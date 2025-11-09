@@ -76,13 +76,19 @@ jobs:
     - name: Display structure of downloaded files
       run: ls -R artifacts/
 
+    - name: Rename artifacts for release
+      run: |
+        mv artifacts/ppxai-linux-amd64/ppxai artifacts/ppxai-linux-amd64/ppxai-linux-amd64
+        mv artifacts/ppxai-macos/ppxai artifacts/ppxai-macos/ppxai-macos
+        mv artifacts/ppxai-windows.exe/ppxai.exe artifacts/ppxai-windows.exe/ppxai-windows.exe
+
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          artifacts/ppxai-linux-amd64/ppxai
-          artifacts/ppxai-macos/ppxai
-          artifacts/ppxai-windows.exe/ppxai.exe
+          artifacts/ppxai-linux-amd64/ppxai-linux-amd64
+          artifacts/ppxai-macos/ppxai-macos
+          artifacts/ppxai-windows.exe/ppxai-windows.exe
         draft: false
         prerelease: false
         generate_release_notes: true
