@@ -25,12 +25,16 @@ A terminal-based interface for interacting with Perplexity AI models.
 - 📈 Global usage statistics and history
 - 📅 Daily usage tracking by model
 
-### Code Generation Tools
+### Code Generation & Analysis Tools
 - 🔨 `/generate` - Generate code from natural language descriptions
 - 🧪 `/test` - Generate comprehensive unit tests for code files
 - 📚 `/docs` - Generate documentation for existing code
 - 🏗️ `/implement` - Implement features from detailed specifications
+- 🐛 `/debug` - Analyze errors, exceptions, and bugs with solutions
+- 📖 `/explain` - Explain code logic and design decisions step-by-step
+- 🔄 `/convert` - Convert code between programming languages
 - 📋 `/spec` - Access specification templates and guidelines
+- 🎯 `/autoroute` - Smart model routing for coding tasks (auto-enabled)
 
 See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effective specifications for code generation.
 
@@ -111,7 +115,7 @@ While in the chat interface:
 - `/load <session>` - Load and continue a previous session
 - `/usage` - Show token usage and cost statistics
 
-#### Code Generation Tools
+#### Code Generation & Analysis Tools
 - `/generate <description>` - Generate code from natural language
   - Example: `/generate a function to validate email addresses in Python`
 - `/test <file>` - Generate unit tests for a code file
@@ -120,9 +124,19 @@ While in the chat interface:
   - Example: `/docs ./src/api.py`
 - `/implement <specification>` - Implement a feature from detailed spec
   - Example: `/implement a REST API endpoint for user authentication`
+- `/debug <error>` - Analyze and fix errors with explanations
+  - Example: `/debug TypeError: 'NoneType' object is not subscriptable at line 42`
+- `/explain <file>` - Explain code logic and design decisions
+  - Example: `/explain ./src/algorithm.py`
+- `/convert <from> <to> <file>` - Convert code between languages
+  - Example: `/convert python javascript ./utils.py`
+  - Example: `/convert go rust 'func hello() { fmt.Println("Hi") }'`
 - `/spec [type]` - Show specification guidelines and templates
   - Types: `api`, `cli`, `lib`, `algo`, `ui`
   - See [SPECIFICATIONS.md](SPECIFICATIONS.md) for details
+- `/autoroute [on|off]` - Toggle smart model routing for coding tasks
+  - Auto-routes coding commands to Sonar Pro for best results
+  - Enabled by default, can be disabled for manual control
 
 ### Available Models
 
@@ -138,10 +152,91 @@ ppxai is particularly useful for:
 
 - **Research & Learning**: Leverage Perplexity's real-time search for up-to-date information
 - **Code Development**: Generate code, tests, and documentation with specialized prompts
-- **Debugging**: Get help analyzing errors and finding solutions
+- **Debugging**: Get help analyzing errors and finding solutions with root cause analysis
+- **Code Understanding**: Explain complex codebases and design decisions
 - **Architecture Planning**: Use specification templates to design features before coding
 - **Code Review**: Generate documentation and tests for existing code
+- **Language Migration**: Convert code between programming languages with idiomatic patterns
 - **Quick Prototypes**: Rapidly generate boilerplate code and implementations
+
+## Example Outputs
+
+### `/explain` - Code Explanation
+
+When you run `/explain ./ppxai.py`, you get comprehensive analysis like:
+
+> **High-Level Structure & Purpose**
+>
+> This code implements a comprehensive command-line interface (CLI) application for interacting with Perplexity AI models, providing tools for conversational AI, code generation, documentation, debugging, and session management—all from the terminal.
+>
+> **Key Design Patterns:**
+> - Separation of concerns (UI, business logic, API communication)
+> - Dependency injection for extensibility
+> - Defensive programming with comprehensive error handling
+> - Modern CLI design with rich terminal UI
+>
+> **Core Components:**
+> 1. **Session Management** - Persistent conversation state with save/load/export
+> 2. **Usage Tracking** - Real-time token and cost monitoring per model
+> 3. **Auto-routing** - Smart model selection for coding tasks
+> 4. **Coding Tools** - Specialized commands with tailored system prompts
+>
+> [Full detailed explanation with architecture diagrams, component interaction, and best practices...]
+
+The explanation includes citations from official documentation and explains not just *what* the code does, but *why* it's designed that way.
+
+### `/debug` - Error Analysis
+
+Provide error details:
+```
+/debug TypeError: 'NoneType' object is not subscriptable at line 42
+```
+
+Get comprehensive debugging help:
+> **Root Cause:** You're trying to access an index on a None object, which occurs when a function returns None instead of the expected list/dict.
+>
+> **Why This Happened:** The variable is None because [specific reason based on context]
+>
+> **Solution:**
+> ```python
+> # Before (causes error)
+> result = get_data()
+> value = result[0]  # Error if result is None
+>
+> # After (fixed)
+> result = get_data()
+> if result is not None:
+>     value = result[0]
+> else:
+>     value = default_value
+> ```
+>
+> **Preventive Measures:**
+> - Add type hints and validation
+> - Use Optional[] types
+> - Implement proper error handling
+>
+> [Additional debugging techniques and best practices...]
+
+### `/convert` - Language Translation
+
+Convert Python to JavaScript:
+```
+/convert python javascript "def hello(name): return f'Hello, {name}!'"
+```
+
+Get idiomatic translation:
+```javascript
+// Converted from Python to JavaScript
+function hello(name) {
+    return `Hello, ${name}!`;
+}
+
+// Usage example:
+console.log(hello("World")); // Output: Hello, World!
+```
+
+The conversion uses proper JavaScript conventions (arrow functions, template literals, etc.) rather than direct literal translation.
 
 ## Data Storage
 
