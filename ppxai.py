@@ -74,6 +74,45 @@ MODELS = {
     },
 }
 
+# System prompts for coding tasks
+CODING_PROMPTS = {
+    "generate": """You are an expert software engineer. Generate clean, efficient, and well-documented code based on the user's requirements. Follow these guidelines:
+- Use best practices and design patterns appropriate for the language
+- Include error handling where appropriate
+- Add clear comments explaining complex logic
+- Follow language-specific conventions and style guides
+- Ensure code is production-ready and maintainable
+- Include usage examples if helpful""",
+
+    "test": """You are an expert in software testing. Generate comprehensive unit tests for the provided code. Follow these guidelines:
+- Cover edge cases and error conditions
+- Use appropriate testing framework for the language (pytest, jest, go test, etc.)
+- Include both positive and negative test cases
+- Test boundary conditions
+- Ensure tests are independent and repeatable
+- Add descriptive test names and comments
+- Aim for high code coverage""",
+
+    "docs": """You are a technical documentation expert. Generate clear, comprehensive documentation for the provided code. Include:
+- Overview/purpose of the code
+- Function/method signatures with parameter descriptions
+- Return value descriptions
+- Usage examples with code snippets
+- Any important notes, warnings, or gotchas
+- Dependencies or prerequisites
+- Use appropriate documentation format (docstrings, JSDoc, GoDoc, etc.)""",
+
+    "implement": """You are an expert software architect and engineer. Implement the requested feature with production-quality code. Follow these guidelines:
+- Break down complex features into manageable components
+- Use SOLID principles and clean code practices
+- Include proper error handling and validation
+- Add logging where appropriate
+- Consider performance and scalability
+- Provide clear code structure and organization
+- Include inline comments for complex logic
+- Suggest additional improvements or considerations"""
+}
+
 
 class PerplexityClient:
     """Client for interacting with Perplexity API."""
@@ -378,6 +417,51 @@ class PerplexityClient:
         return sorted(sessions, key=lambda x: x.get("saved_at", ""), reverse=True)
 
 
+def read_file_content(filepath: str) -> Optional[str]:
+    """Read and return file content, handling errors gracefully."""
+    try:
+        path = Path(filepath).expanduser().resolve()
+        if not path.exists():
+            console.print(f"[red]Error: File not found: {filepath}[/red]")
+            return None
+
+        if not path.is_file():
+            console.print(f"[red]Error: Not a file: {filepath}[/red]")
+            return None
+
+        # Check file size (limit to 100KB for safety)
+        if path.stat().st_size > 100 * 1024:
+            console.print(f"[yellow]Warning: File is large ({path.stat().st_size // 1024}KB). This may use many tokens.[/yellow]")
+            response = Prompt.ask("Continue?", choices=["y", "n"], default="n")
+            if response.lower() != "y":
+                return None
+
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        return content
+    except UnicodeDecodeError:
+        console.print(f"[red]Error: File is not a text file or has encoding issues: {filepath}[/red]")
+        return None
+    except Exception as e:
+        console.print(f"[red]Error reading file: {e}[/red]")
+        return None
+
+
+def send_coding_task(client: PerplexityClient, task_type: str, user_message: str, model: str) -> Optional[str]:
+    """Send a coding task with appropriate system prompt."""
+    if task_type not in CODING_PROMPTS:
+        console.print(f"[red]Unknown task type: {task_type}[/red]")
+        return None
+
+    # Create a temporary message with system instruction
+    system_prompt = CODING_PROMPTS[task_type]
+    full_message = f"{system_prompt}\n\n{user_message}"
+
+    # Send the message
+    return client.chat(full_message, model, stream=True)
+
+
 def display_welcome():
     """Display welcome message."""
     welcome_text = """
@@ -385,7 +469,7 @@ def display_welcome():
 
 Welcome to the Perplexity AI terminal interface!
 
-Commands:
+## General Commands
 - Type your question or prompt to chat
 - `/save [filename]` - Export conversation to markdown file
 - `/sessions` - List all saved sessions
@@ -395,6 +479,12 @@ Commands:
 - `/model` - Change model
 - `/help` - Show this help message
 - `/quit` or `/exit` - Exit the application
+
+## Code Generation Tools
+- `/generate <description>` - Generate code from natural language description
+- `/test <file>` - Generate unit tests for a code file
+- `/docs <file>` - Generate documentation for a code file
+- `/implement <specification>` - Implement a feature from detailed specification
 """
     console.print(Panel(Markdown(welcome_text), title="Welcome", border_style="cyan"))
 
@@ -611,6 +701,53 @@ def main():
 
                 elif command == "/help":
                     display_welcome()
+                    continue
+
+                # Code generation commands
+                elif command == "/generate":
+                    if not args:
+                        console.print("[red]Please provide a description: /generate <description>[/red]")
+                        console.print("[yellow]Example: /generate a function to validate email addresses in Python[/yellow]\n")
+                        continue
+
+                    console.print(f"\n[cyan]Generating code for:[/cyan] {args}\n")
+                    send_coding_task(client, "generate", args, current_model)
+                    continue
+
+                elif command == "/test":
+                    if not args:
+                        console.print("[red]Please provide a file path: /test <file>[/red]")
+                        console.print("[yellow]Example: /test ./src/utils.py[/yellow]\n")
+                        continue
+
+                    file_content = read_file_content(args.strip())
+                    if file_content:
+                        console.print(f"\n[cyan]Generating tests for:[/cyan] {args}\n")
+                        task_message = f"Generate comprehensive unit tests for the following code:\n\n```\n{file_content}\n```"
+                        send_coding_task(client, "test", task_message, current_model)
+                    continue
+
+                elif command == "/docs":
+                    if not args:
+                        console.print("[red]Please provide a file path: /docs <file>[/red]")
+                        console.print("[yellow]Example: /docs ./src/api.py[/yellow]\n")
+                        continue
+
+                    file_content = read_file_content(args.strip())
+                    if file_content:
+                        console.print(f"\n[cyan]Generating documentation for:[/cyan] {args}\n")
+                        task_message = f"Generate comprehensive documentation for the following code:\n\n```\n{file_content}\n```"
+                        send_coding_task(client, "docs", task_message, current_model)
+                    continue
+
+                elif command == "/implement":
+                    if not args:
+                        console.print("[red]Please provide a feature specification: /implement <specification>[/red]")
+                        console.print("[yellow]Example: /implement a REST API endpoint for user authentication[/yellow]\n")
+                        continue
+
+                    console.print(f"\n[cyan]Implementing feature:[/cyan] {args}\n")
+                    send_coding_task(client, "implement", args, current_model)
                     continue
 
                 else:
