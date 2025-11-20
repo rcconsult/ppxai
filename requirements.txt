@@ -3,3 +3,4 @@ rich>=13.0.0
 prompt-toolkit>=3.0.0
 python-dotenv>=1.0.0
 pyinstaller>=6.0.0
+mcp>=0.1.0  # Model Context Protocol (optional, for tool support)

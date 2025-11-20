@@ -38,6 +38,25 @@ A terminal-based interface for interacting with Perplexity AI models.
 
 See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effective specifications for code generation.
 
+### AI Tools (Experimental) 🆕
+- 🛠️ `/tools enable` - Enable AI tools (file search, calculator, code analyzer, etc.)
+- 📋 `/tools list` - Show available tools
+- ✅ `/tools status` - Check tools status
+- ❌ `/tools disable` - Disable tools
+
+**Built-in Tools:**
+- `search_files` - Find files by pattern
+- `read_file` - Read file contents
+- `list_directory` - List directory contents
+- `calculator` - Evaluate mathematical expressions
+
+**Extensible System:**
+- Add custom Python tools in minutes
+- Optional MCP (Model Context Protocol) server support
+- See [docs/TOOL_CREATION_GUIDE.md](docs/TOOL_CREATION_GUIDE.md) for details
+
+**Learn More:** [Tool Documentation](docs/README.md)
+
 ## Quick Start
 
 ### Option 1: Download Standalone Executable (Recommended for Users)
@@ -279,6 +298,41 @@ Clickable links work best in modern terminals:
 - **macOS:** Terminal.app, iTerm2 (Cmd+Click)
 - **Windows:** Windows Terminal (Ctrl+Click)
 - **Linux:** GNOME Terminal, Konsole, etc. (Ctrl+Click)
+
+## Project Structure
+
+```
+ppxai/
+├── ppxai.py                              # Main CLI application
+├── tool_manager.py                       # Tool management system
+├── perplexity_tools_prompt_based.py      # AI tool implementation
+├── demo/
+│   ├── example_builtin_tool.py           # Example Python tool
+│   ├── example_mcp_server/               # Example MCP server
+│   └── demo_tools_working.py             # Working demo
+├── tests/
+│   ├── test_all_tools.py                 # Tool tests
+│   ├── test_mcp.py                       # MCP diagnostics
+│   └── test_prompt_tools.py              # Quick test
+├── docs/
+│   ├── README.md                          # Documentation index
+│   ├── TOOL_CREATION_GUIDE.md            # Step-by-step tool guide
+│   ├── QUICK_START_TOOLS.md              # 60-second setup
+│   └── ...                                # Additional guides
+├── SPECIFICATIONS.md                     # Code generation specs
+├── CLAUDE.md                             # Claude Code guidance
+└── README.md                             # This file
+```
+
+## Documentation
+
+- **Main Guide:** [README.md](README.md) (this file)
+- **Tool System:** [docs/README.md](docs/README.md)
+- **Tool Creation:** [docs/TOOL_CREATION_GUIDE.md](docs/TOOL_CREATION_GUIDE.md)
+- **Code Generation:** [SPECIFICATIONS.md](SPECIFICATIONS.md)
+- **Building:** [BUILD.md](BUILD.md)
+- **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Security:** [SECURITY.md](SECURITY.md)
 
 ## License
 
