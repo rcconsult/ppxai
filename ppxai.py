@@ -43,6 +43,7 @@ MODEL_PRICING = {
     "sonar-reasoning": {"input": 1.00, "output": 5.00},
     "sonar-reasoning-pro": {"input": 5.00, "output": 15.00},
     "sonar-deep-research": {"input": 5.00, "output": 15.00},
+    "codellama-34b": {"input": 0.35, "output": 0.70},
 }
 
 # Available Perplexity models
@@ -72,7 +73,15 @@ MODELS = {
         "name": "Sonar Deep Research",
         "description": "Exhaustive research with comprehensive reports"
     },
+    "6": {
+        "id": "codellama-34b",
+        "name": "CodeLlama 34B",
+        "description": "Specialized model for code generation and debugging (recommended for coding tasks)"
+    },
 }
+
+# Best model for coding tasks
+CODING_MODEL = "codellama-34b"
 
 # System prompts for coding tasks
 CODING_PROMPTS = {
@@ -110,7 +119,37 @@ CODING_PROMPTS = {
 - Consider performance and scalability
 - Provide clear code structure and organization
 - Include inline comments for complex logic
-- Suggest additional improvements or considerations"""
+- Suggest additional improvements or considerations""",
+
+    "debug": """You are an expert debugger and problem solver. Analyze errors, exceptions, and bugs to provide clear solutions. Follow these guidelines:
+- Identify the root cause of the error, not just symptoms
+- Explain why the error occurred in simple terms
+- Provide step-by-step solution with corrected code
+- Suggest preventive measures to avoid similar issues
+- Include relevant debugging techniques or tools
+- Consider edge cases that might cause similar problems
+- Explain any important concepts related to the bug""",
+
+    "explain": """You are an expert code educator and technical communicator. Explain code logic, concepts, and implementations clearly. Follow these guidelines:
+- Break down complex code into understandable steps
+- Explain the "why" behind design decisions, not just the "what"
+- Use analogies and examples to clarify difficult concepts
+- Highlight key patterns, algorithms, or techniques used
+- Point out important details that might be overlooked
+- Explain dependencies and how components interact
+- Relate concepts to real-world scenarios when helpful
+- Focus on understanding, not just describing the code""",
+
+    "convert": """You are an expert in multiple programming languages and cross-language translation. Convert code accurately between languages while maintaining functionality and idioms. Follow these guidelines:
+- Preserve the original logic and behavior exactly
+- Use idiomatic patterns and conventions for the target language
+- Adapt data structures to target language equivalents
+- Update imports, libraries, and dependencies appropriately
+- Adjust error handling to target language standards
+- Maintain or improve code quality in translation
+- Add comments explaining significant translation decisions
+- Highlight any limitations or differences in the conversion
+- Suggest target language-specific improvements where beneficial"""
 }
 
 # Specification templates and guidelines
@@ -399,6 +438,7 @@ class PerplexityClient:
             "completion_tokens": 0,
             "estimated_cost": 0.0
         }
+        self.auto_route = True  # Auto-route coding tasks to best model
 
     def chat(self, message: str, model: str, stream: bool = True):
         """
@@ -712,10 +752,16 @@ def read_file_content(filepath: str) -> Optional[str]:
 
 
 def send_coding_task(client: PerplexityClient, task_type: str, user_message: str, model: str) -> Optional[str]:
-    """Send a coding task with appropriate system prompt."""
+    """Send a coding task with appropriate system prompt and optional auto-routing."""
     if task_type not in CODING_PROMPTS:
         console.print(f"[red]Unknown task type: {task_type}[/red]")
         return None
+
+    # Auto-route to coding model if enabled
+    original_model = model
+    if client.auto_route and model != CODING_MODEL:
+        model = CODING_MODEL
+        console.print(f"[dim]Auto-routed to {CODING_MODEL} for coding task (disable with /autoroute off)[/dim]")
 
     # Create a temporary message with system instruction
     system_prompt = CODING_PROMPTS[task_type]
@@ -748,7 +794,11 @@ Welcome to the Perplexity AI terminal interface!
 - `/test <file>` - Generate unit tests for a code file
 - `/docs <file>` - Generate documentation for a code file
 - `/implement <specification>` - Implement a feature from detailed specification
+- `/debug <error>` - Analyze and fix errors, exceptions, and bugs
+- `/explain <file>` - Explain code logic and design decisions step-by-step
+- `/convert <from> <to> <file>` - Convert code between programming languages
 - `/spec [type]` - Show specification guidelines and templates (api, cli, lib, algo, ui)
+- `/autoroute [on|off]` - Toggle auto-routing to CodeLlama for coding tasks (currently enabled by default)
 """
     console.print(Panel(Markdown(welcome_text), title="Welcome", border_style="cyan"))
 
@@ -1027,6 +1077,76 @@ def main():
 
                     console.print(f"\n[cyan]Implementing feature:[/cyan] {args}\n")
                     send_coding_task(client, "implement", args, current_model)
+                    continue
+
+                elif command == "/debug":
+                    if not args:
+                        console.print("[red]Please provide error details or paste your error message/stack trace[/red]")
+                        console.print("[yellow]Example: /debug TypeError: 'NoneType' object is not subscriptable at line 42[/yellow]\n")
+                        continue
+
+                    console.print(f"\n[cyan]Analyzing error:[/cyan] {args[:100]}...\n")
+                    send_coding_task(client, "debug", args, current_model)
+                    continue
+
+                elif command == "/explain":
+                    if not args:
+                        console.print("[red]Please provide a file path: /explain <file>[/red]")
+                        console.print("[yellow]Example: /explain ./src/algorithm.py[/yellow]\n")
+                        continue
+
+                    file_content = read_file_content(args.strip())
+                    if file_content:
+                        console.print(f"\n[cyan]Explaining code:[/cyan] {args}\n")
+                        task_message = f"Explain the following code in detail, including logic, design decisions, and how it works:\n\n```\n{file_content}\n```"
+                        send_coding_task(client, "explain", task_message, current_model)
+                    continue
+
+                elif command == "/convert":
+                    if not args:
+                        console.print("[red]Please provide: /convert <source-lang> <target-lang> <file-or-code>[/red]")
+                        console.print("[yellow]Example: /convert python javascript ./utils.py[/yellow]")
+                        console.print("[yellow]Example: /convert go rust 'func hello() { fmt.Println(\"Hi\") }'[/yellow]\n")
+                        continue
+
+                    parts = args.split(maxsplit=2)
+                    if len(parts) < 3:
+                        console.print("[red]Invalid format. Use: /convert <source-lang> <target-lang> <file-or-code>[/red]\n")
+                        continue
+
+                    source_lang, target_lang, code_or_file = parts
+
+                    # Check if it's a file or inline code
+                    if os.path.exists(code_or_file.strip('\'"')):
+                        file_content = read_file_content(code_or_file.strip('\'"'))
+                        if not file_content:
+                            continue
+                        code_to_convert = file_content
+                    else:
+                        code_to_convert = code_or_file.strip('\'"')
+
+                    console.print(f"\n[cyan]Converting from {source_lang} to {target_lang}[/cyan]\n")
+                    task_message = f"Convert the following {source_lang} code to {target_lang}:\n\n```{source_lang}\n{code_to_convert}\n```"
+                    send_coding_task(client, "convert", task_message, current_model)
+                    continue
+
+                elif command == "/autoroute":
+                    if not args:
+                        status = "enabled" if client.auto_route else "disabled"
+                        console.print(f"\n[cyan]Auto-routing is currently:[/cyan] [bold]{status}[/bold]")
+                        console.print(f"[dim]Auto-routing uses {CODING_MODEL} for coding commands[/dim]")
+                        console.print("[yellow]Use /autoroute on or /autoroute off to change[/yellow]\n")
+                        continue
+
+                    arg = args.strip().lower()
+                    if arg == "on":
+                        client.auto_route = True
+                        console.print(f"[green]Auto-routing enabled.[/green] Coding commands will use {CODING_MODEL}\n")
+                    elif arg == "off":
+                        client.auto_route = False
+                        console.print(f"[yellow]Auto-routing disabled.[/yellow] Manual model selection will be used\n")
+                    else:
+                        console.print("[red]Invalid option. Use /autoroute on or /autoroute off[/red]\n")
                     continue
 
                 elif command == "/spec":
