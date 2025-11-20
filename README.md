@@ -4,14 +4,35 @@ A terminal-based interface for interacting with Perplexity AI models.
 
 ## Features
 
+### Core Features
 - 🤖 Interactive chat with Perplexity AI models
 - 🔄 Model selection (Sonar, Sonar Pro, Sonar Reasoning, and more)
-- 💬 Conversation history management
 - ⚡ Streaming responses for real-time interaction
-- 📝 Command history support
-- 🎨 Rich terminal UI with markdown rendering
+- 🎨 Rich terminal UI with markdown rendering (headings, lists, tables, code blocks)
 - 🔗 Clickable source citations in terminal
+- 📝 Command history support
 - 📦 Standalone executables available (no Python required!)
+
+### Session Management
+- 💾 Auto-save sessions every 10 messages
+- 📂 Load and continue previous conversations
+- 📤 Export conversations to markdown files
+- 🗂️ Session browser with metadata
+
+### Usage Tracking
+- 📊 Real-time token usage monitoring
+- 💰 Cost estimation based on model pricing
+- 📈 Global usage statistics and history
+- 📅 Daily usage tracking by model
+
+### Code Generation Tools
+- 🔨 `/generate` - Generate code from natural language descriptions
+- 🧪 `/test` - Generate comprehensive unit tests for code files
+- 📚 `/docs` - Generate documentation for existing code
+- 🏗️ `/implement` - Implement features from detailed specifications
+- 📋 `/spec` - Access specification templates and guidelines
+
+See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effective specifications for code generation.
 
 ## Quick Start
 
@@ -77,11 +98,31 @@ chmod +x ppxai.py
 
 While in the chat interface:
 
+#### General Commands
 - Type your question or prompt to chat with the AI
+- `/help` - Show help message with all commands
 - `/model` - Change the current model
 - `/clear` - Clear conversation history
-- `/help` - Show help message
-- `/quit` or `/exit` - Exit the application
+- `/quit` or `/exit` - Exit the application (auto-saves session)
+
+#### Session Management
+- `/save [filename]` - Export conversation to markdown file
+- `/sessions` - List all saved sessions
+- `/load <session>` - Load and continue a previous session
+- `/usage` - Show token usage and cost statistics
+
+#### Code Generation Tools
+- `/generate <description>` - Generate code from natural language
+  - Example: `/generate a function to validate email addresses in Python`
+- `/test <file>` - Generate unit tests for a code file
+  - Example: `/test ./src/utils.py`
+- `/docs <file>` - Generate documentation for a code file
+  - Example: `/docs ./src/api.py`
+- `/implement <specification>` - Implement a feature from detailed spec
+  - Example: `/implement a REST API endpoint for user authentication`
+- `/spec [type]` - Show specification guidelines and templates
+  - Types: `api`, `cli`, `lib`, `algo`, `ui`
+  - See [SPECIFICATIONS.md](SPECIFICATIONS.md) for details
 
 ### Available Models
 
@@ -90,6 +131,27 @@ While in the chat interface:
 3. **Sonar Reasoning** - Fast reasoning model for problem-solving with search
 4. **Sonar Reasoning Pro** - Precision reasoning with Chain of Thought capabilities
 5. **Sonar Deep Research** - Exhaustive research with comprehensive reports
+
+## Use Cases
+
+ppxai is particularly useful for:
+
+- **Research & Learning**: Leverage Perplexity's real-time search for up-to-date information
+- **Code Development**: Generate code, tests, and documentation with specialized prompts
+- **Debugging**: Get help analyzing errors and finding solutions
+- **Architecture Planning**: Use specification templates to design features before coding
+- **Code Review**: Generate documentation and tests for existing code
+- **Quick Prototypes**: Rapidly generate boilerplate code and implementations
+
+## Data Storage
+
+ppxai stores data locally in `~/.ppxai/`:
+
+- `~/.ppxai/sessions/` - Saved conversation sessions (JSON)
+- `~/.ppxai/exports/` - Exported markdown files
+- `~/.ppxai/usage.json` - Token usage and cost tracking
+
+All data stays on your machine. No data is sent anywhere except to Perplexity's API during chat.
 
 ## API Key
 
