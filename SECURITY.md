@@ -2,20 +2,40 @@
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+We are currently supporting the latest version of ppxai with security updates.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| Latest  | :white_check_mark: |
+| Older   | :x:                |
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+If you discover a security vulnerability in ppxai, please report it by:
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+1. **Opening a GitHub Issue** with the label "security" (for non-critical issues)
+2. **Creating a private security advisory** on GitHub (for critical vulnerabilities)
+
+Please include:
+- Description of the vulnerability
+- Steps to reproduce
+- Potential impact
+- Suggested fix (if any)
+
+### What to Expect
+
+- We will acknowledge your report within 48 hours
+- We will investigate and provide updates on the status
+- Once fixed, we will credit you in the release notes (unless you prefer to remain anonymous)
+
+### Scope
+
+Please note that ppxai is a terminal UI application that:
+- Stores session data locally in `~/.ppxai/`
+- Communicates only with the Perplexity API
+- Requires users to provide their own API keys via `.env` file
+
+**Security considerations:**
+- Keep your `.env` file and API keys secure
+- Do not commit `.env` files to version control
+- Be cautious when sharing session exports as they may contain sensitive conversation data
