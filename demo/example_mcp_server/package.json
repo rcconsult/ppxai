@@ -1,0 +1,24 @@
+{
+  "name": "example-mcp-server",
+  "version": "1.0.0",
+  "description": "Example MCP server for ppxai demonstrating custom tools",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "example-mcp-server": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ppxai",
+    "tools"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0"
+  }
+}

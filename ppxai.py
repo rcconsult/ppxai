@@ -7,6 +7,7 @@ A terminal-based interface for interacting with Perplexity AI models.
 import os
 import sys
 import json
+import asyncio
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List
@@ -19,6 +20,14 @@ from rich.table import Table
 from prompt_toolkit import prompt
 from prompt_toolkit.history import InMemoryHistory
 from dotenv import load_dotenv
+
+# Tool support
+try:
+    from perplexity_tools_prompt_based import PerplexityClientPromptTools
+    from tool_manager import load_tool_config
+    TOOLS_AVAILABLE = True
+except ImportError:
+    TOOLS_AVAILABLE = False
 
 # Load environment variables
 load_dotenv()
@@ -793,6 +802,12 @@ Welcome to the Perplexity AI terminal interface!
 - `/convert <from> <to> <file>` - Convert code between programming languages
 - `/spec [type]` - Show specification guidelines and templates (api, cli, lib, algo, ui)
 - `/autoroute [on|off]` - Toggle auto-routing to Sonar Pro for coding tasks (currently enabled by default)
+
+## AI Tools (Experimental)
+- `/tools enable` - Enable AI tools (file search, calculator, etc.)
+- `/tools disable` - Disable AI tools
+- `/tools list` - Show available tools
+- `/tools status` - Show tools status
 """
     console.print(Panel(Markdown(welcome_text), title="Welcome", border_style="cyan"))
 
@@ -1148,13 +1163,109 @@ def main():
                     display_spec_help(spec_type)
                     continue
 
+                elif command == "/tools":
+                    if not TOOLS_AVAILABLE:
+                        console.print("[red]Error: Tool support not available.[/red]")
+                        console.print("[yellow]Missing dependencies. Check docs/TOOL_CREATION_GUIDE.md[/yellow]\n")
+                        continue
+
+                    subcommand = args.strip().lower() if args else "status"
+
+                    if subcommand == "enable":
+                        # Enable tools for this session
+                        if isinstance(client, PerplexityClientPromptTools):
+                            console.print("[yellow]Tools already enabled[/yellow]\n")
+                            continue
+
+                        # Upgrade client to tool-enabled version
+                        tool_client = PerplexityClientPromptTools(
+                            api_key=api_key,
+                            session_name=client.session_name,
+                            enable_tools=True
+                        )
+                        # Copy conversation history
+                        tool_client.conversation_history = client.conversation_history
+                        tool_client.session_metadata = client.session_metadata
+                        tool_client.current_session_usage = client.current_session_usage
+
+                        # Initialize tools (built-in only by default)
+                        console.print("[cyan]Initializing tools...[/cyan]")
+                        asyncio.run(tool_client.initialize_tools(mcp_servers=[]))
+
+                        # Replace client
+                        client = tool_client
+                        console.print("[green]✓ Tools enabled![/green]")
+                        console.print("[dim]Use '/tools list' to see available tools[/dim]\n")
+
+                    elif subcommand == "disable":
+                        if not isinstance(client, PerplexityClientPromptTools):
+                            console.print("[yellow]Tools not enabled[/yellow]\n")
+                            continue
+
+                        # Downgrade to regular client
+                        regular_client = PerplexityClient(api_key, client.session_name)
+                        regular_client.conversation_history = client.conversation_history
+                        regular_client.session_metadata = client.session_metadata
+                        regular_client.current_session_usage = client.current_session_usage
+
+                        # Cleanup tool client
+                        asyncio.run(client.cleanup())
+
+                        client = regular_client
+                        console.print("[yellow]Tools disabled[/yellow]\n")
+
+                    elif subcommand == "list":
+                        if not isinstance(client, PerplexityClientPromptTools):
+                            console.print("[yellow]Tools not enabled. Use '/tools enable' first[/yellow]\n")
+                            continue
+
+                        if not client.tool_manager or not client.tool_manager.tools:
+                            console.print("[yellow]No tools available[/yellow]\n")
+                            continue
+
+                        table = Table(title="Available Tools", show_header=True, header_style="bold cyan")
+                        table.add_column("Tool", style="green")
+                        table.add_column("Source", style="yellow")
+                        table.add_column("Description", style="white")
+
+                        for tool_info in client.tool_manager.list_tools():
+                            table.add_row(
+                                tool_info['name'],
+                                tool_info['source'],
+                                tool_info['description'][:60] + "..." if len(tool_info['description']) > 60 else tool_info['description']
+                            )
+
+                        console.print()
+                        console.print(table)
+                        console.print()
+
+                    elif subcommand == "status":
+                        if isinstance(client, PerplexityClientPromptTools):
+                            tool_count = len(client.tool_manager.tools) if client.tool_manager else 0
+                            console.print(f"[green]✓ Tools enabled[/green] ({tool_count} tools available)")
+                            console.print("[dim]Use '/tools list' to see available tools[/dim]\n")
+                        else:
+                            console.print("[yellow]Tools not enabled[/yellow]")
+                            console.print("[dim]Use '/tools enable' to activate AI tools[/dim]\n")
+
+                    else:
+                        console.print(f"[red]Unknown subcommand: {subcommand}[/red]")
+                        console.print("[yellow]Available: enable, disable, list, status[/yellow]\n")
+
+                    continue
+
                 else:
                     console.print(f"[red]Unknown command: {user_input}[/red]")
                     console.print("[yellow]Type /help for available commands[/yellow]\n")
                     continue
 
             # Send message to API
-            response = client.chat(user_input, current_model, stream=True)
+            if isinstance(client, PerplexityClientPromptTools) and client.enable_tools:
+                # Use async tool-enabled chat
+                response = asyncio.run(client.chat_with_tools(user_input, current_model))
+            else:
+                # Use regular chat
+                response = client.chat(user_input, current_model, stream=True)
 
             # Update session metadata
             if response:

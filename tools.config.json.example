@@ -1,0 +1,46 @@
+{
+  "enabled": true,
+  "max_tool_iterations": 5,
+  "mcp_servers": [
+    {
+      "name": "filesystem",
+      "description": "File system operations (read, write, search)",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
+    },
+    {
+      "name": "brave-search",
+      "description": "Web search using Brave Search API",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "your-brave-api-key-here"
+      }
+    },
+    {
+      "name": "git",
+      "description": "Git repository operations",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-git", "."]
+    },
+    {
+      "name": "sqlite",
+      "description": "SQLite database operations",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sqlite", "path/to/database.db"]
+    }
+  ],
+  "builtin_tools": {
+    "search_files": true,
+    "read_file": true,
+    "calculator": true,
+    "run_shell_command": false
+  },
+  "notes": [
+    "Set enabled to true to activate tool support",
+    "MCP servers are Node.js packages that can be installed via npx",
+    "Built-in tools are Python functions that don't require external servers",
+    "Set run_shell_command to false for security unless you trust the model",
+    "See https://github.com/modelcontextprotocol/servers for more MCP servers"
+  ]
+}
