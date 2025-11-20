@@ -43,7 +43,6 @@ MODEL_PRICING = {
     "sonar-reasoning": {"input": 1.00, "output": 5.00},
     "sonar-reasoning-pro": {"input": 5.00, "output": 15.00},
     "sonar-deep-research": {"input": 5.00, "output": 15.00},
-    "codellama-34b": {"input": 0.35, "output": 0.70},
 }
 
 # Available Perplexity models
@@ -73,15 +72,10 @@ MODELS = {
         "name": "Sonar Deep Research",
         "description": "Exhaustive research with comprehensive reports"
     },
-    "6": {
-        "id": "codellama-34b",
-        "name": "CodeLlama 34B",
-        "description": "Specialized model for code generation and debugging (recommended for coding tasks)"
-    },
 }
 
-# Best model for coding tasks
-CODING_MODEL = "codellama-34b"
+# Best model for coding tasks (using Sonar Pro for advanced reasoning)
+CODING_MODEL = "sonar-pro"
 
 # System prompts for coding tasks
 CODING_PROMPTS = {
@@ -798,7 +792,7 @@ Welcome to the Perplexity AI terminal interface!
 - `/explain <file>` - Explain code logic and design decisions step-by-step
 - `/convert <from> <to> <file>` - Convert code between programming languages
 - `/spec [type]` - Show specification guidelines and templates (api, cli, lib, algo, ui)
-- `/autoroute [on|off]` - Toggle auto-routing to CodeLlama for coding tasks (currently enabled by default)
+- `/autoroute [on|off]` - Toggle auto-routing to Sonar Pro for coding tasks (currently enabled by default)
 """
     console.print(Panel(Markdown(welcome_text), title="Welcome", border_style="cyan"))
 
