@@ -1,7 +1,7 @@
 """
-Perplexity Client with Prompt-Based Tool Support
+AI Client with Prompt-Based Tool Support
 
-Since Perplexity doesn't support OpenAI function calling, this uses
+Since some providers don't support OpenAI function calling, this uses
 prompt engineering to enable tool usage:
 1. Tools described in system prompt
 2. Model responds with structured tool calls in text
@@ -11,8 +11,10 @@ prompt engineering to enable tool usage:
 
 import asyncio
 import json
+import os
 import re
 from typing import Optional, List, Dict, Any
+import httpx
 from openai import OpenAI
 from rich.console import Console
 from rich.markdown import Markdown
@@ -26,25 +28,56 @@ console = Console()
 
 class PerplexityClientPromptTools:
     """
-    Perplexity client with prompt-based tool support.
+    AI client with prompt-based tool support.
     Works around lack of native function calling.
     """
 
     def __init__(
         self,
         api_key: str,
+        base_url: str = "https://api.perplexity.ai",
         session_name: Optional[str] = None,
-        enable_tools: bool = False
+        enable_tools: bool = False,
+        provider: str = None
     ):
         """Initialize the client with optional tool support."""
-        self.client = OpenAI(
-            api_key=api_key,
-            base_url="https://api.perplexity.ai"
-        )
+        # Check if SSL verification should be disabled
+        # Use SSL_VERIFY environment variable (applies to all HTTPS connections)
+        ssl_verify = os.getenv("SSL_VERIFY", "true").lower() != "false"
+
+        if not ssl_verify:
+            # Create custom httpx client with SSL verification disabled
+            http_client = httpx.Client(verify=False)
+            self.client = OpenAI(
+                api_key=api_key,
+                base_url=base_url,
+                http_client=http_client
+            )
+        else:
+            self.client = OpenAI(
+                api_key=api_key,
+                base_url=base_url
+            )
+        self.base_url = base_url
+        self.provider = provider or "perplexity"
         self.conversation_history = []
         self.session_name = session_name or f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         self.enable_tools = enable_tools
         self.tool_manager = ToolManager() if enable_tools else None
+        # Add session metadata and usage tracking for compatibility with AIClient
+        self.session_metadata = {
+            "created_at": datetime.now().isoformat(),
+            "model": None,
+            "provider": self.provider,
+            "message_count": 0
+        }
+        self.current_session_usage = {
+            "total_tokens": 0,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "estimated_cost": 0.0
+        }
+        self.auto_route = True
 
     async def initialize_tools(self, mcp_servers: List[Dict[str, Any]] = None):
         """Initialize the tool system."""
@@ -58,16 +91,20 @@ class PerplexityClientPromptTools:
             except Exception as e:
                 console.print(f"[yellow]Note: MCP servers skipped: {e}[/yellow]")
 
-        # Register built-in tools
+        # Register built-in tools (pass provider to conditionally register web tools)
         self._register_builtin_tools()
 
         console.print(f"[green]Tools initialized:[/green] {len(self.tool_manager.tools)} tools available")
         for tool_info in self.tool_manager.list_tools():
-            console.print(f"  • {tool_info['name']}: {tool_info['description']}")
+            console.print(f"  * {tool_info['name']}: {tool_info['description']}")
+
+        # Note about Perplexity's built-in search
+        if self.provider == "perplexity":
+            console.print(f"[dim]Note: Perplexity has built-in web search - just ask questions directly![/dim]")
         console.print()
 
     def _register_builtin_tools(self):
-        """Register built-in tools."""
+        """Register built-in tools based on provider capabilities."""
         import os
         import subprocess
         from pathlib import Path
@@ -247,31 +284,523 @@ class PerplexityClientPromptTools:
             handler=list_directory
         )
 
+        # =====================================================================
+        # Date/Time tool with timezone support
+        # =====================================================================
+        def get_datetime(timezone: str = "UTC") -> str:
+            """Get current date and time with timezone support."""
+            from datetime import datetime
+            try:
+                import zoneinfo
+                tz = zoneinfo.ZoneInfo(timezone)
+            except Exception:
+                # Fallback for older Python or invalid timezone
+                try:
+                    import pytz
+                    tz = pytz.timezone(timezone)
+                except Exception:
+                    return f"Error: Invalid timezone '{timezone}'. Use IANA format like 'Europe/Zurich', 'America/New_York', 'UTC'"
+
+            now = datetime.now(tz)
+            return (
+                f"Current date and time in {timezone}:\n"
+                f"  Date: {now.strftime('%A, %B %d, %Y')}\n"
+                f"  Time: {now.strftime('%H:%M:%S')}\n"
+                f"  ISO format: {now.isoformat()}\n"
+                f"  Unix timestamp: {int(now.timestamp())}"
+            )
+
+        self.tool_manager.register_builtin_tool(
+            name="get_datetime",
+            description="Get the current date and time with timezone support. Use IANA timezone names like 'Europe/Zurich', 'America/New_York', 'Asia/Tokyo', 'UTC'",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "timezone": {
+                        "type": "string",
+                        "description": "IANA timezone name (default: 'UTC'). Examples: 'Europe/Zurich', 'America/New_York', 'Asia/Tokyo'"
+                    }
+                },
+                "required": []
+            },
+            handler=get_datetime
+        )
+
+        # =====================================================================
+        # Shell command execution tool (universal - available to all providers)
+        # =====================================================================
+        def execute_shell_command(command: str, working_dir: str = None) -> str:
+            """Execute a shell command and return the output.
+
+            Args:
+                command: The shell command to execute
+                working_dir: Optional working directory for the command
+
+            Returns:
+                str: Command output (stdout + stderr) or error message
+            """
+            try:
+                import platform
+                import os
+                import subprocess
+
+                # Determine shell based on platform
+                is_windows = platform.system() == "Windows"
+
+                # Change to working directory if specified
+                original_dir = None
+                if working_dir:
+                    original_dir = os.getcwd()
+                    if not os.path.isdir(working_dir):
+                        return f"Error: Working directory does not exist: {working_dir}"
+                    os.chdir(working_dir)
+
+                try:
+                    # Execute command with shell
+                    result = subprocess.run(
+                        command,
+                        shell=True,
+                        capture_output=True,
+                        text=True,
+                        timeout=30,  # 30 second timeout
+                        encoding='utf-8' if not is_windows else None,
+                        errors='replace'  # Replace encoding errors
+                    )
+
+                    # Combine stdout and stderr
+                    output = ""
+                    if result.stdout:
+                        output += result.stdout
+                    if result.stderr:
+                        if output:
+                            output += "\n--- stderr ---\n"
+                        output += result.stderr
+
+                    # Add return code if non-zero
+                    if result.returncode != 0:
+                        output += f"\n\nCommand exited with code: {result.returncode}"
+
+                    return output if output else f"Command completed successfully (exit code: {result.returncode})"
+
+                finally:
+                    # Restore original directory
+                    if original_dir:
+                        os.chdir(original_dir)
+
+            except subprocess.TimeoutExpired:
+                return "Error: Command timed out after 30 seconds"
+            except Exception as e:
+                return f"Error executing command: {str(e)}"
+
+        self.tool_manager.register_builtin_tool(
+            name="execute_shell_command",
+            description="Execute a shell command in the system. Supports Windows (cmd/PowerShell) and Unix (bash) commands. Use for system operations like creating directories, file operations, running scripts, etc. Commands run with a 30-second timeout.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "command": {
+                        "type": "string",
+                        "description": "Shell command to execute (e.g., 'mkdir new_folder', 'dir', 'ls -la', 'git status')"
+                    },
+                    "working_dir": {
+                        "type": "string",
+                        "description": "Optional working directory path where the command should be executed"
+                    }
+                },
+                "required": ["command"]
+            },
+            handler=execute_shell_command
+        )
+
+        # =====================================================================
+        # Web-enabled tools (registered based on provider capabilities)
+        # Only register tools for capabilities the provider doesn't have natively
+        # =====================================================================
+        self._register_web_tools()
+
+    def _register_web_tools(self):
+        """Register web-enabled tools based on provider capabilities.
+
+        Only registers tools for capabilities the provider doesn't have natively.
+        This is configured in ppxai/config.py under each provider's 'capabilities' dict.
+        """
+        # Import capability checker from config
+        try:
+            from ppxai.config import provider_needs_tool, get_provider_capabilities
+        except ImportError:
+            # Fallback for standalone usage
+            def provider_needs_tool(provider, category):
+                return provider != "perplexity"
+            def get_provider_capabilities(provider):
+                return {}
+
+        capabilities = get_provider_capabilities(self.provider)
+
+        # Show which capabilities this provider has natively
+        native_caps = [k for k, v in capabilities.items() if v]
+        if native_caps:
+            console.print(f"[dim]Provider has native: {', '.join(native_caps)}[/dim]")
+
+        # =====================================================================
+        # Weather forecast tool using wttr.in (free, no API key required)
+        # Only register if provider doesn't have native weather capability
+        # =====================================================================
+        if provider_needs_tool(self.provider, "weather"):
+            self._register_weather_tool()
+
+        # =====================================================================
+        # Web search tool using DuckDuckGo (no API key required)
+        # Only register if provider doesn't have native web search
+        # =====================================================================
+        if provider_needs_tool(self.provider, "web_search"):
+            self._register_web_search_tool()
+
+        # =====================================================================
+        # URL fetch tool to read web pages
+        # Only register if provider doesn't have native web fetch
+        # =====================================================================
+        if provider_needs_tool(self.provider, "web_fetch"):
+            self._register_fetch_url_tool()
+
+    def _register_weather_tool(self):
+        """Register weather forecast tool using wttr.in."""
+        def get_weather(location: str, format: str = "short") -> str:
+            """Get weather forecast for a location using wttr.in."""
+            import urllib.request
+            import urllib.error
+            import ssl
+
+            # Create SSL context that doesn't verify (for corporate proxies)
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
+            try:
+                # wttr.in format options:
+                # ?format=3 - short one-line (City: condition temp)
+                # ?format=4 - one-line with more info
+                # ?0 - current weather only (no forecast)
+                # ?1 - current + 1 day forecast
+                # ?2 - current + 2 day forecast (default)
+                if format == "short":
+                    url = f"https://wttr.in/{urllib.parse.quote(location)}?format=4"
+                elif format == "detailed":
+                    url = f"https://wttr.in/{urllib.parse.quote(location)}?0&m"  # metric, current only
+                else:
+                    url = f"https://wttr.in/{urllib.parse.quote(location)}?2&m"  # 2-day forecast, metric
+
+                # Set a reasonable timeout and user agent
+                req = urllib.request.Request(
+                    url,
+                    headers={"User-Agent": "curl/7.68.0"}  # wttr.in prefers curl-like UA
+                )
+
+                with urllib.request.urlopen(req, timeout=10, context=ssl_context) as response:
+                    result = response.read().decode('utf-8')
+
+                # Clean up ANSI codes if present
+                import re
+                result = re.sub(r'\x1b\[[0-9;]*m', '', result)
+
+                return f"Weather for {location}:\n{result}"
+
+            except urllib.error.HTTPError as e:
+                if e.code == 404:
+                    return f"Error: Location '{location}' not found. Try a different city name or format like 'Geneva,Switzerland'"
+                return f"Error fetching weather: HTTP {e.code}"
+            except urllib.error.URLError as e:
+                return f"Error: Could not connect to weather service. {str(e.reason)}"
+            except Exception as e:
+                return f"Error getting weather: {str(e)}"
+
+        self.tool_manager.register_builtin_tool(
+            name="get_weather",
+            description="Get current weather and forecast for a location. Uses wttr.in service (no API key needed)",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "City name, optionally with country (e.g., 'Geneva', 'Geneva,Switzerland', 'New York', 'Tokyo')"
+                    },
+                    "format": {
+                        "type": "string",
+                        "description": "Output format: 'short' (one line), 'detailed' (current only), 'forecast' (2-day forecast)",
+                        "enum": ["short", "detailed", "forecast"]
+                    }
+                },
+                "required": ["location"]
+            },
+            handler=get_weather
+        )
+
+    def _register_web_search_tool(self):
+        """Register web search tool using DuckDuckGo."""
+        def web_search(query: str, num_results: int = 5) -> str:
+            """Search the web using DuckDuckGo."""
+            import urllib.request
+            import urllib.parse
+            import urllib.error
+            import ssl
+            import re
+
+            # Create SSL context
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
+            try:
+                # Use DuckDuckGo HTML search (more reliable than API)
+                encoded_query = urllib.parse.quote_plus(query)
+                url = f"https://html.duckduckgo.com/html/?q={encoded_query}"
+
+                req = urllib.request.Request(
+                    url,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                    }
+                )
+
+                with urllib.request.urlopen(req, timeout=15, context=ssl_context) as response:
+                    html = response.read().decode('utf-8')
+
+                # Parse results from HTML
+                results = []
+
+                # Find result blocks
+                result_pattern = r'<a[^>]*class="result__a"[^>]*href="([^"]*)"[^>]*>([^<]*)</a>'
+                snippet_pattern = r'<a[^>]*class="result__snippet"[^>]*>([^<]*(?:<[^>]*>[^<]*)*)</a>'
+
+                links = re.findall(result_pattern, html)
+                snippets = re.findall(snippet_pattern, html)
+
+                for i, (link, title) in enumerate(links[:num_results]):
+                    # Clean up the redirect URL
+                    if 'uddg=' in link:
+                        # Extract actual URL from DuckDuckGo redirect
+                        match = re.search(r'uddg=([^&]*)', link)
+                        if match:
+                            link = urllib.parse.unquote(match.group(1))
+
+                    # Get snippet if available
+                    snippet = ""
+                    if i < len(snippets):
+                        snippet = re.sub(r'<[^>]*>', '', snippets[i])  # Remove HTML tags
+                        snippet = snippet.strip()[:200]
+
+                    results.append(f"{i+1}. {title}\n   URL: {link}\n   {snippet}\n")
+
+                if not results:
+                    return f"No results found for '{query}'"
+
+                return f"Search results for '{query}':\n\n" + "\n".join(results)
+
+            except urllib.error.URLError as e:
+                return f"Error: Could not connect to search service. {str(e.reason)}"
+            except Exception as e:
+                return f"Error searching: {str(e)}"
+
+        self.tool_manager.register_builtin_tool(
+            name="web_search",
+            description="Search the web using DuckDuckGo. Returns titles, URLs, and snippets of top results",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Search query (e.g., 'Python tutorials', 'weather API documentation')"
+                    },
+                    "num_results": {
+                        "type": "integer",
+                        "description": "Number of results to return (default: 5, max: 10)"
+                    }
+                },
+                "required": ["query"]
+            },
+            handler=web_search
+        )
+
+    def _register_fetch_url_tool(self):
+        """Register URL fetch tool to read web pages."""
+        def fetch_url(url: str, max_length: int = 5000) -> str:
+            """Fetch and extract text content from a URL."""
+            import urllib.request
+            import urllib.error
+            import ssl
+            import re
+
+            # Create SSL context
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
+            try:
+                req = urllib.request.Request(
+                    url,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                    }
+                )
+
+                with urllib.request.urlopen(req, timeout=15, context=ssl_context) as response:
+                    content_type = response.headers.get('Content-Type', '')
+                    if 'text/html' not in content_type and 'text/plain' not in content_type:
+                        return f"Error: URL returns non-text content ({content_type})"
+
+                    html = response.read().decode('utf-8', errors='ignore')
+
+                # Extract title
+                title_match = re.search(r'<title[^>]*>([^<]*)</title>', html, re.IGNORECASE)
+                title = title_match.group(1).strip() if title_match else "No title"
+
+                # Remove script and style elements
+                html = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL | re.IGNORECASE)
+                html = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL | re.IGNORECASE)
+                html = re.sub(r'<nav[^>]*>.*?</nav>', '', html, flags=re.DOTALL | re.IGNORECASE)
+                html = re.sub(r'<footer[^>]*>.*?</footer>', '', html, flags=re.DOTALL | re.IGNORECASE)
+
+                # Remove HTML tags
+                text = re.sub(r'<[^>]+>', ' ', html)
+
+                # Clean up whitespace
+                text = re.sub(r'\s+', ' ', text).strip()
+
+                # Truncate if too long
+                if len(text) > max_length:
+                    text = text[:max_length] + "... [truncated]"
+
+                return f"Title: {title}\nURL: {url}\n\nContent:\n{text}"
+
+            except urllib.error.HTTPError as e:
+                return f"Error: HTTP {e.code} - {e.reason}"
+            except urllib.error.URLError as e:
+                return f"Error: Could not connect to URL. {str(e.reason)}"
+            except Exception as e:
+                return f"Error fetching URL: {str(e)}"
+
+        self.tool_manager.register_builtin_tool(
+            name="fetch_url",
+            description="Fetch and read the text content of a web page URL",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "Full URL to fetch (e.g., 'https://example.com/page')"
+                    },
+                    "max_length": {
+                        "type": "integer",
+                        "description": "Maximum characters to return (default: 5000)"
+                    }
+                },
+                "required": ["url"]
+            },
+            handler=fetch_url
+        )
+
     def _get_tools_prompt(self) -> str:
         """Generate a system prompt describing available tools."""
         if not self.tool_manager or not self.tool_manager.tools:
             return ""
 
-        tools_desc = "# Available Tools\n\n"
-        tools_desc += "You have access to the following tools. To use a tool, respond with a JSON code block:\n\n"
+        tools_desc = "# IMPORTANT: You Have Access to Tools\n\n"
+        tools_desc += "You MUST use these tools when the user asks for information you don't have access to natively.\n"
+        tools_desc += "You are an AI assistant with tool capabilities. When you need real-time information (like current time, weather, web pages), you MUST call the appropriate tool.\n\n"
+        tools_desc += "## How to Call a Tool\n\n"
+        tools_desc += "To use a tool, respond ONLY with a JSON code block in this exact format:\n\n"
         tools_desc += "```json\n{\n  \"tool\": \"tool_name\",\n  \"arguments\": {\"param\": \"value\"}\n}\n```\n\n"
-        tools_desc += "## Tools:\n\n"
+        tools_desc += "## Available Tools:\n\n"
 
         for name, tool_def in self.tool_manager.tools.items():
-            tools_desc += f"**{name}**: {tool_def.description}\n"
+            tools_desc += f"### {name}\n"
+            tools_desc += f"{tool_def.description}\n"
             if tool_def.parameters.get("properties"):
-                tools_desc += "  Parameters:\n"
+                tools_desc += "Parameters:\n"
                 for param, info in tool_def.parameters["properties"].items():
                     required = "required" if param in tool_def.parameters.get("required", []) else "optional"
                     tools_desc += f"  - `{param}` ({required}): {info.get('description', '')}\n"
             tools_desc += "\n"
 
-        tools_desc += "\nIMPORTANT:\n"
-        tools_desc += "- Only use tools when explicitly asked or when necessary to answer the question\n"
-        tools_desc += "- After using a tool, you'll receive the result and can continue with your response\n"
-        tools_desc += "- If you don't need a tool, just respond normally\n"
+        tools_desc += "## CRITICAL INSTRUCTIONS:\n\n"
+        tools_desc += "1. **For date/time questions**: ALWAYS use the `get_datetime` tool. Do NOT say you don't have access.\n"
+        tools_desc += "2. **For weather questions**: ALWAYS use the `get_weather` tool. Do NOT say you can't access weather.\n"
+        tools_desc += "3. **For web searches**: Use the `web_search` tool to find current information.\n"
+        tools_desc += "4. **For reading web pages**: Use the `fetch_url` tool to read URL contents.\n"
+        tools_desc += "5. **For system operations**: Use the `execute_shell_command` tool to run commands, create directories, file operations, etc.\n"
+        tools_desc += "6. When calling a tool, output ONLY the JSON block, nothing else.\n"
+        tools_desc += "7. After receiving tool results, provide a helpful response based on that data.\n"
+        tools_desc += "8. NEVER say 'I don't have access to real-time data' or 'I can't execute commands' - you DO have access via these tools!\n"
 
         return tools_desc
+
+    def _suggest_tools_for_query(self, query: str) -> List[str]:
+        """Suggest which tools might be useful for a given query.
+
+        Returns a list of tool names that could help answer the query.
+        """
+        if not self.tool_manager:
+            return []
+
+        query_lower = query.lower()
+        suggestions = []
+
+        # Keywords that suggest date/time tool
+        datetime_keywords = ['time', 'date', 'today', 'now', 'current time', 'what day', 'timezone', 'clock']
+        if any(kw in query_lower for kw in datetime_keywords):
+            if 'get_datetime' in self.tool_manager.tools:
+                suggestions.append('get_datetime')
+
+        # Keywords that suggest weather tool
+        weather_keywords = ['weather', 'forecast', 'temperature', 'rain', 'sunny', 'cloudy', 'snow', 'humidity', 'wind']
+        if any(kw in query_lower for kw in weather_keywords):
+            if 'get_weather' in self.tool_manager.tools:
+                suggestions.append('get_weather')
+
+        # Keywords that suggest web search
+        search_keywords = ['search', 'find', 'look up', 'google', 'latest', 'news', 'current events', 'recent']
+        if any(kw in query_lower for kw in search_keywords):
+            if 'web_search' in self.tool_manager.tools:
+                suggestions.append('web_search')
+
+        # Keywords that suggest URL fetch
+        url_keywords = ['url', 'website', 'webpage', 'http', 'https', 'link', 'page content', 'read this']
+        if any(kw in query_lower for kw in url_keywords):
+            if 'fetch_url' in self.tool_manager.tools:
+                suggestions.append('fetch_url')
+
+        # Keywords that suggest file operations
+        file_keywords = ['file', 'read', 'open', 'contents of', 'show me']
+        if any(kw in query_lower for kw in file_keywords):
+            if 'read_file' in self.tool_manager.tools:
+                suggestions.append('read_file')
+
+        # Keywords that suggest calculator
+        calc_keywords = ['calculate', 'math', 'compute', 'multiply', 'divide', 'add', 'subtract', 'sum', 'plus', 'minus', 'times']
+        if any(kw in query_lower for kw in calc_keywords):
+            if 'calculator' in self.tool_manager.tools:
+                suggestions.append('calculator')
+
+        # Keywords that suggest directory listing
+        dir_keywords = ['list files', 'directory', 'folder', 'ls', 'dir', 'what files']
+        if any(kw in query_lower for kw in dir_keywords):
+            if 'list_directory' in self.tool_manager.tools:
+                suggestions.append('list_directory')
+
+        # Keywords that suggest file search
+        search_file_keywords = ['find files', 'search files', 'locate', '*.py', '*.txt', 'glob']
+        if any(kw in query_lower for kw in search_file_keywords):
+            if 'search_files' in self.tool_manager.tools:
+                suggestions.append('search_files')
+
+        # Keywords that suggest shell command execution
+        shell_keywords = ['mkdir', 'create directory', 'delete', 'remove', 'move', 'copy', 'rename',
+                         'execute', 'run', 'command', 'shell', 'bash', 'cmd', 'powershell',
+                         'git', 'npm', 'pip', 'install', 'build', 'compile', 'make']
+        if any(kw in query_lower for kw in shell_keywords):
+            if 'execute_shell_command' in self.tool_manager.tools:
+                suggestions.append('execute_shell_command')
+
+        return suggestions
 
     async def chat_with_tools(
         self,
@@ -293,10 +822,22 @@ class PerplexityClientPromptTools:
         if not self.enable_tools or not self.tool_manager:
             return await self._chat_without_tools(message, model)
 
-        # Add user message
+        # Show suggested tools for this query
+        suggested_tools = self._suggest_tools_for_query(message)
+        if suggested_tools:
+            tools_str = ", ".join(suggested_tools)
+            console.print(f"[dim]💡 Relevant tools for this query: {tools_str}[/dim]")
+
+        # Add user message with tool hint if relevant tools detected
+        user_content = message
+        if suggested_tools:
+            # Add a hint to the model about which tool to use
+            tool_hint = f"\n\n[System hint: Use the {suggested_tools[0]} tool to answer this question. Respond with the JSON tool call.]"
+            user_content = message + tool_hint
+
         self.conversation_history.append({
             "role": "user",
-            "content": message
+            "content": user_content
         })
 
         iteration = 0
@@ -399,21 +940,45 @@ class PerplexityClientPromptTools:
         """
         Parse a tool call from model response.
 
-        Looks for JSON code blocks with tool calls.
+        Looks for JSON in code blocks or raw JSON with tool/arguments keys.
         """
-        # Look for JSON code blocks
-        json_pattern = r'```json\s*(\{.*?\})\s*```'
+        # First, try to find JSON in code blocks (```json ... ```)
+        json_pattern = r'```(?:json)?\s*(\{.*?\})\s*```'
         matches = re.findall(json_pattern, text, re.DOTALL)
 
         for match in matches:
             try:
                 data = json.loads(match)
                 if "tool" in data and "arguments" in data:
-                    # Valid tool call
                     if data["tool"] in self.tool_manager.tools:
                         return data
             except json.JSONDecodeError:
                 continue
+
+        # If no code block found, try to find raw JSON object with tool/arguments
+        # This handles models that output JSON without markdown formatting
+        raw_json_pattern = r'\{\s*"tool"\s*:\s*"[^"]+"\s*,\s*"arguments"\s*:\s*\{[^}]*\}\s*\}'
+        raw_matches = re.findall(raw_json_pattern, text, re.DOTALL)
+
+        for match in raw_matches:
+            try:
+                data = json.loads(match)
+                if "tool" in data and "arguments" in data:
+                    if data["tool"] in self.tool_manager.tools:
+                        return data
+            except json.JSONDecodeError:
+                continue
+
+        # Last resort: try to parse the entire response as JSON
+        text_stripped = text.strip()
+        if text_stripped.startswith('{') and text_stripped.endswith('}'):
+            try:
+                data = json.loads(text_stripped)
+                if "tool" in data and "arguments" in data:
+                    if data["tool"] in self.tool_manager.tools:
+                        return data
+            except json.JSONDecodeError:
+                pass
 
         return None
 
@@ -453,6 +1018,93 @@ class PerplexityClientPromptTools:
     def clear_history(self):
         """Clear conversation history."""
         self.conversation_history = []
+
+    def chat(self, message: str, model: str, stream: bool = True):
+        """
+        Synchronous chat method for compatibility with AIClient.
+
+        When tools are enabled, this uses the async chat_with_tools internally.
+        Otherwise, it performs a simple chat request.
+
+        Args:
+            message: The user's message
+            model: The model ID to use
+            stream: Whether to stream the response (used only when tools disabled)
+
+        Returns:
+            The assistant's response
+        """
+        if self.enable_tools and self.tool_manager:
+            # Use async tool-enabled chat
+            return asyncio.run(self.chat_with_tools(message, model))
+        else:
+            # Simple non-tool chat
+            self.conversation_history.append({
+                "role": "user",
+                "content": message
+            })
+
+            try:
+                if stream:
+                    return self._stream_response(model)
+                else:
+                    return self._simple_response(model)
+            except Exception as e:
+                console.print(f"[red]Error: {str(e)}[/red]")
+                self.conversation_history.pop()
+                return None
+
+    def _stream_response(self, model: str):
+        """Stream the response from the API."""
+        response_chunks = []
+
+        response_stream = self.client.chat.completions.create(
+            model=model,
+            messages=self.conversation_history,
+            stream=True
+        )
+
+        console.print("\n[bold cyan]Assistant:[/bold cyan] [dim](streaming...)[/dim]")
+        for chunk in response_stream:
+            if chunk.choices[0].delta.content:
+                content = chunk.choices[0].delta.content
+                response_chunks.append(content)
+                console.print(".", end="", style="dim")
+
+        console.print("\n")
+        full_response = "".join(response_chunks)
+
+        if full_response.strip():
+            console.print(Markdown(full_response))
+
+        self.conversation_history.append({
+            "role": "assistant",
+            "content": full_response
+        })
+
+        return full_response
+
+    def _simple_response(self, model: str):
+        """Get a non-streaming response from the API."""
+        response = self.client.chat.completions.create(
+            model=model,
+            messages=self.conversation_history,
+            stream=False
+        )
+
+        assistant_message = response.choices[0].message.content
+
+        console.print("\n[bold cyan]Assistant:[/bold cyan]")
+        if assistant_message.strip():
+            console.print(Markdown(assistant_message))
+        console.print()
+
+        self.conversation_history.append({
+            "role": "assistant",
+            "content": assistant_message
+        })
+
+        return assistant_message
 
     async def cleanup(self):
         """Clean up resources."""
