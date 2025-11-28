@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-Quick test to verify prompt-based tools work with Perplexity
+Manual test script to verify prompt-based tools work with Perplexity
+
+This is not a pytest test - it's a manual testing script.
+Run directly with: python tests/test_prompt_tools.py
 """
 
 import asyncio
@@ -11,7 +14,7 @@ from perplexity_tools_prompt_based import PerplexityClientPromptTools
 
 console = Console()
 
-async def test():
+async def manual_test():
     load_dotenv()
     api_key = os.getenv('PERPLEXITY_API_KEY')
 
@@ -42,4 +45,4 @@ async def test():
     await client.cleanup()
 
 if __name__ == "__main__":
-    asyncio.run(test())
+    asyncio.run(manual_test())

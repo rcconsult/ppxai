@@ -49,6 +49,9 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
 - `read_file` - Read file contents
 - `list_directory` - List directory contents
 - `calculator` - Evaluate mathematical expressions
+- `execute_shell_command` - Execute system commands (mkdir, git, npm, etc.) 🆕
+- `get_datetime` - Get current date/time with timezone support
+- Plus web tools (for custom provider): weather, web search, URL fetch
 
 **Extensible System:**
 - Add custom Python tools in minutes

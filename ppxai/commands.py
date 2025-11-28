@@ -8,7 +8,7 @@ from typing import Optional, TYPE_CHECKING
 
 from rich.console import Console
 
-from .config import CODING_MODEL
+from .config import CODING_MODEL, get_coding_model, get_provider_config, get_api_key, get_base_url, PROVIDERS
 from .prompts import CODING_PROMPTS
 from .utils import read_file_content
 from .ui import (
@@ -16,6 +16,7 @@ from .ui import (
     display_welcome,
     display_spec_help,
     select_model,
+    select_provider,
     display_sessions,
     display_usage,
     display_global_usage,
@@ -23,19 +24,20 @@ from .ui import (
 )
 
 if TYPE_CHECKING:
-    from .client import PerplexityClient
+    from .client import AIClient
 
 
-def send_coding_task(client: 'PerplexityClient', task_type: str, user_message: str, model: str) -> Optional[str]:
+def send_coding_task(client: 'AIClient', task_type: str, user_message: str, model: str, provider: str = None) -> Optional[str]:
     """Send a coding task with appropriate system prompt and optional auto-routing."""
     if task_type not in CODING_PROMPTS:
         console.print(f"[red]Unknown task type: {task_type}[/red]")
         return None
 
-    # Auto-route to coding model if enabled
-    if client.auto_route and model != CODING_MODEL:
-        model = CODING_MODEL
-        console.print(f"[dim]Auto-routed to {CODING_MODEL} for coding task (disable with /autoroute off)[/dim]")
+    # Auto-route to coding model if enabled (use provider-specific coding model)
+    coding_model = get_coding_model(provider)
+    if client.auto_route and model != coding_model:
+        model = coding_model
+        console.print(f"[dim]Auto-routed to {coding_model} for coding task (disable with /autoroute off)[/dim]")
 
     # Create a temporary message with system instruction
     system_prompt = CODING_PROMPTS[task_type]
@@ -48,10 +50,12 @@ def send_coding_task(client: 'PerplexityClient', task_type: str, user_message: s
 class CommandHandler:
     """Handles all slash commands for the application."""
 
-    def __init__(self, client, api_key: str, current_model: str):
+    def __init__(self, client, api_key: str, current_model: str, base_url: str = None, provider: str = None):
         self.client = client
         self.api_key = api_key
         self.current_model = current_model
+        self.base_url = base_url or "https://api.perplexity.ai"
+        self.provider = provider or "perplexity"
         self.tools_available = False
         self.PerplexityClientPromptTools = None
         self.load_tool_config = None
@@ -88,22 +92,22 @@ class CommandHandler:
 
     def handle_sessions(self):
         """Handle /sessions command."""
-        from .client import PerplexityClient
-        sessions = PerplexityClient.list_sessions()
+        from .client import AIClient
+        sessions = AIClient.list_sessions()
         display_sessions(sessions)
 
     def handle_load(self, args: str):
         """Handle /load command."""
-        from .client import PerplexityClient
+        from .client import AIClient
 
         if not args:
             console.print("[red]Please specify a session name: /load <session_name>[/red]\n")
-            sessions = PerplexityClient.list_sessions()
+            sessions = AIClient.list_sessions()
             display_sessions(sessions)
             return
 
         try:
-            loaded_client = PerplexityClient.load_session(args.strip(), self.api_key)
+            loaded_client = AIClient.load_session(args.strip(), self.api_key, self.base_url, self.provider)
             if loaded_client:
                 self.client = loaded_client
                 self.current_model = self.client.session_metadata.get("model", self.current_model)
@@ -127,9 +131,51 @@ class CommandHandler:
 
     def handle_model(self):
         """Handle /model command."""
-        self.current_model = select_model()
+        self.current_model = select_model(self.provider)
         self.client.session_metadata["model"] = self.current_model
         console.print()
+
+    def handle_provider(self):
+        """Handle /provider command - switch between providers."""
+        from .client import AIClient
+
+        console.print(f"\n[cyan]Current provider:[/cyan] {self.provider}")
+
+        # Show available providers
+        new_provider = select_provider()
+
+        if new_provider == self.provider:
+            console.print("[dim]Same provider selected, no change needed.[/dim]\n")
+            return
+
+        # Check if new provider has API key configured
+        new_api_key = get_api_key(new_provider)
+        if not new_api_key:
+            config = get_provider_config(new_provider)
+            console.print(f"[red]Error: {config['api_key_env']} not configured.[/red]")
+            console.print("[yellow]Please add the API key to your .env file.[/yellow]\n")
+            return
+
+        # Switch to new provider
+        new_base_url = get_base_url(new_provider)
+        new_config = get_provider_config(new_provider)
+
+        # Create new client with the new provider
+        new_client = AIClient(new_api_key, new_base_url, provider=new_provider)
+        new_client.conversation_history = self.client.conversation_history
+        new_client.current_session_usage = self.client.current_session_usage
+
+        self.client = new_client
+        self.api_key = new_api_key
+        self.base_url = new_base_url
+        self.provider = new_provider
+
+        # Select model for new provider
+        self.current_model = select_model(new_provider)
+        self.client.session_metadata["model"] = self.current_model
+        self.client.session_metadata["provider"] = new_provider
+
+        console.print(f"\n[green]Switched to:[/green] {new_config['name']} ({new_base_url})\n")
 
     def handle_help(self):
         """Handle /help command."""
@@ -235,17 +281,19 @@ class CommandHandler:
 
     def handle_autoroute(self, args: str):
         """Handle /autoroute command."""
+        coding_model = get_coding_model(self.provider)
+
         if not args:
             status = "enabled" if self.client.auto_route else "disabled"
             console.print(f"\n[cyan]Auto-routing is currently:[/cyan] [bold]{status}[/bold]")
-            console.print(f"[dim]Auto-routing uses {CODING_MODEL} for coding commands[/dim]")
+            console.print(f"[dim]Auto-routing uses {coding_model} for coding commands[/dim]")
             console.print("[yellow]Use /autoroute on or /autoroute off to change[/yellow]\n")
             return
 
         arg = args.strip().lower()
         if arg == "on":
             self.client.auto_route = True
-            console.print(f"[green]Auto-routing enabled.[/green] Coding commands will use {CODING_MODEL}\n")
+            console.print(f"[green]Auto-routing enabled.[/green] Coding commands will use {coding_model}\n")
         elif arg == "off":
             self.client.auto_route = False
             console.print(f"[yellow]Auto-routing disabled.[/yellow] Manual model selection will be used\n")
@@ -287,8 +335,10 @@ class CommandHandler:
         # Upgrade client to tool-enabled version
         tool_client = self.PerplexityClientPromptTools(
             api_key=self.api_key,
+            base_url=self.base_url,
             session_name=self.client.session_name,
-            enable_tools=True
+            enable_tools=True,
+            provider=self.provider
         )
         # Copy conversation history
         tool_client.conversation_history = self.client.conversation_history
@@ -306,14 +356,14 @@ class CommandHandler:
 
     def _disable_tools(self):
         """Disable AI tools."""
-        from .client import PerplexityClient
+        from .client import AIClient
 
         if not isinstance(self.client, self.PerplexityClientPromptTools):
             console.print("[yellow]Tools not enabled[/yellow]\n")
             return
 
         # Downgrade to regular client
-        regular_client = PerplexityClient(self.api_key, self.client.session_name)
+        regular_client = AIClient(self.api_key, self.base_url, self.client.session_name, self.provider)
         regular_client.conversation_history = self.client.conversation_history
         regular_client.session_metadata = self.client.session_metadata
         regular_client.current_session_usage = self.client.current_session_usage
@@ -372,6 +422,8 @@ class CommandHandler:
             self.handle_clear()
         elif command == "/model":
             self.handle_model()
+        elif command == "/provider":
+            self.handle_provider()
         elif command == "/help":
             self.handle_help()
         elif command == "/generate":

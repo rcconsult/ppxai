@@ -1,8 +1,10 @@
 """
-Perplexity API client for interacting with Perplexity AI models.
+API client for interacting with LLM providers (Perplexity AI or custom self-hosted models).
 """
 
 import json
+import os
+import httpx
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List
@@ -16,26 +18,59 @@ from .config import (
     EXPORTS_DIR,
     USAGE_FILE,
     MODEL_PRICING,
+    MODEL_PROVIDER,
+    get_provider_config,
+    get_active_pricing,
 )
 
 # Initialize Rich console
 console = Console()
 
 
-class PerplexityClient:
-    """Client for interacting with Perplexity API."""
+class AIClient:
+    """Client for interacting with LLM APIs (Perplexity or custom self-hosted)."""
 
-    def __init__(self, api_key: str, session_name: Optional[str] = None):
-        """Initialize the Perplexity client."""
-        self.client = OpenAI(
-            api_key=api_key,
-            base_url="https://api.perplexity.ai"
-        )
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str = "https://api.perplexity.ai",
+        session_name: Optional[str] = None,
+        provider: Optional[str] = None
+    ):
+        """
+        Initialize the AI client.
+
+        Args:
+            api_key: API key for authentication
+            base_url: Base URL for the API endpoint
+            session_name: Optional session name for conversation tracking
+            provider: Provider name (perplexity, custom) for pricing lookup
+        """
+        # Check if SSL verification should be disabled
+        # Use SSL_VERIFY environment variable (applies to all HTTPS connections)
+        ssl_verify = os.getenv("SSL_VERIFY", "true").lower() != "false"
+
+        if not ssl_verify:
+            # Create custom httpx client with SSL verification disabled
+            http_client = httpx.Client(verify=False)
+            self.client = OpenAI(
+                api_key=api_key,
+                base_url=base_url,
+                http_client=http_client
+            )
+        else:
+            self.client = OpenAI(
+                api_key=api_key,
+                base_url=base_url
+            )
+        self.base_url = base_url
+        self.provider = provider or MODEL_PROVIDER
         self.conversation_history = []
         self.session_name = session_name or f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         self.session_metadata = {
             "created_at": datetime.now().isoformat(),
             "model": None,
+            "provider": self.provider,
             "message_count": 0
         }
         self.current_session_usage = {
@@ -48,7 +83,7 @@ class PerplexityClient:
 
     def chat(self, message: str, model: str, stream: bool = True):
         """
-        Send a chat message to Perplexity API.
+        Send a chat message to the LLM API.
 
         Args:
             message: The user's message
@@ -185,9 +220,10 @@ class PerplexityClient:
         self.current_session_usage["completion_tokens"] += completion_tokens
         self.current_session_usage["total_tokens"] += total_tokens
 
-        # Calculate cost
-        if model in MODEL_PRICING:
-            pricing = MODEL_PRICING[model]
+        # Calculate cost using provider-specific pricing
+        pricing_table = get_active_pricing()
+        if model in pricing_table:
+            pricing = pricing_table[model]
             input_cost = (prompt_tokens / 1_000_000) * pricing["input"]
             output_cost = (completion_tokens / 1_000_000) * pricing["output"]
             total_cost = input_cost + output_cost
@@ -284,7 +320,12 @@ class PerplexityClient:
         return filepath
 
     @staticmethod
-    def load_session(session_name: str, api_key: str) -> Optional['PerplexityClient']:
+    def load_session(
+        session_name: str,
+        api_key: str,
+        base_url: str = "https://api.perplexity.ai",
+        provider: str = None
+    ) -> Optional['AIClient']:
         """Load a saved session."""
         filepath = SESSIONS_DIR / f"{session_name}.json"
 
@@ -294,7 +335,7 @@ class PerplexityClient:
         with open(filepath, 'r', encoding='utf-8') as f:
             session_data = json.load(f)
 
-        client = PerplexityClient(api_key, session_name)
+        client = AIClient(api_key, base_url, session_name, provider)
         client.conversation_history = session_data.get("conversation_history", [])
         client.session_metadata = session_data.get("metadata", {})
         client.current_session_usage = session_data.get("usage", {
@@ -324,3 +365,7 @@ class PerplexityClient:
                 continue
 
         return sorted(sessions, key=lambda x: x.get("saved_at", ""), reverse=True)
+
+
+# Backward compatibility alias
+PerplexityClient = AIClient

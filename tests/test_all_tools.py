@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-Test all built-in tools with Perplexity
+Manual test script for all built-in tools with Perplexity
+
+This is not a pytest test - it's a manual testing script.
+Run directly with: python tests/test_all_tools.py
 """
 
 import asyncio
@@ -12,7 +15,7 @@ from perplexity_tools_prompt_based import PerplexityClientPromptTools
 
 console = Console()
 
-async def test_tool(client, name, prompt):
+async def run_tool_test(client, name, prompt):
     """Test a specific tool."""
     console.print(f"\n{'='*70}")
     console.print(Panel(f"[bold cyan]Testing: {name}[/bold cyan]", border_style="cyan"))
@@ -42,28 +45,28 @@ async def main():
     await client.initialize_tools()
 
     # Test 1: Calculator
-    await test_tool(
+    await run_tool_test(
         client,
         "Calculator Tool",
         "Use the calculator tool to compute (123 + 456) * 2"
     )
 
     # Test 2: Search Files
-    await test_tool(
+    await run_tool_test(
         client,
         "Search Files Tool",
         "Use the search_files tool to find all Python files (*.py) in the current directory"
     )
 
     # Test 3: List Directory
-    await test_tool(
+    await run_tool_test(
         client,
         "List Directory Tool",
         "Use the list_directory tool to show me what files are in the current directory"
     )
 
     # Test 4: Read File (using a file we know exists)
-    await test_tool(
+    await run_tool_test(
         client,
         "Read File Tool",
         "Use the read_file tool to read the first 20 lines of README.md if it exists"
