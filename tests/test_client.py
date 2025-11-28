@@ -5,7 +5,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from ppxai.client import PerplexityClient
+from ppxai.client import PerplexityClient, AIClient
 
 
 class TestPerplexityClient:
@@ -135,3 +135,110 @@ class TestPerplexityClientUsageTracking:
         # Sonar pricing: $0.20 input + $0.20 output = $0.40 per million
         expected_cost = 0.20 + 0.20  # $0.40
         assert abs(client.current_session_usage["estimated_cost"] - expected_cost) < 0.01
+
+
+class TestAIClientMultiProvider:
+    """Tests for AIClient multi-provider support."""
+
+    @pytest.fixture
+    def perplexity_client(self):
+        """Create a Perplexity client instance for testing."""
+        with patch('ppxai.client.OpenAI'):
+            return AIClient("test-api-key", provider="perplexity")
+
+    @pytest.fixture
+    def custom_client(self):
+        """Create a custom provider client instance for testing."""
+        with patch('ppxai.client.OpenAI'):
+            return AIClient(
+                "custom-api-key",
+                base_url="https://custom.example.com/v1",
+                provider="custom"
+            )
+
+    def test_aiclient_is_perplexityclient(self):
+        """Test that AIClient and PerplexityClient are the same."""
+        assert AIClient is PerplexityClient
+
+    def test_client_stores_provider(self, perplexity_client):
+        """Test that client stores provider name."""
+        assert perplexity_client.provider == "perplexity"
+
+    def test_custom_client_stores_provider(self, custom_client):
+        """Test that custom client stores provider name."""
+        assert custom_client.provider == "custom"
+
+    def test_client_stores_base_url(self, custom_client):
+        """Test that client stores custom base URL."""
+        assert custom_client.base_url == "https://custom.example.com/v1"
+
+    def test_perplexity_client_default_base_url(self, perplexity_client):
+        """Test that perplexity client uses default base URL."""
+        assert perplexity_client.base_url == "https://api.perplexity.ai"
+
+    def test_session_metadata_includes_provider(self, custom_client):
+        """Test that session metadata includes provider."""
+        assert "provider" in custom_client.session_metadata
+        assert custom_client.session_metadata["provider"] == "custom"
+
+    def test_openai_client_initialized_with_custom_url(self):
+        """Test that OpenAI client is initialized with custom base URL."""
+        # Temporarily override SSL_VERIFY to ensure consistent test behavior
+        with patch.dict('os.environ', {"SSL_VERIFY": "true"}):
+            with patch('ppxai.client.OpenAI') as mock_openai:
+                AIClient(
+                    "test-key",
+                    base_url="https://custom.example.com/v1",
+                    provider="custom"
+                )
+                mock_openai.assert_called_once_with(
+                    api_key="test-key",
+                    base_url="https://custom.example.com/v1"
+                )
+
+
+class TestAIClientLoadSessionWithProvider:
+    """Tests for loading sessions with provider support."""
+
+    @pytest.fixture
+    def temp_sessions_dir(self, tmp_path):
+        """Create a temporary sessions directory."""
+        sessions_dir = tmp_path / "sessions"
+        sessions_dir.mkdir()
+        return sessions_dir
+
+    def test_load_session_with_provider(self, temp_sessions_dir, monkeypatch):
+        """Test loading a session with custom provider."""
+        monkeypatch.setattr('ppxai.client.SESSIONS_DIR', temp_sessions_dir)
+
+        # Create a test session file
+        session_data = {
+            "session_name": "custom-session",
+            "metadata": {
+                "created_at": "2024-01-01T00:00:00",
+                "provider": "custom"
+            },
+            "conversation_history": [{"role": "user", "content": "hello"}],
+            "usage": {
+                "total_tokens": 100,
+                "prompt_tokens": 50,
+                "completion_tokens": 50,
+                "estimated_cost": 0.0
+            },
+            "saved_at": "2024-01-01T01:00:00"
+        }
+        session_file = temp_sessions_dir / "custom-session.json"
+        session_file.write_text(json.dumps(session_data))
+
+        with patch('ppxai.client.OpenAI'):
+            loaded_client = AIClient.load_session(
+                "custom-session",
+                "custom-api-key",
+                base_url="https://custom.example.com/v1",
+                provider="custom"
+            )
+
+        assert loaded_client is not None
+        assert loaded_client.provider == "custom"
+        assert loaded_client.base_url == "https://custom.example.com/v1"
+        assert len(loaded_client.conversation_history) == 1
