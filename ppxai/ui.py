@@ -11,7 +11,7 @@ from rich.markdown import Markdown
 from rich.prompt import Prompt
 from rich.table import Table
 
-from .config import MODELS, USAGE_FILE
+from .config import MODELS, USAGE_FILE, PROVIDERS, get_provider_config
 from .prompts import SPEC_GUIDELINES, SPEC_TEMPLATES
 
 # Initialize Rich console
@@ -21,9 +21,9 @@ console = Console()
 def display_welcome():
     """Display welcome message."""
     welcome_text = """
-# Perplexity AI Text UI
+# ppxai - AI Text UI
 
-Welcome to the Perplexity AI terminal interface!
+Welcome to the AI terminal interface!
 
 ## General Commands
 - Type your question or prompt to chat
@@ -45,7 +45,8 @@ Welcome to the Perplexity AI terminal interface!
 - `/explain <file>` - Explain code logic and design decisions step-by-step
 - `/convert <from> <to> <file>` - Convert code between programming languages
 - `/spec [type]` - Show specification guidelines and templates (api, cli, lib, algo, ui)
-- `/autoroute [on|off]` - Toggle auto-routing to Sonar Pro for coding tasks (currently enabled by default)
+- `/autoroute [on|off]` - Toggle auto-routing to best coding model (enabled by default)
+- `/provider` - Switch between providers (Perplexity, Custom)
 
 ## AI Tools (Experimental)
 - `/tools enable` - Enable AI tools (file search, calculator, etc.)
@@ -70,32 +71,67 @@ def display_spec_help(spec_type: Optional[str] = None):
         console.print("[yellow]Use /spec without arguments for general guidelines[/yellow]\n")
 
 
-def display_models():
+def display_models(provider: str = None):
     """Display available models in a table."""
-    table = Table(title="Available Models", show_header=True, header_style="bold magenta")
+    config = get_provider_config(provider)
+    models = config["models"]
+    provider_name = config["name"]
+
+    table = Table(title=f"Available Models ({provider_name})", show_header=True, header_style="bold magenta")
     table.add_column("Choice", style="cyan", width=8)
     table.add_column("Name", style="green")
     table.add_column("Description", style="white")
 
-    for choice, model in MODELS.items():
+    for choice, model in models.items():
         table.add_row(choice, model["name"], model["description"])
 
     console.print(table)
 
 
-def select_model() -> Optional[str]:
+def select_model(provider: str = None) -> Optional[str]:
     """Prompt user to select a model."""
-    display_models()
+    config = get_provider_config(provider)
+    models = config["models"]
+
+    display_models(provider)
+
+    # Default to first model if only one available
+    default_choice = "1" if len(models) == 1 else "2" if "2" in models else "1"
 
     choice = Prompt.ask(
         "\n[bold yellow]Select a model[/bold yellow]",
-        choices=list(MODELS.keys()),
-        default="2"
+        choices=list(models.keys()),
+        default=default_choice
     )
 
-    selected_model = MODELS[choice]
+    selected_model = models[choice]
     console.print(f"\n[green]Selected:[/green] {selected_model['name']}")
     return selected_model["id"]
+
+
+def select_provider() -> str:
+    """Prompt user to select a provider."""
+    table = Table(title="Available Providers", show_header=True, header_style="bold magenta")
+    table.add_column("Choice", style="cyan", width=8)
+    table.add_column("Provider", style="green")
+    table.add_column("Endpoint", style="white")
+
+    provider_keys = list(PROVIDERS.keys())
+    for idx, key in enumerate(provider_keys, 1):
+        config = PROVIDERS[key]
+        table.add_row(str(idx), config["name"], config["base_url"])
+
+    console.print(table)
+
+    choice = Prompt.ask(
+        "\n[bold yellow]Select a provider[/bold yellow]",
+        choices=[str(i) for i in range(1, len(provider_keys) + 1)],
+        default="1"
+    )
+
+    selected_provider = provider_keys[int(choice) - 1]
+    console.print(f"\n[green]Selected:[/green] {PROVIDERS[selected_provider]['name']}")
+    return selected_provider
 
 
 def display_sessions(sessions):

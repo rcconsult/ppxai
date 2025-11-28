@@ -1,7 +1,7 @@
 """
-ppxai - Perplexity AI Text UI Application
+ppxai - AI Text UI Application
 
-A terminal-based interface for interacting with Perplexity AI models.
+A terminal-based interface for interacting with LLM providers (Perplexity AI or custom self-hosted models).
 """
 
 from .config import (
@@ -11,8 +11,16 @@ from .config import (
     MODEL_PRICING,
     MODELS,
     CODING_MODEL,
+    MODEL_PROVIDER,
+    PROVIDERS,
+    get_provider_config,
+    get_active_models,
+    get_active_pricing,
+    get_api_key,
+    get_base_url,
+    get_coding_model,
 )
-from .client import PerplexityClient
+from .client import AIClient, PerplexityClient
 from .prompts import CODING_PROMPTS, SPEC_GUIDELINES, SPEC_TEMPLATES
 from .ui import (
     console,
@@ -20,6 +28,7 @@ from .ui import (
     display_spec_help,
     display_models,
     select_model,
+    select_provider,
     display_sessions,
     display_usage,
     display_global_usage,
@@ -36,8 +45,17 @@ __all__ = [
     "MODEL_PRICING",
     "MODELS",
     "CODING_MODEL",
+    "MODEL_PROVIDER",
+    "PROVIDERS",
+    "get_provider_config",
+    "get_active_models",
+    "get_active_pricing",
+    "get_api_key",
+    "get_base_url",
+    "get_coding_model",
     # Client
-    "PerplexityClient",
+    "AIClient",
+    "PerplexityClient",  # Backward compatibility alias
     # Prompts
     "CODING_PROMPTS",
     "SPEC_GUIDELINES",
@@ -48,6 +66,7 @@ __all__ = [
     "display_spec_help",
     "display_models",
     "select_model",
+    "select_provider",
     "display_sessions",
     "display_usage",
     "display_global_usage",
@@ -59,4 +78,4 @@ __all__ = [
     "send_coding_task",
 ]
 
-__version__ = "1.0.0"
+__version__ = "1.5.0"
