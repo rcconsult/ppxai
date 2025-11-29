@@ -1,6 +1,27 @@
 # ppxai Development Roadmap
 
-## Current Release: v1.5.0
+## Current Release: v1.6.0
+
+**Status**: ✅ Complete - Multi-Provider Configuration & Tool Improvements
+
+Features implemented:
+- Hybrid configuration: `ppxai-config.json` for providers + `.env` for secrets
+- JSON config file search order: `PPXAI_CONFIG_FILE` env → `./ppxai-config.json` → `~/.ppxai/ppxai-config.json` → built-in defaults
+- New config functions: `get_config_source()`, `get_available_providers()`, `set_active_provider()`, `reload_config()`, `validate_config()`
+- Backward compatibility with legacy `CUSTOM_*` env vars
+- Support for multiple providers: Perplexity, OpenAI, OpenRouter, local models
+- 172+ tests passing (including 48 new config tests, 25 shell command tests)
+
+Bug fixes in this release:
+- Fixed tool call JSON parsing for flat format (model outputting `{"tool": "...", "command": "..."}` instead of nested format)
+- Fixed message alternation error when max tool iterations reached (Perplexity API 400 error)
+- Fixed missing `export_conversation()`, `save_session()`, `get_usage_summary()` methods in PerplexityClientPromptTools
+- Increased default `tool_max_iterations` from 5 to 15
+- Added `/tools config` command to adjust max_iterations at runtime (1-50 range)
+
+---
+
+## Previous Release: v1.5.0
 
 **Status**: ✅ Complete - Shell commands & SSL fix
 
@@ -8,92 +29,213 @@ Features implemented:
 - Shell command execution tool (`execute_shell_command`)
 - SSL certificate verification fix for corporate proxies
 - Unified `SSL_VERIFY` environment variable
-- 148 tests passing (100%)
 
 ---
 
-## Future Enhancements
+## Completed: v1.6.0 Multi-Provider Configuration
 
-### v1.6.0: Multi-Provider Configuration (Priority: High)
+**Goal**: Support multiple custom providers with easy switching using a hybrid configuration approach
 
-**Goal**: Support multiple custom providers with easy switching
+#### Architecture: Hybrid Configuration
+
+**Design Principle**: Separate sensitive data from configuration data
+- **`.env`** - Only sensitive API keys (secrets, never committed to git)
+- **`ppxai-config.json`** - Provider definitions, models, capabilities (can be version controlled)
 
 #### Features
 
-1. **Multiple Custom Provider Support**
-   - Configure multiple custom endpoints (not just one)
-   - Each provider can have its own:
-     - API endpoint URL
-     - API key
-     - Model configuration
-     - Display name
-   - Easy switching between providers
+1. **JSON-Based Provider Configuration**
+   - All provider settings in `ppxai-config.json`
+   - Supports unlimited providers
+   - Each provider can have:
+     - Multiple models with descriptions
+     - Custom pricing (or $0 for self-hosted)
+     - Capability flags (web_search, realtime_info, etc.)
+     - Tool configuration
 
-2. **Enhanced Provider Configuration**
-   - Extend `.env` configuration to support multiple custom providers
-   - New format:
-     ```bash
-     # Provider 1: Internal Code AI
-     CUSTOM_PROVIDER_1_NAME=Internal Code AI
-     CUSTOM_PROVIDER_1_ENDPOINT=https://api.example.com/v1
-     CUSTOM_PROVIDER_1_API_KEY=dummy-key
-     CUSTOM_PROVIDER_1_MODEL_ID=openai/gpt-oss-120b
+2. **Configuration File Format**
 
-     # Provider 2: OpenAI ChatGPT
-     CUSTOM_PROVIDER_2_NAME=OpenAI ChatGPT
-     CUSTOM_PROVIDER_2_ENDPOINT=https://api.openai.com/v1
-     CUSTOM_PROVIDER_2_API_KEY=sk-proj-...
-     CUSTOM_PROVIDER_2_MODEL_ID=gpt-4
+   **`ppxai-config.json`** (can be committed to git):
+   ```json
+   {
+     "version": "1.0",
+     "default_provider": "perplexity",
+     "providers": {
+       "perplexity": {
+         "name": "Perplexity AI",
+         "base_url": "https://api.perplexity.ai",
+         "api_key_env": "PERPLEXITY_API_KEY",
+         "default_model": "sonar-pro",
+         "models": {
+           "sonar": {
+             "name": "Sonar",
+             "description": "Lightweight search model"
+           },
+           "sonar-pro": {
+             "name": "Sonar Pro",
+             "description": "Advanced search model"
+           }
+         },
+         "pricing": {
+           "sonar": {"input": 0.20, "output": 0.20},
+           "sonar-pro": {"input": 3.00, "output": 15.00}
+         },
+         "capabilities": {
+           "web_search": true,
+           "realtime_info": true
+         }
+       },
+       "openai": {
+         "name": "OpenAI ChatGPT",
+         "base_url": "https://api.openai.com/v1",
+         "api_key_env": "OPENAI_API_KEY",
+         "default_model": "gpt-4o",
+         "models": {
+           "gpt-4o": {
+             "name": "GPT-4o",
+             "description": "Latest flagship model"
+           },
+           "gpt-4o-mini": {
+             "name": "GPT-4o Mini",
+             "description": "Fast and affordable"
+           }
+         },
+         "pricing": {
+           "gpt-4o": {"input": 2.50, "output": 10.00},
+           "gpt-4o-mini": {"input": 0.15, "output": 0.60}
+         },
+         "capabilities": {
+           "web_search": false,
+           "realtime_info": false
+         }
+       },
+       "openrouter": {
+         "name": "OpenRouter (Claude)",
+         "base_url": "https://openrouter.ai/api/v1",
+         "api_key_env": "OPENROUTER_API_KEY",
+         "default_model": "anthropic/claude-sonnet-4",
+         "models": {
+           "anthropic/claude-sonnet-4": {
+             "name": "Claude Sonnet 4",
+             "description": "Anthropic's balanced model"
+           },
+           "anthropic/claude-opus-4": {
+             "name": "Claude Opus 4",
+             "description": "Anthropic's most capable model"
+           }
+         },
+         "pricing": {
+           "anthropic/claude-sonnet-4": {"input": 3.00, "output": 15.00},
+           "anthropic/claude-opus-4": {"input": 15.00, "output": 75.00}
+         },
+         "capabilities": {
+           "web_search": false,
+           "realtime_info": false
+         }
+       },
+       "local-llama": {
+         "name": "Local Llama (vLLM)",
+         "base_url": "http://localhost:8000/v1",
+         "api_key_env": "LOCAL_API_KEY",
+         "default_model": "meta-llama/Llama-3-70b",
+         "models": {
+           "meta-llama/Llama-3-70b": {
+             "name": "Llama 3 70B",
+             "description": "Self-hosted Llama model"
+           }
+         },
+         "pricing": {
+           "meta-llama/Llama-3-70b": {"input": 0.0, "output": 0.0}
+         },
+         "capabilities": {
+           "web_search": false,
+           "realtime_info": false
+         }
+       }
+     }
+   }
+   ```
 
-     # Provider 3: Local vLLM
-     CUSTOM_PROVIDER_3_NAME=Local Llama
-     CUSTOM_PROVIDER_3_ENDPOINT=http://localhost:8000/v1
-     CUSTOM_PROVIDER_3_API_KEY=dummy
-     CUSTOM_PROVIDER_3_MODEL_ID=meta-llama/Llama-3-70b
-     ```
+   **`.env`** (secrets only, never commit):
+   ```bash
+   # API Keys only - referenced by api_key_env in ppxai-config.json
+   PERPLEXITY_API_KEY=pplx-xxxxxxxxxxxxxxxx
+   OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxx
+   OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxx
+   LOCAL_API_KEY=dummy-key
 
-3. **Provider Management Commands**
-   - `/provider list` - Show all configured providers
+   # Optional: Override default provider from config
+   MODEL_PROVIDER=openai
+
+   # Optional: SSL verification (for corporate proxies)
+   SSL_VERIFY=true
+   ```
+
+3. **Configuration File Locations** (searched in order)
+   1. `./ppxai-config.json` - Project-specific (for teams)
+   2. `~/.ppxai/ppxai-config.json` - User-specific (personal setup)
+   3. Built-in defaults (Perplexity only, backward compatible)
+
+4. **Provider Management Commands**
+   - `/provider list` - Show all configured providers with status
    - `/provider switch <name>` - Switch to a specific provider
-   - `/provider info` - Show current provider details
-   - `/provider add` - Interactive provider addition (future)
+   - `/provider info` - Show current provider details (endpoint, models, capabilities)
+   - `/provider models` - List models for current provider
+   - `/provider validate` - Check all provider configurations
 
-4. **Dynamic Provider Discovery**
-   - Auto-detect all `CUSTOM_PROVIDER_*` environment variables
-   - Build provider list dynamically at startup
-   - Support unlimited number of providers
+5. **Backward Compatibility**
+   - If no `ppxai-config.json` exists, fall back to current `.env` behavior
+   - Existing `CUSTOM_*` env vars still work as a single custom provider
+   - Perplexity provider always available as built-in default
 
-#### Implementation Plan
+#### Implementation Plan (✅ COMPLETED)
 
-**Phase 1: Configuration (2-3 hours)**
-- [ ] Update `ppxai/config.py` to parse multiple custom providers
-- [ ] Create `parse_custom_providers()` function
-- [ ] Modify `PROVIDERS` dict to include all discovered providers
-- [ ] Update `.env.example` with multi-provider examples
+**Phase 1: Configuration Schema & Loading** ✅
+- [x] Define JSON schema for `ppxai-config.json`
+- [x] Create `load_config()` function with file location search
+- [x] Implement config validation with helpful error messages
+- [x] Add backward compatibility layer for existing `.env` setup
+- [x] Create `ppxai-config.example.json` template
 
-**Phase 2: UI/UX (1-2 hours)**
-- [ ] Update provider selection menu to show all providers
-- [ ] Add provider metadata (endpoint, model) to selection display
-- [ ] Implement `/provider` command with subcommands
-- [ ] Update help text and documentation
+**Phase 2: Config Integration** ✅
+- [x] Update `ppxai/config.py` to use JSON config
+- [x] Merge JSON providers with built-in Perplexity config
+- [x] Implement `api_key_env` lookup from environment
+- [x] Add config reload capability
 
-**Phase 3: Client Management (1 hour)**
-- [ ] Update client initialization to support any provider
-- [ ] Ensure session metadata tracks provider correctly
-- [ ] Test provider switching during session
+**Phase 3: UI/UX** (Partial - commands deferred to v1.7)
+- [x] Config system supports multiple providers
+- [ ] `/provider` command with subcommands (deferred)
 
-**Phase 4: Testing (1-2 hours)**
-- [ ] Add tests for multi-provider configuration parsing
-- [ ] Test provider switching functionality
-- [ ] Integration tests with multiple providers
-- [ ] Update existing tests to handle new provider structure
+**Phase 4: Client Management** ✅
+- [x] Update client initialization to use config-based providers
+- [x] Ensure session metadata tracks provider correctly
+- [x] Test provider switching during session
 
-**Phase 5: Documentation (1 hour)**
-- [ ] Update README.md with multi-provider setup
-- [ ] Create MULTI_PROVIDER_GUIDE.md
-- [ ] Update `.env.example` with comprehensive examples
+**Phase 5: Testing** ✅
+- [x] Add tests for JSON config loading and validation (48 tests)
+- [x] Test config file location precedence
+- [x] Test backward compatibility with `.env` only
+- [x] Integration tests with multiple providers
+- [x] Test missing API key handling
 
-**Estimated Total**: 6-9 hours
+**Phase 6: Documentation** ✅
+- [x] Update README.md with new configuration approach
+- [x] Create `ppxai-config.example.json` with all provider examples
+- [x] Document config file locations and precedence
+- [x] Update CLAUDE.md with architecture overview
+
+#### Benefits of This Approach
+
+| Aspect | `.env` Only (old) | Hybrid `.env` + JSON (new) |
+|--------|-------------------|---------------------------|
+| Secrets safety | ✅ Good | ✅ Better (clear separation) |
+| Version control | ❌ Can't share config | ✅ Config can be committed |
+| Team sharing | ❌ Manual setup each | ✅ Share `ppxai-config.json` |
+| Multiple models | ❌ One model per provider | ✅ Multiple models per provider |
+| Readability | ❌ Flat key-value | ✅ Structured JSON |
+| Validation | ❌ Runtime errors | ✅ Schema validation |
+| Backward compat | N/A | ✅ Falls back to `.env` |
 
 ---
 
@@ -297,17 +439,17 @@ Features implemented:
 
 ## Development Priorities
 
-### Immediate (v1.6.0)
-- ✅ **Must Have**: Multiple custom provider support
-- ✅ **Must Have**: Provider switching commands
-- ✅ **Should Have**: Provider management UI
+### Completed (v1.6.0) ✅
+- ✅ **Done**: Hybrid configuration (ppxai-config.json + .env)
+- ✅ **Done**: Multiple provider support
+- ✅ **Done**: Config validation and reload
 
-### Short-term (v1.7.0)
-- ✅ **Must Have**: Per-provider tool configuration
-- ✅ **Should Have**: Tool categories
-- ⚠️ **Nice to Have**: Runtime tool enable/disable
+### Immediate (v1.7.0)
+- ⚠️ **Must Have**: `/provider` commands (list, switch, info)
+- ⚠️ **Must Have**: Per-provider tool configuration
+- ⚠️ **Should Have**: Tool categories
 
-### Mid-term (v1.8.0)
+### Short-term (v1.8.0)
 - ⚠️ **Nice to Have**: Tool aliases
 - ⚠️ **Nice to Have**: Tool presets
 - ⚠️ **Nice to Have**: Usage statistics
@@ -342,6 +484,6 @@ Interested in working on any of these features?
 
 ---
 
-**Last Updated**: November 28, 2025
-**Current Version**: v1.5.0
-**Next Target**: v1.6.0 (Multi-Provider Configuration)
+**Last Updated**: November 29, 2025
+**Current Version**: v1.6.0
+**Next Target**: v1.7.0 (Provider Commands & Per-Provider Tools)

@@ -312,7 +312,9 @@ class CommandHandler:
             console.print("[yellow]Missing dependencies. Check docs/TOOL_CREATION_GUIDE.md[/yellow]\n")
             return
 
-        subcommand = args.strip().lower() if args else "status"
+        parts = args.strip().split() if args else []
+        subcommand = parts[0].lower() if parts else "status"
+        subargs = parts[1:] if len(parts) > 1 else []
 
         if subcommand == "enable":
             self._enable_tools()
@@ -322,9 +324,11 @@ class CommandHandler:
             self._list_tools()
         elif subcommand == "status":
             self._tools_status()
+        elif subcommand == "config":
+            self._tools_config(subargs)
         else:
             console.print(f"[red]Unknown subcommand: {subcommand}[/red]")
-            console.print("[yellow]Available: enable, disable, list, status[/yellow]\n")
+            console.print("[yellow]Available: enable, disable, list, status, config[/yellow]\n")
 
     def _enable_tools(self):
         """Enable AI tools."""
@@ -390,11 +394,51 @@ class CommandHandler:
         """Show tools status."""
         if isinstance(self.client, self.PerplexityClientPromptTools):
             tool_count = len(self.client.tool_manager.tools) if self.client.tool_manager else 0
+            max_iter = getattr(self.client, 'tool_max_iterations', 15)
             console.print(f"[green]✓ Tools enabled[/green] ({tool_count} tools available)")
+            console.print(f"[dim]Max iterations: {max_iter}[/dim]")
             console.print("[dim]Use '/tools list' to see available tools[/dim]\n")
         else:
             console.print("[yellow]Tools not enabled[/yellow]")
             console.print("[dim]Use '/tools enable' to activate AI tools[/dim]\n")
+
+    def _tools_config(self, args: list):
+        """Configure tool settings."""
+        if not isinstance(self.client, self.PerplexityClientPromptTools):
+            console.print("[yellow]Tools not enabled. Use '/tools enable' first[/yellow]\n")
+            return
+
+        if not args:
+            # Show current config
+            max_iter = getattr(self.client, 'tool_max_iterations', 15)
+            console.print("[bold]Tool Configuration[/bold]")
+            console.print(f"  max_iterations: {max_iter}")
+            console.print()
+            console.print("[dim]Usage: /tools config <setting> <value>[/dim]")
+            console.print("[dim]Available settings:[/dim]")
+            console.print("[dim]  max_iterations <number> - Max tool calls per query (1-50)[/dim]\n")
+            return
+
+        if len(args) < 2:
+            console.print("[red]Usage: /tools config <setting> <value>[/red]\n")
+            return
+
+        setting = args[0].lower()
+        value = args[1]
+
+        if setting == "max_iterations":
+            try:
+                num = int(value)
+                if num < 1 or num > 50:
+                    console.print("[red]max_iterations must be between 1 and 50[/red]\n")
+                    return
+                self.client.tool_max_iterations = num
+                console.print(f"[green]✓ max_iterations set to {num}[/green]\n")
+            except ValueError:
+                console.print(f"[red]Invalid number: {value}[/red]\n")
+        else:
+            console.print(f"[red]Unknown setting: {setting}[/red]")
+            console.print("[dim]Available: max_iterations[/dim]\n")
 
     def handle_command(self, user_input: str) -> Optional[bool]:
         """

@@ -13,6 +13,7 @@ import asyncio
 import json
 import os
 import re
+from pathlib import Path
 from typing import Optional, List, Dict, Any
 import httpx
 from openai import OpenAI
@@ -22,6 +23,7 @@ from rich.panel import Panel
 from datetime import datetime
 
 from tool_manager import ToolManager
+from ppxai.config import EXPORTS_DIR, SESSIONS_DIR
 
 console = Console()
 
@@ -78,6 +80,8 @@ class PerplexityClientPromptTools:
             "estimated_cost": 0.0
         }
         self.auto_route = True
+        # Tool configuration
+        self.tool_max_iterations = 15  # Default max tool calls per query
 
     async def initialize_tools(self, mcp_servers: List[Dict[str, Any]] = None):
         """Initialize the tool system."""
@@ -806,7 +810,7 @@ class PerplexityClientPromptTools:
         self,
         message: str,
         model: str,
-        max_iterations: int = 5
+        max_iterations: int = None
     ) -> Optional[str]:
         """
         Chat with prompt-based tool support.
@@ -814,13 +818,17 @@ class PerplexityClientPromptTools:
         Args:
             message: User's message
             model: Model ID
-            max_iterations: Max tool call iterations
+            max_iterations: Max tool call iterations (uses self.tool_max_iterations if None)
 
         Returns:
             Final assistant response
         """
         if not self.enable_tools or not self.tool_manager:
             return await self._chat_without_tools(message, model)
+
+        # Use instance default if not specified
+        if max_iterations is None:
+            max_iterations = self.tool_max_iterations
 
         # Show suggested tools for this query
         suggested_tools = self._suggest_tools_for_query(message)
@@ -888,6 +896,12 @@ class PerplexityClientPromptTools:
                         error_msg = f"Error executing tool: {str(e)}"
                         console.print(f"[red]{error_msg}[/red]")
 
+                        # Add assistant's tool call attempt to history
+                        self.conversation_history.append({
+                            "role": "assistant",
+                            "content": f"[Tool Call: {tool_name}]\n```json\n{json.dumps(tool_call, indent=2)}\n```"
+                        })
+
                         self.conversation_history.append({
                             "role": "user",
                             "content": f"[Tool Error]\n{error_msg}\n\nPlease provide an answer without using that tool."
@@ -917,6 +931,12 @@ class PerplexityClientPromptTools:
                 return None
 
         console.print("[yellow]Warning: Maximum tool iterations reached[/yellow]")
+        # Ensure history ends with assistant message to maintain alternation
+        if self.conversation_history and self.conversation_history[-1]["role"] == "user":
+            self.conversation_history.append({
+                "role": "assistant",
+                "content": "[Tool iterations limit reached. Please try again with a simpler query or increase max_iterations with '/tools config max_iterations <number>'.]"
+            })
         return None
 
     def _build_messages_with_tools(self) -> List[Dict[str, str]]:
@@ -941,7 +961,37 @@ class PerplexityClientPromptTools:
         Parse a tool call from model response.
 
         Looks for JSON in code blocks or raw JSON with tool/arguments keys.
+        Also handles cases where model puts parameters at top level instead of in 'arguments'.
         """
+        def normalize_tool_call(data: dict) -> Optional[dict]:
+            """Normalize tool call to expected format with 'tool' and 'arguments' keys."""
+            if "tool" not in data:
+                return None
+            tool_name = data["tool"]
+            if tool_name not in self.tool_manager.tools:
+                return None
+
+            # Already has arguments key - return as-is
+            if "arguments" in data:
+                return data
+
+            # Model put parameters at top level - extract them into 'arguments'
+            # Get expected parameters for this tool
+            tool_def = self.tool_manager.tools[tool_name]
+            expected_params = set(tool_def.parameters.get("properties", {}).keys())
+
+            # Extract parameters from top level
+            arguments = {}
+            for key, value in data.items():
+                if key != "tool" and key in expected_params:
+                    arguments[key] = value
+
+            # If we found any expected parameters, normalize the format
+            if arguments:
+                return {"tool": tool_name, "arguments": arguments}
+
+            return None
+
         # First, try to find JSON in code blocks (```json ... ```)
         json_pattern = r'```(?:json)?\s*(\{.*?\})\s*```'
         matches = re.findall(json_pattern, text, re.DOTALL)
@@ -949,23 +999,23 @@ class PerplexityClientPromptTools:
         for match in matches:
             try:
                 data = json.loads(match)
-                if "tool" in data and "arguments" in data:
-                    if data["tool"] in self.tool_manager.tools:
-                        return data
+                normalized = normalize_tool_call(data)
+                if normalized:
+                    return normalized
             except json.JSONDecodeError:
                 continue
 
-        # If no code block found, try to find raw JSON object with tool/arguments
+        # If no code block found, try to find raw JSON object with tool key
         # This handles models that output JSON without markdown formatting
-        raw_json_pattern = r'\{\s*"tool"\s*:\s*"[^"]+"\s*,\s*"arguments"\s*:\s*\{[^}]*\}\s*\}'
+        raw_json_pattern = r'\{\s*"tool"\s*:\s*"[^"]+"\s*[^}]*\}'
         raw_matches = re.findall(raw_json_pattern, text, re.DOTALL)
 
         for match in raw_matches:
             try:
                 data = json.loads(match)
-                if "tool" in data and "arguments" in data:
-                    if data["tool"] in self.tool_manager.tools:
-                        return data
+                normalized = normalize_tool_call(data)
+                if normalized:
+                    return normalized
             except json.JSONDecodeError:
                 continue
 
@@ -974,9 +1024,9 @@ class PerplexityClientPromptTools:
         if text_stripped.startswith('{') and text_stripped.endswith('}'):
             try:
                 data = json.loads(text_stripped)
-                if "tool" in data and "arguments" in data:
-                    if data["tool"] in self.tool_manager.tools:
-                        return data
+                normalized = normalize_tool_call(data)
+                if normalized:
+                    return normalized
             except json.JSONDecodeError:
                 pass
 
@@ -1018,6 +1068,66 @@ class PerplexityClientPromptTools:
     def clear_history(self):
         """Clear conversation history."""
         self.conversation_history = []
+
+    def get_usage_summary(self) -> Dict:
+        """Get current session usage summary."""
+        return self.current_session_usage.copy()
+
+    def export_conversation(self, filename: Optional[str] = None) -> Path:
+        """Export conversation to a markdown file."""
+        if not filename:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"conversation_{timestamp}.md"
+
+        filepath = EXPORTS_DIR / filename
+
+        # Build markdown content
+        content = f"# Conversation Export\n\n"
+        content += f"**Exported:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        content += f"**Session:** {self.session_name}\n"
+        if self.session_metadata.get("model"):
+            content += f"**Model:** {self.session_metadata['model']}\n"
+        content += f"**Messages:** {len(self.conversation_history)}\n\n"
+
+        # Add usage stats
+        usage = self.get_usage_summary()
+        content += f"## Usage Statistics\n\n"
+        content += f"- Total Tokens: {usage['total_tokens']:,}\n"
+        content += f"- Prompt Tokens: {usage['prompt_tokens']:,}\n"
+        content += f"- Completion Tokens: {usage['completion_tokens']:,}\n"
+        content += f"- Estimated Cost: ${usage['estimated_cost']:.4f}\n\n"
+
+        content += "---\n\n"
+
+        # Add conversation
+        content += "## Conversation\n\n"
+        for msg in self.conversation_history:
+            role = msg['role'].capitalize()
+            content_text = msg['content']
+            content += f"### {role}\n\n{content_text}\n\n"
+
+        # Write to file
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        return filepath
+
+    def save_session(self) -> Path:
+        """Save current session to a JSON file."""
+        filepath = SESSIONS_DIR / f"{self.session_name}.json"
+
+        session_data = {
+            "session_name": self.session_name,
+            "metadata": self.session_metadata,
+            "conversation_history": self.conversation_history,
+            "usage": self.current_session_usage,
+            "saved_at": datetime.now().isoformat()
+        }
+
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(session_data, f, indent=2)
+
+        return filepath
 
     def chat(self, message: str, model: str, stream: bool = True):
         """

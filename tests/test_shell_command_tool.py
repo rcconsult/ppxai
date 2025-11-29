@@ -409,3 +409,125 @@ class TestShellCommandSecurity:
 
             assert 'error' in result.lower()
             assert 'test error' in result.lower()
+
+
+class TestToolCallParsing:
+    """Test that tool call parsing handles various model output formats."""
+
+    def test_parse_tool_call_standard_format(self):
+        """Test parsing standard format with 'arguments' key."""
+        from perplexity_tools_prompt_based import PerplexityClientPromptTools
+
+        client = PerplexityClientPromptTools(
+            api_key="test-key",
+            enable_tools=True,
+            provider="perplexity"
+        )
+
+        asyncio.run(client.initialize_tools())
+
+        # Standard format with arguments
+        text = '```json\n{"tool": "execute_shell_command", "arguments": {"command": "ls -la"}}\n```'
+        result = client._parse_tool_call(text)
+
+        assert result is not None
+        assert result["tool"] == "execute_shell_command"
+        assert result["arguments"]["command"] == "ls -la"
+
+    def test_parse_tool_call_flat_format(self):
+        """Test parsing format where model puts parameters at top level."""
+        from perplexity_tools_prompt_based import PerplexityClientPromptTools
+
+        client = PerplexityClientPromptTools(
+            api_key="test-key",
+            enable_tools=True,
+            provider="perplexity"
+        )
+
+        asyncio.run(client.initialize_tools())
+
+        # Flat format - model puts 'command' at top level instead of in 'arguments'
+        text = '```json\n{"tool": "execute_shell_command", "command": "ls -la"}\n```'
+        result = client._parse_tool_call(text)
+
+        assert result is not None
+        assert result["tool"] == "execute_shell_command"
+        assert "arguments" in result
+        assert result["arguments"]["command"] == "ls -la"
+
+    def test_parse_tool_call_raw_json_flat(self):
+        """Test parsing raw JSON (no code block) with flat format."""
+        from perplexity_tools_prompt_based import PerplexityClientPromptTools
+
+        client = PerplexityClientPromptTools(
+            api_key="test-key",
+            enable_tools=True,
+            provider="perplexity"
+        )
+
+        asyncio.run(client.initialize_tools())
+
+        # Raw JSON without code block
+        text = '{"tool": "execute_shell_command", "command": "git status"}'
+        result = client._parse_tool_call(text)
+
+        assert result is not None
+        assert result["tool"] == "execute_shell_command"
+        assert result["arguments"]["command"] == "git status"
+
+    def test_parse_tool_call_with_working_dir(self):
+        """Test parsing with multiple parameters."""
+        from perplexity_tools_prompt_based import PerplexityClientPromptTools
+
+        client = PerplexityClientPromptTools(
+            api_key="test-key",
+            enable_tools=True,
+            provider="perplexity"
+        )
+
+        asyncio.run(client.initialize_tools())
+
+        # Flat format with both parameters
+        text = '{"tool": "execute_shell_command", "command": "ls", "working_dir": "/tmp"}'
+        result = client._parse_tool_call(text)
+
+        assert result is not None
+        assert result["tool"] == "execute_shell_command"
+        assert result["arguments"]["command"] == "ls"
+        assert result["arguments"]["working_dir"] == "/tmp"
+
+    def test_parse_tool_call_invalid_tool(self):
+        """Test that invalid tool names return None."""
+        from perplexity_tools_prompt_based import PerplexityClientPromptTools
+
+        client = PerplexityClientPromptTools(
+            api_key="test-key",
+            enable_tools=True,
+            provider="perplexity"
+        )
+
+        asyncio.run(client.initialize_tools())
+
+        # Unknown tool name
+        text = '{"tool": "nonexistent_tool", "command": "test"}'
+        result = client._parse_tool_call(text)
+
+        assert result is None
+
+    def test_parse_tool_call_no_tool_key(self):
+        """Test that JSON without 'tool' key returns None."""
+        from perplexity_tools_prompt_based import PerplexityClientPromptTools
+
+        client = PerplexityClientPromptTools(
+            api_key="test-key",
+            enable_tools=True,
+            provider="perplexity"
+        )
+
+        asyncio.run(client.initialize_tools())
+
+        # No tool key
+        text = '{"command": "ls -la"}'
+        result = client._parse_tool_call(text)
+
+        assert result is None

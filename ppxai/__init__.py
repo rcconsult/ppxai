@@ -19,6 +19,13 @@ from .config import (
     get_api_key,
     get_base_url,
     get_coding_model,
+    get_default_model,
+    get_config_source,
+    get_available_providers,
+    get_provider_capabilities,
+    set_active_provider,
+    reload_config,
+    validate_config,
 )
 from .client import AIClient, PerplexityClient
 from .prompts import CODING_PROMPTS, SPEC_GUIDELINES, SPEC_TEMPLATES
@@ -53,6 +60,13 @@ __all__ = [
     "get_api_key",
     "get_base_url",
     "get_coding_model",
+    "get_default_model",
+    "get_config_source",
+    "get_available_providers",
+    "get_provider_capabilities",
+    "set_active_provider",
+    "reload_config",
+    "validate_config",
     # Client
     "AIClient",
     "PerplexityClient",  # Backward compatibility alias
@@ -78,4 +92,4 @@ __all__ = [
     "send_coding_task",
 ]
 
-__version__ = "1.5.0"
+__version__ = "1.6.0"

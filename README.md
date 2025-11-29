@@ -42,6 +42,7 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
 - 🛠️ `/tools enable` - Enable AI tools (file search, calculator, code analyzer, etc.)
 - 📋 `/tools list` - Show available tools
 - ✅ `/tools status` - Check tools status
+- ⚙️ `/tools config` - Configure tool settings (e.g., max iterations)
 - ❌ `/tools disable` - Disable tools
 
 **Built-in Tools:**
@@ -97,15 +98,26 @@ source venv/bin/activate  # On macOS/Linux
 pip install -r requirements.txt
 ```
 
-4. Set up your API key:
+4. Set up configuration:
+
+**Simple setup (Perplexity only):**
 ```bash
 cp .env.example .env
+# Edit .env and add your Perplexity API key:
+# PERPLEXITY_API_KEY=your_api_key_here
 ```
 
-Edit `.env` and add your Perplexity API key:
+**Multi-provider setup (OpenAI, Claude via OpenRouter, local models, etc.):**
+```bash
+# Copy both configuration files
+cp .env.example .env
+cp ppxai-config.example.json ppxai-config.json
+
+# Edit .env with your API keys (secrets only)
+# Edit ppxai-config.json for provider settings
 ```
-PERPLEXITY_API_KEY=your_api_key_here
-```
+
+See [Configuration](#configuration) section for details.
 
 ## Usage
 
@@ -267,12 +279,103 @@ ppxai stores data locally in `~/.ppxai/`:
 - `~/.ppxai/sessions/` - Saved conversation sessions (JSON)
 - `~/.ppxai/exports/` - Exported markdown files
 - `~/.ppxai/usage.json` - Token usage and cost tracking
+- `~/.ppxai/ppxai-config.json` - User-specific provider configuration (optional)
 
-All data stays on your machine. No data is sent anywhere except to Perplexity's API during chat.
+All data stays on your machine. No data is sent anywhere except to the configured AI provider's API during chat.
 
-## API Key
+## Configuration
 
-You need a Perplexity API key to use this application. Get one at [Perplexity AI](https://www.perplexity.ai/).
+ppxai uses a **hybrid configuration** approach that separates secrets from settings:
+
+### Files
+
+| File | Purpose | Version Control |
+|------|---------|-----------------|
+| `.env` | API keys only (secrets) | ❌ Never commit |
+| `ppxai-config.json` | Provider definitions, models, pricing | ✅ Can commit |
+
+### Config File Search Order
+
+1. `PPXAI_CONFIG_FILE` environment variable (if set)
+2. `./ppxai-config.json` (project-specific, for teams)
+3. `~/.ppxai/ppxai-config.json` (user-specific)
+4. Built-in defaults (Perplexity only)
+
+### Simple Setup (Perplexity Only)
+
+Just create `.env` with your API key:
+```bash
+PERPLEXITY_API_KEY=pplx-xxxxxxxxxxxxx
+```
+
+No `ppxai-config.json` needed - built-in Perplexity configuration is used.
+
+### Multi-Provider Setup
+
+**1. Create `.env` with API keys:**
+```bash
+# API Keys (referenced by api_key_env in ppxai-config.json)
+PERPLEXITY_API_KEY=pplx-xxxxxxxxxxxxx
+OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxx
+OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxx
+
+# Optional: Override default provider
+MODEL_PROVIDER=openai
+```
+
+**2. Create `ppxai-config.json` with providers:**
+```json
+{
+  "version": "1.0",
+  "default_provider": "perplexity",
+  "providers": {
+    "perplexity": {
+      "name": "Perplexity AI",
+      "base_url": "https://api.perplexity.ai",
+      "api_key_env": "PERPLEXITY_API_KEY",
+      "default_model": "sonar-pro",
+      "models": {
+        "sonar-pro": {
+          "name": "Sonar Pro",
+          "description": "Advanced search model"
+        }
+      },
+      "capabilities": {
+        "web_search": true,
+        "realtime_info": true
+      }
+    },
+    "openai": {
+      "name": "OpenAI ChatGPT",
+      "base_url": "https://api.openai.com/v1",
+      "api_key_env": "OPENAI_API_KEY",
+      "default_model": "gpt-4o",
+      "models": {
+        "gpt-4o": {"name": "GPT-4o", "description": "Latest flagship model"},
+        "gpt-4o-mini": {"name": "GPT-4o Mini", "description": "Fast and affordable"}
+      }
+    }
+  }
+}
+```
+
+See `ppxai-config.example.json` for a complete example with multiple providers.
+
+### Supported Providers
+
+Any OpenAI-compatible API works, including:
+- **Perplexity AI** - Built-in web search
+- **OpenAI** - GPT-4o, GPT-4 Turbo, o1
+- **OpenRouter** - Claude, Gemini, Llama, and 100+ models
+- **Local models** - vLLM, Ollama, llama.cpp
+- **Self-hosted** - Any OpenAI-compatible endpoint
+
+## API Keys
+
+Get API keys from:
+- **Perplexity:** [perplexity.ai](https://www.perplexity.ai/)
+- **OpenAI:** [platform.openai.com](https://platform.openai.com/)
+- **OpenRouter:** [openrouter.ai](https://openrouter.ai/) (for Claude, Gemini, etc.)
 
 ## Building Executables
 
@@ -306,24 +409,35 @@ Clickable links work best in modern terminals:
 
 ```
 ppxai/
-├── ppxai.py                              # Main CLI application
+├── ppxai.py                              # Entry point wrapper
+├── ppxai/                                # Main package
+│   ├── __init__.py                       # Package exports (v1.6.0)
+│   ├── main.py                           # CLI application
+│   ├── client.py                         # AI client for API communication
+│   ├── config.py                         # Hybrid configuration system
+│   ├── commands.py                       # Command handlers
+│   ├── ui.py                             # Terminal UI/display
+│   ├── prompts.py                        # Coding prompts & templates
+│   └── utils.py                          # Utility functions
 ├── tool_manager.py                       # Tool management system
 ├── perplexity_tools_prompt_based.py      # AI tool implementation
+├── ppxai-config.json                     # Provider configuration (optional)
+├── ppxai-config.example.json             # Configuration template
 ├── demo/
 │   ├── example_builtin_tool.py           # Example Python tool
 │   ├── example_mcp_server/               # Example MCP server
 │   └── demo_tools_working.py             # Working demo
-├── tests/
-│   ├── test_all_tools.py                 # Tool tests
-│   ├── test_mcp.py                       # MCP diagnostics
-│   └── test_prompt_tools.py              # Quick test
+├── tests/                                # 170+ tests
+│   ├── test_config.py                    # Configuration tests (48 tests)
+│   ├── test_client.py                    # Client tests
+│   ├── test_commands.py                  # Command tests
+│   └── ...                               # Additional test modules
 ├── docs/
-│   ├── README.md                          # Documentation index
+│   ├── README.md                         # Documentation index
 │   ├── TOOL_CREATION_GUIDE.md            # Step-by-step tool guide
-│   ├── QUICK_START_TOOLS.md              # 60-second setup
-│   └── ...                                # Additional guides
+│   └── QUICK_START_TOOLS.md              # 60-second setup
 ├── SPECIFICATIONS.md                     # Code generation specs
-├── CLAUDE.md                             # Claude Code guidance
+├── ROADMAP.md                            # Development roadmap
 └── README.md                             # This file
 ```
 
