@@ -73,3 +73,4 @@ Thumbs.db
 # Claude Code
 .claude/
 CLAUDE.md
+.ppxai/tools.config.json
