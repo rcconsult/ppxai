@@ -55,9 +55,12 @@ coverage.xml
 # pyenv
 .python-version
 
-# Environment variables
+# Environment variables (secrets)
 **/.env
 **/.env.local
+
+# User-specific config (project-level config can be committed)
+# ppxai-config.json  # Uncomment to ignore project-level config
 
 # IDEs
 .vscode/
