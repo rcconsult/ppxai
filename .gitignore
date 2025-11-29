@@ -56,8 +56,8 @@ coverage.xml
 .python-version
 
 # Environment variables
-.env
-.env.local
+**/.env
+**/.env.local
 
 # IDEs
 .vscode/

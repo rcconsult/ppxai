@@ -81,7 +81,7 @@ def check_npx():
         return False
 
 
-async def test_mcp_server():
+async def manual_test_mcp_server():
     """Test starting a simple MCP server."""
     console.print("\n[bold]Testing MCP Server Connection[/bold]")
     console.print("Attempting to start @modelcontextprotocol/server-filesystem...")
@@ -173,7 +173,7 @@ async def main():
     # Test MCP server only if all dependencies are available
     if all([results["Python MCP Library"], results["Node.js"], results["npx"]]):
         console.print("\n[bold]Step 2: Testing MCP Server[/bold]\n")
-        results["MCP Server"] = await test_mcp_server()
+        results["MCP Server"] = await manual_test_mcp_server()
     else:
         console.print("\n[yellow]Skipping MCP server test (missing dependencies)[/yellow]")
 
