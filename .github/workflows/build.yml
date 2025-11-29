@@ -13,14 +13,16 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
         include:
           - os: ubuntu-latest
             artifact_name: ppxai
             asset_name: ppxai-linux-amd64
           - os: macos-latest
             artifact_name: ppxai
-            asset_name: ppxai-macos
+            asset_name: ppxai-macos-arm64
+          - os: macos-13
+            artifact_name: ppxai
+            asset_name: ppxai-macos-intel
           - os: windows-latest
             artifact_name: ppxai.exe
             asset_name: ppxai-windows.exe
@@ -79,7 +81,8 @@ jobs:
     - name: Rename artifacts for release
       run: |
         mv artifacts/ppxai-linux-amd64/ppxai artifacts/ppxai-linux-amd64/ppxai-linux-amd64
-        mv artifacts/ppxai-macos/ppxai artifacts/ppxai-macos/ppxai-macos
+        mv artifacts/ppxai-macos-arm64/ppxai artifacts/ppxai-macos-arm64/ppxai-macos-arm64
+        mv artifacts/ppxai-macos-intel/ppxai artifacts/ppxai-macos-intel/ppxai-macos-intel
         mv artifacts/ppxai-windows.exe/ppxai.exe artifacts/ppxai-windows.exe/ppxai-windows.exe
 
     - name: Create Release
@@ -87,7 +90,8 @@ jobs:
       with:
         files: |
           artifacts/ppxai-linux-amd64/ppxai-linux-amd64
-          artifacts/ppxai-macos/ppxai-macos
+          artifacts/ppxai-macos-arm64/ppxai-macos-arm64
+          artifacts/ppxai-macos-intel/ppxai-macos-intel
           artifacts/ppxai-windows.exe/ppxai-windows.exe
         draft: false
         prerelease: false
