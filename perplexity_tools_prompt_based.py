@@ -348,6 +348,41 @@ class PerplexityClientPromptTools:
                 import os
                 import subprocess
 
+                # List of interactive commands that require user input
+                interactive_commands = [
+                    'nano', 'vim', 'vi', 'emacs', 'pico', 'joe',  # Text editors
+                    'less', 'more',  # Pagers
+                    'top', 'htop', 'btop',  # System monitors
+                    'python', 'python3', 'ipython', 'node', 'irb', 'ruby',  # REPLs (without args)
+                    'ssh', 'telnet', 'ftp', 'sftp',  # Remote connections
+                    'mysql', 'psql', 'mongo', 'redis-cli',  # Database CLIs
+                    'bash', 'zsh', 'sh', 'fish', 'csh', 'tcsh',  # Shells (without args)
+                ]
+
+                # Extract the base command (first word)
+                cmd_parts = command.strip().split()
+                if cmd_parts:
+                    base_cmd = os.path.basename(cmd_parts[0].lower())
+
+                    # Check if it's an interactive command
+                    if base_cmd in interactive_commands:
+                        # Some commands are only interactive without arguments
+                        repl_commands = ['python', 'python3', 'ipython', 'node', 'irb', 'ruby', 'bash', 'zsh', 'sh', 'fish', 'csh', 'tcsh']
+                        if base_cmd in repl_commands and len(cmd_parts) > 1:
+                            # Has arguments, likely not interactive (e.g., 'python script.py')
+                            pass
+                        else:
+                            return (
+                                f"Error: '{base_cmd}' is an interactive command that requires user input.\n\n"
+                                f"Interactive commands like text editors (nano, vim), REPLs (python, node), "
+                                f"and pagers (less, more) cannot be run through this tool because they "
+                                f"require keyboard input and have a 30-second timeout.\n\n"
+                                f"Alternatives:\n"
+                                f"- To view file contents: use 'cat <file>' or the read_file tool\n"
+                                f"- To edit files: describe the changes you want and I'll help modify the file\n"
+                                f"- To run scripts: use 'python script.py' or 'node script.js' with arguments"
+                            )
+
                 # Determine shell based on platform
                 is_windows = platform.system() == "Windows"
 
@@ -398,7 +433,7 @@ class PerplexityClientPromptTools:
 
         self.tool_manager.register_builtin_tool(
             name="execute_shell_command",
-            description="Execute a shell command in the system. Supports Windows (cmd/PowerShell) and Unix (bash) commands. Use for system operations like creating directories, file operations, running scripts, etc. Commands run with a 30-second timeout.",
+            description="Execute a shell command in the system. Supports Windows (cmd/PowerShell) and Unix (bash) commands. Use for system operations like creating directories, file operations, running scripts, etc. Commands run with a 30-second timeout. Note: Interactive commands (nano, vim, less, python REPL, etc.) are not supported - use non-interactive alternatives.",
             parameters={
                 "type": "object",
                 "properties": {
