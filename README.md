@@ -366,9 +366,12 @@ See `ppxai-config.example.json` for a complete example with multiple providers.
 Any OpenAI-compatible API works, including:
 - **Perplexity AI** - Built-in web search
 - **OpenAI** - GPT-4o, GPT-4 Turbo, o1
+- **Google Gemini** - Via OpenAI-compatible endpoint
 - **OpenRouter** - Claude, Gemini, Llama, and 100+ models
 - **Local models** - vLLM, Ollama, llama.cpp
 - **Self-hosted** - Any OpenAI-compatible endpoint
+
+**📖 [Provider Setup Guide](docs/PROVIDER_SETUP.md)** - Detailed configuration examples for each provider including OpenAI, Gemini, OpenRouter, and local models.
 
 ## API Keys
 
