@@ -531,3 +531,210 @@ class TestToolCallParsing:
         result = client._parse_tool_call(text)
 
         assert result is None
+
+
+class TestInteractiveCommandDetection:
+    """Test that interactive commands are detected and rejected with helpful messages."""
+
+    def test_nano_rejected(self):
+        """Test that nano editor is rejected with helpful message."""
+        from perplexity_tools_prompt_based import PerplexityClientPromptTools
+
+        client = PerplexityClientPromptTools(
+            api_key="test-key",
+            enable_tools=True,
+            provider="custom"
+        )
+
+        asyncio.run(client.initialize_tools())
+
+        result = asyncio.run(client.tool_manager.execute_tool(
+            'execute_shell_command',
+            {'command': 'nano README.md'}
+        ))
+
+        assert 'error' in result.lower()
+        assert 'interactive' in result.lower()
+        assert 'nano' in result.lower()
+        assert 'alternatives' in result.lower()
+
+    def test_vim_rejected(self):
+        """Test that vim editor is rejected."""
+        from perplexity_tools_prompt_based import PerplexityClientPromptTools
+
+        client = PerplexityClientPromptTools(
+            api_key="test-key",
+            enable_tools=True,
+            provider="custom"
+        )
+
+        asyncio.run(client.initialize_tools())
+
+        result = asyncio.run(client.tool_manager.execute_tool(
+            'execute_shell_command',
+            {'command': 'vim file.txt'}
+        ))
+
+        assert 'error' in result.lower()
+        assert 'interactive' in result.lower()
+        assert 'vim' in result.lower()
+
+    def test_less_rejected(self):
+        """Test that less pager is rejected."""
+        from perplexity_tools_prompt_based import PerplexityClientPromptTools
+
+        client = PerplexityClientPromptTools(
+            api_key="test-key",
+            enable_tools=True,
+            provider="custom"
+        )
+
+        asyncio.run(client.initialize_tools())
+
+        result = asyncio.run(client.tool_manager.execute_tool(
+            'execute_shell_command',
+            {'command': 'less /etc/hosts'}
+        ))
+
+        assert 'error' in result.lower()
+        assert 'interactive' in result.lower()
+
+    def test_top_rejected(self):
+        """Test that top system monitor is rejected."""
+        from perplexity_tools_prompt_based import PerplexityClientPromptTools
+
+        client = PerplexityClientPromptTools(
+            api_key="test-key",
+            enable_tools=True,
+            provider="custom"
+        )
+
+        asyncio.run(client.initialize_tools())
+
+        result = asyncio.run(client.tool_manager.execute_tool(
+            'execute_shell_command',
+            {'command': 'top'}
+        ))
+
+        assert 'error' in result.lower()
+        assert 'interactive' in result.lower()
+
+    def test_python_repl_rejected(self):
+        """Test that python REPL (no args) is rejected."""
+        from perplexity_tools_prompt_based import PerplexityClientPromptTools
+
+        client = PerplexityClientPromptTools(
+            api_key="test-key",
+            enable_tools=True,
+            provider="custom"
+        )
+
+        asyncio.run(client.initialize_tools())
+
+        result = asyncio.run(client.tool_manager.execute_tool(
+            'execute_shell_command',
+            {'command': 'python3'}
+        ))
+
+        assert 'error' in result.lower()
+        assert 'interactive' in result.lower()
+
+    def test_python_script_allowed(self):
+        """Test that python with script argument is allowed."""
+        from perplexity_tools_prompt_based import PerplexityClientPromptTools
+
+        client = PerplexityClientPromptTools(
+            api_key="test-key",
+            enable_tools=True,
+            provider="custom"
+        )
+
+        asyncio.run(client.initialize_tools())
+
+        result = asyncio.run(client.tool_manager.execute_tool(
+            'execute_shell_command',
+            {'command': 'python3 -c "print(1+1)"'}
+        ))
+
+        # Should execute and return "2" or similar, not an interactive error
+        assert 'interactive' not in result.lower()
+
+    def test_bash_repl_rejected(self):
+        """Test that bash shell (no args) is rejected."""
+        from perplexity_tools_prompt_based import PerplexityClientPromptTools
+
+        client = PerplexityClientPromptTools(
+            api_key="test-key",
+            enable_tools=True,
+            provider="custom"
+        )
+
+        asyncio.run(client.initialize_tools())
+
+        result = asyncio.run(client.tool_manager.execute_tool(
+            'execute_shell_command',
+            {'command': 'bash'}
+        ))
+
+        assert 'error' in result.lower()
+        assert 'interactive' in result.lower()
+
+    def test_bash_with_command_allowed(self):
+        """Test that bash -c with command is allowed."""
+        from perplexity_tools_prompt_based import PerplexityClientPromptTools
+
+        client = PerplexityClientPromptTools(
+            api_key="test-key",
+            enable_tools=True,
+            provider="custom"
+        )
+
+        asyncio.run(client.initialize_tools())
+
+        result = asyncio.run(client.tool_manager.execute_tool(
+            'execute_shell_command',
+            {'command': 'bash -c "echo hello"'}
+        ))
+
+        # Should execute and return output, not an interactive error
+        assert 'interactive' not in result.lower()
+
+    def test_ssh_rejected(self):
+        """Test that ssh is rejected."""
+        from perplexity_tools_prompt_based import PerplexityClientPromptTools
+
+        client = PerplexityClientPromptTools(
+            api_key="test-key",
+            enable_tools=True,
+            provider="custom"
+        )
+
+        asyncio.run(client.initialize_tools())
+
+        result = asyncio.run(client.tool_manager.execute_tool(
+            'execute_shell_command',
+            {'command': 'ssh user@host'}
+        ))
+
+        assert 'error' in result.lower()
+        assert 'interactive' in result.lower()
+
+    def test_non_interactive_commands_work(self):
+        """Test that non-interactive commands still work."""
+        from perplexity_tools_prompt_based import PerplexityClientPromptTools
+
+        client = PerplexityClientPromptTools(
+            api_key="test-key",
+            enable_tools=True,
+            provider="custom"
+        )
+
+        asyncio.run(client.initialize_tools())
+
+        # Test various non-interactive commands
+        for cmd in ['echo hello', 'ls', 'pwd', 'date']:
+            result = asyncio.run(client.tool_manager.execute_tool(
+                'execute_shell_command',
+                {'command': cmd}
+            ))
+            assert 'interactive' not in result.lower(), f"Command '{cmd}' should not be rejected as interactive"
