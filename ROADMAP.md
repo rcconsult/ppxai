@@ -401,6 +401,103 @@ Features implemented:
 
 ---
 
+### v1.9.0: Web Terminal & Launcher Options (Priority: Medium)
+
+**Goal**: Provide flexible terminal launch options including web-based access
+
+#### Features
+
+1. **Web Terminal Interface**
+   - HTML-based terminal emulator (xterm.js or similar)
+   - Run ppxai in a browser tab
+   - WebSocket-based communication with backend
+   - Cross-platform access without native installation
+   - Shareable session URLs (optional)
+
+2. **Configurable Terminal Launcher**
+   - Executable opens system default terminal or configured terminal
+   - Configuration in `ppxai-config.json`:
+     ```json
+     {
+       "terminal": {
+         "mode": "native",  // "native", "web", or "auto"
+         "native_terminal": {
+           "macos": "Terminal.app",  // or "iTerm.app", "Warp.app"
+           "linux": "gnome-terminal",  // or "konsole", "xterm"
+           "windows": "wt.exe"  // Windows Terminal, or "cmd.exe"
+         },
+         "web": {
+           "host": "localhost",
+           "port": 8080,
+           "auto_open_browser": true
+         }
+       }
+     }
+     ```
+
+3. **Launch Modes**
+   - `ppxai` - Launch in current terminal (default, current behavior)
+   - `ppxai --terminal` - Launch in configured native terminal
+   - `ppxai --web` - Start web server and open browser
+   - `ppxai --web --port 3000` - Custom port for web mode
+   - `ppxai --headless` - Web server only, no browser auto-open
+
+4. **Web Terminal Features**
+   - Full terminal emulation with ANSI color support
+   - Copy/paste support
+   - Responsive design for mobile access
+   - Optional authentication for remote access
+   - Theme customization (dark/light mode)
+
+#### Implementation Plan
+
+**Phase 1: Web Terminal Backend (4-5 hours)**
+- [ ] Add WebSocket server (using `websockets` or `aiohttp`)
+- [ ] Create PTY bridge for terminal I/O
+- [ ] Implement session management for web clients
+- [ ] Handle terminal resize events
+
+**Phase 2: Web Terminal Frontend (4-5 hours)**
+- [ ] Integrate xterm.js terminal emulator
+- [ ] Create minimal HTML/CSS interface
+- [ ] Implement WebSocket client connection
+- [ ] Add copy/paste and keyboard handling
+- [ ] Bundle frontend assets with PyInstaller
+
+**Phase 3: Native Terminal Launcher (2-3 hours)**
+- [ ] Detect available terminals per platform
+- [ ] Implement terminal launch for macOS (Terminal.app, iTerm, Warp)
+- [ ] Implement terminal launch for Linux (gnome-terminal, konsole, etc.)
+- [ ] Implement terminal launch for Windows (Windows Terminal, cmd, PowerShell)
+- [ ] Add configuration options in `ppxai-config.json`
+
+**Phase 4: CLI Arguments & Config (2 hours)**
+- [ ] Add `--terminal`, `--web`, `--headless` flags
+- [ ] Implement `--port` option for web mode
+- [ ] Read terminal preferences from config file
+- [ ] Add `/config terminal` command for runtime changes
+
+**Phase 5: Security & Polish (2-3 hours)**
+- [ ] Add optional authentication for web mode
+- [ ] Implement HTTPS support (self-signed or Let's Encrypt)
+- [ ] Add rate limiting and connection limits
+- [ ] Create connection status indicators
+
+**Phase 6: Testing & Documentation (2 hours)**
+- [ ] Test on all platforms (macOS, Linux, Windows)
+- [ ] Test web terminal in major browsers
+- [ ] Document all launch modes
+- [ ] Update README with web terminal instructions
+
+**Estimated Total**: 16-20 hours
+
+**Dependencies:**
+- `xterm.js` (frontend terminal emulator)
+- `websockets` or `aiohttp` (WebSocket server)
+- `ptyprocess` (Unix) / `winpty` (Windows) for PTY handling
+
+---
+
 ## Additional Future Considerations
 
 ### v2.0.0: Major Enhancements (Long-term)
@@ -453,6 +550,11 @@ Features implemented:
 - ⚠️ **Nice to Have**: Tool aliases
 - ⚠️ **Nice to Have**: Tool presets
 - ⚠️ **Nice to Have**: Usage statistics
+
+### Medium-term (v1.9.0)
+- 🌐 **Nice to Have**: Web terminal interface (browser-based)
+- 🖥️ **Nice to Have**: Configurable terminal launcher
+- 📱 **Nice to Have**: Cross-platform terminal support
 
 ### Long-term (v2.0.0+)
 - 💡 **Future**: Plugin system
