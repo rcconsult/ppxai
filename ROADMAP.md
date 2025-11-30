@@ -500,7 +500,138 @@ Features implemented:
 
 ## Additional Future Considerations
 
-### v2.0.0: Major Enhancements (Long-term)
+### v2.0.0: IDE Integration & Major Enhancements (Long-term)
+
+**Goal**: Provide seamless IDE integration similar to Claude Code CLI and Gemini CLI
+
+#### IDE Integration Features
+
+1. **VS Code Extension**
+   - Native VS Code extension for ppxai
+   - Integrated terminal panel within VS Code
+   - File context awareness (open files, workspace structure)
+   - Inline code suggestions and completions
+   - Side panel for chat interface
+   - Command palette integration (`Ctrl+Shift+P` → "ppxai: ...")
+
+2. **Editor Protocol Support**
+   - Language Server Protocol (LSP) integration
+   - Editor-agnostic communication protocol
+   - Support for multiple editors:
+     - VS Code (primary)
+     - JetBrains IDEs (IntelliJ, PyCharm, WebStorm)
+     - Neovim/Vim
+     - Sublime Text
+     - Cursor IDE
+
+3. **Workspace Awareness**
+   - Automatic project context detection
+   - Git status and diff awareness
+   - Dependency analysis (package.json, requirements.txt, etc.)
+   - Project structure understanding
+   - `.ppxai` config file per project
+
+4. **Code Actions**
+   - `/edit <file>` - AI-assisted file editing with diff preview
+   - `/refactor` - Refactoring suggestions with apply/reject
+   - `/explain` - Inline code explanations
+   - `/test` - Generate tests for selected code
+   - `/fix` - Fix errors/warnings in current file
+   - `/review` - Code review for staged changes
+
+5. **Context Sharing**
+   - Share selected code with ppxai
+   - Share terminal output
+   - Share error messages and stack traces
+   - Automatic file inclusion based on imports
+   - @-mentions for files (`@src/utils.py explain this`)
+
+6. **IDE-Specific Features**
+   - Diagnostic integration (show AI suggestions for errors)
+   - CodeLens for AI actions
+   - Hover providers for explanations
+   - Quick fixes powered by AI
+   - Git integration (commit message generation, PR descriptions)
+
+#### Implementation Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    VS Code / IDE                        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
+│  │  Extension  │  │  Terminal   │  │  Side Panel │     │
+│  │   (UI)      │  │  (Embedded) │  │   (Chat)    │     │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘     │
+└─────────┼────────────────┼────────────────┼─────────────┘
+          │                │                │
+          ▼                ▼                ▼
+┌─────────────────────────────────────────────────────────┐
+│              ppxai Language Server / Daemon             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
+│  │  LSP Server │  │  WebSocket  │  │   JSON-RPC  │     │
+│  │             │  │   Server    │  │   Handler   │     │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘     │
+└─────────┼────────────────┼────────────────┼─────────────┘
+          │                │                │
+          ▼                ▼                ▼
+┌─────────────────────────────────────────────────────────┐
+│                   ppxai Core Engine                     │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
+│  │  AI Client  │  │    Tools    │  │   Session   │     │
+│  │  (Multi-    │  │  (File,     │  │  Management │     │
+│  │  Provider)  │  │   Shell)    │  │             │     │
+│  └─────────────┘  └─────────────┘  └─────────────┘     │
+└─────────────────────────────────────────────────────────┘
+```
+
+#### Implementation Plan
+
+**Phase 1: Daemon Mode (4-5 hours)**
+- [ ] Create ppxai daemon that runs in background
+- [ ] Implement JSON-RPC or WebSocket API
+- [ ] Add `ppxai --daemon` and `ppxai --connect` modes
+- [ ] Implement health check and auto-restart
+
+**Phase 2: VS Code Extension - Basic (6-8 hours)**
+- [ ] Create VS Code extension scaffold
+- [ ] Implement terminal integration
+- [ ] Add basic chat panel
+- [ ] Connect to ppxai daemon
+- [ ] Publish to VS Code Marketplace
+
+**Phase 3: Workspace Context (4-5 hours)**
+- [ ] Implement workspace file scanning
+- [ ] Add git integration (status, diff, blame)
+- [ ] Create project context builder
+- [ ] Add @-mention file references
+
+**Phase 4: Code Actions (6-8 hours)**
+- [ ] Implement `/edit` with diff preview
+- [ ] Add CodeLens providers
+- [ ] Create diagnostic integration
+- [ ] Implement quick fixes
+
+**Phase 5: LSP Integration (8-10 hours)**
+- [ ] Create LSP server wrapper
+- [ ] Implement completion provider
+- [ ] Add hover provider for explanations
+- [ ] Create signature help provider
+
+**Phase 6: Multi-IDE Support (6-8 hours)**
+- [ ] Create JetBrains plugin (Kotlin)
+- [ ] Add Neovim plugin (Lua)
+- [ ] Document generic editor integration
+
+**Estimated Total**: 34-44 hours
+
+**Dependencies:**
+- `pygls` (Python LSP server framework)
+- VS Code Extension API
+- `watchdog` (file system monitoring)
+
+---
+
+#### Other v2.0.0 Enhancements
 
 1. **Advanced Session Management**
    - Session branching and merging
@@ -557,6 +688,8 @@ Features implemented:
 - 📱 **Nice to Have**: Cross-platform terminal support
 
 ### Long-term (v2.0.0+)
+- 🔌 **Future**: VS Code extension & IDE integration
+- 🔌 **Future**: LSP server for editor-agnostic support
 - 💡 **Future**: Plugin system
 - 💡 **Future**: Multi-modal support
 - 💡 **Future**: Workflow automation
