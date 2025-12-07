@@ -9,7 +9,7 @@ Config file search order:
 1. PPXAI_CONFIG_FILE environment variable (if set)
 2. ./ppxai-config.json (project-specific)
 3. ~/.ppxai/ppxai-config.json (user-specific)
-4. Built-in defaults (Perplexity only)
+4. Built-in defaults (Perplexity, Gemini)
 """
 
 import json
@@ -34,7 +34,7 @@ SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
 EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # =============================================================================
-# Built-in Default Configuration (Perplexity)
+# Built-in Default Configuration (Perplexity, Gemini)
 # =============================================================================
 
 BUILTIN_PROVIDERS = {
@@ -79,6 +79,44 @@ BUILTIN_PROVIDERS = {
             "web_fetch": True,
             "weather": True,
             "realtime_info": True,
+        },
+    },
+    "gemini": {
+        "name": "Google Gemini",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "api_key_env": "GEMINI_API_KEY",
+        "default_model": "gemini-2.0-flash",
+        "coding_model": "gemini-2.5-pro",
+        "models": {
+            "gemini-2.0-flash": {
+                "name": "Gemini 2.0 Flash",
+                "description": "Fast model with multimodal support"
+            },
+            "gemini-2.0-flash-lite": {
+                "name": "Gemini 2.0 Flash Lite",
+                "description": "Cost-efficient for high-volume tasks"
+            },
+            "gemini-2.5-flash": {
+                "name": "Gemini 2.5 Flash",
+                "description": "Latest fast model, best price/performance"
+            },
+            "gemini-2.5-pro": {
+                "name": "Gemini 2.5 Pro",
+                "description": "Most capable model for complex reasoning"
+            },
+        },
+        "pricing": {
+            # Prices per million tokens (2025)
+            "gemini-2.0-flash": {"input": 0.10, "output": 0.40},
+            "gemini-2.0-flash-lite": {"input": 0.075, "output": 0.30},
+            "gemini-2.5-flash": {"input": 0.15, "output": 0.60},
+            "gemini-2.5-pro": {"input": 1.25, "output": 5.00},
+        },
+        "capabilities": {
+            "web_search": False,
+            "web_fetch": False,
+            "weather": False,
+            "realtime_info": False,
         },
     },
 }
@@ -298,13 +336,13 @@ def load_config() -> Dict[str, Any]:
         }
 
     else:
-        # No config file found - use builtin + legacy custom provider
-        providers = {
-            "perplexity": {
-                **BUILTIN_PROVIDERS["perplexity"],
-                "models": _convert_models_format(BUILTIN_PROVIDERS["perplexity"]["models"]),
-            },
-        }
+        # No config file found - use builtin providers + legacy custom provider
+        providers = {}
+        for provider_id, provider_config in BUILTIN_PROVIDERS.items():
+            providers[provider_id] = {
+                **provider_config,
+                "models": _convert_models_format(provider_config["models"]),
+            }
 
         # Check for legacy custom provider
         legacy_custom = _build_legacy_custom_provider()

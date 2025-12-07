@@ -8,8 +8,8 @@ const SLASH_COMMANDS: Record<string, { description: string; usage: string }> = {
     '/save': { description: 'Save current session', usage: '/save' },
     '/load': { description: 'Load a saved session', usage: '/load [session_name]' },
     '/sessions': { description: 'List saved sessions', usage: '/sessions' },
-    '/model': { description: 'Switch model', usage: '/model [model_id]' },
-    '/provider': { description: 'Switch provider', usage: '/provider [provider_id]' },
+    '/model': { description: 'Switch model or list models', usage: '/model [model_id|list]' },
+    '/provider': { description: 'Switch provider or list providers', usage: '/provider [provider_id|list]' },
     '/tools': { description: 'Manage AI tools', usage: '/tools [enable|disable|status|list]' },
     '/show': { description: 'Display file contents locally (no LLM call)', usage: '/show <filepath>' },
     '/cat': { description: 'Alias for /show', usage: '/cat <filepath>' },
@@ -430,6 +430,17 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                                 content: `✓ Switched to model: ${selected.label}`
                             });
                         }
+                    } else if (args[0] === 'list') {
+                        // List available models
+                        const models = await this._backend.getModels();
+                        const status = await this._backend.getStatus();
+                        const modelList = models.map(m =>
+                            `• **${m.id}**${m.id === status.model ? ' ✓' : ''} - ${m.description}`
+                        ).join('\n');
+                        this._view.webview.postMessage({
+                            type: 'systemMessage',
+                            content: `**Available Models:**\n${modelList}`
+                        });
                     } else {
                         const set = await this._backend.setModel(args[0]);
                         if (set) {
@@ -467,6 +478,17 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                                 content: `✓ Switched to provider: ${selected.label}`
                             });
                         }
+                    } else if (args[0] === 'list') {
+                        // List available providers
+                        const providers = await this._backend.getProviders();
+                        const status = await this._backend.getStatus();
+                        const providerList = providers.map(p =>
+                            `• **${p.id}**${p.id === status.provider ? ' ✓' : ''} - ${p.name}${p.has_api_key ? '' : ' (no API key)'}`
+                        ).join('\n');
+                        this._view.webview.postMessage({
+                            type: 'systemMessage',
+                            content: `**Available Providers:**\n${providerList}`
+                        });
                     } else {
                         const set = await this._backend.setProvider(args[0]);
                         if (set) {
