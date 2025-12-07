@@ -114,12 +114,13 @@ class BaseProvider(ABC):
         """
         return [
             ModelInfo(
-                id=model_id,
-                name=info.get("name", model_id),
+                # Use actual model ID from info dict (numbered format has id inside)
+                id=info.get("id", model_key),
+                name=info.get("name", info.get("id", model_key)),
                 description=info.get("description", ""),
                 context_length=info.get("context_length")
             )
-            for model_id, info in self.models.items()
+            for model_key, info in self.models.items()
         ]
 
     def validate_config(self) -> bool:

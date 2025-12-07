@@ -45,6 +45,43 @@
         "realtime_info": true
       }
     },
+    "gemini": {
+      "name": "Google Gemini",
+      "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "api_key_env": "GEMINI_API_KEY",
+      "default_model": "gemini-2.0-flash",
+      "coding_model": "gemini-2.5-pro",
+      "models": {
+        "gemini-2.0-flash": {
+          "name": "Gemini 2.0 Flash",
+          "description": "Fast model with multimodal support"
+        },
+        "gemini-2.0-flash-lite": {
+          "name": "Gemini 2.0 Flash Lite",
+          "description": "Cost-efficient for high-volume tasks"
+        },
+        "gemini-2.5-flash": {
+          "name": "Gemini 2.5 Flash",
+          "description": "Latest fast model, best price/performance"
+        },
+        "gemini-2.5-pro": {
+          "name": "Gemini 2.5 Pro",
+          "description": "Most capable model for complex reasoning"
+        }
+      },
+      "pricing": {
+        "gemini-2.0-flash": {"input": 0.10, "output": 0.40},
+        "gemini-2.0-flash-lite": {"input": 0.075, "output": 0.30},
+        "gemini-2.5-flash": {"input": 0.15, "output": 0.60},
+        "gemini-2.5-pro": {"input": 1.25, "output": 5.00}
+      },
+      "capabilities": {
+        "web_search": false,
+        "web_fetch": false,
+        "weather": false,
+        "realtime_info": false
+      }
+    },
     "openai": {
       "name": "OpenAI ChatGPT",
       "base_url": "https://api.openai.com/v1",

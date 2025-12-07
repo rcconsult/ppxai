@@ -129,20 +129,77 @@ class CommandHandler:
         self.client.clear_history()
         console.print("\n[green]Conversation history cleared.[/green]\n")
 
-    def handle_model(self):
+    def handle_model(self, args: str = ""):
         """Handle /model command."""
-        self.current_model = select_model(self.provider)
-        self.client.session_metadata["model"] = self.current_model
-        console.print()
+        args = args.strip().lower()
 
-    def handle_provider(self):
+        if args == "list":
+            # List available models
+            from .config import get_provider_config
+            config = get_provider_config(self.provider)
+            models = config.get("models", {})
+
+            console.print(f"\n[bold cyan]Available Models ({self.provider}):[/bold cyan]")
+            for num, info in models.items():
+                model_id = info.get("id", num)
+                is_current = " [green]✓[/green]" if model_id == self.current_model else ""
+                console.print(f"  • [bold]{model_id}[/bold]{is_current} - {info.get('description', '')}")
+            console.print()
+        elif args:
+            # Direct model selection by ID
+            from .config import get_provider_config
+            config = get_provider_config(self.provider)
+            models = config.get("models", {})
+
+            # Find model by ID
+            found = False
+            for num, info in models.items():
+                model_id = info.get("id", num)
+                if model_id == args:
+                    self.current_model = model_id
+                    self.client.session_metadata["model"] = self.current_model
+                    console.print(f"[green]✓ Switched to model: {model_id}[/green]\n")
+                    found = True
+                    break
+
+            if not found:
+                console.print(f"[red]Model not found: {args}[/red]")
+                console.print("[dim]Use /model list to see available models[/dim]\n")
+        else:
+            # Interactive selection
+            self.current_model = select_model(self.provider)
+            self.client.session_metadata["model"] = self.current_model
+            console.print()
+
+    def handle_provider(self, args: str = ""):
         """Handle /provider command - switch between providers."""
         from .client import AIClient
 
-        console.print(f"\n[cyan]Current provider:[/cyan] {self.provider}")
+        args = args.strip().lower()
 
-        # Show available providers
-        new_provider = select_provider()
+        if args == "list":
+            # List available providers
+            console.print(f"\n[bold cyan]Available Providers:[/bold cyan]")
+            for provider_id, config in PROVIDERS.items():
+                has_key = bool(get_api_key(provider_id))
+                is_current = " [green]✓[/green]" if provider_id == self.provider else ""
+                key_status = "" if has_key else " [dim](no API key)[/dim]"
+                console.print(f"  • [bold]{provider_id}[/bold]{is_current} - {config.get('name', provider_id)}{key_status}")
+            console.print()
+            return
+
+        if args and args != "list":
+            # Direct provider selection by ID
+            if args not in PROVIDERS:
+                console.print(f"[red]Provider not found: {args}[/red]")
+                console.print("[dim]Use /provider list to see available providers[/dim]\n")
+                return
+
+            new_provider = args
+        else:
+            # Interactive selection
+            console.print(f"\n[cyan]Current provider:[/cyan] {self.provider}")
+            new_provider = select_provider()
 
         if new_provider == self.provider:
             console.print("[dim]Same provider selected, no change needed.[/dim]\n")
@@ -170,12 +227,15 @@ class CommandHandler:
         self.base_url = new_base_url
         self.provider = new_provider
 
-        # Select model for new provider
-        self.current_model = select_model(new_provider)
+        # Select model for new provider (auto-select default if direct switch)
+        if args:
+            self.current_model = new_config.get("default_model", "")
+        else:
+            self.current_model = select_model(new_provider)
         self.client.session_metadata["model"] = self.current_model
         self.client.session_metadata["provider"] = new_provider
 
-        console.print(f"\n[green]Switched to:[/green] {new_config['name']} ({new_base_url})\n")
+        console.print(f"\n[green]Switched to:[/green] {new_config['name']} (model: {self.current_model})\n")
 
     def handle_help(self):
         """Handle /help command."""
@@ -681,9 +741,9 @@ class CommandHandler:
         elif command == "/clear":
             self.handle_clear()
         elif command == "/model":
-            self.handle_model()
+            self.handle_model(args)
         elif command == "/provider":
-            self.handle_provider()
+            self.handle_provider(args)
         elif command == "/help":
             self.handle_help()
         elif command == "/generate":

@@ -148,7 +148,12 @@ While in the chat interface:
 #### General Commands
 - Type your question or prompt to chat with the AI
 - `/help` - Show help message with all commands
-- `/model` - Change the current model
+- `/provider` - Switch AI provider (interactive picker)
+- `/provider list` - List all available providers
+- `/provider <id>` - Switch directly to a provider (e.g., `/provider gemini`)
+- `/model` - Change the current model (interactive picker)
+- `/model list` - List all models for current provider
+- `/model <id>` - Switch directly to a model (e.g., `/model gemini-2.5-pro`)
 - `/clear` - Clear conversation history
 - `/quit` or `/exit` - Exit the application (auto-saves session)
 - **@file References** - Type `@filename` to include file content in your message
@@ -310,16 +315,17 @@ ppxai uses a **hybrid configuration** approach that separates secrets from setti
 1. `PPXAI_CONFIG_FILE` environment variable (if set)
 2. `./ppxai-config.json` (project-specific, for teams)
 3. `~/.ppxai/ppxai-config.json` (user-specific)
-4. Built-in defaults (Perplexity only)
+4. Built-in defaults (Perplexity + Gemini)
 
-### Simple Setup (Perplexity Only)
+### Simple Setup (Perplexity + Gemini)
 
-Just create `.env` with your API key:
+Just create `.env` with your API keys:
 ```bash
 PERPLEXITY_API_KEY=pplx-xxxxxxxxxxxxx
+GEMINI_API_KEY=AIza-xxxxxxxxxxxxx
 ```
 
-No `ppxai-config.json` needed - built-in Perplexity configuration is used.
+No `ppxai-config.json` needed - built-in Perplexity and Gemini configurations are used. Use `/provider list` to see available providers.
 
 ### Multi-Provider Setup
 
