@@ -36,6 +36,10 @@ Welcome to the AI terminal interface!
 - `/help` - Show this help message
 - `/quit` or `/exit` - Exit the application
 
+## File Commands
+- `/show <file>` - Display file contents with syntax highlighting (no LLM call)
+- `/cat <file>` - Alias for /show
+
 ## Code Generation Tools
 - `/generate <description>` - Generate code from natural language description
 - `/test <file>` - Generate unit tests for a code file

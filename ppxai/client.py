@@ -22,6 +22,7 @@ from .config import (
     get_provider_config,
     get_active_pricing,
 )
+from .engine.context import ContextInjector
 
 # Initialize Rich console
 console = Console()
@@ -80,6 +81,8 @@ class AIClient:
             "estimated_cost": 0.0
         }
         self.auto_route = True  # Auto-route coding tasks to best model
+        self.auto_inject_context = True  # Auto-inject file contents
+        self.context_injector = ContextInjector(os.getcwd())
 
     def chat(self, message: str, model: str, stream: bool = True):
         """
@@ -93,9 +96,19 @@ class AIClient:
         Returns:
             The assistant's response
         """
+        # Auto-inject file context if enabled
+        enhanced_message = message
+        if self.auto_inject_context:
+            enhanced_message, injected = self.context_injector.inject_context(message)
+            if injected:
+                for ctx in injected:
+                    size_str = self.context_injector._format_size(ctx.size)
+                    truncation_note = " (truncated)" if ctx.truncated else ""
+                    console.print(f"[cyan]📎 Attached:[/cyan] {ctx.source} ({size_str}){truncation_note}")
+
         self.conversation_history.append({
             "role": "user",
-            "content": message
+            "content": enhanced_message
         })
 
         try:
@@ -110,6 +123,9 @@ class AIClient:
 
     def _stream_response(self, model: str):
         """Stream the response from the API."""
+        import time
+        start_time = time.time()
+
         response_chunks = []
         citations = []
         last_chunk = None
@@ -160,10 +176,17 @@ class AIClient:
         if citations:
             self._display_citations(citations)
 
+        # Show response time
+        elapsed = time.time() - start_time
+        console.print(f"[dim]({elapsed:.1f}s)[/dim]\n")
+
         return full_response
 
     def _get_response(self, model: str):
         """Get a non-streaming response from the API."""
+        import time
+        start_time = time.time()
+
         response = self.client.chat.completions.create(
             model=model,
             messages=self.conversation_history,
@@ -190,6 +213,10 @@ class AIClient:
         # Display citations if available
         if hasattr(response, 'citations') and response.citations:
             self._display_citations(response.citations)
+
+        # Show response time
+        elapsed = time.time() - start_time
+        console.print(f"[dim]({elapsed:.1f}s)[/dim]\n")
 
         return assistant_message
 

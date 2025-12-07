@@ -1,16 +1,27 @@
-# Building ppxai Executables
+# Building ppxai
 
-This guide explains how to build standalone executables for ppxai on Windows, macOS, and Linux.
+This guide explains how to build:
+- **TUI Executables** - Standalone terminal app for Windows, macOS, and Linux
+- **VS Code Extension** - VSIX package for VS Code Marketplace
 
 ## Prerequisites
 
+### TUI Executable
 - Python 3.8 or higher
 - pip (Python package installer)
 - Git (optional, for cloning the repository)
 
-## Quick Build
+### VS Code Extension
+- Node.js 18 or higher
+- npm (Node package manager)
 
-### macOS / Linux
+---
+
+## TUI Executable
+
+### Quick Build
+
+#### macOS / Linux
 
 ```bash
 ./build.sh
@@ -18,7 +29,7 @@ This guide explains how to build standalone executables for ppxai on Windows, ma
 
 The executable will be created at `dist/ppxai`
 
-### Windows
+#### Windows
 
 ```batch
 build.bat
@@ -248,8 +259,105 @@ This is normal. It includes the entire Python runtime and all dependencies. Typi
 - Linux: 15-25 MB
 - Windows: 10-20 MB
 
-## Support
+### TUI Support
 
-For issues related to building, check:
+For issues related to TUI executable builds, check:
 - [PyInstaller Documentation](https://pyinstaller.org/)
 - [PyInstaller GitHub Issues](https://github.com/pyinstaller/pyinstaller/issues)
+
+---
+
+## VS Code Extension
+
+### Quick Build
+
+```bash
+cd vscode-extension
+npm install
+npm run compile
+npx vsce package --allow-missing-repository
+```
+
+This creates a `.vsix` file (e.g., `ppxai-0.1.0.vsix`) in the `vscode-extension` directory.
+
+### Install Locally
+
+```bash
+code --install-extension ppxai-0.1.0.vsix
+```
+
+Or in VS Code: Extensions view → `...` menu → "Install from VSIX..."
+
+### Development Build
+
+For development with watch mode:
+
+```bash
+cd vscode-extension
+npm install
+npm run watch
+```
+
+Then press F5 in VS Code to launch Extension Development Host.
+
+### Build Steps
+
+1. **Install dependencies:**
+   ```bash
+   cd vscode-extension
+   npm install
+   ```
+
+2. **Compile TypeScript:**
+   ```bash
+   npm run compile
+   ```
+
+3. **Package extension:**
+   ```bash
+   npx vsce package --allow-missing-repository
+   ```
+
+4. **Install for testing:**
+   ```bash
+   code --install-extension ppxai-*.vsix
+   ```
+
+### Publishing to Marketplace
+
+To publish to VS Code Marketplace:
+
+1. **Create publisher account** at [Visual Studio Marketplace](https://marketplace.visualstudio.com/manage)
+
+2. **Generate Personal Access Token (PAT):**
+   - Go to Azure DevOps → User Settings → Personal Access Tokens
+   - Create token with "Marketplace (Publish)" scope
+
+3. **Login with vsce:**
+   ```bash
+   npx vsce login <publisher-name>
+   ```
+
+4. **Publish:**
+   ```bash
+   npx vsce publish
+   ```
+
+### Extension Troubleshooting
+
+#### "Cannot find module" errors
+```bash
+npm run compile
+```
+
+#### Extension not activating
+Check Output panel → "ppxai" for backend logs.
+
+#### Python backend not found
+Ensure `python3` is in PATH or configure `ppxai.pythonPath` in VS Code settings.
+
+### Extension Support
+
+For extension-specific issues:
+- Check [vscode-extension/README.md](vscode-extension/README.md)
+- See [VS Code Extension API](https://code.visualstudio.com/api)

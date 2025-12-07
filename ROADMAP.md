@@ -1,6 +1,42 @@
 # ppxai Development Roadmap
 
-## Current Release: v1.6.0
+## Current Release: v1.8.0
+
+**Status**: ✅ Complete - VSCode Extension & Enhanced UX
+
+Features implemented:
+- **VSCode Extension** with full chat UI in sidebar
+- **@filename file referencing** in chat messages (TUI + Extension)
+- **Autocomplete** for `/` commands and `@` file references (Tab completion in TUI, live suggestions in Extension)
+- **Tools toggle button** in extension UI (click to enable/disable)
+- **Markdown rendering** improvements with proper heading sizes, code highlighting
+- **File search** for `/show` command with fuzzy matching
+- **Response timing** display in both TUI and extension
+
+Extension features:
+- Chat panel with streaming responses
+- Provider/model switching
+- Session save/load
+- Slash commands (`/help`, `/show`, `/tools`, etc.)
+- Context menu commands (Explain Selection, Generate Tests, etc.)
+
+---
+
+## Previous Release: v1.7.0
+
+**Status**: ✅ Complete - Engine Refactoring
+
+Features implemented:
+- **Layered architecture**: Engine → Server → Clients
+- **Engine layer** (`ppxai/engine/`) with no UI dependencies
+- **JSON-RPC server** for IDE integration
+- **Provider abstraction** with `BaseProvider` interface
+- **Tool system** with `BaseTool` and `ToolManager`
+- Event-based communication between layers
+
+---
+
+## Previous Release: v1.6.0
 
 **Status**: ✅ Complete - Multi-Provider Configuration & Tool Improvements
 
@@ -10,14 +46,12 @@ Features implemented:
 - New config functions: `get_config_source()`, `get_available_providers()`, `set_active_provider()`, `reload_config()`, `validate_config()`
 - Backward compatibility with legacy `CUSTOM_*` env vars
 - Support for multiple providers: Perplexity, OpenAI, OpenRouter, local models
-- 172+ tests passing (including 48 new config tests, 25 shell command tests)
+- 180+ tests passing (including 48 config tests, 25 shell command tests)
 
-Bug fixes in this release:
-- Fixed tool call JSON parsing for flat format (model outputting `{"tool": "...", "command": "..."}` instead of nested format)
-- Fixed message alternation error when max tool iterations reached (Perplexity API 400 error)
-- Fixed missing `export_conversation()`, `save_session()`, `get_usage_summary()` methods in PerplexityClientPromptTools
-- Increased default `tool_max_iterations` from 5 to 15
-- Added `/tools config` command to adjust max_iterations at runtime (1-50 range)
+Bug fixes:
+- Fixed tool call JSON parsing for flat format
+- Fixed message alternation error when max tool iterations reached
+- Added `/tools config` command to adjust max_iterations at runtime
 
 ---
 
@@ -239,7 +273,110 @@ Features implemented:
 
 ---
 
-### v1.7.0: Per-Provider Tool Configuration (Priority: Medium)
+### v1.9.0: VSCode Extension CI/CD & Marketplace Publishing (Priority: High)
+
+**Goal**: Automate VSCode extension builds and publishing to the marketplace
+
+#### Features
+
+1. **GitHub Actions Workflow**
+   - Automated builds on push/PR to extension directory
+   - Version bumping and changelog generation
+   - Cross-platform testing (Windows, macOS, Linux)
+   - VSIX artifact generation
+
+2. **Marketplace Publishing**
+   - Automated publishing to VS Code Marketplace
+   - Publisher account setup and token management
+   - Version tag-based releases
+   - Pre-release channel support
+
+3. **Quality Gates**
+   - ESLint/TypeScript checks
+   - Extension manifest validation
+   - Bundle size monitoring
+   - Automated testing (if applicable)
+
+#### Implementation Plan
+
+**Phase 1: CI Workflow (2-3 hours)**
+- [ ] Create `.github/workflows/vscode-extension.yml`
+- [ ] Setup Node.js environment and caching
+- [ ] Add compile and lint steps
+- [ ] Generate VSIX artifacts
+- [ ] Upload artifacts to releases
+
+**Phase 2: Marketplace Setup (1-2 hours)**
+- [ ] Create Azure DevOps organization (if needed)
+- [ ] Create VS Code Marketplace publisher account
+- [ ] Generate Personal Access Token (PAT)
+- [ ] Add PAT as GitHub secret (`VSCE_PAT`)
+- [ ] Configure publisher in `package.json`
+
+**Phase 3: Release Workflow (2-3 hours)**
+- [ ] Create release workflow triggered by tags (`v*-ext`)
+- [ ] Auto-increment version in `package.json`
+- [ ] Generate changelog from commits
+- [ ] Publish to VS Code Marketplace
+- [ ] Create GitHub release with VSIX
+
+**Phase 4: Pre-release Support (1 hour)**
+- [ ] Configure pre-release channel
+- [ ] Beta version naming convention
+- [ ] Separate workflow for pre-releases
+
+**Estimated Total**: 6-9 hours
+
+#### Example Workflow
+
+```yaml
+# .github/workflows/vscode-extension.yml
+name: VSCode Extension CI/CD
+
+on:
+  push:
+    paths:
+      - 'vscode-extension/**'
+    tags:
+      - 'v*-ext'
+  pull_request:
+    paths:
+      - 'vscode-extension/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vscode-extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: vscode-extension/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run compile
+      - run: npx vsce package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ppxai-extension
+          path: vscode-extension/*.vsix
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+      - run: npx vsce publish -p ${{ secrets.VSCE_PAT }}
+```
+
+---
+
+### v1.10.0: Per-Provider Tool Configuration (Priority: Medium)
 
 **Goal**: Configure which tools are available for each provider
 
@@ -253,18 +390,27 @@ Features implemented:
      - Enable only file operations for code review bots
      - Full tool access for development/testing
 
-2. **Configuration Format**
-   ```bash
-   # Provider 1 tools configuration
-   CUSTOM_PROVIDER_1_TOOLS=file,shell,calculator,datetime
-   # or disable specific tools
-   CUSTOM_PROVIDER_1_TOOLS_DISABLE=web_search,fetch_url
-
-   # Provider 2 tools (minimal set)
-   CUSTOM_PROVIDER_2_TOOLS=file,calculator
-
-   # Provider 3 tools (all)
-   CUSTOM_PROVIDER_3_TOOLS=all
+2. **Configuration Format** (in `ppxai-config.json`)
+   ```json
+   {
+     "providers": {
+       "perplexity": {
+         "tools": {
+           "disabled": ["web_search", "fetch_url"]
+         }
+       },
+       "openai": {
+         "tools": {
+           "enabled": ["all"]
+         }
+       },
+       "local": {
+         "tools": {
+           "enabled": ["file", "calculator", "datetime"]
+         }
+       }
+     }
+   }
    ```
 
 3. **Tool Management Commands**
@@ -285,8 +431,7 @@ Features implemented:
 #### Implementation Plan
 
 **Phase 1: Configuration Schema (1-2 hours)**
-- [ ] Define tool configuration schema
-- [ ] Create `parse_provider_tools()` function
+- [ ] Define tool configuration schema in JSON config
 - [ ] Add tool categories mapping
 - [ ] Update provider config structure
 
@@ -294,37 +439,21 @@ Features implemented:
 - [ ] Modify `ToolManager` to support provider-specific tools
 - [ ] Implement tool filtering based on provider config
 - [ ] Add runtime enable/disable functionality
-- [ ] Create tool category groups
 
 **Phase 3: Commands (1-2 hours)**
 - [ ] Implement `/tools available` command
-- [ ] Implement `/tools enabled` command
 - [ ] Implement `/tools enable/disable <tool>` commands
 - [ ] Update `/tools` command help text
 
-**Phase 4: Validation & Security (1 hour)**
-- [ ] Validate tool names in configuration
-- [ ] Prevent enabling unavailable tools
-- [ ] Add warnings for dangerous tool combinations
-- [ ] Implement tool access logging (optional)
-
-**Phase 5: Testing (2 hours)**
+**Phase 4: Testing & Documentation (2 hours)**
 - [ ] Test tool filtering per provider
-- [ ] Test runtime enable/disable
-- [ ] Test tool category groups
-- [ ] Integration tests with multiple providers
+- [ ] Update documentation
 
-**Phase 6: Documentation (1 hour)**
-- [ ] Update TOOLS.md with configuration guide
-- [ ] Add security best practices
-- [ ] Document tool categories
-- [ ] Update `.env.example`
-
-**Estimated Total**: 8-11 hours
+**Estimated Total**: 6-9 hours
 
 ---
 
-### v1.8.0: Enhanced Tool System (Priority: Low)
+### v1.11.0: Enhanced Tool System (Priority: Low)
 
 **Goal**: Improve tool capabilities and user experience
 
@@ -401,7 +530,7 @@ Features implemented:
 
 ---
 
-### v1.9.0: Web Terminal & Launcher Options (Priority: Medium)
+### v1.12.0: Web Terminal & Launcher Options (Priority: Low)
 
 **Goal**: Provide flexible terminal launch options including web-based access
 
@@ -500,134 +629,69 @@ Features implemented:
 
 ## Additional Future Considerations
 
-### v2.0.0: IDE Integration & Major Enhancements (Long-term)
+### v2.0.0: Advanced IDE Integration & Multi-Editor Support (Long-term)
 
-**Goal**: Provide seamless IDE integration similar to Claude Code CLI and Gemini CLI
+**Goal**: Expand IDE integration beyond VS Code and add advanced features
 
-#### IDE Integration Features
+**Note**: Basic VS Code extension is complete (v1.8.0). This phase focuses on advanced features and multi-IDE support.
 
-1. **VS Code Extension**
-   - Native VS Code extension for ppxai
-   - Integrated terminal panel within VS Code
-   - File context awareness (open files, workspace structure)
-   - Inline code suggestions and completions
-   - Side panel for chat interface
-   - Command palette integration (`Ctrl+Shift+P` → "ppxai: ...")
+#### Completed in v1.8.0 ✅
+- ✅ VS Code extension with chat panel
+- ✅ Side panel for chat interface
+- ✅ Command palette integration
+- ✅ @-mentions for files
+- ✅ JSON-RPC server for IDE communication
+- ✅ Streaming responses
+- ✅ Session management
+- ✅ Provider/model switching
 
-2. **Editor Protocol Support**
-   - Language Server Protocol (LSP) integration
-   - Editor-agnostic communication protocol
-   - Support for multiple editors:
-     - VS Code (primary)
-     - JetBrains IDEs (IntelliJ, PyCharm, WebStorm)
-     - Neovim/Vim
-     - Sublime Text
-     - Cursor IDE
+#### Remaining Features
 
-3. **Workspace Awareness**
-   - Automatic project context detection
-   - Git status and diff awareness
-   - Dependency analysis (package.json, requirements.txt, etc.)
-   - Project structure understanding
-   - `.ppxai` config file per project
+1. **Multi-Editor Support**
+   - JetBrains IDEs plugin (IntelliJ, PyCharm, WebStorm)
+   - Neovim/Vim plugin
+   - Sublime Text plugin
+   - Editor-agnostic LSP server
 
-4. **Code Actions**
+2. **Advanced Code Actions**
    - `/edit <file>` - AI-assisted file editing with diff preview
    - `/refactor` - Refactoring suggestions with apply/reject
-   - `/explain` - Inline code explanations
-   - `/test` - Generate tests for selected code
    - `/fix` - Fix errors/warnings in current file
    - `/review` - Code review for staged changes
+   - CodeLens integration for AI actions
 
-5. **Context Sharing**
-   - Share selected code with ppxai
-   - Share terminal output
-   - Share error messages and stack traces
-   - Automatic file inclusion based on imports
-   - @-mentions for files (`@src/utils.py explain this`)
+3. **Enhanced Workspace Awareness**
+   - Git status and diff awareness
+   - Dependency analysis (package.json, requirements.txt, etc.)
+   - Automatic context from imports
+   - Diagnostic integration
 
-6. **IDE-Specific Features**
-   - Diagnostic integration (show AI suggestions for errors)
-   - CodeLens for AI actions
-   - Hover providers for explanations
-   - Quick fixes powered by AI
-   - Git integration (commit message generation, PR descriptions)
-
-#### Implementation Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    VS Code / IDE                        │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
-│  │  Extension  │  │  Terminal   │  │  Side Panel │     │
-│  │   (UI)      │  │  (Embedded) │  │   (Chat)    │     │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘     │
-└─────────┼────────────────┼────────────────┼─────────────┘
-          │                │                │
-          ▼                ▼                ▼
-┌─────────────────────────────────────────────────────────┐
-│              ppxai Language Server / Daemon             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
-│  │  LSP Server │  │  WebSocket  │  │   JSON-RPC  │     │
-│  │             │  │   Server    │  │   Handler   │     │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘     │
-└─────────┼────────────────┼────────────────┼─────────────┘
-          │                │                │
-          ▼                ▼                ▼
-┌─────────────────────────────────────────────────────────┐
-│                   ppxai Core Engine                     │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
-│  │  AI Client  │  │    Tools    │  │   Session   │     │
-│  │  (Multi-    │  │  (File,     │  │  Management │     │
-│  │  Provider)  │  │   Shell)    │  │             │     │
-│  └─────────────┘  └─────────────┘  └─────────────┘     │
-└─────────────────────────────────────────────────────────┘
-```
+4. **LSP Integration**
+   - Language Server Protocol support
+   - Completion provider
+   - Hover provider for explanations
+   - Signature help provider
 
 #### Implementation Plan
 
-**Phase 1: Daemon Mode (4-5 hours)**
-- [ ] Create ppxai daemon that runs in background
-- [ ] Implement JSON-RPC or WebSocket API
-- [ ] Add `ppxai --daemon` and `ppxai --connect` modes
-- [ ] Implement health check and auto-restart
-
-**Phase 2: VS Code Extension - Basic (6-8 hours)**
-- [ ] Create VS Code extension scaffold
-- [ ] Implement terminal integration
-- [ ] Add basic chat panel
-- [ ] Connect to ppxai daemon
-- [ ] Publish to VS Code Marketplace
-
-**Phase 3: Workspace Context (4-5 hours)**
-- [ ] Implement workspace file scanning
-- [ ] Add git integration (status, diff, blame)
-- [ ] Create project context builder
-- [ ] Add @-mention file references
-
-**Phase 4: Code Actions (6-8 hours)**
+**Phase 1: Advanced Code Actions (6-8 hours)**
 - [ ] Implement `/edit` with diff preview
-- [ ] Add CodeLens providers
+- [ ] Add inline code modifications
 - [ ] Create diagnostic integration
 - [ ] Implement quick fixes
 
-**Phase 5: LSP Integration (8-10 hours)**
-- [ ] Create LSP server wrapper
+**Phase 2: LSP Server (8-10 hours)**
+- [ ] Create LSP server wrapper using `pygls`
 - [ ] Implement completion provider
 - [ ] Add hover provider for explanations
 - [ ] Create signature help provider
 
-**Phase 6: Multi-IDE Support (6-8 hours)**
+**Phase 3: Multi-IDE Support (10-14 hours)**
 - [ ] Create JetBrains plugin (Kotlin)
 - [ ] Add Neovim plugin (Lua)
 - [ ] Document generic editor integration
 
-**Estimated Total**: 34-44 hours
-
-**Dependencies:**
-- `pygls` (Python LSP server framework)
-- VS Code Extension API
-- `watchdog` (file system monitoring)
+**Estimated Total**: 24-32 hours
 
 ---
 
@@ -667,32 +731,47 @@ Features implemented:
 
 ## Development Priorities
 
-### Completed (v1.6.0) ✅
-- ✅ **Done**: Hybrid configuration (ppxai-config.json + .env)
-- ✅ **Done**: Multiple provider support
-- ✅ **Done**: Config validation and reload
+### Completed ✅
 
-### Immediate (v1.7.0)
-- ⚠️ **Must Have**: `/provider` commands (list, switch, info)
-- ⚠️ **Must Have**: Per-provider tool configuration
-- ⚠️ **Should Have**: Tool categories
+**v1.8.0** - VSCode Extension & Enhanced UX
+- ✅ VSCode extension with full chat UI
+- ✅ @filename file referencing
+- ✅ Autocomplete for / commands and @files
+- ✅ Tools toggle button in extension
+- ✅ Markdown rendering improvements
+- ✅ File search for /show command
 
-### Short-term (v1.8.0)
-- ⚠️ **Nice to Have**: Tool aliases
-- ⚠️ **Nice to Have**: Tool presets
-- ⚠️ **Nice to Have**: Usage statistics
+**v1.7.0** - Engine Refactoring
+- ✅ Layered architecture (Engine → Server → Clients)
+- ✅ JSON-RPC server for IDE integration
+- ✅ Provider abstraction with BaseProvider interface
 
-### Medium-term (v1.9.0)
-- 🌐 **Nice to Have**: Web terminal interface (browser-based)
-- 🖥️ **Nice to Have**: Configurable terminal launcher
-- 📱 **Nice to Have**: Cross-platform terminal support
+**v1.6.0** - Multi-Provider Configuration
+- ✅ Hybrid configuration (ppxai-config.json + .env)
+- ✅ Multiple provider support
+- ✅ Config validation and reload
+
+### Immediate (v1.9.0)
+- 🚀 **High Priority**: VSCode Extension CI/CD & Marketplace publishing
+- 🚀 **High Priority**: GitHub Actions workflow for extension builds
+- 📦 **High Priority**: Automated VSIX packaging and releases
+
+### Short-term (v1.10.0)
+- ⚠️ **Medium**: Per-provider tool configuration
+- ⚠️ **Medium**: Tool categories (file, shell, web, data)
+- ⚠️ **Medium**: Runtime tool enable/disable per provider
+
+### Medium-term (v1.11.0 - v1.12.0)
+- 💡 **Nice to Have**: Tool aliases and presets
+- 💡 **Nice to Have**: Tool usage statistics
+- 🌐 **Nice to Have**: Web terminal interface
 
 ### Long-term (v2.0.0+)
-- 🔌 **Future**: VS Code extension & IDE integration
+- 🔌 **Future**: Multi-IDE support (JetBrains, Neovim, Sublime)
 - 🔌 **Future**: LSP server for editor-agnostic support
+- 💡 **Future**: Advanced code actions (edit, refactor, review)
 - 💡 **Future**: Plugin system
 - 💡 **Future**: Multi-modal support
-- 💡 **Future**: Workflow automation
 
 ---
 
@@ -719,6 +798,6 @@ Interested in working on any of these features?
 
 ---
 
-**Last Updated**: November 29, 2025
-**Current Version**: v1.6.0
-**Next Target**: v1.7.0 (Provider Commands & Per-Provider Tools)
+**Last Updated**: December 7, 2025
+**Current Version**: v1.8.0
+**Next Target**: v1.9.0 (VSCode Extension CI/CD & Marketplace Publishing)

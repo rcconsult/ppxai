@@ -140,7 +140,7 @@ class PerplexityClientPromptTools:
         )
 
         # Read file tool
-        def read_file(filepath: str, max_lines: int = 100) -> str:
+        def read_file(filepath: str, max_lines: int = 500) -> str:
             """Read contents of a file."""
             try:
                 path = Path(filepath).expanduser().resolve()
@@ -167,7 +167,7 @@ class PerplexityClientPromptTools:
                 "type": "object",
                 "properties": {
                     "filepath": {"type": "string", "description": "Path to the file"},
-                    "max_lines": {"type": "integer", "description": "Max lines (default: 100)"}
+                    "max_lines": {"type": "integer", "description": "Max lines (default: 500)"}
                 },
                 "required": ["filepath"]
             },
@@ -858,6 +858,9 @@ class PerplexityClientPromptTools:
         Returns:
             Final assistant response
         """
+        import time
+        start_time = time.time()
+
         if not self.enable_tools or not self.tool_manager:
             return await self._chat_without_tools(message, model)
 
@@ -950,7 +953,10 @@ class PerplexityClientPromptTools:
                     console.print("\n[bold cyan]Assistant:[/bold cyan]")
                     if assistant_message.strip():
                         console.print(Markdown(assistant_message))
-                    console.print()
+
+                    # Show response time
+                    elapsed = time.time() - start_time
+                    console.print(f"[dim]({elapsed:.1f}s)[/dim]\n")
 
                     self.conversation_history.append({
                         "role": "assistant",
@@ -1069,6 +1075,9 @@ class PerplexityClientPromptTools:
 
     async def _chat_without_tools(self, message: str, model: str) -> Optional[str]:
         """Chat without tools."""
+        import time
+        start_time = time.time()
+
         self.conversation_history.append({
             "role": "user",
             "content": message
@@ -1086,7 +1095,10 @@ class PerplexityClientPromptTools:
             console.print("\n[bold cyan]Assistant:[/bold cyan]")
             if assistant_message.strip():
                 console.print(Markdown(assistant_message))
-            console.print()
+
+            # Show response time
+            elapsed = time.time() - start_time
+            console.print(f"[dim]({elapsed:.1f}s)[/dim]\n")
 
             self.conversation_history.append({
                 "role": "assistant",

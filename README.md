@@ -12,6 +12,15 @@ A terminal-based interface for interacting with Perplexity AI models.
 - 🔗 Clickable source citations in terminal
 - 📝 Command history support
 - 📦 Standalone executables available (no Python required!)
+- 🆕 **VS Code Extension** - Full-featured chat panel in your IDE
+
+### VS Code Extension 🆕
+- 💬 **Chat Panel** - Interactive AI chat in the sidebar with markdown rendering
+- 📎 **@file References** - Type `@filename` to include file content in messages
+- ⌨️ **Autocomplete** - Tab completion for `/` commands and `@` file references
+- 🛠️ **Tools Toggle** - Click badge to enable/disable AI tools
+- 🖱️ **Context Menu** - Right-click commands: Explain, Generate Tests, Generate Docs
+- 🔄 **Multi-Provider** - Supports all configured providers (Perplexity, OpenAI, etc.)
 
 ### Session Management
 - 💾 Auto-save sessions every 10 messages
@@ -142,6 +151,8 @@ While in the chat interface:
 - `/model` - Change the current model
 - `/clear` - Clear conversation history
 - `/quit` or `/exit` - Exit the application (auto-saves session)
+- **@file References** - Type `@filename` to include file content in your message
+- **Autocomplete** - Tab/type to complete `/` commands and `@` file references
 
 #### Session Management
 - `/save [filename]` - Export conversation to markdown file
@@ -414,14 +425,27 @@ Clickable links work best in modern terminals:
 ppxai/
 ├── ppxai.py                              # Entry point wrapper
 ├── ppxai/                                # Main package
-│   ├── __init__.py                       # Package exports (v1.6.0)
+│   ├── __init__.py                       # Package exports (v1.8.0)
 │   ├── main.py                           # CLI application
 │   ├── client.py                         # AI client for API communication
 │   ├── config.py                         # Hybrid configuration system
 │   ├── commands.py                       # Command handlers
 │   ├── ui.py                             # Terminal UI/display
 │   ├── prompts.py                        # Coding prompts & templates
-│   └── utils.py                          # Utility functions
+│   ├── utils.py                          # Utility functions
+│   ├── server.py                         # JSON-RPC server for IDE integration
+│   └── engine/                           # Core engine (v1.7.0+)
+│       ├── types.py                      # Shared types (Event, Message, etc.)
+│       ├── client.py                     # EngineClient facade
+│       ├── session.py                    # Session management
+│       ├── providers/                    # Provider implementations
+│       └── tools/                        # Tool system
+├── vscode-extension/                     # VS Code Extension (v1.8.0)
+│   ├── src/
+│   │   ├── extension.ts                  # Extension entry point
+│   │   ├── chatPanel.ts                  # Webview chat UI
+│   │   └── backend.ts                    # Python process manager
+│   └── package.json                      # Extension manifest
 ├── tool_manager.py                       # Tool management system
 ├── perplexity_tools_prompt_based.py      # AI tool implementation
 ├── ppxai-config.json                     # Provider configuration (optional)
@@ -430,7 +454,7 @@ ppxai/
 │   ├── example_builtin_tool.py           # Example Python tool
 │   ├── example_mcp_server/               # Example MCP server
 │   └── demo_tools_working.py             # Working demo
-├── tests/                                # 170+ tests
+├── tests/                                # 180+ tests
 │   ├── test_config.py                    # Configuration tests (48 tests)
 │   ├── test_client.py                    # Client tests
 │   ├── test_commands.py                  # Command tests
@@ -447,9 +471,12 @@ ppxai/
 ## Documentation
 
 - **Main Guide:** [README.md](README.md) (this file)
+- **VS Code Extension:** [vscode-extension/README.md](vscode-extension/README.md)
+- **Provider Setup:** [docs/PROVIDER_SETUP.md](docs/PROVIDER_SETUP.md)
 - **Tool System:** [docs/README.md](docs/README.md)
 - **Tool Creation:** [docs/TOOL_CREATION_GUIDE.md](docs/TOOL_CREATION_GUIDE.md)
 - **Code Generation:** [SPECIFICATIONS.md](SPECIFICATIONS.md)
+- **Development Roadmap:** [ROADMAP.md](ROADMAP.md)
 - **Building:** [BUILD.md](BUILD.md)
 - **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md)
 - **Security:** [SECURITY.md](SECURITY.md)

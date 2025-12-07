@@ -1,0 +1,154 @@
+{
+  "name": "ppxai",
+  "displayName": "ppxai - AI Chat",
+  "description": "Multi-provider AI chat interface with code generation tools",
+  "version": "0.1.0",
+  "publisher": "ppxai",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Programming Languages",
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "ppxai.openChat",
+        "title": "Open Chat",
+        "category": "ppxai"
+      },
+      {
+        "command": "ppxai.explainSelection",
+        "title": "Explain Selection",
+        "category": "ppxai"
+      },
+      {
+        "command": "ppxai.generateTests",
+        "title": "Generate Tests",
+        "category": "ppxai"
+      },
+      {
+        "command": "ppxai.generateDocs",
+        "title": "Generate Documentation",
+        "category": "ppxai"
+      },
+      {
+        "command": "ppxai.debugError",
+        "title": "Debug Error",
+        "category": "ppxai"
+      },
+      {
+        "command": "ppxai.implement",
+        "title": "Implement from Description",
+        "category": "ppxai"
+      },
+      {
+        "command": "ppxai.switchProvider",
+        "title": "Switch Provider",
+        "category": "ppxai"
+      },
+      {
+        "command": "ppxai.switchModel",
+        "title": "Switch Model",
+        "category": "ppxai"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "ppxai.explainSelection",
+          "when": "editorHasSelection",
+          "group": "ppxai@1"
+        },
+        {
+          "command": "ppxai.generateTests",
+          "group": "ppxai@2"
+        },
+        {
+          "command": "ppxai.generateDocs",
+          "group": "ppxai@3"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ppxai",
+          "title": "ppxai",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "ppxai": [
+        {
+          "type": "webview",
+          "id": "ppxai.chatView",
+          "name": "Chat",
+          "visibility": "visible",
+          "initialSize": 3
+        },
+        {
+          "id": "ppxai.sessions",
+          "name": "Sessions",
+          "visibility": "collapsed",
+          "initialSize": 1
+        }
+      ]
+    },
+    "configuration": {
+      "title": "ppxai",
+      "properties": {
+        "ppxai.configPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to ppxai-config.json (leave empty for auto-detect)"
+        },
+        "ppxai.defaultProvider": {
+          "type": "string",
+          "default": "perplexity",
+          "description": "Default AI provider"
+        },
+        "ppxai.defaultModel": {
+          "type": "string",
+          "default": "",
+          "description": "Default model (leave empty for provider default)"
+        },
+        "ppxai.enableTools": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable AI tools (file operations, shell, web search)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.54.0",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.3.0",
+    "webpack": "^5.103.0",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "highlight.js": "^11.11.1",
+    "marked": "^17.0.1",
+    "openai": "^4.73.0"
+  }
+}

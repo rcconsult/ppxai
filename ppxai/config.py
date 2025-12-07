@@ -67,11 +67,12 @@ BUILTIN_PROVIDERS = {
             },
         },
         "pricing": {
-            "sonar": {"input": 0.20, "output": 0.20},
+            # Prices per million tokens (2025)
+            "sonar": {"input": 1.00, "output": 1.00},
             "sonar-pro": {"input": 3.00, "output": 15.00},
             "sonar-reasoning": {"input": 1.00, "output": 5.00},
-            "sonar-reasoning-pro": {"input": 5.00, "output": 15.00},
-            "sonar-deep-research": {"input": 5.00, "output": 15.00},
+            "sonar-reasoning-pro": {"input": 2.00, "output": 8.00},
+            "sonar-deep-research": {"input": 2.00, "output": 8.00},
         },
         "capabilities": {
             "web_search": True,

@@ -440,6 +440,222 @@ class CommandHandler:
             console.print(f"[red]Unknown setting: {setting}[/red]")
             console.print("[dim]Available: max_iterations[/dim]\n")
 
+    def _search_files(self, query: str, max_results: int = 10) -> list:
+        """Search for files matching query in current directory."""
+        from pathlib import Path
+        import fnmatch
+
+        # Remove @ prefix if present
+        query = query.lstrip('@').strip()
+
+        # Get search root (current working directory)
+        root = Path.cwd()
+
+        # Build search patterns
+        patterns = []
+        query_lower = query.lower()
+
+        # If query looks like a path, try exact match first
+        if '/' in query or '\\' in query:
+            direct_path = root / query
+            if direct_path.exists() and direct_path.is_file():
+                return [direct_path]
+
+        # Extract filename parts for fuzzy matching
+        parts = query_lower.replace('-', ' ').replace('_', ' ').split()
+
+        matches = []
+        try:
+            # Walk directory tree (skip hidden dirs and common ignore patterns)
+            ignore_dirs = {'.git', 'node_modules', '__pycache__', '.venv', 'venv', '.tox', 'dist', 'build', '.eggs'}
+
+            for path in root.rglob('*'):
+                if path.is_file():
+                    # Skip files in ignored directories
+                    if any(ignored in path.parts for ignored in ignore_dirs):
+                        continue
+
+                    # Check if filename matches
+                    filename_lower = path.name.lower()
+                    path_str_lower = str(path.relative_to(root)).lower()
+
+                    # Exact filename match
+                    if query_lower == filename_lower:
+                        return [path]  # Exact match, return immediately
+
+                    # Check if all query parts are in the path
+                    if all(part in path_str_lower for part in parts):
+                        matches.append(path)
+                    # Also check partial filename match
+                    elif query_lower in filename_lower:
+                        matches.append(path)
+
+                    if len(matches) >= max_results * 2:  # Get more for sorting
+                        break
+        except PermissionError:
+            pass
+
+        # Sort by relevance (shorter paths and exact filename matches first)
+        def score(p):
+            name = p.name.lower()
+            # Prefer exact filename matches
+            if query_lower == name:
+                return (0, len(str(p)))
+            if query_lower in name:
+                return (1, len(str(p)))
+            return (2, len(str(p)))
+
+        matches.sort(key=score)
+        return matches[:max_results]
+
+    def process_file_references(self, content: str) -> tuple[str, list[dict]]:
+        """
+        Process @filename references in a message and return augmented message with file contents.
+
+        Returns:
+            tuple: (augmented_message, list of {name, path} dicts for resolved files)
+        """
+        import re
+        from pathlib import Path
+
+        # Match @filename patterns (word characters, dots, hyphens, slashes)
+        ref_pattern = r'@([\w.\-/]+)'
+        matches = list(re.finditer(ref_pattern, content))
+
+        if not matches:
+            return content, []
+
+        resolved_files = []
+        processed_message = content
+
+        for match in matches:
+            ref = match.group(1)
+            full_match = match.group(0)
+
+            # Try to resolve the file
+            files = self._search_files(ref, max_results=1)
+            if files:
+                file_path = files[0]
+                try:
+                    file_content = file_path.read_text()
+                    filename = file_path.name
+
+                    resolved_files.append({
+                        'name': filename,
+                        'path': str(file_path),
+                        'content': file_content
+                    })
+
+                    # Replace @ref with just the filename in the message
+                    processed_message = processed_message.replace(full_match, filename, 1)
+                except Exception:
+                    # File couldn't be read, leave reference as-is
+                    pass
+
+        if not resolved_files:
+            return content, []
+
+        # Build augmented message with file contents as context
+        augmented_message = processed_message
+        augmented_message += '\n\n---\n**Referenced Files:**\n'
+
+        for f in resolved_files:
+            ext = Path(f['name']).suffix.lstrip('.')
+            augmented_message += f"\n**{f['name']}** (`{f['path']}`):\n```{ext}\n{f['content']}\n```\n"
+
+        return augmented_message, [{'name': f['name'], 'path': f['path']} for f in resolved_files]
+
+    def handle_show(self, args: str):
+        """Display file contents locally without LLM call."""
+        from pathlib import Path
+        from rich.syntax import Syntax
+        import time
+
+        start_time = time.time()
+
+        if not args.strip():
+            console.print("[red]Usage: /show <filepath> or /show @<search-query>[/red]")
+            console.print("[dim]Examples:[/dim]")
+            console.print("[dim]  /show README.md[/dim]")
+            console.print("[dim]  /show @architecture (searches for files)[/dim]")
+            console.print("[dim]  /show docs/README.md[/dim]\n")
+            return
+
+        query = args.strip()
+
+        # Extract @reference if present (ignore trailing words like "file", "in docs", etc.)
+        import re
+        at_match = re.search(r'@([\w.\-/]+)', query)
+        if at_match:
+            query = at_match.group(1)  # Use just the reference without @
+
+        # Check if it's a direct path first
+        direct_path = Path(query).expanduser()
+        if not direct_path.is_absolute():
+            direct_path = Path.cwd() / query
+
+        if direct_path.exists() and direct_path.is_file():
+            path = direct_path.resolve()
+        else:
+            # Search for files
+            console.print(f"[dim]Searching for '{query}'...[/dim]")
+            matches = self._search_files(query)
+
+            if not matches:
+                console.print(f"[red]No files found matching: {query}[/red]\n")
+                return
+
+            if len(matches) == 1:
+                path = matches[0]
+                console.print(f"[dim]Found: {path.relative_to(Path.cwd())}[/dim]\n")
+            else:
+                # Multiple matches - let user choose
+                console.print(f"\n[yellow]Multiple files found ({len(matches)}):[/yellow]")
+                for i, match in enumerate(matches, 1):
+                    rel_path = match.relative_to(Path.cwd())
+                    console.print(f"  [cyan]{i}[/cyan]. {rel_path}")
+
+                console.print("\n[dim]Use exact path: /show <path>[/dim]\n")
+                return
+
+        if not path.is_file():
+            console.print(f"[red]Not a file: {query}[/red]\n")
+            return
+
+        try:
+            content = path.read_text(encoding='utf-8')
+            lines = content.split('\n')
+
+            # Detect language from extension
+            ext_to_lang = {
+                '.py': 'python', '.js': 'javascript', '.ts': 'typescript',
+                '.json': 'json', '.yaml': 'yaml', '.yml': 'yaml',
+                '.md': 'markdown', '.html': 'html', '.css': 'css',
+                '.sh': 'bash', '.bash': 'bash', '.zsh': 'bash',
+                '.rs': 'rust', '.go': 'go', '.java': 'java',
+                '.c': 'c', '.cpp': 'cpp', '.h': 'c', '.hpp': 'cpp',
+                '.rb': 'ruby', '.php': 'php', '.sql': 'sql',
+                '.xml': 'xml', '.toml': 'toml', '.ini': 'ini',
+            }
+            lang = ext_to_lang.get(path.suffix.lower(), 'text')
+
+            # Show file info
+            size_kb = path.stat().st_size / 1024
+            console.print(f"\n[bold cyan]{path.name}[/bold cyan] [dim]({size_kb:.1f} KB, {len(lines)} lines)[/dim]\n")
+
+            # Display with syntax highlighting (no truncation for local viewing)
+            syntax = Syntax(content, lang, theme="monokai", line_numbers=True)
+            console.print(syntax)
+
+            # Show timing
+            elapsed = time.time() - start_time
+            console.print(f"[dim]({elapsed:.2f}s)[/dim]\n")
+
+        except UnicodeDecodeError:
+            console.print(f"[red]Cannot display binary file: {query}[/red]\n")
+        except Exception as e:
+            console.print(f"[red]Error reading file: {e}[/red]\n")
+
     def handle_command(self, user_input: str) -> Optional[bool]:
         """
         Handle a slash command.
@@ -490,6 +706,10 @@ class CommandHandler:
             self.handle_spec(args)
         elif command == "/tools":
             self.handle_tools(args)
+        elif command == "/show":
+            self.handle_show(args)
+        elif command == "/cat":
+            self.handle_show(args)  # Alias for /show
         else:
             console.print(f"[red]Unknown command: {user_input}[/red]")
             console.print("[yellow]Type /help for available commands[/yellow]\n")
