@@ -5,9 +5,12 @@ Main entry point for the ppxai application.
 import os
 import sys
 import asyncio
+from pathlib import Path
 
-from prompt_toolkit import prompt
+from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit.completion import Completer, Completion
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 
 from .client import AIClient
 from .commands import CommandHandler
@@ -19,6 +22,106 @@ from .config import (
     get_provider_config,
 )
 from .ui import console, display_welcome, select_model, select_provider
+
+
+class PPXAICompleter(Completer):
+    """Custom completer for slash commands and @file references."""
+
+    COMMANDS = [
+        ('/help', 'Show available commands'),
+        ('/model', 'Switch model'),
+        ('/provider', 'Switch provider'),
+        ('/clear', 'Clear conversation history'),
+        ('/save', 'Save current session'),
+        ('/load', 'Load a saved session'),
+        ('/sessions', 'List saved sessions'),
+        ('/new', 'Start new session'),
+        ('/history', 'Show conversation history'),
+        ('/tools', 'Manage AI tools'),
+        ('/show', 'Display file contents'),
+        ('/cat', 'Display file contents (alias)'),
+        ('/usage', 'Show token usage stats'),
+        ('/status', 'Show current status'),
+        ('/explain', 'Explain code'),
+        ('/test', 'Generate tests'),
+        ('/review', 'Review code'),
+        ('/debug', 'Debug code'),
+        ('/optimize', 'Optimize code'),
+        ('/quit', 'Exit the application'),
+        ('/exit', 'Exit the application'),
+    ]
+
+    # Directories to ignore when searching for files
+    IGNORE_DIRS = {'.git', 'node_modules', '__pycache__', '.venv', 'venv', '.tox', 'dist', 'build', '.eggs', '.mypy_cache'}
+
+    def __init__(self):
+        self._file_cache = {}
+        self._cache_time = 0
+
+    def _get_files(self, max_files: int = 100) -> list[tuple[str, str]]:
+        """Get files in the current directory for completion."""
+        import time
+        now = time.time()
+
+        # Cache for 5 seconds
+        if now - self._cache_time < 5 and self._file_cache:
+            return list(self._file_cache.items())[:max_files]
+
+        root = Path.cwd()
+        files = {}
+
+        try:
+            for path in root.rglob('*'):
+                if len(files) >= max_files * 2:
+                    break
+                if path.is_file():
+                    # Skip files in ignored directories
+                    if any(ignored in path.parts for ignored in self.IGNORE_DIRS):
+                        continue
+                    try:
+                        rel_path = str(path.relative_to(root))
+                        files[path.name] = rel_path
+                    except ValueError:
+                        pass
+        except PermissionError:
+            pass
+
+        self._file_cache = files
+        self._cache_time = now
+        return list(files.items())[:max_files]
+
+    def get_completions(self, document, complete_event):
+        text = document.text_before_cursor
+
+        # Check for @file reference anywhere in the text (priority over commands)
+        at_pos = text.rfind('@')
+        if at_pos >= 0:
+            # Get the query after @
+            query = text[at_pos + 1:].lower()
+
+            # Show file completions
+            for filename, filepath in self._get_files():
+                if not query or query in filename.lower() or query in filepath.lower():
+                    # Calculate how much to replace (from @ to cursor)
+                    replace_len = len(text) - at_pos
+                    yield Completion(
+                        '@' + filename,
+                        start_position=-replace_len,
+                        display=filename,
+                        display_meta=filepath
+                    )
+            return  # Don't show command completions when typing @file
+
+        # Check for slash command at start of line (only if no @ in text)
+        if text.startswith('/'):
+            cmd_text = text.lower()
+            for cmd, desc in self.COMMANDS:
+                if cmd.lower().startswith(cmd_text):
+                    yield Completion(
+                        cmd,
+                        start_position=-len(text),
+                        display_meta=desc
+                    )
 
 # Note: Environment variables are loaded in config.py
 
@@ -68,21 +171,24 @@ def main():
     # Create command handler with provider info
     handler = CommandHandler(client, api_key, current_model, base_url, provider)
 
-    # Create prompt history
-    history = InMemoryHistory()
+    # Create prompt session with history and completer
+    completer = PPXAICompleter()
+    session = PromptSession(
+        history=InMemoryHistory(),
+        completer=completer,
+        complete_while_typing=True,
+        auto_suggest=AutoSuggestFromHistory(),
+    )
 
     # Main loop
-    console.print("\n[bold green]Ready to chat! Type your message or /help for commands.[/bold green]\n")
+    console.print("\n[bold green]Ready to chat! Type your message or /help for commands.[/bold green]")
+    console.print("[dim]Tab: autocomplete • @file: reference files • ↑/↓: history[/dim]\n")
     console.print(f"[dim]Session: {client.session_name}[/dim]\n")
 
     while True:
         try:
-            # Get user input with history support
-            user_input = prompt(
-                "You: ",
-                history=history,
-                multiline=False
-            ).strip()
+            # Get user input with history and completion support
+            user_input = session.prompt("You: ").strip()
 
             if not user_input:
                 continue
@@ -97,6 +203,12 @@ def main():
                 current_model = handler.current_model
                 continue
 
+            # Process @filename references in the message
+            augmented_input, resolved_files = handler.process_file_references(user_input)
+            if resolved_files:
+                file_names = ', '.join(f['name'] for f in resolved_files)
+                console.print(f"[dim]Including {len(resolved_files)} file(s): {file_names}[/dim]")
+
             # Check if tools are enabled
             tools_enabled = (
                 handler.tools_available and
@@ -108,10 +220,10 @@ def main():
             # Send message to API
             if tools_enabled:
                 # Use async tool-enabled chat
-                response = asyncio.run(client.chat_with_tools(user_input, current_model))
+                response = asyncio.run(client.chat_with_tools(augmented_input, current_model))
             else:
                 # Use regular chat
-                response = client.chat(user_input, current_model, stream=True)
+                response = client.chat(augmented_input, current_model, stream=True)
 
             # Update session metadata
             if response:

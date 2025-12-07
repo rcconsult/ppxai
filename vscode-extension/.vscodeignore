@@ -1,0 +1,22 @@
+.vscode/**
+.vscode-test/**
+src/**
+.gitignore
+.yarnrc
+vsc-extension-quickstart.md
+**/tsconfig.json
+**/.eslintrc.json
+**/*.map
+**/*.ts
+# Include production dependencies, exclude dev dependencies
+node_modules/.bin/**
+node_modules/@types/**
+node_modules/typescript/**
+node_modules/eslint/**
+node_modules/@typescript-eslint/**
+node_modules/webpack/**
+node_modules/webpack-cli/**
+node_modules/ts-loader/**
+# We bundle these in media/ folder
+node_modules/marked/**
+node_modules/highlight.js/**
