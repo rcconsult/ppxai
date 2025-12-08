@@ -927,14 +927,14 @@ Mode 1: Direct (default)          Mode 2: HTTP Client (--http)
        │                                 │
        ▼                                 ▼
 ┌─────────────┐                   ┌─────────────┐
-│EngineClient│                   │ HTTP Client │
+│EngineClien t│                   │ HTTP Client │
 └──────┬──────┘                   └──────┬──────┘
        │                                 │ HTTP + SSE
        ▼                                 ▼
-┌─────────────┐                   ┌─────────────┐
-│  Provider   │                   │ HTTP Server │
-│    API      │                   │(ppxai-server)│
-└─────────────┘                   └─────────────┘
+┌─────────────┐                   ┌───────────────┐
+│  Provider   │                   │ HTTP Ser ver  │
+│    API      │                   │(ppxai-server) │
+└─────────────┘                   └───────────────┘
 ```
 
 ##### Implementation Plan (Part A)
