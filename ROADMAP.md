@@ -874,171 +874,15 @@ export class ServerManager {
 
 ---
 
-### v1.11.0: Per-Provider Tool Configuration (Priority: Medium)
+### v1.11.0: TUI Modernization & Web Chat UI (Priority: High)
 
-*Moved from v1.10.0*
-
-**Goal**: Configure which tools are available for each provider
-
-#### Features
-
-1. **Tool Configuration Per Provider**
-   - Enable/disable specific tools for each provider
-   - Different tool sets for different use cases
-   - Example use cases:
-     - Disable shell commands on production endpoints
-     - Enable only file operations for code review bots
-     - Full tool access for development/testing
-
-2. **Configuration Format** (in `ppxai-config.json`)
-   ```json
-   {
-     "providers": {
-       "perplexity": {
-         "tools": {
-           "disabled": ["web_search", "fetch_url"]
-         }
-       },
-       "openai": {
-         "tools": {
-           "enabled": ["all"]
-         }
-       },
-       "local": {
-         "tools": {
-           "enabled": ["file", "calculator", "datetime"]
-         }
-       }
-     }
-   }
-   ```
-
-3. **Tool Management Commands**
-   - `/tools available` - Show all available tools in system
-   - `/tools enabled` - Show tools enabled for current provider
-   - `/tools enable <tool>` - Enable specific tool for current session
-   - `/tools disable <tool>` - Disable specific tool for current session
-   - `/tools reset` - Reset to provider defaults
-
-4. **Tool Categories**
-   - `file` - File operations (read, search, list_directory)
-   - `shell` - Shell command execution
-   - `web` - Web operations (search, fetch_url)
-   - `data` - Data tools (calculator, datetime)
-   - `weather` - Weather information
-   - `all` - All available tools
-
-#### Implementation Plan
-
-**Phase 1: Configuration Schema (1-2 hours)**
-- [ ] Define tool configuration schema in JSON config
-- [ ] Add tool categories mapping
-- [ ] Update provider config structure
-
-**Phase 2: Tool Manager Enhancement (2-3 hours)**
-- [ ] Modify `ToolManager` to support provider-specific tools
-- [ ] Implement tool filtering based on provider config
-- [ ] Add runtime enable/disable functionality
-
-**Phase 3: Commands (1-2 hours)**
-- [ ] Implement `/tools available` command
-- [ ] Implement `/tools enable/disable <tool>` commands
-- [ ] Update `/tools` command help text
-
-**Phase 4: Testing & Documentation (2 hours)**
-- [ ] Test tool filtering per provider
-- [ ] Update documentation
-
-**Estimated Total**: 6-9 hours
-
----
-
-### v1.12.0: Enhanced Tool System (Priority: Low)
-
-*Moved from v1.11.0*
-
-**Goal**: Improve tool capabilities and user experience
-
-#### Features
-
-1. **Tool Aliases**
-   - Short aliases for frequently used tools
-   - User-configurable aliases
-   - Example: `ls` → `list_directory`, `calc` → `calculator`
-
-2. **Tool Presets**
-   - Pre-defined tool combinations for specific tasks
-   - `coding` preset: file + shell + calculator
-   - `research` preset: web + fetch_url + calculator + datetime
-   - `admin` preset: shell + file + datetime
-   - `safe` preset: calculator + datetime only
-
-3. **Tool Execution History**
-   - Track which tools are used
-   - Usage statistics per tool
-   - Most used tools dashboard
-   - `/tools stats` command
-
-4. **Interactive Tool Configuration**
-   - `/tools wizard` - Interactive tool setup
-   - Guided configuration for beginners
-   - Test tool functionality before enabling
-
-5. **Tool Plugins**
-   - Support for custom user-defined tools
-   - Tool plugin directory (`~/.ppxai/tools/`)
-   - Hot-reload tool plugins
-   - Tool marketplace (future consideration)
-
-#### Implementation Plan
-
-**Phase 1: Tool Aliases (1 hour)**
-- [ ] Add alias configuration to tool definitions
-- [ ] Implement alias resolution in command handler
-- [ ] Update tool help to show aliases
-
-**Phase 2: Tool Presets (2 hours)**
-- [ ] Define preset configurations
-- [ ] Implement preset loading
-- [ ] Add `/tools preset <name>` command
-- [ ] Create preset templates
-
-**Phase 3: Usage Tracking (2 hours)**
-- [ ] Add tool execution logging
-- [ ] Create usage statistics storage
-- [ ] Implement `/tools stats` command
-- [ ] Add visualization for stats
-
-**Phase 4: Interactive Configuration (2-3 hours)**
-- [ ] Create tool configuration wizard
-- [ ] Implement interactive prompts
-- [ ] Add tool testing functionality
-- [ ] Build guided setup flow
-
-**Phase 5: Plugin System (4-5 hours)**
-- [ ] Design plugin interface
-- [ ] Implement plugin discovery
-- [ ] Add plugin loading mechanism
-- [ ] Create plugin template/examples
-- [ ] Add plugin validation
-
-**Phase 6: Testing & Docs (2 hours)**
-- [ ] Test all new features
-- [ ] Write plugin development guide
-- [ ] Update documentation
-- [ ] Create example plugins
-
-**Estimated Total**: 13-16 hours
-
----
-
-### v1.13.0: TUI Modernization & Web Chat UI (Priority: Medium)
-
-*Revised from Web Terminal - aligned with HTTP + SSE architecture*
+*Moved from v1.13.0 - Groups architecture/foundation work together*
 
 **Goal**: Modernize TUI to use `EngineClient` and provide a web-based chat UI using the same HTTP + SSE backend as the VS Code extension
 
 **Prerequisite**: v1.9.0 (HTTP + SSE server provides unified backend)
+
+**Rationale**: This version completes the architectural modernization started in v1.9.0, ensuring all clients (TUI, Extension, Web) share the same HTTP + SSE infrastructure before adding feature enhancements.
 
 ---
 
@@ -1203,7 +1047,7 @@ A lightweight web-based chat interface using the same HTTP + SSE backend as the 
 
 ---
 
-#### v1.13.0 Combined Summary
+#### v1.11.0 Combined Summary
 
 | Part | Effort | Key Deliverable |
 |------|--------|-----------------|
@@ -1217,6 +1061,165 @@ A lightweight web-based chat interface using the same HTTP + SSE backend as the 
 - Consistent behavior across all interfaces
 - Simpler architecture than PTY + WebSocket
 - Session sharing between clients possible
+- **Completes the foundation before adding feature enhancements**
+
+---
+
+### v1.12.0: Per-Provider Tool Configuration (Priority: Medium)
+
+*Moved from v1.11.0*
+
+**Goal**: Configure which tools are available for each provider
+
+#### Features
+
+1. **Tool Configuration Per Provider**
+   - Enable/disable specific tools for each provider
+   - Different tool sets for different use cases
+   - Example use cases:
+     - Disable shell commands on production endpoints
+     - Enable only file operations for code review bots
+     - Full tool access for development/testing
+
+2. **Configuration Format** (in `ppxai-config.json`)
+   ```json
+   {
+     "providers": {
+       "perplexity": {
+         "tools": {
+           "disabled": ["web_search", "fetch_url"]
+         }
+       },
+       "openai": {
+         "tools": {
+           "enabled": ["all"]
+         }
+       },
+       "local": {
+         "tools": {
+           "enabled": ["file", "calculator", "datetime"]
+         }
+       }
+     }
+   }
+   ```
+
+3. **Tool Management Commands**
+   - `/tools available` - Show all available tools in system
+   - `/tools enabled` - Show tools enabled for current provider
+   - `/tools enable <tool>` - Enable specific tool for current session
+   - `/tools disable <tool>` - Disable specific tool for current session
+   - `/tools reset` - Reset to provider defaults
+
+4. **Tool Categories**
+   - `file` - File operations (read, search, list_directory)
+   - `shell` - Shell command execution
+   - `web` - Web operations (search, fetch_url)
+   - `data` - Data tools (calculator, datetime)
+   - `weather` - Weather information
+   - `all` - All available tools
+
+#### Implementation Plan
+
+**Phase 1: Configuration Schema (1-2 hours)**
+- [ ] Define tool configuration schema in JSON config
+- [ ] Add tool categories mapping
+- [ ] Update provider config structure
+
+**Phase 2: Tool Manager Enhancement (2-3 hours)**
+- [ ] Modify `ToolManager` to support provider-specific tools
+- [ ] Implement tool filtering based on provider config
+- [ ] Add runtime enable/disable functionality
+
+**Phase 3: Commands (1-2 hours)**
+- [ ] Implement `/tools available` command
+- [ ] Implement `/tools enable/disable <tool>` commands
+- [ ] Update `/tools` command help text
+
+**Phase 4: Testing & Documentation (2 hours)**
+- [ ] Test tool filtering per provider
+- [ ] Update documentation
+
+**Estimated Total**: 6-9 hours
+
+---
+
+### v1.13.0: Enhanced Tool System (Priority: Low)
+
+*Moved from v1.12.0*
+
+**Goal**: Improve tool capabilities and user experience
+
+#### Features
+
+1. **Tool Aliases**
+   - Short aliases for frequently used tools
+   - User-configurable aliases
+   - Example: `ls` → `list_directory`, `calc` → `calculator`
+
+2. **Tool Presets**
+   - Pre-defined tool combinations for specific tasks
+   - `coding` preset: file + shell + calculator
+   - `research` preset: web + fetch_url + calculator + datetime
+   - `admin` preset: shell + file + datetime
+   - `safe` preset: calculator + datetime only
+
+3. **Tool Execution History**
+   - Track which tools are used
+   - Usage statistics per tool
+   - Most used tools dashboard
+   - `/tools stats` command
+
+4. **Interactive Tool Configuration**
+   - `/tools wizard` - Interactive tool setup
+   - Guided configuration for beginners
+   - Test tool functionality before enabling
+
+5. **Tool Plugins**
+   - Support for custom user-defined tools
+   - Tool plugin directory (`~/.ppxai/tools/`)
+   - Hot-reload tool plugins
+   - Tool marketplace (future consideration)
+
+#### Implementation Plan
+
+**Phase 1: Tool Aliases (1 hour)**
+- [ ] Add alias configuration to tool definitions
+- [ ] Implement alias resolution in command handler
+- [ ] Update tool help to show aliases
+
+**Phase 2: Tool Presets (2 hours)**
+- [ ] Define preset configurations
+- [ ] Implement preset loading
+- [ ] Add `/tools preset <name>` command
+- [ ] Create preset templates
+
+**Phase 3: Usage Tracking (2 hours)**
+- [ ] Add tool execution logging
+- [ ] Create usage statistics storage
+- [ ] Implement `/tools stats` command
+- [ ] Add visualization for stats
+
+**Phase 4: Interactive Configuration (2-3 hours)**
+- [ ] Create tool configuration wizard
+- [ ] Implement interactive prompts
+- [ ] Add tool testing functionality
+- [ ] Build guided setup flow
+
+**Phase 5: Plugin System (4-5 hours)**
+- [ ] Design plugin interface
+- [ ] Implement plugin discovery
+- [ ] Add plugin loading mechanism
+- [ ] Create plugin template/examples
+- [ ] Add plugin validation
+
+**Phase 6: Testing & Docs (2 hours)**
+- [ ] Test all new features
+- [ ] Write plugin development guide
+- [ ] Update documentation
+- [ ] Create example plugins
+
+**Estimated Total**: 13-16 hours
 
 ---
 
@@ -1471,22 +1474,23 @@ A lightweight web-based chat interface using the same HTTP + SSE backend as the 
 - 🚀 **High Priority**: FastAPI server with native streaming
 - 📖 **Documentation**: [docs/uv-migration-plan.md](docs/uv-migration-plan.md), [docs/sse-migration-plan.md](docs/sse-migration-plan.md)
 
-### Short-term (v1.10.0)
-- 📦 **High Priority**: VSCode Extension CI/CD & Self-Contained Bundling
+### Short-term (v1.10.0 - v1.11.0) - Foundation & Architecture
+- 📦 **v1.10.0 High Priority**: VSCode Extension CI/CD & Self-Contained Bundling
 - 📦 **Part A**: GitHub Actions workflow, VSIX downloads via GitHub releases
 - 📦 **Part B**: PyInstaller bundled server, platform-specific VSIX, zero-dependency install
+- 🔄 **v1.11.0 High Priority**: TUI Modernization - migrate from `AIClient` to `EngineClient`
+- 🌐 **v1.11.0 High Priority**: Web Chat UI - browser-based chat via HTTP + SSE (same backend as extension)
 
-### Medium-term (v1.11.0 - v1.12.0)
-- ⚠️ **Medium**: Per-provider tool configuration
-- ⚠️ **Medium**: Tool categories (file, shell, web, data)
-- 💡 **Nice to Have**: Tool aliases and presets
-- 💡 **Nice to Have**: Tool usage statistics
+### Medium-term (v1.12.0 - v1.13.0) - Tool Enhancements
+- ⚠️ **v1.12.0 Medium**: Per-provider tool configuration
+- ⚠️ **v1.12.0 Medium**: Tool categories (file, shell, web, data)
+- 💡 **v1.13.0 Nice to Have**: Tool aliases and presets
+- 💡 **v1.13.0 Nice to Have**: Tool usage statistics
+- 💡 **v1.13.0 Nice to Have**: Tool plugin system
 
-### Long-term (v1.13.0 - v1.15.0)
-- 🔄 **Medium**: TUI Modernization - migrate from `AIClient` to `EngineClient`
-- 🌐 **Medium**: Web Chat UI - browser-based chat via HTTP + SSE (same backend as extension)
-- 🔧 **Medium**: IDE Integration Phase 1 - Workspace awareness (read files, navigate)
-- 🔧 **Medium**: IDE Integration Phase 2 - Code actions (apply edits, terminal, git)
+### Long-term (v1.14.0 - v1.15.0) - IDE Integration
+- 🔧 **v1.14.0 Medium**: IDE Integration Phase 1 - Workspace awareness (read files, navigate)
+- 🔧 **v1.15.0 Medium**: IDE Integration Phase 2 - Code actions (apply edits, terminal, git)
 - 📖 **Documentation**: [docs/ide-integration-plan.md](docs/ide-integration-plan.md)
 
 ### Future (v2.0.0+)
