@@ -482,13 +482,80 @@ class EngineClient:
 
 ### Server Layer (`server/`)
 
-#### `server/jsonrpc.py` - JSON-RPC Server
+The server layer provides multiple transport options for client communication:
+
+#### Transport Options
+
+| Transport | File | Use Case | Status |
+|-----------|------|----------|--------|
+| JSON-RPC/stdio | `jsonrpc.py` | Legacy, subprocess | ✅ Implemented |
+| **HTTP + SSE** | `http.py` | **Recommended**, low latency | 🚧 Planned |
+| WebSocket | `websocket.py` | Bidirectional, real-time | 📋 Optional |
+
+#### `server/http.py` - HTTP Server with SSE (Recommended)
+
+**Why SSE over JSON-RPC?** See [docs/sse-migration-plan.md](sse-migration-plan.md) for detailed analysis.
+
+| Metric | JSON-RPC/stdio | HTTP + SSE |
+|--------|----------------|------------|
+| First token latency | 50-200ms | 10-30ms |
+| Per-request overhead | JSON parse + asyncio.run | Native async |
+| Reconnection | Manual | Built-in |
+| Cancellation | Kill process | AbortController |
+| Debug tooling | Custom | Browser DevTools |
+
+```python
+"""HTTP server with SSE streaming for ppxai engine."""
+from fastapi import FastAPI, Request
+from fastapi.responses import StreamingResponse
+import json
+
+from ..engine import EngineClient, EventType
+
+app = FastAPI()
+
+@app.post("/chat")
+async def chat(request: Request):
+    """Chat endpoint with Server-Sent Events streaming."""
+    body = await request.json()
+    message = body.get("message", "")
+
+    async def generate():
+        async for event in request.app.state.engine.chat(message, stream=True):
+            data = {"type": event.type.value, "data": event.data}
+            yield f"data: {json.dumps(data)}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
+
+# REST endpoints for configuration
+@app.get("/providers")
+async def get_providers(request: Request):
+    return [{"id": p.id, "name": p.name, "has_api_key": p.has_api_key}
+            for p in request.app.state.engine.list_providers()]
+
+@app.post("/provider")
+async def set_provider(request: Request):
+    body = await request.json()
+    return {"success": request.app.state.engine.set_provider(body["provider"])}
+
+@app.get("/status")
+async def get_status(request: Request):
+    return request.app.state.engine.get_status()
+```
+
+#### `server/jsonrpc.py` - JSON-RPC Server (Legacy)
+
+Retained for backward compatibility with existing integrations.
 
 ```python
 """JSON-RPC 2.0 server over stdio.
 
 Provides the same EngineClient functionality over JSON-RPC,
 enabling integration with VSCode extension and other clients.
+
+NOTE: For new integrations, prefer HTTP + SSE (server/http.py)
+for better performance. See docs/sse-migration-plan.md.
 """
 
 import json
@@ -666,40 +733,59 @@ async def main():
 
 ## Implementation Phases
 
-### Phase 1: Create Engine Types & Structure
+### Phase 1: Create Engine Types & Structure ✅
 - Create `engine/types.py` with all shared types
 - Create `engine/providers/base.py` abstract class
 - Create `engine/tools/base.py` abstract class
 - Create directory structure
 
-### Phase 2: Refactor Providers
+### Phase 2: Refactor Providers ✅
 - Extract `PerplexityProvider` from current client
 - Extract `OpenAIProvider` (generic OpenAI-compatible)
 - Create provider registry
 
-### Phase 3: Refactor Tools
+### Phase 3: Refactor Tools ✅
 - Move tool definitions to `engine/tools/builtin/`
 - Create `ToolManager` with provider-aware filtering
 - Remove Rich console dependencies from tool execution
 
-### Phase 4: Create Engine Client
+### Phase 4: Create Engine Client ✅
 - Implement `EngineClient` facade
 - Event-based output (no console printing)
 - Async iterators for streaming
 
-### Phase 5: Update Server
+### Phase 5: Update Server ✅
 - Refactor `server.py` to use `EngineClient`
 - All methods delegate to engine
 - Stream events via JSON
 
-### Phase 6: Update TUI
+### Phase 6: Update TUI ✅
 - Refactor TUI to consume events from `EngineClient`
 - All Rich rendering in TUI layer only
 
-### Phase 7: Update VSCode Extension
+### Phase 7: Update VSCode Extension ✅
 - Connect to JSON-RPC server
 - Remove duplicate TypeScript AI client
 - Use Python backend for all functionality
+
+### Phase 8: HTTP + SSE Migration 🚧
+**Goal:** Replace JSON-RPC/stdio with HTTP + SSE for improved streaming performance.
+
+See [docs/sse-migration-plan.md](sse-migration-plan.md) for detailed implementation plan.
+
+**Summary:**
+1. Add FastAPI + uvicorn dependencies
+2. Create `ppxai/server/http.py` with SSE streaming
+3. Create `vscode-extension/src/backend-http.ts` with fetch/SSE client
+4. Add server lifecycle management to extension
+5. Implement automatic fallback to JSON-RPC
+6. Benchmark and validate performance improvements
+
+**Expected Improvements:**
+- First token latency: 50-200ms → 10-30ms
+- Native request cancellation via AbortController
+- Built-in SSE reconnection
+- Standard HTTP debugging tools
 
 ---
 

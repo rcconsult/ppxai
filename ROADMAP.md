@@ -273,7 +273,193 @@ Features implemented:
 
 ---
 
-### v1.9.0: VSCode Extension CI/CD & Marketplace Publishing (Priority: High)
+### v1.9.0: Modern Tooling & Performance (Priority: High)
+
+This release focuses on modernizing the development infrastructure and improving runtime performance through two complementary migrations.
+
+---
+
+#### Part A: uv Migration - Modern Python Tooling
+
+**Goal**: Migrate from `pip` + `requirements.txt` to `uv` for faster, reproducible builds
+
+**Detailed Plan**: See [docs/uv-migration-plan.md](docs/uv-migration-plan.md)
+
+##### Motivation
+
+| Aspect | Current (`pip`) | With `uv` | Improvement |
+|--------|-----------------|-----------|-------------|
+| Fresh install | ~45s | ~3s | 15x faster |
+| CI dependency step | ~60s | ~5s | 12x faster |
+| Lockfile | None | `uv.lock` | Reproducible |
+| Python management | External | Built-in | Simpler |
+| Project metadata | `requirements.txt` | `pyproject.toml` | Standard |
+
+##### Features
+
+1. **pyproject.toml Configuration**
+   - Standard Python packaging format (PEP 621)
+   - Optional dependency groups: `server`, `mcp`, `dev`, `build`
+   - Script entry points: `ppxai`, `ppxai-server`
+
+2. **Lockfile Support**
+   - `uv.lock` for reproducible builds
+   - Commit lockfile to version control
+   - `uv sync --frozen` for CI
+
+3. **Faster Development Workflow**
+   - `uv sync` - one command setup
+   - `uv run` - run without activation
+   - `uvx` - run tools without installing
+
+##### Implementation Plan
+
+**Phase 1: Create pyproject.toml & Bootstrap (1.5 hours)**
+- [ ] Create `pyproject.toml` with all dependencies
+- [ ] Define optional dependency groups (server, mcp, dev, build)
+- [ ] Configure script entry points
+- [ ] Add tool configurations (ruff, pytest)
+- [ ] Create `scripts/bootstrap.py` (auto-downloads uv)
+- [ ] Add `.uv/` to `.gitignore`
+
+**Phase 2: Migration (1 hour)**
+- [ ] Run `python scripts/bootstrap.py` to test bootstrap
+- [ ] Verify app runs: `.uv/uv run ppxai`
+- [ ] Verify tests pass: `.uv/uv run pytest tests/ -v`
+- [ ] Regenerate `requirements.txt` for backward compat
+
+**Phase 3: Documentation (1 hour)**
+- [ ] Update `CLAUDE.md` with bootstrap script instructions
+- [ ] Update `README.md` installation section
+- [ ] Document manual uv installation as alternative
+
+**Phase 4: CI/CD (1 hour)**
+- [ ] Update GitHub Actions to use `astral-sh/setup-uv@v4`
+- [ ] Use `uv sync --frozen` for reproducible CI builds
+- [ ] Add caching for uv dependencies
+
+**Estimated Total**: 4.5 hours
+
+---
+
+#### Part B: HTTP + SSE Backend Migration
+
+**Goal**: Replace JSON-RPC over stdio with HTTP + Server-Sent Events for improved streaming performance
+
+**Detailed Plan**: See [docs/sse-migration-plan.md](docs/sse-migration-plan.md)
+
+##### Motivation
+
+The current JSON-RPC/stdio architecture has inherent limitations:
+- Synchronous `for line in stdin` with `asyncio.run()` per request
+- Mixed stdout protocol (streaming events + JSON-RPC responses)
+- ~50-200ms first token latency overhead
+- No native request cancellation
+
+##### Expected Improvements
+
+| Metric | JSON-RPC (current) | HTTP + SSE (proposed) | Improvement |
+|--------|-------------------|----------------------|-------------|
+| First token latency | 50-200ms | 10-30ms | 3-10x faster |
+| Throughput | ~1,000 msg/s | ~5,000 msg/s | 5x higher |
+| Request cancellation | Kill process | AbortController | Native |
+| Reconnection | Manual restart | Built-in SSE | Automatic |
+| Debug tooling | Custom | Browser DevTools | Standard |
+
+##### Features
+
+1. **FastAPI HTTP Server** (`ppxai/server/http.py`)
+   - SSE streaming for chat responses
+   - REST endpoints for configuration
+   - Native async request handling
+   - CORS support for webview
+
+2. **TypeScript HTTP Client** (`vscode-extension/src/backend-http.ts`)
+   - Fetch API with streaming reader
+   - AbortController for cancellation
+   - Event mapping for compatibility
+
+3. **Server Lifecycle Manager**
+   - Automatic server startup
+   - Health check monitoring
+   - Graceful shutdown
+
+4. **Backward Compatibility**
+   - JSON-RPC backend retained as fallback
+   - Auto-selection: HTTP preferred, JSON-RPC fallback
+   - Configuration option: `ppxai.backend: auto | http | jsonrpc`
+
+##### Implementation Plan
+
+**Phase 1: Python HTTP Server (3-4 hours)**
+- [ ] Install server dependencies: `uv sync --extra server`
+- [ ] Create `ppxai/server/http.py` with SSE streaming
+- [ ] Add `/chat`, `/coding_task` streaming endpoints
+- [ ] Add REST endpoints for providers, models, tools, sessions
+- [ ] Add health check endpoint
+- [ ] Test independently: `uv run ppxai-server`
+
+**Phase 2: TypeScript HTTP Client (2-3 hours)**
+- [ ] Create `vscode-extension/src/backend-http.ts`
+- [ ] Implement SSE stream processing with fetch
+- [ ] Add AbortController support for cancellation
+- [ ] Map event types for backward compatibility
+
+**Phase 3: Server Management (2 hours)**
+- [ ] Create `vscode-extension/src/serverManager.ts`
+- [ ] Implement server startup with health check polling
+- [ ] Add graceful shutdown on extension deactivate
+
+**Phase 4: Backend Factory & Integration (2 hours)**
+- [ ] Create `vscode-extension/src/backendFactory.ts`
+- [ ] Implement auto-selection with fallback
+- [ ] Update `chatPanel.ts` to use factory
+- [ ] Add configuration options to `package.json`
+
+**Phase 5: Testing & Validation (2 hours)**
+- [ ] Benchmark latency comparison
+- [ ] Test fallback to JSON-RPC
+- [ ] Test cancellation mid-stream
+- [ ] Verify tool calls work correctly
+
+**Estimated Total**: 11-13 hours
+
+---
+
+#### v1.9.0 Combined Summary
+
+| Component | Effort | Key Deliverable |
+|-----------|--------|-----------------|
+| uv Migration | 4.5 hours | `pyproject.toml`, `uv.lock`, bootstrap script, faster CI |
+| HTTP + SSE | 11-13 hours | 3-10x latency improvement |
+| **Total** | **15.5-17.5 hours** | Modern tooling + performance |
+
+##### New Dependencies (via pyproject.toml)
+
+```toml
+[project.optional-dependencies]
+server = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+]
+```
+
+##### Installation After v1.9.0
+
+```bash
+# Basic installation
+uv sync
+
+# With HTTP server support
+uv sync --extra server
+
+# Run HTTP server
+uv run ppxai-server
+```
+
+---
+
+### v1.10.0: VSCode Extension CI/CD & Marketplace Publishing (Priority: High)
 
 **Goal**: Automate VSCode extension builds and publishing to the marketplace
 
@@ -376,7 +562,9 @@ jobs:
 
 ---
 
-### v1.10.0: Per-Provider Tool Configuration (Priority: Medium)
+### v1.11.0: Per-Provider Tool Configuration (Priority: Medium)
+
+*Moved from v1.10.0*
 
 **Goal**: Configure which tools are available for each provider
 
@@ -453,7 +641,9 @@ jobs:
 
 ---
 
-### v1.11.0: Enhanced Tool System (Priority: Low)
+### v1.12.0: Enhanced Tool System (Priority: Low)
+
+*Moved from v1.11.0*
 
 **Goal**: Improve tool capabilities and user experience
 
@@ -530,7 +720,9 @@ jobs:
 
 ---
 
-### v1.12.0: Web Terminal & Launcher Options (Priority: Low)
+### v1.13.0: Web Terminal & Launcher Options (Priority: Low)
+
+*Moved from v1.12.0*
 
 **Goal**: Provide flexible terminal launch options including web-based access
 
@@ -752,21 +944,25 @@ jobs:
 - ✅ Config validation and reload
 
 ### Immediate (v1.9.0)
-- 🚀 **High Priority**: VSCode Extension CI/CD & Marketplace publishing
-- 🚀 **High Priority**: GitHub Actions workflow for extension builds
-- 📦 **High Priority**: Automated VSIX packaging and releases
+- 🛠️ **High Priority**: uv migration - modern Python tooling (15x faster installs)
+- 🛠️ **High Priority**: pyproject.toml + lockfile for reproducible builds
+- 🚀 **High Priority**: HTTP + SSE backend migration (3-10x latency improvement)
+- 🚀 **High Priority**: FastAPI server with native streaming
+- 📖 **Documentation**: [docs/uv-migration-plan.md](docs/uv-migration-plan.md), [docs/sse-migration-plan.md](docs/sse-migration-plan.md)
 
 ### Short-term (v1.10.0)
-- ⚠️ **Medium**: Per-provider tool configuration
-- ⚠️ **Medium**: Tool categories (file, shell, web, data)
-- ⚠️ **Medium**: Runtime tool enable/disable per provider
+- 📦 **High Priority**: VSCode Extension CI/CD & Marketplace publishing
+- 📦 **High Priority**: GitHub Actions workflow for extension builds
+- 📦 **High Priority**: Automated VSIX packaging and releases
 
 ### Medium-term (v1.11.0 - v1.12.0)
+- ⚠️ **Medium**: Per-provider tool configuration
+- ⚠️ **Medium**: Tool categories (file, shell, web, data)
 - 💡 **Nice to Have**: Tool aliases and presets
 - 💡 **Nice to Have**: Tool usage statistics
-- 🌐 **Nice to Have**: Web terminal interface
 
-### Long-term (v2.0.0+)
+### Long-term (v1.13.0 - v2.0.0+)
+- 🌐 **Nice to Have**: Web terminal interface
 - 🔌 **Future**: Multi-IDE support (JetBrains, Neovim, Sublime)
 - 🔌 **Future**: LSP server for editor-agnostic support
 - 💡 **Future**: Advanced code actions (edit, refactor, review)
@@ -798,6 +994,6 @@ Interested in working on any of these features?
 
 ---
 
-**Last Updated**: December 7, 2025
+**Last Updated**: December 8, 2025
 **Current Version**: v1.8.0
-**Next Target**: v1.9.0 (VSCode Extension CI/CD & Marketplace Publishing)
+**Next Target**: v1.9.0 (HTTP + SSE Backend Migration)
