@@ -459,61 +459,60 @@ uv run ppxai-server
 
 ---
 
-### v1.10.0: VSCode Extension CI/CD & Marketplace Publishing (Priority: High)
+### v1.10.0: VSCode Extension CI/CD & Self-Contained Bundling (Priority: High)
 
-**Goal**: Automate VSCode extension builds and publishing to the marketplace
+**Goal**: Automate VSCode extension builds with downloadable VSIX packages, and create self-contained bundles with Python server included
 
-#### Features
+**Prerequisite**: v1.9.0 (HTTP + SSE backend provides the bundleable server architecture)
+
+---
+
+#### Part A: CI/CD & VSIX Downloads (No Bundling)
+
+This part enables automated extension builds and VSIX downloads without requiring Marketplace publication. Users who download the VSIX will need Python + ppxai installed separately.
+
+##### Features
 
 1. **GitHub Actions Workflow**
    - Automated builds on push/PR to extension directory
-   - Version bumping and changelog generation
-   - Cross-platform testing (Windows, macOS, Linux)
+   - ESLint/TypeScript quality gates
    - VSIX artifact generation
-
-2. **Marketplace Publishing**
-   - Automated publishing to VS Code Marketplace
-   - Publisher account setup and token management
-   - Version tag-based releases
-   - Pre-release channel support
-
-3. **Quality Gates**
-   - ESLint/TypeScript checks
    - Extension manifest validation
-   - Bundle size monitoring
-   - Automated testing (if applicable)
 
-#### Implementation Plan
+2. **GitHub Releases**
+   - VSIX attached to GitHub releases
+   - Download without Marketplace publication
+   - Version tag-based releases (`v*-ext`)
 
-**Phase 1: CI Workflow (2-3 hours)**
+3. **Optional Marketplace Publishing**
+   - Publisher account and PAT setup
+   - Manual or automated publishing
+
+##### Implementation Plan (Part A)
+
+**Phase A1: CI Workflow (2-3 hours)**
 - [ ] Create `.github/workflows/vscode-extension.yml`
 - [ ] Setup Node.js environment and caching
-- [ ] Add compile and lint steps
+- [ ] Add compile, lint, and bundle size checks
 - [ ] Generate VSIX artifacts
-- [ ] Upload artifacts to releases
+- [ ] Upload artifacts to GitHub releases
 
-**Phase 2: Marketplace Setup (1-2 hours)**
+**Phase A2: Release Workflow (2-3 hours)**
+- [ ] Create release workflow triggered by tags (`v*-ext`)
+- [ ] Auto-increment version in `package.json`
+- [ ] Generate changelog from commits
+- [ ] Create GitHub release with VSIX attachment
+
+**Phase A3: Optional Marketplace Setup (1-2 hours)**
 - [ ] Create Azure DevOps organization (if needed)
 - [ ] Create VS Code Marketplace publisher account
 - [ ] Generate Personal Access Token (PAT)
 - [ ] Add PAT as GitHub secret (`VSCE_PAT`)
-- [ ] Configure publisher in `package.json`
+- [ ] Add `npx vsce publish` step to release workflow
 
-**Phase 3: Release Workflow (2-3 hours)**
-- [ ] Create release workflow triggered by tags (`v*-ext`)
-- [ ] Auto-increment version in `package.json`
-- [ ] Generate changelog from commits
-- [ ] Publish to VS Code Marketplace
-- [ ] Create GitHub release with VSIX
+**Estimated Part A Total**: 5-8 hours
 
-**Phase 4: Pre-release Support (1 hour)**
-- [ ] Configure pre-release channel
-- [ ] Beta version naming convention
-- [ ] Separate workflow for pre-releases
-
-**Estimated Total**: 6-9 hours
-
-#### Example Workflow
+##### Example CI Workflow (Part A)
 
 ```yaml
 # .github/workflows/vscode-extension.yml
@@ -551,14 +550,327 @@ jobs:
           name: ppxai-extension
           path: vscode-extension/*.vsix
 
-  publish:
+  release:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
-      - run: npx vsce publish -p ${{ secrets.VSCE_PAT }}
+        with:
+          name: ppxai-extension
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: '*.vsix'
 ```
+
+---
+
+#### Part B: Self-Contained Extension with Bundled Server
+
+This part bundles the Python HTTP server as a standalone binary inside the VSIX, enabling zero-dependency installation. When a user downloads the VSIX, everything needed to run is included.
+
+**Key Insight from v1.9.0**: The HTTP + SSE server architecture is ideal for bundling:
+- Single HTTP endpoint vs JSON-RPC/stdio complexity
+- PyInstaller can create standalone `ppxai-server` binary
+- `serverManager.ts` from v1.9.0 provides lifecycle management foundation
+
+##### Features
+
+1. **PyInstaller Bundled Server**
+   - Build `ppxai-server` as standalone executable
+   - No Python runtime required on user's machine
+   - Platform-specific binaries (darwin-x64, darwin-arm64, win32-x64, linux-x64)
+
+2. **Platform-Specific VSIX Packages**
+   - Separate VSIX per platform with bundled binary
+   - Standard VSIX naming: `ppxai-darwin-x64-0.1.0.vsix`, etc.
+   - VS Code auto-selects correct platform variant
+
+3. **Server Detection Priority**
+   - First: Bundled binary in extension
+   - Second: System-installed `ppxai-server` (via uv/pip)
+   - Third: Python module `python -m ppxai.server`
+   - Fourth: Error with installation instructions
+
+4. **Zero-Dependency User Experience**
+   - Download VSIX → Install → Works immediately
+   - No Python installation required
+   - No pip/uv commands needed
+
+##### Architecture
+
+```
+Extension Activation
+        │
+        ▼
+┌─────────────────────────┐
+│   serverManager.ts      │
+│   (from v1.9.0)         │
+└───────────┬─────────────┘
+            │
+    Detection Priority
+            │
+    ┌───────┼───────────────────────┐
+    ▼       ▼                       ▼
+┌───────┐ ┌─────────────────┐  ┌────────────────┐
+│Bundled│ │System ppxai-    │  │python -m       │
+│Binary │ │server (PATH)    │  │ppxai.server    │
+└───┬───┘ └────────┬────────┘  └───────┬────────┘
+    │              │                   │
+    ▼              ▼                   ▼
+┌─────────────────────────────────────────────────┐
+│         HTTP Server (port 54320)                │
+│         SSE Streaming for chat                  │
+└─────────────────────────────────────────────────┘
+```
+
+##### Implementation Plan (Part B)
+
+**Phase B1: PyInstaller Configuration (3-4 hours)**
+- [ ] Create `ppxai.spec` PyInstaller spec file
+- [ ] Configure for single-file executable
+- [ ] Include all engine dependencies
+- [ ] Test on macOS (arm64 and x64)
+- [ ] Test on Linux (x64)
+- [ ] Test on Windows (x64)
+
+**Phase B2: Multi-Platform CI Build Matrix (4-5 hours)**
+- [ ] Extend workflow with platform matrix
+- [ ] Build Python server binary on each platform
+- [ ] Cache PyInstaller builds for speed
+- [ ] Archive binaries as intermediate artifacts
+
+**Phase B3: Platform-Specific VSIX Packaging (3-4 hours)**
+- [ ] Update `package.json` with platform targets
+- [ ] Copy bundled binary to `extension/bin/` directory
+- [ ] Package platform-specific VSIX
+- [ ] Generate universal VSIX (no binary, requires Python)
+
+**Phase B4: serverManager.ts Updates (2-3 hours)**
+- [ ] Implement bundled binary detection
+- [ ] Add detection priority logic
+- [ ] Handle binary execution permissions
+- [ ] Add fallback chain with clear error messages
+
+**Phase B5: Testing & Validation (2-3 hours)**
+- [ ] Test bundled extension on clean systems
+- [ ] Verify fallback to system Python
+- [ ] Test binary auto-update scenarios
+- [ ] Document troubleshooting steps
+
+**Estimated Part B Total**: 14-19 hours
+
+##### PyInstaller Spec File
+
+```python
+# ppxai.spec
+# -*- mode: python ; coding: utf-8 -*-
+
+block_cipher = None
+
+a = Analysis(
+    ['ppxai/server/http.py'],
+    pathex=[],
+    binaries=[],
+    datas=[],
+    hiddenimports=[
+        'ppxai.engine',
+        'ppxai.engine.providers',
+        'ppxai.engine.tools',
+        'ppxai.engine.tools.builtin',
+        'uvicorn',
+        'fastapi',
+        'httpx',
+        'openai',
+    ],
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=['tkinter', 'matplotlib'],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
+    noarchive=False,
+)
+
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    [],
+    name='ppxai-server',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=True,
+    upx=True,
+    console=True,
+    target_arch=None,  # Set per platform
+)
+```
+
+##### Multi-Platform CI Workflow (Part B)
+
+```yaml
+# .github/workflows/vscode-extension-bundled.yml
+name: VSCode Extension (Bundled)
+
+on:
+  push:
+    tags:
+      - 'v*-ext-bundled'
+
+jobs:
+  build-server:
+    strategy:
+      matrix:
+        include:
+          - os: macos-14          # M1/M2 runner
+            platform: darwin-arm64
+          - os: macos-13          # Intel runner
+            platform: darwin-x64
+          - os: ubuntu-latest
+            platform: linux-x64
+          - os: windows-latest
+            platform: win32-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - name: Install dependencies
+        run: uv sync --extra server --extra build
+      - name: Build server binary
+        run: uv run pyinstaller ppxai.spec
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server-${{ matrix.platform }}
+          path: dist/ppxai-server*
+
+  build-extension:
+    needs: build-server
+    strategy:
+      matrix:
+        platform: [darwin-arm64, darwin-x64, linux-x64, win32-x64]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/download-artifact@v4
+        with:
+          name: server-${{ matrix.platform }}
+          path: vscode-extension/bin/
+      - name: Package VSIX
+        working-directory: vscode-extension
+        run: |
+          npm ci
+          npx vsce package --target ${{ matrix.platform }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vsix-${{ matrix.platform }}
+          path: vscode-extension/*.vsix
+
+  release:
+    needs: build-extension
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: '**/*.vsix'
+```
+
+##### serverManager.ts with Bundled Binary Detection
+
+```typescript
+// vscode-extension/src/serverManager.ts (updated from v1.9.0)
+
+import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
+import { spawn, ChildProcess } from 'child_process';
+
+export class ServerManager {
+    private process: ChildProcess | null = null;
+    private port: number = 54320;
+
+    /**
+     * Find the server executable with priority:
+     * 1. Bundled binary in extension
+     * 2. System ppxai-server in PATH
+     * 3. Python module
+     */
+    private async findServerExecutable(): Promise<{ type: 'binary' | 'python'; path: string; args: string[] } | null> {
+        // Priority 1: Bundled binary
+        const bundledPath = this.getBundledBinaryPath();
+        if (bundledPath && fs.existsSync(bundledPath)) {
+            // Ensure executable permissions on Unix
+            if (process.platform !== 'win32') {
+                fs.chmodSync(bundledPath, 0o755);
+            }
+            return { type: 'binary', path: bundledPath, args: ['--port', String(this.port)] };
+        }
+
+        // Priority 2: System ppxai-server
+        const systemPath = await this.findInPath('ppxai-server');
+        if (systemPath) {
+            return { type: 'binary', path: systemPath, args: ['--port', String(this.port)] };
+        }
+
+        // Priority 3: Python module
+        const pythonPath = vscode.workspace.getConfiguration('ppxai').get<string>('pythonPath') || 'python3';
+        return { type: 'python', path: pythonPath, args: ['-m', 'ppxai.server', '--port', String(this.port)] };
+    }
+
+    private getBundledBinaryPath(): string | null {
+        const ext = vscode.extensions.getExtension('ppxai.ppxai');
+        if (!ext) return null;
+
+        const platform = process.platform;
+        const arch = process.arch;
+        const binaryName = platform === 'win32' ? 'ppxai-server.exe' : 'ppxai-server';
+
+        return path.join(ext.extensionPath, 'bin', binaryName);
+    }
+
+    async start(): Promise<boolean> {
+        const executable = await this.findServerExecutable();
+        if (!executable) {
+            vscode.window.showErrorMessage(
+                'ppxai server not found. Install via: uv sync --extra server'
+            );
+            return false;
+        }
+
+        const args = executable.type === 'python'
+            ? executable.args
+            : executable.args;
+
+        this.process = spawn(executable.path, args, {
+            env: { ...process.env, PYTHONUNBUFFERED: '1' }
+        });
+
+        // ... health check polling, event handlers, etc.
+        return true;
+    }
+}
+```
+
+---
+
+#### v1.10.0 Combined Summary
+
+| Part | Effort | Key Deliverable |
+|------|--------|-----------------|
+| Part A: CI/CD + VSIX Downloads | 5-8 hours | Automated builds, GitHub release downloads |
+| Part B: Self-Contained Bundling | 14-19 hours | Zero-dependency VSIX with bundled server |
+| **Total** | **19-27 hours** | Full CI/CD + self-contained extension |
+
+**Recommendation**: Implement Part A first (quick win), then Part B (self-contained) as follow-up
 
 ---
 
@@ -720,102 +1032,311 @@ jobs:
 
 ---
 
-### v1.13.0: Web Terminal & Launcher Options (Priority: Low)
+### v1.13.0: TUI Modernization & Web Chat UI (Priority: Medium)
 
-*Moved from v1.12.0*
+*Revised from Web Terminal - aligned with HTTP + SSE architecture*
 
-**Goal**: Provide flexible terminal launch options including web-based access
+**Goal**: Modernize TUI to use `EngineClient` and provide a web-based chat UI using the same HTTP + SSE backend as the VS Code extension
+
+**Prerequisite**: v1.9.0 (HTTP + SSE server provides unified backend)
+
+---
+
+#### Part A: TUI Modernization
+
+Migrate TUI from legacy `AIClient` to `EngineClient` for unified behavior across all clients.
+
+##### Motivation
+
+Currently, TUI uses the legacy `AIClient` while the extension uses `EngineClient` via HTTP server. This creates:
+- Inconsistent tool behavior between TUI and extension
+- Duplicate code paths for the same functionality
+- Inability to share sessions between TUI and extension
+
+##### Features
+
+1. **Direct Engine Mode** (default)
+   - TUI uses `EngineClient` directly (no server)
+   - Same behavior as extension but without HTTP overhead
+   - Maintains current single-process architecture
+
+2. **HTTP Client Mode** (optional)
+   - `ppxai --http` connects to running HTTP server
+   - Useful for debugging or sharing sessions with extension
+   - TUI becomes a thin client to the HTTP server
+
+3. **Unified Behavior**
+   - Same tool system as extension
+   - Consistent streaming events
+   - Session sharing capability
+
+##### Architecture
+
+```
+TUI Modes:
+
+Mode 1: Direct (default)          Mode 2: HTTP Client (--http)
+┌─────────────┐                   ┌─────────────┐
+│    TUI      │                   │    TUI      │
+│  (Rich UI)  │                   │  (Rich UI)  │
+└──────┬──────┘                   └──────┬──────┘
+       │                                 │
+       ▼                                 ▼
+┌─────────────┐                   ┌─────────────┐
+│EngineClient│                   │ HTTP Client │
+└──────┬──────┘                   └──────┬──────┘
+       │                                 │ HTTP + SSE
+       ▼                                 ▼
+┌─────────────┐                   ┌─────────────┐
+│  Provider   │                   │ HTTP Server │
+│    API      │                   │(ppxai-server)│
+└─────────────┘                   └─────────────┘
+```
+
+##### Implementation Plan (Part A)
+
+**Phase A1: Replace AIClient with EngineClient (3-4 hours)**
+- [ ] Update `ppxai/main.py` to use `EngineClient`
+- [ ] Map Rich UI to engine events (`EventType.STREAM_CHUNK`, etc.)
+- [ ] Update `CommandHandler` to use engine methods
+- [ ] Ensure all slash commands work with new engine
+
+**Phase A2: HTTP Client Mode (2-3 hours)**
+- [ ] Create `ppxai/http_client.py` (mirrors extension's HTTP client)
+- [ ] Add `--http` flag to CLI
+- [ ] Implement SSE stream parsing for TUI
+- [ ] Add server connection status to UI
+
+**Phase A3: Session Sharing (1-2 hours)**
+- [ ] Enable session export/import via HTTP API
+- [ ] Allow TUI to connect to extension's server
+- [ ] Document session sharing workflow
+
+**Estimated Part A Total**: 6-9 hours
+
+---
+
+#### Part B: Web Chat UI
+
+A lightweight web-based chat interface using the same HTTP + SSE backend as the VS Code extension. This is architecturally consistent with v1.9.0 (not a terminal emulator).
+
+##### Features
+
+1. **Browser-Based Chat UI**
+   - Modern HTML/CSS/JS chat interface
+   - Connects to `ppxai-server` via HTTP + SSE
+   - Same backend as VS Code extension
+   - No Python required on client (just a browser)
+
+2. **Launch Modes**
+   - `ppxai-server --web` - Start HTTP server with web UI
+   - `ppxai-server --web --port 3000` - Custom port
+   - Web UI served from `/` endpoint
+
+3. **Web UI Features**
+   - Markdown rendering (same as extension)
+   - Code syntax highlighting
+   - Streaming responses with SSE
+   - Provider/model switching
+   - Mobile-responsive design
+
+4. **Optional: Terminal Emulation Mode**
+   - For users who prefer terminal look-and-feel in browser
+   - Uses xterm.js with PTY bridge
+   - Higher complexity, lower priority
+
+##### Architecture (HTTP + SSE - Preferred)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    HTTP Server (ppxai-server)               │
+├─────────────────────────────────────────────────────────────┤
+│  GET /              → Serve web UI (index.html)             │
+│  POST /chat         → Chat with SSE streaming               │
+│  GET /providers     → List providers                        │
+│  GET /models        → List models                           │
+│  ...                → All existing HTTP endpoints           │
+└───────────────────────────────┬─────────────────────────────┘
+                                │
+         ┌──────────────────────┼──────────────────────┐
+         │                      │                      │
+         ▼                      ▼                      ▼
+┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
+│   Web Browser   │   │  VS Code Ext    │   │   TUI --http    │
+│   (chat UI)     │   │  (backend-http) │   │   (optional)    │
+└─────────────────┘   └─────────────────┘   └─────────────────┘
+```
+
+##### Implementation Plan (Part B)
+
+**Phase B1: Web UI Frontend (4-5 hours)**
+- [ ] Create `ppxai/server/static/index.html` - chat interface
+- [ ] Add CSS styling (dark mode, responsive)
+- [ ] Implement JavaScript SSE client
+- [ ] Add markdown rendering (marked.js)
+- [ ] Add code highlighting (highlight.js)
+
+**Phase B2: Server Updates (2-3 hours)**
+- [ ] Add static file serving to FastAPI server
+- [ ] Add `--web` flag to serve web UI
+- [ ] Configure CORS for local development
+- [ ] Bundle static files with PyInstaller (for v1.10.0)
+
+**Phase B3: Web UI Features (3-4 hours)**
+- [ ] Implement provider/model selector
+- [ ] Add chat history display
+- [ ] Implement file reference (@file) support
+- [ ] Add tool call visualization
+
+**Phase B4: Optional Terminal Mode (4-5 hours)**
+- [ ] Add xterm.js integration (optional)
+- [ ] Create PTY bridge for terminal I/O
+- [ ] WebSocket endpoint for terminal mode
+- [ ] Configuration for mode selection
+
+**Phase B5: Security & Polish (2 hours)**
+- [ ] Optional authentication token
+- [ ] Rate limiting for public access
+- [ ] HTTPS documentation
+
+**Estimated Part B Total**: 15-19 hours (11-14 without terminal mode)
+
+---
+
+#### v1.13.0 Combined Summary
+
+| Part | Effort | Key Deliverable |
+|------|--------|-----------------|
+| Part A: TUI Modernization | 6-9 hours | Unified TUI using EngineClient |
+| Part B: Web Chat UI | 11-14 hours | Browser-based chat via HTTP + SSE |
+| Part B (optional): Terminal Mode | +4-5 hours | xterm.js terminal emulation |
+| **Total** | **17-23 hours** | Full TUI + Web UI modernization |
+
+**Benefits of this approach:**
+- All clients (TUI, Extension, Web) use same HTTP + SSE backend
+- Consistent behavior across all interfaces
+- Simpler architecture than PTY + WebSocket
+- Session sharing between clients possible
+
+---
+
+### v1.14.0: IDE Integration Phase 1 - Workspace Awareness (Priority: Medium)
+
+**Goal**: Enable ppxai to be aware of VS Code workspace, read files, and navigate - similar to Claude Code and Gemini Code Assist
+
+**Detailed Plan**: See [docs/ide-integration-plan.md](docs/ide-integration-plan.md)
 
 #### Features
 
-1. **Web Terminal Interface**
-   - HTML-based terminal emulator (xterm.js or similar)
-   - Run ppxai in a browser tab
-   - WebSocket-based communication with backend
-   - Cross-platform access without native installation
-   - Shareable session URLs (optional)
+1. **IDE Bridge Server** (in VS Code extension)
+   - HTTP server for TUI→IDE communication
+   - Automatic startup on extension activation
+   - Local-only binding (127.0.0.1:54321)
 
-2. **Configurable Terminal Launcher**
-   - Executable opens system default terminal or configured terminal
-   - Configuration in `ppxai-config.json`:
-     ```json
-     {
-       "terminal": {
-         "mode": "native",  // "native", "web", or "auto"
-         "native_terminal": {
-           "macos": "Terminal.app",  // or "iTerm.app", "Warp.app"
-           "linux": "gnome-terminal",  // or "konsole", "xterm"
-           "windows": "wt.exe"  // Windows Terminal, or "cmd.exe"
-         },
-         "web": {
-           "host": "localhost",
-           "port": 8080,
-           "auto_open_browser": true
-         }
-       }
-     }
-     ```
+2. **Workspace Awareness Tools**
+   - `ide.get_workspace_info` - Get workspace name and folders
+   - `ide.list_files` - List files matching glob pattern
+   - `ide.read_file` - Read any file in workspace
+   - `ide.search_files` - Search text across workspace
 
-3. **Launch Modes**
-   - `ppxai` - Launch in current terminal (default, current behavior)
-   - `ppxai --terminal` - Launch in configured native terminal
-   - `ppxai --web` - Start web server and open browser
-   - `ppxai --web --port 3000` - Custom port for web mode
-   - `ppxai --headless` - Web server only, no browser auto-open
+3. **Editor Awareness Tools**
+   - `ide.get_active_file` - Get current file path and content
+   - `ide.get_selection` - Get highlighted text
+   - `ide.open_file` - Open file at specific line
+   - `ide.get_diagnostics` - Get errors/warnings
 
-4. **Web Terminal Features**
-   - Full terminal emulation with ANSI color support
-   - Copy/paste support
-   - Responsive design for mobile access
-   - Optional authentication for remote access
-   - Theme customization (dark/light mode)
+4. **TUI Bridge Connection**
+   - `/ide connect <url>` - Connect TUI to VS Code bridge
+   - `/ide status` - Show connection status
+   - `/ide disconnect` - Disconnect from IDE
 
 #### Implementation Plan
 
-**Phase 1: Web Terminal Backend (4-5 hours)**
-- [ ] Add WebSocket server (using `websockets` or `aiohttp`)
-- [ ] Create PTY bridge for terminal I/O
-- [ ] Implement session management for web clients
-- [ ] Handle terminal resize events
+**Phase 1: Extension Bridge Server (3-4 hours)**
+- [ ] Create `vscode-extension/src/bridge.ts`
+- [ ] Implement HTTP server with tool endpoints
+- [ ] Auto-start on extension activation
+- [ ] Add `ppxai.showBridgeStatus` command
 
-**Phase 2: Web Terminal Frontend (4-5 hours)**
-- [ ] Integrate xterm.js terminal emulator
-- [ ] Create minimal HTML/CSS interface
-- [ ] Implement WebSocket client connection
-- [ ] Add copy/paste and keyboard handling
-- [ ] Bundle frontend assets with PyInstaller
+**Phase 2: Python IDE Client (2-3 hours)**
+- [ ] Create `ppxai/engine/ide_client.py`
+- [ ] Implement async HTTP client with httpx
+- [ ] Add connection management
 
-**Phase 3: Native Terminal Launcher (2-3 hours)**
-- [ ] Detect available terminals per platform
-- [ ] Implement terminal launch for macOS (Terminal.app, iTerm, Warp)
-- [ ] Implement terminal launch for Linux (gnome-terminal, konsole, etc.)
-- [ ] Implement terminal launch for Windows (Windows Terminal, cmd, PowerShell)
-- [ ] Add configuration options in `ppxai-config.json`
+**Phase 3: IDE Tools (2-3 hours)**
+- [ ] Create `ppxai/engine/tools/builtin/ide.py`
+- [ ] Implement workspace and editor tools
+- [ ] Register tools in ToolManager
 
-**Phase 4: CLI Arguments & Config (2 hours)**
-- [ ] Add `--terminal`, `--web`, `--headless` flags
-- [ ] Implement `--port` option for web mode
-- [ ] Read terminal preferences from config file
-- [ ] Add `/config terminal` command for runtime changes
+**Phase 4: CLI Commands (2 hours)**
+- [ ] Add `/ide connect|disconnect|status` commands
+- [ ] Integrate IDEClient into EngineClient
 
-**Phase 5: Security & Polish (2-3 hours)**
-- [ ] Add optional authentication for web mode
-- [ ] Implement HTTPS support (self-signed or Let's Encrypt)
-- [ ] Add rate limiting and connection limits
-- [ ] Create connection status indicators
+**Phase 5: Testing & Documentation (2-3 hours)**
+- [ ] Test bridge server endpoints
+- [ ] Test TUI→IDE communication
+- [ ] Update documentation
 
-**Phase 6: Testing & Documentation (2 hours)**
-- [ ] Test on all platforms (macOS, Linux, Windows)
-- [ ] Test web terminal in major browsers
-- [ ] Document all launch modes
-- [ ] Update README with web terminal instructions
+**Estimated Total**: 12-16 hours
+
+---
+
+### v1.15.0: IDE Integration Phase 2 - Code Actions (Priority: Medium)
+
+**Goal**: Enable AI to apply code changes, run terminal commands, and interact with git - full agentic coding capabilities
+
+**Detailed Plan**: See [docs/ide-integration-plan.md](docs/ide-integration-plan.md)
+
+#### Features
+
+1. **Code Edit Tools**
+   - `ide.apply_edit` - Apply text edits to files
+   - `ide.insert_text` - Insert text at position
+   - `ide.replace_selection` - Replace selected text
+   - `ide.show_diff` - Preview changes before applying
+   - `ide.format_document` - Format current file
+
+2. **Terminal Tools**
+   - `ide.run_in_terminal` - Execute command in integrated terminal
+   - `ide.create_terminal` - Create named terminal
+
+3. **Git Tools**
+   - `ide.git_status` - Get repository status
+   - `ide.git_diff` - Get file or repo diff
+   - `ide.git_stage` - Stage files
+   - `ide.git_commit` - Create commits
+
+4. **Safety Features**
+   - Confirmation prompts for file modifications
+   - Undo/rollback support
+   - Edit history tracking
+
+#### Implementation Plan
+
+**Phase 1: Code Edit Tools (4-5 hours)**
+- [ ] Implement `ide.apply_edit` with WorkspaceEdit
+- [ ] Add diff preview functionality
+- [ ] Implement confirmation prompts
+
+**Phase 2: Terminal Tools (3-4 hours)**
+- [ ] Implement terminal command execution
+- [ ] Add terminal creation and management
+
+**Phase 3: Git Tools (4-5 hours)**
+- [ ] Integrate with VS Code Git extension API
+- [ ] Implement status, diff, stage, commit tools
+
+**Phase 4: Undo/Rollback (2-3 hours)**
+- [ ] Track applied edits
+- [ ] Implement `/ide undo` command
+- [ ] Add edit history to session
+
+**Phase 5: Testing & Documentation (3-4 hours)**
+- [ ] Security review of write operations
+- [ ] Comprehensive testing
+- [ ] User documentation and examples
 
 **Estimated Total**: 16-20 hours
-
-**Dependencies:**
-- `xterm.js` (frontend terminal emulator)
-- `websockets` or `aiohttp` (WebSocket server)
-- `ptyprocess` (Unix) / `winpty` (Windows) for PTY handling
 
 ---
 
@@ -951,9 +1472,9 @@ jobs:
 - 📖 **Documentation**: [docs/uv-migration-plan.md](docs/uv-migration-plan.md), [docs/sse-migration-plan.md](docs/sse-migration-plan.md)
 
 ### Short-term (v1.10.0)
-- 📦 **High Priority**: VSCode Extension CI/CD & Marketplace publishing
-- 📦 **High Priority**: GitHub Actions workflow for extension builds
-- 📦 **High Priority**: Automated VSIX packaging and releases
+- 📦 **High Priority**: VSCode Extension CI/CD & Self-Contained Bundling
+- 📦 **Part A**: GitHub Actions workflow, VSIX downloads via GitHub releases
+- 📦 **Part B**: PyInstaller bundled server, platform-specific VSIX, zero-dependency install
 
 ### Medium-term (v1.11.0 - v1.12.0)
 - ⚠️ **Medium**: Per-provider tool configuration
@@ -961,8 +1482,14 @@ jobs:
 - 💡 **Nice to Have**: Tool aliases and presets
 - 💡 **Nice to Have**: Tool usage statistics
 
-### Long-term (v1.13.0 - v2.0.0+)
-- 🌐 **Nice to Have**: Web terminal interface
+### Long-term (v1.13.0 - v1.15.0)
+- 🔄 **Medium**: TUI Modernization - migrate from `AIClient` to `EngineClient`
+- 🌐 **Medium**: Web Chat UI - browser-based chat via HTTP + SSE (same backend as extension)
+- 🔧 **Medium**: IDE Integration Phase 1 - Workspace awareness (read files, navigate)
+- 🔧 **Medium**: IDE Integration Phase 2 - Code actions (apply edits, terminal, git)
+- 📖 **Documentation**: [docs/ide-integration-plan.md](docs/ide-integration-plan.md)
+
+### Future (v2.0.0+)
 - 🔌 **Future**: Multi-IDE support (JetBrains, Neovim, Sublime)
 - 🔌 **Future**: LSP server for editor-agnostic support
 - 💡 **Future**: Advanced code actions (edit, refactor, review)
@@ -994,6 +1521,6 @@ Interested in working on any of these features?
 
 ---
 
-**Last Updated**: December 8, 2025
+**Last Updated**: December 9, 2025
 **Current Version**: v1.8.0
-**Next Target**: v1.9.0 (HTTP + SSE Backend Migration)
+**Next Target**: v1.9.0 (uv Migration + HTTP + SSE Backend)
