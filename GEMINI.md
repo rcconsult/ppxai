@@ -1,81 +1,75 @@
 # Project Overview
 
-The `ppxai` project is a Python-based command-line interface (CLI) application that allows users to interact with Perplexity AI models. It provides an interactive chat experience directly in the terminal, featuring model selection, conversation history management, streaming responses, and rich terminal UI elements like Markdown rendering and clickable source citations. The application can be run from source or distributed as a standalone executable across Windows, macOS, and Linux, thanks to PyInstaller.
+The `ppxai` project is a comprehensive AI coding assistant and chat interface. It has evolved from a simple CLI into a robust platform supporting multiple AI providers (Perplexity, OpenAI, OpenRouter, Local Models), a structured Python package, and a full-featured VS Code extension. It focuses on developer workflows with specialized tools for code generation, debugging, testing, and documentation.
 
 ## Main Technologies
 
-*   **Python:** The core language of the application.
-*   **Perplexity AI API:** Used for interacting with Perplexity AI models.
-*   **`openai` library:** Python client for the Perplexity AI API.
-*   **`rich`:** Provides a sophisticated terminal UI with rich text, Markdown rendering, panels, and tables.
-*   **`prompt_toolkit`:** Enables interactive command-line input with features like history.
-*   **`python-dotenv`:** For loading environment variables from a `.env` file.
-*   **`PyInstaller`:** Used to package the application into standalone executables.
+*   **Python:** Core application logic (v3.8+).
+*   **TypeScript:** VS Code extension development.
+*   **Rich:** Advanced terminal UI with markdown, panels, and tables.
+*   **Prompt Toolkit:** Interactive CLI input handling.
+*   **JSON-RPC:** Communication protocol between the VS Code extension and the Python backend.
+*   **MCP (Model Context Protocol):** Support for external tool servers.
+*   **PyInstaller:** For building standalone executables.
 
-## Building and Running
+## Key Features
 
-### Running from Source (For Developers)
+### Core CLI & Chat
+*   **Multi-Provider:** Switch between Perplexity (Sonar), OpenAI (GPT-4), Claude, Gemini, and local models.
+*   **Streaming:** Real-time response streaming with markdown rendering.
+*   **Session Management:** Auto-save, load, and export conversations.
+*   **Usage Tracking:** Token usage and cost monitoring per model.
 
-1.  Clone the repository.
-2.  Set up and activate a Python virtual environment:
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate  # macOS/Linux
-    # venv\Scripts\activate   # Windows
-    ```
-3.  Install dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
-4.  Copy `.env.example` to `.env` and add your `PERPLEXITY_API_KEY`:
-    ```bash
-    cp .env.example .env
-    # Edit .env and add: PERPLEXITY_API_KEY=your_api_key_here
-    ```
-5.  Run the application:
-    ```bash
-    python ppxai.py
-    ```
+### Developer Tools
+*   **`/generate`**: Create code from natural language descriptions.
+*   **`/test`**: Generate unit tests for specific files.
+*   **`/docs`**: Generate documentation for code.
+*   **`/debug`**: Analyze errors and provide fixes.
+*   **`/explain`**: detailed code logic explanations.
+*   **`/convert`**: Translate code between languages.
+*   **`/tools`**: Enable/disable AI tools (File Search, Read, Shell, Calculator).
 
-### Building Standalone Executables
+### VS Code Extension
+*   **Chat Panel:** Integrated sidebar chat.
+*   **Context:** `@file` referencing to pull code into context.
+*   **Code Actions:** Context menu items for Explain, Test, and Document.
+*   **Autocomplete:** Slash commands and file path completion.
 
-*   **Quick Build (macOS/Linux):**
-    ```bash
-    ./build.sh
-    ```
-    (creates `dist/ppxai`)
-*   **Quick Build (Windows):**
-    ```batch
-    build.bat
-    ```
-    (creates `dist\ppxai.exe`)
-*   **Manual Build:** After setting up a virtual environment and installing dependencies, run:
-    ```bash
-    pyinstaller ppxai.spec
-    ```
-*   **Distribution:** Distribute the executable along with the `.env.example` file and instructions for users to set their API key in a `.env` file.
+## Project Structure
 
-## Development Conventions
+```
+ppxai/
+├── ppxai.py                              # Entry point wrapper
+├── ppxai/                                # Main package
+│   ├── main.py                           # CLI application entry
+│   ├── client.py                         # AI client wrapper
+│   ├── config.py                         # Hybrid configuration (Env + JSON)
+│   ├── server.py                         # JSON-RPC server for VS Code
+│   └── engine/                           # Core logic
+│       ├── providers/                    # Provider implementations (Perplexity, OpenAI, etc.)
+│       └── tools/                        # Tool system (Built-in & MCP)
+├── vscode-extension/                     # VS Code Extension source
+│   ├── src/                              # TypeScript source
+│   └── package.json                      # Extension manifest
+├── docs/                                 # Comprehensive documentation
+└── tests/                                # Extensive test suite
+```
 
-*   **API Key Management:** Uses a `.env` file and `python-dotenv` for secure handling of the `PERPLEXITY_API_KEY`.
-*   **Terminal UI:** Leverages `rich` for an enhanced user experience in the terminal, including Markdown formatting and clickable links.
-*   **Command Handling:** Integrates a simple command system within the chat interface (e.g., `/model`, `/clear`, `/quit`).
-*   **Automated Builds:** Utilizes GitHub Actions for cross-platform executable builds.
-*   **Code Structure:** `ppxai.py` centralizes the application logic, `PerplexityClient` handles API communication, and separate functions manage UI aspects.
+## Configuration
 
-## GitHub Community Files
+*   **Secrets:** `.env` file for API keys (`PERPLEXITY_API_KEY`, `OPENAI_API_KEY`, etc.). **Never commit.**
+*   **Settings:** `ppxai-config.json` for provider definitions, model lists, and non-secret settings. **Can commit.**
+*   **User Data:** Stored in `~/.ppxai/` (sessions, logs, user config).
 
-The project includes comprehensive GitHub community files to facilitate collaboration:
+## Build & Release
 
-*   **Contributing Guide (`CONTRIBUTING.md`):** Provides detailed guidelines for contributors, including development setup, code guidelines, and reporting issues.
-*   **Pull Request Template (`.github/PULL_REQUEST_TEMPLATE.md`):** Standardized PR template with sections for description, type of change, testing checklist, and contributor guidelines. Tailored to ppxai workflow including model testing and slash command verification.
-*   **Issue Templates (`.github/ISSUE_TEMPLATE/`):** Structured templates for bug reports and feature requests to help maintainers triage issues efficiently.
-*   **Security Policy (`SECURITY.md`):** Outlines how to report security vulnerabilities responsibly.
-*   **Code of Conduct (`CODE_OF_CONDUCT.md`):** Contributor Covenant Code of Conduct for maintaining a welcoming community.
+*   **Version:** ~v1.8.0
+*   **Executables:** `build.sh` (macOS/Linux) and `build.bat` (Windows) create standalone binaries using PyInstaller.
+*   **VS Code:** `npm run compile` and `vsce package` for the extension.
 
-## Release Management
+## Development Status
 
-*   **Current Version:** v1.3.2
-*   **Versioning:** Follows Semantic Versioning (SemVer)
-*   **Release Process:** Documented in `RELEASE.md` with both automated (GitHub Actions) and manual build options
-*   **Distribution:** Pre-built executables available for Linux, macOS, and Windows on GitHub Releases
+*   **Tool Integration:** Complete. Supports built-in tools (Shell, Filesystem) and MCP servers.
+*   **Shell Tool:** Implemented with safety checks (blocks interactive commands like `vim`).
+*   **Testing:** Comprehensive test suite in `tests/`.
+*   **Documentation:** Up-to-date guides in `docs/` for providers, tools, and contributing.

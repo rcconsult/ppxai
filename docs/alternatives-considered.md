@@ -30,11 +30,11 @@ Bun is a fast JavaScript runtime and toolkit that offers:
 │  TUI (Python)   │ VS Code Ext     │  Web UI (Browser JS)        │
 │  Rich library   │ (TypeScript)    │  HTML + SSE client          │
 └────────┬────────┴────────┬────────┴────────────┬────────────────┘
-         │                 │                      │
-         │                 ▼                      │
+         │                 │                     │
+         │                 ▼                     │
          │    ┌─────────────────────────┐        │
-         └───►│   HTTP Server (Python)   │◄───────┘
-              │   FastAPI + uvicorn      │
+         └───►│   HTTP Server (Python)  │◄───────┘
+              │   FastAPI + uvicorn     │
               └───────────┬─────────────┘
                           │
                           ▼
