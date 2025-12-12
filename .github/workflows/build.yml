@@ -30,6 +30,12 @@ jobs:
     - name: Run tests
       run: uv run pytest tests/ -v --ignore=tests/test_custom_endpoint_integration.py
 
+    - name: Run benchmark
+      env:
+        PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      run: uv run python scripts/benchmark.py --all-providers --iterations 2 --no-save
+
   build:
     needs: test
     strategy:
