@@ -14,7 +14,10 @@ Usage:
     uv run python scripts/benchmark.py
 
     # Run with specific provider
-    uv run python scripts/benchmark.py --provider openai
+    uv run python scripts/benchmark.py --provider gemini
+
+    # Run all configured providers
+    uv run python scripts/benchmark.py --all-providers
 
     # Run with mock (for CI, no API calls)
     uv run python scripts/benchmark.py --mock
@@ -403,34 +406,77 @@ async def main():
         action="store_true",
         help="Don't save results to log file",
     )
+    parser.add_argument(
+        "--all-providers",
+        action="store_true",
+        help="Benchmark all configured providers",
+    )
 
     args = parser.parse_args()
 
     print(f"ppxai Latency Benchmark v{get_version()}")
     print(f"Git: {get_git_info()['commit']} ({get_git_info()['branch']})")
 
-    # Run benchmark
+    # Determine which providers to benchmark
     if args.mock:
-        benchmark_data = await run_mock_benchmark()
+        providers = ["mock"]
+    elif args.all_providers:
+        from ppxai.config import get_available_providers
+        providers = get_available_providers()
+        print(f"\nBenchmarking all providers: {', '.join(providers)}")
     else:
-        benchmark_data = await run_benchmark(args.provider, args.iterations)
+        providers = [args.provider]
 
-    # Calculate summary
-    summary = calculate_summary(benchmark_data["results"])
+    # Run benchmarks for all providers
+    all_results = []
+    any_regression = False
 
-    # Print summary
-    print_summary(summary, benchmark_data["provider"], benchmark_data["model"])
+    for provider_id in providers:
+        if provider_id == "mock":
+            benchmark_data = await run_mock_benchmark()
+        else:
+            benchmark_data = await run_benchmark(provider_id, args.iterations)
 
-    # Save results
-    if not args.no_save:
-        log_file = save_results(benchmark_data, summary)
+        # Calculate summary
+        summary = calculate_summary(benchmark_data["results"])
 
-        # Compare with baseline
-        compare_with_baseline(summary, log_file)
+        # Print summary
+        print_summary(summary, benchmark_data["provider"], benchmark_data["model"])
+
+        # Save results
+        if not args.no_save:
+            log_file = save_results(benchmark_data, summary)
+
+            # Compare with baseline
+            if not compare_with_baseline(summary, log_file):
+                any_regression = True
+
+        all_results.append({
+            "provider": benchmark_data["provider"],
+            "model": benchmark_data["model"],
+            "summary": summary,
+        })
+
+    # Print final comparison table if multiple providers
+    if len(all_results) > 1:
+        print("\n" + "=" * 60)
+        print("COMPARISON SUMMARY")
+        print("=" * 60)
+        print(f"{'Provider':<15} {'Model':<20} {'TTFT':<10} {'Total':<10} {'Tok/s':<10}")
+        print("-" * 60)
+        for r in all_results:
+            s = r["summary"]
+            ttft = f"{s['ttft_ms']['mean']:.0f}ms" if "ttft_ms" in s else "N/A"
+            total = f"{s['total_ms']['mean']:.0f}ms" if "total_ms" in s else "N/A"
+            speed = f"{s['tokens_per_sec']['mean']:.1f}" if "tokens_per_sec" in s else "N/A"
+            print(f"{r['provider']:<15} {r['model']:<20} {ttft:<10} {total:<10} {speed:<10}")
 
     # Return exit code based on results
-    if summary.get("failed_runs", 0) > summary.get("successful_runs", 0):
+    if any_regression:
         return 1
+    for r in all_results:
+        if r["summary"].get("failed_runs", 0) > r["summary"].get("successful_runs", 0):
+            return 1
     return 0
 
 
