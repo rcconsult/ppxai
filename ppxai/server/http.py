@@ -29,7 +29,7 @@ from ..engine import EngineClient, EventType
 app = FastAPI(
     title="ppxai HTTP Server",
     description="HTTP + SSE server for ppxai AI chat",
-    version="1.9.2",
+    version="1.10.0",
 )
 
 # Add CORS middleware for webview/browser access
@@ -133,7 +133,7 @@ async def health_check():
     """Health check endpoint."""
     return {
         "status": "ok",
-        "version": "1.9.2",
+        "version": "1.10.0",
         "engine": engine is not None,
     }
 

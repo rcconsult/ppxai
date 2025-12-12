@@ -1,15 +1,15 @@
 import * as vscode from 'vscode';
-import { PythonBackend } from './backend';
+import { HttpClient, getHttpClient, resetHttpClient } from './httpClient';
 import { ChatViewProvider } from './chatPanel';
 import { SessionsProvider } from './sessionsProvider';
 
-let backend: PythonBackend;
+let backend: HttpClient;
 
 export async function activate(context: vscode.ExtensionContext) {
     console.log('ppxai extension activating...');
 
-    // Initialize Python backend
-    backend = new PythonBackend();
+    // Initialize HTTP backend (connects to ppxai-server)
+    backend = getHttpClient();
 
     // Initialize chat view provider
     const chatViewProvider = new ChatViewProvider(context, backend);
@@ -257,8 +257,6 @@ export async function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
-    // Stop the Python backend process
-    if (backend) {
-        backend.stop();
-    }
+    // Reset HTTP client
+    resetHttpClient();
 }

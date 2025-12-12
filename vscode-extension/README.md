@@ -15,38 +15,53 @@ Multi-provider AI chat interface for VS Code, powered by ppxai.
   - Generate Tests
   - Generate Documentation
 - **Slash Commands**: `/help`, `/show`, `/tools`, `/model`, `/provider`, etc.
-- **Multi-Provider Support**: Perplexity, OpenAI, OpenRouter, local models
+- **Multi-Provider Support**: Perplexity, OpenAI, Gemini, OpenRouter, local models
 - **Session Management**: Save and load conversation sessions
-- **Streaming Responses**: Real-time streaming output with timing info
+- **Streaming Responses**: Real-time SSE streaming with timing info
 
 ## Requirements
 
-- Python 3.8+
-- ppxai Python package (parent directory)
-- API key for your chosen provider
+- Python 3.10+
+- ppxai Python package with server dependencies
 
 ## Installation
 
-### Development Setup
-
-1. Install dependencies:
-   ```bash
-   cd vscode-extension
-   npm install
-   ```
-
-2. Compile TypeScript:
-   ```bash
-   npm run compile
-   ```
-
-3. Press F5 in VS Code to launch Extension Development Host
-
-### Production Build
+### 1. Install ppxai with server support
 
 ```bash
-npm run vscode:prepublish
-npx vsce package
+pip install ppxai[server]
+# Or with uv
+uv pip install ppxai[server]
+```
+
+### 2. Install the VSCode extension
+
+Download the `.vsix` file from [GitHub Releases](https://github.com/rcconsult/ppxai/releases) and install:
+
+```bash
+code --install-extension ppxai-1.10.0.vsix
+```
+
+### 3. Start ppxai-server
+
+Before using the extension, start the HTTP server:
+
+```bash
+ppxai-server
+# Or with uv
+uv run ppxai-server
+```
+
+The server runs on `http://127.0.0.1:54320` by default.
+
+### 4. Configure API keys
+
+Create a `.env` file with your API keys:
+
+```bash
+PERPLEXITY_API_KEY=your-key-here
+# Or
+GEMINI_API_KEY=your-key-here
 ```
 
 ## Configuration
@@ -55,7 +70,7 @@ Configure the extension in VS Code settings:
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| `ppxai.pythonPath` | Path to Python interpreter | `python3` |
+| `ppxai.serverUrl` | URL of ppxai-server | `http://127.0.0.1:54320` |
 | `ppxai.defaultProvider` | Default AI provider | `perplexity` |
 | `ppxai.defaultModel` | Default model (empty for provider default) | `""` |
 | `ppxai.enableTools` | Enable AI tools (file ops, shell, web) | `false` |
@@ -78,18 +93,27 @@ Configure the extension in VS Code settings:
 ```
 vscode-extension/
 ├── src/
-│   ├── extension.ts      # Extension entry point
-│   ├── backend.ts        # Python process manager
-│   ├── chatPanel.ts      # Webview chat UI
+│   ├── extension.ts       # Extension entry point
+│   ├── httpClient.ts      # HTTP + SSE client for ppxai-server
+│   ├── chatPanel.ts       # Webview chat UI
 │   └── sessionsProvider.ts # Sessions tree view
-├── webview/              # (future) Separate webview assets
+├── webview/               # (future) Separate webview assets
 └── resources/
-    └── icon.svg          # Activity bar icon
+    └── icon.svg           # Activity bar icon
 ```
 
-The extension spawns a Python subprocess (`ppxai.server`) and communicates via JSON-RPC over stdio.
+The extension communicates with `ppxai-server` via HTTP REST + SSE for streaming responses.
 
 ## Development
+
+### Building from source
+
+```bash
+cd vscode-extension
+npm install
+npm run compile
+npx vsce package --allow-missing-repository
+```
 
 ### Watch Mode
 
@@ -102,4 +126,4 @@ npm run watch
 1. Open the extension folder in VS Code
 2. Press F5 to launch Extension Development Host
 3. Use Debug Console for extension logs
-4. Check Output > ppxai for backend logs
+4. Check Output > ppxai HTTP for client logs

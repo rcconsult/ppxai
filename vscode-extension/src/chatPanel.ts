@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { PythonBackend, StreamEvent } from './backend';
+import { HttpClient, StreamEvent } from './httpClient';
 
 // Slash command definitions
 const SLASH_COMMANDS: Record<string, { description: string; usage: string }> = {
@@ -21,12 +21,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'ppxai.chatView';
 
     private _view?: vscode.WebviewView;
-    private _backend: PythonBackend;
+    private _backend: HttpClient;
     private _context: vscode.ExtensionContext;
 
     constructor(
         context: vscode.ExtensionContext,
-        backend: PythonBackend
+        backend: HttpClient
     ) {
         this._context = context;
         this._backend = backend;
@@ -99,13 +99,20 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     private async initializeBackend() {
         try {
-            // Start backend if not running
+            // Connect to ppxai-server if not running
             if (!this._backend.isRunning()) {
                 this._view?.webview.postMessage({
                     type: 'systemMessage',
-                    content: 'Starting Python backend...'
+                    content: 'Connecting to ppxai-server...'
                 });
-                await this._backend.start();
+                const connected = await this._backend.start();
+                if (!connected) {
+                    this._view?.webview.postMessage({
+                        type: 'error',
+                        content: 'Could not connect to ppxai-server. Please start it with: uv run ppxai-server'
+                    });
+                    return;
+                }
             }
 
             // Set working directory for context injection
@@ -232,7 +239,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         };
     }
 
-    private handleStreamEvent(event: StreamEvent['event']) {
+    private handleStreamEvent(event: StreamEvent) {
         if (!this._view) { return; }
 
         switch (event.type) {

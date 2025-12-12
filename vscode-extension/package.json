@@ -2,7 +2,7 @@
   "name": "ppxai",
   "displayName": "ppxai - AI Chat",
   "description": "Multi-provider AI chat interface with code generation tools",
-  "version": "0.1.0",
+  "version": "1.10.0",
   "publisher": "ppxai",
   "engines": {
     "vscode": "^1.85.0"
@@ -103,6 +103,11 @@
     "configuration": {
       "title": "ppxai",
       "properties": {
+        "ppxai.serverUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:54320",
+          "description": "URL of the ppxai-server (run: uv run ppxai-server)"
+        },
         "ppxai.configPath": {
           "type": "string",
           "default": "",
