@@ -255,38 +255,54 @@ export class HttpClient {
     }
 
     /**
-     * Set tool configuration (stub for interface compatibility)
+     * Set tool configuration (e.g., max_iterations)
      */
-    async setToolConfig(_setting: string, _value: any): Promise<boolean> {
-        // Not yet implemented in HTTP API
-        return true;
+    async setToolConfig(setting: string, value: any): Promise<boolean> {
+        const response = await fetch(`${this.baseUrl}/tools/config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ setting, value: String(value) })
+        });
+        return response.ok;
     }
 
     /**
-     * Set working directory (stub for interface compatibility)
+     * Set working directory for file path resolution
      */
-    async setWorkingDir(_path: string): Promise<boolean> {
-        // Not yet implemented in HTTP API
-        return true;
+    async setWorkingDir(path: string): Promise<boolean> {
+        const response = await fetch(`${this.baseUrl}/context/working_dir`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path })
+        });
+        return response.ok;
     }
 
     /**
-     * Set auto-inject context (stub for interface compatibility)
+     * Enable or disable automatic context injection
      */
-    async setAutoInject(_enabled: boolean): Promise<boolean> {
-        // Not yet implemented in HTTP API
-        return true;
+    async setAutoInject(enabled: boolean): Promise<boolean> {
+        const response = await fetch(`${this.baseUrl}/context/auto_inject`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled })
+        });
+        return response.ok;
     }
 
     /**
-     * Get auto-inject status (stub for interface compatibility)
+     * Get auto-inject context status
      */
     async getAutoInject(): Promise<boolean> {
         try {
-            const status = await this.getStatus();
-            return status.auto_inject_context || false;
+            const response = await fetch(`${this.baseUrl}/context/auto_inject`);
+            if (!response.ok) {
+                return true; // Default to enabled
+            }
+            const data = await response.json() as { enabled: boolean };
+            return data.enabled;
         } catch {
-            return false;
+            return true; // Default to enabled
         }
     }
 
@@ -470,11 +486,13 @@ export class HttpClient {
             case 'tool_call':
                 return { type: 'tool_call', content: JSON.stringify(event.data) };
             case 'tool_result':
-                return { type: 'tool_result', content: event.data || '' };
+                // tool_result data is {tool, result} object - stringify it
+                return { type: 'tool_result', content: typeof event.data === 'object' ? JSON.stringify(event.data) : (event.data || '') };
             case 'tool_error':
                 return { type: 'error', content: event.data || 'Tool error' };
             case 'context_injected':
-                return { type: 'context_injected', content: event.data || '' };
+                // context_injected data is an object - stringify it
+                return { type: 'context_injected', content: typeof event.data === 'object' ? JSON.stringify(event.data) : (event.data || '') };
             case 'error':
                 return { type: 'error', content: event.data || 'Unknown error' };
             case 'info':
@@ -543,7 +561,7 @@ export class HttpClient {
     }
 
     /**
-     * Get usage statistics (stub - not yet in HTTP API)
+     * Get usage statistics
      */
     async getUsage(): Promise<{
         total_tokens: number;
@@ -551,13 +569,16 @@ export class HttpClient {
         completion_tokens: number;
         estimated_cost: number;
     }> {
-        // Not yet implemented in HTTP API
-        return {
-            total_tokens: 0,
-            prompt_tokens: 0,
-            completion_tokens: 0,
-            estimated_cost: 0
-        };
+        const response = await fetch(`${this.baseUrl}/usage`);
+        if (!response.ok) {
+            throw new Error(`Failed to get usage: ${response.statusText}`);
+        }
+        return response.json() as Promise<{
+            total_tokens: number;
+            prompt_tokens: number;
+            completion_tokens: number;
+            estimated_cost: number;
+        }>;
     }
 }
 

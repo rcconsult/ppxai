@@ -16,6 +16,7 @@ const SLASH_COMMANDS: Record<string, { description: string; usage: string }> = {
     '/usage': { description: 'Show token usage stats', usage: '/usage' },
     '/status': { description: 'Show current status', usage: '/status' },
     // Coding task commands
+    '/generate': { description: 'Generate code from description', usage: '/generate <description>' },
     '/explain': { description: 'Explain code or concept', usage: '/explain <code or question>' },
     '/test': { description: 'Generate tests for code', usage: '/test <code or @file>' },
     '/docs': { description: 'Generate documentation', usage: '/docs <code or @file>' },
@@ -74,6 +75,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 case 'searchFiles':
                     await this.handleSearchFilesForAutocomplete(message.query);
                     break;
+                case 'openLink':
+                    if (message.url) {
+                        vscode.env.openExternal(vscode.Uri.parse(message.url));
+                    }
+                    break;
             }
         });
     }
@@ -125,6 +131,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             const workspaceFolders = vscode.workspace.workspaceFolders;
             if (workspaceFolders && workspaceFolders.length > 0) {
                 await this._backend.setWorkingDir(workspaceFolders[0].uri.fsPath);
+            }
+
+            // Sync tools setting from VSCode configuration
+            const config = vscode.workspace.getConfiguration('ppxai');
+            const enableTools = config.get<boolean>('enableTools', false);
+            if (enableTools) {
+                await this._backend.enableTools();
             }
 
             await this.updateStatus();
@@ -554,6 +567,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     break;
 
                 // Coding task commands
+                case '/generate':
+                    await this.handleCodingTaskCommand('generate', args.join(' '));
+                    break;
+
                 case '/explain':
                     await this.handleCodingTaskCommand('explain', args.join(' '));
                     break;
@@ -683,7 +700,7 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
         const filename = editor?.document.fileName;
 
         // Start streaming response
-        this._view.webview.postMessage({ type: 'startStreaming' });
+        this._view.webview.postMessage({ type: 'startResponse' });
 
         try {
             await this._backend.codingTask(
@@ -700,7 +717,7 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             });
         }
 
-        this._view.webview.postMessage({ type: 'endStreaming' });
+        this._view.webview.postMessage({ type: 'endResponse' });
     }
 
     private async showHelp() {
@@ -734,6 +751,11 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                     content: '✓ Tools disabled'
                 });
             }
+
+            // Save the setting to persist across restarts
+            const config = vscode.workspace.getConfiguration('ppxai');
+            await config.update('enableTools', enable, vscode.ConfigurationTarget.Global);
+
             await this.updateStatus();
         } catch (error) {
             this._view.webview.postMessage({
@@ -1135,6 +1157,37 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             border-radius: 8px;
             max-width: 95%;
             line-height: 1.5;
+            position: relative;  /* Required for timestamp absolute positioning */
+        }
+
+        .message-timestamp {
+            position: absolute;
+            top: 4px;
+            right: 8px;
+            font-size: 10px;
+            opacity: 1;
+            color: var(--vscode-foreground);
+            z-index: 10;
+            background: var(--vscode-badge-background);
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+
+        .message.user .message-timestamp {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .message.assistant .message-timestamp,
+        .message.system .message-timestamp,
+        .message.command .message-timestamp,
+        .message.error .message-timestamp,
+        .message.tool-call .message-timestamp,
+        .message.tool-result .message-timestamp {
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .message-content {
+            padding-right: 50px; /* Space for timestamp */
         }
 
         .message.user {
@@ -1341,11 +1394,19 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
         /* Links */
         .message a {
             color: var(--vscode-textLink-foreground);
-            text-decoration: none;
+            text-decoration: underline;
+            cursor: pointer;
         }
 
         .message a:hover {
             text-decoration: underline;
+            color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground));
+        }
+
+        .message-content a {
+            color: var(--vscode-textLink-foreground);
+            text-decoration: underline;
+            cursor: pointer;
         }
 
         /* Strong and emphasis */
@@ -1517,6 +1578,35 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             background: var(--vscode-editorWidget-background);
             border-bottom: 1px solid var(--vscode-editorWidget-border);
         }
+
+        /* Time/date dividers between messages */
+        .time-divider {
+            display: flex;
+            align-items: center;
+            margin: 16px 0 12px 0;
+            gap: 12px;
+        }
+
+        .time-divider::before,
+        .time-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--vscode-panel-border);
+            opacity: 0.5;
+        }
+
+        .time-divider-label {
+            font-size: 10px;
+            color: var(--vscode-descriptionForeground);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            padding: 2px 8px;
+            background: var(--vscode-editor-background);
+            border-radius: 10px;
+            border: 1px solid var(--vscode-panel-border);
+        }
     </style>
 </head>
 <body>
@@ -1576,6 +1666,10 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
         let historyIndex = -1;
         let currentInput = '';
 
+        // Time divider tracking
+        let lastMessageTime = null;
+        const TIME_GAP_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes - show divider after this gap
+
         // Autocomplete state
         const autocompleteDropdown = document.getElementById('autocompleteDropdown');
         let autocompleteItems = [];
@@ -1597,6 +1691,12 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             { name: '/show', description: 'Display file contents' },
             { name: '/usage', description: 'Show token usage stats' },
             { name: '/status', description: 'Show current status' },
+            { name: '/generate', description: 'Generate code from description' },
+            { name: '/explain', description: 'Explain code or concept' },
+            { name: '/test', description: 'Generate tests for code' },
+            { name: '/docs', description: 'Generate documentation' },
+            { name: '/debug', description: 'Debug an error message' },
+            { name: '/implement', description: 'Implement from description' },
         ];
 
         // Configure marked for GFM
@@ -1638,6 +1738,10 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                 text = text.replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>');
                 // Italic
                 text = text.replace(/\\*([^*]+)\\*/g, '<em>$1</em>');
+                // Links [text](url)
+                text = text.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+                // Bare URLs (http/https)
+                text = text.replace(/(?<![">])(https?:\\/\\/[^\\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
                 // Lists
                 text = text.replace(/^- (.+)$/gm, '<li>$1</li>');
                 text = text.replace(/(<li>.*<\\/li>\\n?)+/g, '<ul>$&</ul>');
@@ -1676,7 +1780,8 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             if (!currentResponseEl || !currentResponseContent) return;
             lastRenderTime = Date.now();
             // Use simple escaping during streaming for speed
-            currentResponseEl.innerHTML = simpleFormat(currentResponseContent);
+            const contentEl = currentResponseEl.querySelector('.message-content') || currentResponseEl;
+            contentEl.innerHTML = simpleFormat(currentResponseContent);
             scrollToBottom();
         }
 
@@ -1695,6 +1800,8 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             text = text.replace(/^### (.+)$/gm, '<h3>$1</h3>');
             text = text.replace(/^## (.+)$/gm, '<h2>$1</h2>');
             text = text.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+            // Links [text](url)
+            text = text.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
             // Line breaks
             text = text.replace(/\\n/g, '<br>');
             return text;
@@ -1703,10 +1810,11 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
         // Full markdown render (at end of streaming)
         function fullRender(showTime = false) {
             if (!currentResponseEl || !currentResponseContent) return;
+            const contentEl = currentResponseEl.querySelector('.message-content') || currentResponseEl;
             try {
-                currentResponseEl.innerHTML = parseMarkdown(currentResponseContent);
+                contentEl.innerHTML = parseMarkdown(currentResponseContent);
                 // Apply syntax highlighting to code blocks (skip large ones for performance)
-                currentResponseEl.querySelectorAll('pre code').forEach((block) => {
+                contentEl.querySelectorAll('pre code').forEach((block) => {
                     if (block.textContent.length <= MAX_HIGHLIGHT_SIZE) {
                         hljs.highlightElement(block);
                     }
@@ -1717,11 +1825,11 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                     const timeEl = document.createElement('div');
                     timeEl.className = 'response-time';
                     timeEl.textContent = elapsed + 's';
-                    currentResponseEl.appendChild(timeEl);
+                    contentEl.appendChild(timeEl);
                 }
             } catch (e) {
                 console.error('Full render error:', e);
-                currentResponseEl.innerHTML = simpleFormat(currentResponseContent);
+                contentEl.innerHTML = simpleFormat(currentResponseContent);
             }
             scrollToBottom();
         }
@@ -1940,6 +2048,18 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             vscode.postMessage({ type: 'toggleTools', enable: !isEnabled });
         });
 
+        // Handle link clicks - open external URLs
+        messagesContainer.addEventListener('click', (e) => {
+            // Use closest() to catch clicks on elements inside links
+            const link = e.target.closest('a');
+            if (link && link.href) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Opening link:', link.href);
+                vscode.postMessage({ type: 'openLink', url: link.href });
+            }
+        });
+
         // Handle messages from extension
         window.addEventListener('message', (event) => {
             const message = event.data;
@@ -1959,10 +2079,13 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                     break;
 
                 case 'toolCall':
+                    typingIndicator.textContent = 'Using tool: ' + message.tool + '...';
+                    typingIndicator.classList.add('visible');
                     addMessage('tool-call', '🔧 **Calling tool:** \`' + message.tool + '\`\\n\`\`\`json\\n' + JSON.stringify(message.arguments, null, 2) + '\\n\`\`\`', true);
                     break;
 
                 case 'toolResult':
+                    typingIndicator.textContent = 'Processing tool result...';
                     const resultPreview = typeof message.result === 'string'
                         ? (message.result.length > 500 ? message.result.slice(0, 500) + '...' : message.result)
                         : JSON.stringify(message.result, null, 2);
@@ -1984,8 +2107,8 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                     break;
 
                 case 'thinking':
-                    // Backend received request
-                    typingIndicator.textContent = 'Processing...';
+                    // Backend received request or iteration progress
+                    typingIndicator.textContent = message.content || 'Processing...';
                     typingIndicator.classList.add('visible');
                     break;
 
@@ -2043,6 +2166,7 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                     typingIndicator.id = 'typingIndicator';
                     typingIndicator.textContent = 'Thinking...';
                     messagesContainer.appendChild(typingIndicator);
+                    lastMessageTime = null; // Reset time tracking for history
 
                     message.messages.forEach(msg => {
                         if (msg.role !== 'system') {
@@ -2058,6 +2182,7 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                     typingIndicator.id = 'typingIndicator';
                     typingIndicator.textContent = 'Thinking...';
                     messagesContainer.appendChild(typingIndicator);
+                    lastMessageTime = null; // Reset time tracking
                     break;
 
                 case 'fileSuggestions':
@@ -2075,23 +2200,104 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
         }
 
+        function formatTimestamp() {
+            const now = new Date();
+            const h = now.getHours().toString().padStart(2, '0');
+            const m = now.getMinutes().toString().padStart(2, '0');
+            const s = now.getSeconds().toString().padStart(2, '0');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const mon = months[now.getMonth()];
+            const day = now.getDate();
+            return h + ':' + m + ':' + s + ' ' + mon + ' ' + day;
+        }
+
+        function formatDividerLabel(date) {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const msgDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+            const diffDays = Math.floor((today - msgDate) / (1000 * 60 * 60 * 24));
+
+            const timeStr = date.getHours().toString().padStart(2, '0') + ':' +
+                           date.getMinutes().toString().padStart(2, '0');
+
+            if (diffDays === 0) {
+                return 'Today ' + timeStr;
+            } else if (diffDays === 1) {
+                return 'Yesterday ' + timeStr;
+            } else if (diffDays < 7) {
+                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                return days[date.getDay()] + ' ' + timeStr;
+            } else {
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                               'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                return months[date.getMonth()] + ' ' + date.getDate() + ' ' + timeStr;
+            }
+        }
+
+        function shouldShowTimeDivider(currentTime) {
+            if (!lastMessageTime) return true; // First message always shows divider
+
+            const lastDate = new Date(lastMessageTime.getFullYear(), lastMessageTime.getMonth(), lastMessageTime.getDate());
+            const currDate = new Date(currentTime.getFullYear(), currentTime.getMonth(), currentTime.getDate());
+
+            // Always show if date changed
+            if (lastDate.getTime() !== currDate.getTime()) return true;
+
+            // Show if gap is more than threshold
+            return (currentTime - lastMessageTime) >= TIME_GAP_THRESHOLD_MS;
+        }
+
+        function addTimeDivider(date) {
+            const divider = document.createElement('div');
+            divider.className = 'time-divider';
+            const label = document.createElement('span');
+            label.className = 'time-divider-label';
+            label.textContent = formatDividerLabel(date);
+            divider.appendChild(label);
+            messagesContainer.insertBefore(divider, typingIndicator);
+        }
+
         function addMessage(role, content, useMarkdown = true) {
+            const now = new Date();
+
+            // Check if we should show a time divider before this message
+            // Only show dividers for user messages (start of new interaction)
+            if (role === 'user' && shouldShowTimeDivider(now)) {
+                addTimeDivider(now);
+            }
+
             const el = document.createElement('div');
             el.className = 'message ' + role;
+
+            // Add timestamp
+            const timestamp = document.createElement('span');
+            timestamp.className = 'message-timestamp';
+            timestamp.textContent = formatTimestamp();
+            el.appendChild(timestamp);
+
+            // Update last message time
+            lastMessageTime = now;
+
+            // Add content
+            const contentEl = document.createElement('div');
+            contentEl.className = 'message-content';
             if (useMarkdown && content) {
                 try {
-                    el.innerHTML = parseMarkdown(content);
+                    contentEl.innerHTML = parseMarkdown(content);
                     // Apply syntax highlighting
-                    el.querySelectorAll('pre code').forEach((block) => {
+                    contentEl.querySelectorAll('pre code').forEach((block) => {
                         hljs.highlightElement(block);
                     });
                 } catch (e) {
                     console.error('Markdown parse error:', e);
-                    el.textContent = content;
+                    contentEl.textContent = content;
                 }
             } else {
-                el.textContent = content;
+                contentEl.textContent = content;
             }
+            el.appendChild(contentEl);
+
             messagesContainer.insertBefore(el, typingIndicator);
             scrollToBottom();
             return el;

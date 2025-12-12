@@ -82,6 +82,7 @@ Type these directly in the chat input:
 ### Coding Tasks
 | Command | Description |
 |---------|-------------|
+| `/generate <desc>` | Generate code from description |
 | `/explain <code>` | Explain code or concept |
 | `/test <code or @file>` | Generate tests for code |
 | `/docs <code or @file>` | Generate documentation |
