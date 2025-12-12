@@ -41,9 +41,6 @@ jobs:
           - os: macos-latest
             artifact_name: ppxai
             asset_name: ppxai-macos-arm64
-          - os: macos-14-large
-            artifact_name: ppxai
-            asset_name: ppxai-macos-intel
           - os: windows-latest
             artifact_name: ppxai.exe
             asset_name: ppxai-windows.exe
@@ -103,7 +100,6 @@ jobs:
       run: |
         mv artifacts/ppxai-linux-amd64/ppxai artifacts/ppxai-linux-amd64/ppxai-linux-amd64
         mv artifacts/ppxai-macos-arm64/ppxai artifacts/ppxai-macos-arm64/ppxai-macos-arm64
-        mv artifacts/ppxai-macos-intel/ppxai artifacts/ppxai-macos-intel/ppxai-macos-intel
         mv artifacts/ppxai-windows.exe/ppxai.exe artifacts/ppxai-windows.exe/ppxai-windows.exe
 
     - name: Create Release
@@ -112,7 +108,6 @@ jobs:
         files: |
           artifacts/ppxai-linux-amd64/ppxai-linux-amd64
           artifacts/ppxai-macos-arm64/ppxai-macos-arm64
-          artifacts/ppxai-macos-intel/ppxai-macos-intel
           artifacts/ppxai-windows.exe/ppxai-windows.exe
         draft: false
         prerelease: false
