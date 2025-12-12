@@ -77,3 +77,6 @@ Thumbs.db
 .claude/
 CLAUDE.md
 .ppxai/tools.config.json
+
+# uv binary cache (downloaded by bootstrap.py)
+.uv/

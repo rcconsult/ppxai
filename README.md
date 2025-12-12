@@ -95,19 +95,35 @@ git clone <repository-url>
 cd ppxai
 ```
 
-2. Create and activate a virtual environment:
+2. **Recommended: Using Bootstrap Script** (easiest, no prerequisites)
 ```bash
-python3 -m venv venv
-source venv/bin/activate  # On macOS/Linux
-# On Windows: venv\Scripts\activate
+# First-time setup (auto-downloads uv + installs dependencies)
+python scripts/bootstrap.py
+
+# Include server dependencies for HTTP + SSE
+python scripts/bootstrap.py --server
+
+# Include all optional dependencies
+python scripts/bootstrap.py --all
 ```
 
-3. Install dependencies:
+This creates a local `.uv/` cache with the uv binary - no system-wide installation needed.
+
+**Or using uv directly** (if you have uv installed):
 ```bash
+uv sync                      # Basic install
+uv sync --extra server       # With HTTP server support
+uv sync --all-extras         # All optional features
+```
+
+**Or using pip** (traditional):
+```bash
+python3 -m venv venv
+source venv/bin/activate  # On macOS/Linux (Windows: venv\Scripts\activate)
 pip install -r requirements.txt
 ```
 
-4. Set up configuration:
+3. Set up configuration:
 
 **Simple setup (Perplexity only):**
 ```bash
@@ -132,13 +148,16 @@ See [Configuration](#configuration) section for details.
 
 Run the application:
 ```bash
+# With uv (recommended)
+uv run ppxai
+
+# Or with pip/venv
 python ppxai.py
 ```
 
-Or make it executable:
+Run tests:
 ```bash
-chmod +x ppxai.py
-./ppxai.py
+uv run pytest tests/ -v
 ```
 
 ### Available Commands
@@ -416,7 +435,7 @@ build.bat
 ## Requirements
 
 - **For standalone executable:** None! Just download and run.
-- **For running from source:** Python 3.8+ (see `requirements.txt` for package dependencies)
+- **For running from source:** Python 3.10+ (dependencies managed via `pyproject.toml` / `uv.lock`)
 
 ## Terminal Compatibility
 
@@ -469,6 +488,10 @@ ppxai/
 │   ├── README.md                         # Documentation index
 │   ├── TOOL_CREATION_GUIDE.md            # Step-by-step tool guide
 │   └── QUICK_START_TOOLS.md              # 60-second setup
+├── pyproject.toml                        # Project metadata & dependencies
+├── uv.lock                               # Dependency lockfile
+├── scripts/
+│   └── bootstrap.py                      # Dev environment bootstrap
 ├── SPECIFICATIONS.md                     # Code generation specs
 ├── ROADMAP.md                            # Development roadmap
 └── README.md                             # This file
