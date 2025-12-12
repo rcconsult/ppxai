@@ -21,17 +21,35 @@ fi
 
 VERSION="$1"
 
+# Check if running on macOS Intel
+OS=$(uname -s)
+ARCH=$(uname -m)
+
+if [ "$OS" != "Darwin" ]; then
+    echo "========================================"
+    echo "NOTICE: Skipping macOS Intel build"
+    echo "========================================"
+    echo "Current OS: $OS"
+    echo "macOS Intel build requires macOS (Darwin)"
+    echo ""
+    echo "The release will proceed without macOS Intel asset."
+    exit 0
+fi
+
+if [ "$ARCH" != "x86_64" ]; then
+    echo "========================================"
+    echo "NOTICE: Skipping macOS Intel build"
+    echo "========================================"
+    echo "Current architecture: $ARCH"
+    echo "macOS Intel build requires x86_64 architecture"
+    echo ""
+    echo "The release will proceed without macOS Intel asset."
+    exit 0
+fi
+
 echo "========================================"
 echo "Building ppxai for macOS Intel (x86_64)"
 echo "========================================"
-
-# Check architecture
-ARCH=$(uname -m)
-if [ "$ARCH" != "x86_64" ]; then
-    echo "Error: This script must run on Intel Mac (x86_64)"
-    echo "Current architecture: $ARCH"
-    exit 1
-fi
 
 # Ensure dependencies are installed
 echo ""
