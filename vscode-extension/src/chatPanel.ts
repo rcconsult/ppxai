@@ -15,6 +15,12 @@ const SLASH_COMMANDS: Record<string, { description: string; usage: string }> = {
     '/cat': { description: 'Alias for /show', usage: '/cat <filepath>' },
     '/usage': { description: 'Show token usage stats', usage: '/usage' },
     '/status': { description: 'Show current status', usage: '/status' },
+    // Coding task commands
+    '/explain': { description: 'Explain code or concept', usage: '/explain <code or question>' },
+    '/test': { description: 'Generate tests for code', usage: '/test <code or @file>' },
+    '/docs': { description: 'Generate documentation', usage: '/docs <code or @file>' },
+    '/debug': { description: 'Debug an error message', usage: '/debug <error message>' },
+    '/implement': { description: 'Implement from description', usage: '/implement <description>' },
 };
 
 export class ChatViewProvider implements vscode.WebviewViewProvider {
@@ -547,6 +553,27 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     });
                     break;
 
+                // Coding task commands
+                case '/explain':
+                    await this.handleCodingTaskCommand('explain', args.join(' '));
+                    break;
+
+                case '/test':
+                    await this.handleCodingTaskCommand('test', args.join(' '));
+                    break;
+
+                case '/docs':
+                    await this.handleCodingTaskCommand('docs', args.join(' '));
+                    break;
+
+                case '/debug':
+                    await this.handleCodingTaskCommand('debug', args.join(' '));
+                    break;
+
+                case '/implement':
+                    await this.handleCodingTaskCommand('implement', args.join(' '));
+                    break;
+
                 default:
                     this._view.webview.postMessage({
                         type: 'error',
@@ -634,6 +661,46 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                 });
                 break;
         }
+    }
+
+    private async handleCodingTaskCommand(taskType: string, content: string) {
+        if (!this._view) { return; }
+
+        if (!content.trim()) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Usage: /${taskType} <content>\nExample: /${taskType} What does this function do?`
+            });
+            return;
+        }
+
+        // Process @file references in content
+        const { message: augmentedContent } = await this.processFileReferences(content);
+
+        // Get current editor context if available
+        const editor = vscode.window.activeTextEditor;
+        const language = editor?.document.languageId;
+        const filename = editor?.document.fileName;
+
+        // Start streaming response
+        this._view.webview.postMessage({ type: 'startStreaming' });
+
+        try {
+            await this._backend.codingTask(
+                taskType,
+                augmentedContent,
+                language,
+                filename,
+                (event: StreamEvent) => this.handleStreamEvent(event)
+            );
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Coding task error: ${error}`
+            });
+        }
+
+        this._view.webview.postMessage({ type: 'endStreaming' });
     }
 
     private async showHelp() {

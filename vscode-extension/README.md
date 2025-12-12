@@ -75,7 +75,32 @@ Configure the extension in VS Code settings:
 | `ppxai.defaultModel` | Default model (empty for provider default) | `""` |
 | `ppxai.enableTools` | Enable AI tools (file ops, shell, web) | `false` |
 
-## Commands
+## Chat Slash Commands
+
+Type these directly in the chat input:
+
+### Coding Tasks
+| Command | Description |
+|---------|-------------|
+| `/explain <code>` | Explain code or concept |
+| `/test <code or @file>` | Generate tests for code |
+| `/docs <code or @file>` | Generate documentation |
+| `/debug <error>` | Debug an error message |
+| `/implement <desc>` | Implement from description |
+
+### Session & Config
+| Command | Description |
+|---------|-------------|
+| `/help` | Show all available commands |
+| `/status` | Show current provider/model |
+| `/provider [id]` | Switch or list providers |
+| `/model [id]` | Switch or list models |
+| `/tools [enable\|disable]` | Manage AI tools |
+| `/show <file>` | Display file contents |
+| `/save` / `/load` | Save/load sessions |
+| `/clear` | Clear conversation |
+
+## VSCode Commands (Cmd+Shift+P)
 
 | Command | Description |
 |---------|-------------|
