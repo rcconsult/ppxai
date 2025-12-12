@@ -109,6 +109,86 @@
           "iteration": 3
         }
       ]
+    },
+    {
+      "timestamp": "2025-12-12T18:55:39.246206",
+      "version": "1.9.0",
+      "git_commit": "18eaee9",
+      "git_branch": "feature/uv-migration",
+      "provider": "gemini",
+      "model": "gemini-2.0-flash",
+      "summary": {
+        "total_runs": 6,
+        "successful_runs": 6,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 615.28,
+          "min": 340.32,
+          "max": 1008.91,
+          "stdev": 247.35
+        },
+        "total_ms": {
+          "mean": 2490.95,
+          "min": 620.0,
+          "max": 6868.82,
+          "stdev": 2678.01
+        },
+        "tokens_per_sec": {
+          "mean": 55.06,
+          "min": 4.95,
+          "max": 82.4
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 1008.91,
+          "total_ms": 1010.32,
+          "tokens": 5,
+          "tokens_per_sec": 4.95,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 617.92,
+          "total_ms": 620.0,
+          "tokens": 5,
+          "tokens_per_sec": 8.06,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 340.32,
+          "total_ms": 760.27,
+          "tokens": 58,
+          "tokens_per_sec": 76.29,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 383.84,
+          "total_ms": 873.77,
+          "tokens": 68,
+          "tokens_per_sec": 77.82,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 759.05,
+          "total_ms": 6868.82,
+          "tokens": 566,
+          "tokens_per_sec": 82.4,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 581.67,
+          "total_ms": 4812.55,
+          "tokens": 389,
+          "tokens_per_sec": 80.83,
+          "prompt_type": "complex",
+          "iteration": 2
+        }
+      ]
     }
   ]
 }
