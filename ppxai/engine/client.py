@@ -14,6 +14,7 @@ from .types import (
     Message, Event, EventType, UsageStats,
     ProviderInfo, ModelInfo, SessionInfo, ProviderCapabilities
 )
+from ..prompts import CODING_PROMPTS
 from .providers import create_provider, list_registered_providers
 from .providers.base import BaseProvider
 from .tools.manager import ToolManager
@@ -356,6 +357,16 @@ class EngineClient:
         """Simple chat without tools."""
         messages = self.session.get_messages()
 
+        # Add system prompt for inline citation URLs if provider has web search/citations
+        if self.provider and (self.provider.capabilities.citations or self.provider.capabilities.web_search):
+            citation_prompt = Message(
+                "system",
+                "When citing sources, always include the full URL in parentheses after "
+                "the citation number, like [1](https://example.com). This helps users "
+                "click through to the sources directly."
+            )
+            messages = [citation_prompt] + messages
+
         async for event in self.provider.chat(messages, self.model, stream):
             yield event
 
@@ -370,8 +381,15 @@ class EngineClient:
         iteration = 0
         max_iterations = self.tool_manager.max_iterations
 
+        # Emit stream start at beginning
+        yield Event(EventType.STREAM_START, {"model": self.model})
+
         while iteration < max_iterations:
             iteration += 1
+
+            # Emit progress for tool iterations (after first)
+            if iteration > 1:
+                yield Event(EventType.INFO, f"Processing... (iteration {iteration})")
 
             # Build messages with tool prompt
             messages = self.session.get_messages()
@@ -379,6 +397,14 @@ class EngineClient:
             # Add system message with tool prompt
             tool_prompt = self.tool_manager.get_tools_prompt()
             if tool_prompt:
+                # Add citation URL instruction if provider has web search/citations OR web_search tool is available
+                has_native_search = self.provider and (self.provider.capabilities.citations or self.provider.capabilities.web_search)
+                has_search_tool = self.tool_manager.get_tool("web_search") is not None
+                if has_native_search or has_search_tool:
+                    tool_prompt += (
+                        "\n\nWhen citing sources or URLs from search results, format them as markdown links "
+                        "like [Source Name](https://example.com) so they are clickable."
+                    )
                 messages = [Message("system", tool_prompt)] + messages
 
             # Get response from provider
@@ -407,17 +433,17 @@ class EngineClient:
                     result = await self.tool_manager.execute_tool(tool_name, **tool_args)
                     yield Event(EventType.TOOL_RESULT, {
                         "tool": tool_name,
-                        "result": result[:500] + "..." if len(result) > 500 else result
+                        "result": result[:2000] + "..." if len(result) > 2000 else result
                     })
 
                     # Add to conversation history
                     self.session.add_message(Message(
                         "assistant",
-                        f"[Tool Call: {tool_name}]\n```json\n{json.dumps(tool_call, indent=2)}\n```"
+                        f"I'll use the {tool_name} tool.\n```json\n{json.dumps(tool_call, indent=2)}\n```"
                     ))
                     self.session.add_message(Message(
                         "user",
-                        f"[Tool Result for {tool_name}]\n```\n{result}\n```\n\nNow provide your final answer based on this result."
+                        f"The {tool_name} tool returned:\n\n{result}\n\nNow use this information to answer my original question. Do NOT just repeat or echo the tool output - synthesize it into a helpful response. If you need more information, call another tool."
                     ))
 
                 except Exception as e:
@@ -429,11 +455,11 @@ class EngineClient:
 
                     self.session.add_message(Message(
                         "assistant",
-                        f"[Tool Call: {tool_name}]\n```json\n{json.dumps(tool_call, indent=2)}\n```"
+                        f"I'll use the {tool_name} tool.\n```json\n{json.dumps(tool_call, indent=2)}\n```"
                     ))
                     self.session.add_message(Message(
                         "user",
-                        f"[Tool Error]\n{error_msg}\n\nPlease provide an answer without using that tool."
+                        f"The {tool_name} tool failed with error: {error_msg}\n\nPlease provide an answer without using that tool, or try a different approach."
                     ))
 
                 # Continue loop for next iteration
@@ -504,9 +530,25 @@ class EngineClient:
             except json.JSONDecodeError:
                 pass
 
-        # Try JSON in code blocks - use greedy match for nested braces
-        code_block_pattern = r'```(?:json)?\s*(\{[\s\S]*?\})\s*```'
+        # Try extracting JSON from markdown code blocks
+        # Match ```json ... ``` or ``` ... ``` blocks
+        code_block_pattern = r'```(?:json)?\s*([\s\S]*?)```'
         matches = re.findall(code_block_pattern, text)
+
+        for match in matches:
+            match_stripped = match.strip()
+            if match_stripped.startswith('{') and match_stripped.endswith('}'):
+                try:
+                    data = json.loads(match_stripped)
+                    normalized = normalize_tool_call(data)
+                    if normalized:
+                        return normalized
+                except json.JSONDecodeError:
+                    pass
+
+        # Try JSON in code blocks - use greedy match for nested braces (fallback)
+        code_block_pattern2 = r'```(?:json)?\s*(\{[\s\S]*?\})\s*```'
+        matches = re.findall(code_block_pattern2, text)
 
         for match in matches:
             # Try to parse, and if it fails due to incomplete JSON, expand the match
@@ -576,6 +618,61 @@ class EngineClient:
 
         asyncio.run(run())
         return result
+
+    # === Coding Tasks ===
+
+    async def coding_task(
+        self,
+        content: str,
+        task_type: str,
+        language: Optional[str] = None,
+        filename: Optional[str] = None,
+        stream: bool = True
+    ) -> AsyncIterator[Event]:
+        """Execute a coding task (explain, test, docs, debug, implement, generate).
+
+        Args:
+            content: Code or content to process
+            task_type: Task type (explain, test, docs, debug, implement, generate)
+            language: Programming language
+            filename: Source filename
+            stream: Whether to stream the response
+
+        Yields:
+            Event objects
+        """
+        if task_type not in CODING_PROMPTS:
+            yield Event(EventType.ERROR, f"Unknown task type: {task_type}")
+            return
+
+        # Build the prompt
+        system_prompt = CODING_PROMPTS[task_type]
+
+        # Build user message based on task type
+        if task_type == "explain":
+            user_message = f"Explain this code:\n\n```{language or ''}\n{content}\n```"
+        elif task_type == "test":
+            user_message = f"Generate unit tests for this code:\n\n```{language or ''}\n{content}\n```"
+        elif task_type == "docs":
+            user_message = f"Generate documentation for this code:\n\n```{language or ''}\n{content}\n```"
+        elif task_type == "debug":
+            user_message = f"Debug this error:\n\n{content}"
+        elif task_type == "implement":
+            user_message = f"Implement the following in {language or 'Python'}:\n\n{content}"
+        elif task_type == "generate":
+            user_message = f"Generate code for the following in {language or 'Python'}:\n\n{content}"
+        else:
+            user_message = content
+
+        if filename:
+            user_message = f"File: {filename}\n\n{user_message}"
+
+        # Combine with system prompt
+        full_message = f"{system_prompt}\n\n{user_message}"
+
+        # Use regular chat to process
+        async for event in self.chat(full_message, stream=stream):
+            yield event
 
     # === Session Management ===
 

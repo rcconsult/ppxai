@@ -133,7 +133,7 @@ class ToolManager:
 
         prompt = "# IMPORTANT: You Have Access to Tools\n\n"
         prompt += "You MUST use these tools when the user asks for information you don't have access to natively.\n"
-        prompt += "You are an AI assistant with tool capabilities. When you need real-time information (like current time, weather, web pages), you MUST call the appropriate tool.\n\n"
+        prompt += "You are an AI assistant with tool capabilities. You have access to the user's filesystem, can run commands, search the web, and more. Use the tools proactively - don't ask the user for information you can get yourself!\n\n"
         prompt += "## How to Call a Tool\n\n"
         prompt += "To use a tool, respond ONLY with a JSON code block in this exact format:\n\n"
         prompt += "```json\n{\n  \"tool\": \"tool_name\",\n  \"arguments\": {\"param\": \"value\"}\n}\n```\n\n"
@@ -150,14 +150,45 @@ class ToolManager:
             prompt += "\n"
 
         prompt += "## CRITICAL INSTRUCTIONS:\n\n"
-        prompt += "1. **For date/time questions**: ALWAYS use the `get_datetime` tool. Do NOT say you don't have access.\n"
-        prompt += "2. **For weather questions**: ALWAYS use the `get_weather` tool. Do NOT say you can't access weather.\n"
-        prompt += "3. **For web searches**: Use the `web_search` tool to find current information.\n"
-        prompt += "4. **For reading web pages**: Use the `fetch_url` tool to read URL contents.\n"
-        prompt += "5. **For system operations**: Use the `execute_shell_command` tool to run commands, create directories, file operations, etc.\n"
-        prompt += "6. When calling a tool, output ONLY the JSON block, nothing else.\n"
-        prompt += "7. After receiving tool results, provide a helpful response based on that data.\n"
-        prompt += "8. NEVER say 'I don't have access to real-time data' or 'I can't execute commands' - you DO have access via these tools!\n"
+
+        # Build dynamic instructions based on available tools
+        available_tool_names = {t.name for t in tools}
+        instruction_num = 1
+
+        if "get_datetime" in available_tool_names:
+            prompt += f"{instruction_num}. **For date/time questions**: ALWAYS use the `get_datetime` tool. Do NOT say you don't have access.\n"
+            instruction_num += 1
+
+        if "get_weather" in available_tool_names:
+            prompt += f"{instruction_num}. **For weather questions**: ALWAYS use the `get_weather` tool. Do NOT say you can't access weather.\n"
+            instruction_num += 1
+
+        if "web_search" in available_tool_names:
+            prompt += f"{instruction_num}. **For web searches**: Use the `web_search` tool to find current information.\n"
+            instruction_num += 1
+
+        if "fetch_url" in available_tool_names:
+            prompt += f"{instruction_num}. **For reading web pages**: Use the `fetch_url` tool to read URL contents.\n"
+            instruction_num += 1
+
+        # Filesystem tools
+        if "list_directory" in available_tool_names or "read_file" in available_tool_names:
+            prompt += f"{instruction_num}. **For exploring the user's project**: Use `list_directory` to see files, `read_file` to read contents. You CAN access the filesystem - use it!\n"
+            instruction_num += 1
+
+        if "execute_shell_command" in available_tool_names:
+            prompt += f"{instruction_num}. **For system operations**: Use the `execute_shell_command` tool to run commands, create directories, file operations, etc.\n"
+            instruction_num += 1
+
+        prompt += f"{instruction_num}. When calling a tool, output ONLY the JSON block, nothing else.\n"
+        instruction_num += 1
+        prompt += f"{instruction_num}. **COMPLETE THE TASK FULLY**: If the user asks to read multiple files, read ALL of them one by one. Don't stop after one file.\n"
+        instruction_num += 1
+        prompt += f"{instruction_num}. After receiving tool results, either call another tool if more work is needed, or provide your final answer.\n"
+        instruction_num += 1
+        prompt += f"{instruction_num}. NEVER say 'I don't have access to real-time data' or 'I can't execute commands' - you DO have access via these tools!\n"
+        instruction_num += 1
+        prompt += f"{instruction_num}. Don't pass unnecessary parameters - use tool defaults (e.g., don't specify max_lines unless you need a specific limit).\n"
 
         return prompt
 

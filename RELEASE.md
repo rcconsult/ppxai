@@ -32,11 +32,17 @@ The GitHub Actions workflow will automatically build executables for all platfor
    - Once builds complete, a new GitHub Release is created
    - The release will include:
      - `ppxai-linux-amd64` - Linux executable
-     - `ppxai-macos` - macOS executable (works on both Intel and Apple Silicon)
+     - `ppxai-macos-arm64` - macOS ARM64 executable (Apple Silicon)
      - `ppxai-windows.exe` - Windows executable
+     - `ppxai-X.Y.Z.vsix` - VSCode extension package
    - Release notes are auto-generated from commits
 
-6. **Edit the release (optional):**
+6. **Upload Intel binary (manual step):**
+   - GitHub Actions runners don't support Intel macOS
+   - Build locally on an Intel Mac: `./scripts/build-intel.sh`
+   - Upload: `gh release upload vX.Y.Z dist/ppxai-macos-intel`
+
+7. **Edit the release (optional):**
    - Add a more detailed description
    - Add upgrade notes
    - Add screenshots or examples
@@ -69,10 +75,12 @@ If you prefer to build and release manually:
    - Go to your repository on GitHub
    - Click "Releases" → "Create a new release"
    - Choose a tag (or create new tag like `v1.0.0`)
-   - Upload the executables:
+   - Upload the artifacts:
      - `ppxai-linux-amd64`
-     - `ppxai-macos`
+     - `ppxai-macos-arm64`
+     - `ppxai-macos-intel`
      - `ppxai-windows.exe`
+     - `ppxai-X.Y.Z.vsix`
    - Write release notes
    - Publish release
 
@@ -121,8 +129,9 @@ Before creating a release tag:
 - [ ] All tests pass
 - [ ] Documentation is up to date (README.md, CLAUDE.md, BUILD.md)
 - [ ] CHANGELOG updated (if you maintain one)
-- [ ] Version number updated (if stored anywhere)
+- [ ] Version number updated in `pyproject.toml` and `vscode-extension/package.json`
 - [ ] Built and tested locally on at least one platform
+- [ ] VSCode extension compiles without errors (`npm run compile`)
 - [ ] API key setup is documented
 - [ ] .env.example is up to date
 

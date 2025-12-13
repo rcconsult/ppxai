@@ -9,20 +9,26 @@ echo "================================================"
 echo "Building ppxai executable..."
 echo "================================================"
 
-# Check if virtual environment exists
-if [ ! -d "venv" ]; then
-    echo "Creating virtual environment..."
-    python3 -m venv venv
+# Check if uv is available
+if command -v uv &> /dev/null; then
+    echo "Using uv package manager..."
+    # Sync dependencies (creates .venv if needed)
+    uv sync --dev
+    # Run pyinstaller through uv
+    UV_MODE=true
+else
+    echo "uv not found, using pip..."
+    # Check if virtual environment exists
+    if [ ! -d ".venv" ]; then
+        echo "Creating virtual environment..."
+        python3 -m venv .venv
+    fi
+    # Activate virtual environment
+    source .venv/bin/activate
+    # Install/upgrade dependencies
+    pip install --upgrade pip
+    pip install -r requirements.txt
 fi
-
-# Activate virtual environment
-echo "Activating virtual environment..."
-source venv/bin/activate
-
-# Install/upgrade dependencies
-echo "Installing dependencies..."
-pip install --upgrade pip
-pip install -r requirements.txt
 
 # Clean previous builds
 echo "Cleaning previous builds..."
@@ -30,7 +36,11 @@ rm -rf build dist
 
 # Build with PyInstaller
 echo "Building executable..."
-pyinstaller ppxai.spec
+if [ "$UV_MODE" = true ]; then
+    uv run pyinstaller ppxai.spec
+else
+    pyinstaller ppxai.spec
+fi
 
 # Check if build was successful
 if [ -f "dist/ppxai" ]; then

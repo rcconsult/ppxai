@@ -24,17 +24,20 @@ def search_files(pattern: str, directory: str = ".") -> str:
         results = glob_module.glob(f"{directory}/**/{pattern}", recursive=True)
         if not results:
             return f"No files found matching '{pattern}'"
-        return "\n".join(results[:20])
+        output = "\n".join(results[:50])
+        if len(results) > 50:
+            output += f"\n... ({len(results) - 50} more files)"
+        return output
     except Exception as e:
         return f"Error: {str(e)}"
 
 
-def read_file(filepath: str, max_lines: int = 500) -> str:
+def read_file(filepath: str, max_lines: int = 1000) -> str:
     """Read contents of a file.
 
     Args:
         filepath: Path to the file
-        max_lines: Maximum lines to read (default: 500)
+        max_lines: Maximum lines to read (default: 1000)
 
     Returns:
         File contents or error message
@@ -113,9 +116,9 @@ def list_directory(path: str = ".", format: str = "simple") -> str:
                 item_type = "DIR " if item.is_dir() else "FILE"
                 items.append(f"{item_type} {item.name}")
 
-        result = "\n".join(items[:50])
-        if len(items) > 50:
-            result += f"\n... ({len(items) - 50} more items)"
+        result = "\n".join(items[:100])
+        if len(items) > 100:
+            result += f"\n... ({len(items) - 100} more items)"
 
         return result
     except Exception as e:
