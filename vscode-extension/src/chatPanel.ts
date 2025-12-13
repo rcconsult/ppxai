@@ -1409,6 +1409,13 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             cursor: pointer;
         }
 
+        /* URL links (from backtick-wrapped URLs) */
+        .message a.url-link {
+            color: var(--vscode-textLink-foreground);
+            text-decoration: underline;
+            word-break: break-all;
+        }
+
         /* Strong and emphasis */
         .message strong {
             font-weight: 600;
@@ -1703,11 +1710,19 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
         // Check if marked library loaded
         let parseMarkdown;
         if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
-            parseMarkdown = marked.parse.bind(marked);
             marked.setOptions({
                 breaks: true,
                 gfm: true
             });
+            // Wrap marked.parse to pre-process backtick-wrapped URLs
+            // Perplexity/Gemini wrap URLs in backticks which marked converts to <code>
+            parseMarkdown = function(text) {
+                if (!text) return '';
+                // Convert backtick-wrapped URLs to links BEFORE marked processes them
+                // This prevents URLs like \`https://example.com\` from becoming <code> blocks
+                text = text.replace(/\`(https?:\\/\\/[^\`]+)\`/g, '<a href="$1" target="_blank" rel="noopener" class="url-link">$1</a>');
+                return marked.parse(text);
+            };
             console.log('Marked library loaded successfully');
         } else {
             console.error('Marked library not loaded! typeof marked =', typeof marked);
@@ -1719,7 +1734,8 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                     code = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                     return '<pre><code class="' + lang + '">' + code + '</code></pre>';
                 });
-                // Inline code (before escaping HTML)
+                // Inline code - but convert URL-only code to links instead
+                text = text.replace(/\`(https?:\\/\\/[^\`]+)\`/g, '<a href="$1" target="_blank" rel="noopener" class="url-link">$1</a>');
                 text = text.replace(/\`([^\`]+)\`/g, function(m, code) {
                     code = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                     return '<code>' + code + '</code>';
@@ -1740,8 +1756,8 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                 text = text.replace(/\\*([^*]+)\\*/g, '<em>$1</em>');
                 // Links [text](url)
                 text = text.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-                // Bare URLs (http/https)
-                text = text.replace(/(?<![">])(https?:\\/\\/[^\\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+                // Bare URLs (http/https) - convert to clickable links
+                text = text.replace(/(^|[^"'>])(https?:\\/\\/[^\\s<)\\]]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
                 // Lists
                 text = text.replace(/^- (.+)$/gm, '<li>$1</li>');
                 text = text.replace(/(<li>.*<\\/li>\\n?)+/g, '<ul>$&</ul>');
@@ -1792,7 +1808,8 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             // Basic code blocks
             text = text.replace(/\`\`\`(\\w*)\\n([\\s\\S]*?)\`\`\`/g, '<pre><code>$2</code></pre>');
-            // Inline code
+            // Inline code - but convert URL-only code to links instead
+            text = text.replace(/\`(https?:\\/\\/[^\`]+)\`/g, '<a href="$1" target="_blank" rel="noopener" class="url-link">$1</a>');
             text = text.replace(/\`([^\`]+)\`/g, '<code>$1</code>');
             // Bold
             text = text.replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>');
@@ -1802,6 +1819,8 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             text = text.replace(/^# (.+)$/gm, '<h1>$1</h1>');
             // Links [text](url)
             text = text.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+            // Bare URLs (convert https://... to clickable links)
+            text = text.replace(/(^|[^"'>])(https?:\\/\\/[^\\s<)\\]]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
             // Line breaks
             text = text.replace(/\\n/g, '<br>');
             return text;

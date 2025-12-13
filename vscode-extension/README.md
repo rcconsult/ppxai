@@ -5,16 +5,18 @@ Multi-provider AI chat interface for VS Code, powered by ppxai.
 ## Features
 
 - **Chat Panel**: Interactive AI chat in the sidebar with markdown rendering
+- **Message Timestamps**: Each message shows time and date (HH:MM:SS Mon DD)
+- **Time Dividers**: Visual separators between conversations (after 5min gap or date change)
 - **@file References**: Type `@filename` to include file content in your messages
 - **Autocomplete**:
   - `/` commands with descriptions
   - `@` file references with fuzzy search
-- **Tools Toggle**: Click the tools badge to enable/disable AI tools
+- **Tools Toggle**: Click the tools badge to enable/disable AI tools (persists across restarts)
 - **Code Commands**: Right-click context menu for code operations
   - Explain Selection
   - Generate Tests
   - Generate Documentation
-- **Slash Commands**: `/help`, `/show`, `/tools`, `/model`, `/provider`, etc.
+- **Slash Commands**: `/help`, `/show`, `/tools`, `/model`, `/provider`, `/generate`, etc.
 - **Multi-Provider Support**: Perplexity, OpenAI, Gemini, OpenRouter, local models
 - **Session Management**: Save and load conversation sessions
 - **Streaming Responses**: Real-time SSE streaming with timing info
@@ -23,6 +25,7 @@ Multi-provider AI chat interface for VS Code, powered by ppxai.
 
 - Python 3.10+
 - ppxai Python package with server dependencies
+- API key for at least one provider (Perplexity, OpenAI, Gemini, etc.)
 
 ## Installation
 
@@ -34,35 +37,60 @@ pip install ppxai[server]
 uv pip install ppxai[server]
 ```
 
-### 2. Install the VSCode extension
+### 2. Configure API keys
+
+Create a `.env` file in your project directory (or home directory `~/.ppxai/.env`):
+
+```bash
+# At least one API key is required
+PERPLEXITY_API_KEY=pplx-xxxxxxxxxxxx
+# Or
+GEMINI_API_KEY=xxxxxxxxxxxx
+# Or
+OPENAI_API_KEY=sk-xxxxxxxxxxxx
+```
+
+The server loads `.env` from the current working directory when started.
+
+### 3. Install the VSCode extension
 
 Download the `.vsix` file from [GitHub Releases](https://github.com/rcconsult/ppxai/releases) and install:
 
 ```bash
-code --install-extension ppxai-1.10.0.vsix
+code --install-extension ppxai-1.10.2.vsix
 ```
 
-### 3. Start ppxai-server
+Or install via VSCode: Extensions → `...` menu → "Install from VSIX..."
 
-Before using the extension, start the HTTP server:
+### 4. Start ppxai-server
+
+**Important:** Start the server from a directory containing your `.env` file:
 
 ```bash
+cd /path/to/your/project  # Contains .env
 ppxai-server
 # Or with uv
 uv run ppxai-server
 ```
 
-The server runs on `http://127.0.0.1:54320` by default.
+The server runs on `http://127.0.0.1:54320` by default. Keep it running while using the extension.
 
-### 4. Configure API keys
+### 5. Open the chat panel
 
-Create a `.env` file with your API keys:
+In VSCode: Click the ppxai icon in the Activity Bar (sidebar), or run command `ppxai: Open Chat`.
 
-```bash
-PERPLEXITY_API_KEY=your-key-here
-# Or
-GEMINI_API_KEY=your-key-here
-```
+## Troubleshooting
+
+**"Could not connect to server"**
+- Ensure ppxai-server is running: `ppxai-server`
+- Check the server URL in settings matches (default: `http://127.0.0.1:54320`)
+
+**"No API key configured"**
+- Create `.env` file with your API key in the directory where you run ppxai-server
+- Restart ppxai-server after adding keys
+
+**Extension not showing**
+- Reload VSCode window: Cmd/Ctrl+Shift+P → "Developer: Reload Window"
 
 ## Configuration
 

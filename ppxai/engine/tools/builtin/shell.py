@@ -96,6 +96,11 @@ def execute_shell_command(command: str, working_dir: str = None) -> str:
             if result.returncode != 0:
                 output += f"\n\nCommand exited with code: {result.returncode}"
 
+            # Truncate output if too large (prevent context overflow)
+            max_output = 10000  # 10KB limit
+            if len(output) > max_output:
+                output = output[:max_output] + f"\n\n... (output truncated, {len(output) - max_output} chars omitted)"
+
             return output if output else f"Command completed successfully (exit code: {result.returncode})"
 
         finally:
@@ -116,16 +121,17 @@ def register_tools(manager: 'ToolManager'):
         name="execute_shell_command",
         description=(
             "Execute a shell command in the system. Supports Windows (cmd/PowerShell) and Unix (bash) commands. "
-            "Use for system operations like creating directories, file operations, running scripts, etc. "
+            "Use for system operations like creating directories, running scripts, git commands, etc. "
             "Commands run with a 30-second timeout. "
-            "Note: Interactive commands (nano, vim, less, python REPL, etc.) are not supported - use non-interactive alternatives."
+            "IMPORTANT: Do NOT use recursive commands like 'ls -R', 'find', 'tree' - they produce too much output. "
+            "For file listing use the list_directory tool. For file search use search_files tool. For reading files use read_file tool."
         ),
         parameters={
             "type": "object",
             "properties": {
                 "command": {
                     "type": "string",
-                    "description": "Shell command to execute (e.g., 'mkdir new_folder', 'dir', 'ls -la', 'git status')"
+                    "description": "Shell command to execute (e.g., 'mkdir new_folder', 'git status', 'pwd'). AVOID recursive commands!"
                 },
                 "working_dir": {
                     "type": "string",

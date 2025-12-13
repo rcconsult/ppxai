@@ -21,6 +21,7 @@ from .config import (
     MODEL_PROVIDER,
     get_provider_config,
     get_active_pricing,
+    get_provider_capabilities,
 )
 from .engine.context import ContextInjector
 
@@ -111,17 +112,32 @@ class AIClient:
             "content": enhanced_message
         })
 
+        # Build messages list, adding citation prompt if provider has web search/citations
+        messages = self.conversation_history.copy()
+        capabilities = get_provider_capabilities(self.provider)
+        if capabilities.get("citations") or capabilities.get("web_search"):
+            # Add system prompt for inline citation URLs (prepend to messages)
+            citation_system = {
+                "role": "system",
+                "content": (
+                    "When citing sources, always include the full URL in parentheses after "
+                    "the citation number, like [1](https://example.com). This helps users "
+                    "click through to the sources directly."
+                )
+            }
+            messages = [citation_system] + messages
+
         try:
             if stream:
-                return self._stream_response(model)
+                return self._stream_response(model, messages)
             else:
-                return self._get_response(model)
+                return self._get_response(model, messages)
         except Exception as e:
             console.print(f"[red]Error: {str(e)}[/red]")
             self.conversation_history.pop()  # Remove the failed message
             return None
 
-    def _stream_response(self, model: str):
+    def _stream_response(self, model: str, messages: list):
         """Stream the response from the API."""
         import time
         start_time = time.time()
@@ -132,7 +148,7 @@ class AIClient:
 
         response_stream = self.client.chat.completions.create(
             model=model,
-            messages=self.conversation_history,
+            messages=messages,
             stream=True
         )
 
@@ -182,14 +198,14 @@ class AIClient:
 
         return full_response
 
-    def _get_response(self, model: str):
+    def _get_response(self, model: str, messages: list):
         """Get a non-streaming response from the API."""
         import time
         start_time = time.time()
 
         response = self.client.chat.completions.create(
             model=model,
-            messages=self.conversation_history,
+            messages=messages,
             stream=False
         )
 

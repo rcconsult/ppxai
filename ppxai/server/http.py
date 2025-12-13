@@ -29,7 +29,7 @@ from ..engine import EngineClient, EventType
 app = FastAPI(
     title="ppxai HTTP Server",
     description="HTTP + SSE server for ppxai AI chat",
-    version="1.10.0",
+    version="1.10.2",
 )
 
 # Add CORS middleware for webview/browser access
@@ -78,12 +78,29 @@ class ToolsRequest(BaseModel):
     enabled: bool
 
 
+class ToolsConfigRequest(BaseModel):
+    """Tools config request body."""
+    setting: str
+    value: str
+
+
+class WorkingDirRequest(BaseModel):
+    """Set working directory request body."""
+    path: str
+
+
+class AutoInjectRequest(BaseModel):
+    """Set auto-inject context request body."""
+    enabled: bool
+
+
 # === SSE Streaming ===
 
 async def sse_event_generator(prompt: str) -> AsyncGenerator[str, None]:
     """Generate SSE events from engine chat.
 
     SSE format: data: {json}\n\n
+    Each event is yielded immediately with a sleep(0) to force flush.
     """
     global engine
     if not engine:
@@ -99,6 +116,8 @@ async def sse_event_generator(prompt: str) -> AsyncGenerator[str, None]:
             if event.metadata:
                 event_data["metadata"] = event.metadata
             yield f"data: {json.dumps(event_data)}\n\n"
+            # Force event loop to flush the response immediately
+            await asyncio.sleep(0)
     except Exception as e:
         yield f"data: {json.dumps({'type': 'error', 'data': str(e)})}\n\n"
 
@@ -122,6 +141,8 @@ async def sse_coding_task_generator(
             if event.metadata:
                 event_data["metadata"] = event.metadata
             yield f"data: {json.dumps(event_data)}\n\n"
+            # Force event loop to flush the response immediately
+            await asyncio.sleep(0)
     except Exception as e:
         yield f"data: {json.dumps({'type': 'error', 'data': str(e)})}\n\n"
 
@@ -329,6 +350,70 @@ async def set_tools(request: ToolsRequest):
     }
 
 
+@app.post("/tools/config")
+async def set_tools_config(request: ToolsConfigRequest):
+    """Configure tool settings (e.g., max_iterations)."""
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    success = engine.set_tool_config(request.setting, request.value)
+    if not success:
+        raise HTTPException(status_code=400, detail=f"Unknown setting: {request.setting}")
+
+    return {
+        "setting": request.setting,
+        "value": request.value,
+        "success": True,
+    }
+
+
+# === Usage Statistics ===
+
+@app.get("/usage")
+async def get_usage():
+    """Get token usage statistics for current session."""
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    return engine.get_usage()
+
+
+# === Context Settings ===
+
+@app.post("/context/working_dir")
+async def set_working_dir(request: WorkingDirRequest):
+    """Set the working directory for file path resolution."""
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    engine.set_working_dir(request.path)
+    return {"path": request.path, "success": True}
+
+
+@app.post("/context/auto_inject")
+async def set_auto_inject(request: AutoInjectRequest):
+    """Enable or disable automatic context injection."""
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    engine.set_auto_inject(request.enabled)
+    return {"enabled": request.enabled, "success": True}
+
+
+@app.get("/context/auto_inject")
+async def get_auto_inject():
+    """Get auto-inject context status."""
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    return {"enabled": engine.get_auto_inject()}
+
+
 # === Session Management ===
 
 @app.get("/sessions")
@@ -436,6 +521,8 @@ def run_server():
     print("  GET  /providers     - List providers")
     print("  GET  /models        - List models")
     print("  GET  /tools         - List tools")
+    print("  POST /tools/config  - Configure tool settings")
+    print("  GET  /usage         - Token usage statistics")
     print("  GET  /health        - Health check")
     print("  GET  /status        - Current status")
     print()
