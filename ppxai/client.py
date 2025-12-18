@@ -13,6 +13,7 @@ from openai import OpenAI
 from rich.console import Console
 from rich.markdown import Markdown
 
+from .markdown_tables import render_markdown_with_tables
 from .config import (
     SESSIONS_DIR,
     EXPORTS_DIR,
@@ -175,9 +176,9 @@ class AIClient:
 
         full_response = "".join(response_chunks)
 
-        # Render the response as formatted markdown
+        # Render the response as formatted markdown with table support
         if full_response.strip():
-            console.print(Markdown(full_response))
+            render_markdown_with_tables(full_response, console)
 
         self.conversation_history.append({
             "role": "assistant",
@@ -211,10 +212,10 @@ class AIClient:
 
         assistant_message = response.choices[0].message.content
 
-        # Render the response as formatted markdown
+        # Render the response as formatted markdown with table support
         console.print("\n[bold cyan]Assistant:[/bold cyan]")
         if assistant_message.strip():
-            console.print(Markdown(assistant_message))
+            render_markdown_with_tables(assistant_message, console)
         console.print()
 
         self.conversation_history.append({
