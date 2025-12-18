@@ -92,4 +92,4 @@ __all__ = [
     "send_coding_task",
 ]
 
-__version__ = "1.6.0"
+__version__ = "1.10.4"

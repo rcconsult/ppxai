@@ -29,7 +29,7 @@ from ..engine import EngineClient, EventType
 app = FastAPI(
     title="ppxai HTTP Server",
     description="HTTP + SSE server for ppxai AI chat",
-    version="1.10.2",
+    version="1.10.4",
 )
 
 # Add CORS middleware for webview/browser access

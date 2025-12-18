@@ -1,41 +1,37 @@
 # Documentation Audit & Update Plan
 
-**Audit Date:** 2025-12-18
+**Last Updated:** 2025-12-19
 **Current Versions:**
-- Python Package: v1.10.2 (pyproject.toml)
-- VSCode Extension: v1.10.3 (package.json)
-- Latest Git Tag: v1.10.3 (Released 2025-12-18)
+- Python Package: v1.10.4 (pyproject.toml)
+- VSCode Extension: v1.10.4 (package.json)
+- Latest Git Tag: v1.10.4 (Pending Release)
 
-**v1.10.3 Focus:** Pre-built ppxai-server binaries for VSCode extension (no functional changes to Python package)
+**v1.10.4 Focus:** TUI markdown table rendering fix + comprehensive regression tests
+
+**Previous Releases:**
+- v1.10.3 (2025-12-18): Pre-built ppxai-server binaries
+- v1.10.2 (2025-12-17): URL citations & system prompts fix
 
 ---
 
-## Critical Issues (Fix Immediately)
+## Status: All Critical Issues Resolved ✅
 
-### 1. **CLAUDE.md** - Outdated Version Reference
-**Current:** Line 9 says "Current Version: v1.10.2 (URL Citations & System Prompts Fix)"
-**Should Be:** "Current Version: v1.10.3 (Pre-built Server Binaries)"
-**Impact:** High - This is the primary developer reference document
-**Fix:**
-```markdown
-**Current Version:** v1.10.3 (Pre-built Server Binaries for VSCode Extension)
-- Python package: v1.10.2
-- VSCode extension: v1.10.3
-- Pre-built ppxai-server binaries for all platforms
-- GitHub Actions CI/CD for automated builds
-```
+### 1. ✅ **CLAUDE.md** - Version Updated
+**Status:** ✅ Updated to v1.10.4
+**Last Update:** 2025-12-19
+- Now shows "Current Version: v1.10.4 (TUI Table Rendering Fix)"
+- Includes what's new section with table rendering features
 
-### 2. **ROADMAP.md** - Severely Outdated
-**Current:** Line 3 says "Current Release: v1.8.0"
-**Should Be:** Updated to reflect v1.10.3
-**Impact:** Critical - Users think project is 5 versions behind
-**Fix:** Add v1.9.x, v1.10.x releases to the top of the file
+### 2. ✅ **ROADMAP.md** - Version Updated
+**Status:** ✅ Updated to v1.10.4
+**Last Update:** 2025-12-19
+- Now shows "Current Release: v1.10.4"
+- Includes comprehensive v1.9.x and v1.10.x release history
 
-### 3. **GEMINI.md** - Outdated Version
-**Current:** Line 66 says "Version: ~v1.8.0"
-**Should Be:** "Version: v1.10.3"
-**Impact:** Medium - This is Gemini-specific setup documentation
-**Consider:** This file might be obsolete since Gemini is now a built-in provider
+### 3. **GEMINI.md** - Version Reference (Low Priority)
+**Current:** May still reference ~v1.8.0
+**Impact:** Low - Gemini is now a built-in provider, this file is historical reference
+**Decision:** Leave as-is since it's historical documentation
 
 ---
 
