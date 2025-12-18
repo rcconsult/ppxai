@@ -89,7 +89,7 @@ export class PythonBackend {
 
         // Find the ppxai package directory
         const workspaceFolders = vscode.workspace.workspaceFolders;
-        let cwd = workspaceFolders?.[0]?.uri.fsPath;
+        const cwd = workspaceFolders?.[0]?.uri.fsPath;
 
         // Try to find ppxai in common locations
         const possiblePaths = [
