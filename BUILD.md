@@ -2,6 +2,7 @@
 
 This guide explains how to build:
 - **TUI Executables** - Standalone terminal app for Windows, macOS, and Linux
+- **Server Executables** - HTTP server for VS Code extension (no Python required)
 - **VS Code Extension** - VSIX package for VS Code Marketplace
 
 ## Prerequisites
@@ -264,6 +265,73 @@ This is normal. It includes the entire Python runtime and all dependencies. Typi
 For issues related to TUI executable builds, check:
 - [PyInstaller Documentation](https://pyinstaller.org/)
 - [PyInstaller GitHub Issues](https://github.com/pyinstaller/pyinstaller/issues)
+
+---
+
+## Server Executable
+
+The server executable (`ppxai-server`) provides the HTTP backend for the VS Code extension. Users can run it without Python installed.
+
+### Quick Build
+
+```bash
+# Install dependencies (including server extras)
+uv sync --extra build --extra server
+
+# Build server executable
+uv run pyinstaller ppxai-server.spec
+```
+
+The executable will be created at `dist/ppxai-server` (or `dist\ppxai-server.exe` on Windows).
+
+### Manual Build (without uv)
+
+```bash
+# Set up virtual environment
+python3 -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate.bat
+
+# Install dependencies
+pip install -e ".[build,server]"
+
+# Build with PyInstaller
+pyinstaller ppxai-server.spec
+```
+
+### macOS Intel Build
+
+For macOS Intel (x86_64), run from an Intel Mac:
+
+```bash
+./scripts/build-intel.sh
+```
+
+This builds both `ppxai-macos-intel` and `ppxai-server-macos-intel`.
+
+### Distribution
+
+The server executable includes:
+- Python interpreter
+- FastAPI, uvicorn, and all HTTP server dependencies
+- ppxai engine and AI client libraries
+
+Users need:
+1. The server executable (`ppxai-server-{platform}`)
+2. A `.env` file with API keys
+3. The VS Code extension (`.vsix` file)
+
+### Running the Server
+
+```bash
+# macOS/Linux
+chmod +x ppxai-server-macos-arm64
+./ppxai-server-macos-arm64
+
+# Windows
+ppxai-server-windows.exe
+```
+
+The server runs on `http://127.0.0.1:54320` by default.
 
 ---
 

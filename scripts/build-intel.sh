@@ -1,6 +1,10 @@
 #!/bin/bash
 #
-# Build and upload macOS Intel executable to GitHub release
+# Build and upload macOS Intel executables to GitHub release
+#
+# Builds both:
+#   - ppxai (TUI application)
+#   - ppxai-server (HTTP server for VSCode extension)
 #
 # Usage:
 #   ./scripts/build-intel.sh v1.9.0    # Build and upload to specific release
@@ -51,32 +55,51 @@ echo "========================================"
 echo "Building ppxai for macOS Intel (x86_64)"
 echo "========================================"
 
-# Ensure dependencies are installed
+# Ensure dependencies are installed (including server deps for ppxai-server)
 echo ""
 echo "Installing dependencies..."
-uv sync --extra build
+uv sync --extra build --extra server
 
-# Build executable
+# Build TUI executable
 echo ""
-echo "Building executable with PyInstaller..."
+echo "Building TUI executable with PyInstaller..."
 uv run pyinstaller ppxai.spec
 
-# Verify build
+# Verify TUI build
 if [ ! -f "dist/ppxai" ]; then
-    echo "Error: Build failed - dist/ppxai not found"
+    echo "Error: TUI build failed - dist/ppxai not found"
     exit 1
 fi
 
 echo ""
-echo "Build successful!"
+echo "TUI build successful!"
 ls -lh dist/ppxai
 file dist/ppxai
 
-# Rename for release
-ASSET_NAME="ppxai-macos-intel"
-cp dist/ppxai "dist/$ASSET_NAME"
+# Build server executable
 echo ""
-echo "Created: dist/$ASSET_NAME"
+echo "Building server executable with PyInstaller..."
+uv run pyinstaller ppxai-server.spec
+
+# Verify server build
+if [ ! -f "dist/ppxai-server" ]; then
+    echo "Error: Server build failed - dist/ppxai-server not found"
+    exit 1
+fi
+
+echo ""
+echo "Server build successful!"
+ls -lh dist/ppxai-server
+file dist/ppxai-server
+
+# Rename for release
+TUI_ASSET="ppxai-macos-intel"
+SERVER_ASSET="ppxai-server-macos-intel"
+cp dist/ppxai "dist/$TUI_ASSET"
+cp dist/ppxai-server "dist/$SERVER_ASSET"
+echo ""
+echo "Created: dist/$TUI_ASSET"
+echo "Created: dist/$SERVER_ASSET"
 
 # Upload to release if version specified
 if [ -n "$VERSION" ]; then
@@ -97,8 +120,8 @@ if [ -n "$VERSION" ]; then
         exit 1
     fi
 
-    # Upload asset
-    gh release upload "$VERSION" "dist/$ASSET_NAME" --clobber
+    # Upload both assets
+    gh release upload "$VERSION" "dist/$TUI_ASSET" "dist/$SERVER_ASSET" --clobber
 
     echo ""
     echo "Upload complete!"
@@ -106,8 +129,8 @@ if [ -n "$VERSION" ]; then
 else
     echo ""
     echo "To upload to a release, run:"
-    echo "  gh release upload <version> dist/$ASSET_NAME"
+    echo "  gh release upload <version> dist/$TUI_ASSET dist/$SERVER_ASSET"
     echo ""
     echo "Example:"
-    echo "  gh release upload v1.9.0 dist/$ASSET_NAME"
+    echo "  gh release upload v1.9.0 dist/$TUI_ASSET dist/$SERVER_ASSET"
 fi

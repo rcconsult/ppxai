@@ -21,6 +21,7 @@ A terminal-based interface for interacting with Perplexity AI models.
 - 🛠️ **Tools Toggle** - Click badge to enable/disable AI tools
 - 🖱️ **Context Menu** - Right-click commands: Explain, Generate Tests, Generate Docs
 - 🔄 **Multi-Provider** - Supports all configured providers (Perplexity, OpenAI, etc.)
+- 📦 **Standalone server available** - No Python needed! Download `ppxai-server` binary from releases
 
 ### Session Management
 - 💾 Auto-save sessions every 10 messages
@@ -85,7 +86,21 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
    - **macOS/Linux:** `./ppxai`
    - **Windows:** `ppxai.exe`
 
-### Option 2: Run from Source (For Developers)
+### Option 2: VSCode Extension with Standalone Server
+
+**No Python installation required!**
+
+1. Download from [Releases](../../releases):
+   - `ppxai-server-{platform}` (server binary)
+   - `ppxai-x.x.x.vsix` (VSCode extension)
+2. Create a `.env` file with your API key (in project folder or `~/.ppxai/.env`)
+3. Install the extension: `code --install-extension ppxai-x.x.x.vsix`
+4. Start the server: `./ppxai-server-macos-arm64` (or your platform's binary)
+5. Open VSCode and click the ppxai icon in the sidebar
+
+See [vscode-extension/README.md](vscode-extension/README.md) for detailed instructions.
+
+### Option 3: Run from Source (For Developers)
 
 ## Installation
 
