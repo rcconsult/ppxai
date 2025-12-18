@@ -24,6 +24,7 @@ from datetime import datetime
 
 from tool_manager import ToolManager
 from ppxai.config import EXPORTS_DIR, SESSIONS_DIR
+from ppxai.markdown_tables import render_markdown_with_tables
 
 console = Console()
 
@@ -952,7 +953,7 @@ class PerplexityClientPromptTools:
                     # No tool call, this is the final response
                     console.print("\n[bold cyan]Assistant:[/bold cyan]")
                     if assistant_message.strip():
-                        console.print(Markdown(assistant_message))
+                        render_markdown_with_tables(assistant_message, console)
 
                     # Show response time
                     elapsed = time.time() - start_time
@@ -1094,7 +1095,7 @@ class PerplexityClientPromptTools:
 
             console.print("\n[bold cyan]Assistant:[/bold cyan]")
             if assistant_message.strip():
-                console.print(Markdown(assistant_message))
+                render_markdown_with_tables(assistant_message, console)
 
             # Show response time
             elapsed = time.time() - start_time
@@ -1232,7 +1233,7 @@ class PerplexityClientPromptTools:
         full_response = "".join(response_chunks)
 
         if full_response.strip():
-            console.print(Markdown(full_response))
+            render_markdown_with_tables(full_response, console)
 
         self.conversation_history.append({
             "role": "assistant",
@@ -1253,7 +1254,7 @@ class PerplexityClientPromptTools:
 
         console.print("\n[bold cyan]Assistant:[/bold cyan]")
         if assistant_message.strip():
-            console.print(Markdown(assistant_message))
+            render_markdown_with_tables(assistant_message, console)
         console.print()
 
         self.conversation_history.append({
