@@ -189,6 +189,62 @@
           "iteration": 2
         }
       ]
+    },
+    {
+      "timestamp": "2025-12-12T22:46:51.525766",
+      "version": "1.10.0",
+      "git_commit": "14b20fe",
+      "git_branch": "master",
+      "provider": "perplexity",
+      "model": "sonar-pro",
+      "summary": {
+        "total_runs": 3,
+        "successful_runs": 3,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 1969.79,
+          "min": 1507.42,
+          "max": 2878.55,
+          "stdev": 787.05
+        },
+        "total_ms": {
+          "mean": 3593.55,
+          "min": 2984.52,
+          "max": 4692.73,
+          "stdev": 953.77
+        },
+        "tokens_per_sec": {
+          "mean": 22.87,
+          "min": 2.68,
+          "max": 41.77
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 2878.55,
+          "total_ms": 2984.52,
+          "tokens": 8,
+          "tokens_per_sec": 2.68,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1523.41,
+          "total_ms": 3103.4,
+          "tokens": 75,
+          "tokens_per_sec": 24.17,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1507.42,
+          "total_ms": 4692.73,
+          "tokens": 196,
+          "tokens_per_sec": 41.77,
+          "prompt_type": "complex",
+          "iteration": 1
+        }
+      ]
     }
   ]
 }
