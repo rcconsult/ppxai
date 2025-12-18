@@ -527,13 +527,25 @@ def run_server():
     print("  GET  /status        - Current status")
     print()
 
-    uvicorn.run(
-        "ppxai.server.http:app",
-        host=args.host,
-        port=args.port,
-        reload=args.reload,
-        log_level="info",
-    )
+    # Check if running as frozen executable (PyInstaller)
+    if getattr(sys, 'frozen', False):
+        # Running as bundled executable - use app object directly
+        # (string import doesn't work in frozen apps)
+        uvicorn.run(
+            app,
+            host=args.host,
+            port=args.port,
+            log_level="info",
+        )
+    else:
+        # Running from source - use string import (supports --reload)
+        uvicorn.run(
+            "ppxai.server.http:app",
+            host=args.host,
+            port=args.port,
+            reload=args.reload,
+            log_level="info",
+        )
 
 
 if __name__ == "__main__":

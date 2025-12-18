@@ -1,0 +1,125 @@
+# -*- mode: python ; coding: utf-8 -*-
+# PyInstaller spec for ppxai-server (HTTP + SSE server for VSCode extension)
+
+block_cipher = None
+
+a = Analysis(
+    ['ppxai-server.py'],
+    pathex=[],
+    binaries=[],
+    datas=[
+        ('.env.example', '.'),
+    ],
+    hiddenimports=[
+        # Core dependencies
+        'openai',
+        'httpx',
+        'rich',
+        'dotenv',
+        # FastAPI and ASGI stack
+        'fastapi',
+        'fastapi.middleware',
+        'fastapi.middleware.cors',
+        'fastapi.responses',
+        'starlette',
+        'starlette.responses',
+        'starlette.routing',
+        'starlette.middleware',
+        'starlette.middleware.cors',
+        'starlette.requests',
+        'starlette.datastructures',
+        'starlette.exceptions',
+        'starlette.status',
+        # Uvicorn
+        'uvicorn',
+        'uvicorn.config',
+        'uvicorn.main',
+        'uvicorn.lifespan',
+        'uvicorn.lifespan.on',
+        'uvicorn.lifespan.off',
+        'uvicorn.protocols',
+        'uvicorn.protocols.http',
+        'uvicorn.protocols.http.auto',
+        'uvicorn.protocols.http.h11_impl',
+        'uvicorn.protocols.http.httptools_impl',
+        'uvicorn.protocols.websockets',
+        'uvicorn.protocols.websockets.auto',
+        'uvicorn.loops',
+        'uvicorn.loops.auto',
+        'uvicorn.loops.asyncio',
+        # Pydantic (for FastAPI models)
+        'pydantic',
+        'pydantic.fields',
+        'pydantic.main',
+        'pydantic_core',
+        # HTTP libraries
+        'h11',
+        'httptools',
+        'anyio',
+        'anyio._backends',
+        'anyio._backends._asyncio',
+        'sniffio',
+        # SSL/encoding
+        'certifi',
+        'idna',
+        'charset_normalizer',
+        # Engine dependencies
+        'ppxai',
+        'ppxai.engine',
+        'ppxai.engine.client',
+        'ppxai.engine.session',
+        'ppxai.engine.types',
+        'ppxai.engine.providers',
+        'ppxai.engine.providers.base',
+        'ppxai.engine.providers.perplexity',
+        'ppxai.engine.providers.openai_compat',
+        'ppxai.engine.tools',
+        'ppxai.engine.tools.base',
+        'ppxai.engine.tools.manager',
+        'ppxai.config',
+        'ppxai.server',
+        'ppxai.server.http',
+        # Timezone support
+        'tzdata',
+        'zoneinfo',
+    ],
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=[
+        # Exclude development/testing packages
+        'pytest',
+        'pytest_asyncio',
+        'ruff',
+        # Exclude TUI-only packages (not needed for server)
+        'prompt_toolkit',
+    ],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
+    noarchive=False,
+)
+
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    [],
+    name='ppxai-server',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
+    console=True,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+)
