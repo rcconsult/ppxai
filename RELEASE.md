@@ -31,16 +31,24 @@ The GitHub Actions workflow will automatically build executables for all platfor
 5. **Release is created automatically:**
    - Once builds complete, a new GitHub Release is created
    - The release will include:
-     - `ppxai-linux-amd64` - Linux executable
-     - `ppxai-macos-arm64` - macOS ARM64 executable (Apple Silicon)
-     - `ppxai-windows.exe` - Windows executable
-     - `ppxai-X.Y.Z.vsix` - VSCode extension package
+     - **TUI binaries:**
+       - `ppxai-linux-amd64` - Linux executable
+       - `ppxai-macos-arm64` - macOS ARM64 executable (Apple Silicon)
+       - `ppxai-windows.exe` - Windows executable
+     - **Server binaries (NEW in v1.10.3):**
+       - `ppxai-server-linux-amd64` - Linux server
+       - `ppxai-server-macos-arm64` - macOS ARM64 server
+       - `ppxai-server-windows.exe` - Windows server
+     - **VSCode extension:**
+       - `ppxai-X.Y.Z.vsix` - VSCode extension package
    - Release notes are auto-generated from commits
 
-6. **Upload Intel binary (manual step):**
+6. **Upload Intel binaries (manual step):**
    - GitHub Actions runners don't support Intel macOS
-   - Build locally on an Intel Mac: `./scripts/build-intel.sh`
-   - Upload: `gh release upload vX.Y.Z dist/ppxai-macos-intel`
+   - Build locally on an Intel Mac: `./scripts/build-intel.sh vX.Y.Z`
+   - This builds AND uploads both:
+     - `ppxai-macos-intel` (TUI)
+     - `ppxai-server-macos-intel` (Server)
 
 7. **Edit the release (optional):**
    - Add a more detailed description
@@ -86,10 +94,38 @@ If you prefer to build and release manually:
 
 ## Version Numbering
 
+### Semantic Versioning
+
 Use [Semantic Versioning](https://semver.org/):
 - **Major** (v1.0.0 → v2.0.0): Breaking changes
 - **Minor** (v1.0.0 → v1.1.0): New features, backward compatible
 - **Patch** (v1.0.0 → v1.0.1): Bug fixes, backward compatible
+
+### Version Alignment Strategy (v1.10.3+)
+
+Starting with v1.10.3, **all published assets share the same version number**, even if a specific component had no functional changes. This provides clarity for users and simplifies release management.
+
+**Published Assets:**
+- **Git tag** (`vX.Y.Z`) - Determines the release version
+- **Python package** (`pyproject.toml`) - Aligns with git tag
+- **VSCode extension** (`package.json`) - Aligns with git tag
+- **Server binaries** (`ppxai-server-*`) - Built from same git tag
+- **TUI binaries** (`ppxai-*`) - Built from same git tag
+
+**Rationale:**
+- **Consistent versioning** makes it easier for users to identify compatible components
+- **Simplified release process** - one version number tracks everything
+- **Clear communication** - all components in a release share the same version
+
+**Example (v1.10.3):**
+- **What changed:** VSCode extension got pre-built server binaries
+- **What didn't change:** Python TUI had no functional changes
+- **Version number:** ALL components bumped to v1.10.3 for consistency
+
+**When to Bump Version:**
+- Bump for **any** user-facing change (extension OR TUI OR server)
+- Infrastructure improvements (CI/CD, build process) also warrant a bump
+- Documentation-only changes do NOT warrant a version bump
 
 ## Pre-releases
 
@@ -127,13 +163,19 @@ Before creating a release tag:
 ## Checklist Before Release
 
 - [ ] All tests pass
-- [ ] Documentation is up to date (README.md, CLAUDE.md, BUILD.md)
-- [ ] CHANGELOG updated (if you maintain one)
-- [ ] Version number updated in `pyproject.toml` and `vscode-extension/package.json`
-- [ ] Built and tested locally on at least one platform
-- [ ] VSCode extension compiles without errors (`npm run compile`)
+- [ ] Documentation is up to date (README.md, CLAUDE.md, BUILD.md, ROADMAP.md)
+- [ ] Version numbers aligned across ALL assets:
+  - [ ] `pyproject.toml` version matches tag
+  - [ ] `vscode-extension/package.json` version matches tag
+  - [ ] README.md mentions correct version
+  - [ ] CLAUDE.md shows current version
+- [ ] Built and tested locally on at least one platform:
+  - [ ] TUI executable works
+  - [ ] Server binary works
+  - [ ] VSCode extension compiles (`npm run compile`)
 - [ ] API key setup is documented
 - [ ] .env.example is up to date
+- [ ] ROADMAP.md updated with release notes
 
 ## Troubleshooting Release Builds
 

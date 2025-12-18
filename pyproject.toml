@@ -1,6 +1,6 @@
 [project]
 name = "ppxai"
-version = "1.10.2"
+version = "1.10.3"
 description = "Terminal UI for interacting with multiple AI providers"
 readme = "README.md"
 license = { text = "MIT" }
@@ -72,6 +72,7 @@ packages = ["ppxai"]
 
 [tool.uv]
 dev-dependencies = [
+    "ipython>=8.37.0",
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "ruff>=0.1.0",

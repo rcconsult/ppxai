@@ -63,7 +63,9 @@ ppxai/
 
 ## Build & Release
 
-*   **Version:** ~v1.8.0
+*   **Version:** v1.10.3
+
+**Note:** As of v1.8.0, Gemini is a **built-in provider** and works out-of-the-box without custom configuration. This document remains for reference on advanced Gemini setup.
 *   **Executables:** `build.sh` (macOS/Linux) and `build.bat` (Windows) create standalone binaries using PyInstaller.
 *   **VS Code:** `npm run compile` and `vsce package` for the extension.
 

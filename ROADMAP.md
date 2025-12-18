@@ -1,6 +1,72 @@
 # ppxai Development Roadmap
 
-## Current Release: v1.8.0
+> **Note:** For future roadmap beyond v1.10.3, see:
+> - [gemini3-features-roadmap.md](gemini3-features-roadmap.md) - Agentic features (v1.11.0-v1.13.0)
+> - [docs/tui-markdown-rendering.md](docs/tui-markdown-rendering.md) - TUI Workspace vision (v1.10.4-v1.15.0)
+> - [sonar-features-proposal.md](sonar-features-proposal.md) - Competitive analysis
+
+---
+
+## Current Release: v1.10.3
+
+**Status**: ✅ Complete - Pre-built Server Binaries
+
+Released: 2025-12-18
+
+Features implemented:
+- **Pre-built ppxai-server binaries** for all platforms (macOS ARM/Intel, Linux, Windows)
+- **No Python required** for VSCode extension users
+- **Automated GitHub Actions CI/CD** for multi-platform builds
+- Server binaries enable standalone VSCode extension distribution
+
+---
+
+## Previous Release: v1.10.2
+
+**Status**: ✅ Complete - URL Citations & System Prompts Fix
+
+Features implemented:
+- Fixed URL rendering in VSCode extension
+- Improved citation system prompts for better AI responses
+
+---
+
+## Previous Release: v1.10.1
+
+**Status**: ✅ Complete - Enhanced UX & Tools Persistence
+
+Features implemented:
+- **Message timestamps** (HH:MM:SS Mon DD format)
+- **Time dividers** between conversation turns (after 5min gap or date change)
+- **Tools persistence** across VSCode restarts
+- **/generate command** for code generation from descriptions
+- HTTP client improvements (setToolConfig, setWorkingDir, setAutoInject endpoints)
+
+---
+
+## Previous Release: v1.10.0
+
+**Status**: ✅ Complete - VSCode Extension CI/CD
+
+Features implemented:
+- **VSCode Extension CI/CD**: Extension VSIX built and released via GitHub Actions
+- **HTTP Backend**: Extension uses HTTP + SSE to communicate with `ppxai-server`
+- **Simplified installation**: Download VSIX from releases, start `ppxai-server`
+
+---
+
+## Previous Release: v1.9.x
+
+**Status**: ✅ Complete - uv Migration & FastAPI HTTP Server
+
+Features implemented:
+- **uv migration**: Package manager migrated from pip to uv for faster dependency management
+- **FastAPI HTTP Server**: `ppxai-server` with SSE streaming for IDE integration
+- **Latency benchmarking**: Track provider performance across releases
+
+---
+
+## Previous Release: v1.8.0
 
 **Status**: ✅ Complete - VSCode Extension & Enhanced UX
 

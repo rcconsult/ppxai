@@ -86,17 +86,19 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
    - **macOS/Linux:** `./ppxai`
    - **Windows:** `ppxai.exe`
 
-### Option 2: VSCode Extension with Standalone Server
+### Option 2: VSCode Extension with Standalone Server 🆕 v1.10.3
 
-**No Python installation required!**
+**No Python installation required!** NEW in v1.10.3: Pre-built server binaries!
 
 1. Download from [Releases](../../releases):
-   - `ppxai-server-{platform}` (server binary)
-   - `ppxai-x.x.x.vsix` (VSCode extension)
+   - `ppxai-server-{platform}` (server binary for macOS ARM/Intel, Linux, Windows)
+   - `ppxai-1.10.3.vsix` (VSCode extension)
 2. Create a `.env` file with your API key (in project folder or `~/.ppxai/.env`)
-3. Install the extension: `code --install-extension ppxai-x.x.x.vsix`
+3. Install the extension: `code --install-extension ppxai-1.10.3.vsix`
 4. Start the server: `./ppxai-server-macos-arm64` (or your platform's binary)
 5. Open VSCode and click the ppxai icon in the sidebar
+
+**What's New:** v1.10.3 introduces standalone server binaries that eliminate the need for Python installation when using the VSCode extension. Simply download the binary for your platform and run!
 
 See [vscode-extension/README.md](vscode-extension/README.md) for detailed instructions.
 
