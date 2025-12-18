@@ -703,13 +703,18 @@ class CommandHandler:
             size_kb = path.stat().st_size / 1024
             console.print(f"\n[bold cyan]{path.name}[/bold cyan] [dim]({size_kb:.1f} KB, {len(lines)} lines)[/dim]\n")
 
-            # Display with syntax highlighting (no truncation for local viewing)
-            syntax = Syntax(content, lang, theme="monokai", line_numbers=True)
-            console.print(syntax)
+            # For markdown files, render them (including tables) instead of syntax highlighting
+            if path.suffix.lower() in ['.md', '.markdown']:
+                from .markdown_tables import render_markdown_with_tables
+                render_markdown_with_tables(content, console)
+            else:
+                # Display with syntax highlighting (no truncation for local viewing)
+                syntax = Syntax(content, lang, theme="monokai", line_numbers=True)
+                console.print(syntax)
 
             # Show timing
             elapsed = time.time() - start_time
-            console.print(f"[dim]({elapsed:.2f}s)[/dim]\n")
+            console.print(f"\n[dim]({elapsed:.2f}s)[/dim]\n")
 
         except UnicodeDecodeError:
             console.print(f"[red]Cannot display binary file: {query}[/red]\n")
