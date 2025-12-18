@@ -100,9 +100,17 @@ BUILTIN_PROVIDERS = {
                 "name": "Gemini 2.5 Flash",
                 "description": "Latest fast model, best price/performance"
             },
+            "gemini-2.5-flash-lite": {
+                "name": "Gemini 2.5 Flash Lite",
+                "description": "For simple tasks that need to be done quickly"
+            },
             "gemini-2.5-pro": {
                 "name": "Gemini 2.5 Pro",
                 "description": "Most capable model for complex reasoning"
+            },
+            "gemini-3-pro-preview": {
+                "name": "Gemini 3 Pro Preview",
+                "description": "Latest preview model with enhanced capabilities"
             },
         },
         "pricing": {
@@ -110,7 +118,9 @@ BUILTIN_PROVIDERS = {
             "gemini-2.0-flash": {"input": 0.10, "output": 0.40},
             "gemini-2.0-flash-lite": {"input": 0.075, "output": 0.30},
             "gemini-2.5-flash": {"input": 0.15, "output": 0.60},
+            "gemini-2.5-flash-lite": {"input": 0.075, "output": 0.30},
             "gemini-2.5-pro": {"input": 1.25, "output": 5.00},
+            "gemini-3-pro-preview": {"input": 1.25, "output": 5.00},  # Preview pricing TBD
         },
         "capabilities": {
             "web_search": False,
