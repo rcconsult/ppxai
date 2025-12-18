@@ -1,13 +1,33 @@
 # ppxai Development Roadmap
 
-> **Note:** For future roadmap beyond v1.10.3, see:
+> **Note:** For future roadmap beyond v1.10.4, see:
 > - [gemini3-features-roadmap.md](gemini3-features-roadmap.md) - Agentic features (v1.11.0-v1.13.0)
 > - [docs/tui-markdown-rendering.md](docs/tui-markdown-rendering.md) - TUI Workspace vision (v1.10.4-v1.15.0)
 > - [sonar-features-proposal.md](sonar-features-proposal.md) - Competitive analysis
 
 ---
 
-## Current Release: v1.10.3
+## Current Release: v1.10.4
+
+**Status**: ✅ Complete - TUI Table Rendering Fix
+
+Released: 2025-12-19
+
+Features implemented:
+- **Fixed markdown table rendering** in Rich TUI (no more raw `|:---|:---|` syntax)
+- Tables now support proper left/center/right alignment (`:---`, `:---:`, `---:`)
+- Handles emojis, inline code, and complex content in table cells
+- 27 new regression tests ensure table rendering stays fixed
+- Created `ppxai/markdown_tables.py` module for table parsing and rendering
+
+**Files Changed:**
+- `ppxai/markdown_tables.py` (new) - Markdown table parser and renderer
+- `ppxai/client.py` - Updated to use `render_markdown_with_tables()`
+- `tests/test_markdown_tables.py` (new) - 27 comprehensive tests
+
+---
+
+## Previous Release: v1.10.3
 
 **Status**: ✅ Complete - Pre-built Server Binaries
 

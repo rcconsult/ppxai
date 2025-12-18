@@ -1,0 +1,374 @@
+"""
+Tests for markdown table parser.
+
+Ensures tables are properly rendered in the TUI without regression.
+"""
+
+import pytest
+from io import StringIO
+from rich.console import Console
+from ppxai.markdown_tables import (
+    parse_table_alignment,
+    parse_markdown_table,
+    is_table_block,
+    split_markdown_content,
+    render_markdown_with_tables,
+)
+
+
+class TestTableAlignment:
+    """Test table alignment parsing."""
+
+    def test_left_alignment(self):
+        """Test left-aligned columns."""
+        alignment_row = "|---|---|---|"
+        result = parse_table_alignment(alignment_row)
+        assert result == ['left', 'left', 'left']
+
+    def test_center_alignment(self):
+        """Test center-aligned columns."""
+        alignment_row = "|:---:|:---:|:---:|"
+        result = parse_table_alignment(alignment_row)
+        assert result == ['center', 'center', 'center']
+
+    def test_right_alignment(self):
+        """Test right-aligned columns."""
+        alignment_row = "|---:|---:|---:|"
+        result = parse_table_alignment(alignment_row)
+        assert result == ['right', 'right', 'right']
+
+    def test_mixed_alignment(self):
+        """Test mixed alignment."""
+        alignment_row = "|:---|:---:|---:|"
+        result = parse_table_alignment(alignment_row)
+        assert result == ['left', 'center', 'right']
+
+    def test_alignment_with_spaces(self):
+        """Test alignment with extra spaces."""
+        alignment_row = "| :--- | :---: | ---: |"
+        result = parse_table_alignment(alignment_row)
+        assert result == ['left', 'center', 'right']
+
+
+class TestTableParsing:
+    """Test markdown table parsing."""
+
+    def test_simple_table(self):
+        """Test parsing a simple table."""
+        table_md = """| Feature | Status |
+|:---|:---|
+| Tables | Working |
+| Alignment | Working |"""
+
+        table = parse_markdown_table(table_md)
+        assert table is not None
+        assert len(table.columns) == 2
+
+    def test_table_with_alignment(self):
+        """Test table with different alignments."""
+        table_md = """| Left | Center | Right |
+|:---|:---:|---:|
+| A | B | C |
+| D | E | F |"""
+
+        table = parse_markdown_table(table_md)
+        assert table is not None
+        assert len(table.columns) == 3
+        # Check column alignment
+        assert table.columns[0].justify == 'left'
+        assert table.columns[1].justify == 'center'
+        assert table.columns[2].justify == 'right'
+
+    def test_table_with_emojis(self):
+        """Test table containing emojis."""
+        table_md = """| Status | Symbol |
+|:---|:---:|
+| Success | ✅ |
+| Failed | ❌ |
+| Pending | ⏳ |"""
+
+        table = parse_markdown_table(table_md)
+        assert table is not None
+        assert len(table.columns) == 2
+
+    def test_table_with_code(self):
+        """Test table containing inline code."""
+        table_md = """| Command | Description |
+|:---|:---|
+| `/help` | Show help |
+| `/quit` | Exit app |"""
+
+        table = parse_markdown_table(table_md)
+        assert table is not None
+
+    def test_table_without_alignment_row(self):
+        """Test table without explicit alignment row."""
+        table_md = """| Name | Value |
+| Alice | 100 |
+| Bob | 200 |"""
+
+        table = parse_markdown_table(table_md)
+        assert table is not None
+        assert len(table.columns) == 2
+        # Should default to left alignment
+        assert table.columns[0].justify == 'left'
+        assert table.columns[1].justify == 'left'
+
+    def test_empty_cells(self):
+        """Test table with empty cells."""
+        table_md = """| A | B | C |
+|---|---|---|
+| 1 | | 3 |
+| | 2 | |"""
+
+        table = parse_markdown_table(table_md)
+        assert table is not None
+
+    def test_uneven_columns(self):
+        """Test table with uneven column counts (should handle gracefully)."""
+        table_md = """| A | B | C |
+|---|---|---|
+| 1 | 2 |
+| X | Y | Z | Extra |"""
+
+        table = parse_markdown_table(table_md)
+        assert table is not None
+
+
+class TestTableDetection:
+    """Test markdown table block detection."""
+
+    def test_is_table_block_positive(self):
+        """Test detection of valid table blocks."""
+        table = """| Feature | Status |
+|:---|:---|
+| Tables | Working |"""
+        assert is_table_block(table) is True
+
+    def test_is_table_block_negative(self):
+        """Test detection of non-table blocks."""
+        assert is_table_block("This is just text") is False
+        assert is_table_block("# Heading") is False
+        assert is_table_block("") is False
+        assert is_table_block("   ") is False
+
+    def test_is_table_block_single_line(self):
+        """Test single-line table (should be False)."""
+        assert is_table_block("| A | B | C |") is False
+
+    def test_is_table_block_with_leading_text(self):
+        """Test table with leading text (should be False)."""
+        text = "Some text before | A | B |"
+        assert is_table_block(text) is False
+
+
+class TestContentSplitting:
+    """Test splitting markdown content into table and non-table blocks."""
+
+    def test_split_table_only(self):
+        """Test content with only a table."""
+        content = """| Feature | Status |
+|:---|:---|
+| Tables | Working |"""
+
+        blocks = split_markdown_content(content)
+        assert len(blocks) == 1
+        assert blocks[0][0] == 'table'
+
+    def test_split_markdown_only(self):
+        """Test content with only markdown (no tables)."""
+        content = """# Heading
+
+This is a paragraph with **bold** and *italic* text."""
+
+        blocks = split_markdown_content(content)
+        assert len(blocks) == 1
+        assert blocks[0][0] == 'markdown'
+
+    def test_split_mixed_content(self):
+        """Test content with both tables and markdown."""
+        content = """# Feature Comparison
+
+Here's a comparison table:
+
+| Feature | Status |
+|:---|:---|
+| Tables | Working |
+| Code | Working |
+
+And here's more text after the table."""
+
+        blocks = split_markdown_content(content)
+        # Should have: markdown, table, markdown
+        assert len(blocks) >= 3
+
+        # Find table block
+        table_blocks = [b for b in blocks if b[0] == 'table']
+        assert len(table_blocks) == 1
+
+    def test_split_multiple_tables(self):
+        """Test content with multiple tables."""
+        content = """## First Table
+
+| A | B |
+|---|---|
+| 1 | 2 |
+
+## Second Table
+
+| X | Y |
+|---|---|
+| 3 | 4 |"""
+
+        blocks = split_markdown_content(content)
+        table_blocks = [b for b in blocks if b[0] == 'table']
+        assert len(table_blocks) == 2
+
+
+class TestRenderingIntegration:
+    """Test the full rendering pipeline."""
+
+    def test_render_table_only(self):
+        """Test rendering content with only a table."""
+        content = """| Feature | Status |
+|:---|:---|
+| Tables | ✅ Working |
+| Tests | ✅ Passing |"""
+
+        # Capture output
+        string_io = StringIO()
+        console = Console(file=string_io, force_terminal=True, width=80)
+
+        render_markdown_with_tables(content, console)
+
+        output = string_io.getvalue()
+        # Should not contain raw markdown table syntax
+        assert '|:---|:---|' not in output
+
+    def test_render_mixed_content(self):
+        """Test rendering mixed table and markdown content."""
+        content = """# Test Report
+
+Here are the results:
+
+| Test | Result |
+|:---|:---:|
+| Unit Tests | ✅ |
+| Integration | ✅ |
+
+All tests passed!"""
+
+        string_io = StringIO()
+        console = Console(file=string_io, force_terminal=True, width=80)
+
+        render_markdown_with_tables(content, console)
+
+        output = string_io.getvalue()
+        # Should contain the heading (markdown rendering)
+        assert 'Test Report' in output
+        # Should not show raw table separators
+        assert '|:---|:---:|' not in output
+
+    def test_render_empty_content(self):
+        """Test rendering empty content (should not crash)."""
+        string_io = StringIO()
+        console = Console(file=string_io, force_terminal=True, width=80)
+
+        render_markdown_with_tables("", console)
+        render_markdown_with_tables("   ", console)
+
+        # Should not raise any exceptions
+
+    def test_render_complex_table(self):
+        """Test rendering a complex table from the bug screenshot."""
+        content = """## Competitive Response to Gemini 3 & Claude Code
+
+**Gemini 3.0** (late 2025) emphasizes "agentic" capabilities:
+- **Tool orchestration**: Browser interaction, code execution, API calls
+- **Agent-first architecture**: Moves from Q&A to "ambient AI"
+
+| Gemini 3 Capability | Claude Code | ppxai Response |
+|:---|:---|:---|
+| **Multi-step autonomy** | ✅ Autonomous (72.7% SWE-bench) | ✅ v1.11.0: `/agent` loop |
+| **Tool orchestration** | ✅ Native | ✅ v1.11.0: `edit_file` tool |
+| **Code review workflows** | ⚠️ Manual | ✅ v1.11.0: `@git` context |
+
+**ppxai's Roadmap Response**: Multi-provider agentic workflows."""
+
+        string_io = StringIO()
+        console = Console(file=string_io, force_terminal=True, width=120)
+
+        render_markdown_with_tables(content, console)
+
+        output = string_io.getvalue()
+        # Should render without raw markdown table syntax
+        assert '|:---|:---|:---|' not in output
+        # Should contain content
+        assert 'Gemini 3 Capability' in output or 'Competitive Response' in output
+
+
+class TestRegressionPrevention:
+    """Tests specifically designed to prevent regression of the table rendering bug."""
+
+    def test_table_bug_from_screenshot(self):
+        """
+        Test the exact scenario from tui-md-render-bug.png.
+
+        This ensures the bug doesn't regress.
+        """
+        # This is the type of table that was showing as raw markdown
+        content = """| Feature | Status |
+|:---|:---|
+| Multi-step autonomy | ✅ Autonomous |
+| Tool orchestration | ✅ Native |"""
+
+        string_io = StringIO()
+        console = Console(file=string_io, force_terminal=True, width=80)
+
+        render_markdown_with_tables(content, console)
+
+        output = string_io.getvalue()
+
+        # The bug was showing "|:---|:---|" in output
+        # This should NOT appear anymore
+        assert '|:---|:---|' not in output, "Table alignment markers should not appear in rendered output"
+
+        # The content should be present (table was rendered, not broken)
+        assert 'Multi-step autonomy' in output
+        assert '✅ Autonomous' in output
+        assert 'Tool orchestration' in output
+
+    def test_no_markdown_class_for_tables(self):
+        """Ensure tables are NOT rendered via rich.markdown.Markdown."""
+        # This test verifies our architectural fix
+        table_content = """| A | B |
+|---|---|
+| 1 | 2 |"""
+
+        blocks = split_markdown_content(table_content)
+        assert len(blocks) == 1
+        assert blocks[0][0] == 'table', "Table content should be identified as 'table', not 'markdown'"
+
+    def test_multiple_tables_no_crosstalk(self):
+        """Ensure multiple tables don't interfere with each other."""
+        content = """## Table 1
+
+| A | B |
+|:---|---:|
+| Left | Right |
+
+## Table 2
+
+| X | Y | Z |
+|:---:|:---:|:---:|
+| Center | Center | Center |"""
+
+        string_io = StringIO()
+        console = Console(file=string_io, force_terminal=True, width=80)
+
+        render_markdown_with_tables(content, console)
+
+        output = string_io.getvalue()
+        # Should not show alignment markers from either table
+        assert '|:---|---:|' not in output
+        assert '|:---:|:---:|:---:|' not in output

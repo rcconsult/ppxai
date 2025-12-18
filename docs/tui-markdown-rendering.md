@@ -128,15 +128,14 @@ console.print(".", end="", style="dim")
 
 ---
 
-## Part 2: Known Issues (v1.10.2)
+## Part 2: Known Issues (Historical)
 
-### 2.1 CRITICAL: Markdown Tables Not Rendering
+### 2.1 ✅ FIXED (v1.10.4): Markdown Tables Not Rendering
 
 **Severity:** High
-**Status:** Open
+**Status:** ✅ FIXED in v1.10.4 (2025-12-19)
 **Affected:** AI response rendering
-**Screenshot:** `../tui-md-render-bug.png`
-**Fix Target:** v1.10.4
+**Screenshot:** `../tui-md-render-bug.png` (historical bug documentation)
 
 **Description:**
 When AI responses contain markdown tables, they are displayed as raw text instead of formatted tables:
@@ -164,10 +163,25 @@ Rich's `Markdown` class has limited table support. The `rich.markdown.Markdown` 
 
 **Fix Options:**
 
-1. **Use `rich-rst` or custom parser** - Pre-process markdown tables and convert to `rich.table.Table` objects
+1. **Use `rich-rst` or custom parser** - Pre-process markdown tables and convert to `rich.table.Table` objects ✅ **IMPLEMENTED in v1.10.4**
 2. **Upgrade to `rich` v13+** - Check if newer Rich versions have improved table support
 3. **Use `mdformat` + custom renderer** - Parse markdown AST and render tables explicitly
 4. **Switch to `textual`** - Textual (by same author) has better markdown table support
+
+**✅ How It Was Fixed (v1.10.4):**
+
+Implemented Option 1 - Custom table parser with Rich Table objects:
+
+- Created `ppxai/markdown_tables.py` module
+- `parse_markdown_table()` - Parses markdown table strings → Rich Table objects
+- `split_markdown_content()` - Separates tables from other markdown content
+- `render_markdown_with_tables()` - Renders mixed content (tables + markdown)
+- Supports alignment markers (`:---`, `:---:`, `---:`) for left/center/right alignment
+- Handles emojis, inline code, and complex content in cells
+- Updated `ppxai/client.py` to use new renderer
+- Added 27 regression tests in `tests/test_markdown_tables.py`
+
+**Result:** Tables now render correctly with proper formatting, alignment, and styling. No more raw markdown syntax visible.
 
 ### 2.2 No Code Block Copy Button
 
@@ -405,78 +419,44 @@ DirectoryTree > .directory-tree--file {
 
 **Note:** Markdown table rendering fix and `@git`/`@tree` context moved to v1.10.4.
 
-### 5.1 Phase 1: Fix Core Rendering (v1.10.4)
+### 5.1 ✅ Phase 1: Fix Core Rendering (v1.10.4 - COMPLETED)
 
+**Status:** ✅ COMPLETED (2025-12-19)
 **Priority:** Critical
-**Sync with:** Quick wins before v1.11.0
 
-| Task | Implementation | Effort |
-|:-----|:---------------|:-------|
-| Fix markdown tables | Custom table parser + `rich.table.Table` | Medium |
-| Fix table alignment | Parse `:---`, `---:`, `:---:` alignment markers | Low |
-| Add table borders | Configurable border styles | Low |
+| Task | Status | Implementation |
+|:-----|:-------|:---------------|
+| Fix markdown tables | ✅ Done | `ppxai/markdown_tables.py` with Rich Table parser |
+| Fix table alignment | ✅ Done | Alignment parser for `:---`, `---:`, `:---:` markers |
+| Add table borders | ✅ Done | Configurable via Rich Table `border_style` |
+| Regression tests | ✅ Done | 27 tests in `tests/test_markdown_tables.py` |
 
-**Implementation:**
+**What Was Implemented:**
 
-```python
-# ppxai/rendering.py
-import re
-from rich.table import Table
-from rich.markdown import Markdown
-from rich.console import Console
+Created a new module `ppxai/markdown_tables.py` with:
 
-def parse_markdown_table(table_str: str) -> Table:
-    """Convert markdown table string to Rich Table."""
-    lines = table_str.strip().split('\n')
+-   `parse_markdown_table()` - Converts markdown table strings to Rich Table objects
+-   `parse_table_alignment()` - Parses alignment markers (left/center/right)
+-   `is_table_block()` - Detects markdown table blocks
+-   `split_markdown_content()` - Separates tables from other markdown content
+-   `render_markdown_with_tables()` - Main rendering function for mixed content
 
-    # Parse header
-    header = [cell.strip() for cell in lines[0].split('|')[1:-1]]
+**Integration:**
 
-    # Parse alignment (line 2)
-    alignments = []
-    if len(lines) > 1 and re.match(r'^[\|\s:-]+$', lines[1]):
-        for cell in lines[1].split('|')[1:-1]:
-            cell = cell.strip()
-            if cell.startswith(':') and cell.endswith(':'):
-                alignments.append('center')
-            elif cell.endswith(':'):
-                alignments.append('right')
-            else:
-                alignments.append('left')
-        data_start = 2
-    else:
-        alignments = ['left'] * len(header)
-        data_start = 1
+Updated `ppxai/client.py` to use `render_markdown_with_tables()` instead of `console.print(Markdown())` for AI responses. This ensures tables are rendered as Rich Table objects while other markdown content uses the standard Rich Markdown renderer.
 
-    # Create Rich table
-    table = Table(show_header=True, header_style="bold cyan")
+**Test Coverage:**
 
-    for i, col in enumerate(header):
-        justify = alignments[i] if i < len(alignments) else 'left'
-        table.add_column(col, justify=justify)
+Added comprehensive regression tests (`tests/test_markdown_tables.py`):
 
-    # Add rows
-    for line in lines[data_start:]:
-        if line.strip():
-            cells = [cell.strip() for cell in line.split('|')[1:-1]]
-            table.add_row(*cells)
+-   Table alignment parsing (left/center/right/mixed)
+-   Table detection and content splitting
+-   Tables with emojis, inline code, and complex content
+-   Multiple tables in one response
+-   Edge cases (empty cells, uneven columns)
+-   Specific regression test for the original bug from tui-md-render-bug.png
 
-    return table
-
-
-def render_response(content: str, console: Console) -> None:
-    """Render AI response with proper table support."""
-    table_pattern = r'(\|[^\n]+\|\n(?:\|[-:| ]+\|\n)?(?:\|[^\n]+\|\n)*)'
-
-    parts = re.split(table_pattern, content)
-
-    for part in parts:
-        if part.strip().startswith('|'):
-            table = parse_markdown_table(part)
-            console.print(table)
-        elif part.strip():
-            console.print(Markdown(part))
-```
+All 228 tests pass (including 27 new table tests).
 
 ### 5.2 Phase 2: Textual Foundation (v1.11.0)
 
