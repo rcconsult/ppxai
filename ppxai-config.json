@@ -17,10 +17,6 @@
           "name": "Sonar Pro",
           "description": "Advanced search model for complex queries"
         },
-        "sonar-reasoning": {
-          "name": "Sonar Reasoning",
-          "description": "Fast reasoning model for problem-solving with search"
-        },
         "sonar-reasoning-pro": {
           "name": "Sonar Reasoning Pro",
           "description": "Precision reasoning with Chain of Thought capabilities"
@@ -33,7 +29,6 @@
       "pricing": {
         "sonar": {"input": 0.20, "output": 0.20},
         "sonar-pro": {"input": 3.00, "output": 15.00},
-        "sonar-reasoning": {"input": 1.00, "output": 5.00},
         "sonar-reasoning-pro": {"input": 5.00, "output": 15.00},
         "sonar-deep-research": {"input": 5.00, "output": 15.00}
       },
