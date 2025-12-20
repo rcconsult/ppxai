@@ -72,6 +72,7 @@ export class HttpClient {
     private conversationHistory: Message[] = [];
     private outputChannel: vscode.OutputChannel;
     private _ready: boolean = false;
+    private currentAbortController: AbortController | null = null;
 
     constructor(baseUrl: string = 'http://127.0.0.1:54320') {
         this.baseUrl = baseUrl;
@@ -310,79 +311,96 @@ export class HttpClient {
      * Send chat message with SSE streaming
      */
     async chat(message: string, streamCallback?: StreamCallback): Promise<string> {
-        const response = await fetch(`${this.baseUrl}/chat`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message })
-        });
-
-        if (!response.ok) {
-            throw new Error(`Chat request failed: ${response.statusText}`);
-        }
-
-        if (!response.body) {
-            throw new Error('No response body');
-        }
-
-        // Track message in local history
-        this.conversationHistory.push({ role: 'user', content: message });
-
-        // Notify stream started
-        streamCallback?.({ type: 'started', content: '' });
-
-        let fullResponse = '';
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
+        // Create new AbortController for this request
+        this.currentAbortController = new AbortController();
 
         try {
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) {break;}
+            const response = await fetch(`${this.baseUrl}/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message }),
+                signal: this.currentAbortController.signal
+            });
 
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop() || '';
+            if (!response.ok) {
+                throw new Error(`Chat request failed: ${response.statusText}`);
+            }
 
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        try {
-                            const event = JSON.parse(line.slice(6));
-                            this.outputChannel.appendLine(`[SSE] ${JSON.stringify(event)}`);
+            if (!response.body) {
+                throw new Error('No response body');
+            }
 
-                            // Map server events to StreamEvent format
-                            const mappedEvent = this.mapServerEvent(event);
-                            if (mappedEvent) {
-                                streamCallback?.(mappedEvent);
-                                if (mappedEvent.type === 'chunk') {
-                                    fullResponse += mappedEvent.content;
+            // Track message in local history
+            this.conversationHistory.push({ role: 'user', content: message });
+
+            // Notify stream started
+            streamCallback?.({ type: 'started', content: '' });
+
+            let fullResponse = '';
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) {break;}
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const event = JSON.parse(line.slice(6));
+                                this.outputChannel.appendLine(`[SSE] ${JSON.stringify(event)}`);
+
+                                // Map server events to StreamEvent format
+                                const mappedEvent = this.mapServerEvent(event);
+                                if (mappedEvent) {
+                                    streamCallback?.(mappedEvent);
+                                    if (mappedEvent.type === 'chunk') {
+                                        fullResponse += mappedEvent.content;
+                                    }
                                 }
-                            }
 
-                            if (event.type === 'error') {
-                                throw new Error(event.data);
-                            }
-                        } catch (e) {
-                            if (e instanceof SyntaxError) {
-                                this.outputChannel.appendLine(`Parse warning: ${line}`);
-                            } else {
-                                throw e;
+                                if (event.type === 'error') {
+                                    throw new Error(event.data);
+                                }
+                            } catch (e) {
+                                if (e instanceof SyntaxError) {
+                                    this.outputChannel.appendLine(`Parse warning: ${line}`);
+                                } else {
+                                    throw e;
+                                }
                             }
                         }
                     }
                 }
+            } finally {
+                reader.releaseLock();
             }
+
+            // Notify stream done
+            streamCallback?.({ type: 'done', content: fullResponse });
+
+            // Track response in local history
+            this.conversationHistory.push({ role: 'assistant', content: fullResponse });
+
+            return fullResponse;
+        } catch (error: any) {
+            // Handle abort separately from other errors
+            if (error.name === 'AbortError') {
+                this.outputChannel.appendLine('[Interrupted by user]');
+                streamCallback?.({ type: 'error', content: 'Interrupted by user' });
+                throw new Error('Interrupted by user');
+            }
+            throw error;
         } finally {
-            reader.releaseLock();
+            // Cleanup controller
+            this.currentAbortController = null;
         }
-
-        // Notify stream done
-        streamCallback?.({ type: 'done', content: fullResponse });
-
-        // Track response in local history
-        this.conversationHistory.push({ role: 'assistant', content: fullResponse });
-
-        return fullResponse;
     }
 
     /**
@@ -404,72 +422,111 @@ export class HttpClient {
             message = `File: ${filename}\n\n${message}`;
         }
 
-        const response = await fetch(`${this.baseUrl}/coding_task`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, task_type: taskType })
-        });
-
-        if (!response.ok) {
-            throw new Error(`Coding task request failed: ${response.statusText}`);
-        }
-
-        if (!response.body) {
-            throw new Error('No response body');
-        }
-
-        // Notify stream started
-        streamCallback?.({ type: 'started', content: '' });
-
-        let fullResponse = '';
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
+        // Create new AbortController for this request
+        this.currentAbortController = new AbortController();
 
         try {
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) {break;}
+            const response = await fetch(`${this.baseUrl}/coding_task`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message, task_type: taskType }),
+                signal: this.currentAbortController.signal
+            });
 
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop() || '';
+            if (!response.ok) {
+                throw new Error(`Coding task request failed: ${response.statusText}`);
+            }
 
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        try {
-                            const event = JSON.parse(line.slice(6));
-                            this.outputChannel.appendLine(`[SSE] ${JSON.stringify(event)}`);
+            if (!response.body) {
+                throw new Error('No response body');
+            }
 
-                            const mappedEvent = this.mapServerEvent(event);
-                            if (mappedEvent) {
-                                streamCallback?.(mappedEvent);
-                                if (mappedEvent.type === 'chunk') {
-                                    fullResponse += mappedEvent.content;
+            // Notify stream started
+            streamCallback?.({ type: 'started', content: '' });
+
+            let fullResponse = '';
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) {break;}
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const event = JSON.parse(line.slice(6));
+                                this.outputChannel.appendLine(`[SSE] ${JSON.stringify(event)}`);
+
+                                const mappedEvent = this.mapServerEvent(event);
+                                if (mappedEvent) {
+                                    streamCallback?.(mappedEvent);
+                                    if (mappedEvent.type === 'chunk') {
+                                        fullResponse += mappedEvent.content;
+                                    }
                                 }
-                            }
 
-                            if (event.type === 'error') {
-                                throw new Error(event.data);
-                            }
-                        } catch (e) {
-                            if (e instanceof SyntaxError) {
-                                this.outputChannel.appendLine(`Parse warning: ${line}`);
-                            } else {
-                                throw e;
+                                if (event.type === 'error') {
+                                    throw new Error(event.data);
+                                }
+                            } catch (e) {
+                                if (e instanceof SyntaxError) {
+                                    this.outputChannel.appendLine(`Parse warning: ${line}`);
+                                } else {
+                                    throw e;
+                                }
                             }
                         }
                     }
                 }
+            } finally {
+                reader.releaseLock();
             }
+
+            // Notify stream done
+            streamCallback?.({ type: 'done', content: fullResponse });
+
+            return fullResponse;
+        } catch (error: any) {
+            // Handle abort separately from other errors
+            if (error.name === 'AbortError') {
+                this.outputChannel.appendLine('[Interrupted by user]');
+                streamCallback?.({ type: 'error', content: 'Interrupted by user' });
+                throw new Error('Interrupted by user');
+            }
+            throw error;
         } finally {
-            reader.releaseLock();
+            // Cleanup controller
+            this.currentAbortController = null;
+        }
+    }
+
+    /**
+     * Interrupt the current streaming request
+     */
+    async interrupt(): Promise<void> {
+        try {
+            // Call server interrupt endpoint
+            await fetch(`${this.baseUrl}/interrupt`, {
+                method: 'POST',
+                signal: AbortSignal.timeout(1000)
+            });
+        } catch (e) {
+            // Log but don't fail - abort controller will still work
+            this.outputChannel.appendLine(`Interrupt warning: ${e}`);
         }
 
-        // Notify stream done
-        streamCallback?.({ type: 'done', content: fullResponse });
-
-        return fullResponse;
+        // Abort the current fetch request
+        if (this.currentAbortController) {
+            this.currentAbortController.abort();
+            this.currentAbortController = null;
+        }
     }
 
     /**
