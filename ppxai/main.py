@@ -25,6 +25,32 @@ from .config import (
 from .ui import console, display_welcome, select_model, select_provider
 
 
+def get_status_line(client, current_model, handler):
+    """Generate status line showing current settings."""
+    provider_config = get_provider_config(client.provider)
+    provider_name = provider_config["name"]
+
+    # Get tools status
+    tools_enabled = (
+        handler.tools_available and
+        handler.PerplexityClientPromptTools and
+        isinstance(client, handler.PerplexityClientPromptTools) and
+        client.enable_tools
+    )
+    tools_status = "[green]ON[/green]" if tools_enabled else "[dim]OFF[/dim]"
+
+    # Get model display name (use ID if not found)
+    model_display = current_model
+    for model_info in provider_config.get("models", {}).values():
+        if model_info.get("id") == current_model:
+            model_display = model_info.get("name", current_model)
+            break
+
+    # Build status line
+    status = f"[dim][[/dim]{provider_name}[dim] | [/dim]{model_display}[dim] | Tools: [/dim]{tools_status}[dim]][/dim]"
+    return status
+
+
 class PPXAICompleter(Completer):
     """Custom completer for slash commands and @file references."""
 
@@ -196,6 +222,10 @@ def main():
             # Reset Ctrl-C counter if timeout elapsed
             if ctrl_c_count > 0 and time.time() - ctrl_c_timestamp > ctrl_c_timeout:
                 ctrl_c_count = 0
+
+            # Display status line
+            status_line = get_status_line(client, current_model, handler)
+            console.print(status_line)
 
             # Get user input with history and completion support
             user_input = session.prompt("You: ").strip()
