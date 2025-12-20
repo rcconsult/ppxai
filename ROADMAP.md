@@ -1,13 +1,46 @@
 # ppxai Development Roadmap
 
-> **Note:** For future roadmap beyond v1.10.6, see:
+> **Note:** For future roadmap beyond v1.10.7, see:
 > - [gemini3-features-roadmap.md](gemini3-features-roadmap.md) - Agentic features (v1.11.0-v1.13.0)
 > - [docs/tui-markdown-rendering.md](docs/tui-markdown-rendering.md) - TUI Workspace vision (v1.10.5-v1.15.0)
 > - [sonar-features-proposal.md](sonar-features-proposal.md) - Competitive analysis
 
 ---
 
-## Current Release: v1.10.6
+## Current Release: v1.10.7
+
+**Status**: ✅ Complete - Perplexity Model Deprecation Fix
+
+Released: 2025-12-20
+
+Features implemented:
+- **Fixed Perplexity API compatibility** - Removed deprecated `sonar-reasoning` model that now returns 400 error
+- **Updated model documentation** - Reflected current Perplexity API supported models
+- **Validated against official docs** - Confirmed sonar-reasoning page returns 404, model removed from API
+
+**Currently Supported Perplexity API Models:**
+- `sonar` - Lightweight search ($1/$1 per 1M tokens)
+- `sonar-pro` - Advanced search ($3/$15 per 1M tokens)
+- `sonar-reasoning-pro` - CoT reasoning ($2/$8 per 1M tokens)
+- `sonar-deep-research` - Research reports ($2/$8 per 1M tokens)
+
+**Files Changed:**
+- `ppxai/config.py` - Removed sonar-reasoning model and pricing
+- `ppxai-config.json` - Removed sonar-reasoning model and pricing
+- `ppxai-config.example.json` - Removed sonar-reasoning model and pricing
+- `pyproject.toml` - Version bump to 1.10.7
+- `vscode-extension/package.json` - Version bump to 1.10.7
+- `README.md` - Updated "What's New" section with v1.10.7 info
+- `vscode-extension/README.md` - Updated version references
+
+**Testing:**
+- 236/241 tests passed
+- 5 pre-existing custom endpoint integration test failures (unrelated)
+- All config tests passing
+
+---
+
+## Previous Release: v1.10.6
 
 **Status**: ✅ Complete - Gemini 3 Models Support
 

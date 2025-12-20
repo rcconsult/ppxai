@@ -53,10 +53,6 @@ BUILTIN_PROVIDERS = {
                 "name": "Sonar Pro",
                 "description": "Advanced search model for complex queries"
             },
-            "sonar-reasoning": {
-                "name": "Sonar Reasoning",
-                "description": "Fast reasoning model for problem-solving with search"
-            },
             "sonar-reasoning-pro": {
                 "name": "Sonar Reasoning Pro",
                 "description": "Precision reasoning with Chain of Thought capabilities"
@@ -70,7 +66,6 @@ BUILTIN_PROVIDERS = {
             # Prices per million tokens (2025)
             "sonar": {"input": 1.00, "output": 1.00},
             "sonar-pro": {"input": 3.00, "output": 15.00},
-            "sonar-reasoning": {"input": 1.00, "output": 5.00},
             "sonar-reasoning-pro": {"input": 2.00, "output": 8.00},
             "sonar-deep-research": {"input": 2.00, "output": 8.00},
         },
