@@ -198,9 +198,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 this.handleStreamEvent(event);
             });
         } catch (error) {
+            // Don't show interrupt as error - user initiated it
+            if (error instanceof Error && error.message === 'Interrupted by user') {
+                // Silent interrupt handling
+                this._view.webview.postMessage({ type: 'endResponse' });
+                return;
+            }
             this._view.webview.postMessage({
                 type: 'error',
-                content: `Error: ${error}`
+                content: String(error)
             });
         }
 
@@ -721,9 +727,15 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                 (event: StreamEvent) => this.handleStreamEvent(event)
             );
         } catch (error) {
+            // Don't show interrupt as error - user initiated it
+            if (error instanceof Error && error.message === 'Interrupted by user') {
+                // Silent interrupt handling
+                this._view.webview.postMessage({ type: 'endResponse' });
+                return;
+            }
             this._view.webview.postMessage({
                 type: 'error',
-                content: `Coding task error: ${error}`
+                content: String(error)
             });
         }
 
@@ -996,9 +1008,15 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                 this.handleStreamEvent(event);
             });
         } catch (error) {
+            // Don't show interrupt as error - user initiated it
+            if (error instanceof Error && error.message === 'Interrupted by user') {
+                // Silent interrupt handling
+                this._view.webview.postMessage({ type: 'endResponse' });
+                return;
+            }
             this._view?.webview.postMessage({
                 type: 'error',
-                content: `Error: ${error}`
+                content: String(error)
             });
         }
 
@@ -1639,7 +1657,7 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
     </div>
 
     <div class="messages" id="messages">
-        <div class="typing-indicator" id="typingIndicator">Thinking...</div>
+        <div class="typing-indicator" id="typingIndicator">Thinking... (Press Esc to stop)</div>
     </div>
 
     <div class="input-container">
@@ -2137,7 +2155,7 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                     break;
 
                 case 'startResponse':
-                    typingIndicator.textContent = 'Thinking...';
+                    typingIndicator.textContent = 'Thinking... (Press Esc to stop)';
                     typingIndicator.classList.add('visible');
                     currentResponseEl = null;
                     currentResponseContent = '';
@@ -2202,7 +2220,7 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                     typingIndicator = document.createElement('div');
                     typingIndicator.className = 'typing-indicator';
                     typingIndicator.id = 'typingIndicator';
-                    typingIndicator.textContent = 'Thinking...';
+                    typingIndicator.textContent = 'Thinking... (Press Esc to stop)';
                     messagesContainer.appendChild(typingIndicator);
                     lastMessageTime = null; // Reset time tracking for history
 
@@ -2218,7 +2236,7 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                     typingIndicator = document.createElement('div');
                     typingIndicator.className = 'typing-indicator';
                     typingIndicator.id = 'typingIndicator';
-                    typingIndicator.textContent = 'Thinking...';
+                    typingIndicator.textContent = 'Thinking... (Press Esc to stop)';
                     messagesContainer.appendChild(typingIndicator);
                     lastMessageTime = null; // Reset time tracking
                     break;
