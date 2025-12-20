@@ -1,3 +1,10 @@
+/**
+ * Chat Panel Webview Provider
+ *
+ * Interrupt handling (Esc key) inspired by Claude Code by Anthropic
+ * https://claude.ai/code
+ */
+
 import * as vscode from 'vscode';
 import { HttpClient, StreamEvent } from './httpClient';
 
@@ -2083,6 +2090,7 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
         });
 
         // Handle Esc key - interrupt current streaming
+        // Inspired by Claude Code's interrupt functionality (https://claude.ai/code)
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 e.preventDefault();
