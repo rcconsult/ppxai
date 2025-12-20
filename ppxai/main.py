@@ -258,7 +258,7 @@ def main():
                 # First Ctrl-C: Show warning with options
                 console.print("\n[yellow]⚠ Activity interrupted![/yellow]")
                 console.print("[yellow]  • Press Ctrl-C again to exit[/yellow]")
-                console.print("[yellow]  • Press Esc or any key to return to prompt[/yellow]\n")
+                console.print("[yellow]  • Or continue typing to resume[/yellow]\n")
 
                 # Cleanup conversation history if interrupted during streaming
                 if client.conversation_history and client.conversation_history[-1]["role"] == "user":

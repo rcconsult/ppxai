@@ -159,7 +159,7 @@ class AIClient:
                 stream=True
             )
 
-            console.print("\n[bold cyan]Assistant:[/bold cyan] [dim](streaming... press Esc to interrupt)[/dim]")
+            console.print("\n[bold cyan]Assistant:[/bold cyan] [dim](streaming...)[/dim]")
             for chunk in response_stream:
                 # Check for interruption
                 if self._interrupted:
