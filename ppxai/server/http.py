@@ -477,6 +477,26 @@ async def save_session(name: Optional[str] = None):
     return {"name": saved_name}
 
 
+@app.post("/export")
+async def export_answer(request: Request):
+    """Export last answer to markdown."""
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    try:
+        body = await request.json()
+        filename = body.get("filename")
+    except Exception:
+        filename = None
+
+    try:
+        filepath = engine.export_answer(filename)
+        return {"filepath": str(filepath)}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.post("/sessions/load/{name}")
 async def load_session(name: str):
     """Load a saved session."""

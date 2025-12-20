@@ -760,6 +760,47 @@ class EngineClient:
         """
         return self.session.export(filename)
 
+    def export_answer(self, filename: Optional[str] = None) -> Path:
+        """Export last assistant answer to markdown.
+
+        Args:
+            filename: Optional filename
+
+        Returns:
+            Path to exported file
+
+        Raises:
+            ValueError: If no assistant message found
+        """
+        from datetime import datetime
+        from ..config import EXPORTS_DIR
+
+        # Find last assistant message
+        last_assistant_msg = None
+        for msg in reversed(self.session.messages):
+            if msg.role == 'assistant':
+                last_assistant_msg = msg.content
+                break
+
+        if not last_assistant_msg:
+            raise ValueError("No assistant response to export yet")
+
+        # Generate filename with timestamp
+        if not filename:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"answer_{timestamp}.md"
+
+        if not filename.endswith('.md'):
+            filename += '.md'
+
+        filepath = EXPORTS_DIR / filename
+
+        # Write content
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(last_assistant_msg)
+
+        return filepath
+
     def get_usage(self) -> Dict[str, Any]:
         """Get usage statistics.
 

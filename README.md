@@ -196,7 +196,8 @@ While in the chat interface:
 - **Autocomplete** - Tab/type to complete `/` commands and `@` file references
 
 #### Session Management
-- `/save [filename]` - Export conversation to markdown file
+- `/save` - Save session to JSON file (~/.ppxai/sessions/)
+- `/export [filename]` - Export last answer to markdown file (~/.ppxai/exports/)
 - `/sessions` - List all saved sessions
 - `/load <session>` - Load and continue a previous session
 - `/usage` - Show token usage and cost statistics

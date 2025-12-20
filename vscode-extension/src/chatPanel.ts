@@ -12,7 +12,8 @@ import { HttpClient, StreamEvent } from './httpClient';
 const SLASH_COMMANDS: Record<string, { description: string; usage: string }> = {
     '/help': { description: 'Show available commands', usage: '/help' },
     '/clear': { description: 'Clear conversation history', usage: '/clear' },
-    '/save': { description: 'Save current session', usage: '/save' },
+    '/save': { description: 'Save session to JSON', usage: '/save' },
+    '/export': { description: 'Export last answer to markdown', usage: '/export [filename]' },
     '/load': { description: 'Load a saved session', usage: '/load [session_name]' },
     '/sessions': { description: 'List saved sessions', usage: '/sessions' },
     '/model': { description: 'Switch model or list models', usage: '/model [model_id|list]' },
@@ -391,6 +392,22 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         type: 'systemMessage',
                         content: `✓ Session saved: ${sessionName}`
                     });
+                    break;
+
+                case '/export':
+                    try {
+                        const filename = args.length > 0 ? args[0] : undefined;
+                        const filepath = await this._backend.exportAnswer(filename);
+                        this._view.webview.postMessage({
+                            type: 'systemMessage',
+                            content: `✓ Answer exported to: ${filepath}`
+                        });
+                    } catch (error: any) {
+                        this._view.webview.postMessage({
+                            type: 'systemMessage',
+                            content: `✗ ${error.message || 'Failed to export answer'}`
+                        });
+                    }
                     break;
 
                 case '/load':
@@ -797,46 +814,36 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             // Generate filename with timestamp
             const now = new Date();
             const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
-            const filename = `ppxai-answer-${timestamp}.md`;
+            const filename = `answer_${timestamp}.md`;
 
-            // Get workspace folder or home directory
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            let defaultUri: vscode.Uri;
+            // Save to ~/.ppxai/exports/
+            const homeDir = require('os').homedir();
+            const exportsDir = vscode.Uri.file(`${homeDir}/.ppxai/exports`);
 
-            if (workspaceFolders && workspaceFolders.length > 0) {
-                defaultUri = vscode.Uri.joinPath(workspaceFolders[0].uri, filename);
-            } else {
-                // Fallback to home directory
-                const homeDir = require('os').homedir();
-                defaultUri = vscode.Uri.file(`${homeDir}/${filename}`);
+            // Ensure exports directory exists
+            try {
+                await vscode.workspace.fs.createDirectory(exportsDir);
+            } catch (error) {
+                // Directory may already exist, ignore error
             }
 
-            // Show save dialog
-            const uri = await vscode.window.showSaveDialog({
-                defaultUri,
-                filters: {
-                    'Markdown': ['md'],
-                    'All Files': ['*']
-                }
-            });
+            const uri = vscode.Uri.joinPath(exportsDir, filename);
 
-            if (uri) {
-                // Write content to file
-                await vscode.workspace.fs.writeFile(uri, Buffer.from(content, 'utf-8'));
+            // Write content to file
+            await vscode.workspace.fs.writeFile(uri, Buffer.from(content, 'utf-8'));
 
-                // Show success message with option to open
-                const action = await vscode.window.showInformationMessage(
-                    `Answer saved to ${uri.fsPath}`,
-                    'Open File'
-                );
+            // Show success message with option to open
+            const action = await vscode.window.showInformationMessage(
+                `Answer exported to ${uri.fsPath}`,
+                'Open File'
+            );
 
-                if (action === 'Open File') {
-                    const doc = await vscode.workspace.openTextDocument(uri);
-                    await vscode.window.showTextDocument(doc);
-                }
+            if (action === 'Open File') {
+                const doc = await vscode.workspace.openTextDocument(uri);
+                await vscode.window.showTextDocument(doc);
             }
         } catch (error) {
-            vscode.window.showErrorMessage(`Failed to save answer: ${error}`);
+            vscode.window.showErrorMessage(`Failed to export answer: ${error}`);
         }
     }
 
@@ -1795,7 +1802,8 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
         const slashCommands = [
             { name: '/help', description: 'Show available commands' },
             { name: '/clear', description: 'Clear conversation history' },
-            { name: '/save', description: 'Save current session' },
+            { name: '/save', description: 'Save session to JSON' },
+            { name: '/export', description: 'Export last answer to markdown' },
             { name: '/load', description: 'Load a saved session' },
             { name: '/sessions', description: 'List saved sessions' },
             { name: '/model', description: 'Switch model' },

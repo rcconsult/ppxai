@@ -596,6 +596,23 @@ export class HttpClient {
     }
 
     /**
+     * Export last answer to markdown file
+     */
+    async exportAnswer(filename?: string): Promise<string> {
+        const response = await fetch(`${this.baseUrl}/export`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: filename ? JSON.stringify({ filename }) : '{}'
+        });
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(error || `Failed to export answer: ${response.statusText}`);
+        }
+        const data = await response.json() as { filepath: string };
+        return data.filepath;
+    }
+
+    /**
      * Get saved sessions
      */
     async getSessions(): Promise<SessionInfo[]> {
