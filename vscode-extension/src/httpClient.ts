@@ -393,7 +393,7 @@ export class HttpClient {
             // Handle abort separately from other errors
             if (error.name === 'AbortError') {
                 this.outputChannel.appendLine('[Interrupted by user]');
-                streamCallback?.({ type: 'error', content: 'Interrupted by user' });
+                // Don't send error event - let chatPanel handle silently
                 throw new Error('Interrupted by user');
             }
             throw error;
@@ -497,7 +497,7 @@ export class HttpClient {
             // Handle abort separately from other errors
             if (error.name === 'AbortError') {
                 this.outputChannel.appendLine('[Interrupted by user]');
-                streamCallback?.({ type: 'error', content: 'Interrupted by user' });
+                // Don't send error event - let chatPanel handle silently
                 throw new Error('Interrupted by user');
             }
             throw error;
@@ -593,6 +593,23 @@ export class HttpClient {
         }
         const data = await response.json() as { name: string };
         return data.name;
+    }
+
+    /**
+     * Export last answer to markdown file
+     */
+    async exportAnswer(filename?: string): Promise<string> {
+        const response = await fetch(`${this.baseUrl}/export`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: filename ? JSON.stringify({ filename }) : '{}'
+        });
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(error || `Failed to export answer: ${response.statusText}`);
+        }
+        const data = await response.json() as { filepath: string };
+        return data.filepath;
     }
 
     /**

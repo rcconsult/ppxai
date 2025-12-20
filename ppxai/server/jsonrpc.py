@@ -264,6 +264,11 @@ class JsonRpcServer:
         """Save current session."""
         return self.engine.save_session()
 
+    def export_answer(self, filename: Optional[str] = None) -> str:
+        """Export last answer to markdown."""
+        filepath = self.engine.export_answer(filename)
+        return str(filepath)
+
     def get_history(self) -> list:
         """Get conversation history."""
         return self.engine.get_history()

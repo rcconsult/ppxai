@@ -12,7 +12,8 @@ import { HttpClient, StreamEvent } from './httpClient';
 const SLASH_COMMANDS: Record<string, { description: string; usage: string }> = {
     '/help': { description: 'Show available commands', usage: '/help' },
     '/clear': { description: 'Clear conversation history', usage: '/clear' },
-    '/save': { description: 'Save current session', usage: '/save' },
+    '/save': { description: 'Save session to JSON', usage: '/save' },
+    '/export': { description: 'Export last answer to markdown', usage: '/export [filename]' },
     '/load': { description: 'Load a saved session', usage: '/load [session_name]' },
     '/sessions': { description: 'List saved sessions', usage: '/sessions' },
     '/model': { description: 'Switch model or list models', usage: '/model [model_id|list]' },
@@ -72,6 +73,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'save':
                     vscode.commands.executeCommand('ppxai.saveSession');
+                    break;
+                case 'saveAnswer':
+                    await this.handleSaveAnswer(message.content);
                     break;
                 case 'ready':
                     await this.initializeBackend();
@@ -198,9 +202,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 this.handleStreamEvent(event);
             });
         } catch (error) {
+            // Don't show interrupt as error - user initiated it
+            if (error instanceof Error && error.message === 'Interrupted by user') {
+                // Silent interrupt handling
+                this._view.webview.postMessage({ type: 'endResponse' });
+                return;
+            }
             this._view.webview.postMessage({
                 type: 'error',
-                content: `Error: ${error}`
+                content: String(error)
             });
         }
 
@@ -382,6 +392,22 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         type: 'systemMessage',
                         content: `✓ Session saved: ${sessionName}`
                     });
+                    break;
+
+                case '/export':
+                    try {
+                        const filename = args.length > 0 ? args[0] : undefined;
+                        const filepath = await this._backend.exportAnswer(filename);
+                        this._view.webview.postMessage({
+                            type: 'systemMessage',
+                            content: `✓ Answer exported to: ${filepath}`
+                        });
+                    } catch (error: any) {
+                        this._view.webview.postMessage({
+                            type: 'systemMessage',
+                            content: `✗ ${error.message || 'Failed to export answer'}`
+                        });
+                    }
                     break;
 
                 case '/load':
@@ -721,9 +747,15 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                 (event: StreamEvent) => this.handleStreamEvent(event)
             );
         } catch (error) {
+            // Don't show interrupt as error - user initiated it
+            if (error instanceof Error && error.message === 'Interrupted by user') {
+                // Silent interrupt handling
+                this._view.webview.postMessage({ type: 'endResponse' });
+                return;
+            }
             this._view.webview.postMessage({
                 type: 'error',
-                content: `Coding task error: ${error}`
+                content: String(error)
             });
         }
 
@@ -772,6 +804,46 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                 type: 'error',
                 content: `Failed to toggle tools: ${error}`
             });
+        }
+    }
+
+    private async handleSaveAnswer(content: string) {
+        if (!this._view) { return; }
+
+        try {
+            // Generate filename with timestamp
+            const now = new Date();
+            const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const filename = `answer_${timestamp}.md`;
+
+            // Save to ~/.ppxai/exports/
+            const homeDir = require('os').homedir();
+            const exportsDir = vscode.Uri.file(`${homeDir}/.ppxai/exports`);
+
+            // Ensure exports directory exists
+            try {
+                await vscode.workspace.fs.createDirectory(exportsDir);
+            } catch (error) {
+                // Directory may already exist, ignore error
+            }
+
+            const uri = vscode.Uri.joinPath(exportsDir, filename);
+
+            // Write content to file
+            await vscode.workspace.fs.writeFile(uri, Buffer.from(content, 'utf-8'));
+
+            // Show success message with option to open
+            const action = await vscode.window.showInformationMessage(
+                `Answer exported to ${uri.fsPath}`,
+                'Open File'
+            );
+
+            if (action === 'Open File') {
+                const doc = await vscode.workspace.openTextDocument(uri);
+                await vscode.window.showTextDocument(doc);
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to export answer: ${error}`);
         }
     }
 
@@ -996,9 +1068,15 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                 this.handleStreamEvent(event);
             });
         } catch (error) {
+            // Don't show interrupt as error - user initiated it
+            if (error instanceof Error && error.message === 'Interrupted by user') {
+                // Silent interrupt handling
+                this._view.webview.postMessage({ type: 'endResponse' });
+                return;
+            }
             this._view?.webview.postMessage({
                 type: 'error',
-                content: `Error: ${error}`
+                content: String(error)
             });
         }
 
@@ -1134,6 +1212,26 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
         .tools-badge.enabled {
             background: var(--vscode-testing-iconPassed, #89d185);
             color: var(--vscode-editor-background);
+        }
+
+        .streaming-badge {
+            background: var(--vscode-editorWarning-foreground, #ff9800);
+            color: var(--vscode-editor-background);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            border: none;
+            cursor: pointer;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .streaming-badge:hover {
+            background: var(--vscode-errorForeground, #f44336);
         }
 
         .header-buttons {
@@ -1631,15 +1729,17 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
         <div class="status">
             <span><span id="provider">Loading...</span> / <span id="model">...</span></span>
             <button class="tools-badge disabled" id="toolsBadge" title="Click to toggle tools">Tools: off</button>
+            <button class="streaming-badge" id="streamingBadge" style="display: none;" title="Press Esc to stop">⏹ Streaming...</button>
         </div>
         <div class="header-buttons">
-            <button class="header-btn" id="saveBtn" title="Save session">Save</button>
+            <button class="header-btn" id="saveSessionBtn" title="Save conversation session">Save Session</button>
+            <button class="header-btn" id="saveAnswerBtn" title="Save last answer as markdown">Save Answer</button>
             <button class="header-btn" id="clearBtn" title="Clear history">Clear</button>
         </div>
     </div>
 
     <div class="messages" id="messages">
-        <div class="typing-indicator" id="typingIndicator">Thinking...</div>
+        <div class="typing-indicator" id="typingIndicator">Thinking... (Press Esc to stop)</div>
     </div>
 
     <div class="input-container">
@@ -1666,11 +1766,14 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
         const providerSpan = document.getElementById('provider');
         const modelSpan = document.getElementById('model');
         const toolsBadge = document.getElementById('toolsBadge');
-        const saveBtn = document.getElementById('saveBtn');
+        const streamingBadge = document.getElementById('streamingBadge');
+        const saveSessionBtn = document.getElementById('saveSessionBtn');
+        const saveAnswerBtn = document.getElementById('saveAnswerBtn');
         const clearBtn = document.getElementById('clearBtn');
 
         let currentResponseEl = null;
         let currentResponseContent = '';
+        let lastAssistantMessage = '';  // Track last assistant response
         let renderPending = false;
         let lastRenderTime = 0;
         let responseStartTime = 0; // Track when response started
@@ -1699,7 +1802,8 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
         const slashCommands = [
             { name: '/help', description: 'Show available commands' },
             { name: '/clear', description: 'Clear conversation history' },
-            { name: '/save', description: 'Save current session' },
+            { name: '/save', description: 'Save session to JSON' },
+            { name: '/export', description: 'Export last answer to markdown' },
             { name: '/load', description: 'Load a saved session' },
             { name: '/sessions', description: 'List saved sessions' },
             { name: '/model', description: 'Switch model' },
@@ -2063,8 +2167,16 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             }
         });
 
-        saveBtn.addEventListener('click', () => {
+        saveSessionBtn.addEventListener('click', () => {
             vscode.postMessage({ type: 'save' });
+        });
+
+        saveAnswerBtn.addEventListener('click', () => {
+            if (lastAssistantMessage) {
+                vscode.postMessage({ type: 'saveAnswer', content: lastAssistantMessage });
+            } else {
+                vscode.postMessage({ type: 'error', message: 'No answer to save yet' });
+            }
         });
 
         clearBtn.addEventListener('click', () => {
@@ -2075,6 +2187,11 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
         toolsBadge.addEventListener('click', () => {
             const isEnabled = toolsBadge.classList.contains('enabled');
             vscode.postMessage({ type: 'toggleTools', enable: !isEnabled });
+        });
+
+        // Streaming badge click handler - interrupt streaming
+        streamingBadge.addEventListener('click', () => {
+            vscode.postMessage({ type: 'interrupt' });
         });
 
         // Handle link clicks - open external URLs
@@ -2137,8 +2254,9 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                     break;
 
                 case 'startResponse':
-                    typingIndicator.textContent = 'Thinking...';
+                    typingIndicator.textContent = 'Thinking... (Press Esc to stop)';
                     typingIndicator.classList.add('visible');
+                    streamingBadge.style.display = 'block';  // Show streaming indicator
                     currentResponseEl = null;
                     currentResponseContent = '';
                     responseStartTime = Date.now();
@@ -2166,9 +2284,12 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
 
                 case 'endResponse':
                     typingIndicator.classList.remove('visible');
+                    streamingBadge.style.display = 'none';  // Hide streaming indicator
                     sendBtn.disabled = false;
                     // Full markdown render with syntax highlighting at the end
                     fullRender(true);
+                    // Save last assistant message for export
+                    lastAssistantMessage = currentResponseContent;
                     currentResponseEl = null;
                     currentResponseContent = '';
                     responseStartTime = 0;
@@ -2176,6 +2297,7 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
 
                 case 'error':
                     typingIndicator.classList.remove('visible');
+                    streamingBadge.style.display = 'none';  // Hide streaming indicator
                     addMessage('error', message.content, false);
                     sendBtn.disabled = false;
                     break;
@@ -2202,7 +2324,7 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                     typingIndicator = document.createElement('div');
                     typingIndicator.className = 'typing-indicator';
                     typingIndicator.id = 'typingIndicator';
-                    typingIndicator.textContent = 'Thinking...';
+                    typingIndicator.textContent = 'Thinking... (Press Esc to stop)';
                     messagesContainer.appendChild(typingIndicator);
                     lastMessageTime = null; // Reset time tracking for history
 
@@ -2218,7 +2340,7 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                     typingIndicator = document.createElement('div');
                     typingIndicator.className = 'typing-indicator';
                     typingIndicator.id = 'typingIndicator';
-                    typingIndicator.textContent = 'Thinking...';
+                    typingIndicator.textContent = 'Thinking... (Press Esc to stop)';
                     messagesContainer.appendChild(typingIndicator);
                     lastMessageTime = null; // Reset time tracking
                     break;

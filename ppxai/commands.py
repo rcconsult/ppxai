@@ -4,6 +4,7 @@ Command handlers for the ppxai application.
 
 import os
 import asyncio
+from datetime import datetime
 from typing import Optional, TYPE_CHECKING
 
 from rich.console import Console
@@ -82,13 +83,46 @@ class CommandHandler:
         return True
 
     def handle_save(self, args: str):
-        """Handle /save command."""
+        """Handle /save command - saves session to JSON."""
         try:
-            filename = args.strip() if args else None
-            filepath = self.client.export_conversation(filename)
-            console.print(f"\n[green]Conversation exported to:[/green] {filepath}\n")
+            filepath = self.client.save_session()
+            console.print(f"\n[green]Session saved to:[/green] {filepath}\n")
         except Exception as e:
-            console.print(f"[red]Error exporting conversation: {e}[/red]\n")
+            console.print(f"[red]Error saving session: {e}[/red]\n")
+
+    def handle_export(self, args: str):
+        """Handle /export command - exports last answer to markdown."""
+        try:
+            # Find last assistant message
+            last_assistant_msg = None
+            for msg in reversed(self.client.conversation_history):
+                if msg['role'] == 'assistant':
+                    last_assistant_msg = msg['content']
+                    break
+
+            if not last_assistant_msg:
+                console.print("[yellow]No assistant response to export yet.[/yellow]\n")
+                return
+
+            # Generate filename with timestamp
+            filename = args.strip() if args else None
+            if not filename:
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f"answer_{timestamp}.md"
+
+            if not filename.endswith('.md'):
+                filename += '.md'
+
+            from .config import EXPORTS_DIR
+            filepath = EXPORTS_DIR / filename
+
+            # Write content
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(last_assistant_msg)
+
+            console.print(f"\n[green]Answer exported to:[/green] {filepath}\n")
+        except Exception as e:
+            console.print(f"[red]Error exporting answer: {e}[/red]\n")
 
     def handle_sessions(self):
         """Handle /sessions command."""
@@ -737,6 +771,8 @@ class CommandHandler:
             return self.handle_quit()
         elif command == "/save":
             self.handle_save(args)
+        elif command == "/export":
+            self.handle_export(args)
         elif command == "/sessions":
             self.handle_sessions()
         elif command == "/load":

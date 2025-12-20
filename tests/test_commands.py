@@ -178,28 +178,44 @@ class TestCommandHandlerBothProviders:
     # ==================== /save Command ====================
 
     def test_save_command_perplexity(self, handler_perplexity, mock_client_perplexity):
-        """Test /save command with Perplexity provider."""
-        mock_client_perplexity.export_conversation = Mock(return_value="/path/to/export.md")
-        handler_perplexity.handle_save("my_export")
-        mock_client_perplexity.export_conversation.assert_called_once_with("my_export")
+        """Test /save command with Perplexity provider - saves session to JSON."""
+        mock_client_perplexity.save_session = Mock(return_value="/path/to/session.json")
+        handler_perplexity.handle_save("")
+        mock_client_perplexity.save_session.assert_called_once()
 
     def test_save_command_custom(self, handler_custom, mock_client_custom):
-        """Test /save command with custom provider."""
-        mock_client_custom.export_conversation = Mock(return_value="/path/to/custom_export.md")
-        handler_custom.handle_save("custom_export")
-        mock_client_custom.export_conversation.assert_called_once_with("custom_export")
-
-    def test_save_without_filename_perplexity(self, handler_perplexity, mock_client_perplexity):
-        """Test /save without filename for Perplexity."""
-        mock_client_perplexity.export_conversation = Mock(return_value="/path/to/export.md")
-        handler_perplexity.handle_save("")
-        mock_client_perplexity.export_conversation.assert_called_once_with(None)
-
-    def test_save_without_filename_custom(self, handler_custom, mock_client_custom):
-        """Test /save without filename for custom provider."""
-        mock_client_custom.export_conversation = Mock(return_value="/path/to/export.md")
+        """Test /save command with custom provider - saves session to JSON."""
+        mock_client_custom.save_session = Mock(return_value="/path/to/session.json")
         handler_custom.handle_save("")
-        mock_client_custom.export_conversation.assert_called_once_with(None)
+        mock_client_custom.save_session.assert_called_once()
+
+    # ==================== /export Command ====================
+
+    def test_export_command_perplexity(self, handler_perplexity, mock_client_perplexity):
+        """Test /export command with Perplexity provider - exports last answer to markdown."""
+        mock_client_perplexity.conversation_history = [
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": "Hi there!"}
+        ]
+        handler_perplexity.handle_export("my_export")
+        # Should write last assistant message to exports folder
+
+    def test_export_without_filename_perplexity(self, handler_perplexity, mock_client_perplexity):
+        """Test /export without filename for Perplexity - generates timestamp filename."""
+        mock_client_perplexity.conversation_history = [
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": "Hi there!"}
+        ]
+        handler_perplexity.handle_export("")
+        # Should write last assistant message with auto-generated filename
+
+    def test_export_no_assistant_message(self, handler_perplexity, mock_client_perplexity):
+        """Test /export with no assistant message yet."""
+        mock_client_perplexity.conversation_history = [
+            {"role": "user", "content": "Hello"}
+        ]
+        handler_perplexity.handle_export("")
+        # Should show warning message
 
     # ==================== /sessions Command ====================
 
