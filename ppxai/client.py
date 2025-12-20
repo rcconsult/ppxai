@@ -85,6 +85,7 @@ class AIClient:
         self.auto_route = True  # Auto-route coding tasks to best model
         self.auto_inject_context = True  # Auto-inject file contents
         self.context_injector = ContextInjector(os.getcwd())
+        self._interrupted = False  # Flag for graceful interruption
 
     def chat(self, message: str, model: str, stream: bool = True):
         """
@@ -146,32 +147,48 @@ class AIClient:
         response_chunks = []
         citations = []
         last_chunk = None
+        interrupted = False
 
-        response_stream = self.client.chat.completions.create(
-            model=model,
-            messages=messages,
-            stream=True
-        )
+        # Reset interrupt flag at start of streaming
+        self._interrupted = False
 
-        console.print("\n[bold cyan]Assistant:[/bold cyan] [dim](streaming...)[/dim]")
-        for chunk in response_stream:
-            last_chunk = chunk
+        try:
+            response_stream = self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                stream=True
+            )
 
-            if chunk.choices[0].delta.content:
-                content = chunk.choices[0].delta.content
-                response_chunks.append(content)
-                # Show a simple progress indicator instead of raw text
-                console.print(".", end="", style="dim")
+            console.print("\n[bold cyan]Assistant:[/bold cyan] [dim](streaming...)[/dim]")
+            for chunk in response_stream:
+                # Check for interruption
+                if self._interrupted:
+                    interrupted = True
+                    console.print("\n[yellow]⚠ Stream interrupted by user[/yellow]\n")
+                    break
 
-            # Try to capture citations from various possible locations
-            if hasattr(chunk, 'citations') and chunk.citations:
-                citations = chunk.citations
-            elif hasattr(chunk.choices[0], 'citations') and chunk.choices[0].citations:
-                citations = chunk.choices[0].citations
-            elif hasattr(chunk.choices[0].delta, 'citations') and chunk.choices[0].delta.citations:
-                citations = chunk.choices[0].delta.citations
+                last_chunk = chunk
 
-        # Clear the progress dots and render the complete markdown
+                if chunk.choices[0].delta.content:
+                    content = chunk.choices[0].delta.content
+                    response_chunks.append(content)
+                    # Show a simple progress indicator instead of raw text
+                    console.print(".", end="", style="dim")
+
+                # Try to capture citations from various possible locations
+                if hasattr(chunk, 'citations') and chunk.citations:
+                    citations = chunk.citations
+                elif hasattr(chunk.choices[0], 'citations') and chunk.choices[0].citations:
+                    citations = chunk.choices[0].citations
+                elif hasattr(chunk.choices[0].delta, 'citations') and chunk.choices[0].delta.citations:
+                    citations = chunk.choices[0].delta.citations
+
+        except KeyboardInterrupt:
+            # Handle Ctrl-C during streaming
+            interrupted = True
+            console.print("\n[yellow]⚠ Stream interrupted[/yellow]\n")
+
+        # Clear the progress dots
         console.print("\n")
 
         full_response = "".join(response_chunks)
@@ -180,22 +197,33 @@ class AIClient:
         if full_response.strip():
             render_markdown_with_tables(full_response, console)
 
-        self.conversation_history.append({
-            "role": "assistant",
-            "content": full_response
-        })
+        # Only add assistant response to history if we got some content
+        # Otherwise, the user message will be cleaned up by the caller
+        if full_response.strip():
+            self.conversation_history.append({
+                "role": "assistant",
+                "content": full_response
+            })
+        else:
+            # No content received, mark as interrupted to trigger cleanup
+            interrupted = True
 
         # Track usage from the last chunk
         if last_chunk and hasattr(last_chunk, 'usage') and last_chunk.usage:
             self._track_usage(last_chunk.usage, model)
 
         # Display citations if available
-        if citations:
+        if citations and not interrupted:
             self._display_citations(citations)
 
         # Show response time
         elapsed = time.time() - start_time
-        console.print(f"[dim]({elapsed:.1f}s)[/dim]\n")
+        if not interrupted:
+            console.print(f"[dim]({elapsed:.1f}s)[/dim]\n")
+
+        # Re-raise KeyboardInterrupt so main loop can handle it
+        if interrupted and not full_response.strip():
+            raise KeyboardInterrupt()
 
         return full_response
 
@@ -252,6 +280,10 @@ class AIClient:
     def clear_history(self):
         """Clear the conversation history."""
         self.conversation_history = []
+
+    def interrupt_stream(self):
+        """Interrupt the current streaming response gracefully."""
+        self._interrupted = True
 
     def _track_usage(self, usage, model: str):
         """Track token usage and estimate costs."""

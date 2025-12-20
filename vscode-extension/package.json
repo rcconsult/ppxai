@@ -55,6 +55,11 @@
         "command": "ppxai.switchModel",
         "title": "Switch Model",
         "category": "ppxai"
+      },
+      {
+        "command": "ppxai.interrupt",
+        "title": "Interrupt Current Request",
+        "category": "ppxai"
       }
     ],
     "menus": {

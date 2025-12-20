@@ -1005,6 +1005,10 @@ class PerplexityClientPromptTools:
         Looks for JSON in code blocks or raw JSON with tool/arguments keys.
         Also handles cases where model puts parameters at top level instead of in 'arguments'.
         """
+        # Handle None content (some providers return None after tool calls)
+        if text is None:
+            return None
+
         def normalize_tool_call(data: dict) -> Optional[dict]:
             """Normalize tool call to expected format with 'tool' and 'arguments' keys."""
             if "tool" not in data:

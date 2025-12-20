@@ -5,6 +5,7 @@ Main entry point for the ppxai application.
 import os
 import sys
 import asyncio
+import time
 from pathlib import Path
 
 from prompt_toolkit import PromptSession
@@ -22,6 +23,32 @@ from .config import (
     get_provider_config,
 )
 from .ui import console, display_welcome, select_model, select_provider
+
+
+def get_status_line(client, current_model, handler):
+    """Generate status line showing current settings."""
+    provider_config = get_provider_config(client.provider)
+    provider_name = provider_config["name"]
+
+    # Get tools status
+    tools_enabled = (
+        handler.tools_available and
+        handler.PerplexityClientPromptTools and
+        isinstance(client, handler.PerplexityClientPromptTools) and
+        client.enable_tools
+    )
+    tools_status = "[green]ON[/green]" if tools_enabled else "[dim]OFF[/dim]"
+
+    # Get model display name (use ID if not found)
+    model_display = current_model
+    for model_info in provider_config.get("models", {}).values():
+        if model_info.get("id") == current_model:
+            model_display = model_info.get("name", current_model)
+            break
+
+    # Build status line
+    status = f"[dim][[/dim]{provider_name}[dim] | [/dim]{model_display}[dim] | Tools: [/dim]{tools_status}[dim]][/dim]"
+    return status
 
 
 class PPXAICompleter(Completer):
@@ -182,13 +209,29 @@ def main():
 
     # Main loop
     console.print("\n[bold green]Ready to chat! Type your message or /help for commands.[/bold green]")
-    console.print("[dim]Tab: autocomplete • @file: reference files • ↑/↓: history[/dim]\n")
+    console.print("[dim]Tab: autocomplete • @file: reference files • ↑/↓: history • Ctrl-C twice to exit[/dim]\n")
     console.print(f"[dim]Session: {client.session_name}[/dim]\n")
+
+    # Track Ctrl-C presses for double-press to exit
+    ctrl_c_count = 0
+    ctrl_c_timestamp = 0
+    ctrl_c_timeout = 2.0  # seconds
 
     while True:
         try:
+            # Reset Ctrl-C counter if timeout elapsed
+            if ctrl_c_count > 0 and time.time() - ctrl_c_timestamp > ctrl_c_timeout:
+                ctrl_c_count = 0
+
+            # Display status line
+            status_line = get_status_line(client, current_model, handler)
+            console.print(status_line)
+
             # Get user input with history and completion support
             user_input = session.prompt("You: ").strip()
+
+            # Reset Ctrl-C counter on successful input
+            ctrl_c_count = 0
 
             if not user_input:
                 continue
@@ -237,7 +280,26 @@ def main():
                         pass  # Silent fail on auto-save
 
         except KeyboardInterrupt:
-            console.print("\n\n[yellow]Use /quit or /exit to exit the application[/yellow]\n")
+            # Implement double Ctrl-C to exit
+            ctrl_c_count += 1
+            ctrl_c_timestamp = time.time()
+
+            if ctrl_c_count == 1:
+                # First Ctrl-C: Show warning with options
+                console.print("\n[yellow]⚠ Activity interrupted![/yellow]")
+                console.print("[yellow]  • Press Ctrl-C again to exit[/yellow]")
+                console.print("[yellow]  • Or continue typing to resume[/yellow]\n")
+
+                # Cleanup conversation history if interrupted during streaming
+                if client.conversation_history and client.conversation_history[-1]["role"] == "user":
+                    # User message without assistant response - remove it to maintain alternation
+                    client.conversation_history.pop()
+                    console.print("[dim]Conversation history cleaned up. Message chain is in a sane state.[/dim]\n")
+            else:
+                # Second Ctrl-C: Exit gracefully
+                console.print("\n[yellow]Exiting gracefully...[/yellow]")
+                break
+
             continue
 
         except EOFError:

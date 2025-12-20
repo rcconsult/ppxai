@@ -253,6 +253,17 @@ export async function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ppxai.interrupt', async () => {
+            try {
+                await backend.interrupt();
+                vscode.window.showInformationMessage('Interrupted current request');
+            } catch (error) {
+                vscode.window.showErrorMessage(`Failed to interrupt: ${error}`);
+            }
+        })
+    );
+
     console.log('ppxai extension activated');
 }
 
