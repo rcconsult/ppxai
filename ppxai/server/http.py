@@ -16,6 +16,7 @@ import argparse
 import asyncio
 import json
 import sys
+from contextlib import asynccontextmanager
 from typing import Optional, AsyncGenerator
 
 from fastapi import FastAPI, HTTPException, Request
@@ -25,11 +26,41 @@ from pydantic import BaseModel
 
 from ..engine import EngineClient, EventType
 
-# Create FastAPI app
+# Global engine instance (managed by lifespan)
+engine: Optional[EngineClient] = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifespan (startup/shutdown)."""
+    global engine
+
+    # Startup: Initialize engine
+    engine = EngineClient()
+
+    # Set default provider (tries perplexity first, falls back to gemini)
+    from ..config import get_available_providers
+    providers = get_available_providers()
+    if providers:
+        engine.set_provider(providers[0])
+
+    print(f"ppxai HTTP server started")
+    print(f"Provider: {engine.provider_name}")
+    print(f"Model: {engine.model}")
+
+    yield
+
+    # Shutdown: Cleanup
+    engine = None
+    print("ppxai HTTP server stopped")
+
+
+# Create FastAPI app with lifespan
 app = FastAPI(
     title="ppxai HTTP Server",
     description="HTTP + SSE server for ppxai AI chat",
     version="1.10.4",
+    lifespan=lifespan,
 )
 
 # Add CORS middleware for webview/browser access
@@ -40,9 +71,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Global engine instance (created on startup)
-engine: Optional[EngineClient] = None
 
 
 # === Request/Response Models ===
@@ -472,33 +500,6 @@ async def clear_session():
 
     engine.clear_history()
     return {"cleared": True}
-
-
-# === Startup/Shutdown ===
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize engine on server startup."""
-    global engine
-    engine = EngineClient()
-
-    # Set default provider (tries perplexity first, falls back to gemini)
-    from ..config import get_available_providers
-    providers = get_available_providers()
-    if providers:
-        engine.set_provider(providers[0])
-
-    print(f"ppxai HTTP server started")
-    print(f"Provider: {engine.provider_name}")
-    print(f"Model: {engine.model}")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on server shutdown."""
-    global engine
-    engine = None
-    print("ppxai HTTP server stopped")
 
 
 # === CLI Entry Point ===
