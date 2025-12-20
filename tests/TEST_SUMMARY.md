@@ -32,11 +32,14 @@ Tests core command handlers for both providers:
 - ✅ Select model (Perplexity)
 - ✅ Select model (Custom)
 
-#### /save Command (4 tests)
-- ✅ Save with filename (Perplexity)
-- ✅ Save with filename (Custom)
-- ✅ Save without filename (Perplexity)
-- ✅ Save without filename (Custom)
+#### /save Command (2 tests)
+- ✅ Save session to JSON (Perplexity)
+- ✅ Save session to JSON (Custom)
+
+#### /export Command (3 tests)
+- ✅ Export last answer with filename (Perplexity)
+- ✅ Export last answer without filename (Perplexity)
+- ✅ Export with no assistant message (Perplexity)
 
 #### /sessions Command (2 tests)
 - ✅ List sessions (Perplexity)

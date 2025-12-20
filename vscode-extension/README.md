@@ -178,7 +178,9 @@ Type these directly in the chat input:
 | `/model [id]` | Switch or list models |
 | `/tools [enable\|disable]` | Manage AI tools |
 | `/show <file>` | Display file contents |
-| `/save` / `/load` | Save/load sessions |
+| `/save` | Save session to JSON |
+| `/export [filename]` | Export last answer to markdown |
+| `/load` | Load saved session |
 | `/clear` | Clear conversation |
 
 ## VSCode Commands (Cmd+Shift+P)
