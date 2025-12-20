@@ -73,6 +73,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 case 'save':
                     vscode.commands.executeCommand('ppxai.saveSession');
                     break;
+                case 'saveAnswer':
+                    await this.handleSaveAnswer(message.content);
+                    break;
                 case 'ready':
                     await this.initializeBackend();
                     break;
@@ -784,6 +787,56 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                 type: 'error',
                 content: `Failed to toggle tools: ${error}`
             });
+        }
+    }
+
+    private async handleSaveAnswer(content: string) {
+        if (!this._view) { return; }
+
+        try {
+            // Generate filename with timestamp
+            const now = new Date();
+            const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const filename = `ppxai-answer-${timestamp}.md`;
+
+            // Get workspace folder or home directory
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            let defaultUri: vscode.Uri;
+
+            if (workspaceFolders && workspaceFolders.length > 0) {
+                defaultUri = vscode.Uri.joinPath(workspaceFolders[0].uri, filename);
+            } else {
+                // Fallback to home directory
+                const homeDir = require('os').homedir();
+                defaultUri = vscode.Uri.file(`${homeDir}/${filename}`);
+            }
+
+            // Show save dialog
+            const uri = await vscode.window.showSaveDialog({
+                defaultUri,
+                filters: {
+                    'Markdown': ['md'],
+                    'All Files': ['*']
+                }
+            });
+
+            if (uri) {
+                // Write content to file
+                await vscode.workspace.fs.writeFile(uri, Buffer.from(content, 'utf-8'));
+
+                // Show success message with option to open
+                const action = await vscode.window.showInformationMessage(
+                    `Answer saved to ${uri.fsPath}`,
+                    'Open File'
+                );
+
+                if (action === 'Open File') {
+                    const doc = await vscode.workspace.openTextDocument(uri);
+                    await vscode.window.showTextDocument(doc);
+                }
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to save answer: ${error}`);
         }
     }
 
@@ -1672,7 +1725,8 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             <button class="streaming-badge" id="streamingBadge" style="display: none;" title="Press Esc to stop">⏹ Streaming...</button>
         </div>
         <div class="header-buttons">
-            <button class="header-btn" id="saveBtn" title="Save session">Save</button>
+            <button class="header-btn" id="saveSessionBtn" title="Save conversation session">Save Session</button>
+            <button class="header-btn" id="saveAnswerBtn" title="Save last answer as markdown">Save Answer</button>
             <button class="header-btn" id="clearBtn" title="Clear history">Clear</button>
         </div>
     </div>
@@ -1706,11 +1760,13 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
         const modelSpan = document.getElementById('model');
         const toolsBadge = document.getElementById('toolsBadge');
         const streamingBadge = document.getElementById('streamingBadge');
-        const saveBtn = document.getElementById('saveBtn');
+        const saveSessionBtn = document.getElementById('saveSessionBtn');
+        const saveAnswerBtn = document.getElementById('saveAnswerBtn');
         const clearBtn = document.getElementById('clearBtn');
 
         let currentResponseEl = null;
         let currentResponseContent = '';
+        let lastAssistantMessage = '';  // Track last assistant response
         let renderPending = false;
         let lastRenderTime = 0;
         let responseStartTime = 0; // Track when response started
@@ -2103,8 +2159,16 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             }
         });
 
-        saveBtn.addEventListener('click', () => {
+        saveSessionBtn.addEventListener('click', () => {
             vscode.postMessage({ type: 'save' });
+        });
+
+        saveAnswerBtn.addEventListener('click', () => {
+            if (lastAssistantMessage) {
+                vscode.postMessage({ type: 'saveAnswer', content: lastAssistantMessage });
+            } else {
+                vscode.postMessage({ type: 'error', message: 'No answer to save yet' });
+            }
         });
 
         clearBtn.addEventListener('click', () => {
@@ -2216,6 +2280,8 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                     sendBtn.disabled = false;
                     // Full markdown render with syntax highlighting at the end
                     fullRender(true);
+                    // Save last assistant message for export
+                    lastAssistantMessage = currentResponseContent;
                     currentResponseEl = null;
                     currentResponseContent = '';
                     responseStartTime = 0;
