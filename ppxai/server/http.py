@@ -502,6 +502,24 @@ async def clear_session():
     return {"cleared": True}
 
 
+@app.post("/interrupt")
+async def interrupt_stream():
+    """Interrupt the current streaming response.
+
+    This sets a flag that the engine will check during streaming.
+    The stream will stop at the next chunk and return partial results.
+
+    Returns:
+        JSON: {"interrupted": true}
+    """
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    engine.interrupt_stream()
+    return {"interrupted": True}
+
+
 # === CLI Entry Point ===
 
 def run_server():

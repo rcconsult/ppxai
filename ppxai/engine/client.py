@@ -49,6 +49,9 @@ class EngineClient:
         self.context_injector = ContextInjector()
         self.auto_inject_context: bool = True  # Enabled by default
 
+        # Interrupt handling for graceful stream cancellation
+        self._interrupted: bool = False
+
         # Load configuration
         self._load_config()
 
@@ -105,6 +108,16 @@ class EngineClient:
             True if enabled
         """
         return self.auto_inject_context
+
+    # === Interrupt Handling ===
+
+    def interrupt_stream(self) -> None:
+        """Interrupt the current streaming response gracefully.
+
+        This sets a flag that the chat() method will check during streaming.
+        The stream will stop at the next chunk and return partial results.
+        """
+        self._interrupted = True
 
     # === Provider Management ===
 
@@ -328,6 +341,9 @@ class EngineClient:
             yield Event(EventType.ERROR, "No model selected")
             return
 
+        # Reset interrupt flag at start of chat
+        self._interrupted = False
+
         # Auto-inject file context if enabled
         injected_contexts = []
 
@@ -368,6 +384,11 @@ class EngineClient:
             messages = [citation_prompt] + messages
 
         async for event in self.provider.chat(messages, self.model, stream):
+            # Check for interrupt
+            if self._interrupted:
+                yield Event(EventType.ERROR, "Interrupted by user")
+                break
+
             yield event
 
             # Track final response
@@ -385,6 +406,11 @@ class EngineClient:
         yield Event(EventType.STREAM_START, {"model": self.model})
 
         while iteration < max_iterations:
+            # Check for interrupt
+            if self._interrupted:
+                yield Event(EventType.ERROR, "Interrupted by user")
+                return
+
             iteration += 1
 
             # Emit progress for tool iterations (after first)
@@ -470,6 +496,11 @@ class EngineClient:
                 if stream:
                     # Re-request with streaming for final response
                     async for event in self.provider.chat(messages, self.model, stream=True):
+                        # Check for interrupt
+                        if self._interrupted:
+                            yield Event(EventType.ERROR, "Interrupted by user")
+                            break
+
                         yield event
                         if event.type == EventType.STREAM_END:
                             self.session.add_message(Message("assistant", event.data))
