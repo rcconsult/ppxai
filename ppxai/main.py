@@ -5,6 +5,7 @@ Main entry point for the ppxai application.
 import os
 import sys
 import asyncio
+import time
 from pathlib import Path
 
 from prompt_toolkit import PromptSession
@@ -182,13 +183,25 @@ def main():
 
     # Main loop
     console.print("\n[bold green]Ready to chat! Type your message or /help for commands.[/bold green]")
-    console.print("[dim]Tab: autocomplete • @file: reference files • ↑/↓: history[/dim]\n")
+    console.print("[dim]Tab: autocomplete • @file: reference files • ↑/↓: history • Ctrl-C twice to exit[/dim]\n")
     console.print(f"[dim]Session: {client.session_name}[/dim]\n")
+
+    # Track Ctrl-C presses for double-press to exit
+    ctrl_c_count = 0
+    ctrl_c_timestamp = 0
+    ctrl_c_timeout = 2.0  # seconds
 
     while True:
         try:
+            # Reset Ctrl-C counter if timeout elapsed
+            if ctrl_c_count > 0 and time.time() - ctrl_c_timestamp > ctrl_c_timeout:
+                ctrl_c_count = 0
+
             # Get user input with history and completion support
             user_input = session.prompt("You: ").strip()
+
+            # Reset Ctrl-C counter on successful input
+            ctrl_c_count = 0
 
             if not user_input:
                 continue
@@ -237,7 +250,26 @@ def main():
                         pass  # Silent fail on auto-save
 
         except KeyboardInterrupt:
-            console.print("\n\n[yellow]Use /quit or /exit to exit the application[/yellow]\n")
+            # Implement double Ctrl-C to exit
+            ctrl_c_count += 1
+            ctrl_c_timestamp = time.time()
+
+            if ctrl_c_count == 1:
+                # First Ctrl-C: Show warning with options
+                console.print("\n[yellow]⚠ Activity interrupted![/yellow]")
+                console.print("[yellow]  • Press Ctrl-C again to exit[/yellow]")
+                console.print("[yellow]  • Press Esc or any key to return to prompt[/yellow]\n")
+
+                # Cleanup conversation history if interrupted during streaming
+                if client.conversation_history and client.conversation_history[-1]["role"] == "user":
+                    # User message without assistant response - remove it to maintain alternation
+                    client.conversation_history.pop()
+                    console.print("[dim]Conversation history cleaned up. Message chain is in a sane state.[/dim]\n")
+            else:
+                # Second Ctrl-C: Exit gracefully
+                console.print("\n[yellow]Exiting gracefully...[/yellow]")
+                break
+
             continue
 
         except EOFError:
