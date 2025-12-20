@@ -393,7 +393,7 @@ export class HttpClient {
             // Handle abort separately from other errors
             if (error.name === 'AbortError') {
                 this.outputChannel.appendLine('[Interrupted by user]');
-                streamCallback?.({ type: 'error', content: 'Interrupted by user' });
+                // Don't send error event - let chatPanel handle silently
                 throw new Error('Interrupted by user');
             }
             throw error;
@@ -497,7 +497,7 @@ export class HttpClient {
             // Handle abort separately from other errors
             if (error.name === 'AbortError') {
                 this.outputChannel.appendLine('[Interrupted by user]');
-                streamCallback?.({ type: 'error', content: 'Interrupted by user' });
+                // Don't send error event - let chatPanel handle silently
                 throw new Error('Interrupted by user');
             }
             throw error;
