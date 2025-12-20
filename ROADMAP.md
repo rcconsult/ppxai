@@ -1,13 +1,43 @@
 # ppxai Development Roadmap
 
-> **Note:** For future roadmap beyond v1.10.4, see:
+> **Note:** For future roadmap beyond v1.10.5, see:
 > - [gemini3-features-roadmap.md](gemini3-features-roadmap.md) - Agentic features (v1.11.0-v1.13.0)
-> - [docs/tui-markdown-rendering.md](docs/tui-markdown-rendering.md) - TUI Workspace vision (v1.10.4-v1.15.0)
+> - [docs/tui-markdown-rendering.md](docs/tui-markdown-rendering.md) - TUI Workspace vision (v1.10.5-v1.15.0)
 > - [sonar-features-proposal.md](sonar-features-proposal.md) - Competitive analysis
 
 ---
 
-## Current Release: v1.10.4
+## Current Release: v1.10.5
+
+**Status**: ✅ Complete - Graceful Interrupt Handling
+
+Released: 2025-12-20
+
+Features implemented:
+- **Graceful keyboard interrupt handling** - Ctrl-C double-press pattern with 2-second timeout
+- **Conversation history cleanup** - Maintains LLM message alternation on interrupt
+- **Status bar** - Shows current provider, model, and tools status in TUI
+- **VSCode extension interrupt support** - Esc key and Command Palette interrupt streaming
+- **Gemini tools fix** - Handle None content from Gemini responses
+- **FastAPI lifespan migration** - Eliminated deprecation warnings with modern async pattern
+- **7 new interrupt tests** - Comprehensive interrupt handling coverage (235/241 tests passing)
+- **Attribution to Anthropic** - Credit Claude Code's interrupt handling inspiration
+
+**Files Changed:**
+- `ppxai/main.py` - Double Ctrl-C handler, status bar, conversation cleanup
+- `ppxai/client.py` - Interrupt flag and stream handling
+- `ppxai/engine/client.py` - Server-side interrupt support
+- `ppxai/server/http.py` - /interrupt endpoint, lifespan migration
+- `vscode-extension/src/httpClient.ts` - AbortController and interrupt()
+- `vscode-extension/src/extension.ts` - Interrupt command
+- `vscode-extension/src/chatPanel.ts` - Esc key listener, attribution
+- `vscode-extension/package.json` - Interrupt command definition
+- `tests/test_client.py` - 7 interrupt handling tests
+- `ppxai/perplexity_tools_prompt_based.py` - None content fix
+
+---
+
+## Previous Release: v1.10.4
 
 **Status**: ✅ Complete - TUI Table Rendering Fix
 

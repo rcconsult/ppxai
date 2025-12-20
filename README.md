@@ -86,19 +86,19 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
    - **macOS/Linux:** `./ppxai`
    - **Windows:** `ppxai.exe`
 
-### Option 2: VSCode Extension with Standalone Server 🆕 v1.10.4
+### Option 2: VSCode Extension with Standalone Server 🆕 v1.10.5
 
 **No Python installation required!** Pre-built server binaries available!
 
 1. Download from [Releases](../../releases):
    - `ppxai-server-{platform}` (server binary for macOS ARM/Intel, Linux, Windows)
-   - `ppxai-1.10.4.vsix` (VSCode extension)
+   - `ppxai-1.10.5.vsix` (VSCode extension)
 2. Create a `.env` file with your API key (in project folder or `~/.ppxai/.env`)
-3. Install the extension: `code --install-extension ppxai-1.10.4.vsix`
+3. Install the extension: `code --install-extension ppxai-1.10.5.vsix`
 4. Start the server: `./ppxai-server-macos-arm64` (or your platform's binary)
 5. Open VSCode and click the ppxai icon in the sidebar
 
-**What's New in v1.10.4:** Fixed markdown table rendering in TUI - tables now display properly with alignment support instead of showing raw markdown syntax. Also includes standalone server binaries (introduced in v1.10.3) that eliminate the need for Python installation.
+**What's New in v1.10.5:** Graceful interrupt handling - Ctrl-C no longer causes message alternation errors, double-press pattern for safe exit, VSCode extension now supports Esc key interrupt, status bar shows current provider/model/tools settings, plus Gemini compatibility and FastAPI deprecation fixes.
 
 See [vscode-extension/README.md](vscode-extension/README.md) for detailed instructions.
 
