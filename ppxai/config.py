@@ -108,9 +108,13 @@ BUILTIN_PROVIDERS = {
                 "name": "Gemini 2.5 Pro",
                 "description": "Most capable model for complex reasoning"
             },
+            "gemini-3-flash-preview": {
+                "name": "Gemini 3 Flash Preview",
+                "description": "Speed-optimized preview with frontier intelligence and 1M context"
+            },
             "gemini-3-pro-preview": {
                 "name": "Gemini 3 Pro Preview",
-                "description": "Latest preview model with enhanced capabilities"
+                "description": "Most powerful agentic model with 1M context, code execution, and search grounding"
             },
         },
         "pricing": {
@@ -120,7 +124,8 @@ BUILTIN_PROVIDERS = {
             "gemini-2.5-flash": {"input": 0.15, "output": 0.60},
             "gemini-2.5-flash-lite": {"input": 0.075, "output": 0.30},
             "gemini-2.5-pro": {"input": 1.25, "output": 5.00},
-            "gemini-3-pro-preview": {"input": 1.25, "output": 5.00},  # Preview pricing TBD
+            "gemini-3-flash-preview": {"input": 0.15, "output": 0.60},  # Estimated, preview pricing
+            "gemini-3-pro-preview": {"input": 1.25, "output": 5.00},  # Estimated, preview pricing
         },
         "capabilities": {
             "web_search": False,
