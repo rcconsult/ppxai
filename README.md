@@ -86,19 +86,19 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
    - **macOS/Linux:** `./ppxai`
    - **Windows:** `ppxai.exe`
 
-### Option 2: VSCode Extension with Standalone Server 🆕 v1.10.7
+### Option 2: VSCode Extension with Standalone Server 🆕 v1.10.8
 
 **No Python installation required!** Pre-built server binaries available!
 
 1. Download from [Releases](../../releases):
    - `ppxai-server-{platform}` (server binary for macOS ARM/Intel, Linux, Windows)
-   - `ppxai-1.10.7.vsix` (VSCode extension)
+   - `ppxai-1.10.8.vsix` (VSCode extension)
 2. Create a `.env` file with your API key (in project folder or `~/.ppxai/.env`)
-3. Install the extension: `code --install-extension ppxai-1.10.7.vsix`
+3. Install the extension: `code --install-extension ppxai-1.10.8.vsix`
 4. Start the server: `./ppxai-server-macos-arm64` (or your platform's binary)
 5. Open VSCode and click the ppxai icon in the sidebar
 
-**What's New in v1.10.7:** Fixed Perplexity API compatibility - removed deprecated `sonar-reasoning` model (now returns 400 error). Currently supported Perplexity models: sonar, sonar-pro, sonar-reasoning-pro, and sonar-deep-research.
+**What's New in v1.10.8:** Unified session management - `/save` saves sessions to JSON, `/export` exports answers to markdown. Both TUI and VSCode extension now have consistent behavior. Improved streaming interrupt UX with visible stop badge.
 
 See [vscode-extension/README.md](vscode-extension/README.md) for detailed instructions.
 

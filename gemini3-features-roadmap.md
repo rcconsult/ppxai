@@ -2,6 +2,9 @@
 
 **Report Date:** 2025-12-18
 **Version Reviewed:** v1.10.3
+**Latest Release:** v1.10.8 (Session Management Unification)
+
+> **Note:** A detailed implementation plan for v1.11.0 is available at [docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.md)
 
 Based on a review of the current v1.10.3 codebase and project trajectory, this proposal outlines the next strategic steps to evolve ppxai from a terminal chatbot into an autonomous developer agent.
 
