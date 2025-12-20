@@ -1,13 +1,36 @@
 # ppxai Development Roadmap
 
-> **Note:** For future roadmap beyond v1.10.5, see:
+> **Note:** For future roadmap beyond v1.10.6, see:
 > - [gemini3-features-roadmap.md](gemini3-features-roadmap.md) - Agentic features (v1.11.0-v1.13.0)
 > - [docs/tui-markdown-rendering.md](docs/tui-markdown-rendering.md) - TUI Workspace vision (v1.10.5-v1.15.0)
 > - [sonar-features-proposal.md](sonar-features-proposal.md) - Competitive analysis
 
 ---
 
-## Current Release: v1.10.5
+## Current Release: v1.10.6
+
+**Status**: ✅ Complete - Gemini 3 Models Support
+
+Released: 2025-12-20
+
+Features implemented:
+- **Gemini 3 Flash Preview** - Speed-optimized preview with frontier intelligence and 1M context
+- **Gemini 3 Pro Preview** - Most powerful agentic model with 1M context, code execution, and search grounding
+- **Enhanced model descriptions** - Updated all Gemini model descriptions with detailed capabilities
+- **Pricing estimates** - Added preview pricing for Gemini 3 models
+
+**Files Changed:**
+- `ppxai/config.py` - Added gemini-3-flash-preview model, enhanced descriptions
+- `ppxai-config.json` - Added Gemini 3 models with capabilities
+- `ppxai-config.example.json` - Updated example config with Gemini 3
+- `pyproject.toml` - Version bump to 1.10.6
+- `vscode-extension/package.json` - Version bump to 1.10.6
+- `README.md` - Updated "What's New" section with Gemini 3 info
+- `vscode-extension/README.md` - Updated version references
+
+---
+
+## Previous Release: v1.10.5
 
 **Status**: ✅ Complete - Graceful Interrupt Handling
 
