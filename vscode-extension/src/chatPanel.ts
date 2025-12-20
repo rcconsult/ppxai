@@ -1154,6 +1154,26 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             color: var(--vscode-editor-background);
         }
 
+        .streaming-badge {
+            background: var(--vscode-editorWarning-foreground, #ff9800);
+            color: var(--vscode-editor-background);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            border: none;
+            cursor: pointer;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .streaming-badge:hover {
+            background: var(--vscode-errorForeground, #f44336);
+        }
+
         .header-buttons {
             display: flex;
             gap: 4px;
@@ -1649,6 +1669,7 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
         <div class="status">
             <span><span id="provider">Loading...</span> / <span id="model">...</span></span>
             <button class="tools-badge disabled" id="toolsBadge" title="Click to toggle tools">Tools: off</button>
+            <button class="streaming-badge" id="streamingBadge" style="display: none;" title="Press Esc to stop">⏹ Streaming...</button>
         </div>
         <div class="header-buttons">
             <button class="header-btn" id="saveBtn" title="Save session">Save</button>
@@ -1684,6 +1705,7 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
         const providerSpan = document.getElementById('provider');
         const modelSpan = document.getElementById('model');
         const toolsBadge = document.getElementById('toolsBadge');
+        const streamingBadge = document.getElementById('streamingBadge');
         const saveBtn = document.getElementById('saveBtn');
         const clearBtn = document.getElementById('clearBtn');
 
@@ -2095,6 +2117,11 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             vscode.postMessage({ type: 'toggleTools', enable: !isEnabled });
         });
 
+        // Streaming badge click handler - interrupt streaming
+        streamingBadge.addEventListener('click', () => {
+            vscode.postMessage({ type: 'interrupt' });
+        });
+
         // Handle link clicks - open external URLs
         messagesContainer.addEventListener('click', (e) => {
             // Use closest() to catch clicks on elements inside links
@@ -2157,6 +2184,7 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                 case 'startResponse':
                     typingIndicator.textContent = 'Thinking... (Press Esc to stop)';
                     typingIndicator.classList.add('visible');
+                    streamingBadge.style.display = 'block';  // Show streaming indicator
                     currentResponseEl = null;
                     currentResponseContent = '';
                     responseStartTime = Date.now();
@@ -2184,6 +2212,7 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
 
                 case 'endResponse':
                     typingIndicator.classList.remove('visible');
+                    streamingBadge.style.display = 'none';  // Hide streaming indicator
                     sendBtn.disabled = false;
                     // Full markdown render with syntax highlighting at the end
                     fullRender(true);
@@ -2194,6 +2223,7 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
 
                 case 'error':
                     typingIndicator.classList.remove('visible');
+                    streamingBadge.style.display = 'none';  // Hide streaming indicator
                     addMessage('error', message.content, false);
                     sendBtn.disabled = false;
                     break;
