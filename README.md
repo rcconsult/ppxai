@@ -64,12 +64,21 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
 - `get_datetime` - Get current date/time with timezone support
 - Plus web tools (for custom provider): weather, web search, URL fetch
 
+**File Editing Tools (v1.11.0) 🎯**
+- `apply_patch` - Apply unified diff patches to files
+- `replace_block` - Search and replace exact text blocks
+- `insert_text` - Insert text at specific line numbers
+- `delete_lines` - Delete line ranges from files
+- **Safe by Design:** User consent required before any file edits (y/n/always/never)
+- **Session-Scoped:** Consent persists across edits in the same session
+- **Atomic Operations:** All edits include automatic rollback on failure
+
 **Extensible System:**
 - Add custom Python tools in minutes
 - Optional MCP (Model Context Protocol) server support
 - See [docs/TOOL_CREATION_GUIDE.md](docs/TOOL_CREATION_GUIDE.md) for details
 
-**Learn More:** [Tool Documentation](docs/README.md)
+**Learn More:** [Tool Documentation](docs/README.md) | [File Editing Guide](docs/FILE_EDITING_GUIDE.md)
 
 ## Quick Start
 
