@@ -5,6 +5,7 @@ This is the primary interface for all frontends (TUI, VSCode, Web).
 It has no UI dependencies and communicates via events.
 """
 
+import asyncio
 import json
 import re
 from typing import List, AsyncIterator, Optional, Dict, Any
@@ -30,11 +31,15 @@ class EngineClient:
     All communication is via events and data structures, never direct console output.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None, consent_callback: Optional[callable] = None):
         """Initialize the engine client.
 
         Args:
             config: Optional configuration dictionary
+            consent_callback: Optional callback for file edit consent (v1.11.0)
+                             Signature: async (file_path: str) -> tuple[bool, str]
+                             Returns: (approved: bool, response: str)
+                             response can be: "y", "n", "always", "never"
         """
         self.config = config or {}
         self.provider: Optional[BaseProvider] = None
@@ -51,6 +56,13 @@ class EngineClient:
 
         # Interrupt handling for graceful stream cancellation
         self._interrupted: bool = False
+
+        # File edit consent callback (Phase 1: v1.11.0)
+        self.consent_callback = consent_callback
+
+        # Event emitter for consent requests (Phase 1C: HTTP/SSE support)
+        # This allows emitting events from within consent callback
+        self._consent_event_queue: List[Event] = []
 
         # Load configuration
         self._load_config()
@@ -258,8 +270,8 @@ class EngineClient:
             True if tools were enabled
         """
         if not self.tools_enabled:
-            # Register all built-in tools
-            register_all_builtin_tools(self.tool_manager, self.provider_name)
+            # Register all built-in tools (including file editing tools v1.11.0)
+            register_all_builtin_tools(self.tool_manager, self.provider_name, engine=self)
             self.tools_enabled = True
         return True
 
@@ -272,6 +284,69 @@ class EngineClient:
         self.tools_enabled = False
         self.tool_manager.clear()
         return True
+
+    async def request_file_edit_consent(self, file_path: str) -> bool:
+        """Request user consent for editing a file (v1.11.0).
+
+        This method manages the consent flow:
+        1. Check if consent mode is "always" or "never"
+        2. Check if file already allowed
+        3. If needed, call consent_callback to ask user
+        4. Update session state based on response
+
+        Args:
+            file_path: Path to file that needs editing
+
+        Returns:
+            True if edit is allowed, False otherwise
+        """
+        from pathlib import Path
+
+        path = Path(file_path).resolve()
+
+        # Check global consent mode
+        if self.session.edit_consent_mode == "always":
+            return True
+        if self.session.edit_consent_mode == "never":
+            return False
+
+        # Check if already consented for this file
+        if path in self.session.allowed_files:
+            return True
+
+        # If no callback, default to allow (backward compatible)
+        if self.consent_callback is None:
+            return True
+
+        # Request consent from user via callback
+        try:
+            # Emit consent request event (Phase 1C: for HTTP/SSE support)
+            consent_event = Event(
+                type=EventType.CONSENT_REQUEST,
+                data={"file_path": str(path)},
+                metadata={"file_path": str(path)}
+            )
+            self._consent_event_queue.append(consent_event)
+
+            # Call consent callback and wait for response
+            approved, response = await self.consent_callback(str(path))
+
+            if response == "y":
+                self.session.allowed_files.add(path)
+                return True
+            elif response == "always":
+                self.session.edit_consent_mode = "always"
+                return True
+            elif response == "never":
+                self.session.edit_consent_mode = "never"
+                return False
+            else:  # "n" or anything else
+                return False
+
+        except Exception as e:
+            # If consent callback fails, deny for safety
+            print(f"Consent callback error: {e}")
+            return False
 
     def list_tools(self) -> List[Dict[str, Any]]:
         """List available tools for current provider.
@@ -456,7 +531,25 @@ class EngineClient:
 
                 # Execute tool
                 try:
-                    result = await self.tool_manager.execute_tool(tool_name, **tool_args)
+                    # Execute tool in background to allow consent events to be yielded
+                    tool_task = asyncio.create_task(self.tool_manager.execute_tool(tool_name, **tool_args))
+
+                    # Poll consent event queue while tool is running
+                    # (file editing tools will add consent requests to queue during execution)
+                    while not tool_task.done():
+                        while self._consent_event_queue:
+                            consent_event = self._consent_event_queue.pop(0)
+                            yield consent_event
+                        await asyncio.sleep(0.05)  # Poll every 50ms
+
+                    # Drain any remaining consent events
+                    while self._consent_event_queue:
+                        consent_event = self._consent_event_queue.pop(0)
+                        yield consent_event
+
+                    # Get tool result
+                    result = await tool_task
+
                     yield Event(EventType.TOOL_RESULT, {
                         "tool": tool_name,
                         "result": result[:2000] + "..." if len(result) > 2000 else result

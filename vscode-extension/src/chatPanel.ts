@@ -346,6 +346,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     // Ignore parse errors
                 }
                 break;
+            case 'consent_request':
+                // Phase 1C: File edit consent request
+                this.handleConsentRequest(event);
+                break;
             case 'error':
                 this._view.webview.postMessage({
                     type: 'error',
@@ -355,6 +359,67 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             case 'done':
                 // Handled by endResponse
                 break;
+        }
+    }
+
+    private async handleConsentRequest(event: StreamEvent) {
+        /**
+         * Handle file edit consent request (Phase 1C: v1.11.0)
+         *
+         * Shows a modal dialog asking user for permission to edit a file.
+         * Supports: Yes (this file), No, Always (all files), Never (block all)
+         */
+        try {
+            const data = JSON.parse(event.content);
+            const filePath = data.file_path || event.metadata?.file_path;
+
+            if (!filePath) {
+                console.error('Consent request missing file_path');
+                return;
+            }
+
+            // Show modal dialog with options
+            const choice = await vscode.window.showWarningMessage(
+                `AI wants to edit file: ${filePath}`,
+                { modal: true },
+                'Yes (this file)',
+                'No',
+                'Always (all files)',
+                'Never (block all)'
+            );
+
+            // Map choice to response
+            let response: 'y' | 'n' | 'always' | 'never';
+            switch (choice) {
+                case 'Yes (this file)':
+                    response = 'y';
+                    break;
+                case 'Always (all files)':
+                    response = 'always';
+                    break;
+                case 'Never (block all)':
+                    response = 'never';
+                    break;
+                default: // 'No' or cancelled
+                    response = 'n';
+                    break;
+            }
+
+            // Send consent response to server
+            await this._backend.consent(filePath, response);
+
+        } catch (error) {
+            console.error('Consent request error:', error);
+            // On error, deny for safety
+            try {
+                const data = JSON.parse(event.content);
+                const filePath = data.file_path || event.metadata?.file_path;
+                if (filePath) {
+                    await this._backend.consent(filePath, 'n');
+                }
+            } catch {
+                // Ignore - best effort
+            }
         }
     }
 
@@ -695,6 +760,20 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     this._view.webview.postMessage({
                         type: 'systemMessage',
                         content: 'Usage: /tools config <setting> <value>\nExample: /tools config max_iterations 20'
+                    });
+                }
+                break;
+
+            case 'help':
+                if (args[1] === 'editing') {
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: this.getFileEditingHelp()
+                    });
+                } else {
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: 'Available help topics: **editing**\nUsage: `/tools help editing`'
                     });
                 }
                 break;
@@ -1130,6 +1209,108 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             text += possible.charAt(Math.floor(Math.random() * possible.length));
         }
         return text;
+    }
+
+    private getFileEditingHelp(): string {
+        return `# File Editing Tools Guide 🎯
+
+## Overview
+ppxai can now **autonomously edit files** during conversations! All edits require your **explicit consent** before any changes are made.
+
+## Quick Start
+1. **Enable tools**: \`/tools enable\`
+2. **Ask AI to edit**: Just request file changes naturally!
+3. **Grant consent**: Choose y/n/always/never when prompted
+
+## Consent System
+
+When AI wants to edit a file, you'll see a modal dialog with 4 options:
+
+| Option | Behavior | Use When |
+|--------|----------|----------|
+| **y** (yes) | Allow editing this file (this session) | You want this specific edit |
+| **n** (no) | Deny editing this file | You don't trust this specific edit |
+| **always** | Allow all file edits (this session) | You trust the AI completely |
+| **never** | Block all file edits (this session) | You want read-only mode |
+
+**Session-Scoped:** Your consent persists for the current session only.
+
+## Available Tools
+
+### 1. apply_patch
+Apply unified diff patches (like git patches).
+
+**Example:**
+\`\`\`
+Apply this patch to fix the bug in auth.py:
+[paste unified diff]
+\`\`\`
+
+### 2. replace_block
+Find and replace exact text blocks.
+
+**Example:**
+\`\`\`
+In config.py, replace "database = 'test.db'" with "database = 'production.db'"
+\`\`\`
+
+### 3. insert_text
+Insert text at specific line numbers.
+
+**Example:**
+\`\`\`
+Add a print statement at line 42 in debug.py: print("Debug checkpoint")
+\`\`\`
+
+### 4. delete_lines
+Delete line ranges from files.
+
+**Example:**
+\`\`\`
+Delete lines 10-15 from old_code.py
+\`\`\`
+
+## Pro Tips 💡
+
+✅ **Do:**
+- Start with small, focused edits
+- Review consent prompts carefully
+- Use "y" for individual edits when learning
+- Use "always" when you fully trust the AI
+
+❌ **Don't:**
+- Grant "always" consent without understanding
+- Edit files you haven't backed up
+- Use with critical system files
+
+## Safety Features ✅
+
+- **User consent required** - Every file edit needs your approval
+- **Atomic operations** - Edits rollback automatically on failure
+- **Session-scoped** - Consent resets when you restart
+- **File existence checks** - Won't edit non-existent files
+
+## Troubleshooting
+
+**Q: AI keeps asking for consent?**
+A: Use "always" mode if you trust it for this session.
+
+**Q: Edit failed?**
+A: Check file permissions, file exists, and exact text matches.
+
+**Q: How do I disable?**
+A: Use \`/tools disable\` or choose "never" when prompted.
+
+## Commands Reference
+
+- \`/tools enable\` - Enable file editing tools
+- \`/tools status\` - Check current consent mode
+- \`/tools list\` - Show all available tools
+- \`/tools help editing\` - Show this help
+
+---
+
+**Ready to try?** Type \`/tools enable\` and ask the AI to edit a file!`;
     }
 
     private _getHtmlForWebview(webview: vscode.Webview): string {
@@ -1828,13 +2009,21 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                 breaks: true,
                 gfm: true
             });
-            // Wrap marked.parse to pre-process backtick-wrapped URLs
-            // Perplexity/Gemini wrap URLs in backticks which marked converts to <code>
+            // Wrap marked.parse to pre-process backtick-wrapped URLs and markdown code blocks
             parseMarkdown = function(text) {
                 if (!text) return '';
+
+                // BUGFIX: Unwrap markdown code blocks BEFORE marked processes them
+                // Some models (Gemini 2.0 Flash, Gemini 3 Pro) wrap output in triple-backtick markdown blocks
+                // which would cause syntax highlighting instead of rendering
+                // Simply extract the content and let marked parse it normally
+                // Use \\x60 hex escape for backticks to avoid template literal parsing issues
+                text = text.replace(/\\x60\\x60\\x60(?:markdown|md)\\s*\\n([\\s\\S]*?)\\x60\\x60\\x60/g, '$1');
+
                 // Convert backtick-wrapped URLs to links BEFORE marked processes them
-                // This prevents URLs like \`https://example.com\` from becoming <code> blocks
-                text = text.replace(/\`(https?:\\/\\/[^\`]+)\`/g, '<a href="$1" target="_blank" rel="noopener" class="url-link">$1</a>');
+                text = text.replace(/\\x60(https?:\\/\\/[^\\x60]+)\\x60/g, '<a href="$1" target="_blank" rel="noopener" class="url-link">$1</a>');
+
+                // Parse with marked
                 return marked.parse(text);
             };
             console.log('Marked library loaded successfully');
@@ -1946,7 +2135,8 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             const contentEl = currentResponseEl.querySelector('.message-content') || currentResponseEl;
             try {
                 contentEl.innerHTML = parseMarkdown(currentResponseContent);
-                // Apply syntax highlighting to code blocks (skip large ones for performance)
+                // parseMarkdown() already unwraps markdown code blocks before parsing
+                // Just apply syntax highlighting to code blocks
                 contentEl.querySelectorAll('pre code').forEach((block) => {
                     if (block.textContent.length <= MAX_HIGHLIGHT_SIZE) {
                         hljs.highlightElement(block);
@@ -2237,6 +2427,22 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                     typingIndicator.textContent = 'Using tool: ' + message.tool + '...';
                     typingIndicator.classList.add('visible');
                     addMessage('tool-call', '🔧 **Calling tool:** \`' + message.tool + '\`\\n\`\`\`json\\n' + JSON.stringify(message.arguments, null, 2) + '\\n\`\`\`', true);
+
+                    // BUGFIX: Strip tool call JSON from current response content
+                    // When Gemini includes tool JSON in its response, remove it from display
+                    if (currentResponseContent) {
+                        // Remove trailing JSON code blocks that match tool call pattern
+                        // Pattern: \\\`\\\`\\\`json\\n{\\n  "tool": "...",\\n  "arguments": {...}\\n}\\n\\\`\\\`\\\`
+                        const toolJsonPattern = /\\\`\\\`\\\`(?:json)?\\s*\\{[^\\\`]*?"tool"\\s*:\\s*"[^"]+?"[^\\\`]*?\\}\\s*\\\`\\\`\\\`\\s*$/;
+                        const beforeStrip = currentResponseContent;
+                        currentResponseContent = currentResponseContent.replace(toolJsonPattern, '').trimEnd();
+
+                        // If we stripped something, re-render to remove the JSON from UI
+                        if (beforeStrip !== currentResponseContent && currentResponseEl) {
+                            const contentEl = currentResponseEl.querySelector('.message-content') || currentResponseEl;
+                            contentEl.innerHTML = simpleFormat(currentResponseContent);
+                        }
+                    }
                     break;
 
                 case 'toolResult':
@@ -2445,8 +2651,12 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             if (useMarkdown && content) {
                 try {
                     contentEl.innerHTML = parseMarkdown(content);
-                    // Apply syntax highlighting
+                    // parseMarkdown() already extracts and renders markdown code blocks
+                    // Just apply syntax highlighting to regular code blocks (skip rendered markdown content)
                     contentEl.querySelectorAll('pre code').forEach((block) => {
+                        // Skip code blocks inside rendered markdown divs
+                        if (block.closest('.rendered-markdown-content')) return;
+
                         hljs.highlightElement(block);
                     });
                 } catch (e) {

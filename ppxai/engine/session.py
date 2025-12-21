@@ -46,6 +46,10 @@ class SessionManager:
         }
         self.usage = UsageStats()
 
+        # File editing consent state (Phase 1: v1.11.0)
+        self.allowed_files: set[Path] = set()  # Files user consented to edit
+        self.edit_consent_mode: str = "ask"  # "ask", "always", "never"
+
     def add_message(self, message: Message):
         """Add a message to the conversation history.
 
@@ -72,9 +76,12 @@ class SessionManager:
         return [{"role": m.role, "content": m.content} for m in self.messages]
 
     def clear(self):
-        """Clear conversation history."""
+        """Clear conversation history and reset consent state."""
         self.messages = []
         self.metadata["message_count"] = 0
+        # Reset file editing consent state
+        self.allowed_files.clear()
+        self.edit_consent_mode = "ask"
 
     def set_provider(self, provider: str):
         """Set the current provider.

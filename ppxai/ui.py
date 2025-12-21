@@ -54,12 +54,222 @@ Welcome to the AI terminal interface!
 - `/provider` - Switch between providers (Perplexity, Custom)
 
 ## AI Tools (Experimental)
-- `/tools enable` - Enable AI tools (file search, calculator, etc.)
+- `/tools enable` - Enable AI tools (file search, calculator, **file editing**)
 - `/tools disable` - Disable AI tools
 - `/tools list` - Show available tools
-- `/tools status` - Show tools status
+- `/tools status` - Show tools status and consent mode
+- `/tools help editing` - 🆕 Interactive guide for file editing tools
+
+## File Editing Tools (v1.11.0) 🆕
+When tools are enabled, AI can edit files **with your consent**:
+- **apply_patch** - Apply unified diff patches
+- **replace_block** - Find and replace code blocks
+- **insert_text** - Insert code at specific lines
+- **delete_lines** - Delete line ranges
+
+**Safety:** User consent required (y/n/always/never) before any edit!
+**Learn more:** Type `/tools help editing` for examples
 """
     console.print(Panel(Markdown(welcome_text), title="Welcome", border_style="cyan"))
+
+
+def display_file_editing_help():
+    """Display interactive help for file editing tools (v1.11.0)."""
+    help_text = """
+# File Editing Tools Guide 🎯
+
+## Overview
+
+ppxai can now **autonomously edit files** during conversations! All edits require your **explicit consent** before any changes are made.
+
+## Quick Start
+
+1. **Enable tools**: `/tools enable`
+2. **Ask AI to edit**: Just request file changes naturally!
+3. **Grant consent**: Choose y/n/always/never when prompted
+
+---
+
+## Consent System
+
+When AI wants to edit a file, you'll see:
+
+```
+⚠️  File Edit Request
+AI wants to edit: /path/to/file.py
+Options: y (yes), n (no), always (all files), never (block all)
+
+Allow edit?
+```
+
+### Consent Options
+
+| Option | Effect | Example |
+|--------|--------|---------|
+| **y** | Allow this file only | Same file can be edited again |
+| **n** | Deny this edit | File unchanged, AI continues |
+| **always** | Auto-approve all files | Great for multi-file refactoring |
+| **never** | Block all edits | No files modified this session |
+
+---
+
+## Practical Examples
+
+### Example 1: Fix a Typo
+
+**You:** `Fix the typo in config.py - 'databse' should be 'database'`
+
+**AI:** `I'll fix that typo` → **[Consent Prompt]** → You type `y`
+
+**Result:** ✓ File edited using `replace_block` tool
+
+---
+
+### Example 2: Add New Function
+
+**You:** `Add a password validation function to utils.py`
+
+**AI:** `I'll add password_is_strong() after line 45` → **[Consent]** → `y`
+
+**Result:** ✓ Function inserted using `insert_text` tool
+
+---
+
+### Example 3: Multi-File Refactoring
+
+**You:** `Extract database connection logic into db.py`
+
+**AI:** `Creating db.py and updating main.py` → **[Consent]** → `always`
+
+**Result:** ✓ AI edits both files without additional prompts
+
+---
+
+### Example 4: Apply Code Review
+
+**You:** `Remove all debug print statements from auth.py`
+
+**AI:** `Found 3 debug statements to remove` → **[Consent]** → `y`
+
+**Result:** ✓ Lines deleted using `delete_lines` tool (3 edits, 1 consent)
+
+---
+
+### Example 5: Apply a Patch
+
+**You:** `Apply this security patch:` + diff
+
+**AI:** `Applying SQL injection fix` → **[Consent]** → `y`
+
+**Result:** ✓ Patch applied using `apply_patch` tool
+
+---
+
+## Available Tools
+
+### 1. replace_block
+**Purpose:** Find and replace exact text (must be unique)
+
+**Example prompts:**
+- `Replace the old error handling with try/catch`
+- `Change DATABASE_URL to use env variable`
+- `Fix typo 'recieve' to 'receive'`
+
+### 2. insert_text
+**Purpose:** Add lines at specific position
+
+**Example prompts:**
+- `Add this import at the top`
+- `Insert error handling after line 42`
+- `Add docstring to the function`
+
+### 3. delete_lines
+**Purpose:** Remove line ranges
+
+**Example prompts:**
+- `Remove the deprecated login function`
+- `Delete all commented code`
+- `Clean up debug statements`
+
+### 4. apply_patch
+**Purpose:** Apply unified diff patches
+
+**Example prompts:**
+- `Apply this code review patch`
+- `Use this diff to fix the bug`
+
+---
+
+## Pro Tips 💡
+
+**For refactoring:**
+```
+You: Refactor auth module - extract hashing to utils
+[Use "always" on first consent prompt]
+```
+
+**With file references:**
+```
+You: @bug_report.md @user_service.py
+     Fix the race condition described in the report
+```
+
+**For multiple edits:**
+```
+You: Implement user profile editing:
+     1. Add PUT endpoint
+     2. Add database method
+     3. Update model
+[AI edits all 3 files systematically]
+```
+
+---
+
+## Safety Features ✅
+
+- **Session-scoped consent** - Permissions only last this session
+- **Atomic operations** - All-or-nothing edits
+- **Automatic rollback** - Failed edits restore original
+- **No silent changes** - You always see what's modified
+- **Safe defaults** - Errors/timeouts deny edits
+
+---
+
+## Troubleshooting
+
+**"Search text not found"**
+→ Ask AI to show current content first: `Show me the login function`
+
+**"Search text found multiple times"**
+→ Be more specific: `Replace the version check in __init__, not main`
+
+**Accidentally denied consent**
+→ Just ask again: `Try that edit again`
+
+**Too many prompts**
+→ Use `always` for the session: Type `always` on first consent
+
+---
+
+## Commands
+
+- `/tools status` - Check consent mode (ask/always/never)
+- `/tools list` - See all available tools
+- `/tools disable` - Turn off file editing
+- `/help` - General help
+
+---
+
+## Full Guide
+
+For complete documentation with advanced patterns:
+📖 See `docs/FILE_EDITING_GUIDE.md`
+
+---
+
+**Ready to try?** Enable tools and ask AI to make a file change!
+"""
+    console.print(Panel(Markdown(help_text), title="📝 File Editing Tools - Interactive Guide", border_style="green", padding=(1, 2)))
 
 
 def display_spec_help(spec_type: Optional[str] = None):

@@ -18,6 +18,7 @@ class EventType(Enum):
     TOOL_RESULT = "tool_result"
     TOOL_ERROR = "tool_error"
     CONTEXT_INJECTED = "context_injected"  # File content was auto-injected
+    CONSENT_REQUEST = "consent_request"  # Request user consent for file edit (v1.11.0)
     ERROR = "error"
     INFO = "info"
 

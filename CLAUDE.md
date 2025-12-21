@@ -6,9 +6,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.10.8 (Unified Save/Export Commands)
+**Current Version:** v1.11.0 (Agentic Workflow - Phase 1: File Editing Tools)
 
-**What's New in v1.10.8:**
+**What's New in v1.11.0:**
+- **NEW:** 4 file editing tools with user consent (apply_patch, replace_block, insert_text, delete_lines)
+- **NEW:** Per-file session consent system (y/n/always/never)
+- **NEW:** Atomic file operations with automatic rollback on failure
+- **NEW:** Consent prompts in both TUI and VSCode extension
+- **Safe:** User consent required before any file modification
+- **Session-scoped:** Consent persists across tool calls in same session
+- **TUI:** Interactive consent prompts with prompt_toolkit validation
+- **VSCode:** Modal consent dialogs with 4 options
+- **Tests:** 25 new regression tests for file editing (262 total tests)
+- **Architecture:** Event-driven consent via SSE for VSCode, async callbacks for TUI
+- **Details:** See [docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.md)
+
+**Previous Release (v1.10.8 - 2025-12-21):**
 - **Unified:** `/save` and `/export` commands now behave consistently across TUI and VSCode extension
 - **New:** `/export [filename]` command to export last answer to markdown (~/.ppxai/exports/)
 - **Changed:** `/save` now saves session to JSON (~/.ppxai/sessions/) for persistence
@@ -17,7 +30,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **Fixed:** VSCode extension interrupt no longer shows red error message on user-initiated stop
 - **Added:** Clear separation between session persistence (JSON) and answer export (markdown)
 
-**Previous Release (v1.10.7 - 2025-12-20):**
+**Earlier Release (v1.10.7 - 2025-12-20):**
 - **Fixed:** Perplexity API compatibility - removed deprecated `sonar-reasoning` model (now returns 400 error)
 - **Updated:** Model documentation to reflect current Perplexity API supported models
 - **Validated:** Against official Perplexity docs (sonar-reasoning page returns 404)
@@ -52,9 +65,9 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - Automated GitHub Actions CI/CD for multi-platform builds (macOS ARM/Intel, Linux, Windows)
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.10.8
-- VSCode extension (package.json): v1.10.8
-- Git tag: v1.10.8 (pending release)
+- Python package (pyproject.toml): v1.11.0
+- VSCode extension (package.json): v1.11.0
+- Git tag: v1.11.0 (pending release)
 
 ## Development Setup
 

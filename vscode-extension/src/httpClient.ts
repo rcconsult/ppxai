@@ -10,8 +10,9 @@ import * as vscode from 'vscode';
 // === Types matching PythonBackend interface ===
 
 export interface StreamEvent {
-    type: 'thinking' | 'started' | 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'context_injected';
+    type: 'thinking' | 'started' | 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'context_injected' | 'consent_request';
     content: string;
+    metadata?: any;
 }
 
 export interface ProviderInfo {
@@ -530,6 +531,33 @@ export class HttpClient {
     }
 
     /**
+     * Respond to file edit consent request (Phase 1C: v1.11.0)
+     */
+    async consent(filePath: string, response: 'y' | 'n' | 'always' | 'never'): Promise<void> {
+        try {
+            const resp = await fetch(`${this.baseUrl}/consent`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    file_path: filePath,
+                    response: response
+                }),
+                signal: AbortSignal.timeout(5000)
+            });
+
+            if (!resp.ok) {
+                const error = await resp.text();
+                throw new Error(`Consent request failed: ${error}`);
+            }
+
+            this.outputChannel.appendLine(`Consent response sent: ${filePath} -> ${response}`);
+        } catch (error) {
+            this.outputChannel.appendLine(`Consent error: ${error}`);
+            throw error;
+        }
+    }
+
+    /**
      * Map server SSE events to StreamEvent format
      */
     private mapServerEvent(event: { type: string; data: any; metadata?: any }): StreamEvent | null {
@@ -550,6 +578,13 @@ export class HttpClient {
             case 'context_injected':
                 // context_injected data is an object - stringify it
                 return { type: 'context_injected', content: typeof event.data === 'object' ? JSON.stringify(event.data) : (event.data || '') };
+            case 'consent_request':
+                // Phase 1C: File edit consent request
+                return {
+                    type: 'consent_request',
+                    content: typeof event.data === 'object' ? JSON.stringify(event.data) : (event.data || ''),
+                    metadata: event.metadata
+                };
             case 'error':
                 return { type: 'error', content: event.data || 'Unknown error' };
             case 'info':

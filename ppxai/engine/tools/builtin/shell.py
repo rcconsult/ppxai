@@ -121,10 +121,11 @@ def register_tools(manager: 'ToolManager'):
         name="execute_shell_command",
         description=(
             "Execute a shell command in the system. Supports Windows (cmd/PowerShell) and Unix (bash) commands. "
-            "Use for system operations like creating directories, running scripts, git commands, etc. "
+            "Use for system operations like creating directories, running scripts, git commands, npm/pip installs, etc. "
             "Commands run with a 30-second timeout. "
-            "IMPORTANT: Do NOT use recursive commands like 'ls -R', 'find', 'tree' - they produce too much output. "
-            "For file listing use the list_directory tool. For file search use search_files tool. For reading files use read_file tool."
+            "IMPORTANT: Do NOT use for file editing (sed, awk, perl, etc.) - use file editing tools instead (replace_block, insert_text, delete_lines, apply_patch). "
+            "Do NOT use recursive commands like 'ls -R', 'find', 'tree' - they produce too much output. "
+            "For file listing use list_directory. For file search use search_files. For reading files use read_file."
         ),
         parameters={
             "type": "object",

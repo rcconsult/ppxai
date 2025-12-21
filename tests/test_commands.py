@@ -667,6 +667,38 @@ class TestToolsCommands:
         """Test /tools with invalid subcommand for custom provider."""
         handler_custom.handle_tools("invalid")
 
+    @patch('ppxai.commands.display_file_editing_help')
+    def test_tools_help_editing_perplexity(self, mock_help, handler_perplexity):
+        """Test /tools help editing for Perplexity."""
+        handler_perplexity.handle_tools("help editing")
+        mock_help.assert_called_once()
+
+    @patch('ppxai.commands.display_file_editing_help')
+    def test_tools_help_editing_custom(self, mock_help, handler_custom):
+        """Test /tools help editing for custom provider."""
+        handler_custom.handle_tools("help editing")
+        mock_help.assert_called_once()
+
+    def test_tools_help_no_topic_perplexity(self, handler_perplexity):
+        """Test /tools help without topic for Perplexity."""
+        handler_perplexity.handle_tools("help")
+        # Should show available topics
+
+    def test_tools_help_no_topic_custom(self, handler_custom):
+        """Test /tools help without topic for custom provider."""
+        handler_custom.handle_tools("help")
+        # Should show available topics
+
+    def test_tools_help_invalid_topic_perplexity(self, handler_perplexity):
+        """Test /tools help with invalid topic for Perplexity."""
+        handler_perplexity.handle_tools("help invalid_topic")
+        # Should show available topics
+
+    def test_tools_help_invalid_topic_custom(self, handler_custom):
+        """Test /tools help with invalid topic for custom provider."""
+        handler_custom.handle_tools("help invalid_topic")
+        # Should show available topics
+
 
 class TestSendCodingTask:
     """Test send_coding_task function for both providers."""

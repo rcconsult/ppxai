@@ -2,7 +2,7 @@
 
 **Report Date:** 2025-12-18
 **Version Reviewed:** v1.10.3
-**Latest Release:** v1.10.8 (Session Management Unification)
+**Latest Release:** v1.11.0 (File Editing Tools with Consent)
 
 > **Note:** A detailed implementation plan for v1.11.0 is available at [docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.md)
 

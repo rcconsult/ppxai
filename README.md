@@ -64,12 +64,21 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
 - `get_datetime` - Get current date/time with timezone support
 - Plus web tools (for custom provider): weather, web search, URL fetch
 
+**File Editing Tools (v1.11.0) 🎯**
+- `apply_patch` - Apply unified diff patches to files
+- `replace_block` - Search and replace exact text blocks
+- `insert_text` - Insert text at specific line numbers
+- `delete_lines` - Delete line ranges from files
+- **Safe by Design:** User consent required before any file edits (y/n/always/never)
+- **Session-Scoped:** Consent persists across edits in the same session
+- **Atomic Operations:** All edits include automatic rollback on failure
+
 **Extensible System:**
 - Add custom Python tools in minutes
 - Optional MCP (Model Context Protocol) server support
 - See [docs/TOOL_CREATION_GUIDE.md](docs/TOOL_CREATION_GUIDE.md) for details
 
-**Learn More:** [Tool Documentation](docs/README.md)
+**Learn More:** [Tool Documentation](docs/README.md) | [File Editing Guide](docs/FILE_EDITING_GUIDE.md)
 
 ## Quick Start
 
@@ -86,19 +95,19 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
    - **macOS/Linux:** `./ppxai`
    - **Windows:** `ppxai.exe`
 
-### Option 2: VSCode Extension with Standalone Server 🆕 v1.10.8
+### Option 2: VSCode Extension with Standalone Server 🆕 v1.11.0
 
 **No Python installation required!** Pre-built server binaries available!
 
 1. Download from [Releases](../../releases):
    - `ppxai-server-{platform}` (server binary for macOS ARM/Intel, Linux, Windows)
-   - `ppxai-1.10.8.vsix` (VSCode extension)
+   - `ppxai-1.11.0.vsix` (VSCode extension)
 2. Create a `.env` file with your API key (in project folder or `~/.ppxai/.env`)
-3. Install the extension: `code --install-extension ppxai-1.10.8.vsix`
+3. Install the extension: `code --install-extension ppxai-1.11.0.vsix`
 4. Start the server: `./ppxai-server-macos-arm64` (or your platform's binary)
 5. Open VSCode and click the ppxai icon in the sidebar
 
-**What's New in v1.10.8:** Unified session management - `/save` saves sessions to JSON, `/export` exports answers to markdown. Both TUI and VSCode extension now have consistent behavior. Improved streaming interrupt UX with visible stop badge.
+**What's New in v1.11.0:** File editing tools with user consent! AI can now autonomously edit files (apply_patch, replace_block, insert_text, delete_lines) with your explicit permission. Type `/tools help editing` for examples and `/tools enable` to try it.
 
 See [vscode-extension/README.md](vscode-extension/README.md) for detailed instructions.
 

@@ -8,35 +8,68 @@
 
 ---
 
-## Next Release: v1.11.0
+## Current Release: v1.11.0
 
-**Status**: 🛠️ In Planning - Agentic Workflow
+**Status**: ✅ Phase 1 Complete - File Editing Tools with Consent
+
+Released: 2025-12-21
 
 **Detailed Implementation Plan**: [docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.md)
 
 **Goal**: Transform ppxai from turn-based chatbot into autonomous developer agent
 
-**Key Features**:
-- **Native File Editing Tools** - Safe, atomic file editing (apply_patch, replace_block, insert_text, delete_lines)
+**Phase 1 Completed Features**:
+- ✅ **Native File Editing Tools** - Safe, atomic file editing (apply_patch, replace_block, insert_text, delete_lines)
+- ✅ **User Consent System** - Per-file session consent (y/n/always/never) in both TUI and VSCode
+- ✅ **TUI Consent Prompts** - Interactive validation with prompt_toolkit
+- ✅ **Event-Driven SSE Consent** - Server-Sent Events for VSCode modal dialogs
+- ✅ **Atomic File Operations** - Automatic rollback on failure
+- ✅ **36 Comprehensive Tests** - 25 tool tests + 11 help/UI tests (273 total tests passing)
+- ✅ **Complete Documentation** - README, CLAUDE.md, FILE_EDITING_GUIDE.md, VSCode TESTING.md
+- ✅ **In-App Help** - `/tools help editing` command in both TUI and VSCode extension
+
+**Files Changed**:
+- `ppxai/engine/tools/builtin/editor.py` - NEW, 4 file editing tools
+- `ppxai/engine/client.py` - Added request_file_edit_consent() method
+- `ppxai/engine/session.py` - Added consent state (allowed_files, edit_consent_mode)
+- `ppxai/commands.py` - TUI consent handler + /tools help editing command
+- `ppxai/ui.py` - Added display_file_editing_help() and updated welcome
+- `tests/test_file_editing_tools.py` - NEW, 25 file editing tests
+- `tests/test_ui.py` - NEW, 5 UI help display tests
+- `tests/test_commands.py` - Added 6 help command tests
+- `docs/FILE_EDITING_GUIDE.md` - NEW, 400+ lines of user documentation
+- `vscode-extension/src/chatPanel.ts` - Added getFileEditingHelp() + help command
+- `vscode-extension/TESTING.md` - NEW, testing documentation
+- `README.md` - Added File Editing Tools section
+- `CLAUDE.md` - Version bump to 1.11.0 with feature summary
+- `pyproject.toml` - Version bump to 1.11.0
+- `vscode-extension/package.json` - Version bump to 1.11.0
+
+**Testing**:
+- 273/278 tests passed (98.2%)
+- 36 total tests for file editing features (25 tools + 11 help/UI)
+- 5 pre-existing custom endpoint integration test failures (unrelated)
+
+**Remaining Features** (Future Phases):
 - **`@git` Context Provider** - Automatic git diff injection for code review
 - **`@tree` Context Provider** - Project structure awareness
 - **`/agent` Command** - Autonomous multi-step task execution (max 5 iterations)
 
 **Implementation Phases**:
-1. Phase 1: File editing tools (4-6 hours) - Test manually
-2. Phase 2: @git context (2-3 hours) - Test manually
-3. Phase 3: @tree context (2-3 hours) - Test manually
-4. Phase 4: Manual testing & refinement (3-4 hours) - Dogfood all features
-5. Phase 5: /agent loop (6-8 hours) - Build automation with confidence
-6. Phase 6: Testing & docs (4-5 hours) - Comprehensive validation
+1. ✅ Phase 1: File editing tools (4-6 hours) - **COMPLETE**
+2. Phase 2: @git context (2-3 hours) - Planned
+3. Phase 3: @tree context (2-3 hours) - Planned
+4. Phase 4: Manual testing & refinement (3-4 hours) - Planned
+5. Phase 5: /agent loop (6-8 hours) - Planned
+6. Phase 6: Testing & docs (4-5 hours) - Planned
 
-**Total Effort**: 21-29 hours
+**Total Effort**: 21-29 hours (4-6 hours completed)
 
-**Branch**: `feature/agentic-workflow-v1.11.0` (to be created)
+**Branch**: `feature/auto-edit-file-tools`
 
 ---
 
-## Current Release: v1.10.8
+## Previous Release: v1.10.8
 
 **Status**: ✅ Complete - Unified Save/Export Commands
 
