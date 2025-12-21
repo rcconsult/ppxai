@@ -2013,30 +2013,18 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             parseMarkdown = function(text) {
                 if (!text) return '';
 
-                // BUGFIX: Extract markdown code blocks BEFORE marked processes them
-                // Some models (Gemini 2.0 Flash, Gemini 3 Pro) wrap output in markdown code blocks
-                // which causes syntax highlighting instead of rendering
-                const markdownBlocks = [];
-                text = text.replace(/\\\`\\\`\\\`(?:markdown|md)\\s*\\n([\\s\\S]*?)\\\`\\\`\\\`/g, (match, content) => {
-                    const placeholder = '<!--RENDERED_MD_' + markdownBlocks.length + '-->';
-                    markdownBlocks.push(content);
-                    return placeholder;
-                });
+                // BUGFIX: Unwrap markdown code blocks BEFORE marked processes them
+                // Some models (Gemini 2.0 Flash, Gemini 3 Pro) wrap output in triple-backtick markdown blocks
+                // which would cause syntax highlighting instead of rendering
+                // Simply extract the content and let marked parse it normally
+                // Use \\x60 hex escape for backticks to avoid template literal parsing issues
+                text = text.replace(/\\x60\\x60\\x60(?:markdown|md)\\s*\\n([\\s\\S]*?)\\x60\\x60\\x60/g, '$1');
 
                 // Convert backtick-wrapped URLs to links BEFORE marked processes them
-                text = text.replace(/\\\`(https?:\\/\\/[^\\\`]+)\\\`/g, '<a href="$1" target="_blank" rel="noopener" class="url-link">$1</a>');
+                text = text.replace(/\\x60(https?:\\/\\/[^\\x60]+)\\x60/g, '<a href="$1" target="_blank" rel="noopener" class="url-link">$1</a>');
 
-                // Parse the rest with marked
-                let html = marked.parse(text);
-
-                // Replace placeholders with rendered markdown (not code blocks)
-                markdownBlocks.forEach((content, index) => {
-                    const placeholder = '<!--RENDERED_MD_' + index + '-->';
-                    const rendered = '<div class="rendered-markdown-content">' + marked.parse(content) + '</div>';
-                    html = html.replace(placeholder, rendered);
-                });
-
-                return html;
+                // Parse with marked
+                return marked.parse(text);
             };
             console.log('Marked library loaded successfully');
         } else {
@@ -2147,12 +2135,9 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             const contentEl = currentResponseEl.querySelector('.message-content') || currentResponseEl;
             try {
                 contentEl.innerHTML = parseMarkdown(currentResponseContent);
-                // parseMarkdown() already extracts and renders markdown code blocks
-                // Just apply syntax highlighting to regular code blocks (skip rendered markdown content)
+                // parseMarkdown() already unwraps markdown code blocks before parsing
+                // Just apply syntax highlighting to code blocks
                 contentEl.querySelectorAll('pre code').forEach((block) => {
-                    // Skip code blocks inside rendered markdown divs
-                    if (block.closest('.rendered-markdown-content')) return;
-
                     if (block.textContent.length <= MAX_HIGHLIGHT_SIZE) {
                         hljs.highlightElement(block);
                     }
