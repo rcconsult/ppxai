@@ -1,13 +1,78 @@
 # ppxai Development Roadmap
 
-> **Note:** For future roadmap beyond v1.10.7, see:
-> - [gemini3-features-roadmap.md](gemini3-features-roadmap.md) - Agentic features (v1.11.0-v1.13.0)
+> **Note:** For future roadmap, see:
+> - **[docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.md)** - **Detailed v1.11.0 implementation plan (NEXT RELEASE)**
+> - [gemini3-features-roadmap.md](gemini3-features-roadmap.md) - Agentic features vision (v1.11.0-v1.13.0)
 > - [docs/tui-markdown-rendering.md](docs/tui-markdown-rendering.md) - TUI Workspace vision (v1.10.5-v1.15.0)
 > - [sonar-features-proposal.md](sonar-features-proposal.md) - Competitive analysis
 
 ---
 
-## Current Release: v1.10.7
+## Next Release: v1.11.0
+
+**Status**: 🛠️ In Planning - Agentic Workflow
+
+**Detailed Implementation Plan**: [docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.md)
+
+**Goal**: Transform ppxai from turn-based chatbot into autonomous developer agent
+
+**Key Features**:
+- **Native File Editing Tools** - Safe, atomic file editing (apply_patch, replace_block, insert_text, delete_lines)
+- **`@git` Context Provider** - Automatic git diff injection for code review
+- **`@tree` Context Provider** - Project structure awareness
+- **`/agent` Command** - Autonomous multi-step task execution (max 5 iterations)
+
+**Implementation Phases**:
+1. Phase 1: File editing tools (4-6 hours) - Test manually
+2. Phase 2: @git context (2-3 hours) - Test manually
+3. Phase 3: @tree context (2-3 hours) - Test manually
+4. Phase 4: Manual testing & refinement (3-4 hours) - Dogfood all features
+5. Phase 5: /agent loop (6-8 hours) - Build automation with confidence
+6. Phase 6: Testing & docs (4-5 hours) - Comprehensive validation
+
+**Total Effort**: 21-29 hours
+
+**Branch**: `feature/agentic-workflow-v1.11.0` (to be created)
+
+---
+
+## Current Release: v1.10.8
+
+**Status**: ✅ Complete - Unified Save/Export Commands
+
+Released: 2025-12-20
+
+**Features implemented:**
+- **Unified `/save` and `/export` commands** - Consistent behavior across TUI and VSCode extension
+- **New `/export` command** - Export last answer to markdown (~/.ppxai/exports/)
+- **Changed `/save` behavior** - Now saves session to JSON (~/.ppxai/sessions/) for persistence
+- **Enhanced VSCode extension**:
+  - "Save Answer" button saves to exports folder with auto-generated filenames
+  - Orange pulsing "⏹ Streaming..." badge in header for interrupt visibility
+  - Silent interrupt handling (no red error messages on user-initiated stop)
+- **Clear separation** - Session persistence (JSON) vs answer export (markdown)
+
+**Files Changed:**
+- `ppxai/commands.py` - Refactored handle_save(), added handle_export()
+- `ppxai/engine/client.py` - Added export_answer() method
+- `ppxai/server/http.py` - Added POST /export endpoint
+- `ppxai/server/jsonrpc.py` - Added export_answer() RPC method
+- `ppxai/ui.py` - Updated help text for /save and /export
+- `ppxai/main.py` - Updated autocomplete with /export command
+- `vscode-extension/src/chatPanel.ts` - Streaming badge, Save Answer button, /export handler
+- `vscode-extension/src/httpClient.ts` - Added exportAnswer() API method
+- `README.md` - Updated session management documentation
+- `tests/test_commands.py` - Updated tests for new behavior
+- `pyproject.toml` - Version bump to 1.10.8
+- `vscode-extension/package.json` - Version bump to 1.10.8
+
+**Testing:**
+- 237/242 tests passed (98%)
+- 5 pre-existing custom endpoint integration test failures (unrelated)
+
+---
+
+## Previous Release: v1.10.7
 
 **Status**: ✅ Complete - Perplexity Model Deprecation Fix
 
@@ -23,20 +88,6 @@ Features implemented:
 - `sonar-pro` - Advanced search ($3/$15 per 1M tokens)
 - `sonar-reasoning-pro` - CoT reasoning ($2/$8 per 1M tokens)
 - `sonar-deep-research` - Research reports ($2/$8 per 1M tokens)
-
-**Files Changed:**
-- `ppxai/config.py` - Removed sonar-reasoning model and pricing
-- `ppxai-config.json` - Removed sonar-reasoning model and pricing
-- `ppxai-config.example.json` - Removed sonar-reasoning model and pricing
-- `pyproject.toml` - Version bump to 1.10.7
-- `vscode-extension/package.json` - Version bump to 1.10.7
-- `README.md` - Updated "What's New" section with v1.10.7 info
-- `vscode-extension/README.md` - Updated version references
-
-**Testing:**
-- 236/241 tests passed
-- 5 pre-existing custom endpoint integration test failures (unrelated)
-- All config tests passing
 
 ---
 
