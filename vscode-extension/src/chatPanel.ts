@@ -2418,6 +2418,22 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                     typingIndicator.textContent = 'Using tool: ' + message.tool + '...';
                     typingIndicator.classList.add('visible');
                     addMessage('tool-call', '🔧 **Calling tool:** \`' + message.tool + '\`\\n\`\`\`json\\n' + JSON.stringify(message.arguments, null, 2) + '\\n\`\`\`', true);
+
+                    // BUGFIX: Strip tool call JSON from current response content
+                    // When Gemini includes tool JSON in its response, remove it from display
+                    if (currentResponseContent) {
+                        // Remove trailing JSON code blocks that match tool call pattern
+                        // Pattern: \\\`\\\`\\\`json\\n{\\n  "tool": "...",\\n  "arguments": {...}\\n}\\n\\\`\\\`\\\`
+                        const toolJsonPattern = /\\\`\\\`\\\`(?:json)?\\s*\\{[^\\\`]*?"tool"\\s*:\\s*"[^"]+?"[^\\\`]*?\\}\\s*\\\`\\\`\\\`\\s*$/;
+                        const beforeStrip = currentResponseContent;
+                        currentResponseContent = currentResponseContent.replace(toolJsonPattern, '').trimEnd();
+
+                        // If we stripped something, re-render to remove the JSON from UI
+                        if (beforeStrip !== currentResponseContent && currentResponseEl) {
+                            const contentEl = currentResponseEl.querySelector('.message-content') || currentResponseEl;
+                            contentEl.innerHTML = simpleFormat(currentResponseContent);
+                        }
+                    }
                     break;
 
                 case 'toolResult':
