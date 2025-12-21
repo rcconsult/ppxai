@@ -2009,14 +2009,34 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                 breaks: true,
                 gfm: true
             });
-            // Wrap marked.parse to pre-process backtick-wrapped URLs
-            // Perplexity/Gemini wrap URLs in backticks which marked converts to <code>
+            // Wrap marked.parse to pre-process backtick-wrapped URLs and markdown code blocks
             parseMarkdown = function(text) {
                 if (!text) return '';
+
+                // BUGFIX: Extract markdown code blocks BEFORE marked processes them
+                // Some models (Gemini 2.0 Flash, Gemini 3 Pro) wrap output in markdown code blocks
+                // which causes syntax highlighting instead of rendering
+                const markdownBlocks = [];
+                text = text.replace(/\\\`\\\`\\\`(?:markdown|md)\\s*\\n([\\s\\S]*?)\\\`\\\`\\\`/g, (match, content) => {
+                    const placeholder = '<!--RENDERED_MD_' + markdownBlocks.length + '-->';
+                    markdownBlocks.push(content);
+                    return placeholder;
+                });
+
                 // Convert backtick-wrapped URLs to links BEFORE marked processes them
-                // This prevents URLs like \`https://example.com\` from becoming <code> blocks
-                text = text.replace(/\`(https?:\\/\\/[^\`]+)\`/g, '<a href="$1" target="_blank" rel="noopener" class="url-link">$1</a>');
-                return marked.parse(text);
+                text = text.replace(/\\\`(https?:\\/\\/[^\\\`]+)\\\`/g, '<a href="$1" target="_blank" rel="noopener" class="url-link">$1</a>');
+
+                // Parse the rest with marked
+                let html = marked.parse(text);
+
+                // Replace placeholders with rendered markdown (not code blocks)
+                markdownBlocks.forEach((content, index) => {
+                    const placeholder = '<!--RENDERED_MD_' + index + '-->';
+                    const rendered = '<div class="rendered-markdown-content">' + marked.parse(content) + '</div>';
+                    html = html.replace(placeholder, rendered);
+                });
+
+                return html;
             };
             console.log('Marked library loaded successfully');
         } else {
@@ -2127,8 +2147,12 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             const contentEl = currentResponseEl.querySelector('.message-content') || currentResponseEl;
             try {
                 contentEl.innerHTML = parseMarkdown(currentResponseContent);
-                // Apply syntax highlighting to code blocks (skip large ones for performance)
+                // parseMarkdown() already extracts and renders markdown code blocks
+                // Just apply syntax highlighting to regular code blocks (skip rendered markdown content)
                 contentEl.querySelectorAll('pre code').forEach((block) => {
+                    // Skip code blocks inside rendered markdown divs
+                    if (block.closest('.rendered-markdown-content')) return;
+
                     if (block.textContent.length <= MAX_HIGHLIGHT_SIZE) {
                         hljs.highlightElement(block);
                     }
@@ -2642,8 +2666,12 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             if (useMarkdown && content) {
                 try {
                     contentEl.innerHTML = parseMarkdown(content);
-                    // Apply syntax highlighting
+                    // parseMarkdown() already extracts and renders markdown code blocks
+                    // Just apply syntax highlighting to regular code blocks (skip rendered markdown content)
                     contentEl.querySelectorAll('pre code').forEach((block) => {
+                        // Skip code blocks inside rendered markdown divs
+                        if (block.closest('.rendered-markdown-content')) return;
+
                         hljs.highlightElement(block);
                     });
                 } catch (e) {
