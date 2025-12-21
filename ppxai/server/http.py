@@ -29,14 +29,54 @@ from ..engine import EngineClient, EventType
 # Global engine instance (managed by lifespan)
 engine: Optional[EngineClient] = None
 
+# Consent request tracking (Phase 1C: v1.11.0)
+# Maps file_path -> asyncio.Future[tuple[bool, str]]
+pending_consent_requests: dict[str, asyncio.Future] = {}
+
+
+async def http_consent_handler(file_path: str) -> tuple[bool, str]:
+    """
+    Handle file edit consent request via HTTP (Phase 1C: v1.11.0).
+
+    This function:
+    1. Creates a Future to wait for user response
+    2. Stores it in pending_consent_requests
+    3. Returns when /consent endpoint resolves the Future
+
+    The consent request event is emitted via SSE in the event generator.
+
+    Args:
+        file_path: Path to file that needs editing
+
+    Returns:
+        tuple: (approved: bool, response: str)
+    """
+    global pending_consent_requests
+
+    # Create a future for this consent request
+    future = asyncio.Future()
+    pending_consent_requests[file_path] = future
+
+    # Wait for response from /consent endpoint (with timeout)
+    try:
+        approved, response = await asyncio.wait_for(future, timeout=300.0)  # 5 min timeout
+        return (approved, response)
+    except asyncio.TimeoutError:
+        # Timeout - deny for safety
+        pending_consent_requests.pop(file_path, None)
+        return (False, 'n')
+    finally:
+        # Cleanup
+        pending_consent_requests.pop(file_path, None)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan (startup/shutdown)."""
     global engine
 
-    # Startup: Initialize engine
-    engine = EngineClient()
+    # Startup: Initialize engine with consent callback (Phase 1C: v1.11.0)
+    engine = EngineClient(consent_callback=http_consent_handler)
 
     # Set default provider (tries perplexity first, falls back to gemini)
     from ..config import get_available_providers
@@ -51,6 +91,7 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown: Cleanup
+    pending_consent_requests.clear()
     engine = None
     print("ppxai HTTP server stopped")
 
@@ -122,6 +163,12 @@ class AutoInjectRequest(BaseModel):
     enabled: bool
 
 
+class ConsentRequest(BaseModel):
+    """File edit consent response (Phase 1C: v1.11.0)."""
+    file_path: str
+    response: str  # 'y', 'n', 'always', 'never'
+
+
 # === SSE Streaming ===
 
 async def sse_event_generator(prompt: str) -> AsyncGenerator[str, None]:
@@ -129,6 +176,7 @@ async def sse_event_generator(prompt: str) -> AsyncGenerator[str, None]:
 
     SSE format: data: {json}\n\n
     Each event is yielded immediately with a sleep(0) to force flush.
+    Phase 1C: Also checks consent_event_queue for pending consent requests.
     """
     global engine
     if not engine:
@@ -137,6 +185,19 @@ async def sse_event_generator(prompt: str) -> AsyncGenerator[str, None]:
 
     try:
         async for event in engine.chat(prompt):
+            # Phase 1C: Check for pending consent requests before each event
+            while engine._consent_event_queue:
+                consent_event = engine._consent_event_queue.pop(0)
+                consent_data = {
+                    "type": consent_event.type.value,
+                    "data": consent_event.data,
+                }
+                if consent_event.metadata:
+                    consent_data["metadata"] = consent_event.metadata
+                yield f"data: {json.dumps(consent_data)}\n\n"
+                await asyncio.sleep(0)
+
+            # Emit regular event
             event_data = {
                 "type": event.type.value,
                 "data": event.data,
@@ -538,6 +599,46 @@ async def interrupt_stream():
 
     engine.interrupt_stream()
     return {"interrupted": True}
+
+
+@app.post("/consent")
+async def respond_to_consent(request: ConsentRequest):
+    """Respond to a file edit consent request (Phase 1C: v1.11.0).
+
+    This endpoint is called by the VSCode extension when the user
+    responds to a consent dialog. It resolves the pending Future
+    that the consent callback is waiting on.
+
+    Args:
+        request: ConsentRequest with file_path and response
+
+    Returns:
+        JSON: {"file_path": str, "response": str, "resolved": bool}
+    """
+    global pending_consent_requests
+
+    file_path = request.file_path
+    response = request.response.lower()
+
+    # Validate response
+    if response not in ['y', 'n', 'always', 'never']:
+        raise HTTPException(status_code=400, detail=f"Invalid response: {response}. Must be y, n, always, or never")
+
+    # Find and resolve the pending request
+    if file_path in pending_consent_requests:
+        future = pending_consent_requests[file_path]
+        if not future.done():
+            # Resolve the future with (approved, response)
+            approved = response in ['y', 'always']
+            future.set_result((approved, response))
+            return {
+                "file_path": file_path,
+                "response": response,
+                "resolved": True
+            }
+
+    # No pending request found
+    raise HTTPException(status_code=404, detail=f"No pending consent request for: {file_path}")
 
 
 # === CLI Entry Point ===

@@ -346,6 +346,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     // Ignore parse errors
                 }
                 break;
+            case 'consent_request':
+                // Phase 1C: File edit consent request
+                this.handleConsentRequest(event);
+                break;
             case 'error':
                 this._view.webview.postMessage({
                     type: 'error',
@@ -355,6 +359,67 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             case 'done':
                 // Handled by endResponse
                 break;
+        }
+    }
+
+    private async handleConsentRequest(event: StreamEvent) {
+        /**
+         * Handle file edit consent request (Phase 1C: v1.11.0)
+         *
+         * Shows a modal dialog asking user for permission to edit a file.
+         * Supports: Yes (this file), No, Always (all files), Never (block all)
+         */
+        try {
+            const data = JSON.parse(event.content);
+            const filePath = data.file_path || event.metadata?.file_path;
+
+            if (!filePath) {
+                console.error('Consent request missing file_path');
+                return;
+            }
+
+            // Show modal dialog with options
+            const choice = await vscode.window.showWarningMessage(
+                `AI wants to edit file: ${filePath}`,
+                { modal: true },
+                'Yes (this file)',
+                'No',
+                'Always (all files)',
+                'Never (block all)'
+            );
+
+            // Map choice to response
+            let response: 'y' | 'n' | 'always' | 'never';
+            switch (choice) {
+                case 'Yes (this file)':
+                    response = 'y';
+                    break;
+                case 'Always (all files)':
+                    response = 'always';
+                    break;
+                case 'Never (block all)':
+                    response = 'never';
+                    break;
+                default: // 'No' or cancelled
+                    response = 'n';
+                    break;
+            }
+
+            // Send consent response to server
+            await this._backend.consent(filePath, response);
+
+        } catch (error) {
+            console.error('Consent request error:', error);
+            // On error, deny for safety
+            try {
+                const data = JSON.parse(event.content);
+                const filePath = data.file_path || event.metadata?.file_path;
+                if (filePath) {
+                    await this._backend.consent(filePath, 'n');
+                }
+            } catch {
+                // Ignore - best effort
+            }
         }
     }
 

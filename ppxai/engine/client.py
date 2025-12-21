@@ -59,6 +59,10 @@ class EngineClient:
         # File edit consent callback (Phase 1: v1.11.0)
         self.consent_callback = consent_callback
 
+        # Event emitter for consent requests (Phase 1C: HTTP/SSE support)
+        # This allows emitting events from within consent callback
+        self._consent_event_queue: List[Event] = []
+
         # Load configuration
         self._load_config()
 
@@ -315,6 +319,15 @@ class EngineClient:
 
         # Request consent from user via callback
         try:
+            # Emit consent request event (Phase 1C: for HTTP/SSE support)
+            consent_event = Event(
+                type=EventType.CONSENT_REQUEST,
+                data={"file_path": str(path)},
+                metadata={"file_path": str(path)}
+            )
+            self._consent_event_queue.append(consent_event)
+
+            # Call consent callback and wait for response
             approved, response = await self.consent_callback(str(path))
 
             if response == "y":
