@@ -30,5 +30,11 @@ def register_all_builtin_tools(manager: 'ToolManager', provider: str = None, eng
 
     # Register file editing tools (v1.11.0) if engine provided
     if engine is not None:
-        from . import editor
-        editor.register_tools(manager, engine)
+        try:
+            from . import editor
+            editor.register_tools(manager, engine)
+            print(f"[DEBUG] File editing tools registered: {len([t for t in manager._tools if t.startswith('apply_') or t.startswith('replace_') or t.startswith('insert_') or t.startswith('delete_')])}")
+        except Exception as e:
+            print(f"[ERROR] Failed to register file editing tools: {e}")
+            import traceback
+            traceback.print_exc()
