@@ -14,6 +14,7 @@
 |----------|-------------|
 | [Tool Creation Guide](TOOL_CREATION_GUIDE.md) | **START HERE** - Step-by-step guide for both approaches |
 | [Quick Start](QUICK_START_TOOLS.md) | Get tools working in 60 seconds |
+| [File Editing Guide](FILE_EDITING_GUIDE.md) | **NEW (v1.11.0)** - File editing tools with consent system 🎯 |
 | [Tool Approaches](TOOL_APPROACHES.md) | Comparison: Prompt-based vs Native function calling |
 
 ### Reference
