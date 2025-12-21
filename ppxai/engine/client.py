@@ -530,7 +530,25 @@ class EngineClient:
 
                 # Execute tool
                 try:
-                    result = await self.tool_manager.execute_tool(tool_name, **tool_args)
+                    # Execute tool in background to allow consent events to be yielded
+                    tool_task = asyncio.create_task(self.tool_manager.execute_tool(tool_name, **tool_args))
+
+                    # Poll consent event queue while tool is running
+                    # (file editing tools will add consent requests to queue during execution)
+                    while not tool_task.done():
+                        while self._consent_event_queue:
+                            consent_event = self._consent_event_queue.pop(0)
+                            yield consent_event
+                        await asyncio.sleep(0.05)  # Poll every 50ms
+
+                    # Drain any remaining consent events
+                    while self._consent_event_queue:
+                        consent_event = self._consent_event_queue.pop(0)
+                        yield consent_event
+
+                    # Get tool result
+                    result = await tool_task
+
                     yield Event(EventType.TOOL_RESULT, {
                         "tool": tool_name,
                         "result": result[:2000] + "..." if len(result) > 2000 else result
