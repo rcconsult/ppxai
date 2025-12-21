@@ -30,6 +30,7 @@ class ContextInjector:
 
     # Patterns to detect file references
     FILE_PATTERNS = [
+        r'@([\w./\-_~]+\.\w+)',               # @/path/file.ext, @./file.ext (explicit reference)
         r'(?:^|\s)([./~][\w./\-_]+\.\w+)',   # ./path/file.ext, ~/file.ext
         r'(?:^|\s)(/[\w./\-_]+\.\w+)',        # /absolute/path/file.ext
     ]
@@ -134,6 +135,10 @@ class ContextInjector:
         """
         if not files:
             return False
+
+        # Check for explicit @ references (always inject these)
+        if '@' in message:
+            return True
 
         msg_lower = message.lower()
 
@@ -252,8 +257,15 @@ class ContextInjector:
         if not injected:
             return message, []
 
+        # Remove @ file references from message (they've been injected)
+        # This prevents the AI from seeing @/path/file.ext and getting confused
+        cleaned_message = message
+        for filepath in files:
+            # Remove @filepath patterns
+            cleaned_message = re.sub(r'@' + re.escape(filepath) + r'\b', f'`{Path(filepath).name}`', cleaned_message)
+
         # Build enhanced message with injected content
-        enhanced = message + "\n\n---\n**Attached file contents:**\n"
+        enhanced = cleaned_message + "\n\n---\n**Attached file contents:**\n"
 
         for ctx in injected:
             truncation_note = " *(truncated)*" if ctx.truncated else ""
