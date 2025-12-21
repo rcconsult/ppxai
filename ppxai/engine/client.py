@@ -5,6 +5,7 @@ This is the primary interface for all frontends (TUI, VSCode, Web).
 It has no UI dependencies and communicates via events.
 """
 
+import asyncio
 import json
 import re
 from typing import List, AsyncIterator, Optional, Dict, Any
