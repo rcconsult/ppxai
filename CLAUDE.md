@@ -65,9 +65,9 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - Automated GitHub Actions CI/CD for multi-platform builds (macOS ARM/Intel, Linux, Windows)
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.10.8
-- VSCode extension (package.json): v1.10.8
-- Git tag: v1.10.8 (pending release)
+- Python package (pyproject.toml): v1.11.0
+- VSCode extension (package.json): v1.11.0
+- Git tag: v1.11.0 (pending release)
 
 ## Development Setup
 
