@@ -8,7 +8,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current Version:** v1.11.0 (Agentic Workflow - Phase 1: File Editing Tools)
 
-**What's New in v1.11.0:**
+**What's New in v1.11.0 (Released 2025-12-21):**
 - **NEW:** 4 file editing tools with user consent (apply_patch, replace_block, insert_text, delete_lines)
 - **NEW:** Per-file session consent system (y/n/always/never)
 - **NEW:** Atomic file operations with automatic rollback on failure
@@ -17,9 +17,12 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **Session-scoped:** Consent persists across tool calls in same session
 - **TUI:** Interactive consent prompts with prompt_toolkit validation
 - **VSCode:** Modal consent dialogs with 4 options
-- **Tests:** 25 new regression tests for file editing (262 total tests)
+- **Fixed:** Markdown code block rendering in VSCode for Gemini models (uses hex escapes to unwrap ```markdown blocks)
+- **Tests:** 262 total tests passing (25 new file editing regression tests)
+- **Performance:** TTFT 1453ms, Total 2446ms (0.84x baseline - improved!), 64.0 tok/s
 - **Architecture:** Event-driven consent via SSE for VSCode, async callbacks for TUI
 - **Details:** See [docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.md)
+- **Release:** https://github.com/rcconsult/ppxai/releases/tag/v1.11.0
 
 **Previous Release (v1.10.8 - 2025-12-21):**
 - **Unified:** `/save` and `/export` commands now behave consistently across TUI and VSCode extension
@@ -67,7 +70,8 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 **Version Alignment:**
 - Python package (pyproject.toml): v1.11.0
 - VSCode extension (package.json): v1.11.0
-- Git tag: v1.11.0 (pending release)
+- Git tag: v1.11.0 (released 2025-12-21)
+- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v1.11.0
 
 ## Development Setup
 
@@ -295,10 +299,31 @@ python -c "from ppxai.config import validate_config; print(validate_config())"
 
 ## Testing
 
-- **180+ tests** across multiple test modules
+- **262 tests** across multiple test modules (25 new file editing tests in v1.11.0)
 - **48 config tests** for the hybrid configuration system
 - Tests use `pytest` with `unittest.mock` for mocking
 - Custom endpoint integration tests require vLLM/Ollama running locally
+
+## GitHub CLI Authentication
+
+When using `gh` commands for releases and repository operations, **always use the project token file** to avoid conflicts with stale environment variables:
+
+```bash
+# Standard pattern for all gh commands
+unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN && gh <command>
+
+# Examples
+unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN && gh release list
+unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN && gh release create v1.x.x
+```
+
+**Why this is needed:**
+- The `gh` CLI checks `GITHUB_TOKEN` env var first, then falls back to `GH_TOKEN`
+- Stale `GITHUB_TOKEN` values in the environment can cause 401 Unauthorized errors
+- The token in `.github/gh-tokenv.env` is the valid project token
+- Always unset `GITHUB_TOKEN` before sourcing to ensure clean state
+
+**Build scripts** (like `scripts/build-intel.sh`) handle this automatically.
 
 ## Recent Features (v1.10.2)
 
