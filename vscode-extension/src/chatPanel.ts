@@ -764,6 +764,20 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 }
                 break;
 
+            case 'help':
+                if (args[1] === 'editing') {
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: this.getFileEditingHelp()
+                    });
+                } else {
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: 'Available help topics: **editing**\nUsage: `/tools help editing`'
+                    });
+                }
+                break;
+
             case 'status':
             default:
                 const status = await this._backend.getToolsStatus();
@@ -1195,6 +1209,108 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
             text += possible.charAt(Math.floor(Math.random() * possible.length));
         }
         return text;
+    }
+
+    private getFileEditingHelp(): string {
+        return `# File Editing Tools Guide 🎯
+
+## Overview
+ppxai can now **autonomously edit files** during conversations! All edits require your **explicit consent** before any changes are made.
+
+## Quick Start
+1. **Enable tools**: \`/tools enable\`
+2. **Ask AI to edit**: Just request file changes naturally!
+3. **Grant consent**: Choose y/n/always/never when prompted
+
+## Consent System
+
+When AI wants to edit a file, you'll see a modal dialog with 4 options:
+
+| Option | Behavior | Use When |
+|--------|----------|----------|
+| **y** (yes) | Allow editing this file (this session) | You want this specific edit |
+| **n** (no) | Deny editing this file | You don't trust this specific edit |
+| **always** | Allow all file edits (this session) | You trust the AI completely |
+| **never** | Block all file edits (this session) | You want read-only mode |
+
+**Session-Scoped:** Your consent persists for the current session only.
+
+## Available Tools
+
+### 1. apply_patch
+Apply unified diff patches (like git patches).
+
+**Example:**
+\`\`\`
+Apply this patch to fix the bug in auth.py:
+[paste unified diff]
+\`\`\`
+
+### 2. replace_block
+Find and replace exact text blocks.
+
+**Example:**
+\`\`\`
+In config.py, replace "database = 'test.db'" with "database = 'production.db'"
+\`\`\`
+
+### 3. insert_text
+Insert text at specific line numbers.
+
+**Example:**
+\`\`\`
+Add a print statement at line 42 in debug.py: print("Debug checkpoint")
+\`\`\`
+
+### 4. delete_lines
+Delete line ranges from files.
+
+**Example:**
+\`\`\`
+Delete lines 10-15 from old_code.py
+\`\`\`
+
+## Pro Tips 💡
+
+✅ **Do:**
+- Start with small, focused edits
+- Review consent prompts carefully
+- Use "y" for individual edits when learning
+- Use "always" when you fully trust the AI
+
+❌ **Don't:**
+- Grant "always" consent without understanding
+- Edit files you haven't backed up
+- Use with critical system files
+
+## Safety Features ✅
+
+- **User consent required** - Every file edit needs your approval
+- **Atomic operations** - Edits rollback automatically on failure
+- **Session-scoped** - Consent resets when you restart
+- **File existence checks** - Won't edit non-existent files
+
+## Troubleshooting
+
+**Q: AI keeps asking for consent?**
+A: Use "always" mode if you trust it for this session.
+
+**Q: Edit failed?**
+A: Check file permissions, file exists, and exact text matches.
+
+**Q: How do I disable?**
+A: Use \`/tools disable\` or choose "never" when prompted.
+
+## Commands Reference
+
+- \`/tools enable\` - Enable file editing tools
+- \`/tools status\` - Check current consent mode
+- \`/tools list\` - Show all available tools
+- \`/tools help editing\` - Show this help
+
+---
+
+**Ready to try?** Type \`/tools enable\` and ask the AI to edit a file!`;
     }
 
     private _getHtmlForWebview(webview: vscode.Webview): string {
