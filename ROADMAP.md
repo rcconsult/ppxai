@@ -24,25 +24,30 @@ Released: 2025-12-21
 - ✅ **TUI Consent Prompts** - Interactive validation with prompt_toolkit
 - ✅ **Event-Driven SSE Consent** - Server-Sent Events for VSCode modal dialogs
 - ✅ **Atomic File Operations** - Automatic rollback on failure
-- ✅ **25 Regression Tests** - Comprehensive test coverage (262 total tests passing)
-- ✅ **Complete Documentation** - Updated README, CLAUDE.md, comprehensive FILE_EDITING_GUIDE.md
-- ✅ **In-App Help** - `/tools help editing` command with practical examples
+- ✅ **36 Comprehensive Tests** - 25 tool tests + 11 help/UI tests (273 total tests passing)
+- ✅ **Complete Documentation** - README, CLAUDE.md, FILE_EDITING_GUIDE.md, VSCode TESTING.md
+- ✅ **In-App Help** - `/tools help editing` command in both TUI and VSCode extension
 
 **Files Changed**:
 - `ppxai/engine/tools/builtin/editor.py` - NEW, 4 file editing tools
 - `ppxai/engine/client.py` - Added request_file_edit_consent() method
 - `ppxai/engine/session.py` - Added consent state (allowed_files, edit_consent_mode)
-- `ppxai/commands.py` - TUI consent handler with prompt_toolkit validation
+- `ppxai/commands.py` - TUI consent handler + /tools help editing command
 - `ppxai/ui.py` - Added display_file_editing_help() and updated welcome
-- `tests/test_file_editing_tools.py` - NEW, 25 comprehensive tests
+- `tests/test_file_editing_tools.py` - NEW, 25 file editing tests
+- `tests/test_ui.py` - NEW, 5 UI help display tests
+- `tests/test_commands.py` - Added 6 help command tests
 - `docs/FILE_EDITING_GUIDE.md` - NEW, 400+ lines of user documentation
+- `vscode-extension/src/chatPanel.ts` - Added getFileEditingHelp() + help command
+- `vscode-extension/TESTING.md` - NEW, testing documentation
 - `README.md` - Added File Editing Tools section
 - `CLAUDE.md` - Version bump to 1.11.0 with feature summary
 - `pyproject.toml` - Version bump to 1.11.0
 - `vscode-extension/package.json` - Version bump to 1.11.0
 
 **Testing**:
-- 262/267 tests passed (98%)
+- 273/278 tests passed (98.2%)
+- 36 total tests for file editing features (25 tools + 11 help/UI)
 - 5 pre-existing custom endpoint integration test failures (unrelated)
 
 **Remaining Features** (Future Phases):
