@@ -262,8 +262,12 @@ def main():
             )
 
             # Send message to API
-            if tools_enabled:
-                # Use async tool-enabled chat
+            # Use EngineClient if available (v1.11.0+ with file editing tools)
+            if hasattr(handler, 'engine_client') and handler.engine_client is not None:
+                # Use new engine with file editing tools and consent system
+                response = handler.engine_client.chat_sync(augmented_input)
+            elif tools_enabled:
+                # Use legacy async tool-enabled chat
                 response = asyncio.run(client.chat_with_tools(augmented_input, current_model))
             else:
                 # Use regular chat
