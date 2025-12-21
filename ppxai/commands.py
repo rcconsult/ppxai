@@ -18,6 +18,7 @@ from .ui import (
     console,
     display_welcome,
     display_spec_help,
+    display_file_editing_help,
     select_model,
     select_provider,
     display_sessions,
@@ -490,9 +491,15 @@ class CommandHandler:
             self._tools_status()
         elif subcommand == "config":
             self._tools_config(subargs)
+        elif subcommand == "help":
+            if subargs and subargs[0] == "editing":
+                display_file_editing_help()
+            else:
+                console.print("[yellow]Available help topics: editing[/yellow]")
+                console.print("[dim]Usage: /tools help editing[/dim]\n")
         else:
             console.print(f"[red]Unknown subcommand: {subcommand}[/red]")
-            console.print("[yellow]Available: enable, disable, list, status, config[/yellow]\n")
+            console.print("[yellow]Available: enable, disable, list, status, config, help[/yellow]\n")
 
     def _enable_tools(self):
         """Enable AI tools (including file editing tools with consent)."""
