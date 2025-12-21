@@ -8,6 +8,8 @@ from datetime import datetime
 from typing import Optional, TYPE_CHECKING
 
 from rich.console import Console
+from prompt_toolkit import prompt as pt_prompt
+from prompt_toolkit.validation import Validator, ValidationError
 
 from .config import CODING_MODEL, get_coding_model, get_provider_config, get_api_key, get_base_url, PROVIDERS
 from .prompts import CODING_PROMPTS
@@ -26,6 +28,73 @@ from .ui import (
 
 if TYPE_CHECKING:
     from .client import AIClient
+
+
+class ConsentValidator(Validator):
+    """Validator for file edit consent responses."""
+
+    def validate(self, document):
+        text = document.text.strip().lower()
+        if text not in ['y', 'n', 'yes', 'no', 'always', 'never']:
+            raise ValidationError(
+                message="Please enter: y (yes), n (no), always, or never",
+                cursor_position=len(document.text)
+            )
+
+
+async def tui_consent_handler(file_path: str) -> tuple[bool, str]:
+    """
+    Handle file edit consent request in TUI.
+
+    Prompts user with options:
+    - y/yes: Allow editing this file (this session)
+    - n/no: Deny editing this file
+    - always: Allow editing all files (this session)
+    - never: Deny all file edits (this session)
+
+    Args:
+        file_path: Path to file that needs editing
+
+    Returns:
+        tuple: (approved: bool, response: str)
+    """
+    console.print(f"\n[bold yellow]⚠️  File Edit Request[/bold yellow]")
+    console.print(f"[cyan]AI wants to edit:[/cyan] {file_path}")
+    console.print("[dim]Options: y (yes), n (no), always (all files), never (block all)[/dim]")
+
+    try:
+        # Use prompt_toolkit for input with validation
+        response = await asyncio.to_thread(
+            pt_prompt,
+            "Allow edit? ",
+            validator=ConsentValidator(),
+            validate_while_typing=False
+        )
+        response = response.strip().lower()
+
+        # Normalize response
+        if response in ['yes', 'y']:
+            response = 'y'
+            approved = True
+            console.print("[green]✓ Edit approved for this file[/green]\n")
+        elif response == 'always':
+            approved = True
+            console.print("[green]✓ All file edits approved for this session[/green]\n")
+        elif response == 'never':
+            approved = False
+            response = 'never'
+            console.print("[yellow]✗ All file edits blocked for this session[/yellow]\n")
+        else:  # 'no', 'n'
+            approved = False
+            response = 'n'
+            console.print("[yellow]✗ Edit denied for this file[/yellow]\n")
+
+        return (approved, response)
+
+    except (KeyboardInterrupt, EOFError):
+        # User cancelled - deny for safety
+        console.print("\n[yellow]✗ Edit cancelled[/yellow]\n")
+        return (False, 'n')
 
 
 def send_coding_task(client: 'AIClient', task_type: str, user_message: str, model: str, provider: str = None) -> Optional[str]:
@@ -60,6 +129,7 @@ class CommandHandler:
         self.tools_available = False
         self.PerplexityClientPromptTools = None
         self.load_tool_config = None
+        self.engine_client = None  # Phase 1B: EngineClient for file editing tools
 
         # Try to load tool support
         try:
@@ -425,7 +495,7 @@ class CommandHandler:
             console.print("[yellow]Available: enable, disable, list, status, config[/yellow]\n")
 
     def _enable_tools(self):
-        """Enable AI tools."""
+        """Enable AI tools (including file editing tools with consent)."""
         if isinstance(self.client, self.PerplexityClientPromptTools):
             console.print("[yellow]Tools already enabled[/yellow]\n")
             return
@@ -449,8 +519,24 @@ class CommandHandler:
 
         # Replace client
         self.client = tool_client
-        console.print("[green]✓ Tools enabled![/green]")
-        console.print("[dim]Use '/tools list' to see available tools[/dim]\n")
+
+        # Phase 1B: Enable EngineClient with file editing tools
+        try:
+            from ppxai.engine import EngineClient
+
+            # Create engine client with consent callback
+            self.engine_client = EngineClient(consent_callback=tui_consent_handler)
+            self.engine_client.set_provider(self.provider)
+            self.engine_client.set_model(self.current_model)
+            self.engine_client.enable_tools()
+
+            console.print("[green]✓ Tools enabled![/green]")
+            console.print("[dim]Includes file editing tools (apply_patch, replace_block, insert_text, delete_lines)[/dim]")
+            console.print("[dim]Use '/tools list' to see available tools[/dim]\n")
+        except ImportError:
+            # EngineClient not available (shouldn't happen, but fallback gracefully)
+            console.print("[green]✓ Tools enabled![/green]")
+            console.print("[dim]Use '/tools list' to see available tools[/dim]\n")
 
     def _disable_tools(self):
         """Disable AI tools."""
@@ -470,6 +556,11 @@ class CommandHandler:
         asyncio.run(self.client.cleanup())
 
         self.client = regular_client
+
+        # Phase 1B: Cleanup engine client
+        if self.engine_client:
+            self.engine_client = None
+
         console.print("[yellow]Tools disabled[/yellow]\n")
 
     def _list_tools(self):
@@ -482,7 +573,19 @@ class CommandHandler:
             console.print("[yellow]No tools available[/yellow]\n")
             return
 
+        # Show legacy tools
         display_tools_table(self.client.tool_manager.list_tools())
+
+        # Phase 1B: Also show engine tools if available
+        if self.engine_client and self.engine_client.tool_manager:
+            engine_tools = self.engine_client.tool_manager.list_tools()
+            if engine_tools:
+                console.print("\n[bold cyan]File Editing Tools (v1.11.0):[/bold cyan]")
+                for tool in engine_tools:
+                    # Only show file editing tools
+                    if tool.get('name') in ['apply_patch', 'replace_block', 'insert_text', 'delete_lines']:
+                        console.print(f"  • [bold]{tool.get('name')}[/bold] - {tool.get('description')}")
+                console.print()
 
     def _tools_status(self):
         """Show tools status."""
@@ -491,6 +594,14 @@ class CommandHandler:
             max_iter = getattr(self.client, 'tool_max_iterations', 15)
             console.print(f"[green]✓ Tools enabled[/green] ({tool_count} tools available)")
             console.print(f"[dim]Max iterations: {max_iter}[/dim]")
+
+            # Phase 1B: Show engine tools status
+            if self.engine_client:
+                engine_tool_count = len(self.engine_client.tool_manager.tools) if self.engine_client.tool_manager else 0
+                console.print(f"[green]✓ File editing tools enabled[/green] ({engine_tool_count} editing tools)")
+                consent_mode = self.engine_client.session.edit_consent_mode
+                console.print(f"[dim]Consent mode: {consent_mode}[/dim]")
+
             console.print("[dim]Use '/tools list' to see available tools[/dim]\n")
         else:
             console.print("[yellow]Tools not enabled[/yellow]")
