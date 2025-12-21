@@ -597,17 +597,27 @@ class CommandHandler:
     def _tools_status(self):
         """Show tools status."""
         if isinstance(self.client, self.PerplexityClientPromptTools):
-            tool_count = len(self.client.tool_manager.tools) if self.client.tool_manager else 0
+            try:
+                # Legacy tool manager uses different API
+                tool_count = len(self.client.tool_manager.list_tools()) if self.client.tool_manager else 0
+            except Exception as e:
+                console.print(f"[yellow]Unexpected error: {e}[/yellow]\n")
+                tool_count = 0
+
             max_iter = getattr(self.client, 'tool_max_iterations', 15)
             console.print(f"[green]✓ Tools enabled[/green] ({tool_count} tools available)")
             console.print(f"[dim]Max iterations: {max_iter}[/dim]")
 
             # Phase 1B: Show engine tools status
             if self.engine_client:
-                engine_tool_count = len(self.engine_client.tool_manager.tools) if self.engine_client.tool_manager else 0
-                console.print(f"[green]✓ File editing tools enabled[/green] ({engine_tool_count} editing tools)")
-                consent_mode = self.engine_client.session.edit_consent_mode
-                console.print(f"[dim]Consent mode: {consent_mode}[/dim]")
+                try:
+                    engine_tool_count = len(self.engine_client.tool_manager.list_tools())
+                    console.print(f"[green]✓ File editing tools enabled[/green] ({engine_tool_count} editing tools)")
+                    consent_mode = self.engine_client.session.edit_consent_mode
+                    console.print(f"[dim]Consent mode: {consent_mode}[/dim]")
+                except Exception:
+                    # Fallback if tool manager not available
+                    pass
 
             console.print("[dim]Use '/tools list' to see available tools[/dim]\n")
         else:
