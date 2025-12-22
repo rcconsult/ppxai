@@ -1,0 +1,256 @@
+"""
+Unified logging system for ppxai clients.
+
+Provides detailed logging of message flow, API calls, and tool execution
+with timestamps. Can be enabled via environment variable or programmatically.
+
+Architecture:
+- TUI logs to: ~/.ppxai/logs/tui-debug.log
+- Server logs to: ~/.ppxai/logs/server-debug.log
+- Same interface, different log files
+
+Usage:
+    # TUI
+    logger = get_logger("tui")
+    logger.enable()
+    logger.log_user_message("Hello")
+
+    # Server
+    logger = get_logger("server")
+    logger.enable()
+    logger.log_api_request(1, messages)
+
+Version: v1.11.2
+"""
+
+import logging
+import sys
+from pathlib import Path
+from datetime import datetime
+from typing import Optional, Dict
+import os
+
+
+class Logger:
+    """Unified logger for ppxai clients (TUI, Server, etc.)."""
+
+    # Class-level registry of logger instances
+    _instances: Dict[str, 'Logger'] = {}
+
+    def __init__(self, name: str):
+        """
+        Initialize logger for a specific client.
+
+        Args:
+            name: Client name (e.g., "tui", "server")
+        """
+        self.name = name
+        self._logger: Optional[logging.Logger] = None
+        self._enabled: bool = False
+        self._log_file: Optional[Path] = None
+
+        # Check if logging is enabled via environment
+        env_var = f'PPXAI_DEBUG' if name == "tui" else f'PPXAI_{name.upper()}_DEBUG'
+        if os.getenv('PPXAI_DEBUG', '').lower() in ['1', 'true', 'yes', 'on']:
+            self._enabled = True
+            self._initialize_logger()
+        elif os.getenv(env_var, '').lower() in ['1', 'true', 'yes', 'on']:
+            self._enabled = True
+            self._initialize_logger()
+
+    def _initialize_logger(self):
+        """Initialize the Python logger with file handler."""
+        if self._logger is not None:
+            return
+
+        if not self._enabled:
+            # Create a no-op logger
+            self._logger = logging.getLogger(f'ppxai.{self.name}.noop')
+            self._logger.addHandler(logging.NullHandler())
+            return
+
+        # Create logs directory
+        log_dir = Path.home() / '.ppxai' / 'logs'
+        log_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create logger
+        self._logger = logging.getLogger(f'ppxai.{self.name}')
+        self._logger.setLevel(logging.DEBUG)
+
+        # Remove any existing handlers
+        self._logger.handlers.clear()
+
+        # File handler
+        self._log_file = log_dir / f'{self.name}-debug.log'
+        file_handler = logging.FileHandler(self._log_file, mode='a')
+        file_handler.setLevel(logging.DEBUG)
+
+        # Format: timestamp | level | message
+        formatter = logging.Formatter(
+            '%(asctime)s.%(msecs)03d | %(levelname)-8s | %(message)s',
+            datefmt='%H:%M:%S'
+        )
+        file_handler.setFormatter(formatter)
+
+        self._logger.addHandler(file_handler)
+
+        # Log session start
+        self._logger.info("=" * 80)
+        self._logger.info(f"{self.name.upper()} DEBUG SESSION STARTED - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        self._logger.info("=" * 80)
+
+    @property
+    def enabled(self) -> bool:
+        """Check if logging is enabled."""
+        return self._enabled
+
+    @property
+    def log_file(self) -> Optional[Path]:
+        """Get the log file path."""
+        return self._log_file
+
+    def enable(self):
+        """Enable logging (creates logger if not already created)."""
+        if self._enabled:
+            return  # Already enabled
+
+        self._enabled = True
+        self._logger = None
+        self._initialize_logger()
+
+    def disable(self):
+        """Disable logging."""
+        if not self._enabled:
+            return
+
+        if self._logger:
+            self._logger.info("=" * 80)
+            self._logger.info(f"{self.name.upper()} DEBUG SESSION ENDED")
+            self._logger.info("=" * 80)
+
+        self._enabled = False
+
+        # Replace with no-op logger
+        self._logger = logging.getLogger(f'ppxai.{self.name}.noop')
+        self._logger.addHandler(logging.NullHandler())
+
+    def clear(self):
+        """Clear the log file."""
+        if self._log_file and self._log_file.exists():
+            self._log_file.write_text("")
+            if self._enabled:
+                # Re-log session start
+                self._logger.info("=" * 80)
+                self._logger.info(f"{self.name.upper()} DEBUG SESSION STARTED - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                self._logger.info("=" * 80)
+
+    def info(self, msg: str):
+        """Log info message."""
+        if self._logger:
+            self._logger.info(msg)
+
+    def debug(self, msg: str):
+        """Log debug message."""
+        if self._logger:
+            self._logger.debug(msg)
+
+    def warning(self, msg: str):
+        """Log warning message."""
+        if self._logger:
+            self._logger.warning(msg)
+
+    def error(self, msg: str):
+        """Log error message."""
+        if self._logger:
+            self._logger.error(msg)
+
+    def log_user_message(self, message: str):
+        """Log user input."""
+        self.info(f"USER INPUT: {message[:200]}")
+
+    def log_assistant_message(self, message: str):
+        """Log assistant response."""
+        self.info(f"ASSISTANT RESPONSE: {message[:200]}")
+
+    def log_command(self, command: str):
+        """Log slash command execution."""
+        self.info(f"COMMAND: {command}")
+
+    def log_history_sync(self, legacy_count: int, engine_count: int, messages: list):
+        """Log conversation history sync."""
+        self.info(f"HISTORY SYNC: legacy={legacy_count}, engine={engine_count}")
+        for i, msg in enumerate(messages):
+            content_preview = msg.content[:80].replace('\n', '\\n') if hasattr(msg, 'content') else str(msg)[:80]
+            role = msg.role if hasattr(msg, 'role') else msg.get('role', 'unknown')
+            self.debug(f"  [{i}] {role:10s}: {content_preview}")
+
+    def log_api_request(self, iteration: int, messages: list):
+        """Log API request with message sequence."""
+        self.info(f"API REQUEST: iteration={iteration}, messages={len(messages)}")
+        for i, msg in enumerate(messages):
+            content_preview = msg.content[:100].replace('\n', '\\n') if hasattr(msg, 'content') else str(msg)[:100]
+            role = msg.role if hasattr(msg, 'role') else msg.get('role', 'unknown')
+            self.debug(f"  [{i}] {role:10s}: {content_preview}")
+
+    def log_api_response(self, response_preview: str):
+        """Log API response."""
+        self.info(f"API RESPONSE: {response_preview[:200]}")
+
+    def log_api_error(self, error_code: int, error_message: str):
+        """Log API error."""
+        self.error(f"API ERROR {error_code}: {error_message}")
+
+    def log_tool_call(self, tool_name: str, arguments: dict):
+        """Log tool execution."""
+        self.info(f"TOOL CALL: {tool_name}")
+        self.debug(f"  Arguments: {arguments}")
+
+    def log_tool_result(self, tool_name: str, result: str):
+        """Log tool result."""
+        self.info(f"TOOL RESULT: {tool_name}")
+        self.debug(f"  Result: {result[:200]}")
+
+    def log_tool_error(self, tool_name: str, error: str):
+        """Log tool error."""
+        self.error(f"TOOL ERROR: {tool_name} - {error}")
+
+    def log_event(self, event_type: str, data: str = ""):
+        """Log generic event."""
+        self.debug(f"EVENT: {event_type} - {data[:100]}")
+
+    def log_http_request(self, method: str, path: str, client: str = "unknown"):
+        """Log HTTP request (server-specific)."""
+        self.info(f"HTTP {method} {path} from {client}")
+
+    def log_http_response(self, status_code: int, path: str):
+        """Log HTTP response (server-specific)."""
+        self.info(f"HTTP {status_code} {path}")
+
+    def log_sse_event(self, event_type: str, data_preview: str = ""):
+        """Log SSE event (server-specific)."""
+        self.debug(f"SSE: {event_type} - {data_preview[:100]}")
+
+
+def get_logger(name: str = "tui") -> Logger:
+    """
+    Get or create a logger instance for a specific client.
+
+    Args:
+        name: Client name (e.g., "tui", "server")
+
+    Returns:
+        Logger: Logger instance for the specified client
+
+    Usage:
+        # TUI
+        logger = get_logger("tui")
+
+        # Server
+        logger = get_logger("server")
+
+        # Custom client
+        logger = get_logger("webclient")
+    """
+    if name not in Logger._instances:
+        Logger._instances[name] = Logger(name)
+    return Logger._instances[name]
