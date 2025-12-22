@@ -284,8 +284,8 @@ def main():
                             pass
 
                         elif event.type == EventType.STREAM_CHUNK:
-                            # Print chunk without newline for streaming effect
-                            console.print(event.data, end="")
+                            # Accumulate chunks for final markdown rendering
+                            # Don't print here to avoid double rendering
                             full_response += event.data
 
                         elif event.type == EventType.TOOL_CALL:
