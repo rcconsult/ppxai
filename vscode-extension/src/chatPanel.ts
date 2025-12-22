@@ -30,6 +30,8 @@ const SLASH_COMMANDS: Record<string, { description: string; usage: string }> = {
     '/docs': { description: 'Generate documentation', usage: '/docs <code or @file>' },
     '/debug': { description: 'Debug an error message', usage: '/debug <error message>' },
     '/implement': { description: 'Implement from description', usage: '/implement <description>' },
+    '/spec': { description: 'Show specification templates', usage: '/spec [api|cli|lib|algo|ui]' },
+    '/convert': { description: 'Convert code between languages', usage: '/convert <source-lang> <target-lang> <code or @file>' },
 };
 
 export class ChatViewProvider implements vscode.WebviewViewProvider {
@@ -82,6 +84,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'toggleTools':
                     await this.handleToggleTools(message.enable);
+                    break;
+                case 'toggleDebugLog':
+                    await this.handleToggleDebugLog(message.enable);
                     break;
                 case 'searchFiles':
                     await this.handleSearchFilesForAutocomplete(message.query);
@@ -156,6 +161,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
             await this.updateStatus();
             await this.refreshHistory();
+            await this.updateDebugLogStatus();
         } catch (error) {
             this._view?.webview.postMessage({
                 type: 'error',
@@ -692,6 +698,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     await this.handleCodingTaskCommand('implement', args.join(' '));
                     break;
 
+                case '/spec':
+                    await this.handleSpecCommand(args.join(' '));
+                    break;
+
+                case '/convert':
+                    await this.handleConvertCommand(args);
+                    break;
+
                 default:
                     this._view.webview.postMessage({
                         type: 'error',
@@ -841,6 +855,87 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
         this._view.webview.postMessage({ type: 'endResponse' });
     }
 
+    private async handleSpecCommand(specType: string) {
+        if (!this._view) { return; }
+
+        const SPEC_TEMPLATES: Record<string, string> = {
+            'api': '**REST API Endpoint Specification Template:**\n\n**Endpoint**: [HTTP_METHOD] /api/v1/resource\n**Purpose**: [What this endpoint does]\n\n**Authentication**: [Required/Optional, type]\n\n**Request:**\n- Headers: [Content-Type, Authorization, etc.]\n- Body Schema:\n  ```json\n  {\n    "field1": "type (description)",\n    "field2": "type (description)"\n  }\n  ```\n\n**Response:**\n- Success (200):\n  ```json\n  {\n    "data": {},\n    "message": "Success"\n  }\n  ```\n- Error (4xx/5xx):\n  ```json\n  {\n    "error": "Error message"\n  }\n  ```\n\n**Validation Rules**: [List validation requirements]\n**Business Logic**: [Describe the processing steps]\n**Error Handling**: [How to handle specific errors]\n\n**Example Request:**\n```bash\ncurl -X POST /api/v1/resource \\\\\n  -H "Content-Type: application/json" \\\\\n  -d \'{"field1": "value"}\'\n```',
+            'cli': '**CLI Tool Specification Template:**\n\n**Command**: program-name [command] [options] [arguments]\n**Purpose**: [What this tool does]\n\n**Commands:**\n- `command1` - [Description]\n- `command2` - [Description]\n\n**Options:**\n- `-f, --flag`: [Description, default value]\n- `-o, --option <value>`: [Description]\n\n**Arguments:**\n- `arg1`: [Description, required/optional]\n\n**Input/Output:**\n- Input: [stdin, files, arguments]\n- Output: [stdout, files, exit codes]\n\n**Error Handling:**\n- Exit code 0: Success\n- Exit code 1: [Error type]\n- Exit code 2: [Error type]\n\n**Examples:**\n```bash\nprogram-name command1 --flag value arg1\nprogram-name command2 -o option < input.txt > output.txt\n```\n\n**Dependencies**: [Required libraries, system tools]\n**Configuration**: [Config files, environment variables]',
+            'lib': '**Library/Module Specification Template:**\n\n**Module Name**: module_name\n**Purpose**: [What this library provides]\n**Language**: [Python, JavaScript, Go, etc.]\n\n**Public API:**\n\n1. **Function/Class**: `name(param1, param2)`\n   - Purpose: [What it does]\n   - Parameters:\n     - `param1` (type): [Description]\n     - `param2` (type): [Description]\n   - Returns: [Type and description]\n   - Raises: [Exceptions/errors]\n   - Example:\n     ```python\n     result = name(value1, value2)\n     ```\n\n2. **Function/Class**: [Repeat for each public interface]\n\n**Internal Architecture:**\n- [Key components and their relationships]\n\n**Dependencies**: [External libraries needed]\n**Thread Safety**: [If applicable]\n**Performance Characteristics**: [Time/space complexity]\n\n**Usage Example:**\n```python\nfrom module_name import ClassName\n\nobj = ClassName(config)\nresult = obj.method(args)\n```',
+            'algo': '**Algorithm Specification Template:**\n\n**Algorithm Name**: [Name or description]\n**Purpose**: [Problem it solves]\n**Language**: [Preferred language]\n\n**Input:**\n- Type: [Array, tree, graph, etc.]\n- Constraints: [Size limits, value ranges]\n- Format: [Specific structure]\n\n**Output:**\n- Type: [What the algorithm returns]\n- Format: [Structure of the result]\n\n**Requirements:**\n- Time Complexity: [Target: O(n log n), etc.]\n- Space Complexity: [Target: O(1), O(n), etc.]\n- Special Constraints: [In-place, iterative vs recursive]\n\n**Algorithm Approach:**\n[High-level description of the approach]\n- Step 1: [Description]\n- Step 2: [Description]\n- Step 3: [Description]\n\n**Edge Cases to Handle:**\n- Empty input\n- Single element\n- Duplicate values\n- [Other specific cases]\n\n**Test Cases:**\n```\nInput: [1, 2, 3]\nOutput: [expected]\n\nInput: []\nOutput: [expected]\n\nInput: [edge case]\nOutput: [expected]\n```',
+            'ui': '**UI Component Specification Template:**\n\n**Component Name**: ComponentName\n**Purpose**: [What this component displays/does]\n**Framework**: [React, Vue, Angular, etc.]\n\n**Props/Inputs:**\n- `prop1` (type, required/optional): [Description, default]\n- `prop2` (type, required/optional): [Description, default]\n\n**State Management:**\n- [Internal state needed]\n- [External state/store]\n\n**Events/Callbacks:**\n- `onEvent1`: [When triggered, parameters]\n- `onEvent2`: [When triggered, parameters]\n\n**Visual Design:**\n- Layout: [Describe structure]\n- Styling: [CSS approach, theme]\n- Responsive: [Mobile/desktop behavior]\n\n**Behavior:**\n- User Interactions: [Click, hover, etc.]\n- Loading States: [How to show loading]\n- Error States: [How to display errors]\n\n**Accessibility:**\n- ARIA labels\n- Keyboard navigation\n- Screen reader support\n\n**Example Usage:**\n```jsx\n<ComponentName\n  prop1="value"\n  prop2={data}\n  onEvent1={handler}\n/>\n```'
+        };
+
+        const SPEC_GUIDELINES = '# Specification Guidelines for Best Outcomes\n\nWriting clear, detailed specifications helps generate better code implementations. Follow this structure:\n\n## 1. Overview\n- **What**: Brief description of what you\'re building\n- **Why**: Purpose and problem it solves\n- **Language/Framework**: Specify the technology stack\n\n## 2. Requirements\n### Functional Requirements\n- List specific features and behaviors\n- Define input/output expectations\n- Specify data structures and formats\n\n### Non-Functional Requirements\n- Performance expectations\n- Security considerations\n- Scalability needs\n- Error handling requirements\n\n## 3. Technical Details\n- API signatures or interfaces\n- Data models/schemas\n- External dependencies\n- Configuration needs\n\n## 4. Constraints & Assumptions\n- Platform limitations\n- Library/version constraints\n- Assumptions about the environment\n\n## 5. Examples\n- Sample inputs and expected outputs\n- Usage scenarios\n- Edge cases to consider\n\n---\n\n## Quick Templates\n\nUse `/spec <type>` to see templates for specific implementation types:\n- `/spec api` - REST API endpoint\n- `/spec cli` - Command-line tool\n- `/spec lib` - Library/module\n- `/spec algo` - Algorithm implementation\n- `/spec ui` - UI component';
+
+        const type = specType.trim().toLowerCase();
+
+        if (!type) {
+            // Show guidelines
+            this._view.webview.postMessage({
+                type: 'systemMessage',
+                content: SPEC_GUIDELINES
+            });
+        } else if (type in SPEC_TEMPLATES) {
+            // Show specific template
+            this._view.webview.postMessage({
+                type: 'systemMessage',
+                content: SPEC_TEMPLATES[type]
+            });
+        } else {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Unknown spec type: ${type}\n\nAvailable types: api, cli, lib, algo, ui\nOr use /spec without arguments for guidelines.`
+            });
+        }
+    }
+
+    private async handleConvertCommand(args: string[]) {
+        if (!this._view) { return; }
+
+        if (args.length < 3) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: 'Usage: /convert <source-lang> <target-lang> <code or @file>\n\nExamples:\n  /convert python javascript @utils.py\n  /convert go rust \'func hello() { fmt.Println("Hi") }\''
+            });
+            return;
+        }
+
+        const sourceLang = args[0];
+        const targetLang = args[1];
+        const codeOrFile = args.slice(2).join(' ');
+
+        // Process @file references
+        const { message: augmentedContent } = await this.processFileReferences(codeOrFile);
+
+        const taskMessage = `Convert the following ${sourceLang} code to ${targetLang}:\n\n\`\`\`${sourceLang}\n${augmentedContent}\n\`\`\``;
+
+        // Start streaming response
+        this._view.webview.postMessage({ type: 'startResponse' });
+
+        try {
+            await this._backend.codingTask(
+                'convert',
+                taskMessage,
+                undefined,
+                undefined,
+                (event: StreamEvent) => this.handleStreamEvent(event)
+            );
+        } catch (error) {
+            // Don't show interrupt as error - user initiated it
+            if (error instanceof Error && error.message === 'Interrupted by user') {
+                this._view.webview.postMessage({ type: 'endResponse' });
+                return;
+            }
+            this._view.webview.postMessage({
+                type: 'error',
+                content: String(error)
+            });
+        }
+
+        this._view.webview.postMessage({ type: 'endResponse' });
+    }
+
     private async showHelp() {
         if (!this._view) { return; }
 
@@ -883,6 +978,45 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                 type: 'error',
                 content: `Failed to toggle tools: ${error}`
             });
+        }
+    }
+
+    private async handleToggleDebugLog(enable: boolean) {
+        if (!this._view) { return; }
+
+        try {
+            const status = await this._backend.setDebugLog(enable);
+
+            this._view.webview.postMessage({
+                type: 'systemMessage',
+                content: `✓ Debug logging ${enable ? 'enabled' : 'disabled'}${status.log_file ? `\nLog file: ${status.log_file}` : ''}`
+            });
+
+            // Update the UI indicator
+            this._view.webview.postMessage({
+                type: 'debugLogStatus',
+                enabled: status.enabled
+            });
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Failed to toggle debug log: ${error}`
+            });
+        }
+    }
+
+    private async updateDebugLogStatus() {
+        if (!this._view) { return; }
+
+        try {
+            const status = await this._backend.getDebugLogStatus();
+            this._view.webview.postMessage({
+                type: 'debugLogStatus',
+                enabled: status.enabled
+            });
+        } catch (error) {
+            // Silently fail - server might not support this endpoint yet
+            console.error('Failed to get debug log status:', error);
         }
     }
 
@@ -1434,6 +1568,69 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             background: var(--vscode-toolbar-hoverBackground);
         }
 
+        .menu-container {
+            position: relative;
+        }
+
+        .menu-btn {
+            background: transparent;
+            border: none;
+            color: var(--vscode-foreground);
+            cursor: pointer;
+            padding: 4px 8px;
+            font-size: 16px;
+            border-radius: 3px;
+            line-height: 1;
+        }
+
+        .menu-btn:hover {
+            background: var(--vscode-toolbar-hoverBackground);
+        }
+
+        .menu-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 4px;
+            background: var(--vscode-dropdown-background);
+            border: 1px solid var(--vscode-dropdown-border);
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            min-width: 180px;
+        }
+
+        .menu-dropdown.visible {
+            display: block;
+        }
+
+        .menu-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--vscode-foreground);
+        }
+
+        .menu-item:hover {
+            background: var(--vscode-list-hoverBackground);
+        }
+
+        .menu-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--vscode-descriptionForeground);
+        }
+
+        .menu-indicator.active {
+            background: #4caf50;
+            box-shadow: 0 0 4px #4caf50;
+        }
+
         .messages {
             flex: 1;
             overflow-y: auto;
@@ -1916,6 +2113,15 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             <button class="header-btn" id="saveSessionBtn" title="Save conversation session">Save Session</button>
             <button class="header-btn" id="saveAnswerBtn" title="Save last answer as markdown">Save Answer</button>
             <button class="header-btn" id="clearBtn" title="Clear history">Clear</button>
+            <div class="menu-container">
+                <button class="menu-btn" id="menuBtn" title="More options">⋮</button>
+                <div class="menu-dropdown" id="menuDropdown">
+                    <div class="menu-item" id="debugLogMenuItem">
+                        <span class="menu-indicator" id="debugLogIndicator"></span>
+                        <span>Debug Log</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1951,6 +2157,10 @@ A: Use \`/tools disable\` or choose "never" when prompted.
         const saveSessionBtn = document.getElementById('saveSessionBtn');
         const saveAnswerBtn = document.getElementById('saveAnswerBtn');
         const clearBtn = document.getElementById('clearBtn');
+        const menuBtn = document.getElementById('menuBtn');
+        const menuDropdown = document.getElementById('menuDropdown');
+        const debugLogMenuItem = document.getElementById('debugLogMenuItem');
+        const debugLogIndicator = document.getElementById('debugLogIndicator');
 
         let currentResponseEl = null;
         let currentResponseContent = '';
@@ -2373,6 +2583,26 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             vscode.postMessage({ type: 'clear' });
         });
 
+        // Menu button click handler - toggle dropdown
+        menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            menuDropdown.classList.toggle('visible');
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!menuBtn.contains(e.target) && !menuDropdown.contains(e.target)) {
+                menuDropdown.classList.remove('visible');
+            }
+        });
+
+        // Debug Log menu item click handler
+        debugLogMenuItem.addEventListener('click', () => {
+            const isActive = debugLogIndicator.classList.contains('active');
+            vscode.postMessage({ type: 'toggleDebugLog', enable: !isActive });
+            menuDropdown.classList.remove('visible');
+        });
+
         // Tools badge click handler - toggle tools on/off
         toolsBadge.addEventListener('click', () => {
             const isEnabled = toolsBadge.classList.contains('enabled');
@@ -2521,6 +2751,14 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                         toolsBadge.classList.add('disabled');
                         toolsBadge.classList.remove('enabled');
                         toolsBadge.title = 'Click to enable tools';
+                    }
+                    break;
+
+                case 'debugLogStatus':
+                    if (message.enabled) {
+                        debugLogIndicator.classList.add('active');
+                    } else {
+                        debugLogIndicator.classList.remove('active');
                     }
                     break;
 

@@ -689,6 +689,32 @@ export class HttpClient {
             estimated_cost: number;
         }>;
     }
+
+    /**
+     * Get debug log status (v1.11.2)
+     */
+    async getDebugLogStatus(): Promise<{ enabled: boolean; log_file: string | null }> {
+        const response = await fetch(`${this.baseUrl}/debug-log`);
+        if (!response.ok) {
+            throw new Error(`Failed to get debug log status: ${response.statusText}`);
+        }
+        return response.json() as Promise<{ enabled: boolean; log_file: string | null }>;
+    }
+
+    /**
+     * Enable or disable debug logging (v1.11.2)
+     */
+    async setDebugLog(enabled: boolean): Promise<{ enabled: boolean; log_file: string | null }> {
+        const response = await fetch(`${this.baseUrl}/debug-log`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled })
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to set debug log: ${response.statusText}`);
+        }
+        return response.json() as Promise<{ enabled: boolean; log_file: string | null }>;
+    }
 }
 
 /**
