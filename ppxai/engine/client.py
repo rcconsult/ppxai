@@ -31,13 +31,22 @@ class EngineClient:
     All communication is via events and data structures, never direct console output.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None, consent_callback: Optional[callable] = None):
+    def __init__(
+        self,
+        config: Optional[Dict[str, Any]] = None,
+        consent_callback: Optional[callable] = None,
+        shell_consent_callback: Optional[callable] = None
+    ):
         """Initialize the engine client.
 
         Args:
             config: Optional configuration dictionary
             consent_callback: Optional callback for file edit consent (v1.11.0)
                              Signature: async (file_path: str) -> tuple[bool, str]
+                             Returns: (approved: bool, response: str)
+                             response can be: "y", "n", "always", "never"
+            shell_consent_callback: Optional callback for shell command consent (v1.11.2)
+                             Signature: async (command: str, working_dir: str, risk_level: str) -> tuple[bool, str]
                              Returns: (approved: bool, response: str)
                              response can be: "y", "n", "always", "never"
         """
@@ -60,11 +69,14 @@ class EngineClient:
         # File edit consent callback (Phase 1: v1.11.0)
         self.consent_callback = consent_callback
 
+        # Shell command consent callback (v1.11.2)
+        self.shell_consent_callback = shell_consent_callback
+
         # Event emitter for consent requests (Phase 1C: HTTP/SSE support)
         # This allows emitting events from within consent callback
         self._consent_event_queue: List[Event] = []
 
-        # Load configuration
+        # Load configuration (including shell command patterns)
         self._load_config()
 
     def _load_config(self):
@@ -77,12 +89,17 @@ class EngineClient:
                 get_base_url,
                 get_default_model,
                 MODEL_PROVIDER,
+                load_config,
             )
             self._providers_config = PROVIDERS
             self._get_api_key = get_api_key
             self._get_base_url = get_base_url
             self._get_default_model = get_default_model
             self._default_provider = MODEL_PROVIDER
+
+            # Load shell tool configuration (v1.11.2)
+            full_config = load_config()
+            self._shell_config = full_config.get("tools", {}).get("shell", {})
         except ImportError:
             # Fallback if old config not available
             self._providers_config = {}
@@ -90,6 +107,7 @@ class EngineClient:
             self._get_base_url = lambda p: None
             self._get_default_model = lambda: None
             self._default_provider = "perplexity"
+            self._shell_config = {}
 
     # === Context Injection ===
 
@@ -346,6 +364,146 @@ class EngineClient:
         except Exception as e:
             # If consent callback fails, deny for safety
             print(f"Consent callback error: {e}")
+            return False
+
+    def _classify_shell_command(self, command: str) -> str:
+        """Classify shell command risk level (v1.11.2).
+
+        Args:
+            command: Shell command to classify
+
+        Returns:
+            Risk level: "never", "dangerous", or "safe"
+        """
+        import re
+
+        # Check never-allow patterns (catastrophic commands)
+        never_allow = self._shell_config.get("never_allow", [])
+        for pattern in never_allow:
+            try:
+                if re.search(pattern, command):
+                    return "never"
+            except re.error:
+                pass
+
+        # Check dangerous patterns (require consent)
+        dangerous = self._shell_config.get("dangerous_commands", [])
+        for pattern in dangerous:
+            try:
+                if re.search(pattern, command):
+                    return "dangerous"
+            except re.error:
+                pass
+
+        # Check allowed patterns (safe)
+        allowed = self._shell_config.get("allowed_commands", [])
+        for pattern in allowed:
+            try:
+                if re.search(pattern, command):
+                    return "safe"
+            except re.error:
+                pass
+
+        # Unknown commands are treated as dangerous for safety
+        return "dangerous"
+
+    async def request_shell_consent(self, command: str, working_dir: str = ".") -> bool:
+        """Request user consent for shell command execution (v1.11.2).
+
+        This method manages the shell consent flow:
+        1. Classify command risk level (never/dangerous/safe)
+        2. Block "never" commands immediately
+        3. Allow "safe" commands without consent
+        4. Request consent for "dangerous" commands
+        5. Check session state (always/never modes)
+
+        Args:
+            command: Shell command to execute
+            working_dir: Working directory for the command
+
+        Returns:
+            True if execution is allowed, False otherwise
+        """
+        # Classify command risk
+        risk_level = self._classify_shell_command(command)
+
+        # Debug logging (v1.11.2)
+        try:
+            from ppxai.tui_logger import get_logger
+            logger = get_logger()
+            logger.debug(f"Shell consent: command='{command[:50]}...' risk={risk_level} callback={self.shell_consent_callback is not None}")
+        except:
+            pass
+
+        # Never-allow commands are always blocked
+        if risk_level == "never":
+            return False
+
+        # Safe commands are always allowed (no consent needed)
+        if risk_level == "safe":
+            return True
+
+        # Check global shell consent mode
+        if self.session.shell_consent_mode == "always":
+            return True
+        if self.session.shell_consent_mode == "never":
+            return False
+
+        # Check if already consented for this specific command
+        if command in self.session.allowed_commands:
+            return True
+
+        # If no callback, default to deny (fail-safe)
+        if self.shell_consent_callback is None:
+            return False
+
+        # Request consent from user via callback
+        try:
+            # Debug logging
+            try:
+                from ppxai.tui_logger import get_logger
+                logger = get_logger()
+                logger.debug(f"Requesting shell consent for: {command[:50]}...")
+            except:
+                pass
+
+            # Emit consent request event (for HTTP/SSE support)
+            consent_event = Event(
+                type=EventType.CONSENT_REQUEST,
+                data={
+                    "command": command,
+                    "working_dir": working_dir,
+                    "risk_level": risk_level,
+                    "type": "shell"
+                },
+                metadata={"command": command, "type": "shell"}
+            )
+            self._consent_event_queue.append(consent_event)
+
+            # Call shell consent callback and wait for response
+            approved, response = await self.shell_consent_callback(command, working_dir, risk_level)
+
+            # Debug logging
+            try:
+                logger.debug(f"Shell consent response: approved={approved} response={response}")
+            except:
+                pass
+
+            if response == "y":
+                self.session.allowed_commands.add(command)
+                return True
+            elif response == "always":
+                self.session.shell_consent_mode = "always"
+                return True
+            elif response == "never":
+                self.session.shell_consent_mode = "never"
+                return False
+            else:  # "n" or anything else
+                return False
+
+        except Exception as e:
+            # If consent callback fails, deny for safety
+            print(f"Shell consent callback error: {e}")
             return False
 
     def list_tools(self) -> List[Dict[str, Any]]:

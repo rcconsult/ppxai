@@ -98,6 +98,72 @@ async def tui_consent_handler(file_path: str) -> tuple[bool, str]:
         return (False, 'n')
 
 
+async def tui_shell_consent_handler(command: str, working_dir: str, risk_level: str) -> tuple[bool, str]:
+    """
+    Handle shell command consent request in TUI (v1.11.2).
+
+    Prompts user with options:
+    - y/yes: Allow executing this command (this session)
+    - n/no: Deny executing this command
+    - always: Allow all shell commands (this session)
+    - never: Deny all shell commands (this session)
+
+    Args:
+        command: Shell command that needs execution
+        working_dir: Working directory for the command
+        risk_level: Risk level classification (safe, dangerous, never)
+
+    Returns:
+        tuple: (approved: bool, response: str)
+    """
+    # Determine risk color
+    risk_color = {
+        "never": "red",
+        "dangerous": "yellow",
+        "safe": "green"
+    }.get(risk_level, "yellow")
+
+    console.print(f"\n[bold {risk_color}]⚠️  Shell Command Request[/bold {risk_color}]")
+    console.print(f"[cyan]Command:[/cyan] {command}")
+    console.print(f"[dim]Directory:[/dim] {working_dir}")
+    console.print(f"[dim]Risk Level:[/dim] [{risk_color}]{risk_level.upper()}[/{risk_color}]")
+    console.print("[dim]Options: y (yes), n (no), always (all commands), never (block all)[/dim]")
+
+    try:
+        # Use prompt_toolkit for input with validation
+        response = await asyncio.to_thread(
+            pt_prompt,
+            "Allow command? ",
+            validator=ConsentValidator(),
+            validate_while_typing=False
+        )
+        response = response.strip().lower()
+
+        # Normalize response
+        if response in ['yes', 'y']:
+            response = 'y'
+            approved = True
+            console.print("[green]✓ Command approved[/green]\n")
+        elif response == 'always':
+            approved = True
+            console.print("[green]✓ All shell commands approved for this session[/green]\n")
+        elif response == 'never':
+            approved = False
+            response = 'never'
+            console.print("[yellow]✗ All shell commands blocked for this session[/yellow]\n")
+        else:  # 'no', 'n'
+            approved = False
+            response = 'n'
+            console.print("[yellow]✗ Command denied[/yellow]\n")
+
+        return (approved, response)
+
+    except (KeyboardInterrupt, EOFError):
+        # User cancelled - deny for safety
+        console.print("\n[yellow]✗ Command cancelled[/yellow]\n")
+        return (False, 'n')
+
+
 def send_coding_task(client: 'AIClient', task_type: str, user_message: str, model: str, provider: str = None) -> Optional[str]:
     """Send a coding task with appropriate system prompt and optional auto-routing."""
     if task_type not in CODING_PROMPTS:
@@ -535,8 +601,11 @@ class CommandHandler:
             from ppxai.engine import EngineClient
             from ppxai.engine.types import Message
 
-            # Create engine client with consent callback
-            self.engine_client = EngineClient(consent_callback=tui_consent_handler)
+            # Create engine client with consent callbacks (file editing + shell commands)
+            self.engine_client = EngineClient(
+                consent_callback=tui_consent_handler,
+                shell_consent_callback=tui_shell_consent_handler
+            )
             self.engine_client.set_provider(self.provider)
             self.engine_client.set_model(self.current_model)
             self.engine_client.enable_tools()

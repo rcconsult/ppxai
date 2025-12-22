@@ -50,6 +50,10 @@ class SessionManager:
         self.allowed_files: set[Path] = set()  # Files user consented to edit
         self.edit_consent_mode: str = "ask"  # "ask", "always", "never"
 
+        # Shell command consent state (v1.11.2)
+        self.allowed_commands: set[str] = set()  # Commands user consented to run
+        self.shell_consent_mode: str = "ask"  # "ask", "always", "never"
+
     def add_message(self, message: Message):
         """Add a message to the conversation history.
 

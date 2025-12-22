@@ -6,9 +6,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.11.1 (Critical Bugfix - TUI Event-Based Streaming)
+**Current Version:** v1.11.2 (Shell Command Consent Security)
 
-**What's New in v1.11.1 (Released 2025-12-22):**
+**What's New in v1.11.2 (Released 2025-12-22):**
+- **NEW:** Shell command consent system for secure AI command execution 🔒
+- **Smart Classification:** Regex-based command risk assessment (safe/dangerous/never)
+- **Safe Commands:** Auto-approved read-only operations (ls, cat, grep, pwd)
+- **Dangerous Commands:** Require user consent (rm, mv, chmod, sudo, curl | bash)
+- **Never-Allow Commands:** Always blocked (rm -rf /, dd of=/dev/, fork bombs)
+- **Session-Scoped:** Consent persists across commands in the same session (y/n/always/never)
+- **Configurable:** Customize allowed/dangerous/forbidden patterns in ppxai-config.json
+- **TUI + VSCode:** Consent prompts in both interfaces with full context
+- **Documentation:** Comprehensive shell consent guide at [docs/SHELL_CONSENT_GUIDE.md](docs/SHELL_CONSENT_GUIDE.md)
+- **Security:** Protects against destructive commands while allowing safe operations
+- **Tests:** All integration tests passing, consent flow verified end-to-end
+
+**Previous Release (v1.11.1 - 2025-12-22):**
 - **CRITICAL FIX:** TUI now displays AI responses when tools are enabled (v1.11.0 regression)
 - **Architecture:** Unified TUI and VSCode to both use event-based streaming
 - **Performance:** No performance impact - EngineClient is 16.5% faster than legacy (2446ms vs 2929ms)
@@ -28,7 +41,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **Tests:** 296/301 tests passing (same as v1.11.0 - 5 pre-existing failures in custom endpoint tests)
 - **Backwards Compatible:** Legacy tool system still works when EngineClient not available
 
-**Previous Release (v1.11.0 - 2025-12-21):**
+**Earlier Release (v1.11.0 - 2025-12-21):**
 - **NEW:** 4 file editing tools with user consent (apply_patch, replace_block, insert_text, delete_lines)
 - **NEW:** Per-file session consent system (y/n/always/never)
 - **NEW:** Atomic file operations with automatic rollback on failure
@@ -89,10 +102,10 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - Automated GitHub Actions CI/CD for multi-platform builds (macOS ARM/Intel, Linux, Windows)
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.11.1
-- VSCode extension (package.json): v1.11.1
-- Git tag: v1.11.1 (released 2025-12-22)
-- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v1.11.1
+- Python package (pyproject.toml): v1.11.2
+- VSCode extension (package.json): v1.11.2
+- Git tag: v1.11.2 (released 2025-12-22)
+- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v1.11.2
 
 ## Development Setup
 

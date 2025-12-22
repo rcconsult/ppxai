@@ -343,6 +343,7 @@ def load_config() -> Dict[str, Any]:
             "config_source": str(config_path),
             "default_provider": default_provider,
             "providers": providers,
+            "tools": json_config.get("tools", {}),  # v1.11.2: Include tools configuration
         }
 
     else:
@@ -366,6 +367,7 @@ def load_config() -> Dict[str, Any]:
             "config_source": "builtin",
             "default_provider": "perplexity",
             "providers": providers,
+            "tools": {},  # v1.11.2: No tools config when using builtin
         }
 
 

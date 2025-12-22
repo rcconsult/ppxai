@@ -91,5 +91,43 @@
         "realtime_info": false
       }
     }
+  },
+  "tools": {
+    "shell": {
+      "require_consent": true,
+      "dangerous_commands": [
+        "^rm\\s+",
+        "^mv\\s+",
+        "^dd\\s+",
+        "^chmod\\s+",
+        "^chown\\s+",
+        "^sudo\\s+",
+        "^curl.*\\|.*bash",
+        "^wget.*\\|.*bash",
+        ">\\s*/dev/",
+        "^kill\\s+",
+        "^pkill\\s+",
+        "^killall\\s+"
+      ],
+      "allowed_commands": [
+        "^ls\\s+",
+        "^cat\\s+(?!.*[><])",
+        "^grep\\s+",
+        "^echo\\s+(?!.*>)",
+        "^pwd$",
+        "^which\\s+",
+        "^whoami$",
+        "^date$",
+        "^uname\\s+"
+      ],
+      "never_allow": [
+        "rm\\s+-rf\\s+/",
+        "dd\\s+.*of=/dev/",
+        ":\\(\\)\\{\\s*:\\|:\\&\\s*\\};:",
+        "mkfs\\.",
+        "^\\s*>\\s*/dev/sda"
+      ],
+      "sandboxed_paths": []
+    }
   }
 }

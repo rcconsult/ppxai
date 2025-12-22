@@ -375,46 +375,74 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     private async handleConsentRequest(event: StreamEvent) {
         /**
-         * Handle file edit consent request (Phase 1C: v1.11.0)
+         * Handle consent requests (file editing or shell commands)
          *
-         * Shows a modal dialog asking user for permission to edit a file.
-         * Supports: Yes (this file), No, Always (all files), Never (block all)
+         * v1.11.0: File edit consent
+         * v1.11.2: Shell command consent
          */
         try {
             const data = JSON.parse(event.content);
-            const filePath = data.file_path || event.metadata?.file_path;
+
+            // Determine consent type
+            if (data.type === 'shell' || data.command) {
+                // Shell command consent (v1.11.2)
+                await this.handleShellConsentRequest(data);
+            } else {
+                // File edit consent (v1.11.0)
+                await this.handleFileConsentRequest(data, event.metadata);
+            }
+        } catch (error) {
+            console.error('Consent request error:', error);
+        }
+    }
+
+    private async handleFileConsentRequest(data: any, metadata: any) {
+        /**
+         * Handle file edit consent request (Phase 1C: v1.11.0)
+         *
+         * Shows a keyboard-friendly QuickPick asking user for permission to edit a file.
+         * Supports: Yes (this file), No, Always (all files), Never (block all)
+         */
+        try {
+            const filePath = data.file_path || metadata?.file_path;
 
             if (!filePath) {
-                console.error('Consent request missing file_path');
+                console.error('File consent request missing file_path');
                 return;
             }
 
-            // Show modal dialog with options
-            const choice = await vscode.window.showWarningMessage(
-                `AI wants to edit file: ${filePath}`,
-                { modal: true },
-                'Yes (this file)',
-                'No',
-                'Always (all files)',
-                'Never (block all)'
-            );
+            // Show keyboard-friendly QuickPick
+            const items = [
+                {
+                    label: '$(check) Yes',
+                    detail: 'Allow editing this file (y)',
+                    value: 'y'
+                },
+                {
+                    label: '$(x) No',
+                    detail: 'Deny editing this file (n)',
+                    value: 'n'
+                },
+                {
+                    label: '$(check-all) Always',
+                    detail: 'Allow all file edits this session (a)',
+                    value: 'always'
+                },
+                {
+                    label: '$(circle-slash) Never',
+                    detail: 'Block all file edits this session (v)',
+                    value: 'never'
+                }
+            ];
 
-            // Map choice to response
-            let response: 'y' | 'n' | 'always' | 'never';
-            switch (choice) {
-                case 'Yes (this file)':
-                    response = 'y';
-                    break;
-                case 'Always (all files)':
-                    response = 'always';
-                    break;
-                case 'Never (block all)':
-                    response = 'never';
-                    break;
-                default: // 'No' or cancelled
-                    response = 'n';
-                    break;
-            }
+            const selected = await vscode.window.showQuickPick(items, {
+                placeHolder: `📝 File Edit: ${filePath}`,
+                title: 'File Edit Consent Required',
+                ignoreFocusOut: true
+            });
+
+            // Map selection to response
+            const response: 'y' | 'n' | 'always' | 'never' = (selected?.value as 'y' | 'n' | 'always' | 'never') || 'n';
 
             // Send consent response to server
             await this._backend.consent(filePath, response);
@@ -423,10 +451,89 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             console.error('Consent request error:', error);
             // On error, deny for safety
             try {
-                const data = JSON.parse(event.content);
-                const filePath = data.file_path || event.metadata?.file_path;
+                const filePath = data.file_path || metadata?.file_path;
                 if (filePath) {
                     await this._backend.consent(filePath, 'n');
+                }
+            } catch {
+                // Ignore - best effort
+            }
+        }
+    }
+
+    private async handleShellConsentRequest(data: any) {
+        /**
+         * Handle shell command consent request (v1.11.2)
+         *
+         * Shows a keyboard-friendly QuickPick asking user for permission to execute a shell command.
+         * Displays command, working directory, and risk level.
+         * Supports: Yes (this command), No, Always (all commands), Never (block all)
+         */
+        try {
+            const command = data.command;
+            const workingDir = data.working_dir || '.';
+            const riskLevel = data.risk_level || 'unknown';
+
+            if (!command) {
+                console.error('Shell consent request missing command');
+                return;
+            }
+
+            // Determine risk emoji and message
+            let riskEmoji = '⚠️';
+            let riskMessage = 'DANGEROUS';
+            if (riskLevel === 'never') {
+                riskEmoji = '🛑';
+                riskMessage = 'BLOCKED - CATASTROPHIC';
+            } else if (riskLevel === 'safe') {
+                riskEmoji = '✅';
+                riskMessage = 'SAFE';
+            }
+
+            // Show keyboard-friendly QuickPick
+            const items = [
+                {
+                    label: '$(check) Yes',
+                    detail: 'Allow this command (y)',
+                    value: 'y'
+                },
+                {
+                    label: '$(x) No',
+                    detail: 'Deny this command (n)',
+                    value: 'n'
+                },
+                {
+                    label: '$(check-all) Always',
+                    detail: 'Allow all shell commands this session (a)',
+                    value: 'always'
+                },
+                {
+                    label: '$(circle-slash) Never',
+                    detail: 'Block all shell commands this session (v)',
+                    value: 'never'
+                }
+            ];
+
+            const selected = await vscode.window.showQuickPick(items, {
+                placeHolder: `${riskEmoji} ${riskMessage}: ${command.length > 50 ? command.substring(0, 50) + '...' : command}`,
+                title: `Shell Command Consent Required (in ${workingDir})`,
+                ignoreFocusOut: true
+            });
+
+            // Map selection to response
+            const response: 'y' | 'n' | 'always' | 'never' = (selected?.value as 'y' | 'n' | 'always' | 'never') || 'n';
+
+            // Send shell consent response to server
+            await this._backend.shellConsent(command, workingDir, response);
+
+        } catch (error) {
+            console.error('Shell consent request error:', error);
+            // On error, deny for safety
+            try {
+                const command = data.command;
+                const workingDir = data.working_dir || '.';
+                if (command) {
+                    await this._backend.shellConsent(command, workingDir, 'n');
                 }
             } catch {
                 // Ignore - best effort

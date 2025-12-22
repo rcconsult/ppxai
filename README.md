@@ -60,9 +60,19 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
 - `read_file` - Read file contents
 - `list_directory` - List directory contents
 - `calculator` - Evaluate mathematical expressions
-- `execute_shell_command` - Execute system commands (mkdir, git, npm, etc.) 🆕
+- `execute_shell_command` - Execute system commands with consent (v1.11.2) 🔒
 - `get_datetime` - Get current date/time with timezone support
 - Plus web tools (for custom provider): weather, web search, URL fetch
+
+**Shell Command Consent (v1.11.2) 🔒**
+- **Safe by Design:** User consent required for dangerous shell commands
+- **Smart Classification:** Regex-based command risk assessment (safe/dangerous/never)
+- **Session-Scoped:** Consent persists across commands in the same session
+- **Configurable:** Customize allowed/dangerous/forbidden patterns in ppxai-config.json
+- **Examples:**
+  - ✅ Auto-approved: `ls`, `cat`, `pwd`, `grep` (read-only operations)
+  - ⚠️ Requires consent: `rm`, `mv`, `chmod`, `sudo`, `curl | bash`
+  - ❌ Always blocked: `rm -rf /`, `dd of=/dev/`, fork bombs
 
 **File Editing Tools (v1.11.1) 🎯**
 - `apply_patch` - Apply unified diff patches to files
@@ -78,7 +88,7 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
 - Optional MCP (Model Context Protocol) server support
 - See [docs/TOOL_CREATION_GUIDE.md](docs/TOOL_CREATION_GUIDE.md) for details
 
-**Learn More:** [Tool Documentation](docs/README.md) | [File Editing Guide](docs/FILE_EDITING_GUIDE.md)
+**Learn More:** [Tool Documentation](docs/README.md) | [Shell Consent Guide](docs/SHELL_CONSENT_GUIDE.md) | [File Editing Guide](docs/FILE_EDITING_GUIDE.md)
 
 ## Quick Start
 
@@ -95,23 +105,24 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
    - **macOS/Linux:** `./ppxai`
    - **Windows:** `ppxai.exe`
 
-### Option 2: VSCode Extension with Standalone Server 🆕 v1.11.1
+### Option 2: VSCode Extension with Standalone Server 🆕 v1.11.2
 
 **No Python installation required!** Pre-built server binaries available!
 
 1. Download from [Releases](../../releases):
    - `ppxai-server-{platform}` (server binary for macOS ARM/Intel, Linux, Windows)
-   - `ppxai-1.11.1.vsix` (VSCode extension)
+   - `ppxai-1.11.2.vsix` (VSCode extension)
 2. Create a `.env` file with your API key (in project folder or `~/.ppxai/.env`)
-3. Install the extension: `code --install-extension ppxai-1.11.1.vsix`
+3. Install the extension: `code --install-extension ppxai-1.11.2.vsix`
 4. Start the server: `./ppxai-server-macos-arm64` (or your platform's binary)
 5. Open VSCode and click the ppxai icon in the sidebar
 
-**What's New in v1.11.1:**
-- 🐛 **Critical bugfix** - Fixed 400 message alternation error in TUI multi-turn conversations with tools
-- 🔍 **TUI Debug Logging** - New `/debug-log` command for troubleshooting (`/debug-log on` to enable)
-- ✅ **File editing tools** (v1.11.0) with user consent work properly in both TUI and VSCode
-- Type `/tools help editing` for examples and `/tools enable` to try it
+**What's New in v1.11.2:**
+- 🔒 **Shell Command Consent** - User consent required for dangerous shell commands (touch, rm, chmod, sudo, etc.)
+- 🎯 **Smart Classification** - Regex-based command risk assessment (safe/dangerous/never)
+- ⌨️ **Keyboard-Friendly UI** - QuickPick interface for consent (no mouse needed!)
+- 🛡️ **Security Fix** - Commands with redirections (`cat >`, `echo >`) now require consent
+- 📖 **Comprehensive Docs** - Full shell consent guide with configuration examples
 
 See [vscode-extension/README.md](vscode-extension/README.md) for detailed instructions.
 
@@ -563,6 +574,8 @@ ppxai/
 - **Provider Setup:** [docs/PROVIDER_SETUP.md](docs/PROVIDER_SETUP.md)
 - **Tool System:** [docs/README.md](docs/README.md)
 - **Tool Creation:** [docs/TOOL_CREATION_GUIDE.md](docs/TOOL_CREATION_GUIDE.md)
+- **Shell Consent:** [docs/SHELL_CONSENT_GUIDE.md](docs/SHELL_CONSENT_GUIDE.md) ⭐ NEW (v1.11.2)
+- **File Editing:** [docs/FILE_EDITING_GUIDE.md](docs/FILE_EDITING_GUIDE.md)
 - **Code Generation:** [SPECIFICATIONS.md](SPECIFICATIONS.md)
 - **Development Roadmap:** [ROADMAP.md](ROADMAP.md)
 - **Building:** [BUILD.md](BUILD.md)

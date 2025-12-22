@@ -33,9 +33,11 @@ engine: Optional[EngineClient] = None
 # Server logger (v1.11.2)
 logger = get_logger("server")
 
-# Consent request tracking (Phase 1C: v1.11.0)
+# Consent request tracking (Phase 1C: v1.11.0, v1.11.2)
 # Maps file_path -> asyncio.Future[tuple[bool, str]]
 pending_consent_requests: dict[str, asyncio.Future] = {}
+# Maps command -> asyncio.Future[tuple[bool, str]]
+pending_shell_consent_requests: dict[str, asyncio.Future] = {}
 
 
 async def http_consent_handler(file_path: str) -> tuple[bool, str]:
@@ -74,14 +76,56 @@ async def http_consent_handler(file_path: str) -> tuple[bool, str]:
         pending_consent_requests.pop(file_path, None)
 
 
+async def http_shell_consent_handler(command: str, working_dir: str, risk_level: str) -> tuple[bool, str]:
+    """
+    Handle shell command consent request via HTTP (v1.11.2).
+
+    This function:
+    1. Creates a Future for the consent decision
+    2. Stores it in pending_shell_consent_requests
+    3. Returns when /shell-consent endpoint resolves the Future
+
+    The consent request event is emitted via SSE in the event generator.
+
+    Args:
+        command: Shell command to execute
+        working_dir: Working directory for the command
+        risk_level: Risk level classification
+
+    Returns:
+        tuple: (approved: bool, response: str)
+    """
+    global pending_shell_consent_requests
+
+    # Create a future for this consent request
+    future: asyncio.Future[tuple[bool, str]] = asyncio.Future()
+    pending_shell_consent_requests[command] = future
+
+    # Wait for response from /shell-consent endpoint (with timeout)
+    try:
+        # Wait up to 60 seconds for user response
+        approved, response = await asyncio.wait_for(future, timeout=60.0)
+        return (approved, response)
+    except asyncio.TimeoutError:
+        # Timeout - deny for safety
+        pending_shell_consent_requests.pop(command, None)
+        return (False, 'n')
+    finally:
+        # Cleanup
+        pending_shell_consent_requests.pop(command, None)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan (startup/shutdown)."""
     global engine
 
-    # Startup: Initialize engine with consent callback (Phase 1C: v1.11.0)
+    # Startup: Initialize engine with consent callbacks (v1.11.0, v1.11.2)
     logger.info("Server starting up - initializing EngineClient")
-    engine = EngineClient(consent_callback=http_consent_handler)
+    engine = EngineClient(
+        consent_callback=http_consent_handler,
+        shell_consent_callback=http_shell_consent_handler
+    )
     logger.info(f"EngineClient initialized - provider: {engine.provider_name}, model: {engine.model}")
 
     # Set default provider (tries perplexity first, falls back to gemini)
@@ -98,6 +142,7 @@ async def lifespan(app: FastAPI):
 
     # Shutdown: Cleanup
     pending_consent_requests.clear()
+    pending_shell_consent_requests.clear()
     engine = None
     print("ppxai HTTP server stopped")
 
@@ -173,6 +218,14 @@ class ConsentRequest(BaseModel):
     """File edit consent response (Phase 1C: v1.11.0)."""
     file_path: str
     response: str  # 'y', 'n', 'always', 'never'
+
+
+class ShellConsentRequest(BaseModel):
+    """Shell command consent response (v1.11.2)."""
+    command: str
+    working_dir: str = "."
+    response: str  # 'y', 'n', 'always', 'never'
+
 
 
 # === SSE Streaming ===
@@ -667,6 +720,46 @@ async def respond_to_consent(request: ConsentRequest):
 
     # No pending request found
     raise HTTPException(status_code=404, detail=f"No pending consent request for: {file_path}")
+
+
+@app.post("/shell-consent")
+async def respond_to_shell_consent(request: ShellConsentRequest):
+    """Respond to a shell command consent request (v1.11.2).
+
+    This endpoint is called by the VSCode extension when the user
+    responds to a shell consent dialog. It resolves the pending Future
+    that the shell consent callback is waiting on.
+
+    Args:
+        request: ShellConsentRequest with command, working_dir, and response
+
+    Returns:
+        JSON: {"command": str, "response": str, "resolved": bool}
+    """
+    global pending_shell_consent_requests
+
+    command = request.command
+    response = request.response.lower()
+
+    # Validate response
+    if response not in ['y', 'n', 'always', 'never']:
+        raise HTTPException(status_code=400, detail=f"Invalid response: {response}. Must be y, n, always, or never")
+
+    # Find and resolve the pending request
+    if command in pending_shell_consent_requests:
+        future = pending_shell_consent_requests[command]
+        if not future.done():
+            # Resolve the future with (approved, response)
+            approved = response in ['y', 'always']
+            future.set_result((approved, response))
+            return {
+                "command": command,
+                "response": response,
+                "resolved": True
+            }
+
+    # No pending request found
+    raise HTTPException(status_code=404, detail=f"No pending shell consent request for: {command}")
 
 
 # === Debug Logging (v1.11.2) ===

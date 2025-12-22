@@ -558,6 +558,34 @@ export class HttpClient {
     }
 
     /**
+     * Respond to shell command consent request (v1.11.2)
+     */
+    async shellConsent(command: string, workingDir: string, response: 'y' | 'n' | 'always' | 'never'): Promise<void> {
+        try {
+            const resp = await fetch(`${this.baseUrl}/shell-consent`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    command: command,
+                    working_dir: workingDir,
+                    response: response
+                }),
+                signal: AbortSignal.timeout(5000)
+            });
+
+            if (!resp.ok) {
+                const error = await resp.text();
+                throw new Error(`Shell consent request failed: ${error}`);
+            }
+
+            this.outputChannel.appendLine(`Shell consent response sent: ${command} -> ${response}`);
+        } catch (error) {
+            this.outputChannel.appendLine(`Shell consent error: ${error}`);
+            throw error;
+        }
+    }
+
+    /**
      * Map server SSE events to StreamEvent format
      */
     private mapServerEvent(event: { type: string; data: any; metadata?: any }): StreamEvent | null {
