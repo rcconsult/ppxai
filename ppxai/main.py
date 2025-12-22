@@ -23,6 +23,8 @@ from .config import (
     get_provider_config,
 )
 from .ui import console, display_welcome, select_model, select_provider
+from .engine.types import EventType
+from .markdown_tables import render_markdown_with_tables
 
 
 def get_status_line(client, current_model, handler):
@@ -247,6 +249,14 @@ def main():
                 current_model = handler.current_model
                 continue
 
+            # Log user input
+            from ppxai.tui_logger import get_logger
+            logger = get_logger()
+            if user_input.startswith('/'):
+                logger.log_command(user_input)
+            else:
+                logger.log_user_message(user_input)
+
             # Process @filename references in the message
             augmented_input, resolved_files = handler.process_file_references(user_input)
             if resolved_files:
@@ -264,8 +274,94 @@ def main():
             # Send message to API
             # Use EngineClient if available (v1.11.0+ with file editing tools)
             if hasattr(handler, 'engine_client') and handler.engine_client is not None:
-                # Use new engine with file editing tools and consent system
-                response = handler.engine_client.chat_sync(augmented_input)
+                # Use new engine with event-based streaming (v1.11.1)
+                async def stream_engine_response():
+                    """Stream response from EngineClient with event handling."""
+                    full_response = ""
+
+                    # Check for pending consent requests before streaming
+                    while handler.engine_client._consent_event_queue:
+                        consent_event = handler.engine_client._consent_event_queue.pop(0)
+                        # Consent is handled inline by engine during tool execution
+                        pass
+
+                    async for event in handler.engine_client.chat(augmented_input, stream=True):
+                        if event.type == EventType.STREAM_START:
+                            # Stream starting - print header
+                            console.print("\n[bold cyan]Assistant:[/bold cyan]")
+
+                        elif event.type == EventType.STREAM_CHUNK:
+                            # Accumulate chunks silently for final formatted render
+                            # VSCode-like behavior: no preview, just formatted output at end
+                            full_response += event.data
+
+                        elif event.type == EventType.TOOL_CALL:
+                            # Show tool being called
+                            tool_name = event.data.get('tool', 'unknown')
+                            tool_args = event.data.get('arguments', {})
+                            console.print(f"[cyan]→ Calling tool: {tool_name}[/cyan]")
+                            logger.log_tool_call(tool_name, tool_args)
+                            # Show tool arguments if verbose mode enabled
+                            if hasattr(handler, 'tools_verbose') and handler.tools_verbose:
+                                console.print(f"[dim]  Arguments: {tool_args}[/dim]")
+
+                        elif event.type == EventType.TOOL_RESULT:
+                            # Log tool result
+                            tool_name = event.data.get('tool', 'unknown') if isinstance(event.data, dict) else 'unknown'
+                            result_str = str(event.data) if event.data else ''
+                            logger.log_tool_result(tool_name, result_str)
+                            # Show tool result if verbose mode enabled
+                            if hasattr(handler, 'tools_verbose') and handler.tools_verbose:
+                                console.print(f"[dim]  Result: {event.data}[/dim]")
+
+                        elif event.type == EventType.TOOL_ERROR:
+                            # Show and log tool error
+                            error_msg = str(event.data)
+                            tool_name = event.data.get('tool', 'unknown') if isinstance(event.data, dict) else 'unknown'
+                            console.print(f"[red]✗ Tool error: {error_msg}[/red]")
+                            logger.log_tool_error(tool_name, error_msg)
+
+                        elif event.type == EventType.CONSENT_REQUEST:
+                            # Consent request handled by engine's callback
+                            # No action needed here - just pass through
+                            logger.log_event('CONSENT_REQUEST', str(event.data))
+                            pass
+
+                        elif event.type == EventType.STREAM_END:
+                            # Final response - render with proper markdown formatting
+                            full_response = event.data if event.data else full_response
+                            logger.log_assistant_message(full_response)
+                            if full_response.strip():
+                                render_markdown_with_tables(full_response, console)
+                            console.print()  # Blank line after response
+                            break
+
+                        elif event.type == EventType.ERROR:
+                            # Show and log error
+                            error_str = str(event.data)
+                            console.print(f"[red]Error: {error_str}[/red]")
+                            # Parse error code if present
+                            if "Error code:" in error_str:
+                                try:
+                                    error_code = int(error_str.split("Error code:")[1].split()[0])
+                                    logger.log_api_error(error_code, error_str)
+                                except:
+                                    logger.error(f"API Error: {error_str}")
+                            else:
+                                logger.error(f"Error: {error_str}")
+                            break
+
+                    return full_response
+
+                response = asyncio.run(stream_engine_response())
+
+                # Sync conversation history from engine back to legacy client
+                if handler.engine_client:
+                    client.conversation_history = [
+                        {"role": msg.role, "content": msg.content}
+                        for msg in handler.engine_client.session.messages
+                    ]
+
             elif tools_enabled:
                 # Use legacy async tool-enabled chat
                 response = asyncio.run(client.chat_with_tools(augmented_input, current_model))

@@ -6,9 +6,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.11.0 (Agentic Workflow - Phase 1: File Editing Tools)
+**Current Version:** v1.11.1 (Critical Bugfix - TUI Event-Based Streaming)
 
-**What's New in v1.11.0 (Released 2025-12-21):**
+**What's New in v1.11.1 (Released 2025-12-22):**
+- **CRITICAL FIX:** TUI now displays AI responses when tools are enabled (v1.11.0 regression)
+- **Architecture:** Unified TUI and VSCode to both use event-based streaming
+- **Performance:** No performance impact - EngineClient is 16.5% faster than legacy (2446ms vs 2929ms)
+- **Event Handling:** TUI now handles STREAM_CHUNK, TOOL_CALL, TOOL_RESULT, CONSENT_REQUEST, and ERROR events
+- **Real-time UX:** TUI shows streaming chunks, tool calls, and consent prompts in real-time
+- **Code Quality:** Eliminates architectural divergence between TUI and VSCode extension
+- **FIXED:** Conversation history sync - Fixed 400 error when using tools with conversation history
+  - Engine client and legacy client now properly sync history when enabling tools and after each response
+  - Fixes message alternation errors ("user or tool message(s) should alternate with assistant message(s)")
+- **FIXED:** Inline markdown in tables - File names and inline code now render properly
+  - Inline code (`` `text` ``) renders with cyan monospace on grey background (GitHub-like)
+  - Bold (`**text**`) and italic (`*text*`) also supported in table cells
+- **NEW:** `/tools set verbose` command to inspect tool inputs/outputs
+  - `/tools set verbose on` - Show tool arguments and results during execution
+  - `/tools set verbose off` - Hide detailed tool information (default)
+  - Useful for debugging and understanding AI tool calls
+- **Tests:** 296/301 tests passing (same as v1.11.0 - 5 pre-existing failures in custom endpoint tests)
+- **Backwards Compatible:** Legacy tool system still works when EngineClient not available
+
+**Previous Release (v1.11.0 - 2025-12-21):**
 - **NEW:** 4 file editing tools with user consent (apply_patch, replace_block, insert_text, delete_lines)
 - **NEW:** Per-file session consent system (y/n/always/never)
 - **NEW:** Atomic file operations with automatic rollback on failure
@@ -23,8 +43,9 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **Architecture:** Event-driven consent via SSE for VSCode, async callbacks for TUI
 - **Details:** See [docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.md)
 - **Release:** https://github.com/rcconsult/ppxai/releases/tag/v1.11.0
+- **Known Issue:** TUI doesn't display responses when tools enabled (fixed in v1.11.1)
 
-**Previous Release (v1.10.8 - 2025-12-21):**
+**Earlier Release (v1.10.8 - 2025-12-21):**
 - **Unified:** `/save` and `/export` commands now behave consistently across TUI and VSCode extension
 - **New:** `/export [filename]` command to export last answer to markdown (~/.ppxai/exports/)
 - **Changed:** `/save` now saves session to JSON (~/.ppxai/sessions/) for persistence
@@ -68,10 +89,10 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - Automated GitHub Actions CI/CD for multi-platform builds (macOS ARM/Intel, Linux, Windows)
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.11.0
-- VSCode extension (package.json): v1.11.0
-- Git tag: v1.11.0 (released 2025-12-21)
-- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v1.11.0
+- Python package (pyproject.toml): v1.11.1
+- VSCode extension (package.json): v1.11.1
+- Git tag: v1.11.1 (released 2025-12-22)
+- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v1.11.1
 
 ## Development Setup
 

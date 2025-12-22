@@ -437,6 +437,11 @@ class EngineClient:
         # Add message to history (with injected content)
         self.session.add_message(Message("user", message))
 
+        # DEBUG: Log session state after adding user message
+        from ppxai.tui_logger import get_logger
+        logger = get_logger()
+        logger.debug(f"After adding user message, session has {len(self.session.messages)} messages")
+
         if self.tools_enabled:
             async for event in self._chat_with_tools(stream):
                 yield event
@@ -464,13 +469,15 @@ class EngineClient:
                 yield Event(EventType.ERROR, "Interrupted by user")
                 break
 
-            yield event
-
-            # Track final response
+            # CRITICAL FIX: Add assistant message to session BEFORE yielding STREAM_END
+            # because the caller (TUI main loop) may break out of the loop after receiving it
             if event.type == EventType.STREAM_END:
                 self.session.add_message(Message("assistant", event.data))
                 if event.metadata and event.metadata.get("usage"):
                     self.session.update_usage(event.metadata["usage"])
+
+            # Now yield the event to caller (TUI may break after this)
+            yield event
 
     async def _chat_with_tools(self, stream: bool) -> AsyncIterator[Event]:
         """Chat with tool support."""
@@ -507,6 +514,11 @@ class EngineClient:
                         "like [Source Name](https://example.com) so they are clickable."
                     )
                 messages = [Message("system", tool_prompt)] + messages
+
+            # Log API request for debugging
+            from ppxai.tui_logger import get_logger
+            logger = get_logger()
+            logger.log_api_request(iteration, messages)
 
             # Get response from provider
             full_response = ""
@@ -586,21 +598,36 @@ class EngineClient:
 
             else:
                 # No tool call - this is the final response
+                from ppxai.tui_logger import get_logger
+                logger = get_logger()
+                logger.debug(f"No tool call detected, generating final response (stream={stream})")
+
                 if stream:
                     # Re-request with streaming for final response
+                    logger.debug(f"Re-requesting with stream=True for final response")
                     async for event in self.provider.chat(messages, self.model, stream=True):
                         # Check for interrupt
                         if self._interrupted:
                             yield Event(EventType.ERROR, "Interrupted by user")
                             break
 
-                        yield event
+                        # CRITICAL FIX: Add assistant message to session BEFORE yielding STREAM_END
+                        # because the caller (TUI main loop) may break out of the loop after receiving it
                         if event.type == EventType.STREAM_END:
+                            logger.debug(f"STREAM_END received, adding assistant message BEFORE yield, length={len(event.data) if event.data else 0}")
                             self.session.add_message(Message("assistant", event.data))
+                            logger.debug(f"After adding assistant message, session has {len(self.session.messages)} messages")
+
+                        # Now yield the event to caller (TUI may break after this)
+                        logger.debug(f"Yielding event: {event.type}")
+                        yield event
                 else:
+                    logger.debug(f"Non-streaming path, adding assistant message from full_response")
                     self.session.add_message(Message("assistant", full_response))
                     yield Event(EventType.STREAM_END, full_response)
+                    logger.debug(f"After adding assistant message, session has {len(self.session.messages)} messages")
 
+                logger.debug(f"Final response complete, returning from _chat_with_tools")
                 return
 
         # Max iterations reached

@@ -64,7 +64,7 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
 - `get_datetime` - Get current date/time with timezone support
 - Plus web tools (for custom provider): weather, web search, URL fetch
 
-**File Editing Tools (v1.11.0) 🎯**
+**File Editing Tools (v1.11.1) 🎯**
 - `apply_patch` - Apply unified diff patches to files
 - `replace_block` - Search and replace exact text blocks
 - `insert_text` - Insert text at specific line numbers
@@ -95,19 +95,23 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
    - **macOS/Linux:** `./ppxai`
    - **Windows:** `ppxai.exe`
 
-### Option 2: VSCode Extension with Standalone Server 🆕 v1.11.0
+### Option 2: VSCode Extension with Standalone Server 🆕 v1.11.1
 
 **No Python installation required!** Pre-built server binaries available!
 
 1. Download from [Releases](../../releases):
    - `ppxai-server-{platform}` (server binary for macOS ARM/Intel, Linux, Windows)
-   - `ppxai-1.11.0.vsix` (VSCode extension)
+   - `ppxai-1.11.1.vsix` (VSCode extension)
 2. Create a `.env` file with your API key (in project folder or `~/.ppxai/.env`)
-3. Install the extension: `code --install-extension ppxai-1.11.0.vsix`
+3. Install the extension: `code --install-extension ppxai-1.11.1.vsix`
 4. Start the server: `./ppxai-server-macos-arm64` (or your platform's binary)
 5. Open VSCode and click the ppxai icon in the sidebar
 
-**What's New in v1.11.0:** File editing tools with user consent! AI can now autonomously edit files (apply_patch, replace_block, insert_text, delete_lines) with your explicit permission. Type `/tools help editing` for examples and `/tools enable` to try it.
+**What's New in v1.11.1:**
+- 🐛 **Critical bugfix** - Fixed 400 message alternation error in TUI multi-turn conversations with tools
+- 🔍 **TUI Debug Logging** - New `/debug-log` command for troubleshooting (`/debug-log on` to enable)
+- ✅ **File editing tools** (v1.11.0) with user consent work properly in both TUI and VSCode
+- Type `/tools help editing` for examples and `/tools enable` to try it
 
 See [vscode-extension/README.md](vscode-extension/README.md) for detailed instructions.
 
@@ -201,6 +205,7 @@ While in the chat interface:
 - `/model <id>` - Switch directly to a model (e.g., `/model gemini-2.5-pro`)
 - `/clear` - Clear conversation history
 - `/quit` or `/exit` - Exit the application (auto-saves session)
+- `/debug-log [on|off|show|clear]` - 🆕 TUI debug logging (logs to `~/.ppxai/logs/tui-debug.log`)
 - **@file References** - Type `@filename` to include file content in your message
 - **Autocomplete** - Tab/type to complete `/` commands and `@` file references
 
@@ -477,7 +482,7 @@ Clickable links work best in modern terminals:
 ppxai/
 ├── ppxai.py                              # Entry point wrapper
 ├── ppxai/                                # Main package
-│   ├── __init__.py                       # Package exports (v1.8.0)
+│   ├── __init__.py                       # Package exports (v1.11.1)
 │   ├── main.py                           # CLI application
 │   ├── client.py                         # AI client for API communication
 │   ├── config.py                         # Hybrid configuration system
@@ -485,40 +490,67 @@ ppxai/
 │   ├── ui.py                             # Terminal UI/display
 │   ├── prompts.py                        # Coding prompts & templates
 │   ├── utils.py                          # Utility functions
-│   ├── server.py                         # JSON-RPC server for IDE integration
+│   ├── tui_logger.py                     # TUI debug logging (v1.11.1)
+│   ├── markdown_tables.py                # Markdown table rendering (v1.10.4)
+│   ├── server/                           # Server implementations
+│   │   ├── http.py                       # FastAPI HTTP + SSE server (v1.9.0)
+│   │   └── jsonrpc.py                    # JSON-RPC server for IDE integration
 │   └── engine/                           # Core engine (v1.7.0+)
 │       ├── types.py                      # Shared types (Event, Message, etc.)
 │       ├── client.py                     # EngineClient facade
 │       ├── session.py                    # Session management
+│       ├── context.py                    # Context management
 │       ├── providers/                    # Provider implementations
+│       │   ├── base.py                   # BaseProvider abstract class
+│       │   ├── perplexity.py             # Perplexity AI provider
+│       │   └── openai_compat.py          # OpenAI-compatible provider
 │       └── tools/                        # Tool system
-├── vscode-extension/                     # VS Code Extension (v1.8.0)
+│           ├── base.py                   # BaseTool abstract class
+│           ├── manager.py                # ToolManager with provider filtering
+│           └── builtin/                  # Built-in tools
+│               ├── calculator.py         # Calculator tool
+│               ├── datetime_tool.py      # DateTime tool
+│               ├── editor.py             # File editing tools (v1.11.0)
+│               ├── filesystem.py         # Filesystem tools
+│               ├── shell.py              # Shell command tool
+│               └── web.py                # Web tools
+├── vscode-extension/                     # VS Code Extension (v1.11.1)
 │   ├── src/
 │   │   ├── extension.ts                  # Extension entry point
 │   │   ├── chatPanel.ts                  # Webview chat UI
-│   │   └── backend.ts                    # Python process manager
+│   │   ├── httpClient.ts                 # HTTP + SSE client (v1.9.0)
+│   │   ├── backend.ts                    # Python process manager (legacy)
+│   │   ├── aiClient.ts                   # AI client interface
+│   │   ├── config.ts                     # Configuration management
+│   │   └── sessionsProvider.ts           # Session tree view
 │   └── package.json                      # Extension manifest
-├── tool_manager.py                       # Tool management system
-├── perplexity_tools_prompt_based.py      # AI tool implementation
+├── tool_manager.py                       # Tool management system (legacy)
+├── perplexity_tools_prompt_based.py      # AI tool implementation (legacy)
 ├── ppxai-config.json                     # Provider configuration (optional)
 ├── ppxai-config.example.json             # Configuration template
 ├── demo/
 │   ├── example_builtin_tool.py           # Example Python tool
 │   ├── example_mcp_server/               # Example MCP server
 │   └── demo_tools_working.py             # Working demo
-├── tests/                                # 180+ tests
+├── tests/                                # 300+ tests (303/308 passing in v1.11.1)
 │   ├── test_config.py                    # Configuration tests (48 tests)
 │   ├── test_client.py                    # Client tests
 │   ├── test_commands.py                  # Command tests
+│   ├── test_engine_streaming.py          # Engine streaming tests (v1.11.1)
+│   ├── test_file_editing_tools.py        # File editing tests (v1.11.0)
+│   ├── test_markdown_tables.py           # Markdown table tests (v1.10.4)
 │   └── ...                               # Additional test modules
 ├── docs/
 │   ├── README.md                         # Documentation index
 │   ├── TOOL_CREATION_GUIDE.md            # Step-by-step tool guide
-│   └── QUICK_START_TOOLS.md              # 60-second setup
+│   ├── FILE_EDITING_GUIDE.md             # File editing guide (v1.11.1)
+│   ├── QUICK_START_TOOLS.md              # 60-second setup
+│   └── ...                               # Additional documentation
 ├── pyproject.toml                        # Project metadata & dependencies
 ├── uv.lock                               # Dependency lockfile
 ├── scripts/
-│   └── bootstrap.py                      # Dev environment bootstrap
+│   ├── bootstrap.py                      # Dev environment bootstrap
+│   └── build-intel.sh                    # macOS Intel build script (v1.9.0)
 ├── SPECIFICATIONS.md                     # Code generation specs
 ├── ROADMAP.md                            # Development roadmap
 └── README.md                             # This file
