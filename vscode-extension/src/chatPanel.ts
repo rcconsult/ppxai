@@ -1631,6 +1631,12 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             box-shadow: 0 0 4px #4caf50;
         }
 
+        .menu-separator {
+            height: 1px;
+            background: var(--vscode-dropdown-border);
+            margin: 4px 0;
+        }
+
         .messages {
             flex: 1;
             overflow-y: auto;
@@ -2110,12 +2116,17 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             <button class="streaming-badge" id="streamingBadge" style="display: none;" title="Press Esc to stop">⏹ Streaming...</button>
         </div>
         <div class="header-buttons">
-            <button class="header-btn" id="saveSessionBtn" title="Save conversation session">Save Session</button>
-            <button class="header-btn" id="saveAnswerBtn" title="Save last answer as markdown">Save Answer</button>
             <button class="header-btn" id="clearBtn" title="Clear history">Clear</button>
             <div class="menu-container">
                 <button class="menu-btn" id="menuBtn" title="More options">⋮</button>
                 <div class="menu-dropdown" id="menuDropdown">
+                    <div class="menu-item" id="saveSessionMenuItem">
+                        <span>💾 Save Session</span>
+                    </div>
+                    <div class="menu-item" id="saveAnswerMenuItem">
+                        <span>📄 Save Answer</span>
+                    </div>
+                    <div class="menu-separator"></div>
                     <div class="menu-item" id="debugLogMenuItem">
                         <span class="menu-indicator" id="debugLogIndicator"></span>
                         <span>Debug Log</span>
@@ -2154,11 +2165,11 @@ A: Use \`/tools disable\` or choose "never" when prompted.
         const modelSpan = document.getElementById('model');
         const toolsBadge = document.getElementById('toolsBadge');
         const streamingBadge = document.getElementById('streamingBadge');
-        const saveSessionBtn = document.getElementById('saveSessionBtn');
-        const saveAnswerBtn = document.getElementById('saveAnswerBtn');
         const clearBtn = document.getElementById('clearBtn');
         const menuBtn = document.getElementById('menuBtn');
         const menuDropdown = document.getElementById('menuDropdown');
+        const saveSessionMenuItem = document.getElementById('saveSessionMenuItem');
+        const saveAnswerMenuItem = document.getElementById('saveAnswerMenuItem');
         const debugLogMenuItem = document.getElementById('debugLogMenuItem');
         const debugLogIndicator = document.getElementById('debugLogIndicator');
 
@@ -2567,18 +2578,6 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             }
         });
 
-        saveSessionBtn.addEventListener('click', () => {
-            vscode.postMessage({ type: 'save' });
-        });
-
-        saveAnswerBtn.addEventListener('click', () => {
-            if (lastAssistantMessage) {
-                vscode.postMessage({ type: 'saveAnswer', content: lastAssistantMessage });
-            } else {
-                vscode.postMessage({ type: 'error', message: 'No answer to save yet' });
-            }
-        });
-
         clearBtn.addEventListener('click', () => {
             vscode.postMessage({ type: 'clear' });
         });
@@ -2594,6 +2593,22 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             if (!menuBtn.contains(e.target) && !menuDropdown.contains(e.target)) {
                 menuDropdown.classList.remove('visible');
             }
+        });
+
+        // Save Session menu item click handler
+        saveSessionMenuItem.addEventListener('click', () => {
+            vscode.postMessage({ type: 'save' });
+            menuDropdown.classList.remove('visible');
+        });
+
+        // Save Answer menu item click handler
+        saveAnswerMenuItem.addEventListener('click', () => {
+            if (lastAssistantMessage) {
+                vscode.postMessage({ type: 'saveAnswer', content: lastAssistantMessage });
+            } else {
+                vscode.postMessage({ type: 'error', message: 'No answer to save yet' });
+            }
+            menuDropdown.classList.remove('visible');
         });
 
         // Debug Log menu item click handler

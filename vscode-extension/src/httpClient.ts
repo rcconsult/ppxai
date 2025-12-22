@@ -705,6 +705,8 @@ export class HttpClient {
      * Enable or disable debug logging (v1.11.2)
      */
     async setDebugLog(enabled: boolean): Promise<{ enabled: boolean; log_file: string | null }> {
+        this.outputChannel.appendLine(`[Debug Log] ${enabled ? 'Enabling' : 'Disabling'} server debug logging...`);
+
         const response = await fetch(`${this.baseUrl}/debug-log`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -713,7 +715,14 @@ export class HttpClient {
         if (!response.ok) {
             throw new Error(`Failed to set debug log: ${response.statusText}`);
         }
-        return response.json() as Promise<{ enabled: boolean; log_file: string | null }>;
+
+        const result = await response.json() as { enabled: boolean; log_file: string | null };
+        this.outputChannel.appendLine(`[Debug Log] Server debug logging ${result.enabled ? 'enabled' : 'disabled'}`);
+        if (result.log_file) {
+            this.outputChannel.appendLine(`[Debug Log] Log file: ${result.log_file}`);
+        }
+
+        return result;
     }
 }
 
