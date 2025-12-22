@@ -15,6 +15,16 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **Event Handling:** TUI now handles STREAM_CHUNK, TOOL_CALL, TOOL_RESULT, CONSENT_REQUEST, and ERROR events
 - **Real-time UX:** TUI shows streaming chunks, tool calls, and consent prompts in real-time
 - **Code Quality:** Eliminates architectural divergence between TUI and VSCode extension
+- **FIXED:** Conversation history sync - Fixed 400 error when using tools with conversation history
+  - Engine client and legacy client now properly sync history when enabling tools and after each response
+  - Fixes message alternation errors ("user or tool message(s) should alternate with assistant message(s)")
+- **FIXED:** Inline markdown in tables - File names and inline code now render properly
+  - Inline code (`` `text` ``) renders with cyan monospace on grey background (GitHub-like)
+  - Bold (`**text**`) and italic (`*text*`) also supported in table cells
+- **NEW:** `/tools set verbose` command to inspect tool inputs/outputs
+  - `/tools set verbose on` - Show tool arguments and results during execution
+  - `/tools set verbose off` - Hide detailed tool information (default)
+  - Useful for debugging and understanding AI tool calls
 - **Tests:** 296/301 tests passing (same as v1.11.0 - 5 pre-existing failures in custom endpoint tests)
 - **Backwards Compatible:** Legacy tool system still works when EngineClient not available
 

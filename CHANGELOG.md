@@ -42,15 +42,35 @@ This release fixes a critical regression in v1.11.0 where the TUI failed to disp
 - `docs/README.md` - Updated version references
 - `CLAUDE.md` - Documented v1.11.1 changes
 
+#### Additional Fixes
+- **Conversation History Sync:** Fixed 400 error when using tools with conversation history
+  - Engine client and legacy client now properly sync conversation history
+  - Fixes message alternation errors ("user or tool message(s) should alternate with assistant message(s)")
+  - Syncs history when enabling tools and after each response
+- **Inline Markdown in Tables:** File names and inline code now render properly in markdown tables
+  - Added `parse_inline_markdown()` to handle backticks, bold, italic in table cells
+  - Inline code (`` `text` ``) renders with cyan monospace on grey background (GitHub-like)
+  - Bold (`**text**`) and italic (`*text*`) also supported
+  - Files: `ppxai/markdown_tables.py` (lines 16-64, 135)
+
+#### New Features
+- **Verbose Tool Logging:** Added `/tools set verbose` command to inspect tool inputs/outputs
+  - `/tools set verbose on` - Show tool arguments and results during execution
+  - `/tools set verbose off` - Hide detailed tool information (default)
+  - Useful for debugging and understanding AI tool calls
+  - Files: `ppxai/commands.py` (lines 134, 495, 665-698), `ppxai/main.py` (lines 295-302)
+
 #### Testing
 - **296/301 tests passing** (same as v1.11.0)
 - 5 failures are pre-existing custom endpoint config issues (unrelated)
 - Syntax validated, imports verified
+- Manually tested: verbose mode, conversation history sync, inline code rendering
 
 ### Changed
 - Version bumped to 1.11.1 in all package files
 - Updated all installation instructions to reference v1.11.1
 - Updated documentation to reflect unified event-based architecture
+- Enhanced markdown table rendering with inline formatting support
 
 ## [1.11.0] - 2025-12-21
 

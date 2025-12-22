@@ -43,6 +43,7 @@ from .ui import (
 )
 from .utils import read_file_content
 from .commands import CommandHandler, send_coding_task
+from .main import main
 
 __all__ = [
     # Config
@@ -90,6 +91,8 @@ __all__ = [
     # Commands
     "CommandHandler",
     "send_coding_task",
+    # Main
+    "main",
 ]
 
-__version__ = "1.10.4"
+__version__ = "1.11.1"

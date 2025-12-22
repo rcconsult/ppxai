@@ -22,14 +22,21 @@ Released: 2025-12-22
 - ✅ **Event Handling** - TUI handles STREAM_CHUNK, TOOL_CALL, TOOL_RESULT, CONSENT_REQUEST, ERROR
 - ✅ **Real-time UX** - TUI shows streaming chunks, tool calls, consent prompts in real-time
 - ✅ **Performance Validated** - EngineClient is 16.5% faster than legacy (2446ms vs 2929ms)
+- ✅ **Conversation History Sync** - Fixed 400 error when using tools with conversation history
+- ✅ **Inline Markdown in Tables** - File names and code render properly in table cells (backticks, bold, italic)
 - ✅ **No Regression** - 296/301 tests passing (same as v1.11.0)
+
+**New Features**:
+- ✅ **Verbose Tool Logging** - `/tools set verbose on/off` to inspect tool inputs/outputs
 
 **Root Cause**: v1.11.0 switched TUI to use `EngineClient.chat_sync()` which returns a plain string without rendering (pure function), but forgot to add console output.
 
 **Solution**: Refactored TUI to use async event stream like VSCode extension, eliminating architectural divergence.
 
 **Files Changed**:
-- `ppxai/main.py` - Added event-based streaming loop (lines 268-325)
+- `ppxai/main.py` - Added event-based streaming loop (lines 268-335), conversation history sync
+- `ppxai/commands.py` - Added conversation history sync (lines 541-549, 330-335), verbose tool logging (lines 134, 495, 665-698)
+- `ppxai/markdown_tables.py` - Added inline markdown parsing for table cells (lines 16-68, 135)
 - `pyproject.toml` - Version 1.11.0 → 1.11.1
 - `vscode-extension/package.json` - Version 1.11.0 → 1.11.1
 - `README.md`, `vscode-extension/README.md`, `docs/README.md` - Updated version references

@@ -131,6 +131,7 @@ class CommandHandler:
         self.PerplexityClientPromptTools = None
         self.load_tool_config = None
         self.engine_client = None  # Phase 1B: EngineClient for file editing tools
+        self.tools_verbose = False  # v1.11.1: Verbose tool execution logging
 
         # Try to load tool support
         try:
@@ -491,6 +492,8 @@ class CommandHandler:
             self._tools_status()
         elif subcommand == "config":
             self._tools_config(subargs)
+        elif subcommand == "set":
+            self._tools_set(subargs)
         elif subcommand == "help":
             if subargs and subargs[0] == "editing":
                 display_file_editing_help()
@@ -499,7 +502,7 @@ class CommandHandler:
                 console.print("[dim]Usage: /tools help editing[/dim]\n")
         else:
             console.print(f"[red]Unknown subcommand: {subcommand}[/red]")
-            console.print("[yellow]Available: enable, disable, list, status, config, help[/yellow]\n")
+            console.print("[yellow]Available: enable, disable, list, status, config, set, help[/yellow]\n")
 
     def _enable_tools(self):
         """Enable AI tools (including file editing tools with consent)."""
@@ -530,12 +533,29 @@ class CommandHandler:
         # Phase 1B: Enable EngineClient with file editing tools
         try:
             from ppxai.engine import EngineClient
+            from ppxai.engine.types import Message
 
             # Create engine client with consent callback
             self.engine_client = EngineClient(consent_callback=tui_consent_handler)
             self.engine_client.set_provider(self.provider)
             self.engine_client.set_model(self.current_model)
             self.engine_client.enable_tools()
+
+            # CRITICAL: Sync conversation history from legacy client to engine
+            # Convert dict format to Message objects
+            for msg in self.client.conversation_history:
+                self.engine_client.session.messages.append(
+                    Message(role=msg["role"], content=msg["content"])
+                )
+
+            # Log history sync for debugging
+            from ppxai.tui_logger import get_logger
+            logger = get_logger()
+            logger.log_history_sync(
+                len(self.client.conversation_history),
+                len(self.engine_client.session.messages),
+                self.engine_client.session.messages
+            )
 
             console.print("[green]✓ Tools enabled![/green]")
             console.print("[dim]Includes file editing tools (apply_patch, replace_block, insert_text, delete_lines)[/dim]")
@@ -661,6 +681,103 @@ class CommandHandler:
         else:
             console.print(f"[red]Unknown setting: {setting}[/red]")
             console.print("[dim]Available: max_iterations[/dim]\n")
+
+    def _tools_set(self, args: list):
+        """Set tool settings (verbose mode)."""
+        if not args:
+            # Show current settings
+            verbose_status = "enabled" if self.tools_verbose else "disabled"
+            console.print("[bold]Tool Settings[/bold]")
+            console.print(f"  verbose: {verbose_status}")
+            console.print()
+            console.print("[dim]Usage: /tools set <setting> <value>[/dim]")
+            console.print("[dim]Available settings:[/dim]")
+            console.print("[dim]  verbose on/off - Show tool inputs and outputs[/dim]\n")
+            return
+
+        if len(args) < 2:
+            console.print("[red]Usage: /tools set <setting> <value>[/red]\n")
+            return
+
+        setting = args[0].lower()
+        value = args[1].lower()
+
+        if setting == "verbose":
+            if value in ["on", "true", "1", "yes"]:
+                self.tools_verbose = True
+                console.print("[green]✓ Verbose tool logging enabled[/green]")
+                console.print("[dim]Tool inputs and outputs will be displayed during execution[/dim]\n")
+            elif value in ["off", "false", "0", "no"]:
+                self.tools_verbose = False
+                console.print("[yellow]Verbose tool logging disabled[/yellow]\n")
+            else:
+                console.print(f"[red]Invalid value: {value}[/red]")
+                console.print("[dim]Use: on, off, true, false, 1, 0, yes, or no[/dim]\n")
+        else:
+            console.print(f"[red]Unknown setting: {setting}[/red]")
+            console.print("[dim]Available: verbose[/dim]\n")
+
+    def handle_debug_log(self, args: str):
+        """Handle /debug-log command to enable/disable debug logging."""
+        from ppxai.tui_logger import get_logger
+        from pathlib import Path
+
+        logger = get_logger()
+
+        if not args:
+            # Show status
+            status = "enabled" if logger.enabled else "disabled"
+            log_file = Path.home() / '.ppxai' / 'logs' / 'tui-debug.log'
+            console.print(f"\n[bold]Debug Logging Status:[/bold] {status}")
+            if logger.enabled:
+                console.print(f"[dim]Log file: {log_file}[/dim]")
+                console.print("[dim]Use '/debug-log off' to disable[/dim]\n")
+            else:
+                console.print(f"[dim]Log file: {log_file}[/dim]")
+                console.print("[dim]Use '/debug-log on' to enable[/dim]")
+                console.print("[dim]Or set PPXAI_DEBUG=1 environment variable[/dim]\n")
+            return
+
+        cmd = args.strip().lower()
+
+        if cmd in ["on", "enable", "1", "true", "yes"]:
+            logger.enable()
+            log_file = Path.home() / '.ppxai' / 'logs' / 'tui-debug.log'
+            console.print("[green]✓ Debug logging enabled[/green]")
+            console.print(f"[dim]Logs will be written to: {log_file}[/dim]")
+            console.print("[dim]All message flow, API requests, and tool executions will be logged[/dim]\n")
+        elif cmd in ["off", "disable", "0", "false", "no"]:
+            logger.disable()
+            console.print("[yellow]Debug logging disabled[/yellow]\n")
+        elif cmd in ["show", "view", "cat"]:
+            # Show recent log entries
+            log_file = Path.home() / '.ppxai' / 'logs' / 'tui-debug.log'
+            if not log_file.exists():
+                console.print("[yellow]No log file found[/yellow]\n")
+                return
+
+            try:
+                with open(log_file, 'r') as f:
+                    lines = f.readlines()
+                    # Show last 50 lines
+                    recent_lines = lines[-50:]
+                    console.print(f"\n[bold]Recent debug log entries:[/bold] (last 50 lines)\n")
+                    for line in recent_lines:
+                        console.print(line.rstrip())
+                    console.print()
+            except Exception as e:
+                console.print(f"[red]Error reading log file: {e}[/red]\n")
+        elif cmd in ["clear", "clean", "reset"]:
+            # Clear log file
+            log_file = Path.home() / '.ppxai' / 'logs' / 'tui-debug.log'
+            if log_file.exists():
+                log_file.unlink()
+                console.print("[green]✓ Debug log cleared[/green]\n")
+            else:
+                console.print("[yellow]No log file to clear[/yellow]\n")
+        else:
+            console.print(f"[red]Unknown command: {cmd}[/red]")
+            console.print("[yellow]Usage: /debug-log [on|off|show|clear][/yellow]\n")
 
     def _search_files(self, query: str, max_results: int = 10) -> list:
         """Search for files matching query in current directory."""
@@ -925,6 +1042,8 @@ class CommandHandler:
             self.handle_implement(args)
         elif command == "/debug":
             self.handle_debug(args)
+        elif command == "/debug-log":
+            self.handle_debug_log(args)
         elif command == "/explain":
             self.handle_explain(args)
         elif command == "/convert":

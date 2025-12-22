@@ -453,6 +453,62 @@
           "iteration": 3
         }
       ]
+    },
+    {
+      "timestamp": "2025-12-22T18:34:30.631619",
+      "version": "1.11.1",
+      "git_commit": "07bf0a3",
+      "git_branch": "bugfix/tui-engineclient-adapter",
+      "provider": "perplexity",
+      "model": "sonar-pro",
+      "summary": {
+        "total_runs": 3,
+        "successful_runs": 3,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 1498.52,
+          "min": 1333.7,
+          "max": 1631.31,
+          "stdev": 151.37
+        },
+        "total_ms": {
+          "mean": 3482.53,
+          "min": 2870.91,
+          "max": 4241.64,
+          "stdev": 697.16
+        },
+        "tokens_per_sec": {
+          "mean": 48.89,
+          "min": 29.68,
+          "max": 81.81
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 1631.31,
+          "total_ms": 2870.91,
+          "tokens": 101,
+          "tokens_per_sec": 35.18,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1530.55,
+          "total_ms": 3335.05,
+          "tokens": 99,
+          "tokens_per_sec": 29.68,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1333.7,
+          "total_ms": 4241.64,
+          "tokens": 347,
+          "tokens_per_sec": 81.81,
+          "prompt_type": "complex",
+          "iteration": 1
+        }
+      ]
     }
   ]
 }
