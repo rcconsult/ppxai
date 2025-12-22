@@ -188,7 +188,7 @@ class TUIEventHandler(EventHandler):
             logger: Logger instance for debug logging
             verbose: Whether to show verbose tool output
         """
-        from ppxai.ui import render_markdown_with_tables
+        from ppxai.markdown_tables import render_markdown_with_tables
 
         self.console = console
         self.logger = logger

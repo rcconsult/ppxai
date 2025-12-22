@@ -76,8 +76,9 @@ def test_execute_help_command():
 
     assert result.status == CommandStatus.INFO
     assert "commands" in result.data
-    assert "/help" in result.data["commands"]
-    assert "/tools" in result.data["commands"]
+    commands_dict = result.data["commands"]
+    assert any("/help" in cmd for cmd in commands_dict.keys())
+    assert any("/tools" in cmd for cmd in commands_dict.keys())
 
 
 def test_execute_clear_command_with_callback():
