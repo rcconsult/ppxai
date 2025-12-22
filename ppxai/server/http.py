@@ -25,9 +25,13 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 
 from ..engine import EngineClient, EventType
+from ..common.logger import get_logger
 
 # Global engine instance (managed by lifespan)
 engine: Optional[EngineClient] = None
+
+# Server logger (v1.11.2)
+logger = get_logger("server")
 
 # Consent request tracking (Phase 1C: v1.11.0)
 # Maps file_path -> asyncio.Future[tuple[bool, str]]
@@ -76,7 +80,9 @@ async def lifespan(app: FastAPI):
     global engine
 
     # Startup: Initialize engine with consent callback (Phase 1C: v1.11.0)
+    logger.info("Server starting up - initializing EngineClient")
     engine = EngineClient(consent_callback=http_consent_handler)
+    logger.info(f"EngineClient initialized - provider: {engine.provider_name}, model: {engine.model}")
 
     # Set default provider (tries perplexity first, falls back to gemini)
     from ..config import get_available_providers
@@ -177,25 +183,40 @@ async def sse_event_generator(prompt: str) -> AsyncGenerator[str, None]:
     SSE format: data: {json}\n\n
     Each event is yielded immediately with a sleep(0) to force flush.
     Phase 1C: Also checks consent_event_queue for pending consent requests.
+    v1.11.2: Added debug logging for troubleshooting.
     """
     global engine
     if not engine:
+        logger.error("SSE event generator called but engine not initialized")
         yield f"data: {json.dumps({'type': 'error', 'data': 'Engine not initialized'})}\n\n"
         return
+
+    logger.log_user_message(prompt)
 
     try:
         async for event in engine.chat(prompt):
             # Phase 1C: Check for pending consent requests before each event
             while engine._consent_event_queue:
                 consent_event = engine._consent_event_queue.pop(0)
+                logger.log_event("CONSENT_REQUEST", str(consent_event.data))
                 consent_data = {
                     "type": consent_event.type.value,
                     "data": consent_event.data,
                 }
                 if consent_event.metadata:
                     consent_data["metadata"] = consent_event.metadata
+                logger.log_sse_event("consent_request", str(consent_event.data)[:100])
                 yield f"data: {json.dumps(consent_data)}\n\n"
                 await asyncio.sleep(0)
+
+            # Log specific event types
+            if event.type == EventType.TOOL_CALL:
+                tool_data = event.data if isinstance(event.data, dict) else {}
+                logger.log_tool_call(tool_data.get('tool', 'unknown'), tool_data.get('arguments', {}))
+            elif event.type == EventType.STREAM_END:
+                logger.log_assistant_message(str(event.data)[:200] if event.data else "")
+            elif event.type == EventType.ERROR:
+                logger.error(f"Engine error: {event.data}")
 
             # Emit regular event
             event_data = {
@@ -204,10 +225,12 @@ async def sse_event_generator(prompt: str) -> AsyncGenerator[str, None]:
             }
             if event.metadata:
                 event_data["metadata"] = event.metadata
+            logger.log_sse_event(event.type.value, str(event.data)[:100] if event.data else "")
             yield f"data: {json.dumps(event_data)}\n\n"
             # Force event loop to flush the response immediately
             await asyncio.sleep(0)
     except Exception as e:
+        logger.error(f"Exception in SSE event generator: {e}")
         yield f"data: {json.dumps({'type': 'error', 'data': str(e)})}\n\n"
 
 
@@ -243,7 +266,7 @@ async def health_check():
     """Health check endpoint."""
     return {
         "status": "ok",
-        "version": "1.10.0",
+        "version": "1.11.2",
         "engine": engine is not None,
     }
 
@@ -265,18 +288,23 @@ async def get_status():
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
-    """Chat endpoint with SSE streaming.
+    """Chat endpoint with SSE streaming (v1.11.2: added logging).
 
     Returns Server-Sent Events stream with chat response chunks.
     """
     global engine
     if not engine:
+        logger.error("Chat endpoint called but engine not initialized")
         raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    logger.log_http_request("POST", "/chat", "vscode")
 
     # Set provider/model if specified
     if request.provider:
+        logger.info(f"Switching provider to: {request.provider}")
         engine.set_provider(request.provider)
     if request.model:
+        logger.info(f"Switching model to: {request.model}")
         engine.set_model(request.model)
 
     return StreamingResponse(
