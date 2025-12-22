@@ -4,6 +4,7 @@ These tests verify the fix for the 400 error bug where assistant messages
 weren't being added to session history before STREAM_END event was yielded.
 """
 import pytest
+import os
 from unittest.mock import Mock, AsyncMock, patch
 from ppxai.engine.client import EngineClient
 from ppxai.engine.types import Event, EventType, Message
@@ -21,11 +22,12 @@ class TestEngineClientStreaming:
     @pytest.fixture
     async def engine_client(self):
         """Create an EngineClient instance for testing."""
-        client = EngineClient()
-        # Set provider to perplexity for testing
-        client.set_provider("perplexity")
-        client.set_model("sonar")
-        return client
+        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+            client = EngineClient()
+            # Set provider to perplexity for testing
+            client.set_provider("perplexity")
+            client.set_model("sonar")
+            return client
 
     @pytest.mark.asyncio
     async def test_assistant_message_added_before_stream_end(self):
@@ -34,9 +36,10 @@ class TestEngineClientStreaming:
         This is the critical fix for the 400 error bug. The TUI breaks out of the
         event loop when it receives STREAM_END, so the message must be added first.
         """
-        client = EngineClient()
-        client.set_provider("perplexity")
-        client.set_model("sonar")
+        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+            client = EngineClient()
+            client.set_provider("perplexity")
+            client.set_model("sonar")
 
         # Mock the provider's chat method to return streaming events
         mock_provider_response = [
@@ -79,9 +82,10 @@ class TestEngineClientStreaming:
         2. Enable tools (history sync)
         3. Second query (should not get 400 error)
         """
-        client = EngineClient()
-        client.set_provider("perplexity")
-        client.set_model("sonar")
+        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+            client = EngineClient()
+            client.set_provider("perplexity")
+            client.set_model("sonar")
 
         # Mock provider to return simple responses
         with patch.object(client.provider, 'chat') as mock_chat:
@@ -125,9 +129,10 @@ class TestEngineClientStreaming:
     @pytest.mark.asyncio
     async def test_stream_end_contains_full_response(self):
         """Test that STREAM_END event contains the full accumulated response."""
-        client = EngineClient()
-        client.set_provider("perplexity")
-        client.set_model("sonar")
+        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+            client = EngineClient()
+            client.set_provider("perplexity")
+            client.set_model("sonar")
 
         with patch.object(client.provider, 'chat') as mock_chat:
             # Simulate streaming chunks
@@ -151,9 +156,10 @@ class TestEngineClientStreaming:
     @pytest.mark.asyncio
     async def test_non_streaming_also_adds_message(self):
         """Test that non-streaming chat also properly adds messages."""
-        client = EngineClient()
-        client.set_provider("perplexity")
-        client.set_model("sonar")
+        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+            client = EngineClient()
+            client.set_provider("perplexity")
+            client.set_model("sonar")
 
         with patch.object(client.provider, 'chat') as mock_chat:
             # Non-streaming returns single STREAM_END event
@@ -177,9 +183,10 @@ class TestEngineClientStreaming:
     @pytest.mark.asyncio
     async def test_interrupt_during_streaming(self):
         """Test that interrupting during streaming doesn't corrupt history."""
-        client = EngineClient()
-        client.set_provider("perplexity")
-        client.set_model("sonar")
+        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+            client = EngineClient()
+            client.set_provider("perplexity")
+            client.set_model("sonar")
 
         with patch.object(client.provider, 'chat') as mock_chat:
             mock_chat.return_value = async_event_generator([
