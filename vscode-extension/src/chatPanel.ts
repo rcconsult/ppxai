@@ -162,6 +162,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             await this.updateStatus();
             await this.refreshHistory();
             await this.updateDebugLogStatus();
+            await this.updateWorkspaceDisplay();
         } catch (error) {
             this._view?.webview.postMessage({
                 type: 'error',
@@ -200,11 +201,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             });
         }
 
+        // Inject workspace context for AI awareness (v1.11.2)
+        const workspaceContext = await this.getWorkspaceContext();
+        const finalMessage = workspaceContext + augmentedMessage;
+
         // Start streaming response
         this._view.webview.postMessage({ type: 'startResponse' });
 
         try {
-            await this._backend.chat(augmentedMessage, (event) => {
+            await this._backend.chat(finalMessage, (event) => {
                 this.handleStreamEvent(event);
             });
         } catch (error) {
@@ -1020,6 +1025,49 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
         }
     }
 
+    /**
+     * Get workspace context for AI awareness (v1.11.2)
+     * Injects workspace information so AI knows where it's working
+     */
+    private async getWorkspaceContext(): Promise<string> {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+            return "";  // No context if no workspace open
+        }
+
+        const workspaceRoot = workspaceFolders[0].uri.fsPath;
+        const workspaceName = workspaceFolders[0].name;
+
+        return `[Context: Working in VSCode workspace "${workspaceName}" at ${workspaceRoot}]\n\n`;
+    }
+
+    /**
+     * Update workspace display in UI (v1.11.2)
+     */
+    private async updateWorkspaceDisplay() {
+        if (!this._view) { return; }
+
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+            // No workspace - hide display
+            this._view.webview.postMessage({
+                type: 'workspaceInfo',
+                hasWorkspace: false
+            });
+            return;
+        }
+
+        const workspaceRoot = workspaceFolders[0].uri.fsPath;
+        const workspaceName = workspaceFolders[0].name;
+
+        this._view.webview.postMessage({
+            type: 'workspaceInfo',
+            hasWorkspace: true,
+            path: workspaceRoot,
+            name: workspaceName
+        });
+    }
+
     private async handleSaveAnswer(content: string) {
         if (!this._view) { return; }
 
@@ -1502,6 +1550,33 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             display: flex;
             align-items: center;
             gap: 8px;
+        }
+
+        .workspace-info {
+            font-size: 10px;
+            color: var(--vscode-descriptionForeground);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            max-width: 40%;
+            overflow: hidden;
+            flex-shrink: 1;
+        }
+
+        .workspace-icon {
+            flex-shrink: 0;
+        }
+
+        .workspace-path {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-shrink: 1;
+        }
+
+        .workspace-name {
+            flex-shrink: 0;
+            opacity: 0.8;
         }
 
         .tools-badge {
@@ -2114,6 +2189,11 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             <span><span id="provider">Loading...</span> / <span id="model">...</span></span>
             <button class="tools-badge disabled" id="toolsBadge" title="Click to toggle tools">Tools: off</button>
             <button class="streaming-badge" id="streamingBadge" style="display: none;" title="Press Esc to stop">⏹ Streaming...</button>
+        </div>
+        <div class="workspace-info" id="workspaceInfo" style="display: none;">
+            <span class="workspace-icon">📁</span>
+            <span id="workspacePath" class="workspace-path"></span>
+            <span class="workspace-name">(<span id="workspaceName"></span>)</span>
         </div>
         <div class="header-buttons">
             <button class="header-btn" id="clearBtn" title="Clear history">Clear</button>
@@ -2774,6 +2854,21 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                         debugLogIndicator.classList.add('active');
                     } else {
                         debugLogIndicator.classList.remove('active');
+                    }
+                    break;
+
+                case 'workspaceInfo':
+                    const workspaceInfoEl = document.getElementById('workspaceInfo');
+                    const workspacePathEl = document.getElementById('workspacePath');
+                    const workspaceNameEl = document.getElementById('workspaceName');
+
+                    if (message.hasWorkspace) {
+                        workspacePathEl.textContent = message.path;
+                        workspacePathEl.title = message.path;  // Show full path on hover
+                        workspaceNameEl.textContent = message.name;
+                        workspaceInfoEl.style.display = 'flex';
+                    } else {
+                        workspaceInfoEl.style.display = 'none';
                     }
                     break;
 
