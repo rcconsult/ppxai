@@ -23,6 +23,8 @@ from .config import (
     get_provider_config,
 )
 from .ui import console, display_welcome, select_model, select_provider
+from .engine.types import EventType
+from .markdown_tables import render_markdown_with_tables
 
 
 def get_status_line(client, current_model, handler):
@@ -264,8 +266,64 @@ def main():
             # Send message to API
             # Use EngineClient if available (v1.11.0+ with file editing tools)
             if hasattr(handler, 'engine_client') and handler.engine_client is not None:
-                # Use new engine with file editing tools and consent system
-                response = handler.engine_client.chat_sync(augmented_input)
+                # Use new engine with event-based streaming (v1.11.1)
+                async def stream_engine_response():
+                    """Stream response from EngineClient with event handling."""
+                    full_response = ""
+                    console.print("\n[bold cyan]Assistant:[/bold cyan]")
+
+                    # Check for pending consent requests before streaming
+                    while handler.engine_client._consent_event_queue:
+                        consent_event = handler.engine_client._consent_event_queue.pop(0)
+                        # Consent is handled inline by engine during tool execution
+                        pass
+
+                    async for event in handler.engine_client.chat(augmented_input, stream=True):
+                        if event.type == EventType.STREAM_START:
+                            # Stream starting - no action needed
+                            pass
+
+                        elif event.type == EventType.STREAM_CHUNK:
+                            # Print chunk without newline for streaming effect
+                            console.print(event.data, end="")
+                            full_response += event.data
+
+                        elif event.type == EventType.TOOL_CALL:
+                            # Show tool being called
+                            tool_name = event.data.get('tool', 'unknown')
+                            console.print(f"\n[cyan]→ Calling tool: {tool_name}[/cyan]")
+
+                        elif event.type == EventType.TOOL_RESULT:
+                            # Tool result - optional, can show if verbose
+                            pass
+
+                        elif event.type == EventType.TOOL_ERROR:
+                            # Show tool error
+                            console.print(f"\n[red]✗ Tool error: {event.data}[/red]")
+
+                        elif event.type == EventType.CONSENT_REQUEST:
+                            # Consent request handled by engine's callback
+                            # No action needed here - just pass through
+                            pass
+
+                        elif event.type == EventType.STREAM_END:
+                            # Final response - use this for markdown rendering
+                            full_response = event.data if event.data else full_response
+                            console.print()  # Newline after stream
+                            # Render final response with markdown tables
+                            if full_response.strip():
+                                render_markdown_with_tables(full_response, console)
+                            break
+
+                        elif event.type == EventType.ERROR:
+                            # Show error
+                            console.print(f"\n[red]Error: {event.data}[/red]")
+                            break
+
+                    return full_response
+
+                response = asyncio.run(stream_engine_response())
+
             elif tools_enabled:
                 # Use legacy async tool-enabled chat
                 response = asyncio.run(client.chat_with_tools(augmented_input, current_model))
