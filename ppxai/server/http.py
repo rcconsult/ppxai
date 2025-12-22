@@ -669,6 +669,38 @@ async def respond_to_consent(request: ConsentRequest):
     raise HTTPException(status_code=404, detail=f"No pending consent request for: {file_path}")
 
 
+# === Debug Logging (v1.11.2) ===
+
+@app.get("/debug-log")
+async def get_debug_log_status():
+    """Get server debug logging status."""
+    return {
+        "enabled": logger.enabled,
+        "log_file": str(logger.log_file) if logger.log_file else None,
+    }
+
+
+@app.post("/debug-log")
+async def set_debug_log(request: dict):
+    """Enable or disable server debug logging.
+
+    Body: {"enabled": true/false}
+    """
+    enabled = request.get("enabled", False)
+
+    if enabled:
+        logger.enable()
+        logger.info("Debug logging enabled via API")
+    else:
+        logger.info("Debug logging disabled via API")
+        logger.disable()
+
+    return {
+        "enabled": logger.enabled,
+        "log_file": str(logger.log_file) if logger.log_file else None,
+    }
+
+
 # === CLI Entry Point ===
 
 def run_server():
@@ -691,6 +723,8 @@ def run_server():
     print("  GET  /tools         - List tools")
     print("  POST /tools/config  - Configure tool settings")
     print("  GET  /usage         - Token usage statistics")
+    print("  GET  /debug-log     - Get debug logging status")
+    print("  POST /debug-log     - Enable/disable debug logging")
     print("  GET  /health        - Health check")
     print("  GET  /status        - Current status")
     print()
