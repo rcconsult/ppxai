@@ -1,14 +1,60 @@
 # ppxai Development Roadmap
 
 > **Note:** For future roadmap, see:
-> - **[docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.md)** - **Detailed v1.11.0 implementation plan (NEXT RELEASE)**
+> - **[docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.md)** - **Agentic workflow implementation plan (Phase 1 complete in v1.11.0, Phases 2-6 remaining)**
 > - [gemini3-features-roadmap.md](gemini3-features-roadmap.md) - Agentic features vision (v1.11.0-v1.13.0)
 > - [docs/tui-markdown-rendering.md](docs/tui-markdown-rendering.md) - TUI Workspace vision (v1.10.5-v1.15.0)
 > - [sonar-features-proposal.md](sonar-features-proposal.md) - Competitive analysis
 
 ---
 
-## Current Release: v1.11.1
+## Current Release: v1.11.2
+
+**Status**: ✅ Shell Command Consent Security + Shared Modules Refactoring
+
+Released: 2025-12-22
+
+**Goal**: Add shell command consent security and complete shared modules refactoring
+
+**Features**:
+- ✅ **Shell Command Consent System** - Regex-based command risk classification
+  - Safe commands auto-approved (ls, cat, pwd, grep)
+  - Dangerous commands require consent (rm, mv, chmod, sudo)
+  - Never-allow commands always blocked (rm -rf /, dd of=/dev/, fork bombs)
+  - Session-scoped consent with y/n/always/never options
+  - Keyboard-friendly QuickPick UI in VSCode
+- ✅ **Shared Modules Architecture** - Complete refactoring
+  - `ppxai/common/consent.py` - Unified consent system (21KB)
+  - `ppxai/common/logger.py` - Unified logging (8KB)
+  - `ppxai/common/event_handler.py` - Shared event processing (9KB)
+  - `ppxai/common/commands.py` - Shared command handlers (14KB)
+  - TUI and HTTP server adapters integrated
+- ✅ **Critical Security Fix** - Commands with redirections (cat >, echo >) now require consent
+- ✅ **Configuration** - Added tools.shell section to ppxai-config.json
+
+**Files Changed**:
+- `ppxai/common/` - NEW shared modules directory
+- `ppxai/engine/client.py` - Added request_shell_consent() and classification
+- `ppxai/engine/session.py` - Shell consent state tracking
+- `ppxai/engine/tools/builtin/shell.py` - Consent integration
+- `ppxai/server/http.py` - Added /shell-consent endpoint
+- `ppxai/commands.py` - TUI consent handler
+- `vscode-extension/src/chatPanel.ts` - QuickPick consent UI
+- `ppxai-config.json` - Shell consent patterns
+- `docs/SHELL_CONSENT_GUIDE.md` - NEW 500+ line security guide
+- `docs/RELEASE-NOTES-v1.11.2.md` - NEW comprehensive release notes
+
+**Testing**:
+- 308/308 tests passing (100%)
+- Shell consent integration tests
+- Shared modules comprehensive tests
+- Pattern matching edge cases
+
+**Branch**: `refactor/shared-modules-adapter` → merged to `master`
+
+---
+
+## Previous Release: v1.11.1
 
 **Status**: ✅ Critical Bugfix - TUI Event-Based Streaming
 
@@ -1826,6 +1872,6 @@ Interested in working on any of these features?
 
 ---
 
-**Last Updated**: December 9, 2025
-**Current Version**: v1.8.0
-**Next Target**: v1.9.0 (uv Migration + HTTP + SSE Backend)
+**Last Updated**: December 22, 2025
+**Current Version**: v1.11.2
+**Next Target**: v1.11.3+ (Agentic Workflow Phases 2-6: @git/@tree/agent)

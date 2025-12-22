@@ -5,6 +5,116 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.2] - 2025-12-22
+
+### Added - Shell Command Consent Security + Shared Modules Refactoring 🔒
+
+This release introduces two major improvements: a comprehensive shell command consent system for secure AI command execution, and complete shared modules architecture refactoring.
+
+#### Shell Command Consent System
+
+- **Regex-Based Command Classification** - Three-tier security model:
+  - **Safe Commands** - Auto-approved read-only operations (ls, cat, grep, pwd, which, whoami, date, uname)
+  - **Dangerous Commands** - Require user consent (rm, mv, chmod, sudo, curl | bash, kill, pkill)
+  - **Never-Allow Commands** - Always blocked (rm -rf /, dd of=/dev/, fork bombs, mkfs)
+
+- **Session-Scoped Consent** - Flexible approval options:
+  - **y (yes, once)** - Approve this command execution
+  - **n (no, once)** - Deny this command execution
+  - **always** - Auto-approve all matching commands (this session)
+  - **never** - Block all matching commands (this session)
+  - Consent decisions persist for entire session
+  - No persistence to disk (security feature)
+
+- **TUI Consent Interface** - Terminal prompt with command details:
+  - Shows command, working directory, risk level
+  - Keyboard-friendly y/n/always/never input
+  - Clear classification feedback
+
+- **VSCode QuickPick Consent** - Native VSCode consent UI:
+  - Keyboard navigation (no mouse required)
+  - Four clear options: "Yes, Once", "Yes, Always", "No, Once", "No, Never"
+  - Command context and risk level display
+  - Dismissible (ESC to cancel)
+
+- **Configuration System** - Customizable patterns in ppxai-config.json:
+  - `tools.shell.allowed_commands` - Safe command patterns
+  - `tools.shell.dangerous_commands` - Require consent patterns
+  - `tools.shell.never_allow` - Forbidden command patterns
+  - Uses Python regex with negative lookaheads for security
+
+- **Critical Security Fix** - Commands with redirections now require consent:
+  - `cat > file.txt` classified as dangerous (not safe)
+  - `echo data > file.txt` classified as dangerous (not safe)
+  - Uses `(?!.*[><])` negative lookahead in patterns
+
+#### Shared Modules Architecture Refactoring
+
+- **ppxai/common/ Directory** - Centralized shared code (55KB total):
+  - `consent.py` (21KB) - Unified consent system for file editing and shell commands
+  - `logger.py` (8KB) - Shared logging system replacing TUI-specific logger
+  - `event_handler.py` (9KB) - Common event processing for both TUI and VSCode
+  - `commands.py` (14KB) - Shared command handlers
+
+- **TUI Adapter** - TUI now uses shared modules:
+  - Migrated from `tui_logger.py` to `ppxai.common.logger`
+  - Uses shared consent manager
+  - Event handler integration
+  - Eliminates duplicate code
+
+- **HTTP Server Adapter** - VSCode backend uses shared modules:
+  - Shared logger for consistent logging
+  - Shared consent manager
+  - Event processing via shared handler
+  - Unified architecture with TUI
+
+- **Backward Compatibility** - No breaking changes:
+  - Existing ppxai-config.json files work unchanged
+  - API remains compatible
+  - All existing tests pass
+
+#### Files Changed
+
+**Shell Consent:**
+- `ppxai/engine/client.py` - Added request_shell_consent() and command classification
+- `ppxai/engine/session.py` - Shell consent state tracking (shell_consent_mode, allowed_shell_patterns, denied_shell_patterns)
+- `ppxai/engine/tools/builtin/shell.py` - Integrated consent system into execute_shell_command
+- `ppxai/server/http.py` - Added POST /shell-consent endpoint for VSCode
+- `ppxai/commands.py` - TUI shell consent handler
+- `vscode-extension/src/chatPanel.ts` - QuickPick consent UI implementation
+- `ppxai-config.json` - Added tools.shell configuration section
+- `docs/SHELL_CONSENT_GUIDE.md` - NEW: Comprehensive 642-line security guide
+- `docs/RELEASE-NOTES-v1.11.2.md` - NEW: Detailed release notes
+
+**Shared Modules:**
+- `ppxai/common/__init__.py` - NEW: Public exports for shared modules
+- `ppxai/common/consent.py` - NEW: Unified consent system
+- `ppxai/common/logger.py` - NEW: Shared logging (replaces tui_logger.py)
+- `ppxai/common/event_handler.py` - NEW: Common event processing
+- `ppxai/common/commands.py` - NEW: Shared command handlers
+- `ppxai/main.py` - Integrated shared modules into TUI
+- `ppxai/server/http.py` - Integrated shared logger into HTTP server
+- `tests/test_consent.py` - Updated for file_mode/shell_mode keys
+- `tests/test_common_*.py` - NEW: Comprehensive tests for shared modules
+
+#### Testing
+- **308/308 tests passing (100%)** - All tests green
+- Shell consent integration tests with edge cases
+- Shared modules comprehensive test coverage
+- Pattern matching validation (safe/dangerous/never)
+- TUI and VSCode consent flow end-to-end tested
+
+#### Documentation
+- [docs/SHELL_CONSENT_GUIDE.md](docs/SHELL_CONSENT_GUIDE.md) - Complete security guide
+- [docs/RELEASE-NOTES-v1.11.2.md](docs/RELEASE-NOTES-v1.11.2.md) - Full release notes
+- Updated README.md with shell consent features
+- Updated CLAUDE.md with v1.11.2 summary
+
+### Changed
+- Version bumped to 1.11.2 in all package files (pyproject.toml, vscode-extension/package.json)
+- TUI and HTTP server now share common modules (no duplicate code)
+- Architecture unified between all clients (TUI, VSCode, future web UI)
+
 ## [1.11.1] - 2025-12-22
 
 ### Fixed - Critical TUI Regression ⚠️

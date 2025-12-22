@@ -1,10 +1,18 @@
 # Documentation Audit & Update Plan
 
-**Last Updated:** 2025-12-19
-**Current Versions:**
-- Python Package: v1.10.4 (pyproject.toml)
-- VSCode Extension: v1.10.4 (package.json)
-- Latest Git Tag: v1.10.4 (Pending Release)
+**⚠️ HISTORICAL DOCUMENT - Last audit was v1.10.4**
+
+**Last Audit Date:** 2025-12-19 (v1.10.4)
+**Current Version as of 2025-12-22:** v1.11.2
+
+**Note:** This document reflects the state at v1.10.4. For current documentation status, see:
+- [ROADMAP.md](ROADMAP.md) - Current: v1.11.2
+- [CHANGELOG.md](CHANGELOG.md) - Full release history
+- [docs/RELEASE-NOTES-v1.11.2.md](docs/RELEASE-NOTES-v1.11.2.md) - Latest release
+
+---
+
+## Historical Snapshot: v1.10.4 Audit
 
 **v1.10.4 Focus:** TUI markdown table rendering fix + comprehensive regression tests
 

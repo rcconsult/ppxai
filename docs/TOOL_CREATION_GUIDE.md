@@ -34,12 +34,17 @@ Step-by-step guide for adding custom tools to ppxai.
 
 ### Step 1: Create Your Tool File
 
-Create `my_tools.py` in the ppxai directory:
+Create `ppxai/engine/tools/builtin/my_tool.py`:
 
 ```python
 """
 My Custom Tools for ppxai
 """
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..manager import ToolManager
+
 
 def my_tool_function(param1: str, param2: int = 10) -> str:
     """
@@ -60,11 +65,48 @@ def my_tool_function(param1: str, param2: int = 10) -> str:
     except Exception as e:
         # Always handle errors gracefully
         return f"Error: {str(e)}"
+
+
+def register_tools(manager: 'ToolManager'):
+    """Register custom tools with the manager."""
+
+    manager.register_function(
+        name="my_tool",
+        description="Brief description of what this tool does",
+        parameters={
+            "type": "object",
+            "properties": {
+                "param1": {
+                    "type": "string",
+                    "description": "What param1 is for"
+                },
+                "param2": {
+                    "type": "integer",
+                    "description": "What param2 is for (optional, default: 10)"
+                }
+            },
+            "required": ["param1"]
+        },
+        handler=my_tool_function
+    )
 ```
 
 **Example: Weather API Tool**
 
+Create `ppxai/engine/tools/builtin/weather.py`:
+
 ```python
+"""
+Weather tool for ppxai
+"""
+from typing import TYPE_CHECKING
+import requests
+import os
+
+if TYPE_CHECKING:
+    from ..manager import ToolManager
+
+
 def get_weather(city: str, units: str = "metric") -> str:
     """
     Get current weather for a city.
@@ -76,9 +118,6 @@ def get_weather(city: str, units: str = "metric") -> str:
     Returns:
         Weather information string
     """
-    import requests
-    import os
-
     try:
         api_key = os.getenv("WEATHER_API_KEY")
         if not api_key:
@@ -106,50 +145,12 @@ def get_weather(city: str, units: str = "metric") -> str:
         return f"Unexpected API response format: {str(e)}"
     except Exception as e:
         return f"Error getting weather: {str(e)}"
-```
 
-### Step 2: Register Your Tool
 
-Edit `perplexity_tools_prompt_based.py`, find the `_register_builtin_tools` method (around line 50), and add:
+def register_tools(manager: 'ToolManager'):
+    """Register weather tools with the manager."""
 
-```python
-def _register_builtin_tools(self):
-    """Register built-in tools."""
-    import os
-    import subprocess
-    from pathlib import Path
-    import glob
-
-    # ... existing tools ...
-
-    # ========== ADD YOUR TOOLS HERE ==========
-
-    # Import your tool functions
-    from my_tools import my_tool_function, get_weather
-
-    # Register your first tool
-    self.tool_manager.register_builtin_tool(
-        name="my_tool",  # Name the AI will use
-        description="Brief description of what this tool does",
-        parameters={
-            "type": "object",
-            "properties": {
-                "param1": {
-                    "type": "string",
-                    "description": "What param1 is for"
-                },
-                "param2": {
-                    "type": "integer",
-                    "description": "What param2 is for (optional, default: 10)"
-                }
-            },
-            "required": ["param1"]  # Only param1 is required
-        },
-        handler=my_tool_function
-    )
-
-    # Register weather tool
-    self.tool_manager.register_builtin_tool(
+    manager.register_function(
         name="get_weather",
         description="Get current weather information for any city",
         parameters={
@@ -171,6 +172,26 @@ def _register_builtin_tools(self):
     )
 ```
 
+### Step 2: Enable Auto-Discovery (Optional)
+
+Tools placed in `ppxai/engine/tools/builtin/` are **automatically discovered and registered** by the ToolManager. No additional registration code needed!
+
+If you want to verify your tool is registered, you can check the builtin tools directory structure:
+
+```bash
+ppxai/engine/tools/builtin/
+├── __init__.py          # Auto-discovers and registers all tools
+├── calculator.py        # Built-in calculator
+├── datetime_tool.py     # Built-in datetime
+├── shell.py             # Built-in shell commands
+├── filesystem.py        # Built-in file operations
+├── editor.py            # Built-in file editing
+├── my_tool.py           # YOUR NEW TOOL ✨
+└── weather.py           # YOUR WEATHER TOOL ✨
+```
+
+The `__init__.py` file automatically imports and registers all tools from this directory when the ToolManager is initialized.
+
 ### Step 3: Test Your Tool
 
 Create a test file `test_my_tool.py`:
@@ -180,32 +201,37 @@ Create a test file `test_my_tool.py`:
 import asyncio
 import os
 from dotenv import load_dotenv
-from perplexity_tools_prompt_based import PerplexityClientPromptTools
+from ppxai.engine import EngineClient, EventType
 
 async def test():
     load_dotenv()
 
-    client = PerplexityClientPromptTools(
-        api_key=os.getenv('PERPLEXITY_API_KEY'),
-        enable_tools=True
-    )
+    # Create engine client
+    engine = EngineClient()
 
-    await client.initialize_tools()
+    # Set provider and model
+    engine.set_provider("perplexity")
+    engine.set_model("sonar-pro")
+
+    # Enable tools (includes your new tool!)
+    engine.enable_tools()
 
     # Test your tool
-    await client.chat_with_tools(
-        "Use the get_weather tool to check the weather in San Francisco",
-        model='sonar-pro'
-    )
-
-    await client.cleanup()
+    print("Testing custom tool...")
+    async for event in engine.chat("Use the get_weather tool to check the weather in San Francisco"):
+        if event.type == EventType.STREAM_CHUNK:
+            print(event.data, end="", flush=True)
+        elif event.type == EventType.TOOL_CALL:
+            print(f"\n[Tool Call: {event.data['tool']}]")
+        elif event.type == EventType.TOOL_RESULT:
+            print(f"[Tool Result: {event.data['result'][:50]}...]")
 
 asyncio.run(test())
 ```
 
 Run it:
 ```bash
-python test_my_tool.py
+uv run python test_my_tool.py
 ```
 
 ### Step 4: Use in ppxai

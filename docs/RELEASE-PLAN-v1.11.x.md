@@ -45,12 +45,12 @@ The v1.11.x series delivers critical bug fixes, refactoring for code sharing, an
 
 ---
 
-### v1.11.2 - Shared Modules Architecture ⏳ PLANNED
+### v1.11.2 - Shared Modules Architecture ✅ RELEASED
 
-**Date**: TBD (Target: Dec 27, 2025)
-**Type**: Minor (Refactoring)
-**Status**: Implementation plan complete
-**Priority**: Medium
+**Date**: 2025-12-22
+**Type**: Minor (Shell Consent Security + Refactoring)
+**Status**: Released
+**Priority**: High
 
 **Scope**:
 - Create `ppxai/common/` module with shared logic
@@ -254,5 +254,5 @@ The v1.11.x series delivers critical bug fixes, refactoring for code sharing, an
 ---
 
 **Last Updated**: 2025-12-22
-**Current Release**: v1.11.1 (ready to ship)
-**Next Release**: v1.11.2 (implementation planned)
+**Current Release**: v1.11.2 (released 2025-12-22)
+**Next Release**: v1.11.3+ (agentic workflow Phases 2-6)
