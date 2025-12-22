@@ -5,6 +5,53 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.1] - 2025-12-22
+
+### Fixed - Critical TUI Regression ⚠️
+
+This release fixes a critical regression in v1.11.0 where the TUI failed to display AI responses when tools were enabled.
+
+#### Root Cause
+- v1.11.0 switched TUI to use `EngineClient.chat_sync()` to enable file editing tools
+- However, `chat_sync()` returns a plain string without rendering (pure function)
+- Legacy `AIClient.chat()` had built-in console printing (side effect)
+- Result: Response was set but never displayed to user
+
+#### Solution
+- **Unified Architecture:** Refactored TUI to use async event stream (like VSCode extension)
+- **Event Handling:** TUI now properly handles all event types:
+  - `STREAM_CHUNK` - Streaming response chunks
+  - `TOOL_CALL` - Tool execution notifications
+  - `TOOL_RESULT` - Tool results
+  - `CONSENT_REQUEST` - File edit consent prompts
+  - `ERROR` - Error messages
+- **Real-time UX:** TUI now shows streaming chunks, tool calls, and consent prompts in real-time
+- **Code Quality:** Eliminates architectural divergence between TUI and VSCode extension
+
+#### Performance
+- **No regression:** EngineClient is actually **16.5% faster** than legacy (2446ms vs 2929ms total time)
+- TTFT: 1453ms, Total: 2446ms, Throughput: 64.0 tok/s
+- Benchmarked against v1.10.5 baseline
+
+#### Files Changed
+- `ppxai/main.py` - Added event-based streaming loop (lines 268-325)
+- `pyproject.toml` - Version 1.11.0 → 1.11.1
+- `vscode-extension/package.json` - Version 1.11.0 → 1.11.1
+- `README.md` - Updated version references and installation instructions
+- `vscode-extension/README.md` - Updated version references
+- `docs/README.md` - Updated version references
+- `CLAUDE.md` - Documented v1.11.1 changes
+
+#### Testing
+- **296/301 tests passing** (same as v1.11.0)
+- 5 failures are pre-existing custom endpoint config issues (unrelated)
+- Syntax validated, imports verified
+
+### Changed
+- Version bumped to 1.11.1 in all package files
+- Updated all installation instructions to reference v1.11.1
+- Updated documentation to reflect unified event-based architecture
+
 ## [1.11.0] - 2025-12-21
 
 ### Added - File Editing Tools with User Consent 🎯

@@ -64,7 +64,7 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
 - `get_datetime` - Get current date/time with timezone support
 - Plus web tools (for custom provider): weather, web search, URL fetch
 
-**File Editing Tools (v1.11.0) 🎯**
+**File Editing Tools (v1.11.1) 🎯**
 - `apply_patch` - Apply unified diff patches to files
 - `replace_block` - Search and replace exact text blocks
 - `insert_text` - Insert text at specific line numbers
@@ -95,19 +95,19 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
    - **macOS/Linux:** `./ppxai`
    - **Windows:** `ppxai.exe`
 
-### Option 2: VSCode Extension with Standalone Server 🆕 v1.11.0
+### Option 2: VSCode Extension with Standalone Server 🆕 v1.11.1
 
 **No Python installation required!** Pre-built server binaries available!
 
 1. Download from [Releases](../../releases):
    - `ppxai-server-{platform}` (server binary for macOS ARM/Intel, Linux, Windows)
-   - `ppxai-1.11.0.vsix` (VSCode extension)
+   - `ppxai-1.11.1.vsix` (VSCode extension)
 2. Create a `.env` file with your API key (in project folder or `~/.ppxai/.env`)
-3. Install the extension: `code --install-extension ppxai-1.11.0.vsix`
+3. Install the extension: `code --install-extension ppxai-1.11.1.vsix`
 4. Start the server: `./ppxai-server-macos-arm64` (or your platform's binary)
 5. Open VSCode and click the ppxai icon in the sidebar
 
-**What's New in v1.11.0:** File editing tools with user consent! AI can now autonomously edit files (apply_patch, replace_block, insert_text, delete_lines) with your explicit permission. Type `/tools help editing` for examples and `/tools enable` to try it.
+**What's New in v1.11.1:** Critical bugfix for TUI event-based streaming. File editing tools (v1.11.0) with user consent now work properly in both TUI and VSCode. Type `/tools help editing` for examples and `/tools enable` to try it.
 
 See [vscode-extension/README.md](vscode-extension/README.md) for detailed instructions.
 
