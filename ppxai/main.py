@@ -284,8 +284,9 @@ def main():
                             pass
 
                         elif event.type == EventType.STREAM_CHUNK:
-                            # Accumulate chunks for final markdown rendering
-                            # Don't print here to avoid double rendering
+                            # Stream raw chunks in dim style for progress feedback
+                            # Then render formatted version at STREAM_END
+                            console.print(event.data, end="", style="dim")
                             full_response += event.data
 
                         elif event.type == EventType.TOOL_CALL:
@@ -309,8 +310,8 @@ def main():
                         elif event.type == EventType.STREAM_END:
                             # Final response - use this for markdown rendering
                             full_response = event.data if event.data else full_response
-                            console.print()  # Newline after stream
-                            # Render final response with markdown tables
+                            console.print("\n")  # Clear line after dim streaming
+                            # Render final response with proper markdown formatting
                             if full_response.strip():
                                 render_markdown_with_tables(full_response, console)
                             break
