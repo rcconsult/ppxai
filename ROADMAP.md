@@ -8,7 +8,43 @@
 
 ---
 
-## Current Release: v1.11.0
+## Current Release: v1.11.1
+
+**Status**: ✅ Critical Bugfix - TUI Event-Based Streaming
+
+Released: 2025-12-22
+
+**Goal**: Fix critical v1.11.0 regression and unify TUI/VSCode architecture
+
+**Fixed Issues**:
+- ✅ **TUI Response Display** - AI responses now show when tools enabled (v1.11.0 regression)
+- ✅ **Unified Architecture** - Both TUI and VSCode use event-based streaming
+- ✅ **Event Handling** - TUI handles STREAM_CHUNK, TOOL_CALL, TOOL_RESULT, CONSENT_REQUEST, ERROR
+- ✅ **Real-time UX** - TUI shows streaming chunks, tool calls, consent prompts in real-time
+- ✅ **Performance Validated** - EngineClient is 16.5% faster than legacy (2446ms vs 2929ms)
+- ✅ **No Regression** - 296/301 tests passing (same as v1.11.0)
+
+**Root Cause**: v1.11.0 switched TUI to use `EngineClient.chat_sync()` which returns a plain string without rendering (pure function), but forgot to add console output.
+
+**Solution**: Refactored TUI to use async event stream like VSCode extension, eliminating architectural divergence.
+
+**Files Changed**:
+- `ppxai/main.py` - Added event-based streaming loop (lines 268-325)
+- `pyproject.toml` - Version 1.11.0 → 1.11.1
+- `vscode-extension/package.json` - Version 1.11.0 → 1.11.1
+- `README.md`, `vscode-extension/README.md`, `docs/README.md` - Updated version references
+- `CLAUDE.md` - Documented v1.11.1 changes
+- `CHANGELOG.md` - Added comprehensive v1.11.1 entry
+
+**Testing**:
+- 296/301 tests passing
+- 5 failures are pre-existing custom endpoint integration issues (unrelated)
+
+**Branch**: `bugfix/tui-engineclient-adapter`
+
+---
+
+## Previous Release: v1.11.0
 
 **Status**: ✅ Phase 1 Complete - File Editing Tools with Consent
 
@@ -17,6 +53,8 @@ Released: 2025-12-21
 **Detailed Implementation Plan**: [docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.md)
 
 **Goal**: Transform ppxai from turn-based chatbot into autonomous developer agent
+
+**Known Issue**: TUI doesn't display AI responses when tools enabled (fixed in v1.11.1)
 
 **Phase 1 Completed Features**:
 - ✅ **Native File Editing Tools** - Safe, atomic file editing (apply_patch, replace_block, insert_text, delete_lines)
