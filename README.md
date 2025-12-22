@@ -107,7 +107,11 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
 4. Start the server: `./ppxai-server-macos-arm64` (or your platform's binary)
 5. Open VSCode and click the ppxai icon in the sidebar
 
-**What's New in v1.11.1:** Critical bugfix for TUI event-based streaming. File editing tools (v1.11.0) with user consent now work properly in both TUI and VSCode. Type `/tools help editing` for examples and `/tools enable` to try it.
+**What's New in v1.11.1:**
+- 🐛 **Critical bugfix** - Fixed 400 message alternation error in TUI multi-turn conversations with tools
+- 🔍 **TUI Debug Logging** - New `/debug-log` command for troubleshooting (`/debug-log on` to enable)
+- ✅ **File editing tools** (v1.11.0) with user consent work properly in both TUI and VSCode
+- Type `/tools help editing` for examples and `/tools enable` to try it
 
 See [vscode-extension/README.md](vscode-extension/README.md) for detailed instructions.
 
@@ -201,6 +205,7 @@ While in the chat interface:
 - `/model <id>` - Switch directly to a model (e.g., `/model gemini-2.5-pro`)
 - `/clear` - Clear conversation history
 - `/quit` or `/exit` - Exit the application (auto-saves session)
+- `/debug-log [on|off|show|clear]` - 🆕 TUI debug logging (logs to `~/.ppxai/logs/tui-debug.log`)
 - **@file References** - Type `@filename` to include file content in your message
 - **Autocomplete** - Tab/type to complete `/` commands and `@` file references
 
