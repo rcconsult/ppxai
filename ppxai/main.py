@@ -249,9 +249,9 @@ def main():
                 current_model = handler.current_model
                 continue
 
-            # Log user input
-            from ppxai.tui_logger import get_logger
-            logger = get_logger()
+            # Log user input (use new shared logger)
+            from ppxai.common.logger import get_logger
+            logger = get_logger("tui")
             if user_input.startswith('/'):
                 logger.log_command(user_input)
             else:
@@ -274,10 +274,14 @@ def main():
             # Send message to API
             # Use EngineClient if available (v1.11.0+ with file editing tools)
             if hasattr(handler, 'engine_client') and handler.engine_client is not None:
-                # Use new engine with event-based streaming (v1.11.1)
+                # Use new engine with event-based streaming (v1.11.2 - shared event handler)
                 async def stream_engine_response():
-                    """Stream response from EngineClient with event handling."""
-                    full_response = ""
+                    """Stream response from EngineClient using shared TUIEventHandler."""
+                    from ppxai.common.event_handler import TUIEventHandler
+
+                    # Create TUI-specific event handler with verbose setting
+                    verbose = hasattr(handler, 'tools_verbose') and handler.tools_verbose
+                    event_handler = TUIEventHandler(console, logger, verbose=verbose)
 
                     # Check for pending consent requests before streaming
                     while handler.engine_client._consent_event_queue:
@@ -285,73 +289,13 @@ def main():
                         # Consent is handled inline by engine during tool execution
                         pass
 
+                    # Process events using shared handler
                     async for event in handler.engine_client.chat(augmented_input, stream=True):
-                        if event.type == EventType.STREAM_START:
-                            # Stream starting - print header
-                            console.print("\n[bold cyan]Assistant:[/bold cyan]")
-
-                        elif event.type == EventType.STREAM_CHUNK:
-                            # Accumulate chunks silently for final formatted render
-                            # VSCode-like behavior: no preview, just formatted output at end
-                            full_response += event.data
-
-                        elif event.type == EventType.TOOL_CALL:
-                            # Show tool being called
-                            tool_name = event.data.get('tool', 'unknown')
-                            tool_args = event.data.get('arguments', {})
-                            console.print(f"[cyan]→ Calling tool: {tool_name}[/cyan]")
-                            logger.log_tool_call(tool_name, tool_args)
-                            # Show tool arguments if verbose mode enabled
-                            if hasattr(handler, 'tools_verbose') and handler.tools_verbose:
-                                console.print(f"[dim]  Arguments: {tool_args}[/dim]")
-
-                        elif event.type == EventType.TOOL_RESULT:
-                            # Log tool result
-                            tool_name = event.data.get('tool', 'unknown') if isinstance(event.data, dict) else 'unknown'
-                            result_str = str(event.data) if event.data else ''
-                            logger.log_tool_result(tool_name, result_str)
-                            # Show tool result if verbose mode enabled
-                            if hasattr(handler, 'tools_verbose') and handler.tools_verbose:
-                                console.print(f"[dim]  Result: {event.data}[/dim]")
-
-                        elif event.type == EventType.TOOL_ERROR:
-                            # Show and log tool error
-                            error_msg = str(event.data)
-                            tool_name = event.data.get('tool', 'unknown') if isinstance(event.data, dict) else 'unknown'
-                            console.print(f"[red]✗ Tool error: {error_msg}[/red]")
-                            logger.log_tool_error(tool_name, error_msg)
-
-                        elif event.type == EventType.CONSENT_REQUEST:
-                            # Consent request handled by engine's callback
-                            # No action needed here - just pass through
-                            logger.log_event('CONSENT_REQUEST', str(event.data))
-                            pass
-
-                        elif event.type == EventType.STREAM_END:
-                            # Final response - render with proper markdown formatting
-                            full_response = event.data if event.data else full_response
-                            logger.log_assistant_message(full_response)
-                            if full_response.strip():
-                                render_markdown_with_tables(full_response, console)
-                            console.print()  # Blank line after response
+                        should_continue = await event_handler.handle_event(event)
+                        if not should_continue:
                             break
 
-                        elif event.type == EventType.ERROR:
-                            # Show and log error
-                            error_str = str(event.data)
-                            console.print(f"[red]Error: {error_str}[/red]")
-                            # Parse error code if present
-                            if "Error code:" in error_str:
-                                try:
-                                    error_code = int(error_str.split("Error code:")[1].split()[0])
-                                    logger.log_api_error(error_code, error_str)
-                                except:
-                                    logger.error(f"API Error: {error_str}")
-                            else:
-                                logger.error(f"Error: {error_str}")
-                            break
-
-                    return full_response
+                    return event_handler.get_response()
 
                 response = asyncio.run(stream_engine_response())
 
