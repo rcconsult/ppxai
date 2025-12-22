@@ -132,7 +132,8 @@ async def test_consent_manager_get_status():
     manager = ConsentManager(consent_callback=mock_callback)
 
     status1 = manager.get_status()
-    assert status1["mode"] == "prompt"
+    assert status1["file_mode"] == "prompt"
+    assert status1["shell_mode"] == "prompt"
 
     await manager.request_consent("/path/file.py")
 
