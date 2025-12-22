@@ -482,7 +482,7 @@ Clickable links work best in modern terminals:
 ppxai/
 ├── ppxai.py                              # Entry point wrapper
 ├── ppxai/                                # Main package
-│   ├── __init__.py                       # Package exports (v1.8.0)
+│   ├── __init__.py                       # Package exports (v1.11.1)
 │   ├── main.py                           # CLI application
 │   ├── client.py                         # AI client for API communication
 │   ├── config.py                         # Hybrid configuration system
@@ -490,40 +490,67 @@ ppxai/
 │   ├── ui.py                             # Terminal UI/display
 │   ├── prompts.py                        # Coding prompts & templates
 │   ├── utils.py                          # Utility functions
-│   ├── server.py                         # JSON-RPC server for IDE integration
+│   ├── tui_logger.py                     # TUI debug logging (v1.11.1)
+│   ├── markdown_tables.py                # Markdown table rendering (v1.10.4)
+│   ├── server/                           # Server implementations
+│   │   ├── http.py                       # FastAPI HTTP + SSE server (v1.9.0)
+│   │   └── jsonrpc.py                    # JSON-RPC server for IDE integration
 │   └── engine/                           # Core engine (v1.7.0+)
 │       ├── types.py                      # Shared types (Event, Message, etc.)
 │       ├── client.py                     # EngineClient facade
 │       ├── session.py                    # Session management
+│       ├── context.py                    # Context management
 │       ├── providers/                    # Provider implementations
+│       │   ├── base.py                   # BaseProvider abstract class
+│       │   ├── perplexity.py             # Perplexity AI provider
+│       │   └── openai_compat.py          # OpenAI-compatible provider
 │       └── tools/                        # Tool system
-├── vscode-extension/                     # VS Code Extension (v1.8.0)
+│           ├── base.py                   # BaseTool abstract class
+│           ├── manager.py                # ToolManager with provider filtering
+│           └── builtin/                  # Built-in tools
+│               ├── calculator.py         # Calculator tool
+│               ├── datetime_tool.py      # DateTime tool
+│               ├── editor.py             # File editing tools (v1.11.0)
+│               ├── filesystem.py         # Filesystem tools
+│               ├── shell.py              # Shell command tool
+│               └── web.py                # Web tools
+├── vscode-extension/                     # VS Code Extension (v1.11.1)
 │   ├── src/
 │   │   ├── extension.ts                  # Extension entry point
 │   │   ├── chatPanel.ts                  # Webview chat UI
-│   │   └── backend.ts                    # Python process manager
+│   │   ├── httpClient.ts                 # HTTP + SSE client (v1.9.0)
+│   │   ├── backend.ts                    # Python process manager (legacy)
+│   │   ├── aiClient.ts                   # AI client interface
+│   │   ├── config.ts                     # Configuration management
+│   │   └── sessionsProvider.ts           # Session tree view
 │   └── package.json                      # Extension manifest
-├── tool_manager.py                       # Tool management system
-├── perplexity_tools_prompt_based.py      # AI tool implementation
+├── tool_manager.py                       # Tool management system (legacy)
+├── perplexity_tools_prompt_based.py      # AI tool implementation (legacy)
 ├── ppxai-config.json                     # Provider configuration (optional)
 ├── ppxai-config.example.json             # Configuration template
 ├── demo/
 │   ├── example_builtin_tool.py           # Example Python tool
 │   ├── example_mcp_server/               # Example MCP server
 │   └── demo_tools_working.py             # Working demo
-├── tests/                                # 180+ tests
+├── tests/                                # 300+ tests (303/308 passing in v1.11.1)
 │   ├── test_config.py                    # Configuration tests (48 tests)
 │   ├── test_client.py                    # Client tests
 │   ├── test_commands.py                  # Command tests
+│   ├── test_engine_streaming.py          # Engine streaming tests (v1.11.1)
+│   ├── test_file_editing_tools.py        # File editing tests (v1.11.0)
+│   ├── test_markdown_tables.py           # Markdown table tests (v1.10.4)
 │   └── ...                               # Additional test modules
 ├── docs/
 │   ├── README.md                         # Documentation index
 │   ├── TOOL_CREATION_GUIDE.md            # Step-by-step tool guide
-│   └── QUICK_START_TOOLS.md              # 60-second setup
+│   ├── FILE_EDITING_GUIDE.md             # File editing guide (v1.11.1)
+│   ├── QUICK_START_TOOLS.md              # 60-second setup
+│   └── ...                               # Additional documentation
 ├── pyproject.toml                        # Project metadata & dependencies
 ├── uv.lock                               # Dependency lockfile
 ├── scripts/
-│   └── bootstrap.py                      # Dev environment bootstrap
+│   ├── bootstrap.py                      # Dev environment bootstrap
+│   └── build-intel.sh                    # macOS Intel build script (v1.9.0)
 ├── SPECIFICATIONS.md                     # Code generation specs
 ├── ROADMAP.md                            # Development roadmap
 └── README.md                             # This file
