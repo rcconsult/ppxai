@@ -199,10 +199,38 @@ class CommandHandler:
         self.tools_available = False
         self.PerplexityClientPromptTools = None
         self.load_tool_config = None
-        self.engine_client = None  # Phase 1B: EngineClient for file editing tools
         self.tools_verbose = False  # v1.11.1: Verbose tool execution logging
 
-        # Try to load tool support
+        # v1.11.4: ALWAYS create EngineClient (not just when tools enabled)
+        # This ensures @git/@tree/@file context injection always works
+        try:
+            from ppxai.engine import EngineClient
+            from ppxai.engine.types import Message
+            import os
+
+            # Create engine client with consent callbacks
+            self.engine_client = EngineClient(
+                consent_callback=tui_consent_handler,
+                shell_consent_callback=tui_shell_consent_handler
+            )
+            self.engine_client.set_provider(self.provider)
+            self.engine_client.set_model(self.current_model)
+            # Set working directory for context injection
+            self.engine_client.set_working_dir(os.getcwd())
+
+            # Sync conversation history from legacy client to engine (if client has history)
+            # Convert dict format to Message objects
+            if hasattr(self.client, 'conversation_history') and self.client.conversation_history:
+                for msg in self.client.conversation_history:
+                    self.engine_client.session.messages.append(
+                        Message(role=msg["role"], content=msg["content"])
+                    )
+
+        except ImportError:
+            # EngineClient not available (shouldn't happen in production)
+            self.engine_client = None
+
+        # Try to load legacy tool support
         try:
             from perplexity_tools_prompt_based import PerplexityClientPromptTools
             from tool_manager import load_tool_config
@@ -585,90 +613,79 @@ class CommandHandler:
 
     def _enable_tools(self):
         """Enable AI tools (including file editing tools with consent)."""
-        if isinstance(self.client, self.PerplexityClientPromptTools):
+        # v1.11.4: Simplified - EngineClient already exists, just enable tools
+        if not self.engine_client:
+            console.print("[red]Error: Engine client not available[/red]\n")
+            return
+
+        if self.engine_client.tools_enabled:
             console.print("[yellow]Tools already enabled[/yellow]\n")
             return
 
-        # Upgrade client to tool-enabled version
-        tool_client = self.PerplexityClientPromptTools(
-            api_key=self.api_key,
-            base_url=self.base_url,
-            session_name=self.client.session_name,
-            enable_tools=True,
-            provider=self.provider
+        # Enable tools in engine client
+        console.print("[cyan]Enabling tools...[/cyan]")
+        self.engine_client.enable_tools()
+
+        # Upgrade legacy client to tool-enabled version for backward compatibility
+        if self.tools_available and not isinstance(self.client, self.PerplexityClientPromptTools):
+            tool_client = self.PerplexityClientPromptTools(
+                api_key=self.api_key,
+                base_url=self.base_url,
+                session_name=self.client.session_name,
+                enable_tools=True,
+                provider=self.provider
+            )
+            # Copy conversation history
+            tool_client.conversation_history = self.client.conversation_history
+            tool_client.session_metadata = self.client.session_metadata
+            tool_client.current_session_usage = self.client.current_session_usage
+
+            # Initialize tools (built-in only by default)
+            asyncio.run(tool_client.initialize_tools(mcp_servers=[]))
+
+            # Replace client
+            self.client = tool_client
+
+        # Log history sync for debugging
+        from ppxai.tui_logger import get_logger
+        logger = get_logger()
+        logger.log_history_sync(
+            len(self.client.conversation_history),
+            len(self.engine_client.session.messages),
+            self.engine_client.session.messages
         )
-        # Copy conversation history
-        tool_client.conversation_history = self.client.conversation_history
-        tool_client.session_metadata = self.client.session_metadata
-        tool_client.current_session_usage = self.client.current_session_usage
 
-        # Initialize tools (built-in only by default)
-        console.print("[cyan]Initializing tools...[/cyan]")
-        asyncio.run(tool_client.initialize_tools(mcp_servers=[]))
-
-        # Replace client
-        self.client = tool_client
-
-        # Phase 1B: Enable EngineClient with file editing tools
-        try:
-            from ppxai.engine import EngineClient
-            from ppxai.engine.types import Message
-
-            # Create engine client with consent callbacks (file editing + shell commands)
-            self.engine_client = EngineClient(
-                consent_callback=tui_consent_handler,
-                shell_consent_callback=tui_shell_consent_handler
-            )
-            self.engine_client.set_provider(self.provider)
-            self.engine_client.set_model(self.current_model)
-            self.engine_client.enable_tools()
-
-            # CRITICAL: Sync conversation history from legacy client to engine
-            # Convert dict format to Message objects
-            for msg in self.client.conversation_history:
-                self.engine_client.session.messages.append(
-                    Message(role=msg["role"], content=msg["content"])
-                )
-
-            # Log history sync for debugging
-            from ppxai.tui_logger import get_logger
-            logger = get_logger()
-            logger.log_history_sync(
-                len(self.client.conversation_history),
-                len(self.engine_client.session.messages),
-                self.engine_client.session.messages
-            )
-
-            console.print("[green]✓ Tools enabled![/green]")
-            console.print("[dim]Includes file editing tools (apply_patch, replace_block, insert_text, delete_lines)[/dim]")
-            console.print("[dim]Use '/tools list' to see available tools[/dim]\n")
-        except ImportError:
-            # EngineClient not available (shouldn't happen, but fallback gracefully)
-            console.print("[green]✓ Tools enabled![/green]")
-            console.print("[dim]Use '/tools list' to see available tools[/dim]\n")
+        console.print("[green]✓ Tools enabled![/green]")
+        console.print("[dim]Includes file editing tools (apply_patch, replace_block, insert_text, delete_lines)[/dim]")
+        console.print("[dim]Use '/tools list' to see available tools[/dim]\n")
 
     def _disable_tools(self):
         """Disable AI tools."""
-        from .client import AIClient
+        # v1.11.4: Simplified - EngineClient persists, just disable tools
+        if not self.engine_client:
+            console.print("[red]Error: Engine client not available[/red]\n")
+            return
 
-        if not isinstance(self.client, self.PerplexityClientPromptTools):
+        if not self.engine_client.tools_enabled:
             console.print("[yellow]Tools not enabled[/yellow]\n")
             return
 
-        # Downgrade to regular client
-        regular_client = AIClient(self.api_key, self.base_url, self.client.session_name, self.provider)
-        regular_client.conversation_history = self.client.conversation_history
-        regular_client.session_metadata = self.client.session_metadata
-        regular_client.current_session_usage = self.client.current_session_usage
+        # Disable tools in engine client (but keep engine client alive for @git/@tree)
+        self.engine_client.disable_tools()
 
-        # Cleanup tool client
-        asyncio.run(self.client.cleanup())
+        # Downgrade legacy client for backward compatibility
+        if isinstance(self.client, self.PerplexityClientPromptTools):
+            from .client import AIClient
 
-        self.client = regular_client
+            regular_client = AIClient(self.api_key, self.base_url, self.client.session_name, self.provider)
+            regular_client.conversation_history = self.client.conversation_history
+            regular_client.session_metadata = self.client.session_metadata
+            regular_client.current_session_usage = self.client.current_session_usage
 
-        # Phase 1B: Cleanup engine client
-        if self.engine_client:
-            self.engine_client = None
+            # Cleanup tool client
+            asyncio.run(self.client.cleanup())
+
+            self.client = regular_client
 
         console.print("[yellow]Tools disabled[/yellow]\n")
 
