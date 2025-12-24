@@ -1,6 +1,6 @@
 # AGENT.md - AI Assistant Context for ppxai
 
-This file provides essential context for AI assistants (Claude Code, GitHub Copilot, etc.) working on the ppxai project.
+This file provides essential context for AI assistants working on the ppxai project.
 
 ## Project Overview
 
@@ -335,11 +335,7 @@ git commit -m "feat: vX.Y.Z - Brief description
 
 - What changed
 - Why it matters
-- Any breaking changes
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
+- Any breaking changes"
 
 # Tag the release
 git tag vX.Y.Z
@@ -673,5 +669,5 @@ code --install-extension ppxai-{version}.vsix
 
 ---
 
-**Last Updated:** 2025-12-23 (v1.11.2.1 release)
-**Maintained for:** Claude Code, GitHub Copilot, and other AI assistants working on ppxai
+**Last Updated:** 2025-12-24 (v1.11.4 development)
+**Maintained for:** AI assistants working on ppxai
