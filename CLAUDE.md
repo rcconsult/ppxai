@@ -6,9 +6,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.11.2.1 (Autorouter Bugfix Patch)
+**Current Version:** v1.11.4 (Git and Tree Context Providers)
 
-**What's New in v1.11.2.1 (Released 2025-12-23):**
+**What's New in v1.11.4 (In Development):**
+- **NEW:** `@git` context provider - Include git diff (staged + unstaged changes) in messages 🔀
+- **NEW:** `@tree` context provider - Include project directory structure in messages 🌳
+- **Context Injection:** Type `@git` to inject current git changes, `@tree` for project structure
+- **Auto-Detection:** Automatically injects git diff or tree structure based on message context
+- **Smart Filtering:** Tree view respects .gitignore patterns and filters common ignore directories
+- **Configurable:** Tree depth configurable (default: 3 levels deep)
+- **Integrated:** Works seamlessly with existing `@file` references
+- **Combined Usage:** Use `@git`, `@tree`, and `@file` together in the same message
+- **Tests:** 31/31 context injection tests passing, including 9 new tests for @git/@tree
+
+**Previous Release (v1.11.2.1 - 2025-12-23):**
 - **CRITICAL FIX:** Autorouter now respects current provider for coding commands 🔧
 - **Bug:** When using Gemini/OpenAI/OpenRouter with coding commands (/convert, /generate, etc.), autorouter would incorrectly try to use Perplexity's sonar-pro model causing 404 errors
 - **Root Cause:** 7 command handlers missing provider parameter, falling back to stale global variable
@@ -401,11 +412,13 @@ None currently. Previous issues resolved:
 - **FastAPI HTTP Server**: `ppxai-server` with SSE streaming for IDE integration
 - **Latency Benchmarking**: Track provider performance across releases
 
-## Recent Features (v1.8.0)
+## Recent Features (v1.11.4)
 
+- **Context Injection**: `@filename` for files, `@git` for changes, `@tree` for structure (TUI + Extension)
+- **Git Integration**: Automatically include staged and unstaged changes with `@git`
+- **Project Structure**: Visualize directory tree with `@tree` (respects .gitignore)
 - **VSCode Extension**: Full chat UI in sidebar with markdown rendering
-- **@filename References**: Include file content in chat messages (TUI + Extension)
-- **Autocomplete**: Tab completion for `/` commands and `@` files in TUI, live suggestions in Extension
+- **Autocomplete**: Tab completion for `/` commands and `@` references in TUI, live suggestions in Extension
 - **Tools Toggle**: Clickable button in extension to enable/disable tools
 - **File Search**: Fuzzy file matching for `/show` command
 - **Gemini Built-in**: Google Gemini added as built-in provider (2.0 Flash, 2.5 Flash, 2.5 Pro)

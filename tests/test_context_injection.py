@@ -99,7 +99,7 @@ class TestContextInjector:
         assert "# Test File" in contexts[0].content
 
         # Enhanced message should have file content
-        assert "**Attached file contents:**" in enhanced
+        assert "**Attached context:**" in enhanced
         assert "# Test File" in enhanced
 
         # @ reference should be replaced with filename
@@ -235,6 +235,241 @@ class TestContextInjector:
         finally:
             if home_file.exists():
                 home_file.unlink()
+
+    def test_inject_git_context_with_changes(self, injector):
+        """Test @git context injection when there are git changes."""
+        import subprocess
+        import tempfile
+        import os
+
+        # Create a temporary git repo
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Initialize git repo
+            subprocess.run(['git', 'init'], cwd=tmpdir, capture_output=True)
+            subprocess.run(['git', 'config', 'user.email', 'test@test.com'], cwd=tmpdir, capture_output=True)
+            subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True)
+
+            # Create and commit a file
+            test_file = Path(tmpdir) / 'test.txt'
+            test_file.write_text("original content\n")
+            subprocess.run(['git', 'add', 'test.txt'], cwd=tmpdir, capture_output=True)
+            subprocess.run(['git', 'commit', '-m', 'Initial commit'], cwd=tmpdir, capture_output=True)
+
+            # Make unstaged changes
+            test_file.write_text("modified content\n")
+
+            # Create another file and stage it
+            new_file = Path(tmpdir) / 'new.txt'
+            new_file.write_text("new file\n")
+            subprocess.run(['git', 'add', 'new.txt'], cwd=tmpdir, capture_output=True)
+
+            # Test git context injection
+            git_injector = ContextInjector(working_dir=tmpdir)
+            ctx = git_injector.inject_git_context()
+
+            assert ctx is not None
+            assert ctx.source == "@git"
+            assert ctx.language == "diff"
+            assert "=== Staged Changes ===" in ctx.content
+            assert "=== Unstaged Changes ===" in ctx.content
+            assert "new.txt" in ctx.content  # Staged file
+            assert "test.txt" in ctx.content  # Modified file
+
+    def test_inject_git_context_no_changes(self, injector):
+        """Test @git context when there are no changes."""
+        import subprocess
+        import tempfile
+
+        # Create a temporary git repo with no changes
+        with tempfile.TemporaryDirectory() as tmpdir:
+            subprocess.run(['git', 'init'], cwd=tmpdir, capture_output=True)
+            subprocess.run(['git', 'config', 'user.email', 'test@test.com'], cwd=tmpdir, capture_output=True)
+            subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True)
+
+            # Create and commit a file
+            test_file = Path(tmpdir) / 'test.txt'
+            test_file.write_text("content\n")
+            subprocess.run(['git', 'add', 'test.txt'], cwd=tmpdir, capture_output=True)
+            subprocess.run(['git', 'commit', '-m', 'Initial commit'], cwd=tmpdir, capture_output=True)
+
+            # Test git context injection with no changes
+            git_injector = ContextInjector(working_dir=tmpdir)
+            ctx = git_injector.inject_git_context()
+
+            assert ctx is not None
+            assert ctx.source == "@git"
+            assert "No changes in working directory" in ctx.content
+
+    def test_inject_git_context_not_a_repo(self, injector):
+        """Test @git context when not in a git repository."""
+        import tempfile
+
+        # Use a non-git directory
+        with tempfile.TemporaryDirectory() as tmpdir:
+            non_git_injector = ContextInjector(working_dir=tmpdir)
+            ctx = non_git_injector.inject_git_context()
+
+            # Should return None when not in a git repo
+            assert ctx is None
+
+    def test_inject_tree_context(self, injector):
+        """Test @tree context injection."""
+        import tempfile
+        import os
+
+        # Create a temporary directory structure
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create some files and directories
+            (Path(tmpdir) / 'file1.txt').write_text("content")
+            (Path(tmpdir) / 'file2.py').write_text("print('hello')")
+            (Path(tmpdir) / 'subdir').mkdir()
+            (Path(tmpdir) / 'subdir' / 'nested.md').write_text("# Nested")
+            (Path(tmpdir) / '.git').mkdir()  # Should be ignored
+
+            tree_injector = ContextInjector(working_dir=tmpdir)
+            ctx = tree_injector.inject_tree_context()
+
+            assert ctx is not None
+            assert ctx.source == "@tree"
+            assert ctx.language == "text"
+            assert "file1.txt" in ctx.content
+            assert "file2.py" in ctx.content
+            assert "subdir/" in ctx.content
+            assert "nested.md" in ctx.content
+            assert ".git" not in ctx.content  # Should be filtered out
+            assert "Directories:" in ctx.content
+            assert "Files:" in ctx.content
+
+    def test_inject_tree_context_max_depth(self, injector):
+        """Test @tree context respects max_depth."""
+        import tempfile
+
+        # Create deep directory structure
+        with tempfile.TemporaryDirectory() as tmpdir:
+            current = Path(tmpdir)
+            for i in range(5):
+                current = current / f'level{i}'
+                current.mkdir()
+                (current / f'file{i}.txt').write_text(f"level {i}")
+
+            tree_injector = ContextInjector(working_dir=tmpdir)
+
+            # Test with max_depth=2
+            ctx = tree_injector.inject_tree_context(max_depth=2)
+
+            assert ctx is not None
+            assert "level0" in ctx.content
+            assert "level1" in ctx.content
+            assert "level2" in ctx.content
+            # level3 and level4 should not appear (beyond max_depth)
+            assert "level3" not in ctx.content
+            assert "level4" not in ctx.content
+
+    def test_inject_context_with_git_pattern(self, injector):
+        """Test that @git pattern triggers git context injection."""
+        import subprocess
+        import tempfile
+
+        # Create a temporary git repo with changes
+        with tempfile.TemporaryDirectory() as tmpdir:
+            subprocess.run(['git', 'init'], cwd=tmpdir, capture_output=True)
+            subprocess.run(['git', 'config', 'user.email', 'test@test.com'], cwd=tmpdir, capture_output=True)
+            subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True)
+
+            test_file = Path(tmpdir) / 'test.txt'
+            test_file.write_text("original\n")
+            subprocess.run(['git', 'add', 'test.txt'], cwd=tmpdir, capture_output=True)
+            subprocess.run(['git', 'commit', '-m', 'Initial'], cwd=tmpdir, capture_output=True)
+            test_file.write_text("modified\n")
+
+            git_injector = ContextInjector(working_dir=tmpdir)
+            message = "Review the changes in @git and suggest improvements"
+            enhanced, contexts = git_injector.inject_context(message)
+
+            # Should inject git context
+            assert len(contexts) == 1
+            assert contexts[0].source == "@git"
+            assert "=== Unstaged Changes ===" in contexts[0].content
+
+            # Enhanced message should contain git diff
+            assert "**Attached context:**" in enhanced
+            assert "```diff" in enhanced
+            # @git should be replaced in message body
+            assert "Review the changes in `git diff`" in enhanced
+            # But @git still appears as source in context header (which is correct)
+            assert "**`@git`**" in enhanced
+
+    def test_inject_context_with_tree_pattern(self, injector):
+        """Test that @tree pattern triggers tree context injection."""
+        import tempfile
+
+        # Create a temporary directory with files
+        with tempfile.TemporaryDirectory() as tmpdir:
+            (Path(tmpdir) / 'file1.txt').write_text("content")
+            (Path(tmpdir) / 'file2.py').write_text("code")
+
+            tree_injector = ContextInjector(working_dir=tmpdir)
+            message = "Here's the project structure: @tree"
+            enhanced, contexts = tree_injector.inject_context(message)
+
+            # Should inject tree context
+            assert len(contexts) == 1
+            assert contexts[0].source == "@tree"
+            assert "file1.txt" in contexts[0].content
+            assert "file2.py" in contexts[0].content
+
+            # Enhanced message should contain tree
+            assert "**Attached context:**" in enhanced
+            assert "```text" in enhanced
+            # @tree should be replaced in message body
+            assert "Here's the project structure: `project tree`" in enhanced
+            # But @tree still appears as source in context header (which is correct)
+            assert "**`@tree`**" in enhanced
+
+    def test_inject_context_combined_git_tree_file(self, injector, temp_file):
+        """Test using @git, @tree, and @file together."""
+        import subprocess
+        import tempfile
+        import shutil
+
+        # Create a temporary git repo
+        with tempfile.TemporaryDirectory() as tmpdir:
+            subprocess.run(['git', 'init'], cwd=tmpdir, capture_output=True)
+            subprocess.run(['git', 'config', 'user.email', 'test@test.com'], cwd=tmpdir, capture_output=True)
+            subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True)
+
+            # Copy temp_file to git repo
+            test_file = Path(tmpdir) / temp_file.name
+            shutil.copy(temp_file, test_file)
+            subprocess.run(['git', 'add', temp_file.name], cwd=tmpdir, capture_output=True)
+            subprocess.run(['git', 'commit', '-m', 'Initial'], cwd=tmpdir, capture_output=True)
+
+            # Make a change
+            test_file.write_text("modified content\n")
+
+            # Create another file for @file reference
+            another_file = Path(tmpdir) / 'another.txt'
+            another_file.write_text("another file content\n")
+
+            combined_injector = ContextInjector(working_dir=tmpdir)
+            message = f"Review @git changes, check @tree structure, and edit @{another_file.name}"
+            enhanced, contexts = combined_injector.inject_context(message)
+
+            # Should inject all three types
+            assert len(contexts) == 3
+            sources = [ctx.source for ctx in contexts]
+            assert "@git" in sources
+            assert "@tree" in sources
+            # Check file is in sources (use resolve for symlink handling)
+            file_sources = [s for s in sources if s not in ["@git", "@tree"]]
+            assert len(file_sources) == 1
+            assert Path(file_sources[0]).resolve() == another_file.resolve()
+
+            # Enhanced message should contain all contexts
+            assert "**Attached context:**" in enhanced
+            assert "`git diff`" in enhanced
+            assert "`project tree`" in enhanced
+            assert another_file.name in enhanced
 
 
 class TestTUIFileReferences:

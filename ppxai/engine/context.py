@@ -35,6 +35,10 @@ class ContextInjector:
         r'(?:^|\s)(/[\w./\-_]+\.\w+)',        # /absolute/path/file.ext
     ]
 
+    # Patterns for special context providers
+    GIT_PATTERN = r'@git\b'
+    TREE_PATTERN = r'@tree\b'
+
     # Keywords that suggest user wants file content
     FILE_KEYWORDS = [
         'read', 'show', 'display', 'contents', 'what is in',
@@ -228,8 +232,146 @@ class ContextInjector:
         except Exception:
             return None
 
+    def inject_git_context(self, working_dir: Optional[str] = None) -> Optional[InjectedContext]:
+        """Inject git diff (staged + unstaged) as context.
+
+        Args:
+            working_dir: Directory to check for git changes (default: self.working_dir)
+
+        Returns:
+            InjectedContext with git diff or None if not in git repo
+        """
+        import subprocess
+
+        work_dir = working_dir or self.working_dir
+
+        try:
+            # Get unstaged changes
+            unstaged = subprocess.run(
+                ['git', 'diff'],
+                cwd=work_dir,
+                capture_output=True,
+                text=True,
+                check=False
+            )
+
+            # Get staged changes
+            staged = subprocess.run(
+                ['git', 'diff', '--staged'],
+                cwd=work_dir,
+                capture_output=True,
+                text=True,
+                check=False
+            )
+
+            # Check if we're in a git repository
+            if unstaged.returncode != 0 or staged.returncode != 0:
+                return None
+
+            # Combine with headers
+            content = ""
+            if staged.stdout.strip():
+                content += "=== Staged Changes ===\n"
+                content += staged.stdout + "\n"
+
+            if unstaged.stdout.strip():
+                content += "=== Unstaged Changes ===\n"
+                content += unstaged.stdout + "\n"
+
+            if not content:
+                content = "No changes in working directory"
+
+            return InjectedContext(
+                source="@git",
+                content=content,
+                language="diff",
+                truncated=len(content) > self.MAX_FILE_SIZE,
+                size=len(content)
+            )
+
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return None  # Not a git repository or git not installed
+
+    def inject_tree_context(self, working_dir: Optional[str] = None, max_depth: int = 3) -> Optional[InjectedContext]:
+        """Inject directory tree structure as context.
+
+        Args:
+            working_dir: Root directory to tree (default: self.working_dir)
+            max_depth: Maximum depth to traverse
+
+        Returns:
+            InjectedContext with tree structure
+        """
+        work_dir = working_dir or self.working_dir
+        root_path = Path(work_dir)
+
+        if not root_path.exists() or not root_path.is_dir():
+            return None
+
+        def build_tree(path: Path, prefix: str = "", depth: int = 0) -> str:
+            """Recursively build tree structure."""
+            if depth > max_depth:
+                return ""
+
+            try:
+                items = sorted(path.iterdir(), key=lambda x: (not x.is_dir(), x.name))
+            except PermissionError:
+                return ""
+
+            output = []
+            # Filter out common ignore patterns
+            ignore_patterns = {'.git', '__pycache__', 'node_modules', '.venv',
+                             'venv', '.pytest_cache', '.mypy_cache', 'dist', 'build'}
+
+            for i, item in enumerate(items):
+                # Skip ignored directories
+                if item.name in ignore_patterns:
+                    continue
+
+                # Skip hidden files/dirs (except .gitignore, .env.example, etc.)
+                if item.name.startswith('.') and item.name not in {'.gitignore', '.env.example',
+                                                                    '.env', '.dockerignore'}:
+                    continue
+
+                is_last = i == len(items) - 1
+                current_prefix = "└── " if is_last else "├── "
+                next_prefix = "    " if is_last else "│   "
+
+                if item.is_dir():
+                    output.append(f"{prefix}{current_prefix}{item.name}/")
+                    subtree = build_tree(item, prefix + next_prefix, depth + 1)
+                    if subtree:
+                        output.append(subtree)
+                else:
+                    output.append(f"{prefix}{current_prefix}{item.name}")
+
+            return "\n".join(filter(None, output))
+
+        tree = build_tree(root_path)
+
+        if not tree:
+            tree = "(empty or inaccessible directory)"
+
+        # Add header with stats
+        tree_lines = tree.split('\n')
+        total_files = sum(1 for line in tree_lines if not line.strip().endswith('/'))
+        total_dirs = sum(1 for line in tree_lines if line.strip().endswith('/'))
+
+        content = f"Project: {root_path.name}\n"
+        content += f"Directories: {total_dirs}, Files: {total_files}\n"
+        content += f"Max depth: {max_depth}\n\n"
+        content += tree
+
+        return InjectedContext(
+            source="@tree",
+            content=content,
+            language="text",
+            truncated=False,
+            size=len(content)
+        )
+
     def inject_context(self, message: str) -> Tuple[str, List[InjectedContext]]:
-        """Process message and inject file contents if appropriate.
+        """Process message and inject file/git/tree contents if appropriate.
 
         Args:
             message: User message
@@ -237,35 +379,52 @@ class ContextInjector:
         Returns:
             Tuple of (modified_message, list_of_injected_contexts)
         """
-        files = self.detect_file_references(message)
-
-        if not self.should_inject(message, files):
-            return message, []
-
         injected = []
         total_size = 0
+        cleaned_message = message
 
-        for filepath in files:
-            if total_size >= self.MAX_TOTAL_CONTEXT:
-                break
+        # Check for @git pattern
+        if re.search(self.GIT_PATTERN, message):
+            git_ctx = self.inject_git_context()
+            if git_ctx:
+                injected.append(git_ctx)
+                total_size += len(git_ctx.content)
+                # Remove @git from message
+                cleaned_message = re.sub(self.GIT_PATTERN, '`git diff`', cleaned_message)
 
-            ctx = self.read_file(filepath)
-            if ctx:
-                injected.append(ctx)
-                total_size += len(ctx.content)
+        # Check for @tree pattern
+        if re.search(self.TREE_PATTERN, message):
+            tree_ctx = self.inject_tree_context()
+            if tree_ctx:
+                injected.append(tree_ctx)
+                total_size += len(tree_ctx.content)
+                # Remove @tree from message
+                cleaned_message = re.sub(self.TREE_PATTERN, '`project tree`', cleaned_message)
+
+        # Check for file references
+        files = self.detect_file_references(message)
+
+        if self.should_inject(message, files):
+            for filepath in files:
+                if total_size >= self.MAX_TOTAL_CONTEXT:
+                    break
+
+                ctx = self.read_file(filepath)
+                if ctx:
+                    injected.append(ctx)
+                    total_size += len(ctx.content)
+
+            # Remove @ file references from message (they've been injected)
+            # This prevents the AI from seeing @/path/file.ext and getting confused
+            for filepath in files:
+                # Remove @filepath patterns
+                cleaned_message = re.sub(r'@' + re.escape(filepath) + r'\b', f'`{Path(filepath).name}`', cleaned_message)
 
         if not injected:
             return message, []
 
-        # Remove @ file references from message (they've been injected)
-        # This prevents the AI from seeing @/path/file.ext and getting confused
-        cleaned_message = message
-        for filepath in files:
-            # Remove @filepath patterns
-            cleaned_message = re.sub(r'@' + re.escape(filepath) + r'\b', f'`{Path(filepath).name}`', cleaned_message)
-
         # Build enhanced message with injected content
-        enhanced = cleaned_message + "\n\n---\n**Attached file contents:**\n"
+        enhanced = cleaned_message + "\n\n---\n**Attached context:**\n"
 
         for ctx in injected:
             truncation_note = " *(truncated)*" if ctx.truncated else ""

@@ -16,8 +16,8 @@ A terminal-based interface for interacting with Perplexity AI models.
 
 ### VS Code Extension 🆕
 - 💬 **Chat Panel** - Interactive AI chat in the sidebar with markdown rendering
-- 📎 **@file References** - Type `@filename` to include file content in messages
-- ⌨️ **Autocomplete** - Tab completion for `/` commands and `@` file references
+- 📎 **Context Injection** - Type `@filename` for files, `@git` for changes, `@tree` for project structure
+- ⌨️ **Autocomplete** - Tab completion for `/` commands and `@` references
 - 🛠️ **Tools Toggle** - Click badge to enable/disable AI tools
 - 🖱️ **Context Menu** - Right-click commands: Explain, Generate Tests, Generate Docs
 - 🔄 **Multi-Provider** - Supports all configured providers (Perplexity, OpenAI, etc.)
@@ -218,8 +218,8 @@ While in the chat interface:
 - `/clear` - Clear conversation history
 - `/quit` or `/exit` - Exit the application (auto-saves session)
 - `/debug-log [on|off|show|clear]` - 🆕 TUI debug logging (logs to `~/.ppxai/logs/tui-debug.log`)
-- **@file References** - Type `@filename` to include file content in your message
-- **Autocomplete** - Tab/type to complete `/` commands and `@` file references
+- **Context Injection** - Type `@filename` for files, `@git` for git changes, `@tree` for directory structure
+- **Autocomplete** - Tab/type to complete `/` commands and `@` references
 
 #### Session Management
 - `/save` - Save session to JSON file (~/.ppxai/sessions/)

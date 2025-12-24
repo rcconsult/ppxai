@@ -257,24 +257,12 @@ def main():
             else:
                 logger.log_user_message(user_input)
 
-            # Process @filename references in the message
-            augmented_input, resolved_files = handler.process_file_references(user_input)
-            if resolved_files:
-                file_names = ', '.join(f['name'] for f in resolved_files)
-                console.print(f"[dim]Including {len(resolved_files)} file(s): {file_names}[/dim]")
-
-            # Check if tools are enabled
-            tools_enabled = (
-                handler.tools_available and
-                handler.PerplexityClientPromptTools and
-                isinstance(client, handler.PerplexityClientPromptTools) and
-                client.enable_tools
-            )
-
             # Send message to API
-            # Use EngineClient if available (v1.11.0+ with file editing tools)
-            if hasattr(handler, 'engine_client') and handler.engine_client is not None:
-                # Use new engine with event-based streaming (v1.11.2 - shared event handler)
+            # v1.11.4: ALWAYS use EngineClient (created at startup)
+            # This ensures @git/@tree/@file context injection always works
+            if handler.engine_client:
+                # Use engine with event-based streaming
+                # EngineClient handles all context injection (@file, @git, @tree) internally
                 async def stream_engine_response():
                     """Stream response from EngineClient using shared TUIEventHandler."""
                     from ppxai.common.event_handler import TUIEventHandler
@@ -290,7 +278,8 @@ def main():
                         pass
 
                     # Process events using shared handler
-                    async for event in handler.engine_client.chat(augmented_input, stream=True):
+                    # Pass user_input directly - EngineClient.chat() handles context injection
+                    async for event in handler.engine_client.chat(user_input, stream=True):
                         should_continue = await event_handler.handle_event(event)
                         if not should_continue:
                             break
@@ -300,16 +289,20 @@ def main():
                 response = asyncio.run(stream_engine_response())
 
                 # Sync conversation history from engine back to legacy client
-                if handler.engine_client:
-                    client.conversation_history = [
-                        {"role": msg.role, "content": msg.content}
-                        for msg in handler.engine_client.session.messages
-                    ]
+                client.conversation_history = [
+                    {"role": msg.role, "content": msg.content}
+                    for msg in handler.engine_client.session.messages
+                ]
 
-            elif tools_enabled:
-                # Use legacy async tool-enabled chat
-                response = asyncio.run(client.chat_with_tools(augmented_input, current_model))
             else:
+                # Fallback path: EngineClient not available (shouldn't happen)
+                # Process @file references only (legacy, does NOT support @git/@tree)
+                console.print("[yellow]Warning: Using legacy client (EngineClient unavailable)[/yellow]")
+                augmented_input, resolved_files = handler.process_file_references(user_input)
+                if resolved_files:
+                    file_names = ', '.join(f['name'] for f in resolved_files)
+                    console.print(f"[dim]Including {len(resolved_files)} file(s): {file_names}[/dim]")
+
                 # Use regular chat
                 response = client.chat(augmented_input, current_model, stream=True)
 
