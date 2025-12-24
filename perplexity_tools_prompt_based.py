@@ -1052,8 +1052,25 @@ class PerplexityClientPromptTools:
                 continue
 
         # If no code block found, try to find raw JSON object with tool key
-        # This handles models that output JSON without markdown formatting
-        raw_json_pattern = r'\{\s*"tool"\s*:\s*"[^"]+"\s*[^}]*\}'
+        # BUGFIX: Extract JSON with nested braces (Gemini compatibility)
+        # Find first '{' and last '}' to handle nested objects
+        first_brace = text.find('{')
+        last_brace = text.rfind('}')
+
+        if first_brace != -1 and last_brace != -1 and first_brace < last_brace:
+            json_candidate = text[first_brace:last_brace+1]
+            try:
+                data = json.loads(json_candidate)
+                # Check if it's a tool call
+                if isinstance(data, dict) and "tool" in data:
+                    normalized = normalize_tool_call(data)
+                    if normalized:
+                        return normalized
+            except json.JSONDecodeError:
+                pass
+
+        # Fallback: try old regex pattern for simple cases
+        raw_json_pattern = r'\{\s*"tool"\s*:\s*"[^"]+"\s*,\s*"arguments"\s*:\s*\{\s*\}\s*\}'
         raw_matches = re.findall(raw_json_pattern, text, re.DOTALL)
 
         for match in raw_matches:

@@ -385,6 +385,9 @@ class CommandHandler:
             console.print("[yellow]Please add the API key to your .env file.[/yellow]\n")
             return
 
+        # BUGFIX: Check if tools are currently enabled before switching
+        tools_were_enabled = isinstance(self.client, self.PerplexityClientPromptTools) if self.PerplexityClientPromptTools else False
+
         # Switch to new provider
         new_base_url = get_base_url(new_provider)
         new_config = get_provider_config(new_provider)
@@ -407,7 +410,14 @@ class CommandHandler:
         self.client.session_metadata["model"] = self.current_model
         self.client.session_metadata["provider"] = new_provider
 
-        console.print(f"\n[green]Switched to:[/green] {new_config['name']} (model: {self.current_model})\n")
+        console.print(f"\n[green]Switched to:[/green] {new_config['name']} (model: {self.current_model})")
+
+        # BUGFIX: Re-enable tools if they were enabled before switching
+        if tools_were_enabled:
+            console.print("[dim]Re-enabling tools for new provider...[/dim]")
+            self._enable_tools()
+        else:
+            console.print()
 
     def handle_help(self):
         """Handle /help command."""
