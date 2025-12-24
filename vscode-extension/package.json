@@ -2,7 +2,7 @@
   "name": "ppxai",
   "displayName": "ppxai - AI Chat",
   "description": "Multi-provider AI chat interface with code generation tools",
-  "version": "1.11.2.2",
+  "version": "1.11.3",
   "publisher": "ppxai",
   "engines": {
     "vscode": "^1.85.0"
@@ -83,7 +83,7 @@
       "activitybar": [
         {
           "id": "ppxai",
-          "title": "PPXAI v1.11.2.2",
+          "title": "PPXAI v1.11.3",
           "icon": "resources/icon.png"
         }
       ]

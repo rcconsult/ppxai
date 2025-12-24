@@ -576,6 +576,21 @@ See [docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.m
 
 ## Quick Reference
 
+### Version Number Format
+
+⚠️ **CRITICAL - VSCode Extension Constraint:** VSCode extensions only support 3-part semantic versioning.
+
+**Format:**
+- ✅ CORRECT: `1.11.3` (major.minor.patch)
+- ❌ WRONG: `1.11.2.2` (4-part version breaks VSCode extension build with "Invalid extension version" error)
+
+**Rule:** Always use 3-part versions. For multiple patch releases, increment the patch number:
+- 1.11.2 → 1.11.3 → 1.11.4 (patches)
+- 1.11.x → 1.12.0 (minor release)
+- 1.x.x → 2.0.0 (major release)
+
+**Historical Note:** v1.11.2.1 and v1.11.2.2 were consolidated into v1.11.3 after discovering this constraint.
+
 ### Version Files to Update (All Required!)
 **Core Version (4 locations):**
 - pyproject.toml (line 3) - `version = "X.Y.Z"`

@@ -8,9 +8,9 @@
 
 ---
 
-## Current Release: v1.11.2.2
+## Current Release: v1.11.3
 
-**Status**: ✅ Foundation Refactoring - Provider Abstraction (Patch)
+**Status**: ✅ Foundation Refactoring + Critical Bugfixes (Consolidates v1.11.2.1 + v1.11.2.2)
 
 Released: 2025-12-24
 
@@ -60,6 +60,8 @@ Released: 2025-12-24
 - ✅ Solid foundation for v1.12.0+ features
 
 **Branch**: `bugfix/gemini-tool-calling` → `master`
+
+**Version Consolidation Note**: ⚠️ This release consolidates v1.11.2.1 and v1.11.2.2 into v1.11.3 because **VSCode extensions only support 3-part semantic versioning** (`major.minor.patch`). The VSCode extension build failed with "Invalid extension version '1.11.2.2'" error. Future releases will use 3-part versions only (1.11.3 → 1.11.4 → 1.12.0).
 
 ---
 
@@ -1944,5 +1946,5 @@ Interested in working on any of these features?
 ---
 
 **Last Updated**: December 24, 2025
-**Current Version**: v1.11.2.2
-**Next Target**: v1.11.3+ (Agentic Workflow Phases 2-6: @git/@tree/agent)
+**Current Version**: v1.11.3
+**Next Target**: v1.12.0+ (Provider Abstraction Cleanup + Agentic Workflow)

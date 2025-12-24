@@ -5,13 +5,23 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.11.2.2] - 2025-12-24
+## [1.11.3] - 2025-12-24
 
-### Added - Foundation Refactoring for Provider Abstraction ⚙️
+### Added - Foundation Refactoring + Critical Bugfixes ⚙️🔧
 
-This release addresses provider abstraction issues identified in codebase analysis, providing a solid foundation for adding new AI providers and fixing critical TUI bugs.
+**Note:** This release consolidates v1.11.2.1 and v1.11.2.2 into v1.11.3 due to VSCode extension versioning constraints (only supports 3-part semantic versioning: major.minor.patch).
 
-#### Provider Abstraction Improvements
+This release combines two critical patches: provider abstraction improvements and autorouter fixes, providing a solid foundation for adding new AI providers.
+
+#### Autorouter Fix (from v1.11.2.1)
+
+- **Fixed Provider Mismatch in Autorouter** - Coding commands now work with all providers
+  - **Problem**: Using `/convert`, `/generate`, etc. with Gemini/OpenAI caused 404 errors
+  - **Root Cause**: 7 coding command handlers didn't pass `self.provider` to `send_coding_task()`
+  - **Fix**: All 7 handlers now pass current provider parameter
+  - **Impact**: Autorouting now respects provider (Perplexity→sonar-pro, Gemini→gemini-2.5-pro, OpenAI→gpt-4o, etc.)
+
+#### Provider Abstraction Improvements (from v1.11.2.2)
 
 - **Configurable Default Provider** - No more hardcoded "perplexity"
   - New `get_default_provider()` function with smart fallback chain
@@ -86,69 +96,9 @@ This release addresses provider abstraction issues identified in codebase analys
 - Use `get_model_pricing(provider)` instead of global `MODEL_PRICING`
 - Use `AIClientWithTools` alias for new code (clearer name)
 
-## [1.11.2.1] - 2025-12-23
+### VSCode Extension Versioning Note
 
-### Fixed - Critical Autorouter Bug 🔧
-
-**Issue**: Provider mismatch in autorouter causing 404 errors with non-Perplexity providers.
-
-#### Problem
-When using coding commands (`/convert`, `/generate`, `/test`, `/docs`, `/implement`, `/debug`, `/explain`) with Gemini, OpenAI, or other non-Perplexity providers, the autorouter would incorrectly attempt to use Perplexity's `sonar-pro` model instead of the current provider's designated coding model, resulting in 404 errors.
-
-Example symptom:
-```
-User: /convert @file.R to Python (while using Gemini)
-Auto-routed to sonar-pro for coding task
-Error: models/sonar-pro is not found for API version v1main [404]
-```
-
-#### Root Cause
-All 7 coding command handlers in `ppxai/commands.py` were calling `send_coding_task()` without passing the current session's provider parameter. This caused the function to fall back to the global `MODEL_PROVIDER` variable, which is set once at import time and doesn't update when users switch providers during a TUI session.
-
-#### Solution
-- **Fixed 7 command handlers**: All now pass `self.provider` to `send_coding_task()`
-  - `handle_generate()` (line 424)
-  - `handle_test()` (line 437)
-  - `handle_docs()` (line 450)
-  - `handle_implement()` (line 461)
-  - `handle_debug()` (line 471)
-  - `handle_explain()` (line 484)
-  - `handle_convert()` (line 512)
-
-- **Autorouting now respects provider**:
-  - Perplexity → `sonar-pro`
-  - Gemini → `gemini-2.5-pro`
-  - OpenAI → `gpt-4o`
-  - OpenRouter → `anthropic/claude-sonnet-4`
-  - Ollama → `codellama`
-
-### Added
-
-- **docs/AUTOROUTER-CONFIG.md** - NEW: Comprehensive guide explaining:
-  - How autorouting works
-  - Default coding models per provider
-  - How to customize `coding_model` in `ppxai-config.json`
-  - Common use cases (cost optimization, consistent models, specialized coding)
-  - Troubleshooting tips
-
-- **Regression test**: `test_send_coding_task_gemini()` - Ensures Gemini provider uses `gemini-2.5-pro` for coding tasks, not `sonar-pro`
-
-### Changed
-
-- `ppxai-config.example.json` - Added inline comment explaining `coding_model` field
-- Version bumped to 1.11.2.1 in `pyproject.toml` and `vscode-extension/package.json`
-
-### Testing
-
-- **308/308 tests passing (100%)**
-- All 7 `send_coding_task` tests pass including new Gemini regression test
-
-### Impact
-
-- ✅ Fixes 404 errors when using coding commands with non-Perplexity providers
-- ✅ Autorouting now works correctly for all providers
-- ✅ Users can customize `coding_model` per provider in config
-- ✅ Backward compatible - drop-in replacement for v1.11.2
+⚠️ **Important**: VSCode extensions only support 3-part semantic versioning (`major.minor.patch`). This is why v1.11.2.1 and v1.11.2.2 were consolidated into v1.11.3. Future releases will use 3-part versions only (e.g., 1.11.3 → 1.11.4 → 1.12.0).
 
 ## [1.11.2] - 2025-12-22
 

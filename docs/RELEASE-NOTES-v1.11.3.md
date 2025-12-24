@@ -1,21 +1,27 @@
-# Release Notes: v1.11.2.2
+# Release Notes: v1.11.3
 
 **Release Date:** December 24, 2025
-**Type:** Patch Release (Foundation Refactoring)
+**Type:** Patch Release (Consolidates v1.11.2.1 + v1.11.2.2)
 **Branch:** bugfix/gemini-tool-calling → master
+
+**⚠️ Version Consolidation:** This release combines v1.11.2.1 and v1.11.2.2 into v1.11.3 due to VSCode extension versioning constraints. VSCode extensions only support 3-part semantic versioning (`major.minor.patch`), not 4-part versions like `1.11.2.2`. The VSCode extension build failed with "Invalid extension version '1.11.2.2'" error.
 
 ---
 
 ## Overview
 
-v1.11.2.2 is a foundation refactoring release that addresses provider abstraction issues identified in the codebase analysis. This release improves extensibility for adding new AI providers and fixes two critical TUI bugs (Gemini tool parsing and tools status persistence).
+v1.11.3 is a foundation refactoring release that combines two critical patches: provider abstraction improvements and autorouter fixes. This release improves extensibility for adding new AI providers and fixes critical bugs.
 
-**Key Changes:**
+**Key Changes (from v1.11.2.2 - Provider Abstraction):**
 - ✅ Configurable default provider (no more hardcoded "perplexity")
 - ✅ Provider-specific pricing function
 - ✅ AIClientWithTools alias for better naming
 - ✅ Fixed: Tools status persists when switching providers (Bug #1)
 - ✅ Fixed: Gemini tool call JSON parsing with nested braces (Bug #2)
+
+**Key Changes (from v1.11.2.1 - Autorouter Fix):**
+- ✅ Fixed: Provider mismatch in autorouter causing 404 errors
+- ✅ All 7 coding command handlers now pass current provider parameter
 
 ---
 
@@ -112,7 +118,7 @@ class PerplexityClientPromptTools:
     NOTE: Despite the name "PerplexityClient", this class works with ALL AI providers
     (Perplexity, Gemini, OpenAI, OpenRouter, Ollama, etc.) - the name is historical.
 
-    For new code, consider using the AIClientWithTools alias (v1.11.2.2+).
+    For new code, consider using the AIClientWithTools alias (v1.11.3+).
     """
 ```
 
@@ -245,10 +251,10 @@ tests/test_provider_tools_bugfixes.py::TestGeminiToolCallParsing::test_parse_too
 - `perplexity_tools_prompt_based.py` - Updated docstring, added `AIClientWithTools` alias
 
 **Version Updates:**
-- `pyproject.toml` - v1.11.2.2
-- `ppxai/__init__.py` - v1.11.2.2
-- `vscode-extension/package.json` - v1.11.2.2 (version + activitybar title)
-- `ROADMAP.md` - Current Release v1.11.2.2, Last Updated Dec 24 2025
+- `pyproject.toml` - v1.11.3
+- `ppxai/__init__.py` - v1.11.3
+- `vscode-extension/package.json` - v1.11.3 (version + activitybar title)
+- `ROADMAP.md` - Current Release v1.11.3, Last Updated Dec 24 2025
 - `README.md` - VSIX filename references updated
 
 **Tests:**
@@ -258,7 +264,7 @@ tests/test_provider_tools_bugfixes.py::TestGeminiToolCallParsing::test_parse_too
 - `docs/BUGFIX-gemini-tool-calling.md` - Bug analysis
 - `docs/PROVIDER-TOOLS-COMPATIBILITY.md` - Provider tools guide
 - `docs/PROVIDER-ABSTRACTION-REFACTORING.md` - Refactoring analysis
-- `docs/RELEASE-NOTES-v1.11.2.2.md` - This file
+- `docs/RELEASE-NOTES-v1.11.3.md` - This file
 
 ---
 
@@ -320,7 +326,7 @@ None. All issues from v1.11.2.1 resolved.
 ```bash
 # Pull latest
 git pull origin master
-git checkout v1.11.2.2
+git checkout v1.11.3
 
 # Update dependencies (no changes, but good practice)
 uv sync
@@ -336,11 +342,11 @@ echo "DEFAULT_PROVIDER=gemini" >> .env
 
 ```bash
 # Download new VSIX
-curl -L -o ppxai-1.11.2.2.vsix \
-  https://github.com/rcconsult/ppxai/releases/download/v1.11.2.2/ppxai-1.11.2.2.vsix
+curl -L -o ppxai-1.11.3.vsix \
+  https://github.com/rcconsult/ppxai/releases/download/v1.11.3/ppxai-1.11.3.vsix
 
 # Install
-code --install-extension ppxai-1.11.2.2.vsix
+code --install-extension ppxai-1.11.3.vsix
 ```
 
 ---
