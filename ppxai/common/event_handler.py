@@ -112,6 +112,11 @@ class EventHandler:
             self.on_tool_error(error_msg)
             return True
 
+        elif event.type == EventType.CONTEXT_INJECTED:
+            # File/git/tree context was auto-injected (v1.11.4)
+            # Just continue - the client can choose to display or ignore
+            return True
+
         elif event.type == EventType.CONSENT_REQUEST:
             # Consent is typically handled by engine's callback
             # This is just for logging/notification purposes
@@ -204,6 +209,33 @@ class TUIEventHandler(EventHandler):
             on_tool_error=self._on_tool_error,
             on_error=self._on_error,
         )
+
+        # Track injected contexts for display
+        self._injected_contexts = []
+
+    async def handle_event(self, event: Event) -> bool:
+        """Override to handle CONTEXT_INJECTED events for TUI display."""
+        if event.type == EventType.CONTEXT_INJECTED:
+            # Collect injected contexts
+            self._injected_contexts.append(event.data)
+            # Display what was injected
+            if event.data and isinstance(event.data, dict):
+                source = event.data.get('source', 'unknown')
+                size = event.data.get('size', 0)
+                # Format size
+                if size < 1024:
+                    size_str = f"{size} B"
+                elif size < 1024 * 1024:
+                    size_str = f"{size / 1024:.1f} KB"
+                else:
+                    size_str = f"{size / (1024 * 1024):.1f} MB"
+
+                # Show what was injected
+                self.console.print(f"[dim]→ Injected context: {source} ({size_str})[/dim]")
+            return True
+
+        # Delegate to parent for all other event types
+        return await super().handle_event(event)
 
     def _on_stream_start(self):
         """Handle stream start for TUI."""
