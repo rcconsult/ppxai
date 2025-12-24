@@ -748,6 +748,27 @@ class TestSendCodingTask:
         assert call_args[0][1] == "gpt-oss-120b"
 
     @patch('ppxai.commands.get_coding_model')
+    def test_send_coding_task_gemini(self, mock_get_coding, mock_client):
+        """Test send_coding_task with Gemini provider (regression test for bug-tui-20251223)."""
+        # Simulate Gemini provider's coding model
+        mock_get_coding.return_value = "gemini-2.5-pro"
+
+        result = send_coding_task(
+            mock_client,
+            "convert",
+            "Convert R to Python",
+            "gemini-2.0-flash-lite",
+            "gemini"  # Explicitly pass gemini provider
+        )
+
+        # Should auto-route to Gemini's coding model, NOT Perplexity's sonar-pro
+        assert mock_client.chat.called
+        call_args = mock_client.chat.call_args
+        assert call_args[0][1] == "gemini-2.5-pro", "Should use Gemini's coding model, not Perplexity's"
+        # Verify get_coding_model was called with correct provider
+        mock_get_coding.assert_called_once_with("gemini")
+
+    @patch('ppxai.commands.get_coding_model')
     def test_send_coding_task_no_autoroute_perplexity(self, mock_get_coding, mock_client):
         """Test send_coding_task with auto-route disabled for Perplexity."""
         mock_client.auto_route = False

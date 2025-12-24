@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "version": "1.0",
   "default_provider": "perplexity",
+  "comment": "Configuration for ppxai - customize providers, models, and autorouting behavior",
   "providers": {
     "perplexity": {
       "name": "Perplexity AI",
@@ -9,6 +10,7 @@
       "api_key_env": "PERPLEXITY_API_KEY",
       "default_model": "sonar-pro",
       "coding_model": "sonar-pro",
+      "__comment_coding_model": "Model used for autorouting coding commands (/generate, /test, /convert, etc.)",
       "models": {
         "sonar": {
           "name": "Sonar",
