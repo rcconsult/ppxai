@@ -613,6 +613,110 @@
           "iteration": 3
         }
       ]
+    },
+    {
+      "timestamp": "2025-12-24T22:20:32.293806",
+      "version": "1.11.4",
+      "git_commit": "bf95fa7",
+      "git_branch": "master",
+      "provider": "perplexity",
+      "model": "sonar-pro",
+      "summary": {
+        "total_runs": 9,
+        "successful_runs": 9,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 1442.63,
+          "min": 1131.23,
+          "max": 1883.14,
+          "stdev": 245.01
+        },
+        "total_ms": {
+          "mean": 2772.01,
+          "min": 1614.63,
+          "max": 3451.86,
+          "stdev": 537.02
+        },
+        "tokens_per_sec": {
+          "mean": 51.41,
+          "min": 4.95,
+          "max": 84.59
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 1548.33,
+          "total_ms": 2396.83,
+          "tokens": 78,
+          "tokens_per_sec": 32.54,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1883.14,
+          "total_ms": 2832.57,
+          "tokens": 91,
+          "tokens_per_sec": 32.13,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 1505.11,
+          "total_ms": 1614.63,
+          "tokens": 8,
+          "tokens_per_sec": 4.95,
+          "prompt_type": "simple",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 1225.82,
+          "total_ms": 3025.43,
+          "tokens": 226,
+          "tokens_per_sec": 74.7,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1294.38,
+          "total_ms": 2543.5,
+          "tokens": 148,
+          "tokens_per_sec": 58.19,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 1581.25,
+          "total_ms": 3080.44,
+          "tokens": 146,
+          "tokens_per_sec": 47.4,
+          "prompt_type": "medium",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 1131.23,
+          "total_ms": 3451.86,
+          "tokens": 292,
+          "tokens_per_sec": 84.59,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1202.94,
+          "total_ms": 2852.75,
+          "tokens": 220,
+          "tokens_per_sec": 77.12,
+          "prompt_type": "complex",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 1611.46,
+          "total_ms": 3150.05,
+          "tokens": 161,
+          "tokens_per_sec": 51.11,
+          "prompt_type": "complex",
+          "iteration": 3
+        }
+      ]
     }
   ]
 }
