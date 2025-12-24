@@ -8,11 +8,11 @@
 
 ---
 
-## Current Release: v1.11.2
+## Current Release: v1.11.2.1
 
-**Status**: ✅ Shell Command Consent Security + Shared Modules Refactoring
+**Status**: ✅ Critical Bugfix - Autorouter Provider Mismatch (Patch)
 
-Released: 2025-12-22
+Released: 2025-12-23
 
 **Goal**: Add shell command consent security and complete shared modules refactoring
 
@@ -1872,6 +1872,6 @@ Interested in working on any of these features?
 
 ---
 
-**Last Updated**: December 22, 2025
-**Current Version**: v1.11.2
+**Last Updated**: December 23, 2025
+**Current Version**: v1.11.2.1
 **Next Target**: v1.11.3+ (Agentic Workflow Phases 2-6: @git/@tree/agent)

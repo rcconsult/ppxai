@@ -240,44 +240,178 @@ cp .env.example .env
 - **Minor (1.11.0)** - New features, backward compatible
 - **Patch (1.11.2.1)** - Bug fixes only
 
-#### Release Checklist
-1. **Update versions** in:
-   - pyproject.toml (line 3)
-   - vscode-extension/package.json (line 5)
+#### Complete Release Checklist
 
-2. **Create release notes:**
-   - docs/RELEASE-NOTES-v{version}.md (comprehensive)
-   - CHANGELOG.md entry (user-facing)
-   - Update CLAUDE.md current version
+**CRITICAL:** Follow this checklist exactly to prevent version inconsistencies.
 
-3. **Commit and tag:**
-   ```bash
-   git add .
-   git commit -m "feat: v{version} - Description"
-   git tag v{version}
-   git push origin master --tags
-   ```
+##### 1. Version Number Updates (MANDATORY - All files)
 
-4. **Create GitHub release:**
-   ```bash
-   # Use project token to avoid stale env vars
-   unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN
+Update the version number in **ALL** of these files:
 
-   gh release create v{version} \
-     --title "v{version} - Title" \
-     --notes-file docs/RELEASE-NOTES-v{version}.md
-   ```
+```bash
+# Core package version
+pyproject.toml                          # Line 3: version = "X.Y.Z"
+ppxai/__init__.py                       # Line 98: __version__ = "X.Y.Z"
 
-5. **Build and upload assets:**
-   ```bash
-   # macOS Intel builds
-   ./scripts/build-intel.sh
+# VSCode extension version
+vscode-extension/package.json           # Line 5: "version": "X.Y.Z"
+vscode-extension/package.json           # Line 86: "title": "PPXAI vX.Y.Z" (activitybar)
 
-   # Upload to release
-   gh release upload v{version} dist/ppxai-macos-intel dist/ppxai-server-macos-intel
+# Documentation metadata
+ROADMAP.md                              # Line 11: Current Release: vX.Y.Z
+ROADMAP.md                              # Line 1875: Last Updated: YYYY-MM-DD
+ROADMAP.md                              # Line 1876: Current Version: vX.Y.Z
 
-   # Other platforms built via GitHub Actions CI/CD
-   ```
+# Installation instructions (VSIX filename references only!)
+README.md                               # Lines 114, 116: ppxai-X.Y.Z.vsix references
+```
+
+**Important:** In README.md and docs/README.md, do NOT change feature-introduction tags like "NEW (v1.11.2)" - these document when features were added. Only update installation/download filename references (e.g., `ppxai-X.Y.Z.vsix`).
+
+**Pro tip:** Use grep to verify all versions are consistent before committing:
+```bash
+# Should show same version in all files
+grep -r "1\.11\.2" --include="*.py" --include="*.toml" --include="*.json" --include="*.md" . 2>/dev/null | grep -v ".git" | grep -v "uv.lock" | grep -v "node_modules"
+```
+
+##### 2. Documentation Updates (MANDATORY)
+
+Create/update these documentation files:
+
+```bash
+# Release notes (create new file for each release)
+docs/RELEASE-NOTES-vX.Y.Z.md            # Comprehensive release notes
+
+# User-facing changelog
+CHANGELOG.md                            # Add new entry at top with version, date, changes
+
+# AI assistant context (update current version section)
+CLAUDE.md                               # Lines 9-20: Update "Current Version" and "What's New"
+
+# Optional: Update release plan if needed
+docs/RELEASE-PLAN-v1.11.x.md           # Mark release as complete, update status
+```
+
+##### 3. Pre-Release Verification
+
+Run these checks **BEFORE** committing:
+
+```bash
+# 1. All tests must pass (308/308 expected as of v1.11.2.1)
+uv run pytest tests/ -v
+
+# 2. Verify version consistency across all files
+grep -h "version.*=" pyproject.toml ppxai/__init__.py | sort -u
+# Should show only ONE version line
+
+# 3. Check VSCode extension versions match
+grep '"version"' vscode-extension/package.json
+grep '"title".*PPXAI' vscode-extension/package.json
+# Both should show same version
+
+# 4. Verify ROADMAP.md is up to date
+grep "Current Release\|Current Version\|Last Updated" ROADMAP.md
+```
+
+##### 4. Commit and Tag
+
+```bash
+# Stage all version and documentation changes
+git add pyproject.toml \
+        ppxai/__init__.py \
+        vscode-extension/package.json \
+        ROADMAP.md \
+        CHANGELOG.md \
+        CLAUDE.md \
+        docs/RELEASE-NOTES-vX.Y.Z.md
+
+# Commit with descriptive message
+git commit -m "feat: vX.Y.Z - Brief description
+
+- What changed
+- Why it matters
+- Any breaking changes
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
+
+# Tag the release
+git tag vX.Y.Z
+
+# Push to GitHub
+git push origin master --tags
+```
+
+##### 5. Create GitHub Release
+
+```bash
+# Use project token to avoid stale env vars
+unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN
+
+# Create release with notes
+gh release create vX.Y.Z \
+  --title "vX.Y.Z - Title" \
+  --notes-file docs/RELEASE-NOTES-vX.Y.Z.md
+
+# Verify release was created
+gh release view vX.Y.Z
+```
+
+##### 6. Build and Upload Assets
+
+```bash
+# macOS Intel builds (from macOS ARM)
+./scripts/build-intel.sh
+
+# Verify binaries were created
+ls -lh dist/ppxai-macos-intel dist/ppxai-server-macos-intel
+
+# Upload to GitHub release
+unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN
+gh release upload vX.Y.Z dist/ppxai-macos-intel dist/ppxai-server-macos-intel
+
+# Other platforms (macOS ARM, Linux, Windows) are built via GitHub Actions CI/CD
+# Check workflow status at: https://github.com/rcconsult/ppxai/actions
+```
+
+##### 7. Post-Release Verification
+
+```bash
+# 1. Verify all assets are uploaded
+gh release view vX.Y.Z
+
+# 2. Check GitHub Actions CI/CD completed successfully
+gh run list --limit 5
+
+# 3. Test installation from release
+# Download and test the binaries work
+curl -L -o /tmp/ppxai-test https://github.com/rcconsult/ppxai/releases/download/vX.Y.Z/ppxai-macos-arm64
+chmod +x /tmp/ppxai-test
+/tmp/ppxai-test --version  # Should show vX.Y.Z
+
+# 4. Verify PyPI package (if published)
+pip install --upgrade ppxai
+python -c "import ppxai; print(ppxai.__version__)"  # Should show X.Y.Z
+```
+
+##### Common Release Mistakes (Learn from v1.11.2.1!)
+
+❌ **DON'T:**
+- Forget to update `ppxai/__init__.py` __version__ (caught in v1.11.2.1)
+- Miss the VSCode activitybar title version (caught in v1.11.2.1)
+- Leave ROADMAP.md with old version (caught in v1.11.2.1)
+- Skip the grep verification step
+- Commit without running tests
+- Use `GITHUB_TOKEN` directly (always unset first!)
+
+✅ **DO:**
+- Follow this checklist line by line
+- Use grep to verify version consistency
+- Run all tests before committing
+- Update ALL 6 version locations
+- Use the project token file for gh commands
+- Verify release assets after upload
 
 ### GitHub CLI Authentication Pattern
 **ALWAYS** use this pattern for `gh` commands:
@@ -442,11 +576,18 @@ See [docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.m
 
 ## Quick Reference
 
-### Version Files to Update
-- pyproject.toml (line 3)
-- vscode-extension/package.json (line 5)
-- CLAUDE.md (current version)
-- CHANGELOG.md (new entry)
+### Version Files to Update (All Required!)
+**Core Version (4 locations):**
+- pyproject.toml (line 3) - `version = "X.Y.Z"`
+- ppxai/__init__.py (line 98) - `__version__ = "X.Y.Z"`
+- vscode-extension/package.json (line 5) - `"version": "X.Y.Z"`
+- vscode-extension/package.json (line 86) - `"title": "PPXAI vX.Y.Z"`
+
+**Documentation (4 files):**
+- ROADMAP.md (lines 11, 1875, 1876) - Current Release, Last Updated, Current Version
+- CLAUDE.md (lines 9-20) - Update "Current Version" and "What's New"
+- README.md (lines 114, 116) - VSIX filename references only (not feature tags!)
+- CHANGELOG.md (add new entry at top)
 - docs/RELEASE-NOTES-v{version}.md (create new)
 
 ### Test Pass Rate Target
