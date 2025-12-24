@@ -5,6 +5,87 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.2.2] - 2025-12-24
+
+### Added - Foundation Refactoring for Provider Abstraction ⚙️
+
+This release addresses provider abstraction issues identified in codebase analysis, providing a solid foundation for adding new AI providers and fixing critical TUI bugs.
+
+#### Provider Abstraction Improvements
+
+- **Configurable Default Provider** - No more hardcoded "perplexity"
+  - New `get_default_provider()` function with smart fallback chain
+  - `DEFAULT_PROVIDER` environment variable support (`.env`)
+  - Fallback order: env var → first available provider → perplexity
+  - Documented in `.env.example`
+
+- **Provider-Specific Pricing** - Each provider can have its own pricing model
+  - New `get_model_pricing(provider)` function for any provider
+  - Backward compatible: Legacy `MODEL_PRICING` global still exists
+
+- **AIClientWithTools Alias** - Better naming for provider-agnostic tool client
+  - `AIClientWithTools` = `PerplexityClientPromptTools` (same class, clearer name)
+  - Updated docstring: "works with ALL providers (not just Perplexity)"
+  - Both names supported for backward compatibility
+
+### Fixed - Critical TUI Bugs 🔧
+
+**From branch `bugfix/gemini-tool-calling`**
+
+- **Bug #1: Tools Status Not Persisting** - Tools now stay ON when switching providers
+  - **Before**: Enable tools on Perplexity → switch to Gemini → Tools show OFF ❌
+  - **After**: Tools remain ON across provider switches ✅
+  - **Root Cause**: `handle_provider()` didn't check if tools were enabled before switching
+  - **Fix**: Added tools persistence logic in `ppxai/commands.py` (lines 388-420)
+  - **Testing**: Manual TUI testing confirms fix works
+
+- **Bug #2: Gemini Tool Call Parsing Failure** - Fixed nested JSON parsing
+  - **Before**: Gemini showed raw JSON instead of executing tools ❌
+  - **After**: Gemini tool calls execute correctly ✅
+  - **Root Cause**: Regex pattern `r'\{\s*"tool"\s*:\s*"[^"]+"\s*[^}]*\}'` broke on nested `arguments` object
+  - **Fix**: Extract JSON using first/last brace positions instead of regex (`perplexity_tools_prompt_based.py` lines 1054-1083)
+  - **Testing**: 4/4 new regression tests passing
+
+### Documentation
+
+- **docs/BUGFIX-gemini-tool-calling.md** - NEW: Comprehensive analysis of both bugs with root causes and fixes
+- **docs/PROVIDER-TOOLS-COMPATIBILITY.md** - NEW: Guide explaining how tools work across different providers
+- **docs/PROVIDER-ABSTRACTION-REFACTORING.md** - NEW: Detailed refactoring analysis and v1.12.0 recommendations
+- **docs/RELEASE-NOTES-v1.11.2.2.md** - NEW: Complete release notes with migration guide
+
+### Testing
+
+- **4 new regression tests** in `tests/test_provider_tools_bugfixes.py`
+  - `test_provider_switching_fix_documented()` - Documents Bug #1 fix
+  - `test_parse_gemini_nested_json_tool_call()` - Tests Gemini nested JSON parsing
+  - `test_parse_tool_call_in_code_block()` - Tests code block tool calls
+  - `test_parse_tool_call_simple_no_nested_args()` - Tests simple tool calls
+- All 4 tests passing (100%)
+- Manual TUI testing confirms both bugs fixed
+
+### Changed
+
+- `ppxai/config.py` - Added `get_default_provider()` and `get_model_pricing(provider)` functions
+- `ppxai/commands.py` - Use configurable default provider, tools persistence fix
+- `perplexity_tools_prompt_based.py` - Gemini JSON parsing fix, added AIClientWithTools alias
+- `.env.example` - Document `DEFAULT_PROVIDER` option
+
+### Impact
+
+- ✅ **Adding new providers now requires ZERO code changes** (config-only)
+- ✅ Tools work correctly with all providers (Perplexity, Gemini, OpenAI, OpenRouter, Ollama)
+- ✅ Solid foundation for v1.12.0+ features (deprecation warnings, code cleanup)
+
+### Migration Guide
+
+**For Users**: No breaking changes! Everything works as before.
+- Optional: Set custom default provider via `DEFAULT_PROVIDER=gemini` in `.env`
+
+**For Developers**: Recommended but not required:
+- Use `get_default_provider()` instead of hardcoded "perplexity"
+- Use `get_model_pricing(provider)` instead of global `MODEL_PRICING`
+- Use `AIClientWithTools` alias for new code (clearer name)
+
 ## [1.11.2.1] - 2025-12-23
 
 ### Fixed - Critical Autorouter Bug 🔧

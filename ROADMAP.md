@@ -8,49 +8,58 @@
 
 ---
 
-## Current Release: v1.11.2.1
+## Current Release: v1.11.2.2
 
-**Status**: ✅ Critical Bugfix - Autorouter Provider Mismatch (Patch)
+**Status**: ✅ Foundation Refactoring - Provider Abstraction (Patch)
 
-Released: 2025-12-23
+Released: 2025-12-24
 
-**Goal**: Add shell command consent security and complete shared modules refactoring
+**Goal**: Iron out provider abstraction issues and fix critical TUI bugs before adding more features
 
 **Features**:
-- ✅ **Shell Command Consent System** - Regex-based command risk classification
-  - Safe commands auto-approved (ls, cat, pwd, grep)
-  - Dangerous commands require consent (rm, mv, chmod, sudo)
-  - Never-allow commands always blocked (rm -rf /, dd of=/dev/, fork bombs)
-  - Session-scoped consent with y/n/always/never options
-  - Keyboard-friendly QuickPick UI in VSCode
-- ✅ **Shared Modules Architecture** - Complete refactoring
-  - `ppxai/common/consent.py` - Unified consent system (21KB)
-  - `ppxai/common/logger.py` - Unified logging (8KB)
-  - `ppxai/common/event_handler.py` - Shared event processing (9KB)
-  - `ppxai/common/commands.py` - Shared command handlers (14KB)
-  - TUI and HTTP server adapters integrated
-- ✅ **Critical Security Fix** - Commands with redirections (cat >, echo >) now require consent
-- ✅ **Configuration** - Added tools.shell section to ppxai-config.json
+- ✅ **Configurable Default Provider** - No more hardcoded "perplexity"
+  - `DEFAULT_PROVIDER` environment variable support
+  - `get_default_provider()` function with smart fallback chain
+  - Falls back to: env var → first available → perplexity
+- ✅ **Provider-Specific Pricing** - Each provider has its own pricing
+  - `get_model_pricing(provider)` function for any provider
+  - Backward compatible: `MODEL_PRICING` global still exists
+- ✅ **AIClientWithTools Alias** - Better naming for provider-agnostic class
+  - `AIClientWithTools` = `PerplexityClientPromptTools` (same class)
+  - Updated docstring: "works with ALL providers"
+  - Both names work for backward compatibility
+
+**Bug Fixes** (from branch `bugfix/gemini-tool-calling`):
+- ✅ **Tools Status Persistence** - Tools now stay ON when switching providers
+  - Before: `/tools enable` on Perplexity → switch to Gemini → Tools OFF ❌
+  - After: Tools remain ON across provider switches ✅
+- ✅ **Gemini Tool Call Parsing** - Fixed nested JSON parsing failure
+  - Before: Gemini showed raw JSON instead of executing tools ❌
+  - After: Gemini tool calls execute correctly ✅
+  - Root cause: Regex pattern broke on nested `arguments` object
 
 **Files Changed**:
-- `ppxai/common/` - NEW shared modules directory
-- `ppxai/engine/client.py` - Added request_shell_consent() and classification
-- `ppxai/engine/session.py` - Shell consent state tracking
-- `ppxai/engine/tools/builtin/shell.py` - Consent integration
-- `ppxai/server/http.py` - Added /shell-consent endpoint
-- `ppxai/commands.py` - TUI consent handler
-- `vscode-extension/src/chatPanel.ts` - QuickPick consent UI
-- `ppxai-config.json` - Shell consent patterns
-- `docs/SHELL_CONSENT_GUIDE.md` - NEW 500+ line security guide
-- `docs/RELEASE-NOTES-v1.11.2.md` - NEW comprehensive release notes
+- `ppxai/config.py` - Added `get_default_provider()` and `get_model_pricing(provider)`
+- `ppxai/commands.py` - Use configurable default, tools persistence fix (lines 388-420)
+- `perplexity_tools_prompt_based.py` - Gemini JSON fix (lines 1054-1083), AIClientWithTools alias
+- `.env.example` - Document `DEFAULT_PROVIDER` option
+- Version updates: `pyproject.toml`, `ppxai/__init__.py`, `vscode-extension/package.json`, `ROADMAP.md`, `README.md`
+- `tests/test_provider_tools_bugfixes.py` - NEW 4 regression tests
+- `docs/BUGFIX-gemini-tool-calling.md` - NEW bug analysis
+- `docs/PROVIDER-TOOLS-COMPATIBILITY.md` - NEW provider tools guide
+- `docs/PROVIDER-ABSTRACTION-REFACTORING.md` - NEW refactoring analysis
+- `docs/RELEASE-NOTES-v1.11.2.2.md` - NEW comprehensive release notes
 
 **Testing**:
-- 308/308 tests passing (100%)
-- Shell consent integration tests
-- Shared modules comprehensive tests
-- Pattern matching edge cases
+- 4/4 new regression tests passing (provider tools bugfixes)
+- Manual TUI testing confirms both bugs fixed
 
-**Branch**: `refactor/shared-modules-adapter` → merged to `master`
+**Impact**:
+- ✅ Adding new providers now requires ZERO code changes (config-only)
+- ✅ Tools work correctly with all providers (Perplexity, Gemini, OpenAI, OpenRouter, Ollama)
+- ✅ Solid foundation for v1.12.0+ features
+
+**Branch**: `bugfix/gemini-tool-calling` → `master`
 
 ---
 
@@ -1412,13 +1421,75 @@ A lightweight web-based chat interface using the same HTTP + SSE backend as the 
 
 ---
 
-### v1.12.0: Per-Provider Tool Configuration (Priority: Medium)
+### v1.12.0: Code Quality & Provider Abstraction (Priority: High)
+
+**Goal**: Complete provider abstraction cleanup and improve developer experience
+
+**Status**: Planned (follows v1.11.2.2 foundation work)
+
+**Detailed Analysis**: [docs/PROVIDER-ABSTRACTION-REFACTORING.md](docs/PROVIDER-ABSTRACTION-REFACTORING.md)
+
+#### Phase 1: Provider Abstraction Cleanup (v1.11.2.2 Follow-up)
+
+**Context**: v1.11.2.2 implemented the functional parts (configurable defaults, provider-specific pricing), but skipped developer experience improvements to avoid breaking changes.
+
+1. **Deprecation Warnings** (Backward Compatible)
+   - Add deprecation warning for `PerplexityClientPromptTools` class name
+     ```python
+     import warnings
+
+     class AIClientWithTools:
+         """AI client with tool-calling capabilities (works with ALL providers)."""
+         pass
+
+     # Deprecated alias
+     PerplexityClientPromptTools = AIClientWithTools
+     warnings.warn(
+         "PerplexityClientPromptTools is deprecated, use AIClientWithTools instead",
+         DeprecationWarning,
+         stacklevel=2
+     )
+     ```
+   - Add deprecation warning for `MODEL_PRICING` global
+     ```python
+     import warnings
+
+     def __getattr__(name):
+         if name == "MODEL_PRICING":
+             warnings.warn(
+                 "MODEL_PRICING is deprecated, use get_model_pricing(provider) instead",
+                 DeprecationWarning,
+                 stacklevel=2
+             )
+             return BUILTIN_PROVIDERS["perplexity"]["pricing"]
+         raise AttributeError(f"module has no attribute '{name}'")
+     ```
+
+2. **Documentation Updates**
+   - Update AGENT.md with new best practices
+   - Update all examples to use `AIClientWithTools`
+   - Add migration guide in CHANGELOG.md
+   - Document deprecation timeline (warnings in v1.12.0, removal in v2.0.0)
+
+3. **Testing**
+   - Add tests for deprecation warnings
+   - Verify all existing code works with warnings
+   - Add examples using new names
+
+**Status After v1.11.2.2**:
+- ✅ Functional implementation complete (adding providers requires zero code changes)
+- ⚠️ Developer experience improvements pending (deprecation warnings)
+- ⚠️ Legacy naming still in use (confusing for new contributors)
+
+**Benefit**: Clearer codebase, easier onboarding, maintains backward compatibility
+
+---
+
+#### Phase 2: Per-Provider Tool Configuration (Priority: Medium)
 
 *Moved from v1.11.0*
 
 **Goal**: Configure which tools are available for each provider
-
-#### Features
 
 1. **Tool Configuration Per Provider**
    - Enable/disable specific tools for each provider
@@ -1872,6 +1943,6 @@ Interested in working on any of these features?
 
 ---
 
-**Last Updated**: December 23, 2025
-**Current Version**: v1.11.2.1
+**Last Updated**: December 24, 2025
+**Current Version**: v1.11.2.2
 **Next Target**: v1.11.3+ (Agentic Workflow Phases 2-6: @git/@tree/agent)

@@ -31,8 +31,13 @@ console = Console()
 
 class PerplexityClientPromptTools:
     """
-    AI client with prompt-based tool support.
-    Works around lack of native function calling.
+    AI client with prompt-based tool support (works with ALL providers).
+
+    NOTE: Despite the name "PerplexityClient", this class works with ALL AI providers
+    (Perplexity, Gemini, OpenAI, OpenRouter, Ollama, etc.) - the name is historical.
+
+    For new code, consider using the AIClientWithTools alias (v1.11.2.2+).
+    Works around lack of native function calling via prompt engineering.
     """
 
     def __init__(
@@ -1322,6 +1327,15 @@ async def example():
     )
 
     await client.cleanup()
+
+
+# =============================================================================
+# Backward-Compatible Alias (v1.11.2.2+)
+# =============================================================================
+# AIClientWithTools is a more accurate name for this class, as it works with
+# ALL providers (not just Perplexity). Both names are supported for backward
+# compatibility.
+AIClientWithTools = PerplexityClientPromptTools
 
 
 if __name__ == "__main__":

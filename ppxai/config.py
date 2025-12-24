@@ -444,6 +444,18 @@ def get_active_pricing() -> dict:
     return get_provider_config().get("pricing", {})
 
 
+def get_model_pricing(provider: str = None) -> dict:
+    """Get pricing for the specified provider.
+
+    Args:
+        provider: Provider ID. If None, uses active provider.
+
+    Returns:
+        Dict of model pricing.
+    """
+    return get_provider_config(provider).get("pricing", {})
+
+
 def get_api_key(provider: str = None) -> str:
     """Get API key for the specified provider from environment.
 
@@ -525,6 +537,31 @@ def get_default_model(provider: str = None) -> str:
         Model ID string.
     """
     return get_provider_config(provider).get("default_model", "")
+
+
+def get_default_provider() -> str:
+    """Get the default provider from environment or configuration.
+
+    Checks in order:
+    1. DEFAULT_PROVIDER environment variable
+    2. First available provider from config/built-ins
+    3. Falls back to "perplexity"
+
+    Returns:
+        Provider ID string.
+    """
+    # Check environment variable first
+    env_provider = os.getenv("DEFAULT_PROVIDER")
+    if env_provider:
+        return env_provider
+
+    # Get first available provider from config
+    available = get_available_providers()
+    if available:
+        return available[0]
+
+    # Fallback to perplexity
+    return "perplexity"
 
 
 def set_active_provider(provider: str) -> bool:

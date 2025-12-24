@@ -188,11 +188,14 @@ class CommandHandler:
     """Handles all slash commands for the application."""
 
     def __init__(self, client, api_key: str, current_model: str, base_url: str = None, provider: str = None):
+        from ppxai.config import get_default_provider, get_base_url
         self.client = client
         self.api_key = api_key
         self.current_model = current_model
-        self.base_url = base_url or "https://api.perplexity.ai"
-        self.provider = provider or "perplexity"
+        # v1.11.2.2: Use configurable default provider instead of hardcoded "perplexity"
+        actual_provider = provider or get_default_provider()
+        self.provider = actual_provider
+        self.base_url = base_url or get_base_url(actual_provider)
         self.tools_available = False
         self.PerplexityClientPromptTools = None
         self.load_tool_config = None
