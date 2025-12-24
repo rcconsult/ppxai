@@ -8,7 +8,77 @@
 
 ---
 
-## Current Release: v1.11.3
+## Current Release: v1.11.4
+
+**Status**: ✅ @git and @tree Context Injection + Unified Architecture
+
+Released: 2025-12-24
+
+**Goal**: Implement context injection for git changes and project structure, unify TUI/VSCode architecture
+
+**New Features**:
+- ✅ **@git Context Injection** - Automatically inject git diff when you type `@git`
+  - Captures both staged and unstaged changes
+  - Formatted with headers: "=== Staged Changes ===" and "=== Unstaged Changes ==="
+  - Shows "No changes in working directory" when clean
+  - Returns None when not in a git repository
+- ✅ **@tree Context Injection** - Automatically inject directory tree when you type `@tree`
+  - Recursive tree generation with ASCII art (├── └── │)
+  - Respects common ignore patterns (.git, __pycache__, node_modules, .venv, etc.)
+  - Configurable max_depth (default: 3 levels)
+  - Shows project stats: directories count, files count
+- ✅ **Combined Context** - Use `@file`, `@git`, and `@tree` together in one message
+  - Example: "Based on @tree, review @git changes to @src/main.py"
+  - AI receives all three contexts: tree + git diff + file content
+- ✅ **TUI Feedback** - Shows what was injected with formatted size
+  - Example: "→ Injected context: @git (31 B)"
+  - Displays for all three: @file, @git, @tree
+
+**Architecture Changes**:
+- ✅ **Unified TUI and VSCode** - Both always use EngineClient (shared engine)
+  - Before: TUI sometimes used legacy code path, VSCode always used EngineClient
+  - After: Both use EngineClient path exclusively (no dual routing)
+- ✅ **EngineClient Always Available** - Created at TUI startup, not just when tools enabled
+  - Context injection works regardless of tools ON/OFF state
+  - Simplified _enable_tools()/_disable_tools() - just toggle tools, keep engine alive
+- ✅ **Event-Based Context Display** - TUIEventHandler shows CONTEXT_INJECTED events
+  - Formats size nicely (B, KB, MB)
+  - Consistent with other event types (TOOL_CALL, TOOL_RESULT, etc.)
+
+**Files Changed**:
+- `ppxai/engine/context.py` - Added `inject_git_context()` and `inject_tree_context()` methods (lines 231-367)
+- `ppxai/commands.py` - EngineClient created in `__init__()` (lines 204-231), always available
+- `ppxai/main.py` - Always use EngineClient path, removed dual routing (lines 260-307)
+- `ppxai/common/event_handler.py` - TUIEventHandler displays CONTEXT_INJECTED events (lines 211-233)
+- Version updates: `pyproject.toml`, `ppxai/__init__.py`, `vscode-extension/package.json`
+- `tests/test_context_injection.py` - Added 9 new @git/@tree tests (now 31 total)
+- `docs/CONTEXT-INJECTION.md` - NEW comprehensive user guide
+- `bug-tui-tool-call-20251224.txt` - Bug analysis and fix documentation
+
+**Testing**:
+- 31/31 context injection tests passing (9 new @git/@tree tests)
+- 70/70 command tests passing
+- Manual TUI verification confirmed @git and @tree work correctly
+- Integration tests: Direct ContextInjector + full TUI path verified
+
+**Performance**:
+- TTFT: 1443ms (0.86x baseline - **14% improvement**)
+- Total: 2772ms (0.85x baseline - **15% improvement**)
+- Throughput: 51.4 tokens/sec
+- No performance regression
+
+**Bug Fixes**:
+- ✅ Fixed @git fuzzy-matching to .gitignore (was incorrectly treating @git as filename)
+- ✅ Fixed context injection only working when tools enabled (now works always)
+- ✅ Fixed dual code path in TUI (now uses unified EngineClient exclusively)
+
+**Branch**: `feature/git-tree-context-injections` → `master`
+
+**Documentation**: See [docs/CONTEXT-INJECTION.md](docs/CONTEXT-INJECTION.md) for usage guide and examples.
+
+---
+
+## Previous Release: v1.11.3
 
 **Status**: ✅ Foundation Refactoring + Critical Bugfixes (Consolidates v1.11.2.1 + v1.11.2.2)
 
@@ -65,7 +135,7 @@ Released: 2025-12-24
 
 ---
 
-## Previous Release: v1.11.1
+## v1.11.1
 
 **Status**: ✅ Critical Bugfix - TUI Event-Based Streaming
 
