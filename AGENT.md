@@ -262,11 +262,16 @@ ROADMAP.md                              # Line 11: Current Release: vX.Y.Z
 ROADMAP.md                              # Line 1875: Last Updated: YYYY-MM-DD
 ROADMAP.md                              # Line 1876: Current Version: vX.Y.Z
 
-# Installation instructions (VSIX filename references only!)
+# Installation instructions
 README.md                               # Lines 114, 116: ppxai-X.Y.Z.vsix references
+README.md                               # Lines 120-126: "What's New in vX.Y.Z" section
+vscode-extension/README.md              # Lines 60, 105: ppxai-X.Y.Z.vsix installation commands
 ```
 
-**Important:** In README.md and docs/README.md, do NOT change feature-introduction tags like "NEW (v1.11.2)" - these document when features were added. Only update installation/download filename references (e.g., `ppxai-X.Y.Z.vsix`).
+**Important:**
+- In README.md "What's New" section, update the version number AND the feature list to reflect the current release
+- In installation commands, update VSIX filename references (e.g., `ppxai-X.Y.Z.vsix`)
+- Do NOT change feature-introduction tags like "NEW (v1.11.2)" in documentation - these document when features were first added
 
 **Pro tip:** Use grep to verify all versions are consistent before committing:
 ```bash
@@ -343,20 +348,27 @@ git tag vX.Y.Z
 git push origin master --tags
 ```
 
-##### 5. Create GitHub Release
+##### 5. GitHub Actions Build & Release
+
+**IMPORTANT:** GitHub Actions automatically creates the release when you push the tag. You must add release notes manually after the build completes.
 
 ```bash
-# Use project token to avoid stale env vars
+# 1. Monitor GitHub Actions build (triggered by git push --tags)
 unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN
+gh run watch --exit-status  # Wait for build to complete
 
-# Create release with notes
-gh release create vX.Y.Z \
-  --title "vX.Y.Z - Title" \
-  --notes-file docs/RELEASE-NOTES-vX.Y.Z.md
-
-# Verify release was created
+# 2. Verify release was auto-created with assets
 gh release view vX.Y.Z
+
+# 3. Add comprehensive release notes to the GitHub release
+# (GitHub Actions creates release with default changelog link only)
+gh release edit vX.Y.Z --notes-file docs/RELEASE-NOTES-vX.Y.Z.md
+
+# 4. Verify release notes were added
+gh release view vX.Y.Z | head -50
 ```
+
+**Critical:** Do NOT skip step 3! The auto-generated release only has a basic changelog link. You must add the comprehensive release notes from `docs/RELEASE-NOTES-vX.Y.Z.md`.
 
 ##### 6. Build and Upload Assets
 
@@ -378,13 +390,22 @@ gh release upload vX.Y.Z dist/ppxai-macos-intel dist/ppxai-server-macos-intel
 ##### 7. Post-Release Verification
 
 ```bash
-# 1. Verify all assets are uploaded
+# 1. Verify all assets are uploaded (should show 9 assets for v1.11.3+)
 gh release view vX.Y.Z
+# Expected assets:
+# - ppxai-1.11.3.vsix (VSCode extension)
+# - ppxai-linux-amd64, ppxai-macos-arm64, ppxai-macos-intel, ppxai-windows.exe
+# - ppxai-server-linux-amd64, ppxai-server-macos-arm64, ppxai-server-macos-intel, ppxai-server-windows.exe
 
-# 2. Check GitHub Actions CI/CD completed successfully
+# 2. CRITICAL: Verify release notes are present on GitHub
+# Visit https://github.com/rcconsult/ppxai/releases/tag/vX.Y.Z
+# Should show comprehensive release notes, NOT just "Full Changelog" link
+# If missing, run: gh release edit vX.Y.Z --notes-file docs/RELEASE-NOTES-vX.Y.Z.md
+
+# 3. Check GitHub Actions CI/CD completed successfully
 gh run list --limit 5
 
-# 3. Test installation from release
+# 4. Test installation from release
 # Download and test the binaries work
 curl -L -o /tmp/ppxai-test https://github.com/rcconsult/ppxai/releases/download/vX.Y.Z/ppxai-macos-arm64
 chmod +x /tmp/ppxai-test
@@ -395,12 +416,15 @@ pip install --upgrade ppxai
 python -c "import ppxai; print(ppxai.__version__)"  # Should show X.Y.Z
 ```
 
-##### Common Release Mistakes (Learn from v1.11.2.1!)
+##### Common Release Mistakes
 
 ❌ **DON'T:**
 - Forget to update `ppxai/__init__.py` __version__ (caught in v1.11.2.1)
 - Miss the VSCode activitybar title version (caught in v1.11.2.1)
 - Leave ROADMAP.md with old version (caught in v1.11.2.1)
+- Forget to update README.md "What's New" section (caught in v1.11.3)
+- Forget to update vscode-extension/README.md VSIX commands (caught in v1.11.3)
+- Skip adding release notes to GitHub release (caught in v1.11.3) ⚠️
 - Skip the grep verification step
 - Commit without running tests
 - Use `GITHUB_TOKEN` directly (always unset first!)
@@ -409,9 +433,11 @@ python -c "import ppxai; print(ppxai.__version__)"  # Should show X.Y.Z
 - Follow this checklist line by line
 - Use grep to verify version consistency
 - Run all tests before committing
-- Update ALL 6 version locations
+- Update ALL version locations (pyproject.toml, __init__.py, package.json x2, ROADMAP.md x3, README.md x2, vscode-extension/README.md x2)
+- Add comprehensive release notes to GitHub release with `gh release edit`
 - Use the project token file for gh commands
-- Verify release assets after upload
+- Verify release notes are visible on GitHub releases page
+- Verify all assets uploaded (9 total for v1.11.3+)
 
 ### GitHub CLI Authentication Pattern
 **ALWAYS** use this pattern for `gh` commands:

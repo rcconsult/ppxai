@@ -117,12 +117,13 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
 4. Start the server: `./ppxai-server-macos-arm64` (or your platform's binary)
 5. Open VSCode and click the ppxai icon in the sidebar
 
-**What's New in v1.11.2:**
-- 🔒 **Shell Command Consent** - User consent required for dangerous shell commands (touch, rm, chmod, sudo, etc.)
-- 🎯 **Smart Classification** - Regex-based command risk assessment (safe/dangerous/never)
-- ⌨️ **Keyboard-Friendly UI** - QuickPick interface for consent (no mouse needed!)
-- 🛡️ **Security Fix** - Commands with redirections (`cat >`, `echo >`) now require consent
-- 📖 **Comprehensive Docs** - Full shell consent guide with configuration examples
+**What's New in v1.11.3:**
+- ⚙️ **Configurable Default Provider** - Set default provider via `DEFAULT_PROVIDER` env variable
+- 💰 **Provider-Specific Pricing** - Each provider now has accurate cost estimation
+- 🔧 **Bug Fix: Tools Persistence** - Tools now stay enabled when switching providers
+- 🔧 **Bug Fix: Gemini Tool Parsing** - Fixed nested JSON parsing for Gemini tool calls
+- 🔧 **Bug Fix: Autorouter Provider** - Coding commands now work correctly with all providers
+- 📖 **Better Naming** - Added `AIClientWithTools` alias for clarity
 
 See [vscode-extension/README.md](vscode-extension/README.md) for detailed instructions.
 

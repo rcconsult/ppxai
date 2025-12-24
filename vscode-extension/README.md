@@ -57,7 +57,7 @@ OPENAI_API_KEY=sk-xxxxxxxxxxxx
 #### 3. Install the VSCode extension
 
 ```bash
-code --install-extension ppxai-1.11.1.vsix
+code --install-extension ppxai-1.11.3.vsix
 ```
 
 Or in VSCode: Extensions → `...` menu → "Install from VSIX..."
@@ -111,7 +111,7 @@ OPENAI_API_KEY=sk-xxxxxxxxxxxx
 Download the `.vsix` file from [GitHub Releases](https://github.com/rcconsult/ppxai/releases) and install:
 
 ```bash
-code --install-extension ppxai-1.11.1.vsix
+code --install-extension ppxai-1.11.3.vsix
 ```
 
 Or in VSCode: Extensions → `...` menu → "Install from VSIX..."
