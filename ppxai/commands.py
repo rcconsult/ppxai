@@ -421,7 +421,7 @@ class CommandHandler:
             return
 
         console.print(f"\n[cyan]Generating code for:[/cyan] {args}\n")
-        send_coding_task(self.client, "generate", args, self.current_model)
+        send_coding_task(self.client, "generate", args, self.current_model, self.provider)
 
     def handle_test(self, args: str):
         """Handle /test command."""
@@ -434,7 +434,7 @@ class CommandHandler:
         if file_content:
             console.print(f"\n[cyan]Generating tests for:[/cyan] {args}\n")
             task_message = f"Generate comprehensive unit tests for the following code:\n\n```\n{file_content}\n```"
-            send_coding_task(self.client, "test", task_message, self.current_model)
+            send_coding_task(self.client, "test", task_message, self.current_model, self.provider)
 
     def handle_docs(self, args: str):
         """Handle /docs command."""
@@ -447,7 +447,7 @@ class CommandHandler:
         if file_content:
             console.print(f"\n[cyan]Generating documentation for:[/cyan] {args}\n")
             task_message = f"Generate comprehensive documentation for the following code:\n\n```\n{file_content}\n```"
-            send_coding_task(self.client, "docs", task_message, self.current_model)
+            send_coding_task(self.client, "docs", task_message, self.current_model, self.provider)
 
     def handle_implement(self, args: str):
         """Handle /implement command."""
@@ -458,7 +458,7 @@ class CommandHandler:
             return
 
         console.print(f"\n[cyan]Implementing feature:[/cyan] {args}\n")
-        send_coding_task(self.client, "implement", args, self.current_model)
+        send_coding_task(self.client, "implement", args, self.current_model, self.provider)
 
     def handle_debug(self, args: str):
         """Handle /debug command."""
@@ -468,7 +468,7 @@ class CommandHandler:
             return
 
         console.print(f"\n[cyan]Analyzing error:[/cyan] {args[:100]}...\n")
-        send_coding_task(self.client, "debug", args, self.current_model)
+        send_coding_task(self.client, "debug", args, self.current_model, self.provider)
 
     def handle_explain(self, args: str):
         """Handle /explain command."""
@@ -481,7 +481,7 @@ class CommandHandler:
         if file_content:
             console.print(f"\n[cyan]Explaining code:[/cyan] {args}\n")
             task_message = f"Explain the following code in detail, including logic, design decisions, and how it works:\n\n```\n{file_content}\n```"
-            send_coding_task(self.client, "explain", task_message, self.current_model)
+            send_coding_task(self.client, "explain", task_message, self.current_model, self.provider)
 
     def handle_convert(self, args: str):
         """Handle /convert command."""
@@ -509,7 +509,7 @@ class CommandHandler:
 
         console.print(f"\n[cyan]Converting from {source_lang} to {target_lang}[/cyan]\n")
         task_message = f"Convert the following {source_lang} code to {target_lang}:\n\n```{source_lang}\n{code_to_convert}\n```"
-        send_coding_task(self.client, "convert", task_message, self.current_model)
+        send_coding_task(self.client, "convert", task_message, self.current_model, self.provider)
 
     def handle_autoroute(self, args: str):
         """Handle /autoroute command."""

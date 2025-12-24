@@ -6,9 +6,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.11.2 (Shell Command Consent Security)
+**Current Version:** v1.11.2.1 (Autorouter Bugfix Patch)
 
-**What's New in v1.11.2 (Released 2025-12-22):**
+**What's New in v1.11.2.1 (Released 2025-12-23):**
+- **CRITICAL FIX:** Autorouter now respects current provider for coding commands 🔧
+- **Bug:** When using Gemini/OpenAI/OpenRouter with coding commands (/convert, /generate, etc.), autorouter would incorrectly try to use Perplexity's sonar-pro model causing 404 errors
+- **Root Cause:** 7 command handlers missing provider parameter, falling back to stale global variable
+- **Fixed:** All coding command handlers now pass self.provider to send_coding_task()
+- **Impact:** Fixes 404 errors when using coding commands with non-Perplexity providers
+- **NEW:** Comprehensive autorouter configuration guide at [docs/AUTOROUTER-CONFIG.md](docs/AUTOROUTER-CONFIG.md)
+- **NEW:** Users can customize coding_model per provider in ppxai-config.json
+- **Tests:** 308/308 tests passing (100%), including new Gemini autorouter regression test
+- **Backward Compatible:** Drop-in replacement for v1.11.2
+
+**Previous Release (v1.11.2 - 2025-12-22):**
 - **NEW:** Shell command consent system for secure AI command execution 🔒
 - **Smart Classification:** Regex-based command risk assessment (safe/dangerous/never)
 - **Safe Commands:** Auto-approved read-only operations (ls, cat, grep, pwd)
