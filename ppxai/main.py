@@ -32,13 +32,14 @@ def get_status_line(client, current_model, handler):
     provider_config = get_provider_config(client.provider)
     provider_name = provider_config["name"]
 
-    # Get tools status
-    tools_enabled = (
-        handler.tools_available and
-        handler.PerplexityClientPromptTools and
-        isinstance(client, handler.PerplexityClientPromptTools) and
-        client.enable_tools
-    )
+    # Get tools status - prefer engine_client.tools_enabled (v1.11.5 fix)
+    tools_enabled = False
+    if handler.engine_client:
+        tools_enabled = handler.engine_client.tools_enabled
+    elif (handler.tools_available and
+          handler.PerplexityClientPromptTools and
+          isinstance(client, handler.PerplexityClientPromptTools)):
+        tools_enabled = client.enable_tools
     tools_status = "[green]ON[/green]" if tools_enabled else "[dim]OFF[/dim]"
 
     # Get model display name (use ID if not found)
@@ -329,9 +330,18 @@ def main():
                 console.print("[yellow]  • Or continue typing to resume[/yellow]\n")
 
                 # Cleanup conversation history if interrupted during streaming
+                # Must clean both legacy client AND engine session to prevent message alternation errors
+                cleaned = False
                 if client.conversation_history and client.conversation_history[-1]["role"] == "user":
                     # User message without assistant response - remove it to maintain alternation
                     client.conversation_history.pop()
+                    cleaned = True
+                # Also cleanup engine session (v1.11.5 fix)
+                if handler.engine_client and handler.engine_client.session.messages:
+                    if handler.engine_client.session.messages[-1].role == "user":
+                        handler.engine_client.session.remove_last_message()
+                        cleaned = True
+                if cleaned:
                     console.print("[dim]Conversation history cleaned up. Message chain is in a sane state.[/dim]\n")
             else:
                 # Second Ctrl-C: Exit gracefully

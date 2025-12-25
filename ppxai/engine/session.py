@@ -79,6 +79,21 @@ class SessionManager:
         """
         return [{"role": m.role, "content": m.content} for m in self.messages]
 
+    def remove_last_message(self) -> bool:
+        """Remove the last message from conversation history.
+
+        Used to cleanup interrupted messages (e.g., Ctrl-C during streaming)
+        to maintain proper user/assistant message alternation.
+
+        Returns:
+            True if a message was removed, False if history was empty
+        """
+        if self.messages:
+            self.messages.pop()
+            self.metadata["message_count"] = len(self.messages)
+            return True
+        return False
+
     def clear(self):
         """Clear conversation history and reset consent state."""
         self.messages = []

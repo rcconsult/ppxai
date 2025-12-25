@@ -85,6 +85,40 @@ def test_session_consent_state_cleared_on_clear():
     assert session.edit_consent_mode == 'ask'
 
 
+def test_session_remove_last_message():
+    """Test that remove_last_message works correctly for Ctrl-C cleanup (v1.11.5)."""
+    from ppxai.engine.types import Message
+    session = SessionManager()
+
+    # Add some messages
+    session.add_message(Message(role="user", content="Hello"))
+    session.add_message(Message(role="assistant", content="Hi there!"))
+    session.add_message(Message(role="user", content="Interrupted message"))
+
+    assert len(session.messages) == 3
+    assert session.messages[-1].role == "user"
+
+    # Remove last message (simulating Ctrl-C during streaming)
+    result = session.remove_last_message()
+
+    assert result is True
+    assert len(session.messages) == 2
+    assert session.messages[-1].role == "assistant"
+    assert session.metadata["message_count"] == 2
+
+
+def test_session_remove_last_message_empty():
+    """Test that remove_last_message returns False for empty session."""
+    session = SessionManager()
+
+    assert len(session.messages) == 0
+
+    result = session.remove_last_message()
+
+    assert result is False
+    assert len(session.messages) == 0
+
+
 # === Consent Flow Tests ===
 
 @pytest.mark.asyncio
