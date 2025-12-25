@@ -111,19 +111,20 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
 
 1. Download from [Releases](../../releases):
    - `ppxai-server-{platform}` (server binary for macOS ARM/Intel, Linux, Windows)
-   - `ppxai-1.11.3.vsix` (VSCode extension)
+   - `ppxai-1.11.4.vsix` (VSCode extension)
 2. Create a `.env` file with your API key (in project folder or `~/.ppxai/.env`)
-3. Install the extension: `code --install-extension ppxai-1.11.3.vsix`
+3. Install the extension: `code --install-extension ppxai-1.11.4.vsix`
 4. Start the server: `./ppxai-server-macos-arm64` (or your platform's binary)
 5. Open VSCode and click the ppxai icon in the sidebar
 
-**What's New in v1.11.3:**
-- ⚙️ **Configurable Default Provider** - Set default provider via `DEFAULT_PROVIDER` env variable
-- 💰 **Provider-Specific Pricing** - Each provider now has accurate cost estimation
-- 🔧 **Bug Fix: Tools Persistence** - Tools now stay enabled when switching providers
-- 🔧 **Bug Fix: Gemini Tool Parsing** - Fixed nested JSON parsing for Gemini tool calls
-- 🔧 **Bug Fix: Autorouter Provider** - Coding commands now work correctly with all providers
-- 📖 **Better Naming** - Added `AIClientWithTools` alias for clarity
+**What's New in v1.11.4:**
+- 🎯 **@git Context Injection** - Type `@git` to automatically inject git diff (staged + unstaged changes)
+- 🌳 **@tree Context Injection** - Type `@tree` to automatically inject directory tree structure
+- 🔗 **Combined Contexts** - Use `@file`, `@git`, and `@tree` together in one message
+- 🏗️ **Unified Architecture** - TUI and VSCode now both use shared EngineClient (no dual code paths)
+- ⚡ **Performance** - 14-15% improvement in TTFT and total response time
+- 🔧 **Bug Fix** - @git no longer fuzzy-matches to .gitignore
+- 🔧 **Bug Fix** - Context injection now works regardless of tools ON/OFF state
 
 See [vscode-extension/README.md](vscode-extension/README.md) for detailed instructions.
 
