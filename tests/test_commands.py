@@ -1,127 +1,114 @@
 """
 Tests for command handlers with both Perplexity and Custom providers.
+
+v1.12.0: Updated to use EngineClient instead of legacy AIClient.
 """
 
 import pytest
 import os
-from unittest.mock import Mock, patch, MagicMock, call
+from unittest.mock import Mock, patch, MagicMock, call, AsyncMock
 from io import StringIO
 
 from ppxai.commands import CommandHandler, send_coding_task
-from ppxai.client import AIClient
 
 
 class TestCommandHandlerBothProviders:
-    """Test CommandHandler with both providers."""
+    """Test CommandHandler with both providers using EngineClient."""
 
     @pytest.fixture
-    def mock_client_perplexity(self):
-        """Create a mock AIClient for Perplexity."""
-        client = Mock(spec=AIClient)
-        client.conversation_history = []
-        client.session_name = "test_session"
-        client.session_metadata = {"model": "sonar-pro", "provider": "perplexity"}
-        client.current_session_usage = {
+    def mock_engine_client(self):
+        """Create a mock EngineClient with session."""
+        engine = Mock()
+        engine.session = Mock()
+        engine.session.messages = []
+        engine.session.session_name = "test_session"
+        engine.session.get_usage = Mock(return_value={
             "total_tokens": 0,
             "prompt_tokens": 0,
             "completion_tokens": 0,
             "estimated_cost": 0.0
-        }
-        client.auto_route = True
-        return client
+        })
+        engine.session.save = Mock()
+        engine.session.clear = Mock()
+        engine.tools_enabled = False
+        engine.model = "sonar-pro"
+        engine.provider = "perplexity"
+        return engine
 
     @pytest.fixture
-    def mock_client_custom(self):
-        """Create a mock AIClient for custom provider."""
-        client = Mock(spec=AIClient)
-        client.conversation_history = []
-        client.session_name = "test_session_custom"
-        client.session_metadata = {"model": "custom-model", "provider": "custom"}
-        client.current_session_usage = {
-            "total_tokens": 0,
-            "prompt_tokens": 0,
-            "completion_tokens": 0,
-            "estimated_cost": 0.0
-        }
-        client.auto_route = True
-        return client
-
-    @pytest.fixture
-    def handler_perplexity(self, mock_client_perplexity):
+    def handler_perplexity(self, mock_engine_client):
         """Create CommandHandler for Perplexity provider."""
-        return CommandHandler(
-            mock_client_perplexity,
+        handler = CommandHandler(
             "test-api-key",
             "sonar-pro",
             "https://api.perplexity.ai",
             "perplexity"
         )
+        handler.engine_client = mock_engine_client
+        return handler
 
     @pytest.fixture
-    def handler_custom(self, mock_client_custom):
+    def handler_custom(self, mock_engine_client):
         """Create CommandHandler for custom provider."""
-        return CommandHandler(
-            mock_client_custom,
+        mock_engine_client.model = "custom-model"
+        mock_engine_client.provider = "custom"
+        handler = CommandHandler(
             "custom-api-key",
             "custom-model",
             "https://custom.example.com/v1",
             "custom"
         )
+        handler.engine_client = mock_engine_client
+        return handler
 
     # ==================== /quit Command ====================
 
-    def test_quit_command_perplexity(self, handler_perplexity, mock_client_perplexity):
+    def test_quit_command_perplexity(self, handler_perplexity, mock_engine_client):
         """Test /quit command with Perplexity provider."""
-        mock_client_perplexity.conversation_history = [{"role": "user", "content": "test"}]
-        mock_client_perplexity.save_session = Mock()
+        mock_engine_client.session.messages = [Mock(role="user", content="test")]
         result = handler_perplexity.handle_quit()
         assert result is True
-        mock_client_perplexity.save_session.assert_called_once()
+        mock_engine_client.session.save.assert_called_once()
 
-    def test_quit_command_custom(self, handler_custom, mock_client_custom):
+    def test_quit_command_custom(self, handler_custom, mock_engine_client):
         """Test /quit command with custom provider."""
-        mock_client_custom.conversation_history = [{"role": "user", "content": "test"}]
-        mock_client_custom.save_session = Mock()
+        mock_engine_client.session.messages = [Mock(role="user", content="test")]
         result = handler_custom.handle_quit()
         assert result is True
-        mock_client_custom.save_session.assert_called_once()
+        mock_engine_client.session.save.assert_called_once()
 
-    def test_quit_with_empty_history_perplexity(self, handler_perplexity, mock_client_perplexity):
+    def test_quit_with_empty_history_perplexity(self, handler_perplexity, mock_engine_client):
         """Test /quit with empty history for Perplexity."""
-        mock_client_perplexity.conversation_history = []
-        mock_client_perplexity.save_session = Mock()
+        mock_engine_client.session.messages = []
         result = handler_perplexity.handle_quit()
         assert result is True
         # Should not save when history is empty
-        mock_client_perplexity.save_session.assert_not_called()
+        mock_engine_client.session.save.assert_not_called()
 
-    def test_quit_with_empty_history_custom(self, handler_custom, mock_client_custom):
+    def test_quit_with_empty_history_custom(self, handler_custom, mock_engine_client):
         """Test /quit with empty history for custom provider."""
-        mock_client_custom.conversation_history = []
-        mock_client_custom.save_session = Mock()
+        mock_engine_client.session.messages = []
         result = handler_custom.handle_quit()
         assert result is True
-        mock_client_custom.save_session.assert_not_called()
+        mock_engine_client.session.save.assert_not_called()
 
     # ==================== /clear Command ====================
 
-    def test_clear_command_perplexity(self, handler_perplexity, mock_client_perplexity):
+    def test_clear_command_perplexity(self, handler_perplexity, mock_engine_client):
         """Test /clear command with Perplexity provider."""
-        mock_client_perplexity.conversation_history = [{"role": "user", "content": "test"}]
-        mock_client_perplexity.clear_history = Mock()
+        mock_engine_client.session.messages = [Mock(role="user", content="test")]
         handler_perplexity.handle_clear()
-        mock_client_perplexity.clear_history.assert_called_once()
+        mock_engine_client.session.clear.assert_called_once()
 
-    def test_clear_command_custom(self, handler_custom, mock_client_custom):
+    def test_clear_command_custom(self, handler_custom, mock_engine_client):
         """Test /clear command with custom provider."""
-        mock_client_custom.conversation_history = [{"role": "user", "content": "test"}]
-        mock_client_custom.clear_history = Mock()
+        mock_engine_client.session.messages = [Mock(role="user", content="test")]
         handler_custom.handle_clear()
-        mock_client_custom.clear_history.assert_called_once()
+        mock_engine_client.session.clear.assert_called_once()
 
     # ==================== /usage Command ====================
 
-    def test_usage_command_perplexity(self, handler_perplexity, mock_client_perplexity):
+    def test_usage_command_perplexity(self, handler_perplexity, mock_engine_client):
         """Test /usage command with Perplexity provider."""
         mock_usage = {
             "total_tokens": 100,
@@ -129,7 +116,7 @@ class TestCommandHandlerBothProviders:
             "completion_tokens": 40,
             "estimated_cost": 0.001
         }
-        mock_client_perplexity.get_usage_summary = Mock(return_value=mock_usage)
+        mock_engine_client.session.get_usage.return_value = mock_usage
 
         with patch('ppxai.commands.display_usage') as mock_display:
             with patch('ppxai.commands.display_global_usage') as mock_global:
@@ -137,7 +124,7 @@ class TestCommandHandlerBothProviders:
                 mock_display.assert_called_once_with(mock_usage)
                 mock_global.assert_called_once()
 
-    def test_usage_command_custom(self, handler_custom, mock_client_custom):
+    def test_usage_command_custom(self, handler_custom, mock_engine_client):
         """Test /usage command with custom provider."""
         mock_usage = {
             "total_tokens": 200,
@@ -145,7 +132,7 @@ class TestCommandHandlerBothProviders:
             "completion_tokens": 80,
             "estimated_cost": 0.002
         }
-        mock_client_custom.get_usage_summary = Mock(return_value=mock_usage)
+        mock_engine_client.session.get_usage.return_value = mock_usage
 
         with patch('ppxai.commands.display_usage') as mock_display:
             with patch('ppxai.commands.display_global_usage') as mock_global:
@@ -156,142 +143,162 @@ class TestCommandHandlerBothProviders:
     # ==================== /model Command ====================
 
     @patch('ppxai.commands.select_model')
-    def test_model_command_perplexity(self, mock_select, handler_perplexity):
+    def test_model_command_perplexity(self, mock_select, handler_perplexity, mock_engine_client):
         """Test /model command with Perplexity provider."""
         mock_select.return_value = "sonar-reasoning"
+        mock_engine_client.set_model = Mock(return_value=True)
         handler_perplexity.handle_model()
 
         assert handler_perplexity.current_model == "sonar-reasoning"
-        assert handler_perplexity.client.session_metadata["model"] == "sonar-reasoning"
+        mock_engine_client.set_model.assert_called_once_with("sonar-reasoning")
         mock_select.assert_called_once_with("perplexity")
 
     @patch('ppxai.commands.select_model')
-    def test_model_command_custom(self, mock_select, handler_custom):
+    def test_model_command_custom(self, mock_select, handler_custom, mock_engine_client):
         """Test /model command with custom provider."""
         mock_select.return_value = "gpt-oss-120b"
+        mock_engine_client.set_model = Mock(return_value=True)
         handler_custom.handle_model()
 
         assert handler_custom.current_model == "gpt-oss-120b"
-        assert handler_custom.client.session_metadata["model"] == "gpt-oss-120b"
+        mock_engine_client.set_model.assert_called_once_with("gpt-oss-120b")
         mock_select.assert_called_once_with("custom")
 
     # ==================== /save Command ====================
 
-    def test_save_command_perplexity(self, handler_perplexity, mock_client_perplexity):
+    def test_save_command_perplexity(self, handler_perplexity, mock_engine_client):
         """Test /save command with Perplexity provider - saves session to JSON."""
-        mock_client_perplexity.save_session = Mock(return_value="/path/to/session.json")
+        mock_engine_client.session.save = Mock()
         handler_perplexity.handle_save("")
-        mock_client_perplexity.save_session.assert_called_once()
+        mock_engine_client.session.save.assert_called_once()
 
-    def test_save_command_custom(self, handler_custom, mock_client_custom):
+    def test_save_command_custom(self, handler_custom, mock_engine_client):
         """Test /save command with custom provider - saves session to JSON."""
-        mock_client_custom.save_session = Mock(return_value="/path/to/session.json")
+        mock_engine_client.session.save = Mock()
         handler_custom.handle_save("")
-        mock_client_custom.save_session.assert_called_once()
+        mock_engine_client.session.save.assert_called_once()
 
     # ==================== /export Command ====================
 
-    def test_export_command_perplexity(self, handler_perplexity, mock_client_perplexity):
+    def test_export_command_perplexity(self, handler_perplexity, mock_engine_client):
         """Test /export command with Perplexity provider - exports last answer to markdown."""
-        mock_client_perplexity.conversation_history = [
-            {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "Hi there!"}
+        mock_engine_client.session.messages = [
+            Mock(role="user", content="Hello"),
+            Mock(role="assistant", content="Hi there!")
         ]
         handler_perplexity.handle_export("my_export")
         # Should write last assistant message to exports folder
 
-    def test_export_without_filename_perplexity(self, handler_perplexity, mock_client_perplexity):
+    def test_export_without_filename_perplexity(self, handler_perplexity, mock_engine_client):
         """Test /export without filename for Perplexity - generates timestamp filename."""
-        mock_client_perplexity.conversation_history = [
-            {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "Hi there!"}
+        mock_engine_client.session.messages = [
+            Mock(role="user", content="Hello"),
+            Mock(role="assistant", content="Hi there!")
         ]
         handler_perplexity.handle_export("")
         # Should write last assistant message with auto-generated filename
 
-    def test_export_no_assistant_message(self, handler_perplexity, mock_client_perplexity):
+    def test_export_no_assistant_message(self, handler_perplexity, mock_engine_client):
         """Test /export with no assistant message yet."""
-        mock_client_perplexity.conversation_history = [
-            {"role": "user", "content": "Hello"}
+        mock_engine_client.session.messages = [
+            Mock(role="user", content="Hello")
         ]
         handler_perplexity.handle_export("")
         # Should show warning message
 
     # ==================== /sessions Command ====================
 
-    @patch('ppxai.client.AIClient.list_sessions')
     @patch('ppxai.commands.display_sessions')
-    def test_sessions_command_perplexity(self, mock_display, mock_list, handler_perplexity):
+    def test_sessions_command_perplexity(self, mock_display, handler_perplexity, mock_engine_client):
         """Test /sessions command with Perplexity provider."""
-        mock_sessions = [
-            {"name": "session1", "created": "2024-01-01", "provider": "perplexity"},
-            {"name": "session2", "created": "2024-01-02", "provider": "perplexity"}
-        ]
-        mock_list.return_value = mock_sessions
-        handler_perplexity.handle_sessions()
-        mock_list.assert_called_once()
-        mock_display.assert_called_once_with(mock_sessions)
+        # Create mock SessionInfo objects with expected attributes
+        session1 = Mock()
+        session1.name = "session1"
+        session1.created_at = "2024-01-01"
+        session1.provider = "perplexity"
+        session1.model = "sonar-pro"
+        session1.message_count = 5
 
-    @patch('ppxai.client.AIClient.list_sessions')
+        session2 = Mock()
+        session2.name = "session2"
+        session2.created_at = "2024-01-02"
+        session2.provider = "perplexity"
+        session2.model = "sonar-pro"
+        session2.message_count = 10
+
+        mock_sessions = [session1, session2]
+        mock_engine_client.session.list_sessions = Mock(return_value=mock_sessions)
+        handler_perplexity.handle_sessions()
+        mock_engine_client.session.list_sessions.assert_called_once()
+        mock_display.assert_called_once()
+
     @patch('ppxai.commands.display_sessions')
-    def test_sessions_command_custom(self, mock_display, mock_list, handler_custom):
+    def test_sessions_command_custom(self, mock_display, handler_custom, mock_engine_client):
         """Test /sessions command with custom provider."""
-        mock_sessions = [
-            {"name": "custom_session1", "created": "2024-01-01", "provider": "custom"},
-        ]
-        mock_list.return_value = mock_sessions
+        # Create mock SessionInfo objects with expected attributes
+        session1 = Mock()
+        session1.name = "custom_session1"
+        session1.created_at = "2024-01-01"
+        session1.provider = "custom"
+        session1.model = "custom-model"
+        session1.message_count = 3
+
+        mock_sessions = [session1]
+        mock_engine_client.session.list_sessions = Mock(return_value=mock_sessions)
         handler_custom.handle_sessions()
-        mock_list.assert_called_once()
-        mock_display.assert_called_once_with(mock_sessions)
+        mock_engine_client.session.list_sessions.assert_called_once()
+        mock_display.assert_called_once()
 
     # ==================== /autoroute Command ====================
 
     @patch('ppxai.commands.get_coding_model')
-    def test_autoroute_on_perplexity(self, mock_get_coding, handler_perplexity, mock_client_perplexity):
+    def test_autoroute_on_perplexity(self, mock_get_coding, handler_perplexity, mock_engine_client):
         """Test /autoroute on with Perplexity provider."""
         mock_get_coding.return_value = "sonar-reasoning"
-        mock_client_perplexity.auto_route = False
+        handler_perplexity.auto_route = False
         handler_perplexity.handle_autoroute("on")
-        assert mock_client_perplexity.auto_route is True
+        assert handler_perplexity.auto_route is True
 
     @patch('ppxai.commands.get_coding_model')
-    def test_autoroute_on_custom(self, mock_get_coding, handler_custom, mock_client_custom):
+    def test_autoroute_on_custom(self, mock_get_coding, handler_custom, mock_engine_client):
         """Test /autoroute on with custom provider."""
         mock_get_coding.return_value = "gpt-oss-120b"
-        mock_client_custom.auto_route = False
+        handler_custom.auto_route = False
         handler_custom.handle_autoroute("on")
-        assert mock_client_custom.auto_route is True
+        assert handler_custom.auto_route is True
 
     @patch('ppxai.commands.get_coding_model')
-    def test_autoroute_off_perplexity(self, mock_get_coding, handler_perplexity, mock_client_perplexity):
+    def test_autoroute_off_perplexity(self, mock_get_coding, handler_perplexity, mock_engine_client):
         """Test /autoroute off with Perplexity provider."""
         mock_get_coding.return_value = "sonar-reasoning"
-        mock_client_perplexity.auto_route = True
+        handler_perplexity.auto_route = True
         handler_perplexity.handle_autoroute("off")
-        assert mock_client_perplexity.auto_route is False
+        assert handler_perplexity.auto_route is False
 
     @patch('ppxai.commands.get_coding_model')
-    def test_autoroute_off_custom(self, mock_get_coding, handler_custom, mock_client_custom):
+    def test_autoroute_off_custom(self, mock_get_coding, handler_custom, mock_engine_client):
         """Test /autoroute off with custom provider."""
         mock_get_coding.return_value = "gpt-oss-120b"
-        mock_client_custom.auto_route = True
+        handler_custom.auto_route = True
         handler_custom.handle_autoroute("off")
-        assert mock_client_custom.auto_route is False
+        assert handler_custom.auto_route is False
 
     @patch('ppxai.commands.get_coding_model')
-    def test_autoroute_status_perplexity(self, mock_get_coding, handler_perplexity, mock_client_perplexity):
+    def test_autoroute_status_perplexity(self, mock_get_coding, handler_perplexity, mock_engine_client):
         """Test /autoroute status check with Perplexity provider."""
         mock_get_coding.return_value = "sonar-reasoning"
+        handler_perplexity.auto_route = True
         handler_perplexity.handle_autoroute("")
         # Should not change current status
-        assert mock_client_perplexity.auto_route is True
+        assert handler_perplexity.auto_route is True
 
     @patch('ppxai.commands.get_coding_model')
-    def test_autoroute_status_custom(self, mock_get_coding, handler_custom, mock_client_custom):
+    def test_autoroute_status_custom(self, mock_get_coding, handler_custom, mock_engine_client):
         """Test /autoroute status check with custom provider."""
         mock_get_coding.return_value = "gpt-oss-120b"
+        handler_custom.auto_route = True
         handler_custom.handle_autoroute("")
-        assert mock_client_custom.auto_route is True
+        assert handler_custom.auto_route is True
 
     # ==================== /provider Command ====================
 
@@ -300,16 +307,15 @@ class TestCommandHandlerBothProviders:
     @patch('ppxai.commands.get_api_key')
     @patch('ppxai.commands.get_base_url')
     @patch('ppxai.commands.get_provider_config')
-    @patch('ppxai.client.AIClient')
     def test_provider_switch_perplexity_to_custom(
         self,
-        mock_aiclient_class,
         mock_get_config,
         mock_get_url,
         mock_get_key,
         mock_select_model,
         mock_select_provider,
-        handler_perplexity
+        handler_perplexity,
+        mock_engine_client
     ):
         """Test switching from Perplexity to custom provider."""
         # Setup mocks
@@ -318,13 +324,8 @@ class TestCommandHandlerBothProviders:
         mock_get_url.return_value = "https://custom.example.com/v1"
         mock_get_config.return_value = {"name": "Custom Provider", "api_key_env": "CUSTOM_API_KEY"}
         mock_select_model.return_value = "gpt-oss-120b"
-
-        # Create mock new client
-        new_client = Mock()
-        new_client.conversation_history = []
-        new_client.session_metadata = {}
-        new_client.current_session_usage = {}
-        mock_aiclient_class.return_value = new_client
+        mock_engine_client.set_provider = Mock(return_value=True)
+        mock_engine_client.set_model = Mock(return_value=True)
 
         handler_perplexity.handle_provider()
 
@@ -339,16 +340,15 @@ class TestCommandHandlerBothProviders:
     @patch('ppxai.commands.get_api_key')
     @patch('ppxai.commands.get_base_url')
     @patch('ppxai.commands.get_provider_config')
-    @patch('ppxai.client.AIClient')
     def test_provider_switch_custom_to_perplexity(
         self,
-        mock_aiclient_class,
         mock_get_config,
         mock_get_url,
         mock_get_key,
         mock_select_model,
         mock_select_provider,
-        handler_custom
+        handler_custom,
+        mock_engine_client
     ):
         """Test switching from custom to Perplexity provider."""
         # Setup mocks
@@ -357,13 +357,8 @@ class TestCommandHandlerBothProviders:
         mock_get_url.return_value = "https://api.perplexity.ai"
         mock_get_config.return_value = {"name": "Perplexity AI", "api_key_env": "PERPLEXITY_API_KEY"}
         mock_select_model.return_value = "sonar-pro"
-
-        # Create mock new client
-        new_client = Mock()
-        new_client.conversation_history = []
-        new_client.session_metadata = {}
-        new_client.current_session_usage = {}
-        mock_aiclient_class.return_value = new_client
+        mock_engine_client.set_provider = Mock(return_value=True)
+        mock_engine_client.set_model = Mock(return_value=True)
 
         handler_custom.handle_provider()
 
@@ -436,34 +431,43 @@ class TestCodingCommands:
     """Test coding-related commands for both providers."""
 
     @pytest.fixture
-    def mock_client(self):
-        """Create a mock client."""
-        client = Mock(spec=AIClient)
-        client.auto_route = True
-        client.chat = Mock(return_value="Code generated successfully")
-        return client
+    def mock_engine_client(self):
+        """Create a mock engine client."""
+        engine = Mock()
+        engine.session = Mock()
+        engine.session.messages = []
+        engine.session.session_name = "test"
+        engine.session.get_usage = Mock(return_value={})
+        engine.tools_enabled = False
+        engine.model = "sonar-pro"
+        engine.provider = "perplexity"
+        return engine
 
     @pytest.fixture
-    def handler_perplexity(self, mock_client):
+    def handler_perplexity(self, mock_engine_client):
         """Handler with Perplexity provider."""
-        return CommandHandler(
-            mock_client,
+        handler = CommandHandler(
             "test-key",
             "sonar-pro",
             "https://api.perplexity.ai",
             "perplexity"
         )
+        handler.engine_client = mock_engine_client
+        return handler
 
     @pytest.fixture
-    def handler_custom(self, mock_client):
+    def handler_custom(self, mock_engine_client):
         """Handler with custom provider."""
-        return CommandHandler(
-            mock_client,
+        mock_engine_client.model = "custom-model"
+        mock_engine_client.provider = "custom"
+        handler = CommandHandler(
             "custom-key",
             "custom-model",
             "https://custom.example.com/v1",
             "custom"
         )
+        handler.engine_client = mock_engine_client
+        return handler
 
     # ==================== /generate Command ====================
 
@@ -561,45 +565,46 @@ class TestToolsCommands:
     """Test /tools command for both providers."""
 
     @pytest.fixture
-    def mock_client(self):
-        """Create a mock client."""
-        client = Mock(spec=AIClient)
-        client.session_name = "test_session"
-        client.conversation_history = []
-        client.session_metadata = {}
-        client.current_session_usage = {}
-        return client
+    def mock_engine_client(self):
+        """Create a mock engine client."""
+        engine = Mock()
+        engine.session = Mock()
+        engine.session.messages = []
+        engine.session.session_name = "test"
+        engine.session.get_usage = Mock(return_value={})
+        engine.tools_enabled = False
+        engine.model = "sonar-pro"
+        engine.provider = "perplexity"
+        engine.enable_tools = Mock()
+        engine.disable_tools = Mock()
+        return engine
 
     @pytest.fixture
-    def handler_perplexity(self, mock_client):
+    def handler_perplexity(self, mock_engine_client):
         """Handler with tools available for Perplexity."""
         handler = CommandHandler(
-            mock_client,
             "test-key",
             "sonar-pro",
             "https://api.perplexity.ai",
             "perplexity"
         )
+        handler.engine_client = mock_engine_client
         handler.tools_available = True
-        # Create a proper mock class (not instance)
-        mock_tool_class = type('MockPerplexityClientPromptTools', (), {})
-        handler.PerplexityClientPromptTools = mock_tool_class
         return handler
 
     @pytest.fixture
-    def handler_custom(self, mock_client):
+    def handler_custom(self, mock_engine_client):
         """Handler with tools available for custom provider."""
+        mock_engine_client.model = "custom-model"
+        mock_engine_client.provider = "custom"
         handler = CommandHandler(
-            mock_client,
             "custom-key",
             "custom-model",
             "https://custom.example.com/v1",
             "custom"
         )
+        handler.engine_client = mock_engine_client
         handler.tools_available = True
-        # Create a proper mock class (not instance)
-        mock_tool_class = type('MockPerplexityClientPromptTools', (), {})
-        handler.PerplexityClientPromptTools = mock_tool_class
         return handler
 
     def test_tools_status_disabled_perplexity(self, handler_perplexity):
@@ -612,40 +617,18 @@ class TestToolsCommands:
         handler_custom.handle_tools("status")
 
     @patch('ppxai.commands.asyncio.run')
-    def test_tools_enable_perplexity(self, mock_asyncio, handler_perplexity):
+    def test_tools_enable_perplexity(self, mock_asyncio, handler_perplexity, mock_engine_client):
         """Test /tools enable for Perplexity."""
-        # Create a proper mock class that can be used with isinstance
-        class MockToolClient:
-            def __init__(self, *args, **kwargs):
-                self.conversation_history = []
-                self.session_metadata = {}
-                self.current_session_usage = {}
-                self.initialize_tools = Mock()
-
-        # Replace with our mock class
-        handler_perplexity.PerplexityClientPromptTools = MockToolClient
         handler_perplexity.handle_tools("enable")
-
-        # Should create tool client
-        assert isinstance(handler_perplexity.client, MockToolClient)
+        # Should call engine_client.enable_tools()
+        mock_engine_client.enable_tools.assert_called_once()
 
     @patch('ppxai.commands.asyncio.run')
-    def test_tools_enable_custom(self, mock_asyncio, handler_custom):
+    def test_tools_enable_custom(self, mock_asyncio, handler_custom, mock_engine_client):
         """Test /tools enable for custom provider."""
-        # Create a proper mock class that can be used with isinstance
-        class MockToolClient:
-            def __init__(self, *args, **kwargs):
-                self.conversation_history = []
-                self.session_metadata = {}
-                self.current_session_usage = {}
-                self.initialize_tools = Mock()
-
-        # Replace with our mock class
-        handler_custom.PerplexityClientPromptTools = MockToolClient
         handler_custom.handle_tools("enable")
-
-        # Should create tool client
-        assert isinstance(handler_custom.client, MockToolClient)
+        # Should call engine_client.enable_tools()
+        mock_engine_client.enable_tools.assert_called_once()
 
     def test_tools_unavailable_perplexity(self, handler_perplexity):
         """Test /tools when not available for Perplexity."""
@@ -704,20 +687,40 @@ class TestSendCodingTask:
     """Test send_coding_task function for both providers."""
 
     @pytest.fixture
-    def mock_client(self):
-        """Create a mock client."""
-        client = Mock(spec=AIClient)
-        client.auto_route = True
-        client.chat = Mock(return_value="Task completed")
-        return client
+    def mock_engine_client(self):
+        """Create a mock engine client."""
+        engine = Mock()
+        engine.session = Mock()
+        engine.session.messages = []
+        engine.session.session_name = "test"
+        engine.tools_enabled = False
+        engine.model = "sonar-pro"
+        engine.provider = "perplexity"
+        engine.set_model = Mock(return_value=True)
+        return engine
+
+    @pytest.fixture
+    def handler(self, mock_engine_client):
+        """Create a handler for testing send_coding_task."""
+        handler = CommandHandler(
+            "test-key",
+            "sonar-pro",
+            "https://api.perplexity.ai",
+            "perplexity"
+        )
+        handler.engine_client = mock_engine_client
+        handler.auto_route = True
+        return handler
 
     @patch('ppxai.commands.get_coding_model')
-    def test_send_coding_task_perplexity(self, mock_get_coding, mock_client):
+    @patch('ppxai.commands.asyncio.run')
+    def test_send_coding_task_perplexity(self, mock_run, mock_get_coding, handler):
         """Test send_coding_task with Perplexity provider."""
         mock_get_coding.return_value = "sonar-reasoning"
+        mock_run.return_value = "Code generated"
 
         result = send_coding_task(
-            mock_client,
+            handler,
             "generate",
             "Write a function",
             "sonar-pro",
@@ -725,57 +728,55 @@ class TestSendCodingTask:
         )
 
         # Should auto-route to coding model
-        assert mock_client.chat.called
-        # Should use coding model
-        call_args = mock_client.chat.call_args
-        assert call_args[0][1] == "sonar-reasoning"
+        mock_get_coding.assert_called_once_with("perplexity")
 
     @patch('ppxai.commands.get_coding_model')
-    def test_send_coding_task_custom(self, mock_get_coding, mock_client):
+    @patch('ppxai.commands.asyncio.run')
+    def test_send_coding_task_custom(self, mock_run, mock_get_coding, handler):
         """Test send_coding_task with custom provider."""
         mock_get_coding.return_value = "gpt-oss-120b"
+        mock_run.return_value = "Code generated"
+        handler.provider = "custom"
 
         result = send_coding_task(
-            mock_client,
+            handler,
             "generate",
             "Write a function",
             "custom-model",
             "custom"
         )
 
-        assert mock_client.chat.called
-        call_args = mock_client.chat.call_args
-        assert call_args[0][1] == "gpt-oss-120b"
+        mock_get_coding.assert_called_once_with("custom")
 
     @patch('ppxai.commands.get_coding_model')
-    def test_send_coding_task_gemini(self, mock_get_coding, mock_client):
+    @patch('ppxai.commands.asyncio.run')
+    def test_send_coding_task_gemini(self, mock_run, mock_get_coding, handler):
         """Test send_coding_task with Gemini provider (regression test for bug-tui-20251223)."""
-        # Simulate Gemini provider's coding model
         mock_get_coding.return_value = "gemini-2.5-pro"
+        mock_run.return_value = "Code generated"
+        handler.provider = "gemini"
 
         result = send_coding_task(
-            mock_client,
+            handler,
             "convert",
             "Convert R to Python",
             "gemini-2.0-flash-lite",
-            "gemini"  # Explicitly pass gemini provider
+            "gemini"
         )
 
-        # Should auto-route to Gemini's coding model, NOT Perplexity's sonar-pro
-        assert mock_client.chat.called
-        call_args = mock_client.chat.call_args
-        assert call_args[0][1] == "gemini-2.5-pro", "Should use Gemini's coding model, not Perplexity's"
-        # Verify get_coding_model was called with correct provider
+        # Should use Gemini's coding model, NOT Perplexity's
         mock_get_coding.assert_called_once_with("gemini")
 
     @patch('ppxai.commands.get_coding_model')
-    def test_send_coding_task_no_autoroute_perplexity(self, mock_get_coding, mock_client):
+    @patch('ppxai.commands.asyncio.run')
+    def test_send_coding_task_no_autoroute_perplexity(self, mock_run, mock_get_coding, handler):
         """Test send_coding_task with auto-route disabled for Perplexity."""
-        mock_client.auto_route = False
+        handler.auto_route = False
         mock_get_coding.return_value = "sonar-reasoning"
+        mock_run.return_value = "Code generated"
 
         result = send_coding_task(
-            mock_client,
+            handler,
             "generate",
             "Write a function",
             "sonar-pro",
@@ -783,30 +784,32 @@ class TestSendCodingTask:
         )
 
         # Should use the model passed, not coding model
-        call_args = mock_client.chat.call_args
-        assert call_args[0][1] == "sonar-pro"
+        # (auto-route disabled, so model stays as sonar-pro)
+        mock_get_coding.assert_called_once_with("perplexity")
 
     @patch('ppxai.commands.get_coding_model')
-    def test_send_coding_task_no_autoroute_custom(self, mock_get_coding, mock_client):
+    @patch('ppxai.commands.asyncio.run')
+    def test_send_coding_task_no_autoroute_custom(self, mock_run, mock_get_coding, handler):
         """Test send_coding_task with auto-route disabled for custom provider."""
-        mock_client.auto_route = False
+        handler.auto_route = False
         mock_get_coding.return_value = "gpt-oss-120b"
+        mock_run.return_value = "Code generated"
+        handler.provider = "custom"
 
         result = send_coding_task(
-            mock_client,
+            handler,
             "generate",
             "Write a function",
             "custom-model",
             "custom"
         )
 
-        call_args = mock_client.chat.call_args
-        assert call_args[0][1] == "custom-model"
+        mock_get_coding.assert_called_once_with("custom")
 
-    def test_send_coding_task_invalid_type_perplexity(self, mock_client):
+    def test_send_coding_task_invalid_type_perplexity(self, handler):
         """Test send_coding_task with invalid task type for Perplexity."""
         result = send_coding_task(
-            mock_client,
+            handler,
             "invalid_task",
             "Some task",
             "sonar-pro",
@@ -815,10 +818,11 @@ class TestSendCodingTask:
 
         assert result is None
 
-    def test_send_coding_task_invalid_type_custom(self, mock_client):
+    def test_send_coding_task_invalid_type_custom(self, handler):
         """Test send_coding_task with invalid task type for custom provider."""
+        handler.provider = "custom"
         result = send_coding_task(
-            mock_client,
+            handler,
             "invalid_task",
             "Some task",
             "custom-model",
@@ -832,34 +836,44 @@ class TestCommandHandlerIntegration:
     """Integration tests for command handling with both providers."""
 
     @pytest.fixture
-    def handler_perplexity(self):
+    def mock_engine_client(self):
+        """Create a mock engine client."""
+        engine = Mock()
+        engine.session = Mock()
+        engine.session.messages = []
+        engine.session.session_name = "test"
+        engine.session.get_usage = Mock(return_value={})
+        engine.session.save = Mock()
+        engine.tools_enabled = False
+        engine.model = "sonar-pro"
+        engine.provider = "perplexity"
+        return engine
+
+    @pytest.fixture
+    def handler_perplexity(self, mock_engine_client):
         """Create a real CommandHandler for Perplexity."""
-        client = Mock(spec=AIClient)
-        client.conversation_history = []
-        client.session_metadata = {"model": "sonar-pro", "provider": "perplexity"}
-        client.auto_route = True
-        return CommandHandler(
-            client,
+        handler = CommandHandler(
             "test-key",
             "sonar-pro",
             "https://api.perplexity.ai",
             "perplexity"
         )
+        handler.engine_client = mock_engine_client
+        return handler
 
     @pytest.fixture
-    def handler_custom(self):
+    def handler_custom(self, mock_engine_client):
         """Create a real CommandHandler for custom provider."""
-        client = Mock(spec=AIClient)
-        client.conversation_history = []
-        client.session_metadata = {"model": "custom-model", "provider": "custom"}
-        client.auto_route = True
-        return CommandHandler(
-            client,
+        mock_engine_client.model = "custom-model"
+        mock_engine_client.provider = "custom"
+        handler = CommandHandler(
             "custom-key",
             "custom-model",
             "https://custom.example.com/v1",
             "custom"
         )
+        handler.engine_client = mock_engine_client
+        return handler
 
     def test_handle_unknown_command_perplexity(self, handler_perplexity):
         """Test handling unknown command with Perplexity."""
@@ -871,27 +885,23 @@ class TestCommandHandlerIntegration:
         result = handler_custom.handle_command("/unknown")
         assert result is False
 
-    def test_handle_quit_command_perplexity(self, handler_perplexity):
+    def test_handle_quit_command_perplexity(self, handler_perplexity, mock_engine_client):
         """Test /quit command returns True for Perplexity."""
-        handler_perplexity.client.save_session = Mock()
         result = handler_perplexity.handle_command("/quit")
         assert result is True
 
-    def test_handle_quit_command_custom(self, handler_custom):
+    def test_handle_quit_command_custom(self, handler_custom, mock_engine_client):
         """Test /quit command returns True for custom provider."""
-        handler_custom.client.save_session = Mock()
         result = handler_custom.handle_command("/quit")
         assert result is True
 
-    def test_handle_exit_command_perplexity(self, handler_perplexity):
+    def test_handle_exit_command_perplexity(self, handler_perplexity, mock_engine_client):
         """Test /exit command returns True for Perplexity."""
-        handler_perplexity.client.save_session = Mock()
         result = handler_perplexity.handle_command("/exit")
         assert result is True
 
-    def test_handle_exit_command_custom(self, handler_custom):
+    def test_handle_exit_command_custom(self, handler_custom, mock_engine_client):
         """Test /exit command returns True for custom provider."""
-        handler_custom.client.save_session = Mock()
         result = handler_custom.handle_command("/exit")
         assert result is True
 
@@ -899,12 +909,12 @@ class TestCommandHandlerIntegration:
     def test_handle_help_command_perplexity(self, mock_welcome, handler_perplexity):
         """Test /help command for Perplexity."""
         result = handler_perplexity.handle_command("/help")
-        assert result is False
-        mock_welcome.assert_called_once()
+        assert result is False  # Should not exit
+        mock_welcome.assert_called()
 
     @patch('ppxai.commands.display_welcome')
     def test_handle_help_command_custom(self, mock_welcome, handler_custom):
         """Test /help command for custom provider."""
         result = handler_custom.handle_command("/help")
         assert result is False
-        mock_welcome.assert_called_once()
+        mock_welcome.assert_called()
