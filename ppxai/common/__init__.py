@@ -14,7 +14,7 @@ Modules:
 - commands: Command execution (slash commands like /tools, /model, etc.)
 - consent: File editing consent management
 
-Version: v1.11.2
+Version: v1.11.7
 """
 
 from ppxai.common.event_handler import EventHandler

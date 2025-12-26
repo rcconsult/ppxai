@@ -9,7 +9,7 @@ Architecture:
 - CommandResult: Structured result that clients can render
 - No direct UI dependencies (Rich, console, etc.)
 
-Version: v1.11.2
+Version: v1.11.7
 """
 
 from dataclasses import dataclass

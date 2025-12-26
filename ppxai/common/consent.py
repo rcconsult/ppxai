@@ -11,7 +11,7 @@ Architecture:
 - ConsentDecision: Enum for decision types (YES, NO, ALWAYS, NEVER)
 - Clients provide consent_callback that returns (approved: bool, decision: str)
 
-Version: v1.11.2
+Version: v1.11.7
 """
 
 import re
