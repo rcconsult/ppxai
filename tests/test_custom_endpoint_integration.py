@@ -2,6 +2,8 @@
 
 This test actually connects to the custom endpoint to verify it works.
 Run with: pytest tests/test_custom_endpoint_integration.py -v -s
+
+NOTE: These tests require a running vLLM/Ollama server with CUSTOM_* env vars configured.
 """
 import os
 import pytest
@@ -21,10 +23,13 @@ def load_env():
 
 
 @pytest.fixture
-def custom_client():
-    """Create a real client connected to the custom endpoint."""
+def custom_engine():
+    """Create a real EngineClient connected to the custom endpoint.
+
+    This fixture requires a custom vLLM/Ollama server to be running
+    and configured via CUSTOM_* env vars or ppxai-config.json.
+    """
     import importlib
-    from ppxai.client import AIClient
 
     # Reload dotenv to ensure we have fresh environment variables
     # This is needed because test_config.py may clear environment
@@ -35,15 +40,28 @@ def custom_client():
     import ppxai.config
     importlib.reload(ppxai.config)
 
-    from ppxai.config import get_api_key, get_base_url
+    from ppxai.config import PROVIDERS
+    from ppxai.engine import EngineClient
 
-    api_key = get_api_key("custom")
-    base_url = get_base_url("custom")
+    # Check if "custom" provider is explicitly configured (not a fallback)
+    if "custom" not in PROVIDERS:
+        pytest.skip("Custom provider not configured in PROVIDERS")
 
+    # Verify it has a custom base_url (not the Perplexity URL)
+    custom_config = PROVIDERS.get("custom", {})
+    base_url = custom_config.get("base_url", "")
+    if "perplexity.ai" in base_url:
+        pytest.skip("Custom provider base_url is Perplexity (fallback) - need real custom endpoint")
+
+    # Check for custom API key
+    api_key_env = custom_config.get("api_key_env", "CUSTOM_API_KEY")
+    api_key = os.getenv(api_key_env, "")
     if not api_key:
-        pytest.skip("CUSTOM_API_KEY not configured")
+        pytest.skip(f"{api_key_env} not configured")
 
-    return AIClient(api_key, base_url, provider="custom")
+    engine = EngineClient()
+    engine.set_provider("custom")
+    return engine
 
 
 @pytest.fixture
@@ -55,27 +73,35 @@ def custom_model_id():
 class TestCustomEndpointIntegration:
     """Integration tests for custom vLLM endpoint."""
 
-    def test_simple_chat_request(self, custom_client, custom_model_id):
+    def test_simple_chat_request(self, custom_engine, custom_model_id):
         """Test a simple chat request to the custom endpoint."""
-        # Send a simple message (non-streaming for easier testing)
-        response = custom_client.chat(
-            "Say 'hello' and nothing else.",
-            model=custom_model_id,
-            stream=False
-        )
+        custom_engine.set_model(custom_model_id)
+
+        # Send a simple message using sync chat
+        response = custom_engine.chat_sync("Say 'hello' and nothing else.")
 
         assert response is not None
         assert len(response) > 0
         assert "hello" in response.lower()
         print(f"\nResponse: {response}")
 
-    def test_streaming_chat_request(self, custom_client, custom_model_id):
+    def test_streaming_chat_request(self, custom_engine, custom_model_id):
         """Test a streaming chat request to the custom endpoint."""
-        response = custom_client.chat(
-            "Count from 1 to 5, one number per line.",
-            model=custom_model_id,
-            stream=True
-        )
+        import asyncio
+        from ppxai.engine.types import EventType
+
+        custom_engine.set_model(custom_model_id)
+
+        async def stream_chat():
+            chunks = []
+            async for event in custom_engine.chat("Count from 1 to 5, one number per line."):
+                if event.type == EventType.STREAM_CHUNK:
+                    chunks.append(event.data)
+                elif event.type == EventType.STREAM_END:
+                    return event.data
+            return "".join(chunks)
+
+        response = asyncio.get_event_loop().run_until_complete(stream_chat())
 
         assert response is not None
         assert len(response) > 0
@@ -83,37 +109,31 @@ class TestCustomEndpointIntegration:
         assert any(str(i) in response for i in range(1, 6))
         print(f"\nStreaming Response: {response}")
 
-    def test_conversation_history(self, custom_client, custom_model_id):
+    def test_conversation_history(self, custom_engine, custom_model_id):
         """Test that conversation history works."""
+        custom_engine.set_model(custom_model_id)
+
         # First message
-        custom_client.chat(
-            "Remember the word 'banana'.",
-            model=custom_model_id,
-            stream=False
-        )
+        custom_engine.chat_sync("Remember the word 'banana'.")
 
         # Second message referencing the first
-        response = custom_client.chat(
-            "What word did I ask you to remember?",
-            model=custom_model_id,
-            stream=False
-        )
+        response = custom_engine.chat_sync("What word did I ask you to remember?")
 
         assert response is not None
         assert "banana" in response.lower()
         print(f"\nMemory test response: {response}")
 
-    def test_usage_tracking(self, custom_client, custom_model_id):
+    def test_usage_tracking(self, custom_engine, custom_model_id):
         """Test that usage is tracked (tokens counted)."""
-        initial_tokens = custom_client.current_session_usage["total_tokens"]
+        custom_engine.set_model(custom_model_id)
 
-        custom_client.chat(
-            "Hello!",
-            model=custom_model_id,
-            stream=False
-        )
+        initial_usage = custom_engine.get_usage()
+        initial_tokens = initial_usage.get("total_tokens", 0)
 
-        final_tokens = custom_client.current_session_usage["total_tokens"]
+        custom_engine.chat_sync("Hello!")
+
+        final_usage = custom_engine.get_usage()
+        final_tokens = final_usage.get("total_tokens", 0)
 
         # Token count should have increased
         print(f"\nTokens used: {final_tokens - initial_tokens}")
@@ -123,14 +143,12 @@ class TestCustomEndpointIntegration:
 class TestCustomEndpointConnectionOnly:
     """Quick connection test - just verifies the endpoint is reachable."""
 
-    def test_endpoint_reachable(self, custom_client, custom_model_id):
+    def test_endpoint_reachable(self, custom_engine, custom_model_id):
         """Test that the custom endpoint is reachable and responds."""
+        custom_engine.set_model(custom_model_id)
+
         try:
-            response = custom_client.chat(
-                "Hi",
-                model=custom_model_id,
-                stream=False
-            )
+            response = custom_engine.chat_sync("Hi")
             print(f"\n[OK] Endpoint reachable! Response: {response[:100]}...")
             assert True
         except Exception as e:
@@ -144,7 +162,17 @@ class TestCustomEndpointCodingTask:
         """Test that custom LLM can generate Python code for Fibonacci problem."""
         import httpx
         from openai import OpenAI
-        from ppxai.config import get_api_key, get_base_url
+        from ppxai.config import PROVIDERS, get_api_key, get_base_url
+
+        # Check if "custom" provider is explicitly configured (not a fallback)
+        if "custom" not in PROVIDERS:
+            pytest.skip("Custom provider not configured in PROVIDERS")
+
+        # Verify it has a custom base_url (not the Perplexity URL)
+        custom_config = PROVIDERS.get("custom", {})
+        provider_base_url = custom_config.get("base_url", "")
+        if "perplexity.ai" in provider_base_url:
+            pytest.skip("Custom provider base_url is Perplexity (fallback) - need real custom endpoint")
 
         # Create client directly to bypass Rich console output issues
         api_key = get_api_key("custom")

@@ -96,10 +96,10 @@ class ToolManager:
         """List available tools as dictionaries.
 
         Returns:
-            List of tool info dicts with name and description
+            List of tool info dicts with name, description, and source
         """
         return [
-            {"name": t.name, "description": t.description}
+            {"name": t.name, "description": t.description, "source": "engine"}
             for t in self.get_available_tools()
         ]
 

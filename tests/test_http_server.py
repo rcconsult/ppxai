@@ -47,7 +47,7 @@ def create_mock_engine():
 
     # Mock list_tools
     engine.list_tools.return_value = [
-        {"name": "web_search", "description": "Search the web"}
+        {"name": "web_search", "description": "Search the web", "source": "engine"}
     ]
 
     # Mock session methods
