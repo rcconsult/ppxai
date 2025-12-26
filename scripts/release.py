@@ -73,11 +73,12 @@ DOC_FILES = {
 
 
 def run_command(cmd: str, capture: bool = True, check: bool = True) -> subprocess.CompletedProcess:
-    """Run a shell command."""
+    """Run a shell command using bash."""
     print(f"  $ {cmd}")
     result = subprocess.run(
         cmd,
         shell=True,
+        executable="/bin/bash",  # Use bash for 'source' support
         cwd=PROJECT_ROOT,
         capture_output=capture,
         text=True,
@@ -86,6 +87,20 @@ def run_command(cmd: str, capture: bool = True, check: bool = True) -> subproces
         print(f"  ❌ Command failed: {result.stderr or result.stdout}")
         sys.exit(1)
     return result
+
+
+def get_gh_token_cmd() -> str:
+    """Get the command prefix to set GH_TOKEN from the token file."""
+    token_file = PROJECT_ROOT / ".github/gh-tokenv.env"
+    if token_file.exists():
+        # Read token directly instead of using source
+        content = token_file.read_text()
+        for line in content.split('\n'):
+            if line.startswith('GH_TOKEN=') or line.startswith('export GH_TOKEN='):
+                # Extract the token value
+                token = line.split('=', 1)[1].strip().strip('"').strip("'")
+                return f'GH_TOKEN="{token}" '
+    return ""
 
 
 def validate_version(version: str) -> str:
@@ -311,7 +326,7 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"""
 def delete_existing_release(version: str) -> bool:
     """Delete existing GitHub release and tags for redo."""
     tag = f"v{version}"
-    token_cmd = "unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN && "
+    token_cmd = get_gh_token_cmd()
 
     print(f"\n🗑️  Deleting existing release v{version}...")
 
@@ -371,8 +386,7 @@ def wait_for_ci(timeout_minutes: int = 10) -> bool:
     """Wait for GitHub Actions CI to complete."""
     print(f"\n⏳ Waiting for CI (timeout: {timeout_minutes}min)...")
 
-    # Source the token
-    token_cmd = "unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN && "
+    token_cmd = get_gh_token_cmd()
 
     start_time = time.time()
     timeout_seconds = timeout_minutes * 60
@@ -418,14 +432,14 @@ def publish_release_notes(version: str):
         print(f"  ⚠️  Release notes not found: {notes_file}")
         return
 
-    token_cmd = "unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN && "
+    token_cmd = get_gh_token_cmd()
     run_command(f'{token_cmd}gh release edit v{version} --notes-file "{notes_file}"')
     print(f"  ✅ Published release notes")
 
 
 def verify_release(version: str) -> bool:
     """Verify release has all expected assets."""
-    token_cmd = "unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN && "
+    token_cmd = get_gh_token_cmd()
     result = run_command(f"{token_cmd}gh release view v{version} --json assets", check=False)
 
     if result.returncode != 0:
@@ -478,6 +492,14 @@ def verify_release(version: str) -> bool:
         return False
 
 
+def print_step(step: int, total: int, title: str):
+    """Print a prominent step header."""
+    bar = "━" * 50
+    print(f"\n{bar}")
+    print(f"  Step {step}/{total}: {title}")
+    print(f"{bar}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Automated release script for ppxai")
     parser.add_argument("version", help="Version to release (e.g., v1.11.8 or 1.11.8)")
@@ -494,26 +516,42 @@ def main():
     current_version = get_current_version()
     date = datetime.now().strftime("%Y-%m-%d")
 
-    print(f"\n🚀 ppxai Release Script")
-    print(f"   Current version: {current_version}")
-    print(f"   New version: {version}")
-    print(f"   Date: {date}")
+    # Calculate total steps based on flags
+    total_steps = 8  # Base steps
+    if args.redo:
+        total_steps += 1
+    if args.skip_tests:
+        total_steps -= 1
+    if args.skip_ci_wait:
+        total_steps -= 1
+
+    print(f"\n{'━' * 50}")
+    print(f"  🚀 ppxai Release Script")
+    print(f"{'━' * 50}")
+    print(f"  Current version: {current_version}")
+    print(f"  Target version:  v{version}")
+    print(f"  Release date:    {date}")
 
     if args.dry_run:
-        print(f"   Mode: DRY RUN (no changes will be made)")
+        print(f"  Mode: DRY RUN (no changes will be made)")
     if args.redo:
-        print(f"   Mode: REDO (will delete existing release first)")
+        print(f"  Mode: REDO (will delete existing release first)")
 
-    # Check git status
-    print(f"\n📋 Checking git status...")
+    step = 0
+
+    # Step 1: Check git status
+    step += 1
+    print_step(step, total_steps, "Checking Git Status")
     if not check_git_clean() and not args.force:
         print(f"  ❌ Git working directory is not clean")
         print(f"     Commit or stash changes first, or use --force")
         sys.exit(1)
     print(f"  ✅ Git working directory is clean")
 
-    # Handle --redo: delete existing release first
+    # Optional: Handle --redo: delete existing release first
     if args.redo:
+        step += 1
+        print_step(step, total_steps, "Deleting Existing Release")
         delete_existing_release(version)
 
     if args.dry_run:
@@ -527,8 +565,9 @@ def main():
         print(f"\n✅ Dry run complete. Use without --dry-run to execute.")
         return
 
-    # Update version files
-    print(f"\n📋 Updating version references...")
+    # Step 2: Update version files
+    step += 1
+    print_step(step, total_steps, "Updating Version References")
     for filepath, config in VERSION_FILES.items():
         update_version_in_file(filepath, config["pattern"], config["replacement"], version)
 
@@ -553,45 +592,52 @@ def main():
         roadmap_path.write_text(content)
         print(f"  ✅ Updated: ROADMAP.md")
 
-    # Check/create release notes
-    print(f"\n📋 Checking release notes...")
+    # Step 3: Check/create release notes
+    step += 1
+    print_step(step, total_steps, "Checking Release Notes")
     create_release_notes(version, date)
 
-    # Run tests
+    # Step 4: Run tests
     if not args.skip_tests:
+        step += 1
+        print_step(step, total_steps, "Running Tests")
         if not run_tests():
             print(f"\n❌ Tests failed. Fix issues and try again.")
             sys.exit(1)
-    else:
-        print(f"\n⏭️  Skipping tests (--skip-tests)")
 
-    # Create commit
-    print(f"\n📋 Creating release commit...")
+    # Step 5: Create commit
+    step += 1
+    print_step(step, total_steps, "Creating Release Commit")
     create_commit(version, f"feat: v{version} release")
 
-    # Create and push tag
-    print(f"\n📋 Creating tag and pushing...")
+    # Step 6: Create and push tag
+    step += 1
+    print_step(step, total_steps, "Pushing to GitHub")
     create_and_push_tag(version)
 
-    # Wait for CI
+    # Step 7: Wait for CI
     if not args.skip_ci_wait:
+        step += 1
+        print_step(step, total_steps, "Waiting for CI")
         if not wait_for_ci():
             print(f"\n⚠️  CI did not complete successfully")
             print(f"    Check: https://github.com/rcconsult/ppxai/actions")
-    else:
-        print(f"\n⏭️  Skipping CI wait (--skip-ci-wait)")
 
-    # Publish release notes
-    print(f"\n📋 Publishing release notes...")
+    # Step 8: Publish release notes
+    step += 1
+    print_step(step, total_steps, "Publishing Release Notes")
     publish_release_notes(version)
 
-    # Verify release
-    print(f"\n📋 Verifying release...")
+    # Step 9: Verify release
+    step += 1
+    print_step(step, total_steps, "Verifying Release")
     verify_release(version)
 
     # Done!
-    print(f"\n✅ Release v{version} complete!")
-    print(f"   https://github.com/rcconsult/ppxai/releases/tag/v{version}")
+    print(f"\n{'━' * 50}")
+    print(f"  ✅ Release v{version} complete!")
+    print(f"{'━' * 50}")
+    print(f"  https://github.com/rcconsult/ppxai/releases/tag/v{version}")
 
 
 if __name__ == "__main__":
