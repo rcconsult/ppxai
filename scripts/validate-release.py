@@ -55,6 +55,22 @@ def validate_release(version: str) -> bool:
             "pattern": r"\*\*Current Version:\*\*\s+v{version}",
             "critical": False,  # CLAUDE.md might be updated during development
         },
+        # README VSIX version checks (repeatedly missed in v1.11.4, v1.11.5, v1.11.6)
+        {
+            "file": "README.md",
+            "pattern": r"ppxai-{version}\.vsix",
+            "critical": True,
+        },
+        {
+            "file": "README.md",
+            "pattern": r"What's New in v{version}",
+            "critical": True,
+        },
+        {
+            "file": "vscode-extension/README.md",
+            "pattern": r"ppxai-{version}\.vsix",
+            "critical": True,
+        },
     ]
 
     project_root = Path(__file__).parent.parent

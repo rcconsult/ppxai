@@ -262,11 +262,19 @@ ROADMAP.md                              # Line 11: Current Release: vX.Y.Z
 ROADMAP.md                              # Line 1875: Last Updated: YYYY-MM-DD
 ROADMAP.md                              # Line 1876: Current Version: vX.Y.Z
 
-# Installation instructions
+# Installation instructions - ⚠️ CRITICAL: REPEATEDLY MISSED IN v1.11.4, v1.11.5, v1.11.6!
 README.md                               # Lines 114, 116: ppxai-X.Y.Z.vsix references
 README.md                               # Lines 120-126: "What's New in vX.Y.Z" section
 vscode-extension/README.md              # Lines 60, 105: ppxai-X.Y.Z.vsix installation commands
 ```
+
+**⚠️ CRITICAL - README Updates (Fixed in v1.11.7):**
+The validation script now checks README.md and vscode-extension/README.md for VSIX version references.
+If validation fails on README files, update these specific locations:
+- README.md line ~114: `ppxai-X.Y.Z.vsix` download reference
+- README.md line ~116: `code --install-extension ppxai-X.Y.Z.vsix` command
+- README.md lines 120-126: "What's New in vX.Y.Z" section header and content
+- vscode-extension/README.md: Search for `ppxai-*.vsix` and update all occurrences
 
 **Important:**
 - In README.md "What's New" section, update the version number AND the feature list to reflect the current release
@@ -418,8 +426,8 @@ python -c "import ppxai; print(ppxai.__version__)"  # Should show X.Y.Z
 - Forget to update `ppxai/__init__.py` __version__ (caught in v1.11.2.1)
 - Miss the VSCode activitybar title version (caught in v1.11.2.1)
 - Leave ROADMAP.md with old version (caught in v1.11.2.1)
-- Forget to update README.md "What's New" section (caught in v1.11.3)
-- Forget to update vscode-extension/README.md VSIX commands (caught in v1.11.3)
+- Forget to update README.md "What's New" section (caught in v1.11.3, repeated in v1.11.4-v1.11.6!)
+- Forget to update vscode-extension/README.md VSIX commands (caught in v1.11.3, repeated in v1.11.4-v1.11.6!)
 - Skip adding release notes to GitHub release (caught in v1.11.3) ⚠️
 - Skip the grep verification step
 - Commit without running tests
