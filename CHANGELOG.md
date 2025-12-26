@@ -5,6 +5,42 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.7] - 2025-12-26
+
+### Major - Legacy Code Removal + Clickable Citations 🎉🔗
+
+This release completes the migration to EngineClient and adds clickable citations/links across all interfaces.
+
+#### Legacy Code Removed
+- **Deleted ~2,100 lines of legacy code**
+  - `ppxai/client.py` (447 lines - AIClient)
+  - `perplexity_tools_prompt_based.py` (1,342 lines - legacy tools client)
+  - `tool_manager.py` (299 lines - legacy MCP loader)
+- **EngineClient is now the only client interface**
+- **337 tests passing** (migrated from legacy tests)
+
+#### New Features
+- **`/tools help <tool-name>`** - Detailed documentation for any tool
+- **Autocomplete for `/tools`** - Tab completion for subcommands and tool names
+- **Custom Tool Development Guide** - [docs/custom-tools-guide.md](docs/custom-tools-guide.md)
+
+### Fixed - Clickable Citations 🔗
+
+- **Perplexity Citations Clickable** - `inject_citation_urls()` converts `[1]` to `[1](url)` format
+  - Perplexity API returns citations as separate metadata array
+  - New function injects URLs into response text for clickable links
+- **TUI Links Clickable** - OSC 8 hyperlinks via `convert_markdown_links_to_rich()`
+  - Works in Ghostty, iTerm2, Kitty, Windows Terminal, GNOME Terminal 3.26+
+  - Cross-platform support (macOS, Linux, Windows)
+- **VSCode Tool Responses** - Added `fullResponse` message type for tool-using responses
+- **`/tools list` After Provider Switch** - Now correctly lists tools after `/provider gemini`
+- **Tool JSON Leak** - No longer leaks to VSCode during streaming
+
+### Documentation
+- Archived legacy documentation to `docs/archive/legacy-tools-docs/`
+- Updated all guides for EngineClient architecture
+- Autocomplete documentation across all relevant guides
+
 ## [1.11.3] - 2025-12-24
 
 ### Added - Foundation Refactoring + Critical Bugfixes ⚙️🔧

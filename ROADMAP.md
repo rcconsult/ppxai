@@ -8,7 +8,53 @@
 
 ---
 
-## Current Release: v1.11.6
+## Current Release: v1.11.7
+
+**Status**: ✅ Legacy Removal + Clickable Citations
+
+Released: 2025-12-26
+
+**Goal**: Complete legacy code removal and fix citation/link rendering
+
+**Major Changes**:
+- ✅ **Legacy Code Removed** - All legacy code paths removed, EngineClient is now the only client
+  - Deleted: `ppxai/client.py` (447 lines - AIClient)
+  - Deleted: `perplexity_tools_prompt_based.py` (1,342 lines - legacy tools client)
+  - Deleted: `tool_manager.py` (299 lines - legacy MCP loader)
+  - ~2,100 lines of legacy code removed
+- ✅ **Tests Migrated** - Legacy tests replaced with EngineClient-based tests (337 passing)
+
+**New Features**:
+- ✅ **`/tools help <tool-name>`** - Detailed tool documentation command
+- ✅ **Autocomplete for `/tools`** - Tab completion for subcommands and tool names
+- ✅ **Custom Tool Development Guide** - [docs/custom-tools-guide.md](docs/custom-tools-guide.md)
+
+**Bug Fixes**:
+- ✅ **Perplexity Citations Clickable** - `inject_citation_urls()` converts `[1]` to `[1](url)` format
+- ✅ **TUI Links Clickable** - OSC 8 hyperlinks via `convert_markdown_links_to_rich()`
+  - Works in Ghostty, iTerm2, Kitty, Windows Terminal, GNOME Terminal 3.26+
+- ✅ **VSCode Tool Responses** - Added `fullResponse` message type for tool-using responses
+- ✅ **`/tools list` After Provider Switch** - Now correctly lists tools after `/provider gemini`
+- ✅ **Tool JSON Leak** - No longer leaks to VSCode during streaming
+
+**Documentation**:
+- ✅ Archived legacy documentation
+- ✅ Updated all guides for EngineClient architecture
+- ✅ Autocomplete documentation across all relevant guides
+
+**Agentic Workflow Progress**:
+- ✅ Phase 1: File editing tools (v1.11.0)
+- ✅ Phase 2: @git context (v1.11.4)
+- ✅ Phase 3: @tree context (v1.11.4)
+- ✅ Phase 4: Manual testing (v1.11.5-v1.11.7)
+- 🎯 Phase 5: `/agent` command (v1.11.8 - next)
+- ⏳ Phase 6: Testing & docs (v1.11.8)
+
+**Branch**: `refactor/maintenance-no-legacy-code` → `master`
+
+---
+
+## Previous Release: v1.11.6
 
 **Status**: ✅ Legacy Code Removal + Bug Fixes
 
@@ -17,28 +63,12 @@ Released: 2025-12-26
 **Goal**: Complete legacy code cleanup and fix tool-related bugs
 
 **Major Changes**:
-- ✅ **Legacy Code Removed** - All legacy code paths removed, EngineClient is now the only client
-  - Deleted: `ppxai/client.py` (447 lines - AIClient)
-  - Deleted: `perplexity_tools_prompt_based.py` (1,342 lines - legacy tools client)
-  - Deleted: `tool_manager.py` (299 lines - legacy MCP loader)
-  - Updated: `ppxai/__init__.py` now exports `EngineClient` as primary interface
+- ✅ **Legacy Code Removed** - All legacy code paths removed
 - ✅ **Tests Migrated** - Legacy tests replaced with EngineClient-based tests
-  - Removed 5 legacy test files (~1,485 lines)
-  - Added `tests/test_engine_tool_parsing.py` (11 new tests)
-  - 322 tests passing (down from 377 - removed legacy tests)
 
 **Bug Fixes**:
 - ✅ **`/tools list` After Provider Switch** - Now correctly lists tools after `/provider gemini`
 - ✅ **`/tools status` After Provider Switch** - Now correctly shows "Tools enabled" after switching
-- ✅ **`/tools config` After Provider Switch** - Now works after switching providers
-
-**Agentic Workflow Progress**:
-- ✅ Phase 1: File editing tools (v1.11.0)
-- ✅ Phase 2: @git context (v1.11.4)
-- ✅ Phase 3: @tree context (v1.11.4)
-- ✅ Phase 4: Manual testing (v1.11.5-v1.11.6)
-- 🎯 Phase 5: `/agent` command (v1.11.7 - next)
-- ⏳ Phase 6: Testing & docs (v1.11.7)
 
 **Branch**: `refactor/maintenance-no-legacy-code` → `master`
 

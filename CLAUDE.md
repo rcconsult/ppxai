@@ -6,15 +6,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.11.6 (Legacy Code Removal + Bug Fixes)
+**Current Version:** v1.11.7 (Legacy Removal + Clickable Citations)
 
-**What's New in v1.11.6 (Released 2025-12-26):**
-- **MAJOR:** All legacy code removed - EngineClient is now the only client interface 🎉
+**What's New in v1.11.7 (Released 2025-12-26):**
+- **MAJOR:** All legacy code removed - EngineClient is now the only client interface
   - Deleted: `ppxai/client.py` (AIClient), `perplexity_tools_prompt_based.py`, `tool_manager.py`
   - ~2,100 lines of legacy code removed
-  - Tests migrated to EngineClient (322 tests passing)
+  - Tests migrated to EngineClient (337 tests passing)
+- **NEW:** `/tools help <tool-name>` command for detailed tool documentation
+- **NEW:** Autocomplete for `/tools` subcommands and tool names
+- **NEW:** Custom tool development guide at [docs/custom-tools-guide.md](docs/custom-tools-guide.md)
+- **FIX:** Perplexity citations now clickable in both TUI and VSCode extension
+  - Perplexity API returns citations as separate array, text only has `[1]`, `[2]` markers
+  - New `inject_citation_urls()` converts `[1]` to `[1](url)` format
+- **FIX:** TUI markdown links now clickable via OSC 8 hyperlinks
+  - Works in Ghostty, iTerm2, Kitty, Windows Terminal, GNOME Terminal 3.26+
+  - `convert_markdown_links_to_rich()` transforms `[text](url)` to Rich link format
+- **FIX:** VSCode extension now displays responses when tools are used
+  - Added `fullResponse` message type for tool-using responses
 - **FIX:** `/tools list` and `/tools status` now work correctly after switching providers
-- **Agentic Progress:** Phases 1-4 complete, `/agent` command (Phase 5) is next in v1.11.7
+- **FIX:** Tool JSON no longer leaks to VSCode during streaming
+- **Docs:** Archived legacy documentation, updated all guides for EngineClient architecture
+- **Compatibility:** Clickable links work cross-platform (macOS, Linux, Windows)
 
 **Previous Release (v1.11.5 - 2025-12-26):**
 - **CRITICAL FIX:** Ctrl-C during streaming no longer causes 400 message alternation errors 🔧
@@ -137,10 +150,10 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - Automated GitHub Actions CI/CD for multi-platform builds (macOS ARM/Intel, Linux, Windows)
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.11.2
-- VSCode extension (package.json): v1.11.2
-- Git tag: v1.11.2 (released 2025-12-22)
-- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v1.11.2
+- Python package (pyproject.toml): v1.11.7
+- VSCode extension (package.json): v1.11.7
+- Git tag: v1.11.7 (released 2025-12-26)
+- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v1.11.7
 
 ## Development Setup
 
