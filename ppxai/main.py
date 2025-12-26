@@ -13,7 +13,6 @@ from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 
-from .client import AIClient
 from .commands import CommandHandler
 from .config import (
     MODEL_PROVIDER,
@@ -27,26 +26,23 @@ from .engine.types import EventType
 from .markdown_tables import render_markdown_with_tables
 
 
-def get_status_line(client, current_model, handler):
-    """Generate status line showing current settings."""
-    provider_config = get_provider_config(client.provider)
+def get_status_line(handler):
+    """Generate status line showing current settings.
+
+    v1.12.0: Now uses handler.provider instead of legacy client.
+    """
+    provider_config = get_provider_config(handler.provider)
     provider_name = provider_config["name"]
 
-    # Get tools status - prefer engine_client.tools_enabled (v1.11.5 fix)
-    tools_enabled = False
-    if handler.engine_client:
-        tools_enabled = handler.engine_client.tools_enabled
-    elif (handler.tools_available and
-          handler.PerplexityClientPromptTools and
-          isinstance(client, handler.PerplexityClientPromptTools)):
-        tools_enabled = client.enable_tools
+    # Get tools status (v1.12.0: engine only)
+    tools_enabled = handler.engine_client.tools_enabled if handler.engine_client else False
     tools_status = "[green]ON[/green]" if tools_enabled else "[dim]OFF[/dim]"
 
     # Get model display name (use ID if not found)
-    model_display = current_model
+    model_display = handler.current_model
     for model_info in provider_config.get("models", {}).values():
-        if model_info.get("id") == current_model:
-            model_display = model_info.get("name", current_model)
+        if model_info.get("id") == handler.current_model:
+            model_display = model_info.get("name", handler.current_model)
             break
 
     # Build status line
@@ -188,8 +184,6 @@ def main():
         console.print("[yellow]Please create a .env file with your API key (see .env.example)[/yellow]")
         sys.exit(1)
 
-    # Initialize client with provider configuration
-    client = AIClient(api_key, base_url, provider=provider)
     console.print(f"\n[green]Connected to:[/green] {provider_config['name']} ({base_url})")
 
     # Display welcome
@@ -197,10 +191,9 @@ def main():
 
     # Select initial model (from provider's available models)
     current_model = select_model(provider)
-    client.session_metadata["model"] = current_model
 
-    # Create command handler with provider info
-    handler = CommandHandler(client, api_key, current_model, base_url, provider)
+    # v1.12.0: Create command handler with provider info (no legacy client)
+    handler = CommandHandler(api_key, current_model, base_url, provider)
 
     # Create prompt session with history and completer
     completer = PPXAICompleter()
@@ -214,7 +207,7 @@ def main():
     # Main loop
     console.print("\n[bold green]Ready to chat! Type your message or /help for commands.[/bold green]")
     console.print("[dim]Tab: autocomplete • @file: reference files • ↑/↓: history • Ctrl-C twice to exit[/dim]\n")
-    console.print(f"[dim]Session: {client.session_name}[/dim]\n")
+    console.print(f"[dim]Session: {handler.engine_client.session.session_name}[/dim]\n")
 
     # Track Ctrl-C presses for double-press to exit
     ctrl_c_count = 0
@@ -227,8 +220,8 @@ def main():
             if ctrl_c_count > 0 and time.time() - ctrl_c_timestamp > ctrl_c_timeout:
                 ctrl_c_count = 0
 
-            # Display status line
-            status_line = get_status_line(client, current_model, handler)
+            # Display status line (v1.12.0: uses handler only)
+            status_line = get_status_line(handler)
             console.print(status_line)
 
             # Get user input with history and completion support
@@ -245,8 +238,7 @@ def main():
                 should_exit = handler.handle_command(user_input)
                 if should_exit:
                     break
-                # Update references in case they changed
-                client = handler.client
+                # v1.12.0: Update current_model from handler (no legacy client)
                 current_model = handler.current_model
                 continue
 
@@ -289,32 +281,20 @@ def main():
 
                 response = asyncio.run(stream_engine_response())
 
-                # Sync conversation history from engine back to legacy client
-                client.conversation_history = [
-                    {"role": msg.role, "content": msg.content}
-                    for msg in handler.engine_client.session.messages
-                ]
+            # v1.12.0: EngineClient is REQUIRED - no fallback
+            if not handler.engine_client:
+                console.print("[red]Error: EngineClient not available. This is a critical error.[/red]")
+                console.print("[yellow]Please report this issue: https://github.com/rcconsult/ppxai/issues[/yellow]")
+                continue
 
-            else:
-                # Fallback path: EngineClient not available (shouldn't happen)
-                # Process @file references only (legacy, does NOT support @git/@tree)
-                console.print("[yellow]Warning: Using legacy client (EngineClient unavailable)[/yellow]")
-                augmented_input, resolved_files = handler.process_file_references(user_input)
-                if resolved_files:
-                    file_names = ', '.join(f['name'] for f in resolved_files)
-                    console.print(f"[dim]Including {len(resolved_files)} file(s): {file_names}[/dim]")
-
-                # Use regular chat
-                response = client.chat(augmented_input, current_model, stream=True)
-
-            # Update session metadata
-            if response:
-                client.session_metadata["message_count"] = len(client.conversation_history)
+            # Update session metadata (v1.12.0: use engine session as source of truth)
+            if response and handler.engine_client:
+                message_count = len(handler.engine_client.session.messages)
 
                 # Auto-save session after every 10 messages
-                if len(client.conversation_history) % 10 == 0:
+                if message_count > 0 and message_count % 10 == 0:
                     try:
-                        client.save_session()
+                        handler.engine_client.session.save()
                     except Exception:
                         pass  # Silent fail on auto-save
 
@@ -329,14 +309,8 @@ def main():
                 console.print("[yellow]  • Press Ctrl-C again to exit[/yellow]")
                 console.print("[yellow]  • Or continue typing to resume[/yellow]\n")
 
-                # Cleanup conversation history if interrupted during streaming
-                # Must clean both legacy client AND engine session to prevent message alternation errors
+                # Cleanup conversation history if interrupted during streaming (v1.12.0: engine only)
                 cleaned = False
-                if client.conversation_history and client.conversation_history[-1]["role"] == "user":
-                    # User message without assistant response - remove it to maintain alternation
-                    client.conversation_history.pop()
-                    cleaned = True
-                # Also cleanup engine session (v1.11.5 fix)
                 if handler.engine_client and handler.engine_client.session.messages:
                     if handler.engine_client.session.messages[-1].role == "user":
                         handler.engine_client.session.remove_last_message()

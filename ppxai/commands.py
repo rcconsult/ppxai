@@ -164,15 +164,18 @@ async def tui_shell_consent_handler(command: str, working_dir: str, risk_level: 
         return (False, 'n')
 
 
-def send_coding_task(client: 'AIClient', task_type: str, user_message: str, model: str, provider: str = None) -> Optional[str]:
-    """Send a coding task with appropriate system prompt and optional auto-routing."""
+def send_coding_task(handler: 'CommandHandler', task_type: str, user_message: str, model: str, provider: str = None) -> Optional[str]:
+    """Send a coding task with appropriate system prompt and optional auto-routing.
+
+    v1.12.0: Updated to use handler.auto_route and engine client.
+    """
     if task_type not in CODING_PROMPTS:
         console.print(f"[red]Unknown task type: {task_type}[/red]")
         return None
 
     # Auto-route to coding model if enabled (use provider-specific coding model)
     coding_model = get_coding_model(provider)
-    if client.auto_route and model != coding_model:
+    if handler.auto_route and model != coding_model:
         model = coding_model
         console.print(f"[dim]Auto-routed to {coding_model} for coding task (disable with /autoroute off)[/dim]")
 
@@ -180,72 +183,107 @@ def send_coding_task(client: 'AIClient', task_type: str, user_message: str, mode
     system_prompt = CODING_PROMPTS[task_type]
     full_message = f"{system_prompt}\n\n{user_message}"
 
-    # Send the message
-    return client.chat(full_message, model, stream=True)
+    # v1.12.0: Use engine client for coding tasks
+    import asyncio
+    from .engine.types import EventType
+    from .markdown_tables import render_markdown_with_tables
+
+    async def run_coding_task():
+        content = ""
+        # Temporarily switch model for coding task if auto-routed
+        original_model = handler.engine_client.model
+        if model != original_model:
+            handler.engine_client.set_model(model)
+
+        try:
+            async for event in handler.engine_client.chat(full_message, stream=True):
+                if event.type == EventType.STREAM_CHUNK:
+                    chunk = event.data
+                    console.print(chunk, end="")
+                    content += chunk
+                elif event.type == EventType.ERROR:
+                    console.print(f"\n[red]Error: {event.data}[/red]")
+        finally:
+            # Restore original model
+            if model != original_model:
+                handler.engine_client.set_model(original_model)
+
+        # Render final content with markdown
+        if content:
+            console.print()  # New line after streaming
+        return content
+
+    return asyncio.run(run_coding_task())
 
 
 class CommandHandler:
     """Handles all slash commands for the application."""
 
-    def __init__(self, client, api_key: str, current_model: str, base_url: str = None, provider: str = None):
+    def __init__(self, client_or_api_key, api_key_or_model: str = None, current_model_or_base_url: str = None, base_url_or_provider: str = None, provider_or_none: str = None):
+        """Initialize CommandHandler.
+
+        v1.12.0: Supports both old and new signatures for backward compatibility.
+
+        New signature (v1.12.0+):
+            CommandHandler(api_key, current_model, base_url=None, provider=None)
+
+        Legacy signature (deprecated):
+            CommandHandler(client, api_key, current_model, base_url, provider)
+            The client parameter is ignored - all operations use EngineClient.
+        """
         from ppxai.config import get_default_provider, get_base_url
-        self.client = client
-        self.api_key = api_key
-        self.current_model = current_model
+
+        # Detect signature based on first argument type
+        # If first arg is a string, it's the new signature (api_key first)
+        # If first arg is not a string, it's the old signature (client first)
+        if isinstance(client_or_api_key, str):
+            # New signature: (api_key, current_model, base_url, provider)
+            self.api_key = client_or_api_key
+            self.current_model = api_key_or_model
+            base_url = current_model_or_base_url
+            provider = base_url_or_provider
+        else:
+            # Legacy signature: (client, api_key, current_model, base_url, provider)
+            # client is ignored in v1.12.0
+            self.api_key = api_key_or_model
+            self.current_model = current_model_or_base_url
+            base_url = base_url_or_provider
+            provider = provider_or_none
         # v1.11.2.2: Use configurable default provider instead of hardcoded "perplexity"
         actual_provider = provider or get_default_provider()
         self.provider = actual_provider
         self.base_url = base_url or get_base_url(actual_provider)
-        self.tools_available = False
-        self.PerplexityClientPromptTools = None
-        self.load_tool_config = None
         self.tools_verbose = False  # v1.11.1: Verbose tool execution logging
 
-        # v1.11.4: ALWAYS create EngineClient (not just when tools enabled)
-        # This ensures @git/@tree/@file context injection always works
-        try:
-            from ppxai.engine import EngineClient
-            from ppxai.engine.types import Message
-            import os
+        # v1.12.0: EngineClient is REQUIRED for all operations
+        # No legacy client fallback - engine handles everything
+        from ppxai.engine import EngineClient
+        import os
 
-            # Create engine client with consent callbacks
-            self.engine_client = EngineClient(
-                consent_callback=tui_consent_handler,
-                shell_consent_callback=tui_shell_consent_handler
-            )
-            self.engine_client.set_provider(self.provider)
-            self.engine_client.set_model(self.current_model)
-            # Set working directory for context injection
-            self.engine_client.set_working_dir(os.getcwd())
+        # Create engine client with consent callbacks
+        self.engine_client = EngineClient(
+            consent_callback=tui_consent_handler,
+            shell_consent_callback=tui_shell_consent_handler
+        )
+        self.engine_client.set_provider(self.provider)
+        self.engine_client.set_model(self.current_model)
+        # Set working directory for context injection
+        self.engine_client.set_working_dir(os.getcwd())
 
-            # Sync conversation history from legacy client to engine (if client has history)
-            # Convert dict format to Message objects
-            if hasattr(self.client, 'conversation_history') and self.client.conversation_history:
-                for msg in self.client.conversation_history:
-                    self.engine_client.session.messages.append(
-                        Message(role=msg["role"], content=msg["content"])
-                    )
+        # v1.12.0: tools_available is always True (engine has builtin tools)
+        self.tools_available = True
 
-        except ImportError:
-            # EngineClient not available (shouldn't happen in production)
-            self.engine_client = None
-
-        # Try to load legacy tool support
-        try:
-            from perplexity_tools_prompt_based import PerplexityClientPromptTools
-            from tool_manager import load_tool_config
-            self.tools_available = True
-            self.PerplexityClientPromptTools = PerplexityClientPromptTools
-            self.load_tool_config = load_tool_config
-        except ImportError:
-            pass
+        # v1.12.0: auto_route flag is now on engine client
+        # Default to enabled for coding task auto-routing
+        self.auto_route = True
 
     def handle_quit(self) -> bool:
         """Handle /quit or /exit command. Returns True if should exit."""
-        if self.client.conversation_history:
+        # v1.12.0: Use engine session for conversation history
+        if self.engine_client.session.messages:
             try:
-                self.client.save_session()
-                console.print(f"[dim]Session saved: {self.client.session_name}[/dim]")
+                self.engine_client.session.save()
+                console.print(f"[dim]Session saved: {self.engine_client.session.session_name}[/dim]")
             except Exception as e:
                 console.print(f"[yellow]Warning: Could not save session: {e}[/yellow]")
         console.print("\n[yellow]Goodbye![/yellow]")
@@ -254,7 +292,9 @@ class CommandHandler:
     def handle_save(self, args: str):
         """Handle /save command - saves session to JSON."""
         try:
-            filepath = self.client.save_session()
+            # v1.12.0: Use engine session for save
+            session_name = self.engine_client.session.save()
+            filepath = self.engine_client.session.sessions_dir / f"{session_name}.json"
             console.print(f"\n[green]Session saved to:[/green] {filepath}\n")
         except Exception as e:
             console.print(f"[red]Error saving session: {e}[/red]\n")
@@ -262,11 +302,11 @@ class CommandHandler:
     def handle_export(self, args: str):
         """Handle /export command - exports last answer to markdown."""
         try:
-            # Find last assistant message
+            # v1.12.0: Use engine session for conversation history
             last_assistant_msg = None
-            for msg in reversed(self.client.conversation_history):
-                if msg['role'] == 'assistant':
-                    last_assistant_msg = msg['content']
+            for msg in reversed(self.engine_client.session.messages):
+                if msg.role == 'assistant':
+                    last_assistant_msg = msg.content
                     break
 
             if not last_assistant_msg:
@@ -282,8 +322,8 @@ class CommandHandler:
             if not filename.endswith('.md'):
                 filename += '.md'
 
-            from .config import EXPORTS_DIR
-            filepath = EXPORTS_DIR / filename
+            # v1.12.0: Use engine session's exports directory
+            filepath = self.engine_client.session.exports_dir / filename
 
             # Write content
             with open(filepath, 'w', encoding='utf-8') as f:
@@ -295,27 +335,47 @@ class CommandHandler:
 
     def handle_sessions(self):
         """Handle /sessions command."""
-        from .client import AIClient
-        sessions = AIClient.list_sessions()
-        display_sessions(sessions)
+        # v1.12.0: Use engine session for listing sessions
+        sessions = self.engine_client.session.list_sessions()
+        # Convert SessionInfo objects to dicts for display function
+        session_dicts = [
+            {
+                "session_name": s.name,
+                "created_at": s.created_at,
+                "provider": s.provider,
+                "model": s.model,
+                "message_count": s.message_count
+            }
+            for s in sessions
+        ]
+        display_sessions(session_dicts)
 
     def handle_load(self, args: str):
         """Handle /load command."""
-        from .client import AIClient
-
         if not args:
             console.print("[red]Please specify a session name: /load <session_name>[/red]\n")
-            sessions = AIClient.list_sessions()
-            display_sessions(sessions)
+            sessions = self.engine_client.session.list_sessions()
+            session_dicts = [
+                {
+                    "session_name": s.name,
+                    "created_at": s.created_at,
+                    "provider": s.provider,
+                    "model": s.model,
+                    "message_count": s.message_count
+                }
+                for s in sessions
+            ]
+            display_sessions(session_dicts)
             return
 
         try:
-            loaded_client = AIClient.load_session(args.strip(), self.api_key, self.base_url, self.provider)
-            if loaded_client:
-                self.client = loaded_client
-                self.current_model = self.client.session_metadata.get("model", self.current_model)
-                console.print(f"\n[green]Session loaded:[/green] {self.client.session_name}")
-                console.print(f"[dim]Messages: {len(self.client.conversation_history)}[/dim]\n")
+            # v1.12.0: Use engine session for loading
+            if self.engine_client.session.load(args.strip()):
+                self.current_model = self.engine_client.session.metadata.get("model", self.current_model)
+                # Update engine client model
+                self.engine_client.set_model(self.current_model)
+                console.print(f"\n[green]Session loaded:[/green] {self.engine_client.session.session_name}")
+                console.print(f"[dim]Messages: {len(self.engine_client.session.messages)}[/dim]\n")
             else:
                 console.print(f"[red]Session not found: {args.strip()}[/red]\n")
         except Exception as e:
@@ -323,13 +383,15 @@ class CommandHandler:
 
     def handle_usage(self):
         """Handle /usage command."""
-        usage = self.client.get_usage_summary()
+        # v1.12.0: Use engine session for usage
+        usage = self.engine_client.session.get_usage()
         display_usage(usage)
         display_global_usage()
 
     def handle_clear(self):
         """Handle /clear command."""
-        self.client.clear_history()
+        # v1.12.0: Use engine session for clear
+        self.engine_client.session.clear()
         console.print("\n[green]Conversation history cleared.[/green]\n")
 
     def handle_model(self, args: str = ""):
@@ -360,7 +422,9 @@ class CommandHandler:
                 model_id = info.get("id", num)
                 if model_id == args:
                     self.current_model = model_id
-                    self.client.session_metadata["model"] = self.current_model
+                    # v1.12.0: Update engine client and session
+                    self.engine_client.set_model(self.current_model)
+                    self.engine_client.session.set_model(self.current_model)
                     console.print(f"[green]✓ Switched to model: {model_id}[/green]\n")
                     found = True
                     break
@@ -371,13 +435,13 @@ class CommandHandler:
         else:
             # Interactive selection
             self.current_model = select_model(self.provider)
-            self.client.session_metadata["model"] = self.current_model
+            # v1.12.0: Update engine client and session
+            self.engine_client.set_model(self.current_model)
+            self.engine_client.session.set_model(self.current_model)
             console.print()
 
     def handle_provider(self, args: str = ""):
         """Handle /provider command - switch between providers."""
-        from .client import AIClient
-
         args = args.strip().lower()
 
         if args == "list":
@@ -416,34 +480,31 @@ class CommandHandler:
             console.print("[yellow]Please add the API key to your .env file.[/yellow]\n")
             return
 
-        # BUGFIX: Check if tools are currently enabled before switching
-        tools_were_enabled = isinstance(self.client, self.PerplexityClientPromptTools) if self.PerplexityClientPromptTools else False
+        # v1.12.0: Check if tools are currently enabled
+        tools_were_enabled = self.engine_client.tools_enabled
 
         # Switch to new provider
         new_base_url = get_base_url(new_provider)
         new_config = get_provider_config(new_provider)
 
-        # Create new client with the new provider
-        new_client = AIClient(new_api_key, new_base_url, provider=new_provider)
-        new_client.conversation_history = self.client.conversation_history
-        new_client.current_session_usage = self.client.current_session_usage
-
-        self.client = new_client
+        # v1.12.0: Update engine client with new provider (engine only)
         self.api_key = new_api_key
         self.base_url = new_base_url
         self.provider = new_provider
+        self.engine_client.set_provider(new_provider)
+        self.engine_client.session.set_provider(new_provider)
 
         # Select model for new provider (auto-select default if direct switch)
         if args:
             self.current_model = new_config.get("default_model", "")
         else:
             self.current_model = select_model(new_provider)
-        self.client.session_metadata["model"] = self.current_model
-        self.client.session_metadata["provider"] = new_provider
+        self.engine_client.set_model(self.current_model)
+        self.engine_client.session.set_model(self.current_model)
 
         console.print(f"\n[green]Switched to:[/green] {new_config['name']} (model: {self.current_model})")
 
-        # BUGFIX: Re-enable tools if they were enabled before switching
+        # Re-enable tools if they were enabled before switching
         if tools_were_enabled:
             console.print("[dim]Re-enabling tools for new provider...[/dim]")
             self._enable_tools()
@@ -462,7 +523,7 @@ class CommandHandler:
             return
 
         console.print(f"\n[cyan]Generating code for:[/cyan] {args}\n")
-        send_coding_task(self.client, "generate", args, self.current_model, self.provider)
+        send_coding_task(self, "generate", args, self.current_model, self.provider)
 
     def handle_test(self, args: str):
         """Handle /test command."""
@@ -475,7 +536,7 @@ class CommandHandler:
         if file_content:
             console.print(f"\n[cyan]Generating tests for:[/cyan] {args}\n")
             task_message = f"Generate comprehensive unit tests for the following code:\n\n```\n{file_content}\n```"
-            send_coding_task(self.client, "test", task_message, self.current_model, self.provider)
+            send_coding_task(self, "test", task_message, self.current_model, self.provider)
 
     def handle_docs(self, args: str):
         """Handle /docs command."""
@@ -488,7 +549,7 @@ class CommandHandler:
         if file_content:
             console.print(f"\n[cyan]Generating documentation for:[/cyan] {args}\n")
             task_message = f"Generate comprehensive documentation for the following code:\n\n```\n{file_content}\n```"
-            send_coding_task(self.client, "docs", task_message, self.current_model, self.provider)
+            send_coding_task(self, "docs", task_message, self.current_model, self.provider)
 
     def handle_implement(self, args: str):
         """Handle /implement command."""
@@ -499,7 +560,7 @@ class CommandHandler:
             return
 
         console.print(f"\n[cyan]Implementing feature:[/cyan] {args}\n")
-        send_coding_task(self.client, "implement", args, self.current_model, self.provider)
+        send_coding_task(self, "implement", args, self.current_model, self.provider)
 
     def handle_debug(self, args: str):
         """Handle /debug command."""
@@ -509,7 +570,7 @@ class CommandHandler:
             return
 
         console.print(f"\n[cyan]Analyzing error:[/cyan] {args[:100]}...\n")
-        send_coding_task(self.client, "debug", args, self.current_model, self.provider)
+        send_coding_task(self, "debug", args, self.current_model, self.provider)
 
     def handle_explain(self, args: str):
         """Handle /explain command."""
@@ -522,7 +583,7 @@ class CommandHandler:
         if file_content:
             console.print(f"\n[cyan]Explaining code:[/cyan] {args}\n")
             task_message = f"Explain the following code in detail, including logic, design decisions, and how it works:\n\n```\n{file_content}\n```"
-            send_coding_task(self.client, "explain", task_message, self.current_model, self.provider)
+            send_coding_task(self, "explain", task_message, self.current_model, self.provider)
 
     def handle_convert(self, args: str):
         """Handle /convert command."""
@@ -550,14 +611,15 @@ class CommandHandler:
 
         console.print(f"\n[cyan]Converting from {source_lang} to {target_lang}[/cyan]\n")
         task_message = f"Convert the following {source_lang} code to {target_lang}:\n\n```{source_lang}\n{code_to_convert}\n```"
-        send_coding_task(self.client, "convert", task_message, self.current_model, self.provider)
+        send_coding_task(self, "convert", task_message, self.current_model, self.provider)
 
     def handle_autoroute(self, args: str):
         """Handle /autoroute command."""
         coding_model = get_coding_model(self.provider)
 
         if not args:
-            status = "enabled" if self.client.auto_route else "disabled"
+            # v1.12.0: Use self.auto_route instead of legacy client
+            status = "enabled" if self.auto_route else "disabled"
             console.print(f"\n[cyan]Auto-routing is currently:[/cyan] [bold]{status}[/bold]")
             console.print(f"[dim]Auto-routing uses {coding_model} for coding commands[/dim]")
             console.print("[yellow]Use /autoroute on or /autoroute off to change[/yellow]\n")
@@ -565,10 +627,10 @@ class CommandHandler:
 
         arg = args.strip().lower()
         if arg == "on":
-            self.client.auto_route = True
+            self.auto_route = True
             console.print(f"[green]Auto-routing enabled.[/green] Coding commands will use {coding_model}\n")
         elif arg == "off":
-            self.client.auto_route = False
+            self.auto_route = False
             console.print(f"[yellow]Auto-routing disabled.[/yellow] Manual model selection will be used\n")
         else:
             console.print("[red]Invalid option. Use /autoroute on or /autoroute off[/red]\n")
@@ -622,38 +684,9 @@ class CommandHandler:
             console.print("[yellow]Tools already enabled[/yellow]\n")
             return
 
-        # Enable tools in engine client
+        # v1.12.0: Enable tools in engine client only (no legacy client upgrade)
         console.print("[cyan]Enabling tools...[/cyan]")
         self.engine_client.enable_tools()
-
-        # Upgrade legacy client to tool-enabled version for backward compatibility
-        if self.tools_available and not isinstance(self.client, self.PerplexityClientPromptTools):
-            tool_client = self.PerplexityClientPromptTools(
-                api_key=self.api_key,
-                base_url=self.base_url,
-                session_name=self.client.session_name,
-                enable_tools=True,
-                provider=self.provider
-            )
-            # Copy conversation history
-            tool_client.conversation_history = self.client.conversation_history
-            tool_client.session_metadata = self.client.session_metadata
-            tool_client.current_session_usage = self.client.current_session_usage
-
-            # Initialize tools (built-in only by default)
-            asyncio.run(tool_client.initialize_tools(mcp_servers=[]))
-
-            # Replace client
-            self.client = tool_client
-
-        # Log history sync for debugging
-        from ppxai.tui_logger import get_logger
-        logger = get_logger()
-        logger.log_history_sync(
-            len(self.client.conversation_history),
-            len(self.engine_client.session.messages),
-            self.engine_client.session.messages
-        )
 
         console.print("[green]✓ Tools enabled![/green]")
         console.print("[dim]Includes file editing tools (apply_patch, replace_block, insert_text, delete_lines)[/dim]")
@@ -661,7 +694,7 @@ class CommandHandler:
 
     def _disable_tools(self):
         """Disable AI tools."""
-        # v1.11.4: Simplified - EngineClient persists, just disable tools
+        # v1.12.0: Engine only - no legacy client downgrade
         if not self.engine_client:
             console.print("[red]Error: Engine client not available[/red]\n")
             return
@@ -672,77 +705,43 @@ class CommandHandler:
 
         # Disable tools in engine client (but keep engine client alive for @git/@tree)
         self.engine_client.disable_tools()
-
-        # Downgrade legacy client for backward compatibility
-        if isinstance(self.client, self.PerplexityClientPromptTools):
-            from .client import AIClient
-
-            regular_client = AIClient(self.api_key, self.base_url, self.client.session_name, self.provider)
-            regular_client.conversation_history = self.client.conversation_history
-            regular_client.session_metadata = self.client.session_metadata
-            regular_client.current_session_usage = self.client.current_session_usage
-
-            # Cleanup tool client
-            asyncio.run(self.client.cleanup())
-
-            self.client = regular_client
-
         console.print("[yellow]Tools disabled[/yellow]\n")
 
     def _list_tools(self):
         """List available tools."""
-        # v1.11.5: Check engine_client.tools_enabled first (works across all providers)
-        tools_enabled = (
-            (self.engine_client and self.engine_client.tools_enabled) or
-            isinstance(self.client, self.PerplexityClientPromptTools)
-        )
-        if not tools_enabled:
+        # v1.12.0: Engine only
+        if not self.engine_client or not self.engine_client.tools_enabled:
             console.print("[yellow]Tools not enabled. Use '/tools enable' first[/yellow]\n")
             return
 
         # Show engine tools (unified across all providers)
-        if self.engine_client and self.engine_client.tool_manager:
+        if self.engine_client.tool_manager:
             engine_tools = self.engine_client.tool_manager.list_tools()
             if engine_tools:
                 display_tools_table(engine_tools)
-        # Fallback: Show legacy tools if engine not available
-        elif isinstance(self.client, self.PerplexityClientPromptTools):
-            if not self.client.tool_manager or not self.client.tool_manager.tools:
+            else:
                 console.print("[yellow]No tools available[/yellow]\n")
-                return
-            display_tools_table(self.client.tool_manager.list_tools())
 
     def _tools_status(self):
         """Show tools status."""
-        # v1.11.5: Check engine_client.tools_enabled first (works across all providers)
-        tools_enabled = (
-            (self.engine_client and self.engine_client.tools_enabled) or
-            isinstance(self.client, self.PerplexityClientPromptTools)
-        )
-
-        if tools_enabled:
-            # Get tool count from engine (primary) or legacy client
+        # v1.12.0: Engine only
+        if self.engine_client and self.engine_client.tools_enabled:
+            # Get tool count from engine
             tool_count = 0
-            if self.engine_client and self.engine_client.tool_manager:
+            if self.engine_client.tool_manager:
                 try:
                     tool_count = len(self.engine_client.tool_manager.list_tools())
-                except Exception:
-                    pass
-            elif isinstance(self.client, self.PerplexityClientPromptTools):
-                try:
-                    tool_count = len(self.client.tool_manager.list_tools()) if self.client.tool_manager else 0
                 except Exception:
                     pass
 
             console.print(f"[green]✓ Tools enabled[/green] ({tool_count} tools available)")
 
-            # Show consent mode if engine available
-            if self.engine_client:
-                try:
-                    consent_mode = self.engine_client.session.edit_consent_mode
-                    console.print(f"[dim]Consent mode: {consent_mode}[/dim]")
-                except Exception:
-                    pass
+            # Show consent mode
+            try:
+                consent_mode = self.engine_client.session.edit_consent_mode
+                console.print(f"[dim]Consent mode: {consent_mode}[/dim]")
+            except Exception:
+                pass
 
             console.print("[dim]Use '/tools list' to see available tools[/dim]\n")
         else:
@@ -751,18 +750,14 @@ class CommandHandler:
 
     def _tools_config(self, args: list):
         """Configure tool settings."""
-        # v1.11.5: Check engine_client.tools_enabled first (works across all providers)
-        tools_enabled = (
-            (self.engine_client and self.engine_client.tools_enabled) or
-            isinstance(self.client, self.PerplexityClientPromptTools)
-        )
-        if not tools_enabled:
+        # v1.12.0: Engine only
+        if not self.engine_client or not self.engine_client.tools_enabled:
             console.print("[yellow]Tools not enabled. Use '/tools enable' first[/yellow]\n")
             return
 
         if not args:
             # Show current config
-            max_iter = getattr(self.client, 'tool_max_iterations', 15)
+            max_iter = getattr(self.engine_client, 'tool_max_iterations', 15)
             console.print("[bold]Tool Configuration[/bold]")
             console.print(f"  max_iterations: {max_iter}")
             console.print()
@@ -784,7 +779,7 @@ class CommandHandler:
                 if num < 1 or num > 50:
                     console.print("[red]max_iterations must be between 1 and 50[/red]\n")
                     return
-                self.client.tool_max_iterations = num
+                self.engine_client.tool_max_iterations = num
                 console.print(f"[green]✓ max_iterations set to {num}[/green]\n")
             except ValueError:
                 console.print(f"[red]Invalid number: {value}[/red]\n")
