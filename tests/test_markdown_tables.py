@@ -372,3 +372,108 @@ class TestRegressionPrevention:
         # Should not show alignment markers from either table
         assert '|:---|---:|' not in output
         assert '|:---:|:---:|:---:|' not in output
+
+
+class TestLinkConversion:
+    """Test markdown link to Rich clickable link conversion (OSC 8)."""
+
+    def test_convert_single_link(self):
+        """Test converting a single markdown link."""
+        from ppxai.markdown_tables import convert_markdown_links_to_rich
+
+        text = "See [1](https://docs.python.org) for details."
+        result = convert_markdown_links_to_rich(text)
+
+        assert "[link=https://docs.python.org]" in result
+        assert "[bold cyan]1[/bold cyan]" in result
+        assert "[/link]" in result
+
+    def test_convert_multiple_links(self):
+        """Test converting multiple markdown links."""
+        from ppxai.markdown_tables import convert_markdown_links_to_rich
+
+        text = "Check [Google](https://google.com) and [Python](https://python.org)."
+        result = convert_markdown_links_to_rich(text)
+
+        assert "[link=https://google.com]" in result
+        assert "[bold cyan]Google[/bold cyan]" in result
+        assert "[link=https://python.org]" in result
+        assert "[bold cyan]Python[/bold cyan]" in result
+
+    def test_no_links_unchanged(self):
+        """Test that text without links is unchanged."""
+        from ppxai.markdown_tables import convert_markdown_links_to_rich
+
+        text = "This is plain text without any links."
+        result = convert_markdown_links_to_rich(text)
+
+        assert result == text
+
+    def test_http_and_https_links(self):
+        """Test both HTTP and HTTPS links are converted."""
+        from ppxai.markdown_tables import convert_markdown_links_to_rich
+
+        text = "[Secure](https://example.com) and [Insecure](http://example.org)"
+        result = convert_markdown_links_to_rich(text)
+
+        assert "[link=https://example.com]" in result
+        assert "[link=http://example.org]" in result
+
+    def test_links_with_special_chars(self):
+        """Test links with special characters in URL."""
+        from ppxai.markdown_tables import convert_markdown_links_to_rich
+
+        text = "[Search](https://google.com/search?q=python&lang=en)"
+        result = convert_markdown_links_to_rich(text)
+
+        assert "[link=https://google.com/search?q=python&lang=en]" in result
+
+    def test_citation_style_links(self):
+        """Test citation-style links like [1], [2], etc."""
+        from ppxai.markdown_tables import convert_markdown_links_to_rich
+
+        text = "This is explained in [1](https://source1.com), [2](https://source2.com), and [3](https://source3.com)."
+        result = convert_markdown_links_to_rich(text)
+
+        assert result.count("[link=") == 3
+        assert "[bold cyan]1[/bold cyan]" in result
+        assert "[bold cyan]2[/bold cyan]" in result
+        assert "[bold cyan]3[/bold cyan]" in result
+
+    def test_render_with_links_produces_osc8(self):
+        """Test that rendering produces OSC 8 hyperlink escape codes."""
+        string_io = StringIO()
+        console = Console(file=string_io, force_terminal=True, width=80)
+
+        content = "Here is a citation [1](https://example.com)."
+        render_markdown_with_tables(content, console)
+
+        output = string_io.getvalue()
+
+        # OSC 8 hyperlink format: \x1b]8;id=...;URL\x1b\\TEXT\x1b]8;;\x1b\\
+        assert '\x1b]8;' in output, "OSC 8 escape sequence should be present"
+        assert 'https://example.com' in output
+        assert '1' in output  # The link text
+
+    def test_links_in_mixed_content(self):
+        """Test links mixed with other markdown content."""
+        string_io = StringIO()
+        console = Console(file=string_io, force_terminal=True, width=80)
+
+        content = """## References
+
+Check out [Python Docs](https://docs.python.org) for more information.
+
+| Source | URL |
+|---|---|
+| Python | python.org |
+
+See also [1](https://example.com) and [2](https://example.org)."""
+
+        render_markdown_with_tables(content, console)
+
+        output = string_io.getvalue()
+        # Should have rendered the links (OSC 8 codes present)
+        assert '\x1b]8;' in output
+        # Should not show raw table syntax
+        assert '|---|---|' not in output

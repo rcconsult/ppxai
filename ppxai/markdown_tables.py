@@ -1,8 +1,12 @@
 """
-Markdown table parser for Rich TUI.
+Markdown table parser and link converter for Rich TUI.
 
-This module provides utilities to parse markdown tables and convert them
-to Rich Table objects for proper rendering in the terminal.
+This module provides utilities to:
+- Parse markdown tables and convert them to Rich Table objects
+- Convert markdown links to Rich clickable terminal links (OSC 8)
+- Handle inline markdown formatting (bold, italic, code)
+
+For proper rendering in the terminal with clickable citations.
 """
 
 import re
@@ -11,6 +15,40 @@ from rich.table import Table
 from rich.markdown import Markdown
 from rich.console import Console, RenderableType
 from rich.text import Text
+
+
+def convert_markdown_links_to_rich(content: str) -> str:
+    """
+    Convert markdown links to Rich markup for clickable terminal links.
+
+    Transforms [text](url) to [link=url]text[/link] format which Rich renders
+    as clickable hyperlinks in terminals that support OSC 8 (iTerm2, Windows
+    Terminal, GNOME Terminal 3.26+, etc.).
+
+    Args:
+        content: Markdown content with links like [Source](https://example.com)
+
+    Returns:
+        Content with Rich-style clickable links
+
+    Examples:
+        >>> convert_markdown_links_to_rich("See [1](https://docs.python.org)")
+        'See [link=https://docs.python.org][bold cyan]1[/bold cyan][/link]'
+
+        >>> convert_markdown_links_to_rich("[Google](https://google.com) is popular")
+        '[link=https://google.com][bold cyan]Google[/bold cyan][/link] is popular'
+    """
+    # Pattern to match markdown links: [text](url)
+    # Match text that doesn't contain ] and url that doesn't contain )
+    link_pattern = r'\[([^\]]+)\]\(([^)]+)\)'
+
+    def replace_link(match):
+        text = match.group(1)
+        url = match.group(2)
+        # Use bold cyan style for visibility + link for clickability
+        return f'[link={url}][bold cyan]{text}[/bold cyan][/link]'
+
+    return re.sub(link_pattern, replace_link, content)
 
 
 def parse_inline_markdown(text: str) -> Text:
@@ -210,10 +248,16 @@ def split_markdown_content(content: str) -> List[Tuple[str, str]]:
 
 def render_markdown_with_tables(content: str, console: Console) -> None:
     """
-    Render markdown content with proper table support.
+    Render markdown content with proper table and link support.
 
-    This function splits markdown content into table and non-table blocks,
-    rendering tables using Rich Table and other content using Rich Markdown.
+    This function:
+    1. Splits content into table and non-table blocks
+    2. Renders tables using Rich Table objects
+    3. Converts markdown links [text](url) to clickable Rich links
+    4. Renders other markdown using Rich Markdown
+
+    Clickable links work in terminals supporting OSC 8 hyperlinks:
+    iTerm2, Windows Terminal, GNOME Terminal 3.26+, Kitty, etc.
 
     Args:
         content: Markdown content to render
@@ -230,4 +274,15 @@ def render_markdown_with_tables(content: str, console: Console) -> None:
             console.print(table)
         else:
             if block_content.strip():
-                console.print(Markdown(block_content))
+                # Check if content has markdown links that should be clickable
+                # Pattern: [text](url) - note: also matches [text](relative) but we only make http(s) clickable
+                has_links = re.search(r'\[[^\]]+\]\(https?://[^)]+\)', block_content)
+
+                if has_links:
+                    # Convert markdown links to Rich clickable links, then render
+                    # We use Rich markup directly for links since Markdown() strips link URLs
+                    rich_content = convert_markdown_links_to_rich(block_content)
+                    console.print(rich_content)
+                else:
+                    # No links - use standard Markdown rendering
+                    console.print(Markdown(block_content))
