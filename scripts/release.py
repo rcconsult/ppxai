@@ -389,17 +389,25 @@ def create_and_push_tag(version: str):
     print(f"  ✅ Pushed to origin")
 
 
-def wait_for_ci(timeout_minutes: int = 10) -> bool:
-    """Wait for GitHub Actions CI to complete."""
-    print(f"\n⏳ Waiting for CI (timeout: {timeout_minutes}min)...")
+def wait_for_ci(version: str, timeout_minutes: int = 10) -> bool:
+    """Wait for GitHub Actions CI to complete for the specific version tag."""
+    tag = f"v{version}"
+    print(f"  Waiting for CI run on tag {tag} (timeout: {timeout_minutes}min)...")
 
     token_cmd = get_gh_token_cmd()
 
     start_time = time.time()
     timeout_seconds = timeout_minutes * 60
 
+    # Wait a bit for CI to start
+    time.sleep(5)
+
     while time.time() - start_time < timeout_seconds:
-        result = run_command(f"{token_cmd}gh run list --limit 1 --json status,conclusion,name", check=False)
+        # Get runs filtered by head branch (tag)
+        result = run_command(
+            f"{token_cmd}gh run list --limit 5 --json status,conclusion,name,headBranch",
+            check=False
+        )
 
         if result.returncode != 0:
             print(f"  ⚠️  Could not check CI status: {result.stderr}")
@@ -408,20 +416,30 @@ def wait_for_ci(timeout_minutes: int = 10) -> bool:
 
         try:
             runs = json.loads(result.stdout)
-            if runs:
-                status = runs[0].get("status")
-                conclusion = runs[0].get("conclusion")
+            # Find runs for our specific tag
+            tag_runs = [r for r in runs if r.get("headBranch") == tag]
 
-                if status == "completed":
-                    if conclusion == "success":
-                        print(f"  ✅ CI completed successfully")
-                        return True
-                    else:
-                        print(f"  ❌ CI failed with: {conclusion}")
-                        return False
+            if not tag_runs:
+                elapsed = int(time.time() - start_time)
+                print(f"  ⏳ Waiting for CI to start for {tag} ({elapsed}s elapsed)")
+                time.sleep(15)
+                continue
+
+            # Check the most recent run for our tag
+            run = tag_runs[0]
+            status = run.get("status")
+            conclusion = run.get("conclusion")
+
+            if status == "completed":
+                if conclusion == "success":
+                    print(f"  ✅ CI completed successfully for {tag}")
+                    return True
                 else:
-                    elapsed = int(time.time() - start_time)
-                    print(f"  ⏳ CI status: {status} ({elapsed}s elapsed)")
+                    print(f"  ❌ CI failed with: {conclusion}")
+                    return False
+            else:
+                elapsed = int(time.time() - start_time)
+                print(f"  ⏳ CI status: {status} ({elapsed}s elapsed)")
         except json.JSONDecodeError:
             pass
 
@@ -431,17 +449,39 @@ def wait_for_ci(timeout_minutes: int = 10) -> bool:
     return False
 
 
-def publish_release_notes(version: str):
+def publish_release_notes(version: str, max_retries: int = 5):
     """Publish release notes to GitHub release."""
     notes_file = PROJECT_ROOT / f"docs/RELEASE-NOTES-v{version}.md"
+    tag = f"v{version}"
 
     if not notes_file.exists():
         print(f"  ⚠️  Release notes not found: {notes_file}")
         return
 
     token_cmd = get_gh_token_cmd()
-    run_command(f'{token_cmd}gh release edit v{version} --notes-file "{notes_file}"')
-    print(f"  ✅ Published release notes")
+
+    # Try to publish, retrying if release doesn't exist yet (CI may still be creating it)
+    for attempt in range(max_retries):
+        result = run_command(
+            f'{token_cmd}gh release edit {tag} --notes-file "{notes_file}"',
+            check=False
+        )
+        if result.returncode == 0:
+            print(f"  ✅ Published release notes to {tag}")
+            return
+
+        if "release not found" in result.stderr.lower():
+            if attempt < max_retries - 1:
+                wait_time = (attempt + 1) * 10
+                print(f"  ⏳ Release not found yet, waiting {wait_time}s (attempt {attempt + 1}/{max_retries})...")
+                time.sleep(wait_time)
+            else:
+                print(f"  ❌ Release {tag} not found after {max_retries} attempts")
+                print(f"     You can manually publish notes with:")
+                print(f"     gh release edit {tag} --notes-file docs/RELEASE-NOTES-{tag}.md")
+        else:
+            print(f"  ❌ Failed to publish release notes: {result.stderr}")
+            return
 
 
 def verify_release(version: str) -> bool:
@@ -626,7 +666,7 @@ def main():
     if not args.skip_ci_wait:
         step += 1
         print_step(step, total_steps, "Waiting for CI")
-        if not wait_for_ci():
+        if not wait_for_ci(version):
             print(f"\n⚠️  CI did not complete successfully")
             print(f"    Check: https://github.com/rcconsult/ppxai/actions")
 
