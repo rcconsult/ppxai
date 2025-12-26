@@ -6,12 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.11.6 (Tools Commands After Provider Switch)
+**Current Version:** v1.11.6 (Legacy Code Removal + Bug Fixes)
 
 **What's New in v1.11.6 (Released 2025-12-26):**
-- **FIX:** `/tools list` and `/tools status` now work correctly after switching providers 🔧
-- **Root Cause:** Commands checked legacy `isinstance()` instead of `engine_client.tools_enabled`
-- **Impact:** `/tools enable` → `/provider gemini` → `/tools status` now correctly shows "Tools enabled"
+- **MAJOR:** All legacy code removed - EngineClient is now the only client interface 🎉
+  - Deleted: `ppxai/client.py` (AIClient), `perplexity_tools_prompt_based.py`, `tool_manager.py`
+  - ~2,100 lines of legacy code removed
+  - Tests migrated to EngineClient (322 tests passing)
+- **FIX:** `/tools list` and `/tools status` now work correctly after switching providers
+- **Agentic Progress:** Phases 1-4 complete, `/agent` command (Phase 5) is next in v1.11.7
 
 **Previous Release (v1.11.5 - 2025-12-26):**
 - **CRITICAL FIX:** Ctrl-C during streaming no longer causes 400 message alternation errors 🔧
@@ -271,13 +274,10 @@ Terminal UI using Rich/prompt_toolkit:
 - **`ui.py`** - Rich console components
 - **`commands.py`** - Slash command handlers
 
-### Legacy Support
+### Supporting Modules
 
-- **`client.py`** - Legacy `AIClient` (still used by TUI during transition)
 - **`config.py`** - Configuration system (used by both engine and TUI)
 - **`server.py`** - Backward-compatible import from `server/jsonrpc.py`
-- **`tool_manager.py`** - Legacy tool manager (being replaced by engine/tools)
-- **`perplexity_tools_prompt_based.py`** - Legacy tool-enabled client
 
 ### Configuration Files
 

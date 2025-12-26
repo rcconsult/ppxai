@@ -1,7 +1,7 @@
 # ppxai Development Roadmap
 
 > **Note:** For future roadmap, see:
-> - **[docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.md)** - **Agentic workflow implementation plan (Phase 1 complete in v1.11.0, Phases 2-6 remaining)**
+> - **[docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.md)** - **Agentic workflow plan (Phases 1-4 complete, Phase 5 `/agent` next)**
 > - [gemini3-features-roadmap.md](gemini3-features-roadmap.md) - Agentic features vision (v1.11.0-v1.13.0)
 > - [docs/tui-markdown-rendering.md](docs/tui-markdown-rendering.md) - TUI Workspace vision (v1.10.5-v1.15.0)
 > - [sonar-features-proposal.md](sonar-features-proposal.md) - Competitive analysis
@@ -10,30 +10,37 @@
 
 ## Current Release: v1.11.6
 
-**Status**: ✅ Bug Fix - /tools list and /tools status After Provider Switch
+**Status**: ✅ Legacy Code Removal + Bug Fixes
 
 Released: 2025-12-26
 
-**Goal**: Fix `/tools list` and `/tools status` commands not recognizing tools after switching providers
+**Goal**: Complete legacy code cleanup and fix tool-related bugs
+
+**Major Changes**:
+- ✅ **Legacy Code Removed** - All legacy code paths removed, EngineClient is now the only client
+  - Deleted: `ppxai/client.py` (447 lines - AIClient)
+  - Deleted: `perplexity_tools_prompt_based.py` (1,342 lines - legacy tools client)
+  - Deleted: `tool_manager.py` (299 lines - legacy MCP loader)
+  - Updated: `ppxai/__init__.py` now exports `EngineClient` as primary interface
+- ✅ **Tests Migrated** - Legacy tests replaced with EngineClient-based tests
+  - Removed 5 legacy test files (~1,485 lines)
+  - Added `tests/test_engine_tool_parsing.py` (11 new tests)
+  - 322 tests passing (down from 377 - removed legacy tests)
 
 **Bug Fixes**:
 - ✅ **`/tools list` After Provider Switch** - Now correctly lists tools after `/provider gemini`
-  - Root cause: `_list_tools()` checked `isinstance(self.client, PerplexityClientPromptTools)` which is False for non-Perplexity providers
-  - Fix: Check `engine_client.tools_enabled` first, show engine tools for all providers
 - ✅ **`/tools status` After Provider Switch** - Now correctly shows "Tools enabled" after switching
-  - Root cause: `_tools_status()` had same isinstance check bug
-  - Fix: Check `engine_client.tools_enabled` first
 - ✅ **`/tools config` After Provider Switch** - Now works after switching providers
-  - Same fix pattern applied
 
-**Files Changed**:
-- `ppxai/commands.py` - Updated `_list_tools()`, `_tools_status()`, `_tools_config()` to check `engine_client.tools_enabled` first
+**Agentic Workflow Progress**:
+- ✅ Phase 1: File editing tools (v1.11.0)
+- ✅ Phase 2: @git context (v1.11.4)
+- ✅ Phase 3: @tree context (v1.11.4)
+- ✅ Phase 4: Manual testing (v1.11.5-v1.11.6)
+- 🎯 Phase 5: `/agent` command (v1.11.7 - next)
+- ⏳ Phase 6: Testing & docs (v1.11.7)
 
-**Testing**:
-- 377 tests passing
-- Manual TUI verification: `/tools enable` → `/provider gemini` → `/tools status` now works
-
-**Branch**: `master`
+**Branch**: `refactor/maintenance-no-legacy-code` → `master`
 
 ---
 
@@ -2075,6 +2082,6 @@ Interested in working on any of these features?
 
 ---
 
-**Last Updated**: December 24, 2025
-**Current Version**: v1.11.3
-**Next Target**: v1.12.0+ (Provider Abstraction Cleanup + Agentic Workflow)
+**Last Updated**: December 26, 2025
+**Current Version**: v1.11.6
+**Next Target**: v1.11.7 (`/agent` command - completes agentic workflow)
