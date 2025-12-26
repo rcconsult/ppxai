@@ -303,9 +303,15 @@ def run_tests() -> bool:
     return False
 
 
-def create_commit(version: str, message: str):
-    """Create release commit."""
+def create_commit(version: str, message: str) -> bool:
+    """Create release commit. Returns True if commit was created, False if nothing to commit."""
     run_command("git add -A")
+
+    # Check if there are changes to commit
+    result = run_command("git status --porcelain", check=False)
+    if not result.stdout.strip():
+        print(f"  ⏭️  No changes to commit (version files already up to date)")
+        return False
 
     commit_msg = f"""{message}
 
@@ -321,6 +327,7 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"""
     msg_file.unlink()
 
     print(f"  ✅ Created commit: {message[:50]}...")
+    return True
 
 
 def delete_existing_release(version: str) -> bool:
