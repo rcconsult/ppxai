@@ -6,9 +6,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.11.4 (Git and Tree Context Providers)
+**Current Version:** v1.11.5 (Bug Fixes - Ctrl-C and Tools Status)
 
-**What's New in v1.11.4 (In Development):**
+**What's New in v1.11.5 (Released 2025-12-26):**
+- **CRITICAL FIX:** Ctrl-C during streaming no longer causes 400 message alternation errors 🔧
+- **FIX:** `/tools enable` now correctly shows "ON" in status line
+- **Root Cause (Ctrl-C):** Cleanup only removed from legacy client, not engine session
+- **Root Cause (Tools):** Status line checked wrong tools flag (legacy vs engine)
+- **Tests:** 377 tests passing (2 new session cleanup tests)
+- **Discovered on:** Fresh Linux Mint 22 installation during cross-platform testing
+
+**Previous Release (v1.11.4 - 2025-12-24):**
 - **NEW:** `@git` context provider - Include git diff (staged + unstaged changes) in messages 🔀
 - **NEW:** `@tree` context provider - Include project directory structure in messages 🌳
 - **Context Injection:** Type `@git` to inject current git changes, `@tree` for project structure

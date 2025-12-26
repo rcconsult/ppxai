@@ -717,6 +717,214 @@
           "iteration": 3
         }
       ]
+    },
+    {
+      "timestamp": "2025-12-26T00:00:25.046607",
+      "version": "1.11.4",
+      "git_commit": "1876a81",
+      "git_branch": "master",
+      "provider": "gemini",
+      "model": "gemini-2.0-flash",
+      "summary": {
+        "total_runs": 9,
+        "successful_runs": 9,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 986.7,
+          "min": 334.32,
+          "max": 5056.67,
+          "stdev": 1528.41
+        },
+        "total_ms": {
+          "mean": 2480.24,
+          "min": 546.68,
+          "max": 5066.78,
+          "stdev": 2155.12
+        },
+        "tokens_per_sec": {
+          "mean": 71.3,
+          "min": 0.99,
+          "max": 122.86
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 5056.67,
+          "total_ms": 5066.78,
+          "tokens": 5,
+          "tokens_per_sec": 0.99,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 537.02,
+          "total_ms": 546.68,
+          "tokens": 5,
+          "tokens_per_sec": 9.15,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 540.85,
+          "total_ms": 551.45,
+          "tokens": 5,
+          "tokens_per_sec": 9.07,
+          "prompt_type": "simple",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 426.26,
+          "total_ms": 844.45,
+          "tokens": 78,
+          "tokens_per_sec": 92.37,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 379.29,
+          "total_ms": 693.6,
+          "tokens": 62,
+          "tokens_per_sec": 89.39,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 334.32,
+          "total_ms": 711.07,
+          "tokens": 65,
+          "tokens_per_sec": 91.41,
+          "prompt_type": "medium",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 502.59,
+          "total_ms": 4517.16,
+          "tokens": 555,
+          "tokens_per_sec": 122.86,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 575.22,
+          "total_ms": 4846.88,
+          "tokens": 530,
+          "tokens_per_sec": 109.35,
+          "prompt_type": "complex",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 528.11,
+          "total_ms": 4544.09,
+          "tokens": 532,
+          "tokens_per_sec": 117.08,
+          "prompt_type": "complex",
+          "iteration": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-12-26T00:01:12.467179",
+      "version": "1.11.4",
+      "git_commit": "1876a81",
+      "git_branch": "master",
+      "provider": "perplexity",
+      "model": "sonar-pro",
+      "summary": {
+        "total_runs": 9,
+        "successful_runs": 9,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 1572.4,
+          "min": 1059.96,
+          "max": 2318.99,
+          "stdev": 404.3
+        },
+        "total_ms": {
+          "mean": 2956.58,
+          "min": 2181.03,
+          "max": 3909.85,
+          "stdev": 550.45
+        },
+        "tokens_per_sec": {
+          "mean": 58.56,
+          "min": 28.1,
+          "max": 86.39
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 2318.99,
+          "total_ms": 2740.38,
+          "tokens": 77,
+          "tokens_per_sec": 28.1,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1155.79,
+          "total_ms": 3275.86,
+          "tokens": 283,
+          "tokens_per_sec": 86.39,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 1728.03,
+          "total_ms": 2181.03,
+          "tokens": 76,
+          "tokens_per_sec": 34.85,
+          "prompt_type": "simple",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 1852.97,
+          "total_ms": 2972.12,
+          "tokens": 158,
+          "tokens_per_sec": 53.16,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1485.49,
+          "total_ms": 2875.92,
+          "tokens": 149,
+          "tokens_per_sec": 51.81,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 1370.26,
+          "total_ms": 2343.51,
+          "tokens": 141,
+          "tokens_per_sec": 60.17,
+          "prompt_type": "medium",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 1874.81,
+          "total_ms": 3544.85,
+          "tokens": 213,
+          "tokens_per_sec": 60.09,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1059.96,
+          "total_ms": 3909.85,
+          "tokens": 309,
+          "tokens_per_sec": 79.03,
+          "prompt_type": "complex",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 1305.32,
+          "total_ms": 2765.69,
+          "tokens": 203,
+          "tokens_per_sec": 73.4,
+          "prompt_type": "complex",
+          "iteration": 3
+        }
+      ]
     }
   ]
 }

@@ -8,7 +8,38 @@
 
 ---
 
-## Current Release: v1.11.4
+## Current Release: v1.11.5
+
+**Status**: ✅ Bug Fixes - Ctrl-C and Tools Status Display
+
+Released: 2025-12-26
+
+**Goal**: Fix critical TUI bugs discovered during Linux testing
+
+**Bug Fixes**:
+- ✅ **Ctrl-C Message Alternation Error** - Fixed 400 error after Ctrl-C interrupt
+  - Root cause: Ctrl-C cleanup only removed user message from legacy `client.conversation_history`, not from `engine_client.session.messages`
+  - Fix: Added `SessionManager.remove_last_message()` method and cleanup logic for both legacy and engine session
+  - Impact: No more "user or tool message(s) should alternate with assistant message(s)" errors after interrupting
+- ✅ **Tools Status Display** - `/tools enable` now correctly shows "ON" in status line
+  - Root cause: `get_status_line()` checked legacy `client.enable_tools` instead of `engine_client.tools_enabled`
+  - Fix: Check `handler.engine_client.tools_enabled` first, fallback to legacy client check
+  - Impact: Status bar accurately reflects tools state
+
+**Files Changed**:
+- `ppxai/engine/session.py` - Added `remove_last_message()` method (lines 82-95)
+- `ppxai/main.py` - Updated Ctrl-C handler (lines 331-344), fixed `get_status_line()` (lines 35-43)
+- `tests/test_file_editing_tools.py` - Added 2 new tests for `remove_last_message` functionality
+
+**Testing**:
+- 377 tests passing (2 new session cleanup tests)
+- Manual TUI verification confirmed both bugs fixed
+
+**Branch**: `bugfix/tools-errors-after-sync` → `master`
+
+---
+
+## Previous Release: v1.11.4
 
 **Status**: ✅ @git and @tree Context Injection + Unified Architecture
 
