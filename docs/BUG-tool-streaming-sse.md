@@ -1,7 +1,7 @@
 # BUG: Tool Call JSON Leaks to VSCode Extension During Streaming
 
 **Created:** 2025-12-26
-**Status:** Open
+**Status:** FIXED (v1.11.7)
 **Priority:** High (blocks `/agent` feature)
 **Affects:** VSCode Extension with tools enabled
 
@@ -78,3 +78,30 @@ User asks: "Explore the project"
 ## Impact on /agent
 
 This bug must be fixed before implementing `/agent` command, as the agent loop will make multiple tool calls per turn.
+
+---
+
+## FIX (v1.11.7)
+
+**Root Cause Identified:** The bug was NOT in SSE event handling. It was in `_chat_with_tools()` at lines 763-789.
+
+When the tool loop detected "no tool call" (final response), it would re-request the same messages with `stream=True` to get a streaming response. However, on this second request, the model might output a NEW tool call, which would be streamed directly to the client without being parsed as a tool call.
+
+**Solution:** Don't re-request with streaming. Use the already-fetched response from the `stream=False` request during tool iterations.
+
+**File Changed:** `ppxai/engine/client.py`
+
+```python
+# Before (buggy):
+if stream:
+    # Re-request with streaming for final response
+    async for event in self.provider.chat(messages, self.model, stream=True):
+        yield event  # Tool call JSON could leak here!
+
+# After (fixed):
+# Don't re-request - use the response we already have
+self.session.add_message(Message("assistant", full_response))
+yield Event(EventType.STREAM_END, full_response)
+```
+
+**Tests:** 322 passing, no regressions.

@@ -760,30 +760,17 @@ class EngineClient:
                 logger = get_logger()
                 logger.debug(f"No tool call detected, generating final response (stream={stream})")
 
-                if stream:
-                    # Re-request with streaming for final response
-                    logger.debug(f"Re-requesting with stream=True for final response")
-                    async for event in self.provider.chat(messages, self.model, stream=True):
-                        # Check for interrupt
-                        if self._interrupted:
-                            yield Event(EventType.ERROR, "Interrupted by user")
-                            break
-
-                        # CRITICAL FIX: Add assistant message to session BEFORE yielding STREAM_END
-                        # because the caller (TUI main loop) may break out of the loop after receiving it
-                        if event.type == EventType.STREAM_END:
-                            logger.debug(f"STREAM_END received, adding assistant message BEFORE yield, length={len(event.data) if event.data else 0}")
-                            self.session.add_message(Message("assistant", event.data))
-                            logger.debug(f"After adding assistant message, session has {len(self.session.messages)} messages")
-
-                        # Now yield the event to caller (TUI may break after this)
-                        logger.debug(f"Yielding event: {event.type}")
-                        yield event
-                else:
-                    logger.debug(f"Non-streaming path, adding assistant message from full_response")
-                    self.session.add_message(Message("assistant", full_response))
-                    yield Event(EventType.STREAM_END, full_response)
-                    logger.debug(f"After adding assistant message, session has {len(self.session.messages)} messages")
+                # v1.11.7 FIX: Don't re-request with streaming - use the response we already have.
+                # Re-requesting caused bugs where the model would output a tool call on the
+                # second request, which would then be sent as the final response without
+                # being parsed as a tool call.
+                #
+                # The response was already fetched with stream=False during tool iterations.
+                # Just emit it as the final response.
+                logger.debug(f"Using already-fetched response as final (no re-request)")
+                self.session.add_message(Message("assistant", full_response))
+                yield Event(EventType.STREAM_END, full_response)
+                logger.debug(f"After adding assistant message, session has {len(self.session.messages)} messages")
 
                 logger.debug(f"Final response complete, returning from _chat_with_tools")
                 return
