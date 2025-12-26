@@ -2,7 +2,15 @@
 ppxai - AI Text UI Application
 
 A terminal-based interface for interacting with LLM providers (Perplexity AI or custom self-hosted models).
+
+v1.12.0+: Use EngineClient instead of legacy AIClient/PerplexityClient.
+    from ppxai.engine import EngineClient
+    engine = EngineClient()
+    engine.set_provider("perplexity")
+    engine.set_model("sonar-pro")
 """
+
+import warnings
 
 from .config import (
     SESSIONS_DIR,
@@ -27,7 +35,49 @@ from .config import (
     reload_config,
     validate_config,
 )
-from .client import AIClient, PerplexityClient
+
+# Legacy client imports - deprecated in v1.12.0
+# Use ppxai.engine.EngineClient instead
+def _get_legacy_client():
+    """Import legacy AIClient with deprecation warning."""
+    warnings.warn(
+        "AIClient is deprecated. Use ppxai.engine.EngineClient instead. "
+        "AIClient will be removed in v1.13.0.",
+        DeprecationWarning,
+        stacklevel=3
+    )
+    from .client import AIClient
+    return AIClient
+
+def _get_legacy_perplexity_client():
+    """Import legacy PerplexityClient with deprecation warning."""
+    warnings.warn(
+        "PerplexityClient is deprecated. Use ppxai.engine.EngineClient instead. "
+        "PerplexityClient will be removed in v1.13.0.",
+        DeprecationWarning,
+        stacklevel=3
+    )
+    from .client import PerplexityClient
+    return PerplexityClient
+
+
+class _DeprecatedAIClient:
+    """Wrapper to emit deprecation warning on use."""
+    def __new__(cls, *args, **kwargs):
+        AIClient = _get_legacy_client()
+        return AIClient(*args, **kwargs)
+
+
+class _DeprecatedPerplexityClient:
+    """Wrapper to emit deprecation warning on use."""
+    def __new__(cls, *args, **kwargs):
+        PerplexityClient = _get_legacy_perplexity_client()
+        return PerplexityClient(*args, **kwargs)
+
+
+# Export deprecated classes for backward compatibility
+AIClient = _DeprecatedAIClient
+PerplexityClient = _DeprecatedPerplexityClient
 from .prompts import CODING_PROMPTS, SPEC_GUIDELINES, SPEC_TEMPLATES
 from .ui import (
     console,

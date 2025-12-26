@@ -5,7 +5,7 @@ Command handlers for the ppxai application.
 import os
 import asyncio
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
+from typing import Optional
 
 from rich.console import Console
 from prompt_toolkit import prompt as pt_prompt
@@ -26,9 +26,6 @@ from .ui import (
     display_global_usage,
     display_tools_table,
 )
-
-if TYPE_CHECKING:
-    from .client import AIClient
 
 
 class ConsentValidator(Validator):
