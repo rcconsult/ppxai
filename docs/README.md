@@ -2,130 +2,128 @@
 
 ## Quick Start
 
-**New to tools?** Start here:
-1. [Tool Creation Guide](TOOL_CREATION_GUIDE.md) - Step-by-step guide for creating tools ⭐
-2. [Quick Start](QUICK_START_TOOLS.md) - 60-second setup
+**New to ppxai?** Start here:
+1. [File Editing Guide](FILE_EDITING_GUIDE.md) - AI-powered file editing with consent
+2. [Shell Consent Guide](SHELL_CONSENT_GUIDE.md) - Secure shell command execution
 
 ## Documentation Index
 
-### For Users
+### User Guides
 
 | Document | Description |
 |----------|-------------|
-| [Tool Creation Guide](TOOL_CREATION_GUIDE.md) | **START HERE** - Step-by-step guide for both approaches |
-| [Quick Start](QUICK_START_TOOLS.md) | Get tools working in 60 seconds |
-| [Shell Consent Guide](SHELL_CONSENT_GUIDE.md) | **NEW (v1.11.2)** - Shell command security with consent system 🔒 |
-| [File Editing Guide](FILE_EDITING_GUIDE.md) | **NEW (v1.11.1)** - File editing tools with consent system 🎯 |
-| [Tool Approaches](TOOL_APPROACHES.md) | Comparison: Prompt-based vs Native function calling |
+| [File Editing Guide](FILE_EDITING_GUIDE.md) | AI-powered file editing with user consent |
+| [Shell Consent Guide](SHELL_CONSENT_GUIDE.md) | Shell command security with consent system |
+| [Context Injection Guide](CONTEXT-INJECTION.md) | `@file`, `@git`, `@tree` context providers |
+| [Provider Setup Guide](PROVIDER_SETUP.md) | Configure AI providers (OpenAI, Gemini, Perplexity) |
+| [Autorouter Config](AUTOROUTER-CONFIG.md) | Automatic model routing for coding tasks |
 
-### Reference
-
-| Document | Description |
-|----------|-------------|
-| [Tools README](TOOLS_README.md) | Complete technical reference |
-| [Integration Summary](INTEGRATION_SUMMARY.md) | How MCP + OpenAI work together |
-| [User Tools Guide](USER_TOOLS_GUIDE.md) | Detailed guide for custom tools |
-
-### Troubleshooting
+### Technical Reference
 
 | Document | Description |
 |----------|-------------|
-| [MCP Fix Guide](MCP_FIX_GUIDE.md) | MCP server troubleshooting |
+| [Agentic Workflow Plan](v1.11.0-agentic-workflow-plan.md) | Technical implementation of agentic features |
+| [Architecture Refactoring](architecture-refactoring.md) | EngineClient architecture design |
+| [AI Codebase Analysis](AI-CODEBASE-ANALYSIS-2025-12-26.md) | External AI analysis of codebase |
 
-### Archive
+### Archived Documentation
 
-| Document | Description |
-|----------|-------------|
-| [Tool Integration](TOOL_INTEGRATION.md) | Legacy integration docs |
-| [Tool Integration Complete](TOOL_INTEGRATION_COMPLETE.md) | Legacy docs |
+Legacy documentation is preserved in `archive/` for historical reference:
+- `archive/legacy-tools-docs/` - Legacy tool system docs (pre-EngineClient)
+- `archive/bug-reports/` - Historical bug reports
 
 ## Tool System Overview
 
-ppxai supports two approaches for adding custom tools:
+ppxai includes built-in tools for AI-powered development:
 
-### 1. Built-in Python Tools (Recommended)
+### Built-in Tools
 
-**Best for:** Most use cases (90%)
+| Tool | Description |
+|------|-------------|
+| `list_directory` | List files in directories |
+| `read_file` | Read file contents |
+| `execute_shell_command` | Run shell commands (with consent) |
+| `apply_patch` | Apply unified diff patches |
+| `replace_block` | Find and replace text blocks |
+| `insert_text` | Insert text at line numbers |
+| `delete_lines` | Delete line ranges |
+| `web_search` | Search the web |
+| `fetch_url` | Fetch URL contents |
+| `get_datetime` | Get current date/time |
+| `get_weather` | Get weather information |
+| `calculator` | Perform calculations |
 
-- ✅ Simple Python functions
-- ✅ Fast execution (same process)
-- ✅ Easy to debug
-- ✅ No external dependencies
+### Enabling Tools
 
-**Example:** See `demo/example_builtin_tool.py`
-
-**Guide:** [Tool Creation Guide - Option 1](TOOL_CREATION_GUIDE.md#option-1-built-in-python-tool-recommended)
-
-### 2. MCP Server Tools (Advanced)
-
-**Best for:** Standard integrations (GitHub, Slack, etc.)
-
-- ✅ Reusable across apps
-- ✅ Community ecosystem
-- ⚠️ Requires Node.js
-- ⚠️ More complex
-
-**Example:** See `demo/example_mcp_server/`
-
-**Guide:** [Tool Creation Guide - Option 2](TOOL_CREATION_GUIDE.md#option-2-mcp-server-tool-advanced)
-
-## Getting Started with Tools
-
-### Step 1: Enable Tools
-
-In ppxai:
-```
+```bash
+# In TUI
 /tools enable
-```
 
-### Step 2: List Available Tools
+# Check status
+/tools status
 
-```
+# List available tools
 /tools list
 ```
 
-### Step 3: Use Tools
+### Creating Custom Tools
 
-Just ask the AI to use them:
+Tools are implemented in `ppxai/engine/tools/builtin/`:
+
+```python
+from ppxai.engine.tools.base import BaseTool
+
+class MyTool(BaseTool):
+    name = "my_tool"
+    description = "Description for the AI"
+    parameters = {
+        "type": "object",
+        "properties": {
+            "arg1": {"type": "string", "description": "First argument"}
+        },
+        "required": ["arg1"]
+    }
+
+    async def execute(self, arg1: str) -> str:
+        return f"Result: {arg1}"
 ```
-You: Use the calculator tool to compute 42 * 58
+
+Register in `ppxai/engine/tools/builtin/__init__.py`:
+
+```python
+from .my_tool import MyTool
+
+def register_all_builtin_tools(manager, provider_name=None, engine=None):
+    # ... existing registrations ...
+    manager.register_tool(MyTool())
 ```
 
-The AI will automatically use the appropriate tool!
+## Using EngineClient
 
-### Step 4: Create Your Own
+The `EngineClient` is the primary interface for programmatic access:
 
-Follow the [Tool Creation Guide](TOOL_CREATION_GUIDE.md)
+```python
+from ppxai.engine import EngineClient
 
-## Examples
+# Create engine
+engine = EngineClient()
 
-### Built-in Tool Examples
+# Configure
+engine.set_provider("gemini")
+engine.set_model("gemini-2.0-flash")
 
-See `demo/example_builtin_tool.py`:
-- `analyze_python_file` - Analyze Python code
-- `format_json` - Format JSON strings
-- `calculate_sha256` - Calculate file hashes
+# Enable tools
+engine.enable_tools()
 
-### MCP Server Example
+# Chat (sync)
+response = engine.chat_sync("What time is it?")
 
-See `demo/example_mcp_server/`:
-- Complete working MCP server
-- 4 text manipulation tools
-- Ready to use or modify
-
-## Testing
-
-All tests are in `tests/` directory:
-
-```bash
-# Test all tools
-python tests/test_all_tools.py
-
-# Test MCP diagnostics
-python tests/test_mcp.py
-
-# Test prompt-based approach
-python tests/test_prompt_tools.py
+# Chat (async with events)
+async for event in engine.chat("Explore this project"):
+    if event.type == EventType.STREAM_CHUNK:
+        print(event.data, end="")
+    elif event.type == EventType.TOOL_CALL:
+        print(f"Calling: {event.data['tool']}")
 ```
 
 ## Directory Structure
@@ -155,28 +153,28 @@ ppxai/
 
 ## FAQ
 
-**Q: Do I need MCP servers?**
-A: No! Built-in Python tools work great for most use cases.
+**Q: What is EngineClient?**
+A: The unified client interface for all AI interactions. It replaces the legacy AIClient.
 
-**Q: Which approach should I use?**
-A: Start with built-in Python tools (Option 1). Add MCP only if you need standard integrations like GitHub/Slack.
+**Q: How do I add a new AI provider?**
+A: See [Provider Setup Guide](PROVIDER_SETUP.md) for configuration examples.
 
-**Q: How do I add my own tool?**
-A: Follow the [Tool Creation Guide](TOOL_CREATION_GUIDE.md) - takes ~15 minutes.
+**Q: How do tools work?**
+A: Tools are registered with `ToolManager` and available to the AI when enabled. The AI can call tools by outputting JSON with the tool name and arguments.
 
-**Q: Do tools work with Perplexity?**
-A: Yes! We use prompt-based tool invocation that works with Perplexity.
+**Q: Is consent required for file editing?**
+A: Yes! All file edits require user consent. See [File Editing Guide](FILE_EDITING_GUIDE.md).
 
-**Q: Can I use both approaches?**
-A: Yes! You can have both built-in and MCP tools simultaneously.
+**Q: How do I use context injection?**
+A: Type `@filename`, `@git`, or `@tree` in your messages. See [Context Injection Guide](CONTEXT-INJECTION.md).
 
 ## Support
 
-- **Examples**: Check `demo/` directory
-- **Tests**: See `tests/` directory
-- **Issues**: GitHub issues
-- **MCP Community**: [MCP Discord](https://discord.gg/modelcontextprotocol)
+- **GitHub Issues**: [github.com/rcconsult/ppxai/issues](https://github.com/rcconsult/ppxai/issues)
+- **Documentation**: This folder
+- **Examples**: `demo/` directory
 
 ---
 
-**Ready to add tools?** Start with [Tool Creation Guide](TOOL_CREATION_GUIDE.md)!
+**Current Version**: v1.11.7
+**Last Updated**: 2025-12-26
