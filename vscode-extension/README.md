@@ -36,10 +36,10 @@ Multi-provider AI chat interface for VS Code, powered by ppxai.
 #### 1. Download binaries from [GitHub Releases](https://github.com/rcconsult/ppxai/releases)
 
 Download for your platform:
-- **macOS (Apple Silicon):** `ppxai-server-macos-arm64` + `ppxai-x.x.x.vsix`
-- **macOS (Intel):** `ppxai-server-macos-intel` + `ppxai-x.x.x.vsix`
-- **Linux:** `ppxai-server-linux-amd64` + `ppxai-x.x.x.vsix`
-- **Windows:** `ppxai-server-windows.exe` + `ppxai-x.x.x.vsix`
+- **macOS (Apple Silicon):** `ppxai-server-macos-arm64` + `ppxai-1.11.7.vsix`
+- **macOS (Intel):** `ppxai-server-macos-intel` + `ppxai-1.11.7.vsix`
+- **Linux:** `ppxai-server-linux-amd64` + `ppxai-1.11.7.vsix`
+- **Windows:** `ppxai-server-windows.exe` + `ppxai-1.11.7.vsix`
 
 #### 2. Configure API keys
 
