@@ -4,9 +4,16 @@ import { ChatViewProvider } from './chatPanel';
 import { SessionsProvider } from './sessionsProvider';
 
 let backend: HttpClient;
+let extensionVersion: string = 'unknown';
+
+export function getExtensionVersion(): string {
+    return extensionVersion;
+}
 
 export async function activate(context: vscode.ExtensionContext) {
-    console.log('ppxai extension activating...');
+    // Get version from package.json
+    extensionVersion = context.extension.packageJSON.version || 'unknown';
+    console.log(`ppxai extension v${extensionVersion} activating...`);
 
     // Initialize HTTP backend (connects to ppxai-server)
     backend = getHttpClient();

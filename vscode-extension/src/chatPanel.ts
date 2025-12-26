@@ -1666,6 +1666,15 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             gap: 8px;
         }
 
+        .version-badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            background: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            border-radius: 3px;
+            font-weight: 500;
+        }
+
         .workspace-info {
             font-size: 10px;
             color: var(--vscode-descriptionForeground);
@@ -2300,6 +2309,7 @@ A: Use \`/tools disable\` or choose "never" when prompted.
 <body>
     <div class="header">
         <div class="status">
+            <span class="version-badge" title="Extension version">v${this._context.extension.packageJSON.version}</span>
             <span><span id="provider">Loading...</span> / <span id="model">...</span></span>
             <button class="tools-badge disabled" id="toolsBadge" title="Click to toggle tools">Tools: off</button>
             <button class="streaming-badge" id="streamingBadge" style="display: none;" title="Press Esc to stop">⏹ Streaming...</button>
