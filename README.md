@@ -108,7 +108,7 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
    - **macOS/Linux:** `./ppxai`
    - **Windows:** `ppxai.exe`
 
-### Option 2: VSCode Extension with Standalone Server 🆕 v1.11.2
+### Option 2: VSCode Extension with Standalone Server 🆕 v1.10.3
 
 **No Python installation required!** Pre-built server binaries available!
 
@@ -497,24 +497,25 @@ Clickable links work best in modern terminals:
 ppxai/
 ├── ppxai.py                              # Entry point wrapper
 ├── ppxai/                                # Main package
-│   ├── __init__.py                       # Package exports (v1.11.1)
+│   ├── __init__.py                       # Package exports
 │   ├── main.py                           # CLI application
-│   ├── client.py                         # AI client for API communication
 │   ├── config.py                         # Hybrid configuration system
 │   ├── commands.py                       # Command handlers
 │   ├── ui.py                             # Terminal UI/display
 │   ├── prompts.py                        # Coding prompts & templates
 │   ├── utils.py                          # Utility functions
-│   ├── tui_logger.py                     # TUI debug logging (v1.11.1)
-│   ├── markdown_tables.py                # Markdown table rendering (v1.10.4)
+│   ├── tui_logger.py                     # TUI debug logging
+│   ├── markdown_tables.py                # Markdown table rendering
+│   ├── common/                           # Shared utilities
+│   │   └── event_handler.py              # Event handling for TUI/VSCode
 │   ├── server/                           # Server implementations
-│   │   ├── http.py                       # FastAPI HTTP + SSE server (v1.9.0)
+│   │   ├── http.py                       # FastAPI HTTP + SSE server
 │   │   └── jsonrpc.py                    # JSON-RPC server for IDE integration
-│   └── engine/                           # Core engine (v1.7.0+)
+│   └── engine/                           # Core engine (EngineClient)
 │       ├── types.py                      # Shared types (Event, Message, etc.)
 │       ├── client.py                     # EngineClient facade
 │       ├── session.py                    # Session management
-│       ├── context.py                    # Context management
+│       ├── context.py                    # Context management (@file, @git, @tree)
 │       ├── providers/                    # Provider implementations
 │       │   ├── base.py                   # BaseProvider abstract class
 │       │   ├── perplexity.py             # Perplexity AI provider
@@ -525,25 +526,21 @@ ppxai/
 │           └── builtin/                  # Built-in tools
 │               ├── calculator.py         # Calculator tool
 │               ├── datetime_tool.py      # DateTime tool
-│               ├── editor.py             # File editing tools (v1.11.0)
+│               ├── editor.py             # File editing tools (apply_patch, etc.)
 │               ├── filesystem.py         # Filesystem tools
-│               ├── shell.py              # Shell command tool
+│               ├── shell.py              # Shell command tool with consent
 │               └── web.py                # Web tools
-├── vscode-extension/                     # VS Code Extension (v1.11.1)
+├── vscode-extension/                     # VS Code Extension
 │   ├── src/
 │   │   ├── extension.ts                  # Extension entry point
 │   │   ├── chatPanel.ts                  # Webview chat UI
-│   │   ├── httpClient.ts                 # HTTP + SSE client (v1.9.0)
-│   │   ├── backend.ts                    # Python process manager (legacy)
-│   │   ├── aiClient.ts                   # AI client interface
+│   │   ├── httpClient.ts                 # HTTP + SSE client
 │   │   ├── config.ts                     # Configuration management
 │   │   └── sessionsProvider.ts           # Session tree view
 │   └── package.json                      # Extension manifest
 ├── ppxai-config.json                     # Provider configuration (optional)
 ├── ppxai-config.example.json             # Configuration template
-├── demo/
-│   └── demo_tools_working.py             # Working demo
-├── tests/                                # 322 tests passing (v1.11.7)
+├── tests/                                # 343 tests passing
 │   ├── test_config.py                    # Configuration tests (48 tests)
 │   ├── test_commands.py                  # Command tests
 │   ├── test_engine_streaming.py          # Engine streaming tests
@@ -554,13 +551,15 @@ ppxai/
 ├── docs/
 │   ├── README.md                         # Documentation index
 │   ├── FILE_EDITING_GUIDE.md             # File editing guide
-│   ├── v1.11.0-agentic-workflow-plan.md  # Agentic workflow plan
+│   ├── SHELL_CONSENT_GUIDE.md            # Shell consent guide
+│   ├── custom-tools-guide.md             # Custom tool development guide
 │   └── archive/                          # Archived documentation
 ├── pyproject.toml                        # Project metadata & dependencies
 ├── uv.lock                               # Dependency lockfile
 ├── scripts/
 │   ├── bootstrap.py                      # Dev environment bootstrap
-│   └── build-intel.sh                    # macOS Intel build script (v1.9.0)
+│   ├── release.py                        # Automated release script
+│   └── build-intel.sh                    # macOS Intel build script
 ├── SPECIFICATIONS.md                     # Code generation specs
 ├── ROADMAP.md                            # Development roadmap
 └── README.md                             # This file
