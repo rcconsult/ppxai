@@ -5,6 +5,33 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.8] - 2025-12-27
+
+### Added - Agent Mode + Release Fixes 🤖
+
+This release introduces Agent Mode for autonomous task execution in the VSCode extension.
+
+#### Agent Mode
+- **Agent Toggle Button** - New button in VSCode extension header to enable/disable agent mode
+- **Agent Mode API** - New endpoints for agent control:
+  - `GET /agent/status` - Check agent mode status
+  - `POST /agent/enable` - Enable agent mode (auto-enables tools)
+  - `POST /agent/disable` - Disable agent mode
+- **EngineClient Support** - `agent_mode` property, `enable_agent_mode()`, `disable_agent_mode()` methods
+- **Agent Mode Guide** - Comprehensive documentation at [docs/AGENT_MODE_GUIDE.md](docs/AGENT_MODE_GUIDE.md)
+
+#### Release Process Fixes
+- **GitHub "Latest" Release Tag** - Releases now correctly marked as latest
+  - Added `make_latest: true` to GitHub Actions workflow
+  - Release script now uses `--latest` flag when publishing notes
+- **Documentation Links** - Fixed 12 broken internal links
+  - `custom-tools-guide.md` → `CUSTOM_TOOL_DEVELOPMENT_GUIDE.md`
+  - Archived docs now properly reference `docs/archive/` paths
+
+### Fixed
+- GitHub releases not being marked as "Latest" on repository page
+- Broken documentation links pointing to moved/renamed files
+
 ## [1.11.7] - 2025-12-26
 
 ### Major - Legacy Code Removal + Clickable Citations 🎉🔗
@@ -22,7 +49,7 @@ This release completes the migration to EngineClient and adds clickable citation
 #### New Features
 - **`/tools help <tool-name>`** - Detailed documentation for any tool
 - **Autocomplete for `/tools`** - Tab completion for subcommands and tool names
-- **Custom Tool Development Guide** - [docs/custom-tools-guide.md](docs/custom-tools-guide.md)
+- **Custom Tool Development Guide** - [docs/CUSTOM_TOOL_DEVELOPMENT_GUIDE.md](docs/CUSTOM_TOOL_DEVELOPMENT_GUIDE.md)
 
 ### Fixed - Clickable Citations 🔗
 

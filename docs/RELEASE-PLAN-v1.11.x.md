@@ -30,7 +30,7 @@ The v1.11.x series delivers critical bug fixes, refactoring for code sharing, an
 
 **Documentation**:
 - [RELEASE-NOTES-v1.11.1.md](RELEASE-NOTES-v1.11.1.md)
-- [400-ERROR-INVESTIGATION.md](400-ERROR-INVESTIGATION.md)
+- [400-ERROR-INVESTIGATION.md](archive/400-ERROR-INVESTIGATION.md)
 - [TUI-DEBUG-LOGGING.md](TUI-DEBUG-LOGGING.md)
 
 **Upgrade Impact**: Drop-in replacement, no breaking changes

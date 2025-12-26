@@ -19,6 +19,9 @@ class EventType(Enum):
     TOOL_ERROR = "tool_error"
     CONTEXT_INJECTED = "context_injected"  # File content was auto-injected
     CONSENT_REQUEST = "consent_request"  # Request user consent for file edit (v1.11.0)
+    AGENT_ITERATION = "agent_iteration"  # Start of agent iteration (v1.11.8)
+    AGENT_COMPLETE = "agent_complete"  # Agent task completed (v1.11.8)
+    AGENT_MAX_ITERATIONS = "agent_max_iterations"  # Max iterations reached (v1.11.8)
     ERROR = "error"
     INFO = "info"
 

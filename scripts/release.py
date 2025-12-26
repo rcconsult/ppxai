@@ -460,7 +460,7 @@ def wait_for_ci(version: str, timeout_minutes: int = 10) -> bool:
 
 
 def publish_release_notes(version: str, max_retries: int = 12):
-    """Publish release notes to GitHub release."""
+    """Publish release notes to GitHub release and mark as latest."""
     notes_file = PROJECT_ROOT / f"docs/RELEASE-NOTES-v{version}.md"
     tag = f"v{version}"
 
@@ -472,12 +472,14 @@ def publish_release_notes(version: str, max_retries: int = 12):
 
     # Try to publish, retrying if release doesn't exist yet (CI may still be creating it)
     for attempt in range(max_retries):
+        # Update release notes AND mark as latest release
         result = run_command(
-            f'{token_cmd}gh release edit {tag} --notes-file "{notes_file}"',
+            f'{token_cmd}gh release edit {tag} --notes-file "{notes_file}" --latest',
             check=False
         )
         if result.returncode == 0:
             print(f"  ✅ Published release notes to {tag}")
+            print(f"  ✅ Marked {tag} as latest release")
             return
 
         if "release not found" in result.stderr.lower():
@@ -488,7 +490,7 @@ def publish_release_notes(version: str, max_retries: int = 12):
             else:
                 print(f"  ❌ Release {tag} not found after {max_retries} attempts")
                 print(f"     You can manually publish notes with:")
-                print(f"     gh release edit {tag} --notes-file docs/RELEASE-NOTES-{tag}.md")
+                print(f"     gh release edit {tag} --notes-file docs/RELEASE-NOTES-{tag}.md --latest")
         else:
             print(f"  ❌ Failed to publish release notes: {result.stderr}")
             return

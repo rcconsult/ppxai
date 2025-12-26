@@ -126,7 +126,7 @@ A comprehensive debug logging system for troubleshooting TUI issues, mirroring V
 ## Documentation
 
 ### New Documentation:
-- [docs/400-ERROR-INVESTIGATION.md](400-ERROR-INVESTIGATION.md) - Complete investigation and fix details
+- [docs/archive/400-ERROR-INVESTIGATION.md](archive/400-ERROR-INVESTIGATION.md) - Complete investigation and fix details
 - [docs/TUI-DEBUG-LOGGING.md](TUI-DEBUG-LOGGING.md) - Debug logging user guide
 - [docs/RELEASE-NOTES-v1.11.1.md](RELEASE-NOTES-v1.11.1.md) - This document
 
@@ -223,7 +223,7 @@ See [docs/PHASE1-SHARED-MODULES-IMPLEMENTATION.md](PHASE1-SHARED-MODULES-IMPLEME
 - **GitHub Release**: https://github.com/rcconsult/ppxai/releases/tag/v1.11.1
 - **PyPI**: https://pypi.org/project/ppxai/1.11.1/
 - **Documentation**: [docs/](docs/)
-- **Bug Report**: [docs/400-ERROR-INVESTIGATION.md](400-ERROR-INVESTIGATION.md)
+- **Bug Report**: [docs/archive/400-ERROR-INVESTIGATION.md](archive/400-ERROR-INVESTIGATION.md)
 
 ---
 

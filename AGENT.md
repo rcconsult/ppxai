@@ -506,7 +506,7 @@ gh <command>
 
 3. Add tests in `tests/test_tools.py`
 
-4. Update [docs/TOOL_CREATION_GUIDE.md](docs/TOOL_CREATION_GUIDE.md) with example
+4. Update [docs/CUSTOM_TOOL_DEVELOPMENT_GUIDE.md](docs/CUSTOM_TOOL_DEVELOPMENT_GUIDE.md) with example
 
 ### Fixing a Bug
 1. **Create bugfix branch:**

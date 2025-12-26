@@ -74,6 +74,7 @@ class PPXAICompleter(Completer):
         ('/review', 'Review code'),
         ('/debug', 'Debug code'),
         ('/optimize', 'Optimize code'),
+        ('/agent', 'Run autonomous agent loop'),
         ('/quit', 'Exit the application'),
         ('/exit', 'Exit the application'),
     ]
@@ -87,6 +88,7 @@ class PPXAICompleter(Completer):
         ('help', 'Show help for a tool'),
         ('set', 'Configure tool settings'),
         ('config', 'Configure tool settings'),
+        ('agent', 'Enable/disable agent mode'),
     ]
 
     # Directories to ignore when searching for files

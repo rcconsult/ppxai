@@ -8,7 +8,57 @@
 
 ---
 
-## Current Release: v1.11.7
+## Next Release: v1.11.8 (In Progress)
+
+**Status**: 🔧 Agent Loop Implementation
+
+**Branch**: `feature/adding-agent-loop`
+
+**Goal**: Implement `/agent` command for autonomous multi-step task execution
+
+**Workflow Diagrams**: See [docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.md#workflow-diagrams)
+
+| Workflow | Diagram |
+|----------|---------|
+| Current (turn-based) | ![Current Flow](docs/current-non-agentic-flow.png) |
+| Agent loop (autonomous) | ![Agent Flow](docs/future-agentic-flow.png) |
+
+**New Features**:
+- 🔧 **`/agent <task>`** - Autonomous multi-step task execution (max 5 iterations)
+- 🔧 **`/tools agent on|off`** - Enable/disable agent mode in TUI
+- 🔧 **Agent mode toggle** - VSCode extension UI button for agent mode
+- 🔧 **Agent events** - `AGENT_ITERATION`, `AGENT_COMPLETE`, `AGENT_MAX_ITERATIONS`
+
+**Implementation Progress**:
+- ✅ 3 new EventTypes in `ppxai/engine/types.py`
+- ✅ `agent_mode` property in EngineClient
+- ✅ `/tools agent on|off` subcommand
+- ✅ `handle_agent()` method in commands.py
+- ✅ `/agent` command registration
+- ✅ Autocomplete entries for `/agent` and `/tools agent`
+- ✅ TUI event handlers for agent events
+- ✅ HTTP endpoints (`/agent/enable`, `/agent/disable`, `/agent/status`)
+- ✅ VSCode httpClient methods
+- ✅ VSCode agent toggle button
+
+**Files Modified**:
+- `ppxai/engine/types.py` - 3 new EventTypes
+- `ppxai/engine/client.py` - agent_mode property and methods
+- `ppxai/commands.py` - /agent command and /tools agent subcommand
+- `ppxai/main.py` - autocomplete entries
+- `ppxai/common/event_handler.py` - TUI agent event handlers
+- `ppxai/server/http.py` - HTTP endpoints for agent mode
+- `vscode-extension/src/httpClient.ts` - client methods
+- `vscode-extension/src/chatPanel.ts` - UI toggle button
+
+**Tests**: 337 passed (awaiting agent-specific tests)
+
+**Documentation**:
+- **[docs/AGENT_MODE_GUIDE.md](docs/AGENT_MODE_GUIDE.md)** - User guide with practical examples for research and development workflows
+
+---
+
+## Current Release: v1.11.8
 
 **Status**: ✅ Legacy Removal + Clickable Citations
 
@@ -27,7 +77,7 @@ Released: 2025-12-26
 **New Features**:
 - ✅ **`/tools help <tool-name>`** - Detailed tool documentation command
 - ✅ **Autocomplete for `/tools`** - Tab completion for subcommands and tool names
-- ✅ **Custom Tool Development Guide** - [docs/custom-tools-guide.md](docs/custom-tools-guide.md)
+- ✅ **Custom Tool Development Guide** - [docs/CUSTOM_TOOL_DEVELOPMENT_GUIDE.md](docs/CUSTOM_TOOL_DEVELOPMENT_GUIDE.md)
 
 **Bug Fixes**:
 - ✅ **Perplexity Citations Clickable** - `inject_citation_urls()` converts `[1]` to `[1](url)` format
@@ -47,7 +97,7 @@ Released: 2025-12-26
 - ✅ Phase 2: @git context (v1.11.4)
 - ✅ Phase 3: @tree context (v1.11.4)
 - ✅ Phase 4: Manual testing (v1.11.5-v1.11.7)
-- 🎯 Phase 5: `/agent` command (v1.11.8 - next)
+- 🔧 Phase 5: `/agent` command (v1.11.8 - **in progress**)
 - ⏳ Phase 6: Testing & docs (v1.11.8)
 
 **Branch**: `refactor/maintenance-no-legacy-code` → `master`
@@ -808,7 +858,7 @@ This release focuses on modernizing the development infrastructure and improving
 
 **Goal**: Migrate from `pip` + `requirements.txt` to `uv` for faster, reproducible builds
 
-**Detailed Plan**: See [docs/uv-migration-plan.md](docs/uv-migration-plan.md)
+**Detailed Plan**: See [docs/archive/uv-migration-plan.md](docs/archive/uv-migration-plan.md)
 
 ##### Motivation
 
@@ -871,7 +921,7 @@ This release focuses on modernizing the development infrastructure and improving
 
 **Goal**: Replace JSON-RPC over stdio with HTTP + Server-Sent Events for improved streaming performance
 
-**Detailed Plan**: See [docs/sse-migration-plan.md](docs/sse-migration-plan.md)
+**Detailed Plan**: See [docs/archive/sse-migration-plan.md](docs/archive/sse-migration-plan.md)
 
 ##### Motivation
 
@@ -1596,7 +1646,7 @@ A lightweight web-based chat interface using the same HTTP + SSE backend as the 
 
 **Status**: Planned (follows v1.11.2.2 foundation work)
 
-**Detailed Analysis**: [docs/PROVIDER-ABSTRACTION-REFACTORING.md](docs/PROVIDER-ABSTRACTION-REFACTORING.md)
+**Detailed Analysis**: [docs/archive/legacy-tools-docs/PROVIDER-ABSTRACTION-REFACTORING.md](docs/archive/legacy-tools-docs/PROVIDER-ABSTRACTION-REFACTORING.md)
 
 #### Phase 1: Provider Abstraction Cleanup (v1.11.2.2 Follow-up)
 
@@ -2059,7 +2109,7 @@ A lightweight web-based chat interface using the same HTTP + SSE backend as the 
 - 🛠️ **High Priority**: pyproject.toml + lockfile for reproducible builds
 - 🚀 **High Priority**: HTTP + SSE backend migration (3-10x latency improvement)
 - 🚀 **High Priority**: FastAPI server with native streaming
-- 📖 **Documentation**: [docs/uv-migration-plan.md](docs/uv-migration-plan.md), [docs/sse-migration-plan.md](docs/sse-migration-plan.md)
+- 📖 **Documentation**: [docs/archive/uv-migration-plan.md](docs/archive/uv-migration-plan.md), [docs/archive/sse-migration-plan.md](docs/archive/sse-migration-plan.md)
 
 ### Short-term (v1.10.0 - v1.11.0) - Foundation & Architecture
 - 📦 **v1.10.0 High Priority**: VSCode Extension CI/CD & Self-Contained Bundling
@@ -2113,5 +2163,6 @@ Interested in working on any of these features?
 ---
 
 **Last Updated**: December 26, 2025
-**Current Version**: v1.11.6
-**Next Target**: v1.11.7 (`/agent` command - completes agentic workflow)
+**Current Version**: v1.11.7
+**Next Target**: v1.11.8 (`/agent` command - completes agentic workflow)
+**Branch**: `feature/adding-agent-loop`

@@ -752,6 +752,63 @@ export class HttpClient {
 
         return result;
     }
+
+    // === Agent Mode (v1.11.8) ===
+
+    /**
+     * Get agent mode status (v1.11.8)
+     */
+    async getAgentStatus(): Promise<{ agent_mode: boolean; tools_enabled: boolean }> {
+        const response = await fetch(`${this.baseUrl}/agent/status`);
+        if (!response.ok) {
+            throw new Error(`Failed to get agent status: ${response.statusText}`);
+        }
+        return response.json() as Promise<{ agent_mode: boolean; tools_enabled: boolean }>;
+    }
+
+    /**
+     * Enable agent mode for autonomous task execution (v1.11.8)
+     *
+     * Agent mode automatically enables tools if not already enabled.
+     */
+    async enableAgentMode(): Promise<boolean> {
+        this.outputChannel.appendLine('[Agent] Enabling agent mode...');
+
+        const response = await fetch(`${this.baseUrl}/agent/enable`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to enable agent mode: ${response.statusText}`);
+        }
+
+        const result = await response.json() as { ok: boolean; agent_mode: boolean; tools_enabled: boolean };
+        this.outputChannel.appendLine(`[Agent] Agent mode enabled (tools: ${result.tools_enabled})`);
+
+        return result.agent_mode;
+    }
+
+    /**
+     * Disable agent mode (v1.11.8)
+     */
+    async disableAgentMode(): Promise<boolean> {
+        this.outputChannel.appendLine('[Agent] Disabling agent mode...');
+
+        const response = await fetch(`${this.baseUrl}/agent/disable`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to disable agent mode: ${response.statusText}`);
+        }
+
+        const result = await response.json() as { ok: boolean; agent_mode: boolean };
+        this.outputChannel.appendLine('[Agent] Agent mode disabled');
+
+        return !result.agent_mode;  // Return true if successfully disabled
+    }
 }
 
 /**

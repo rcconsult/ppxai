@@ -9,7 +9,7 @@ Architecture:
 - Callbacks are provided by the client for rendering
 - Business logic is centralized, UI is delegated
 
-Version: v1.11.7
+Version: v1.11.8
 """
 
 from typing import AsyncIterator, Callable, Optional, Any, Dict
@@ -214,7 +214,7 @@ class TUIEventHandler(EventHandler):
         self._injected_contexts = []
 
     async def handle_event(self, event: Event) -> bool:
-        """Override to handle CONTEXT_INJECTED events for TUI display."""
+        """Override to handle CONTEXT_INJECTED and AGENT_* events for TUI display."""
         if event.type == EventType.CONTEXT_INJECTED:
             # Collect injected contexts
             self._injected_contexts.append(event.data)
@@ -233,6 +233,26 @@ class TUIEventHandler(EventHandler):
                 # Show what was injected
                 self.console.print(f"[dim]→ Injected context: {source} ({size_str})[/dim]")
             return True
+
+        # Agent loop events (v1.11.8)
+        elif event.type == EventType.AGENT_ITERATION:
+            iteration = event.data.get("iteration", 0) if isinstance(event.data, dict) else 0
+            max_iter = event.data.get("max", 5) if isinstance(event.data, dict) else 5
+            self.console.print(f"\n[yellow]━━━ Iteration {iteration}/{max_iter} ━━━[/yellow]\n")
+            return True
+
+        elif event.type == EventType.AGENT_COMPLETE:
+            summary = event.data.get("summary", "") if isinstance(event.data, dict) else ""
+            self.console.print(f"\n[green]✅ Task completed![/green]")
+            if summary:
+                self.console.print(f"[dim]Summary: {summary}[/dim]\n")
+            return False  # Signal completion
+
+        elif event.type == EventType.AGENT_MAX_ITERATIONS:
+            max_iter = event.data.get("iterations", 5) if isinstance(event.data, dict) else 5
+            self.console.print(f"\n[yellow]⚠️  Max iterations ({max_iter}) reached[/yellow]")
+            self.console.print("[dim]Task may be incomplete. Review output above.[/dim]\n")
+            return False  # Signal completion
 
         # Delegate to parent for all other event types
         return await super().handle_event(event)

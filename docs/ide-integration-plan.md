@@ -8,7 +8,7 @@ This document outlines the implementation plan for deep IDE integration, enablin
 - v1.14.0: Workspace Awareness (Read-only)
 - v1.15.0: Code Actions (Write capabilities)
 
-**Prerequisites:** Complete [SSE migration](sse-migration-plan.md) (v1.9.0 Part B)
+**Prerequisites:** Complete [SSE migration](archive/sse-migration-plan.md) (v1.9.0 Part B)
 
 ---
 
@@ -866,5 +866,5 @@ The earlier `docs/gemini-ide-analysis.md` proposal is superseded by this plan. K
 - [VS Code Extension API](https://code.visualstudio.com/api)
 - [VS Code Workspace API](https://code.visualstudio.com/api/references/vscode-api#workspace)
 - [VS Code Language Features](https://code.visualstudio.com/api/language-extensions/programmatic-language-features)
-- [ppxai SSE Migration Plan](sse-migration-plan.md)
+- [ppxai SSE Migration Plan](archive/sse-migration-plan.md)
 - [ppxai Architecture Document](architecture-refactoring.md)

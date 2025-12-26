@@ -89,7 +89,7 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
 **Extensible System:**
 - Add custom Python tools in minutes
 - Optional MCP (Model Context Protocol) server support
-- See [docs/TOOL_CREATION_GUIDE.md](docs/TOOL_CREATION_GUIDE.md) for details
+- See [docs/CUSTOM_TOOL_DEVELOPMENT_GUIDE.md](docs/CUSTOM_TOOL_DEVELOPMENT_GUIDE.md) for details
 
 **Learn More:** [Tool Documentation](docs/README.md) | [Shell Consent Guide](docs/SHELL_CONSENT_GUIDE.md) | [File Editing Guide](docs/FILE_EDITING_GUIDE.md)
 
@@ -114,9 +114,9 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
 
 1. Download from [Releases](../../releases):
    - `ppxai-server-{platform}` (server binary for macOS ARM/Intel, Linux, Windows)
-   - `ppxai-1.11.7.vsix` (VSCode extension)
+   - `ppxai-1.11.8.vsix` (VSCode extension)
 2. Create a `.env` file with your API key (in project folder or `~/.ppxai/.env`)
-3. Install the extension: `code --install-extension ppxai-1.11.7.vsix`
+3. Install the extension: `code --install-extension ppxai-1.11.8.vsix`
 4. Start the server: `./ppxai-server-macos-arm64` (or your platform's binary)
 5. Open VSCode and click the ppxai icon in the sidebar
 
@@ -552,7 +552,7 @@ ppxai/
 │   ├── README.md                         # Documentation index
 │   ├── FILE_EDITING_GUIDE.md             # File editing guide
 │   ├── SHELL_CONSENT_GUIDE.md            # Shell consent guide
-│   ├── custom-tools-guide.md             # Custom tool development guide
+│   ├── CUSTOM_TOOL_DEVELOPMENT_GUIDE.md  # Custom tool development guide
 │   └── archive/                          # Archived documentation
 ├── pyproject.toml                        # Project metadata & dependencies
 ├── uv.lock                               # Dependency lockfile
@@ -571,7 +571,7 @@ ppxai/
 - **VS Code Extension:** [vscode-extension/README.md](vscode-extension/README.md)
 - **Provider Setup:** [docs/PROVIDER_SETUP.md](docs/PROVIDER_SETUP.md)
 - **Tool System:** [docs/README.md](docs/README.md)
-- **Tool Creation:** [docs/TOOL_CREATION_GUIDE.md](docs/TOOL_CREATION_GUIDE.md)
+- **Tool Creation:** [docs/CUSTOM_TOOL_DEVELOPMENT_GUIDE.md](docs/CUSTOM_TOOL_DEVELOPMENT_GUIDE.md)
 - **Shell Consent:** [docs/SHELL_CONSENT_GUIDE.md](docs/SHELL_CONSENT_GUIDE.md) ⭐ NEW (v1.11.2)
 - **File Editing:** [docs/FILE_EDITING_GUIDE.md](docs/FILE_EDITING_GUIDE.md)
 - **Code Generation:** [SPECIFICATIONS.md](SPECIFICATIONS.md)

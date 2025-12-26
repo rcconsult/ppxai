@@ -72,6 +72,9 @@ class EngineClient:
         # Shell command consent callback (v1.11.2)
         self.shell_consent_callback = shell_consent_callback
 
+        # Agent mode for autonomous task execution (v1.11.8)
+        self._agent_mode: bool = False
+
         # Event emitter for consent requests (Phase 1C: HTTP/SSE support)
         # This allows emitting events from within consent callback
         self._consent_event_queue: List[Event] = []
@@ -301,6 +304,33 @@ class EngineClient:
         """
         self.tools_enabled = False
         self.tool_manager.clear()
+        return True
+
+    @property
+    def agent_mode(self) -> bool:
+        """Whether agent mode is enabled (v1.11.8)."""
+        return self._agent_mode
+
+    def enable_agent_mode(self) -> bool:
+        """Enable agent mode for autonomous task execution (v1.11.8).
+
+        Agent mode automatically enables tools if not already enabled.
+
+        Returns:
+            True if agent mode was enabled
+        """
+        self._agent_mode = True
+        if not self.tools_enabled:
+            self.enable_tools()
+        return True
+
+    def disable_agent_mode(self) -> bool:
+        """Disable agent mode (v1.11.8).
+
+        Returns:
+            True if agent mode was disabled
+        """
+        self._agent_mode = False
         return True
 
     async def request_file_edit_consent(self, file_path: str) -> bool:

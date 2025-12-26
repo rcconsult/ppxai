@@ -494,7 +494,7 @@ The server layer provides multiple transport options for client communication:
 
 #### `server/http.py` - HTTP Server with SSE (Recommended)
 
-**Why SSE over JSON-RPC?** See [docs/sse-migration-plan.md](sse-migration-plan.md) for detailed analysis.
+**Why SSE over JSON-RPC?** See [docs/archive/sse-migration-plan.md](archive/sse-migration-plan.md) for detailed analysis.
 
 | Metric | JSON-RPC/stdio | HTTP + SSE |
 |--------|----------------|------------|
@@ -771,7 +771,7 @@ async def main():
 ### Phase 8: HTTP + SSE Migration 🚧
 **Goal:** Replace JSON-RPC/stdio with HTTP + SSE for improved streaming performance.
 
-See [docs/sse-migration-plan.md](sse-migration-plan.md) for detailed implementation plan.
+See [docs/archive/sse-migration-plan.md](archive/sse-migration-plan.md) for detailed implementation plan.
 
 **Summary:**
 1. Add FastAPI + uvicorn dependencies

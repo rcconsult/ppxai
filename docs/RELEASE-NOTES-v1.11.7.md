@@ -23,7 +23,7 @@ All legacy code has been removed. EngineClient is now the only client interface:
 
 - **`/tools help <tool-name>`** - Get detailed documentation for any tool
 - **Autocomplete for `/tools`** - Tab completion for subcommands and tool names
-- **Custom Tool Development Guide** - Comprehensive guide at [docs/custom-tools-guide.md](custom-tools-guide.md)
+- **Custom Tool Development Guide** - Comprehensive guide at [docs/CUSTOM_TOOL_DEVELOPMENT_GUIDE.md](CUSTOM_TOOL_DEVELOPMENT_GUIDE.md)
 
 ## Bug Fixes
 

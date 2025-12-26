@@ -88,6 +88,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 case 'toggleDebugLog':
                     await this.handleToggleDebugLog(message.enable);
                     break;
+                case 'toggleAgent':
+                    await this.handleToggleAgent(message.enable);
+                    break;
                 case 'searchFiles':
                     await this.handleSearchFilesForAutocomplete(message.query);
                     break;
@@ -162,6 +165,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             await this.updateStatus();
             await this.refreshHistory();
             await this.updateDebugLogStatus();
+            await this.updateAgentStatus();  // v1.11.8
             await this.updateWorkspaceDisplay();
         } catch (error) {
             this._view?.webview.postMessage({
@@ -1140,6 +1144,61 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
     }
 
     /**
+     * Handle agent mode toggle (v1.11.8)
+     */
+    private async handleToggleAgent(enable: boolean) {
+        if (!this._view) { return; }
+
+        try {
+            if (enable) {
+                await this._backend.enableAgentMode();
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: '✓ Agent mode enabled (tools auto-enabled)\n*Use natural language to assign autonomous tasks*'
+                });
+            } else {
+                await this._backend.disableAgentMode();
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: '✓ Agent mode disabled'
+                });
+            }
+
+            // Update the UI indicator
+            this._view.webview.postMessage({
+                type: 'agentStatus',
+                enabled: enable
+            });
+
+            // Also update status since agent mode affects tools
+            await this.updateStatus();
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Failed to toggle agent mode: ${error}`
+            });
+        }
+    }
+
+    /**
+     * Update agent mode status in UI (v1.11.8)
+     */
+    private async updateAgentStatus() {
+        if (!this._view) { return; }
+
+        try {
+            const status = await this._backend.getAgentStatus();
+            this._view.webview.postMessage({
+                type: 'agentStatus',
+                enabled: status.agent_mode
+            });
+        } catch (error) {
+            // Silently fail - server might not support this endpoint yet
+            console.error('Failed to get agent status:', error);
+        }
+    }
+
+    /**
      * Get workspace context for AI awareness (v1.11.2)
      * Injects workspace information so AI knows where it's working
      */
@@ -1724,6 +1783,32 @@ A: Use \`/tools disable\` or choose "never" when prompted.
 
         .tools-badge.enabled {
             background: var(--vscode-testing-iconPassed, #89d185);
+            color: var(--vscode-editor-background);
+        }
+
+        /* Agent badge - v1.11.8 */
+        .agent-badge {
+            background: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .agent-badge:hover {
+            background: var(--vscode-button-hoverBackground);
+            border-color: var(--vscode-focusBorder);
+        }
+
+        .agent-badge.disabled {
+            opacity: 0.6;
+        }
+
+        .agent-badge.enabled {
+            background: var(--vscode-editorInfo-foreground, #3794ff);
             color: var(--vscode-editor-background);
         }
 
@@ -2312,6 +2397,7 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             <span class="version-badge" title="Extension version">v${this._context.extension.packageJSON.version}</span>
             <span><span id="provider">Loading...</span> / <span id="model">...</span></span>
             <button class="tools-badge disabled" id="toolsBadge" title="Click to toggle tools">Tools: off</button>
+            <button class="agent-badge disabled" id="agentBadge" title="Click to toggle agent mode">Agent: off</button>
             <button class="streaming-badge" id="streamingBadge" style="display: none;" title="Press Esc to stop">⏹ Streaming...</button>
         </div>
         <div class="workspace-info" id="workspaceInfo" style="display: none;">
@@ -2828,6 +2914,13 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             vscode.postMessage({ type: 'toggleTools', enable: !isEnabled });
         });
 
+        // Agent badge click handler - toggle agent mode on/off (v1.11.8)
+        const agentBadge = document.getElementById('agentBadge');
+        agentBadge.addEventListener('click', () => {
+            const isEnabled = agentBadge.classList.contains('enabled');
+            vscode.postMessage({ type: 'toggleAgent', enable: !isEnabled });
+        });
+
         // Streaming badge click handler - interrupt streaming
         streamingBadge.addEventListener('click', () => {
             vscode.postMessage({ type: 'interrupt' });
@@ -2989,6 +3082,22 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                         debugLogIndicator.classList.add('active');
                     } else {
                         debugLogIndicator.classList.remove('active');
+                    }
+                    break;
+
+                case 'agentStatus':
+                    // v1.11.8: Handle agent mode status updates
+                    const agentBadgeEl = document.getElementById('agentBadge');
+                    if (message.enabled) {
+                        agentBadgeEl.textContent = 'Agent: on';
+                        agentBadgeEl.classList.remove('disabled');
+                        agentBadgeEl.classList.add('enabled');
+                        agentBadgeEl.title = 'Agent mode enabled - click to disable';
+                    } else {
+                        agentBadgeEl.textContent = 'Agent: off';
+                        agentBadgeEl.classList.add('disabled');
+                        agentBadgeEl.classList.remove('enabled');
+                        agentBadgeEl.title = 'Click to enable agent mode';
                     }
                     break;
 

@@ -231,7 +231,7 @@ ppxai/
 │   ├── README.md                      [✅ Current] Tool documentation index
 │   ├── tui-markdown-rendering.md      [✅ Updated] TUI workspace vision (v1.10.4-v1.15.0)
 │   ├── PROVIDER_SETUP.md              [✅ Current] Provider configuration
-│   ├── TOOL_CREATION_GUIDE.md         [✅ Current] Creating custom tools
+│   ├── CUSTOM_TOOL_DEVELOPMENT_GUIDE.md [✅ Current] Creating custom tools
 │   ├── ... [other current docs]
 │   │
 │   └── archive/                       [🆕 NEW] Historical documentation

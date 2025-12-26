@@ -672,9 +672,12 @@ class CommandHandler:
                 console.print("[yellow]Tool Help[/yellow]")
                 console.print("[dim]Usage: /tools help <tool-name>  - Show help for a specific tool[/dim]")
                 console.print("[dim]       /tools help editing      - Show file editing guide[/dim]\n")
+        elif subcommand == "agent":
+            # Agent mode control (v1.11.8)
+            self._tools_agent(subargs)
         else:
             console.print(f"[red]Unknown subcommand: {subcommand}[/red]")
-            console.print("[yellow]Available: enable, disable, list, status, config, set, help[/yellow]\n")
+            console.print("[yellow]Available: enable, disable, list, status, config, set, help, agent[/yellow]\n")
 
     def _enable_tools(self):
         """Enable AI tools (including file editing tools with consent)."""
@@ -824,6 +827,32 @@ class CommandHandler:
         else:
             console.print(f"[red]Unknown setting: {setting}[/red]")
             console.print("[dim]Available: verbose[/dim]\n")
+
+    def _tools_agent(self, args: list):
+        """Control agent mode for autonomous task execution (v1.11.8)."""
+        if not self.engine_client:
+            console.print("[red]Error: Engine client not available[/red]\n")
+            return
+
+        if not args:
+            # Show current agent mode status
+            status = "[green]ON[/green]" if self.engine_client.agent_mode else "[dim]OFF[/dim]"
+            console.print(f"[bold]Agent Mode:[/bold] {status}")
+            console.print("[dim]Usage: /tools agent on|off[/dim]")
+            console.print("[dim]       /agent <task>  - Run autonomous task[/dim]\n")
+            return
+
+        action = args[0].lower()
+        if action in ["on", "enable"]:
+            self.engine_client.enable_agent_mode()
+            console.print("[green]Agent mode enabled[/green]")
+            console.print("[dim]Tools auto-enabled. Use '/agent <task>' to start autonomous execution.[/dim]\n")
+        elif action in ["off", "disable"]:
+            self.engine_client.disable_agent_mode()
+            console.print("[yellow]Agent mode disabled[/yellow]\n")
+        else:
+            console.print(f"[red]Unknown action: {action}[/red]")
+            console.print("[yellow]Usage: /tools agent on|off[/yellow]\n")
 
     def _show_tool_help(self, tool_name: str):
         """Show detailed help for a specific tool.
@@ -1140,6 +1169,118 @@ class CommandHandler:
         except Exception as e:
             console.print(f"[red]Error reading file: {e}[/red]\n")
 
+    def handle_agent(self, args: str):
+        """Handle /agent command for autonomous task execution (v1.11.8).
+
+        The agent loop runs autonomously until:
+        - Task completes (AI signals TASK_COMPLETE)
+        - Max iterations reached (default: 5)
+        - User interrupts with Ctrl-C
+        """
+        if not args.strip():
+            console.print("[red]Usage: /agent <task description>[/red]")
+            console.print("[yellow]Example: /agent Fix the bug in auth.py[/yellow]")
+            console.print("[yellow]         /agent Review @git changes and fix issues[/yellow]\n")
+            return
+
+        if not self.engine_client:
+            console.print("[red]Error: Engine client not available[/red]\n")
+            return
+
+        task = args.strip()
+        max_iterations = 5
+
+        # Ensure agent mode is enabled (auto-enables tools)
+        if not self.engine_client.agent_mode:
+            console.print("[yellow]Enabling agent mode...[/yellow]")
+            self.engine_client.enable_agent_mode()
+
+        console.print(f"\n[cyan]🤖 Starting autonomous agent[/cyan]")
+        console.print(f"[dim]Task: {task}[/dim]")
+        console.print(f"[dim]Max iterations: {max_iterations}[/dim]")
+        console.print(f"[dim]Press Ctrl-C to interrupt[/dim]\n")
+
+        async def run_agent_loop():
+            from .common.event_handler import TUIEventHandler
+
+            iteration = 0
+            task_complete = False
+
+            while iteration < max_iterations and not task_complete:
+                iteration += 1
+                console.print(f"\n[yellow]━━━ Iteration {iteration}/{max_iterations} ━━━[/yellow]\n")
+
+                # Build prompt for this iteration
+                if iteration == 1:
+                    prompt = self._build_agent_prompt(task, iteration)
+                else:
+                    prompt = self._build_continuation_prompt(task, iteration)
+
+                # Run chat with event handling
+                event_handler = TUIEventHandler(console, verbose=self.tools_verbose)
+
+                try:
+                    async for event in self.engine_client.chat(prompt, stream=True):
+                        should_continue = await event_handler.handle_event(event)
+                        if not should_continue:
+                            break
+                except KeyboardInterrupt:
+                    console.print("\n[yellow]Agent interrupted by user[/yellow]\n")
+                    return
+
+                response = event_handler.get_response()
+
+                # Check for completion signal
+                if "TASK_COMPLETE:" in response:
+                    task_complete = True
+                    # Extract summary after TASK_COMPLETE:
+                    summary_parts = response.split("TASK_COMPLETE:", 1)
+                    final_summary = summary_parts[1].strip() if len(summary_parts) > 1 else "Done"
+                    console.print(f"\n[green]✅ Task completed![/green]")
+                    console.print(f"[dim]Summary: {final_summary[:200]}{'...' if len(final_summary) > 200 else ''}[/dim]\n")
+                    return
+
+            if not task_complete:
+                console.print(f"\n[yellow]⚠️  Max iterations ({max_iterations}) reached[/yellow]")
+                console.print("[dim]Task may be incomplete. Review the output above.[/dim]\n")
+
+        try:
+            import asyncio
+            asyncio.run(run_agent_loop())
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Agent interrupted[/yellow]\n")
+
+    def _build_agent_prompt(self, task: str, iteration: int) -> str:
+        """Build initial prompt for agent (v1.11.8)."""
+        return f"""Task: {task}
+
+Work on this task autonomously. You have tools available for:
+- Reading files (read_file, search_files, list_directory)
+- Editing files (apply_patch, replace_block, insert_text, delete_lines)
+- Running shell commands (execute_shell_command)
+- Web search and fetch (if available for your provider)
+
+Instructions:
+1. Analyze the task and plan your approach
+2. Use tools to gather information and make changes
+3. After each action, assess progress
+
+When the task is complete, respond with:
+TASK_COMPLETE: <brief summary of what was done>
+
+If you need to continue working, explain your progress and use the appropriate tools."""
+
+    def _build_continuation_prompt(self, task: str, iteration: int) -> str:
+        """Build continuation prompt for subsequent iterations (v1.11.8)."""
+        return f"""Continue working on the task: {task}
+
+Review your previous work and continue toward completion.
+
+If the task is now complete, respond with:
+TASK_COMPLETE: <brief summary of what was done>
+
+If more work is needed, explain what you're doing next and use the appropriate tools."""
+
     def handle_command(self, user_input: str) -> Optional[bool]:
         """
         Handle a slash command.
@@ -1198,6 +1339,8 @@ class CommandHandler:
             self.handle_show(args)
         elif command == "/cat":
             self.handle_show(args)  # Alias for /show
+        elif command == "/agent":
+            self.handle_agent(args)
         else:
             console.print(f"[red]Unknown command: {user_input}[/red]")
             console.print("[yellow]Type /help for available commands[/yellow]\n")

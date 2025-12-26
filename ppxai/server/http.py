@@ -336,6 +336,7 @@ async def get_status():
         "provider": engine.provider_name,
         "model": engine.model,
         "tools_enabled": engine.tools_enabled,
+        "agent_mode": engine.agent_mode,  # v1.11.8
         "auto_inject_context": engine.auto_inject_context,
     }
 
@@ -763,6 +764,57 @@ async def respond_to_shell_consent(request: ShellConsentRequest):
     raise HTTPException(status_code=404, detail=f"No pending shell consent request for: {command}")
 
 
+# === Agent Mode (v1.11.8) ===
+
+@app.get("/agent/status")
+async def get_agent_status():
+    """Get agent mode status (v1.11.8)."""
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    return {
+        "agent_mode": engine.agent_mode,
+        "tools_enabled": engine.tools_enabled,
+    }
+
+
+@app.post("/agent/enable")
+async def enable_agent_mode():
+    """Enable agent mode for autonomous task execution (v1.11.8).
+
+    Agent mode automatically enables tools if not already enabled.
+    """
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    engine.enable_agent_mode()
+    logger.info("Agent mode enabled via API")
+
+    return {
+        "ok": True,
+        "agent_mode": True,
+        "tools_enabled": engine.tools_enabled,
+    }
+
+
+@app.post("/agent/disable")
+async def disable_agent_mode():
+    """Disable agent mode (v1.11.8)."""
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    engine.disable_agent_mode()
+    logger.info("Agent mode disabled via API")
+
+    return {
+        "ok": True,
+        "agent_mode": False,
+    }
+
+
 # === Debug Logging (v1.11.2) ===
 
 @app.get("/debug-log")
@@ -816,6 +868,9 @@ def run_server():
     print("  GET  /models        - List models")
     print("  GET  /tools         - List tools")
     print("  POST /tools/config  - Configure tool settings")
+    print("  GET  /agent/status  - Get agent mode status")
+    print("  POST /agent/enable  - Enable agent mode")
+    print("  POST /agent/disable - Disable agent mode")
     print("  GET  /usage         - Token usage statistics")
     print("  GET  /debug-log     - Get debug logging status")
     print("  POST /debug-log     - Enable/disable debug logging")
