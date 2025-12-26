@@ -399,9 +399,6 @@ def wait_for_ci(version: str, timeout_minutes: int = 10) -> bool:
     start_time = time.time()
     timeout_seconds = timeout_minutes * 60
 
-    # Wait a bit for CI to start
-    time.sleep(5)
-
     while time.time() - start_time < timeout_seconds:
         # Get runs filtered by head branch (tag)
         result = run_command(
@@ -411,7 +408,7 @@ def wait_for_ci(version: str, timeout_minutes: int = 10) -> bool:
 
         if result.returncode != 0:
             print(f"  ⚠️  Could not check CI status: {result.stderr}")
-            time.sleep(30)
+            time.sleep(10)
             continue
 
         try:
@@ -422,7 +419,7 @@ def wait_for_ci(version: str, timeout_minutes: int = 10) -> bool:
             if not tag_runs:
                 elapsed = int(time.time() - start_time)
                 print(f"  ⏳ Waiting for CI to start for {tag} ({elapsed}s elapsed)")
-                time.sleep(15)
+                time.sleep(5)
                 continue
 
             # Check the most recent run for our tag
@@ -443,13 +440,13 @@ def wait_for_ci(version: str, timeout_minutes: int = 10) -> bool:
         except json.JSONDecodeError:
             pass
 
-        time.sleep(30)
+        time.sleep(15)
 
     print(f"  ⚠️  CI timeout after {timeout_minutes} minutes")
     return False
 
 
-def publish_release_notes(version: str, max_retries: int = 5):
+def publish_release_notes(version: str, max_retries: int = 6):
     """Publish release notes to GitHub release."""
     notes_file = PROJECT_ROOT / f"docs/RELEASE-NOTES-v{version}.md"
     tag = f"v{version}"
@@ -472,8 +469,8 @@ def publish_release_notes(version: str, max_retries: int = 5):
 
         if "release not found" in result.stderr.lower():
             if attempt < max_retries - 1:
-                wait_time = (attempt + 1) * 10
-                print(f"  ⏳ Release not found yet, waiting {wait_time}s (attempt {attempt + 1}/{max_retries})...")
+                wait_time = 5  # Fixed 5s wait between retries
+                print(f"  ⏳ Release not found yet, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})...")
                 time.sleep(wait_time)
             else:
                 print(f"  ❌ Release {tag} not found after {max_retries} attempts")
