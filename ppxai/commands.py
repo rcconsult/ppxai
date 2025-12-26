@@ -691,51 +691,57 @@ class CommandHandler:
 
     def _list_tools(self):
         """List available tools."""
-        if not isinstance(self.client, self.PerplexityClientPromptTools):
+        # v1.11.5: Check engine_client.tools_enabled first (works across all providers)
+        tools_enabled = (
+            (self.engine_client and self.engine_client.tools_enabled) or
+            isinstance(self.client, self.PerplexityClientPromptTools)
+        )
+        if not tools_enabled:
             console.print("[yellow]Tools not enabled. Use '/tools enable' first[/yellow]\n")
             return
 
-        if not self.client.tool_manager or not self.client.tool_manager.tools:
-            console.print("[yellow]No tools available[/yellow]\n")
-            return
-
-        # Show legacy tools
-        display_tools_table(self.client.tool_manager.list_tools())
-
-        # Phase 1B: Also show engine tools if available
+        # Show engine tools (unified across all providers)
         if self.engine_client and self.engine_client.tool_manager:
             engine_tools = self.engine_client.tool_manager.list_tools()
             if engine_tools:
-                console.print("\n[bold cyan]File Editing Tools (v1.11.0):[/bold cyan]")
-                for tool in engine_tools:
-                    # Only show file editing tools
-                    if tool.get('name') in ['apply_patch', 'replace_block', 'insert_text', 'delete_lines']:
-                        console.print(f"  • [bold]{tool.get('name')}[/bold] - {tool.get('description')}")
-                console.print()
+                display_tools_table(engine_tools)
+        # Fallback: Show legacy tools if engine not available
+        elif isinstance(self.client, self.PerplexityClientPromptTools):
+            if not self.client.tool_manager or not self.client.tool_manager.tools:
+                console.print("[yellow]No tools available[/yellow]\n")
+                return
+            display_tools_table(self.client.tool_manager.list_tools())
 
     def _tools_status(self):
         """Show tools status."""
-        if isinstance(self.client, self.PerplexityClientPromptTools):
-            try:
-                # Legacy tool manager uses different API
-                tool_count = len(self.client.tool_manager.list_tools()) if self.client.tool_manager else 0
-            except Exception as e:
-                console.print(f"[yellow]Unexpected error: {e}[/yellow]\n")
-                tool_count = 0
+        # v1.11.5: Check engine_client.tools_enabled first (works across all providers)
+        tools_enabled = (
+            (self.engine_client and self.engine_client.tools_enabled) or
+            isinstance(self.client, self.PerplexityClientPromptTools)
+        )
 
-            max_iter = getattr(self.client, 'tool_max_iterations', 15)
+        if tools_enabled:
+            # Get tool count from engine (primary) or legacy client
+            tool_count = 0
+            if self.engine_client and self.engine_client.tool_manager:
+                try:
+                    tool_count = len(self.engine_client.tool_manager.list_tools())
+                except Exception:
+                    pass
+            elif isinstance(self.client, self.PerplexityClientPromptTools):
+                try:
+                    tool_count = len(self.client.tool_manager.list_tools()) if self.client.tool_manager else 0
+                except Exception:
+                    pass
+
             console.print(f"[green]✓ Tools enabled[/green] ({tool_count} tools available)")
-            console.print(f"[dim]Max iterations: {max_iter}[/dim]")
 
-            # Phase 1B: Show engine tools status
+            # Show consent mode if engine available
             if self.engine_client:
                 try:
-                    engine_tool_count = len(self.engine_client.tool_manager.list_tools())
-                    console.print(f"[green]✓ File editing tools enabled[/green] ({engine_tool_count} editing tools)")
                     consent_mode = self.engine_client.session.edit_consent_mode
                     console.print(f"[dim]Consent mode: {consent_mode}[/dim]")
                 except Exception:
-                    # Fallback if tool manager not available
                     pass
 
             console.print("[dim]Use '/tools list' to see available tools[/dim]\n")
@@ -745,7 +751,12 @@ class CommandHandler:
 
     def _tools_config(self, args: list):
         """Configure tool settings."""
-        if not isinstance(self.client, self.PerplexityClientPromptTools):
+        # v1.11.5: Check engine_client.tools_enabled first (works across all providers)
+        tools_enabled = (
+            (self.engine_client and self.engine_client.tools_enabled) or
+            isinstance(self.client, self.PerplexityClientPromptTools)
+        )
+        if not tools_enabled:
             console.print("[yellow]Tools not enabled. Use '/tools enable' first[/yellow]\n")
             return
 

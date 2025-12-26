@@ -8,7 +8,36 @@
 
 ---
 
-## Current Release: v1.11.5
+## Current Release: v1.11.6
+
+**Status**: ✅ Bug Fix - /tools list and /tools status After Provider Switch
+
+Released: 2025-12-26
+
+**Goal**: Fix `/tools list` and `/tools status` commands not recognizing tools after switching providers
+
+**Bug Fixes**:
+- ✅ **`/tools list` After Provider Switch** - Now correctly lists tools after `/provider gemini`
+  - Root cause: `_list_tools()` checked `isinstance(self.client, PerplexityClientPromptTools)` which is False for non-Perplexity providers
+  - Fix: Check `engine_client.tools_enabled` first, show engine tools for all providers
+- ✅ **`/tools status` After Provider Switch** - Now correctly shows "Tools enabled" after switching
+  - Root cause: `_tools_status()` had same isinstance check bug
+  - Fix: Check `engine_client.tools_enabled` first
+- ✅ **`/tools config` After Provider Switch** - Now works after switching providers
+  - Same fix pattern applied
+
+**Files Changed**:
+- `ppxai/commands.py` - Updated `_list_tools()`, `_tools_status()`, `_tools_config()` to check `engine_client.tools_enabled` first
+
+**Testing**:
+- 377 tests passing
+- Manual TUI verification: `/tools enable` → `/provider gemini` → `/tools status` now works
+
+**Branch**: `master`
+
+---
+
+## Previous Release: v1.11.5
 
 **Status**: ✅ Bug Fixes - Ctrl-C and Tools Status Display
 
