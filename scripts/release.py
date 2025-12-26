@@ -564,13 +564,14 @@ def main():
     date = datetime.now().strftime("%Y-%m-%d")
 
     # Calculate total steps based on flags
-    total_steps = 8  # Base steps
+    # Base steps: Git check, Update versions, Release notes, Tests, Commit, Push, CI wait, Publish notes, Verify = 9
+    total_steps = 9
     if args.redo:
-        total_steps += 1
+        total_steps += 1  # Add "Delete existing release" step
     if args.skip_tests:
-        total_steps -= 1
+        total_steps -= 1  # Remove "Run tests" step
     if args.skip_ci_wait:
-        total_steps -= 1
+        total_steps -= 1  # Remove "Wait for CI" step
 
     print(f"\n{'━' * 50}")
     print(f"  🚀 ppxai Release Script")
