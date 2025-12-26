@@ -368,7 +368,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 });
                 break;
             case 'done':
-                // Handled by endResponse
+                // CRITICAL: When tools are used, stream_end contains the full response
+                // but no chunk events were sent. We need to capture the content here.
+                if (event.content && event.content.trim()) {
+                    this._view.webview.postMessage({
+                        type: 'fullResponse',
+                        content: event.content
+                    });
+                }
                 break;
         }
     }
@@ -2918,6 +2925,17 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                     }
                     currentResponseContent += message.content;
                     scheduleRender(); // Throttled simple render during streaming
+                    break;
+
+                case 'fullResponse':
+                    // Handle complete response from stream_end (used when tools are called)
+                    // This arrives BEFORE endResponse with the full content
+                    if (!currentResponseEl) {
+                        currentResponseEl = addMessage('assistant', '', false);
+                        typingIndicator.classList.remove('visible');
+                    }
+                    currentResponseContent = message.content;
+                    scheduleRender();
                     break;
 
                 case 'endResponse':

@@ -4,9 +4,43 @@ Perplexity AI provider.
 Perplexity has native web search and citation capabilities.
 """
 
+import re
 from typing import List, AsyncIterator, Optional
 from ..types import Message, Event, EventType, ProviderCapabilities
 from .base import BaseProvider
+
+
+def inject_citation_urls(content: str, citations: List[str]) -> str:
+    """
+    Inject citation URLs into response text.
+
+    Perplexity returns citations as a separate array, but the response text
+    only contains [1], [2], etc. markers. This function converts them to
+    clickable markdown links like [1](url).
+
+    Args:
+        content: Response text with [1], [2] markers
+        citations: List of citation URLs from Perplexity API
+
+    Returns:
+        Content with [1](url), [2](url) format for clickable links
+    """
+    if not citations:
+        return content
+
+    # Replace [N] with [N](url) where N is 1-indexed
+    def replace_citation(match):
+        num = int(match.group(1))
+        # Citations are 1-indexed in text, 0-indexed in array
+        if 1 <= num <= len(citations):
+            url = citations[num - 1]
+            return f'[{num}]({url})'
+        return match.group(0)  # Leave unchanged if out of range
+
+    # Match [N] but NOT already [N](url)
+    # Negative lookahead ensures we don't match already-linked citations
+    pattern = r'\[(\d+)\](?!\()'
+    return re.sub(pattern, replace_citation, content)
 
 
 class PerplexityProvider(BaseProvider):
@@ -81,6 +115,10 @@ class PerplexityProvider(BaseProvider):
                 citations = []
                 if hasattr(response, 'citations'):
                     citations = response.citations or []
+
+                # Inject citation URLs into response text for clickable links
+                if citations:
+                    content = inject_citation_urls(content, citations)
 
                 metadata = {"usage": usage}
                 if citations:
