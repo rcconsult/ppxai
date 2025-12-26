@@ -398,11 +398,12 @@ def wait_for_ci(version: str, timeout_minutes: int = 10) -> bool:
 
     start_time = time.time()
     timeout_seconds = timeout_minutes * 60
+    seen_in_progress = False  # Track if we've seen this run actually start
 
     while time.time() - start_time < timeout_seconds:
-        # Get runs filtered by head branch (tag)
+        # Get runs filtered by head branch (tag) with createdAt to check recency
         result = run_command(
-            f"{token_cmd}gh run list --limit 5 --json status,conclusion,name,headBranch",
+            f"{token_cmd}gh run list --limit 5 --json status,conclusion,name,headBranch,createdAt",
             check=False
         )
 
@@ -427,13 +428,25 @@ def wait_for_ci(version: str, timeout_minutes: int = 10) -> bool:
             status = run.get("status")
             conclusion = run.get("conclusion")
 
+            # Track if we've seen this run in progress (not just completed from old run)
+            if status in ("queued", "in_progress"):
+                seen_in_progress = True
+
             if status == "completed":
-                if conclusion == "success":
-                    print(f"  ✅ CI completed successfully for {tag}")
-                    return True
+                # Only accept completion if we saw it actually run (not stale completed run)
+                if seen_in_progress or conclusion != "success":
+                    if conclusion == "success":
+                        print(f"  ✅ CI completed successfully for {tag}")
+                        return True
+                    else:
+                        print(f"  ❌ CI failed with: {conclusion}")
+                        return False
                 else:
-                    print(f"  ❌ CI failed with: {conclusion}")
-                    return False
+                    # Stale completed run, wait for new one
+                    elapsed = int(time.time() - start_time)
+                    print(f"  ⏳ Waiting for new CI run to start for {tag} ({elapsed}s elapsed)")
+                    time.sleep(5)
+                    continue
             else:
                 elapsed = int(time.time() - start_time)
                 print(f"  ⏳ CI status: {status} ({elapsed}s elapsed)")
@@ -446,7 +459,7 @@ def wait_for_ci(version: str, timeout_minutes: int = 10) -> bool:
     return False
 
 
-def publish_release_notes(version: str, max_retries: int = 6):
+def publish_release_notes(version: str, max_retries: int = 12):
     """Publish release notes to GitHub release."""
     notes_file = PROJECT_ROOT / f"docs/RELEASE-NOTES-v{version}.md"
     tag = f"v{version}"
@@ -469,7 +482,7 @@ def publish_release_notes(version: str, max_retries: int = 6):
 
         if "release not found" in result.stderr.lower():
             if attempt < max_retries - 1:
-                wait_time = 5  # Fixed 5s wait between retries
+                wait_time = 5 + (attempt * 5)  # 5s, 10s, 15s, 20s... up to 60s
                 print(f"  ⏳ Release not found yet, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})...")
                 time.sleep(wait_time)
             else:
