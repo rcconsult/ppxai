@@ -477,18 +477,18 @@ class TestTUIFileReferences:
 
     @pytest.fixture
     def handler(self):
-        """Create a CommandHandler for testing."""
-        from ppxai.commands import CommandHandler
-        from ppxai.client import AIClient
+        """Create a CommandHandler for testing.
 
-        # Create a mock client
-        client = AIClient(api_key="test")
+        v1.12.0: Updated to use new CommandHandler signature (no client).
+        """
+        from ppxai.commands import CommandHandler
+
+        # v1.12.0: No longer need AIClient - CommandHandler creates EngineClient
         handler = CommandHandler(
-            client=client,
-            api_key="test",
-            current_model="test-model",
-            base_url="https://test.com",
-            provider="test"
+            "test",  # api_key
+            "test-model",  # current_model
+            "https://test.com",  # base_url
+            "test"  # provider
         )
         return handler
 
