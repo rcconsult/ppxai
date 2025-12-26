@@ -17,6 +17,7 @@
 | [Context Injection Guide](CONTEXT-INJECTION.md) | `@file`, `@git`, `@tree` context providers |
 | [Provider Setup Guide](PROVIDER_SETUP.md) | Configure AI providers (OpenAI, Gemini, Perplexity) |
 | [Autorouter Config](AUTOROUTER-CONFIG.md) | Automatic model routing for coding tasks |
+| [Custom Tool Development](CUSTOM_TOOL_DEVELOPMENT_GUIDE.md) | Create your own tools for ppxai |
 
 ### Technical Reference
 

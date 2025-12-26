@@ -45,6 +45,7 @@ from .ui import (
     display_usage,
     display_global_usage,
     display_tools_table,
+    display_tool_help,
 )
 from .utils import read_file_content
 from .commands import CommandHandler, send_coding_task
@@ -93,6 +94,7 @@ __all__ = [
     "display_usage",
     "display_global_usage",
     "display_tools_table",
+    "display_tool_help",
     # Utils
     "read_file_content",
     # Commands

@@ -442,3 +442,77 @@ def display_tools_table(tools_list):
     console.print()
     console.print(table)
     console.print()
+
+
+def display_tool_help(tool_name: str, tool_info: dict):
+    """Display detailed help for a specific tool.
+
+    Args:
+        tool_name: Name of the tool
+        tool_info: Dictionary with 'description' and 'parameters' keys
+    """
+    description = tool_info.get('description', 'No description available')
+    parameters = tool_info.get('parameters', {})
+    properties = parameters.get('properties', {})
+    required = parameters.get('required', [])
+
+    # Build help text
+    lines = []
+    lines.append(f"**{tool_name}**")
+    lines.append("")
+    lines.append(description)
+    lines.append("")
+
+    if properties:
+        lines.append("## Parameters")
+        lines.append("")
+
+        for param_name, param_info in properties.items():
+            param_type = param_info.get('type', 'any')
+            param_desc = param_info.get('description', 'No description')
+            is_required = param_name in required
+
+            # Handle enum types
+            if 'enum' in param_info:
+                enum_values = ', '.join(f'`{v}`' for v in param_info['enum'])
+                param_type = f"enum [{enum_values}]"
+
+            req_marker = "**required**" if is_required else "optional"
+            lines.append(f"- `{param_name}` ({param_type}, {req_marker})")
+            lines.append(f"  {param_desc}")
+            lines.append("")
+    else:
+        lines.append("*No parameters required*")
+        lines.append("")
+
+    # Add usage example
+    lines.append("## Example Usage")
+    lines.append("")
+    lines.append(f"Ask the AI: *\"Use {tool_name} to ...\"*")
+    lines.append("")
+
+    # Build example call
+    if properties:
+        example_args = []
+        for param_name in required[:2]:  # Show first 2 required params
+            param_info = properties.get(param_name, {})
+            if param_info.get('type') == 'string':
+                example_args.append(f'{param_name}="value"')
+            elif param_info.get('type') == 'integer':
+                example_args.append(f'{param_name}=10')
+            elif param_info.get('type') == 'boolean':
+                example_args.append(f'{param_name}=true')
+            else:
+                example_args.append(f'{param_name}=...')
+
+        if example_args:
+            args_str = ', '.join(example_args)
+            lines.append(f"AI calls: `{tool_name}({args_str})`")
+
+    help_text = '\n'.join(lines)
+    console.print(Panel(
+        Markdown(help_text),
+        title=f"🔧 Tool Help: {tool_name}",
+        border_style="cyan",
+        padding=(1, 2)
+    ))

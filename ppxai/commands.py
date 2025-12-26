@@ -19,6 +19,7 @@ from .ui import (
     display_welcome,
     display_spec_help,
     display_file_editing_help,
+    display_tool_help,
     select_model,
     select_provider,
     display_sessions,
@@ -661,11 +662,16 @@ class CommandHandler:
         elif subcommand == "set":
             self._tools_set(subargs)
         elif subcommand == "help":
-            if subargs and subargs[0] == "editing":
-                display_file_editing_help()
+            if subargs:
+                if subargs[0] == "editing":
+                    display_file_editing_help()
+                else:
+                    # Show help for specific tool
+                    self._show_tool_help(subargs[0])
             else:
-                console.print("[yellow]Available help topics: editing[/yellow]")
-                console.print("[dim]Usage: /tools help editing[/dim]\n")
+                console.print("[yellow]Tool Help[/yellow]")
+                console.print("[dim]Usage: /tools help <tool-name>  - Show help for a specific tool[/dim]")
+                console.print("[dim]       /tools help editing      - Show file editing guide[/dim]\n")
         else:
             console.print(f"[red]Unknown subcommand: {subcommand}[/red]")
             console.print("[yellow]Available: enable, disable, list, status, config, set, help[/yellow]\n")
@@ -818,6 +824,38 @@ class CommandHandler:
         else:
             console.print(f"[red]Unknown setting: {setting}[/red]")
             console.print("[dim]Available: verbose[/dim]\n")
+
+    def _show_tool_help(self, tool_name: str):
+        """Show detailed help for a specific tool.
+
+        Args:
+            tool_name: Name of the tool to show help for
+        """
+        if not self.engine_client or not self.engine_client.tools_enabled:
+            console.print("[yellow]Tools not enabled. Use '/tools enable' first[/yellow]\n")
+            return
+
+        if not self.engine_client.tool_manager:
+            console.print("[red]Tool manager not available[/red]\n")
+            return
+
+        # Get the tool
+        tool = self.engine_client.tool_manager.get_tool(tool_name)
+        if not tool:
+            # Tool not found - show available tools
+            available_tools = self.engine_client.tool_manager.list_tools()
+            tool_names = [t['name'] for t in available_tools]
+
+            console.print(f"[red]Tool not found: {tool_name}[/red]")
+            console.print("[dim]Available tools:[/dim]")
+            for name in sorted(tool_names):
+                console.print(f"[dim]  - {name}[/dim]")
+            console.print()
+            return
+
+        # Get tool definition and display help
+        tool_info = tool.get_definition()
+        display_tool_help(tool_name, tool_info)
 
     def handle_debug_log(self, args: str):
         """Handle /debug-log command to enable/disable debug logging."""
