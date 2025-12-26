@@ -308,11 +308,53 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"""
     print(f"  ✅ Created commit: {message[:50]}...")
 
 
+def delete_existing_release(version: str) -> bool:
+    """Delete existing GitHub release and tags for redo."""
+    tag = f"v{version}"
+    token_cmd = "unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN && "
+
+    print(f"\n🗑️  Deleting existing release v{version}...")
+
+    # Delete GitHub release
+    result = run_command(f"{token_cmd}gh release delete {tag} --yes", check=False)
+    if result.returncode == 0:
+        print(f"  ✅ Deleted GitHub release: {tag}")
+    else:
+        print(f"  ⏭️  No GitHub release found for {tag}")
+
+    # Delete remote tag
+    result = run_command(f"git push origin --delete {tag}", check=False)
+    if result.returncode == 0:
+        print(f"  ✅ Deleted remote tag: {tag}")
+    else:
+        print(f"  ⏭️  No remote tag found for {tag}")
+
+    # Delete local tag
+    result = run_command(f"git tag -d {tag}", check=False)
+    if result.returncode == 0:
+        print(f"  ✅ Deleted local tag: {tag}")
+    else:
+        print(f"  ⏭️  No local tag found for {tag}")
+
+    # Reset to previous commit if the last commit is the release commit
+    result = run_command("git log -1 --format=%s", check=False)
+    if result.returncode == 0:
+        last_commit_msg = result.stdout.strip()
+        if f"v{version}" in last_commit_msg and ("release" in last_commit_msg.lower() or "feat:" in last_commit_msg.lower()):
+            print(f"  ⚠️  Last commit appears to be the release commit: {last_commit_msg[:50]}...")
+            print(f"  🔄 Resetting to previous commit...")
+            run_command("git reset --hard HEAD~1")
+            run_command("git push origin master --force")
+            print(f"  ✅ Reset master to previous commit")
+
+    return True
+
+
 def create_and_push_tag(version: str):
     """Create tag and push to origin."""
     tag = f"v{version}"
 
-    # Delete existing tag if present
+    # Delete existing local tag if present
     run_command(f"git tag -d {tag}", check=False)
 
     # Create new tag
@@ -443,6 +485,7 @@ def main():
     parser.add_argument("--skip-tests", action="store_true", help="Skip running tests")
     parser.add_argument("--skip-ci-wait", action="store_true", help="Don't wait for CI to complete")
     parser.add_argument("--force", action="store_true", help="Force release even with uncommitted changes")
+    parser.add_argument("--redo", action="store_true", help="Delete existing release/tag and redo from scratch")
 
     args = parser.parse_args()
 
@@ -458,6 +501,8 @@ def main():
 
     if args.dry_run:
         print(f"   Mode: DRY RUN (no changes will be made)")
+    if args.redo:
+        print(f"   Mode: REDO (will delete existing release first)")
 
     # Check git status
     print(f"\n📋 Checking git status...")
@@ -466,6 +511,10 @@ def main():
         print(f"     Commit or stash changes first, or use --force")
         sys.exit(1)
     print(f"  ✅ Git working directory is clean")
+
+    # Handle --redo: delete existing release first
+    if args.redo:
+        delete_existing_release(version)
 
     if args.dry_run:
         print(f"\n📋 Would update the following files:")

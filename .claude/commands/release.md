@@ -47,6 +47,25 @@ python scripts/release.py v1.11.8 --skip-ci-wait
 
 # Force release even with uncommitted changes
 python scripts/release.py v1.11.8 --force
+
+# REDO: Delete broken release and rebuild from scratch
+python scripts/release.py v1.11.8 --redo
+```
+
+## Redo a Broken Release
+
+If something went wrong with a release, use `--redo` to:
+1. Delete the GitHub release
+2. Delete the remote and local tags
+3. Reset master if the last commit was the release commit
+4. Then proceed with a fresh release
+
+```bash
+# Redo a broken release
+python scripts/release.py v1.11.7 --redo
+
+# Redo with force (if you have local changes to include)
+python scripts/release.py v1.11.7 --redo --force
 ```
 
 ## Before Running
