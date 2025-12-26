@@ -132,21 +132,25 @@ python tests/test_prompt_tools.py
 
 ```
 ppxai/
-├── ppxai.py                              # Main CLI (with /tools commands)
-├── tool_manager.py                       # Core tool management
-├── perplexity_tools_prompt_based.py      # Prompt-based implementation
+├── ppxai/                                # Main package
+│   ├── main.py                           # CLI entry point
+│   ├── commands.py                       # Slash command handlers
+│   └── engine/                           # Core engine
+│       ├── client.py                     # EngineClient (primary interface)
+│       ├── providers/                    # Provider implementations
+│       └── tools/                        # Tool system
+│           ├── manager.py                # ToolManager
+│           └── builtin/                  # Built-in tools
 ├── demo/
-│   ├── example_builtin_tool.py           # Built-in tool example
-│   ├── example_mcp_server/               # MCP server example
 │   └── demo_tools_working.py             # Working demo
 ├── tests/
-│   ├── test_all_tools.py                 # Test all tools
-│   ├── test_mcp.py                       # MCP diagnostics
-│   └── test_prompt_tools.py              # Quick test
+│   ├── test_engine_tool_parsing.py       # Tool parsing tests
+│   ├── test_file_editing_tools.py        # File editing tests
+│   └── ...                               # Additional tests
 └── docs/
     ├── README.md                          # This file
-    ├── TOOL_CREATION_GUIDE.md            # ⭐ Start here
-    └── ...                                # Other guides
+    ├── FILE_EDITING_GUIDE.md             # File editing guide
+    └── archive/                           # Archived documentation
 ```
 
 ## FAQ

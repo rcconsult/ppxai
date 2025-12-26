@@ -49,12 +49,9 @@ TUI Layer (ppxai/)                - Terminal UI
 ├── main.py                       - CLI entry point
 ├── ui.py                         - Rich console components
 └── commands.py                   - Slash command handlers
-
-Legacy Support                    - Backward compatibility during transition
-├── client.py                     - Legacy AIClient (still used by TUI)
-├── tool_manager.py              - Legacy tool manager
-└── perplexity_tools_prompt_based.py
 ```
+
+**Note**: Legacy code (AIClient, tool_manager.py, perplexity_tools_prompt_based.py) was removed in v1.11.6. EngineClient is now the only client interface.
 
 ### Key Design Patterns
 

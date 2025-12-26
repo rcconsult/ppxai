@@ -537,28 +537,23 @@ ppxai/
 │   │   ├── config.ts                     # Configuration management
 │   │   └── sessionsProvider.ts           # Session tree view
 │   └── package.json                      # Extension manifest
-├── tool_manager.py                       # Tool management system (legacy)
-├── perplexity_tools_prompt_based.py      # AI tool implementation (legacy)
 ├── ppxai-config.json                     # Provider configuration (optional)
 ├── ppxai-config.example.json             # Configuration template
 ├── demo/
-│   ├── example_builtin_tool.py           # Example Python tool
-│   ├── example_mcp_server/               # Example MCP server
 │   └── demo_tools_working.py             # Working demo
-├── tests/                                # 300+ tests (303/308 passing in v1.11.1)
+├── tests/                                # 322 tests passing (v1.11.7)
 │   ├── test_config.py                    # Configuration tests (48 tests)
-│   ├── test_client.py                    # Client tests
 │   ├── test_commands.py                  # Command tests
-│   ├── test_engine_streaming.py          # Engine streaming tests (v1.11.1)
-│   ├── test_file_editing_tools.py        # File editing tests (v1.11.0)
-│   ├── test_markdown_tables.py           # Markdown table tests (v1.10.4)
+│   ├── test_engine_streaming.py          # Engine streaming tests
+│   ├── test_engine_tool_parsing.py       # Tool parsing tests
+│   ├── test_file_editing_tools.py        # File editing tests
+│   ├── test_markdown_tables.py           # Markdown table tests
 │   └── ...                               # Additional test modules
 ├── docs/
 │   ├── README.md                         # Documentation index
-│   ├── TOOL_CREATION_GUIDE.md            # Step-by-step tool guide
-│   ├── FILE_EDITING_GUIDE.md             # File editing guide (v1.11.1)
-│   ├── QUICK_START_TOOLS.md              # 60-second setup
-│   └── ...                               # Additional documentation
+│   ├── FILE_EDITING_GUIDE.md             # File editing guide
+│   ├── v1.11.0-agentic-workflow-plan.md  # Agentic workflow plan
+│   └── archive/                          # Archived documentation
 ├── pyproject.toml                        # Project metadata & dependencies
 ├── uv.lock                               # Dependency lockfile
 ├── scripts/
