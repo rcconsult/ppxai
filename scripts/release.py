@@ -549,8 +549,8 @@ def verify_release(version: str) -> bool:
         return False
 
 
-def print_step(step: int, total: int, title: str):
-    """Print a prominent step header."""
+def print_step(step: int, total: int, title: str, step_times: list = None):
+    """Print a prominent step header. Optionally record previous step time."""
     bar = "━" * 50
     print(f"\n{bar}")
     print(f"  Step {step}/{total}: {title}")
@@ -596,6 +596,16 @@ def main():
         print(f"  Mode: REDO (will delete existing release first)")
 
     step = 0
+    step_times = []  # Track (step_name, duration) tuples
+    step_start = time.time()
+    total_start = time.time()
+
+    def record_step(name: str):
+        """Record the time for the current step."""
+        nonlocal step_start
+        duration = time.time() - step_start
+        step_times.append((name, duration))
+        step_start = time.time()
 
     # Step 1: Check git status
     step += 1
@@ -605,12 +615,14 @@ def main():
         print(f"     Commit or stash changes first, or use --force")
         sys.exit(1)
     print(f"  ✅ Git working directory is clean")
+    record_step("Git Status")
 
     # Optional: Handle --redo: delete existing release first
     if args.redo:
         step += 1
         print_step(step, total_steps, "Deleting Existing Release")
         delete_existing_release(version)
+        record_step("Delete Release")
 
     if args.dry_run:
         print(f"\n📋 Would update the following files:")
@@ -649,11 +661,13 @@ def main():
         )
         roadmap_path.write_text(content)
         print(f"  ✅ Updated: ROADMAP.md")
+    record_step("Update Versions")
 
     # Step 3: Check/create release notes
     step += 1
     print_step(step, total_steps, "Checking Release Notes")
     create_release_notes(version, date)
+    record_step("Release Notes")
 
     # Step 4: Run tests
     if not args.skip_tests:
@@ -662,16 +676,19 @@ def main():
         if not run_tests():
             print(f"\n❌ Tests failed. Fix issues and try again.")
             sys.exit(1)
+        record_step("Tests")
 
     # Step 5: Create commit
     step += 1
     print_step(step, total_steps, "Creating Release Commit")
     create_commit(version, f"feat: v{version} release")
+    record_step("Commit")
 
     # Step 6: Create and push tag
     step += 1
     print_step(step, total_steps, "Pushing to GitHub")
     create_and_push_tag(version)
+    record_step("Push")
 
     # Step 7: Wait for CI
     if not args.skip_ci_wait:
@@ -680,22 +697,31 @@ def main():
         if not wait_for_ci(version):
             print(f"\n⚠️  CI did not complete successfully")
             print(f"    Check: https://github.com/rcconsult/ppxai/actions")
+        record_step("CI Wait")
 
     # Step 8: Publish release notes
     step += 1
     print_step(step, total_steps, "Publishing Release Notes")
     publish_release_notes(version)
+    record_step("Publish Notes")
 
     # Step 9: Verify release
     step += 1
     print_step(step, total_steps, "Verifying Release")
     verify_release(version)
+    record_step("Verify")
 
-    # Done!
+    # Done - print timing summary
+    total_time = time.time() - total_start
     print(f"\n{'━' * 50}")
     print(f"  ✅ Release v{version} complete!")
     print(f"{'━' * 50}")
     print(f"  https://github.com/rcconsult/ppxai/releases/tag/v{version}")
+    print(f"\n  ⏱️  Timing Summary:")
+    for step_name, duration in step_times:
+        print(f"      {step_name:.<20} {duration:>6.1f}s")
+    print(f"      {'─' * 27}")
+    print(f"      {'Total':.<20} {total_time:>6.1f}s")
 
 
 if __name__ == "__main__":
