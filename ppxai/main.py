@@ -78,12 +78,24 @@ class PPXAICompleter(Completer):
         ('/exit', 'Exit the application'),
     ]
 
+    # Subcommands for /tools
+    TOOLS_SUBCOMMANDS = [
+        ('enable', 'Enable AI tools'),
+        ('disable', 'Disable AI tools'),
+        ('list', 'List available tools'),
+        ('status', 'Show tools status'),
+        ('help', 'Show help for a tool'),
+        ('set', 'Configure tool settings'),
+        ('config', 'Configure tool settings'),
+    ]
+
     # Directories to ignore when searching for files
     IGNORE_DIRS = {'.git', 'node_modules', '__pycache__', '.venv', 'venv', '.tox', 'dist', 'build', '.eggs', '.mypy_cache'}
 
-    def __init__(self):
+    def __init__(self, command_handler=None):
         self._file_cache = {}
         self._cache_time = 0
+        self._command_handler = command_handler
 
     def _get_files(self, max_files: int = 100) -> list[tuple[str, str]]:
         """Get files in the current directory for completion."""
@@ -142,6 +154,33 @@ class PPXAICompleter(Completer):
         # Check for slash command at start of line (only if no @ in text)
         if text.startswith('/'):
             cmd_text = text.lower()
+
+            # Handle /tools subcommands
+            if cmd_text.startswith('/tools '):
+                parts = text.split()
+                if len(parts) == 2:
+                    # Completing subcommand: /tools en<tab>
+                    subquery = parts[1].lower()
+                    for subcmd, desc in self.TOOLS_SUBCOMMANDS:
+                        if subcmd.startswith(subquery):
+                            yield Completion(
+                                subcmd,
+                                start_position=-len(parts[1]),
+                                display_meta=desc
+                            )
+                elif len(parts) >= 3 and parts[1].lower() == 'help':
+                    # Completing tool name: /tools help calc<tab>
+                    tool_query = parts[2].lower() if len(parts) > 2 else ''
+                    for tool_name, tool_desc in self._get_tool_names():
+                        if tool_name.lower().startswith(tool_query):
+                            yield Completion(
+                                tool_name,
+                                start_position=-len(tool_query) if tool_query else 0,
+                                display_meta=tool_desc[:40] + '...' if len(tool_desc) > 40 else tool_desc
+                            )
+                return
+
+            # Regular command completion
             for cmd, desc in self.COMMANDS:
                 if cmd.lower().startswith(cmd_text):
                     yield Completion(
@@ -149,6 +188,32 @@ class PPXAICompleter(Completer):
                         start_position=-len(text),
                         display_meta=desc
                     )
+
+    def _get_tool_names(self) -> list[tuple[str, str]]:
+        """Get available tool names and descriptions for completion."""
+        if not self._command_handler:
+            return []
+
+        engine = self._command_handler.engine_client
+        if not engine or not engine.tools_enabled or not engine.tool_manager:
+            # Return common tool names even if tools not enabled
+            return [
+                ('calculator', 'Evaluate mathematical expressions'),
+                ('get_datetime', 'Get current date and time'),
+                ('list_directory', 'List files in a directory'),
+                ('read_file', 'Read file contents'),
+                ('execute_shell_command', 'Execute shell commands'),
+                ('apply_patch', 'Apply unified diff patches'),
+                ('replace_block', 'Find and replace text blocks'),
+                ('insert_text', 'Insert text at line numbers'),
+                ('delete_lines', 'Delete line ranges'),
+                ('web_search', 'Search the web'),
+                ('fetch_url', 'Fetch URL contents'),
+            ]
+
+        # Get actual tools from manager
+        tools = engine.tool_manager.list_tools()
+        return [(t['name'], t['description']) for t in tools]
 
 # Note: Environment variables are loaded in config.py
 
@@ -196,7 +261,8 @@ def main():
     handler = CommandHandler(api_key, current_model, base_url, provider)
 
     # Create prompt session with history and completer
-    completer = PPXAICompleter()
+    # Pass handler to completer for tool name autocomplete
+    completer = PPXAICompleter(command_handler=handler)
     session = PromptSession(
         history=InMemoryHistory(),
         completer=completer,
