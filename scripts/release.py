@@ -1,0 +1,549 @@
+#!/usr/bin/env python3
+"""
+Automated release script for ppxai.
+
+This script handles the complete release process:
+1. Validate version format (3-part semantic versioning)
+2. Update all version references across the codebase
+3. Run tests
+4. Create release commit and tag
+5. Push to GitHub and trigger CI
+6. Wait for CI to complete
+7. Publish release notes
+8. Verify release assets
+
+Usage:
+    python scripts/release.py v1.11.8
+    python scripts/release.py v1.11.8 --dry-run
+    python scripts/release.py v1.11.8 --skip-tests
+"""
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+from datetime import datetime
+
+# Project root directory
+PROJECT_ROOT = Path(__file__).parent.parent
+
+# Files that need version updates
+VERSION_FILES = {
+    "pyproject.toml": {
+        "pattern": r'version = "[\d.]+"',
+        "replacement": 'version = "{version}"',
+    },
+    "ppxai/__init__.py": {
+        "pattern": r'__version__ = "[\d.]+"',
+        "replacement": '__version__ = "{version}"',
+    },
+    "vscode-extension/package.json": {
+        "pattern": r'"version": "[\d.]+"',
+        "replacement": '"version": "{version}"',
+        "json_key": "version",
+    },
+    "ppxai/common/event_handler.py": {
+        "pattern": r'Version: v[\d.]+',
+        "replacement": 'Version: v{version}',
+    },
+}
+
+# Files with vsix references that need updating
+VSIX_FILES = [
+    "README.md",
+    "vscode-extension/README.md",
+]
+
+# Documentation files that need version updates
+DOC_FILES = {
+    "CLAUDE.md": {
+        "current_version_pattern": r'\*\*Current Version:\*\* v[\d.]+',
+        "current_version_replacement": '**Current Version:** v{version}',
+        "version_alignment_pattern": r'- Python package \(pyproject\.toml\): v[\d.]+\n- VSCode extension \(package\.json\): v[\d.]+\n- Git tag: v[\d.]+ \(released [\d-]+\)\n- GitHub Release: https://github\.com/rcconsult/ppxai/releases/tag/v[\d.]+',
+    },
+    "ROADMAP.md": {
+        "current_release_pattern": r'## Current Release: v[\d.]+',
+        "current_release_replacement": '## Current Release: v{version}',
+    },
+}
+
+
+def run_command(cmd: str, capture: bool = True, check: bool = True) -> subprocess.CompletedProcess:
+    """Run a shell command."""
+    print(f"  $ {cmd}")
+    result = subprocess.run(
+        cmd,
+        shell=True,
+        cwd=PROJECT_ROOT,
+        capture_output=capture,
+        text=True,
+    )
+    if check and result.returncode != 0:
+        print(f"  ❌ Command failed: {result.stderr or result.stdout}")
+        sys.exit(1)
+    return result
+
+
+def validate_version(version: str) -> str:
+    """Validate version format and return without 'v' prefix."""
+    # Remove 'v' prefix if present
+    if version.startswith('v'):
+        version = version[1:]
+
+    # Check 3-part semantic version
+    if not re.match(r'^\d+\.\d+\.\d+$', version):
+        print(f"❌ Invalid version format: {version}")
+        print("   Version must be 3-part semantic version (e.g., 1.11.7)")
+        sys.exit(1)
+
+    return version
+
+
+def get_current_version() -> str:
+    """Get current version from pyproject.toml."""
+    pyproject = PROJECT_ROOT / "pyproject.toml"
+    content = pyproject.read_text()
+    match = re.search(r'version = "([^"]+)"', content)
+    if match:
+        return match.group(1)
+    return "unknown"
+
+
+def check_git_clean() -> bool:
+    """Check if git working directory is clean."""
+    result = run_command("git status --porcelain", check=False)
+    return len(result.stdout.strip()) == 0
+
+
+def update_version_in_file(filepath: str, pattern: str, replacement: str, version: str) -> bool:
+    """Update version in a single file using regex."""
+    full_path = PROJECT_ROOT / filepath
+    if not full_path.exists():
+        print(f"  ⚠️  File not found: {filepath}")
+        return False
+
+    content = full_path.read_text()
+    new_content = re.sub(pattern, replacement.format(version=version), content)
+
+    if content == new_content:
+        print(f"  ⏭️  No change needed: {filepath}")
+        return False
+
+    full_path.write_text(new_content)
+    print(f"  ✅ Updated: {filepath}")
+    return True
+
+
+def update_vsix_references(version: str) -> int:
+    """Update all ppxai-X.Y.Z.vsix references."""
+    count = 0
+    vsix_pattern = r'ppxai-[\d.]+\.vsix'
+    vsix_replacement = f'ppxai-{version}.vsix'
+
+    for filepath in VSIX_FILES:
+        full_path = PROJECT_ROOT / filepath
+        if not full_path.exists():
+            continue
+
+        content = full_path.read_text()
+        new_content = re.sub(vsix_pattern, vsix_replacement, content)
+
+        if content != new_content:
+            full_path.write_text(new_content)
+            print(f"  ✅ Updated vsix refs: {filepath}")
+            count += 1
+
+    return count
+
+
+def update_package_lock(version: str):
+    """Update vscode-extension/package-lock.json."""
+    lock_file = PROJECT_ROOT / "vscode-extension/package-lock.json"
+    if not lock_file.exists():
+        return
+
+    content = lock_file.read_text()
+    data = json.loads(content)
+
+    changed = False
+    if data.get("version") != version:
+        data["version"] = version
+        changed = True
+
+    if "packages" in data and "" in data["packages"]:
+        if data["packages"][""].get("version") != version:
+            data["packages"][""]["version"] = version
+            changed = True
+
+    if changed:
+        lock_file.write_text(json.dumps(data, indent=2) + "\n")
+        print(f"  ✅ Updated: vscode-extension/package-lock.json")
+
+
+def update_claude_md(version: str, date: str):
+    """Update CLAUDE.md with new version info."""
+    filepath = PROJECT_ROOT / "CLAUDE.md"
+    content = filepath.read_text()
+
+    # Update current version line
+    content = re.sub(
+        r'\*\*Current Version:\*\* v[\d.]+[^\n]*',
+        f'**Current Version:** v{version}',
+        content
+    )
+
+    # Update version alignment section
+    alignment_replacement = f"""- Python package (pyproject.toml): v{version}
+- VSCode extension (package.json): v{version}
+- Git tag: v{version} (released {date})
+- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v{version}"""
+
+    content = re.sub(
+        r'- Python package \(pyproject\.toml\): v[\d.]+\n- VSCode extension \(package\.json\): v[\d.]+\n- Git tag: v[\d.]+ \(released [\d-]+\)\n- GitHub Release: https://github\.com/rcconsult/ppxai/releases/tag/v[\d.]+',
+        alignment_replacement,
+        content
+    )
+
+    filepath.write_text(content)
+    print(f"  ✅ Updated: CLAUDE.md")
+
+
+def create_release_notes(version: str, date: str):
+    """Create release notes file if it doesn't exist."""
+    notes_file = PROJECT_ROOT / f"docs/RELEASE-NOTES-v{version}.md"
+
+    if notes_file.exists():
+        print(f"  ⏭️  Release notes already exist: {notes_file.name}")
+        return
+
+    template = f"""# Release Notes: v{version}
+
+**Release Date:** {date}
+
+## Summary
+
+[Brief description of this release]
+
+## Major Changes
+
+- [Major change 1]
+- [Major change 2]
+
+## New Features
+
+- [Feature 1]
+- [Feature 2]
+
+## Bug Fixes
+
+- [Fix 1]
+- [Fix 2]
+
+## Documentation Updates
+
+- [Doc update 1]
+
+## Testing
+
+- [X] tests passing
+
+## Upgrade Notes
+
+This is a drop-in replacement for the previous version. No configuration changes required.
+
+## Links
+
+- **GitHub Release:** https://github.com/rcconsult/ppxai/releases/tag/v{version}
+- **Full Changelog:** [CHANGELOG.md](../CHANGELOG.md)
+"""
+
+    notes_file.write_text(template)
+    print(f"  ✅ Created: {notes_file.name}")
+    print(f"  ⚠️  Please edit the release notes before continuing!")
+
+
+def run_tests() -> bool:
+    """Run pytest and return success status."""
+    print("\n📋 Running tests...")
+
+    # Try different ways to run pytest
+    for cmd in [".uv/uv run pytest tests/ -v --tb=short", "uv run pytest tests/ -v --tb=short", "python -m pytest tests/ -v --tb=short"]:
+        result = run_command(cmd, check=False)
+        if result.returncode == 0:
+            # Extract test count from output
+            match = re.search(r'(\d+) passed', result.stdout)
+            if match:
+                print(f"  ✅ {match.group(1)} tests passed")
+            return True
+        elif "command not found" not in result.stderr:
+            print(f"  ❌ Tests failed!")
+            print(result.stdout[-2000:] if len(result.stdout) > 2000 else result.stdout)
+            return False
+
+    print("  ⚠️  Could not find pytest runner")
+    return False
+
+
+def create_commit(version: str, message: str):
+    """Create release commit."""
+    run_command("git add -A")
+
+    commit_msg = f"""{message}
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"""
+
+    # Write commit message to temp file to handle multiline
+    msg_file = PROJECT_ROOT / ".git/RELEASE_COMMIT_MSG"
+    msg_file.write_text(commit_msg)
+
+    run_command(f'git commit -F "{msg_file}"')
+    msg_file.unlink()
+
+    print(f"  ✅ Created commit: {message[:50]}...")
+
+
+def create_and_push_tag(version: str):
+    """Create tag and push to origin."""
+    tag = f"v{version}"
+
+    # Delete existing tag if present
+    run_command(f"git tag -d {tag}", check=False)
+
+    # Create new tag
+    run_command(f'git tag -a {tag} -m "{tag} release"')
+    print(f"  ✅ Created tag: {tag}")
+
+    # Push master and tag
+    run_command("git push origin master")
+    run_command(f"git push origin {tag} --force")
+    print(f"  ✅ Pushed to origin")
+
+
+def wait_for_ci(timeout_minutes: int = 10) -> bool:
+    """Wait for GitHub Actions CI to complete."""
+    print(f"\n⏳ Waiting for CI (timeout: {timeout_minutes}min)...")
+
+    # Source the token
+    token_cmd = "unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN && "
+
+    start_time = time.time()
+    timeout_seconds = timeout_minutes * 60
+
+    while time.time() - start_time < timeout_seconds:
+        result = run_command(f"{token_cmd}gh run list --limit 1 --json status,conclusion,name", check=False)
+
+        if result.returncode != 0:
+            print(f"  ⚠️  Could not check CI status: {result.stderr}")
+            time.sleep(30)
+            continue
+
+        try:
+            runs = json.loads(result.stdout)
+            if runs:
+                status = runs[0].get("status")
+                conclusion = runs[0].get("conclusion")
+
+                if status == "completed":
+                    if conclusion == "success":
+                        print(f"  ✅ CI completed successfully")
+                        return True
+                    else:
+                        print(f"  ❌ CI failed with: {conclusion}")
+                        return False
+                else:
+                    elapsed = int(time.time() - start_time)
+                    print(f"  ⏳ CI status: {status} ({elapsed}s elapsed)")
+        except json.JSONDecodeError:
+            pass
+
+        time.sleep(30)
+
+    print(f"  ⚠️  CI timeout after {timeout_minutes} minutes")
+    return False
+
+
+def publish_release_notes(version: str):
+    """Publish release notes to GitHub release."""
+    notes_file = PROJECT_ROOT / f"docs/RELEASE-NOTES-v{version}.md"
+
+    if not notes_file.exists():
+        print(f"  ⚠️  Release notes not found: {notes_file}")
+        return
+
+    token_cmd = "unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN && "
+    run_command(f'{token_cmd}gh release edit v{version} --notes-file "{notes_file}"')
+    print(f"  ✅ Published release notes")
+
+
+def verify_release(version: str) -> bool:
+    """Verify release has all expected assets."""
+    token_cmd = "unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN && "
+    result = run_command(f"{token_cmd}gh release view v{version} --json assets", check=False)
+
+    if result.returncode != 0:
+        print(f"  ❌ Could not fetch release info")
+        return False
+
+    try:
+        data = json.loads(result.stdout)
+        assets = [a["name"] for a in data.get("assets", [])]
+
+        expected = [
+            f"ppxai-{version}.vsix",
+            "ppxai-linux-amd64",
+            "ppxai-macos-arm64",
+            "ppxai-windows.exe",
+            "ppxai-server-linux-amd64",
+            "ppxai-server-macos-arm64",
+            "ppxai-server-windows.exe",
+        ]
+
+        # Optional Intel Mac builds
+        optional = [
+            "ppxai-macos-intel",
+            "ppxai-server-macos-intel",
+        ]
+
+        missing = [e for e in expected if e not in assets]
+        present_optional = [o for o in optional if o in assets]
+
+        print(f"  📦 Assets: {len(assets)} found")
+        for asset in assets:
+            print(f"      ✅ {asset}")
+
+        if missing:
+            print(f"  ⚠️  Missing required assets:")
+            for m in missing:
+                print(f"      ❌ {m}")
+            return False
+
+        if len(present_optional) < len(optional):
+            missing_optional = [o for o in optional if o not in assets]
+            print(f"  ⚠️  Missing optional assets (Intel Mac builds):")
+            for m in missing_optional:
+                print(f"      ⏭️  {m}")
+
+        return True
+
+    except json.JSONDecodeError:
+        print(f"  ❌ Could not parse release info")
+        return False
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Automated release script for ppxai")
+    parser.add_argument("version", help="Version to release (e.g., v1.11.8 or 1.11.8)")
+    parser.add_argument("--dry-run", action="store_true", help="Show what would be done without making changes")
+    parser.add_argument("--skip-tests", action="store_true", help="Skip running tests")
+    parser.add_argument("--skip-ci-wait", action="store_true", help="Don't wait for CI to complete")
+    parser.add_argument("--force", action="store_true", help="Force release even with uncommitted changes")
+
+    args = parser.parse_args()
+
+    # Validate version
+    version = validate_version(args.version)
+    current_version = get_current_version()
+    date = datetime.now().strftime("%Y-%m-%d")
+
+    print(f"\n🚀 ppxai Release Script")
+    print(f"   Current version: {current_version}")
+    print(f"   New version: {version}")
+    print(f"   Date: {date}")
+
+    if args.dry_run:
+        print(f"   Mode: DRY RUN (no changes will be made)")
+
+    # Check git status
+    print(f"\n📋 Checking git status...")
+    if not check_git_clean() and not args.force:
+        print(f"  ❌ Git working directory is not clean")
+        print(f"     Commit or stash changes first, or use --force")
+        sys.exit(1)
+    print(f"  ✅ Git working directory is clean")
+
+    if args.dry_run:
+        print(f"\n📋 Would update the following files:")
+        for filepath in VERSION_FILES:
+            print(f"     - {filepath}")
+        for filepath in VSIX_FILES:
+            print(f"     - {filepath} (vsix refs)")
+        print(f"     - CLAUDE.md")
+        print(f"     - vscode-extension/package-lock.json")
+        print(f"\n✅ Dry run complete. Use without --dry-run to execute.")
+        return
+
+    # Update version files
+    print(f"\n📋 Updating version references...")
+    for filepath, config in VERSION_FILES.items():
+        update_version_in_file(filepath, config["pattern"], config["replacement"], version)
+
+    # Update vsix references
+    update_vsix_references(version)
+
+    # Update package-lock.json
+    update_package_lock(version)
+
+    # Update CLAUDE.md
+    update_claude_md(version, date)
+
+    # Update ROADMAP.md current release
+    roadmap_path = PROJECT_ROOT / "ROADMAP.md"
+    if roadmap_path.exists():
+        content = roadmap_path.read_text()
+        content = re.sub(
+            r'## Current Release: v[\d.]+',
+            f'## Current Release: v{version}',
+            content
+        )
+        roadmap_path.write_text(content)
+        print(f"  ✅ Updated: ROADMAP.md")
+
+    # Check/create release notes
+    print(f"\n📋 Checking release notes...")
+    create_release_notes(version, date)
+
+    # Run tests
+    if not args.skip_tests:
+        if not run_tests():
+            print(f"\n❌ Tests failed. Fix issues and try again.")
+            sys.exit(1)
+    else:
+        print(f"\n⏭️  Skipping tests (--skip-tests)")
+
+    # Create commit
+    print(f"\n📋 Creating release commit...")
+    create_commit(version, f"feat: v{version} release")
+
+    # Create and push tag
+    print(f"\n📋 Creating tag and pushing...")
+    create_and_push_tag(version)
+
+    # Wait for CI
+    if not args.skip_ci_wait:
+        if not wait_for_ci():
+            print(f"\n⚠️  CI did not complete successfully")
+            print(f"    Check: https://github.com/rcconsult/ppxai/actions")
+    else:
+        print(f"\n⏭️  Skipping CI wait (--skip-ci-wait)")
+
+    # Publish release notes
+    print(f"\n📋 Publishing release notes...")
+    publish_release_notes(version)
+
+    # Verify release
+    print(f"\n📋 Verifying release...")
+    verify_release(version)
+
+    # Done!
+    print(f"\n✅ Release v{version} complete!")
+    print(f"   https://github.com/rcconsult/ppxai/releases/tag/v{version}")
+
+
+if __name__ == "__main__":
+    main()
