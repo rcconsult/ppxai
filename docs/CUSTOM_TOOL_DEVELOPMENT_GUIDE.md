@@ -802,6 +802,21 @@ ppxai provides per-tool help (v1.11.7+):
 # └────────────────────────────────────────────────────────────┘
 ```
 
+### Autocomplete Support
+
+The TUI provides autocomplete for `/tools` commands (v1.11.7+):
+
+| Input | Tab Shows |
+|-------|-----------|
+| `/tools <tab>` | enable, disable, list, status, help, set, config |
+| `/tools help <tab>` | All available tool names with descriptions |
+| `/tools help calc<tab>` | Completes to `calculator` |
+
+**Tips:**
+- Autocomplete works even before tools are enabled (shows common built-in tools)
+- Once tools are enabled, shows actual registered tools from `ToolManager`
+- Tool descriptions appear as hints next to tool names
+
 ---
 
 ## Advanced Patterns

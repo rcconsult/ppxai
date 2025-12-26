@@ -90,6 +90,8 @@ File editing tools are included when you enable AI tools:
 /tools enable
 ```
 
+> **Tip:** Use Tab for autocomplete: `/tools <tab>` shows all subcommands, `/tools help <tab>` shows tool names.
+
 **VSCode:**
 Enable tools in settings or via the tools toggle button in chat panel.
 
@@ -98,6 +100,9 @@ Enable tools in settings or via the tools toggle button in chat panel.
 **TUI:**
 ```bash
 /tools status
+
+# Get help for a specific editing tool
+/tools help apply_patch
 ```
 
 Output:

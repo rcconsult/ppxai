@@ -52,8 +52,11 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
 - 🛠️ `/tools enable` - Enable AI tools (file search, calculator, code analyzer, etc.)
 - 📋 `/tools list` - Show available tools
 - ✅ `/tools status` - Check tools status
+- ❓ `/tools help <name>` - Show help for a specific tool
 - ⚙️ `/tools config` - Configure tool settings (e.g., max iterations)
 - ❌ `/tools disable` - Disable tools
+
+> **Tip:** Use Tab for autocomplete: `/tools <tab>` shows subcommands, `/tools help <tab>` shows tool names.
 
 **Built-in Tools:**
 - `search_files` - Find files by pattern

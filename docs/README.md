@@ -65,7 +65,20 @@ ppxai includes built-in tools for AI-powered development:
 
 # List available tools
 /tools list
+
+# Get help for a specific tool
+/tools help calculator
 ```
+
+### Autocomplete
+
+The TUI supports tab-completion for tools:
+
+| Input | Tab Shows |
+|-------|-----------|
+| `/tools <tab>` | enable, disable, list, status, help |
+| `/tools help <tab>` | All available tool names |
+| `/tools help calc<tab>` | Completes to `calculator` |
 
 ### Creating Custom Tools
 
