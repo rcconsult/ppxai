@@ -74,7 +74,8 @@ coverage.xml
 Thumbs.db
 
 # Claude Code
-.claude/
+.claude/*
+!.claude/commands/
 CLAUDE.md
 .ppxai/tools.config.json
 
