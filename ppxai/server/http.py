@@ -26,6 +26,7 @@ from pydantic import BaseModel
 
 from ..engine import EngineClient, EventType
 from ..common.logger import get_logger
+from .. import __version__
 
 # Global engine instance (managed by lifespan)
 engine: Optional[EngineClient] = None
@@ -151,7 +152,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="ppxai HTTP Server",
     description="HTTP + SSE server for ppxai AI chat",
-    version="1.10.4",
+    version=__version__,
     lifespan=lifespan,
 )
 
@@ -319,7 +320,7 @@ async def health_check():
     """Health check endpoint."""
     return {
         "status": "ok",
-        "version": "1.11.2",
+        "version": __version__,
         "engine": engine is not None,
     }
 
