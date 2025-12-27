@@ -60,6 +60,11 @@ Welcome to the AI terminal interface!
 - `/tools status` - Show tools status and consent mode
 - `/tools help editing` - 🆕 Interactive guide for file editing tools
 
+## Agent Mode (v1.12.0) 🆕
+- `/agent <task>` - Execute autonomous agent task with checkpoints
+- `/undo` - Revert last agent task (requires checkpoints enabled)
+**Safety:** Changes auto-committed (git) or snapshotted (file backup) before tasks
+
 ## File Editing Tools (v1.11.0) 🆕
 When tools are enabled, AI can edit files **with your consent**:
 - **apply_patch** - Apply unified diff patches
