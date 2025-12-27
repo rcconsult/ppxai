@@ -128,6 +128,11 @@
         "^\\s*>\\s*/dev/sda"
       ],
       "sandboxed_paths": []
+    },
+    "agent": {
+      "max_iterations": 10,
+      "context_char_limit": 2000,
+      "min_task_words": 3
     }
   }
 }
