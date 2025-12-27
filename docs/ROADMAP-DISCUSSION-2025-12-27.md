@@ -91,6 +91,45 @@ If something goes wrong:
 - 65% of developers report AI missing context in multi-file refactoring (research finding)
 - Notable incident: Replit's agent deleted a production database
 
+### What "Corrupted State" Actually Means
+
+When multi-file edits fail mid-way, the problem is **filesystem state**, not AI context:
+
+```
+Agent Task: "Refactor auth module to use JWT"
+
+Iteration 1: Edit auth.py ✅ (adds JWT imports, changes login())
+Iteration 2: Edit user.py ✅ (updates User class)
+Iteration 3: Edit tests/test_auth.py ❌ FAILS (syntax error, user rejects, or AI hallucinates)
+```
+
+**Result:** Codebase is in an **inconsistent intermediate state**:
+- `auth.py` and `user.py` modified (expect JWT)
+- `tests/test_auth.py` unchanged (expects old auth)
+- Code may not compile/run
+- `git diff` shows a mess of partial changes
+
+| Corruption Aspect | Impact |
+|-------------------|--------|
+| **Code consistency** | Files reference functions/imports that don't exist or were partially changed |
+| **Test failures** | Tests written for old code, implementation changed |
+| **Build breakage** | Partial refactoring leaves dangling imports, missing symbols |
+| **Manual recovery** | User must manually figure out what changed and how to fix it |
+
+### Why Not Vector DBs (ChromaDB)?
+
+Considered using embedded vector databases for checkpointing. **Rejected** because:
+
+| Requirement | Vector DB | Git | In-Memory Snapshots |
+|-------------|-----------|-----|---------------------|
+| Store exact file content | Overkill | ✅ Perfect | ✅ Good |
+| Point-in-time recovery | ❌ Not designed for | ✅ Native | ✅ Easy |
+| Atomic multi-file rollback | ❌ No | ✅ `git revert` | ✅ Copy back |
+| Diff viewing | ❌ No | ✅ `git diff` | Need to compute |
+| Dependencies | Heavy (~300MB) | Already have | Zero |
+
+Vector DBs are designed for semantic similarity search (RAG), not filesystem snapshots. Git already solves this problem perfectly.
+
 ### How Others Solve It
 
 | Tool | Approach |
@@ -137,9 +176,61 @@ User: /undo → Both files restored atomically
 | `/rewind` browser (interactive) | 8-10 hours |
 | Dry-run mode (`/agent --dry-run`) | 3-4 hours |
 
+### Implementation Options
+
+**Option 1: Git-based (Recommended)**
+```python
+# Before agent task
+subprocess.run(["git", "stash", "push", "-m", "ppxai-checkpoint"])
+# or: git commit with "ppxai: checkpoint" message
+
+# After failure or /undo
+subprocess.run(["git", "stash", "pop"])
+# or: git revert HEAD
+```
+- Zero new dependencies (users already have Git)
+- Full diff viewing for free
+- Persists across sessions if desired
+
+**Option 2: In-memory snapshots (session-scoped)**
+```python
+class CheckpointManager:
+    def __init__(self):
+        self.checkpoints: dict[str, dict[str, bytes]] = {}
+
+    def create(self, files: list[str]) -> str:
+        checkpoint_id = f"cp-{datetime.now().isoformat()}"
+        self.checkpoints[checkpoint_id] = {
+            path: Path(path).read_bytes() for path in files
+        }
+        return checkpoint_id
+
+    def restore(self, checkpoint_id: str):
+        for path, content in self.checkpoints[checkpoint_id].items():
+            Path(path).write_bytes(content)
+```
+- Zero dependencies
+- Ephemeral (gone when session ends)
+- Fast for small files
+
+**Option 3: SQLite (persistent without Git)**
+```python
+import sqlite3
+conn = sqlite3.connect("~/.ppxai/checkpoints.db")
+# Store: (checkpoint_id, file_path, content, timestamp)
+```
+- Tiny dependency (built into Python)
+- ACID transactions
+- Persists across sessions
+
 ### Recommendation
 
-Start with Git-based auto-commits in agent mode. Low effort, high safety value.
+Start with **Git-based auto-commits** in agent mode:
+- Zero new dependencies
+- Battle-tested atomic operations
+- Free diff viewing with `git diff`
+- Aligns with Aider's proven pattern
+- Low effort, high safety value
 
 ---
 
