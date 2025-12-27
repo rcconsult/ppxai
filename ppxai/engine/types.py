@@ -22,6 +22,7 @@ class EventType(Enum):
     AGENT_ITERATION = "agent_iteration"  # Start of agent iteration (v1.11.8)
     AGENT_COMPLETE = "agent_complete"  # Agent task completed (v1.11.8)
     AGENT_MAX_ITERATIONS = "agent_max_iterations"  # Max iterations reached (v1.11.8)
+    STATUS = "status"  # Status/notification messages (v1.12.0 - checkpoints, etc.)
     ERROR = "error"
     INFO = "info"
 

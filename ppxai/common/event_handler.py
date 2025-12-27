@@ -234,6 +234,14 @@ class TUIEventHandler(EventHandler):
                 self.console.print(f"[dim]→ Injected context: {source} ({size_str})[/dim]")
             return True
 
+        # Status messages (v1.12.0 - checkpoint notifications, etc.)
+        elif event.type == EventType.STATUS:
+            # Display status/notification messages
+            msg = str(event.data) if event.data else ""
+            if msg:
+                self.console.print(f"[cyan]{msg}[/cyan]")
+            return True
+
         # Agent loop events (v1.11.8)
         elif event.type == EventType.AGENT_ITERATION:
             iteration = event.data.get("iteration", 0) if isinstance(event.data, dict) else 0
