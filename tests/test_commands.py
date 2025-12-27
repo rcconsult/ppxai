@@ -717,7 +717,11 @@ class TestSendCodingTask:
     def test_send_coding_task_perplexity(self, mock_run, mock_get_coding, handler):
         """Test send_coding_task with Perplexity provider."""
         mock_get_coding.return_value = "sonar-reasoning"
-        mock_run.return_value = "Code generated"
+        # Consume coroutine to avoid warning
+        def run_and_close(coro):
+            coro.close()
+            return "Code generated"
+        mock_run.side_effect = run_and_close
 
         result = send_coding_task(
             handler,
@@ -735,14 +739,11 @@ class TestSendCodingTask:
     def test_send_coding_task_custom(self, mock_run, mock_get_coding, handler):
         """Test send_coding_task with custom provider."""
         mock_get_coding.return_value = "gpt-oss-120b"
-        # Properly consume coroutine to avoid warning
-        def consume_coroutine(coro):
-            try:
-                coro.close()
-            except:
-                pass
+        # Consume coroutine to avoid warning
+        def run_and_close(coro):
+            coro.close()
             return "Code generated"
-        mock_run.side_effect = consume_coroutine
+        mock_run.side_effect = run_and_close
         handler.provider = "custom"
 
         result = send_coding_task(
@@ -760,7 +761,11 @@ class TestSendCodingTask:
     def test_send_coding_task_gemini(self, mock_run, mock_get_coding, handler):
         """Test send_coding_task with Gemini provider (regression test for bug-tui-20251223)."""
         mock_get_coding.return_value = "gemini-2.5-pro"
-        mock_run.return_value = "Code generated"
+        # Consume coroutine to avoid warning
+        def run_and_close(coro):
+            coro.close()
+            return "Code generated"
+        mock_run.side_effect = run_and_close
         handler.provider = "gemini"
 
         result = send_coding_task(
@@ -780,14 +785,11 @@ class TestSendCodingTask:
         """Test send_coding_task with auto-route disabled for Perplexity."""
         handler.auto_route = False
         mock_get_coding.return_value = "sonar-reasoning"
-        # Properly consume coroutine to avoid warning
-        def consume_coroutine(coro):
-            try:
-                coro.close()
-            except:
-                pass
+        # Consume coroutine to avoid warning
+        def run_and_close(coro):
+            coro.close()
             return "Code generated"
-        mock_run.side_effect = consume_coroutine
+        mock_run.side_effect = run_and_close
 
         result = send_coding_task(
             handler,
@@ -807,7 +809,11 @@ class TestSendCodingTask:
         """Test send_coding_task with auto-route disabled for custom provider."""
         handler.auto_route = False
         mock_get_coding.return_value = "gpt-oss-120b"
-        mock_run.return_value = "Code generated"
+        # Consume coroutine to avoid warning
+        def run_and_close(coro):
+            coro.close()
+            return "Code generated"
+        mock_run.side_effect = run_and_close
         handler.provider = "custom"
 
         result = send_coding_task(
