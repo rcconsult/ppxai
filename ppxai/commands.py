@@ -1342,8 +1342,15 @@ class CommandHandler:
         """
         if not args.strip():
             console.print("[red]Usage: /agent <task description>[/red]")
+            console.print("[yellow]       /agent on|off  - Toggle agent mode[/yellow]")
             console.print("[yellow]Example: /agent Fix the bug in auth.py[/yellow]")
             console.print("[yellow]         /agent Review @git changes and fix issues[/yellow]\n")
+            return
+
+        # v1.11.9: Redirect toggle commands to /tools agent handler (FIX)
+        first_word = args.strip().split()[0].lower()
+        if first_word in ["on", "off", "enable", "disable"]:
+            self._tools_agent([first_word])
             return
 
         if not self.engine_client:
@@ -1395,7 +1402,7 @@ class CommandHandler:
                     prompt = self._build_continuation_prompt(task, iteration)
 
                 # Run chat with event handling
-                event_handler = TUIEventHandler(console, verbose=self.tools_verbose)
+                event_handler = TUIEventHandler(console, self.logger, verbose=self.tools_verbose)
 
                 try:
                     async for event in self.engine_client.chat(prompt, stream=True):
