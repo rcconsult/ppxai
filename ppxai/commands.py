@@ -1169,6 +1169,71 @@ class CommandHandler:
         except Exception as e:
             console.print(f"[red]Error reading file: {e}[/red]\n")
 
+    def handle_undo(self):
+        """Handle /undo command to revert last agent task (v1.12.0)."""
+        if not self.engine_client:
+            console.print("[red]Undo command requires engine client[/red]")
+            return
+
+        # Check if agent mode is enabled
+        if not self.engine_client.agent_mode:
+            console.print("[yellow]⚠️  Agent mode is not enabled[/yellow]")
+            console.print("[dim]Undo only works for agent mode tasks that created checkpoints[/dim]\n")
+            return
+
+        # Get checkpoint status
+        status = self.engine_client.get_checkpoint_status()
+        if not status.get("enabled"):
+            console.print("[yellow]⚠️  Checkpoints are not enabled[/yellow]")
+            console.print("[dim]Initialize a git repository to enable automatic checkpoints[/dim]\n")
+            return
+
+        last_checkpoint = status.get("last_checkpoint")
+        if not last_checkpoint:
+            console.print("[yellow]⚠️  No checkpoint to undo[/yellow]")
+            console.print("[dim]Run an /agent task first to create a checkpoint[/dim]\n")
+            return
+
+        # Show what will be undone
+        backend = status.get("backend")
+        console.print(f"\n[bold yellow]⚠️  Undo Last Agent Task[/bold yellow]")
+        console.print(f"[cyan]Backend:[/cyan] {backend}")
+        console.print(f"[cyan]Checkpoint:[/cyan] {last_checkpoint}")
+
+        if backend == "git":
+            console.print("\n[dim]This will:[/dim]")
+            console.print("[dim]  • Create a git revert commit[/dim]")
+            console.print("[dim]  • Restore all files to their pre-agent state[/dim]")
+        else:
+            console.print("\n[dim]This will:[/dim]")
+            console.print("[dim]  • Restore files from snapshot[/dim]")
+            console.print("[dim]  • Overwrite current file contents[/dim]")
+
+        # Ask for confirmation
+        try:
+            from prompt_toolkit import prompt as pt_prompt
+            response = pt_prompt("\nConfirm undo? (y/n): ")
+            if response.lower() not in ["y", "yes"]:
+                console.print("[yellow]Undo cancelled[/yellow]\n")
+                return
+        except (KeyboardInterrupt, EOFError):
+            console.print("\n[yellow]Undo cancelled[/yellow]\n")
+            return
+
+        # Perform undo
+        console.print("\n[dim]Reverting changes...[/dim]")
+        success = self.engine_client.undo_last_checkpoint()
+
+        if success:
+            console.print("[green]✓ Undo successful[/green]")
+            if backend == "git":
+                console.print("[dim]Check `git log` to see the revert commit[/dim]")
+        else:
+            console.print("[red]✗ Undo failed[/red]")
+            console.print("[dim]Check checkpoint status with /agent or enable verbose tools logging[/dim]")
+
+        console.print()
+
     def handle_agent(self, args: str):
         """Handle /agent command for autonomous task execution (v1.11.8).
 
@@ -1229,6 +1294,18 @@ class CommandHandler:
         console.print(f"[dim]Task: {task}[/dim]")
         console.print(f"[dim]Max iterations: {max_iterations}[/dim]")
         console.print(f"[dim]Press Ctrl-C to interrupt[/dim]\n")
+
+        # Create checkpoint before agent task (v1.12.0)
+        checkpoint_id = self.engine_client.create_checkpoint(task[:100])  # Truncate long tasks
+        if checkpoint_id:
+            # Notifications are emitted via events in create_checkpoint()
+            pass
+        else:
+            # If no checkpoint created, show warning if appropriate
+            status = self.engine_client.get_checkpoint_status()
+            if not status.get("enabled"):
+                console.print("[yellow]⚠️  Running without checkpoints (no git repo)[/yellow]")
+                console.print("[dim]Changes cannot be undone with /undo[/dim]\n")
 
         async def run_agent_loop():
             from .common.event_handler import TUIEventHandler
@@ -1371,6 +1448,8 @@ If more work is needed, explain what you're doing next and use the appropriate t
             self.handle_show(args)  # Alias for /show
         elif command == "/agent":
             self.handle_agent(args)
+        elif command == "/undo":
+            self.handle_undo()
         else:
             console.print(f"[red]Unknown command: {user_input}[/red]")
             console.print("[yellow]Type /help for available commands[/yellow]\n")
