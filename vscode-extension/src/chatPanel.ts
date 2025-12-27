@@ -18,7 +18,8 @@ const SLASH_COMMANDS: Record<string, { description: string; usage: string }> = {
     '/sessions': { description: 'List saved sessions', usage: '/sessions' },
     '/model': { description: 'Switch model or list models', usage: '/model [model_id|list]' },
     '/provider': { description: 'Switch provider or list providers', usage: '/provider [provider_id|list]' },
-    '/tools': { description: 'Manage AI tools', usage: '/tools [enable|disable|status|list]' },
+    '/tools': { description: 'Manage AI tools', usage: '/tools [enable|disable|status|list|config|set|agent|help]' },
+    '/agent': { description: 'Run autonomous agent task', usage: '/agent <task description>' },
     '/show': { description: 'Display file contents locally (no LLM call)', usage: '/show <filepath>' },
     '/cat': { description: 'Alias for /show', usage: '/cat <filepath>' },
     '/usage': { description: 'Show token usage stats', usage: '/usage' },
@@ -829,6 +830,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     await this.handleConvertCommand(args);
                     break;
 
+                case '/agent':
+                    await this.handleAgentCommand(args);
+                    break;
+
                 default:
                     this._view.webview.postMessage({
                         type: 'error',
@@ -894,9 +899,87 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         content: `✓ Set ${setting} = ${value}`
                     });
                 } else {
+                    // Show current config (matches TUI behavior)
+                    const configStatus = await this._backend.getToolsStatus();
                     this._view.webview.postMessage({
                         type: 'systemMessage',
-                        content: 'Usage: /tools config <setting> <value>\nExample: /tools config max_iterations 20'
+                        content: `**Tool Configuration:**
+• max_iterations: ${configStatus.max_iterations}
+
+Usage: \`/tools config <setting> <value>\`
+Available settings:
+  max_iterations <number> - Max tool calls per query (1-50)`
+                    });
+                }
+                break;
+
+            case 'set':
+                // v1.11.9: Add /tools set verbose on|off (matches TUI)
+                if (args.length >= 3) {
+                    const setting = args[1]?.toLowerCase();
+                    const value = args[2]?.toLowerCase();
+                    if (setting === 'verbose') {
+                        const enabled = ['on', 'true', '1', 'yes'].includes(value);
+                        await this._backend.setToolConfig('verbose', enabled ? 'on' : 'off');
+                        this._view.webview.postMessage({
+                            type: 'systemMessage',
+                            content: enabled
+                                ? '✓ Verbose tool logging enabled\n*Tool inputs and outputs will be displayed during execution*'
+                                : '✓ Verbose tool logging disabled'
+                        });
+                    } else {
+                        this._view.webview.postMessage({
+                            type: 'error',
+                            content: `Unknown setting: ${setting}\nAvailable: verbose`
+                        });
+                    }
+                } else {
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: `**Tool Settings:**
+• verbose: off
+
+Usage: \`/tools set <setting> <value>\`
+Available settings:
+  verbose on|off - Show tool inputs and outputs`
+                    });
+                }
+                break;
+
+            case 'agent':
+                // v1.11.9: Add /tools agent on|off (matches TUI)
+                if (args.length >= 2) {
+                    const action = args[1]?.toLowerCase();
+                    if (['on', 'enable'].includes(action)) {
+                        await this._backend.enableAgentMode();
+                        this._view.webview.postMessage({
+                            type: 'systemMessage',
+                            content: '✓ Agent mode enabled\n*Tools auto-enabled. Use `/agent <task>` to start autonomous execution.*'
+                        });
+                        await this.updateAgentStatus();
+                        await this.updateStatus();
+                    } else if (['off', 'disable'].includes(action)) {
+                        await this._backend.disableAgentMode();
+                        this._view.webview.postMessage({
+                            type: 'systemMessage',
+                            content: '✓ Agent mode disabled'
+                        });
+                        await this.updateAgentStatus();
+                    } else {
+                        this._view.webview.postMessage({
+                            type: 'error',
+                            content: `Unknown action: ${action}\nUsage: /tools agent on|off`
+                        });
+                    }
+                } else {
+                    // Show current agent status
+                    const agentStatus = await this._backend.getAgentStatus();
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: `**Agent Mode:** ${agentStatus.agent_mode ? 'ON' : 'OFF'}
+
+Usage: \`/tools agent on|off\`
+       \`/agent <task>\` - Run autonomous task`
                     });
                 }
                 break;
@@ -907,10 +990,17 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         type: 'systemMessage',
                         content: this.getFileEditingHelp()
                     });
+                } else if (args[1]) {
+                    // v1.11.9: Show help for specific tool (matches TUI)
+                    await this.showToolHelp(args[1]);
                 } else {
                     this._view.webview.postMessage({
                         type: 'systemMessage',
-                        content: 'Available help topics: **editing**\nUsage: `/tools help editing`'
+                        content: `**Tool Help:**
+Usage: \`/tools help <tool-name>\` - Show help for a specific tool
+       \`/tools help editing\` - Show file editing guide
+
+Use \`/tools list\` to see available tool names.`
                     });
                 }
                 break;
@@ -919,17 +1009,251 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             default:
                 const status = await this._backend.getToolsStatus();
                 const available = status.enabled ? await this._backend.listTools() : [];
+                const agentMode = await this._backend.getAgentStatus();
                 this._view.webview.postMessage({
                     type: 'systemMessage',
                     content: `**Tools Status:**
 • Enabled: ${status.enabled ? 'yes' : 'no'}
+• Agent mode: ${agentMode.agent_mode ? 'ON' : 'OFF'}
 • Available: ${available.length} tools
 • Max iterations: ${status.max_iterations}
+• Consent mode: ${status.consent_mode || 'default'}
 
 Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
                 });
                 break;
         }
+    }
+
+    /**
+     * Show help for a specific tool (v1.11.9)
+     */
+    private async showToolHelp(toolName: string) {
+        if (!this._view) { return; }
+
+        try {
+            const toolsList = await this._backend.listTools();
+            const tool = toolsList.find(t => t.name.toLowerCase() === toolName.toLowerCase());
+
+            if (!tool) {
+                this._view.webview.postMessage({
+                    type: 'error',
+                    content: `Tool not found: ${toolName}\nUse \`/tools list\` to see available tools.`
+                });
+                return;
+            }
+
+            // Format parameters if available
+            let paramsInfo = '';
+            if (tool.parameters && Object.keys(tool.parameters).length > 0) {
+                const params = Object.entries(tool.parameters)
+                    .map(([name, schema]: [string, any]) => {
+                        const required = schema.required ? ' (required)' : '';
+                        const desc = schema.description || '';
+                        return `  • **${name}**${required}: ${desc}`;
+                    })
+                    .join('\n');
+                paramsInfo = `\n\n**Parameters:**\n${params}`;
+            }
+
+            this._view.webview.postMessage({
+                type: 'systemMessage',
+                content: `**Tool: ${tool.name}**
+
+${tool.description}${paramsInfo}`
+            });
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Failed to get tool help: ${error}`
+            });
+        }
+    }
+
+    /**
+     * Handle /agent command for autonomous task execution (v1.11.9)
+     * Matches TUI behavior with iterative agent loop
+     */
+    private async handleAgentCommand(args: string[]) {
+        if (!this._view) { return; }
+
+        const task = args.join(' ').trim();
+
+        // Handle /agent on|off as toggle commands (v1.11.9)
+        if (task.toLowerCase() === 'on' || task.toLowerCase() === 'enable') {
+            await this._backend.enableAgentMode();
+            this._view.webview.postMessage({
+                type: 'systemMessage',
+                content: '✓ Agent mode enabled\n*Tools auto-enabled. Use `/agent <task>` to start autonomous execution.*'
+            });
+            await this.updateAgentStatus();
+            await this.updateStatus();
+            return;
+        }
+
+        if (task.toLowerCase() === 'off' || task.toLowerCase() === 'disable') {
+            await this._backend.disableAgentMode();
+            this._view.webview.postMessage({
+                type: 'systemMessage',
+                content: '✓ Agent mode disabled'
+            });
+            await this.updateAgentStatus();
+            return;
+        }
+
+        if (!task) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Usage: /agent <task description>
+       /agent on|off - Toggle agent mode
+Example: /agent Fix the bug in auth.py
+         /agent Review @git changes and fix issues`
+            });
+            return;
+        }
+
+        // v1.11.9: Get agent config from server
+        const agentConfig = await this._backend.getAgentConfig();
+        const minWords = agentConfig.min_task_words;
+        const maxIterations = agentConfig.max_iterations;
+
+        // v1.11.9: Reject vague/ambiguous single-word tasks for safety
+        const words = task.split(/\s+/).filter(w => w.length > 0);
+        if (words.length < minWords) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Task too vague: "${task}"
+
+Agent tasks should be specific and descriptive (at least ${minWords} words).
+Vague tasks can lead to unexpected AI interpretations.
+
+Examples:
+  ✓ /agent Fix the authentication bug in login.py
+  ✓ /agent Review @git changes and suggest improvements
+  ✗ /agent fix bug
+  ✗ /agent do it`
+            });
+            return;
+        }
+
+        // Ensure agent mode is enabled (auto-enables tools)
+        try {
+            const agentStatus = await this._backend.getAgentStatus();
+            if (!agentStatus.agent_mode) {
+                await this._backend.enableAgentMode();
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: '✓ Agent mode enabled (tools auto-enabled)'
+                });
+                await this.updateAgentStatus();
+            }
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Failed to enable agent mode: ${error}`
+            });
+            return;
+        }
+
+        this._view.webview.postMessage({
+            type: 'systemMessage',
+            content: `🤖 **Starting autonomous agent**
+• Task: ${task}
+• Max iterations: ${maxIterations}
+• Press Escape to interrupt`
+        });
+
+        // Process @file references in task
+        const { message: augmentedTask } = await this.processFileReferences(task);
+
+        // Run agent loop
+        for (let iteration = 1; iteration <= maxIterations; iteration++) {
+            this._view.webview.postMessage({
+                type: 'systemMessage',
+                content: `━━━ **Iteration ${iteration}/${maxIterations}** ━━━`
+            });
+
+            // Build prompt for this iteration
+            const prompt = iteration === 1
+                ? this.buildAgentPrompt(augmentedTask, iteration)
+                : this.buildContinuationPrompt(augmentedTask, iteration);
+
+            // Start streaming response
+            this._view.webview.postMessage({ type: 'startResponse' });
+
+            let response = '';
+            let taskComplete = false;
+
+            try {
+                await this._backend.chat(
+                    prompt,
+                    (event: StreamEvent) => {
+                        this.handleStreamEvent(event);
+                        if (event.type === 'chunk' && event.content) {
+                            response += event.content;
+                        }
+                    }
+                );
+
+                // Check for completion signal
+                if (response.includes('TASK_COMPLETE:')) {
+                    taskComplete = true;
+                    const summaryParts = response.split('TASK_COMPLETE:');
+                    const summary = summaryParts[1]?.trim().slice(0, 200) || 'Done';
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: `✅ **Task completed!**
+Summary: ${summary}${summary.length >= 200 ? '...' : ''}`
+                    });
+                    break;
+                }
+            } catch (error) {
+                this._view.webview.postMessage({
+                    type: 'error',
+                    content: `Agent error: ${error}`
+                });
+                break;
+            }
+
+            if (taskComplete) break;
+        }
+
+        // If we exhausted iterations
+        this._view.webview.postMessage({
+            type: 'systemMessage',
+            content: `⚠️ Max iterations (${maxIterations}) reached. Task may be incomplete.`
+        });
+    }
+
+    /**
+     * Build initial agent prompt (v1.11.9)
+     */
+    private buildAgentPrompt(task: string, iteration: number): string {
+        return `You are an autonomous AI agent. Complete this task step by step:
+
+**Task:** ${task}
+
+**Instructions:**
+1. Analyze what needs to be done
+2. Use available tools to complete the task
+3. When finished, respond with "TASK_COMPLETE: <brief summary>"
+4. If you need more steps, explain what you did and what's next
+
+**Iteration:** ${iteration}
+
+Begin working on the task.`;
+    }
+
+    /**
+     * Build continuation prompt for subsequent iterations (v1.11.9)
+     */
+    private buildContinuationPrompt(task: string, iteration: number): string {
+        return `Continue working on the task.
+
+**Original Task:** ${task}
+**Iteration:** ${iteration}
+
+Review your previous actions and continue. If the task is complete, respond with "TASK_COMPLETE: <brief summary>".`;
     }
 
     private async handleCodingTaskCommand(taskType: string, content: string) {
@@ -1491,7 +1815,8 @@ Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
         // Show user message
         this._view.webview.postMessage({
             type: 'userMessage',
-            content: `${taskMessage}${contextInfo}:\n\`\`\`${language || ''}\n${content.slice(0, 500)}${content.length > 500 ? '...' : ''}\n\`\`\``
+            // v1.11.9: Increased from 500 to 2000 chars for better context
+            content: `${taskMessage}${contextInfo}:\n\`\`\`${language || ''}\n${content.slice(0, 2000)}${content.length > 2000 ? '...' : ''}\n\`\`\``
         });
 
         // Start streaming response
@@ -2989,8 +3314,9 @@ A: Use \`/tools disable\` or choose "never" when prompted.
 
                 case 'toolResult':
                     typingIndicator.textContent = 'Processing tool result...';
+                    // v1.11.9: Increased from 500 to 2000 chars for better agent context
                     const resultPreview = typeof message.result === 'string'
-                        ? (message.result.length > 500 ? message.result.slice(0, 500) + '...' : message.result)
+                        ? (message.result.length > 2000 ? message.result.slice(0, 2000) + '...' : message.result)
                         : JSON.stringify(message.result, null, 2);
                     addMessage('tool-result', '📋 **Result from** \`' + message.tool + '\`:\\n\`\`\`\\n' + resultPreview + '\\n\`\`\`', true);
                     break;

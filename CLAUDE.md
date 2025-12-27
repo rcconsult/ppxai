@@ -6,9 +6,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.11.8
+**Current Version:** v1.11.9
 
-**What's New in v1.11.8 (Released 2025-12-27):**
+**What's New in v1.11.9 (Released 2025-12-27):**
+- **CRITICAL FIX:** `/agent on|off` now correctly toggles agent mode instead of being interpreted as tasks
+  - Previously, typing `/agent off` would cause AI to search for things to turn "off" (including killing server processes)
+  - Now properly recognized as toggle commands in both TUI and VSCode extension
+- **SECURITY:** Added safety mitigations for agent mode
+  - Minimum word count validation (default: 3 words) rejects vague single-word tasks
+  - `kill`, `pkill`, `killall` added to built-in dangerous shell patterns
+  - Built-in defaults ensure safety even without config file
+- **NEW:** Configurable agent settings via `ppxai-config.json`
+  - `tools.agent.max_iterations` (default: 10) - Maximum agent loop iterations
+  - `tools.agent.context_char_limit` (default: 2000) - Character limit for context display
+  - `tools.agent.min_task_words` (default: 3) - Minimum words required for agent tasks
+- **NEW:** `/agent/config` API endpoint for retrieving agent configuration
+- **NEW:** Full `/tools` command parity between TUI and VSCode extension
+  - Added `/tools agent`, `/tools set verbose on|off`, `/tools help <tool>` to extension
+- **Tests:** 337 tests passing
+
+**Previous Release (v1.11.8 - 2025-12-27):**
 - **NEW:** Agent Mode for autonomous task execution in VSCode extension
   - Agent toggle button in extension header
   - `GET /agent/status`, `POST /agent/enable`, `POST /agent/disable` API endpoints
@@ -156,10 +173,10 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - Automated GitHub Actions CI/CD for multi-platform builds (macOS ARM/Intel, Linux, Windows)
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.11.8
-- VSCode extension (package.json): v1.11.8
-- Git tag: v1.11.8 (released 2025-12-26)
-- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v1.11.8
+- Python package (pyproject.toml): v1.11.9
+- VSCode extension (package.json): v1.11.9
+- Git tag: v1.11.9 (released 2025-12-27)
+- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v1.11.9
 
 ## Development Setup
 

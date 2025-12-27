@@ -1,6 +1,6 @@
 # Agent Mode User Guide
 
-**Version**: v1.11.8+
+**Version**: v1.11.9+
 **Status**: Active Development
 
 This guide explains how to use ppxai's autonomous agent mode for multi-step task execution.
@@ -34,11 +34,11 @@ Agent mode transforms ppxai from a turn-based chat assistant into an autonomous 
 ![Agent Flow Diagram](future-agentic-flow.png)
 
 1. You issue an `/agent <task>` command
-2. The agent enters an autonomous loop (max 5 iterations)
+2. The agent enters an autonomous loop (max 10 iterations by default)
 3. Each iteration: Plan → Execute tools → Check completion
 4. Loop continues until:
    - AI signals `TASK_COMPLETE:` (success)
-   - Max iterations reached (5)
+   - Max iterations reached (configurable, default: 10)
    - User interrupts with Ctrl-C
 
 ### Comparison: Turn-Based vs Agent Mode
@@ -47,7 +47,7 @@ Agent mode transforms ppxai from a turn-based chat assistant into an autonomous 
 |--------|---------------------|------------|
 | User involvement | Every step | Initial task only |
 | Tool calls | Single per turn | Multiple per iteration |
-| Iterations | Manual | Automatic (up to 5) |
+| Iterations | Manual | Automatic (up to 10) |
 | Best for | Simple queries | Multi-step tasks |
 
 ---
@@ -335,11 +335,86 @@ After interrupting, the agent will summarize progress made.
 
 ### Iteration Limits
 
-The default max is 5 iterations. If your task needs more:
+The default max is 10 iterations (configurable via `tools.agent.max_iterations`). If your task needs more:
 
-1. Let the agent complete 5 iterations
+1. Let the agent complete its iterations
 2. Review the output
 3. Run `/agent continue` or issue a follow-up task
+
+---
+
+## Configuration
+
+Agent mode behavior can be customized in `ppxai-config.json`:
+
+```json
+{
+  "tools": {
+    "agent": {
+      "max_iterations": 10,
+      "context_char_limit": 2000,
+      "min_task_words": 3
+    }
+  }
+}
+```
+
+### Configuration Options
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `max_iterations` | 10 | Maximum autonomous loop iterations before stopping |
+| `context_char_limit` | 2000 | Character limit for context display in tool results |
+| `min_task_words` | 3 | Minimum word count required for agent tasks |
+
+### Why These Settings Exist
+
+**`max_iterations`**: Prevents runaway agent loops that could consume excessive API tokens or run indefinitely. The default of 10 balances giving the agent enough room to complete complex tasks while preventing infinite loops.
+
+- **Lower values (3-5)**: Safer for simple tasks, uses fewer tokens, faster completion
+- **Higher values (15-20)**: Allows complex multi-step tasks, but risks more API usage
+- **Warning**: Values above 20 may lead to excessive token consumption
+
+**`context_char_limit`**: Controls how much context from tool results is shown in the UI and passed back to the AI. Higher limits provide more context for accurate decisions but increase token usage.
+
+- **Lower values (500-1000)**: Faster, cheaper, but may miss important details
+- **Higher values (3000-5000)**: Better context retention, but more expensive
+- **Warning**: Very high limits (>5000) may cause context overflow in some models
+
+**`min_task_words`**: Safety feature that rejects vague single-word tasks. This prevents accidental dangerous actions from ambiguous commands like `/agent on` or `/agent delete`.
+
+- **Default (3)**: Requires descriptive tasks like "Fix the bug in auth.py"
+- **Lower values (1-2)**: Less safe, allows vague tasks
+- **Warning**: Setting to 1 removes this safety check entirely
+
+### Shell Command Safety
+
+Agent mode includes built-in shell command safety patterns. These patterns are always active even without a config file:
+
+**Dangerous patterns (require consent):**
+- `rm`, `mv`, `dd`, `chmod`, `chown`, `sudo`
+- `kill`, `pkill`, `killall`
+- `curl | bash`, `wget | bash`
+
+**Never-allow patterns (always blocked):**
+- `rm -rf /`, `dd of=/dev/`
+- Fork bombs and system-level destructive commands
+
+You can customize these in `ppxai-config.json`:
+
+```json
+{
+  "tools": {
+    "shell": {
+      "safe_patterns": ["^ls\\s*", "^cat\\s+"],
+      "dangerous_patterns": ["^rm\\s+", "^kill\\s+"],
+      "never_allow_patterns": ["^rm\\s+-rf\\s+/"]
+    }
+  }
+}
+```
+
+See [Shell Consent Guide](SHELL_CONSENT_GUIDE.md) for complete documentation.
 
 ---
 
@@ -373,7 +448,7 @@ The default max is 5 iterations. If your task needs more:
 
 ### Max Iterations Reached
 
-**Problem:** Task incomplete after 5 iterations
+**Problem:** Task incomplete after max iterations
 
 **Solutions:**
 1. Review the agent's progress
@@ -477,5 +552,5 @@ The default max is 5 iterations. If your task needs more:
 
 ---
 
-**Last Updated:** 2025-12-26
-**Version:** v1.11.8 (Feature Branch)
+**Last Updated:** 2025-12-27
+**Version:** v1.11.9
