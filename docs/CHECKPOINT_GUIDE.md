@@ -283,6 +283,84 @@ You: /undo
 
 ---
 
+### Example 4: Interrupt Handling (Ctrl-C)
+
+```
+# Agent task in progress
+You: /agent refactor authentication module
+
+✓ Checkpoint created: d4b8f2a1 (refactor authentication module)
+
+🤖 Starting autonomous agent...
+━━━ Iteration 1/10 ━━━
+
+[Agent starts making changes...]
+  → Modified: auth/login.py
+  → Created: auth/jwt_utils.py
+
+# User presses Ctrl-C (realizes agent is going wrong direction)
+^C
+
+⚠️  Agent interrupted by user (Ctrl-C)
+
+Agent task incomplete due to interrupt.
+
+Checkpoint: d4b8f2a1
+Backend: git
+
+Rollback all changes from this task?
+  y - Rollback to checkpoint (undo all changes)
+  n - Keep partial changes
+
+Rollback? (y/n): y
+
+Rolling back changes...
+✓ Checkpoint reverted successfully
+
+⚠️  Uncommitted changes detected in working directory
+These are partial changes from the interrupted agent task.
+
+Clean working directory?
+  y - Remove all uncommitted changes (git reset --hard)
+  n - Keep uncommitted changes for manual review
+
+Clean working directory? (y/n): y
+
+Running git reset --hard...
+✓ Working directory cleaned
+Removing untracked files...
+✓ All changes removed
+
+# All clean! Back to state before /agent command
+```
+
+**File Backend (Non-Git):**
+```
+# Same interrupt scenario, but with file backend
+^C
+
+⚠️  Agent interrupted by user (Ctrl-C)
+
+Agent task incomplete due to interrupt.
+
+Checkpoint: cp-20251227-153045
+Backend: file
+
+Rollback all changes from this task?
+  y - Rollback to checkpoint (undo all changes)
+  n - Keep partial changes
+
+Rollback? (y/n): y
+
+Rolling back changes...
+✓ Checkpoint reverted successfully
+
+# File backend restores all snapshotted files automatically
+# No additional cleanup needed
+```
+
+---
+
 ## Safety and Best Practices
 
 ### ✅ Recommended

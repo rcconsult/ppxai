@@ -501,6 +501,14 @@ You: /agent update dependencies
    - `{task}` variable truncated to 100 characters
    - No other variables supported yet
 
+### ✅ Addressed in v1.12.0
+
+1. **Interrupt Handling (FIXED)**
+   - ✅ Ctrl-C now prompts for automatic rollback
+   - ✅ Git backend offers working directory cleanup
+   - ✅ Clear user feedback throughout process
+   - ✅ No more dirty state after interrupts
+
 ---
 
 ## 🔮 Future Enhancements (v1.13+)
