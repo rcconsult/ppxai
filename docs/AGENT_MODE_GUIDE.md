@@ -477,5 +477,5 @@ The default max is 5 iterations. If your task needs more:
 
 ---
 
-**Last Updated:** 2025-12-26
-**Version:** v1.11.8 (Feature Branch)
+**Last Updated:** 2025-12-27
+**Version:** v1.11.9
