@@ -36,6 +36,7 @@ export interface ModelInfo {
 export interface ToolInfo {
     name: string;
     description: string;
+    parameters?: Record<string, { description?: string; required?: boolean }>;
 }
 
 export interface EngineStatus {
@@ -219,16 +220,22 @@ export class HttpClient {
     /**
      * Get tools status
      */
-    async getToolsStatus(): Promise<{ enabled: boolean; tool_count: number; max_iterations: number }> {
+    async getToolsStatus(): Promise<{ enabled: boolean; tool_count: number; max_iterations: number; consent_mode: string }> {
         const response = await fetch(`${this.baseUrl}/tools`);
         if (!response.ok) {
             throw new Error(`Failed to get tools: ${response.statusText}`);
         }
-        const data = await response.json() as { tools: ToolInfo[]; enabled: boolean };
+        const data = await response.json() as {
+            tools: ToolInfo[];
+            enabled: boolean;
+            max_iterations?: number;
+            consent_mode?: string;
+        };
         return {
             enabled: data.enabled,
             tool_count: data.tools.length,
-            max_iterations: 10  // Default, not exposed by HTTP API yet
+            max_iterations: data.max_iterations || 15,
+            consent_mode: data.consent_mode || 'default'
         };
     }
 
@@ -764,6 +771,22 @@ export class HttpClient {
             throw new Error(`Failed to get agent status: ${response.statusText}`);
         }
         return response.json() as Promise<{ agent_mode: boolean; tools_enabled: boolean }>;
+    }
+
+    /**
+     * Get agent configuration (v1.11.9)
+     */
+    async getAgentConfig(): Promise<{ max_iterations: number; context_char_limit: number; min_task_words: number }> {
+        try {
+            const response = await fetch(`${this.baseUrl}/agent/config`);
+            if (!response.ok) {
+                // Return defaults if endpoint not available
+                return { max_iterations: 10, context_char_limit: 2000, min_task_words: 3 };
+            }
+            return response.json() as Promise<{ max_iterations: number; context_char_limit: number; min_task_words: number }>;
+        } catch {
+            return { max_iterations: 10, context_char_limit: 2000, min_task_words: 3 };
+        }
     }
 
     /**

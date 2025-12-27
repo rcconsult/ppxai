@@ -499,9 +499,20 @@ async def get_tools():
         raise HTTPException(status_code=503, detail="Engine not initialized")
 
     tools = engine.list_tools()
+
+    # Get consent mode from session (v1.11.9)
+    consent_mode = "default"
+    try:
+        if hasattr(engine, 'session') and hasattr(engine.session, 'edit_consent_mode'):
+            consent_mode = engine.session.edit_consent_mode
+    except Exception:
+        pass
+
     return {
         "tools": tools,  # Already list of {"name": ..., "description": ...}
         "enabled": engine.tools_enabled,
+        "max_iterations": getattr(engine, 'tool_max_iterations', 15),
+        "consent_mode": consent_mode,
     }
 
 
@@ -777,6 +788,16 @@ async def get_agent_status():
         "agent_mode": engine.agent_mode,
         "tools_enabled": engine.tools_enabled,
     }
+
+
+@app.get("/agent/config")
+async def get_agent_config():
+    """Get agent configuration (v1.11.9)."""
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    return engine.get_agent_config()
 
 
 @app.post("/agent/enable")

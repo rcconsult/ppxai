@@ -101,8 +101,39 @@ class EngineClient:
             self._default_provider = MODEL_PROVIDER
 
             # Load shell tool configuration (v1.11.2)
+            # v1.11.9: Add default dangerous patterns for safety
             full_config = load_config()
-            self._shell_config = full_config.get("tools", {}).get("shell", {})
+            user_shell_config = full_config.get("tools", {}).get("shell", {})
+
+            # Built-in defaults merged with user config
+            default_dangerous = [
+                r"^rm\s+", r"^mv\s+", r"^dd\s+", r"^chmod\s+", r"^chown\s+",
+                r"^sudo\s+", r"^curl.*\|.*bash", r"^wget.*\|.*bash",
+                r">\s*/dev/", r"^kill\s+", r"^pkill\s+", r"^killall\s+"
+            ]
+            default_never = [
+                r"rm\s+-rf\s+/", r"dd\s+.*of=/dev/", r":\(\)\{\s*:\|:&\s*\};:",
+                r"mkfs\.", r"^\s*>\s*/dev/sda"
+            ]
+            default_allowed = [
+                r"^ls\s+", r"^cat\s+(?!.*[><])", r"^grep\s+",
+                r"^echo\s+(?!.*>)", r"^pwd$", r"^which\s+",
+                r"^whoami$", r"^date$", r"^uname\s+"
+            ]
+
+            self._shell_config = {
+                "dangerous_commands": user_shell_config.get("dangerous_commands", default_dangerous),
+                "never_allow": user_shell_config.get("never_allow", default_never),
+                "allowed_commands": user_shell_config.get("allowed_commands", default_allowed),
+            }
+
+            # v1.11.9: Load agent configuration
+            agent_config = full_config.get("tools", {}).get("agent", {})
+            self._agent_config = {
+                "max_iterations": agent_config.get("max_iterations", 10),
+                "context_char_limit": agent_config.get("context_char_limit", 2000),
+                "min_task_words": agent_config.get("min_task_words", 3),
+            }
         except ImportError:
             # Fallback if old config not available
             self._providers_config = {}
@@ -110,7 +141,29 @@ class EngineClient:
             self._get_base_url = lambda p: None
             self._get_default_model = lambda: None
             self._default_provider = "perplexity"
-            self._shell_config = {}
+            # v1.11.9: Built-in shell safety defaults
+            self._shell_config = {
+                "dangerous_commands": [
+                    r"^rm\s+", r"^mv\s+", r"^dd\s+", r"^chmod\s+", r"^chown\s+",
+                    r"^sudo\s+", r"^curl.*\|.*bash", r"^wget.*\|.*bash",
+                    r">\s*/dev/", r"^kill\s+", r"^pkill\s+", r"^killall\s+"
+                ],
+                "never_allow": [
+                    r"rm\s+-rf\s+/", r"dd\s+.*of=/dev/", r":\(\)\{\s*:\|:&\s*\};:",
+                    r"mkfs\.", r"^\s*>\s*/dev/sda"
+                ],
+                "allowed_commands": [
+                    r"^ls\s+", r"^cat\s+(?!.*[><])", r"^grep\s+",
+                    r"^echo\s+(?!.*>)", r"^pwd$", r"^which\s+",
+                    r"^whoami$", r"^date$", r"^uname\s+"
+                ],
+            }
+            # v1.11.9: Default agent configuration
+            self._agent_config = {
+                "max_iterations": 10,
+                "context_char_limit": 2000,
+                "min_task_words": 3,
+            }
 
     # === Context Injection ===
 
@@ -332,6 +385,14 @@ class EngineClient:
         """
         self._agent_mode = False
         return True
+
+    def get_agent_config(self) -> dict:
+        """Get agent configuration (v1.11.9).
+
+        Returns:
+            Dict with max_iterations, context_char_limit, min_task_words
+        """
+        return self._agent_config
 
     async def request_file_edit_consent(self, file_path: str) -> bool:
         """Request user consent for editing a file (v1.11.0).
