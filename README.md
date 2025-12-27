@@ -120,13 +120,12 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
 4. Start the server: `./ppxai-server-macos-arm64` (or your platform's binary)
 5. Open VSCode and click the ppxai icon in the sidebar
 
-**What's New in v1.11.7:**
-- 🔗 **Clickable Citations** - Perplexity citations `[1]` now link to source URLs
-- 🔗 **TUI Clickable Links** - OSC 8 hyperlinks in Ghostty, iTerm2, Kitty, Windows Terminal
-- 🛠️ **`/tools help <name>`** - Get detailed documentation for any tool
-- ⌨️ **Autocomplete** - Tab completion for `/tools` subcommands and tool names
-- 🔧 **VSCode Tool Responses** - Fixed display when tools are used
-- 🏗️ **Legacy Code Removed** - ~2,100 lines removed, EngineClient is now the only interface
+**What's New in v1.11.9:**
+- 🔒 **Agent Mode Safety** - `/agent on|off` now correctly toggles instead of being interpreted as tasks
+- 🛡️ **Vague Task Protection** - Minimum 3-word requirement prevents ambiguous agent commands
+- ⚙️ **Configurable Agent Settings** - `max_iterations`, `context_char_limit`, `min_task_words` in config
+- 🔧 **Shell Safety Defaults** - `kill`, `pkill`, `killall` added to built-in dangerous patterns
+- 🔌 **Full Command Parity** - `/tools agent`, `/tools set verbose`, `/tools help` in VSCode extension
 
 See [vscode-extension/README.md](vscode-extension/README.md) for detailed instructions.
 
