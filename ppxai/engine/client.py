@@ -22,6 +22,7 @@ from .tools.manager import ToolManager
 from .tools.builtin import register_all_builtin_tools
 from .session import SessionManager
 from .context import ContextInjector
+from ..checkpoint import CheckpointManager
 
 
 class EngineClient:
@@ -75,6 +76,10 @@ class EngineClient:
         # Agent mode for autonomous task execution (v1.11.8)
         self._agent_mode: bool = False
 
+        # Checkpoint manager for atomic multi-file rollback (v1.12.0)
+        self._checkpoint_manager: Optional[CheckpointManager] = None
+        self._last_checkpoint_id: Optional[str] = None
+
         # Event emitter for consent requests (Phase 1C: HTTP/SSE support)
         # This allows emitting events from within consent callback
         self._consent_event_queue: List[Event] = []
@@ -121,6 +126,15 @@ class EngineClient:
             path: Working directory path
         """
         self.context_injector.set_working_dir(path)
+
+        # Initialize checkpoint manager for this working directory (v1.12.0)
+        checkpoint_backend = self.config.get("tools", {}).get("agent", {}).get("checkpoint_backend", "auto")
+        session_id = self.session.session_name or "default"
+        self._checkpoint_manager = CheckpointManager(
+            working_dir=path,
+            session_id=session_id,
+            backend=checkpoint_backend
+        )
 
     def set_auto_inject(self, enabled: bool) -> bool:
         """Enable or disable automatic context injection.
@@ -312,9 +326,10 @@ class EngineClient:
         return self._agent_mode
 
     def enable_agent_mode(self) -> bool:
-        """Enable agent mode for autonomous task execution (v1.11.8).
+        """Enable agent mode for autonomous task execution (v1.11.8, v1.12.0).
 
         Agent mode automatically enables tools if not already enabled.
+        In v1.12.0+, also enables checkpointing for atomic rollback.
 
         Returns:
             True if agent mode was enabled
@@ -322,6 +337,37 @@ class EngineClient:
         self._agent_mode = True
         if not self.tools_enabled:
             self.enable_tools()
+
+        # Emit notification about checkpoint status (v1.12.0)
+        if self._checkpoint_manager:
+            backend = self._checkpoint_manager.get_backend_name()
+            if backend == "git":
+                notification = (
+                    "🔒 Agent Mode enabled with Git checkpoints\n"
+                    "   • Changes will be auto-committed before each task\n"
+                    "   • Use /undo to revert the last agent task atomically"
+                )
+            elif backend == "file":
+                checkpoint_path = f"~/.ppxai/checkpoints/{self.session.session_name}"
+                notification = (
+                    f"🔒 Agent Mode enabled with file snapshots\n"
+                    f"   • File snapshots saved to {checkpoint_path}\n"
+                    "   • Use /undo to restore from last snapshot\n"
+                    "   ⚠️  Tip: Initialize git repo for atomic commits"
+                )
+            else:
+                notification = (
+                    "⚠️  Agent Mode enabled WITHOUT checkpoints\n"
+                    "   • File edits cannot be undone automatically\n"
+                    "   • Initialize git repo for checkpoint support"
+                )
+
+            # Queue notification event
+            self._consent_event_queue.append(Event(
+                type=EventType.STATUS,
+                data=notification
+            ))
+
         return True
 
     def disable_agent_mode(self) -> bool:
@@ -332,6 +378,87 @@ class EngineClient:
         """
         self._agent_mode = False
         return True
+
+    # === Checkpoint Management (v1.12.0) ===
+
+    def create_checkpoint(self, description: str) -> Optional[str]:
+        """Create a checkpoint before agent task execution (v1.12.0).
+
+        Args:
+            description: Description of the task (for commit message)
+
+        Returns:
+            Checkpoint ID if successful, None otherwise
+        """
+        if not self._checkpoint_manager or not self._agent_mode:
+            return None
+
+        checkpoint_id = self._checkpoint_manager.create_checkpoint(description)
+        if checkpoint_id:
+            self._last_checkpoint_id = checkpoint_id
+
+            # Emit notification
+            backend = self._checkpoint_manager.get_backend_name()
+            if backend == "git":
+                msg = f"✓ Checkpoint created: {checkpoint_id[:8]} ({description})"
+            else:
+                msg = f"✓ Snapshot saved: {checkpoint_id} ({description})"
+
+            self._consent_event_queue.append(Event(
+                type=EventType.STATUS,
+                data=msg
+            ))
+
+        return checkpoint_id
+
+    def undo_last_checkpoint(self) -> bool:
+        """Undo the last checkpoint (revert changes) (v1.12.0).
+
+        Returns:
+            True if undo was successful, False otherwise
+        """
+        if not self._checkpoint_manager or not self._last_checkpoint_id:
+            return False
+
+        success = self._checkpoint_manager.restore_checkpoint(self._last_checkpoint_id)
+        if success:
+            backend = self._checkpoint_manager.get_backend_name()
+            checkpoint_id = self._last_checkpoint_id
+
+            if backend == "git":
+                msg = f"✓ Changes reverted using git revert (checkpoint: {checkpoint_id[:8]})"
+            else:
+                msg = f"✓ Files restored from snapshot: {checkpoint_id}"
+
+            self._consent_event_queue.append(Event(
+                type=EventType.STATUS,
+                data=msg
+            ))
+
+            self._last_checkpoint_id = None
+            return True
+
+        return False
+
+    def get_checkpoint_status(self) -> Dict[str, Any]:
+        """Get checkpoint system status (v1.12.0).
+
+        Returns:
+            Dictionary with checkpoint status information
+        """
+        if not self._checkpoint_manager:
+            return {
+                "enabled": False,
+                "backend": "none",
+                "last_checkpoint": None,
+            }
+
+        return {
+            "enabled": self._checkpoint_manager.is_enabled(),
+            "backend": self._checkpoint_manager.get_backend_name(),
+            "last_checkpoint": self._last_checkpoint_id,
+            "status_description": self._checkpoint_manager.get_status_description(),
+        }
 
     async def request_file_edit_consent(self, file_path: str) -> bool:
         """Request user consent for editing a file (v1.11.0).
