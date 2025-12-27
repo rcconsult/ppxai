@@ -39,39 +39,58 @@ ppxai provides:
 
 ---
 
-## Next Up: v1.12.0 - Polish & Stability
+## Next Up: v1.12.0 - Safety & Reproducibility
 
-**Goal**: Bug fixes, test coverage, documentation polish
+**Theme**: Make agent mode safe and predictable with atomic rollback
 
-| Task | Priority | Effort |
-|------|----------|--------|
-| Add agent mode tests (`tests/test_agent_mode.py`) | High | 2 hrs |
-| Fix 4 test warnings (unawaited coroutines) | Medium | 1 hr |
-| Remove remaining legacy comments in tests | Low | 30 min |
-| Update all doc version references | Medium | 30 min |
+| Feature | Description | Priority |
+|---------|-------------|----------|
+| **Git-based checkpoints** | Auto-commit before `/agent` tasks for atomic rollback | High |
+| **`/undo` command** | Revert last agent task (`git revert HEAD`) | High |
+| **Agent mode tests** | Add `tests/test_agent_mode.py` | High |
+| **Fix test warnings** | 4 unawaited coroutine warnings | Medium |
+
+**User value**: If agent edits go wrong, `/undo` restores all files atomically.
 
 ---
 
-## Future: v1.13.0+ - Enhanced Capabilities
+## v1.13.0 - Session Bootstrap
 
-### Better Tool System
-- **Per-Provider Tool Config** - Enable/disable tools per provider in config
-- **Tool Presets** - `coding`, `research`, `admin` preset bundles
-- **Custom Tools** - User-defined tools in `~/.ppxai/tools/`
+**Theme**: Reproducible starting point for every session
 
-### Enhanced Context
-- **@url** - Fetch and inject web content
-- **@clipboard** - Inject clipboard contents
-- **Context size display** - Show token count before sending
+| Feature | Description | Priority |
+|---------|-------------|----------|
+| **AGENTS.md support** | Load project context on startup | High |
+| **File precedence** | Global (`~/.ppxai/`) → Project → Subdirectory | High |
+| **`/agents` commands** | `/agents show`, `/agents reload`, `/agents edit` | Medium |
+| **CLAUDE.md fallback** | Support both AGENTS.md and CLAUDE.md standards | Medium |
 
-### VSCode Extension Improvements
-- **Inline diff preview** - Show file changes before applying
-- **Terminal integration** - Run commands in VSCode terminal
-- **Git integration** - Stage, commit from agent mode
+**User value**: Teams share project context. Consistent starting point every session.
 
-### Performance
-- **Response caching** - Cache identical queries
-- **Streaming improvements** - Lower latency first token
+---
+
+## v1.14.0+ - Enhanced Recovery & Context
+
+**Theme**: Power user features
+
+| Feature | Description | Priority |
+|---------|-------------|----------|
+| **`/rewind` browser** | Interactive checkpoint history viewer | Medium |
+| **`/agent --dry-run`** | Preview changes without applying | Medium |
+| **@url context** | Fetch and inject web content | Low |
+| **@clipboard context** | Inject clipboard contents | Low |
+| **Token count display** | Show context size before sending | Low |
+
+---
+
+## Future Considerations
+
+These are tracked but not prioritized:
+
+- **Textual TUI migration** - Only if current TUI becomes limiting (~20-40 hrs)
+- **libghostty SDK** - Watch for stable C API (expected 2026)
+- **Per-provider tool config** - Enable/disable tools per provider
+- **Custom tools** - User-defined tools in `~/.ppxai/tools/`
 
 ---
 
