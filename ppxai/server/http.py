@@ -779,14 +779,18 @@ async def respond_to_shell_consent(request: ShellConsentRequest):
 
 @app.get("/agent/status")
 async def get_agent_status():
-    """Get agent mode status (v1.11.8)."""
+    """Get agent mode status (v1.11.8, v1.12.0)."""
     global engine
     if not engine:
         raise HTTPException(status_code=503, detail="Engine not initialized")
 
+    # Include checkpoint status in v1.12.0+
+    checkpoint_status = engine.get_checkpoint_status()
+
     return {
         "agent_mode": engine.agent_mode,
         "tools_enabled": engine.tools_enabled,
+        "checkpoint": checkpoint_status,  # v1.12.0
     }
 
 
@@ -833,6 +837,64 @@ async def disable_agent_mode():
     return {
         "ok": True,
         "agent_mode": False,
+    }
+
+
+# === Checkpoint Management (v1.12.0) ===
+
+@app.get("/checkpoint/status")
+async def get_checkpoint_status():
+    """Get checkpoint system status (v1.12.0)."""
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    return engine.get_checkpoint_status()
+
+
+@app.post("/checkpoint/undo")
+async def undo_last_checkpoint():
+    """Undo the last checkpoint (revert agent task changes) (v1.12.0)."""
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    # Check if agent mode is enabled
+    if not engine.agent_mode:
+        raise HTTPException(
+            status_code=400,
+            detail="Agent mode must be enabled to use undo"
+        )
+
+    # Check if checkpoints are enabled
+    status = engine.get_checkpoint_status()
+    if not status.get("enabled"):
+        raise HTTPException(
+            status_code=400,
+            detail="Checkpoints are not enabled (no git repo or checkpoint backend disabled)"
+        )
+
+    # Check if there's a checkpoint to undo
+    if not status.get("last_checkpoint"):
+        raise HTTPException(
+            status_code=400,
+            detail="No checkpoint to undo (run an agent task first)"
+        )
+
+    # Perform undo
+    success = engine.undo_last_checkpoint()
+    if not success:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to undo checkpoint"
+        )
+
+    logger.info("Checkpoint undo successful via API")
+
+    return {
+        "ok": True,
+        "backend": status.get("backend"),
+        "checkpoint_id": status.get("last_checkpoint"),
     }
 
 
