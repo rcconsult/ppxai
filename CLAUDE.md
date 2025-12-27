@@ -8,7 +8,24 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current Version:** v1.11.9
 
-**What's New in v1.11.8 (Released 2025-12-27):**
+**What's New in v1.11.9 (Released 2025-12-27):**
+- **CRITICAL FIX:** `/agent on|off` now correctly toggles agent mode instead of being interpreted as tasks
+  - Previously, typing `/agent off` would cause AI to search for things to turn "off" (including killing server processes!)
+  - Now properly recognized as toggle commands in both TUI and VSCode extension
+- **SECURITY:** Added safety mitigations for agent mode
+  - Minimum word count validation (default: 3 words) rejects vague single-word tasks
+  - `kill`, `pkill`, `killall` added to built-in dangerous shell patterns
+  - Built-in defaults ensure safety even without config file
+- **NEW:** Configurable agent settings via `ppxai-config.json`
+  - `tools.agent.max_iterations` (default: 10) - Maximum agent loop iterations
+  - `tools.agent.context_char_limit` (default: 2000) - Character limit for context display
+  - `tools.agent.min_task_words` (default: 3) - Minimum words required for agent tasks
+- **NEW:** `/agent/config` API endpoint for retrieving agent configuration
+- **NEW:** Full `/tools` command parity between TUI and VSCode extension
+  - Added `/tools agent`, `/tools set verbose on|off`, `/tools help <tool>` to extension
+- **Tests:** 337 tests passing
+
+**Previous Release (v1.11.8 - 2025-12-27):**
 - **NEW:** Agent Mode for autonomous task execution in VSCode extension
   - Agent toggle button in extension header
   - `GET /agent/status`, `POST /agent/enable`, `POST /agent/disable` API endpoints
@@ -388,6 +405,45 @@ python -c "from ppxai.config import validate_config; print(validate_config())"
 - **48 config tests** for the hybrid configuration system
 - Tests use `pytest` with `unittest.mock` for mocking
 - Custom endpoint integration tests require vLLM/Ollama running locally
+
+## Release Process
+
+**CRITICAL: Always use the `/release` skill for releases.**
+
+```bash
+# Standard release
+/release v1.x.x
+
+# Or run the script directly
+python scripts/release.py v1.x.x
+```
+
+**NEVER manually:**
+- Update version files individually
+- Create git tags with `git tag`
+- Run `gh release create`
+- Upload assets manually
+
+The release script handles everything automatically:
+1. Updates ALL version references (pyproject.toml, package.json, `__init__.py`, README, CLAUDE.md, ROADMAP.md)
+2. Creates release notes template (edit before proceeding)
+3. Runs tests
+4. Creates commit and tag
+5. Pushes to GitHub
+6. Waits for CI to complete
+7. Publishes release notes
+
+**Before releasing:**
+1. Edit `docs/RELEASE-NOTES-v{version}.md` with actual release content
+2. Run `python scripts/validate-release.py v{version}` to check all files
+
+**If something goes wrong:**
+```bash
+# Redo a broken release from scratch
+python scripts/release.py v1.x.x --redo --force
+```
+
+See [docs/RELEASE-NOTES-v1.11.9.md](docs/RELEASE-NOTES-v1.11.9.md) for an example of proper release notes.
 
 ## GitHub CLI Authentication
 

@@ -281,6 +281,31 @@ This is a drop-in replacement for the previous version. No configuration changes
     print(f"  ⚠️  Please edit the release notes before continuing!")
 
 
+def check_release_notes_not_template(version: str) -> bool:
+    """Check if release notes exist and are not just the template."""
+    notes_file = PROJECT_ROOT / f"docs/RELEASE-NOTES-v{version}.md"
+
+    if not notes_file.exists():
+        return True  # Will be created later, that's OK
+
+    content = notes_file.read_text()
+
+    # Check for template placeholders
+    template_markers = [
+        "[Brief description of this release]",
+        "[Major change 1]",
+        "[Feature 1]",
+        "[Fix 1]",
+        "[Doc update 1]",
+    ]
+
+    for marker in template_markers:
+        if marker in content:
+            return False
+
+    return True
+
+
 def run_tests() -> bool:
     """Run pytest and return success status."""
     print("\n📋 Running tests...")
@@ -617,6 +642,21 @@ def main():
         print(f"     Commit or stash changes first, or use --force")
         sys.exit(1)
     print(f"  ✅ Git working directory is clean")
+
+    # Pre-flight check: Warn if release notes are still template
+    if not check_release_notes_not_template(version):
+        notes_file = f"docs/RELEASE-NOTES-v{version}.md"
+        print(f"\n  ⚠️  WARNING: Release notes appear to be template!")
+        print(f"     File: {notes_file}")
+        print(f"     Please edit the release notes with actual content before proceeding.")
+        print(f"     The release will continue, but GitHub release notes will be incomplete.")
+        print(f"")
+        if not args.force:
+            response = input("     Continue anyway? [y/N]: ").strip().lower()
+            if response != 'y':
+                print(f"\n  ❌ Aborted. Edit {notes_file} and try again.")
+                sys.exit(1)
+
     record_step("Git Status")
 
     # Optional: Handle --redo: delete existing release first
