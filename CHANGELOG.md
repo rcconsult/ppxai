@@ -5,6 +5,39 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.9] - 2025-12-27
+
+### Fixed - Critical Agent Mode Safety 🔒
+
+This release fixes a critical safety issue where `/agent on|off` commands were being interpreted as tasks instead of toggle commands.
+
+#### Critical Fix
+- **`/agent on|off` now correctly toggles agent mode** instead of being interpreted as tasks
+  - Previously, typing `/agent off` would cause AI to search for things to turn "off" (including killing server processes!)
+  - Now properly recognized as toggle commands in both TUI and VSCode extension
+
+#### Security Improvements
+- **Minimum word count validation** (default: 3 words) rejects vague single-word tasks
+- **`kill`, `pkill`, `killall` added to built-in dangerous shell patterns**
+- Built-in defaults ensure safety even without config file
+
+#### New Features
+- **Configurable agent settings** via `ppxai-config.json`:
+  - `tools.agent.max_iterations` (default: 10) - Maximum agent loop iterations
+  - `tools.agent.context_char_limit` (default: 2000) - Character limit for context display
+  - `tools.agent.min_task_words` (default: 3) - Minimum words required for agent tasks
+- **`/agent/config` API endpoint** for retrieving agent configuration
+- **Full `/tools` command parity** between TUI and VSCode extension
+  - Added `/tools agent`, `/tools set verbose on|off`, `/tools help <tool>` to extension
+
+#### Documentation
+- Updated [Agent Mode Guide](docs/AGENT_MODE_GUIDE.md) with configuration section
+
+#### Testing
+- 337 tests passing
+
+---
+
 ## [1.11.8] - 2025-12-27
 
 ### Added - Agent Mode + Release Fixes 🤖
@@ -31,6 +64,66 @@ This release introduces Agent Mode for autonomous task execution in the VSCode e
 ### Fixed
 - GitHub releases not being marked as "Latest" on repository page
 - Broken documentation links pointing to moved/renamed files
+
+## [1.11.6] - 2025-12-26
+
+### Fixed - /tools Commands After Provider Switch 🔧
+
+- **`/tools list` After Provider Switch** - Now correctly lists tools after `/provider gemini`
+  - Root cause: `_list_tools()` checked `isinstance(self.client, PerplexityClientPromptTools)` which is False for non-Perplexity providers
+  - Fix: Check `engine_client.tools_enabled` first, show engine tools for all providers
+
+- **`/tools status` After Provider Switch** - Now correctly shows "Tools enabled" after switching providers
+  - Same fix pattern applied
+
+- **`/tools config` After Provider Switch** - Now works correctly after switching providers
+
+### Testing
+- 377 tests passing
+- Manual TUI verification confirmed fix
+
+---
+
+## [1.11.5] - 2025-12-26
+
+### Fixed - Ctrl-C and Tools Status Display 🔧
+
+- **Ctrl-C Message Alternation Error** - Fixed 400 error after interrupting streaming with Ctrl-C
+  - Root cause: Ctrl-C cleanup only removed user message from legacy `client.conversation_history`, not from `engine_client.session.messages`
+  - Fix: Added `SessionManager.remove_last_message()` method and cleanup logic for both legacy and engine session
+
+- **Tools Status Display** - `/tools enable` now correctly shows "ON" in status line
+  - Root cause: `get_status_line()` checked legacy `client.enable_tools` instead of `engine_client.tools_enabled`
+  - Fix: Check `handler.engine_client.tools_enabled` first, fallback to legacy client check
+
+### Testing
+- 377 tests passing (2 new session cleanup tests)
+
+---
+
+## [1.11.4] - 2025-12-24
+
+### Added - @git and @tree Context Injection 📂
+
+Automatic context injection for git changes and directory structure in AI messages.
+
+#### New Features
+- **@git injection**: Automatically includes `git diff` (staged + unstaged changes) when you type `@git` in messages
+- **@tree injection**: Automatically includes directory tree structure when you type `@tree` in messages
+- **Combined contexts**: Use `@file`, `@git`, and `@tree` together in the same message
+- **Provider-agnostic**: Works with all providers (Perplexity, Gemini, OpenAI, custom)
+- **TUI feedback**: Shows what was injected with size (e.g., "→ Injected context: @git (31 B)")
+
+#### Architecture Changes
+- **Unified TUI and VSCode**: Both now always use shared EngineClient (unified architecture)
+- EngineClient now created at TUI startup (not just when tools enabled)
+- Context injection works regardless of tools ON/OFF state
+
+#### Testing
+- 31 context injection tests passing (9 new @git/@tree tests)
+- 70 command tests passing
+
+---
 
 ## [1.11.7] - 2025-12-26
 
@@ -518,6 +611,15 @@ ppxai follows [Semantic Versioning](https://semver.org/):
 5. Push tag: `git push origin v1.x.x`
 6. GitHub Actions automatically builds and creates release
 
+[1.11.9]: https://github.com/rcconsult/ppxai/releases/tag/v1.11.9
+[1.11.8]: https://github.com/rcconsult/ppxai/releases/tag/v1.11.8
+[1.11.7]: https://github.com/rcconsult/ppxai/releases/tag/v1.11.7
+[1.11.6]: https://github.com/rcconsult/ppxai/releases/tag/v1.11.6
+[1.11.5]: https://github.com/rcconsult/ppxai/releases/tag/v1.11.5
+[1.11.4]: https://github.com/rcconsult/ppxai/releases/tag/v1.11.4
+[1.11.3]: https://github.com/rcconsult/ppxai/releases/tag/v1.11.3
+[1.11.2]: https://github.com/rcconsult/ppxai/releases/tag/v1.11.2
+[1.11.1]: https://github.com/rcconsult/ppxai/releases/tag/v1.11.1
 [1.11.0]: https://github.com/rcconsult/ppxai/releases/tag/v1.11.0
 [1.10.8]: https://github.com/rcconsult/ppxai/releases/tag/v1.10.8
 [1.10.7]: https://github.com/rcconsult/ppxai/releases/tag/v1.10.7
