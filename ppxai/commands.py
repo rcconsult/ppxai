@@ -1234,6 +1234,104 @@ class CommandHandler:
 
         console.print()
 
+    def _handle_agent_interrupt(self, checkpoint_id: Optional[str], checkpoint_backend: Optional[str]):
+        """Handle agent interruption and offer automatic rollback (v1.12.0).
+
+        Args:
+            checkpoint_id: Checkpoint ID if one was created
+            checkpoint_backend: Backend type ('git' or 'file')
+        """
+        console.print("[yellow]Agent task incomplete due to interrupt.[/yellow]\n")
+
+        if not checkpoint_id:
+            console.print("[dim]No checkpoint available. Any partial changes remain in place.[/dim]")
+            console.print("[dim]Tip: Review changes manually and clean up as needed.[/dim]\n")
+            return
+
+        # Show current state
+        console.print(f"[cyan]Checkpoint: {checkpoint_id[:8] if len(checkpoint_id) > 8 else checkpoint_id}[/cyan]")
+        console.print(f"[cyan]Backend: {checkpoint_backend}[/cyan]\n")
+
+        # Prompt for rollback
+        console.print("[bold]Rollback all changes from this task?[/bold]")
+        console.print("[dim]  y - Rollback to checkpoint (undo all changes)[/dim]")
+        console.print("[dim]  n - Keep partial changes[/dim]\n")
+
+        from prompt_toolkit import prompt as pt_prompt
+        try:
+            response = pt_prompt("Rollback? (y/n): ").strip().lower()
+        except (KeyboardInterrupt, EOFError):
+            console.print("\n[yellow]Keeping partial changes (no rollback)[/yellow]\n")
+            return
+
+        if response not in ['y', 'yes']:
+            console.print("\n[yellow]Partial changes preserved[/yellow]")
+            console.print("[dim]Use /undo later to rollback if needed[/dim]\n")
+            return
+
+        # Perform rollback
+        console.print("\n[dim]Rolling back changes...[/dim]")
+        success = self.engine_client.undo_last_checkpoint()
+
+        if success:
+            console.print("[green]✓ Checkpoint reverted successfully[/green]\n")
+
+            # For git backend, check for uncommitted changes
+            if checkpoint_backend == "git":
+                import subprocess
+                try:
+                    result = subprocess.run(
+                        ["git", "status", "--porcelain"],
+                        capture_output=True,
+                        text=True,
+                        check=False
+                    )
+                    if result.returncode == 0 and result.stdout.strip():
+                        # Uncommitted changes detected
+                        console.print("[yellow]⚠️  Uncommitted changes detected in working directory[/yellow]")
+                        console.print("[dim]These are partial changes from the interrupted agent task.[/dim]\n")
+                        console.print("[bold]Clean working directory?[/bold]")
+                        console.print("[dim]  y - Remove all uncommitted changes (git reset --hard)[/dim]")
+                        console.print("[dim]  n - Keep uncommitted changes for manual review[/dim]\n")
+
+                        try:
+                            clean_response = pt_prompt("Clean working directory? (y/n): ").strip().lower()
+                        except (KeyboardInterrupt, EOFError):
+                            console.print("\n[yellow]Keeping uncommitted changes[/yellow]\n")
+                            return
+
+                        if clean_response in ['y', 'yes']:
+                            console.print("\n[dim]Running git reset --hard...[/dim]")
+                            reset_result = subprocess.run(
+                                ["git", "reset", "--hard", "HEAD"],
+                                capture_output=True,
+                                text=True,
+                                check=False
+                            )
+
+                            if reset_result.returncode == 0:
+                                console.print("[green]✓ Working directory cleaned[/green]")
+
+                                # Also clean untracked files
+                                console.print("[dim]Removing untracked files...[/dim]")
+                                subprocess.run(
+                                    ["git", "clean", "-fd"],
+                                    capture_output=True,
+                                    check=False
+                                )
+                                console.print("[green]✓ All changes removed[/green]\n")
+                            else:
+                                console.print(f"[red]✗ git reset failed: {reset_result.stderr}[/red]\n")
+                        else:
+                            console.print("\n[yellow]Uncommitted changes preserved[/yellow]")
+                            console.print("[dim]Run 'git status' to see changes[/dim]")
+                            console.print("[dim]Run 'git reset --hard' to clean manually[/dim]\n")
+                except Exception as e:
+                    console.print(f"[yellow]Could not check git status: {e}[/yellow]\n")
+        else:
+            console.print("[red]✗ Rollback failed[/red]")
+            console.print("[dim]Check logs or try /undo manually[/dim]\n")
+
     def handle_agent(self, args: str):
         """Handle /agent command for autonomous task execution (v1.11.8).
 
@@ -1267,9 +1365,12 @@ class CommandHandler:
 
         # Create checkpoint before agent task (v1.12.0)
         checkpoint_id = self.engine_client.create_checkpoint(task[:100])  # Truncate long tasks
+        checkpoint_backend = None
+
         if checkpoint_id:
             # Notifications are emitted via events in create_checkpoint()
-            pass
+            status = self.engine_client.get_checkpoint_status()
+            checkpoint_backend = status.get("backend")
         else:
             # If no checkpoint created, show warning if appropriate
             status = self.engine_client.get_checkpoint_status()
@@ -1302,8 +1403,8 @@ class CommandHandler:
                         if not should_continue:
                             break
                 except KeyboardInterrupt:
-                    console.print("\n[yellow]Agent interrupted by user[/yellow]\n")
-                    return
+                    console.print("\n[yellow]⚠️  Agent interrupted by user (Ctrl-C)[/yellow]\n")
+                    raise  # Re-raise to outer handler
 
                 response = event_handler.get_response()
 
@@ -1325,7 +1426,8 @@ class CommandHandler:
             import asyncio
             asyncio.run(run_agent_loop())
         except KeyboardInterrupt:
-            console.print("\n[yellow]Agent interrupted[/yellow]\n")
+            # Offer automatic rollback after interrupt (v1.12.0)
+            self._handle_agent_interrupt(checkpoint_id, checkpoint_backend)
 
     def _build_agent_prompt(self, task: str, iteration: int) -> str:
         """Build initial prompt for agent (v1.11.8)."""
