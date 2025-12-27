@@ -8,99 +8,44 @@
 
 ---
 
-## Next Release: v1.11.8 (In Progress)
-
-**Status**: 🔧 Agent Loop Implementation
-
-**Branch**: `feature/adding-agent-loop`
-
-**Goal**: Implement `/agent` command for autonomous multi-step task execution
-
-**Workflow Diagrams**: See [docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.md#workflow-diagrams)
-
-| Workflow | Diagram |
-|----------|---------|
-| Current (turn-based) | ![Current Flow](docs/current-non-agentic-flow.png) |
-| Agent loop (autonomous) | ![Agent Flow](docs/future-agentic-flow.png) |
-
-**New Features**:
-- 🔧 **`/agent <task>`** - Autonomous multi-step task execution (max 5 iterations)
-- 🔧 **`/tools agent on|off`** - Enable/disable agent mode in TUI
-- 🔧 **Agent mode toggle** - VSCode extension UI button for agent mode
-- 🔧 **Agent events** - `AGENT_ITERATION`, `AGENT_COMPLETE`, `AGENT_MAX_ITERATIONS`
-
-**Implementation Progress**:
-- ✅ 3 new EventTypes in `ppxai/engine/types.py`
-- ✅ `agent_mode` property in EngineClient
-- ✅ `/tools agent on|off` subcommand
-- ✅ `handle_agent()` method in commands.py
-- ✅ `/agent` command registration
-- ✅ Autocomplete entries for `/agent` and `/tools agent`
-- ✅ TUI event handlers for agent events
-- ✅ HTTP endpoints (`/agent/enable`, `/agent/disable`, `/agent/status`)
-- ✅ VSCode httpClient methods
-- ✅ VSCode agent toggle button
-
-**Files Modified**:
-- `ppxai/engine/types.py` - 3 new EventTypes
-- `ppxai/engine/client.py` - agent_mode property and methods
-- `ppxai/commands.py` - /agent command and /tools agent subcommand
-- `ppxai/main.py` - autocomplete entries
-- `ppxai/common/event_handler.py` - TUI agent event handlers
-- `ppxai/server/http.py` - HTTP endpoints for agent mode
-- `vscode-extension/src/httpClient.ts` - client methods
-- `vscode-extension/src/chatPanel.ts` - UI toggle button
-
-**Tests**: 337 passed (awaiting agent-specific tests)
-
-**Documentation**:
-- **[docs/AGENT_MODE_GUIDE.md](docs/AGENT_MODE_GUIDE.md)** - User guide with practical examples for research and development workflows
-
----
-
 ## Current Release: v1.11.9
 
-**Status**: ✅ Legacy Removal + Clickable Citations
+**Status**: ✅ Agentic Workflow Complete
 
-Released: 2025-12-26
+Released: 2025-12-27
 
-**Goal**: Complete legacy code removal and fix citation/link rendering
+**Goal**: Complete agentic workflow with safety fixes
 
-**Major Changes**:
-- ✅ **Legacy Code Removed** - All legacy code paths removed, EngineClient is now the only client
-  - Deleted: `ppxai/client.py` (447 lines - AIClient)
-  - Deleted: `perplexity_tools_prompt_based.py` (1,342 lines - legacy tools client)
-  - Deleted: `tool_manager.py` (299 lines - legacy MCP loader)
-  - ~2,100 lines of legacy code removed
-- ✅ **Tests Migrated** - Legacy tests replaced with EngineClient-based tests (337 passing)
-
-**New Features**:
-- ✅ **`/tools help <tool-name>`** - Detailed tool documentation command
-- ✅ **Autocomplete for `/tools`** - Tab completion for subcommands and tool names
-- ✅ **Custom Tool Development Guide** - [docs/CUSTOM_TOOL_DEVELOPMENT_GUIDE.md](docs/CUSTOM_TOOL_DEVELOPMENT_GUIDE.md)
-
-**Bug Fixes**:
-- ✅ **Perplexity Citations Clickable** - `inject_citation_urls()` converts `[1]` to `[1](url)` format
-- ✅ **TUI Links Clickable** - OSC 8 hyperlinks via `convert_markdown_links_to_rich()`
-  - Works in Ghostty, iTerm2, Kitty, Windows Terminal, GNOME Terminal 3.26+
-- ✅ **VSCode Tool Responses** - Added `fullResponse` message type for tool-using responses
-- ✅ **`/tools list` After Provider Switch** - Now correctly lists tools after `/provider gemini`
-- ✅ **Tool JSON Leak** - No longer leaks to VSCode during streaming
-
-**Documentation**:
-- ✅ Archived legacy documentation
-- ✅ Updated all guides for EngineClient architecture
-- ✅ Autocomplete documentation across all relevant guides
-
-**Agentic Workflow Progress**:
+**Agentic Workflow - ALL PHASES COMPLETE**:
 - ✅ Phase 1: File editing tools (v1.11.0)
 - ✅ Phase 2: @git context (v1.11.4)
 - ✅ Phase 3: @tree context (v1.11.4)
 - ✅ Phase 4: Manual testing (v1.11.5-v1.11.7)
-- 🔧 Phase 5: `/agent` command (v1.11.8 - **in progress**)
-- ⏳ Phase 6: Testing & docs (v1.11.8)
+- ✅ Phase 5: `/agent` command (v1.11.8)
+- ✅ Phase 6: Safety fixes & docs (v1.11.9)
 
-**Branch**: `refactor/maintenance-no-legacy-code` → `master`
+**v1.11.9 Changes**:
+- ✅ **Critical Fix**: `/agent on|off` now correctly toggles agent mode (was being interpreted as tasks)
+- ✅ **Security**: Minimum 3-word task validation, `kill/pkill/killall` added to dangerous patterns
+- ✅ **Configurable**: Agent settings via `ppxai-config.json` (max_iterations, context_char_limit, min_task_words)
+- ✅ **API**: `/agent/config` endpoint for retrieving agent configuration
+- ✅ **Parity**: Full `/tools` command support in VSCode extension
+
+**v1.11.8 Changes**:
+- ✅ Agent Mode toggle button in VSCode extension
+- ✅ `/agent <task>` command for autonomous multi-step execution
+- ✅ Agent events: AGENT_ITERATION, AGENT_COMPLETE, AGENT_MAX_ITERATIONS
+- ✅ HTTP endpoints: /agent/enable, /agent/disable, /agent/status
+
+**v1.11.7 Changes**:
+- ✅ Legacy code removed (~2,100 lines)
+- ✅ Clickable citations in Perplexity responses
+- ✅ OSC 8 hyperlinks in TUI
+
+**Documentation**:
+- **[docs/AGENT_MODE_GUIDE.md](docs/AGENT_MODE_GUIDE.md)** - Comprehensive user guide
+
+**Tests**: 337 passing
 
 ---
 
@@ -2162,7 +2107,7 @@ Interested in working on any of these features?
 
 ---
 
-**Last Updated**: December 26, 2025
-**Current Version**: v1.11.7
-**Next Target**: v1.11.8 (`/agent` command - completes agentic workflow)
-**Branch**: `feature/adding-agent-loop`
+**Last Updated**: December 27, 2025
+**Current Version**: v1.11.9
+**Next Target**: v1.12.0 (Code quality & provider abstraction cleanup)
+**Branch**: `master`
