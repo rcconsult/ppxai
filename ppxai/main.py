@@ -30,6 +30,7 @@ def get_status_line(handler):
     """Generate status line showing current settings.
 
     v1.12.0: Now uses handler.provider instead of legacy client.
+    v1.12.0: Added agent mode and checkpoint status.
     """
     provider_config = get_provider_config(handler.provider)
     provider_name = provider_config["name"]
@@ -45,8 +46,28 @@ def get_status_line(handler):
             model_display = model_info.get("name", handler.current_model)
             break
 
+    # Get agent mode status (v1.12.0)
+    agent_status_parts = []
+    if handler.engine_client and handler.engine_client.agent_mode:
+        agent_status_parts.append("Agent: [green]ON[/green]")
+
+        # Add checkpoint status
+        checkpoint_status = handler.engine_client.get_checkpoint_status()
+        if checkpoint_status.get("enabled"):
+            backend = checkpoint_status.get("backend")
+            if backend == "git":
+                agent_status_parts.append("Checkpoints: [green]git[/green]")
+            elif backend == "file":
+                agent_status_parts.append("Checkpoints: [yellow]file[/yellow]")
+        else:
+            agent_status_parts.append("Checkpoints: [red]OFF[/red]")
+
     # Build status line
-    status = f"[dim][[/dim]{provider_name}[dim] | [/dim]{model_display}[dim] | Tools: [/dim]{tools_status}[dim]][/dim]"
+    parts = [provider_name, model_display, f"Tools: {tools_status}"]
+    if agent_status_parts:
+        parts.extend(agent_status_parts)
+
+    status = "[dim][[/dim]" + "[dim] | [/dim]".join(parts) + "[dim]][/dim]"
     return status
 
 
