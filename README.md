@@ -114,9 +114,9 @@ See [SPECIFICATIONS.md](SPECIFICATIONS.md) for detailed guides on writing effect
 
 1. Download from [Releases](../../releases):
    - `ppxai-server-{platform}` (server binary for macOS ARM/Intel, Linux, Windows)
-   - `ppxai-1.11.8.vsix` (VSCode extension)
+   - `ppxai-1.11.9.vsix` (VSCode extension)
 2. Create a `.env` file with your API key (in project folder or `~/.ppxai/.env`)
-3. Install the extension: `code --install-extension ppxai-1.11.8.vsix`
+3. Install the extension: `code --install-extension ppxai-1.11.9.vsix`
 4. Start the server: `./ppxai-server-macos-arm64` (or your platform's binary)
 5. Open VSCode and click the ppxai icon in the sidebar
 

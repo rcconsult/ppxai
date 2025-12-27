@@ -748,7 +748,7 @@ wheels = [
 
 [[package]]
 name = "ppxai"
-version = "1.11.8"
+version = "1.11.9"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },

@@ -58,7 +58,7 @@
 
 ---
 
-## Current Release: v1.11.8
+## Current Release: v1.11.9
 
 **Status**: ✅ Legacy Removal + Clickable Citations
 
