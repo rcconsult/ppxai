@@ -96,6 +96,7 @@ class PPXAICompleter(Completer):
         ('/debug', 'Debug code'),
         ('/optimize', 'Optimize code'),
         ('/agent', 'Run autonomous agent loop'),
+        ('/undo', 'Revert last agent task'),
         ('/quit', 'Exit the application'),
         ('/exit', 'Exit the application'),
     ]

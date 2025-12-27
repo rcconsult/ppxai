@@ -271,10 +271,16 @@ class TestFileCheckpointBackend:
     def test_cleanup_old_checkpoints(self, temp_dirs):
         """Test that old checkpoints are cleaned up."""
         import time
+        import shutil
         working_dir, session_id = temp_dirs
         # Use unique session ID to avoid interference from other tests
         unique_session_id = session_id + "-cleanup-test"
         backend = FileCheckpointBackend(working_dir, unique_session_id)
+
+        # Clean checkpoint directory to ensure test isolation
+        if backend.checkpoint_dir.exists():
+            shutil.rmtree(backend.checkpoint_dir)
+            backend.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
         # Create 7 checkpoints with unique timestamps
         test_file = working_dir / "test.txt"
