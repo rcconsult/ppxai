@@ -735,7 +735,14 @@ class TestSendCodingTask:
     def test_send_coding_task_custom(self, mock_run, mock_get_coding, handler):
         """Test send_coding_task with custom provider."""
         mock_get_coding.return_value = "gpt-oss-120b"
-        mock_run.return_value = "Code generated"
+        # Properly consume coroutine to avoid warning
+        def consume_coroutine(coro):
+            try:
+                coro.close()
+            except:
+                pass
+            return "Code generated"
+        mock_run.side_effect = consume_coroutine
         handler.provider = "custom"
 
         result = send_coding_task(
@@ -773,7 +780,14 @@ class TestSendCodingTask:
         """Test send_coding_task with auto-route disabled for Perplexity."""
         handler.auto_route = False
         mock_get_coding.return_value = "sonar-reasoning"
-        mock_run.return_value = "Code generated"
+        # Properly consume coroutine to avoid warning
+        def consume_coroutine(coro):
+            try:
+                coro.close()
+            except:
+                pass
+            return "Code generated"
+        mock_run.side_effect = consume_coroutine
 
         result = send_coding_task(
             handler,
