@@ -34,6 +34,10 @@ engine: Optional[EngineClient] = None
 # Server logger (v1.11.2)
 logger = get_logger("server")
 
+# Request serialization lock (v1.12.0)
+# Prevents concurrent chat requests from corrupting conversation state
+chat_lock: asyncio.Lock = None
+
 # Consent request tracking (Phase 1C: v1.11.0, v1.11.2)
 # Maps file_path -> asyncio.Future[tuple[bool, str]]
 pending_consent_requests: dict[str, asyncio.Future] = {}
@@ -119,7 +123,7 @@ async def http_shell_consent_handler(command: str, working_dir: str, risk_level:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan (startup/shutdown)."""
-    global engine
+    global engine, chat_lock
 
     # Startup: Initialize engine with consent callbacks (v1.11.0, v1.11.2)
     logger.info("Server starting up - initializing EngineClient")
@@ -128,6 +132,10 @@ async def lifespan(app: FastAPI):
         shell_consent_callback=http_shell_consent_handler
     )
     logger.info(f"EngineClient initialized - provider: {engine.provider_name}, model: {engine.model}")
+
+    # Initialize chat lock (v1.12.0)
+    chat_lock = asyncio.Lock()
+    logger.info("Chat request lock initialized")
 
     # Set default provider (tries perplexity first, falls back to gemini)
     from ..config import get_available_providers
@@ -343,61 +351,89 @@ async def get_status():
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
-    """Chat endpoint with SSE streaming (v1.11.2: added logging).
+    """Chat endpoint with SSE streaming (v1.11.2: added logging, v1.12.0: added request locking).
 
     Returns Server-Sent Events stream with chat response chunks.
+
+    v1.12.0: Serializes chat requests to prevent concurrent execution from
+    corrupting conversation state. If agent is running, subsequent requests
+    will wait for completion.
     """
-    global engine
+    global engine, chat_lock
     if not engine:
         logger.error("Chat endpoint called but engine not initialized")
         raise HTTPException(status_code=503, detail="Engine not initialized")
 
     logger.log_http_request("POST", "/chat", "vscode")
 
-    # Set provider/model if specified
-    if request.provider:
-        logger.info(f"Switching provider to: {request.provider}")
-        engine.set_provider(request.provider)
-    if request.model:
-        logger.info(f"Switching model to: {request.model}")
-        engine.set_model(request.model)
+    # Acquire lock to serialize chat requests (v1.12.0)
+    async with chat_lock:
+        logger.info("Chat lock acquired - processing request")
 
-    return StreamingResponse(
-        sse_event_generator(request.message),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",  # Disable nginx buffering
-        }
-    )
+        # Set provider/model if specified
+        if request.provider:
+            logger.info(f"Switching provider to: {request.provider}")
+            engine.set_provider(request.provider)
+        if request.model:
+            logger.info(f"Switching model to: {request.model}")
+            engine.set_model(request.model)
+
+        # Wrap generator to ensure lock is held during streaming
+        async def locked_generator():
+            """Generator that streams events while holding the lock."""
+            async for event in sse_event_generator(request.message):
+                yield event
+            logger.info("Chat request completed - releasing lock")
+
+        return StreamingResponse(
+            locked_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",  # Disable nginx buffering
+            }
+        )
 
 
 @app.post("/coding_task")
 async def coding_task(request: CodingTaskRequest):
-    """Coding task endpoint with SSE streaming.
+    """Coding task endpoint with SSE streaming (v1.12.0: added request locking).
 
     Supports task types: generate, debug, explain, test, docs, implement
+
+    v1.12.0: Serializes coding task requests to prevent concurrent execution.
     """
-    global engine
+    global engine, chat_lock
     if not engine:
         raise HTTPException(status_code=503, detail="Engine not initialized")
 
-    # Set provider/model if specified
-    if request.provider:
-        engine.set_provider(request.provider)
-    if request.model:
-        engine.set_model(request.model)
+    # Acquire lock to serialize requests (v1.12.0)
+    async with chat_lock:
+        logger.info("Coding task lock acquired - processing request")
 
-    return StreamingResponse(
-        sse_coding_task_generator(request.message, request.task_type),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        }
-    )
+        # Set provider/model if specified
+        if request.provider:
+            engine.set_provider(request.provider)
+        if request.model:
+            engine.set_model(request.model)
+
+        # Wrap generator to ensure lock is held during streaming
+        async def locked_generator():
+            """Generator that streams events while holding the lock."""
+            async for event in sse_coding_task_generator(request.message, request.task_type):
+                yield event
+            logger.info("Coding task completed - releasing lock")
+
+        return StreamingResponse(
+            locked_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            }
+        )
 
 
 # === Provider/Model Management ===

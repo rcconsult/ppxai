@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(python3:*)",
+      "Bash(echo:*)",
+      "Bash(npm run compile:*)",
+      "Bash(node -e:*)",
+      "Bash(npx vsce:*)",
+      "Bash(code --uninstall-extension:*)",
+      "Bash(code --install-extension:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
