@@ -123,11 +123,12 @@ class GitCheckpointBackend(CheckpointBackend):
             return False
 
     def list_checkpoints(self) -> List[Tuple[str, str, str]]:
-        """List ppxai checkpoint commits."""
+        """List ppxai checkpoint and agent commits (undoable commits)."""
         try:
+            # v1.12.0: Include both checkpoint and agent commits
             result = self._run_git(
                 "log",
-                "--grep=^ppxai checkpoint:",
+                "--grep=^ppxai checkpoint:\\|^ppxai agent:",
                 "--format=%H|%s|%ai",
                 "-n", "10",
                 check=False
@@ -138,8 +139,13 @@ class GitCheckpointBackend(CheckpointBackend):
                 if not line:
                     continue
                 commit_hash, message, timestamp = line.split("|", 2)
-                # Extract description from "ppxai checkpoint: <description>"
-                description = message.replace("ppxai checkpoint: ", "")
+                # Extract description from "ppxai checkpoint: <desc>" or "ppxai agent: <desc>"
+                if message.startswith("ppxai checkpoint: "):
+                    description = message.replace("ppxai checkpoint: ", "")
+                elif message.startswith("ppxai agent: "):
+                    description = message.replace("ppxai agent: ", "")
+                else:
+                    description = message
                 checkpoints.append((commit_hash[:8], description, timestamp))
 
             return checkpoints
