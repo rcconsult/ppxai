@@ -87,6 +87,10 @@ class EngineClient:
         # Load configuration (including shell command patterns)
         self._load_config()
 
+        # v1.12.0: Initialize checkpoint manager with default working directory
+        # This ensures TUI has checkpoints available without explicit set_working_dir call
+        self._init_checkpoint_manager(self.context_injector.working_dir)
+
     def _load_config(self):
         """Load configuration from ppxai-config.json and .env."""
         # Import from existing config module to reuse configuration loading
@@ -172,15 +176,12 @@ class EngineClient:
 
     # === Context Injection ===
 
-    def set_working_dir(self, path: str):
-        """Set working directory for file path resolution.
+    def _init_checkpoint_manager(self, path: str):
+        """Initialize checkpoint manager for a working directory (v1.12.0).
 
         Args:
             path: Working directory path
         """
-        self.context_injector.set_working_dir(path)
-
-        # Initialize checkpoint manager for this working directory (v1.12.0)
         checkpoint_backend = self.config.get("tools", {}).get("agent", {}).get("checkpoint_backend", "auto")
         session_id = self.session.session_name or "default"
         self._checkpoint_manager = CheckpointManager(
@@ -189,7 +190,7 @@ class EngineClient:
             backend=checkpoint_backend
         )
 
-        # v1.12.0: Restore last checkpoint ID from existing checkpoints (persistence across restarts)
+        # Restore last checkpoint ID from existing checkpoints (persistence across restarts)
         try:
             checkpoints = self._checkpoint_manager.list_checkpoints()
             if checkpoints:
@@ -197,6 +198,15 @@ class EngineClient:
                 self._last_checkpoint_id = checkpoints[0][0]
         except Exception:
             pass  # Ignore errors - checkpoint ID will be None until first checkpoint is created
+
+    def set_working_dir(self, path: str):
+        """Set working directory for file path resolution.
+
+        Args:
+            path: Working directory path
+        """
+        self.context_injector.set_working_dir(path)
+        self._init_checkpoint_manager(path)
 
     def set_auto_inject(self, enabled: bool) -> bool:
         """Enable or disable automatic context injection.
@@ -603,6 +613,7 @@ class EngineClient:
         2. Check if file already allowed
         3. If needed, call consent_callback to ask user
         4. Update session state based on response
+        5. v1.12.0: Create checkpoint before first file edit in agent mode
 
         Args:
             file_path: Path to file that needs editing
@@ -613,6 +624,19 @@ class EngineClient:
         from pathlib import Path
 
         path = Path(file_path).resolve()
+
+        # v1.12.0: Create checkpoint before first file edit in agent mode
+        # Only create once per chat turn (when no files have been edited yet)
+        if self._agent_mode and self._checkpoint_manager and not self.session.allowed_files:
+            # Extract filename for checkpoint description
+            filename = path.name
+            checkpoint_id = self.create_checkpoint(f"Before editing {filename}")
+            if checkpoint_id:
+                # Emit checkpoint notification via STATUS event
+                self._consent_event_queue.append(Event(
+                    type=EventType.STATUS,
+                    data=f"✓ Checkpoint created: {checkpoint_id[:8]} (Before editing {filename})"
+                ))
 
         # Check global consent mode
         if self.session.edit_consent_mode == "always":
