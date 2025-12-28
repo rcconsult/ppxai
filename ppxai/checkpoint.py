@@ -1,4 +1,3 @@
-# v1.12.0 Test
 """
 Checkpoint system for atomic multi-file rollback in agent mode.
 
