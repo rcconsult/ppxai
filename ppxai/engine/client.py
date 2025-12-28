@@ -911,11 +911,6 @@ class EngineClient:
         # Add message to history (with injected content)
         self.session.add_message(Message("user", message))
 
-        # DEBUG: Log session state after adding user message
-        from ppxai.tui_logger import get_logger
-        logger = get_logger()
-        logger.debug(f"After adding user message, session has {len(self.session.messages)} messages")
-
         if self.tools_enabled:
             async for event in self._chat_with_tools(stream):
                 yield event
@@ -988,11 +983,6 @@ class EngineClient:
                         "like [Source Name](https://example.com) so they are clickable."
                     )
                 messages = [Message("system", tool_prompt)] + messages
-
-            # Log API request for debugging
-            from ppxai.tui_logger import get_logger
-            logger = get_logger()
-            logger.log_api_request(iteration, messages)
 
             # Get response from provider
             full_response = ""
@@ -1072,10 +1062,6 @@ class EngineClient:
 
             else:
                 # No tool call - this is the final response
-                from ppxai.tui_logger import get_logger
-                logger = get_logger()
-                logger.debug(f"No tool call detected, generating final response (stream={stream})")
-
                 # v1.11.7 FIX: Don't re-request with streaming - use the response we already have.
                 # Re-requesting caused bugs where the model would output a tool call on the
                 # second request, which would then be sent as the final response without
@@ -1083,19 +1069,16 @@ class EngineClient:
                 #
                 # The response was already fetched with stream=False during tool iterations.
                 # Just emit it as the final response.
-                logger.debug(f"Using already-fetched response as final (no re-request)")
                 self.session.add_message(Message("assistant", full_response))
-                yield Event(EventType.STREAM_END, full_response)
-                logger.debug(f"After adding assistant message, session has {len(self.session.messages)} messages")
 
                 # v1.12.0: Commit agent changes after successful task completion
+                # NOTE: Must happen BEFORE yield STREAM_END because consumer breaks loop on STREAM_END
                 if self._agent_mode and self._checkpoint_manager:
                     commit_hash = self.commit_agent_changes("Task completed")
                     if commit_hash:
-                        logger.debug(f"Agent changes committed: {commit_hash[:8]}")
                         yield Event(EventType.STATUS, f"✓ Changes committed: {commit_hash[:8]}")
 
-                logger.debug(f"Final response complete, returning from _chat_with_tools")
+                yield Event(EventType.STREAM_END, full_response)
                 return
 
         # Max iterations reached
