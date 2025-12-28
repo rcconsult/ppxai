@@ -108,9 +108,11 @@ class GitCheckpointBackend(CheckpointBackend):
             return False
 
         try:
-            # Verify the commit exists and is a ppxai checkpoint
+            # Verify the commit exists and is a ppxai commit (checkpoint or agent)
             result = self._run_git("log", "-1", "--format=%s", checkpoint_id, check=False)
-            if not result.stdout.startswith("ppxai checkpoint:"):
+            msg = result.stdout.strip()
+            # v1.12.0: Accept both checkpoint commits and agent task commits
+            if not (msg.startswith("ppxai checkpoint:") or msg.startswith("ppxai agent:")):
                 return False
 
             # Revert the commit

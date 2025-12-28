@@ -189,6 +189,15 @@ class EngineClient:
             backend=checkpoint_backend
         )
 
+        # v1.12.0: Restore last checkpoint ID from existing checkpoints (persistence across restarts)
+        try:
+            checkpoints = self._checkpoint_manager.list_checkpoints()
+            if checkpoints:
+                # list_checkpoints returns [(id, description, timestamp), ...] sorted by recency
+                self._last_checkpoint_id = checkpoints[0][0]
+        except Exception:
+            pass  # Ignore errors - checkpoint ID will be None until first checkpoint is created
+
     def set_auto_inject(self, enabled: bool) -> bool:
         """Enable or disable automatic context injection.
 
@@ -500,6 +509,71 @@ class EngineClient:
             return True
 
         return False
+
+    def commit_agent_changes(self, description: str) -> Optional[str]:
+        """Commit changes made during agent task (v1.12.0).
+
+        This commits any uncommitted changes after a successful agent task,
+        allowing undo to work via git revert.
+
+        Args:
+            description: Description of the changes (for commit message)
+
+        Returns:
+            Commit hash if successful, None otherwise
+        """
+        if not self._checkpoint_manager or not self._agent_mode:
+            return None
+
+        # Only git backend supports this
+        if self._checkpoint_manager.get_backend_name() != "git":
+            return None
+
+        try:
+            import subprocess
+            working_dir = self.context_injector.working_dir
+
+            # Check if there are changes to commit
+            result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=working_dir,
+                capture_output=True,
+                text=True
+            )
+            if not result.stdout.strip():
+                return None  # No changes to commit
+
+            # Stage all changes
+            subprocess.run(
+                ["git", "add", "-A"],
+                cwd=working_dir,
+                check=True
+            )
+
+            # Commit with descriptive message
+            commit_msg = f"ppxai agent: {description}"
+            subprocess.run(
+                ["git", "commit", "-m", commit_msg],
+                cwd=working_dir,
+                check=True
+            )
+
+            # Get the commit hash
+            result = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=working_dir,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            commit_hash = result.stdout.strip()
+
+            # Update last checkpoint to the new commit (so undo reverts this)
+            self._last_checkpoint_id = commit_hash
+
+            return commit_hash
+        except subprocess.CalledProcessError:
+            return None
 
     def get_checkpoint_status(self) -> Dict[str, Any]:
         """Get checkpoint system status (v1.12.0).
@@ -989,6 +1063,13 @@ class EngineClient:
                 self.session.add_message(Message("assistant", full_response))
                 yield Event(EventType.STREAM_END, full_response)
                 logger.debug(f"After adding assistant message, session has {len(self.session.messages)} messages")
+
+                # v1.12.0: Commit agent changes after successful task completion
+                if self._agent_mode and self._checkpoint_manager:
+                    commit_hash = self.commit_agent_changes("Task completed")
+                    if commit_hash:
+                        logger.debug(f"Agent changes committed: {commit_hash[:8]}")
+                        yield Event(EventType.STATUS, f"✓ Changes committed: {commit_hash[:8]}")
 
                 logger.debug(f"Final response complete, returning from _chat_with_tools")
                 return

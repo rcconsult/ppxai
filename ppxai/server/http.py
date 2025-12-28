@@ -859,13 +859,7 @@ async def undo_last_checkpoint():
     if not engine:
         raise HTTPException(status_code=503, detail="Engine not initialized")
 
-    # Check if agent mode is enabled
-    if not engine.agent_mode:
-        raise HTTPException(
-            status_code=400,
-            detail="Agent mode must be enabled to use undo"
-        )
-
+    # v1.12.0: Allow undo regardless of agent mode - checkpoints from previous sessions should be undoable
     # Check if checkpoints are enabled
     status = engine.get_checkpoint_status()
     if not status.get("enabled"):
@@ -881,18 +875,37 @@ async def undo_last_checkpoint():
             detail="No checkpoint to undo (run an agent task first)"
         )
 
+    # v1.12.0: Check for uncommitted changes before undo (git revert requires clean working tree)
+    if status.get("backend") == "git":
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=engine.context_injector.working_dir,
+                capture_output=True,
+                text=True
+            )
+            if result.stdout.strip():
+                raise HTTPException(
+                    status_code=400,
+                    detail="Cannot undo: uncommitted changes in working directory. Commit or stash changes first."
+                )
+        except subprocess.CalledProcessError:
+            pass  # If git status fails, let the undo attempt proceed
+
     # Perform undo
     success = engine.undo_last_checkpoint()
     if not success:
         raise HTTPException(
             status_code=500,
-            detail="Failed to undo checkpoint"
+            detail="Failed to undo checkpoint (git revert may have failed)"
         )
 
     logger.info("Checkpoint undo successful via API")
 
     return {
-        "ok": True,
+        "success": True,
+        "message": f"Checkpoint {status.get('last_checkpoint', '')[:8]} reverted successfully",
         "backend": status.get("backend"),
         "checkpoint_id": status.get("last_checkpoint"),
     }
