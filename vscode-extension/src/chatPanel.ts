@@ -2349,14 +2349,15 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             display: none;
         }
 
-        .tool-summary::before {
-            content: '▶ ';
+        .tool-arrow {
+            display: inline-block;
             font-size: 10px;
             color: var(--vscode-descriptionForeground);
+            transition: transform 0.15s ease;
         }
 
-        .tool-details[open] .tool-summary::before {
-            content: '▼ ';
+        .tool-details[open] .tool-arrow {
+            transform: rotate(90deg);
         }
 
         .tool-content {
@@ -3654,7 +3655,8 @@ A: Use \`/tools disable\` or choose "never" when prompted.
 
             const summaryEl = document.createElement('summary');
             summaryEl.className = 'tool-summary';
-            summaryEl.textContent = summary;
+            // Use text arrow instead of CSS ::before for better webview compatibility
+            summaryEl.innerHTML = '<span class="tool-arrow">▶</span> ' + summary;
             detailsEl.appendChild(summaryEl);
 
             const contentEl = document.createElement('pre');
