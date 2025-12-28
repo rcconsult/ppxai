@@ -3655,8 +3655,12 @@ A: Use \`/tools disable\` or choose "never" when prompted.
 
             const summaryEl = document.createElement('summary');
             summaryEl.className = 'tool-summary';
-            // Use text arrow instead of CSS ::before for better webview compatibility
-            summaryEl.innerHTML = '<span class="tool-arrow">▶</span> ' + summary;
+            // Build summary with arrow span for rotation on open
+            const arrowSpan = document.createElement('span');
+            arrowSpan.className = 'tool-arrow';
+            arrowSpan.textContent = '▶';
+            summaryEl.appendChild(arrowSpan);
+            summaryEl.appendChild(document.createTextNode(' ' + summary));
             detailsEl.appendChild(summaryEl);
 
             const contentEl = document.createElement('pre');
