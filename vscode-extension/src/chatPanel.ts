@@ -3335,7 +3335,7 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                     typingIndicator.textContent = 'Using tool: ' + message.tool + '...';
                     typingIndicator.classList.add('visible');
                     // v1.12.0: Collapsible tool call details (matches TUI compact display)
-                    addToolMessage('tool-call', '🔧 Calling tool: ' + message.tool, JSON.stringify(message.arguments, null, 2));
+                    addToolMessageCollapsible('tool-call', '🔧 Calling tool: ' + message.tool, JSON.stringify(message.arguments, null, 2));
 
                     // BUGFIX: Strip tool call JSON from current response content
                     // When Gemini includes tool JSON in its response, remove it from display
@@ -3361,7 +3361,7 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                         ? (message.result.length > 2000 ? message.result.slice(0, 2000) + '...' : message.result)
                         : JSON.stringify(message.result, null, 2);
                     // v1.12.0: Collapsible tool result details (matches TUI compact display)
-                    addToolMessage('tool-result', '📋 Result from ' + message.tool, resultPreview);
+                    addToolMessageCollapsible('tool-result', '📋 Result from ' + message.tool, resultPreview);
                     break;
 
                 case 'contextInjected':
@@ -3635,7 +3635,7 @@ A: Use \`/tools disable\` or choose "never" when prompted.
         }
 
         // v1.12.0: Add collapsible tool message (matches TUI compact display)
-        function addToolMessage(role, summary, details) {
+        function addToolMessageCollapsible(role, summary, details) {
             const now = new Date();
             const el = document.createElement('div');
             el.className = 'message ' + role;
@@ -3649,28 +3649,34 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             // Update last message time
             lastMessageTime = now;
 
-            // Add collapsible content with <details>
-            const detailsEl = document.createElement('details');
-            detailsEl.className = 'tool-details';
+            // Create collapsible structure using a clickable header
+            const headerEl = document.createElement('div');
+            headerEl.className = 'tool-header';
+            headerEl.style.cursor = 'pointer';
+            headerEl.style.userSelect = 'none';
 
-            const summaryEl = document.createElement('summary');
-            summaryEl.className = 'tool-summary';
-            // Build summary with arrow span for rotation on open
-            const arrowSpan = document.createElement('span');
-            arrowSpan.className = 'tool-arrow';
-            arrowSpan.textContent = '▶';
-            summaryEl.appendChild(arrowSpan);
-            summaryEl.appendChild(document.createTextNode(' ' + summary));
-            detailsEl.appendChild(summaryEl);
+            const arrowEl = document.createElement('span');
+            arrowEl.className = 'tool-arrow';
+            arrowEl.textContent = '▶ ';
+            headerEl.appendChild(arrowEl);
+            headerEl.appendChild(document.createTextNode(summary));
 
             const contentEl = document.createElement('pre');
             contentEl.className = 'tool-content';
+            contentEl.style.display = 'none';  // Start collapsed
             const codeEl = document.createElement('code');
             codeEl.textContent = details;
             contentEl.appendChild(codeEl);
-            detailsEl.appendChild(contentEl);
 
-            el.appendChild(detailsEl);
+            // Toggle on click
+            headerEl.addEventListener('click', function() {
+                const isHidden = contentEl.style.display === 'none';
+                contentEl.style.display = isHidden ? 'block' : 'none';
+                arrowEl.textContent = isHidden ? '▼ ' : '▶ ';
+            });
+
+            el.appendChild(headerEl);
+            el.appendChild(contentEl);
             messagesContainer.insertBefore(el, typingIndicator);
             scrollToBottom();
             return el;
