@@ -137,9 +137,11 @@ class EngineClient:
             }
 
             # v1.11.9: Load agent configuration
+            # v1.12.0: Added max_tool_iterations for inner tool loop
             agent_config = full_config.get("tools", {}).get("agent", {})
             self._agent_config = {
                 "max_iterations": agent_config.get("max_iterations", 10),
+                "max_tool_iterations": agent_config.get("max_tool_iterations", 15),
                 "context_char_limit": agent_config.get("context_char_limit", 2000),
                 "min_task_words": agent_config.get("min_task_words", 3),
             }
@@ -168,8 +170,10 @@ class EngineClient:
                 ],
             }
             # v1.11.9: Default agent configuration
+            # v1.12.0: Added max_tool_iterations
             self._agent_config = {
                 "max_iterations": 10,
+                "max_tool_iterations": 15,
                 "context_char_limit": 2000,
                 "min_task_words": 3,
             }
@@ -379,6 +383,8 @@ class EngineClient:
         if not self.tools_enabled:
             # Register all built-in tools (including file editing tools v1.11.0)
             register_all_builtin_tools(self.tool_manager, self.provider_name, engine=self)
+            # v1.12.0: Apply configurable max_tool_iterations
+            self.tool_manager.max_iterations = self._agent_config.get("max_tool_iterations", 15)
             self.tools_enabled = True
         return True
 
