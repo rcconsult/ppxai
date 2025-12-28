@@ -278,14 +278,17 @@ Response: {"ok": true, "backend": "git"}
 ### Commits on Feature Branch
 
 ```
-4881725 feat: Add STATUS event type for checkpoint notifications
-7177459 docs: Add comprehensive checkpoint system user guide
-90a5dc7 docs: Add /undo command to help text and autocomplete
-87e6f37 feat: Add checkpoint system integration tests (28 tests)
-d8e3f4e docs: Add VSCode checkpoint UI specification
-ba52f08 feat: Integrate checkpoint system into EngineClient and TUI
-5ac3c3a feat: Add HTTP API endpoints for checkpoint operations
-3f2a7b1 feat: Implement checkpoint system with git and file backends
+5043df2 fix(v1.12.0): Fix auto-commit timing in async generator flow
+3d96cf6 fix(v1.12.0): Initialize checkpoint manager on TUI startup
+fd28a70 fix(v1.12.0): Align TUI /undo with VSCode extension behavior
+0930961 feat(v1.12.0): Fix checkpoint undo with auto-commit after agent tasks
+5fb5a82 docs(v1.12.0): Document interrupt handling improvements
+2fc374e feat(v1.12.0): Add robust interrupt handling with automatic rollback
+7548620 docs: Add comprehensive v1.12.0 release notes
+619184a feat: Add STATUS event type for checkpoint notifications
+349f9b8 docs: Add comprehensive checkpoint system user guide
+b592837 docs: Add /undo command to help text and autocomplete
+... (earlier commits)
 ```
 
 ---
@@ -508,6 +511,12 @@ You: /agent update dependencies
    - ✅ Git backend offers working directory cleanup
    - ✅ Clear user feedback throughout process
    - ✅ No more dirty state after interrupts
+
+2. **TUI/VSCode Parity (FIXED)**
+   - ✅ TUI `/undo` works regardless of agent mode (same as VSCode)
+   - ✅ TUI `/undo` checks for dirty working tree before undo
+   - ✅ Checkpoint manager initialized on startup (not just on set_working_dir)
+   - ✅ Auto-commit happens correctly in async generator flow
 
 ---
 
