@@ -2331,8 +2331,48 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             background: var(--vscode-editorHint-background, rgba(238, 238, 238, 0.1));
             border-left: 3px solid var(--vscode-editorHint-foreground, #6c6c6c);
             font-size: 12px;
+        }
+
+        /* v1.12.0: Collapsible tool details (matches TUI compact display) */
+        .tool-details {
+            margin: 0;
+        }
+
+        .tool-summary {
+            cursor: pointer;
+            padding: 4px 0;
+            user-select: none;
+            list-style: none;
+        }
+
+        .tool-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .tool-summary::before {
+            content: '▶ ';
+            font-size: 10px;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .tool-details[open] .tool-summary::before {
+            content: '▼ ';
+        }
+
+        .tool-content {
+            margin: 8px 0 4px 16px;
+            padding: 8px;
+            background: var(--vscode-editor-background);
+            border-radius: 4px;
+            font-size: 11px;
             max-height: 200px;
             overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .tool-content code {
+            font-family: var(--vscode-editor-font-family, monospace);
         }
 
         /* VSCode-style Markdown rendering */
@@ -3293,7 +3333,8 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                 case 'toolCall':
                     typingIndicator.textContent = 'Using tool: ' + message.tool + '...';
                     typingIndicator.classList.add('visible');
-                    addMessage('tool-call', '🔧 **Calling tool:** \`' + message.tool + '\`\\n\`\`\`json\\n' + JSON.stringify(message.arguments, null, 2) + '\\n\`\`\`', true);
+                    // v1.12.0: Collapsible tool call details (matches TUI compact display)
+                    addToolMessage('tool-call', '🔧 Calling tool: ' + message.tool, JSON.stringify(message.arguments, null, 2));
 
                     // BUGFIX: Strip tool call JSON from current response content
                     // When Gemini includes tool JSON in its response, remove it from display
@@ -3318,7 +3359,8 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                     const resultPreview = typeof message.result === 'string'
                         ? (message.result.length > 2000 ? message.result.slice(0, 2000) + '...' : message.result)
                         : JSON.stringify(message.result, null, 2);
-                    addMessage('tool-result', '📋 **Result from** \`' + message.tool + '\`:\\n\`\`\`\\n' + resultPreview + '\\n\`\`\`', true);
+                    // v1.12.0: Collapsible tool result details (matches TUI compact display)
+                    addToolMessage('tool-result', '📋 Result from ' + message.tool, resultPreview);
                     break;
 
                 case 'contextInjected':
@@ -3586,6 +3628,43 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             }
             el.appendChild(contentEl);
 
+            messagesContainer.insertBefore(el, typingIndicator);
+            scrollToBottom();
+            return el;
+        }
+
+        // v1.12.0: Add collapsible tool message (matches TUI compact display)
+        function addToolMessage(role, summary, details) {
+            const now = new Date();
+            const el = document.createElement('div');
+            el.className = 'message ' + role;
+
+            // Add timestamp
+            const timestamp = document.createElement('span');
+            timestamp.className = 'message-timestamp';
+            timestamp.textContent = formatTimestamp();
+            el.appendChild(timestamp);
+
+            // Update last message time
+            lastMessageTime = now;
+
+            // Add collapsible content with <details>
+            const detailsEl = document.createElement('details');
+            detailsEl.className = 'tool-details';
+
+            const summaryEl = document.createElement('summary');
+            summaryEl.className = 'tool-summary';
+            summaryEl.textContent = summary;
+            detailsEl.appendChild(summaryEl);
+
+            const contentEl = document.createElement('pre');
+            contentEl.className = 'tool-content';
+            const codeEl = document.createElement('code');
+            codeEl.textContent = details;
+            contentEl.appendChild(codeEl);
+            detailsEl.appendChild(contentEl);
+
+            el.appendChild(detailsEl);
             messagesContainer.insertBefore(el, typingIndicator);
             scrollToBottom();
             return el;
