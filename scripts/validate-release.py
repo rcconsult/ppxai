@@ -47,7 +47,8 @@ def validate_release(version: str) -> bool:
         },
         {
             "file": "ROADMAP.md",
-            "pattern": r"##\s+Current Release:\s+v{version}",
+            # Pattern: > **Current Version**: v1.12.0 (December 2025)
+            "pattern": r">\s+\*\*Current Version\*\*:\s+v{version}",
             "critical": True,
         },
         {
@@ -61,14 +62,23 @@ def validate_release(version: str) -> bool:
             "pattern": r"ppxai-{version}\.vsix",
             "critical": True,
         },
-        {
-            "file": "README.md",
-            "pattern": r"What's New in v{version}",
-            "critical": True,
-        },
+        # NOTE: "What's New" check removed - README.md is project overview, not changelog
+        # Version-specific changes go in docs/RELEASE-NOTES-v{version}.md
         {
             "file": "vscode-extension/README.md",
             "pattern": r"ppxai-{version}\.vsix",
+            "critical": True,
+        },
+        # CHANGELOG must have entry for this version
+        {
+            "file": "CHANGELOG.md",
+            "pattern": r"##\s+\[{version}\]\s+-\s+\d{{4}}-\d{{2}}-\d{{2}}",
+            "critical": True,
+        },
+        # event_handler.py has version in welcome message
+        {
+            "file": "ppxai/common/event_handler.py",
+            "pattern": r"Version:\s+v{version}",
             "critical": True,
         },
     ]

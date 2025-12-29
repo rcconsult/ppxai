@@ -25,13 +25,15 @@ The script handles everything automatically:
    - vscode-extension/README.md (vsix references)
    - CLAUDE.md (current version + version alignment)
    - ROADMAP.md (current release)
-3. ✅ Creates release notes template if missing
-4. ✅ Runs tests
-5. ✅ Creates commit and tag
-6. ✅ Pushes to GitHub
-7. ✅ Waits for CI to complete
-8. ✅ Publishes release notes to GitHub release
-9. ✅ Verifies all assets are present
+3. ✅ Validates all version references with validate-release.py
+4. ✅ Creates release notes template if missing
+5. ✅ Runs tests
+6. ✅ Creates commit and tag
+7. ✅ Pushes to GitHub
+8. ✅ Waits for CI to complete
+9. ✅ Publishes release notes to GitHub release
+10. ✅ Builds Intel Mac assets (auto-detects platform)
+11. ✅ Verifies all assets are present
 
 ## Script Options
 
@@ -80,12 +82,9 @@ python scripts/release.py v1.11.7 --redo --force
 
 ## After Running
 
-1. **Intel Mac builds** - If you're on macOS with Intel, run:
-   ```bash
-   ./scripts/build-intel.sh v{version}
-   ```
+1. **Verify the release** - Check https://github.com/rcconsult/ppxai/releases/tag/v{version}
 
-2. **Verify the release** - Check https://github.com/rcconsult/ppxai/releases/tag/v{version}
+Note: Intel Mac builds are now automatic. If you run the release on an Intel Mac, the script will detect the platform and build/upload the Intel binaries automatically.
 
 ## Manual Override
 

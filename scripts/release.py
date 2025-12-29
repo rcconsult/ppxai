@@ -3,14 +3,17 @@
 Automated release script for ppxai.
 
 This script handles the complete release process:
-1. Validate version format (3-part semantic versioning)
+1. Check git status (clean working directory)
 2. Update all version references across the codebase
-3. Run tests
-4. Create release commit and tag
-5. Push to GitHub and trigger CI
-6. Wait for CI to complete
-7. Publish release notes
-8. Verify release assets
+3. Validate version references with validate-release.py
+4. Check/create release notes template
+5. Run tests
+6. Create release commit
+7. Push to GitHub and trigger CI
+8. Wait for CI to complete
+9. Publish release notes to GitHub
+10. Build Intel Mac assets (auto-detects platform)
+11. Verify release assets
 
 Usage:
     python scripts/release.py v1.11.8
@@ -66,8 +69,9 @@ DOC_FILES = {
         "version_alignment_pattern": r'- Python package \(pyproject\.toml\): v[\d.]+\n- VSCode extension \(package\.json\): v[\d.]+\n- Git tag: v[\d.]+ \(released [\d-]+\)\n- GitHub Release: https://github\.com/rcconsult/ppxai/releases/tag/v[\d.]+',
     },
     "ROADMAP.md": {
-        "current_release_pattern": r'## Current Release: v[\d.]+',
-        "current_release_replacement": '## Current Release: v{version}',
+        # Pattern matches: > **Current Version**: v1.11.9 (December 2025)
+        "current_release_pattern": r'> \*\*Current Version\*\*: v[\d.]+ \([^)]+\)',
+        "current_release_replacement": '> **Current Version**: v{version} ({month} {year})',
     },
 }
 
@@ -328,6 +332,32 @@ def run_tests() -> bool:
     return False
 
 
+def run_validation(version: str) -> bool:
+    """Run validate-release.py to ensure all files are correctly updated."""
+    print("\n🔍 Validating version references...")
+
+    # Import and run validation inline (avoid subprocess for better error messages)
+    validate_script = PROJECT_ROOT / "scripts/validate-release.py"
+    if not validate_script.exists():
+        print("  ⚠️  validate-release.py not found, skipping validation")
+        return True
+
+    # Run validation script
+    result = run_command(f"python3 {validate_script} v{version}", check=False)
+
+    if result.returncode == 0:
+        print("  ✅ All version references validated")
+        return True
+    else:
+        # Check if only git-dirty error (that's expected at this point)
+        if "Git working directory is not clean" in result.stdout and result.stdout.count("- ") == 1:
+            print("  ✅ All version references validated (git dirty expected)")
+            return True
+        print("  ❌ Validation failed!")
+        print(result.stdout)
+        return False
+
+
 def create_commit(version: str, message: str) -> bool:
     """Create release commit. Returns True if commit was created, False if nothing to commit."""
     run_command("git add -A")
@@ -521,6 +551,39 @@ def publish_release_notes(version: str, max_retries: int = 12):
             return
 
 
+def is_macos_intel() -> bool:
+    """Check if running on macOS Intel (x86_64)."""
+    import platform
+    return platform.system() == "Darwin" and platform.machine() == "x86_64"
+
+
+def build_intel_assets(version: str) -> bool:
+    """Build and upload Intel Mac assets if on Intel Mac platform.
+
+    Returns True if build was successful or skipped (non-Intel platform).
+    Returns False if build failed.
+    """
+    build_script = PROJECT_ROOT / "scripts/build-intel.sh"
+
+    if not build_script.exists():
+        print(f"  ⚠️  build-intel.sh not found, skipping Intel build")
+        return True
+
+    # The script auto-detects platform and exits gracefully if not Intel Mac
+    result = run_command(f'bash "{build_script}" v{version}', check=False)
+
+    if result.returncode == 0:
+        # Check if it actually built (vs graceful skip)
+        if "Skipping macOS Intel build" in result.stdout:
+            print(f"  ⏭️  Not on macOS Intel - Intel build skipped")
+        else:
+            print(f"  ✅ Intel Mac assets built and uploaded")
+        return True
+    else:
+        print(f"  ❌ Intel build failed: {result.stderr or result.stdout}")
+        return False
+
+
 def verify_release(version: str) -> bool:
     """Verify release has all expected assets."""
     token_cmd = get_gh_token_cmd()
@@ -601,8 +664,8 @@ def main():
     date = datetime.now().strftime("%Y-%m-%d")
 
     # Calculate total steps based on flags
-    # Base steps: Git check, Update versions, Release notes, Tests, Commit, Push, CI wait, Publish notes, Verify = 9
-    total_steps = 9
+    # Base steps: Git check, Update versions, Validate, Release notes, Tests, Commit, Push, CI wait, Publish notes, Intel build, Verify = 11
+    total_steps = 11
     if args.redo:
         total_steps += 1  # Add "Delete existing release" step
     if args.skip_tests:
@@ -692,26 +755,37 @@ def main():
     # Update CLAUDE.md
     update_claude_md(version, date)
 
-    # Update ROADMAP.md current release
+    # Update ROADMAP.md current version
     roadmap_path = PROJECT_ROOT / "ROADMAP.md"
     if roadmap_path.exists():
         content = roadmap_path.read_text()
+        # Pattern: > **Current Version**: v1.11.9 (December 2025)
+        month_year = datetime.now().strftime("%B %Y")  # e.g., "December 2025"
         content = re.sub(
-            r'## Current Release: v[\d.]+',
-            f'## Current Release: v{version}',
+            r'> \*\*Current Version\*\*: v[\d.]+ \([^)]+\)',
+            f'> **Current Version**: v{version} ({month_year})',
             content
         )
         roadmap_path.write_text(content)
         print(f"  ✅ Updated: ROADMAP.md")
     record_step("Update Versions")
 
-    # Step 3: Check/create release notes
+    # Step 3: Validate all version references
+    step += 1
+    print_step(step, total_steps, "Validating Version References")
+    if not run_validation(version):
+        print(f"\n❌ Validation failed. Some files may not have been updated correctly.")
+        print(f"   Run: python scripts/validate-release.py v{version}")
+        sys.exit(1)
+    record_step("Validation")
+
+    # Step 4: Check/create release notes
     step += 1
     print_step(step, total_steps, "Checking Release Notes")
     create_release_notes(version, date)
     record_step("Release Notes")
 
-    # Step 4: Run tests
+    # Step 5: Run tests
     if not args.skip_tests:
         step += 1
         print_step(step, total_steps, "Running Tests")
@@ -720,19 +794,19 @@ def main():
             sys.exit(1)
         record_step("Tests")
 
-    # Step 5: Create commit
+    # Step 6: Create commit
     step += 1
     print_step(step, total_steps, "Creating Release Commit")
     create_commit(version, f"feat: v{version} release")
     record_step("Commit")
 
-    # Step 6: Create and push tag
+    # Step 7: Create and push tag
     step += 1
     print_step(step, total_steps, "Pushing to GitHub")
     create_and_push_tag(version)
     record_step("Push")
 
-    # Step 7: Wait for CI
+    # Step 8: Wait for CI
     if not args.skip_ci_wait:
         step += 1
         print_step(step, total_steps, "Waiting for CI")
@@ -741,13 +815,20 @@ def main():
             print(f"    Check: https://github.com/rcconsult/ppxai/actions")
         record_step("CI Wait")
 
-    # Step 8: Publish release notes
+    # Step 9: Publish release notes
     step += 1
     print_step(step, total_steps, "Publishing Release Notes")
     publish_release_notes(version)
     record_step("Publish Notes")
 
-    # Step 9: Verify release
+    # Step 10: Build Intel Mac assets (auto-detects platform)
+    step += 1
+    print_step(step, total_steps, "Building Intel Mac Assets")
+    if not build_intel_assets(version):
+        print(f"\n⚠️  Intel build failed, but release continues")
+    record_step("Intel Build")
+
+    # Step 11: Verify release
     step += 1
     print_step(step, total_steps, "Verifying Release")
     verify_release(version)

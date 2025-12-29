@@ -1341,6 +1341,374 @@
           "iteration": 3
         }
       ]
+    },
+    {
+      "timestamp": "2025-12-29T18:37:34.103276",
+      "version": "1.11.9",
+      "git_commit": "266ab94",
+      "git_branch": "feature/agent-multi-file-atomic-edit",
+      "provider": "mock",
+      "model": "mock-model",
+      "summary": {
+        "total_runs": 9,
+        "successful_runs": 9,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 229.93,
+          "min": 156.67,
+          "max": 270.66,
+          "stdev": 44.43
+        },
+        "total_ms": {
+          "mean": 1297.91,
+          "min": 647.82,
+          "max": 1972.22,
+          "stdev": 458.47
+        },
+        "tokens_per_sec": {
+          "mean": 44.72,
+          "min": 17.7,
+          "max": 98.89
+        }
+      },
+      "detailed_results": [
+        {
+          "prompt_type": "simple",
+          "iteration": 1,
+          "ttft_ms": 160.69,
+          "total_ms": 1972.22,
+          "tokens": 43,
+          "tokens_per_sec": 21.8
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 2,
+          "ttft_ms": 156.67,
+          "total_ms": 890.78,
+          "tokens": 68,
+          "tokens_per_sec": 76.34
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 3,
+          "ttft_ms": 224.83,
+          "total_ms": 647.82,
+          "tokens": 37,
+          "tokens_per_sec": 57.11
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 1,
+          "ttft_ms": 218.18,
+          "total_ms": 1412.72,
+          "tokens": 25,
+          "tokens_per_sec": 17.7
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 2,
+          "ttft_ms": 250.94,
+          "total_ms": 1393.34,
+          "tokens": 29,
+          "tokens_per_sec": 20.81
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 3,
+          "ttft_ms": 266.79,
+          "total_ms": 748.34,
+          "tokens": 74,
+          "tokens_per_sec": 98.89
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 1,
+          "ttft_ms": 251.13,
+          "total_ms": 1240.43,
+          "tokens": 63,
+          "tokens_per_sec": 50.79
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 2,
+          "ttft_ms": 269.44,
+          "total_ms": 1746.42,
+          "tokens": 57,
+          "tokens_per_sec": 32.64
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 3,
+          "ttft_ms": 270.66,
+          "total_ms": 1629.15,
+          "tokens": 43,
+          "tokens_per_sec": 26.39
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-12-29T18:41:17.510356",
+      "version": "1.11.9",
+      "git_commit": "266ab94",
+      "git_branch": "feature/agent-multi-file-atomic-edit",
+      "provider": "perplexity",
+      "model": "sonar-pro",
+      "summary": {
+        "total_runs": 9,
+        "successful_runs": 9,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 18085.29,
+          "min": 1656.52,
+          "max": 22845.99,
+          "stdev": 9125.28
+        },
+        "total_ms": {
+          "mean": 19679.14,
+          "min": 3935.24,
+          "max": 24776.35,
+          "stdev": 8837.16
+        },
+        "tokens_per_sec": {
+          "mean": 23.71,
+          "min": 5.42,
+          "max": 77.99
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 2330.54,
+          "total_ms": 4295.55,
+          "tokens": 335,
+          "tokens_per_sec": 77.99,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 22845.99,
+          "total_ms": 24769.02,
+          "tokens": 321,
+          "tokens_per_sec": 12.96,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 22601.72,
+          "total_ms": 23364.7,
+          "tokens": 142,
+          "tokens_per_sec": 6.08,
+          "prompt_type": "simple",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 22668.06,
+          "total_ms": 23976.86,
+          "tokens": 130,
+          "tokens_per_sec": 5.42,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 22650.27,
+          "total_ms": 23609.47,
+          "tokens": 129,
+          "tokens_per_sec": 5.46,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 22700.45,
+          "total_ms": 23960.5,
+          "tokens": 232,
+          "tokens_per_sec": 9.68,
+          "prompt_type": "medium",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 22806.15,
+          "total_ms": 24424.53,
+          "tokens": 234,
+          "tokens_per_sec": 9.58,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1656.52,
+          "total_ms": 3935.24,
+          "tokens": 296,
+          "tokens_per_sec": 75.22,
+          "prompt_type": "complex",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 22507.89,
+          "total_ms": 24776.35,
+          "tokens": 272,
+          "tokens_per_sec": 10.98,
+          "prompt_type": "complex",
+          "iteration": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-12-29T18:47:43.926757",
+      "version": "1.11.9",
+      "git_commit": "266ab94",
+      "git_branch": "feature/agent-multi-file-atomic-edit",
+      "provider": "perplexity",
+      "model": "sonar-pro",
+      "summary": {
+        "total_runs": 6,
+        "successful_runs": 6,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 1415.54,
+          "min": 1214.14,
+          "max": 2008.57,
+          "stdev": 307.97
+        },
+        "total_ms": {
+          "mean": 3078.85,
+          "min": 2114.51,
+          "max": 3997.11,
+          "stdev": 708.23
+        },
+        "tokens_per_sec": {
+          "mean": 70.09,
+          "min": 48.24,
+          "max": 97.1
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 2008.57,
+          "total_ms": 3997.11,
+          "tokens": 305,
+          "tokens_per_sec": 76.31,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1214.14,
+          "total_ms": 3522.23,
+          "tokens": 342,
+          "tokens_per_sec": 97.1,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 1266.71,
+          "total_ms": 2114.51,
+          "tokens": 102,
+          "tokens_per_sec": 48.24,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1244.6,
+          "total_ms": 2638.22,
+          "tokens": 146,
+          "tokens_per_sec": 55.34,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 1261.21,
+          "total_ms": 2686.33,
+          "tokens": 206,
+          "tokens_per_sec": 76.68,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1497.98,
+          "total_ms": 3514.7,
+          "tokens": 235,
+          "tokens_per_sec": 66.86,
+          "prompt_type": "complex",
+          "iteration": 2
+        }
+      ]
+    },
+    {
+      "timestamp": "2025-12-29T18:48:07.889254",
+      "version": "1.11.9",
+      "git_commit": "266ab94",
+      "git_branch": "feature/agent-multi-file-atomic-edit",
+      "provider": "gemini",
+      "model": "gemini-2.0-flash",
+      "summary": {
+        "total_runs": 6,
+        "successful_runs": 6,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 620.68,
+          "min": 461.85,
+          "max": 1024.69,
+          "stdev": 208.68
+        },
+        "total_ms": {
+          "mean": 2595.78,
+          "min": 568.08,
+          "max": 7135.02,
+          "stdev": 2867.25
+        },
+        "tokens_per_sec": {
+          "mean": 60.18,
+          "min": 4.87,
+          "max": 93.9
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 1024.69,
+          "total_ms": 1026.76,
+          "tokens": 5,
+          "tokens_per_sec": 4.87,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 565.86,
+          "total_ms": 568.08,
+          "tokens": 5,
+          "tokens_per_sec": 8.8,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 468.5,
+          "total_ms": 776.46,
+          "tokens": 67,
+          "tokens_per_sec": 86.29,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 461.85,
+          "total_ms": 772.19,
+          "tokens": 60,
+          "tokens_per_sec": 77.7,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 566.98,
+          "total_ms": 5296.19,
+          "tokens": 474,
+          "tokens_per_sec": 89.5,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 636.22,
+          "total_ms": 7135.02,
+          "tokens": 670,
+          "tokens_per_sec": 93.9,
+          "prompt_type": "complex",
+          "iteration": 2
+        }
+      ]
     }
   ]
 }

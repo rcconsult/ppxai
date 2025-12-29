@@ -154,6 +154,87 @@ class TestGitCheckpointBackend:
         backend = GitCheckpointBackend(git_repo)
         assert backend.get_backend_name() == "git"
 
+    # v1.12.1: Stale checkpoint detection tests
+
+    def test_is_checkpoint_valid_head(self, git_repo):
+        """Test that checkpoint at HEAD is valid."""
+        backend = GitCheckpointBackend(git_repo)
+
+        # Create a checkpoint
+        (git_repo / "test.txt").write_text("Content\n")
+        checkpoint_id = backend.create_checkpoint("Test checkpoint")
+
+        # Checkpoint is HEAD, should be valid
+        is_valid, reason = backend.is_checkpoint_valid(checkpoint_id)
+        assert is_valid is True
+        assert "HEAD" in reason
+
+    def test_is_checkpoint_valid_head_parent(self, git_repo):
+        """Test that checkpoint at HEAD~1 is valid."""
+        backend = GitCheckpointBackend(git_repo)
+
+        # Create a checkpoint
+        (git_repo / "test.txt").write_text("Content 1\n")
+        checkpoint_id = backend.create_checkpoint("Checkpoint 1")
+
+        # Create another commit to move HEAD forward
+        (git_repo / "test2.txt").write_text("Content 2\n")
+        backend.create_checkpoint("Checkpoint 2")
+
+        # Original checkpoint is now HEAD~1, should still be valid
+        is_valid, reason = backend.is_checkpoint_valid(checkpoint_id)
+        assert is_valid is True
+        assert "HEAD~1" in reason
+
+    def test_is_checkpoint_valid_stale(self, git_repo):
+        """Test that checkpoint older than HEAD~1 is stale (invalid)."""
+        backend = GitCheckpointBackend(git_repo)
+
+        # Create a checkpoint
+        (git_repo / "test.txt").write_text("Content 1\n")
+        checkpoint_id = backend.create_checkpoint("Checkpoint 1")
+
+        # Create two more commits to move HEAD forward
+        (git_repo / "test2.txt").write_text("Content 2\n")
+        backend.create_checkpoint("Checkpoint 2")
+
+        (git_repo / "test3.txt").write_text("Content 3\n")
+        backend.create_checkpoint("Checkpoint 3")
+
+        # Original checkpoint is now HEAD~2, should be invalid (stale)
+        is_valid, reason = backend.is_checkpoint_valid(checkpoint_id)
+        assert is_valid is False
+        assert "stale" in reason.lower()
+
+    def test_is_checkpoint_valid_nonexistent(self, git_repo):
+        """Test that nonexistent checkpoint ID is invalid."""
+        backend = GitCheckpointBackend(git_repo)
+
+        is_valid, reason = backend.is_checkpoint_valid("invalid-hash-1234567890")
+        assert is_valid is False
+        assert "not found" in reason.lower()
+
+    def test_is_checkpoint_valid_empty(self, git_repo):
+        """Test that empty checkpoint ID is invalid."""
+        backend = GitCheckpointBackend(git_repo)
+
+        is_valid, reason = backend.is_checkpoint_valid("")
+        assert is_valid is False
+        assert "no checkpoint" in reason.lower()
+
+    def test_is_checkpoint_valid_short_hash(self, git_repo):
+        """Test validation works with short git hashes."""
+        backend = GitCheckpointBackend(git_repo)
+
+        # Create a checkpoint
+        (git_repo / "test.txt").write_text("Content\n")
+        checkpoint_id = backend.create_checkpoint("Test checkpoint")
+
+        # Use short hash (first 8 chars)
+        short_hash = checkpoint_id[:8]
+        is_valid, reason = backend.is_checkpoint_valid(short_hash)
+        assert is_valid is True
+
 
 class TestFileCheckpointBackend:
     """Test file-based checkpoint backend."""
@@ -329,6 +410,42 @@ class TestFileCheckpointBackend:
         assert snapshot_file.exists()
         assert snapshot_file.read_text() == "Nested content\n"
 
+    # v1.12.1: Stale checkpoint detection tests (file backend)
+
+    def test_is_checkpoint_valid_exists(self, temp_dirs):
+        """Test that existing checkpoint is valid."""
+        working_dir, session_id = temp_dirs
+        backend = FileCheckpointBackend(working_dir, session_id)
+
+        # Create a checkpoint
+        test_file = working_dir / "test.txt"
+        test_file.write_text("Content\n")
+        backend.register_file(test_file)
+        checkpoint_id = backend.create_checkpoint("Test checkpoint")
+
+        # Checkpoint should be valid
+        is_valid, reason = backend.is_checkpoint_valid(checkpoint_id)
+        assert is_valid is True
+        assert "exists" in reason.lower()
+
+    def test_is_checkpoint_valid_nonexistent(self, temp_dirs):
+        """Test that nonexistent checkpoint is invalid."""
+        working_dir, session_id = temp_dirs
+        backend = FileCheckpointBackend(working_dir, session_id)
+
+        is_valid, reason = backend.is_checkpoint_valid("cp-nonexistent")
+        assert is_valid is False
+        assert "not found" in reason.lower()
+
+    def test_is_checkpoint_valid_empty(self, temp_dirs):
+        """Test that empty checkpoint ID is invalid."""
+        working_dir, session_id = temp_dirs
+        backend = FileCheckpointBackend(working_dir, session_id)
+
+        is_valid, reason = backend.is_checkpoint_valid("")
+        assert is_valid is False
+        assert "no checkpoint" in reason.lower()
+
 
 class TestCheckpointManager:
     """Test CheckpointManager with auto-detection."""
@@ -464,6 +581,54 @@ class TestCheckpointManager:
 
             status_desc = manager.get_status_description()
             assert "disabled" in status_desc.lower()
+
+    # v1.12.1: Stale checkpoint detection tests (manager)
+
+    def test_is_checkpoint_valid_with_git(self, git_repo):
+        """Test checkpoint validation through manager with git backend."""
+        manager = CheckpointManager(str(git_repo), "test-session", backend="git")
+
+        # Create a checkpoint
+        (Path(git_repo) / "test.txt").write_text("Content\n")
+        checkpoint_id = manager.create_checkpoint("Test task")
+
+        # Should be valid (HEAD)
+        is_valid, reason = manager.is_checkpoint_valid(checkpoint_id)
+        assert is_valid is True
+
+        # Create another commit to make it HEAD~1
+        (Path(git_repo) / "test2.txt").write_text("Content 2\n")
+        manager.create_checkpoint("Second task")
+
+        # Original should still be valid (HEAD~1)
+        is_valid, reason = manager.is_checkpoint_valid(checkpoint_id)
+        assert is_valid is True
+
+        # Create one more commit to make original stale (HEAD~2)
+        (Path(git_repo) / "test3.txt").write_text("Content 3\n")
+        manager.create_checkpoint("Third task")
+
+        # Original should now be invalid (stale)
+        is_valid, reason = manager.is_checkpoint_valid(checkpoint_id)
+        assert is_valid is False
+        assert "stale" in reason.lower()
+
+    def test_is_checkpoint_valid_disabled(self):
+        """Test checkpoint validation when disabled."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            manager = CheckpointManager(tmpdir, "test-session", backend="none")
+
+            is_valid, reason = manager.is_checkpoint_valid("any-id")
+            assert is_valid is False
+            assert "disabled" in reason.lower()
+
+    def test_is_checkpoint_valid_empty_id(self, git_repo):
+        """Test checkpoint validation with empty ID."""
+        manager = CheckpointManager(str(git_repo), "test-session", backend="git")
+
+        is_valid, reason = manager.is_checkpoint_valid("")
+        assert is_valid is False
+        assert "no checkpoint" in reason.lower()
 
 
 if __name__ == "__main__":

@@ -293,7 +293,22 @@ async def sse_event_generator(prompt: str) -> AsyncGenerator[str, None]:
             await asyncio.sleep(0)
     except Exception as e:
         logger.error(f"Exception in SSE event generator: {e}")
-        yield f"data: {json.dumps({'type': 'error', 'data': str(e)})}\n\n"
+        error_str = str(e)
+        yield f"data: {json.dumps({'type': 'error', 'data': error_str})}\n\n"
+
+        # v1.12.0: Session cleanup for message alternation errors
+        # When we get a 400 error about message alternation, it means the session
+        # has consecutive user messages. Clean up by removing the last user message.
+        if "alternation" in error_str.lower() or "alternate" in error_str.lower():
+            try:
+                messages = engine.session.messages
+                # Find and remove orphan user messages (consecutive user messages at the end)
+                while len(messages) > 1 and messages[-1].role == "user" and messages[-2].role == "user":
+                    removed = messages.pop()
+                    logger.info(f"Session cleanup: removed orphan user message (len={len(removed.content)})")
+                logger.info(f"Session cleaned up, now has {len(messages)} messages")
+            except Exception as cleanup_error:
+                logger.error(f"Session cleanup failed: {cleanup_error}")
 
 
 async def sse_coding_task_generator(
@@ -318,7 +333,18 @@ async def sse_coding_task_generator(
             # Force event loop to flush the response immediately
             await asyncio.sleep(0)
     except Exception as e:
-        yield f"data: {json.dumps({'type': 'error', 'data': str(e)})}\n\n"
+        error_str = str(e)
+        yield f"data: {json.dumps({'type': 'error', 'data': error_str})}\n\n"
+
+        # v1.12.0: Session cleanup for message alternation errors
+        if "alternation" in error_str.lower() or "alternate" in error_str.lower():
+            try:
+                messages = engine.session.messages
+                while len(messages) > 1 and messages[-1].role == "user" and messages[-2].role == "user":
+                    removed = messages.pop()
+                    logger.info(f"Session cleanup: removed orphan user message (len={len(removed.content)})")
+            except Exception as cleanup_error:
+                logger.error(f"Session cleanup failed: {cleanup_error}")
 
 
 # === API Endpoints ===
@@ -910,6 +936,16 @@ async def undo_last_checkpoint():
         raise HTTPException(
             status_code=400,
             detail="No checkpoint to undo (run an agent task first)"
+        )
+
+    # v1.12.1: Check if checkpoint is still valid (not stale)
+    # CRITICAL: Prevents reverting wrong commit when newer commits exist
+    if not status.get("is_valid", True):  # Default to True for backward compat
+        validity_reason = status.get("validity_reason", "Checkpoint is stale")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot undo: {validity_reason}. New commits have been made since the agent task. "
+                   f"Use 'git revert {status.get('last_checkpoint', '')[:8]}' manually if you still want to revert."
         )
 
     # v1.12.0: Check for uncommitted changes before undo (git revert requires clean working tree)

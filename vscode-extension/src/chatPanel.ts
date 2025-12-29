@@ -225,6 +225,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             if (error instanceof Error && error.message === 'Interrupted by user') {
                 // Silent interrupt handling
                 this._view.webview.postMessage({ type: 'endResponse' });
+                await this.updateStatus();  // v1.12.0: Update usage badge after response
                 return;
             }
             this._view.webview.postMessage({
@@ -234,6 +235,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         }
 
         this._view.webview.postMessage({ type: 'endResponse' });
+        await this.updateStatus();  // v1.12.0: Update usage badge after response
     }
 
     /**
@@ -255,6 +257,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         for (const match of matches) {
             const ref = match[1];
             const fullMatch = match[0];
+
+            // Skip special context providers - let backend handle these
+            // @tree = project structure, @git = git diff
+            const specialContextProviders = ['tree', 'git'];
+            if (specialContextProviders.includes(ref.toLowerCase())) {
+                continue;  // Don't treat as file reference
+            }
 
             // Try to resolve the file
             const files = await this.searchFiles(ref, 1);
@@ -1356,6 +1365,7 @@ Review your previous actions and continue. If the task is complete, respond with
             if (error instanceof Error && error.message === 'Interrupted by user') {
                 // Silent interrupt handling
                 this._view.webview.postMessage({ type: 'endResponse' });
+                await this.updateStatus();  // v1.12.0: Update usage badge after response
                 return;
             }
             this._view.webview.postMessage({
@@ -1365,6 +1375,7 @@ Review your previous actions and continue. If the task is complete, respond with
         }
 
         this._view.webview.postMessage({ type: 'endResponse' });
+        await this.updateStatus();  // v1.12.0: Update usage badge after response
     }
 
     private async handleSpecCommand(specType: string) {
@@ -1437,6 +1448,7 @@ Review your previous actions and continue. If the task is complete, respond with
             // Don't show interrupt as error - user initiated it
             if (error instanceof Error && error.message === 'Interrupted by user') {
                 this._view.webview.postMessage({ type: 'endResponse' });
+                await this.updateStatus();  // v1.12.0: Update usage badge after response
                 return;
             }
             this._view.webview.postMessage({
@@ -1446,6 +1458,7 @@ Review your previous actions and continue. If the task is complete, respond with
         }
 
         this._view.webview.postMessage({ type: 'endResponse' });
+        await this.updateStatus();  // v1.12.0: Update usage badge after response
     }
 
     private async showHelp() {
@@ -1687,7 +1700,7 @@ Review your previous actions and continue. If the task is complete, respond with
     }
 
     /**
-     * Handle checkpoint undo (v1.12.0)
+     * Handle checkpoint undo (v1.12.0, v1.12.1: validity check)
      */
     private async handleUndoCheckpoint() {
         if (!this._view) { return; }
@@ -1701,6 +1714,16 @@ Review your previous actions and continue. If the task is complete, respond with
                 this._view.webview.postMessage({
                     type: 'systemMessage',
                     content: '⚠️  No checkpoint to undo'
+                });
+                return;
+            }
+
+            // v1.12.1: Check if checkpoint is still valid (not stale)
+            if (checkpoint.is_valid === false) {
+                const shortId = checkpoint.last_checkpoint.substring(0, 8);
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: `⚠️  Cannot undo: ${checkpoint.validity_reason || 'Checkpoint is stale'}\n\nNew commits have been made since the agent task.\nUse 'git revert ${shortId}' manually if you still want to revert.`
                 });
                 return;
             }
@@ -2056,6 +2079,7 @@ Review your previous actions and continue. If the task is complete, respond with
             if (error instanceof Error && error.message === 'Interrupted by user') {
                 // Silent interrupt handling
                 this._view.webview.postMessage({ type: 'endResponse' });
+                await this.updateStatus();  // v1.12.0: Update usage badge after response
                 return;
             }
             this._view?.webview.postMessage({
@@ -2065,6 +2089,7 @@ Review your previous actions and continue. If the task is complete, respond with
         }
 
         this._view.webview.postMessage({ type: 'endResponse' });
+        await this.updateStatus();  // v1.12.0: Update usage badge after response
     }
 
     public async updateStatus() {
@@ -2418,6 +2443,14 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             cursor: not-allowed;
         }
 
+        /* v1.12.1: Stale checkpoint - red disabled state */
+        .undo-badge.stale {
+            background: var(--vscode-errorForeground, #f44336);
+            color: var(--vscode-editor-background);
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
         /* Usage badge - v1.12.0 */
         .usage-badge {
             background: var(--vscode-badge-background);
@@ -2593,6 +2626,7 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             max-width: 95%;
             line-height: 1.5;
             position: relative;  /* Required for timestamp absolute positioning */
+            overflow-x: auto;  /* v1.12.0: Prevent table overflow */
         }
 
         .message-timestamp {
@@ -2774,12 +2808,15 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             border-collapse: collapse;
             margin: 12px 0;
             width: 100%;
+            display: block;
+            overflow-x: auto;  /* v1.12.0: Horizontal scroll for wide tables */
         }
 
         .message th, .message td {
             border: 1px solid var(--vscode-panel-border);
             padding: 6px 12px;
             text-align: left;
+            white-space: nowrap;  /* v1.12.0: Prevent cell content wrapping */
         }
 
         .message th {
@@ -2787,7 +2824,7 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             font-weight: 600;
         }
 
-        .message tr:nth-child(even) {
+        .message tr:nth-child(even) td {
             background: var(--vscode-list-hoverBackground);
         }
 
@@ -2910,6 +2947,13 @@ A: Use \`/tools disable\` or choose "never" when prompted.
         #messageInput:focus {
             outline: none;
             border-color: var(--vscode-focusBorder);
+        }
+
+        /* v1.12.0: Disabled input state during streaming/consent */
+        #messageInput:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background: var(--vscode-input-background);
         }
 
         #sendBtn {
@@ -3489,7 +3533,10 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             vscode.postMessage({ type: 'chat', content });
             messageInput.value = '';
             messageInput.style.height = 'auto';
+            // v1.12.0: Disable BOTH input and button to prevent concurrent requests
             sendBtn.disabled = true;
+            messageInput.disabled = true;
+            messageInput.placeholder = 'Waiting for response...';
         }
 
         sendBtn.addEventListener('click', sendMessage);
@@ -3584,10 +3631,11 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             vscode.postMessage({ type: 'toggleAgent', enable: !isEnabled });
         });
 
-        // Undo badge click handler - undo last checkpoint (v1.12.0)
+        // Undo badge click handler - undo last checkpoint (v1.12.0, v1.12.1: stale check)
         const undoBadge = document.getElementById('undoBadge');
         undoBadge.addEventListener('click', () => {
-            if (!undoBadge.classList.contains('disabled')) {
+            // Block clicks on disabled (no checkpoint) or stale checkpoints
+            if (!undoBadge.classList.contains('disabled') && !undoBadge.classList.contains('stale')) {
                 vscode.postMessage({ type: 'undoCheckpoint' });
             }
         });
@@ -3633,7 +3681,10 @@ A: Use \`/tools disable\` or choose "never" when prompted.
 
                 case 'systemMessage':
                     addMessage('system', message.content, true);
+                    // v1.12.0: Re-enable input after system message (e.g., /help, /status)
                     sendBtn.disabled = false;
+                    messageInput.disabled = false;
+                    messageInput.placeholder = 'Ask anything or type / for commands...';
                     break;
 
                 case 'toolCall':
@@ -3717,7 +3768,10 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                 case 'endResponse':
                     typingIndicator.classList.remove('visible');
                     streamingBadge.style.display = 'none';  // Hide streaming indicator
+                    // v1.12.0: Re-enable input after response completes
                     sendBtn.disabled = false;
+                    messageInput.disabled = false;
+                    messageInput.placeholder = 'Ask anything or type / for commands...';
                     // Full markdown render with syntax highlighting at the end
                     fullRender(true);
                     // Save last assistant message for export
@@ -3731,7 +3785,10 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                     typingIndicator.classList.remove('visible');
                     streamingBadge.style.display = 'none';  // Hide streaming indicator
                     addMessage('error', message.content, false);
+                    // v1.12.0: Re-enable input after error
                     sendBtn.disabled = false;
+                    messageInput.disabled = false;
+                    messageInput.placeholder = 'Ask anything or type / for commands...';
                     break;
 
                 case 'status':
@@ -3805,16 +3862,27 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                                 agentBadgeEl.title = 'Agent mode ON (Checkpoints: DISABLED)\\n• Changes CANNOT be undone\\n• Initialize git repo to enable checkpoints';
                             }
 
-                            // Update undo button
+                            // Update undo button (v1.12.1: validity-aware styling)
+                            const isValid = message.checkpoint.is_valid !== false;  // Default true for backward compat
+                            undoBadgeEl.classList.remove('enabled', 'disabled', 'stale');
+
                             if (lastCheckpoint) {
-                                undoBadgeEl.classList.add('visible', 'enabled');
-                                undoBadgeEl.classList.remove('disabled');
                                 const shortId = lastCheckpoint.length > 8 ? lastCheckpoint.substring(0, 8) : lastCheckpoint;
-                                undoBadgeEl.title = \`Undo Last Agent Task\\nCheckpoint: \${shortId} (\${backend})\`;
-                            } else {
                                 undoBadgeEl.classList.add('visible');
-                                undoBadgeEl.classList.remove('enabled');
-                                undoBadgeEl.classList.add('disabled');
+
+                                if (isValid) {
+                                    // Valid checkpoint: blue enabled
+                                    undoBadgeEl.classList.add('enabled');
+                                    undoBadgeEl.title = \`Undo Last Agent Task\\nCheckpoint: \${shortId} (\${backend})\`;
+                                } else {
+                                    // Stale checkpoint: red disabled
+                                    undoBadgeEl.classList.add('stale');
+                                    const reason = message.checkpoint.validity_reason || 'Checkpoint is stale';
+                                    undoBadgeEl.title = \`Cannot Undo: \${reason}\\nCheckpoint: \${shortId} (STALE)\\nUse 'git revert \${shortId}' manually if needed\`;
+                                }
+                            } else {
+                                // No checkpoint: grey disabled
+                                undoBadgeEl.classList.add('visible', 'disabled');
                                 undoBadgeEl.title = 'No checkpoint to undo';
                             }
                         } else {
@@ -3830,8 +3898,8 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                         agentBadgeEl.classList.remove('enabled', 'checkpoint-git', 'checkpoint-file', 'checkpoint-none');
                         agentBadgeEl.title = 'Click to enable agent mode';
 
-                        // Hide undo button when agent is off
-                        undoBadgeEl.classList.remove('visible', 'enabled');
+                        // Hide undo button when agent is off (v1.12.1: also clear stale class)
+                        undoBadgeEl.classList.remove('visible', 'enabled', 'stale');
                         undoBadgeEl.classList.add('disabled');
                     }
                     break;

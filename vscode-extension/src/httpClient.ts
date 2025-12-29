@@ -807,7 +807,7 @@ export class HttpClient {
     // === Agent Mode (v1.11.8) ===
 
     /**
-     * Get agent mode status (v1.11.8, v1.12.0: added checkpoint info)
+     * Get agent mode status (v1.11.8, v1.12.0: checkpoint info, v1.12.1: validity check)
      */
     async getAgentStatus(): Promise<{
         agent_mode: boolean;
@@ -816,6 +816,8 @@ export class HttpClient {
             enabled: boolean;
             backend: 'git' | 'file' | 'none';
             last_checkpoint: string | null;
+            is_valid: boolean;  // v1.12.1: Whether checkpoint is still valid
+            validity_reason: string;  // v1.12.1: Why checkpoint is valid/invalid
             status_description: string;
         };
     }> {
@@ -830,6 +832,8 @@ export class HttpClient {
                 enabled: boolean;
                 backend: 'git' | 'file' | 'none';
                 last_checkpoint: string | null;
+                is_valid: boolean;
+                validity_reason: string;
                 status_description: string;
             };
         }>;

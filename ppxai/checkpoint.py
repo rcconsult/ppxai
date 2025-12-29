@@ -66,6 +66,53 @@ class GitCheckpointBackend(CheckpointBackend):
         git_dir = self.working_dir / ".git"
         return git_dir.exists() and git_dir.is_dir()
 
+    def is_checkpoint_valid(self, checkpoint_id: str) -> Tuple[bool, str]:
+        """Check if a checkpoint is still valid (not stale).
+
+        A checkpoint is valid if:
+        - It is HEAD (the current commit)
+        - It is HEAD~1 (the parent of the current commit)
+
+        This prevents reverting old commits that have been superseded by newer work.
+
+        Args:
+            checkpoint_id: The commit hash to validate
+
+        Returns:
+            Tuple of (is_valid: bool, reason: str)
+        """
+        if not checkpoint_id:
+            return False, "No checkpoint ID provided"
+
+        try:
+            # Get HEAD commit
+            result = self._run_git("rev-parse", "HEAD", check=False)
+            if result.returncode != 0:
+                return False, "Could not determine HEAD commit"
+            head_commit = result.stdout.strip()
+
+            # Get HEAD~1 commit (parent)
+            result = self._run_git("rev-parse", "HEAD~1", check=False)
+            parent_commit = result.stdout.strip() if result.returncode == 0 else None
+
+            # Expand short hash to full hash for comparison
+            result = self._run_git("rev-parse", checkpoint_id, check=False)
+            if result.returncode != 0:
+                return False, f"Checkpoint commit {checkpoint_id} not found"
+            full_checkpoint_id = result.stdout.strip()
+
+            # Check if checkpoint is HEAD or HEAD~1
+            if full_checkpoint_id == head_commit:
+                return True, "Checkpoint is HEAD"
+            if parent_commit and full_checkpoint_id == parent_commit:
+                return True, "Checkpoint is HEAD~1"
+
+            # Checkpoint is stale
+            return False, f"Checkpoint is stale: newer commits exist after {checkpoint_id[:8]}"
+
+        except subprocess.CalledProcessError as e:
+            return False, f"Git error: {e}"
+
     def _run_git(self, *args, check=True, capture_output=True) -> subprocess.CompletedProcess:
         """Run a git command in the working directory."""
         return subprocess.run(
@@ -170,6 +217,26 @@ class FileCheckpointBackend(CheckpointBackend):
     def is_available(self) -> bool:
         """File backend is always available."""
         return True
+
+    def is_checkpoint_valid(self, checkpoint_id: str) -> Tuple[bool, str]:
+        """Check if a checkpoint is still valid.
+
+        File-based checkpoints are always valid if the snapshot directory exists.
+        Unlike git, there's no concept of "newer commits" invalidating old snapshots.
+
+        Args:
+            checkpoint_id: The checkpoint ID to validate
+
+        Returns:
+            Tuple of (is_valid: bool, reason: str)
+        """
+        if not checkpoint_id:
+            return False, "No checkpoint ID provided"
+
+        snapshot_dir = self.checkpoint_dir / checkpoint_id
+        if snapshot_dir.exists() and (snapshot_dir / "metadata.txt").exists():
+            return True, "Snapshot exists"
+        return False, f"Snapshot {checkpoint_id} not found"
 
     def register_file(self, file_path: Path):
         """Register a file that will be modified (call before editing)."""
@@ -356,6 +423,27 @@ class CheckpointManager:
             return False
 
         return self.backend.restore_checkpoint(checkpoint_id)
+
+    def is_checkpoint_valid(self, checkpoint_id: str) -> Tuple[bool, str]:
+        """
+        Check if a checkpoint is still valid (not stale).
+
+        For git backend, checks if checkpoint is HEAD or HEAD~1.
+        For file backend, checks if snapshot directory exists.
+
+        Args:
+            checkpoint_id: The checkpoint ID to validate
+
+        Returns:
+            Tuple of (is_valid: bool, reason: str)
+        """
+        if not self.backend:
+            return False, "Checkpointing is disabled"
+
+        if not checkpoint_id:
+            return False, "No checkpoint ID provided"
+
+        return self.backend.is_checkpoint_valid(checkpoint_id)
 
     def list_checkpoints(self) -> List[Tuple[str, str, str]]:
         """

@@ -53,12 +53,24 @@ class OpenAICompatibleProvider(BaseProvider):
 
             if stream:
                 # Streaming response with usage tracking
-                response_stream = self.client.chat.completions.create(
-                    model=model,
-                    messages=api_messages,
-                    stream=True,
-                    stream_options={"include_usage": True}
-                )
+                # Try with stream_options first, fall back if not supported (e.g., vLLM, Ollama)
+                try:
+                    response_stream = self.client.chat.completions.create(
+                        model=model,
+                        messages=api_messages,
+                        stream=True,
+                        stream_options={"include_usage": True}
+                    )
+                except Exception as e:
+                    # Some OpenAI-compatible APIs don't support stream_options
+                    if "stream_options" in str(e).lower() or "unknown" in str(e).lower():
+                        response_stream = self.client.chat.completions.create(
+                            model=model,
+                            messages=api_messages,
+                            stream=True
+                        )
+                    else:
+                        raise
 
                 full_response = []
                 usage = None

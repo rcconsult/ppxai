@@ -1189,6 +1189,15 @@ class CommandHandler:
             console.print("[dim]Run an /agent task first to create a checkpoint[/dim]\n")
             return
 
+        # v1.12.1: Check if checkpoint is still valid (not stale)
+        is_valid = status.get("is_valid", True)  # Default True for backward compat
+        if not is_valid:
+            validity_reason = status.get("validity_reason", "Checkpoint is stale")
+            console.print(f"[yellow]⚠️  Cannot undo: {validity_reason}[/yellow]")
+            console.print("[dim]New commits have been made since the agent task.[/dim]")
+            console.print(f"[dim]Use 'git revert {last_checkpoint[:8]}' manually if you still want to revert.[/dim]\n")
+            return
+
         # v1.12.0: Check for uncommitted changes before undo (git revert requires clean working tree)
         backend = status.get("backend")
         if backend == "git":

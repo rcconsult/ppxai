@@ -54,19 +54,36 @@ def get_status_line(handler):
             model_display = model_info.get("name", handler.current_model)
             break
 
-    # Get agent mode status (v1.12.0)
+    # Get agent mode status (v1.12.0, v1.12.1: checkpoint ID display)
     agent_status_parts = []
     if handler.engine_client and handler.engine_client.agent_mode:
         agent_status_parts.append("Agent: [green]ON[/green]")
 
-        # Add checkpoint status
+        # Add checkpoint status with ID (v1.12.1)
         checkpoint_status = handler.engine_client.get_checkpoint_status()
         if checkpoint_status.get("enabled"):
             backend = checkpoint_status.get("backend")
+            last_checkpoint = checkpoint_status.get("last_checkpoint")
+            is_valid = checkpoint_status.get("is_valid", True)
+
+            # Show backend type
             if backend == "git":
                 agent_status_parts.append("Checkpoints: [green]git[/green]")
             elif backend == "file":
                 agent_status_parts.append("Checkpoints: [yellow]file[/yellow]")
+
+            # Show checkpoint ID with validity state (v1.12.1)
+            if last_checkpoint:
+                short_id = last_checkpoint[:8] if len(last_checkpoint) > 8 else last_checkpoint
+                if is_valid:
+                    # Valid checkpoint: blue
+                    agent_status_parts.append(f"ID: [cyan]{short_id}[/cyan]")
+                else:
+                    # Stale checkpoint: red
+                    agent_status_parts.append(f"ID: [red]{short_id} (STALE)[/red]")
+            else:
+                # No checkpoint: grey
+                agent_status_parts.append("ID: [dim]None[/dim]")
         else:
             agent_status_parts.append("Checkpoints: [red]OFF[/red]")
 

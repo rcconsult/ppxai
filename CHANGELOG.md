@@ -5,6 +5,48 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] - 2025-12-29
+
+### Added - Checkpoint System & Usage Tracking 🔒📊
+
+This release introduces a checkpoint system for atomic multi-file rollback and real-time token usage tracking with cost estimation.
+
+#### Checkpoint System
+- **Git-based checkpoints** - Auto-commits changes before agent tasks for atomic rollback
+- **`/undo` command** - Revert last agent task with single command (`git revert HEAD`)
+- **File-based fallback** - Snapshots to `~/.ppxai/checkpoints/` when git unavailable
+- **Auto-detection** - Automatically selects best backend (git → file → none)
+- **Stale detection** - Checkpoints invalidated when new commits are made after them
+- **VSCode Undo button** - One-click rollback with confirmation dialog
+
+#### Token Usage & Cost Tracking
+- **Real-time streaming usage** - Extract tokens from streaming responses
+- **Cost estimation** - Automatic USD cost calculation based on per-model pricing
+- **TUI status line** - Shows `1.2K↓/0.5K↑ $0.0045` in status bar
+- **VSCode usage badge** - Live-updating badge with tooltip breakdown
+- **All providers supported** - OpenAI, Perplexity, Gemini streaming
+
+#### New Configuration Options
+- `tools.agent.checkpoint_backend` - `"auto"` | `"git"` | `"file"` | `"none"`
+- `tools.agent.checkpoint_message` - Custom commit message format
+- `tools.agent.max_tool_iterations` - Max inner tool loop iterations
+
+#### Bug Fixes
+- Fixed `@tree` and `@git` context injection in VSCode (was treated as file search)
+- Fixed usage badge not updating after responses
+- Fixed table horizontal overflow in VSCode webview
+- Fixed concurrent request causing 400 message alternation errors
+- Session cleanup on interrupted requests
+
+#### Documentation
+- [CHECKPOINT_GUIDE.md](docs/CHECKPOINT_GUIDE.md) - Comprehensive checkpoint system guide
+- [RELEASE-NOTES-v1.12.0.md](docs/RELEASE-NOTES-v1.12.0.md) - Full release notes
+
+#### Testing
+- 377+ tests passing (40 new checkpoint tests)
+
+---
+
 ## [1.11.9] - 2025-12-27
 
 ### Fixed - Critical Agent Mode Safety 🔒

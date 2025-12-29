@@ -31,10 +31,10 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **Tests:** 365 tests passing (28 new checkpoint tests)
 - **Docs:** [CHECKPOINT_GUIDE.md](docs/CHECKPOINT_GUIDE.md), [VSCODE-CHECKPOINT-UI-SPEC.md](docs/VSCODE-CHECKPOINT-UI-SPEC.md)
 
-**⚠️ RELEASE BLOCKER - Checkpoint Stale State Bug:**
-- **CRITICAL:** Checkpoint persists after branch moves forward with non-agent commits
-- **Risk:** Undo button could revert wrong commit, causing data loss for users
-- **Must fix:** Checkpoint must be invalidated when new commits are made after it
+**✅ RELEASE BLOCKER RESOLVED - Checkpoint Stale State Bug (Fixed in v1.12.0):**
+- **Fixed:** `is_checkpoint_valid()` now checks if checkpoint is HEAD or HEAD~1
+- **Protection:** TUI, VSCode, and HTTP all reject undo on stale checkpoints
+- **Tests:** 12 new stale detection tests added
 - **Details:** [docs/CHECKPOINT-CRITICAL-BUG.md](docs/CHECKPOINT-CRITICAL-BUG.md)
 
 **What's New in v1.11.9 (Released 2025-12-27):**
@@ -453,24 +453,86 @@ python scripts/release.py v1.x.x
 - Run `gh release create`
 - Upload assets manually
 
-The release script handles everything automatically:
-1. Updates ALL version references (pyproject.toml, package.json, `__init__.py`, README, CLAUDE.md, ROADMAP.md)
-2. Creates release notes template (edit before proceeding)
-3. Runs tests
-4. Creates commit and tag
-5. Pushes to GitHub
-6. Waits for CI to complete
-7. Publishes release notes
+### Release Script (11 Steps)
 
-**Before releasing:**
-1. Edit `docs/RELEASE-NOTES-v{version}.md` with actual release content
-2. Run `python scripts/validate-release.py v{version}` to check all files
+The release script (`scripts/release.py`) handles everything automatically:
 
-**If something goes wrong:**
+1. **Git Status Check** - Ensures clean working directory
+2. **Update Versions** - Updates all 9 version files (see table below)
+3. **Validate References** - Runs `validate-release.py` to confirm all files updated
+4. **Check Release Notes** - Creates template if missing, warns if still template
+5. **Run Tests** - Executes pytest (skip with `--skip-tests`)
+6. **Create Commit** - `feat: v{version} release`
+7. **Push to GitHub** - Pushes commit and tag
+8. **Wait for CI** - Monitors GitHub Actions (skip with `--skip-ci-wait`)
+9. **Publish Notes** - Uploads release notes to GitHub release
+10. **Intel Mac Build** - Auto-detects platform, builds and uploads if on macOS Intel
+11. **Verify Assets** - Confirms all 7 binaries + VSIX uploaded (+ Intel if available)
+
+### Files Updated by Release Script
+
+| File | Pattern | v Prefix |
+|------|---------|----------|
+| `pyproject.toml` | `version = "1.12.0"` | No |
+| `ppxai/__init__.py` | `__version__ = "1.12.0"` | No |
+| `vscode-extension/package.json` | `"version": "1.12.0"` | No |
+| `vscode-extension/package-lock.json` | `"version": "1.12.0"` | No |
+| `ppxai/common/event_handler.py` | `Version: v1.12.0` | Yes |
+| `README.md` | `ppxai-1.12.0.vsix` | No |
+| `vscode-extension/README.md` | `ppxai-1.12.0.vsix` | No |
+| `CLAUDE.md` | `**Current Version:** v1.12.0` | Yes |
+| `ROADMAP.md` | `> **Current Version**: v1.12.0` | Yes |
+
+### Files Validated (Not Auto-Updated)
+
+These files must be manually updated BEFORE running release:
+
+| File | Pattern | Notes |
+|------|---------|-------|
+| `CHANGELOG.md` | `## [1.12.0] - YYYY-MM-DD` | Must add entry manually |
+| `docs/RELEASE-NOTES-v{version}.md` | Full release notes | Must write content |
+
+### Version Prefix Convention
+
+| Context | Format | Reason |
+|---------|--------|--------|
+| Python packages | `1.12.0` | PEP 440 |
+| npm/package.json | `1.12.0` | semver |
+| Git tags | `v1.12.0` | Git convention |
+| User-facing docs | `v1.12.0` | Readability |
+| CHANGELOG | `[1.12.0]` | Keep a Changelog format |
+
+### Pre-Release Checklist
+
+1. **Create CHANGELOG entry** - Add `## [X.Y.Z] - YYYY-MM-DD` section
+2. **Write release notes** - Edit `docs/RELEASE-NOTES-v{version}.md`
+3. **Merge feature branch** - If on feature branch, merge to master first:
+   ```bash
+   git checkout master
+   git merge feature/branch-name --ff-only
+   ```
+4. **Run validation** - `python scripts/validate-release.py v{version}`
+
+### If Something Goes Wrong
+
 ```bash
 # Redo a broken release from scratch
 python scripts/release.py v1.x.x --redo --force
 ```
+
+### Release Assets (Built by CI)
+
+| Asset | Description |
+|-------|-------------|
+| `ppxai-{version}.vsix` | VSCode extension |
+| `ppxai-linux-amd64` | TUI binary (Linux) |
+| `ppxai-macos-arm64` | TUI binary (macOS ARM) |
+| `ppxai-macos-intel` | TUI binary (macOS Intel) - optional |
+| `ppxai-windows.exe` | TUI binary (Windows) |
+| `ppxai-server-linux-amd64` | Server binary (Linux) |
+| `ppxai-server-macos-arm64` | Server binary (macOS ARM) |
+| `ppxai-server-macos-intel` | Server binary (macOS Intel) - optional |
+| `ppxai-server-windows.exe` | Server binary (Windows) |
 
 See [docs/RELEASE-NOTES-v1.11.9.md](docs/RELEASE-NOTES-v1.11.9.md) for an example of proper release notes.
 

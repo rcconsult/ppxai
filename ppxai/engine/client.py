@@ -8,6 +8,7 @@ It has no UI dependencies and communicates via events.
 import asyncio
 import json
 import re
+from dataclasses import asdict
 from typing import List, AsyncIterator, Optional, Dict, Any
 from pathlib import Path
 
@@ -607,22 +608,41 @@ class EngineClient:
             return None
 
     def get_checkpoint_status(self) -> Dict[str, Any]:
-        """Get checkpoint system status (v1.12.0).
+        """Get checkpoint system status (v1.12.0, updated v1.12.1).
 
         Returns:
-            Dictionary with checkpoint status information
+            Dictionary with checkpoint status information including validity.
         """
         if not self._checkpoint_manager:
             return {
                 "enabled": False,
                 "backend": "none",
                 "last_checkpoint": None,
+                "is_valid": False,
+                "validity_reason": "Checkpointing is disabled",
             }
+
+        # v1.12.1: Check if checkpoint is still valid (not stale)
+        is_valid = False
+        validity_reason = "No checkpoint available"
+        checkpoint_id = self._last_checkpoint_id  # Capture before potential clearing
+
+        if checkpoint_id:
+            is_valid, validity_reason = self._checkpoint_manager.is_checkpoint_valid(
+                checkpoint_id
+            )
+
+            # Auto-invalidate stale checkpoints (clear internal reference)
+            # But keep returning the ID so users can manually revert if needed
+            if not is_valid:
+                self._last_checkpoint_id = None
 
         return {
             "enabled": self._checkpoint_manager.is_enabled(),
             "backend": self._checkpoint_manager.get_backend_name(),
-            "last_checkpoint": self._last_checkpoint_id,
+            "last_checkpoint": checkpoint_id,  # Return even if stale
+            "is_valid": is_valid,
+            "validity_reason": validity_reason,
             "status_description": self._checkpoint_manager.get_status_description(),
         }
 
@@ -975,9 +995,11 @@ class EngineClient:
                         usage.prompt_tokens,
                         usage.completion_tokens,
                         self.model,
-                        self.provider_id
+                        self.provider_name  # Fixed: was provider_id
                     )
                     self.session.update_usage(usage)
+                    # Convert UsageStats to dict for JSON serialization
+                    event.metadata["usage"] = asdict(usage)
 
             # Now yield the event to caller (TUI may break after this)
             yield event
@@ -986,6 +1008,9 @@ class EngineClient:
         """Chat with tool support."""
         iteration = 0
         max_iterations = self.tool_manager.max_iterations
+
+        # Track accumulated usage across all provider calls (v1.12.0)
+        accumulated_usage = UsageStats()
 
         # Emit stream start at beginning
         yield Event(EventType.STREAM_START, {"model": self.model})
@@ -1026,6 +1051,12 @@ class EngineClient:
                     return
                 elif event.type == EventType.STREAM_END:
                     full_response = event.data
+                    # Accumulate usage from this provider call (v1.12.0)
+                    if event.metadata and event.metadata.get("usage"):
+                        usage = event.metadata["usage"]
+                        accumulated_usage.prompt_tokens += usage.prompt_tokens
+                        accumulated_usage.completion_tokens += usage.completion_tokens
+                        accumulated_usage.total_tokens += usage.total_tokens
 
             # Check for tool call
             tool_call = self._parse_tool_call(full_response)
@@ -1115,7 +1146,19 @@ class EngineClient:
                     # Reset edited files tracking for next task
                     self._agent_edited_files.clear()
 
-                yield Event(EventType.STREAM_END, full_response)
+                # v1.12.0: Calculate cost and update session with accumulated usage
+                metadata = None
+                if accumulated_usage.total_tokens > 0:
+                    accumulated_usage.estimated_cost = calculate_cost(
+                        accumulated_usage.prompt_tokens,
+                        accumulated_usage.completion_tokens,
+                        self.model,
+                        self.provider_name
+                    )
+                    self.session.update_usage(accumulated_usage)
+                    metadata = {"usage": asdict(accumulated_usage)}
+
+                yield Event(EventType.STREAM_END, full_response, metadata)
                 return
 
         # Max iterations reached
