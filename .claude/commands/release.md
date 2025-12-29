@@ -14,8 +14,9 @@ python scripts/release.py $ARGUMENTS
 ```
 
 The script handles everything automatically:
-1. ✅ Validates version format (3-part semantic versioning)
-2. ✅ Updates ALL version references:
+1. ✅ Checks git status (clean working directory)
+2. ✅ Checks branch (must be on master, use `--force` to override)
+3. ✅ Updates ALL version references:
    - pyproject.toml
    - ppxai/__init__.py
    - vscode-extension/package.json
@@ -25,15 +26,16 @@ The script handles everything automatically:
    - vscode-extension/README.md (vsix references)
    - CLAUDE.md (current version + version alignment)
    - ROADMAP.md (current release)
-3. ✅ Validates all version references with validate-release.py
-4. ✅ Creates release notes template if missing
-5. ✅ Runs tests
-6. ✅ Creates commit and tag
-7. ✅ Pushes to GitHub
-8. ✅ Waits for CI to complete
-9. ✅ Publishes release notes to GitHub release
-10. ✅ Builds Intel Mac assets (auto-detects platform)
-11. ✅ Verifies all assets are present
+4. ✅ Validates all version references with validate-release.py
+5. ✅ Creates release notes template if missing
+6. ✅ Runs TypeScript lint on VSCode extension
+7. ✅ Runs tests
+8. ✅ Creates commit and tag
+9. ✅ Pushes to GitHub
+10. ✅ Waits for CI to complete
+11. ✅ Publishes release notes to GitHub release
+12. ✅ Builds Intel Mac assets (auto-detects platform)
+13. ✅ Verifies all assets are present
 
 ## Script Options
 

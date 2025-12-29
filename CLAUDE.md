@@ -453,21 +453,23 @@ python scripts/release.py v1.x.x
 - Run `gh release create`
 - Upload assets manually
 
-### Release Script (11 Steps)
+### Release Script (13 Steps)
 
 The release script (`scripts/release.py`) handles everything automatically:
 
 1. **Git Status Check** - Ensures clean working directory
-2. **Update Versions** - Updates all 9 version files (see table below)
-3. **Validate References** - Runs `validate-release.py` to confirm all files updated
-4. **Check Release Notes** - Creates template if missing, warns if still template
-5. **Run Tests** - Executes pytest (skip with `--skip-tests`)
-6. **Create Commit** - `feat: v{version} release`
-7. **Push to GitHub** - Pushes commit and tag
-8. **Wait for CI** - Monitors GitHub Actions (skip with `--skip-ci-wait`)
-9. **Publish Notes** - Uploads release notes to GitHub release
-10. **Intel Mac Build** - Auto-detects platform, builds and uploads if on macOS Intel
-11. **Verify Assets** - Confirms all 7 binaries + VSIX uploaded (+ Intel if available)
+2. **Branch Check** - Ensures on master branch (use `--force` to override)
+3. **Update Versions** - Updates all 9 version files (see table below)
+4. **Validate References** - Runs `validate-release.py` to confirm all files updated
+5. **Check Release Notes** - Creates template if missing, warns if still template
+6. **TypeScript Lint** - Runs ESLint on VSCode extension
+7. **Run Tests** - Executes pytest (skip with `--skip-tests`)
+8. **Create Commit** - `feat: v{version} release`
+9. **Push to GitHub** - Pushes commit and tag
+10. **Wait for CI** - Monitors GitHub Actions (skip with `--skip-ci-wait`)
+11. **Publish Notes** - Uploads release notes to GitHub release
+12. **Intel Mac Build** - Auto-detects platform, builds and uploads if on macOS Intel
+13. **Verify Assets** - Confirms all 7 binaries + VSIX uploaded (+ Intel if available)
 
 ### Files Updated by Release Script
 
