@@ -362,6 +362,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     // Ignore parse errors
                 }
                 break;
+            case 'status':
+                // v1.12.0: Checkpoint status events (commit notifications)
+                this._view.webview.postMessage({
+                    type: 'checkpointStatus',
+                    content: event.content
+                });
+                break;
             case 'consent_request':
                 // Phase 1C: File edit consent request
                 this.handleConsentRequest(event);
@@ -3431,6 +3438,11 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                     streamingBadge.style.display = 'none';  // Hide streaming indicator
                     addMessage('error', message.content, false);
                     sendBtn.disabled = false;
+                    break;
+
+                case 'checkpointStatus':
+                    // v1.12.0: Show checkpoint commit notifications
+                    addMessage('system', message.content, true);
                     break;
 
                 case 'status':

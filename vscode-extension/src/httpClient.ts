@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 // === Types matching PythonBackend interface ===
 
 export interface StreamEvent {
-    type: 'thinking' | 'started' | 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'context_injected' | 'consent_request';
+    type: 'thinking' | 'started' | 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'context_injected' | 'consent_request' | 'status';
     content: string;
     metadata?: any;
 }
@@ -624,6 +624,9 @@ export class HttpClient {
                 return { type: 'error', content: event.data || 'Unknown error' };
             case 'info':
                 return { type: 'thinking', content: event.data || '' };
+            case 'status':
+                // v1.12.0: Checkpoint status events (commit notifications)
+                return { type: 'status', content: event.data || '' };
             default:
                 return null;
         }
