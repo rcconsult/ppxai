@@ -17,11 +17,19 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **NEW:** Auto-commit after successful agent tasks (creates undoable checkpoint)
 - **NEW:** `EventType.STATUS` for checkpoint notifications in TUI and VSCode
 - **NEW:** HTTP endpoints: `/checkpoint/status`, `/checkpoint/undo`
+- **NEW:** VSCode Undo button with confirmation dialog (restored from lost commit)
+- **NEW:** Collapsible tool messages with verbose mode (▶/▼ click to expand/collapse)
 - **FIX:** TUI `/undo` aligns with VSCode behavior (works regardless of agent mode)
 - **FIX:** Checkpoint manager initialized on startup (not just on set_working_dir)
 - **FIX:** Auto-commit timing in async generator flow (before STREAM_END yield)
 - **Tests:** 365 tests passing (28 new checkpoint tests)
 - **Docs:** [CHECKPOINT_GUIDE.md](docs/CHECKPOINT_GUIDE.md), [VSCODE-CHECKPOINT-UI-SPEC.md](docs/VSCODE-CHECKPOINT-UI-SPEC.md)
+
+**⚠️ RELEASE BLOCKER - Checkpoint Stale State Bug:**
+- **CRITICAL:** Checkpoint persists after branch moves forward with non-agent commits
+- **Risk:** Undo button could revert wrong commit, causing data loss for users
+- **Must fix:** Checkpoint must be invalidated when new commits are made after it
+- **Details:** [docs/CHECKPOINT-CRITICAL-BUG.md](docs/CHECKPOINT-CRITICAL-BUG.md)
 
 **What's New in v1.11.9 (Released 2025-12-27):**
 - **CRITICAL FIX:** `/agent on|off` now correctly toggles agent mode instead of being interpreted as tasks
