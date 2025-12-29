@@ -665,9 +665,6 @@ export class HttpClient {
                 return { type: 'error', content: event.data || 'Unknown error' };
             case 'info':
                 return { type: 'thinking', content: event.data || '' };
-            case 'status':
-                // v1.12.0: Checkpoint status events (commit notifications)
-                return { type: 'status', content: event.data || '' };
             default:
                 return null;
         }
