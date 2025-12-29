@@ -92,6 +92,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 case 'toggleAgent':
                     await this.handleToggleAgent(message.enable);
                     break;
+                case 'undoCheckpoint':
+                    await this.handleUndoCheckpoint();
+                    break;
                 case 'searchFiles':
                     await this.handleSearchFilesForAutocomplete(message.query);
                     break;
@@ -101,7 +104,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     }
                     break;
                 case 'interrupt':
-                    await this._backend.interrupt();
+                    await this.handleInterrupt();
                     break;
             }
         });
@@ -364,16 +367,69 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     // Ignore parse errors
                 }
                 break;
-            case 'status':
-                // v1.12.0: Checkpoint status events (commit notifications)
-                this._view.webview.postMessage({
-                    type: 'checkpointStatus',
-                    content: event.content
-                });
-                break;
             case 'consent_request':
                 // Phase 1C: File edit consent request
                 this.handleConsentRequest(event);
+                break;
+            case 'status':
+                // v1.12.0: Checkpoint notifications and status messages
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: event.content
+                });
+                break;
+            case 'agent_iteration':
+                // v1.12.0: Agent loop iteration progress
+                try {
+                    const data = event.metadata || JSON.parse(event.content);
+                    const iteration = data.iteration || 0;
+                    const max = data.max || 10;
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: `━━━ Iteration ${iteration}/${max} ━━━`
+                    });
+                } catch {
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: `━━━ Agent iteration ━━━`
+                    });
+                }
+                break;
+            case 'agent_complete':
+                // v1.12.0: Agent task completed
+                try {
+                    const data = event.metadata || JSON.parse(event.content);
+                    const summary = data.summary || '';
+                    let message = '✅ Task completed!';
+                    if (summary) {
+                        message += `\nSummary: ${summary}`;
+                    }
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: message
+                    });
+                } catch {
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: '✅ Task completed!'
+                    });
+                }
+                break;
+            case 'agent_max_iterations':
+                // v1.12.0: Agent reached max iterations
+                try {
+                    const data = event.metadata || JSON.parse(event.content);
+                    const iterations = data.iterations || 10;
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: `⚠️  Max iterations (${iterations}) reached\nTask may be incomplete. Review output above.`
+                    });
+                } catch {
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: '⚠️  Max iterations reached'
+                    });
+                }
                 break;
             case 'error':
                 this._view.webview.postMessage({
@@ -1477,7 +1533,7 @@ Review your previous actions and continue. If the task is complete, respond with
     }
 
     /**
-     * Handle agent mode toggle (v1.11.8)
+     * Handle agent mode toggle (v1.11.8, v1.12.0: added checkpoint notification)
      */
     private async handleToggleAgent(enable: boolean) {
         if (!this._view) { return; }
@@ -1485,9 +1541,27 @@ Review your previous actions and continue. If the task is complete, respond with
         try {
             if (enable) {
                 await this._backend.enableAgentMode();
+
+                // Get updated status with checkpoint info
+                const agentStatus = await this._backend.getAgentStatus();
+                const checkpoint = agentStatus.checkpoint;
+
+                // Build notification message based on checkpoint backend
+                let message = '✓ Agent mode enabled (tools auto-enabled)\n*Use natural language to assign autonomous tasks*';
+
+                if (checkpoint) {
+                    if (checkpoint.backend === 'git') {
+                        message = '🔒 Agent Mode enabled with Git checkpoints\n• Changes will be auto-committed before each task\n• Use Undo button to revert the last agent task atomically';
+                    } else if (checkpoint.backend === 'file') {
+                        message = '⚠️  Agent Mode enabled with File checkpoints\n• Snapshots will be saved to ~/.ppxai/checkpoints\n• Use Undo button to restore from snapshot\n• Tip: Initialize git repo for atomic commits';
+                    } else {
+                        message = '⚠️  Agent Mode enabled WITHOUT checkpoints\n• Changes CANNOT be undone\n• Initialize git repo or enable file backend for safety';
+                    }
+                }
+
                 this._view.webview.postMessage({
                     type: 'systemMessage',
-                    content: '✓ Agent mode enabled (tools auto-enabled)\n*Use natural language to assign autonomous tasks*'
+                    content: message
                 });
             } else {
                 await this._backend.disableAgentMode();
@@ -1497,11 +1571,8 @@ Review your previous actions and continue. If the task is complete, respond with
                 });
             }
 
-            // Update the UI indicator
-            this._view.webview.postMessage({
-                type: 'agentStatus',
-                enabled: enable
-            });
+            // Update the UI indicator with checkpoint status
+            await this.updateAgentStatus();
 
             // Also update status since agent mode affects tools
             await this.updateStatus();
@@ -1514,7 +1585,7 @@ Review your previous actions and continue. If the task is complete, respond with
     }
 
     /**
-     * Update agent mode status in UI (v1.11.8)
+     * Update agent mode status in UI (v1.11.8, v1.12.0: added checkpoint info)
      */
     private async updateAgentStatus() {
         if (!this._view) { return; }
@@ -1523,11 +1594,156 @@ Review your previous actions and continue. If the task is complete, respond with
             const status = await this._backend.getAgentStatus();
             this._view.webview.postMessage({
                 type: 'agentStatus',
-                enabled: status.agent_mode
+                enabled: status.agent_mode,
+                checkpoint: status.checkpoint || null
             });
         } catch (error) {
             // Silently fail - server might not support this endpoint yet
             console.error('Failed to get agent status:', error);
+        }
+    }
+
+    /**
+     * Handle streaming interrupt (v1.12.0: added checkpoint recovery)
+     */
+    private async handleInterrupt() {
+        if (!this._view) { return; }
+
+        try {
+            // Interrupt the stream first
+            await this._backend.interrupt();
+
+            // Check if agent mode is active and has checkpoint
+            const agentStatus = await this._backend.getAgentStatus();
+            if (!agentStatus.agent_mode || !agentStatus.checkpoint || !agentStatus.checkpoint.last_checkpoint) {
+                // Not in agent mode or no checkpoint - just interrupt silently
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: '⚠️  Streaming interrupted by user'
+                });
+                return;
+            }
+
+            const checkpoint = agentStatus.checkpoint;
+            const shortId = checkpoint.last_checkpoint && checkpoint.last_checkpoint.length > 8
+                ? checkpoint.last_checkpoint.substring(0, 8)
+                : checkpoint.last_checkpoint || '';
+
+            // Show interrupt recovery prompt
+            this._view.webview.postMessage({
+                type: 'systemMessage',
+                content: '⚠️  Agent interrupted by user'
+            });
+
+            const action = await vscode.window.showWarningMessage(
+                `Agent Task Interrupted\n\nAgent task incomplete due to interrupt.\n\nCheckpoint: ${shortId}\nBackend: ${checkpoint.backend}\n\nRollback all changes from this task?`,
+                { modal: true },
+                'Rollback to Checkpoint',
+                'Keep Partial Changes'
+            );
+
+            if (action === 'Rollback to Checkpoint') {
+                // Perform rollback
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: 'Rolling back changes...'
+                });
+
+                const result = await this._backend.undoCheckpoint();
+
+                if (result.success) {
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: `✓ Checkpoint reverted successfully`
+                    });
+
+                    // For git backend, offer cleanup of uncommitted changes
+                    if (checkpoint.backend === 'git') {
+                        this._view.webview.postMessage({
+                            type: 'systemMessage',
+                            content: '⚠️  Note: Any uncommitted changes from the interrupted task may remain.\nReview your working directory and run git status.'
+                        });
+                    }
+
+                    // Update status
+                    await this.updateAgentStatus();
+                } else {
+                    this._view.webview.postMessage({
+                        type: 'error',
+                        content: `✗ Rollback failed: ${result.message}`
+                    });
+                }
+            } else {
+                // User chose to keep partial changes
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: '⚠️  Partial changes preserved\nUse /undo command or Undo button to rollback if needed'
+                });
+            }
+        } catch (error) {
+            // Silently handle interrupt errors - user initiated
+            console.error('Interrupt handling error:', error);
+        }
+    }
+
+    /**
+     * Handle checkpoint undo (v1.12.0)
+     */
+    private async handleUndoCheckpoint() {
+        if (!this._view) { return; }
+
+        try {
+            // Get current checkpoint status first
+            const agentStatus = await this._backend.getAgentStatus();
+            const checkpoint = agentStatus.checkpoint;
+
+            if (!checkpoint || !checkpoint.last_checkpoint) {
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: '⚠️  No checkpoint to undo'
+                });
+                return;
+            }
+
+            // Show confirmation prompt
+            const confirmed = await vscode.window.showWarningMessage(
+                `Undo Last Agent Task?\n\nThis will revert all changes made by the last agent task.\n\nBackend: ${checkpoint.backend}\nCheckpoint: ${checkpoint.last_checkpoint.substring(0, 8)}`,
+                { modal: true },
+                'Undo'
+            );
+
+            if (confirmed !== 'Undo') {
+                return;
+            }
+
+            // Perform undo
+            const result = await this._backend.undoCheckpoint();
+
+            if (result.success) {
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: `✓ ${result.message}`
+                });
+
+                // Check if git backend with uncommitted changes
+                if (checkpoint.backend === 'git') {
+                    // TODO: Add second prompt for git cleanup if needed
+                    // For now, just show success
+                }
+
+                // Update status
+                await this.updateAgentStatus();
+            } else {
+                this._view.webview.postMessage({
+                    type: 'error',
+                    content: `✗ Undo failed: ${result.message}`
+                });
+            }
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Failed to undo checkpoint: ${error}`
+            });
         }
     }
 
@@ -2120,7 +2336,7 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             color: var(--vscode-editor-background);
         }
 
-        /* Agent badge - v1.11.8 */
+        /* Agent badge - v1.11.8, v1.12.0: checkpoint indicators */
         .agent-badge {
             background: var(--vscode-badge-background);
             color: var(--vscode-badge-foreground);
@@ -2144,6 +2360,93 @@ A: Use \`/tools disable\` or choose "never" when prompted.
         .agent-badge.enabled {
             background: var(--vscode-editorInfo-foreground, #3794ff);
             color: var(--vscode-editor-background);
+        }
+
+        /* Checkpoint indicators - v1.12.0 */
+        .agent-badge.enabled.checkpoint-git {
+            background: var(--vscode-testing-iconPassed, #89d185);
+            color: var(--vscode-editor-background);
+        }
+
+        .agent-badge.enabled.checkpoint-file {
+            background: var(--vscode-editorWarning-foreground, #ff9800);
+            color: var(--vscode-editor-background);
+        }
+
+        .agent-badge.enabled.checkpoint-none {
+            background: var(--vscode-errorForeground, #f44336);
+            color: var(--vscode-editor-background);
+        }
+
+        /* Undo badge - v1.12.0 */
+        .undo-badge {
+            background: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: none;
+        }
+
+        .undo-badge:hover {
+            background: var(--vscode-button-hoverBackground);
+            border-color: var(--vscode-focusBorder);
+        }
+
+        .undo-badge.visible {
+            display: inline-block;
+        }
+
+        .undo-badge.enabled {
+            background: var(--vscode-editorInfo-foreground, #3794ff);
+            color: var(--vscode-editor-background);
+        }
+
+        .undo-badge.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* v1.12.0: Tool messages with collapsible details */
+        .tool-title {
+            font-size: 13px;
+            user-select: none;
+        }
+        .tool-title.clickable {
+            cursor: pointer;
+        }
+        .tool-title.clickable:hover {
+            opacity: 0.8;
+        }
+        /* Expand/collapse indicator */
+        .tool-title.clickable::before {
+            content: '▼ ';
+            font-size: 10px;
+            opacity: 0.6;
+        }
+        .tool-title.clickable.collapsed::before {
+            content: '▶ ';
+        }
+        .tool-details-content {
+            margin: 4px 0 4px 8px;
+            padding: 8px;
+            background: var(--vscode-editor-background);
+            border-radius: 4px;
+            font-size: 11px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            transition: max-height 0.2s ease-out, padding 0.2s ease-out, opacity 0.2s ease-out;
+        }
+        .tool-details-content.collapsed {
+            max-height: 0;
+            padding: 0 8px;
+            opacity: 0;
+            overflow: hidden;
         }
 
         .streaming-badge {
@@ -2340,55 +2643,8 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             background: var(--vscode-editorHint-background, rgba(238, 238, 238, 0.1));
             border-left: 3px solid var(--vscode-editorHint-foreground, #6c6c6c);
             font-size: 12px;
-        }
-
-        /* v1.12.0: Tool messages with collapsible details */
-        .tool-title {
-            font-size: 13px;
-            user-select: none;
-        }
-
-        .tool-title.clickable {
-            cursor: pointer;
-        }
-
-        .tool-title.clickable:hover {
-            opacity: 0.8;
-        }
-
-        /* Expand/collapse indicator */
-        .tool-title.clickable::before {
-            content: '▼ ';
-            font-size: 10px;
-            opacity: 0.6;
-        }
-
-        .tool-title.clickable.collapsed::before {
-            content: '▶ ';
-        }
-
-        .tool-details-content {
-            margin: 4px 0 4px 8px;
-            padding: 8px;
-            background: var(--vscode-editor-background);
-            border-radius: 4px;
-            font-size: 11px;
             max-height: 200px;
             overflow-y: auto;
-            white-space: pre-wrap;
-            word-break: break-word;
-            transition: max-height 0.2s ease-out, padding 0.2s ease-out, opacity 0.2s ease-out;
-        }
-
-        .tool-details-content.collapsed {
-            max-height: 0;
-            padding: 0 8px;
-            opacity: 0;
-            overflow: hidden;
-        }
-
-        .tool-details-content code {
-            font-family: var(--vscode-editor-font-family, monospace);
         }
 
         /* VSCode-style Markdown rendering */
@@ -2779,6 +3035,7 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             <span><span id="provider">Loading...</span> / <span id="model">...</span></span>
             <button class="tools-badge disabled" id="toolsBadge" title="Click to toggle tools">Tools: off</button>
             <button class="agent-badge disabled" id="agentBadge" title="Click to toggle agent mode">Agent: off</button>
+            <button class="undo-badge" id="undoBadge" title="No checkpoint to undo">↶ Undo</button>
             <button class="streaming-badge" id="streamingBadge" style="display: none;" title="Press Esc to stop">⏹ Streaming...</button>
         </div>
         <div class="workspace-info" id="workspaceInfo" style="display: none;">
@@ -3290,28 +3547,30 @@ A: Use \`/tools disable\` or choose "never" when prompted.
         });
 
         // Tools badge click handler - toggle tools on/off
-        if (toolsBadge) {
-            toolsBadge.addEventListener('click', () => {
-                const isEnabled = toolsBadge.classList.contains('enabled');
-                vscode.postMessage({ type: 'toggleTools', enable: !isEnabled });
-            });
-        }
+        toolsBadge.addEventListener('click', () => {
+            const isEnabled = toolsBadge.classList.contains('enabled');
+            vscode.postMessage({ type: 'toggleTools', enable: !isEnabled });
+        });
 
         // Agent badge click handler - toggle agent mode on/off (v1.11.8)
         const agentBadge = document.getElementById('agentBadge');
-        if (agentBadge) {
-            agentBadge.addEventListener('click', () => {
-                const isEnabled = agentBadge.classList.contains('enabled');
-                vscode.postMessage({ type: 'toggleAgent', enable: !isEnabled });
-            });
-        }
+        agentBadge.addEventListener('click', () => {
+            const isEnabled = agentBadge.classList.contains('enabled');
+            vscode.postMessage({ type: 'toggleAgent', enable: !isEnabled });
+        });
+
+        // Undo badge click handler - undo last checkpoint (v1.12.0)
+        const undoBadge = document.getElementById('undoBadge');
+        undoBadge.addEventListener('click', () => {
+            if (!undoBadge.classList.contains('disabled')) {
+                vscode.postMessage({ type: 'undoCheckpoint' });
+            }
+        });
 
         // Streaming badge click handler - interrupt streaming
-        if (streamingBadge) {
-            streamingBadge.addEventListener('click', () => {
-                vscode.postMessage({ type: 'interrupt' });
-            });
-        }
+        streamingBadge.addEventListener('click', () => {
+            vscode.postMessage({ type: 'interrupt' });
+        });
 
         // Handle link clicks - open external URLs
         messagesContainer.addEventListener('click', (e) => {
@@ -3355,9 +3614,8 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                 case 'toolCall':
                     typingIndicator.textContent = 'Using tool: ' + message.tool + '...';
                     typingIndicator.classList.add('visible');
-                    // v1.12.0: Tool call - always show title, details only if verbose ON
-                    const toolCallJson = JSON.stringify(message.arguments, null, 2);
-                    addToolMessage('tool-call', '🔧 Calling tool: ' + message.tool, toolCallJson, message.verbose);
+                    // v1.12.0: Use collapsible tool message
+                    addToolMessage('tool-call', '🔧 Calling tool: ' + message.tool, JSON.stringify(message.arguments, null, 2), message.verbose);
 
                     // BUGFIX: Strip tool call JSON from current response content
                     // When Gemini includes tool JSON in its response, remove it from display
@@ -3378,11 +3636,10 @@ A: Use \`/tools disable\` or choose "never" when prompted.
 
                 case 'toolResult':
                     typingIndicator.textContent = 'Processing tool result...';
-                    // v1.11.9: Increased from 500 to 2000 chars for better agent context
+                    // v1.12.0: Use collapsible tool message with verbose support
                     const resultPreview = typeof message.result === 'string'
                         ? (message.result.length > 2000 ? message.result.slice(0, 2000) + '...' : message.result)
                         : JSON.stringify(message.result, null, 2);
-                    // v1.12.0: Tool result - always show title, details only if verbose ON
                     addToolMessage('tool-result', '📋 Result from ' + message.tool, resultPreview, message.verbose);
                     break;
 
@@ -3452,11 +3709,6 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                     sendBtn.disabled = false;
                     break;
 
-                case 'checkpointStatus':
-                    // v1.12.0: Show checkpoint commit notifications
-                    addMessage('system', message.content, true);
-                    break;
-
                 case 'status':
                     providerSpan.textContent = message.provider;
                     modelSpan.textContent = message.model;
@@ -3482,18 +3734,65 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                     break;
 
                 case 'agentStatus':
-                    // v1.11.8: Handle agent mode status updates
+                    // v1.11.8, v1.12.0: Handle agent mode + checkpoint status updates
                     const agentBadgeEl = document.getElementById('agentBadge');
+                    const undoBadgeEl = document.getElementById('undoBadge');
+
                     if (message.enabled) {
-                        agentBadgeEl.textContent = 'Agent: on';
+                        // Agent mode is ON
                         agentBadgeEl.classList.remove('disabled');
                         agentBadgeEl.classList.add('enabled');
-                        agentBadgeEl.title = 'Agent mode enabled - click to disable';
+
+                        // Remove all checkpoint classes first
+                        agentBadgeEl.classList.remove('checkpoint-git', 'checkpoint-file', 'checkpoint-none');
+
+                        // Update based on checkpoint backend (v1.12.0)
+                        if (message.checkpoint) {
+                            const backend = message.checkpoint.backend;
+                            const lastCheckpoint = message.checkpoint.last_checkpoint;
+
+                            if (backend === 'git') {
+                                agentBadgeEl.classList.add('checkpoint-git');
+                                agentBadgeEl.textContent = 'Agent 🔒';
+                                agentBadgeEl.title = 'Agent mode ON (Checkpoints: git)\\n• Auto-commits before tasks\\n• Use Undo button to revert';
+                            } else if (backend === 'file') {
+                                agentBadgeEl.classList.add('checkpoint-file');
+                                agentBadgeEl.textContent = 'Agent ⚠️';
+                                agentBadgeEl.title = 'Agent mode ON (Checkpoints: file)\\n• Snapshots saved to ~/.ppxai/checkpoints\\n• Use Undo button to revert\\n• Tip: Init git repo for atomic commits';
+                            } else {
+                                agentBadgeEl.classList.add('checkpoint-none');
+                                agentBadgeEl.textContent = 'Agent ⚠️';
+                                agentBadgeEl.title = 'Agent mode ON (Checkpoints: DISABLED)\\n• Changes CANNOT be undone\\n• Initialize git repo to enable checkpoints';
+                            }
+
+                            // Update undo button
+                            if (lastCheckpoint) {
+                                undoBadgeEl.classList.add('visible', 'enabled');
+                                undoBadgeEl.classList.remove('disabled');
+                                const shortId = lastCheckpoint.length > 8 ? lastCheckpoint.substring(0, 8) : lastCheckpoint;
+                                undoBadgeEl.title = \`Undo Last Agent Task\\nCheckpoint: \${shortId} (\${backend})\`;
+                            } else {
+                                undoBadgeEl.classList.add('visible');
+                                undoBadgeEl.classList.remove('enabled');
+                                undoBadgeEl.classList.add('disabled');
+                                undoBadgeEl.title = 'No checkpoint to undo';
+                            }
+                        } else {
+                            // No checkpoint info (old server or disabled)
+                            agentBadgeEl.textContent = 'Agent: on';
+                            agentBadgeEl.title = 'Agent mode enabled - click to disable';
+                            undoBadgeEl.classList.remove('visible');
+                        }
                     } else {
+                        // Agent mode is OFF
                         agentBadgeEl.textContent = 'Agent: off';
                         agentBadgeEl.classList.add('disabled');
-                        agentBadgeEl.classList.remove('enabled');
+                        agentBadgeEl.classList.remove('enabled', 'checkpoint-git', 'checkpoint-file', 'checkpoint-none');
                         agentBadgeEl.title = 'Click to enable agent mode';
+
+                        // Hide undo button when agent is off
+                        undoBadgeEl.classList.remove('visible', 'enabled');
+                        undoBadgeEl.classList.add('disabled');
                     }
                     break;
 
@@ -3661,9 +3960,7 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             return el;
         }
 
-        // v1.12.0: Add tool message (matches TUI verbose behavior)
-        // Verbose OFF: Show only tool name (like TUI's "→ Calling tool: xxx")
-        // Verbose ON: Show tool name + details (arguments/results)
+        // v1.12.0: Add tool message with collapsible details
         function addToolMessage(role, title, details, verbose) {
             const now = new Date();
             const el = document.createElement('div');

@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 // === Types matching PythonBackend interface ===
 
 export interface StreamEvent {
-    type: 'thinking' | 'started' | 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'context_injected' | 'consent_request' | 'status';
+    type: 'thinking' | 'started' | 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'context_injected' | 'consent_request' | 'status' | 'agent_iteration' | 'agent_complete' | 'agent_max_iterations';
     content: string;
     metadata?: any;
 }
@@ -783,14 +783,32 @@ export class HttpClient {
     // === Agent Mode (v1.11.8) ===
 
     /**
-     * Get agent mode status (v1.11.8)
+     * Get agent mode status (v1.11.8, v1.12.0: added checkpoint info)
      */
-    async getAgentStatus(): Promise<{ agent_mode: boolean; tools_enabled: boolean }> {
+    async getAgentStatus(): Promise<{
+        agent_mode: boolean;
+        tools_enabled: boolean;
+        checkpoint?: {
+            enabled: boolean;
+            backend: 'git' | 'file' | 'none';
+            last_checkpoint: string | null;
+            status_description: string;
+        };
+    }> {
         const response = await fetch(`${this.baseUrl}/agent/status`);
         if (!response.ok) {
             throw new Error(`Failed to get agent status: ${response.statusText}`);
         }
-        return response.json() as Promise<{ agent_mode: boolean; tools_enabled: boolean }>;
+        return response.json() as Promise<{
+            agent_mode: boolean;
+            tools_enabled: boolean;
+            checkpoint?: {
+                enabled: boolean;
+                backend: 'git' | 'file' | 'none';
+                last_checkpoint: string | null;
+                status_description: string;
+            };
+        }>;
     }
 
     /**
@@ -851,6 +869,33 @@ export class HttpClient {
         this.outputChannel.appendLine('[Agent] Agent mode disabled');
 
         return !result.agent_mode;  // Return true if successfully disabled
+    }
+
+    // === Checkpoints (v1.12.0) ===
+
+    /**
+     * Undo last checkpoint (v1.12.0)
+     *
+     * Reverts all changes from the last agent task.
+     * Returns true if successful, false otherwise.
+     */
+    async undoCheckpoint(): Promise<{ success: boolean; message: string; checkpoint_id?: string }> {
+        this.outputChannel.appendLine('[Checkpoint] Undoing last checkpoint...');
+
+        const response = await fetch(`${this.baseUrl}/checkpoint/undo`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`Failed to undo checkpoint: ${error || response.statusText}`);
+        }
+
+        const result = await response.json() as { success: boolean; message: string; checkpoint_id?: string };
+        this.outputChannel.appendLine(`[Checkpoint] Undo result: ${result.message}`);
+
+        return result;
     }
 }
 
