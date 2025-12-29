@@ -87,47 +87,70 @@ def get_git_info() -> dict:
     return info
 
 
-async def benchmark_streaming(provider_id: str, model: str, prompt: str) -> dict:
+async def benchmark_streaming(provider_id: str, model: str, prompt: str, max_retries: int = 2) -> dict:
     """
-    Benchmark a single streaming request.
+    Benchmark a single streaming request with retry logic.
+
+    Args:
+        provider_id: Provider to benchmark
+        model: Model to use
+        prompt: Prompt to send
+        max_retries: Number of retries for rate-limited requests
 
     Returns:
         dict with ttft_ms, total_ms, tokens, tokens_per_sec
     """
     from ppxai.engine import EngineClient, EventType
 
-    engine = EngineClient()
-    engine.set_provider(provider_id)
-    engine.set_model(model)
+    for attempt in range(max_retries + 1):
+        engine = EngineClient()
+        engine.set_provider(provider_id)
+        engine.set_model(model)
 
-    start_time = time.perf_counter()
-    first_token_time = None
-    total_tokens = 0
+        start_time = time.perf_counter()
+        first_token_time = None
+        total_tokens = 0
 
-    async for event in engine.chat(prompt):
-        if event.type == EventType.STREAM_CHUNK:
-            if first_token_time is None:
-                first_token_time = time.perf_counter()
-            # Rough token count (words + punctuation)
-            total_tokens += len(event.data.split())
-        elif event.type == EventType.STREAM_END:
-            break
-        elif event.type == EventType.ERROR:
-            raise Exception(f"API Error: {event.data}")
+        try:
+            async for event in engine.chat(prompt):
+                if event.type == EventType.STREAM_CHUNK:
+                    if first_token_time is None:
+                        first_token_time = time.perf_counter()
+                    # Rough token count (words + punctuation)
+                    total_tokens += len(event.data.split())
+                elif event.type == EventType.STREAM_END:
+                    break
+                elif event.type == EventType.ERROR:
+                    raise Exception(f"API Error: {event.data}")
 
-    end_time = time.perf_counter()
+            end_time = time.perf_counter()
 
-    # Calculate metrics
-    ttft_ms = (first_token_time - start_time) * 1000 if first_token_time else None
-    total_ms = (end_time - start_time) * 1000
-    tokens_per_sec = total_tokens / (total_ms / 1000) if total_ms > 0 else 0
+            # Detect rate limiting (TTFT > 20s is suspicious)
+            ttft_ms = (first_token_time - start_time) * 1000 if first_token_time else None
+            if ttft_ms and ttft_ms > 20000 and attempt < max_retries:
+                wait_time = 10 * (attempt + 1)
+                print(f"      [Rate limited? TTFT={ttft_ms:.0f}ms, retrying in {wait_time}s...]")
+                await asyncio.sleep(wait_time)
+                continue
 
-    return {
-        "ttft_ms": round(ttft_ms, 2) if ttft_ms else None,
-        "total_ms": round(total_ms, 2),
-        "tokens": total_tokens,
-        "tokens_per_sec": round(tokens_per_sec, 2),
-    }
+            # Calculate metrics
+            total_ms = (end_time - start_time) * 1000
+            tokens_per_sec = total_tokens / (total_ms / 1000) if total_ms > 0 else 0
+
+            return {
+                "ttft_ms": round(ttft_ms, 2) if ttft_ms else None,
+                "total_ms": round(total_ms, 2),
+                "tokens": total_tokens,
+                "tokens_per_sec": round(tokens_per_sec, 2),
+            }
+
+        except Exception as e:
+            if attempt < max_retries:
+                wait_time = 5 * (attempt + 1)
+                print(f"      [Error: {e}, retrying in {wait_time}s...]")
+                await asyncio.sleep(wait_time)
+            else:
+                raise
 
 
 async def run_mock_benchmark() -> dict:
@@ -421,9 +444,14 @@ async def main():
     if args.mock:
         providers = ["mock"]
     elif args.all_providers:
-        from ppxai.config import get_available_providers
-        providers = get_available_providers()
-        print(f"\nBenchmarking all providers: {', '.join(providers)}")
+        from ppxai.config import get_available_providers, get_api_key
+        all_providers = get_available_providers()
+        # Filter to only providers with valid API keys
+        providers = [p for p in all_providers if get_api_key(p)]
+        skipped = [p for p in all_providers if not get_api_key(p)]
+        print(f"\nBenchmarking providers with API keys: {', '.join(providers)}")
+        if skipped:
+            print(f"Skipping (no API key): {', '.join(skipped)}")
     else:
         providers = [args.provider]
 
@@ -431,7 +459,11 @@ async def main():
     all_results = []
     any_regression = False
 
-    for provider_id in providers:
+    for idx, provider_id in enumerate(providers):
+        # Add delay between providers to avoid rate limiting
+        if idx > 0:
+            print(f"\n--- Waiting 5s before next provider to avoid rate limits ---")
+            await asyncio.sleep(5)
         if provider_id == "mock":
             benchmark_data = await run_mock_benchmark()
         else:
