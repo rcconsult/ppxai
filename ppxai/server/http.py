@@ -513,6 +513,7 @@ async def get_tools():
         "enabled": engine.tools_enabled,
         "max_iterations": getattr(engine, 'tool_max_iterations', 15),
         "consent_mode": consent_mode,
+        "verbose": getattr(engine, '_tools_verbose', False),  # v1.12.0
     }
 
 

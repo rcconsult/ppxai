@@ -79,6 +79,11 @@ class EngineClient:
         # Checkpoint manager for atomic multi-file rollback (v1.12.0)
         self._checkpoint_manager: Optional[CheckpointManager] = None
         self._last_checkpoint_id: Optional[str] = None
+        # Track files edited by agent during current task (v1.12.0)
+        self._agent_edited_files: set = set()
+
+        # v1.12.0: Verbose mode for tool output display (matches TUI behavior)
+        self._tools_verbose: bool = False
 
         # Event emitter for consent requests (Phase 1C: HTTP/SSE support)
         # This allows emitting events from within consent callback
@@ -840,7 +845,7 @@ class EngineClient:
         """Configure tool settings.
 
         Args:
-            setting: Setting name (e.g., 'max_iterations')
+            setting: Setting name (e.g., 'max_iterations', 'verbose')
             value: Setting value
 
         Returns:
@@ -848,6 +853,10 @@ class EngineClient:
         """
         if setting == "max_iterations":
             self.tool_manager.max_iterations = int(value)
+            return True
+        elif setting == "verbose":
+            # v1.12.0: Store verbose setting for tool output display
+            self._tools_verbose = value in [True, "on", "true", "1", "yes"]
             return True
         return False
 
@@ -860,7 +869,8 @@ class EngineClient:
         return {
             "enabled": self.tools_enabled,
             "tool_count": len(self.tool_manager.list_tools()) if self.tools_enabled else 0,
-            "max_iterations": self.tool_manager.max_iterations
+            "max_iterations": self.tool_manager.max_iterations,
+            "verbose": self._tools_verbose  # v1.12.0: Include verbose setting
         }
 
     # === Chat ===
@@ -1078,11 +1088,14 @@ class EngineClient:
                 self.session.add_message(Message("assistant", full_response))
 
                 # v1.12.0: Commit agent changes after successful task completion
-                # NOTE: Must happen BEFORE yield STREAM_END because consumer breaks loop on STREAM_END
-                if self._agent_mode and self._checkpoint_manager:
+                # NOTE: Only commit if agent made file edits (tracked via _agent_edited_files)
+                # This prevents committing unrelated changes from other tools (e.g., Claude Code)
+                if self._agent_mode and self._checkpoint_manager and self._agent_edited_files:
                     commit_hash = self.commit_agent_changes("Task completed")
                     if commit_hash:
                         yield Event(EventType.STATUS, f"✓ Changes committed: {commit_hash[:8]}")
+                    # Reset edited files tracking for next task
+                    self._agent_edited_files.clear()
 
                 yield Event(EventType.STREAM_END, full_response)
                 return

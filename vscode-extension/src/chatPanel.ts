@@ -324,7 +324,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     this._view.webview.postMessage({
                         type: 'toolCall',
                         tool: data.tool,
-                        arguments: data.arguments
+                        arguments: data.arguments,
+                        verbose: this._backend.toolsVerbose  // v1.12.0: Pass verbose state
                     });
                 } catch {
                     this._view.webview.postMessage({
@@ -339,7 +340,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     this._view.webview.postMessage({
                         type: 'toolResult',
                         tool: data.tool,
-                        result: data.result
+                        result: data.result,
+                        verbose: this._backend.toolsVerbose  // v1.12.0: Pass verbose state
                     });
                 } catch {
                     this._view.webview.postMessage({
@@ -2340,35 +2342,33 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             font-size: 12px;
         }
 
-        /* v1.12.0: Collapsible tool details (matches TUI compact display) */
-        .tool-details {
-            margin: 0;
-        }
-
-        .tool-summary {
-            cursor: pointer;
-            padding: 4px 0;
+        /* v1.12.0: Tool messages with collapsible details */
+        .tool-title {
+            font-size: 13px;
             user-select: none;
-            list-style: none;
         }
 
-        .tool-summary::-webkit-details-marker {
-            display: none;
+        .tool-title.clickable {
+            cursor: pointer;
         }
 
-        .tool-arrow {
-            display: inline-block;
+        .tool-title.clickable:hover {
+            opacity: 0.8;
+        }
+
+        /* Expand/collapse indicator */
+        .tool-title.clickable::before {
+            content: '▼ ';
             font-size: 10px;
-            color: var(--vscode-descriptionForeground);
-            transition: transform 0.15s ease;
+            opacity: 0.6;
         }
 
-        .tool-details[open] .tool-arrow {
-            transform: rotate(90deg);
+        .tool-title.clickable.collapsed::before {
+            content: '▶ ';
         }
 
-        .tool-content {
-            margin: 8px 0 4px 16px;
+        .tool-details-content {
+            margin: 4px 0 4px 8px;
             padding: 8px;
             background: var(--vscode-editor-background);
             border-radius: 4px;
@@ -2377,9 +2377,17 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             overflow-y: auto;
             white-space: pre-wrap;
             word-break: break-word;
+            transition: max-height 0.2s ease-out, padding 0.2s ease-out, opacity 0.2s ease-out;
         }
 
-        .tool-content code {
+        .tool-details-content.collapsed {
+            max-height: 0;
+            padding: 0 8px;
+            opacity: 0;
+            overflow: hidden;
+        }
+
+        .tool-details-content code {
             font-family: var(--vscode-editor-font-family, monospace);
         }
 
@@ -3282,22 +3290,28 @@ A: Use \`/tools disable\` or choose "never" when prompted.
         });
 
         // Tools badge click handler - toggle tools on/off
-        toolsBadge.addEventListener('click', () => {
-            const isEnabled = toolsBadge.classList.contains('enabled');
-            vscode.postMessage({ type: 'toggleTools', enable: !isEnabled });
-        });
+        if (toolsBadge) {
+            toolsBadge.addEventListener('click', () => {
+                const isEnabled = toolsBadge.classList.contains('enabled');
+                vscode.postMessage({ type: 'toggleTools', enable: !isEnabled });
+            });
+        }
 
         // Agent badge click handler - toggle agent mode on/off (v1.11.8)
         const agentBadge = document.getElementById('agentBadge');
-        agentBadge.addEventListener('click', () => {
-            const isEnabled = agentBadge.classList.contains('enabled');
-            vscode.postMessage({ type: 'toggleAgent', enable: !isEnabled });
-        });
+        if (agentBadge) {
+            agentBadge.addEventListener('click', () => {
+                const isEnabled = agentBadge.classList.contains('enabled');
+                vscode.postMessage({ type: 'toggleAgent', enable: !isEnabled });
+            });
+        }
 
         // Streaming badge click handler - interrupt streaming
-        streamingBadge.addEventListener('click', () => {
-            vscode.postMessage({ type: 'interrupt' });
-        });
+        if (streamingBadge) {
+            streamingBadge.addEventListener('click', () => {
+                vscode.postMessage({ type: 'interrupt' });
+            });
+        }
 
         // Handle link clicks - open external URLs
         messagesContainer.addEventListener('click', (e) => {
@@ -3341,10 +3355,9 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                 case 'toolCall':
                     typingIndicator.textContent = 'Using tool: ' + message.tool + '...';
                     typingIndicator.classList.add('visible');
-                    // v1.12.0: Show tool call with collapsible details
+                    // v1.12.0: Tool call - always show title, details only if verbose ON
                     const toolCallJson = JSON.stringify(message.arguments, null, 2);
-                    const toolCallContent = '🔧 Calling tool: ' + message.tool + '\n\n' + toolCallJson;
-                    addMessage('tool-call', toolCallContent, true);
+                    addToolMessage('tool-call', '🔧 Calling tool: ' + message.tool, toolCallJson, message.verbose);
 
                     // BUGFIX: Strip tool call JSON from current response content
                     // When Gemini includes tool JSON in its response, remove it from display
@@ -3369,9 +3382,8 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                     const resultPreview = typeof message.result === 'string'
                         ? (message.result.length > 2000 ? message.result.slice(0, 2000) + '...' : message.result)
                         : JSON.stringify(message.result, null, 2);
-                    // v1.12.0: Show tool result with details
-                    const toolResultContent = '📋 Result from ' + message.tool + '\n\n' + resultPreview;
-                    addMessage('tool-result', toolResultContent, true);
+                    // v1.12.0: Tool result - always show title, details only if verbose ON
+                    addToolMessage('tool-result', '📋 Result from ' + message.tool, resultPreview, message.verbose);
                     break;
 
                 case 'contextInjected':
@@ -3643,6 +3655,51 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                 contentEl.textContent = content;
             }
             el.appendChild(contentEl);
+
+            messagesContainer.insertBefore(el, typingIndicator);
+            scrollToBottom();
+            return el;
+        }
+
+        // v1.12.0: Add tool message (matches TUI verbose behavior)
+        // Verbose OFF: Show only tool name (like TUI's "→ Calling tool: xxx")
+        // Verbose ON: Show tool name + details (arguments/results)
+        function addToolMessage(role, title, details, verbose) {
+            const now = new Date();
+            const el = document.createElement('div');
+            el.className = 'message ' + role;
+
+            // Add timestamp
+            const timestamp = document.createElement('span');
+            timestamp.className = 'message-timestamp';
+            timestamp.textContent = formatTimestamp();
+            el.appendChild(timestamp);
+
+            // Update last message time
+            lastMessageTime = now;
+
+            // Tool title (clickable to toggle details)
+            const titleEl = document.createElement('div');
+            const isCollapsed = verbose !== true;
+            titleEl.className = 'tool-title' + (details ? ' clickable' : '') + (isCollapsed ? ' collapsed' : '');
+            titleEl.textContent = title;
+            el.appendChild(titleEl);
+
+            // Details (always created, collapsed by default unless verbose ON)
+            if (details) {
+                const contentEl = document.createElement('pre');
+                contentEl.className = 'tool-details-content' + (isCollapsed ? ' collapsed' : '');
+                const codeEl = document.createElement('code');
+                codeEl.textContent = details;
+                contentEl.appendChild(codeEl);
+                el.appendChild(contentEl);
+
+                // Click title to toggle collapse
+                titleEl.addEventListener('click', () => {
+                    contentEl.classList.toggle('collapsed');
+                    titleEl.classList.toggle('collapsed');
+                });
+            }
 
             messagesContainer.insertBefore(el, typingIndicator);
             scrollToBottom();

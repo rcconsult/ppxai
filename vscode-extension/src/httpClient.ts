@@ -75,10 +75,19 @@ export class HttpClient {
     private outputChannel: vscode.OutputChannel;
     private _ready: boolean = false;
     private currentAbortController: AbortController | null = null;
+    // v1.12.0: Track verbose mode for tool output display
+    private _toolsVerbose: boolean = false;
 
     constructor(baseUrl: string = 'http://127.0.0.1:54320') {
         this.baseUrl = baseUrl;
         this.outputChannel = vscode.window.createOutputChannel('ppxai HTTP');
+    }
+
+    /**
+     * Get current verbose mode setting (v1.12.0)
+     */
+    get toolsVerbose(): boolean {
+        return this._toolsVerbose;
     }
 
     /**
@@ -220,7 +229,7 @@ export class HttpClient {
     /**
      * Get tools status
      */
-    async getToolsStatus(): Promise<{ enabled: boolean; tool_count: number; max_iterations: number; consent_mode: string }> {
+    async getToolsStatus(): Promise<{ enabled: boolean; tool_count: number; max_iterations: number; consent_mode: string; verbose: boolean }> {
         const response = await fetch(`${this.baseUrl}/tools`);
         if (!response.ok) {
             throw new Error(`Failed to get tools: ${response.statusText}`);
@@ -230,12 +239,16 @@ export class HttpClient {
             enabled: boolean;
             max_iterations?: number;
             consent_mode?: string;
+            verbose?: boolean;  // v1.12.0
         };
+        // v1.12.0: Sync verbose setting from server
+        this._toolsVerbose = data.verbose || false;
         return {
             enabled: data.enabled,
             tool_count: data.tools.length,
             max_iterations: data.max_iterations || 15,
-            consent_mode: data.consent_mode || 'default'
+            consent_mode: data.consent_mode || 'default',
+            verbose: data.verbose || false  // v1.12.0
         };
     }
 
@@ -272,6 +285,10 @@ export class HttpClient {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ setting, value: String(value) })
         });
+        // v1.12.0: Track verbose setting locally
+        if (response.ok && setting === 'verbose') {
+            this._toolsVerbose = ['on', 'true', '1', 'yes'].includes(String(value).toLowerCase());
+        }
         return response.ok;
     }
 

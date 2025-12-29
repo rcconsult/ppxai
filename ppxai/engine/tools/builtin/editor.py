@@ -87,6 +87,8 @@ class ApplyPatchTool(BaseTool):
                 temp_path.replace(path)
 
                 lines_changed = sum(1 for a, b in zip(original_lines, new_lines) if a != b)
+                # v1.12.0: Track edited file for agent auto-commit
+                self.engine._agent_edited_files.add(str(path))
                 return f"✓ Successfully applied patch to {file_path} ({lines_changed} lines changed)"
 
             except Exception as e:
@@ -185,6 +187,8 @@ class ReplaceBlockTool(BaseTool):
                 temp_path.replace(path)
 
                 lines_added = replace.count('\n') - search.count('\n')
+                # v1.12.0: Track edited file for agent auto-commit
+                self.engine._agent_edited_files.add(str(path))
                 return f"✓ Successfully replaced block in {file_path} at line {line_num} ({lines_added:+d} lines)"
 
             except Exception as e:
@@ -283,6 +287,8 @@ class InsertTextTool(BaseTool):
 
                 num_lines = text.count('\n') + (0 if text.endswith('\n') else 1)
                 end_line = line_number + num_lines - 1
+                # v1.12.0: Track edited file for agent auto-commit
+                self.engine._agent_edited_files.add(str(path))
                 return f"✓ Successfully inserted text in {file_path} at lines {line_number}-{end_line}"
 
             except Exception as e:
@@ -384,6 +390,8 @@ class DeleteLinesTool(BaseTool):
 
                 num_deleted = end_line - start_line + 1
                 preview = deleted_content[:100] + "..." if len(deleted_content) > 100 else deleted_content
+                # v1.12.0: Track edited file for agent auto-commit
+                self.engine._agent_edited_files.add(str(path))
                 return f"✓ Successfully deleted lines {start_line}-{end_line} from {file_path} ({num_deleted} lines)\nDeleted content:\n{preview}"
 
             except Exception as e:
