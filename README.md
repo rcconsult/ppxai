@@ -17,7 +17,7 @@
 
 1. Download from [Releases](../../releases):
    - `ppxai-{platform}` (TUI binary)
-   - `ppxai-server-{platform}` + `ppxai-1.11.9.vsix` (for VSCode)
+   - `ppxai-server-{platform}` + `ppxai-1.12.0.vsix` (for VSCode)
 
 2. Create `.env` with your API key:
    ```bash

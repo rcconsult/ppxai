@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.11.9 (v1.12.0 in development on `feature/agent-multi-file-atomic-edit`)
+**Current Version:** v1.12.0
 
 **What's New in v1.12.0 (In Development):**
 - **NEW:** Checkpoint System for atomic multi-file rollback in agent mode
@@ -202,10 +202,10 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - Automated GitHub Actions CI/CD for multi-platform builds (macOS ARM/Intel, Linux, Windows)
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.11.9
-- VSCode extension (package.json): v1.11.9
-- Git tag: v1.11.9 (released 2025-12-27)
-- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v1.11.9
+- Python package (pyproject.toml): v1.12.0
+- VSCode extension (package.json): v1.12.0
+- Git tag: v1.12.0 (released 2025-12-29)
+- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v1.12.0
 
 ## Development Setup
 
@@ -480,7 +480,7 @@ The release script (`scripts/release.py`) handles everything automatically:
 | `ppxai/common/event_handler.py` | `Version: v1.12.0` | Yes |
 | `README.md` | `ppxai-1.12.0.vsix` | No |
 | `vscode-extension/README.md` | `ppxai-1.12.0.vsix` | No |
-| `CLAUDE.md` | `**Current Version:** v1.12.0` | Yes |
+| `CLAUDE.md` | `**Current Version:** v1.12.0
 | `ROADMAP.md` | `> **Current Version**: v1.12.0` | Yes |
 
 ### Files Validated (Not Auto-Updated)
