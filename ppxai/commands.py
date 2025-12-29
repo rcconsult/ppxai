@@ -1175,12 +1175,7 @@ class CommandHandler:
             console.print("[red]Undo command requires engine client[/red]")
             return
 
-        # Check if agent mode is enabled
-        if not self.engine_client.agent_mode:
-            console.print("[yellow]⚠️  Agent mode is not enabled[/yellow]")
-            console.print("[dim]Undo only works for agent mode tasks that created checkpoints[/dim]\n")
-            return
-
+        # v1.12.0: Allow undo regardless of agent mode - checkpoints from previous sessions should be undoable
         # Get checkpoint status
         status = self.engine_client.get_checkpoint_status()
         if not status.get("enabled"):
@@ -1194,8 +1189,26 @@ class CommandHandler:
             console.print("[dim]Run an /agent task first to create a checkpoint[/dim]\n")
             return
 
-        # Show what will be undone
+        # v1.12.0: Check for uncommitted changes before undo (git revert requires clean working tree)
         backend = status.get("backend")
+        if backend == "git":
+            import subprocess
+            try:
+                working_dir = self.engine_client.context_injector.working_dir
+                result = subprocess.run(
+                    ["git", "status", "--porcelain"],
+                    cwd=working_dir,
+                    capture_output=True,
+                    text=True
+                )
+                if result.stdout.strip():
+                    console.print("[yellow]⚠️  Cannot undo: uncommitted changes in working directory[/yellow]")
+                    console.print("[dim]Commit or stash your changes first, then try again[/dim]\n")
+                    return
+            except subprocess.CalledProcessError:
+                pass  # If git status fails, let the undo attempt proceed
+
+        # Show what will be undone
         console.print(f"\n[bold yellow]⚠️  Undo Last Agent Task[/bold yellow]")
         console.print(f"[cyan]Backend:[/cyan] {backend}")
         console.print(f"[cyan]Checkpoint:[/cyan] {last_checkpoint}")
@@ -1342,7 +1355,7 @@ class CommandHandler:
         """
         if not args.strip():
             console.print("[red]Usage: /agent <task description>[/red]")
-            console.print("[yellow]       /agent on|off  - Toggle agent mode[/yellow]")
+            console.print("[yellow]       /agent on|off - Toggle agent mode[/yellow]")
             console.print("[yellow]Example: /agent Fix the bug in auth.py[/yellow]")
             console.print("[yellow]         /agent Review @git changes and fix issues[/yellow]\n")
             return
@@ -1358,7 +1371,36 @@ class CommandHandler:
             return
 
         task = args.strip()
-        max_iterations = 5
+
+        # v1.11.9: Handle /agent on|off as toggle commands
+        if task.lower() in ['on', 'enable']:
+            self.engine_client.enable_agent_mode()
+            console.print("[green]Agent mode enabled[/green]")
+            console.print("[dim]Tools auto-enabled. Use '/agent <task>' to start autonomous execution.[/dim]\n")
+            return
+
+        if task.lower() in ['off', 'disable']:
+            self.engine_client.disable_agent_mode()
+            console.print("[yellow]Agent mode disabled[/yellow]\n")
+            return
+
+        # v1.11.9: Get agent config from engine
+        agent_config = self.engine_client.get_agent_config()
+        min_words = agent_config.get("min_task_words", 3)
+        max_iterations = agent_config.get("max_iterations", 10)
+
+        # v1.11.9: Reject vague/ambiguous tasks for safety
+        words = task.split()
+        if len(words) < min_words:
+            console.print(f"[red]Task too vague: \"{task}\"[/red]")
+            console.print(f"\n[yellow]Agent tasks should be specific and descriptive (at least {min_words} words).[/yellow]")
+            console.print("[yellow]Vague tasks can lead to unexpected AI interpretations.[/yellow]")
+            console.print("\n[dim]Examples:[/dim]")
+            console.print("[green]  ✓ /agent Fix the authentication bug in login.py[/green]")
+            console.print("[green]  ✓ /agent Review @git changes and suggest improvements[/green]")
+            console.print("[red]  ✗ /agent fix bug[/red]")
+            console.print("[red]  ✗ /agent do it[/red]\n")
+            return
 
         # Ensure agent mode is enabled (auto-enables tools)
         if not self.engine_client.agent_mode:

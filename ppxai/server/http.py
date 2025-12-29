@@ -535,9 +535,21 @@ async def get_tools():
         raise HTTPException(status_code=503, detail="Engine not initialized")
 
     tools = engine.list_tools()
+
+    # Get consent mode from session (v1.11.9)
+    consent_mode = "default"
+    try:
+        if hasattr(engine, 'session') and hasattr(engine.session, 'edit_consent_mode'):
+            consent_mode = engine.session.edit_consent_mode
+    except Exception:
+        pass
+
     return {
         "tools": tools,  # Already list of {"name": ..., "description": ...}
         "enabled": engine.tools_enabled,
+        "max_iterations": getattr(engine, 'tool_max_iterations', 15),
+        "consent_mode": consent_mode,
+        "verbose": getattr(engine, '_tools_verbose', False),  # v1.12.0
     }
 
 
@@ -819,6 +831,16 @@ async def get_agent_status():
     }
 
 
+@app.get("/agent/config")
+async def get_agent_config():
+    """Get agent configuration (v1.11.9)."""
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    return engine.get_agent_config()
+
+
 @app.post("/agent/enable")
 async def enable_agent_mode():
     """Enable agent mode for autonomous task execution (v1.11.8).
@@ -874,13 +896,7 @@ async def undo_last_checkpoint():
     if not engine:
         raise HTTPException(status_code=503, detail="Engine not initialized")
 
-    # Check if agent mode is enabled
-    if not engine.agent_mode:
-        raise HTTPException(
-            status_code=400,
-            detail="Agent mode must be enabled to use undo"
-        )
-
+    # v1.12.0: Allow undo regardless of agent mode - checkpoints from previous sessions should be undoable
     # Check if checkpoints are enabled
     status = engine.get_checkpoint_status()
     if not status.get("enabled"):
@@ -896,18 +912,37 @@ async def undo_last_checkpoint():
             detail="No checkpoint to undo (run an agent task first)"
         )
 
+    # v1.12.0: Check for uncommitted changes before undo (git revert requires clean working tree)
+    if status.get("backend") == "git":
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=engine.context_injector.working_dir,
+                capture_output=True,
+                text=True
+            )
+            if result.stdout.strip():
+                raise HTTPException(
+                    status_code=400,
+                    detail="Cannot undo: uncommitted changes in working directory. Commit or stash changes first."
+                )
+        except subprocess.CalledProcessError:
+            pass  # If git status fails, let the undo attempt proceed
+
     # Perform undo
     success = engine.undo_last_checkpoint()
     if not success:
         raise HTTPException(
             status_code=500,
-            detail="Failed to undo checkpoint"
+            detail="Failed to undo checkpoint (git revert may have failed)"
         )
 
     logger.info("Checkpoint undo successful via API")
 
     return {
-        "ok": True,
+        "success": True,
+        "message": f"Checkpoint {status.get('last_checkpoint', '')[:8]} reverted successfully",
         "backend": status.get("backend"),
         "checkpoint_id": status.get("last_checkpoint"),
     }

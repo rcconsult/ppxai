@@ -6,7 +6,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.11.9
+**Current Version:** v1.11.9 (v1.12.0 in development on `feature/agent-multi-file-atomic-edit`)
+
+**What's New in v1.12.0 (In Development):**
+- **NEW:** Checkpoint System for atomic multi-file rollback in agent mode
+  - Git backend: Auto-commits before agent tasks, `git revert` to undo
+  - File backend (fallback): Snapshots to `~/.ppxai/checkpoints/`
+  - Auto-detection: Uses git if available, else file, configurable via `checkpoint_backend`
+- **NEW:** `/undo` command to revert last agent task atomically
+- **NEW:** Auto-commit after successful agent tasks (creates undoable checkpoint)
+- **NEW:** `EventType.STATUS` for checkpoint notifications in TUI and VSCode
+- **NEW:** HTTP endpoints: `/checkpoint/status`, `/checkpoint/undo`
+- **NEW:** VSCode Undo button with confirmation dialog (restored from lost commit)
+- **NEW:** Collapsible tool messages with verbose mode (▶/▼ click to expand/collapse)
+- **FIX:** TUI `/undo` aligns with VSCode behavior (works regardless of agent mode)
+- **FIX:** Checkpoint manager initialized on startup (not just on set_working_dir)
+- **FIX:** Auto-commit timing in async generator flow (before STREAM_END yield)
+- **Tests:** 365 tests passing (28 new checkpoint tests)
+- **Docs:** [CHECKPOINT_GUIDE.md](docs/CHECKPOINT_GUIDE.md), [VSCODE-CHECKPOINT-UI-SPEC.md](docs/VSCODE-CHECKPOINT-UI-SPEC.md)
+
+**⚠️ RELEASE BLOCKER - Checkpoint Stale State Bug:**
+- **CRITICAL:** Checkpoint persists after branch moves forward with non-agent commits
+- **Risk:** Undo button could revert wrong commit, causing data loss for users
+- **Must fix:** Checkpoint must be invalidated when new commits are made after it
+- **Details:** [docs/CHECKPOINT-CRITICAL-BUG.md](docs/CHECKPOINT-CRITICAL-BUG.md)
 
 **What's New in v1.11.9 (Released 2025-12-27):**
 - **CRITICAL FIX:** `/agent on|off` now correctly toggles agent mode instead of being interpreted as tasks

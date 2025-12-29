@@ -79,6 +79,11 @@ class EngineClient:
         # Checkpoint manager for atomic multi-file rollback (v1.12.0)
         self._checkpoint_manager: Optional[CheckpointManager] = None
         self._last_checkpoint_id: Optional[str] = None
+        # Track files edited by agent during current task (v1.12.0)
+        self._agent_edited_files: set = set()
+
+        # v1.12.0: Verbose mode for tool output display (matches TUI behavior)
+        self._tools_verbose: bool = False
 
         # Event emitter for consent requests (Phase 1C: HTTP/SSE support)
         # This allows emitting events from within consent callback
@@ -86,6 +91,10 @@ class EngineClient:
 
         # Load configuration (including shell command patterns)
         self._load_config()
+
+        # v1.12.0: Initialize checkpoint manager with default working directory
+        # This ensures TUI has checkpoints available without explicit set_working_dir call
+        self._init_checkpoint_manager(self.context_injector.working_dir)
 
     def _load_config(self):
         """Load configuration from ppxai-config.json and .env."""
@@ -106,8 +115,41 @@ class EngineClient:
             self._default_provider = MODEL_PROVIDER
 
             # Load shell tool configuration (v1.11.2)
+            # v1.11.9: Add default dangerous patterns for safety
             full_config = load_config()
-            self._shell_config = full_config.get("tools", {}).get("shell", {})
+            user_shell_config = full_config.get("tools", {}).get("shell", {})
+
+            # Built-in defaults merged with user config
+            default_dangerous = [
+                r"^rm\s+", r"^mv\s+", r"^dd\s+", r"^chmod\s+", r"^chown\s+",
+                r"^sudo\s+", r"^curl.*\|.*bash", r"^wget.*\|.*bash",
+                r">\s*/dev/", r"^kill\s+", r"^pkill\s+", r"^killall\s+"
+            ]
+            default_never = [
+                r"rm\s+-rf\s+/", r"dd\s+.*of=/dev/", r":\(\)\{\s*:\|:&\s*\};:",
+                r"mkfs\.", r"^\s*>\s*/dev/sda"
+            ]
+            default_allowed = [
+                r"^ls\s+", r"^cat\s+(?!.*[><])", r"^grep\s+",
+                r"^echo\s+(?!.*>)", r"^pwd$", r"^which\s+",
+                r"^whoami$", r"^date$", r"^uname\s+"
+            ]
+
+            self._shell_config = {
+                "dangerous_commands": user_shell_config.get("dangerous_commands", default_dangerous),
+                "never_allow": user_shell_config.get("never_allow", default_never),
+                "allowed_commands": user_shell_config.get("allowed_commands", default_allowed),
+            }
+
+            # v1.11.9: Load agent configuration
+            # v1.12.0: Added max_tool_iterations for inner tool loop
+            agent_config = full_config.get("tools", {}).get("agent", {})
+            self._agent_config = {
+                "max_iterations": agent_config.get("max_iterations", 10),
+                "max_tool_iterations": agent_config.get("max_tool_iterations", 15),
+                "context_char_limit": agent_config.get("context_char_limit", 2000),
+                "min_task_words": agent_config.get("min_task_words", 3),
+            }
         except ImportError:
             # Fallback if old config not available
             self._providers_config = {}
@@ -115,9 +157,56 @@ class EngineClient:
             self._get_base_url = lambda p: None
             self._get_default_model = lambda: None
             self._default_provider = "perplexity"
-            self._shell_config = {}
+            # v1.11.9: Built-in shell safety defaults
+            self._shell_config = {
+                "dangerous_commands": [
+                    r"^rm\s+", r"^mv\s+", r"^dd\s+", r"^chmod\s+", r"^chown\s+",
+                    r"^sudo\s+", r"^curl.*\|.*bash", r"^wget.*\|.*bash",
+                    r">\s*/dev/", r"^kill\s+", r"^pkill\s+", r"^killall\s+"
+                ],
+                "never_allow": [
+                    r"rm\s+-rf\s+/", r"dd\s+.*of=/dev/", r":\(\)\{\s*:\|:&\s*\};:",
+                    r"mkfs\.", r"^\s*>\s*/dev/sda"
+                ],
+                "allowed_commands": [
+                    r"^ls\s+", r"^cat\s+(?!.*[><])", r"^grep\s+",
+                    r"^echo\s+(?!.*>)", r"^pwd$", r"^which\s+",
+                    r"^whoami$", r"^date$", r"^uname\s+"
+                ],
+            }
+            # v1.11.9: Default agent configuration
+            # v1.12.0: Added max_tool_iterations
+            self._agent_config = {
+                "max_iterations": 10,
+                "max_tool_iterations": 15,
+                "context_char_limit": 2000,
+                "min_task_words": 3,
+            }
 
     # === Context Injection ===
+
+    def _init_checkpoint_manager(self, path: str):
+        """Initialize checkpoint manager for a working directory (v1.12.0).
+
+        Args:
+            path: Working directory path
+        """
+        checkpoint_backend = self.config.get("tools", {}).get("agent", {}).get("checkpoint_backend", "auto")
+        session_id = self.session.session_name or "default"
+        self._checkpoint_manager = CheckpointManager(
+            working_dir=path,
+            session_id=session_id,
+            backend=checkpoint_backend
+        )
+
+        # Restore last checkpoint ID from existing checkpoints (persistence across restarts)
+        try:
+            checkpoints = self._checkpoint_manager.list_checkpoints()
+            if checkpoints:
+                # list_checkpoints returns [(id, description, timestamp), ...] sorted by recency
+                self._last_checkpoint_id = checkpoints[0][0]
+        except Exception:
+            pass  # Ignore errors - checkpoint ID will be None until first checkpoint is created
 
     def set_working_dir(self, path: str):
         """Set working directory for file path resolution.
@@ -126,6 +215,7 @@ class EngineClient:
             path: Working directory path
         """
         self.context_injector.set_working_dir(path)
+        self._init_checkpoint_manager(path)
 
         # Initialize checkpoint manager for this working directory (v1.12.0)
         checkpoint_backend = self.config.get("tools", {}).get("agent", {}).get("checkpoint_backend", "auto")
@@ -307,6 +397,8 @@ class EngineClient:
         if not self.tools_enabled:
             # Register all built-in tools (including file editing tools v1.11.0)
             register_all_builtin_tools(self.tool_manager, self.provider_name, engine=self)
+            # v1.12.0: Apply configurable max_tool_iterations
+            self.tool_manager.max_iterations = self._agent_config.get("max_tool_iterations", 15)
             self.tools_enabled = True
         return True
 
@@ -379,6 +471,14 @@ class EngineClient:
         self._agent_mode = False
         return True
 
+    def get_agent_config(self) -> dict:
+        """Get agent configuration (v1.11.9).
+
+        Returns:
+            Dict with max_iterations, context_char_limit, min_task_words
+        """
+        return self._agent_config
+
     # === Checkpoint Management (v1.12.0) ===
 
     def create_checkpoint(self, description: str) -> Optional[str]:
@@ -440,6 +540,71 @@ class EngineClient:
 
         return False
 
+    def commit_agent_changes(self, description: str) -> Optional[str]:
+        """Commit changes made during agent task (v1.12.0).
+
+        This commits any uncommitted changes after a successful agent task,
+        allowing undo to work via git revert.
+
+        Args:
+            description: Description of the changes (for commit message)
+
+        Returns:
+            Commit hash if successful, None otherwise
+        """
+        if not self._checkpoint_manager or not self._agent_mode:
+            return None
+
+        # Only git backend supports this
+        if self._checkpoint_manager.get_backend_name() != "git":
+            return None
+
+        try:
+            import subprocess
+            working_dir = self.context_injector.working_dir
+
+            # Check if there are changes to commit
+            result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=working_dir,
+                capture_output=True,
+                text=True
+            )
+            if not result.stdout.strip():
+                return None  # No changes to commit
+
+            # Stage all changes
+            subprocess.run(
+                ["git", "add", "-A"],
+                cwd=working_dir,
+                check=True
+            )
+
+            # Commit with descriptive message
+            commit_msg = f"ppxai agent: {description}"
+            subprocess.run(
+                ["git", "commit", "-m", commit_msg],
+                cwd=working_dir,
+                check=True
+            )
+
+            # Get the commit hash
+            result = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=working_dir,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            commit_hash = result.stdout.strip()
+
+            # Update last checkpoint to the new commit (so undo reverts this)
+            self._last_checkpoint_id = commit_hash
+
+            return commit_hash
+        except subprocess.CalledProcessError:
+            return None
+
     def get_checkpoint_status(self) -> Dict[str, Any]:
         """Get checkpoint system status (v1.12.0).
 
@@ -468,6 +633,7 @@ class EngineClient:
         2. Check if file already allowed
         3. If needed, call consent_callback to ask user
         4. Update session state based on response
+        5. v1.12.0: Create checkpoint before first file edit in agent mode
 
         Args:
             file_path: Path to file that needs editing
@@ -478,6 +644,19 @@ class EngineClient:
         from pathlib import Path
 
         path = Path(file_path).resolve()
+
+        # v1.12.0: Create checkpoint before first file edit in agent mode
+        # Only create once per chat turn (when no files have been edited yet)
+        if self._agent_mode and self._checkpoint_manager and not self.session.allowed_files:
+            # Extract filename for checkpoint description
+            filename = path.name
+            checkpoint_id = self.create_checkpoint(f"Before editing {filename}")
+            if checkpoint_id:
+                # Emit checkpoint notification via STATUS event
+                self._consent_event_queue.append(Event(
+                    type=EventType.STATUS,
+                    data=f"✓ Checkpoint created: {checkpoint_id[:8]} (Before editing {filename})"
+                ))
 
         # Check global consent mode
         if self.session.edit_consent_mode == "always":
@@ -675,7 +854,7 @@ class EngineClient:
         """Configure tool settings.
 
         Args:
-            setting: Setting name (e.g., 'max_iterations')
+            setting: Setting name (e.g., 'max_iterations', 'verbose')
             value: Setting value
 
         Returns:
@@ -683,6 +862,10 @@ class EngineClient:
         """
         if setting == "max_iterations":
             self.tool_manager.max_iterations = int(value)
+            return True
+        elif setting == "verbose":
+            # v1.12.0: Store verbose setting for tool output display
+            self._tools_verbose = value in [True, "on", "true", "1", "yes"]
             return True
         return False
 
@@ -695,7 +878,8 @@ class EngineClient:
         return {
             "enabled": self.tools_enabled,
             "tool_count": len(self.tool_manager.list_tools()) if self.tools_enabled else 0,
-            "max_iterations": self.tool_manager.max_iterations
+            "max_iterations": self.tool_manager.max_iterations,
+            "verbose": self._tools_verbose  # v1.12.0: Include verbose setting
         }
 
     # === Chat ===
@@ -751,11 +935,6 @@ class EngineClient:
 
         # Add message to history (with injected content)
         self.session.add_message(Message("user", message))
-
-        # DEBUG: Log session state after adding user message
-        from ppxai.tui_logger import get_logger
-        logger = get_logger()
-        logger.debug(f"After adding user message, session has {len(self.session.messages)} messages")
 
         if self.tools_enabled:
             async for event in self._chat_with_tools(stream):
@@ -829,11 +1008,6 @@ class EngineClient:
                         "like [Source Name](https://example.com) so they are clickable."
                     )
                 messages = [Message("system", tool_prompt)] + messages
-
-            # Log API request for debugging
-            from ppxai.tui_logger import get_logger
-            logger = get_logger()
-            logger.log_api_request(iteration, messages)
 
             # Get response from provider
             full_response = ""
@@ -913,10 +1087,6 @@ class EngineClient:
 
             else:
                 # No tool call - this is the final response
-                from ppxai.tui_logger import get_logger
-                logger = get_logger()
-                logger.debug(f"No tool call detected, generating final response (stream={stream})")
-
                 # v1.11.7 FIX: Don't re-request with streaming - use the response we already have.
                 # Re-requesting caused bugs where the model would output a tool call on the
                 # second request, which would then be sent as the final response without
@@ -924,12 +1094,19 @@ class EngineClient:
                 #
                 # The response was already fetched with stream=False during tool iterations.
                 # Just emit it as the final response.
-                logger.debug(f"Using already-fetched response as final (no re-request)")
                 self.session.add_message(Message("assistant", full_response))
-                yield Event(EventType.STREAM_END, full_response)
-                logger.debug(f"After adding assistant message, session has {len(self.session.messages)} messages")
 
-                logger.debug(f"Final response complete, returning from _chat_with_tools")
+                # v1.12.0: Commit agent changes after successful task completion
+                # NOTE: Only commit if agent made file edits (tracked via _agent_edited_files)
+                # This prevents committing unrelated changes from other tools (e.g., Claude Code)
+                if self._agent_mode and self._checkpoint_manager and self._agent_edited_files:
+                    commit_hash = self.commit_agent_changes("Task completed")
+                    if commit_hash:
+                        yield Event(EventType.STATUS, f"✓ Changes committed: {commit_hash[:8]}")
+                    # Reset edited files tracking for next task
+                    self._agent_edited_files.clear()
+
+                yield Event(EventType.STREAM_END, full_response)
                 return
 
         # Max iterations reached
