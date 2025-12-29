@@ -1,6 +1,6 @@
 # Release Notes: v1.12.0 - Checkpoint System & Usage Tracking
 
-**Release Date:** 2025-12-27
+**Release Date:** 2025-12-29
 **Type:** Major Feature Release
 **Branch:** `feature/agent-multi-file-atomic-edit` → `master`
 
@@ -677,6 +677,6 @@ You: /agent update dependencies
 ---
 
 **Version:** v1.12.0
-**Release Date:** 2025-12-27
+**Release Date:** 2025-12-29
 **Type:** Major Feature Release
 **Status:** Ready for Merge
