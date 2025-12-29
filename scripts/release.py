@@ -4,16 +4,18 @@ Automated release script for ppxai.
 
 This script handles the complete release process:
 1. Check git status (clean working directory)
-2. Update all version references across the codebase
-3. Validate version references with validate-release.py
-4. Check/create release notes template
-5. Run tests
-6. Create release commit
-7. Push to GitHub and trigger CI
-8. Wait for CI to complete
-9. Publish release notes to GitHub
-10. Build Intel Mac assets (auto-detects platform)
-11. Verify release assets
+2. Check branch (must be on master)
+3. Update all version references across the codebase
+4. Validate version references with validate-release.py
+5. Check/create release notes template
+6. Run TypeScript lint (VSCode extension)
+7. Run tests
+8. Create release commit
+9. Push to GitHub and trigger CI
+10. Wait for CI to complete
+11. Publish release notes to GitHub
+12. Build Intel Mac assets (auto-detects platform)
+13. Verify release assets
 
 Usage:
     python scripts/release.py v1.11.8
@@ -310,12 +312,67 @@ def check_release_notes_not_template(version: str) -> bool:
     return True
 
 
+def get_uv_command() -> str:
+    """Detect the correct uv command based on local installation."""
+    local_uv = PROJECT_ROOT / ".uv/uv"
+    if local_uv.exists():
+        return str(local_uv)
+    # Try system uv
+    result = subprocess.run("which uv", shell=True, capture_output=True, text=True)
+    if result.returncode == 0:
+        return "uv"
+    return None
+
+
+def check_branch() -> tuple[bool, str]:
+    """Check if on master branch. Returns (is_master, current_branch)."""
+    result = run_command("git branch --show-current", check=False)
+    branch = result.stdout.strip()
+    return branch == "master", branch
+
+
+def run_typescript_lint() -> bool:
+    """Run TypeScript linting for VSCode extension."""
+    print("\n📋 Running TypeScript lint...")
+
+    vscode_dir = PROJECT_ROOT / "vscode-extension"
+    if not vscode_dir.exists():
+        print("  ⏭️  vscode-extension directory not found, skipping lint")
+        return True
+
+    # Check if npm is available
+    result = subprocess.run("which npm", shell=True, capture_output=True, text=True)
+    if result.returncode != 0:
+        print("  ⚠️  npm not found, skipping TypeScript lint")
+        return True
+
+    # Run lint
+    result = run_command(f"cd {vscode_dir} && npm run lint", check=False)
+    if result.returncode == 0:
+        print("  ✅ TypeScript lint passed")
+        return True
+    else:
+        print(f"  ❌ TypeScript lint failed!")
+        print(result.stdout[-1000:] if len(result.stdout) > 1000 else result.stdout)
+        print(result.stderr[-500:] if len(result.stderr) > 500 else result.stderr)
+        return False
+
+
 def run_tests() -> bool:
     """Run pytest and return success status."""
     print("\n📋 Running tests...")
 
-    # Try different ways to run pytest
-    for cmd in [".uv/uv run pytest tests/ -v --tb=short", "uv run pytest tests/ -v --tb=short", "python -m pytest tests/ -v --tb=short"]:
+    # Detect uv command
+    uv_cmd = get_uv_command()
+
+    # Build command list based on available tools
+    commands = []
+    if uv_cmd:
+        commands.append(f"{uv_cmd} run pytest tests/ -v --tb=short")
+    commands.append("python3 -m pytest tests/ -v --tb=short")
+    commands.append("python -m pytest tests/ -v --tb=short")
+
+    for cmd in commands:
         result = run_command(cmd, check=False)
         if result.returncode == 0:
             # Extract test count from output
@@ -323,7 +380,7 @@ def run_tests() -> bool:
             if match:
                 print(f"  ✅ {match.group(1)} tests passed")
             return True
-        elif "command not found" not in result.stderr:
+        elif "command not found" not in result.stderr and "No module named" not in result.stderr:
             print(f"  ❌ Tests failed!")
             print(result.stdout[-2000:] if len(result.stdout) > 2000 else result.stdout)
             return False
@@ -664,8 +721,8 @@ def main():
     date = datetime.now().strftime("%Y-%m-%d")
 
     # Calculate total steps based on flags
-    # Base steps: Git check, Update versions, Validate, Release notes, Tests, Commit, Push, CI wait, Publish notes, Intel build, Verify = 11
-    total_steps = 11
+    # Base steps: Git check, Branch check, Update versions, Validate, Release notes, TS Lint, Tests, Commit, Push, CI wait, Publish notes, Intel build, Verify = 13
+    total_steps = 13
     if args.redo:
         total_steps += 1  # Add "Delete existing release" step
     if args.skip_tests:
@@ -705,6 +762,22 @@ def main():
         print(f"     Commit or stash changes first, or use --force")
         sys.exit(1)
     print(f"  ✅ Git working directory is clean")
+    record_step("Git Status")
+
+    # Step 2: Check branch
+    step += 1
+    print_step(step, total_steps, "Checking Branch")
+    is_master, current_branch = check_branch()
+    if not is_master and not args.force:
+        print(f"  ❌ Not on master branch (current: {current_branch})")
+        print(f"     Switch to master first: git checkout master")
+        print(f"     Or use --force to release from {current_branch}")
+        sys.exit(1)
+    if is_master:
+        print(f"  ✅ On master branch")
+    else:
+        print(f"  ⚠️  On {current_branch} branch (--force used)")
+    record_step("Branch Check")
 
     # Pre-flight check: Warn if release notes are still template
     if not check_release_notes_not_template(version):
@@ -719,8 +792,6 @@ def main():
             if response != 'y':
                 print(f"\n  ❌ Aborted. Edit {notes_file} and try again.")
                 sys.exit(1)
-
-    record_step("Git Status")
 
     # Optional: Handle --redo: delete existing release first
     if args.redo:
@@ -740,7 +811,7 @@ def main():
         print(f"\n✅ Dry run complete. Use without --dry-run to execute.")
         return
 
-    # Step 2: Update version files
+    # Step 3: Update version files
     step += 1
     print_step(step, total_steps, "Updating Version References")
     for filepath, config in VERSION_FILES.items():
@@ -770,7 +841,7 @@ def main():
         print(f"  ✅ Updated: ROADMAP.md")
     record_step("Update Versions")
 
-    # Step 3: Validate all version references
+    # Step 4: Validate all version references
     step += 1
     print_step(step, total_steps, "Validating Version References")
     if not run_validation(version):
@@ -779,13 +850,21 @@ def main():
         sys.exit(1)
     record_step("Validation")
 
-    # Step 4: Check/create release notes
+    # Step 5: Check/create release notes
     step += 1
     print_step(step, total_steps, "Checking Release Notes")
     create_release_notes(version, date)
     record_step("Release Notes")
 
-    # Step 5: Run tests
+    # Step 6: Run TypeScript lint
+    step += 1
+    print_step(step, total_steps, "Running TypeScript Lint")
+    if not run_typescript_lint():
+        print(f"\n❌ TypeScript lint failed. Fix issues and try again.")
+        sys.exit(1)
+    record_step("TS Lint")
+
+    # Step 7: Run tests
     if not args.skip_tests:
         step += 1
         print_step(step, total_steps, "Running Tests")
@@ -794,19 +873,19 @@ def main():
             sys.exit(1)
         record_step("Tests")
 
-    # Step 6: Create commit
+    # Step 8: Create commit
     step += 1
     print_step(step, total_steps, "Creating Release Commit")
     create_commit(version, f"feat: v{version} release")
     record_step("Commit")
 
-    # Step 7: Create and push tag
+    # Step 9: Create and push tag
     step += 1
     print_step(step, total_steps, "Pushing to GitHub")
     create_and_push_tag(version)
     record_step("Push")
 
-    # Step 8: Wait for CI
+    # Step 10: Wait for CI
     if not args.skip_ci_wait:
         step += 1
         print_step(step, total_steps, "Waiting for CI")
@@ -815,20 +894,20 @@ def main():
             print(f"    Check: https://github.com/rcconsult/ppxai/actions")
         record_step("CI Wait")
 
-    # Step 9: Publish release notes
+    # Step 11: Publish release notes
     step += 1
     print_step(step, total_steps, "Publishing Release Notes")
     publish_release_notes(version)
     record_step("Publish Notes")
 
-    # Step 10: Build Intel Mac assets (auto-detects platform)
+    # Step 12: Build Intel Mac assets (auto-detects platform)
     step += 1
     print_step(step, total_steps, "Building Intel Mac Assets")
     if not build_intel_assets(version):
         print(f"\n⚠️  Intel build failed, but release continues")
     record_step("Intel Build")
 
-    # Step 11: Verify release
+    # Step 13: Verify release
     step += 1
     print_step(step, total_steps, "Verifying Release")
     verify_release(version)
