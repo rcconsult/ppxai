@@ -1,4 +1,4 @@
-# Release Notes: v1.12.0 - Checkpoint System
+# Release Notes: v1.12.0 - Checkpoint System & Usage Tracking
 
 **Release Date:** 2025-12-27
 **Type:** Major Feature Release
@@ -8,13 +8,19 @@
 
 ## 🎯 Overview
 
-ppxai v1.12.0 introduces a **checkpoint system** that provides atomic multi-file rollback for agent mode tasks. Before executing autonomous tasks, ppxai creates a checkpoint that lets you undo all changes with a single `/undo` command.
+ppxai v1.12.0 introduces a **checkpoint system** for atomic multi-file rollback and **real-time token usage tracking** with cost estimation.
 
-**Key Benefits:**
+**Checkpoint System:**
 - ✅ **Safe Experimentation** - Try agent tasks risk-free, undo with one command
 - ✅ **Git Integration** - Uses native git commits for version-controlled projects
 - ✅ **Zero Configuration** - Works out of the box with sensible defaults
 - ✅ **Fallback Support** - File snapshots when git is not available
+
+**Usage Tracking:**
+- ✅ **Real-time Tokens** - See prompt/completion tokens in status line
+- ✅ **Cost Estimation** - Automatic USD cost calculation per model
+- ✅ **VSCode Integration** - Usage badge with live updates
+- ✅ **All Providers** - Works with streaming responses (OpenAI, Perplexity, Gemini)
 
 ---
 
@@ -149,7 +155,56 @@ POST /checkpoint/undo
 Response: {"ok": true, "backend": "git"}
 ```
 
-### 7. Documentation
+### 7. Real-Time Token Usage & Cost Tracking
+
+**Streaming Usage Extraction**
+- Both OpenAI-compatible and Perplexity providers now extract token counts from streaming responses
+- Uses `stream_options={"include_usage": True}` parameter for accurate token counts
+- Works with all streaming requests (the default mode)
+
+**Cost Calculation**
+- Automatic USD cost estimation based on per-model pricing in config
+- Pricing data for all built-in providers (Perplexity, Gemini)
+- Configurable pricing for custom providers
+
+**TUI Status Line**
+```
+[Perplexity | Sonar Pro | Tools: ON | 1.2K↓/0.5K↑ $0.0045]
+```
+- `1.2K↓` - Prompt tokens (input)
+- `0.5K↑` - Completion tokens (output)
+- `$0.0045` - Estimated cost for session
+
+**VSCode Extension**
+- Usage badge in header with live updates after each response
+- Tooltip shows total tokens and cost details
+- Green color when cost > $0
+
+**`/usage` Command**
+```
+┌─────────────────────────────────────────┐
+│        Current Session Usage            │
+├─────────────────────┬───────────────────┤
+│ Metric              │             Value │
+├─────────────────────┼───────────────────┤
+│ Total Tokens        │             1,750 │
+│ Prompt Tokens       │             1,200 │
+│ Completion Tokens   │               550 │
+│ Estimated Cost      │           $0.0045 │
+└─────────────────────┴───────────────────┘
+```
+
+**HTTP Endpoint: `/usage`**
+```json
+{
+  "total_tokens": 1750,
+  "prompt_tokens": 1200,
+  "completion_tokens": 550,
+  "estimated_cost": 0.0045
+}
+```
+
+### 8. Documentation
 
 **New User Guides:**
 - [docs/CHECKPOINT_GUIDE.md](../docs/CHECKPOINT_GUIDE.md) - Comprehensive 550+ line user guide

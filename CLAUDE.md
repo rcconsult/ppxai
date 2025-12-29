@@ -19,6 +19,12 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **NEW:** HTTP endpoints: `/checkpoint/status`, `/checkpoint/undo`
 - **NEW:** VSCode Undo button with confirmation dialog (restored from lost commit)
 - **NEW:** Collapsible tool messages with verbose mode (▶/▼ click to expand/collapse)
+- **NEW:** Real-time token usage and cost tracking
+  - Streaming usage: Both OpenAI-compatible and Perplexity providers now extract token counts from streaming responses
+  - Cost calculation: Automatic USD cost estimation based on per-model pricing
+  - TUI status line: Shows session tokens (in/out) and estimated cost (e.g., `1.2K↓/0.5K↑ $0.0045`)
+  - VSCode extension: Usage badge in header with live updates and tooltip
+  - `/usage` command shows detailed session stats with cost breakdown
 - **FIX:** TUI `/undo` aligns with VSCode behavior (works regardless of agent mode)
 - **FIX:** Checkpoint manager initialized on startup (not just on set_working_dir)
 - **FIX:** Auto-commit timing in async generator flow (before STREAM_END yield)
