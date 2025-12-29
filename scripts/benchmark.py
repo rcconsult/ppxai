@@ -98,7 +98,7 @@ async def benchmark_streaming(provider_id: str, model: str, prompt: str, max_ret
         max_retries: Number of retries for rate-limited requests
 
     Returns:
-        dict with ttft_ms, total_ms, tokens, tokens_per_sec
+        dict with ttft_ms, total_ms, tokens, tokens_per_sec, prompt_tokens, completion_tokens
     """
     from ppxai.engine import EngineClient, EventType
 
@@ -110,6 +110,8 @@ async def benchmark_streaming(provider_id: str, model: str, prompt: str, max_ret
         start_time = time.perf_counter()
         first_token_time = None
         total_tokens = 0
+        prompt_tokens = 0
+        completion_tokens = 0
 
         try:
             async for event in engine.chat(prompt):
@@ -119,6 +121,11 @@ async def benchmark_streaming(provider_id: str, model: str, prompt: str, max_ret
                     # Rough token count (words + punctuation)
                     total_tokens += len(event.data.split())
                 elif event.type == EventType.STREAM_END:
+                    # Extract token usage from metadata if available
+                    if event.metadata and event.metadata.get("usage"):
+                        usage = event.metadata["usage"]
+                        prompt_tokens = getattr(usage, 'prompt_tokens', 0) or 0
+                        completion_tokens = getattr(usage, 'completion_tokens', 0) or 0
                     break
                 elif event.type == EventType.ERROR:
                     raise Exception(f"API Error: {event.data}")
@@ -142,6 +149,8 @@ async def benchmark_streaming(provider_id: str, model: str, prompt: str, max_ret
                 "total_ms": round(total_ms, 2),
                 "tokens": total_tokens,
                 "tokens_per_sec": round(tokens_per_sec, 2),
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
             }
 
         except Exception as e:
@@ -234,6 +243,8 @@ def calculate_summary(results: list) -> dict:
     ttft_values = [r["ttft_ms"] for r in valid_results if r.get("ttft_ms")]
     total_values = [r["total_ms"] for r in valid_results]
     speed_values = [r["tokens_per_sec"] for r in valid_results]
+    prompt_tokens = [r.get("prompt_tokens", 0) for r in valid_results]
+    completion_tokens = [r.get("completion_tokens", 0) for r in valid_results]
 
     summary = {
         "total_runs": len(results),
@@ -263,6 +274,15 @@ def calculate_summary(results: list) -> dict:
             "min": round(min(speed_values), 2),
             "max": round(max(speed_values), 2),
         }
+
+    # Token usage stats
+    summary["tokens"] = {
+        "prompt_total": sum(prompt_tokens),
+        "completion_total": sum(completion_tokens),
+        "total": sum(prompt_tokens) + sum(completion_tokens),
+        "prompt_mean": round(mean(prompt_tokens), 0) if prompt_tokens else 0,
+        "completion_mean": round(mean(completion_tokens), 0) if completion_tokens else 0,
+    }
 
     return summary
 
@@ -337,6 +357,12 @@ def print_summary(summary: dict, provider: str, model: str):
         print(f"\nThroughput:")
         print(f"  Mean: {speed['mean']:.1f} tokens/sec")
         print(f"  Range: {speed['min']:.1f} - {speed['max']:.1f} tokens/sec")
+
+    if "tokens" in summary:
+        tokens = summary["tokens"]
+        print(f"\nToken Usage:")
+        print(f"  Total: {tokens['total']:,} ({tokens['prompt_total']:,} in / {tokens['completion_total']:,} out)")
+        print(f"  Per request: ~{int(tokens['prompt_mean'])} in / ~{int(tokens['completion_mean'])} out")
 
 
 def compare_with_baseline(summary: dict, log_file: Path) -> bool:

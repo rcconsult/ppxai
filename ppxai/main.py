@@ -26,11 +26,19 @@ from .engine.types import EventType
 from .markdown_tables import render_markdown_with_tables
 
 
+def format_tokens(count: int) -> str:
+    """Format token count for display (e.g., 1.2K, 15.3K)."""
+    if count >= 1000:
+        return f"{count/1000:.1f}K"
+    return str(count)
+
+
 def get_status_line(handler):
     """Generate status line showing current settings.
 
     v1.12.0: Now uses handler.provider instead of legacy client.
     v1.12.0: Added agent mode and checkpoint status.
+    v1.12.0: Added session token usage and cost display.
     """
     provider_config = get_provider_config(handler.provider)
     provider_name = provider_config["name"]
@@ -62,10 +70,27 @@ def get_status_line(handler):
         else:
             agent_status_parts.append("Checkpoints: [red]OFF[/red]")
 
+    # Get session usage stats (v1.12.0)
+    usage_display = ""
+    if handler.engine_client:
+        usage = handler.engine_client.session.get_usage()
+        prompt_tokens = usage.get("prompt_tokens", 0)
+        completion_tokens = usage.get("completion_tokens", 0)
+        cost = usage.get("estimated_cost", 0.0)
+
+        if prompt_tokens > 0 or completion_tokens > 0:
+            tokens_str = f"{format_tokens(prompt_tokens)}↓/{format_tokens(completion_tokens)}↑"
+            if cost > 0:
+                usage_display = f"[cyan]{tokens_str}[/cyan] [dim]${cost:.4f}[/dim]"
+            else:
+                usage_display = f"[cyan]{tokens_str}[/cyan]"
+
     # Build status line
     parts = [provider_name, model_display, f"Tools: {tools_status}"]
     if agent_status_parts:
         parts.extend(agent_status_parts)
+    if usage_display:
+        parts.append(usage_display)
 
     status = "[dim][[/dim]" + "[dim] | [/dim]".join(parts) + "[dim]][/dim]"
     return status

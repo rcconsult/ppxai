@@ -83,22 +83,41 @@ class PerplexityProvider(BaseProvider):
             yield Event(EventType.STREAM_START, {"model": model})
 
             if stream:
-                # Streaming response
+                # Streaming response with usage tracking
                 response_stream = self.client.chat.completions.create(
                     model=model,
                     messages=api_messages,
-                    stream=True
+                    stream=True,
+                    stream_options={"include_usage": True}
                 )
 
                 full_response = []
+                usage = None
+                citations = []
                 for chunk in response_stream:
-                    if chunk.choices[0].delta.content:
+                    # Check for usage in final chunk (when include_usage is True)
+                    if hasattr(chunk, 'usage') and chunk.usage:
+                        usage = self._parse_usage(chunk.usage)
+                    # Check for citations (Perplexity-specific)
+                    if hasattr(chunk, 'citations') and chunk.citations:
+                        citations = chunk.citations
+                    # Process content chunks
+                    if chunk.choices and chunk.choices[0].delta.content:
                         content = chunk.choices[0].delta.content
                         full_response.append(content)
                         yield Event(EventType.STREAM_CHUNK, content)
 
                 final_content = "".join(full_response)
-                yield Event(EventType.STREAM_END, final_content)
+                # Inject citation URLs into response text
+                if citations:
+                    final_content = inject_citation_urls(final_content, citations)
+
+                metadata = {}
+                if usage:
+                    metadata["usage"] = usage
+                if citations:
+                    metadata["citations"] = citations
+                yield Event(EventType.STREAM_END, final_content, metadata if metadata else None)
 
             else:
                 # Non-streaming response

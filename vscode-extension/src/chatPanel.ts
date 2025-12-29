@@ -2073,13 +2073,20 @@ Review your previous actions and continue. If the task is complete, respond with
         try {
             const status = await this._backend.getStatus();
             const toolsStatus = await this._backend.getToolsStatus();
+            const usage = await this._backend.getUsage();
 
             this._view.webview.postMessage({
                 type: 'status',
                 provider: status.provider,
                 model: status.model,
                 toolsEnabled: toolsStatus.enabled,
-                toolCount: toolsStatus.tool_count
+                toolCount: toolsStatus.tool_count,
+                usage: {
+                    promptTokens: usage.prompt_tokens || 0,
+                    completionTokens: usage.completion_tokens || 0,
+                    totalTokens: usage.total_tokens || 0,
+                    estimatedCost: usage.estimated_cost || 0
+                }
             });
         } catch (error) {
             // Backend may not be ready yet
@@ -2088,7 +2095,8 @@ Review your previous actions and continue. If the task is complete, respond with
                 provider: 'Not connected',
                 model: '...',
                 toolsEnabled: false,
-                toolCount: 0
+                toolCount: 0,
+                usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0, estimatedCost: 0 }
             });
         }
     }
@@ -2408,6 +2416,21 @@ A: Use \`/tools disable\` or choose "never" when prompted.
         .undo-badge.disabled {
             opacity: 0.5;
             cursor: not-allowed;
+        }
+
+        /* Usage badge - v1.12.0 */
+        .usage-badge {
+            background: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            opacity: 0.8;
+            cursor: help;
+        }
+
+        .usage-badge.has-cost {
+            color: var(--vscode-charts-green, #89d185);
         }
 
         /* v1.12.0: Tool messages with collapsible details */
@@ -3037,6 +3060,7 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             <button class="agent-badge disabled" id="agentBadge" title="Click to toggle agent mode">Agent: off</button>
             <button class="undo-badge" id="undoBadge" title="No checkpoint to undo">↶ Undo</button>
             <button class="streaming-badge" id="streamingBadge" style="display: none;" title="Press Esc to stop">⏹ Streaming...</button>
+            <span class="usage-badge" id="usageBadge" title="Session token usage and cost">0↓/0↑</span>
         </div>
         <div class="workspace-info" id="workspaceInfo" style="display: none;">
             <span class="workspace-icon">📁</span>
@@ -3093,6 +3117,7 @@ A: Use \`/tools disable\` or choose "never" when prompted.
         const modelSpan = document.getElementById('model');
         const toolsBadge = document.getElementById('toolsBadge');
         const streamingBadge = document.getElementById('streamingBadge');
+        const usageBadge = document.getElementById('usageBadge');
         const clearBtn = document.getElementById('clearBtn');
         const menuBtn = document.getElementById('menuBtn');
         const menuDropdown = document.getElementById('menuDropdown');
@@ -3722,6 +3747,21 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                         toolsBadge.classList.add('disabled');
                         toolsBadge.classList.remove('enabled');
                         toolsBadge.title = 'Click to enable tools';
+                    }
+                    // Update usage badge (v1.12.0)
+                    if (message.usage && usageBadge) {
+                        const formatTokens = (count) => count >= 1000 ? (count/1000).toFixed(1) + 'K' : count.toString();
+                        const promptStr = formatTokens(message.usage.promptTokens);
+                        const completionStr = formatTokens(message.usage.completionTokens);
+                        const cost = message.usage.estimatedCost;
+                        if (cost > 0) {
+                            usageBadge.textContent = promptStr + '↓/' + completionStr + '↑ $' + cost.toFixed(4);
+                            usageBadge.classList.add('has-cost');
+                        } else {
+                            usageBadge.textContent = promptStr + '↓/' + completionStr + '↑';
+                            usageBadge.classList.remove('has-cost');
+                        }
+                        usageBadge.title = 'Session: ' + message.usage.totalTokens.toLocaleString() + ' tokens, $' + cost.toFixed(4);
                     }
                     break;
 

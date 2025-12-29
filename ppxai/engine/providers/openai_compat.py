@@ -52,22 +52,29 @@ class OpenAICompatibleProvider(BaseProvider):
             yield Event(EventType.STREAM_START, {"model": model})
 
             if stream:
-                # Streaming response
+                # Streaming response with usage tracking
                 response_stream = self.client.chat.completions.create(
                     model=model,
                     messages=api_messages,
-                    stream=True
+                    stream=True,
+                    stream_options={"include_usage": True}
                 )
 
                 full_response = []
+                usage = None
                 for chunk in response_stream:
-                    if chunk.choices[0].delta.content:
+                    # Check for usage in final chunk (when include_usage is True)
+                    if hasattr(chunk, 'usage') and chunk.usage:
+                        usage = self._parse_usage(chunk.usage)
+                    # Process content chunks
+                    if chunk.choices and chunk.choices[0].delta.content:
                         content = chunk.choices[0].delta.content
                         full_response.append(content)
                         yield Event(EventType.STREAM_CHUNK, content)
 
                 final_content = "".join(full_response)
-                yield Event(EventType.STREAM_END, final_content)
+                metadata = {"usage": usage} if usage else None
+                yield Event(EventType.STREAM_END, final_content, metadata)
 
             else:
                 # Non-streaming response

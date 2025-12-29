@@ -23,6 +23,7 @@ from .tools.builtin import register_all_builtin_tools
 from .session import SessionManager
 from .context import ContextInjector
 from ..checkpoint import CheckpointManager
+from ..config import calculate_cost
 
 
 class EngineClient:
@@ -968,7 +969,15 @@ class EngineClient:
             if event.type == EventType.STREAM_END:
                 self.session.add_message(Message("assistant", event.data))
                 if event.metadata and event.metadata.get("usage"):
-                    self.session.update_usage(event.metadata["usage"])
+                    usage = event.metadata["usage"]
+                    # Calculate cost based on model and provider
+                    usage.estimated_cost = calculate_cost(
+                        usage.prompt_tokens,
+                        usage.completion_tokens,
+                        self.model,
+                        self.provider_id
+                    )
+                    self.session.update_usage(usage)
 
             # Now yield the event to caller (TUI may break after this)
             yield event

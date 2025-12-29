@@ -456,6 +456,34 @@ def get_model_pricing(provider: str = None) -> dict:
     return get_provider_config(provider).get("pricing", {})
 
 
+def calculate_cost(prompt_tokens: int, completion_tokens: int, model: str, provider: str = None) -> float:
+    """Calculate estimated cost in USD for token usage.
+
+    Args:
+        prompt_tokens: Number of input tokens
+        completion_tokens: Number of output tokens
+        model: Model ID used
+        provider: Provider ID. If None, uses active provider.
+
+    Returns:
+        Estimated cost in USD (0.0 if pricing not available)
+    """
+    pricing = get_model_pricing(provider)
+    model_pricing = pricing.get(model, {})
+
+    if not model_pricing:
+        return 0.0
+
+    # Prices are per million tokens
+    input_price = model_pricing.get("input", 0.0)
+    output_price = model_pricing.get("output", 0.0)
+
+    input_cost = (prompt_tokens / 1_000_000) * input_price
+    output_cost = (completion_tokens / 1_000_000) * output_price
+
+    return input_cost + output_cost
+
+
 def get_api_key(provider: str = None) -> str:
     """Get API key for the specified provider from environment.
 
