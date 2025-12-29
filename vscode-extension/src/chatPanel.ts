@@ -3334,8 +3334,10 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                 case 'toolCall':
                     typingIndicator.textContent = 'Using tool: ' + message.tool + '...';
                     typingIndicator.classList.add('visible');
-                    // v1.12.0: Collapsible tool call details (matches TUI compact display)
-                    addToolMessageCollapsible('tool-call', '🔧 Calling tool: ' + message.tool, JSON.stringify(message.arguments, null, 2));
+                    // v1.12.0: Show tool call with collapsible details
+                    const toolCallJson = JSON.stringify(message.arguments, null, 2);
+                    const toolCallContent = '🔧 Calling tool: ' + message.tool + '\n\n' + toolCallJson;
+                    addMessage('tool-call', toolCallContent, true);
 
                     // BUGFIX: Strip tool call JSON from current response content
                     // When Gemini includes tool JSON in its response, remove it from display
@@ -3360,8 +3362,9 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                     const resultPreview = typeof message.result === 'string'
                         ? (message.result.length > 2000 ? message.result.slice(0, 2000) + '...' : message.result)
                         : JSON.stringify(message.result, null, 2);
-                    // v1.12.0: Collapsible tool result details (matches TUI compact display)
-                    addToolMessageCollapsible('tool-result', '📋 Result from ' + message.tool, resultPreview);
+                    // v1.12.0: Show tool result with details
+                    const toolResultContent = '📋 Result from ' + message.tool + '\n\n' + resultPreview;
+                    addMessage('tool-result', toolResultContent, true);
                     break;
 
                 case 'contextInjected':
@@ -3629,54 +3632,6 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             }
             el.appendChild(contentEl);
 
-            messagesContainer.insertBefore(el, typingIndicator);
-            scrollToBottom();
-            return el;
-        }
-
-        // v1.12.0: Add collapsible tool message (matches TUI compact display)
-        function addToolMessageCollapsible(role, summary, details) {
-            const now = new Date();
-            const el = document.createElement('div');
-            el.className = 'message ' + role;
-
-            // Add timestamp
-            const timestamp = document.createElement('span');
-            timestamp.className = 'message-timestamp';
-            timestamp.textContent = formatTimestamp();
-            el.appendChild(timestamp);
-
-            // Update last message time
-            lastMessageTime = now;
-
-            // Create collapsible structure using a clickable header
-            const headerEl = document.createElement('div');
-            headerEl.className = 'tool-header';
-            headerEl.style.cursor = 'pointer';
-            headerEl.style.userSelect = 'none';
-
-            const arrowEl = document.createElement('span');
-            arrowEl.className = 'tool-arrow';
-            arrowEl.textContent = '▶ ';
-            headerEl.appendChild(arrowEl);
-            headerEl.appendChild(document.createTextNode(summary));
-
-            const contentEl = document.createElement('pre');
-            contentEl.className = 'tool-content';
-            contentEl.style.display = 'none';  // Start collapsed
-            const codeEl = document.createElement('code');
-            codeEl.textContent = details;
-            contentEl.appendChild(codeEl);
-
-            // Toggle on click
-            headerEl.addEventListener('click', function() {
-                const isHidden = contentEl.style.display === 'none';
-                contentEl.style.display = isHidden ? 'block' : 'none';
-                arrowEl.textContent = isHidden ? '▼ ' : '▶ ';
-            });
-
-            el.appendChild(headerEl);
-            el.appendChild(contentEl);
             messagesContainer.insertBefore(el, typingIndicator);
             scrollToBottom();
             return el;
