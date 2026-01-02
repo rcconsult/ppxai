@@ -25,7 +25,6 @@
 |----------|-------------|
 | [Agentic Workflow Plan](v1.11.0-agentic-workflow-plan.md) | Technical implementation of agentic features |
 | [Architecture Refactoring](architecture-refactoring.md) | EngineClient architecture design |
-| [AI Codebase Analysis](AI-CODEBASE-ANALYSIS-2025-12-26.md) | External AI analysis of codebase |
 
 ### Archived Documentation
 
@@ -190,5 +189,5 @@ A: Type `@filename`, `@git`, or `@tree` in your messages. See [Context Injection
 
 ---
 
-**Current Version**: v1.11.7
-**Last Updated**: 2025-12-26
+**Current Version**: v1.12.3
+**Last Updated**: 2026-01-03

@@ -39,18 +39,29 @@ ppxai provides:
 
 ---
 
-## Next Up: v1.12.0 - Safety & Reproducibility
+## Completed (v1.12.x)
 
-**Theme**: Make agent mode safe and predictable with atomic rollback
+### Safety & Reproducibility ✅ (v1.12.0)
+- Git-based checkpoints: Auto-commit before `/agent` tasks
+- `/undo` command: Revert last agent task atomically
+- Stale checkpoint detection
+- File-based fallback for non-git directories
 
-| Feature | Description | Priority |
-|---------|-------------|----------|
-| **Git-based checkpoints** | Auto-commit before `/agent` tasks for atomic rollback | High |
-| **`/undo` command** | Revert last agent task (`git revert HEAD`) | High |
-| **Agent mode tests** | Add `tests/test_agent_mode.py` | High |
-| **Fix test warnings** | 4 unawaited coroutine warnings | Medium |
+### TUI Themes ✅ (v1.12.1)
+- 4 themes: Standard, Tron Legacy, Matrix, Nord
+- Framed status panel with colored badges
+- Clickable file links via OSC 8 hyperlinks
+- `/theme` command with autocomplete
 
-**User value**: If agent edits go wrong, `/undo` restores all files atomically.
+### Tool Call Parsing ✅ (v1.12.2)
+- Fixed single-quote JSON parsing in tool calls
+- Improved error handling for malformed tool responses
+
+### Usage Analytics ✅ (v1.12.3)
+- Persistent usage storage in `~/.ppxai/usage/usage.json`
+- Time-based usage reports: `/usage 24h|week|month|year|all`
+- HTTP endpoints: `/usage/report`, `/usage/sessions`
+- Auto-save after each chat (VSCode), on quit (TUI)
 
 ---
 
@@ -108,7 +119,7 @@ ppxai is **not** trying to be:
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ```bash
-uv run pytest tests/ -v       # Run tests (337 passing)
+uv run pytest tests/ -v       # Run tests (406 passing)
 uv run ppxai-server           # Start server for VSCode dev
 ```
 
@@ -124,4 +135,4 @@ For archived planning documents:
 
 ---
 
-**Last Updated**: December 27, 2025
+**Last Updated**: January 3, 2026

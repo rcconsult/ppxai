@@ -32,8 +32,9 @@ Fixes #
 
 <!-- Describe how you tested your changes -->
 
-- [ ] Tested locally with `python ppxai.py`
-- [ ] Verified with multiple Perplexity models
+- [ ] Tested TUI locally with `uv run ppxai` (or `python ppxai.py`)
+- [ ] Tested VSCode extension (if applicable)
+- [ ] Verified with relevant AI providers (if applicable)
 - [ ] Tested slash commands (if applicable)
 - [ ] No errors or warnings in console
 
@@ -44,6 +45,7 @@ Fixes #
 - [ ] I have updated documentation (if applicable)
 - [ ] My changes generate no new warnings or errors
 - [ ] I have checked that my changes don't break existing functionality
+- [ ] Tests pass: `uv run pytest tests/ -v`
 
 ## Additional Notes
 

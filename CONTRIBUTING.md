@@ -12,7 +12,28 @@ Thank you for your interest in contributing to ppxai! We welcome contributions f
 
 ## Development Setup
 
-### TUI (Terminal UI)
+### TUI (Terminal UI) - Recommended: uv
+
+1. Clone your fork
+2. Bootstrap the project (auto-downloads uv if needed):
+   ```bash
+   python scripts/bootstrap.py --all
+   ```
+3. Set up configuration:
+   ```bash
+   cp .env.example .env
+   # Edit .env and add your API keys (e.g., PERPLEXITY_API_KEY)
+   ```
+4. Run the application:
+   ```bash
+   uv run ppxai
+   ```
+5. Run tests:
+   ```bash
+   uv run pytest tests/ -v
+   ```
+
+### TUI - Alternative: pip
 
 1. Clone your fork
 2. Create and activate a virtual environment:
@@ -28,9 +49,6 @@ Thank you for your interest in contributing to ppxai! We welcome contributions f
    ```bash
    cp .env.example .env
    # Edit .env and add your API keys (e.g., PERPLEXITY_API_KEY)
-
-   # Optional: For multi-provider setup
-   cp ppxai-config.example.json ppxai-config.json
    ```
 5. Run the application:
    ```bash

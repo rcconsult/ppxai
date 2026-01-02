@@ -1,6 +1,6 @@
 # ppxai - Multi-LLM Interface for Developers
 
-![Version](https://img.shields.io/badge/version-1.12.1-blue) ![Tests](https://img.shields.io/badge/tests-377%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen)
+![Version](https://img.shields.io/badge/version-1.12.3-blue) ![Tests](https://img.shields.io/badge/tests-406%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen)
 
 **Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
 
@@ -104,7 +104,7 @@ Enable with `/tools enable` (or use Agent Mode):
 - Auto-save every 10 messages
 - `/sessions` - Browse saved conversations
 - `/export` - Export to markdown
-- `/usage` - View token counts and cost estimates
+- `/usage [24h|week|month|all]` - View token counts and cost estimates
 
 ## Configuration
 
@@ -145,7 +145,7 @@ See [docs/PROVIDER_SETUP.md](docs/PROVIDER_SETUP.md) for detailed examples.
 All data stays on your machine:
 - `~/.ppxai/sessions/` - Conversation history
 - `~/.ppxai/exports/` - Markdown exports
-- `~/.ppxai/usage.json` - Usage stats
+- `~/.ppxai/usage/` - Usage stats
 
 No telemetry. No tracking. Data only goes to the LLM provider you choose.
 
@@ -171,7 +171,7 @@ ppxai/
 │   ├── engine/               # EngineClient, providers, tools
 │   └── server/               # HTTP + JSON-RPC servers
 ├── vscode-extension/         # VSCode extension (TypeScript)
-├── tests/                    # 377 tests
+├── tests/                    # 406 tests
 └── docs/                     # Documentation
 ```
 
