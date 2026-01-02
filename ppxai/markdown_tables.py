@@ -17,7 +17,7 @@ from rich.console import Console, RenderableType
 from rich.text import Text
 
 
-def convert_markdown_links_to_rich(content: str) -> str:
+def convert_markdown_links_to_rich(content: str, working_dir: str = None) -> str:
     """
     Convert markdown links to Rich markup for clickable terminal links.
 
@@ -25,8 +25,12 @@ def convert_markdown_links_to_rich(content: str) -> str:
     as clickable hyperlinks in terminals that support OSC 8 (iTerm2, Windows
     Terminal, GNOME Terminal 3.26+, etc.).
 
+    For local file paths (relative or absolute), converts to file:// URIs
+    so they're clickable in the terminal.
+
     Args:
         content: Markdown content with links like [Source](https://example.com)
+        working_dir: Working directory for resolving relative paths (defaults to cwd)
 
     Returns:
         Content with Rich-style clickable links
@@ -37,7 +41,16 @@ def convert_markdown_links_to_rich(content: str) -> str:
 
         >>> convert_markdown_links_to_rich("[Google](https://google.com) is popular")
         '[link=https://google.com][bold cyan]Google[/bold cyan][/link] is popular'
+
+        >>> convert_markdown_links_to_rich("[README](./README.md)")  # Converts to file:// URI
+        '[link=file:///path/to/README.md][bold cyan]README[/bold cyan][/link]'
     """
+    import os
+    from pathlib import Path
+
+    if working_dir is None:
+        working_dir = os.getcwd()
+
     # Pattern to match markdown links: [text](url)
     # Match text that doesn't contain ] and url that doesn't contain )
     link_pattern = r'\[([^\]]+)\]\(([^)]+)\)'
@@ -45,8 +58,34 @@ def convert_markdown_links_to_rich(content: str) -> str:
     def replace_link(match):
         text = match.group(1)
         url = match.group(2)
+
+        # Check if it's a web URL (http/https) or already a file:// URI
+        if url.startswith(('http://', 'https://', 'file://')):
+            final_url = url
+            display_text = text
+        else:
+            # It's a local file path - convert to file:// URI
+            # Handle relative paths (./file, ../file, file)
+            if url.startswith('./') or url.startswith('../') or not url.startswith('/'):
+                # Relative path - resolve against working directory
+                abs_path = Path(working_dir) / url
+                abs_path = abs_path.resolve()
+            else:
+                # Already absolute path
+                abs_path = Path(url)
+
+            # Convert to file:// URI for clicking
+            final_url = f"file://{abs_path}"
+
+            # For display, use just the filename (not ./path or full path)
+            # Unless the link text is explicitly different from the path
+            if text == url or text.endswith(url) or url.endswith(text):
+                display_text = abs_path.name  # Just the filename
+            else:
+                display_text = text  # Keep custom text
+
         # Use bold cyan style for visibility + link for clickability
-        return f'[link={url}][bold cyan]{text}[/bold cyan][/link]'
+        return f'[link={final_url}][bold cyan]{display_text}[/bold cyan][/link]'
 
     return re.sub(link_pattern, replace_link, content)
 
