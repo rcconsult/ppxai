@@ -441,7 +441,7 @@ python -c "from ppxai.config import validate_config; print(validate_config())"
 /release v1.x.x
 
 # Or run the script directly
-python scripts/release.py v1.x.x
+uv run python scripts/release.py v1.x.x
 ```
 
 **NEVER manually:**
@@ -516,7 +516,7 @@ These files must be manually updated BEFORE running release:
 
 ```bash
 # Redo a broken release from scratch
-python scripts/release.py v1.x.x --redo --force
+uv run python scripts/release.py v1.x.x --redo --force
 ```
 
 ### Release Assets (Built by CI)
