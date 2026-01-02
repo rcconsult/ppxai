@@ -2,7 +2,7 @@
 
 **Created:** December 29, 2025
 **Last Updated:** January 2, 2026
-**Status:** v1.12.1 Released
+**Status:** v1.12.2 Released
 **Branch:** `master`
 
 ---
@@ -11,11 +11,12 @@
 
 This document outlines the release plan for the v1.12.x series, focusing on:
 1. Checkpoint system with stale detection (DONE - v1.12.0)
-2. Real-time token usage and cost tracking (DONE - v1.12.0)
+2. Real-time token usage and cost tracking with per-model breakdown (DONE - v1.12.0)
 3. TUI enhancements: themes, framed panels, clickable links (DONE - v1.12.1)
-4. Per-provider/model usage breakdown (NEXT - v1.12.2)
-5. Dedicated Gemini provider for native features (PLANNED - v1.12.3+)
-6. TUI experiments:
+4. TUI polish: emoji toggle, logging unification, bug fixes (DONE - v1.12.2)
+5. Time-based usage analytics (NEXT - v1.12.3)
+6. Dedicated Gemini provider for native features (PLANNED - v1.12.4)
+7. TUI experiments:
    - `experiment/rich-tui` - MERGED to master (v1.12.1)
    - `experiment/tui-textual` - Experimental, ~20% feature parity
 
@@ -49,10 +50,12 @@ This document outlines the release plan for the v1.12.x series, focusing on:
 #### Token Usage & Cost Tracking (FIXED)
 - [x] Streaming usage extraction (`stream_options={"include_usage": True}`)
 - [x] Cost calculation based on per-model pricing
+- [x] **Per-model usage breakdown** (`usage_by_model` dict with `provider/model` keys)
 - [x] Session usage accumulation
 - [x] TUI status line shows `1.2K↓/0.5K↑ $0.0045`
 - [x] VSCode usage badge with live updates
-- [x] `/usage` command shows session stats
+- [x] `/usage` command shows session stats with per-model table
+- [x] `/usage show <session|provider|model|off>` display modes
 - [x] Works with tools/agent mode (accumulated across iterations)
 - [x] Fallback for APIs that don't support `stream_options`
 - [x] Self-hosted LLMs: tokens tracked, cost = $0.00
@@ -82,97 +85,42 @@ This document outlines the release plan for the v1.12.x series, focusing on:
 
 ---
 
-## v1.12.2 - Usage Analytics & Cost Breakdown
+## v1.12.2 - TUI Polish & Bug Fixes
 
-**Status:** Proposed
+**Status:** ✅ Released (2026-01-02)
+**Tag:** v1.12.2
+
+### Features Complete
+
+#### Emoji Toggle
+- [x] `/theme emoji on|off` command to toggle emoji display in panel badges
+- [x] Switch between emoji badges and text-only badges for better alignment
+
+#### Bug Fixes
+- [x] **Single-quote JSON** - Fixed parsing of tool calls using single quotes
+- [x] **Unified logging** - TUI and engine now share common logger module
+- [x] **Logger initialization** - Fixed missing `self.logger` in CommandHandler
+- [x] **Checkpoint status** - Shows `↶` symbol instead of full git hash
+- [x] **Panel alignment** - Text symbols instead of emojis for consistent alignment
+
+#### Code Cleanup
+- [x] Removed obsolete `tui_logger.py` (replaced by `ppxai/common/logger.py`)
+
+### Tests
+- 386 tests passing
+
+---
+
+## v1.12.3 - Time-Based Usage Analytics
+
+**Status:** Next
 **Target:** 1-2 days
 
 ### Motivation
 
-Current usage tracking shows only aggregated totals:
-```json
-{"total_tokens": 1298, "prompt_tokens": 1143, "completion_tokens": 155, "estimated_cost": 0.005754}
-```
-
-This is misleading when users switch between providers/models in a session. Different models have vastly different pricing (e.g., sonar: $0.20/M vs sonar-pro: $3.00/M input).
-
-Users also need to track spending over time to budget their API costs effectively.
+Per-model usage tracking is complete (v1.12.0), but users need to track spending **over time** to budget their API costs effectively. Currently, usage data is lost when the session ends.
 
 ### Proposed Implementation
-
-#### 1. Session Storage Change
-
-**Current:**
-```python
-self.usage = UsageStats(...)  # Single aggregate
-```
-
-**Proposed:**
-```python
-self.usage_by_model: Dict[str, UsageStats] = {}  # Key: "provider/model"
-# Example keys: "perplexity/sonar-pro", "gemini/gemini-2.0-flash"
-```
-
-#### 2. Update `update_usage()` Signature
-
-```python
-def update_usage(self, usage: UsageStats, provider: str, model: str):
-    key = f"{provider}/{model}"
-    if key not in self.usage_by_model:
-        self.usage_by_model[key] = UsageStats()
-
-    self.usage_by_model[key].prompt_tokens += usage.prompt_tokens
-    self.usage_by_model[key].completion_tokens += usage.completion_tokens
-    self.usage_by_model[key].total_tokens += usage.total_tokens
-    self.usage_by_model[key].estimated_cost += usage.estimated_cost
-```
-
-#### 3. Update `get_usage()` Response
-
-```python
-def get_usage(self) -> Dict[str, Any]:
-    # Calculate totals
-    totals = UsageStats()
-    for usage in self.usage_by_model.values():
-        totals.prompt_tokens += usage.prompt_tokens
-        # ... etc
-
-    return {
-        "by_model": {
-            key: asdict(usage)
-            for key, usage in self.usage_by_model.items()
-        },
-        "totals": asdict(totals)
-    }
-```
-
-#### 4. TUI `/usage` Display
-
-```
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃                     Session Usage Statistics                      ┃
-┣━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┫
-┃ Provider     ┃ Model              ┃ In      ┃ Out     ┃ Cost     ┃
-┣━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━╋━━━━━━━━━╋━━━━━━━━━━┫
-┃ perplexity   ┃ sonar-pro          ┃ 1,143   ┃ 155     ┃ $0.0058  ┃
-┃ gemini       ┃ gemini-2.0-flash   ┃ 101     ┃ 3       ┃ $0.0000  ┃
-┣━━━━━━━━━━━━━━╋━━━━━━━━━━━━━━━━━━━━╋━━━━━━━━━╋━━━━━━━━━╋━━━━━━━━━━┫
-┃ TOTAL        ┃                    ┃ 1,244   ┃ 158     ┃ $0.0058  ┃
-┗━━━━━━━━━━━━━━┻━━━━━━━━━━━━━━━━━━━━┻━━━━━━━━━┻━━━━━━━━━┻━━━━━━━━━━┛
-```
-
-#### 5. VSCode Extension Usage Tooltip
-
-Hover over usage badge shows breakdown instead of just totals.
-
-#### 6. Status Line (No Change)
-
-Keep showing session totals in status line (space constrained):
-```
-[Perplexity | sonar-pro | Tools: ON | 1.2K↓/0.5K↑ $0.0058]
-```
-
-### Part B: Time-Based Cost Aggregation
 
 #### 1. Persistent Usage Storage
 
@@ -184,50 +132,19 @@ Keep showing session totals in status line (space constrained):
   "sessions": [
     {
       "session_id": "abc123",
-      "session_name": "chat-2025-12-29-1430",
-      "started_at": "2025-12-29T14:30:00Z",
-      "ended_at": "2025-12-29T15:45:00Z",
+      "session_name": "chat-2026-01-02-1430",
+      "started_at": "2026-01-02T14:30:00Z",
+      "ended_at": "2026-01-02T15:45:00Z",
       "usage_by_model": {
-        "perplexity/sonar-pro": {"prompt_tokens": 1143, "completion_tokens": 155, "estimated_cost": 0.0058},
-        "gemini/gemini-2.0-flash": {"prompt_tokens": 500, "completion_tokens": 50, "estimated_cost": 0.0001}
+        "perplexity/sonar-pro": {"prompt_tokens": 1143, "completion_tokens": 155, "estimated_cost": 0.0058}
       },
-      "total_cost": 0.0059
+      "total_cost": 0.0058
     }
   ]
 }
 ```
 
-#### 2. Time-Based Aggregation
-
-```python
-def get_usage_report(period: str = "all") -> Dict[str, Any]:
-    """Get usage aggregated by time period.
-
-    Args:
-        period: "session" | "24h" | "week" | "month" | "year" | "all"
-    """
-    now = datetime.now(UTC)
-    cutoff = {
-        "24h": now - timedelta(hours=24),
-        "week": now - timedelta(weeks=1),
-        "month": now - timedelta(days=30),
-        "year": now - timedelta(days=365),
-        "all": datetime.min,
-    }.get(period, datetime.min)
-
-    # Filter sessions by cutoff
-    sessions = [s for s in usage_data["sessions"] if s["started_at"] >= cutoff]
-
-    return {
-        "period": period,
-        "session_count": len(sessions),
-        "by_model": aggregate_by_model(sessions),
-        "by_session": [summarize_session(s) for s in sessions],
-        "totals": aggregate_totals(sessions)
-    }
-```
-
-#### 3. TUI `/usage` Command Enhancement
+#### 2. TUI `/usage` Command Enhancement
 
 ```
 /usage              # Current session (default)
@@ -290,73 +207,26 @@ GET /usage/export?format=csv  # Export usage data
 
 | File | Changes |
 |------|---------|
-| `ppxai/engine/session.py` | Add `usage_by_model`, update methods |
-| `ppxai/engine/client.py` | Pass provider/model to `update_usage()` |
-| `ppxai/engine/types.py` | No change (UsageStats stays same) |
-| `ppxai/ui.py` | Update `display_usage()` for breakdown table |
-| `ppxai/server/http.py` | Update `/usage` endpoint response |
-| `vscode-extension/src/chatPanel.ts` | Update usage tooltip |
-| `tests/test_session.py` | Add per-model usage tests |
 | **NEW** `ppxai/usage.py` | Persistent usage storage and aggregation |
-| **NEW** `ppxai/commands.py` | Enhanced `/usage` with period argument |
-| **NEW** `vscode-extension/src/usageDashboard.ts` | Usage dashboard webview |
+| `ppxai/commands.py` | Enhanced `/usage` with period argument |
+| `ppxai/server/http.py` | New `/usage/report`, `/usage/sessions` endpoints |
+| `tests/test_usage.py` | Tests for persistent storage and aggregation |
 
 ### Effort Estimate
 
-**Part A: Per-Model Breakdown**
-- Implementation: 2-3 hours
-- Testing: 1 hour
-- Subtotal: 3-4 hours
-
-**Part B: Time-Based Aggregation**
 - Persistent storage: 2 hours
 - Aggregation logic: 2 hours
-- TUI enhancements: 2 hours
-- VSCode dashboard: 4-6 hours
+- TUI `/usage <period>` command: 2 hours
 - HTTP endpoints: 2 hours
 - Testing: 2 hours
-- Subtotal: 14-16 hours
+- **Total: 8-10 hours**
 
-**Total: 17-20 hours (split across v1.12.1 and v1.12.2)**
+### Future (v1.12.4+)
 
-### Phased Rollout
-
-| Version | Features |
-|---------|----------|
-| v1.12.1 | Part A: Per-model breakdown (current session only) |
-| v1.12.2 | Part B: Time-based aggregation, persistent storage, `/usage <period>` |
-| v1.12.3 | VSCode dashboard webview, CSV export |
-
----
-
-## v1.12.3 - Time-Based Usage Analytics
-
-**Status:** Planned
-**Target:** After v1.12.2
-
-### Features
-
-#### Persistent Usage Storage
-- [ ] `~/.ppxai/usage/usage.json` - Session history with costs
-- [ ] Auto-save session usage on exit/new session
-- [ ] Migration from session-only tracking
-
-#### Time-Based Aggregation
-- [ ] `/usage 24h` - Last 24 hours spending
-- [ ] `/usage week` - Last 7 days spending
-- [ ] `/usage month` - Last 30 days spending
-- [ ] `/usage year` - Last 365 days spending
-- [ ] `/usage all` - All-time spending
-
-#### HTTP Endpoints
-- [ ] `GET /usage/report?period=week` - Time-based report
-- [ ] `GET /usage/sessions` - List sessions with costs
-- [ ] `GET /usage/export?format=csv` - Export for spreadsheets
-
-### Bug Fixes (TBD based on feedback)
-- [ ] Checkpoint edge cases discovered in production
-- [ ] Usage tracking accuracy issues
-- [ ] VSCode extension UI glitches
+| Feature | Description |
+|---------|-------------|
+| VSCode dashboard | Dedicated webview with charts |
+| CSV export | `GET /usage/export?format=csv` |
 
 ---
 
@@ -908,19 +778,19 @@ For each release:
 ```
 Released:    v1.12.0 (2025-12-31)
              │  ✅ Checkpoint system with stale detection
-             │  ✅ Real-time token usage and cost tracking
+             │  ✅ Real-time token usage + per-model breakdown
              ▼
-Released:    v1.12.1 (2026-01-02) ◄── CURRENT
+Released:    v1.12.1 (2026-01-02)
              │  ✅ TUI themes (Standard, Tron Legacy, Matrix, Nord)
              │  ✅ Framed status panel with badges
              │  ✅ Clickable file links (OSC 8)
              ▼
-Next:        v1.12.2 (per-model usage breakdown)
-             │  • Track usage by provider/model
-             │  • Table display in /usage
-             │  • VSCode tooltip breakdown
+Released:    v1.12.2 (2026-01-02) ◄── CURRENT
+             │  ✅ Bug fixes (JSON parsing, logging)
+             │  ✅ /theme emoji on|off command
+             │  ✅ Panel alignment improvements
              ▼
-Planned:     v1.12.3 (time-based usage analytics)
+Next:        v1.12.3 (time-based usage analytics)
              │  • Persistent usage storage
              │  • /usage 24h|week|month|year|all
              │  • Session history with costs
@@ -981,20 +851,33 @@ Future:      v1.13.0 (AGENTS.md support)
    - `@tree` and `@git` now work correctly in VSCode extension
    - Previously treated as file search instead of context providers
 
-### Proposed for v1.12.1
+### Released in v1.12.0
 
-6. **Per-Model Usage Breakdown**
+6. **Per-Model Usage Breakdown** ✅
    - Track usage by `{provider}/{model}` key
    - Table display in `/usage` command
-   - Detailed tooltip in VSCode
+   - `/usage show <session|provider|model|off>` display modes
 
-### Proposed for v1.12.2
+### Released in v1.12.1 ✅
 
-7. **Time-Based Usage Analytics**
+7. **TUI Themes & Polish**
+   - 4 themes: Standard, Tron Legacy, Matrix, Nord
+   - Framed status panel with badges
+   - Clickable file links (OSC 8)
+
+### Released in v1.12.2 ✅
+
+8. **Bug Fixes & Code Cleanup**
+   - Single-quote JSON parsing fix
+   - Unified logging (TUI + engine)
+   - `/theme emoji on|off` command
+
+### Next: v1.12.3
+
+9. **Time-Based Usage Analytics**
    - Persistent storage in `~/.ppxai/usage/usage.json`
    - `/usage 24h|week|month|year|all` commands
    - Session history with cost breakdown
-   - CSV export for budgeting
 
 ---
 
