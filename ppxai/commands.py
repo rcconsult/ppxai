@@ -306,6 +306,14 @@ class CommandHandler:
                 console.print(f"[dim]Session saved: {self.engine_client.session.session_name}[/dim]")
             except Exception as e:
                 console.print(f"[yellow]Warning: Could not save session: {e}[/yellow]")
+
+        # v1.12.3: Save usage to persistent storage for time-based analytics
+        try:
+            self.engine_client.session.save_usage_to_persistent_storage()
+        except Exception as e:
+            # Non-critical - don't fail on usage persistence errors
+            pass
+
         console.print("\n[yellow]Goodbye![/yellow]")
         return True
 
@@ -406,6 +414,11 @@ class CommandHandler:
 
         Sub-commands:
             /usage              - Show session usage totals
+            /usage 24h          - Show usage for last 24 hours (v1.12.3)
+            /usage week         - Show usage for last 7 days (v1.12.3)
+            /usage month        - Show usage for last 30 days (v1.12.3)
+            /usage year         - Show usage for last 365 days (v1.12.3)
+            /usage all          - Show all-time usage (v1.12.3)
             /usage show session - Status line shows session totals (default)
             /usage show provider - Status line shows current provider totals
             /usage show model   - Status line shows current model totals
@@ -421,6 +434,12 @@ class CommandHandler:
 
         parts = args.split()
         sub_command = parts[0]
+
+        # v1.12.3: Time-based usage reports
+        time_periods = {"24h", "week", "month", "year", "all"}
+        if sub_command in time_periods:
+            self._display_global_usage_report(sub_command)
+            return
 
         if sub_command == "show":
             if len(parts) < 2:
@@ -452,7 +471,7 @@ class CommandHandler:
 
         else:
             console.print(f"\n[red]Unknown sub-command: {sub_command}[/red]")
-            console.print("  Available: show, reset\n")
+            console.print("  Available: 24h, week, month, year, all, show, reset\n")
 
     def _display_usage_report(self):
         """Display detailed usage report with per-model breakdown."""
@@ -504,6 +523,94 @@ class CommandHandler:
         display_mode = usage.get("display_mode", "session")
         console.print(f"\n  Status line display: [cyan]{display_mode}[/cyan]")
         console.print("  (Change with /usage show <session|provider|model|off>)\n")
+
+    def _display_global_usage_report(self, period: str):
+        """Display usage report for a time period (v1.12.3).
+
+        Args:
+            period: One of "24h", "week", "month", "year", "all"
+        """
+        from rich.table import Table
+        from .usage import get_usage_report
+
+        report = get_usage_report(period)
+
+        # Header with period info
+        period_labels = {
+            "24h": "Last 24 Hours",
+            "week": "Last 7 Days",
+            "month": "Last 30 Days",
+            "year": "Last 365 Days",
+            "all": "All Time"
+        }
+        console.print()
+        console.print(f"[bold cyan]Usage Report: {period_labels.get(period, period)}[/bold cyan]")
+
+        if report["start_date"]:
+            console.print(f"[dim]Period: {report['start_date']} to {report['end_date']}[/dim]")
+        else:
+            console.print(f"[dim]Period: All recorded sessions[/dim]")
+
+        # Summary stats
+        console.print(f"\n  Sessions: [cyan]{report['session_count']}[/cyan]")
+        console.print(f"  Total tokens: [cyan]{report['total_tokens']:,}[/cyan]")
+        console.print(f"  Estimated cost: [yellow]${report['total_cost']:.4f}[/yellow]")
+
+        # By provider breakdown
+        by_provider = report.get("by_provider", {})
+        if by_provider:
+            console.print()
+            table = Table(title="By Provider", show_header=True, header_style="bold magenta")
+            table.add_column("Provider", style="cyan")
+            table.add_column("Tokens", justify="right", style="green")
+            table.add_column("Cost", justify="right", style="yellow")
+            table.add_column("Sessions", justify="right", style="dim")
+
+            for provider, stats in sorted(by_provider.items()):
+                table.add_row(
+                    provider,
+                    f"{stats['total_tokens']:,}",
+                    f"${stats['estimated_cost']:.4f}",
+                    str(stats['session_count'])
+                )
+
+            console.print(table)
+
+        # By model breakdown
+        by_model = report.get("by_model", {})
+        if by_model:
+            console.print()
+            table = Table(title="By Model", show_header=True, header_style="bold magenta")
+            table.add_column("Provider", style="cyan")
+            table.add_column("Model", style="cyan")
+            table.add_column("In", justify="right", style="green")
+            table.add_column("Out", justify="right", style="green")
+            table.add_column("Cost", justify="right", style="yellow")
+
+            for key, stats in sorted(by_model.items()):
+                parts = key.split("/", 1)
+                provider = parts[0]
+                model = parts[1] if len(parts) > 1 else key
+                table.add_row(
+                    provider,
+                    model,
+                    f"{stats['prompt_tokens']:,}",
+                    f"{stats['completion_tokens']:,}",
+                    f"${stats['estimated_cost']:.4f}"
+                )
+
+            console.print(table)
+
+        # Recent sessions (limit to 5)
+        sessions = report.get("sessions", [])[:5]
+        if sessions:
+            console.print()
+            console.print("[bold]Recent Sessions:[/bold]")
+            for s in sessions:
+                ended = s.get("ended_at", "")[:16].replace("T", " ")
+                console.print(f"  [dim]{ended}[/dim] - {s.get('total_tokens', 0):,} tokens, ${s.get('total_cost', 0):.4f}")
+
+        console.print()
 
     def handle_clear(self):
         """Handle /clear command."""

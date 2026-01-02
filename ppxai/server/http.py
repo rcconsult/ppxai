@@ -150,6 +150,14 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown: Cleanup
+    # v1.12.3: Save usage to persistent storage before shutdown
+    if engine and engine.session:
+        try:
+            engine.session.save_usage_to_persistent_storage()
+            logger.info("Session usage saved to persistent storage")
+        except Exception as e:
+            logger.warning(f"Failed to save usage to persistent storage: {e}")
+
     pending_consent_requests.clear()
     pending_shell_consent_requests.clear()
     engine = None
@@ -310,6 +318,14 @@ async def sse_event_generator(prompt: str) -> AsyncGenerator[str, None]:
             except Exception as cleanup_error:
                 logger.error(f"Session cleanup failed: {cleanup_error}")
 
+    # v1.12.3: Auto-save usage to persistent storage after each chat
+    # This ensures usage is never lost even if server crashes
+    try:
+        if engine and engine.session:
+            engine.session.save_usage_to_persistent_storage()
+    except Exception as save_error:
+        logger.warning(f"Failed to auto-save usage: {save_error}")
+
 
 async def sse_coding_task_generator(
     prompt: str,
@@ -345,6 +361,13 @@ async def sse_coding_task_generator(
                     logger.info(f"Session cleanup: removed orphan user message (len={len(removed.content)})")
             except Exception as cleanup_error:
                 logger.error(f"Session cleanup failed: {cleanup_error}")
+
+    # v1.12.3: Auto-save usage to persistent storage after each coding task
+    try:
+        if engine and engine.session:
+            engine.session.save_usage_to_persistent_storage()
+    except Exception as save_error:
+        logger.warning(f"Failed to auto-save usage: {save_error}")
 
 
 # === API Endpoints ===
@@ -679,6 +702,63 @@ async def reset_usage():
 
     engine.session.reset_usage()
     return {"success": True}
+
+
+@app.get("/usage/report")
+async def get_usage_report(period: str = "all"):
+    """Get aggregated usage report for a time period (v1.12.3).
+
+    Query params:
+        period: One of "24h", "week", "month", "year", "all" (default: "all")
+
+    Returns aggregated usage stats across all sessions:
+        - total_tokens: Total tokens used
+        - total_cost: Estimated total cost
+        - session_count: Number of sessions
+        - by_provider: Usage breakdown by provider
+        - by_model: Usage breakdown by model
+        - sessions: Recent session summaries
+    """
+    from ..usage import get_usage_report as get_report
+
+    valid_periods = {"24h", "week", "month", "year", "all"}
+    if period not in valid_periods:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid period: {period}. Valid periods: {', '.join(valid_periods)}"
+        )
+
+    return get_report(period)
+
+
+@app.get("/usage/sessions")
+async def get_usage_sessions(limit: int = 20, offset: int = 0):
+    """Get list of recorded sessions with usage data (v1.12.3).
+
+    Query params:
+        limit: Maximum sessions to return (default: 20, max: 100)
+        offset: Number of sessions to skip (default: 0)
+
+    Returns:
+        sessions: List of session records (newest first)
+        total: Total number of recorded sessions
+    """
+    from ..usage import get_usage_storage
+
+    # Clamp limit to reasonable range
+    limit = max(1, min(100, limit))
+    offset = max(0, offset)
+
+    storage = get_usage_storage()
+    sessions = storage.get_sessions(limit=limit, offset=offset)
+    total = storage.get_session_count()
+
+    return {
+        "sessions": sessions,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 # === Context Settings ===

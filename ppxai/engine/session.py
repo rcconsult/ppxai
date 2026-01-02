@@ -441,3 +441,42 @@ class SessionManager:
             filepath.unlink()
             return True
         return False
+
+    def save_usage_to_persistent_storage(self):
+        """Save session usage to persistent storage (v1.12.3).
+
+        Called when session ends (exit, /clear, etc.) to persist usage data
+        across sessions for time-based analytics.
+        """
+        from datetime import datetime
+        from ..usage import save_session_usage
+
+        # Skip if no usage
+        if self.usage.total_tokens == 0 and self.usage.estimated_cost == 0.0:
+            return
+
+        # Convert UsageStats to dict format for persistence
+        usage_by_model = {
+            key: {
+                "prompt_tokens": stats.prompt_tokens,
+                "completion_tokens": stats.completion_tokens,
+                "estimated_cost": stats.estimated_cost
+            }
+            for key, stats in self.usage_by_model.items()
+        }
+
+        # Parse created_at from metadata or use current time
+        try:
+            started_at = datetime.fromisoformat(self.metadata.get("created_at", datetime.now().isoformat()))
+        except ValueError:
+            started_at = datetime.now()
+
+        save_session_usage(
+            session_id=self.session_name,
+            started_at=started_at,
+            ended_at=datetime.now(),
+            usage_by_model=usage_by_model,
+            total_cost=self.usage.estimated_cost,
+            total_tokens=self.usage.total_tokens,
+            message_count=len(self.messages)
+        )

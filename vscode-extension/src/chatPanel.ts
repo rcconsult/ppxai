@@ -22,7 +22,7 @@ const SLASH_COMMANDS: Record<string, { description: string; usage: string }> = {
     '/agent': { description: 'Run autonomous agent task', usage: '/agent <task description>' },
     '/show': { description: 'Display file contents locally (no LLM call)', usage: '/show <filepath>' },
     '/cat': { description: 'Alias for /show', usage: '/cat <filepath>' },
-    '/usage': { description: 'Show token usage stats', usage: '/usage' },
+    '/usage': { description: 'Show token usage stats', usage: '/usage [24h|week|month|year|all]' },
     '/status': { description: 'Show current status', usage: '/status' },
     // Coding task commands
     '/generate': { description: 'Generate code from description', usage: '/generate <description>' },
@@ -1886,10 +1886,15 @@ Review your previous actions and continue. If the task is complete, respond with
     }
 
     /**
-     * Handle /usage command with sub-commands (v1.12.2)
+     * Handle /usage command with sub-commands (v1.12.3)
      *
      * Sub-commands:
      *   /usage              - Show session usage with per-model breakdown
+     *   /usage 24h          - Show usage for last 24 hours (v1.12.3)
+     *   /usage week         - Show usage for last 7 days (v1.12.3)
+     *   /usage month        - Show usage for last 30 days (v1.12.3)
+     *   /usage year         - Show usage for last 365 days (v1.12.3)
+     *   /usage all          - Show all-time usage (v1.12.3)
      *   /usage show session - Status shows session totals (default)
      *   /usage show provider - Status shows current provider totals
      *   /usage show model   - Status shows current model totals
@@ -1900,6 +1905,13 @@ Review your previous actions and continue. If the task is complete, respond with
         if (!this._view) { return; }
 
         const subCommand = args[0]?.toLowerCase();
+
+        // Time-based period arguments (v1.12.3)
+        const timePeriods = ['24h', 'week', 'month', 'year', 'all'];
+        if (subCommand && timePeriods.includes(subCommand)) {
+            await this.handleGlobalUsageReport(subCommand);
+            return;
+        }
 
         if (!subCommand) {
             // Default: show session usage with per-model breakdown
@@ -1990,8 +2002,75 @@ Use \`/usage show <session|provider|model|off>\` to change.`;
         // Unknown sub-command
         this._view.webview.postMessage({
             type: 'systemMessage',
-            content: `Unknown sub-command: \`${subCommand}\`\nAvailable: \`show\`, \`reset\``
+            content: `Unknown sub-command: \`${subCommand}\`\nAvailable: \`24h\`, \`week\`, \`month\`, \`year\`, \`all\`, \`show\`, \`reset\``
         });
+    }
+
+    /**
+     * Display global usage report for a time period (v1.12.3)
+     */
+    private async handleGlobalUsageReport(period: string) {
+        if (!this._view) { return; }
+
+        const periodLabels: Record<string, string> = {
+            '24h': 'Last 24 Hours',
+            'week': 'Last 7 Days',
+            'month': 'Last 30 Days',
+            'year': 'Last 365 Days',
+            'all': 'All Time'
+        };
+
+        try {
+            const report = await this._backend.getUsageReport(period);
+
+            let content = `**Usage Report: ${periodLabels[period] || period}**\n`;
+            if (report.start_date) {
+                content += `*Period: ${report.start_date} to ${report.end_date}*\n\n`;
+            } else {
+                content += `*Period: All recorded sessions*\n\n`;
+            }
+
+            content += `• Sessions: ${report.session_count}\n`;
+            content += `• Total tokens: ${report.total_tokens.toLocaleString()}\n`;
+            content += `• Estimated cost: $${report.total_cost.toFixed(4)}\n`;
+
+            // By provider breakdown
+            if (report.by_provider && Object.keys(report.by_provider).length > 0) {
+                content += '\n**By Provider:**\n\n';
+                content += '| Provider | Tokens | Cost | Sessions |\n';
+                content += '|:---------|-------:|-----:|---------:|\n';
+                for (const [provider, stats] of Object.entries(report.by_provider).sort()) {
+                    content += `| ${provider} | ${stats.total_tokens.toLocaleString()} | $${stats.estimated_cost.toFixed(4)} | ${stats.session_count} |\n`;
+                }
+            }
+
+            // By model breakdown
+            if (report.by_model && Object.keys(report.by_model).length > 0) {
+                content += '\n**By Model:**\n\n';
+                content += '| Provider | Model | In | Out | Cost |\n';
+                content += '|:---------|:------|---:|----:|-----:|\n';
+                for (const [key, stats] of Object.entries(report.by_model).sort()) {
+                    const [provider, model] = key.split('/', 2);
+                    content += `| ${provider} | ${model || key} | ${stats.prompt_tokens.toLocaleString()} | ${stats.completion_tokens.toLocaleString()} | $${stats.estimated_cost.toFixed(4)} |\n`;
+                }
+            }
+
+            // Recent sessions (limit to 5)
+            if (report.sessions && report.sessions.length > 0) {
+                content += '\n**Recent Sessions:**\n';
+                for (const session of report.sessions.slice(0, 5)) {
+                    const ended = session.ended_at?.substring(0, 16).replace('T', ' ') || 'unknown';
+                    content += `• ${ended} - ${session.total_tokens.toLocaleString()} tokens, $${session.total_cost.toFixed(4)}\n`;
+                }
+            }
+
+            this._view.webview.postMessage({ type: 'systemMessage', content });
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'systemMessage',
+                content: `Failed to get usage report: ${error}`
+            });
+        }
     }
 
     private async handleShowCommand(args: string[]) {

@@ -822,6 +822,77 @@ export class HttpClient {
     }
 
     /**
+     * Get aggregated usage report for a time period (v1.12.3)
+     *
+     * @param period - One of "24h", "week", "month", "year", "all"
+     */
+    async getUsageReport(period: string): Promise<{
+        period: string;
+        start_date: string | null;
+        end_date: string;
+        total_tokens: number;
+        total_cost: number;
+        session_count: number;
+        by_provider: Record<string, {
+            prompt_tokens: number;
+            completion_tokens: number;
+            total_tokens: number;
+            estimated_cost: number;
+            session_count: number;
+        }>;
+        by_model: Record<string, {
+            prompt_tokens: number;
+            completion_tokens: number;
+            total_tokens: number;
+            estimated_cost: number;
+            session_count: number;
+        }>;
+        sessions: Array<{
+            session_id: string;
+            started_at: string;
+            ended_at: string;
+            total_tokens: number;
+            total_cost: number;
+            message_count: number;
+        }>;
+    }> {
+        const response = await fetch(`${this.baseUrl}/usage/report?period=${encodeURIComponent(period)}`);
+        if (!response.ok) {
+            throw new Error(`Failed to get usage report: ${response.statusText}`);
+        }
+        return response.json() as Promise<{
+            period: string;
+            start_date: string | null;
+            end_date: string;
+            total_tokens: number;
+            total_cost: number;
+            session_count: number;
+            by_provider: Record<string, {
+                prompt_tokens: number;
+                completion_tokens: number;
+                total_tokens: number;
+                estimated_cost: number;
+                session_count: number;
+            }>;
+            by_model: Record<string, {
+                prompt_tokens: number;
+                completion_tokens: number;
+                total_tokens: number;
+                estimated_cost: number;
+                session_count: number;
+            }>;
+            sessions: Array<{
+                session_id: string;
+                started_at: string;
+                ended_at: string;
+                total_tokens: number;
+                total_cost: number;
+                message_count: number;
+            }>;
+        }>;
+    }
+
+    /**
      * Get debug log status (v1.11.2)
      */
     async getDebugLogStatus(): Promise<{ enabled: boolean; log_file: string | null }> {
