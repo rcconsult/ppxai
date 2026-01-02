@@ -293,6 +293,10 @@ class CommandHandler:
         # False = convert emojis to text symbols (guaranteed alignment)
         self.emoji_mode = False  # Default: text symbols for reliable alignment
 
+        # v1.12.1: Initialize logger for agent mode event handling
+        from ppxai.common.logger import get_logger
+        self.logger = get_logger("tui")
+
     def handle_quit(self) -> bool:
         """Handle /quit or /exit command. Returns True if should exit."""
         # v1.12.0: Use engine session for conversation history
