@@ -5,6 +5,38 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.1] - 2026-01-02
+
+### Added - Enhanced TUI Experience
+
+#### Themed TUI Panels
+- **4 Distinctive Themes** - Standard, Tron Legacy, Matrix, and Nord color schemes
+- **Rounded Panel Corners** - User, assistant, and system messages have rounded borders
+- **`/theme` Command** - List themes or switch with `/theme <name>`
+- **Theme Autocomplete** - Tab completion for theme names
+
+#### Framed Status Panel
+- **Badge Display** - Provider, model, tools status as colored badges
+- **Visual Hierarchy** - Clear separation between header and chat
+- **Theme-Aware Styling** - Badges adapt to current theme colors
+
+#### Clickable File Links
+- **OSC 8 Hyperlinks** - Markdown links clickable in supported terminals
+- **File URI Support** - Local paths convert to `file://` URIs
+- **VSCode Integration** - Click file links to open in editor
+- **`/show` Command** - File references in rendered markdown are clickable
+
+### Fixed
+- File link resolution for relative paths in markdown
+- Link detection regex to match all markdown links (not just http/https)
+- Working directory passed correctly for relative link resolution
+
+### New Files
+- `ppxai/themes.py` - Theme dataclass and 4 built-in themes
+- `ppxai/ui_components.py` - Reusable Rich UI components
+
+---
+
 ## [1.12.0] - 2025-12-29
 
 ### Added - Checkpoint System & Usage Tracking 🔒📊
