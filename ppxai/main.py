@@ -33,19 +33,19 @@ def format_tokens(count: int) -> str:
     return str(count)
 
 
-def get_status_line(handler):
+def get_status_line(handler, use_themed: bool = True):
     """Generate status line showing current settings.
 
     v1.12.0: Now uses handler.provider instead of legacy client.
     v1.12.0: Added agent mode and checkpoint status.
     v1.12.0: Added session token usage and cost display.
+    v1.12.0: Added themed status line with badges (experiment/rich-tui).
     """
     provider_config = get_provider_config(handler.provider)
     provider_name = provider_config["name"]
 
     # Get tools status (v1.12.0: engine only)
     tools_enabled = handler.engine_client.tools_enabled if handler.engine_client else False
-    tools_status = "[green]ON[/green]" if tools_enabled else "[dim]OFF[/dim]"
 
     # Get model display name (use ID if not found)
     model_display = handler.current_model
@@ -54,41 +54,25 @@ def get_status_line(handler):
             model_display = model_info.get("name", handler.current_model)
             break
 
-    # Get agent mode status (v1.12.0, v1.12.1: checkpoint ID display)
-    agent_status_parts = []
-    if handler.engine_client and handler.engine_client.agent_mode:
-        agent_status_parts.append("Agent: [green]ON[/green]")
+    # Get agent mode status (v1.12.0)
+    agent_mode = handler.engine_client and handler.engine_client.agent_mode
 
-        # Add checkpoint status with ID (v1.12.1)
+    # Get checkpoint ID for display (v1.12.1)
+    checkpoint_str = None
+    if agent_mode and handler.engine_client:
         checkpoint_status = handler.engine_client.get_checkpoint_status()
         if checkpoint_status.get("enabled"):
-            backend = checkpoint_status.get("backend")
             last_checkpoint = checkpoint_status.get("last_checkpoint")
             is_valid = checkpoint_status.get("is_valid", True)
-
-            # Show backend type
-            if backend == "git":
-                agent_status_parts.append("Checkpoints: [green]git[/green]")
-            elif backend == "file":
-                agent_status_parts.append("Checkpoints: [yellow]file[/yellow]")
-
-            # Show checkpoint ID with validity state (v1.12.1)
             if last_checkpoint:
                 short_id = last_checkpoint[:8] if len(last_checkpoint) > 8 else last_checkpoint
-                if is_valid:
-                    # Valid checkpoint: blue
-                    agent_status_parts.append(f"ID: [cyan]{short_id}[/cyan]")
+                if not is_valid:
+                    checkpoint_str = f"{short_id}!"  # Stale marker
                 else:
-                    # Stale checkpoint: red
-                    agent_status_parts.append(f"ID: [red]{short_id} (STALE)[/red]")
-            else:
-                # No checkpoint: grey
-                agent_status_parts.append("ID: [dim]None[/dim]")
-        else:
-            agent_status_parts.append("Checkpoints: [red]OFF[/red]")
+                    checkpoint_str = short_id
 
     # Get session usage stats (v1.12.0)
-    usage_display = ""
+    usage_str = None
     if handler.engine_client:
         usage = handler.engine_client.session.get_usage()
         prompt_tokens = usage.get("prompt_tokens", 0)
@@ -96,18 +80,37 @@ def get_status_line(handler):
         cost = usage.get("estimated_cost", 0.0)
 
         if prompt_tokens > 0 or completion_tokens > 0:
-            tokens_str = f"{format_tokens(prompt_tokens)}↓/{format_tokens(completion_tokens)}↑"
-            if cost > 0:
-                usage_display = f"[cyan]{tokens_str}[/cyan] [dim]${cost:.4f}[/dim]"
-            else:
-                usage_display = f"[cyan]{tokens_str}[/cyan]"
+            from ppxai.ui_components import format_usage_string
+            usage_str = format_usage_string(prompt_tokens, completion_tokens, cost)
 
-    # Build status line
+    # Use themed status line if available (experiment/rich-tui)
+    if use_themed:
+        from ppxai.ui_components import render_status_line
+        from ppxai.themes import get_theme
+        from ppxai.config import get_tui_theme
+
+        theme = get_theme(get_tui_theme())
+        return render_status_line(
+            provider=provider_name,
+            model=model_display,
+            tools_enabled=tools_enabled,
+            agent_mode=agent_mode,
+            usage_str=usage_str,
+            checkpoint_str=checkpoint_str,
+            theme=theme,
+        )
+
+    # Fallback: plain text status line
+    tools_status = "[green]ON[/green]" if tools_enabled else "[dim]OFF[/dim]"
+
+    # Build legacy status line
     parts = [provider_name, model_display, f"Tools: {tools_status}"]
-    if agent_status_parts:
-        parts.extend(agent_status_parts)
-    if usage_display:
-        parts.append(usage_display)
+    if agent_mode:
+        parts.append("Agent: [green]ON[/green]")
+        if checkpoint_str:
+            parts.append(f"ID: [cyan]{checkpoint_str}[/cyan]")
+    if usage_str:
+        parts.append(f"[cyan]{usage_str}[/cyan]")
 
     status = "[dim][[/dim]" + "[dim] | [/dim]".join(parts) + "[dim]][/dim]"
     return status
@@ -139,6 +142,7 @@ class PPXAICompleter(Completer):
         ('/optimize', 'Optimize code'),
         ('/agent', 'Run autonomous agent loop'),
         ('/undo', 'Revert last agent task'),
+        ('/theme', 'Switch or list themes'),
         ('/quit', 'Exit the application'),
         ('/exit', 'Exit the application'),
     ]
@@ -153,6 +157,15 @@ class PPXAICompleter(Completer):
         ('set', 'Configure tool settings'),
         ('config', 'Configure tool settings'),
         ('agent', 'Enable/disable agent mode'),
+    ]
+
+    # Theme names for /theme autocomplete
+    THEME_NAMES = [
+        ('list', 'Show available themes'),
+        ('standard', 'Default ppxai theme'),
+        ('tron-legacy', 'Cyan/orange Tron: Legacy style'),
+        ('matrix', 'Green-on-black Matrix style'),
+        ('nord', 'Arctic bluish Nord palette'),
     ]
 
     # Directories to ignore when searching for files
@@ -243,6 +256,21 @@ class PPXAICompleter(Completer):
                                 tool_name,
                                 start_position=-len(tool_query) if tool_query else 0,
                                 display_meta=tool_desc[:40] + '...' if len(tool_desc) > 40 else tool_desc
+                            )
+                return
+
+            # Handle /theme subcommands (experiment/rich-tui)
+            if cmd_text.startswith('/theme '):
+                parts = text.split()
+                if len(parts) == 2:
+                    # Completing theme name: /theme ma<tab>
+                    theme_query = parts[1].lower()
+                    for theme_name, desc in self.THEME_NAMES:
+                        if theme_name.startswith(theme_query):
+                            yield Completion(
+                                theme_name,
+                                start_position=-len(parts[1]),
+                                display_meta=desc
                             )
                 return
 

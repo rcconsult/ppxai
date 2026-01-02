@@ -184,7 +184,7 @@ class TUIEventHandler(EventHandler):
             await handler.handle_event(event)
     """
 
-    def __init__(self, console, logger, verbose: bool = False):
+    def __init__(self, console, logger, verbose: bool = False, theme_name: str = None):
         """
         Initialize TUI-specific event handler.
 
@@ -192,13 +192,24 @@ class TUIEventHandler(EventHandler):
             console: Rich console instance for rendering
             logger: Logger instance for debug logging
             verbose: Whether to show verbose tool output
+            theme_name: Theme name for styled rendering (optional, uses config default)
         """
         from ppxai.markdown_tables import render_markdown_with_tables
+        from ppxai.themes import get_theme, DEFAULT_THEME
+        from ppxai.config import get_tui_theme
 
         self.console = console
         self.logger = logger
         self.verbose = verbose
         self._render_markdown = render_markdown_with_tables
+
+        # Get theme (from arg, config, or default)
+        if theme_name:
+            self.theme = get_theme(theme_name)
+            self.theme_name = theme_name
+        else:
+            self.theme_name = get_tui_theme()
+            self.theme = get_theme(self.theme_name)
 
         super().__init__(
             on_stream_start=self._on_stream_start,
@@ -267,7 +278,8 @@ class TUIEventHandler(EventHandler):
 
     def _on_stream_start(self):
         """Handle stream start for TUI."""
-        self.console.print("\n[bold cyan]Assistant:[/bold cyan]")
+        # With themed panels, we show header after content is complete
+        pass
 
     def _on_stream_chunk(self, chunk: str):
         """Handle stream chunk for TUI (silent accumulation for final render)."""
@@ -275,10 +287,21 @@ class TUIEventHandler(EventHandler):
         pass
 
     def _on_stream_end(self, response: str):
-        """Handle stream end for TUI."""
+        """Handle stream end for TUI with themed panel."""
+        from datetime import datetime
+        from ppxai.ui_components import render_message
+
         self.logger.log_assistant_message(response)
         if response.strip():
-            self._render_markdown(response, self.console)
+            # Render response in a themed panel with rounded corners
+            panel = render_message(
+                content=response,
+                role="assistant",
+                theme=self.theme,
+                timestamp=datetime.now(),
+                show_timestamp=True,
+            )
+            self.console.print(panel)
         self.console.print()  # Blank line after response
 
     def _on_tool_call(self, tool_data: Dict[str, Any]):
