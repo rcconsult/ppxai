@@ -57,7 +57,8 @@ def get_status_line(handler, use_themed: bool = True):
     # Get agent mode status (v1.12.0)
     agent_mode = handler.engine_client and handler.engine_client.agent_mode
 
-    # Get checkpoint ID for display (v1.12.1)
+    # Get checkpoint status for display (v1.12.1)
+    # Shows user-friendly label instead of git hash
     checkpoint_str = None
     if agent_mode and handler.engine_client:
         checkpoint_status = handler.engine_client.get_checkpoint_status()
@@ -65,11 +66,10 @@ def get_status_line(handler, use_themed: bool = True):
             last_checkpoint = checkpoint_status.get("last_checkpoint")
             is_valid = checkpoint_status.get("is_valid", True)
             if last_checkpoint:
-                short_id = last_checkpoint[:8] if len(last_checkpoint) > 8 else last_checkpoint
                 if not is_valid:
-                    checkpoint_str = f"{short_id}!"  # Stale marker
+                    checkpoint_str = "↶!"  # Stale - undo may not work correctly
                 else:
-                    checkpoint_str = short_id
+                    checkpoint_str = "↶"  # Valid checkpoint - undo available
 
     # Get session usage stats (v1.12.0)
     usage_str = None
@@ -112,7 +112,7 @@ def get_status_line(handler, use_themed: bool = True):
     if agent_mode:
         parts.append("Agent: [green]ON[/green]")
         if checkpoint_str:
-            parts.append(f"ID: [cyan]{checkpoint_str}[/cyan]")
+            parts.append(f"[cyan]{checkpoint_str}[/cyan]")  # ↶ for undo available, ↶! for stale
     if usage_str:
         parts.append(f"[cyan]{usage_str}[/cyan]")
 
