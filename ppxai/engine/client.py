@@ -1201,16 +1201,27 @@ class EngineClient:
 
             return None
 
+        def try_parse_json(json_str: str) -> Optional[dict]:
+            """Try to parse JSON, including handling single quotes."""
+            try:
+                return json.loads(json_str)
+            except json.JSONDecodeError:
+                # Try converting single quotes to double quotes (Python dict style)
+                # This handles cases where models output {'tool': 'name'} instead of {"tool": "name"}
+                try:
+                    fixed = json_str.replace("'", '"')
+                    return json.loads(fixed)
+                except json.JSONDecodeError:
+                    return None
+
         # Try entire response as JSON first (most common case for tool calls)
         text_stripped = text.strip()
         if text_stripped.startswith('{') and text_stripped.endswith('}'):
-            try:
-                data = json.loads(text_stripped)
+            data = try_parse_json(text_stripped)
+            if data:
                 normalized = normalize_tool_call(data)
                 if normalized:
                     return normalized
-            except json.JSONDecodeError:
-                pass
 
         # Try extracting JSON from markdown code blocks
         # Match ```json ... ``` or ``` ... ``` blocks
@@ -1220,59 +1231,54 @@ class EngineClient:
         for match in matches:
             match_stripped = match.strip()
             if match_stripped.startswith('{') and match_stripped.endswith('}'):
-                try:
-                    data = json.loads(match_stripped)
+                data = try_parse_json(match_stripped)
+                if data:
                     normalized = normalize_tool_call(data)
                     if normalized:
                         return normalized
-                except json.JSONDecodeError:
-                    pass
 
         # Try JSON in code blocks - use greedy match for nested braces (fallback)
         code_block_pattern2 = r'```(?:json)?\s*(\{[\s\S]*?\})\s*```'
         matches = re.findall(code_block_pattern2, text)
 
         for match in matches:
-            # Try to parse, and if it fails due to incomplete JSON, expand the match
-            try:
-                data = json.loads(match)
+            data = try_parse_json(match)
+            if data:
                 normalized = normalize_tool_call(data)
                 if normalized:
                     return normalized
-            except json.JSONDecodeError:
-                continue
 
         # Try to find JSON objects with "tool" key using a more robust approach
         # Look for complete JSON objects by counting braces
-        start_idx = 0
-        while True:
-            start = text.find('{"tool"', start_idx)
-            if start == -1:
-                break
+        # Also try single-quote style: {'tool'
+        for pattern in ['{"tool"', "{'tool'"]:
+            start_idx = 0
+            while True:
+                start = text.find(pattern, start_idx)
+                if start == -1:
+                    break
 
-            # Find matching closing brace
-            depth = 0
-            end = start
-            for i, char in enumerate(text[start:], start):
-                if char == '{':
-                    depth += 1
-                elif char == '}':
-                    depth -= 1
-                    if depth == 0:
-                        end = i + 1
-                        break
+                # Find matching closing brace
+                depth = 0
+                end = start
+                for i, char in enumerate(text[start:], start):
+                    if char == '{':
+                        depth += 1
+                    elif char == '}':
+                        depth -= 1
+                        if depth == 0:
+                            end = i + 1
+                            break
 
-            if depth == 0 and end > start:
-                json_str = text[start:end]
-                try:
-                    data = json.loads(json_str)
-                    normalized = normalize_tool_call(data)
-                    if normalized:
-                        return normalized
-                except json.JSONDecodeError:
-                    pass
+                if depth == 0 and end > start:
+                    json_str = text[start:end]
+                    data = try_parse_json(json_str)
+                    if data:
+                        normalized = normalize_tool_call(data)
+                        if normalized:
+                            return normalized
 
-            start_idx = end if end > start else start + 1
+                start_idx = end if end > start else start + 1
 
         return None
 
