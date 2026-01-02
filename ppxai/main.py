@@ -89,7 +89,9 @@ def get_status_line(handler, use_themed: bool = True):
         from ppxai.themes import get_theme
         from ppxai.config import get_tui_theme
 
-        theme = get_theme(get_tui_theme())
+        # Use handler's current theme if set, otherwise fall back to config
+        theme_name = getattr(handler, 'current_theme_name', None) or get_tui_theme()
+        theme = get_theme(theme_name)
         return render_status_line(
             provider=provider_name,
             model=model_display,
@@ -420,9 +422,10 @@ def main():
                     """Stream response from EngineClient using shared TUIEventHandler."""
                     from ppxai.common.event_handler import TUIEventHandler
 
-                    # Create TUI-specific event handler with verbose setting
+                    # Create TUI-specific event handler with verbose setting and theme
                     verbose = hasattr(handler, 'tools_verbose') and handler.tools_verbose
-                    event_handler = TUIEventHandler(console, logger, verbose=verbose)
+                    theme_name = getattr(handler, 'current_theme_name', None)
+                    event_handler = TUIEventHandler(console, logger, verbose=verbose, theme_name=theme_name)
 
                     # Check for pending consent requests before streaming
                     while handler.engine_client._consent_event_queue:
