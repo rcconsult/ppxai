@@ -1193,7 +1193,8 @@ class CommandHandler:
             # For markdown files, render them (including tables) instead of syntax highlighting
             if path.suffix.lower() in ['.md', '.markdown']:
                 from .markdown_tables import render_markdown_with_tables
-                render_markdown_with_tables(content, console)
+                # Pass the file's parent directory for resolving relative links
+                render_markdown_with_tables(content, console, working_dir=str(path.parent))
             else:
                 # Display with syntax highlighting (no truncation for local viewing)
                 syntax = Syntax(content, lang, theme="monokai", line_numbers=True)

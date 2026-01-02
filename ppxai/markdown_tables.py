@@ -285,7 +285,7 @@ def split_markdown_content(content: str) -> List[Tuple[str, str]]:
     return blocks
 
 
-def render_markdown_with_tables(content: str, console: Console) -> None:
+def render_markdown_with_tables(content: str, console: Console, working_dir: str = None) -> None:
     """
     Render markdown content with proper table and link support.
 
@@ -301,6 +301,7 @@ def render_markdown_with_tables(content: str, console: Console) -> None:
     Args:
         content: Markdown content to render
         console: Rich Console instance
+        working_dir: Working directory for resolving relative paths (defaults to cwd)
     """
     if not content.strip():
         return
@@ -313,14 +314,14 @@ def render_markdown_with_tables(content: str, console: Console) -> None:
             console.print(table)
         else:
             if block_content.strip():
-                # Check if content has markdown links that should be clickable
-                # Pattern: [text](url) - note: also matches [text](relative) but we only make http(s) clickable
-                has_links = re.search(r'\[[^\]]+\]\(https?://[^)]+\)', block_content)
+                # Check if content has any markdown links (web URLs or local files)
+                # Pattern: [text](url) - matches both http(s) URLs and local file paths
+                has_links = re.search(r'\[[^\]]+\]\([^)]+\)', block_content)
 
                 if has_links:
                     # Convert markdown links to Rich clickable links, then render
                     # We use Rich markup directly for links since Markdown() strips link URLs
-                    rich_content = convert_markdown_links_to_rich(block_content)
+                    rich_content = convert_markdown_links_to_rich(block_content, working_dir)
                     console.print(rich_content)
                 else:
                     # No links - use standard Markdown rendering
