@@ -27,6 +27,8 @@ from .ui import (
     display_global_usage,
     display_tools_table,
 )
+from .themes import get_theme, list_themes, Theme, DEFAULT_THEME
+from .ui_components import render_theme_list
 
 
 class ConsentValidator(Validator):
@@ -275,6 +277,17 @@ class CommandHandler:
         # Default to enabled for coding task auto-routing
         self.auto_route = True
 
+        # v1.12.0: TUI theme support - load from config
+        from ppxai.config import get_tui_theme
+        try:
+            config_theme = get_tui_theme()
+            self.current_theme_name = config_theme
+            self.theme = get_theme(config_theme)
+        except ValueError:
+            # Fallback to default if config theme is invalid
+            self.current_theme_name = DEFAULT_THEME
+            self.theme = get_theme(DEFAULT_THEME)
+
     def handle_quit(self) -> bool:
         """Handle /quit or /exit command. Returns True if should exit."""
         # v1.12.0: Use engine session for conversation history
@@ -512,6 +525,32 @@ class CommandHandler:
     def handle_help(self):
         """Handle /help command."""
         display_welcome()
+
+    def handle_theme(self, args: str):
+        """Handle /theme command for switching TUI themes.
+
+        Usage:
+            /theme          - List available themes
+            /theme list     - List available themes
+            /theme <name>   - Switch to named theme
+        """
+        args = args.strip().lower() if args else ""
+
+        if not args or args == "list":
+            # Show available themes
+            console.print(render_theme_list(self.current_theme_name))
+            console.print("[dim]Usage: /theme <name> to switch themes[/dim]\n")
+            return
+
+        # Try to switch to the specified theme
+        try:
+            new_theme = get_theme(args)
+            self.theme = new_theme
+            self.current_theme_name = args
+            console.print(f"[green]✓ Theme switched to: {new_theme.name}[/green]\n")
+        except ValueError as e:
+            console.print(f"[red]{e}[/red]")
+            console.print("[dim]Use /theme list to see available themes[/dim]\n")
 
     def handle_generate(self, args: str):
         """Handle /generate command."""
@@ -1550,6 +1589,8 @@ If more work is needed, explain what you're doing next and use the appropriate t
             self.handle_provider(args)
         elif command == "/help":
             self.handle_help()
+        elif command == "/theme":
+            self.handle_theme(args)
         elif command == "/generate":
             self.handle_generate(args)
         elif command == "/test":

@@ -1,7 +1,7 @@
 # Release Plan: v1.12.x Series
 
 **Created:** December 29, 2025
-**Last Updated:** December 29, 2025
+**Last Updated:** January 2, 2026
 **Status:** In Progress
 **Branch:** `feature/agent-multi-file-atomic-edit`
 
@@ -14,6 +14,9 @@ This document outlines the release plan for the v1.12.x series, focusing on:
 2. Real-time token usage and cost tracking (DONE)
 3. Per-provider/model usage breakdown (TODO)
 4. Dedicated Gemini provider for native features (PLANNED)
+5. TUI enhancement experiments (EXPERIMENTAL)
+   - `experiment/rich-tui` - Enhanced Rich with rounded panels, themes
+   - `experiment/tui-textual` - Full Textual framework migration
 
 ---
 
@@ -417,6 +420,432 @@ gemini = ["google-generativeai>=0.8.0"]
 
 ---
 
+## TUI Enhancement Experiments
+
+**Status:** Experimental
+**Branches:** `experiment/rich-tui`, `experiment/tui-textual`
+
+### Motivation
+
+The current TUI uses Rich for rendering but doesn't leverage its full potential. The VSCode extension has a polished UI with message boxes, badges, and visual hierarchy. We want to bring that experience to the terminal.
+
+Two experimental approaches will be evaluated:
+
+### Experiment 1: Enhanced Rich TUI
+
+**Branch:** `experiment/rich-tui`
+**Framework:** Rich (current dependency)
+**Effort:** 4-6 hours
+
+Uses Rich's advanced components (Panel, Live, Layout) to enhance the existing TUI without introducing new dependencies.
+
+#### UI Components
+
+```python
+from rich.panel import Panel
+from rich.markdown import Markdown
+from rich import box
+from rich.text import Text
+from rich.table import Table
+
+def render_message(role: str, content: str, theme: Theme) -> Panel:
+    """Render a message with rounded corners and theme colors."""
+    style = theme.user_style if role == "user" else theme.assistant_style
+    title = theme.user_title if role == "user" else theme.assistant_title
+    return Panel(
+        Markdown(content),
+        title=f"[bold]{title}[/bold]",
+        border_style=style,
+        box=box.ROUNDED,  # ╭──╮ rounded corners
+        padding=(0, 1)
+    )
+
+def render_header(provider: str, model: str, tools: bool, usage: str, theme: Theme) -> Panel:
+    """Render status bar with badges."""
+    header = Table.grid(expand=True)
+    header.add_column(justify="left")
+    header.add_column(justify="right")
+
+    badges = Text()
+    badges.append(f" {provider} ", style=theme.provider_badge)
+    badges.append(" ")
+    badges.append(f" {model} ", style=theme.model_badge)
+    badges.append(" ")
+    badges.append(f" Tools: {'ON' if tools else 'OFF'} ",
+                  style=theme.tools_on_badge if tools else theme.tools_off_badge)
+    badges.append(" ")
+    badges.append(f" {usage} ", style=theme.usage_badge)
+
+    header.add_row(f"ppxai v1.12.x", badges)
+    return Panel(header, box=box.ROUNDED, style=theme.header_style)
+```
+
+#### Theme System
+
+```python
+from dataclasses import dataclass
+
+@dataclass
+class Theme:
+    """TUI theme configuration."""
+    name: str
+
+    # Message styles
+    user_style: str
+    user_title: str
+    assistant_style: str
+    assistant_title: str
+
+    # Badge styles (Rich markup)
+    provider_badge: str
+    model_badge: str
+    tools_on_badge: str
+    tools_off_badge: str
+    usage_badge: str
+
+    # Header/footer
+    header_style: str
+    footer_style: str
+
+    # Code blocks
+    code_theme: str  # Pygments theme name
+
+# Built-in themes
+THEMES = {
+    "standard": Theme(
+        name="Standard",
+        user_style="blue",
+        user_title="You",
+        assistant_style="green",
+        assistant_title="Assistant",
+        provider_badge="white on blue",
+        model_badge="white on dark_blue",
+        tools_on_badge="white on green",
+        tools_off_badge="white on red",
+        usage_badge="white on dark_green",
+        header_style="dim",
+        footer_style="dim",
+        code_theme="monokai",
+    ),
+    "tron-legacy": Theme(
+        name="Tron Legacy",
+        # Tron Legacy color palette
+        # Cyan: #6FC3DF (user)
+        # Orange: #DF740C (system/warnings)
+        # White: #F8F8F8 (text)
+        # Dark: #0C141F (background implied)
+        user_style="cyan",
+        user_title="USER",
+        assistant_style="bright_cyan",
+        assistant_title="PROGRAM",
+        provider_badge="black on cyan",
+        model_badge="black on bright_cyan",
+        tools_on_badge="black on bright_green",
+        tools_off_badge="black on red",
+        usage_badge="black on yellow",
+        header_style="cyan dim",
+        footer_style="cyan dim",
+        code_theme="native",  # Dark theme for code
+    ),
+}
+```
+
+#### Files to Modify
+
+| File | Changes |
+|------|---------|
+| `ppxai/ui.py` | Add `Theme` dataclass, `render_message()`, `render_header()` |
+| `ppxai/main.py` | Load theme from config, pass to UI functions |
+| `ppxai/config.py` | Add `tui.theme` config option |
+| **NEW** `ppxai/themes.py` | Theme definitions (standard, tron-legacy) |
+
+---
+
+### Experiment 2: Textual TUI
+
+**Branch:** `experiment/tui-textual`
+**Framework:** Textual (new dependency)
+**Effort:** 8-12 hours
+
+Full rewrite using Textual framework for a modern, reactive TUI with mouse support, scrolling, and CSS styling.
+
+#### Why Textual?
+
+| Feature | Rich | Textual |
+|---------|------|---------|
+| Output rendering | ✅ | ✅ |
+| Interactive widgets | ❌ | ✅ |
+| Mouse support | ❌ | ✅ |
+| CSS styling | ❌ | ✅ |
+| Scrollable views | Manual | ✅ Built-in |
+| Layout system | Basic | ✅ Flexbox-like |
+| Hot reload | ❌ | ✅ |
+| Component lifecycle | ❌ | ✅ |
+
+#### App Structure
+
+```python
+from textual.app import App, ComposeResult
+from textual.containers import ScrollableContainer, Horizontal
+from textual.widgets import Header, Footer, Static, Input, Button
+from textual.css.query import NoMatches
+
+class MessageBox(Static):
+    """A styled message container."""
+
+    def __init__(self, role: str, content: str) -> None:
+        super().__init__()
+        self.role = role
+        self.content = content
+        self.add_class(f"message-{role}")
+
+    def compose(self) -> ComposeResult:
+        yield Static(self.content, classes="message-content")
+
+class StatusBadge(Static):
+    """A status indicator badge."""
+    pass
+
+class PPXAIApp(App):
+    """Main TUI application."""
+
+    CSS_PATH = "ppxai.tcss"
+    BINDINGS = [
+        ("ctrl+c", "quit", "Quit"),
+        ("ctrl+t", "toggle_tools", "Toggle Tools"),
+        ("escape", "cancel", "Cancel"),
+    ]
+
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock=True)
+        with Horizontal(id="status-bar"):
+            yield StatusBadge("Perplexity", id="provider-badge")
+            yield StatusBadge("sonar-pro", id="model-badge")
+            yield StatusBadge("Tools: ON", id="tools-badge")
+            yield StatusBadge("1.2K↓/0.5K↑ $0.00", id="usage-badge")
+        yield ScrollableContainer(id="chat-history")
+        yield Input(placeholder="Type a message...", id="chat-input")
+        yield Footer()
+
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
+        """Handle user message submission."""
+        message = event.value
+        event.input.value = ""
+
+        # Add user message to chat
+        chat = self.query_one("#chat-history")
+        chat.mount(MessageBox("user", message))
+
+        # Stream AI response...
+```
+
+#### Theme CSS (ppxai.tcss)
+
+```css
+/* Standard Theme */
+.message-user {
+    border: round cyan;
+    margin: 1 2;
+    padding: 0 1;
+}
+
+.message-assistant {
+    border: round green;
+    margin: 1 2;
+    padding: 0 1;
+}
+
+#status-bar {
+    dock: top;
+    height: 1;
+    background: $surface;
+}
+
+StatusBadge {
+    padding: 0 1;
+    margin: 0 1;
+}
+
+#provider-badge {
+    background: blue;
+    color: white;
+}
+
+#model-badge {
+    background: darkblue;
+    color: white;
+}
+
+#tools-badge.on {
+    background: green;
+    color: white;
+}
+
+#tools-badge.off {
+    background: red;
+    color: white;
+}
+
+/* Tron Legacy Theme */
+.tron-legacy .message-user {
+    border: round $accent;
+    border-title-color: $accent;
+}
+
+.tron-legacy .message-assistant {
+    border: round $secondary;
+}
+
+.tron-legacy {
+    /* Tron Legacy palette */
+    $primary: #0C141F;
+    $accent: #6FC3DF;
+    $secondary: #DF740C;
+    $text: #F8F8F8;
+}
+```
+
+#### Files to Create
+
+| File | Purpose |
+|------|---------|
+| **NEW** `ppxai/tui/__init__.py` | TUI package |
+| **NEW** `ppxai/tui/app.py` | Main Textual app |
+| **NEW** `ppxai/tui/widgets.py` | Custom widgets (MessageBox, StatusBadge) |
+| **NEW** `ppxai/tui/themes/` | Theme CSS files |
+| **NEW** `ppxai/tui/themes/standard.tcss` | Standard theme |
+| **NEW** `ppxai/tui/themes/tron-legacy.tcss` | Tron Legacy theme |
+
+---
+
+### UI Design Guidelines (Both Experiments)
+
+#### 1. Visual Alignment with VSCode Extension
+
+| Element | VSCode | TUI Target |
+|---------|--------|------------|
+| Message boxes | Bordered cards | `Panel(box=box.ROUNDED)` or Textual border |
+| User messages | Blue accent | Blue border/background |
+| Assistant messages | Green accent | Green border/background |
+| Status badges | Colored pills | Inline colored text blocks |
+| Provider/Model | Header badges | Top status bar |
+| Tools toggle | Clickable button | Badge + `/tools` command |
+| Usage display | Badge + tooltip | Badge in status bar |
+
+#### 2. Rounded Corners
+
+**Rich:** Use `box=box.ROUNDED` for Panel components
+```
+╭─ You ──────────────────────────────────────╮
+│ What is the capital of France?             │
+╰────────────────────────────────────────────╯
+```
+
+**Textual:** Use `border: round <color>;` in CSS
+```css
+.message-user {
+    border: round cyan;
+}
+```
+
+#### 3. Theme Support
+
+Both experiments must support switching between themes at runtime:
+
+```bash
+# TUI command
+/theme standard
+/theme tron-legacy
+/theme list
+
+# Config file
+{
+    "tui": {
+        "theme": "tron-legacy"
+    }
+}
+```
+
+#### 4. DAG-Style Refactoring Protection
+
+To avoid breaking existing functionality, follow this dependency structure:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        ppxai/ui.py                              │
+│  (Current rendering - PROTECTED, minimal changes)               │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ imports
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     ppxai/ui_components.py                      │
+│  (NEW: Shared components - Theme, MessageRenderer, BadgeRenderer)│
+└─────────────────────────────────────────────────────────────────┘
+                              │
+              ┌───────────────┴───────────────┐
+              │                               │
+              ▼                               ▼
+┌─────────────────────────┐     ┌─────────────────────────┐
+│  ppxai/ui_rich.py       │     │  ppxai/tui/app.py       │
+│  (Experiment 1: Rich)    │     │  (Experiment 2: Textual)│
+└─────────────────────────┘     └─────────────────────────┘
+```
+
+**Refactoring Rules:**
+1. **DO NOT** modify core rendering in `ppxai/ui.py` directly
+2. **DO** extract shared components to `ppxai/ui_components.py`
+3. **DO** create new modules for experimental UI code
+4. **DO** use feature flags or entry points to switch implementations
+5. **DO** maintain backward compatibility with existing config
+
+---
+
+### Comparison Workflow
+
+**Note:** Both experiment branches remain open until a decision is made. No merge until comparison is complete.
+
+1. **Phase 1: Rich Experiment** (`experiment/rich-tui`)
+   - Branch from current `master` or `feature/agent-multi-file-atomic-edit`
+   - Implement enhanced Rich UI with rounded panels
+   - Add theme support (standard, tron-legacy)
+   - Keep branch open for testing
+
+2. **Phase 2: Textual Experiment** (`experiment/tui-textual`)
+   - Branch from `experiment/rich-tui` (inherit theme system)
+   - Implement full Textual app
+   - Keep branch open for testing
+
+3. **Phase 3: Side-by-Side Testing**
+   - Both branches available for testing
+   - Compare implementation complexity
+   - Compare user experience (responsiveness, mouse support)
+   - Compare maintenance burden (dependencies, testing)
+   - Gather feedback from actual usage
+
+4. **Phase 4: Decision & Merge**
+   - Choose winner: Rich enhancement OR Textual migration
+   - Merge chosen experiment to main branch
+   - Archive (don't delete) rejected experiment branch
+   - Release as v1.12.5 or v1.13.0
+
+---
+
+### Tron Legacy Color Palette Reference
+
+From the movie's visual design:
+
+| Element | Hex | RGB | Rich Color |
+|---------|-----|-----|------------|
+| Cyan (User) | #6FC3DF | 111, 195, 223 | `cyan` / `bright_cyan` |
+| Orange (Flynn) | #DF740C | 223, 116, 12 | `dark_orange` |
+| White (Grid) | #F8F8F8 | 248, 248, 248 | `white` |
+| Dark (Background) | #0C141F | 12, 20, 31 | Terminal default |
+| Blue (Identity Disc) | #18CAE6 | 24, 202, 230 | `bright_cyan` |
+| Red (Enemy) | #FF4500 | 255, 69, 0 | `red` |
+
+---
+
 ## Future Considerations (v1.13+)
 
 ### Claude/Anthropic Dedicated Provider
@@ -488,7 +917,28 @@ Planned:     v1.12.3 (VSCode dashboard + Gemini) ──────── 2-3 we
 Planned:     v1.12.4 (bug fixes) ──────────────────────── 1-2 weeks
              │
              ▼
-Future:      v1.13.0 (AGENTS.md)
+Future:      v1.12.5 or v1.13.0 (TUI Enhancement)
+
+═══════════════════════════════════════════════════════════════════
+                    TUI EXPERIMENTS (parallel)
+═══════════════════════════════════════════════════════════════════
+
+Branch: experiment/rich-tui ──────────────────────────────┐
+        │  • Rich SDK enhancements                        │
+        │  • Rounded panel message boxes                  │
+        │  • Theme system (standard, tron-legacy)         │ Compare
+        │  • Status bar with badges                       │   &
+        ▼                                                 │ Decide
+Branch: experiment/tui-textual ───────────────────────────┤
+        │  • Full Textual framework                       │
+        │  • Mouse support + scrollable views             │
+        │  • CSS-based theming                            │
+        │  • Same themes (standard, tron-legacy)          │
+        ▼                                                 │
+        ┌─────────────────────────────────────────────────┘
+        │
+        ▼
+Winner: Merge to main ──────────────────────────────────── Release
 ```
 
 ---
@@ -597,4 +1047,4 @@ python scripts/release.py v1.12.0 --redo --force
 
 ---
 
-**Last Updated:** December 29, 2025
+**Last Updated:** January 2, 2026

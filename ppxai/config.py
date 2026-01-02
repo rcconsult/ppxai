@@ -657,3 +657,44 @@ def validate_config() -> Dict[str, Any]:
         }
 
     return result
+
+
+# =============================================================================
+# TUI Configuration (v1.12.0 - Enhanced TUI Experiment)
+# =============================================================================
+
+def get_tui_config() -> Dict[str, Any]:
+    """Get TUI-specific configuration.
+
+    Reads from ppxai-config.json under the "tui" key:
+    {
+        "tui": {
+            "theme": "standard",  // or "tron-legacy", "matrix", "nord"
+            "show_timestamps": true,
+            "show_header": true
+        }
+    }
+
+    Returns:
+        Dict with TUI configuration options.
+    """
+    defaults = {
+        "theme": "standard",
+        "show_timestamps": True,
+        "show_header": True,
+    }
+
+    # Check if config has tui section
+    tui_config = _config.get("tui", {})
+
+    # Merge with defaults
+    return {**defaults, **tui_config}
+
+
+def get_tui_theme() -> str:
+    """Get the configured TUI theme name.
+
+    Returns:
+        Theme name string (e.g., "standard", "tron-legacy").
+    """
+    return get_tui_config().get("theme", "standard")
