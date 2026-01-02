@@ -92,15 +92,141 @@ def normalize_zwj_emojis(text: str) -> str:
     return result
 
 
-def sanitize_for_panel(text: str, normalize_zwj: bool = True) -> str:
+# Mapping from emojis to single-width text symbols
+# These symbols render at exactly 1 cell in monospace fonts
+EMOJI_TO_TEXT_SYMBOL = {
+    # Warning/Caution
+    '⚠️': '!',
+    '⚠': '!',
+    '\u26a0': '!',  # warning sign
+    '⛔': 'X',
+    '🚫': 'X',
+    '❌': 'X',
+    '❎': 'X',
+
+    # Success/Positive
+    '✅': '*',
+    '✓': '*',
+    '✔️': '*',
+    '✔': '*',
+    '👍': '+',
+    '💚': '*',
+    '💙': '*',
+
+    # Info/Note
+    'ℹ️': 'i',
+    'ℹ': 'i',
+    '💡': '*',
+    '📝': '>',
+    '📌': '>',
+
+    # Error/Negative
+    '🔴': 'o',
+    '🟠': 'o',
+    '🟡': 'o',
+    '🟢': 'o',
+    '🔵': 'o',
+    '⭕': 'o',
+    '👎': '-',
+    '💔': 'x',
+
+    # Actions
+    '🔄': '~',
+    '🔃': '~',
+    '♻️': '~',
+    '🔁': '~',
+    '⏳': '-',
+    '⏰': '@',
+    '🕐': '@',
+
+    # Files/Folders
+    '📁': '/',
+    '📂': '/',
+    '📄': '#',
+    '📃': '#',
+    '📋': '#',
+
+    # Stars/Rating
+    '⭐': '*',
+    '🌟': '*',
+    '✨': '*',
+    '💫': '*',
+    '★': '*',
+    '☆': '*',
+
+    # Arrows (keep as-is, these are safe)
+    '→': '>',
+    '←': '<',
+    '↑': '^',
+    '↓': 'v',
+
+    # Common compound emojis
+    '👨‍👩‍👧': '+',
+    '👨‍👩‍👧‍👦': '+',
+    '👪': '+',
+
+    # Misc
+    '🎉': '!',
+    '🎊': '!',
+    '🔥': '!',
+    '💥': '!',
+    '🚀': '>',
+    '⚡': '!',
+    '💻': '#',
+    '🖥️': '#',
+    '⌨️': '#',
+    '🔧': '%',
+    '🔨': '%',
+    '⚙️': '%',
+    '⚙': '%',
+    '🔒': '#',
+    '🔓': '#',
+    '🔑': '#',
+}
+
+
+def emojis_to_text_symbols(text: str) -> str:
+    """
+    Replace emojis with single-width text symbols.
+
+    This ensures consistent panel alignment in terminals by replacing
+    variable-width emoji characters with predictable single-cell symbols.
+
+    Args:
+        text: Text containing emojis
+
+    Returns:
+        Text with emojis replaced by text symbols
+
+    Examples:
+        >>> emojis_to_text_symbols("⚠️ Warning")
+        '! Warning'
+        >>> emojis_to_text_symbols("✅ Done")
+        '* Done'
+    """
+    if not text:
+        return text
+
+    result = text
+    for emoji, symbol in EMOJI_TO_TEXT_SYMBOL.items():
+        result = result.replace(emoji, symbol)
+
+    return result
+
+
+def sanitize_for_panel(text: str, use_text_symbols: bool = True) -> str:
     """
     Sanitize text for rendering in Rich panels.
 
-    Applies emoji width normalization to ensure panel borders align correctly.
+    Applies emoji normalization to ensure panel borders align correctly.
+
+    By default, replaces emojis with single-width text symbols for guaranteed
+    alignment. Set use_text_symbols=False for legacy behavior (strip variation
+    selectors only).
 
     Args:
         text: Text to sanitize
-        normalize_zwj: Whether to also simplify ZWJ emoji sequences
+        use_text_symbols: Replace emojis with text symbols (recommended)
 
     Returns:
         Sanitized text safe for panel rendering
@@ -108,8 +234,12 @@ def sanitize_for_panel(text: str, normalize_zwj: bool = True) -> str:
     if not text:
         return text
 
-    result = normalize_emoji_width(text)
-    if normalize_zwj:
+    if use_text_symbols:
+        # Most reliable: replace emojis with text symbols
+        result = emojis_to_text_symbols(text)
+    else:
+        # Legacy: strip variation selectors and simplify ZWJ
+        result = normalize_emoji_width(text)
         result = normalize_zwj_emojis(result)
 
     return result

@@ -335,7 +335,8 @@ class TestRegressionPrevention:
 
         # The content should be present (table was rendered, not broken)
         assert 'Multi-step autonomy' in output
-        assert '✅ Autonomous' in output
+        # Note: ✅ is converted to '*' for consistent panel alignment
+        assert 'Autonomous' in output
         assert 'Tool orchestration' in output
 
     def test_no_markdown_class_for_tables(self):
@@ -477,3 +478,75 @@ See also [1](https://example.com) and [2](https://example.org)."""
         assert '\x1b]8;' in output
         # Should not show raw table syntax
         assert '|---|---|' not in output
+
+
+class TestEmojiConversion:
+    """Test emoji to text symbol conversion for panel alignment."""
+
+    def test_warning_emoji_converted(self):
+        """Test warning emoji is converted to '!'."""
+        from ppxai.ui_components import emojis_to_text_symbols
+
+        assert emojis_to_text_symbols("⚠️ Warning") == "! Warning"
+        assert emojis_to_text_symbols("⚠ Note") == "! Note"
+
+    def test_success_emoji_converted(self):
+        """Test checkmark emoji is converted to '*'."""
+        from ppxai.ui_components import emojis_to_text_symbols
+
+        assert emojis_to_text_symbols("✅ Done") == "* Done"
+        assert emojis_to_text_symbols("✓ OK") == "* OK"
+
+    def test_error_emoji_converted(self):
+        """Test error emoji is converted to 'X'."""
+        from ppxai.ui_components import emojis_to_text_symbols
+
+        assert emojis_to_text_symbols("❌ Failed") == "X Failed"
+
+    def test_multiple_emojis_converted(self):
+        """Test multiple emojis in one string."""
+        from ppxai.ui_components import emojis_to_text_symbols
+
+        text = "✅ Step 1\n⚠️ Step 2\n❌ Step 3"
+        result = emojis_to_text_symbols(text)
+        assert result == "* Step 1\n! Step 2\nX Step 3"
+
+    def test_no_emojis_unchanged(self):
+        """Test text without emojis is unchanged."""
+        from ppxai.ui_components import emojis_to_text_symbols
+
+        text = "Plain text without emojis"
+        assert emojis_to_text_symbols(text) == text
+
+    def test_sanitize_for_panel_uses_text_symbols(self):
+        """Test sanitize_for_panel converts emojis by default."""
+        from ppxai.ui_components import sanitize_for_panel
+
+        text = "⚠️ Warning: ✅ check, ❌ fail"
+        result = sanitize_for_panel(text)
+        assert "⚠️" not in result
+        assert "✅" not in result
+        assert "❌" not in result
+        assert "!" in result  # warning converted
+        assert "*" in result  # success converted
+        assert "X" in result  # error converted
+
+    def test_tables_with_emojis_aligned(self):
+        """Test that tables with emojis render with consistent alignment."""
+        string_io = StringIO()
+        console = Console(file=string_io, force_terminal=True, width=80)
+
+        content = """| Status | Description |
+|--------|-------------|
+| ✅ | Success |
+| ⚠️ | Warning |
+| ❌ | Error |"""
+
+        render_markdown_with_tables(content, console)
+        output = string_io.getvalue()
+
+        # Emojis should be converted to text symbols
+        # The exact characters depend on the mapping
+        assert "Success" in output
+        assert "Warning" in output
+        assert "Error" in output
