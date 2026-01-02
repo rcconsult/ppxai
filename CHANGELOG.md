@@ -5,6 +5,33 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.2] - 2026-01-02
+
+### Added - TUI Polish & Bug Fixes
+
+#### Emoji Toggle
+- **`/theme emoji on|off`** - Toggle emoji display in panel badges
+- Switch between emoji badges and text-only badges for better alignment
+
+### Fixed
+
+#### Tool Call Parsing
+- **Single-quote JSON** - Fixed parsing of tool calls using single quotes instead of double quotes
+
+#### Logging & Initialization
+- **Unified logging** - TUI and engine now share common logger module
+- **Logger initialization** - Fixed missing `self.logger` in CommandHandler
+- **Removed obsolete** `tui_logger.py` (replaced by `ppxai/common/logger.py`)
+
+#### TUI Display
+- **Checkpoint status** - Shows `↶` symbol instead of full git hash for cleaner display
+- **Panel alignment** - Text symbols instead of emojis for consistent column alignment
+
+### Testing
+- All 377 tests passing
+
+---
+
 ## [1.12.1] - 2026-01-02
 
 ### Added - Enhanced TUI Experience
@@ -685,6 +712,9 @@ ppxai follows [Semantic Versioning](https://semver.org/):
 5. Push tag: `git push origin v1.x.x`
 6. GitHub Actions automatically builds and creates release
 
+[1.12.2]: https://github.com/rcconsult/ppxai/releases/tag/v1.12.2
+[1.12.1]: https://github.com/rcconsult/ppxai/releases/tag/v1.12.1
+[1.12.0]: https://github.com/rcconsult/ppxai/releases/tag/v1.12.0
 [1.11.9]: https://github.com/rcconsult/ppxai/releases/tag/v1.11.9
 [1.11.8]: https://github.com/rcconsult/ppxai/releases/tag/v1.11.8
 [1.11.7]: https://github.com/rcconsult/ppxai/releases/tag/v1.11.7

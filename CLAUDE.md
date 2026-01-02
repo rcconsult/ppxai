@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.12.1 (Released January 2, 2026)
+**Current Version:** v1.12.2
 
 **What's New in v1.12.1 (Released 2026-01-02):**
 - **NEW:** Themed TUI panels with 4 themes: Standard, Tron Legacy, Matrix, Nord
@@ -199,10 +199,10 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - Automated GitHub Actions CI/CD for multi-platform builds (macOS ARM/Intel, Linux, Windows)
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.12.1
-- VSCode extension (package.json): v1.12.1
-- Git tag: v1.12.1 (released 2026-01-02)
-- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v1.12.1
+- Python package (pyproject.toml): v1.12.2
+- VSCode extension (package.json): v1.12.2
+- Git tag: v1.12.2 (released 2026-01-02)
+- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v1.12.2
 
 ## Development Setup
 
@@ -479,7 +479,7 @@ The release script (`scripts/release.py`) handles everything automatically:
 | `ppxai/common/event_handler.py` | `Version: v1.12.0` | Yes |
 | `README.md` | `ppxai-1.12.0.vsix` | No |
 | `vscode-extension/README.md` | `ppxai-1.12.0.vsix` | No |
-| `CLAUDE.md` | `**Current Version:** v1.12.1
+| `CLAUDE.md` | `**Current Version:** v1.12.2
 | `ROADMAP.md` | `> **Current Version**: v1.12.0` | Yes |
 
 ### Files Validated (Not Auto-Updated)

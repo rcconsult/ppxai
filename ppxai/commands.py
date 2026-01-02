@@ -401,12 +401,109 @@ class CommandHandler:
         except Exception as e:
             console.print(f"[red]Error loading session: {e}[/red]\n")
 
-    def handle_usage(self):
-        """Handle /usage command."""
-        # v1.12.0: Use engine session for usage
+    def handle_usage(self, args: str = ""):
+        """Handle /usage command with sub-commands.
+
+        Sub-commands:
+            /usage              - Show session usage totals
+            /usage show session - Status line shows session totals (default)
+            /usage show provider - Status line shows current provider totals
+            /usage show model   - Status line shows current model totals
+            /usage show off     - Hide usage from status line
+            /usage reset        - Reset all usage counters
+        """
+        args = args.strip().lower()
+
+        if not args:
+            # Default: show session totals with per-model breakdown
+            self._display_usage_report()
+            return
+
+        parts = args.split()
+        sub_command = parts[0]
+
+        if sub_command == "show":
+            if len(parts) < 2:
+                console.print("\n[yellow]Usage: /usage show <session|provider|model|off>[/yellow]")
+                console.print(f"  Current mode: [cyan]{self.engine_client.session.usage_display_mode}[/cyan]\n")
+                return
+
+            mode = parts[1]
+            valid_modes = {"session", "provider", "model", "off"}
+            if mode not in valid_modes:
+                console.print(f"\n[red]Invalid mode: {mode}[/red]")
+                console.print(f"  Valid modes: {', '.join(valid_modes)}\n")
+                return
+
+            if self.engine_client.session.set_usage_display_mode(mode):
+                mode_descriptions = {
+                    "session": "session totals",
+                    "provider": f"current provider ({self.provider}) totals",
+                    "model": f"current model ({self.current_model}) totals",
+                    "off": "hidden"
+                }
+                console.print(f"\n[green]Usage display set to: {mode_descriptions[mode]}[/green]\n")
+            else:
+                console.print(f"\n[red]Failed to set display mode[/red]\n")
+
+        elif sub_command == "reset":
+            self.engine_client.session.reset_usage()
+            console.print("\n[green]Usage counters reset to zero.[/green]\n")
+
+        else:
+            console.print(f"\n[red]Unknown sub-command: {sub_command}[/red]")
+            console.print("  Available: show, reset\n")
+
+    def _display_usage_report(self):
+        """Display detailed usage report with per-model breakdown."""
+        from rich.table import Table
+
         usage = self.engine_client.session.get_usage()
-        display_usage(usage)
-        display_global_usage()
+
+        # Session totals
+        console.print()
+        console.print("[bold cyan]Session Usage Statistics[/bold cyan]")
+        console.print(f"  Total tokens: {usage['total_tokens']:,} ({usage['prompt_tokens']:,}↓ / {usage['completion_tokens']:,}↑)")
+        console.print(f"  Estimated cost: ${usage['estimated_cost']:.4f}")
+
+        # Per-model breakdown if available
+        by_model = usage.get("by_model", {})
+        if by_model:
+            console.print()
+            table = Table(title="Usage by Model", show_header=True, header_style="bold magenta")
+            table.add_column("Provider", style="cyan")
+            table.add_column("Model", style="cyan")
+            table.add_column("In", justify="right", style="green")
+            table.add_column("Out", justify="right", style="green")
+            table.add_column("Cost", justify="right", style="yellow")
+
+            for key, stats in sorted(by_model.items()):
+                parts = key.split("/", 1)
+                provider = parts[0]
+                model = parts[1] if len(parts) > 1 else key
+                table.add_row(
+                    provider,
+                    model,
+                    f"{stats['prompt_tokens']:,}",
+                    f"{stats['completion_tokens']:,}",
+                    f"${stats['estimated_cost']:.4f}"
+                )
+
+            # Add totals row
+            table.add_row(
+                "[bold]TOTAL[/bold]",
+                "",
+                f"[bold]{usage['prompt_tokens']:,}[/bold]",
+                f"[bold]{usage['completion_tokens']:,}[/bold]",
+                f"[bold]${usage['estimated_cost']:.4f}[/bold]"
+            )
+
+            console.print(table)
+
+        # Display mode
+        display_mode = usage.get("display_mode", "session")
+        console.print(f"\n  Status line display: [cyan]{display_mode}[/cyan]")
+        console.print("  (Change with /usage show <session|provider|model|off>)\n")
 
     def handle_clear(self):
         """Handle /clear command."""
@@ -1623,7 +1720,7 @@ If more work is needed, explain what you're doing next and use the appropriate t
         elif command == "/load":
             self.handle_load(args)
         elif command == "/usage":
-            self.handle_usage()
+            self.handle_usage(args)
         elif command == "/clear":
             self.handle_clear()
         elif command == "/model":

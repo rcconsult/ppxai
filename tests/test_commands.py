@@ -114,15 +114,15 @@ class TestCommandHandlerBothProviders:
             "total_tokens": 100,
             "prompt_tokens": 60,
             "completion_tokens": 40,
-            "estimated_cost": 0.001
+            "estimated_cost": 0.001,
+            "by_model": {},
+            "display_mode": "session"
         }
         mock_engine_client.session.get_usage.return_value = mock_usage
 
-        with patch('ppxai.commands.display_usage') as mock_display:
-            with patch('ppxai.commands.display_global_usage') as mock_global:
-                handler_perplexity.handle_usage()
-                mock_display.assert_called_once_with(mock_usage)
-                mock_global.assert_called_once()
+        # v1.12.2: /usage now uses _display_usage_report instead of display_usage
+        handler_perplexity.handle_usage()
+        mock_engine_client.session.get_usage.assert_called_once()
 
     def test_usage_command_custom(self, handler_custom, mock_engine_client):
         """Test /usage command with custom provider."""
@@ -130,15 +130,38 @@ class TestCommandHandlerBothProviders:
             "total_tokens": 200,
             "prompt_tokens": 120,
             "completion_tokens": 80,
-            "estimated_cost": 0.002
+            "estimated_cost": 0.002,
+            "by_model": {},
+            "display_mode": "session"
         }
         mock_engine_client.session.get_usage.return_value = mock_usage
 
-        with patch('ppxai.commands.display_usage') as mock_display:
-            with patch('ppxai.commands.display_global_usage') as mock_global:
-                handler_custom.handle_usage()
-                mock_display.assert_called_once_with(mock_usage)
-                mock_global.assert_called_once()
+        # v1.12.2: /usage now uses _display_usage_report instead of display_usage
+        handler_custom.handle_usage()
+        mock_engine_client.session.get_usage.assert_called_once()
+
+    def test_usage_show_command_perplexity(self, handler_perplexity, mock_engine_client):
+        """Test /usage show <mode> command (v1.12.2)."""
+        mock_engine_client.session.set_usage_display_mode = Mock(return_value=True)
+
+        # Test setting display mode to 'model'
+        handler_perplexity.handle_usage("show model")
+        mock_engine_client.session.set_usage_display_mode.assert_called_with("model")
+
+        # Test setting display mode to 'provider'
+        handler_perplexity.handle_usage("show provider")
+        mock_engine_client.session.set_usage_display_mode.assert_called_with("provider")
+
+        # Test setting display mode to 'off'
+        handler_perplexity.handle_usage("show off")
+        mock_engine_client.session.set_usage_display_mode.assert_called_with("off")
+
+    def test_usage_reset_command_perplexity(self, handler_perplexity, mock_engine_client):
+        """Test /usage reset command (v1.12.2)."""
+        mock_engine_client.session.reset_usage = Mock()
+
+        handler_perplexity.handle_usage("reset")
+        mock_engine_client.session.reset_usage.assert_called_once()
 
     # ==================== /model Command ====================
 

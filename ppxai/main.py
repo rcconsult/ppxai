@@ -71,17 +71,27 @@ def get_status_line(handler, use_themed: bool = True):
                 else:
                     checkpoint_str = "↶"  # Valid checkpoint - undo available
 
-    # Get session usage stats (v1.12.0)
+    # Get session usage stats (v1.12.0, v1.12.2: display mode support)
     usage_str = None
     if handler.engine_client:
-        usage = handler.engine_client.session.get_usage()
-        prompt_tokens = usage.get("prompt_tokens", 0)
-        completion_tokens = usage.get("completion_tokens", 0)
-        cost = usage.get("estimated_cost", 0.0)
+        # v1.12.2: Use display mode-aware method
+        usage_display = handler.engine_client.session.get_usage_for_display(
+            current_provider=handler.provider,
+            current_model=handler.current_model
+        )
 
-        if prompt_tokens > 0 or completion_tokens > 0:
-            from ppxai.ui_components import format_usage_string
-            usage_str = format_usage_string(prompt_tokens, completion_tokens, cost)
+        if usage_display:  # None if display_mode is "off"
+            prompt_tokens = usage_display.get("prompt_tokens", 0)
+            completion_tokens = usage_display.get("completion_tokens", 0)
+            cost = usage_display.get("estimated_cost", 0.0)
+            label = usage_display.get("label")  # Provider/model label or None
+
+            if prompt_tokens > 0 or completion_tokens > 0:
+                from ppxai.ui_components import format_usage_string
+                usage_str = format_usage_string(prompt_tokens, completion_tokens, cost)
+                # Add label prefix for provider/model modes
+                if label:
+                    usage_str = f"[{label}] {usage_str}"
 
     # Use themed status line if available (experiment/rich-tui)
     if use_themed:
@@ -170,6 +180,20 @@ class PPXAICompleter(Completer):
         ('tron-legacy', 'Cyan/orange Tron: Legacy style'),
         ('matrix', 'Green-on-black Matrix style'),
         ('nord', 'Arctic bluish Nord palette'),
+    ]
+
+    # Subcommands for /usage (v1.12.2)
+    USAGE_SUBCOMMANDS = [
+        ('show', 'Set status line display mode'),
+        ('reset', 'Reset all usage counters'),
+    ]
+
+    # Display modes for /usage show
+    USAGE_DISPLAY_MODES = [
+        ('session', 'Show session totals'),
+        ('provider', 'Show current provider totals'),
+        ('model', 'Show current model totals'),
+        ('off', 'Hide usage from status line'),
     ]
 
     # Directories to ignore when searching for files
@@ -293,6 +317,31 @@ class PPXAICompleter(Completer):
                         if opt.startswith(emoji_query):
                             yield Completion(
                                 opt,
+                                start_position=-len(parts[2]),
+                                display_meta=desc
+                            )
+                return
+
+            # Handle /usage subcommands (v1.12.2)
+            if cmd_text.startswith('/usage '):
+                parts = text.split()
+                if len(parts) == 2:
+                    # Completing subcommand: /usage sh<tab>
+                    subquery = parts[1].lower()
+                    for subcmd, desc in self.USAGE_SUBCOMMANDS:
+                        if subcmd.startswith(subquery):
+                            yield Completion(
+                                subcmd,
+                                start_position=-len(parts[1]),
+                                display_meta=desc
+                            )
+                elif len(parts) == 3 and parts[1].lower() == 'show':
+                    # Completing display mode: /usage show se<tab>
+                    mode_query = parts[2].lower()
+                    for mode, desc in self.USAGE_DISPLAY_MODES:
+                        if mode.startswith(mode_query):
+                            yield Completion(
+                                mode,
                                 start_position=-len(parts[2]),
                                 display_meta=desc
                             )

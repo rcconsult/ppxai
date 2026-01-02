@@ -1,7 +1,7 @@
 # Agent Mode User Guide
 
-**Version**: v1.11.9+
-**Status**: Active Development
+**Version**: v1.12.0+
+**Status**: Production Ready
 
 This guide explains how to use ppxai's autonomous agent mode for multi-step task execution.
 
@@ -546,11 +546,12 @@ See [Shell Consent Guide](SHELL_CONSENT_GUIDE.md) for complete documentation.
 
 ## Related Documentation
 
-- [Agentic Workflow Plan](v1.11.0-agentic-workflow-plan.md) - Technical implementation details
+- [Checkpoint Guide](CHECKPOINT_GUIDE.md) - Atomic rollback for agent tasks
 - [Shell Consent Guide](SHELL_CONSENT_GUIDE.md) - Shell command security
 - [Custom Tools Guide](CUSTOM_TOOL_DEVELOPMENT_GUIDE.md) - Creating custom tools
+- [Agentic Workflow Plan](v1.11.0-agentic-workflow-plan.md) - Technical implementation details
 
 ---
 
-**Last Updated:** 2025-12-27
-**Version:** v1.11.9
+**Last Updated:** 2026-01-02
+**Version:** v1.12.2

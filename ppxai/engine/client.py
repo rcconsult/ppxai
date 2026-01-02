@@ -997,7 +997,8 @@ class EngineClient:
                         self.model,
                         self.provider_name  # Fixed: was provider_id
                     )
-                    self.session.update_usage(usage)
+                    # v1.12.2: Pass provider and model for per-model tracking
+                    self.session.update_usage(usage, self.provider_name, self.model)
                     # Convert UsageStats to dict for JSON serialization
                     event.metadata["usage"] = asdict(usage)
 
@@ -1155,7 +1156,8 @@ class EngineClient:
                         self.model,
                         self.provider_name
                     )
-                    self.session.update_usage(accumulated_usage)
+                    # v1.12.2: Pass provider and model for per-model tracking
+                    self.session.update_usage(accumulated_usage, self.provider_name, self.model)
                     metadata = {"usage": asdict(accumulated_usage)}
 
                 yield Event(EventType.STREAM_END, full_response, metadata)

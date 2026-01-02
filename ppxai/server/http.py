@@ -618,12 +618,67 @@ async def set_tools_config(request: ToolsConfigRequest):
 
 @app.get("/usage")
 async def get_usage():
-    """Get token usage statistics for current session."""
+    """Get token usage statistics for current session.
+
+    Returns full usage including per-model breakdown (v1.12.2).
+    """
     global engine
     if not engine:
         raise HTTPException(status_code=503, detail="Engine not initialized")
 
     return engine.get_usage()
+
+
+class UsageDisplayModeRequest(BaseModel):
+    """Request body for setting usage display mode."""
+    mode: str  # "session", "provider", "model", or "off"
+
+
+@app.post("/usage/display")
+async def set_usage_display_mode(request: UsageDisplayModeRequest):
+    """Set usage display mode for status line (v1.12.2).
+
+    Args:
+        mode: One of "session", "provider", "model", "off"
+            - session: Show session totals
+            - provider: Show current provider totals
+            - model: Show current model totals
+            - off: Hide usage from status line
+    """
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    valid_modes = {"session", "provider", "model", "off"}
+    if request.mode not in valid_modes:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid mode: {request.mode}. Valid modes: {', '.join(valid_modes)}"
+        )
+
+    success = engine.session.set_usage_display_mode(request.mode)
+    return {"mode": request.mode, "success": success}
+
+
+@app.get("/usage/display")
+async def get_usage_display_mode():
+    """Get current usage display mode (v1.12.2)."""
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    return {"mode": engine.session.usage_display_mode}
+
+
+@app.post("/usage/reset")
+async def reset_usage():
+    """Reset all usage statistics to zero (v1.12.2)."""
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    engine.session.reset_usage()
+    return {"success": True}
 
 
 # === Context Settings ===

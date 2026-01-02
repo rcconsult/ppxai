@@ -746,13 +746,20 @@ export class HttpClient {
     }
 
     /**
-     * Get usage statistics
+     * Get usage statistics (v1.12.2: includes per-model breakdown)
      */
     async getUsage(): Promise<{
         total_tokens: number;
         prompt_tokens: number;
         completion_tokens: number;
         estimated_cost: number;
+        by_model?: Record<string, {
+            total_tokens: number;
+            prompt_tokens: number;
+            completion_tokens: number;
+            estimated_cost: number;
+        }>;
+        display_mode?: string;
     }> {
         const response = await fetch(`${this.baseUrl}/usage`);
         if (!response.ok) {
@@ -763,7 +770,55 @@ export class HttpClient {
             prompt_tokens: number;
             completion_tokens: number;
             estimated_cost: number;
+            by_model?: Record<string, {
+                total_tokens: number;
+                prompt_tokens: number;
+                completion_tokens: number;
+                estimated_cost: number;
+            }>;
+            display_mode?: string;
         }>;
+    }
+
+    /**
+     * Set usage display mode for status line (v1.12.2)
+     * @param mode - "session", "provider", "model", or "off"
+     */
+    async setUsageDisplayMode(mode: string): Promise<{ mode: string; success: boolean }> {
+        const response = await fetch(`${this.baseUrl}/usage/display`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode })
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to set usage display mode: ${response.statusText}`);
+        }
+        return response.json() as Promise<{ mode: string; success: boolean }>;
+    }
+
+    /**
+     * Get current usage display mode (v1.12.2)
+     */
+    async getUsageDisplayMode(): Promise<{ mode: string }> {
+        const response = await fetch(`${this.baseUrl}/usage/display`);
+        if (!response.ok) {
+            throw new Error(`Failed to get usage display mode: ${response.statusText}`);
+        }
+        return response.json() as Promise<{ mode: string }>;
+    }
+
+    /**
+     * Reset all usage statistics to zero (v1.12.2)
+     */
+    async resetUsage(): Promise<{ success: boolean }> {
+        const response = await fetch(`${this.baseUrl}/usage/reset`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to reset usage: ${response.statusText}`);
+        }
+        return response.json() as Promise<{ success: boolean }>;
     }
 
     /**

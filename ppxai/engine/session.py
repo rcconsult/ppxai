@@ -46,6 +46,17 @@ class SessionManager:
         }
         self.usage = UsageStats()
 
+        # v1.12.2: Per-model usage tracking
+        # Keys are "provider/model" strings, e.g., "perplexity/sonar-pro"
+        self.usage_by_model: Dict[str, UsageStats] = {}
+
+        # v1.12.2: Usage display mode for status line
+        # "session" = total session usage (default)
+        # "provider" = current provider usage only
+        # "model" = current model usage only
+        # "off" = hide usage from status line
+        self.usage_display_mode: str = "session"
+
         # File editing consent state (Phase 1: v1.11.0)
         self.allowed_files: set[Path] = set()  # Files user consented to edit
         self.edit_consent_mode: str = "ask"  # "ask", "always", "never"
@@ -118,28 +129,165 @@ class SessionManager:
         """
         self.metadata["model"] = model
 
-    def update_usage(self, usage: UsageStats):
+    def update_usage(self, usage: UsageStats, provider: str = None, model: str = None):
         """Update usage statistics.
 
         Args:
             usage: UsageStats to add
+            provider: Provider name (for per-model tracking)
+            model: Model ID (for per-model tracking)
         """
+        # Update session totals
         self.usage.prompt_tokens += usage.prompt_tokens
         self.usage.completion_tokens += usage.completion_tokens
         self.usage.total_tokens += usage.total_tokens
         self.usage.estimated_cost += usage.estimated_cost
 
+        # v1.12.2: Update per-model tracking
+        if provider and model:
+            key = f"{provider}/{model}"
+            if key not in self.usage_by_model:
+                self.usage_by_model[key] = UsageStats()
+
+            model_usage = self.usage_by_model[key]
+            model_usage.prompt_tokens += usage.prompt_tokens
+            model_usage.completion_tokens += usage.completion_tokens
+            model_usage.total_tokens += usage.total_tokens
+            model_usage.estimated_cost += usage.estimated_cost
+
     def get_usage(self) -> Dict[str, Any]:
         """Get usage statistics.
 
         Returns:
-            Dictionary with usage stats
+            Dictionary with usage stats including per-model breakdown
         """
         return {
             "total_tokens": self.usage.total_tokens,
             "prompt_tokens": self.usage.prompt_tokens,
             "completion_tokens": self.usage.completion_tokens,
+            "estimated_cost": self.usage.estimated_cost,
+            # v1.12.2: Add per-model breakdown
+            "by_model": {
+                key: {
+                    "total_tokens": stats.total_tokens,
+                    "prompt_tokens": stats.prompt_tokens,
+                    "completion_tokens": stats.completion_tokens,
+                    "estimated_cost": stats.estimated_cost
+                }
+                for key, stats in self.usage_by_model.items()
+            },
+            "display_mode": self.usage_display_mode
+        }
+
+    def get_usage_for_display(self, current_provider: str = None, current_model: str = None) -> Optional[Dict[str, Any]]:
+        """Get usage statistics for status line display based on display mode.
+
+        Args:
+            current_provider: Current provider name
+            current_model: Current model ID
+
+        Returns:
+            Dictionary with usage stats for display, or None if display_mode is "off"
+        """
+        if self.usage_display_mode == "off":
+            return None
+
+        if self.usage_display_mode == "session":
+            return {
+                "label": None,  # No label for session totals
+                "prompt_tokens": self.usage.prompt_tokens,
+                "completion_tokens": self.usage.completion_tokens,
+                "estimated_cost": self.usage.estimated_cost
+            }
+
+        if self.usage_display_mode == "provider" and current_provider:
+            # Aggregate all models for current provider
+            prompt_tokens = 0
+            completion_tokens = 0
+            estimated_cost = 0.0
+            for key, stats in self.usage_by_model.items():
+                if key.startswith(f"{current_provider}/"):
+                    prompt_tokens += stats.prompt_tokens
+                    completion_tokens += stats.completion_tokens
+                    estimated_cost += stats.estimated_cost
+            return {
+                "label": current_provider[:4],  # Short provider label
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "estimated_cost": estimated_cost
+            }
+
+        if self.usage_display_mode == "model" and current_provider and current_model:
+            key = f"{current_provider}/{current_model}"
+            if key in self.usage_by_model:
+                stats = self.usage_by_model[key]
+                # Use short model name (last part after any /)
+                short_model = current_model.split("/")[-1][:12]
+                return {
+                    "label": short_model,
+                    "prompt_tokens": stats.prompt_tokens,
+                    "completion_tokens": stats.completion_tokens,
+                    "estimated_cost": stats.estimated_cost
+                }
+            return {
+                "label": current_model.split("/")[-1][:12],
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "estimated_cost": 0.0
+            }
+
+        # Fallback to session totals
+        return {
+            "label": None,
+            "prompt_tokens": self.usage.prompt_tokens,
+            "completion_tokens": self.usage.completion_tokens,
             "estimated_cost": self.usage.estimated_cost
+        }
+
+    def set_usage_display_mode(self, mode: str) -> bool:
+        """Set the usage display mode for status line.
+
+        Args:
+            mode: One of "session", "provider", "model", "off"
+
+        Returns:
+            True if mode was set successfully
+        """
+        valid_modes = {"session", "provider", "model", "off"}
+        if mode in valid_modes:
+            self.usage_display_mode = mode
+            return True
+        return False
+
+    def reset_usage(self):
+        """Reset all usage statistics to zero."""
+        self.usage = UsageStats()
+        self.usage_by_model.clear()
+
+    def get_usage_by_provider(self) -> Dict[str, Dict[str, Any]]:
+        """Get usage aggregated by provider.
+
+        Returns:
+            Dictionary with provider as key and aggregated stats as value
+        """
+        by_provider: Dict[str, UsageStats] = {}
+        for key, stats in self.usage_by_model.items():
+            provider = key.split("/")[0]
+            if provider not in by_provider:
+                by_provider[provider] = UsageStats()
+            by_provider[provider].prompt_tokens += stats.prompt_tokens
+            by_provider[provider].completion_tokens += stats.completion_tokens
+            by_provider[provider].total_tokens += stats.total_tokens
+            by_provider[provider].estimated_cost += stats.estimated_cost
+
+        return {
+            provider: {
+                "total_tokens": stats.total_tokens,
+                "prompt_tokens": stats.prompt_tokens,
+                "completion_tokens": stats.completion_tokens,
+                "estimated_cost": stats.estimated_cost
+            }
+            for provider, stats in by_provider.items()
         }
 
     def save(self, name: Optional[str] = None) -> str:
