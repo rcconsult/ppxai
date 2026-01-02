@@ -2,28 +2,29 @@
 
 **Created:** December 29, 2025
 **Last Updated:** January 2, 2026
-**Status:** In Progress
-**Branch:** `feature/agent-multi-file-atomic-edit`
+**Status:** v1.12.1 Released
+**Branch:** `master`
 
 ---
 
 ## Overview
 
 This document outlines the release plan for the v1.12.x series, focusing on:
-1. Checkpoint system with stale detection (DONE)
-2. Real-time token usage and cost tracking (DONE)
-3. Per-provider/model usage breakdown (TODO)
-4. Dedicated Gemini provider for native features (PLANNED)
-5. TUI enhancement experiments (EXPERIMENTAL)
-   - `experiment/rich-tui` - Enhanced Rich with rounded panels, themes
-   - `experiment/tui-textual` - Full Textual framework migration
+1. Checkpoint system with stale detection (DONE - v1.12.0)
+2. Real-time token usage and cost tracking (DONE - v1.12.0)
+3. TUI enhancements: themes, framed panels, clickable links (DONE - v1.12.1)
+4. Per-provider/model usage breakdown (NEXT - v1.12.2)
+5. Dedicated Gemini provider for native features (PLANNED - v1.12.3+)
+6. TUI experiments:
+   - `experiment/rich-tui` - MERGED to master (v1.12.1)
+   - `experiment/tui-textual` - Experimental, ~20% feature parity
 
 ---
 
 ## v1.12.0 - Checkpoint System & Usage Tracking
 
-**Status:** Ready for Release (all blockers resolved)
-**Target:** Immediate
+**Status:** ✅ Released (2025-12-31)
+**Tag:** v1.12.0
 
 ### Features Complete
 
@@ -66,10 +67,25 @@ This document outlines the release plan for the v1.12.x series, focusing on:
 
 ---
 
-## v1.12.1 - Usage Analytics & Cost Breakdown
+## v1.12.1 - TUI Enhancements
+
+**Status:** ✅ Released (2026-01-02)
+**Tag:** v1.12.1
+
+### Features Complete
+
+- [x] Themed TUI panels with 4 themes: Standard, Tron Legacy, Matrix, Nord
+- [x] Framed status panel with colored badges
+- [x] Clickable file links via OSC 8 hyperlinks
+- [x] `/theme` command with autocomplete
+- [x] New files: `ppxai/themes.py`, `ppxai/ui_components.py`
+
+---
+
+## v1.12.2 - Usage Analytics & Cost Breakdown
 
 **Status:** Proposed
-**Target:** 1-2 days after v1.12.0
+**Target:** 1-2 days
 
 ### Motivation
 
@@ -313,10 +329,10 @@ GET /usage/export?format=csv  # Export usage data
 
 ---
 
-## v1.12.2 - Time-Based Usage Analytics
+## v1.12.3 - Time-Based Usage Analytics
 
 **Status:** Planned
-**Target:** 3-5 days after v1.12.1
+**Target:** After v1.12.2
 
 ### Features
 
@@ -344,10 +360,10 @@ GET /usage/export?format=csv  # Export usage data
 
 ---
 
-## v1.12.3 - Gemini Dedicated Provider
+## v1.12.4 - Gemini Dedicated Provider
 
 **Status:** Planned
-**Target:** 2-3 weeks after v1.12.2
+**Target:** After v1.12.3
 
 ### Motivation
 
@@ -407,10 +423,10 @@ gemini = ["google-generativeai>=0.8.0"]
 
 ---
 
-## v1.12.4 - Gemini Bug Fixes
+## v1.12.5 - Gemini Bug Fixes
 
 **Status:** Planned
-**Target:** 1-2 weeks after v1.12.3
+**Target:** After v1.12.4
 
 ### Anticipated Issues
 - [ ] Grounding response format changes
@@ -890,55 +906,46 @@ For each release:
 ## Timeline Summary
 
 ```
-Current:     v1.11.9 (released 2025-12-27)
-             │
+Released:    v1.12.0 (2025-12-31)
+             │  ✅ Checkpoint system with stale detection
+             │  ✅ Real-time token usage and cost tracking
              ▼
-Ready:       v1.12.0 (checkpoint + usage) ◄── NOW READY
-             │  ✅ Checkpoint stale detection FIXED
-             │  ✅ Usage tracking bugs FIXED
-             │  ✅ Concurrent request protection FIXED
+Released:    v1.12.1 (2026-01-02) ◄── CURRENT
+             │  ✅ TUI themes (Standard, Tron Legacy, Matrix, Nord)
+             │  ✅ Framed status panel with badges
+             │  ✅ Clickable file links (OSC 8)
              ▼
-Proposed:    v1.12.1 (per-model usage breakdown) ──────── 1-2 days
+Next:        v1.12.2 (per-model usage breakdown)
              │  • Track usage by provider/model
              │  • Table display in /usage
              │  • VSCode tooltip breakdown
              ▼
-Planned:     v1.12.2 (time-based usage analytics) ─────── 3-5 days
+Planned:     v1.12.3 (time-based usage analytics)
              │  • Persistent usage storage
              │  • /usage 24h|week|month|year|all
              │  • Session history with costs
-             │  • CSV export endpoint
              ▼
-Planned:     v1.12.3 (VSCode dashboard + Gemini) ──────── 2-3 weeks
-             │  • Usage dashboard webview
-             │  • Interactive charts
-             │  • Gemini dedicated provider
+Planned:     v1.12.4 (Gemini dedicated provider)
+             │  • Native search grounding
+             │  • Citation support
              ▼
-Planned:     v1.12.4 (bug fixes) ──────────────────────── 1-2 weeks
-             │
-             ▼
-Future:      v1.12.5 or v1.13.0 (TUI Enhancement)
+Future:      v1.13.0 (AGENTS.md support)
 
 ═══════════════════════════════════════════════════════════════════
-                    TUI EXPERIMENTS (parallel)
+                    TUI EXPERIMENTS
 ═══════════════════════════════════════════════════════════════════
 
-Branch: experiment/rich-tui ──────────────────────────────┐
-        │  • Rich SDK enhancements                        │
-        │  • Rounded panel message boxes                  │
-        │  • Theme system (standard, tron-legacy)         │ Compare
-        │  • Status bar with badges                       │   &
-        ▼                                                 │ Decide
-Branch: experiment/tui-textual ───────────────────────────┤
-        │  • Full Textual framework                       │
-        │  • Mouse support + scrollable views             │
-        │  • CSS-based theming                            │
-        │  • Same themes (standard, tron-legacy)          │
-        ▼                                                 │
-        ┌─────────────────────────────────────────────────┘
-        │
-        ▼
-Winner: Merge to main ──────────────────────────────────── Release
+✅ MERGED: experiment/rich-tui → master (v1.12.1)
+           │  • Rich SDK enhancements
+           │  • Rounded panel message boxes
+           │  • 4 themes (Standard, Tron Legacy, Matrix, Nord)
+           │  • Framed status bar with badges
+
+🧪 OPEN:   experiment/tui-textual
+           │  • Full Textual framework
+           │  • ~20% feature parity with Rich TUI
+           │  • Missing: autocomplete, commands, agent mode
+           │  • Decision: Keep as experiment, no merge planned
 ```
 
 ---
@@ -991,58 +998,23 @@ Winner: Merge to main ───────────────────�
 
 ---
 
-## v1.12.0 Release Checklist
+## Release Checklist (Template)
 
-**Pre-Release Verification** (on feature branch)
+Use for each new release:
+
 ```bash
-# 1. Verify all changes are committed
-git status  # Should be clean or have only expected changes
+# 1. Create release notes
+# Edit docs/RELEASE-NOTES-v{version}.md
 
-# 2. Run tests
-uv run pytest tests/ -v
+# 2. Run validation
+python scripts/validate-release.py v{version}
 
-# 3. Verify release notes are complete (not template)
-cat docs/RELEASE-NOTES-v1.12.0.md | grep -c "\[Brief description"  # Should be 0
+# 3. Execute release
+/release v{version}
+# or: python scripts/release.py v{version}
 
-# 4. Verify validation passes (dry run)
-python scripts/validate-release.py v1.12.0
-```
-
-**Merge Feature Branch to Master**
-```bash
-# 1. Ensure on feature branch
-git checkout feature/agent-multi-file-atomic-edit
-
-# 2. Fast-forward merge to master
-git checkout master
-git merge feature/agent-multi-file-atomic-edit --ff-only
-
-# 3. Verify merge succeeded
-git log --oneline -5  # Should show feature commits
-```
-
-**Execute Release**
-```bash
-# Option 1: Use /release skill (RECOMMENDED)
-/release v1.12.0
-
-# Option 2: Run script directly
-python scripts/release.py v1.12.0
-```
-
-**Post-Release Verification**
-```bash
-# Verify on GitHub
-# 1. Check release: https://github.com/rcconsult/ppxai/releases/tag/v1.12.0
-# 2. Verify assets: 7 binaries + 1 VSIX
-# 3. Verify release notes are populated
-# 4. Verify marked as "Latest"
-```
-
-**Rollback (if needed)**
-```bash
-# Delete release and redo from scratch
-python scripts/release.py v1.12.0 --redo --force
+# 4. Verify on GitHub
+# https://github.com/rcconsult/ppxai/releases/tag/v{version}
 ```
 
 ---

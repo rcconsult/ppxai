@@ -6,36 +6,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.12.1
+**Current Version:** v1.12.1 (Released January 2, 2026)
 
-**What's New in v1.12.0 (In Development):**
+**What's New in v1.12.1 (Released 2026-01-02):**
+- **NEW:** Themed TUI panels with 4 themes: Standard, Tron Legacy, Matrix, Nord
+- **NEW:** Framed status panel with colored badges (provider, model, tools)
+- **NEW:** Clickable file links via OSC 8 hyperlinks in terminal
+- **NEW:** `/theme` command for listing and switching themes (with autocomplete)
+- **FIX:** File links in `/show` command now clickable
+- **FIX:** Markdown relative paths resolve correctly with working directory
+- **Tests:** 377 tests passing
+- **Files:** [ppxai/themes.py](ppxai/themes.py), [ppxai/ui_components.py](ppxai/ui_components.py)
+
+**What's New in v1.12.0 (Released 2025-12-31):**
 - **NEW:** Checkpoint System for atomic multi-file rollback in agent mode
   - Git backend: Auto-commits before agent tasks, `git revert` to undo
   - File backend (fallback): Snapshots to `~/.ppxai/checkpoints/`
-  - Auto-detection: Uses git if available, else file, configurable via `checkpoint_backend`
+  - Stale checkpoint detection prevents undo when commits made after checkpoint
 - **NEW:** `/undo` command to revert last agent task atomically
-- **NEW:** Auto-commit after successful agent tasks (creates undoable checkpoint)
-- **NEW:** `EventType.STATUS` for checkpoint notifications in TUI and VSCode
-- **NEW:** HTTP endpoints: `/checkpoint/status`, `/checkpoint/undo`
-- **NEW:** VSCode Undo button with confirmation dialog (restored from lost commit)
-- **NEW:** Collapsible tool messages with verbose mode (▶/▼ click to expand/collapse)
 - **NEW:** Real-time token usage and cost tracking
-  - Streaming usage: Both OpenAI-compatible and Perplexity providers now extract token counts from streaming responses
-  - Cost calculation: Automatic USD cost estimation based on per-model pricing
-  - TUI status line: Shows session tokens (in/out) and estimated cost (e.g., `1.2K↓/0.5K↑ $0.0045`)
-  - VSCode extension: Usage badge in header with live updates and tooltip
-  - `/usage` command shows detailed session stats with cost breakdown
-- **FIX:** TUI `/undo` aligns with VSCode behavior (works regardless of agent mode)
-- **FIX:** Checkpoint manager initialized on startup (not just on set_working_dir)
-- **FIX:** Auto-commit timing in async generator flow (before STREAM_END yield)
-- **Tests:** 365 tests passing (28 new checkpoint tests)
-- **Docs:** [CHECKPOINT_GUIDE.md](docs/CHECKPOINT_GUIDE.md), [VSCODE-CHECKPOINT-UI-SPEC.md](docs/VSCODE-CHECKPOINT-UI-SPEC.md)
-
-**✅ RELEASE BLOCKER RESOLVED - Checkpoint Stale State Bug (Fixed in v1.12.0):**
-- **Fixed:** `is_checkpoint_valid()` now checks if checkpoint is HEAD or HEAD~1
-- **Protection:** TUI, VSCode, and HTTP all reject undo on stale checkpoints
-- **Tests:** 12 new stale detection tests added
-- **Details:** [docs/CHECKPOINT-CRITICAL-BUG.md](docs/CHECKPOINT-CRITICAL-BUG.md)
+  - TUI status line shows `1.2K↓/0.5K↑ $0.0045`
+  - VSCode usage badge with live updates
+  - `/usage` command shows session stats
+- **NEW:** VSCode Undo button with confirmation dialog
+- **NEW:** Collapsible tool messages with verbose mode
+- **FIX:** Checkpoint stale state bug resolved (rejects undo on stale checkpoints)
+- **Tests:** 377 tests passing (40 checkpoint tests)
+- **Docs:** [CHECKPOINT_GUIDE.md](docs/CHECKPOINT_GUIDE.md)
 
 **What's New in v1.11.9 (Released 2025-12-27):**
 - **CRITICAL FIX:** `/agent on|off` now correctly toggles agent mode instead of being interpreted as tasks
