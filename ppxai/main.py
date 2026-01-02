@@ -85,14 +85,16 @@ def get_status_line(handler, use_themed: bool = True):
 
     # Use themed status line if available (experiment/rich-tui)
     if use_themed:
-        from ppxai.ui_components import render_status_line
+        from ppxai.ui_components import render_status_line, render_status_panel
         from ppxai.themes import get_theme
         from ppxai.config import get_tui_theme
 
         # Use handler's current theme if set, otherwise fall back to config
         theme_name = getattr(handler, 'current_theme_name', None) or get_tui_theme()
         theme = get_theme(theme_name)
-        return render_status_line(
+
+        # Use framed panel for status (experiment/rich-tui)
+        return render_status_panel(
             provider=provider_name,
             model=model_display,
             tools_enabled=tools_enabled,

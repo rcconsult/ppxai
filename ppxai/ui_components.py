@@ -276,6 +276,106 @@ def render_status_line(
     return status
 
 
+def render_input_prompt_header(theme: Optional[Theme] = None) -> str:
+    """Render the top border of an input frame.
+
+    This creates a visual frame illusion for the input prompt.
+    The actual input is handled by prompt_toolkit below this border.
+
+    Args:
+        theme: Theme to use
+
+    Returns:
+        String with top border and title
+    """
+    if theme is None:
+        theme = get_theme(DEFAULT_THEME)
+
+    title = theme.user_title
+    # Use Rich markup for the border - this gets printed before prompt_toolkit input
+    return f"[{theme.user_style}]╭─ {title} ─────────────────────────────────────────────╮[/{theme.user_style}]"
+
+
+def render_input_prompt_footer(theme: Optional[Theme] = None) -> str:
+    """Render the bottom border of an input frame.
+
+    Args:
+        theme: Theme to use
+
+    Returns:
+        String with bottom border
+    """
+    if theme is None:
+        theme = get_theme(DEFAULT_THEME)
+
+    return f"[{theme.user_style}]╰───────────────────────────────────────────────────────╯[/{theme.user_style}]"
+
+
+def render_status_panel(
+    provider: str,
+    model: str,
+    tools_enabled: bool = False,
+    agent_mode: bool = False,
+    usage_str: Optional[str] = None,
+    checkpoint_str: Optional[str] = None,
+    theme: Optional[Theme] = None,
+) -> Panel:
+    """Render status line in a framed panel with badges.
+
+    Args:
+        provider: Provider name
+        model: Model name
+        tools_enabled: Whether tools are enabled
+        agent_mode: Whether agent mode is active
+        usage_str: Usage statistics string
+        checkpoint_str: Checkpoint status
+        theme: Theme to use
+
+    Returns:
+        Rich Panel with status badges
+    """
+    if theme is None:
+        theme = get_theme(DEFAULT_THEME)
+
+    badges = Text()
+
+    # Provider badge
+    badges.append(f" {provider} ", style=theme.provider_badge)
+    badges.append(" ")
+
+    # Model badge
+    badges.append(f" {model} ", style=theme.model_badge)
+    badges.append(" ")
+
+    # Tools badge
+    if tools_enabled:
+        badges.append(" Tools: ON ", style=theme.tools_on_badge)
+    else:
+        badges.append(" Tools: OFF ", style=theme.tools_off_badge)
+
+    # Agent badge (only show if active)
+    if agent_mode:
+        badges.append(" ")
+        badges.append(" Agent ", style=theme.agent_badge)
+
+    # Checkpoint badge (only show if available)
+    if checkpoint_str:
+        badges.append(" ")
+        badges.append(f" {checkpoint_str} ", style=theme.checkpoint_badge)
+
+    # Usage badge
+    if usage_str:
+        badges.append(" ")
+        badges.append(f" {usage_str} ", style=theme.usage_badge)
+
+    return Panel(
+        badges,
+        box=box.ROUNDED,
+        border_style=theme.header_style,
+        padding=(0, 1),
+    )
+
+
 def render_welcome(theme: Optional[Theme] = None) -> Panel:
     """Render welcome message with theme styling.
 
