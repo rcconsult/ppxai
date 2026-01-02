@@ -267,13 +267,33 @@ class PPXAICompleter(Completer):
             if cmd_text.startswith('/theme '):
                 parts = text.split()
                 if len(parts) == 2:
-                    # Completing theme name: /theme ma<tab>
-                    theme_query = parts[1].lower()
+                    # Completing theme name or emoji subcommand: /theme ma<tab> or /theme em<tab>
+                    query = parts[1].lower()
+
+                    # Check if typing "emoji" subcommand
+                    if 'emoji'.startswith(query):
+                        yield Completion(
+                            'emoji',
+                            start_position=-len(parts[1]),
+                            display_meta='Toggle emoji mode (on|off)'
+                        )
+
+                    # Theme names
                     for theme_name, desc in self.THEME_NAMES:
-                        if theme_name.startswith(theme_query):
+                        if theme_name.startswith(query):
                             yield Completion(
                                 theme_name,
                                 start_position=-len(parts[1]),
+                                display_meta=desc
+                            )
+                elif len(parts) == 3 and parts[1].lower() == 'emoji':
+                    # Completing /theme emoji on|off
+                    emoji_query = parts[2].lower()
+                    for opt, desc in [('on', 'Show original emojis'), ('off', 'Convert to text symbols')]:
+                        if opt.startswith(emoji_query):
+                            yield Completion(
+                                opt,
+                                start_position=-len(parts[2]),
                                 display_meta=desc
                             )
                 return
@@ -424,10 +444,16 @@ def main():
                     """Stream response from EngineClient using shared TUIEventHandler."""
                     from ppxai.common.event_handler import TUIEventHandler
 
-                    # Create TUI-specific event handler with verbose setting and theme
+                    # Create TUI-specific event handler with verbose setting, theme, and emoji mode
                     verbose = hasattr(handler, 'tools_verbose') and handler.tools_verbose
                     theme_name = getattr(handler, 'current_theme_name', None)
-                    event_handler = TUIEventHandler(console, logger, verbose=verbose, theme_name=theme_name)
+                    emoji_mode = getattr(handler, 'emoji_mode', False)
+                    event_handler = TUIEventHandler(
+                        console, logger,
+                        verbose=verbose,
+                        theme_name=theme_name,
+                        emoji_mode=emoji_mode
+                    )
 
                     # Check for pending consent requests before streaming
                     while handler.engine_client._consent_event_queue:

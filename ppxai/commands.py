@@ -288,6 +288,11 @@ class CommandHandler:
             self.current_theme_name = DEFAULT_THEME
             self.theme = get_theme(DEFAULT_THEME)
 
+        # v1.12.1: Emoji mode - convert emojis to text symbols for panel alignment
+        # True = show original emojis (may cause misalignment in some terminals)
+        # False = convert emojis to text symbols (guaranteed alignment)
+        self.emoji_mode = False  # Default: text symbols for reliable alignment
+
     def handle_quit(self) -> bool:
         """Handle /quit or /exit command. Returns True if should exit."""
         # v1.12.0: Use engine session for conversation history
@@ -527,19 +532,47 @@ class CommandHandler:
         display_welcome()
 
     def handle_theme(self, args: str):
-        """Handle /theme command for switching TUI themes.
+        """Handle /theme command for switching TUI themes and emoji mode.
 
         Usage:
-            /theme          - List available themes
-            /theme list     - List available themes
-            /theme <name>   - Switch to named theme
+            /theme              - List available themes and settings
+            /theme list         - List available themes
+            /theme <name>       - Switch to named theme
+            /theme emoji        - Show current emoji mode
+            /theme emoji on     - Show original emojis (may cause panel misalignment)
+            /theme emoji off    - Convert emojis to text symbols (reliable alignment)
         """
         args = args.strip().lower() if args else ""
 
+        # Handle emoji subcommand
+        if args.startswith("emoji"):
+            emoji_args = args[5:].strip()  # Get text after "emoji"
+
+            if not emoji_args:
+                # Show current emoji mode
+                mode = "on (original emojis)" if self.emoji_mode else "off (text symbols)"
+                console.print(f"[cyan]Emoji mode:[/cyan] {mode}")
+                console.print("[dim]Use /theme emoji on|off to change[/dim]\n")
+                return
+
+            if emoji_args == "on":
+                self.emoji_mode = True
+                console.print("[green]* Emoji mode: ON[/green]")
+                console.print("[dim]Original emojis will be shown (may cause panel misalignment in some terminals)[/dim]\n")
+            elif emoji_args == "off":
+                self.emoji_mode = False
+                console.print("[green]* Emoji mode: OFF[/green]")
+                console.print("[dim]Emojis converted to text symbols for reliable panel alignment[/dim]\n")
+            else:
+                console.print("[red]Invalid option. Use: /theme emoji on|off[/red]\n")
+            return
+
         if not args or args == "list":
-            # Show available themes
+            # Show available themes and current settings
             console.print(render_theme_list(self.current_theme_name))
-            console.print("[dim]Usage: /theme <name> to switch themes[/dim]\n")
+            emoji_status = "on" if self.emoji_mode else "off"
+            console.print(f"[dim]Emoji mode: {emoji_status}[/dim]")
+            console.print("[dim]Usage: /theme <name> | /theme emoji on|off[/dim]\n")
             return
 
         # Try to switch to the specified theme
@@ -547,7 +580,7 @@ class CommandHandler:
             new_theme = get_theme(args)
             self.theme = new_theme
             self.current_theme_name = args
-            console.print(f"[green]✓ Theme switched to: {new_theme.name}[/green]\n")
+            console.print(f"[green]* Theme switched to: {new_theme.name}[/green]\n")
         except ValueError as e:
             console.print(f"[red]{e}[/red]")
             console.print("[dim]Use /theme list to see available themes[/dim]\n")
@@ -1493,7 +1526,11 @@ class CommandHandler:
                     prompt = self._build_continuation_prompt(task, iteration)
 
                 # Run chat with event handling
-                event_handler = TUIEventHandler(console, self.logger, verbose=self.tools_verbose)
+                event_handler = TUIEventHandler(
+                    console, self.logger,
+                    verbose=self.tools_verbose,
+                    emoji_mode=self.emoji_mode
+                )
 
                 try:
                     async for event in self.engine_client.chat(prompt, stream=True):

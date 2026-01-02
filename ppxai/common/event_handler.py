@@ -184,7 +184,7 @@ class TUIEventHandler(EventHandler):
             await handler.handle_event(event)
     """
 
-    def __init__(self, console, logger, verbose: bool = False, theme_name: str = None):
+    def __init__(self, console, logger, verbose: bool = False, theme_name: str = None, emoji_mode: bool = False):
         """
         Initialize TUI-specific event handler.
 
@@ -193,6 +193,7 @@ class TUIEventHandler(EventHandler):
             logger: Logger instance for debug logging
             verbose: Whether to show verbose tool output
             theme_name: Theme name for styled rendering (optional, uses config default)
+            emoji_mode: Whether to show original emojis (True) or convert to text symbols (False)
         """
         from ppxai.markdown_tables import render_markdown_with_tables
         from ppxai.themes import get_theme, DEFAULT_THEME
@@ -201,6 +202,7 @@ class TUIEventHandler(EventHandler):
         self.console = console
         self.logger = logger
         self.verbose = verbose
+        self.emoji_mode = emoji_mode  # v1.12.1: emoji rendering mode
         self._render_markdown = render_markdown_with_tables
 
         # Get theme (from arg, config, or default)
@@ -294,12 +296,15 @@ class TUIEventHandler(EventHandler):
         self.logger.log_assistant_message(response)
         if response.strip():
             # Render response in a themed panel with rounded corners
+            # normalize_emojis: True = convert to text symbols, False = keep original emojis
+            # emoji_mode: True = show original, False = use text symbols
             panel = render_message(
                 content=response,
                 role="assistant",
                 theme=self.theme,
                 timestamp=datetime.now(),
                 show_timestamp=True,
+                normalize_emojis=not self.emoji_mode,  # Invert: emoji_mode=True means don't normalize
             )
             self.console.print(panel)
         self.console.print()  # Blank line after response
