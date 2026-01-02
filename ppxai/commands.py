@@ -964,10 +964,11 @@ class CommandHandler:
 
     def handle_debug_log(self, args: str):
         """Handle /debug-log command to enable/disable debug logging."""
-        from ppxai.tui_logger import get_logger
+        # v1.12.1: Use common logger (same as main.py) to fix logging mismatch
+        from ppxai.common.logger import get_logger
         from pathlib import Path
 
-        logger = get_logger()
+        logger = get_logger("tui")
 
         if not args:
             # Show status

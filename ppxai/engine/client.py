@@ -784,10 +784,10 @@ class EngineClient:
         # Classify command risk
         risk_level = self._classify_shell_command(command)
 
-        # Debug logging (v1.11.2)
+        # Debug logging (v1.11.2, v1.12.1: use common logger)
         try:
-            from ppxai.tui_logger import get_logger
-            logger = get_logger()
+            from ppxai.common.logger import get_logger
+            logger = get_logger("tui")
             logger.debug(f"Shell consent: command='{command[:50]}...' risk={risk_level} callback={self.shell_consent_callback is not None}")
         except:
             pass
@@ -816,10 +816,10 @@ class EngineClient:
 
         # Request consent from user via callback
         try:
-            # Debug logging
+            # Debug logging (v1.12.1: use common logger)
             try:
-                from ppxai.tui_logger import get_logger
-                logger = get_logger()
+                from ppxai.common.logger import get_logger
+                logger = get_logger("tui")
                 logger.debug(f"Requesting shell consent for: {command[:50]}...")
             except:
                 pass
