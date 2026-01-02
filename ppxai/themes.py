@@ -88,13 +88,13 @@ THEMES: Dict[str, Theme] = {
         # Orange: #DF740C (Flynn/System)
         # White: #F8F8F8 (Grid/Text)
         # Dark: #0C141F (Background)
-        # Message styles
-        user_style="cyan",
-        user_title="USER",
-        assistant_style="bright_cyan",
-        assistant_title="PROGRAM",
-        system_style="dark_orange",
-        system_title="SYSTEM",
+        # Message styles - BOLD cyan for visibility
+        user_style="bold cyan",
+        user_title="◈ USER",
+        assistant_style="bold bright_cyan",
+        assistant_title="◈ PROGRAM",
+        system_style="bold dark_orange",
+        system_title="◈ SYSTEM",
         # Badge styles - Tron aesthetic
         provider_badge="black on cyan",
         model_badge="black on bright_cyan",
@@ -104,8 +104,8 @@ THEMES: Dict[str, Theme] = {
         agent_badge="black on bright_magenta",
         checkpoint_badge="black on bright_cyan",
         # Header/footer
-        header_style="cyan dim",
-        footer_style="cyan dim",
+        header_style="cyan",
+        footer_style="cyan",
         # Code theme - dark for Tron aesthetic
         code_theme="native",
         # Accents
@@ -118,68 +118,65 @@ THEMES: Dict[str, Theme] = {
 
     "matrix": Theme(
         name="Matrix",
-        # Inspired by The Matrix (1999) - green on black
-        # Message styles
-        user_style="green",
-        user_title="NEO",
-        assistant_style="bright_green",
-        assistant_title="ORACLE",
-        system_style="dark_green",
-        system_title="MATRIX",
-        # Badge styles
-        provider_badge="black on green",
-        model_badge="black on bright_green",
+        # Inspired by The Matrix (1999) - neon green on black
+        # Message styles - BOLD bright green for "digital rain" effect
+        user_style="bold green",
+        user_title="▶ NEO",
+        assistant_style="bold bright_green",
+        assistant_title="▶ ORACLE",
+        system_style="green",
+        system_title="▶ MATRIX",
+        # Badge styles - all green theme
+        provider_badge="black on bright_green",
+        model_badge="black on green",
         tools_on_badge="black on bright_green",
-        tools_off_badge="black on red",
-        usage_badge="black on dark_green",
+        tools_off_badge="bright_green on red",
+        usage_badge="black on bright_green",
         agent_badge="black on bright_green",
         checkpoint_badge="black on green",
         # Header/footer
-        header_style="green dim",
-        footer_style="green dim",
+        header_style="bright_green",
+        footer_style="bright_green",
         # Code theme
         code_theme="native",
         # Accents
-        link_style="bright_green underline",
+        link_style="bold bright_green underline",
         error_style="bold red",
         warning_style="yellow",
-        success_style="bright_green",
-        info_style="green",
+        success_style="bold bright_green",
+        info_style="bright_green",
     ),
 
     "nord": Theme(
         name="Nord",
         # Inspired by Nord color palette - arctic, bluish colors
-        # Polar Night: #2E3440, #3B4252, #434C5E, #4C566A
-        # Snow Storm: #D8DEE9, #E5E9F0, #ECEFF4
-        # Frost: #8FBCBB, #88C0D0, #81A1C1, #5E81AC
-        # Aurora: #BF616A (red), #D08770 (orange), #EBCB8B (yellow), #A3BE8C (green), #B48EAD (purple)
+        # Using MAGENTA/PURPLE for contrast with other themes
         # Message styles
-        user_style="bright_blue",      # Frost blue
-        user_title="You",
-        assistant_style="cyan",        # Frost cyan
-        assistant_title="Assistant",
-        system_style="magenta",        # Aurora purple
-        system_title="System",
-        # Badge styles
+        user_style="bright_blue",
+        user_title="❄ You",
+        assistant_style="bright_magenta",  # Purple for contrast!
+        assistant_title="❄ Assistant",
+        system_style="yellow",
+        system_title="❄ System",
+        # Badge styles - purple accents
         provider_badge="white on blue",
-        model_badge="white on bright_blue",
+        model_badge="white on bright_magenta",
         tools_on_badge="white on green",
         tools_off_badge="white on red",
-        usage_badge="white on cyan",
+        usage_badge="white on bright_magenta",
         agent_badge="white on magenta",
-        checkpoint_badge="white on bright_cyan",
+        checkpoint_badge="white on bright_blue",
         # Header/footer
-        header_style="bright_blue dim",
-        footer_style="bright_blue dim",
+        header_style="bright_magenta",
+        footer_style="bright_magenta",
         # Code theme
         code_theme="nord-darker",
         # Accents
-        link_style="bright_cyan underline",
+        link_style="bright_magenta underline",
         error_style="bold red",
         warning_style="yellow",
         success_style="green",
-        info_style="cyan",
+        info_style="bright_magenta",
     ),
 }
 

@@ -67,9 +67,13 @@ def render_message(
     # Render content as markdown
     rendered_content = Markdown(content)
 
+    # Build title with theme-specific styling
+    # Title uses border color for visual consistency
+    styled_title = f"[bold {border_style}]{title}[/bold {border_style}]"
+
     return Panel(
         rendered_content,
-        title=f"[bold]{title}[/bold]",
+        title=styled_title,
         title_align="left",
         border_style=border_style,
         box=box.ROUNDED,
