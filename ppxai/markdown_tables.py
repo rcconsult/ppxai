@@ -285,15 +285,21 @@ def split_markdown_content(content: str) -> List[Tuple[str, str]]:
     return blocks
 
 
-def render_markdown_with_tables(content: str, console: Console, working_dir: str = None) -> None:
+def render_markdown_with_tables(
+    content: str,
+    console: Console,
+    working_dir: str = None,
+    normalize_emojis: bool = True,
+) -> None:
     """
     Render markdown content with proper table and link support.
 
     This function:
-    1. Splits content into table and non-table blocks
-    2. Renders tables using Rich Table objects
-    3. Converts markdown links [text](url) to clickable Rich links
-    4. Renders other markdown using Rich Markdown
+    1. Normalizes emoji widths for consistent panel alignment
+    2. Splits content into table and non-table blocks
+    3. Renders tables using Rich Table objects
+    4. Converts markdown links [text](url) to clickable Rich links
+    5. Renders other markdown using Rich Markdown
 
     Clickable links work in terminals supporting OSC 8 hyperlinks:
     iTerm2, Windows Terminal, GNOME Terminal 3.26+, Kitty, etc.
@@ -302,9 +308,15 @@ def render_markdown_with_tables(content: str, console: Console, working_dir: str
         content: Markdown content to render
         console: Rich Console instance
         working_dir: Working directory for resolving relative paths (defaults to cwd)
+        normalize_emojis: Whether to normalize emoji widths for panel alignment
     """
     if not content.strip():
         return
+
+    # Normalize emoji widths to prevent panel misalignment
+    if normalize_emojis:
+        from ppxai.ui_components import sanitize_for_panel
+        content = sanitize_for_panel(content)
 
     blocks = split_markdown_content(content)
 

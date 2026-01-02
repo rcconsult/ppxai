@@ -5,10 +5,12 @@ Provides reusable Rich-based components with theme support:
 - Message panels with rounded corners
 - Status badges for header
 - Header/footer rendering
+- Emoji width normalization for terminal alignment
 
 This module is designed to be imported by ui.py without breaking existing functionality.
 """
 
+import re
 from datetime import datetime
 from typing import Optional
 
@@ -22,6 +24,97 @@ from rich.text import Text
 from .themes import Theme, get_theme, DEFAULT_THEME, THEMES
 
 
+def normalize_emoji_width(text: str) -> str:
+    """
+    Normalize emoji widths for consistent terminal panel rendering.
+
+    Emojis can cause panel misalignment because:
+    1. Variation selectors (U+FE0F) affect width calculation differently
+       in Rich vs actual terminal rendering
+    2. Zero-Width Joiner (ZWJ) sequences create compound emojis with
+       unpredictable widths (e.g., family emojis 👨‍👩‍👧‍👦)
+
+    This function:
+    - Strips variation selectors (U+FE0F) which force emoji presentation
+    - The base characters remain and render correctly
+
+    Args:
+        text: Text containing emojis
+
+    Returns:
+        Text with normalized emoji widths
+
+    Examples:
+        >>> normalize_emoji_width("Warning ⚠️")  # U+26A0 + U+FE0F
+        'Warning ⚠'  # U+26A0 only
+    """
+    if not text:
+        return text
+
+    # Remove variation selector-16 (U+FE0F)
+    # This selector forces emoji-style rendering but causes width calculation issues
+    result = text.replace('\ufe0f', '')
+
+    return result
+
+
+def normalize_zwj_emojis(text: str) -> str:
+    """
+    Simplify ZWJ (Zero-Width Joiner) emoji sequences.
+
+    ZWJ sequences combine multiple emojis into one (e.g., family, professions).
+    These often have unpredictable widths. This function replaces them with
+    simpler single-character emojis.
+
+    Args:
+        text: Text containing ZWJ emojis
+
+    Returns:
+        Text with simplified emojis
+
+    Examples:
+        >>> normalize_zwj_emojis("Family: 👨‍👩‍👧‍👦")
+        'Family: 👪'
+    """
+    if not text:
+        return text
+
+    # Pattern: person + ZWJ + person/child combinations -> family emoji
+    # This handles: 👨‍👩‍👧, 👨‍👩‍👧‍👦, 👩‍👩‍👧, etc.
+    zwj_pattern = r'[\U0001F468\U0001F469](?:\u200d[\U0001F466-\U0001F469\U0001F467])+'
+    result = re.sub(zwj_pattern, '👪', text)
+
+    # Handle other common ZWJ sequences (professions, etc.)
+    # Person + ZWJ + object -> just the person
+    profession_pattern = r'([\U0001F468\U0001F469\U0001F9D1])\u200d[\U0001F3A8-\U0001FAF8]'
+    result = re.sub(profession_pattern, r'\1', result)
+
+    return result
+
+
+def sanitize_for_panel(text: str, normalize_zwj: bool = True) -> str:
+    """
+    Sanitize text for rendering in Rich panels.
+
+    Applies emoji width normalization to ensure panel borders align correctly.
+
+    Args:
+        text: Text to sanitize
+        normalize_zwj: Whether to also simplify ZWJ emoji sequences
+
+    Returns:
+        Sanitized text safe for panel rendering
+    """
+    if not text:
+        return text
+
+    result = normalize_emoji_width(text)
+    if normalize_zwj:
+        result = normalize_zwj_emojis(result)
+
+    return result
+
+
 # Shared console instance
 console = Console()
 
@@ -32,6 +125,7 @@ def render_message(
     theme: Optional[Theme] = None,
     timestamp: Optional[datetime] = None,
     show_timestamp: bool = True,
+    normalize_emojis: bool = True,
 ) -> Panel:
     """Render a chat message with rounded corners and theme styling.
 
@@ -41,6 +135,7 @@ def render_message(
         theme: Theme to use (defaults to standard)
         timestamp: Message timestamp (optional)
         show_timestamp: Whether to show timestamp in title
+        normalize_emojis: Whether to normalize emoji widths for alignment
 
     Returns:
         Rich Panel with rounded corners
@@ -63,6 +158,10 @@ def render_message(
     if show_timestamp and timestamp:
         time_str = timestamp.strftime("%H:%M:%S")
         title = f"{title} [{time_str}]"
+
+    # Normalize emoji widths to prevent panel misalignment
+    if normalize_emojis:
+        content = sanitize_for_panel(content)
 
     # Render content as markdown
     rendered_content = Markdown(content)
