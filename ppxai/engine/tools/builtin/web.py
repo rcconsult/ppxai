@@ -237,8 +237,10 @@ def register_tools(manager: 'ToolManager', provider: str = None):
         provider: Current provider name
     """
     # Providers with native web capabilities don't need these tools
-    providers_with_web_search = ["perplexity"]
-    providers_with_weather = ["perplexity"]
+    # - perplexity: Native web search with citations
+    # - gemini: Native web search via Google Search Grounding
+    providers_with_web_search = ["perplexity", "gemini"]
+    providers_with_weather = ["perplexity", "gemini"]
 
     manager.register_function(
         name="get_weather",

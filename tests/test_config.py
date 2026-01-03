@@ -340,15 +340,28 @@ class TestLegacyCustomProvider:
         assert result["api_key_env"] == "CUSTOM_API_KEY"
         assert "test-model-v1" in result["models"]
 
-    @patch.dict(os.environ, {
-        "CUSTOM_MODEL_ENDPOINT": "https://test.example.com/v1",
-    })
     def test_build_legacy_custom_provider_defaults(self):
-        """Test legacy provider uses defaults for missing vars."""
-        result = _build_legacy_custom_provider()
-        assert result is not None
-        assert result["name"] == "Custom Self-Hosted"
-        assert result["default_model"] == "custom-model"
+        """Test legacy provider uses defaults for missing vars.
+
+        Note: We must delete (not just empty) CUSTOM_* vars to test defaults,
+        since os.getenv() only uses default when var is unset, not when empty.
+        """
+        # Save and remove any existing CUSTOM_* vars that might be in .env
+        vars_to_clear = ["CUSTOM_PROVIDER_NAME", "CUSTOM_MODEL_ID",
+                         "CUSTOM_MODEL_NAME", "CUSTOM_MODEL_DESC"]
+        saved = {k: os.environ.pop(k, None) for k in vars_to_clear}
+
+        try:
+            with patch.dict(os.environ, {"CUSTOM_MODEL_ENDPOINT": "https://test.example.com/v1"}):
+                result = _build_legacy_custom_provider()
+                assert result is not None
+                assert result["name"] == "Custom Self-Hosted"
+                assert result["default_model"] == "custom-model"
+        finally:
+            # Restore any vars that were set
+            for k, v in saved.items():
+                if v is not None:
+                    os.environ[k] = v
 
 
 class TestConfigHelpers:

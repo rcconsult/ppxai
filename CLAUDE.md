@@ -8,6 +8,20 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current Version:** v1.12.5
 
+**Test Fixes (2026-01-03):**
+- **FIX:** `test_build_legacy_custom_provider_defaults` - Fixed env var isolation using explicit delete/restore
+- **FIX:** `test_process_file_references_nonexistent_file` - Reduced from 170s to <1s by mocking `_search_files`
+- **FIX:** `test_cleanup_old_checkpoints` - Fixed flaky timestamp collision by mocking `datetime.now()`
+- **FIX:** Custom endpoint integration tests - Fixed `.env` path and deprecated asyncio usage
+- **UPDATE:** Gemini provider capabilities set to `web_search: true` (native Google Search Grounding)
+- **UPDATE:** Added "gemini" to `providers_with_web_search` exclusion list in `web.py`
+- **DOCS:** Added Premium Web Search section to [RELEASE-PLAN-v1.13.x.md](docs/RELEASE-PLAN-v1.13.x.md)
+  - Research on Perplexity Sonar API for web search ($0.20/1M tokens)
+  - Research on Gemini Google Search Grounding ($14/1000 queries)
+  - Proposed `web_premium.py` implementation for custom vLLM fallback
+  - Usage metrics tracking for premium tool calls
+- **Tests:** 406 tests passing
+
 **What's New in v1.12.4 (Released 2026-01-03):**
 - **NEW:** `/checkpoint` command for checkpoint management
   - `/checkpoint status` - View checkpoint configuration

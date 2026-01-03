@@ -39,6 +39,28 @@
         "realtime_info": true
       }
     },
+    "custom": {
+      "name": "Internal Code AI",
+      "base_url": "https://codeai.trad.int/v1",
+      "api_key_env": "CUSTOM_API_KEY",
+      "default_model": "openai/gpt-oss-120b",
+      "coding_model": "openai/gpt-oss-120b",
+      "models": {
+        "openai/gpt-oss-120b": {
+          "name": "GPT OSS 120B",
+          "description": "Internal self-hosted GPT model for coding"
+        }
+      },
+      "pricing": {
+        "openai/gpt-oss-120b": {"input": 0.0, "output": 0.0}
+      },
+      "capabilities": {
+        "web_search": false,
+        "web_fetch": false,
+        "weather": false,
+        "realtime_info": false
+      }
+    },
     "gemini": {
       "name": "Google Gemini",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
@@ -85,10 +107,11 @@
         "gemini-3-pro-preview": {"input": 1.25, "output": 5.00}
       },
       "capabilities": {
-        "web_search": false,
-        "web_fetch": false,
-        "weather": false,
-        "realtime_info": false
+        "web_search": true,
+        "web_fetch": true,
+        "weather": true,
+        "realtime_info": true,
+        "citations": true
       }
     }
   },

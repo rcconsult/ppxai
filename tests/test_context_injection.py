@@ -535,9 +535,18 @@ class TestTUIFileReferences:
         assert len(resolved) == 0
 
     def test_process_file_references_nonexistent_file(self, handler):
-        """Test that nonexistent files are handled gracefully."""
+        """Test that nonexistent files are handled gracefully.
+
+        Note: We mock _search_files to avoid expensive directory scans on WSL/Windows
+        which can take 170+ seconds due to filesystem I/O overhead.
+        """
+        from unittest.mock import patch
+
         message = "Please edit @nonexistent_file_12345.txt"
-        augmented, resolved = handler.process_file_references(message)
+
+        # Mock _search_files to return empty list (file not found) immediately
+        with patch.object(handler, '_search_files', return_value=[]):
+            augmented, resolved = handler.process_file_references(message)
 
         # Should not find file
         assert len(resolved) == 0

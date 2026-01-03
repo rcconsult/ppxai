@@ -13,9 +13,9 @@ from dotenv import load_dotenv
 @pytest.fixture(scope="module", autouse=True)
 def load_env():
     """Load environment variables before any tests in this module."""
-    # Load environment variables from the ppxai/.env file
+    # Load environment variables from the project root .env file
     # Use override=True to reload even if already loaded/cleared by other tests
-    env_path = os.path.join(os.path.dirname(__file__), '..', 'ppxai', '.env')
+    env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
     load_dotenv(dotenv_path=env_path, override=True)
     yield
     # Reload again after tests in case they were cleared
@@ -33,7 +33,7 @@ def custom_engine():
 
     # Reload dotenv to ensure we have fresh environment variables
     # This is needed because test_config.py may clear environment
-    env_path = os.path.join(os.path.dirname(__file__), '..', 'ppxai', '.env')
+    env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
     load_dotenv(dotenv_path=env_path, override=True)
 
     # Reload config module to pick up new environment variables
@@ -101,7 +101,8 @@ class TestCustomEndpointIntegration:
                     return event.data
             return "".join(chunks)
 
-        response = asyncio.get_event_loop().run_until_complete(stream_chat())
+        # Use asyncio.run() for Python 3.10+ compatibility
+        response = asyncio.run(stream_chat())
 
         assert response is not None
         assert len(response) > 0

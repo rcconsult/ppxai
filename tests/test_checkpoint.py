@@ -351,8 +351,9 @@ class TestFileCheckpointBackend:
 
     def test_cleanup_old_checkpoints(self, temp_dirs):
         """Test that old checkpoints are cleaned up."""
-        import time
         import shutil
+        from unittest.mock import patch
+        from datetime import datetime, timedelta
         working_dir, session_id = temp_dirs
         # Use unique session ID to avoid interference from other tests
         unique_session_id = session_id + "-cleanup-test"
@@ -363,14 +364,19 @@ class TestFileCheckpointBackend:
             shutil.rmtree(backend.checkpoint_dir)
             backend.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
-        # Create 7 checkpoints with unique timestamps
+        # Create 7 checkpoints with mocked unique timestamps
+        # (Using real sleep is flaky on slow systems like WSL)
         test_file = working_dir / "test.txt"
+        base_time = datetime(2026, 1, 1, 12, 0, 0)
         for i in range(7):
             test_file.write_text(f"Version {i}\n")
             backend.modified_files = [test_file]  # Re-register
-            backend.create_checkpoint(f"Checkpoint {i}")
-            if i < 6:  # Don't sleep after last one
-                time.sleep(1.1)  # Ensure different timestamps
+            # Mock datetime.now() to return a unique timestamp for each checkpoint
+            mock_time = base_time + timedelta(seconds=i)
+            with patch('ppxai.checkpoint.datetime') as mock_datetime:
+                mock_datetime.now.return_value = mock_time
+                mock_datetime.strptime = datetime.strptime
+                backend.create_checkpoint(f"Checkpoint {i}")
 
         # Verify we have 7 checkpoints
         checkpoints_before = backend.list_checkpoints()
