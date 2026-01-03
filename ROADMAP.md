@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.12.3 (January 2026)
+> **Current Version**: v1.12.4 (January 2026)
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
@@ -62,6 +62,13 @@ ppxai provides:
 - Time-based usage reports: `/usage 24h|week|month|year|all`
 - HTTP endpoints: `/usage/report`, `/usage/sessions`
 - Auto-save after each chat (VSCode), on quit (TUI)
+
+### Checkpoint Management ✅ (v1.12.4)
+- `/checkpoint` command with 6 subcommands
+- Status, list, backend switching, clear, info, undo alias
+- Tab autocomplete for subcommands and backends
+- VSCode extension full support
+- HTTP endpoints for remote control
 
 ---
 

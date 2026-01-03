@@ -6,7 +6,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.12.3
+**Current Version:** v1.12.4
+
+**What's New in v1.12.4 (Released 2026-01-03):**
+- **NEW:** `/checkpoint` command for checkpoint management
+  - `/checkpoint status` - View checkpoint configuration
+  - `/checkpoint list` - List recent checkpoints
+  - `/checkpoint backend <git|file|auto|none>` - Switch backend (session-only)
+  - `/checkpoint clear` - Clear old file-based snapshots
+  - `/checkpoint info <id>` - Show checkpoint details
+  - `/checkpoint undo` - Alias for `/undo` command
+- **NEW:** Tab autocomplete for `/checkpoint` subcommands and backends
+- **NEW:** VSCode extension support for all checkpoint commands
+- **NEW:** HTTP endpoints: `/checkpoint/list`, `/checkpoint/backend`, `/checkpoint/clear`
+- **Docs:** Updated [CHECKPOINT_GUIDE.md](docs/CHECKPOINT_GUIDE.md) to v1.12.4
 
 **What's New in v1.12.1 (Released 2026-01-02):**
 - **NEW:** Themed TUI panels with 4 themes: Standard, Tron Legacy, Matrix, Nord

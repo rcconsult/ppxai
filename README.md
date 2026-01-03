@@ -1,6 +1,6 @@
 # ppxai - Multi-LLM Interface for Developers
 
-![Version](https://img.shields.io/badge/version-1.12.3-blue) ![Tests](https://img.shields.io/badge/tests-406%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen)
+![Version](https://img.shields.io/badge/version-1.12.4-blue) ![Tests](https://img.shields.io/badge/tests-406%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen)
 
 **Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
 
@@ -19,7 +19,7 @@
 
 1. Download from [Releases](../../releases):
    - `ppxai-{platform}` (TUI binary)
-   - `ppxai-server-{platform}` + `ppxai-1.12.3.vsix` (for VSCode)
+   - `ppxai-server-{platform}` + `ppxai-1.12.4.vsix` (for VSCode)
 
 2. Create `.env` with your API key:
    ```bash
@@ -74,12 +74,12 @@ Enable with `/agent on` or click the Agent button in VSCode:
 
 See [docs/AGENT_MODE_GUIDE.md](docs/AGENT_MODE_GUIDE.md) for details.
 
-### Checkpoint & Undo (v1.12.0)
+### Checkpoint & Undo (v1.12.0+)
 Atomic rollback for multi-file agent operations:
 - `/undo` reverts all changes from the last agent task
+- `/checkpoint` - Manage checkpoints (status, list, backend, clear, info)
 - Git backend: auto-commits before tasks, `git revert` to undo
 - File backend (fallback): snapshots to `~/.ppxai/checkpoints/`
-- Stale detection prevents undo when commits made after checkpoint
 
 See [docs/CHECKPOINT_GUIDE.md](docs/CHECKPOINT_GUIDE.md) for details.
 
