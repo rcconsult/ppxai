@@ -1119,6 +1119,80 @@ async def undo_last_checkpoint():
     }
 
 
+@app.get("/checkpoint/list")
+async def list_checkpoints(limit: int = 10):
+    """List recent checkpoints (v1.12.4)."""
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    checkpoints = engine.list_checkpoints(limit=limit)
+    return {
+        "checkpoints": checkpoints,
+        "count": len(checkpoints),
+    }
+
+
+@app.post("/checkpoint/backend")
+async def set_checkpoint_backend(request: dict):
+    """Set the checkpoint backend (v1.12.4).
+
+    Body: {"backend": "git" | "file" | "auto" | "none"}
+    """
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    backend = request.get("backend")
+    if not backend:
+        raise HTTPException(status_code=400, detail="Missing 'backend' field")
+
+    valid_backends = ('git', 'file', 'auto', 'none')
+    if backend not in valid_backends:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid backend: {backend}. Valid options: {', '.join(valid_backends)}"
+        )
+
+    success = engine.set_checkpoint_backend(backend)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to set checkpoint backend")
+
+    # Return the new status
+    status = engine.get_checkpoint_status()
+    return {
+        "success": True,
+        "backend": status.get("backend"),
+        "enabled": status.get("enabled"),
+    }
+
+
+@app.post("/checkpoint/clear")
+async def clear_file_checkpoints(request: dict = None):
+    """Clear old file-based checkpoint snapshots (v1.12.4).
+
+    Body (optional): {"keep_last": 0}
+    """
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    keep_last = 0
+    if request:
+        keep_last = request.get("keep_last", 0)
+
+    status = engine.get_checkpoint_status()
+    if status.get("backend") != "file":
+        raise HTTPException(
+            status_code=400,
+            detail="Clear only applies to file-based checkpoints. Current backend: " + status.get("backend", "none")
+        )
+
+    removed = engine.clear_file_checkpoints(keep_last=keep_last)
+    return {
+        "success": True,
+        "removed": removed,
+        "message": f"Cleared {removed} checkpoint(s)",
+    }
+
+
 # === Debug Logging (v1.11.2) ===
 
 @app.get("/debug-log")

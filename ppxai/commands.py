@@ -1538,6 +1538,187 @@ class CommandHandler:
 
         console.print()
 
+    def handle_checkpoint(self, args: str):
+        """Handle /checkpoint command for checkpoint management (v1.12.4).
+
+        Subcommands:
+            /checkpoint              - Show checkpoint status (default)
+            /checkpoint status       - Show checkpoint status
+            /checkpoint list         - List recent checkpoints
+            /checkpoint backend <x>  - Set backend (git/file/auto/none)
+            /checkpoint clear        - Clear old file-based snapshots
+            /checkpoint info <id>    - Show details about a checkpoint
+            /checkpoint undo         - Alias for /undo
+        """
+        if not self.engine_client:
+            console.print("[red]Checkpoint command requires engine client[/red]")
+            return
+
+        parts = args.strip().split() if args else []
+        subcommand = parts[0].lower() if parts else "status"
+
+        if subcommand == "status" or not parts:
+            self._checkpoint_status()
+        elif subcommand == "list":
+            self._checkpoint_list()
+        elif subcommand == "backend":
+            backend = parts[1] if len(parts) > 1 else None
+            self._checkpoint_backend(backend)
+        elif subcommand == "clear":
+            self._checkpoint_clear()
+        elif subcommand == "info":
+            checkpoint_id = parts[1] if len(parts) > 1 else None
+            self._checkpoint_info(checkpoint_id)
+        elif subcommand == "undo":
+            self.handle_undo()  # Delegate to existing /undo handler
+        else:
+            console.print(f"[red]Unknown subcommand: {subcommand}[/red]")
+            console.print("[dim]Available: status, list, backend, clear, info, undo[/dim]\n")
+
+    def _checkpoint_status(self):
+        """Show current checkpoint status."""
+        status = self.engine_client.get_checkpoint_status()
+
+        console.print("\n[bold cyan]━━━ Checkpoint Status ━━━[/bold cyan]")
+
+        enabled = status.get("enabled", False)
+        backend = status.get("backend", "none")
+        last_checkpoint = status.get("last_checkpoint")
+        is_valid = status.get("is_valid", False)
+        validity_reason = status.get("validity_reason", "")
+
+        # Backend status with color
+        if backend == "git":
+            backend_display = "[green]git[/green] (atomic)"
+        elif backend == "file":
+            backend_display = "[yellow]file[/yellow] (snapshot)"
+        else:
+            backend_display = "[red]none[/red] (disabled)"
+
+        console.print(f"  [cyan]Backend:[/cyan] {backend_display}")
+        console.print(f"  [cyan]Enabled:[/cyan] {'[green]Yes[/green]' if enabled else '[red]No[/red]'}")
+
+        if last_checkpoint:
+            checkpoint_display = last_checkpoint[:8] if len(last_checkpoint) > 8 else last_checkpoint
+            if is_valid:
+                console.print(f"  [cyan]Last checkpoint:[/cyan] {checkpoint_display} [green](valid)[/green]")
+            else:
+                console.print(f"  [cyan]Last checkpoint:[/cyan] {checkpoint_display} [yellow](stale)[/yellow]")
+                console.print(f"  [dim]Reason: {validity_reason}[/dim]")
+        else:
+            console.print("  [cyan]Last checkpoint:[/cyan] [dim]None[/dim]")
+
+        console.print()
+
+    def _checkpoint_list(self):
+        """List recent checkpoints."""
+        checkpoints = self.engine_client.list_checkpoints(limit=10)
+
+        console.print("\n[bold cyan]━━━ Recent Checkpoints ━━━[/bold cyan]")
+
+        if not checkpoints:
+            console.print("  [dim]No checkpoints found[/dim]")
+            console.print("  [dim]Run an /agent task to create checkpoints[/dim]\n")
+            return
+
+        for i, cp in enumerate(checkpoints, 1):
+            cp_id = cp.get("id", "")[:8]
+            desc = cp.get("description", "")[:50]
+            timestamp = cp.get("timestamp", "")[:19]  # Truncate to datetime
+            console.print(f"  {i}. [cyan]{cp_id}[/cyan]  {timestamp}  {desc}")
+
+        console.print()
+
+    def _checkpoint_backend(self, backend: Optional[str]):
+        """Set or show the checkpoint backend."""
+        if not backend:
+            # Show current backend
+            status = self.engine_client.get_checkpoint_status()
+            current = status.get("backend", "none")
+            console.print(f"\n[cyan]Current backend:[/cyan] {current}")
+            console.print("[dim]Usage: /checkpoint backend <git|file|auto|none>[/dim]\n")
+            return
+
+        valid_backends = ('git', 'file', 'auto', 'none')
+        if backend not in valid_backends:
+            console.print(f"[red]Invalid backend: {backend}[/red]")
+            console.print(f"[dim]Valid options: {', '.join(valid_backends)}[/dim]\n")
+            return
+
+        success = self.engine_client.set_checkpoint_backend(backend)
+        if success:
+            status = self.engine_client.get_checkpoint_status()
+            actual_backend = status.get("backend", "none")
+            console.print(f"[green]✓ Checkpoint backend set to: {actual_backend}[/green]")
+
+            if backend == "git" and actual_backend != "git":
+                console.print("[yellow]Note: Git backend requested but no git repo found[/yellow]")
+            elif backend == "auto":
+                console.print(f"[dim]Auto-detected backend: {actual_backend}[/dim]")
+        else:
+            console.print("[red]✗ Failed to set checkpoint backend[/red]")
+
+        console.print()
+
+    def _checkpoint_clear(self):
+        """Clear old file-based checkpoint snapshots."""
+        status = self.engine_client.get_checkpoint_status()
+        backend = status.get("backend", "none")
+
+        if backend != "file":
+            console.print("[yellow]Clear only applies to file-based checkpoints[/yellow]")
+            console.print(f"[dim]Current backend: {backend}[/dim]\n")
+            return
+
+        # Ask for confirmation
+        from prompt_toolkit import prompt as pt_prompt
+        try:
+            response = pt_prompt("Clear all file-based checkpoints? (y/n): ")
+            if response.lower() not in ["y", "yes"]:
+                console.print("[yellow]Clear cancelled[/yellow]\n")
+                return
+        except (KeyboardInterrupt, EOFError):
+            console.print("\n[yellow]Clear cancelled[/yellow]\n")
+            return
+
+        removed = self.engine_client.clear_file_checkpoints(keep_last=0)
+        console.print(f"[green]✓ Cleared {removed} checkpoint(s)[/green]\n")
+
+    def _checkpoint_info(self, checkpoint_id: Optional[str]):
+        """Show details about a specific checkpoint."""
+        if not checkpoint_id:
+            console.print("[red]Usage: /checkpoint info <checkpoint_id>[/red]")
+            console.print("[dim]Use /checkpoint list to see available checkpoints[/dim]\n")
+            return
+
+        checkpoints = self.engine_client.list_checkpoints(limit=20)
+
+        # Find matching checkpoint (prefix match)
+        matching = [cp for cp in checkpoints if cp.get("id", "").startswith(checkpoint_id)]
+
+        if not matching:
+            console.print(f"[red]Checkpoint not found: {checkpoint_id}[/red]")
+            console.print("[dim]Use /checkpoint list to see available checkpoints[/dim]\n")
+            return
+
+        cp = matching[0]
+        console.print("\n[bold cyan]━━━ Checkpoint Details ━━━[/bold cyan]")
+        console.print(f"  [cyan]ID:[/cyan] {cp.get('id', '')}")
+        console.print(f"  [cyan]Description:[/cyan] {cp.get('description', '')}")
+        console.print(f"  [cyan]Timestamp:[/cyan] {cp.get('timestamp', '')}")
+
+        # Check if this is the current checkpoint
+        status = self.engine_client.get_checkpoint_status()
+        if status.get("last_checkpoint", "").startswith(checkpoint_id):
+            if status.get("is_valid"):
+                console.print("  [cyan]Status:[/cyan] [green]Current (can undo)[/green]")
+            else:
+                console.print("  [cyan]Status:[/cyan] [yellow]Stale (cannot undo)[/yellow]")
+        else:
+            console.print("  [cyan]Status:[/cyan] [dim]Historical[/dim]")
+
+        console.print()
+
     def _handle_agent_interrupt(self, checkpoint_id: Optional[str], checkpoint_backend: Optional[str]):
         """Handle agent interruption and offer automatic rollback (v1.12.0).
 
@@ -1868,6 +2049,8 @@ If more work is needed, explain what you're doing next and use the appropriate t
             self.handle_agent(args)
         elif command == "/undo":
             self.handle_undo()
+        elif command == "/checkpoint":
+            self.handle_checkpoint(args)
         else:
             console.print(f"[red]Unknown command: {user_input}[/red]")
             console.print("[yellow]Type /help for available commands[/yellow]\n")

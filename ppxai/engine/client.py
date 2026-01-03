@@ -646,6 +646,67 @@ class EngineClient:
             "status_description": self._checkpoint_manager.get_status_description(),
         }
 
+    def list_checkpoints(self, limit: int = 10) -> List[Dict[str, str]]:
+        """List recent checkpoints (v1.12.4).
+
+        Returns:
+            List of checkpoint info dicts with keys: id, description, timestamp
+        """
+        if not self._checkpoint_manager:
+            return []
+
+        checkpoints = self._checkpoint_manager.list_checkpoints()
+        return [
+            {"id": cp[0], "description": cp[1], "timestamp": cp[2]}
+            for cp in checkpoints[:limit]
+        ]
+
+    def set_checkpoint_backend(self, backend: str) -> bool:
+        """Set the checkpoint backend mode (v1.12.4).
+
+        Args:
+            backend: One of 'git', 'file', 'auto', 'none'
+
+        Returns:
+            True if backend was set successfully
+        """
+        valid_backends = ('git', 'file', 'auto', 'none')
+        if backend not in valid_backends:
+            return False
+
+        # Reinitialize checkpoint manager with new backend
+        working_dir = str(Path.cwd())
+        session_id = self.session.session_name if self.session else "default"
+
+        self._checkpoint_manager = CheckpointManager(
+            working_dir=working_dir,
+            session_id=session_id,
+            backend=backend
+        )
+        return True
+
+    def clear_file_checkpoints(self, keep_last: int = 0) -> int:
+        """Clear old file-based checkpoint snapshots (v1.12.4).
+
+        Args:
+            keep_last: Number of recent checkpoints to keep (0 = clear all)
+
+        Returns:
+            Number of checkpoints removed
+        """
+        if not self._checkpoint_manager:
+            return 0
+
+        from ..checkpoint import FileCheckpointBackend
+
+        if isinstance(self._checkpoint_manager.backend, FileCheckpointBackend):
+            before_count = len(self._checkpoint_manager.list_checkpoints())
+            self._checkpoint_manager.backend.cleanup_old_checkpoints(keep_last=keep_last)
+            after_count = len(self._checkpoint_manager.list_checkpoints())
+            return before_count - after_count
+
+        return 0
+
     async def request_file_edit_consent(self, file_path: str) -> bool:
         """Request user consent for editing a file (v1.11.0).
 

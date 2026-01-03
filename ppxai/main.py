@@ -156,6 +156,7 @@ class PPXAICompleter(Completer):
         ('/optimize', 'Optimize code'),
         ('/agent', 'Run autonomous agent loop'),
         ('/undo', 'Revert last agent task'),
+        ('/checkpoint', 'Manage checkpoint settings'),
         ('/theme', 'Switch or list themes'),
         ('/quit', 'Exit the application'),
         ('/exit', 'Exit the application'),
@@ -186,6 +187,24 @@ class PPXAICompleter(Completer):
     USAGE_SUBCOMMANDS = [
         ('show', 'Set status line display mode'),
         ('reset', 'Reset all usage counters'),
+    ]
+
+    # Subcommands for /checkpoint (v1.12.4)
+    CHECKPOINT_SUBCOMMANDS = [
+        ('status', 'Show checkpoint status'),
+        ('list', 'List recent checkpoints'),
+        ('backend', 'Set checkpoint backend'),
+        ('clear', 'Clear old file-based snapshots'),
+        ('info', 'Show details about a checkpoint'),
+        ('undo', 'Revert last checkpoint (alias)'),
+    ]
+
+    # Backend options for /checkpoint backend
+    CHECKPOINT_BACKENDS = [
+        ('git', 'Use git commits (requires git repo)'),
+        ('file', 'Use file snapshots'),
+        ('auto', 'Auto-detect best backend'),
+        ('none', 'Disable checkpoints'),
     ]
 
     # Display modes for /usage show
@@ -342,6 +361,31 @@ class PPXAICompleter(Completer):
                         if mode.startswith(mode_query):
                             yield Completion(
                                 mode,
+                                start_position=-len(parts[2]),
+                                display_meta=desc
+                            )
+                return
+
+            # Handle /checkpoint subcommands (v1.12.4)
+            if cmd_text.startswith('/checkpoint '):
+                parts = text.split()
+                if len(parts) == 2:
+                    # Completing subcommand: /checkpoint st<tab>
+                    subquery = parts[1].lower()
+                    for subcmd, desc in self.CHECKPOINT_SUBCOMMANDS:
+                        if subcmd.startswith(subquery):
+                            yield Completion(
+                                subcmd,
+                                start_position=-len(parts[1]),
+                                display_meta=desc
+                            )
+                elif len(parts) == 3 and parts[1].lower() == 'backend':
+                    # Completing backend: /checkpoint backend gi<tab>
+                    backend_query = parts[2].lower()
+                    for backend, desc in self.CHECKPOINT_BACKENDS:
+                        if backend.startswith(backend_query):
+                            yield Completion(
+                                backend,
                                 start_position=-len(parts[2]),
                                 display_meta=desc
                             )

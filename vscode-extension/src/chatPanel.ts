@@ -20,6 +20,7 @@ const SLASH_COMMANDS: Record<string, { description: string; usage: string }> = {
     '/provider': { description: 'Switch provider or list providers', usage: '/provider [provider_id|list]' },
     '/tools': { description: 'Manage AI tools', usage: '/tools [enable|disable|status|list|config|set|agent|help]' },
     '/agent': { description: 'Run autonomous agent task', usage: '/agent <task description>' },
+    '/checkpoint': { description: 'Manage checkpoints', usage: '/checkpoint [status|list|backend|clear|info|undo]' },
     '/show': { description: 'Display file contents locally (no LLM call)', usage: '/show <filepath>' },
     '/cat': { description: 'Alias for /show', usage: '/cat <filepath>' },
     '/usage': { description: 'Show token usage stats', usage: '/usage [24h|week|month|year|all]' },
@@ -900,6 +901,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     await this.handleAgentCommand(args);
                     break;
 
+                case '/checkpoint':
+                    await this.handleCheckpointCommand(args);
+                    break;
+
                 default:
                     this._view.webview.postMessage({
                         type: 'error',
@@ -1451,6 +1456,160 @@ Review your previous actions and continue. If the task is complete, respond with
 
         this._view.webview.postMessage({ type: 'endResponse' });
         await this.updateStatus();  // v1.12.0: Update usage badge after response
+    }
+
+    /**
+     * Handle /checkpoint command for checkpoint management (v1.12.4)
+     */
+    private async handleCheckpointCommand(args: string[]) {
+        if (!this._view) { return; }
+
+        const subcommand = args[0]?.toLowerCase() || 'status';
+
+        try {
+            switch (subcommand) {
+                case 'status':
+                    const status = await this._backend.getCheckpointStatus();
+                    let statusMsg = '**Checkpoint Status**\n';
+                    const backendDisplay = status.backend === 'git' ? '🟢 git (atomic)' :
+                                          status.backend === 'file' ? '🟡 file (snapshot)' :
+                                          '🔴 none (disabled)';
+                    statusMsg += `• Backend: ${backendDisplay}\n`;
+                    statusMsg += `• Enabled: ${status.enabled ? 'Yes' : 'No'}\n`;
+                    if (status.last_checkpoint) {
+                        const cpId = status.last_checkpoint.substring(0, 8);
+                        const validity = status.is_valid ? '✓ valid' : '⚠ stale';
+                        statusMsg += `• Last checkpoint: \`${cpId}\` (${validity})\n`;
+                        if (!status.is_valid) {
+                            statusMsg += `  ${status.validity_reason}\n`;
+                        }
+                    } else {
+                        statusMsg += '• Last checkpoint: None\n';
+                    }
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: statusMsg
+                    });
+                    break;
+
+                case 'list':
+                    const result = await this._backend.listCheckpoints(10);
+                    if (result.checkpoints.length === 0) {
+                        this._view.webview.postMessage({
+                            type: 'systemMessage',
+                            content: 'No checkpoints found.\nRun an `/agent` task to create checkpoints.'
+                        });
+                    } else {
+                        let listMsg = '**Recent Checkpoints**\n';
+                        result.checkpoints.forEach((cp, i) => {
+                            const cpId = cp.id.substring(0, 8);
+                            const ts = cp.timestamp.substring(0, 19);
+                            const desc = cp.description.substring(0, 50);
+                            listMsg += `${i + 1}. \`${cpId}\`  ${ts}  ${desc}\n`;
+                        });
+                        this._view.webview.postMessage({
+                            type: 'systemMessage',
+                            content: listMsg
+                        });
+                    }
+                    break;
+
+                case 'backend':
+                    const backend = args[1]?.toLowerCase() as 'git' | 'file' | 'auto' | 'none';
+                    if (!backend) {
+                        const currentStatus = await this._backend.getCheckpointStatus();
+                        this._view.webview.postMessage({
+                            type: 'systemMessage',
+                            content: `Current backend: **${currentStatus.backend}**\n\nUsage: \`/checkpoint backend <git|file|auto|none>\``
+                        });
+                    } else if (!['git', 'file', 'auto', 'none'].includes(backend)) {
+                        this._view.webview.postMessage({
+                            type: 'error',
+                            content: `Invalid backend: ${backend}\nValid options: git, file, auto, none`
+                        });
+                    } else {
+                        const backendResult = await this._backend.setCheckpointBackend(backend);
+                        this._view.webview.postMessage({
+                            type: 'systemMessage',
+                            content: `✓ Checkpoint backend set to: **${backendResult.backend}**`
+                        });
+                    }
+                    break;
+
+                case 'clear':
+                    const clearStatus = await this._backend.getCheckpointStatus();
+                    if (clearStatus.backend !== 'file') {
+                        this._view.webview.postMessage({
+                            type: 'systemMessage',
+                            content: `Clear only applies to file-based checkpoints.\nCurrent backend: ${clearStatus.backend}`
+                        });
+                    } else {
+                        const confirm = await vscode.window.showWarningMessage(
+                            'Clear all file-based checkpoints?',
+                            { modal: true },
+                            'Clear'
+                        );
+                        if (confirm === 'Clear') {
+                            const clearResult = await this._backend.clearFileCheckpoints(0);
+                            this._view.webview.postMessage({
+                                type: 'systemMessage',
+                                content: `✓ Cleared ${clearResult.removed} checkpoint(s)`
+                            });
+                        }
+                    }
+                    break;
+
+                case 'info':
+                    const cpId = args[1];
+                    if (!cpId) {
+                        this._view.webview.postMessage({
+                            type: 'error',
+                            content: 'Usage: `/checkpoint info <checkpoint_id>`\nUse `/checkpoint list` to see available checkpoints.'
+                        });
+                    } else {
+                        const checkpoints = await this._backend.listCheckpoints(20);
+                        const matching = checkpoints.checkpoints.find(cp => cp.id.startsWith(cpId));
+                        if (!matching) {
+                            this._view.webview.postMessage({
+                                type: 'error',
+                                content: `Checkpoint not found: ${cpId}\nUse \`/checkpoint list\` to see available checkpoints.`
+                            });
+                        } else {
+                            let infoMsg = '**Checkpoint Details**\n';
+                            infoMsg += `• ID: \`${matching.id}\`\n`;
+                            infoMsg += `• Description: ${matching.description}\n`;
+                            infoMsg += `• Timestamp: ${matching.timestamp}\n`;
+                            this._view.webview.postMessage({
+                                type: 'systemMessage',
+                                content: infoMsg
+                            });
+                        }
+                    }
+                    break;
+
+                case 'undo':
+                    // Delegate to existing undo functionality
+                    const undoResult = await this._backend.undoCheckpoint();
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: undoResult.success
+                            ? `✓ ${undoResult.message}`
+                            : `✗ ${undoResult.message}`
+                    });
+                    break;
+
+                default:
+                    this._view.webview.postMessage({
+                        type: 'error',
+                        content: `Unknown subcommand: ${subcommand}\nAvailable: status, list, backend, clear, info, undo`
+                    });
+            }
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Checkpoint error: ${error}`
+            });
+        }
     }
 
     private async showHelp() {

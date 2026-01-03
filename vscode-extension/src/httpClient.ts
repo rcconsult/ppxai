@@ -1048,6 +1048,112 @@ export class HttpClient {
 
         return result;
     }
+
+    /**
+     * List recent checkpoints (v1.12.4)
+     */
+    async listCheckpoints(limit: number = 10): Promise<{
+        checkpoints: Array<{ id: string; description: string; timestamp: string }>;
+        count: number;
+    }> {
+        this.outputChannel.appendLine('[Checkpoint] Listing checkpoints...');
+
+        const response = await fetch(`${this.baseUrl}/checkpoint/list?limit=${limit}`);
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`Failed to list checkpoints: ${error || response.statusText}`);
+        }
+
+        return response.json() as Promise<{
+            checkpoints: Array<{ id: string; description: string; timestamp: string }>;
+            count: number;
+        }>;
+    }
+
+    /**
+     * Get checkpoint status (v1.12.4)
+     */
+    async getCheckpointStatus(): Promise<{
+        enabled: boolean;
+        backend: string;
+        last_checkpoint: string | null;
+        is_valid: boolean;
+        validity_reason: string;
+    }> {
+        this.outputChannel.appendLine('[Checkpoint] Getting status...');
+
+        const response = await fetch(`${this.baseUrl}/checkpoint/status`);
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`Failed to get checkpoint status: ${error || response.statusText}`);
+        }
+
+        return response.json() as Promise<{
+            enabled: boolean;
+            backend: string;
+            last_checkpoint: string | null;
+            is_valid: boolean;
+            validity_reason: string;
+        }>;
+    }
+
+    /**
+     * Set checkpoint backend (v1.12.4)
+     */
+    async setCheckpointBackend(backend: 'git' | 'file' | 'auto' | 'none'): Promise<{
+        success: boolean;
+        backend: string;
+        enabled: boolean;
+    }> {
+        this.outputChannel.appendLine(`[Checkpoint] Setting backend to: ${backend}`);
+
+        const response = await fetch(`${this.baseUrl}/checkpoint/backend`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ backend })
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`Failed to set checkpoint backend: ${error || response.statusText}`);
+        }
+
+        return response.json() as Promise<{
+            success: boolean;
+            backend: string;
+            enabled: boolean;
+        }>;
+    }
+
+    /**
+     * Clear file-based checkpoints (v1.12.4)
+     */
+    async clearFileCheckpoints(keepLast: number = 0): Promise<{
+        success: boolean;
+        removed: number;
+        message: string;
+    }> {
+        this.outputChannel.appendLine('[Checkpoint] Clearing file checkpoints...');
+
+        const response = await fetch(`${this.baseUrl}/checkpoint/clear`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ keep_last: keepLast })
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`Failed to clear checkpoints: ${error || response.statusText}`);
+        }
+
+        return response.json() as Promise<{
+            success: boolean;
+            removed: number;
+            message: string;
+        }>;
+    }
 }
 
 /**

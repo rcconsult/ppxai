@@ -1,4 +1,4 @@
-# Checkpoint System User Guide (v1.12.0)
+# Checkpoint System User Guide (v1.12.4)
 
 ## Overview
 
@@ -190,6 +190,155 @@ Confirm undo? (y/n):
 - Cannot undo if no checkpoint exists
 - Git backend: Creates a revert commit (visible in history)
 - File backend: Overwrites current files (no intermediate versions)
+
+---
+
+### `/checkpoint` - Checkpoint Management (v1.12.4)
+
+The `/checkpoint` command provides checkpoint status, listing, and configuration:
+
+```
+/checkpoint [subcommand] [args]
+```
+
+**Subcommands:**
+
+| Subcommand | Description |
+|------------|-------------|
+| `status` (default) | Show current checkpoint status |
+| `list` | List recent checkpoints |
+| `backend <mode>` | Set checkpoint backend for this session |
+| `clear` | Clear old file-based snapshots |
+| `info <id>` | Show details about a specific checkpoint |
+| `undo` | Alias for `/undo` command |
+
+**Tab Autocomplete:**
+Both TUI and VSCode extension support autocomplete for subcommands and backend options.
+
+---
+
+#### `/checkpoint status`
+
+Show current checkpoint configuration:
+
+```
+/checkpoint status
+```
+
+**Output:**
+```
+📍 Checkpoint Status
+  Backend: git
+  Session: default
+  Working Dir: /path/to/project
+  Last Checkpoint: abc123de
+```
+
+---
+
+#### `/checkpoint list`
+
+List recent checkpoints (up to 10):
+
+```
+/checkpoint list
+```
+
+**Output (Git Backend):**
+```
+📋 Recent Checkpoints
+  abc123de  refactor auth module           2025-12-31 14:30:22
+  def456gh  add user registration          2025-12-31 12:15:00
+  ghi789jk  update dependencies            2025-12-30 16:45:33
+```
+
+**Output (File Backend):**
+```
+📋 Recent Checkpoints
+  cp-20251231-143022  refactor auth module    2025-12-31T14:30:22
+  cp-20251231-121500  add user registration   2025-12-31T12:15:00
+```
+
+---
+
+#### `/checkpoint backend <mode>`
+
+Change checkpoint backend for the current session:
+
+```
+/checkpoint backend git    # Use git commits
+/checkpoint backend file   # Use file snapshots
+/checkpoint backend auto   # Auto-detect best backend
+/checkpoint backend none   # Disable checkpoints
+```
+
+**Note:** This only affects the current session. To persist the setting, edit `ppxai-config.json`.
+
+**Output:**
+```
+✓ Checkpoint backend set to: git
+```
+
+**Error (no git repo):**
+```
+⚠️  Git repository not found. Falling back to file backend.
+```
+
+---
+
+#### `/checkpoint clear`
+
+Clear old file-based checkpoint snapshots:
+
+```
+/checkpoint clear
+```
+
+**Output:**
+```
+🗑️  Cleared 8 old checkpoint snapshots
+```
+
+**Note:** This only affects file-based checkpoints. Git checkpoints are managed by git history.
+
+---
+
+#### `/checkpoint info <id>`
+
+Show details about a specific checkpoint:
+
+```
+/checkpoint info abc123de
+```
+
+**Output (Git Backend):**
+```
+📍 Checkpoint: abc123de
+  Full Hash: abc123de456789...
+  Description: refactor auth module
+  Timestamp: 2025-12-31 14:30:22
+  Valid: ✓ (HEAD~1)
+```
+
+**Output (File Backend):**
+```
+📍 Checkpoint: cp-20251231-143022
+  Description: refactor auth module
+  Timestamp: 2025-12-31T14:30:22
+  Files: 3 files snapshotted
+```
+
+---
+
+#### `/checkpoint undo`
+
+Alias for the `/undo` command:
+
+```
+/checkpoint undo
+```
+
+This is equivalent to running `/undo` directly.
 
 ---
 
@@ -616,9 +765,24 @@ A: Yes! Checkpoint commits are local until you push. They work with `git pull`, 
 **Q: Does /undo work on already-pushed commits?**
 A: Yes, but it creates a revert commit (doesn't rewrite history). The original checkpoint commit remains in history. Use `git rebase` or `git reset` for history rewriting (advanced users only).
 
+**Q: How do I switch from git to file backend?**
+A: Use `/checkpoint backend file` to switch for the current session. To persist permanently, edit `ppxai-config.json` and set `"checkpoint_backend": "file"`.
+
+**Q: How do I see what checkpoints are available?**
+A: Use `/checkpoint list` to see the last 10 checkpoints, or `/checkpoint info <id>` to get details about a specific checkpoint.
+
 ---
 
 ## Version History
+
+- **v1.12.4** - `/checkpoint` command for checkpoint management
+  - `/checkpoint status` - View checkpoint configuration
+  - `/checkpoint list` - List recent checkpoints
+  - `/checkpoint backend <mode>` - Switch backend (session-only)
+  - `/checkpoint clear` - Clear file-based snapshots
+  - `/checkpoint info <id>` - View checkpoint details
+  - `/checkpoint undo` - Alias for `/undo`
+  - Tab autocomplete for subcommands and backends
 
 - **v1.12.0** - Initial checkpoint system release
   - Git backend with auto-commits
