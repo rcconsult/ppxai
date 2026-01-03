@@ -2,8 +2,8 @@
 
 **Created:** January 3, 2026
 **Last Updated:** January 3, 2026
-**Status:** Planned
-**Branch:** TBD (`feature/session-bootstrap`)
+**Status:** v1.13.0 Released
+**Branch:** `master`
 
 ---
 
@@ -72,7 +72,24 @@ The v1.13.x series introduces "Session Bootstrap" - the ability to automatically
 
 ## Release Schedule
 
-### v1.13.0 - AGENTS.md Support (Core)
+### v1.13.0 - Custom Provider Parity ✅ RELEASED
+
+**Released:** January 3, 2026
+
+**Actual v1.13.0 Scope:**
+- Premium web search tool for custom providers (vLLM, Ollama)
+- Priority fallback: Perplexity Sonar → Gemini Grounding → DuckDuckGo
+- SSL_VERIFY environment variable for corporate proxy support
+- `native_tool_calling` capability for vLLM endpoints
+- `ToolUsage` dataclass for per-tool usage tracking
+- Enhanced tool parsing with dispatcher pattern
+- 525 tests passing (119 new tests)
+
+See [RELEASE-NOTES-v1.13.0.md](RELEASE-NOTES-v1.13.0.md) for full details.
+
+---
+
+### v1.13.1 - AGENTS.md Support (Core)
 
 **Goal:** Load project context from working directory
 

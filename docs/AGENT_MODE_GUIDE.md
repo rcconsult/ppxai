@@ -1,6 +1,6 @@
 # Agent Mode User Guide
 
-**Version**: v1.12.0+
+**Version**: v1.13.0+
 **Status**: Production Ready
 
 This guide explains how to use ppxai's autonomous agent mode for multi-step task execution.
@@ -553,5 +553,5 @@ See [Shell Consent Guide](SHELL_CONSENT_GUIDE.md) for complete documentation.
 
 ---
 
-**Last Updated:** 2026-01-02
-**Version:** v1.12.2
+**Last Updated:** 2026-01-03
+**Version:** v1.13.0

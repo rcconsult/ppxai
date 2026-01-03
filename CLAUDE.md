@@ -8,19 +8,26 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current Version:** v1.13.0
 
-**Test Fixes (2026-01-03):**
-- **FIX:** `test_build_legacy_custom_provider_defaults` - Fixed env var isolation using explicit delete/restore
-- **FIX:** `test_process_file_references_nonexistent_file` - Reduced from 170s to <1s by mocking `_search_files`
-- **FIX:** `test_cleanup_old_checkpoints` - Fixed flaky timestamp collision by mocking `datetime.now()`
-- **FIX:** Custom endpoint integration tests - Fixed `.env` path and deprecated asyncio usage
-- **UPDATE:** Gemini provider capabilities set to `web_search: true` (native Google Search Grounding)
-- **UPDATE:** Added "gemini" to `providers_with_web_search` exclusion list in `web.py`
-- **DOCS:** Added Premium Web Search section to [RELEASE-PLAN-v1.13.x.md](docs/RELEASE-PLAN-v1.13.x.md)
-  - Research on Perplexity Sonar API for web search ($0.20/1M tokens)
-  - Research on Gemini Google Search Grounding ($14/1000 queries)
-  - Proposed `web_premium.py` implementation for custom vLLM fallback
-  - Usage metrics tracking for premium tool calls
-- **Tests:** 406 tests passing
+**What's New in v1.13.0 (Released 2026-01-03):**
+- **NEW:** Premium web search tool for custom providers (vLLM, Ollama)
+  - Priority fallback: Perplexity Sonar → Gemini Grounding → DuckDuckGo (free)
+  - Automatic detection of available API keys
+  - Citation integration across all providers
+- **NEW:** `SSL_VERIFY` environment variable for corporate proxy support
+- **NEW:** `native_tool_calling` capability for vLLM endpoints
+  - Works with `--enable-auto-tool-choice` flag
+  - Full streaming tool call support
+- **NEW:** `ToolUsage` dataclass for per-tool usage tracking
+  - `/usage` command shows tool usage breakdown with provider info
+  - Separate cost tracking for model costs vs tool costs
+- **NEW:** Enhanced tool parsing with dispatcher pattern
+  - Infer tool names from argument patterns for vLLM
+  - Robust error handling for malformed responses
+- **FIX:** Test fixes for env var isolation, file reference processing, checkpoint timestamps
+- **UPDATE:** Gemini provider capabilities set to `web_search: true`
+- **UPDATE:** Replaced deprecated `sonar-reasoning` with `sonar-reasoning-pro` and `sonar-deep-research`
+- **Tests:** 525 tests passing (119 new tests)
+- **Docs:** [RELEASE-NOTES-v1.13.0.md](docs/RELEASE-NOTES-v1.13.0.md)
 
 **What's New in v1.12.4 (Released 2026-01-03):**
 - **NEW:** `/checkpoint` command for checkpoint management
@@ -454,7 +461,7 @@ python -c "from ppxai.config import validate_config; print(validate_config())"
 
 ## Testing
 
-- **262 tests** across multiple test modules (25 new file editing tests in v1.11.0)
+- **525 tests** across multiple test modules (119 new tests in v1.13.0)
 - **48 config tests** for the hybrid configuration system
 - Tests use `pytest` with `unittest.mock` for mocking
 - Custom endpoint integration tests require vLLM/Ollama running locally
@@ -499,15 +506,15 @@ The release script (`scripts/release.py`) handles everything automatically:
 
 | File | Pattern | v Prefix |
 |------|---------|----------|
-| `pyproject.toml` | `version = "1.12.0"` | No |
-| `ppxai/__init__.py` | `__version__ = "1.12.0"` | No |
-| `vscode-extension/package.json` | `"version": "1.12.0"` | No |
-| `vscode-extension/package-lock.json` | `"version": "1.12.0"` | No |
-| `ppxai/common/event_handler.py` | `Version: v1.12.0` | Yes |
-| `README.md` | `ppxai-1.12.0.vsix` | No |
-| `vscode-extension/README.md` | `ppxai-1.12.0.vsix` | No |
-| `CLAUDE.md` | `**Current Version:** v1.13.0
-| `ROADMAP.md` | `> **Current Version**: v1.12.0` | Yes |
+| `pyproject.toml` | `version = "1.13.0"` | No |
+| `ppxai/__init__.py` | `__version__ = "1.13.0"` | No |
+| `vscode-extension/package.json` | `"version": "1.13.0"` | No |
+| `vscode-extension/package-lock.json` | `"version": "1.13.0"` | No |
+| `ppxai/common/event_handler.py` | `Version: v1.13.0` | Yes |
+| `README.md` | `ppxai-1.13.0.vsix` | No |
+| `vscode-extension/README.md` | `ppxai-1.13.0.vsix` | No |
+| `CLAUDE.md` | `**Current Version:** v1.13.0` | Yes |
+| `ROADMAP.md` | `> **Current Version**: v1.13.0` | Yes |
 
 ### Files Validated (Not Auto-Updated)
 
@@ -515,7 +522,7 @@ These files must be manually updated BEFORE running release:
 
 | File | Pattern | Notes |
 |------|---------|-------|
-| `CHANGELOG.md` | `## [1.12.0] - YYYY-MM-DD` | Must add entry manually |
+| `CHANGELOG.md` | `## [1.13.0] - YYYY-MM-DD` | Must add entry manually |
 | `docs/RELEASE-NOTES-v{version}.md` | Full release notes | Must write content |
 
 ### Version Prefix Convention

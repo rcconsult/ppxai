@@ -47,7 +47,8 @@ ppxai includes built-in tools for AI-powered development:
 | `replace_block` | Find and replace text blocks |
 | `insert_text` | Insert text at line numbers |
 | `delete_lines` | Delete line ranges |
-| `web_search` | Search the web |
+| `web_search` | Search the web (DuckDuckGo) |
+| `web_search_premium` | Premium web search (Perplexity/Gemini) |
 | `fetch_url` | Fetch URL contents |
 | `get_datetime` | Get current date/time |
 | `get_weather` | Get weather information |
@@ -189,5 +190,5 @@ A: Type `@filename`, `@git`, or `@tree` in your messages. See [Context Injection
 
 ---
 
-**Current Version**: v1.12.3
+**Current Version**: v1.13.0
 **Last Updated**: 2026-01-03

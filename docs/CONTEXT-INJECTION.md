@@ -1,7 +1,7 @@
 # Context Injection Guide
 
-**Version:** v1.11.4+
-**Last Updated:** 2025-12-24
+**Version:** v1.13.0+
+**Last Updated:** 2026-01-03
 
 ## Overview
 
