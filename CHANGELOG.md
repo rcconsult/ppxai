@@ -5,6 +5,26 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.5] - 2026-01-03
+
+### Added - Native Gemini Provider
+
+#### Google Search Grounding
+- **Native Gemini SDK** - Direct integration with `google-genai` package
+- **Google Search Grounding** - Real-time web search with citations (like Perplexity)
+- **Streaming support** - Full async streaming with usage tracking
+- **Graceful fallback** - Uses OpenAI-compatible API if `google-genai` not installed
+
+#### Installation
+```bash
+pip install ppxai[gemini]   # For enhanced Gemini support
+```
+
+### Technical
+- New provider: `ppxai/engine/providers/gemini.py`
+- Auto-detection in provider factory
+- No performance regression (benchmarked)
+
 ## [1.12.4] - 2026-01-03
 
 ### Added - Checkpoint Management & Web Search Improvements
