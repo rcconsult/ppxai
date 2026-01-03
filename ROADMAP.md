@@ -70,52 +70,100 @@ ppxai provides:
 - VSCode extension full support
 - HTTP endpoints for remote control
 
----
-
-## In Development: v1.12.5 - Native Gemini Provider
-
-**Theme**: Enhanced Gemini with Google Search Grounding
-
-| Feature | Description | Status |
-|---------|-------------|--------|
-| **Native Gemini SDK** | Direct integration with `google-genai` package | ✅ Done |
-| **Google Search Grounding** | Real-time web search with citations | ✅ Done |
-| **Streaming support** | Full async streaming like Perplexity | ✅ Done |
-| **Usage tracking** | Token counts from Gemini API | ✅ Done |
-| **Fallback to OpenAI-compat** | Works without `google-genai` installed | ✅ Done |
-
-**Install**: `pip install ppxai[gemini]` for enhanced Gemini support.
-
-**Branch**: `feature/gemini-native-provider`
+### Native Gemini Provider ✅ (v1.12.5)
+- Native `google-genai` SDK integration
+- Google Search Grounding with citations (like Perplexity)
+- Streaming support with usage tracking
+- Graceful fallback to OpenAI-compatible API
+- Install: `pip install ppxai[gemini]`
 
 ---
 
-## v1.13.0 - Session Bootstrap
+## v1.13.x Series - Session Bootstrap
 
 **Theme**: Reproducible starting point for every session
 
-| Feature | Description | Priority |
-|---------|-------------|----------|
-| **AGENTS.md support** | Load project context on startup | High |
-| **File precedence** | Global (`~/.ppxai/`) → Project → Subdirectory | High |
-| **`/agents` commands** | `/agents show`, `/agents reload`, `/agents edit` | Medium |
-| **CLAUDE.md fallback** | Support both AGENTS.md and CLAUDE.md standards | Medium |
+**User value**: Teams share project context. Consistent AI behavior across sessions.
 
-**User value**: Teams share project context. Consistent starting point every session.
+### v1.13.0 - AGENTS.md Support
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **AGENTS.md loading** | Load project instructions from AGENTS.md on startup | Planned |
+| **CLAUDE.md fallback** | Support CLAUDE.md as alternative filename | Planned |
+| **System prompt injection** | Append project context to system prompt | Planned |
+| **TUI + VSCode support** | Both interfaces load context | Planned |
+
+**Implementation notes:**
+- Parse markdown, extract text content
+- Inject as system message prefix (append, not replace)
+- Show loaded context in `/status` output
+
+### v1.13.1 - File Precedence
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Global context** | Load from `~/.ppxai/AGENTS.md` | Planned |
+| **Project context** | Load from project root AGENTS.md | Planned |
+| **Subdirectory context** | Load from current working directory | Planned |
+| **Merge strategy** | Global → Project → Subdir (concatenate) | Planned |
+
+**Precedence order:**
+1. `~/.ppxai/AGENTS.md` (global defaults)
+2. `{project_root}/AGENTS.md` (project-specific)
+3. `{cwd}/AGENTS.md` (subdirectory overrides)
+
+### v1.13.2 - `/context` Commands
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **`/context show`** | Display loaded context sources | Planned |
+| **`/context reload`** | Refresh context from disk | Planned |
+| **`/context edit`** | Open context file in editor | Planned |
+| **`/context clear`** | Temporarily disable context | Planned |
+| **Tab autocomplete** | Autocomplete for subcommands | Planned |
+
+**Note:** Using `/context` instead of `/agents` - clearer naming, avoids confusion with agent mode.
+
+### v1.13.3 - Context Enhancements
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Context size display** | Show token count in status bar | Planned |
+| **Conditional sections** | `<!-- if provider:gemini -->` blocks | Planned |
+| **Include directive** | `<!-- include: ./docs/style.md -->` | Planned |
+| **HTTP endpoint** | `GET /context` for VSCode | Planned |
 
 ---
 
-## v1.14.0+ - Enhanced Recovery & Context
+## v1.14.x Series - Enhanced Context Providers
 
-**Theme**: Power user features
+**Theme**: More ways to inject context
+
+### v1.14.0 - @url Context
+
+| Feature | Description | Priority |
+|---------|-------------|----------|
+| **`@url` provider** | Fetch and inject web content | High |
+| **HTML→Markdown** | Convert fetched HTML to markdown | High |
+| **Caching** | Cache fetched URLs for session | Medium |
+| **Rate limiting** | Prevent abuse of web fetching | Medium |
+
+### v1.14.1 - @clipboard Context
+
+| Feature | Description | Priority |
+|---------|-------------|----------|
+| **`@clipboard`** | Inject clipboard contents | Medium |
+| **Image support** | Handle clipboard images (base64) | Low |
+| **TUI + VSCode** | Both interfaces support clipboard | Medium |
+
+### v1.14.2 - Recovery Features
 
 | Feature | Description | Priority |
 |---------|-------------|----------|
 | **`/rewind` browser** | Interactive checkpoint history viewer | Medium |
 | **`/agent --dry-run`** | Preview changes without applying | Medium |
-| **@url context** | Fetch and inject web content | Low |
-| **@clipboard context** | Inject clipboard contents | Low |
-| **Token count display** | Show context size before sending | Low |
+| **Diff preview** | Show what would change before commit | Medium |
 
 ---
 
