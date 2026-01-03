@@ -61,16 +61,45 @@ def get_weather(location: str, format: str = "short") -> str:
         return f"Error getting weather: {str(e)}"
 
 
-def web_search(query: str, num_results: int = 5) -> str:
-    """Search the web using DuckDuckGo.
+# Try to import ddgs package (optional dependency, v1.12.4+)
+# Supports both 'ddgs' (newer) and 'duckduckgo-search' (older) packages
+_ddg_available = False
+try:
+    from ddgs import DDGS
+    _ddg_available = True
+except ImportError:
+    try:
+        from duckduckgo_search import DDGS
+        _ddg_available = True
+    except ImportError:
+        pass
 
-    Args:
-        query: Search query
-        num_results: Number of results (default: 5, max: 10)
 
-    Returns:
-        Search results
-    """
+def _web_search_ddg_package(query: str, num_results: int = 5) -> str:
+    """Search using duckduckgo-search package (more reliable)."""
+    try:
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=min(num_results, 10)))
+
+        if not results:
+            return f"No results found for '{query}'"
+
+        formatted = []
+        for i, r in enumerate(results, 1):
+            title = r.get('title', 'No title')
+            url = r.get('href', r.get('link', ''))
+            snippet = r.get('body', '')[:200]
+            formatted.append(f"{i}. {title}\n   URL: {url}\n   {snippet}\n")
+
+        return f"Search results for '{query}':\n\n" + "\n".join(formatted)
+
+    except Exception as e:
+        # Fall back to HTML scraping on any error
+        return _web_search_html_fallback(query, num_results)
+
+
+def _web_search_html_fallback(query: str, num_results: int = 5) -> str:
+    """Fallback: Search using DuckDuckGo HTML interface (no package needed)."""
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
@@ -118,6 +147,25 @@ def web_search(query: str, num_results: int = 5) -> str:
         return f"Error: Could not connect to search service. {str(e.reason)}"
     except Exception as e:
         return f"Error searching: {str(e)}"
+
+
+def web_search(query: str, num_results: int = 5) -> str:
+    """Search the web using DuckDuckGo.
+
+    Uses duckduckgo-search package if available (more reliable),
+    falls back to HTML scraping otherwise.
+
+    Args:
+        query: Search query
+        num_results: Number of results (default: 5, max: 10)
+
+    Returns:
+        Search results
+    """
+    if _ddg_available:
+        return _web_search_ddg_package(query, num_results)
+    else:
+        return _web_search_html_fallback(query, num_results)
 
 
 def fetch_url(url: str, max_length: int = 5000) -> str:

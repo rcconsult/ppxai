@@ -42,6 +42,11 @@ mcp = [
     "mcp>=0.1.0",
 ]
 
+# Web search tool (DuckDuckGo)
+search = [
+    "ddgs>=9.0.0",
+]
+
 # Development dependencies
 dev = [
     "pytest>=7.0.0",
