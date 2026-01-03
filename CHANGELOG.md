@@ -5,6 +5,38 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.4] - 2026-01-03
+
+### Added - Checkpoint Management & Web Search Improvements
+
+#### `/checkpoint` Command
+- **`/checkpoint status`** - View current checkpoint configuration
+- **`/checkpoint list`** - List recent checkpoints (up to 10)
+- **`/checkpoint backend <git|file|auto|none>`** - Switch checkpoint backend (session-only)
+- **`/checkpoint clear`** - Clear old file-based checkpoint snapshots
+- **`/checkpoint info <id>`** - Show details about a specific checkpoint
+- **`/checkpoint undo`** - Alias for `/undo` command
+- **Tab autocomplete** - Subcommands and backend options autocomplete in TUI
+
+#### Web Search Tool Upgrade
+- **`ddgs` package** - Upgraded to use `ddgs>=9.0.0` for more reliable DuckDuckGo search
+- **Fallback chain** - Uses ddgs → duckduckgo-search → HTML scraping
+- **No API key needed** - Works out of the box for all providers
+
+### New Endpoints
+- `GET /checkpoint/list` - List recent checkpoints
+- `POST /checkpoint/backend` - Set checkpoint backend
+- `POST /checkpoint/clear` - Clear file-based checkpoints
+
+### VSCode Extension
+- Full `/checkpoint` command support with all subcommands
+- HTTP client methods for checkpoint management
+
+### Testing
+- 400 tests passing
+
+---
+
 ## [1.12.3] - 2026-01-03
 
 ### Added - Time-Based Usage Analytics

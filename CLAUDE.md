@@ -212,10 +212,10 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - Automated GitHub Actions CI/CD for multi-platform builds (macOS ARM/Intel, Linux, Windows)
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.12.3
-- VSCode extension (package.json): v1.12.3
-- Git tag: v1.12.3 (released 2026-01-03)
-- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v1.12.3
+- Python package (pyproject.toml): v1.12.4
+- VSCode extension (package.json): v1.12.4
+- Git tag: v1.12.4 (released 2026-01-03)
+- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v1.12.4
 
 ## Development Setup
 
@@ -492,7 +492,7 @@ The release script (`scripts/release.py`) handles everything automatically:
 | `ppxai/common/event_handler.py` | `Version: v1.12.0` | Yes |
 | `README.md` | `ppxai-1.12.0.vsix` | No |
 | `vscode-extension/README.md` | `ppxai-1.12.0.vsix` | No |
-| `CLAUDE.md` | `**Current Version:** v1.12.3
+| `CLAUDE.md` | `**Current Version:** v1.12.4
 | `ROADMAP.md` | `> **Current Version**: v1.12.0` | Yes |
 
 ### Files Validated (Not Auto-Updated)
