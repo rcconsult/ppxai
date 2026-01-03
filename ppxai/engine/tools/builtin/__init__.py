@@ -25,7 +25,17 @@ def register_all_builtin_tools(manager: 'ToolManager', provider: str = None, eng
     filesystem.register_tools(manager)
     calculator.register_tools(manager)
     datetime_tool.register_tools(manager)
-    web.register_tools(manager, provider)
+
+    # Web search: Try premium first (v1.13.4), fall back to free
+    try:
+        from . import web_premium
+        if web_premium.is_available():
+            web_premium.register_tools(manager, provider)
+        else:
+            web.register_tools(manager, provider)
+    except Exception:
+        # Fall back to free search if premium module fails
+        web.register_tools(manager, provider)
 
     # Register tools that require engine for consent (v1.11.0+)
     if engine is not None:

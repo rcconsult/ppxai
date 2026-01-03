@@ -11,7 +11,7 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Optional
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 import uuid
 
 
@@ -25,6 +25,7 @@ class SessionUsageRecord:
     total_cost: float
     total_tokens: int
     message_count: int
+    tool_calls: Dict[str, Dict[str, Any]] = field(default_factory=dict)  # v1.13.4: Tool usage tracking
 
 
 class UsageStorage:
@@ -107,7 +108,8 @@ class UsageStorage:
         usage_by_model: Dict[str, Dict[str, Any]],
         total_cost: float,
         total_tokens: int,
-        message_count: int
+        message_count: int,
+        tool_calls: Dict[str, Dict[str, Any]] = None  # v1.13.4: Tool usage tracking
     ):
         """Save a session's usage data.
 
@@ -123,6 +125,7 @@ class UsageStorage:
             total_cost: Total estimated cost
             total_tokens: Total tokens used
             message_count: Number of messages in session
+            tool_calls: Dict mapping tool names to usage stats (v1.13.4)
         """
         # Skip if no usage
         if total_tokens == 0 and total_cost == 0.0:
@@ -135,7 +138,8 @@ class UsageStorage:
             usage_by_model=usage_by_model,
             total_cost=total_cost,
             total_tokens=total_tokens,
-            message_count=message_count
+            message_count=message_count,
+            tool_calls=tool_calls or {}  # v1.13.4: Store tool usage
         )
 
         # Update existing session or append new one (v1.12.3)
@@ -202,6 +206,7 @@ class UsageStorage:
         total_cost = 0.0
         by_provider: Dict[str, Dict[str, Any]] = {}
         by_model: Dict[str, Dict[str, Any]] = {}
+        by_tool: Dict[str, Dict[str, Any]] = {}  # v1.13.4: Tool usage aggregation
 
         for session in filtered_sessions:
             total_tokens += session.get("total_tokens", 0)
@@ -239,6 +244,21 @@ class UsageStorage:
                 by_provider[provider]["estimated_cost"] += usage.get("estimated_cost", 0.0)
                 by_provider[provider]["session_count"] += 1
 
+            # v1.13.4: Aggregate by tool
+            for tool_name, tool_usage in session.get("tool_calls", {}).items():
+                if tool_name not in by_tool:
+                    by_tool[tool_name] = {
+                        "call_count": 0,
+                        "tokens_in": 0,
+                        "tokens_out": 0,
+                        "estimated_cost": 0.0,
+                        "provider": tool_usage.get("provider", "unknown")
+                    }
+                by_tool[tool_name]["call_count"] += tool_usage.get("call_count", 0)
+                by_tool[tool_name]["tokens_in"] += tool_usage.get("tokens_in", 0)
+                by_tool[tool_name]["tokens_out"] += tool_usage.get("tokens_out", 0)
+                by_tool[tool_name]["estimated_cost"] += tool_usage.get("estimated_cost", 0.0)
+
         # Build session summaries
         session_summaries = [
             {
@@ -261,6 +281,7 @@ class UsageStorage:
             "session_count": len(filtered_sessions),
             "by_provider": by_provider,
             "by_model": by_model,
+            "by_tool": by_tool,  # v1.13.4: Tool usage aggregation
             "sessions": session_summaries
         }
 

@@ -311,3 +311,235 @@ class TestConvenienceFunctions:
 
         # Cleanup
         ppxai.usage._storage = None
+
+
+class TestToolUsagePersistence:
+    """Tests for tool usage tracking in persistent storage (v1.13.4)."""
+
+    def test_save_session_with_tool_calls(self, storage):
+        """Test saving session with tool usage data."""
+        storage.save_session_usage(
+            session_id="tool-session",
+            started_at=datetime(2026, 1, 1, 10, 0),
+            ended_at=datetime(2026, 1, 1, 11, 0),
+            usage_by_model={
+                "perplexity/sonar-pro": {
+                    "prompt_tokens": 1000,
+                    "completion_tokens": 500,
+                    "estimated_cost": 0.05
+                }
+            },
+            total_cost=0.06,
+            total_tokens=1500,
+            message_count=10,
+            tool_calls={
+                "web_search": {
+                    "call_count": 2,
+                    "tokens_in": 200,
+                    "tokens_out": 400,
+                    "estimated_cost": 0.01,
+                    "provider": "perplexity"
+                }
+            }
+        )
+
+        assert len(storage._data["sessions"]) == 1
+        session = storage._data["sessions"][0]
+        assert "tool_calls" in session
+        assert "web_search" in session["tool_calls"]
+        assert session["tool_calls"]["web_search"]["call_count"] == 2
+        assert session["tool_calls"]["web_search"]["provider"] == "perplexity"
+
+    def test_usage_report_includes_tool_costs(self, storage):
+        """Test that tool costs are included in usage report."""
+        storage.save_session_usage(
+            session_id="tool-cost-session",
+            started_at=datetime.now(),
+            ended_at=datetime.now() + timedelta(hours=1),
+            usage_by_model={
+                "openai/gpt-4o": {
+                    "prompt_tokens": 1000,
+                    "completion_tokens": 500,
+                    "estimated_cost": 0.05
+                }
+            },
+            total_cost=0.06,
+            total_tokens=1500,
+            message_count=5,
+            tool_calls={
+                "web_search": {
+                    "call_count": 1,
+                    "tokens_in": 100,
+                    "tokens_out": 200,
+                    "estimated_cost": 0.01,
+                    "provider": "perplexity"
+                }
+            }
+        )
+
+        report = storage.get_usage_report("all")
+
+        assert report["total_cost"] == 0.06
+        assert "by_tool" in report
+        assert "web_search" in report["by_tool"]
+        assert report["by_tool"]["web_search"]["call_count"] == 1
+        assert report["by_tool"]["web_search"]["estimated_cost"] == 0.01
+
+    def test_multiple_tool_aggregation(self, storage):
+        """Test aggregation of multiple tool calls in report."""
+        # Session 1: web_search via Perplexity
+        storage.save_session_usage(
+            session_id="session-1",
+            started_at=datetime.now() - timedelta(days=1),
+            ended_at=datetime.now() - timedelta(days=1) + timedelta(hours=1),
+            usage_by_model={
+                "openai/gpt-4o": {
+                    "prompt_tokens": 500,
+                    "completion_tokens": 250,
+                    "estimated_cost": 0.02
+                }
+            },
+            total_cost=0.03,
+            total_tokens=750,
+            message_count=5,
+            tool_calls={
+                "web_search": {
+                    "call_count": 2,
+                    "tokens_in": 200,
+                    "tokens_out": 400,
+                    "estimated_cost": 0.01,
+                    "provider": "perplexity"
+                }
+            }
+        )
+
+        # Session 2: web_search via Gemini
+        storage.save_session_usage(
+            session_id="session-2",
+            started_at=datetime.now(),
+            ended_at=datetime.now() + timedelta(hours=1),
+            usage_by_model={
+                "openai/gpt-4o": {
+                    "prompt_tokens": 500,
+                    "completion_tokens": 250,
+                    "estimated_cost": 0.02
+                }
+            },
+            total_cost=0.029,
+            total_tokens=750,
+            message_count=5,
+            tool_calls={
+                "web_search": {
+                    "call_count": 1,
+                    "tokens_in": 0,
+                    "tokens_out": 0,
+                    "estimated_cost": 0.009,
+                    "provider": "gemini"
+                }
+            }
+        )
+
+        report = storage.get_usage_report("all")
+
+        assert report["session_count"] == 2
+        assert "by_tool" in report
+        assert "web_search" in report["by_tool"]
+        # Aggregate: 2 + 1 = 3 calls
+        assert report["by_tool"]["web_search"]["call_count"] == 3
+        # Cost: 0.01 + 0.009 = 0.019
+        assert pytest.approx(report["by_tool"]["web_search"]["estimated_cost"], abs=0.001) == 0.019
+
+    def test_tool_usage_with_duckduckgo(self, storage):
+        """Test tool usage tracking for free DuckDuckGo provider."""
+        storage.save_session_usage(
+            session_id="free-search",
+            started_at=datetime.now(),
+            ended_at=datetime.now() + timedelta(hours=1),
+            usage_by_model={
+                "openai/gpt-4o": {
+                    "prompt_tokens": 1000,
+                    "completion_tokens": 500,
+                    "estimated_cost": 0.05
+                }
+            },
+            total_cost=0.05,
+            total_tokens=1500,
+            message_count=10,
+            tool_calls={
+                "web_search": {
+                    "call_count": 5,
+                    "tokens_in": 0,
+                    "tokens_out": 0,
+                    "estimated_cost": 0.0,
+                    "provider": "duckduckgo"
+                }
+            }
+        )
+
+        report = storage.get_usage_report("all")
+
+        assert report["by_tool"]["web_search"]["provider"] == "duckduckgo"
+        assert report["by_tool"]["web_search"]["estimated_cost"] == 0.0
+        assert report["by_tool"]["web_search"]["call_count"] == 5
+
+    def test_empty_tool_calls_field(self, storage):
+        """Test handling of empty tool_calls field."""
+        storage.save_session_usage(
+            session_id="no-tools",
+            started_at=datetime.now(),
+            ended_at=datetime.now() + timedelta(hours=1),
+            usage_by_model={
+                "perplexity/sonar-pro": {
+                    "prompt_tokens": 1000,
+                    "completion_tokens": 500,
+                    "estimated_cost": 0.05
+                }
+            },
+            total_cost=0.05,
+            total_tokens=1500,
+            message_count=10,
+            tool_calls={}  # No tool calls
+        )
+
+        report = storage.get_usage_report("all")
+
+        # Report should not have by_tool if no tools were used
+        if "by_tool" in report:
+            assert len(report["by_tool"]) == 0
+
+    def test_tool_usage_persistence_across_sessions(self, storage, temp_usage_dir):
+        """Test that tool usage persists across UsageStorage instances."""
+        storage.save_session_usage(
+            session_id="persist-tools",
+            started_at=datetime.now(),
+            ended_at=datetime.now() + timedelta(hours=1),
+            usage_by_model={
+                "openai/gpt-4o": {
+                    "prompt_tokens": 1000,
+                    "completion_tokens": 500,
+                    "estimated_cost": 0.05
+                }
+            },
+            total_cost=0.06,
+            total_tokens=1500,
+            message_count=10,
+            tool_calls={
+                "web_search": {
+                    "call_count": 3,
+                    "tokens_in": 300,
+                    "tokens_out": 600,
+                    "estimated_cost": 0.01,
+                    "provider": "perplexity"
+                }
+            }
+        )
+
+        # Load fresh storage from same directory
+        new_storage = UsageStorage(usage_dir=temp_usage_dir)
+        report = new_storage.get_usage_report("all")
+
+        assert report["session_count"] == 1
+        assert "by_tool" in report
+        assert "web_search" in report["by_tool"]
+        assert report["by_tool"]["web_search"]["call_count"] == 3
+        assert report["by_tool"]["web_search"]["provider"] == "perplexity"

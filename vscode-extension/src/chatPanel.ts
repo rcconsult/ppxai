@@ -3535,6 +3535,7 @@ A: Use \`/tools disable\` or choose "never" when prompted.
         let autocompleteMode = null; // 'file', 'command', or null
         let autocompleteQuery = '';
         let autocompleteStartPos = 0;
+        let autocompleteDisabled = false; // Disabled for special providers (@git, @tree)
 
         // Slash commands for autocomplete
         const slashCommands = [
@@ -3824,6 +3825,19 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             if (atMatch) {
                 autocompleteStartPos = cursorPos - atMatch[0].length;
                 autocompleteQuery = atMatch[1];
+                // Skip autocomplete for special context providers (@git, @tree)
+                // These are handled by the backend, not as file references
+                // Also skip partial matches (e.g., "tre" could become "tree")
+                const specialProviders = ['git', 'tree'];
+                const queryLower = autocompleteQuery.toLowerCase();
+                const isSpecialProvider = specialProviders.includes(queryLower);
+                const couldBeSpecialProvider = specialProviders.some(sp => sp.startsWith(queryLower) && queryLower.length > 0);
+                if (isSpecialProvider || couldBeSpecialProvider) {
+                    autocompleteDisabled = true;
+                    hideAutocomplete();
+                    return;
+                }
+                autocompleteDisabled = false;
                 // Request file suggestions from extension
                 vscode.postMessage({ type: 'searchFiles', query: autocompleteQuery || '' });
                 return;
@@ -4287,7 +4301,8 @@ A: Use \`/tools disable\` or choose "never" when prompted.
 
                 case 'fileSuggestions':
                     // Received file suggestions for autocomplete
-                    if (autocompleteMode === 'file' || message.files.length > 0) {
+                    // Don't show if autocomplete is disabled (e.g., @git, @tree special providers)
+                    if (!autocompleteDisabled && (autocompleteMode === 'file' || message.files.length > 0)) {
                         showAutocomplete(message.files, 'file');
                     }
                     break;

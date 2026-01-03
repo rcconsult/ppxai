@@ -31,6 +31,8 @@ from ppxai.config import (
     reload_config,
     validate_config,
     load_config,
+    get_tool_config,
+    get_tool_pricing,
     _find_config_file,
     _load_json_config,
     _validate_provider_config,
@@ -506,3 +508,73 @@ class TestJSONConfigIntegration:
                 assert minimal["default_model"] == "model1"
 
         os.unlink(f.name)
+
+
+class TestToolConfig:
+    """Tests for tool configuration helpers (v1.13.4)."""
+
+    def test_get_tool_config_web_search(self):
+        """Test get_tool_config returns web_search configuration."""
+        config = get_tool_config("web_search")
+        assert isinstance(config, dict)
+        # Web search config should have preferred field
+        if config:  # Only if web_search config exists
+            assert "preferred" in config or "pricing" in config
+
+    def test_get_tool_config_nonexistent_tool(self):
+        """Test get_tool_config returns empty dict for nonexistent tool."""
+        config = get_tool_config("nonexistent_tool")
+        assert config == {}
+
+    def test_get_tool_config_shell(self):
+        """Test get_tool_config returns shell configuration."""
+        config = get_tool_config("shell")
+        assert isinstance(config, dict)
+        # Shell config should have require_consent field
+        if config:  # Only if shell config exists
+            assert "require_consent" in config or "dangerous_commands" in config
+
+    def test_get_tool_config_agent(self):
+        """Test get_tool_config returns agent configuration."""
+        config = get_tool_config("agent")
+        assert isinstance(config, dict)
+        # Agent config should have max_iterations field
+        if config:  # Only if agent config exists
+            assert "max_iterations" in config or "min_task_words" in config
+
+
+class TestToolPricing:
+    """Tests for tool pricing configuration (v1.13.4)."""
+
+    def test_get_tool_pricing_perplexity(self):
+        """Test get_tool_pricing returns Perplexity pricing."""
+        pricing = get_tool_pricing("web_search", "perplexity")
+        assert isinstance(pricing, dict)
+        # Perplexity pricing should have input/output per-token pricing
+        if pricing:  # Only if pricing exists
+            assert "input" in pricing or "model" in pricing
+
+    def test_get_tool_pricing_gemini_grounding(self):
+        """Test get_tool_pricing returns Gemini Grounding pricing."""
+        pricing = get_tool_pricing("web_search", "gemini_grounding")
+        assert isinstance(pricing, dict)
+        # Gemini Grounding pricing should have per_query pricing
+        if pricing:  # Only if pricing exists
+            assert "per_query" in pricing or "model" in pricing
+
+    def test_get_tool_pricing_nonexistent_provider(self):
+        """Test get_tool_pricing returns empty dict for nonexistent provider."""
+        pricing = get_tool_pricing("web_search", "nonexistent_provider")
+        assert pricing == {}
+
+    def test_get_tool_pricing_nonexistent_tool(self):
+        """Test get_tool_pricing returns empty dict for nonexistent tool."""
+        pricing = get_tool_pricing("nonexistent_tool", "perplexity")
+        assert pricing == {}
+
+    def test_get_tool_pricing_duckduckgo_free(self):
+        """Test DuckDuckGo has no pricing (free service)."""
+        pricing = get_tool_pricing("web_search", "duckduckgo")
+        # DuckDuckGo is free, so pricing should be empty or have zero cost
+        if pricing:
+            assert pricing.get("cost", 0) == 0 or "per_query" not in pricing

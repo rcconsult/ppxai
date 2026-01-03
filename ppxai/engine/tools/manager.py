@@ -103,6 +103,29 @@ class ToolManager:
             for t in self.get_available_tools()
         ]
 
+    def get_tools_openai_format(self) -> List[Dict[str, Any]]:
+        """Get tools in OpenAI function calling format.
+
+        This format is used by vLLM with --enable-auto-tool-choice and other
+        OpenAI-compatible endpoints that support native tool calling.
+
+        Returns:
+            List of tool definitions in OpenAI format:
+            [{"type": "function", "function": {"name": ..., "description": ..., "parameters": ...}}]
+        """
+        tools = self.get_available_tools()
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "parameters": tool.parameters,
+                }
+            }
+            for tool in tools
+        ]
+
     async def execute_tool(self, name: str, **kwargs) -> str:
         """Execute a tool by name.
 

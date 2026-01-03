@@ -519,6 +519,39 @@ class CommandHandler:
 
             console.print(table)
 
+        # v1.13.4: Tool usage breakdown
+        tool_calls = usage.get("tool_calls", {})
+        if tool_calls:
+            console.print()
+            tool_table = Table(title="Tool Usage", show_header=True, header_style="bold magenta")
+            tool_table.add_column("Tool", style="cyan")
+            tool_table.add_column("Provider", style="cyan")
+            tool_table.add_column("Calls", justify="right", style="green")
+            tool_table.add_column("Tokens In", justify="right", style="green")
+            tool_table.add_column("Tokens Out", justify="right", style="green")
+            tool_table.add_column("Cost", justify="right", style="yellow")
+
+            total_tool_cost = 0.0
+            for tool_name, tool_stats in sorted(tool_calls.items()):
+                provider = tool_stats.get("provider", "unknown")
+                tool_table.add_row(
+                    tool_name,
+                    provider.title() if provider != "duckduckgo" else "DuckDuckGo",
+                    f"{tool_stats.get('call_count', 0)}",
+                    f"{tool_stats.get('tokens_in', 0):,}",
+                    f"{tool_stats.get('tokens_out', 0):,}",
+                    f"${tool_stats.get('estimated_cost', 0.0):.4f}"
+                )
+                total_tool_cost += tool_stats.get('estimated_cost', 0.0)
+
+            console.print(tool_table)
+            total_cost = usage['estimated_cost'] + total_tool_cost
+            console.print(f"\n[bold cyan]Total Session Cost:[/bold cyan] [bold yellow]${total_cost:.4f}[/bold yellow]")
+            console.print(f"  Model cost: ${usage['estimated_cost']:.4f}")
+            console.print(f"  Tool cost: ${total_tool_cost:.4f}")
+        else:
+            console.print(f"\n[bold cyan]Total Session Cost:[/bold cyan] [bold yellow]${usage['estimated_cost']:.4f}[/bold yellow]")
+
         # Display mode
         display_mode = usage.get("display_mode", "session")
         console.print(f"\n  Status line display: [cyan]{display_mode}[/cyan]")
@@ -1028,6 +1061,20 @@ class CommandHandler:
                 console.print(f"[dim]Consent mode: {consent_mode}[/dim]")
             except Exception:
                 pass
+
+            # v1.13.4: Show web search provider
+            try:
+                from ppxai.engine.tools.builtin import web_premium
+                if web_premium.is_available():
+                    provider = web_premium.get_premium_search_provider(self.provider)
+                    if provider:
+                        console.print(f"[dim]Web Search: {provider.title()} (premium)[/dim]")
+                    else:
+                        console.print(f"[dim]Web Search: DuckDuckGo (free)[/dim]")
+                else:
+                    console.print(f"[dim]Web Search: DuckDuckGo (free)[/dim]")
+            except Exception:
+                console.print(f"[dim]Web Search: DuckDuckGo (free)[/dim]")
 
             console.print("[dim]Use '/tools list' to see available tools[/dim]\n")
         else:

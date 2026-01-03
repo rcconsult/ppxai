@@ -66,7 +66,8 @@ class BaseProvider(ABC):
         self,
         messages: List[Message],
         model: str,
-        stream: bool = False
+        stream: bool = False,
+        tools: Optional[List[Dict[str, Any]]] = None
     ) -> AsyncIterator[Event]:
         """Send a chat request and yield events.
 
@@ -74,9 +75,10 @@ class BaseProvider(ABC):
             messages: Conversation history
             model: Model ID to use
             stream: Whether to stream the response
+            tools: Optional list of tools in OpenAI format (for native tool calling)
 
         Yields:
-            Event objects (STREAM_START, STREAM_CHUNK, STREAM_END, ERROR)
+            Event objects (STREAM_START, STREAM_CHUNK, STREAM_END, ERROR, TOOL_CALL)
         """
         pass
 

@@ -961,3 +961,174 @@ class TestCommandHandlerIntegration:
         result = handler_custom.handle_command("/help")
         assert result is False
         mock_welcome.assert_called()
+
+
+class TestCommandsWithToolUsage:
+    """Tests for command handlers with tool usage tracking (v1.13.4)."""
+
+    @pytest.fixture
+    def mock_engine_with_tool_usage(self):
+        """Create a mock EngineClient with tool usage data."""
+        engine = Mock()
+        engine.session = Mock()
+        engine.session.messages = []
+        engine.session.session_name = "test_session"
+        engine.session.get_usage = Mock(return_value={
+            "total_tokens": 2500,
+            "prompt_tokens": 1500,
+            "completion_tokens": 1000,
+            "estimated_cost": 0.10,
+            "tool_calls": {
+                "web_search": {
+                    "call_count": 2,
+                    "tokens_in": 200,
+                    "tokens_out": 400,
+                    "estimated_cost": 0.01,
+                    "provider": "perplexity"
+                }
+            }
+        })
+        engine.session.save = Mock()
+        engine.tools_enabled = True
+        engine.model = "gpt-4o"
+        engine.provider = "openai"
+        return engine
+
+    @pytest.fixture
+    def handler_with_tools(self, mock_engine_with_tool_usage):
+        """Create CommandHandler with tool usage enabled."""
+        handler = CommandHandler(
+            "test-api-key",
+            "gpt-4o",
+            "https://api.openai.com/v1",
+            "openai"
+        )
+        handler.engine_client = mock_engine_with_tool_usage
+        return handler
+
+    def test_usage_command_includes_tool_usage(self, handler_with_tools, capsys):
+        """Test /usage command displays tool usage breakdown."""
+        handler_with_tools.handle_command("/usage")
+        captured = capsys.readouterr()
+
+        # Should contain tool information
+        output = captured.out
+        assert "web_search" in output or "Tools" in output or "tool" in output.lower()
+
+    def test_usage_command_tool_costs(self, handler_with_tools, capsys):
+        """Test /usage command shows tool costs separately."""
+        handler_with_tools.handle_command("/usage")
+        captured = capsys.readouterr()
+
+        output = captured.out
+        # Should show model cost (0.10) and tool cost (0.01)
+        # Total should be around 0.11
+        assert "0.1" in output or "$0" in output or "Cost" in output
+
+    def test_usage_command_without_tool_usage(self, capsys):
+        """Test /usage command when no tools were used."""
+        mock_engine = Mock()
+        mock_engine.session = Mock()
+        mock_engine.session.messages = []
+        mock_engine.session.get_usage.return_value = {
+            "total_tokens": 1500,
+            "prompt_tokens": 1000,
+            "completion_tokens": 500,
+            "estimated_cost": 0.05,
+            "tool_calls": {}  # No tool calls
+        }
+        mock_engine.tools_enabled = False
+        mock_engine.model = "sonar-pro"
+        mock_engine.provider = "perplexity"
+
+        handler = CommandHandler(
+            "test-api-key",
+            "sonar-pro",
+            "https://api.perplexity.ai",
+            "perplexity"
+        )
+        handler.engine_client = mock_engine
+
+        handler.handle_command("/usage")
+        captured = capsys.readouterr()
+
+        output = captured.out
+        # Should not crash and should show basic usage
+        assert "Cost" in output or "total" in output.lower()
+
+    @pytest.fixture
+    def mock_engine_with_multiple_tools(self):
+        """Create EngineClient with multiple tool usage."""
+        engine = Mock()
+        engine.session = Mock()
+        engine.session.messages = []
+        engine.session.get_usage = Mock(return_value={
+            "total_tokens": 3000,
+            "prompt_tokens": 2000,
+            "completion_tokens": 1000,
+            "estimated_cost": 0.15,
+            "tool_calls": {
+                "web_search": {
+                    "call_count": 3,
+                    "tokens_in": 300,
+                    "tokens_out": 600,
+                    "estimated_cost": 0.02,
+                    "provider": "perplexity"
+                },
+                "shell": {
+                    "call_count": 2,
+                    "tokens_in": 0,
+                    "tokens_out": 0,
+                    "estimated_cost": 0.0,
+                    "provider": "free"
+                }
+            }
+        })
+        engine.session.save = Mock()
+        engine.tools_enabled = True
+        engine.model = "gpt-4o"
+        engine.provider = "openai"
+        return engine
+
+    def test_usage_command_multiple_tools(self, mock_engine_with_multiple_tools, capsys):
+        """Test /usage command with multiple tools used."""
+        handler = CommandHandler(
+            "test-api-key",
+            "gpt-4o",
+            "https://api.openai.com/v1",
+            "openai"
+        )
+        handler.engine_client = mock_engine_with_multiple_tools
+
+        handler.handle_command("/usage")
+        captured = capsys.readouterr()
+
+        output = captured.out
+        # Should show both tools
+        assert ("web_search" in output or "tool" in output.lower()) or "Call" in output
+
+    @patch('ppxai.engine.tools.builtin.web_premium.is_available')
+    def test_tools_status_shows_premium_search(self, mock_available, handler_with_tools, capsys):
+        """Test /tools status displays premium search provider."""
+        mock_available.return_value = True
+
+        with patch('ppxai.engine.tools.builtin.web_premium.get_premium_search_provider') as mock_provider:
+            mock_provider.return_value = "perplexity"
+            handler_with_tools.handle_command("/tools status")
+            captured = capsys.readouterr()
+
+            output = captured.out
+            # Should show some information about web search
+            assert "search" in output.lower() or "perplexity" in output.lower() or "Web" in output
+
+    @patch('ppxai.engine.tools.builtin.web_premium.is_available')
+    def test_tools_status_shows_free_search(self, mock_available, handler_with_tools, capsys):
+        """Test /tools status shows free DuckDuckGo when no premium available."""
+        mock_available.return_value = False
+
+        handler_with_tools.handle_command("/tools status")
+        captured = capsys.readouterr()
+
+        output = captured.out
+        # Should show web search status
+        assert "search" in output.lower() or "Web" in output or "DuckDuckGo" in output

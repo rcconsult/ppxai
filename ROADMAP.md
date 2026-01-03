@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.12.5 (January 2026)
+> **Current Version**: v1.13.0 (January 2026)
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
@@ -79,6 +79,18 @@ ppxai provides:
 
 ---
 
+## Completed (v1.13.x)
+
+### Premium Web Search ✅ (v1.13.0)
+- Premium web search tool for custom providers (vLLM, Ollama)
+- Priority fallback: Perplexity Sonar → Gemini Grounding → DuckDuckGo (free)
+- SSL_VERIFY environment variable for corporate proxy support
+- Custom provider tool calling tests (8 new tests)
+- Documentation updates: test counts, Gemini capabilities, deprecated models
+- Install: `pip install ppxai[gemini]` for Gemini Grounding support
+
+---
+
 ## v1.13.x Series - Session Bootstrap
 
 **Theme**: Reproducible starting point for every session
@@ -105,7 +117,7 @@ The implementation follows a separation of concerns pattern:
    - Returns `{loaded: bool, sources: List[str], char_count: int}`
    - Used by `/context show` (TUI) and `GET /context` (HTTP)
 
-### v1.13.0 - AGENTS.md Support
+### v1.13.1 - AGENTS.md Support
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -128,7 +140,7 @@ test_context_injected_into_system_prompt()
 test_context_cached_between_chat_calls()
 ```
 
-### v1.13.1 - File Precedence
+### v1.13.2 - File Precedence
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -144,7 +156,7 @@ test_context_cached_between_chat_calls()
 
 **Merge behavior:** Concatenate all found files with `\n\n---\n\n` separator.
 
-### v1.13.2 - `/context` Commands
+### v1.13.3 - `/context` Commands
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -162,7 +174,7 @@ test_context_cached_between_chat_calls()
 - `ppxai/server/http.py` - Add `GET /context`, `POST /context/reload`
 - `vscode-extension/src/httpClient.ts` - Add context API calls
 
-### v1.13.3 - Context Enhancements
+### v1.13.4 - Context Enhancements
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -240,7 +252,7 @@ ppxai is **not** trying to be:
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ```bash
-uv run pytest tests/ -v       # Run tests (406 passing)
+uv run pytest tests/ -v       # Run tests (525 passing)
 uv run ppxai-server           # Start server for VSCode dev
 ```
 

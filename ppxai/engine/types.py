@@ -47,12 +47,33 @@ class Message:
 
 
 @dataclass
+class ToolUsage:
+    """Usage tracking for a specific tool.
+
+    Tracks both per-token pricing (Perplexity) and per-query pricing (Gemini).
+    """
+    call_count: int = 0
+    tokens_in: int = 0
+    tokens_out: int = 0
+    estimated_cost: float = 0.0
+    provider: str = ""  # "perplexity", "gemini", "duckduckgo"
+
+    def add_usage(self, tokens_in: int = 0, tokens_out: int = 0, cost: float = 0.0):
+        """Add usage from a single tool call."""
+        self.call_count += 1
+        self.tokens_in += tokens_in
+        self.tokens_out += tokens_out
+        self.estimated_cost += cost
+
+
+@dataclass
 class UsageStats:
     """Token usage and cost statistics."""
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
     estimated_cost: float = 0.0
+    tool_calls: Dict[str, 'ToolUsage'] = field(default_factory=dict)
 
 
 @dataclass
@@ -71,6 +92,7 @@ class ProviderCapabilities:
     weather: bool = False
     citations: bool = False
     streaming: bool = True
+    native_tool_calling: bool = False  # v1.13.x: OpenAI-style function calling
 
     @classmethod
     def from_dict(cls, data: Dict[str, bool]) -> 'ProviderCapabilities':
@@ -81,6 +103,7 @@ class ProviderCapabilities:
             weather=data.get('weather', False),
             citations=data.get('citations', False),
             streaming=data.get('streaming', True),
+            native_tool_calling=data.get('native_tool_calling', False),
         )
 
 

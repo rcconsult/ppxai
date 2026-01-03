@@ -5,6 +5,43 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.0] - 2026-01-03
+
+### Added - Custom Provider Parity
+
+#### Premium Web Search Tool
+- **Custom provider support** - vLLM, Ollama, and other custom providers can now use premium web search
+- **Priority fallback chain** - Perplexity Sonar > Gemini Grounding > DuckDuckGo (free)
+- **Automatic detection** - Tool checks available API keys and uses best available option
+- **Citation integration** - Web search results formatted consistently across all providers
+
+#### SSL Proxy Support
+- **`SSL_VERIFY` environment variable** - Disable SSL verification for corporate proxies
+- **Corporate network compatible** - Works behind SSL-inspecting firewalls
+
+#### Tool Usage Tracking
+- **`ToolUsage` dataclass** - New type for tracking per-tool usage (calls, tokens, cost)
+- **`/usage` enhancement** - Shows tool usage breakdown with provider info
+- **Cost attribution** - Separate tracking for model costs vs tool costs
+
+#### Native Tool Calling for Custom Providers
+- **`native_tool_calling` capability** - Enable OpenAI-style function calling for vLLM endpoints
+- **vLLM integration** - Works with `--enable-auto-tool-choice` flag
+- **Streaming tool calls** - Full support for streaming responses with tool calls
+
+#### Enhanced Tool Parsing
+- **vLLM inference** - Infer tool names from argument patterns
+- **Dispatcher pattern** - Match JSON arguments against registered tool schemas
+- **Robust error handling** - Better recovery from malformed tool responses
+
+### Testing
+- 525 tests passing (119 new tests)
+- Custom provider tool calling tests
+- Tool parsing test coverage (440+ lines)
+- Premium web search integration tests
+
+---
+
 ## [1.12.5] - 2026-01-03
 
 ### Added - Native Gemini Provider

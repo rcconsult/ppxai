@@ -1058,6 +1058,10 @@ class EngineClient:
                         self.model,
                         self.provider_name  # Fixed: was provider_id
                     )
+                    # v1.13.4: Add tool usage from this response
+                    if hasattr(self, '_current_tool_usage'):
+                        usage.tool_calls = self._current_tool_usage
+                        self._current_tool_usage = {}  # Reset for next response
                     # v1.12.2: Pass provider and model for per-model tracking
                     self.session.update_usage(usage, self.provider_name, self.model)
                     # Convert UsageStats to dict for JSON serialization
@@ -1067,12 +1071,29 @@ class EngineClient:
             yield event
 
     async def _chat_with_tools(self, stream: bool) -> AsyncIterator[Event]:
-        """Chat with tool support."""
+        """Chat with tool support.
+
+        Supports two modes:
+        1. Native tool calling (vLLM with --enable-auto-tool-choice): Provider returns TOOL_CALL events
+        2. Prompt-based (fallback): Parse tool calls from model's text response
+        """
         iteration = 0
         max_iterations = self.tool_manager.max_iterations
 
         # Track accumulated usage across all provider calls (v1.12.0)
         accumulated_usage = UsageStats()
+
+        # Check if provider supports native tool calling (v1.13.x)
+        use_native_tools = (
+            self.provider and
+            hasattr(self.provider, 'capabilities') and
+            self.provider.capabilities.native_tool_calling
+        )
+
+        # Get tools in OpenAI format for native tool calling
+        openai_tools = None
+        if use_native_tools:
+            openai_tools = self.tool_manager.get_tools_openai_format()
 
         # Emit stream start at beginning
         yield Event(EventType.STREAM_START, {"model": self.model})
@@ -1089,28 +1110,33 @@ class EngineClient:
             if iteration > 1:
                 yield Event(EventType.INFO, f"Processing... (iteration {iteration})")
 
-            # Build messages with tool prompt
+            # Build messages with tool prompt (only for prompt-based mode)
             messages = self.session.get_messages()
 
-            # Add system message with tool prompt
-            tool_prompt = self.tool_manager.get_tools_prompt()
-            if tool_prompt:
-                # Add citation URL instruction if provider has web search/citations OR web_search tool is available
-                has_native_search = self.provider and (self.provider.capabilities.citations or self.provider.capabilities.web_search)
-                has_search_tool = self.tool_manager.get_tool("web_search") is not None
-                if has_native_search or has_search_tool:
-                    tool_prompt += (
-                        "\n\nWhen citing sources or URLs from search results, format them as markdown links "
-                        "like [Source Name](https://example.com) so they are clickable."
-                    )
-                messages = [Message("system", tool_prompt)] + messages
+            if not use_native_tools:
+                # Prompt-based tool calling: add system message with tool instructions
+                tool_prompt = self.tool_manager.get_tools_prompt()
+                if tool_prompt:
+                    # Add citation URL instruction if provider has web search/citations OR web_search tool is available
+                    has_native_search = self.provider and (self.provider.capabilities.citations or self.provider.capabilities.web_search)
+                    has_search_tool = self.tool_manager.get_tool("web_search") is not None
+                    if has_native_search or has_search_tool:
+                        tool_prompt += (
+                            "\n\nWhen citing sources or URLs from search results, format them as markdown links "
+                            "like [Source Name](https://example.com) so they are clickable."
+                        )
+                    messages = [Message("system", tool_prompt)] + messages
 
             # Get response from provider
             full_response = ""
-            async for event in self.provider.chat(messages, self.model, stream=False):
+            native_tool_calls = []  # Collect native tool calls from provider
+            async for event in self.provider.chat(messages, self.model, stream=False, tools=openai_tools):
                 if event.type == EventType.ERROR:
                     yield event
                     return
+                elif event.type == EventType.TOOL_CALL:
+                    # Native tool call from provider (vLLM with --enable-auto-tool-choice)
+                    native_tool_calls.append(event.data)
                 elif event.type == EventType.STREAM_END:
                     full_response = event.data
                     # Accumulate usage from this provider call (v1.12.0)
@@ -1120,8 +1146,15 @@ class EngineClient:
                         accumulated_usage.completion_tokens += usage.completion_tokens
                         accumulated_usage.total_tokens += usage.total_tokens
 
-            # Check for tool call
-            tool_call = self._parse_tool_call(full_response)
+            # Determine tool call: native takes precedence, then parse from text
+            tool_call = None
+            if native_tool_calls:
+                # Use first native tool call (models typically call one at a time)
+                tc = native_tool_calls[0]
+                tool_call = {"tool": tc["tool"], "arguments": tc.get("arguments", {})}
+            else:
+                # Fallback: parse tool call from text response
+                tool_call = self._parse_tool_call(full_response)
 
             if tool_call:
                 tool_name = tool_call["tool"]
@@ -1152,6 +1185,19 @@ class EngineClient:
 
                     # Get tool result
                     result = await tool_task
+
+                    # v1.13.4: Track tool usage for premium search
+                    if tool_name == "web_search":
+                        try:
+                            from .tools.builtin import web_premium
+                            tool_usage = web_premium.get_last_tool_usage()
+
+                            if tool_usage:
+                                if not hasattr(self, '_current_tool_usage'):
+                                    self._current_tool_usage = {}
+                                self._current_tool_usage[tool_name] = tool_usage
+                        except Exception:
+                            pass  # Ignore if tracking fails
 
                     yield Event(EventType.TOOL_RESULT, {
                         "tool": tool_name,
@@ -1217,6 +1263,10 @@ class EngineClient:
                         self.model,
                         self.provider_name
                     )
+                    # v1.13.4: Add tool usage from tools executed during this request
+                    if hasattr(self, '_current_tool_usage'):
+                        accumulated_usage.tool_calls = self._current_tool_usage
+                        self._current_tool_usage = {}  # Reset for next request
                     # v1.12.2: Pass provider and model for per-model tracking
                     self.session.update_usage(accumulated_usage, self.provider_name, self.model)
                     metadata = {"usage": asdict(accumulated_usage)}
@@ -1264,6 +1314,115 @@ class EngineClient:
 
             return None
 
+        def infer_tool_from_arguments(data: dict) -> Optional[dict]:
+            """Infer which tool based on argument patterns when 'tool' key is missing.
+
+            This handles models (like vLLM-served models) that output raw JSON arguments
+            without the required 'tool' wrapper.
+
+            Uses a configuration-driven dispatcher pattern for maintainability.
+            """
+            if "tool" in data:
+                return None  # Already has tool key, use normalize_tool_call instead
+
+            keys = set(data.keys())
+
+            # Tool inference rules: each rule defines how to detect and normalize a tool call
+            # Format: {
+            #   "tool": tool name,
+            #   "required": keys that MUST be present (any one of list items),
+            #   "allowed": all keys that can be present (superset check),
+            #   "aliases": {canonical_param: [alias1, alias2, ...]} for normalization
+            # }
+            tool_rules = [
+                {
+                    "tool": "web_search",
+                    "required": ["query"],
+                    "allowed": {"query", "num_results", "top_n", "count", "limit", "max_results", "recency_days"},
+                    "aliases": {
+                        "num_results": ["top_n", "count", "limit", "max_results"],
+                    }
+                },
+                {
+                    "tool": "read_file",
+                    "required": ["path", "filepath"],  # Either one satisfies
+                    "allowed": {"path", "filepath", "line_start", "line_end", "max_lines"},
+                    "aliases": {
+                        "filepath": ["path"],  # Normalize path -> filepath
+                    }
+                },
+                {
+                    "tool": "list_directory",
+                    "required": [],  # No required keys, but must have at least one allowed key
+                    "allowed": {"path", "format"},
+                    "aliases": {}
+                },
+                {
+                    "tool": "execute_shell_command",
+                    "required": ["command"],
+                    "allowed": {"command", "working_dir"},
+                    "aliases": {}
+                },
+                {
+                    "tool": "fetch_url",
+                    "required": ["url"],
+                    "allowed": {"url", "max_length"},
+                    "aliases": {}
+                },
+                {
+                    "tool": "get_weather",
+                    "required": ["location"],
+                    "allowed": {"location", "format"},
+                    "aliases": {}
+                },
+                {
+                    "tool": "calculator",
+                    "required": ["expression"],
+                    "allowed": {"expression"},
+                    "aliases": {}
+                },
+            ]
+
+            def match_rule(rule: dict) -> Optional[dict]:
+                """Check if data matches a tool rule and return normalized arguments."""
+                tool_name = rule["tool"]
+                required = rule["required"]
+                allowed = rule["allowed"]
+                aliases = rule["aliases"]
+
+                # Check required keys (any one from list must be present)
+                if required:
+                    if not any(req in keys for req in required):
+                        return None
+                elif not keys:
+                    # No required keys defined, but data must have at least one allowed key
+                    return None
+
+                # Check that all keys are in allowed set
+                if not keys <= allowed:
+                    return None
+
+                # Normalize arguments using aliases
+                args = {}
+                for key, value in data.items():
+                    # Check if this key should be mapped to a canonical name
+                    canonical = key
+                    for canon, alias_list in aliases.items():
+                        if key in alias_list:
+                            canonical = canon
+                            break
+                    args[canonical] = value
+
+                return {"tool": tool_name, "arguments": args}
+
+            # Try each rule in order (first match wins)
+            for rule in tool_rules:
+                result = match_rule(rule)
+                if result:
+                    return result
+
+            return None
+
         def try_parse_json(json_str: str) -> Optional[dict]:
             """Try to parse JSON, including handling single quotes."""
             try:
@@ -1285,6 +1444,10 @@ class EngineClient:
                 normalized = normalize_tool_call(data)
                 if normalized:
                     return normalized
+                # Fallback: try to infer tool from arguments (for models like vLLM)
+                inferred = infer_tool_from_arguments(data)
+                if inferred:
+                    return inferred
 
         # Try extracting JSON from markdown code blocks
         # Match ```json ... ``` or ``` ... ``` blocks
@@ -1299,6 +1462,10 @@ class EngineClient:
                     normalized = normalize_tool_call(data)
                     if normalized:
                         return normalized
+                    # Fallback: try to infer tool from arguments
+                    inferred = infer_tool_from_arguments(data)
+                    if inferred:
+                        return inferred
 
         # Try JSON in code blocks - use greedy match for nested braces (fallback)
         code_block_pattern2 = r'```(?:json)?\s*(\{[\s\S]*?\})\s*```'
@@ -1310,6 +1477,10 @@ class EngineClient:
                 normalized = normalize_tool_call(data)
                 if normalized:
                     return normalized
+                # Fallback: try to infer tool from arguments
+                inferred = infer_tool_from_arguments(data)
+                if inferred:
+                    return inferred
 
         # Try to find JSON objects with "tool" key using a more robust approach
         # Look for complete JSON objects by counting braces

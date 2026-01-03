@@ -123,7 +123,7 @@ BUILTIN_PROVIDERS = {
             "gemini-3-pro-preview": {"input": 1.25, "output": 5.00},  # Estimated, preview pricing
         },
         "capabilities": {
-            "web_search": False,
+            "web_search": True,
             "web_fetch": False,
             "weather": False,
             "realtime_info": False,
@@ -541,6 +541,34 @@ def provider_needs_tool(provider: str, tool_category: str) -> bool:
     capabilities = get_provider_capabilities(provider)
     # Provider needs the tool if it doesn't have the native capability
     return not capabilities.get(tool_category, False)
+
+
+def get_tool_config(tool_name: str) -> Dict[str, Any]:
+    """Get configuration for a specific tool.
+
+    Args:
+        tool_name: Tool name (e.g., 'web_search', 'shell')
+
+    Returns:
+        Tool configuration dict, or empty dict if not configured
+    """
+    tools_config = _config.get("tools", {})
+    return tools_config.get(tool_name, {})
+
+
+def get_tool_pricing(tool_name: str, provider: str) -> Dict[str, Any]:
+    """Get pricing configuration for a tool provider.
+
+    Args:
+        tool_name: Tool name (e.g., 'web_search')
+        provider: Provider name (e.g., 'perplexity', 'gemini')
+
+    Returns:
+        Pricing dict with rates, or empty dict if not configured
+    """
+    tool_config = get_tool_config(tool_name)
+    pricing = tool_config.get("pricing", {})
+    return pricing.get(provider, {})
 
 
 def get_coding_model(provider: str = None) -> str:

@@ -48,7 +48,7 @@
       "models": {
         "openai/gpt-oss-120b": {
           "name": "GPT OSS 120B",
-          "description": "Internal self-hosted GPT model for coding"
+          "description": "Internal self-hosted GPT model with native tool calling via vLLM"
         }
       },
       "pricing": {
@@ -58,7 +58,8 @@
         "web_search": false,
         "web_fetch": false,
         "weather": false,
-        "realtime_info": false
+        "realtime_info": false,
+        "native_tool_calling": true
       }
     },
     "gemini": {

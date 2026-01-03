@@ -9,7 +9,7 @@ Architecture:
 - Callbacks are provided by the client for rendering
 - Business logic is centralized, UI is delegated
 
-Version: v1.12.5
+Version: v1.13.0
 """
 
 from typing import AsyncIterator, Callable, Optional, Any, Dict

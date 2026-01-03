@@ -155,11 +155,21 @@ class SessionManager:
             model_usage.total_tokens += usage.total_tokens
             model_usage.estimated_cost += usage.estimated_cost
 
+        # v1.13.4: Merge tool usage
+        for tool_name, tool_usage in usage.tool_calls.items():
+            if tool_name not in self.usage.tool_calls:
+                from .types import ToolUsage
+                self.usage.tool_calls[tool_name] = ToolUsage(provider=tool_usage.provider)
+            self.usage.tool_calls[tool_name].call_count += tool_usage.call_count
+            self.usage.tool_calls[tool_name].tokens_in += tool_usage.tokens_in
+            self.usage.tool_calls[tool_name].tokens_out += tool_usage.tokens_out
+            self.usage.tool_calls[tool_name].estimated_cost += tool_usage.estimated_cost
+
     def get_usage(self) -> Dict[str, Any]:
         """Get usage statistics.
 
         Returns:
-            Dictionary with usage stats including per-model breakdown
+            Dictionary with usage stats including per-model breakdown and tool usage
         """
         return {
             "total_tokens": self.usage.total_tokens,
@@ -175,6 +185,17 @@ class SessionManager:
                     "estimated_cost": stats.estimated_cost
                 }
                 for key, stats in self.usage_by_model.items()
+            },
+            # v1.13.4: Add tool usage breakdown
+            "tool_calls": {
+                tool_name: {
+                    "call_count": tool_usage.call_count,
+                    "tokens_in": tool_usage.tokens_in,
+                    "tokens_out": tool_usage.tokens_out,
+                    "estimated_cost": tool_usage.estimated_cost,
+                    "provider": tool_usage.provider
+                }
+                for tool_name, tool_usage in self.usage.tool_calls.items()
             },
             "display_mode": self.usage_display_mode
         }

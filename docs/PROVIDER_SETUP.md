@@ -129,15 +129,15 @@ MODEL_PROVIDER=gemini
         "gemini-1.5-flash": {"input": 0.075, "output": 0.30}
       },
       "capabilities": {
-        "web_search": false,
-        "realtime_info": false
+        "web_search": true,
+        "realtime_info": true
       }
     }
   }
 }
 ```
 
-**Note**: The OpenAI-compatible endpoint is `https://generativelanguage.googleapis.com/v1beta/openai`. Some advanced Gemini features (like grounding with Google Search) may not be available through this endpoint.
+**Note**: The OpenAI-compatible endpoint is `https://generativelanguage.googleapis.com/v1beta/openai`. For native Google Search Grounding with citations (similar to Perplexity), install `pip install ppxai[gemini]` which uses the native Gemini SDK.
 
 ---
 
@@ -175,15 +175,20 @@ MODEL_PROVIDER=perplexity
           "name": "Sonar Pro",
           "description": "Advanced search with citations"
         },
-        "sonar-reasoning": {
-          "name": "Sonar Reasoning",
+        "sonar-reasoning-pro": {
+          "name": "Sonar Reasoning Pro",
           "description": "Extended thinking for complex queries"
+        },
+        "sonar-deep-research": {
+          "name": "Sonar Deep Research",
+          "description": "Multi-step research for comprehensive answers"
         }
       },
       "pricing": {
         "sonar": {"input": 1.00, "output": 1.00},
         "sonar-pro": {"input": 3.00, "output": 15.00},
-        "sonar-reasoning": {"input": 1.00, "output": 5.00}
+        "sonar-reasoning-pro": {"input": 2.00, "output": 8.00},
+        "sonar-deep-research": {"input": 2.00, "output": 8.00}
       },
       "capabilities": {
         "web_search": true,
@@ -436,7 +441,7 @@ MODEL_PROVIDER=perplexity
         "gemini-2.0-flash": {"name": "Gemini 2.0 Flash", "description": "Fast multimodal"},
         "gemini-1.5-pro": {"name": "Gemini 1.5 Pro", "description": "2M context"}
       },
-      "capabilities": {"web_search": false, "realtime_info": false}
+      "capabilities": {"web_search": true, "realtime_info": true}
     },
     "openrouter": {
       "name": "OpenRouter (Claude)",
@@ -514,3 +519,35 @@ Error: Connection refused at localhost:8000
 [SSL: CERTIFICATE_VERIFY_FAILED]
 ```
 **Solution**: If you're behind a corporate proxy, add `SSL_VERIFY=false` to your `.env` file (not recommended for production).
+
+---
+
+## Advanced Features
+
+### Premium Web Search for Custom Providers
+
+When using custom providers (vLLM, Ollama, etc.) that don't have native web search, ppxai can use Perplexity or Gemini for web search tool calls:
+
+```bash
+# .env - Add one of these for premium web search
+PERPLEXITY_API_KEY=pplx-xxxxx  # Uses Perplexity Sonar API
+GEMINI_API_KEY=AIza-xxxxx      # Uses Gemini with Google Search Grounding
+```
+
+Priority: Perplexity > Gemini > DuckDuckGo (free fallback)
+
+### SSL Verification
+
+For corporate environments with SSL inspection:
+
+```bash
+# .env
+SSL_VERIFY=false  # Disables SSL certificate verification
+```
+
+This setting is respected by:
+- All OpenAI-compatible API calls
+- Premium web search (Perplexity, Gemini)
+- URL fetching tools
+
+**⚠️ Security Warning**: Only use `SSL_VERIFY=false` in trusted corporate environments where SSL inspection is required.

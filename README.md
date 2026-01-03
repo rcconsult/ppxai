@@ -1,6 +1,6 @@
 # ppxai - Multi-LLM Interface for Developers
 
-![Version](https://img.shields.io/badge/version-1.12.5-blue) ![Tests](https://img.shields.io/badge/tests-406%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen)
+![Version](https://img.shields.io/badge/version-1.12.5-blue) ![Tests](https://img.shields.io/badge/tests-525%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen)
 
 **Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
 
@@ -19,7 +19,7 @@
 
 1. Download from [Releases](../../releases):
    - `ppxai-{platform}` (TUI binary)
-   - `ppxai-server-{platform}` + `ppxai-1.12.5.vsix` (for VSCode)
+   - `ppxai-server-{platform}` + `ppxai-1.13.0.vsix` (for VSCode)
 
 2. Create `.env` with your API key:
    ```bash
@@ -173,7 +173,7 @@ ppxai/
 │   ├── engine/               # EngineClient, providers, tools
 │   └── server/               # HTTP + JSON-RPC servers
 ├── vscode-extension/         # VSCode extension (TypeScript)
-├── tests/                    # 406 tests
+├── tests/                    # 525 tests
 └── docs/                     # Documentation
 ```
 

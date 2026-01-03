@@ -5,7 +5,7 @@ Perplexity has native web search and citation capabilities.
 """
 
 import re
-from typing import List, AsyncIterator, Optional
+from typing import List, AsyncIterator, Optional, Dict, Any
 from ..types import Message, Event, EventType, ProviderCapabilities
 from .base import BaseProvider
 
@@ -65,7 +65,8 @@ class PerplexityProvider(BaseProvider):
         self,
         messages: List[Message],
         model: str,
-        stream: bool = False
+        stream: bool = False,
+        tools: Optional[List[Dict[str, Any]]] = None
     ) -> AsyncIterator[Event]:
         """Send chat request to Perplexity API.
 
@@ -73,10 +74,12 @@ class PerplexityProvider(BaseProvider):
             messages: Conversation history
             model: Model ID to use
             stream: Whether to stream the response
+            tools: Ignored - Perplexity uses native search, not tools
 
         Yields:
             Event objects including citations when available
         """
+        # Note: tools parameter is ignored - Perplexity has native search
         try:
             api_messages = self._convert_messages(messages)
 
