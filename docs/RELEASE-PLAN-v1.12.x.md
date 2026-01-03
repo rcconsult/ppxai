@@ -1,8 +1,8 @@
 # Release Plan: v1.12.x Series
 
 **Created:** December 29, 2025
-**Last Updated:** January 2, 2026
-**Status:** v1.12.2 Released
+**Last Updated:** January 3, 2026
+**Status:** v1.12.5 Released
 **Branch:** `master`
 
 ---
@@ -113,8 +113,8 @@ This document outlines the release plan for the v1.12.x series, focusing on:
 
 ## v1.12.3 - Time-Based Usage Analytics
 
-**Status:** Next
-**Target:** 1-2 days
+**Status:** ✅ Released (2026-01-03)
+**Tag:** v1.12.3
 
 ### Motivation
 
@@ -230,79 +230,65 @@ GET /usage/export?format=csv  # Export usage data
 
 ---
 
-## v1.12.4 - Gemini Dedicated Provider
+## v1.12.4 - Checkpoint Management Commands
 
-**Status:** Planned
-**Target:** After v1.12.3
+**Status:** ✅ Released (2026-01-03)
+**Tag:** v1.12.4
 
-### Motivation
+### Features Complete
 
-Currently Gemini uses the generic `OpenAICompatibleProvider`. A dedicated provider enables:
+#### `/checkpoint` Command
+- **`/checkpoint status`** - View current checkpoint configuration
+- **`/checkpoint list`** - List recent checkpoints (up to 10)
+- **`/checkpoint backend <git|file|auto|none>`** - Switch checkpoint backend (session-only)
+- **`/checkpoint clear`** - Clear old file-based checkpoint snapshots
+- **`/checkpoint info <id>`** - Show details about a specific checkpoint
+- **`/checkpoint undo`** - Alias for `/undo` command
+- **Tab autocomplete** - Subcommands and backend options autocomplete in TUI
 
-| Feature | Generic OpenAI | Dedicated Gemini |
-|---------|---------------|------------------|
-| Search Grounding | N/A | Real-time web search |
-| Safety Settings | N/A | Configurable thresholds |
-| Code Execution | N/A | Native Python sandbox |
-| System Instructions | Merged into messages | Proper `system_instruction` field |
-| Caching | N/A | Context caching for cost reduction |
-| Multimodal | Basic | Native image/video/audio |
+#### Web Search Tool Upgrade
+- **`ddgs` package** - Upgraded to use `ddgs>=9.0.0` for more reliable DuckDuckGo search
+- **Fallback chain** - Uses ddgs → duckduckgo-search → HTML scraping
 
-### What is Search Grounding?
+#### VSCode Extension
+- All `/checkpoint` commands available in extension
+- HTTP endpoints: `/checkpoint/list`, `/checkpoint/backend`, `/checkpoint/clear`
 
-Gemini's Search Grounding connects the model to Google Search in real-time:
-- Model can retrieve up-to-date information during generation
-- Returns grounding sources (citations) with responses
-- Similar to Perplexity's native web search capability
-- Reduces hallucination for factual queries
+#### Documentation
+- Updated [CHECKPOINT_GUIDE.md](CHECKPOINT_GUIDE.md) to v1.12.4
 
-**When enabled:**
-```
-User: "What's the weather in Tokyo today?"
-Gemini: "According to current data, Tokyo is 12°C with partly cloudy skies [1]"
-        Sources: [1] weather.google.com
-```
-
-### Implementation Plan
-
-**New File:** `ppxai/engine/providers/gemini.py`
-
-### Features to Implement
-
-| Feature | Priority | Effort |
-|---------|----------|--------|
-| Basic chat with native SDK | High | 2-3 hrs |
-| Streaming responses | High | 1-2 hrs |
-| Usage/token tracking | High | 1 hr |
-| Search grounding | High | 2-3 hrs |
-| Grounding source citations | High | 1-2 hrs |
-| System instruction handling | Medium | 1 hr |
-| Safety settings config | Medium | 1-2 hrs |
-| Context caching | Low | 3-4 hrs |
-| Code execution | Low | 4-6 hrs |
-
-**Total Effort:** 12-20 hours
-
-### Dependencies
-
-```toml
-# pyproject.toml - new optional dependency
-[project.optional-dependencies]
-gemini = ["google-generativeai>=0.8.0"]
-```
+### Tests
+- 400 tests passing
 
 ---
 
-## v1.12.5 - Gemini Bug Fixes
+## v1.12.5 - Native Gemini Provider
 
-**Status:** Planned
-**Target:** After v1.12.4
+**Status:** ✅ Released (2026-01-03)
+**Tag:** v1.12.5
 
-### Anticipated Issues
-- [ ] Grounding response format changes
-- [ ] Rate limiting handling
-- [ ] Safety settings edge cases
-- [ ] Token counting discrepancies
+### Features Complete
+
+#### Google Search Grounding
+- **Native Gemini SDK** - Direct integration with `google-genai` package
+- **Google Search Grounding** - Real-time web search with citations (like Perplexity)
+- **Streaming support** - Full async streaming with usage tracking
+- **Graceful fallback** - Uses OpenAI-compatible API if `google-genai` not installed
+
+#### Installation
+```bash
+pip install ppxai[gemini]   # For enhanced Gemini support
+```
+
+#### Provider Features
+- Search grounding with citation support
+- Native streaming responses
+- Token usage tracking
+- Safety settings configuration
+- System instruction handling
+
+### Tests
+- 406 tests passing
 
 ---
 
@@ -785,19 +771,25 @@ Released:    v1.12.1 (2026-01-02)
              │  ✅ Framed status panel with badges
              │  ✅ Clickable file links (OSC 8)
              ▼
-Released:    v1.12.2 (2026-01-02) ◄── CURRENT
+Released:    v1.12.2 (2026-01-02)
              │  ✅ Bug fixes (JSON parsing, logging)
              │  ✅ /theme emoji on|off command
              │  ✅ Panel alignment improvements
              ▼
-Next:        v1.12.3 (time-based usage analytics)
-             │  • Persistent usage storage
-             │  • /usage 24h|week|month|year|all
-             │  • Session history with costs
+Released:    v1.12.3 (2026-01-03)
+             │  ✅ Persistent usage storage
+             │  ✅ /usage 24h|week|month|year|all
+             │  ✅ Session history with costs
              ▼
-Planned:     v1.12.4 (Gemini dedicated provider)
-             │  • Native search grounding
-             │  • Citation support
+Released:    v1.12.4 (2026-01-03)
+             │  ✅ /checkpoint management commands
+             │  ✅ Web search tool upgrade (ddgs)
+             │  ✅ Tab autocomplete for checkpoints
+             ▼
+Released:    v1.12.5 (2026-01-03) ◄── CURRENT
+             │  ✅ Native Gemini provider
+             │  ✅ Google Search Grounding
+             │  ✅ Citation support
              ▼
 Future:      v1.13.0 (AGENTS.md support)
 
