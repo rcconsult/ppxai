@@ -47,6 +47,11 @@ search = [
     "ddgs>=9.0.0",
 ]
 
+# Native Gemini provider (v1.12.5+)
+gemini = [
+    "google-genai>=1.0.0",
+]
+
 # Development dependencies
 dev = [
     "pytest>=7.0.0",

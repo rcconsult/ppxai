@@ -41,12 +41,14 @@ uv run ppxai                        # Start TUI
 
 ### Multi-Provider Support
 - **Perplexity AI** - Real-time search with citations
-- **Google Gemini** - 2.5 Flash/Pro with 1M context
+- **Google Gemini** - 2.5 Flash/Pro with 1M context, Google Search Grounding
 - **OpenAI** - GPT-4o, o1
 - **OpenRouter** - Claude, Llama, 100+ models
 - **Local** - Ollama, vLLM, llama.cpp
 
 Switch providers anytime: `/provider gemini` or `/model gpt-4o`
+
+**Enhanced Gemini support (v1.12.5+):** Install `pip install ppxai[gemini]` for native Google Search Grounding with citations.
 
 ### Dual Interface
 | TUI (Terminal) | VSCode Extension |

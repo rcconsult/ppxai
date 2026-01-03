@@ -72,6 +72,24 @@ ppxai provides:
 
 ---
 
+## In Development: v1.12.5 - Native Gemini Provider
+
+**Theme**: Enhanced Gemini with Google Search Grounding
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Native Gemini SDK** | Direct integration with `google-genai` package | ✅ Done |
+| **Google Search Grounding** | Real-time web search with citations | ✅ Done |
+| **Streaming support** | Full async streaming like Perplexity | ✅ Done |
+| **Usage tracking** | Token counts from Gemini API | ✅ Done |
+| **Fallback to OpenAI-compat** | Works without `google-genai` installed | ✅ Done |
+
+**Install**: `pip install ppxai[gemini]` for enhanced Gemini support.
+
+**Branch**: `feature/gemini-native-provider`
+
+---
+
 ## v1.13.0 - Session Bootstrap
 
 **Theme**: Reproducible starting point for every session
