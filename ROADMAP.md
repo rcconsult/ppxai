@@ -85,6 +85,26 @@ ppxai provides:
 
 **User value**: Teams share project context. Consistent AI behavior across sessions.
 
+### Architecture (Researched)
+
+The implementation follows a separation of concerns pattern:
+
+1. **Discovery** - `ContextInjector.find_bootstrap_files()` in `ppxai/engine/context.py`
+   - Locates AGENTS.md or CLAUDE.md in the directory hierarchy
+   - AGENTS.md takes priority over CLAUDE.md when both exist
+
+2. **Caching** - `EngineClient._bootstrap_context` in `ppxai/engine/client.py`
+   - Loads once on startup, caches until explicit reload
+   - Tracks sources via `_bootstrap_sources: List[str]`
+
+3. **Injection** - `EngineClient._build_system_messages()`
+   - Prepends bootstrap context to system prompt
+   - Integrates with existing tool prompt logic
+
+4. **Status API** - `EngineClient.get_bootstrap_status()`
+   - Returns `{loaded: bool, sources: List[str], char_count: int}`
+   - Used by `/context show` (TUI) and `GET /context` (HTTP)
+
 ### v1.13.0 - AGENTS.md Support
 
 | Feature | Description | Status |
@@ -92,12 +112,21 @@ ppxai provides:
 | **AGENTS.md loading** | Load project instructions from AGENTS.md on startup | Planned |
 | **CLAUDE.md fallback** | Support CLAUDE.md as alternative filename | Planned |
 | **System prompt injection** | Append project context to system prompt | Planned |
-| **TUI + VSCode support** | Both interfaces load context | Planned |
+| **TUI + VSCode support** | Both interfaces load context via EngineClient | Planned |
 
-**Implementation notes:**
-- Parse markdown, extract text content
-- Inject as system message prefix (append, not replace)
-- Show loaded context in `/status` output
+**Files to modify:**
+- `ppxai/engine/context.py` - Add `find_bootstrap_files()` method
+- `ppxai/engine/client.py` - Add bootstrap context loading and injection
+- `tests/test_bootstrap_context.py` - New test file
+
+**Test cases:**
+```python
+test_finds_agents_md_in_working_dir()
+test_finds_claude_md_as_fallback()
+test_agents_md_takes_priority_over_claude_md()
+test_context_injected_into_system_prompt()
+test_context_cached_between_chat_calls()
+```
 
 ### v1.13.1 - File Precedence
 
@@ -113,6 +142,8 @@ ppxai provides:
 2. `{project_root}/AGENTS.md` (project-specific)
 3. `{cwd}/AGENTS.md` (subdirectory overrides)
 
+**Merge behavior:** Concatenate all found files with `\n\n---\n\n` separator.
+
 ### v1.13.2 - `/context` Commands
 
 | Feature | Description | Status |
@@ -125,6 +156,12 @@ ppxai provides:
 
 **Note:** Using `/context` instead of `/agents` - clearer naming, avoids confusion with agent mode.
 
+**Files to modify:**
+- `ppxai/commands.py` - Add `/context` command handler
+- `ppxai/common/commands.py` - Add to COMMANDS list for autocomplete
+- `ppxai/server/http.py` - Add `GET /context`, `POST /context/reload`
+- `vscode-extension/src/httpClient.ts` - Add context API calls
+
 ### v1.13.3 - Context Enhancements
 
 | Feature | Description | Status |
@@ -133,6 +170,17 @@ ppxai provides:
 | **Conditional sections** | `<!-- if provider:gemini -->` blocks | Planned |
 | **Include directive** | `<!-- include: ./docs/style.md -->` | Planned |
 | **HTTP endpoint** | `GET /context` for VSCode | Planned |
+
+**Conditional syntax example:**
+```markdown
+<!-- if provider:gemini -->
+Use Google Search Grounding for real-time information.
+<!-- endif -->
+
+<!-- if provider:perplexity -->
+Cite sources using [1], [2] notation.
+<!-- endif -->
+```
 
 ---
 
