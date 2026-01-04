@@ -118,9 +118,13 @@ PLIST
 # Replace version placeholder
 sed -i '' "s/VERSION_PLACEHOLDER/$VERSION/g" "$CONTENTS_DIR/Info.plist"
 
-# Create a simple icon (placeholder - can be replaced with real icon)
-# For now, we'll skip the icon since we don't have one
-echo "Note: No custom icon - using default macOS app icon"
+# Copy app icon
+if [ -f "resources/ppxai.icns" ]; then
+    cp resources/ppxai.icns "$RESOURCES_DIR/AppIcon.icns"
+    echo "Copied app icon"
+else
+    echo "Warning: No icon found at resources/ppxai.icns"
+fi
 
 echo "App bundle created: $APP_DIR"
 ls -la "$MACOS_DIR/"

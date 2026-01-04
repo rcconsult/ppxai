@@ -301,6 +301,11 @@ jobs:
         # Copy web UI files
         cp -r ppxai/web/* "$APP_DIR/Contents/Resources/web/"
 
+        # Copy app icon
+        if [ -f "resources/ppxai.icns" ]; then
+            cp resources/ppxai.icns "$APP_DIR/Contents/Resources/AppIcon.icns"
+        fi
+
         # Create Info.plist
         cat > "$APP_DIR/Contents/Info.plist" << 'PLIST'
         <?xml version="1.0" encoding="UTF-8"?>
@@ -321,6 +326,8 @@ jobs:
             <string>ppxai-desktop</string>
             <key>CFBundlePackageType</key>
             <string>APPL</string>
+            <key>CFBundleIconFile</key>
+            <string>AppIcon</string>
             <key>LSMinimumSystemVersion</key>
             <string>10.13</string>
             <key>NSHighResolutionCapable</key>
