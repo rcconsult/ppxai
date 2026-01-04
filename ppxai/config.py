@@ -18,9 +18,12 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 from dotenv import load_dotenv
 
-# Load .env file from the current working directory (standard behavior)
-# This allows users to place .env in their project root
-load_dotenv()
+# Load .env files in priority order:
+# 1. Current working directory (project-specific)
+# 2. ~/.ppxai/.env (user-specific, for standalone binaries)
+# Later loads don't override existing environment variables
+load_dotenv()  # Current directory
+load_dotenv(Path.home() / ".ppxai" / ".env")  # User config directory
 
 # Directories for data storage
 PPXAI_HOME = Path.home() / ".ppxai"
