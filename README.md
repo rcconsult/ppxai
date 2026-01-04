@@ -15,20 +15,36 @@
 
 ## Quick Start
 
-### Option 1: Standalone Binary (No Python Required)
+### Option 1: One-Line Install (Recommended)
 
-1. Download from [Releases](../../releases):
-   - `ppxai-{platform}` (TUI binary)
-   - `ppxai-server-{platform}` + `ppxai-1.13.0.vsix` (for VSCode)
+```bash
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash
+```
 
-2. Create `.env` with your API key:
-   ```bash
-   PERPLEXITY_API_KEY=pplx-xxxxx   # or GEMINI_API_KEY, OPENAI_API_KEY, etc.
-   ```
+This installs `ppxai` and `ppxai-server` to `~/.local/bin`. Then:
 
-3. Run: `./ppxai` (TUI) or `./ppxai-server` + install VSIX (VSCode)
+```bash
+# Add to PATH (if not already)
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
 
-### Option 2: From Source
+# Set up API key
+echo 'PERPLEXITY_API_KEY=pplx-xxxxx' > ~/.ppxai/.env
+
+# Run
+ppxai
+```
+
+With VSCode extension: `curl -sSL ... | bash -s -- --with-extension`
+
+See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed installation options.
+
+### Option 2: Download Binaries
+
+Download from [Releases](../../releases):
+- `ppxai-{platform}` (TUI binary)
+- `ppxai-server-{platform}` + `ppxai-1.13.0.vsix` (for VSCode)
+
+### Option 3: From Source
 
 ```bash
 git clone https://github.com/rcconsult/ppxai.git && cd ppxai

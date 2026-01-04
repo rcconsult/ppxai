@@ -7,6 +7,7 @@
 
 import * as vscode from 'vscode';
 import { HttpClient, StreamEvent } from './httpClient';
+import { startServer, stopServer, onServerStatusChange } from './extension';
 
 // Slash command definitions
 const SLASH_COMMANDS: Record<string, { description: string; usage: string }> = {
@@ -90,6 +91,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 case 'toggleDebugLog':
                     await this.handleToggleDebugLog(message.enable);
                     break;
+                case 'toggleServer':
+                    await this.handleToggleServer(message.stop);
+                    break;
                 case 'toggleAgent':
                     await this.handleToggleAgent(message.enable);
                     break;
@@ -138,20 +142,44 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     private async initializeBackend() {
         try {
+            // Register for server status changes (v1.13.1)
+            onServerStatusChange((running: boolean) => {
+                this.updateServerStatus(running);
+            });
+
             // Connect to ppxai-server if not running
             if (!this._backend.isRunning()) {
+                // Show connecting state (v1.13.1)
+                this._view?.webview.postMessage({
+                    type: 'serverStatus',
+                    connected: false,
+                    connecting: true
+                });
                 this._view?.webview.postMessage({
                     type: 'systemMessage',
                     content: 'Connecting to ppxai-server...'
                 });
                 const connected = await this._backend.start();
+                // Update server status (v1.13.1)
+                this._view?.webview.postMessage({
+                    type: 'serverStatus',
+                    connected: connected,
+                    connecting: false
+                });
                 if (!connected) {
                     this._view?.webview.postMessage({
                         type: 'error',
-                        content: 'Could not connect to ppxai-server. Please start it with: uv run ppxai-server'
+                        content: 'Could not connect to ppxai-server. Click the server badge to start it, or run: ppxai-server'
                     });
                     return;
                 }
+            } else {
+                // Already connected (v1.13.1)
+                this._view?.webview.postMessage({
+                    type: 'serverStatus',
+                    connected: true,
+                    connecting: false
+                });
             }
 
             // Set working directory for context injection
@@ -1681,6 +1709,72 @@ Review your previous actions and continue. If the task is complete, respond with
         }
     }
 
+    /**
+     * Handle server start/stop toggle (v1.13.1)
+     */
+    private async handleToggleServer(stop: boolean) {
+        if (!this._view) { return; }
+
+        // Show connecting state
+        this._view.webview.postMessage({
+            type: 'serverStatus',
+            connected: false,
+            connecting: true
+        });
+
+        try {
+            if (stop) {
+                await stopServer();
+                this._view.webview.postMessage({
+                    type: 'serverStatus',
+                    connected: false,
+                    connecting: false
+                });
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: '✓ Server stopped'
+                });
+            } else {
+                const started = await startServer();
+                this._view.webview.postMessage({
+                    type: 'serverStatus',
+                    connected: started,
+                    connecting: false
+                });
+                if (started) {
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: '✓ Server started successfully'
+                    });
+                    // Re-initialize after server starts
+                    await this.initializeBackend();
+                }
+            }
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'serverStatus',
+                connected: false,
+                connecting: false
+            });
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Failed to toggle server: ${error}`
+            });
+        }
+    }
+
+    /**
+     * Update server status in webview (v1.13.1)
+     */
+    public updateServerStatus(connected: boolean) {
+        if (!this._view) { return; }
+        this._view.webview.postMessage({
+            type: 'serverStatus',
+            connected: connected,
+            connecting: false
+        });
+    }
+
     private async updateDebugLogStatus() {
         if (!this._view) { return; }
 
@@ -2656,6 +2750,52 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             font-weight: 500;
         }
 
+        /* Server status badge - v1.13.1 */
+        .server-badge {
+            background: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .server-badge:hover {
+            background: var(--vscode-button-hoverBackground);
+            border-color: var(--vscode-focusBorder);
+        }
+
+        .server-badge.disconnected {
+            background: var(--vscode-inputValidation-errorBackground, #5a1d1d);
+            color: var(--vscode-inputValidation-errorForeground, #f48771);
+        }
+
+        .server-badge.connected {
+            background: var(--vscode-testing-iconPassed, #89d185);
+            color: var(--vscode-editor-background);
+        }
+
+        .server-badge.connecting {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .server-indicator {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
         .workspace-info {
             font-size: 10px;
             color: var(--vscode-descriptionForeground);
@@ -3438,6 +3578,10 @@ A: Use \`/tools disable\` or choose "never" when prompted.
     <div class="header">
         <div class="status">
             <span class="version-badge" title="Extension version">v${this._context.extension.packageJSON.version}</span>
+            <button class="server-badge disconnected" id="serverBadge" title="Click to start/stop server">
+                <span class="server-indicator"></span>
+                <span id="serverStatus">Disconnected</span>
+            </button>
             <span><span id="provider">Loading...</span> / <span id="model">...</span></span>
             <button class="tools-badge disabled" id="toolsBadge" title="Click to toggle tools">Tools: off</button>
             <button class="agent-badge disabled" id="agentBadge" title="Click to toggle agent mode">Agent: off</button>
@@ -3498,6 +3642,8 @@ A: Use \`/tools disable\` or choose "never" when prompted.
         const sendBtn = document.getElementById('sendBtn');
         const providerSpan = document.getElementById('provider');
         const modelSpan = document.getElementById('model');
+        const serverBadge = document.getElementById('serverBadge');
+        const serverStatus = document.getElementById('serverStatus');
         const toolsBadge = document.getElementById('toolsBadge');
         const streamingBadge = document.getElementById('streamingBadge');
         const usageBadge = document.getElementById('usageBadge');
@@ -3972,6 +4118,30 @@ A: Use \`/tools disable\` or choose "never" when prompted.
         });
 
         // Tools badge click handler - toggle tools on/off
+        // Server badge click handler - toggle server on/off (v1.13.1)
+        serverBadge.addEventListener('click', () => {
+            const isConnected = serverBadge.classList.contains('connected');
+            vscode.postMessage({ type: 'toggleServer', stop: isConnected });
+        });
+
+        // Function to update server status (v1.13.1)
+        function updateServerStatus(connected, connecting = false) {
+            serverBadge.classList.remove('connected', 'disconnected', 'connecting');
+            if (connecting) {
+                serverBadge.classList.add('connecting');
+                serverStatus.textContent = 'Connecting...';
+                serverBadge.title = 'Connecting to server...';
+            } else if (connected) {
+                serverBadge.classList.add('connected');
+                serverStatus.textContent = 'Connected';
+                serverBadge.title = 'Click to stop server';
+            } else {
+                serverBadge.classList.add('disconnected');
+                serverStatus.textContent = 'Disconnected';
+                serverBadge.title = 'Click to start server';
+            }
+        }
+
         toolsBadge.addEventListener('click', () => {
             const isEnabled = toolsBadge.classList.contains('enabled');
             vscode.postMessage({ type: 'toggleTools', enable: !isEnabled });
@@ -4270,6 +4440,11 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                     } else {
                         workspaceInfoEl.style.display = 'none';
                     }
+                    break;
+
+                case 'serverStatus':
+                    // Update server status badge (v1.13.1)
+                    updateServerStatus(message.connected, message.connecting);
                     break;
 
                 case 'history':

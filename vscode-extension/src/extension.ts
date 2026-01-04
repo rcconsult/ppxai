@@ -1,13 +1,141 @@
 import * as vscode from 'vscode';
+import * as os from 'os';
 import { HttpClient, getHttpClient, resetHttpClient } from './httpClient';
 import { ChatViewProvider } from './chatPanel';
 import { SessionsProvider } from './sessionsProvider';
 
 let backend: HttpClient;
 let extensionVersion: string = 'unknown';
+let serverTerminal: vscode.Terminal | undefined;
+const serverStatusCallbacks: Array<(running: boolean) => void> = [];
 
 export function getExtensionVersion(): string {
     return extensionVersion;
+}
+
+/**
+ * Register a callback to be notified of server status changes (v1.13.1)
+ */
+export function onServerStatusChange(callback: (running: boolean) => void): void {
+    serverStatusCallbacks.push(callback);
+}
+
+/**
+ * Notify all listeners of server status change
+ */
+function notifyServerStatus(running: boolean): void {
+    for (const callback of serverStatusCallbacks) {
+        callback(running);
+    }
+}
+
+/**
+ * Find the ppxai-server binary (v1.13.1)
+ * Returns the binary name, expecting it to be in PATH (via install.sh or system)
+ */
+function findServerBinary(): string {
+    const platform = os.platform();
+    const binaryName = platform === 'win32' ? 'ppxai-server.exe' : 'ppxai-server';
+
+    // Return just the binary name - let the shell find it in PATH
+    // If user installed via install.sh, ~/.local/bin should be in PATH
+    // Otherwise, uv run ppxai-server works as fallback
+    return binaryName;
+}
+
+/**
+ * Check if server is running (v1.13.1)
+ */
+export async function isServerRunning(): Promise<boolean> {
+    return backend?.isRunning() && await backend?.isAvailable();
+}
+
+/**
+ * Start the ppxai-server in a terminal (v1.13.1)
+ */
+export async function startServer(): Promise<boolean> {
+    // Check if already running
+    if (await isServerRunning()) {
+        vscode.window.showInformationMessage('ppxai-server is already running');
+        notifyServerStatus(true);
+        return true;
+    }
+
+    // Check if terminal exists but server not responding
+    if (serverTerminal) {
+        serverTerminal.dispose();
+        serverTerminal = undefined;
+    }
+
+    // Determine the command to run
+    // Try ppxai-server directly first (if in PATH via install.sh)
+    // Fall back to 'uv run ppxai-server' for dev environments
+    const serverBinary = findServerBinary();
+
+    // Create terminal with specific name
+    serverTerminal = vscode.window.createTerminal({
+        name: 'ppxai-server',
+        hideFromUser: false, // Show terminal so user can see output
+        iconPath: new vscode.ThemeIcon('server-process')
+    });
+
+    // Try running the server
+    // First try direct binary, if that fails user will see error and can try uv run
+    serverTerminal.sendText(`${serverBinary} || uv run ppxai-server`);
+    serverTerminal.show(true); // Show but don't take focus
+
+    // Wait a bit for server to start, then check health
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Try to connect
+    const started = await backend.start();
+    if (started) {
+        vscode.window.showInformationMessage('ppxai-server started successfully');
+        notifyServerStatus(true);
+        return true;
+    }
+
+    // Give it more time and retry
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    const retryStarted = await backend.start();
+    if (retryStarted) {
+        vscode.window.showInformationMessage('ppxai-server started successfully');
+        notifyServerStatus(true);
+        return true;
+    }
+
+    vscode.window.showWarningMessage('ppxai-server may still be starting. Check the terminal for status.');
+    return false;
+}
+
+/**
+ * Stop the ppxai-server (v1.13.1)
+ */
+export async function stopServer(): Promise<void> {
+    if (serverTerminal) {
+        // Send Ctrl+C to gracefully stop
+        serverTerminal.sendText('\x03'); // Ctrl+C
+        await new Promise(resolve => setTimeout(resolve, 500));
+        serverTerminal.dispose();
+        serverTerminal = undefined;
+    }
+
+    backend.stop();
+    notifyServerStatus(false);
+    vscode.window.showInformationMessage('ppxai-server stopped');
+}
+
+/**
+ * Toggle server state (v1.13.1)
+ */
+export async function toggleServer(): Promise<boolean> {
+    const running = await isServerRunning();
+    if (running) {
+        await stopServer();
+        return false;
+    } else {
+        return await startServer();
+    }
 }
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -271,10 +399,65 @@ export async function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    // Server control commands (v1.13.1)
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ppxai.startServer', async () => {
+            await startServer();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ppxai.stopServer', async () => {
+            await stopServer();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ppxai.toggleServer', async () => {
+            await toggleServer();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ppxai.serverStatus', async () => {
+            const running = await isServerRunning();
+            if (running) {
+                const health = await backend.getHealth();
+                vscode.window.showInformationMessage(
+                    `ppxai-server is running (v${health.version})`
+                );
+            } else {
+                const action = await vscode.window.showWarningMessage(
+                    'ppxai-server is not running',
+                    'Start Server'
+                );
+                if (action === 'Start Server') {
+                    await startServer();
+                }
+            }
+        })
+    );
+
+    // Handle terminal close events to track server state
+    context.subscriptions.push(
+        vscode.window.onDidCloseTerminal((terminal) => {
+            if (terminal === serverTerminal) {
+                serverTerminal = undefined;
+                backend.stop();
+                notifyServerStatus(false);
+            }
+        })
+    );
+
     console.log('ppxai extension activated');
 }
 
 export function deactivate() {
+    // Stop server terminal if running
+    if (serverTerminal) {
+        serverTerminal.dispose();
+        serverTerminal = undefined;
+    }
     // Reset HTTP client
     resetHttpClient();
 }

@@ -60,6 +60,30 @@
         "command": "ppxai.interrupt",
         "title": "Interrupt Current Request",
         "category": "ppxai"
+      },
+      {
+        "command": "ppxai.startServer",
+        "title": "Start Server",
+        "category": "ppxai",
+        "icon": "$(server-process)"
+      },
+      {
+        "command": "ppxai.stopServer",
+        "title": "Stop Server",
+        "category": "ppxai",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "ppxai.toggleServer",
+        "title": "Toggle Server",
+        "category": "ppxai",
+        "icon": "$(server)"
+      },
+      {
+        "command": "ppxai.serverStatus",
+        "title": "Server Status",
+        "category": "ppxai",
+        "icon": "$(server-environment)"
       }
     ],
     "menus": {

@@ -91,6 +91,13 @@ export class HttpClient {
     }
 
     /**
+     * Get the base URL (v1.13.1)
+     */
+    getBaseUrl(): string {
+        return this.baseUrl;
+    }
+
+    /**
      * Check if server is available and mark as ready
      */
     async start(): Promise<boolean> {

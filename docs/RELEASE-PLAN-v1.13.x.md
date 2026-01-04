@@ -89,7 +89,63 @@ See [RELEASE-NOTES-v1.13.0.md](RELEASE-NOTES-v1.13.0.md) for full details.
 
 ---
 
-### v1.13.1 - AGENTS.md Support (Core)
+### v1.13.1 - Installation & Server Control (Planned)
+
+**Goal:** Frictionless installation and VSCode server management
+
+#### Features
+
+| Feature | Description |
+|---------|-------------|
+| `install.sh` | curl+bash installer for TUI and server binaries |
+| VSCode Server Badge | Click to start/stop ppxai-server from extension |
+| Terminal Integration | Server runs in VSCode terminal with output visible |
+| Installation Guide | Comprehensive docs/INSTALLATION.md |
+
+#### Installation Script (`install.sh`)
+
+```bash
+# One-line install
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash
+
+# Options
+--version VERSION    # Specific version (default: latest)
+--with-extension     # Also download VSCode VSIX
+--server-only        # Only ppxai-server
+--install-dir DIR    # Custom directory (default: ~/.local/bin)
+```
+
+#### VSCode Server Control
+
+- **Server Badge** - Shows connection status (Connected/Disconnected/Connecting)
+- **Click to Toggle** - Start or stop server directly from the UI
+- **Terminal Output** - Server runs in named terminal for visibility
+- **Auto-Reconnect** - Re-initializes after server starts
+
+#### New Commands (package.json)
+
+```json
+"ppxai.startServer"  - Start ppxai-server in terminal
+"ppxai.stopServer"   - Stop ppxai-server
+"ppxai.toggleServer" - Toggle server state
+"ppxai.serverStatus" - Show server status
+```
+
+#### Files Changed
+
+| File | Changes |
+|------|---------|
+| `install.sh` | NEW - curl+bash installer |
+| `docs/INSTALLATION.md` | NEW - Installation guide |
+| `extension.ts` | Server terminal management, commands |
+| `chatPanel.ts` | Server badge, status updates |
+| `httpClient.ts` | `getBaseUrl()` method |
+| `package.json` | Server control commands |
+| `README.md` | Updated quick start with curl+bash |
+
+---
+
+### v1.13.2 - AGENTS.md Support (Core)
 
 **Goal:** Load project context from working directory
 
@@ -160,7 +216,7 @@ def test_no_bootstrap_file_is_fine():
         assert engine._bootstrap_sources == []
 ```
 
-### v1.13.1 - File Precedence
+### v1.13.3 - File Precedence
 
 **Goal:** Support global, project, and subdirectory contexts
 
@@ -205,7 +261,7 @@ def test_missing_intermediate_is_fine():
     """Works if only global and subdir exist, no project."""
 ```
 
-### v1.13.2 - `/context` Commands
+### v1.13.4 - `/context` Commands
 
 **Goal:** User control over loaded context
 
@@ -251,7 +307,7 @@ Bootstrap Context:
   ...
 ```
 
-### v1.13.3 - Context Enhancements
+### v1.13.5 - Context Enhancements
 
 **Goal:** Advanced context features
 
@@ -290,7 +346,26 @@ Prefer using tools over asking the user for information.
 
 ## Implementation Checklist
 
-### v1.13.0
+### v1.13.0 ✅ RELEASED
+- [x] Premium web search tool
+- [x] SSL_VERIFY environment variable
+- [x] `native_tool_calling` capability
+- [x] `ToolUsage` dataclass
+- [x] Enhanced tool parsing
+- [x] 525 tests passing
+
+### v1.13.1 (Current)
+- [x] Create `install.sh` curl+bash installer
+- [x] Add `--with-extension` option to download VSIX
+- [x] Add VSCode server status badge
+- [x] Add server start/stop via terminal
+- [x] Add server control commands (start, stop, toggle, status)
+- [x] Create `docs/INSTALLATION.md`
+- [x] Update README.md quick start
+- [ ] Test installation on clean machine
+- [ ] Test VSCode server control
+
+### v1.13.2
 - [ ] Add `find_bootstrap_files()` to ContextInjector
 - [ ] Add `_bootstrap_context` to EngineClient
 - [ ] Add `load_bootstrap_context()` method
@@ -303,14 +378,14 @@ Prefer using tools over asking the user for information.
 - [ ] Test in TUI
 - [ ] Test in VSCode extension
 
-### v1.13.1
+### v1.13.3
 - [ ] Add global path search (`~/.ppxai/`)
 - [ ] Add git root detection
 - [ ] Implement merge strategy
 - [ ] Add source tracking for each file
 - [ ] Add tests for precedence
 
-### v1.13.2
+### v1.13.4
 - [ ] Add `/context` command handler
 - [ ] Implement `show` subcommand
 - [ ] Implement `reload` subcommand
@@ -320,7 +395,7 @@ Prefer using tools over asking the user for information.
 - [ ] Add HTTP endpoints
 - [ ] Update VSCode extension
 
-### v1.13.3
+### v1.13.5
 - [ ] Add token counting
 - [ ] Implement conditional parsing
 - [ ] Implement include directive
