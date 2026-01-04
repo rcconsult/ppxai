@@ -36,7 +36,7 @@ def validate_release(version: str) -> bool:
             "critical": True,
         },
         {
-            "file": "ppxai/__init__.py",
+            "file": "ppxai/version.py",
             "pattern": r'__version__\s*=\s*"{version}"',
             "critical": True,
         },

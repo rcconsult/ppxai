@@ -26,7 +26,7 @@ from pydantic import BaseModel
 
 from ..engine import EngineClient, EventType
 from ..common.logger import get_logger
-from .. import __version__
+from ..version import __version__
 
 # Global engine instance (managed by lifespan)
 engine: Optional[EngineClient] = None

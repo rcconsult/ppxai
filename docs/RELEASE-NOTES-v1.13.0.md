@@ -4,9 +4,25 @@
 
 ## Summary
 
-Major release focused on custom provider support: Premium web search for vLLM/Ollama, native tool calling, comprehensive usage tracking, and enhanced tool parsing. This release validates that custom providers work as reliably as Perplexity and Gemini.
+Major release with **one-line installer**, server binary fix, premium web search for vLLM/Ollama, native tool calling, and comprehensive usage tracking. This release validates that custom providers work as reliably as Perplexity and Gemini.
+
+**Highlights:**
+- 🚀 New `curl | bash` installer for easy binary installation
+- 🔧 **CRITICAL FIX:** Server binaries now work correctly (broken since v1.11.7)
+- 🔍 Premium web search tool with Perplexity/Gemini fallback for custom providers
+- 📊 Per-tool usage tracking with cost attribution
 
 ## What's New
+
+### One-Line Installer
+- **`install.sh`** - New curl-based installer for easy binary installation
+  ```bash
+  curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash
+  ```
+- **Platform Detection** - Automatically detects OS (Linux/macOS/Windows) and architecture (ARM64/Intel)
+- **Options** - `--version`, `--server-only`, `--tui-only`, `--with-extension`, `--install-dir`
+- **Post-Install Guidance** - PATH setup instructions and API key configuration
+- **Documentation** - Comprehensive [INSTALLATION.md](docs/INSTALLATION.md) guide
 
 ### Premium Web Search Tool
 - **Custom Provider Support** - vLLM, Ollama, and other custom providers can now use premium web search
@@ -40,6 +56,13 @@ Major release focused on custom provider support: Premium web search for vLLM/Ol
 ### `/tools status` Enhancement
 - **Web Search Provider Display** - Shows which web search backend is active
 - **Premium vs Free Indicator** - Clearly indicates Perplexity/Gemini (premium) or DuckDuckGo (free)
+
+### Bug Fixes
+- **CRITICAL: Server Binary Fixed** - `ppxai-server` binaries now work correctly
+  - **Affected releases:** v1.11.7 through v1.13.0 (initial) had broken server binaries
+  - **Root cause:** Import chain pulled `prompt_toolkit` (TUI-only dependency) into server
+  - **Fix:** Moved `__version__` to isolated `ppxai/version.py` module
+  - **Impact:** Server binaries no longer crash with `ModuleNotFoundError: No module named 'prompt_toolkit'`
 
 ### Documentation Updates
 - Updated test counts from 406 to 525 tests across README.md and ROADMAP.md
@@ -78,6 +101,9 @@ For native tool calling with vLLM:
 ## Technical Details
 
 ### New Files
+- `install.sh` - One-line curl installer for binary installation
+- `docs/INSTALLATION.md` - Comprehensive installation guide
+- `ppxai/version.py` - Isolated version module (fixes server binary import chain)
 - `ppxai/engine/tools/builtin/web_premium.py` - Premium web search with Perplexity/Gemini fallback
 - `tests/test_engine_tool_parsing.py` - 440+ lines of tool parsing tests
 - `tests/test_web_premium.py` - Premium web search tests
@@ -111,6 +137,9 @@ ProviderCapabilities(
 
 | File | Changes |
 |------|---------|
+| `install.sh` | **New** - One-line curl installer |
+| `docs/INSTALLATION.md` | **New** - Comprehensive installation guide |
+| `ppxai/version.py` | **New** - Isolated version module for server binary |
 | `ppxai/engine/types.py` | Added `ToolUsage`, `native_tool_calling` capability |
 | `ppxai/engine/providers/openai_compat.py` | Native tool calling, streaming tool calls |
 | `ppxai/engine/client.py` | Tool usage tracking integration |

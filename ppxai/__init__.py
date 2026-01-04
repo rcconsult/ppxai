@@ -104,4 +104,4 @@ __all__ = [
     "main",
 ]
 
-__version__ = "1.13.0"
+from .version import __version__
