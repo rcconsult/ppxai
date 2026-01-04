@@ -256,8 +256,101 @@ jobs:
         name: ppxai-vscode-${{ steps.version.outputs.version }}.vsix
         path: vscode-extension/*.vsix
 
+  build-dmg:
+    needs: [build-desktop, build-server]
+    runs-on: macos-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download desktop artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ppxai-desktop-macos-arm64
+        path: dist/
+
+    - name: Download server artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ppxai-server-macos-arm64
+        path: dist/
+
+    - name: Get version
+      id: version
+      run: echo "version=$(grep 'version = ' pyproject.toml | head -1 | cut -d'"' -f2)" >> $GITHUB_OUTPUT
+
+    - name: Create app bundle and DMG
+      run: |
+        # Rename binaries
+        mv dist/ppxai-desktop dist/ppxai-desktop-bin
+        mv dist/ppxai-server dist/ppxai-server-bin
+
+        # Create .app bundle structure
+        APP_DIR="dist/ppxai.app"
+        mkdir -p "$APP_DIR/Contents/MacOS"
+        mkdir -p "$APP_DIR/Contents/Resources/web"
+
+        # Copy binaries
+        cp dist/ppxai-desktop-bin "$APP_DIR/Contents/MacOS/ppxai-desktop"
+        cp dist/ppxai-server-bin "$APP_DIR/Contents/MacOS/ppxai-server"
+        chmod +x "$APP_DIR/Contents/MacOS/ppxai-desktop"
+        chmod +x "$APP_DIR/Contents/MacOS/ppxai-server"
+
+        # Copy web UI files
+        cp -r ppxai/web/* "$APP_DIR/Contents/Resources/web/"
+
+        # Create Info.plist
+        cat > "$APP_DIR/Contents/Info.plist" << 'PLIST'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleName</key>
+            <string>ppxai</string>
+            <key>CFBundleDisplayName</key>
+            <string>ppxai Desktop</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.ppxai.desktop</string>
+            <key>CFBundleVersion</key>
+            <string>${{ steps.version.outputs.version }}</string>
+            <key>CFBundleShortVersionString</key>
+            <string>${{ steps.version.outputs.version }}</string>
+            <key>CFBundleExecutable</key>
+            <string>ppxai-desktop</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>LSMinimumSystemVersion</key>
+            <string>10.13</string>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+        </dict>
+        </plist>
+        PLIST
+
+        # Create DMG
+        DMG_CONTENTS="dist/dmg-contents"
+        mkdir -p "$DMG_CONTENTS"
+        cp -r "$APP_DIR" "$DMG_CONTENTS/"
+        ln -s /Applications "$DMG_CONTENTS/Applications"
+
+        hdiutil create -volname "ppxai Desktop" \
+            -srcfolder "$DMG_CONTENTS" \
+            -ov -format UDZO \
+            "dist/ppxai-${{ steps.version.outputs.version }}-macos-arm64.dmg"
+
+        rm -rf "$DMG_CONTENTS"
+        ls -lh dist/*.dmg
+
+    - name: Upload DMG artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ppxai-${{ steps.version.outputs.version }}-macos-arm64.dmg
+        path: dist/ppxai-${{ steps.version.outputs.version }}-macos-arm64.dmg
+
   release:
-    needs: [build-tui, build-server, build-desktop, build-web-ui, build-vscode]
+    needs: [build-tui, build-server, build-desktop, build-web-ui, build-vscode, build-dmg]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
 
@@ -299,6 +392,12 @@ jobs:
         WEBUI_PATH=$(find artifacts -name "ppxai-web-ui-*.zip" -type f | head -1)
         echo "path=$WEBUI_PATH" >> $GITHUB_OUTPUT
 
+    - name: Find DMG
+      id: dmg
+      run: |
+        DMG_PATH=$(find artifacts -name "ppxai-*-macos-arm64.dmg" -type f | head -1)
+        echo "path=$DMG_PATH" >> $GITHUB_OUTPUT
+
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
@@ -314,6 +413,7 @@ jobs:
           artifacts/ppxai-desktop-windows.exe/ppxai-desktop-windows.exe
           ${{ steps.vsix.outputs.path }}
           ${{ steps.webui.outputs.path }}
+          ${{ steps.dmg.outputs.path }}
         draft: false
         prerelease: false
         make_latest: true
