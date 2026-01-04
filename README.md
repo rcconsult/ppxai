@@ -42,7 +42,7 @@ See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed installation optio
 
 Download from [Releases](../../releases):
 - `ppxai-{platform}` (TUI binary)
-- `ppxai-server-{platform}` + `ppxai-1.13.0.vsix` (for VSCode)
+- `ppxai-server-{platform}` + `ppxai-1.13.1.vsix` (for VSCode)
 
 ### Option 3: From Source
 

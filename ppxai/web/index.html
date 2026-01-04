@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ppxai - AI Chat</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="lib/highlight-github-dark.css">
+    <script src="lib/marked.min.js"></script>
+    <script src="lib/highlight.min.js"></script>
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <span class="logo">ppxai</span>
+                <span class="version-badge" id="versionBadge">v1.13.1</span>
+                <button class="server-badge connected" id="serverBadge" title="Server status">
+                    <span class="server-indicator"></span>
+                    <span id="serverStatus">Connected</span>
+                </button>
+            </div>
+            <div class="header-center">
+                <select id="providerSelect" class="header-select" title="Select provider">
+                    <option value="">Loading...</option>
+                </select>
+                <span class="separator">/</span>
+                <select id="modelSelect" class="header-select" title="Select model">
+                    <option value="">...</option>
+                </select>
+            </div>
+            <div class="header-right">
+                <button class="badge tools-badge" id="toolsBadge" title="Toggle tools">
+                    <span class="badge-icon">🛠</span>
+                    <span id="toolsStatus">Tools: off</span>
+                </button>
+                <button class="badge agent-badge" id="agentBadge" title="Toggle agent mode">
+                    <span class="badge-icon">🤖</span>
+                    <span id="agentStatus">Agent: off</span>
+                </button>
+                <button class="badge undo-badge hidden" id="undoBadge" title="Undo last agent action">
+                    ↶ Undo
+                </button>
+                <button class="badge streaming-badge hidden" id="streamingBadge" title="Press Esc to stop">
+                    ⏹ Streaming...
+                </button>
+                <span class="usage-badge" id="usageBadge" title="Token usage">0↓/0↑</span>
+            </div>
+            <div class="header-actions">
+                <button class="header-btn" id="clearBtn" title="Clear conversation">Clear</button>
+                <button class="header-btn" id="themeBtn" title="Toggle theme">🌙</button>
+                <div class="menu-container">
+                    <button class="header-btn menu-btn" id="menuBtn">⋮</button>
+                    <div class="menu-dropdown hidden" id="menuDropdown">
+                        <div class="menu-item" id="saveSessionBtn">💾 Save Session</div>
+                        <div class="menu-item" id="exportBtn">📄 Export Answer</div>
+                        <div class="menu-separator"></div>
+                        <div class="menu-item" id="debugLogBtn">
+                            <span class="menu-indicator" id="debugIndicator"></span>
+                            Debug Log
+                        </div>
+                        <div class="menu-separator"></div>
+                        <div class="menu-item" id="settingsBtn">⚙️ Settings</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Messages Container -->
+        <main class="messages" id="messagesContainer">
+            <div class="welcome-message">
+                <h2>Welcome to ppxai</h2>
+                <p>AI-powered chat with multiple providers</p>
+                <div class="quick-commands">
+                    <button class="quick-cmd" data-cmd="/help">📖 Help</button>
+                    <button class="quick-cmd" data-cmd="/tools enable">🛠 Enable Tools</button>
+                    <button class="quick-cmd" data-cmd="/provider list">🔄 Providers</button>
+                    <button class="quick-cmd" data-cmd="/model list">📋 Models</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Input Container -->
+        <footer class="input-container">
+            <div class="input-hint">
+                Type <kbd>/help</kbd> for commands • <kbd>@file</kbd> to reference • <kbd>↑/↓</kbd> for history
+            </div>
+            <div class="autocomplete-container">
+                <div class="autocomplete-dropdown hidden" id="autocompleteDropdown"></div>
+                <div class="input-wrapper">
+                    <textarea
+                        id="messageInput"
+                        placeholder="Ask anything or type / for commands..."
+                        rows="1"
+                        autofocus
+                    ></textarea>
+                    <button id="sendBtn" class="send-btn">
+                        <span class="send-icon">➤</span>
+                        <span class="send-text">Send</span>
+                    </button>
+                </div>
+            </div>
+        </footer>
+
+        <!-- Consent Dialog -->
+        <div class="modal hidden" id="consentModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="consentTitle">Permission Required</h3>
+                </div>
+                <div class="modal-body">
+                    <p id="consentMessage"></p>
+                    <pre id="consentDetails" class="consent-details"></pre>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="consentNo">Deny</button>
+                    <button class="btn btn-secondary" id="consentNever">Never for this</button>
+                    <button class="btn btn-secondary" id="consentAlways">Always allow</button>
+                    <button class="btn btn-primary" id="consentYes">Allow</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div class="modal hidden" id="settingsModal">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h3>Settings</h3>
+                    <button class="modal-close" id="closeSettings">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="settings-section">
+                        <h4>Appearance</h4>
+                        <label class="setting-item">
+                            <span>Theme</span>
+                            <select id="themeSetting">
+                                <option value="dark">Dark</option>
+                                <option value="light">Light</option>
+                                <option value="system">System</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="settings-section">
+                        <h4>Server</h4>
+                        <label class="setting-item">
+                            <span>Server URL</span>
+                            <input type="text" id="serverUrl" value="http://127.0.0.1:54320" />
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -655,19 +655,29 @@ def verify_release(version: str) -> bool:
         assets = [a["name"] for a in data.get("assets", [])]
 
         expected = [
+            # VSCode extension
             f"ppxai-{version}.vsix",
+            # TUI binaries
             "ppxai-linux-amd64",
             "ppxai-macos-arm64",
             "ppxai-windows.exe",
+            # Server binaries
             "ppxai-server-linux-amd64",
             "ppxai-server-macos-arm64",
             "ppxai-server-windows.exe",
+            # Desktop binaries (v1.13.1+)
+            "ppxai-desktop-linux-amd64",
+            "ppxai-desktop-macos-arm64",
+            "ppxai-desktop-windows.exe",
+            # Web UI zip (v1.13.1+)
+            f"ppxai-web-ui-{version}.zip",
         ]
 
-        # Optional Intel Mac builds
+        # Optional Intel Mac builds (built locally, not by CI)
         optional = [
             "ppxai-macos-intel",
             "ppxai-server-macos-intel",
+            "ppxai-desktop-macos-intel",
         ]
 
         missing = [e for e in expected if e not in assets]

@@ -5,6 +5,35 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.1] - 2026-01-04
+
+### Added - Desktop Web App
+
+#### ppxai-desktop Launcher
+- **Standalone launcher** - Start server and open browser with one click
+- **macOS app bundle** - Native `.app` with DMG installer for drag-and-drop install
+- **Cross-platform binaries** - Linux, Windows, macOS (ARM + Intel)
+- **Auto-install** - Web UI files auto-copied to `~/.ppxai/web/` on first run
+
+#### Web UI
+- **Full-featured chat** - Browser-based chat interface with SSE streaming
+- **Feature parity** - All slash commands, autocomplete, tools, agent mode, themes
+- **Project selector** - Quick switch between recent project directories
+- **Provider/model switching** - Dropdown selectors in header
+- **Usage tracking** - Token counts and cost display
+
+#### UI Improvements
+- **Tool call ordering** - Tool calls now appear before the answer (matching VSCode)
+- **Visual badge states** - Tools and Agent badges turn green when enabled
+- **Usage tables** - Formatted markdown tables for `/usage` reports
+
+### Documentation
+- Updated INSTALLATION.md with desktop app instructions for all platforms
+- Added Linux and Windows platform-specific behavior notes
+- Added troubleshooting guide for desktop app
+
+---
+
 ## [1.13.0] - 2026-01-03
 
 ### Added - Custom Provider Parity

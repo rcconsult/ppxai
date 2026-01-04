@@ -2,9 +2,10 @@
 #
 # Build and upload macOS Intel executables to GitHub release
 #
-# Builds both:
+# Builds:
 #   - ppxai (TUI application)
 #   - ppxai-server (HTTP server for VSCode extension)
+#   - ppxai-desktop (Desktop launcher for web UI)
 #
 # Usage:
 #   ./scripts/build-intel.sh v1.9.0    # Build and upload to specific release
@@ -92,14 +93,33 @@ echo "Server build successful!"
 ls -lh dist/ppxai-server
 file dist/ppxai-server
 
+# Build desktop executable
+echo ""
+echo "Building desktop executable with PyInstaller..."
+uv run pyinstaller ppxai-desktop.spec
+
+# Verify desktop build
+if [ ! -f "dist/ppxai-desktop" ]; then
+    echo "Error: Desktop build failed - dist/ppxai-desktop not found"
+    exit 1
+fi
+
+echo ""
+echo "Desktop build successful!"
+ls -lh dist/ppxai-desktop
+file dist/ppxai-desktop
+
 # Rename for release
 TUI_ASSET="ppxai-macos-intel"
 SERVER_ASSET="ppxai-server-macos-intel"
+DESKTOP_ASSET="ppxai-desktop-macos-intel"
 cp dist/ppxai "dist/$TUI_ASSET"
 cp dist/ppxai-server "dist/$SERVER_ASSET"
+cp dist/ppxai-desktop "dist/$DESKTOP_ASSET"
 echo ""
 echo "Created: dist/$TUI_ASSET"
 echo "Created: dist/$SERVER_ASSET"
+echo "Created: dist/$DESKTOP_ASSET"
 
 # Upload to release if version specified
 if [ -n "$VERSION" ]; then
@@ -120,8 +140,8 @@ if [ -n "$VERSION" ]; then
         exit 1
     fi
 
-    # Upload both assets
-    gh release upload "$VERSION" "dist/$TUI_ASSET" "dist/$SERVER_ASSET" --clobber
+    # Upload all three assets
+    gh release upload "$VERSION" "dist/$TUI_ASSET" "dist/$SERVER_ASSET" "dist/$DESKTOP_ASSET" --clobber
 
     echo ""
     echo "Upload complete!"
@@ -129,8 +149,8 @@ if [ -n "$VERSION" ]; then
 else
     echo ""
     echo "To upload to a release, run:"
-    echo "  gh release upload <version> dist/$TUI_ASSET dist/$SERVER_ASSET"
+    echo "  gh release upload <version> dist/$TUI_ASSET dist/$SERVER_ASSET dist/$DESKTOP_ASSET"
     echo ""
     echo "Example:"
-    echo "  gh release upload v1.9.0 dist/$TUI_ASSET dist/$SERVER_ASSET"
+    echo "  gh release upload v1.9.0 dist/$TUI_ASSET dist/$SERVER_ASSET dist/$DESKTOP_ASSET"
 fi
