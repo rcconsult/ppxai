@@ -8,8 +8,12 @@ v1.12.0+: Use EngineClient for programmatic access:
     engine = EngineClient()
     engine.set_provider("perplexity")
     engine.set_model("sonar-pro")
+
+Note: TUI-specific imports (commands, main, ui) are lazy-loaded to allow
+the server to import ppxai submodules without requiring prompt_toolkit.
 """
 
+# Core imports - these are safe for both server and TUI
 from .config import (
     SESSIONS_DIR,
     EXPORTS_DIR,
@@ -34,25 +38,14 @@ from .config import (
     validate_config,
 )
 from .prompts import CODING_PROMPTS, SPEC_GUIDELINES, SPEC_TEMPLATES
-from .ui import (
-    console,
-    display_welcome,
-    display_spec_help,
-    display_models,
-    select_model,
-    select_provider,
-    display_sessions,
-    display_usage,
-    display_global_usage,
-    display_tools_table,
-    display_tool_help,
-)
 from .utils import read_file_content
-from .commands import CommandHandler, send_coding_task
-from .main import main
+from .version import __version__
 
 # Export EngineClient as the primary client interface
 from .engine import EngineClient
+
+# TUI-specific imports are lazy-loaded via __getattr__ below
+# This allows the server to import ppxai.* without requiring prompt_toolkit
 
 __all__ = [
     # Config
@@ -83,7 +76,11 @@ __all__ = [
     "CODING_PROMPTS",
     "SPEC_GUIDELINES",
     "SPEC_TEMPLATES",
-    # UI
+    # Utils
+    "read_file_content",
+    # Version
+    "__version__",
+    # UI (lazy-loaded)
     "console",
     "display_welcome",
     "display_spec_help",
@@ -95,13 +92,41 @@ __all__ = [
     "display_global_usage",
     "display_tools_table",
     "display_tool_help",
-    # Utils
-    "read_file_content",
-    # Commands
+    # Commands (lazy-loaded)
     "CommandHandler",
     "send_coding_task",
-    # Main
+    # Main (lazy-loaded)
     "main",
 ]
 
-from .version import __version__
+# Lazy loading for TUI-specific modules
+# These require prompt_toolkit which is not available in server builds
+_lazy_imports = {
+    # UI module exports
+    "console": ".ui",
+    "display_welcome": ".ui",
+    "display_spec_help": ".ui",
+    "display_models": ".ui",
+    "select_model": ".ui",
+    "select_provider": ".ui",
+    "display_sessions": ".ui",
+    "display_usage": ".ui",
+    "display_global_usage": ".ui",
+    "display_tools_table": ".ui",
+    "display_tool_help": ".ui",
+    # Commands module exports
+    "CommandHandler": ".commands",
+    "send_coding_task": ".commands",
+    # Main module exports
+    "main": ".main",
+}
+
+
+def __getattr__(name: str):
+    """Lazy load TUI-specific modules on first access."""
+    if name in _lazy_imports:
+        module_name = _lazy_imports[name]
+        import importlib
+        module = importlib.import_module(module_name, package="ppxai")
+        return getattr(module, name)
+    raise AttributeError(f"module 'ppxai' has no attribute {name!r}")
