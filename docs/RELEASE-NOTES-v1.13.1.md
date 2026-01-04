@@ -14,7 +14,7 @@ v1.13.1 introduces the **ppxai Desktop Web App** - a standalone browser-based ch
 
 - **`ppxai-desktop` binary** - Launches server and opens browser automatically
 - **macOS `.app` bundle** - Drag to Applications, launch from Launchpad
-- **macOS DMG installer** - `ppxai-VERSION-macos-arm64.dmg`
+- **macOS DMG installer** - `ppxai-VERSION-macos-intel.dmg` (ARM DMG in future releases)
 - **Cross-platform** - Binaries for Linux, Windows, and macOS (ARM + Intel)
 
 The desktop app:
@@ -40,10 +40,10 @@ Full feature parity with VSCode extension:
 
 ### Installation Options
 
-**Option A: macOS DMG (Recommended for Mac users)**
+**Option A: macOS DMG (Intel Macs)**
 ```bash
 # Download from GitHub Releases
-open ppxai-1.13.1-macos-arm64.dmg
+open ppxai-v1.13.1-macos-intel.dmg
 # Drag ppxai.app to Applications
 ```
 
@@ -88,6 +88,8 @@ chmod +x ppxai-desktop-macos-arm64 ppxai-server-macos-arm64
 | Asset | Description |
 |-------|-------------|
 | `ppxai-1.13.1.vsix` | VSCode extension |
+| `ppxai-v1.13.1-macos-intel.dmg` | macOS DMG installer (Intel) |
+| `ppxai-web-ui-1.13.1.zip` | Web UI files for manual install |
 | `ppxai-macos-arm64` | TUI binary (macOS ARM) |
 | `ppxai-macos-intel` | TUI binary (macOS Intel) |
 | `ppxai-linux-amd64` | TUI binary (Linux) |
@@ -96,6 +98,10 @@ chmod +x ppxai-desktop-macos-arm64 ppxai-server-macos-arm64
 | `ppxai-server-macos-intel` | Server binary (macOS Intel) |
 | `ppxai-server-linux-amd64` | Server binary (Linux) |
 | `ppxai-server-windows.exe` | Server binary (Windows) |
+| `ppxai-desktop-macos-arm64` | Desktop launcher (macOS ARM) |
+| `ppxai-desktop-macos-intel` | Desktop launcher (macOS Intel) |
+| `ppxai-desktop-linux-amd64` | Desktop launcher (Linux) |
+| `ppxai-desktop-windows.exe` | Desktop launcher (Windows) |
 
 ## Known Limitations
 
