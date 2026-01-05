@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.github.rcconsult.ppxai</id>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <name>ppxai</name>
+  <summary>Multi-LLM AI Assistant for Developers</summary>
+
+  <description>
+    <p>
+      Open-source AI assistant with zero vendor lock-in. Use your favorite LLM
+      provider in the terminal or as a desktop app—switch models mid-session,
+      run locally, pay only for what you need.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Multiple AI providers: Perplexity, OpenAI, Gemini, OpenRouter, local models</li>
+      <li>Terminal UI with rich markdown rendering</li>
+      <li>Desktop Web App with browser-based interface</li>
+      <li>VSCode extension integration</li>
+      <li>AI-powered tools: file operations, shell commands, web search</li>
+      <li>Agent mode for autonomous task execution</li>
+      <li>Session persistence and conversation history</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">ppxai.desktop</launchable>
+
+  <url type="homepage">https://github.com/rcconsult/ppxai</url>
+  <url type="bugtracker">https://github.com/rcconsult/ppxai/issues</url>
+  <url type="help">https://github.com/rcconsult/ppxai#readme</url>
+
+  <provides>
+    <binary>ppxai</binary>
+    <binary>ppxai-server</binary>
+    <binary>ppxai-desktop</binary>
+  </provides>
+
+  <requires>
+    <display_length compare="ge">768</display_length>
+  </requires>
+
+  <recommends>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </recommends>
+
+  <categories>
+    <category>Development</category>
+    <category>Utility</category>
+  </categories>
+
+  <keywords>
+    <keyword>AI</keyword>
+    <keyword>LLM</keyword>
+    <keyword>Chat</keyword>
+    <keyword>Assistant</keyword>
+    <keyword>OpenAI</keyword>
+    <keyword>Gemini</keyword>
+    <keyword>Perplexity</keyword>
+    <keyword>Claude</keyword>
+    <keyword>Developer</keyword>
+  </keywords>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>ppxai Terminal UI with AI chat</caption>
+      <image>https://raw.githubusercontent.com/rcconsult/ppxai/master/docs/screenshots/tui.png</image>
+    </screenshot>
+  </screenshots>
+
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="1.13.2" date="2026-01-05">
+      <description>
+        <p>Bugfix release with markdown rendering fixes and Windows compatibility improvements.</p>
+      </description>
+    </release>
+    <release version="1.13.1" date="2026-01-04">
+      <description>
+        <p>Desktop Web App with standalone browser-based chat interface.</p>
+      </description>
+    </release>
+    <release version="1.13.0" date="2026-01-03">
+      <description>
+        <p>Custom Provider Parity with premium web search and tool usage tracking.</p>
+      </description>
+    </release>
+  </releases>
+</component>

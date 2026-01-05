@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=ppxai
+GenericName=AI Assistant
+Comment=Multi-LLM AI Assistant for Developers
+Exec=ppxai-desktop
+Icon=ppxai
+Terminal=false
+Type=Application
+Categories=Development;Utility;Chat;
+Keywords=AI;Chat;LLM;OpenAI;Gemini;Perplexity;Claude;Assistant;
+StartupNotify=true
+StartupWMClass=ppxai
+MimeType=text/plain;

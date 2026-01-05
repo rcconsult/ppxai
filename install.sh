@@ -12,6 +12,7 @@
 #   --server-only       Only install ppxai-server
 #   --tui-only          Only install ppxai TUI
 #   --with-extension    Also download VSCode extension (.vsix)
+#   --with-desktop      Install Linux desktop integration (.desktop file, icon)
 #   --install-dir DIR   Install directory (default: ~/.local/bin)
 #   --help              Show this help message
 #
@@ -19,6 +20,8 @@
 #   ~/.local/bin/ppxai              - Terminal UI application
 #   ~/.local/bin/ppxai-server       - HTTP server for VSCode extension
 #   ~/.local/bin/ppxai-VERSION.vsix - VSCode extension (with --with-extension)
+#   ~/.local/share/applications/ppxai.desktop - Desktop entry (with --with-desktop)
+#   ~/.local/share/icons/hicolor/128x128/apps/ppxai.png - Icon (with --with-desktop)
 
 set -euo pipefail
 
@@ -29,6 +32,7 @@ VERSION="latest"
 INSTALL_TUI=true
 INSTALL_SERVER=true
 INSTALL_EXTENSION=false
+INSTALL_DESKTOP=false
 
 # Colors for output
 RED='\033[0;31m'
@@ -56,6 +60,7 @@ OPTIONS:
     --server-only       Only install ppxai-server (for VSCode extension)
     --tui-only          Only install ppxai TUI (terminal app)
     --with-extension    Also download VSCode extension (.vsix)
+    --with-desktop      Install Linux desktop integration (.desktop file, icon)
     --install-dir DIR   Install directory (default: ~/.local/bin)
     --help              Show this help message
 
@@ -65,6 +70,9 @@ EXAMPLES:
 
     # Install specific version with VSCode extension
     curl -sSL ... | bash -s -- --version v1.13.0 --with-extension
+
+    # Install with Linux desktop integration (adds to app menu)
+    curl -sSL ... | bash -s -- --with-desktop
 
     # Install only the server (for VSCode users)
     curl -sSL ... | bash -s -- --server-only
@@ -108,6 +116,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --with-extension)
             INSTALL_EXTENSION=true
+            shift
+            ;;
+        --with-desktop)
+            INSTALL_DESKTOP=true
             shift
             ;;
         --help|-h)
@@ -222,6 +234,53 @@ download_extension() {
     echo "    code --install-extension $target"
 }
 
+# --- Install Linux desktop integration ---
+install_desktop_integration() {
+    local version="$1"
+
+    # Only install on Linux
+    if [[ "$(uname -s)" != "Linux" ]]; then
+        warn "Desktop integration is only available on Linux"
+        return 0
+    fi
+
+    local apps_dir="${HOME}/.local/share/applications"
+    local icons_dir="${HOME}/.local/share/icons/hicolor/128x128/apps"
+    local desktop_url="https://raw.githubusercontent.com/${REPO}/${version}/resources/ppxai.desktop"
+    local icon_url="https://raw.githubusercontent.com/${REPO}/${version}/resources/ppxai.png"
+
+    info "Installing Linux desktop integration..."
+
+    # Create directories
+    mkdir -p "$apps_dir" "$icons_dir"
+
+    # Download .desktop file
+    if curl -sSL --fail "$desktop_url" -o "${apps_dir}/ppxai.desktop" 2>/dev/null; then
+        # Update Exec path to use installed binary
+        sed -i "s|Exec=ppxai-desktop|Exec=${INSTALL_DIR}/ppxai-desktop|" "${apps_dir}/ppxai.desktop"
+        success "Installed: ${apps_dir}/ppxai.desktop"
+    else
+        warn "Failed to download .desktop file"
+    fi
+
+    # Download icon
+    if curl -sSL --fail "$icon_url" -o "${icons_dir}/ppxai.png" 2>/dev/null; then
+        success "Installed: ${icons_dir}/ppxai.png"
+    else
+        warn "Failed to download icon"
+    fi
+
+    # Update desktop database if available
+    if command -v update-desktop-database &>/dev/null; then
+        update-desktop-database "$apps_dir" 2>/dev/null || true
+    fi
+
+    # Update icon cache if available
+    if command -v gtk-update-icon-cache &>/dev/null; then
+        gtk-update-icon-cache -f -t "${HOME}/.local/share/icons/hicolor" 2>/dev/null || true
+    fi
+}
+
 # --- Main ---
 main() {
     echo ""
@@ -276,6 +335,10 @@ main() {
         if ! download_extension "$VERSION"; then
             warn "VSCode extension download failed (non-fatal)"
         fi
+    fi
+
+    if [[ "$INSTALL_DESKTOP" == true ]]; then
+        install_desktop_integration "$VERSION"
     fi
 
     if [[ "$failed" == true ]]; then
