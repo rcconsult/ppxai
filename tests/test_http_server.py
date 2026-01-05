@@ -283,3 +283,142 @@ class TestHttpServerSessions:
         """Test GET /sessions returns 503 without engine."""
         response = no_engine_client.get("/sessions")
         assert response.status_code == 503
+
+
+class TestHttpServerToolsHelp:
+    """Test /tools/help endpoint (v1.14.0)."""
+
+    def test_get_tool_help(self, mock_client):
+        """Test GET /tools/help/{tool_name} returns tool definition."""
+        client, mock_engine = mock_client
+        mock_engine.tools_enabled = True
+
+        # Create mock tool with get_definition method
+        mock_tool = MagicMock()
+        mock_tool.get_definition.return_value = {
+            "function": {
+                "name": "calculator",
+                "description": "Perform mathematical calculations",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "expression": {
+                            "type": "string",
+                            "description": "Mathematical expression to evaluate"
+                        }
+                    },
+                    "required": ["expression"]
+                }
+            }
+        }
+
+        mock_engine.tool_manager = MagicMock()
+        mock_engine.tool_manager.get_tool.return_value = mock_tool
+        mock_engine.tool_manager.list_tools.return_value = [
+            {"name": "calculator", "description": "Math tool"}
+        ]
+
+        response = client.get("/tools/help/calculator")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "calculator"
+        assert "description" in data
+        assert "parameters" in data
+
+    def test_get_tool_help_not_found(self, mock_client):
+        """Test GET /tools/help/{tool_name} returns 404 for unknown tool."""
+        client, mock_engine = mock_client
+        mock_engine.tools_enabled = True
+        mock_engine.tool_manager = MagicMock()
+        mock_engine.tool_manager.get_tool.return_value = None
+        mock_engine.tool_manager.list_tools.return_value = [
+            {"name": "calculator", "description": "Math tool"}
+        ]
+
+        response = client.get("/tools/help/unknown_tool")
+        assert response.status_code == 404
+        assert "not found" in response.json()["detail"].lower()
+
+    def test_get_tool_help_tools_disabled(self, mock_client):
+        """Test GET /tools/help returns 400 when tools disabled."""
+        client, mock_engine = mock_client
+        mock_engine.tools_enabled = False
+        mock_engine.tool_manager = None
+
+        response = client.get("/tools/help/calculator")
+        assert response.status_code == 400
+        assert "not enabled" in response.json()["detail"].lower()
+
+
+class TestHttpServerCheckpointInfo:
+    """Test /checkpoint/info endpoint (v1.14.0)."""
+
+    def test_get_checkpoint_info(self, mock_client):
+        """Test GET /checkpoint/info/{id} returns checkpoint details."""
+        client, mock_engine = mock_client
+
+        mock_engine.list_checkpoints.return_value = [
+            {
+                "id": "abc123def456",
+                "description": "Agent task: Fix bug",
+                "timestamp": "2025-01-05 12:00:00"
+            },
+            {
+                "id": "xyz789",
+                "description": "Agent task: Add feature",
+                "timestamp": "2025-01-05 11:00:00"
+            }
+        ]
+        mock_engine.get_checkpoint_status.return_value = {
+            "backend": "git",
+            "enabled": True,
+            "last_checkpoint": "abc123def456",
+            "is_valid": True
+        }
+
+        response = client.get("/checkpoint/info/abc123")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == "abc123def456"
+        assert data["description"] == "Agent task: Fix bug"
+        assert data["is_current"] == True
+        assert data["is_valid"] == True
+
+    def test_get_checkpoint_info_historical(self, mock_client):
+        """Test GET /checkpoint/info returns historical status for old checkpoint."""
+        client, mock_engine = mock_client
+
+        mock_engine.list_checkpoints.return_value = [
+            {
+                "id": "abc123",
+                "description": "Current checkpoint",
+                "timestamp": "2025-01-05 12:00:00"
+            },
+            {
+                "id": "xyz789",
+                "description": "Old checkpoint",
+                "timestamp": "2025-01-05 11:00:00"
+            }
+        ]
+        mock_engine.get_checkpoint_status.return_value = {
+            "backend": "git",
+            "enabled": True,
+            "last_checkpoint": "abc123",
+            "is_valid": True
+        }
+
+        response = client.get("/checkpoint/info/xyz789")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == "xyz789"
+        assert data["is_current"] == False
+        assert data["status"] == "historical"
+
+    def test_get_checkpoint_info_not_found(self, mock_client):
+        """Test GET /checkpoint/info returns 404 for unknown checkpoint."""
+        client, mock_engine = mock_client
+        mock_engine.list_checkpoints.return_value = []
+
+        response = client.get("/checkpoint/info/unknown")
+        assert response.status_code == 404
+        assert "not found" in response.json()["detail"].lower()

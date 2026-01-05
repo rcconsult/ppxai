@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.13.1 (January 2026)
+> **Current Version**: v1.13.2 (January 2026)
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
@@ -89,9 +89,23 @@ ppxai provides:
 - Documentation updates: test counts, Gemini capabilities, deprecated models
 - Install: `pip install ppxai[gemini]` for Gemini Grounding support
 
+### Desktop Web App ✅ (v1.13.1)
+- Standalone `ppxai-desktop` launcher for all platforms
+- macOS `.app` bundle with DMG installer
+- Full-featured browser-based chat interface
+- Feature parity: commands, tools, agent mode, themes
+- Working directory context with folder badge
+
+### Bugfix Release ✅ (v1.13.2)
+- Fixed markdown rendering (bullet lists, `/usage` tables)
+- Updated marked.js to v11.1.1 in Web App
+- Desktop Web App: auto-detect server URL, proper favicon
+- Shared modules for command/formatter parity
+- Windows compatibility fixes (tests, PEP 735 config)
+
 ---
 
-## v1.13.x Series - Session Bootstrap
+## v1.14.x Series - Session Bootstrap
 
 **Theme**: Reproducible starting point for every session
 
@@ -117,7 +131,7 @@ The implementation follows a separation of concerns pattern:
    - Returns `{loaded: bool, sources: List[str], char_count: int}`
    - Used by `/context show` (TUI) and `GET /context` (HTTP)
 
-### v1.13.1 - AGENTS.md Support
+### v1.14.0 - AGENTS.md Support
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -140,7 +154,7 @@ test_context_injected_into_system_prompt()
 test_context_cached_between_chat_calls()
 ```
 
-### v1.13.2 - File Precedence
+### v1.14.1 - File Precedence
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -156,7 +170,7 @@ test_context_cached_between_chat_calls()
 
 **Merge behavior:** Concatenate all found files with `\n\n---\n\n` separator.
 
-### v1.13.3 - `/context` Commands
+### v1.14.2 - `/context` Commands
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -174,7 +188,7 @@ test_context_cached_between_chat_calls()
 - `ppxai/server/http.py` - Add `GET /context`, `POST /context/reload`
 - `vscode-extension/src/httpClient.ts` - Add context API calls
 
-### v1.13.4 - Context Enhancements
+### v1.14.3 - Context Enhancements
 
 | Feature | Description | Status |
 |---------|-------------|--------|

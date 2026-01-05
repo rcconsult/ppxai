@@ -16,7 +16,7 @@ This installs both the terminal app (`ppxai`) and the server (`ppxai-server`) to
 
 ```bash
 # Install specific version
-curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --version v1.13.0
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --version v1.13.2
 
 # Install with VSCode extension
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-extension
@@ -99,7 +99,7 @@ ppxai
 
 ```bash
 # Install the extension
-code --install-extension ~/.local/bin/ppxai-1.13.0.vsix
+code --install-extension ~/.local/bin/ppxai-1.13.2.vsix
 
 # Or drag and drop the .vsix file into VSCode
 ```

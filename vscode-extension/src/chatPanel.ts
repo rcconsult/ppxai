@@ -3,39 +3,39 @@
  *
  * Interrupt handling (Esc key) inspired by Claude Code by Anthropic
  * https://claude.ai/code
+ *
+ * v1.14.0 - Uses shared modules for command definitions and formatters
+ *           to maintain parity with Desktop Web App.
  */
 
 import * as vscode from 'vscode';
 import { HttpClient, StreamEvent } from './httpClient';
 import { startServer, stopServer, onServerStatusChange } from './extension';
 
-// Slash command definitions
-const SLASH_COMMANDS: Record<string, { description: string; usage: string }> = {
-    '/help': { description: 'Show available commands', usage: '/help' },
-    '/clear': { description: 'Clear conversation history', usage: '/clear' },
-    '/save': { description: 'Save session to JSON', usage: '/save' },
-    '/export': { description: 'Export last answer to markdown', usage: '/export [filename]' },
-    '/load': { description: 'Load a saved session', usage: '/load [session_name]' },
-    '/sessions': { description: 'List saved sessions', usage: '/sessions' },
-    '/model': { description: 'Switch model or list models', usage: '/model [model_id|list]' },
-    '/provider': { description: 'Switch provider or list providers', usage: '/provider [provider_id|list]' },
-    '/tools': { description: 'Manage AI tools', usage: '/tools [enable|disable|status|list|config|set|agent|help]' },
-    '/agent': { description: 'Run autonomous agent task', usage: '/agent <task description>' },
-    '/checkpoint': { description: 'Manage checkpoints', usage: '/checkpoint [status|list|backend|clear|info|undo]' },
-    '/show': { description: 'Display file contents locally (no LLM call)', usage: '/show <filepath>' },
-    '/cat': { description: 'Alias for /show', usage: '/cat <filepath>' },
-    '/usage': { description: 'Show token usage stats', usage: '/usage [24h|week|month|year|all]' },
-    '/status': { description: 'Show current status', usage: '/status' },
-    // Coding task commands
-    '/generate': { description: 'Generate code from description', usage: '/generate <description>' },
-    '/explain': { description: 'Explain code or concept', usage: '/explain <code or question>' },
-    '/test': { description: 'Generate tests for code', usage: '/test <code or @file>' },
-    '/docs': { description: 'Generate documentation', usage: '/docs <code or @file>' },
-    '/debug': { description: 'Debug an error message', usage: '/debug <error message>' },
-    '/implement': { description: 'Implement from description', usage: '/implement <description>' },
-    '/spec': { description: 'Show specification templates', usage: '/spec [api|cli|lib|algo|ui]' },
-    '/convert': { description: 'Convert code between languages', usage: '/convert <source-lang> <target-lang> <code or @file>' },
-};
+// Import shared modules for command definitions and formatters
+import {
+    SLASH_COMMANDS,
+    generateHelpText,
+    isAIForwardedCommand,
+    parseCommand
+} from './shared/commands';
+import {
+    formatToolsStatus,
+    formatToolsList,
+    formatToolConfig,
+    formatToolHelp,
+    formatAgentStatus,
+    formatCheckpointStatus,
+    formatCheckpointList,
+    formatCheckpointInfo,
+    formatCheckpointBackendHelp,
+    formatUsageStats,
+    formatUsageDisplayHelp,
+    formatStatus,
+    formatProvidersList,
+    formatModelsList,
+    formatSessionsList
+} from './shared/formatters';
 
 export class ChatViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'ppxai.chatView';
@@ -1657,13 +1657,20 @@ Review your previous actions and continue. If the task is complete, respond with
     private async showHelp() {
         if (!this._view) { return; }
 
-        const helpText = Object.entries(SLASH_COMMANDS)
-            .map(([cmd, info]) => `**${cmd}** - ${info.description}\n  Usage: \`${info.usage}\``)
-            .join('\n\n');
+        // Use shared help generator for consistent output across Web App and VSCode
+        let helpText = generateHelpText();
+
+        // Add VSCode-specific keyboard shortcuts
+        helpText += '\n**Keyboard Shortcuts:**\n';
+        helpText += '- `Esc` - Stop streaming\n';
+        helpText += '- `↑/↓` - Command history\n';
+        helpText += '- `@file` - Reference a file\n';
+        helpText += '- `@git` - Include git diff\n';
+        helpText += '- `@tree` - Include project structure\n';
 
         this._view.webview.postMessage({
             type: 'systemMessage',
-            content: `**Available Commands:**\n\n${helpText}`
+            content: helpText
         });
     }
 
@@ -2184,8 +2191,9 @@ Review your previous actions and continue. If the task is complete, respond with
             // Default: show session usage with per-model breakdown
             const usage = await this._backend.getUsage();
             let content = `**Session Usage Statistics:**
-• Total tokens: ${usage.total_tokens.toLocaleString()} (${usage.prompt_tokens.toLocaleString()}↓ / ${usage.completion_tokens.toLocaleString()}↑)
-• Estimated cost: $${usage.estimated_cost.toFixed(4)}`;
+
+- Total tokens: ${usage.total_tokens.toLocaleString()} (${usage.prompt_tokens.toLocaleString()}↓ / ${usage.completion_tokens.toLocaleString()}↑)
+- Estimated cost: $${usage.estimated_cost.toFixed(4)}`;
 
             // Add per-model breakdown as table if available
             if (usage.by_model && Object.keys(usage.by_model).length > 0) {

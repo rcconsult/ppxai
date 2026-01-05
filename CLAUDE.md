@@ -6,34 +6,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.13.1
+**Current Version:** v1.13.2
 
-**Work in Progress (branch: updates/desktop-web-app-fixes):**
-- **Desktop Web App:** Standalone macOS app with embedded web UI
-  - Working directory context with folder badge in UI
-  - `/show` command with fuzzy file search
-  - Filesystem tools respect `engine.get_working_dir()` context
-  - `WORKING_DIR_CHANGED` event for UI notification
-- **Gemini Native Grounding:** Fixed google-genai package bundling in PyInstaller
-  - Added hidden imports for google-genai and dependencies
-  - Native Google Search Grounding now works in bundled binary
-  - Real-time weather, search queries return citations
-- **Filesystem Tool Classes:** Converted standalone functions to BaseTool classes
-  - `SetWorkingDirectoryTool`, `GetWorkingDirectoryTool`
-  - `ListDirectoryTool`, `SearchFilesTool`, `ReadFileTool`
-  - All resolve paths relative to engine working directory
-- **HTTP Server Endpoints:**
-  - `GET/POST /context/working_dir` - Get/set working directory
-  - `POST /files/read` - Read file contents
-  - `POST /files/search` - Search for files
-- **Build System Fixes (Linux):**
-  - `ppxai-server.spec`: Exclude tkinter to fix PyInstaller hook error
-  - `pyproject.toml`: All dev/build deps in `[tool.uv]` dev-dependencies
-  - `uv.lock`: Includes pyinstaller, fastapi, google-genai, duckduckgo-search
-  - `bootstrap.py`: `--all` flag now includes `--dev` for complete setup
-  - Fresh clone + `python scripts/bootstrap.py --all` gives full build environment
-- **WSL2 Performance Note:** Working on `/mnt/c/` (Windows filesystem) causes very slow Python imports (~24s startup). For development on WSL2, clone to `~/` (Linux native filesystem) for 3x faster performance.
-- **Known Issues:** Several bugs still being fixed, not ready for release
+**What's New in v1.13.2 (Released 2026-01-05):**
+- **FIX:** Markdown rendering in VSCode extension and Desktop Web App
+  - Fixed bullet lists (changed from `•` to `-` for proper markdown)
+  - Fixed `/usage` tables - now render correctly in both UIs
+  - Updated `marked.js` to v11.1.1 in Web App
+- **FIX:** Desktop Web App improvements
+  - Auto-detect server URL from `window.location.origin`
+  - Added proper favicon (same icon as VSCode extension)
+  - Markdown preview for `.md` files with link click handling
+- **NEW:** Shared modules for command/formatter parity across TUI, VSCode, Web App
+- **FIX:** Windows compatibility
+  - Tests use `tempfile.gettempdir()` instead of hardcoded `/tmp`
+  - PEP 735 migration: `[dependency-groups].dev` format
+- **Tests:** 533 tests passing
+- **Docs:** [RELEASE-NOTES-v1.13.2.md](docs/RELEASE-NOTES-v1.13.2.md)
+
+**What's New in v1.13.1 (Released 2026-01-04):**
+- **NEW:** Desktop Web App - Standalone browser-based chat interface
+  - `ppxai-desktop` launcher for all platforms
+  - macOS `.app` bundle with DMG installer
+  - Full feature parity with TUI (commands, tools, agent mode)
+- **NEW:** Working directory context with folder badge
+- **Docs:** [RELEASE-NOTES-v1.13.1.md](docs/RELEASE-NOTES-v1.13.1.md)
 
 **What's New in v1.13.0 (Released 2026-01-03):**
 - **NEW:** Premium web search tool for custom providers (vLLM, Ollama)
@@ -260,10 +257,10 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - Automated GitHub Actions CI/CD for multi-platform builds (macOS ARM/Intel, Linux, Windows)
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.13.1
-- VSCode extension (package.json): v1.13.1
-- Git tag: v1.13.1 (released 2026-01-04)
-- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v1.13.1
+- Python package (pyproject.toml): v1.13.2
+- VSCode extension (package.json): v1.13.2
+- Git tag: v1.13.2 (released 2026-01-05)
+- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v1.13.2
 
 ## Development Setup
 
@@ -488,7 +485,7 @@ python -c "from ppxai.config import validate_config; print(validate_config())"
 
 ## Testing
 
-- **525 tests** across multiple test modules (119 new tests in v1.13.0)
+- **533 tests** across multiple test modules (16 new shared module tests in v1.13.2)
 - **48 config tests** for the hybrid configuration system
 - Tests use `pytest` with `unittest.mock` for mocking
 - Custom endpoint integration tests require vLLM/Ollama running locally
@@ -540,7 +537,7 @@ The release script (`scripts/release.py`) handles everything automatically:
 | `ppxai/common/event_handler.py` | `Version: v1.13.0` | Yes |
 | `README.md` | `ppxai-1.13.0.vsix` | No |
 | `vscode-extension/README.md` | `ppxai-1.13.0.vsix` | No |
-| `CLAUDE.md` | `**Current Version:** v1.13.1
+| `CLAUDE.md` | `**Current Version:** v1.13.0` | Yes |
 | `ROADMAP.md` | `> **Current Version**: v1.13.0` | Yes |
 
 ### Files Validated (Not Auto-Updated)

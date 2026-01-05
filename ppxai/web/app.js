@@ -1,8 +1,20 @@
 /**
  * ppxai Web UI Application
  *
- * v1.13.1 - Standalone web-based chat interface
+ * v1.14.1 - Standalone web-based chat interface
+ *
+ * Uses shared modules for command definitions and formatters to maintain
+ * parity with VSCode extension.
+ *
+ * v1.14.1 Changes:
+ * - Fixed markdown rendering with proper list syntax (- instead of •)
+ * - Added table format for /usage command (matching VSCode extension)
+ * - Updated marked.js to v11.1.1
  */
+
+// Import shared modules (loaded via script tags in index.html)
+// These are available as globals: SharedCommands, SharedFormatters
+// Or when using ES modules: import from './shared/index.js'
 
 class PpxaiApp {
     constructor() {
@@ -48,33 +60,36 @@ class PpxaiApp {
         // DOM elements
         this.elements = {};
 
-        // Slash commands
-        this.slashCommands = {
-            '/help': { description: 'Show available commands', usage: '/help' },
-            '/clear': { description: 'Clear conversation history', usage: '/clear' },
-            '/save': { description: 'Save session to JSON', usage: '/save' },
-            '/export': { description: 'Export last answer to markdown', usage: '/export [filename]' },
-            '/load': { description: 'Load a saved session', usage: '/load <session_name>' },
-            '/sessions': { description: 'List saved sessions', usage: '/sessions' },
-            '/model': { description: 'Switch model or list models', usage: '/model [model_id|list]' },
-            '/provider': { description: 'Switch provider or list providers', usage: '/provider [provider_id|list]' },
-            '/tools': { description: 'Manage AI tools', usage: '/tools [enable|disable|status|list]' },
-            '/agent': { description: 'Run autonomous agent task', usage: '/agent <task description>' },
-            '/checkpoint': { description: 'Manage checkpoints', usage: '/checkpoint [status|list|undo]' },
-            '/usage': { description: 'Show token usage stats', usage: '/usage [24h|week|month|all]' },
-            '/status': { description: 'Show current status', usage: '/status' },
-            '/show': { description: 'Display file contents', usage: '/show <filepath>' },
-            '/cat': { description: 'Alias for /show', usage: '/cat <filepath>' },
-            '/generate': { description: 'Generate code from description', usage: '/generate <description>' },
-            '/explain': { description: 'Explain code or concept', usage: '/explain <code or question>' },
-            '/test': { description: 'Generate tests for code', usage: '/test <code or @file>' },
-            '/docs': { description: 'Generate documentation', usage: '/docs <code or @file>' },
-            '/debug': { description: 'Debug an error message', usage: '/debug <error message>' },
-            '/implement': { description: 'Implement from specification', usage: '/implement <specification>' },
-            '/convert': { description: 'Convert code between languages', usage: '/convert <src> <dest> <code>' },
-            '/spec': { description: 'Show specification templates', usage: '/spec [api|cli|lib|algo|ui]' },
-            '/theme': { description: 'Switch theme', usage: '/theme [dark|light]' },
-        };
+        // Use shared slash commands if available, otherwise use local copy
+        // This ensures backwards compatibility while enabling shared definitions
+        this.slashCommands = (typeof SharedCommands !== 'undefined' && SharedCommands.SLASH_COMMANDS)
+            ? SharedCommands.SLASH_COMMANDS
+            : {
+                '/help': { description: 'Show available commands', usage: '/help' },
+                '/clear': { description: 'Clear conversation history', usage: '/clear' },
+                '/save': { description: 'Save session to JSON', usage: '/save' },
+                '/export': { description: 'Export last answer to markdown', usage: '/export [filename]' },
+                '/load': { description: 'Load a saved session', usage: '/load <session_name>' },
+                '/sessions': { description: 'List saved sessions', usage: '/sessions' },
+                '/model': { description: 'Switch model or list models', usage: '/model [model_id|list]' },
+                '/provider': { description: 'Switch provider or list providers', usage: '/provider [provider_id|list]' },
+                '/tools': { description: 'Manage AI tools', usage: '/tools [enable|disable|status|list|config|set|agent|help]' },
+                '/agent': { description: 'Run autonomous agent task', usage: '/agent [on|off|<task description>]' },
+                '/checkpoint': { description: 'Manage checkpoints', usage: '/checkpoint [status|list|undo|backend|clear|info]' },
+                '/usage': { description: 'Show token usage stats', usage: '/usage [24h|week|month|all|show|reset]' },
+                '/status': { description: 'Show current status', usage: '/status' },
+                '/show': { description: 'Display file contents', usage: '/show <filepath>' },
+                '/cat': { description: 'Alias for /show', usage: '/cat <filepath>' },
+                '/generate': { description: 'Generate code from description', usage: '/generate <description>' },
+                '/explain': { description: 'Explain code or concept', usage: '/explain <code or question>' },
+                '/test': { description: 'Generate tests for code', usage: '/test <code or @file>' },
+                '/docs': { description: 'Generate documentation', usage: '/docs <code or @file>' },
+                '/debug': { description: 'Debug an error message', usage: '/debug <error message>' },
+                '/implement': { description: 'Implement from specification', usage: '/implement <specification>' },
+                '/convert': { description: 'Convert code between languages', usage: '/convert <src> <dest> <code>' },
+                '/spec': { description: 'Show specification templates', usage: '/spec [api|cli|lib|algo|ui]' },
+                '/theme': { description: 'Switch theme', usage: '/theme [dark|light]' },
+            };
 
         // Initialize
         this.init();
@@ -129,6 +144,7 @@ class PpxaiApp {
             previewInfo: document.getElementById('previewInfo'),
             previewClose: document.getElementById('previewClose'),
             previewCode: document.getElementById('previewCode'),
+            previewMarkdown: document.getElementById('previewMarkdown'),
 
             // Modals
             consentModal: document.getElementById('consentModal'),
@@ -231,19 +247,11 @@ class PpxaiApp {
     }
 
     setupMarkdown() {
-        // Configure marked.js
+        // Configure marked.js v11+
         if (typeof marked !== 'undefined') {
             marked.setOptions({
-                highlight: (code, lang) => {
-                    if (typeof hljs !== 'undefined' && lang && hljs.getLanguage(lang)) {
-                        try {
-                            return hljs.highlight(code, { language: lang }).value;
-                        } catch (e) {}
-                    }
-                    return code;
-                },
                 breaks: true,
-                gfm: true
+                gfm: true  // GitHub Flavored Markdown (tables, strikethrough, etc.)
             });
         }
     }
@@ -827,7 +835,7 @@ class PpxaiApp {
                 break;
 
             case '/usage':
-                await this.showUsageReport(args);
+                await this.handleUsageCommand(args);
                 break;
 
             case '/status':
@@ -865,10 +873,17 @@ class PpxaiApp {
     }
 
     showHelp() {
-        let helpText = '**Available Commands:**\n\n';
-        Object.entries(this.slashCommands).forEach(([cmd, info]) => {
-            helpText += `\`${info.usage}\` - ${info.description}\n`;
-        });
+        // Use shared help generator if available
+        let helpText;
+        if (typeof SharedCommands !== 'undefined' && SharedCommands.generateHelpText) {
+            helpText = SharedCommands.generateHelpText();
+        } else {
+            helpText = '**Available Commands:**\n\n';
+            Object.entries(this.slashCommands).forEach(([cmd, info]) => {
+                helpText += `\`${info.usage}\` - ${info.description}\n`;
+            });
+        }
+
         helpText += '\n**Keyboard Shortcuts:**\n';
         helpText += '- `Esc` - Stop streaming\n';
         helpText += '- `↑/↓` - Command history\n';
@@ -978,11 +993,72 @@ class PpxaiApp {
                     } catch (error) {
                         this.showError(`Failed to set verbose: ${error.message}`);
                     }
+                } else {
+                    this.showError('Usage: /tools set verbose on|off');
+                }
+                break;
+
+            case 'config':
+                try {
+                    const response = await fetch(`${this.serverUrl}/tools`);
+                    const data = await response.json();
+                    let text = '**Tool Configuration:**\n\n';
+                    text += `- Enabled: ${data.enabled ? 'yes' : 'no'}\n`;
+                    text += `- Max iterations: ${data.max_iterations || 15}\n`;
+                    text += `- Verbose: ${data.verbose ? 'on' : 'off'}\n`;
+                    text += `- Consent mode: ${data.consent_mode || 'default'}\n`;
+                    text += `- Tool count: ${data.tools.length}\n`;
+                    this.addMessage('system', text);
+                } catch (error) {
+                    this.showError(`Failed to get tool config: ${error.message}`);
+                }
+                break;
+
+            case 'agent':
+                const agentArg = args.split(/\s+/)[1];
+                if (agentArg === 'on' || agentArg === 'enable') {
+                    if (!this.agentMode) await this.toggleAgent();
+                    this.showSystemMessage('Agent mode enabled. Tools auto-enabled.');
+                } else if (agentArg === 'off' || agentArg === 'disable') {
+                    if (this.agentMode) await this.toggleAgent();
+                    this.showSystemMessage('Agent mode disabled.');
+                } else {
+                    const status = this.agentMode ? 'ON' : 'OFF';
+                    this.addMessage('system', `**Agent Mode:** ${status}\n\nUsage: \`/tools agent on|off\`\nOr use \`/agent <task>\` to run an autonomous task.`);
+                }
+                break;
+
+            case 'help':
+                const toolName = args.split(/\s+/)[1];
+                if (toolName) {
+                    try {
+                        const response = await fetch(`${this.serverUrl}/tools/help/${encodeURIComponent(toolName)}`);
+                        if (!response.ok) {
+                            const err = await response.json();
+                            this.showError(err.detail || `Tool not found: ${toolName}`);
+                            return;
+                        }
+                        const data = await response.json();
+                        let text = `**Tool: ${data.name}**\n\n`;
+                        text += `${data.description}\n\n`;
+                        if (data.parameters && data.parameters.properties) {
+                            text += '**Parameters:**\n';
+                            Object.entries(data.parameters.properties).forEach(([name, prop]) => {
+                                const required = data.parameters.required?.includes(name) ? ' *(required)*' : '';
+                                text += `- \`${name}\`${required}: ${prop.description || prop.type || 'no description'}\n`;
+                            });
+                        }
+                        this.addMessage('system', text);
+                    } catch (error) {
+                        this.showError(`Failed to get tool help: ${error.message}`);
+                    }
+                } else {
+                    this.addMessage('system', '**Tool Help**\n\nUsage: `/tools help <tool-name>` - Show help for a specific tool\n\nUse `/tools list` to see available tools.');
                 }
                 break;
 
             default:
-                this.showError(`Unknown /tools subcommand: ${subCmd}`);
+                this.showError(`Unknown /tools subcommand: ${subCmd}. Available: enable, disable, status, list, config, set, agent, help`);
         }
     }
 
@@ -1035,13 +1111,124 @@ class PpxaiApp {
                 await this.undoCheckpoint();
                 break;
 
+            case 'backend':
+                const backendArg = args.split(/\s+/)[1];
+                if (backendArg) {
+                    const validBackends = ['git', 'file', 'auto', 'none'];
+                    if (!validBackends.includes(backendArg)) {
+                        this.showError(`Invalid backend: ${backendArg}. Valid options: ${validBackends.join(', ')}`);
+                        return;
+                    }
+                    try {
+                        const response = await fetch(`${this.serverUrl}/checkpoint/backend`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ backend: backendArg })
+                        });
+                        if (!response.ok) {
+                            const err = await response.json();
+                            this.showError(err.detail || 'Failed to set backend');
+                            return;
+                        }
+                        const data = await response.json();
+                        this.showSystemMessage(`Checkpoint backend set to: ${data.backend}`);
+                    } catch (error) {
+                        this.showError(`Failed to set backend: ${error.message}`);
+                    }
+                } else {
+                    this.addMessage('system', '**Checkpoint Backend**\n\nUsage: `/checkpoint backend <git|file|auto|none>`\n\n- `git`: Use git commits (recommended for git repos)\n- `file`: Use file snapshots (~/.ppxai/checkpoints/)\n- `auto`: Auto-detect best backend\n- `none`: Disable checkpoints');
+                }
+                break;
+
+            case 'clear':
+                try {
+                    const response = await fetch(`${this.serverUrl}/checkpoint/clear`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ keep_last: 0 })
+                    });
+                    if (!response.ok) {
+                        const err = await response.json();
+                        this.showError(err.detail || 'Failed to clear checkpoints');
+                        return;
+                    }
+                    const data = await response.json();
+                    this.showSystemMessage(data.message || `Cleared ${data.removed} checkpoint(s)`);
+                } catch (error) {
+                    this.showError(`Failed to clear checkpoints: ${error.message}`);
+                }
+                break;
+
+            case 'info':
+                const checkpointId = args.split(/\s+/)[1];
+                if (checkpointId) {
+                    try {
+                        const response = await fetch(`${this.serverUrl}/checkpoint/info/${encodeURIComponent(checkpointId)}`);
+                        if (!response.ok) {
+                            const err = await response.json();
+                            this.showError(err.detail || `Checkpoint not found: ${checkpointId}`);
+                            return;
+                        }
+                        const data = await response.json();
+                        let text = '**Checkpoint Details:**\n\n';
+                        text += `- ID: \`${data.id}\`\n`;
+                        text += `- Description: ${data.description}\n`;
+                        text += `- Timestamp: ${data.timestamp}\n`;
+                        text += `- Status: ${data.is_current ? (data.is_valid ? 'Current (can undo)' : 'Stale (cannot undo)') : 'Historical'}\n`;
+                        this.addMessage('system', text);
+                    } catch (error) {
+                        this.showError(`Failed to get checkpoint info: ${error.message}`);
+                    }
+                } else {
+                    this.addMessage('system', '**Checkpoint Info**\n\nUsage: `/checkpoint info <checkpoint_id>`\n\nUse `/checkpoint list` to see available checkpoints.');
+                }
+                break;
+
             default:
-                this.showError(`Unknown /checkpoint subcommand: ${subCmd}`);
+                this.showError(`Unknown /checkpoint subcommand: ${subCmd}. Available: status, list, undo, backend, clear, info`);
         }
     }
 
-    async showUsageReport(period) {
+    async handleUsageCommand(args) {
+        const parts = args.trim().split(/\s+/);
+        const subCmd = parts[0];
+
+        // Check for subcommands first
+        if (subCmd === 'show') {
+            const mode = parts[1];
+            if (mode && ['session', 'provider', 'model', 'off'].includes(mode)) {
+                try {
+                    await fetch(`${this.serverUrl}/usage/display`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mode })
+                    });
+                    this.showSystemMessage(`Usage display mode set to: ${mode}`);
+                } catch (error) {
+                    this.showError(`Failed to set usage display mode: ${error.message}`);
+                }
+            } else {
+                this.addMessage('system', '**Usage Display Mode**\n\nUsage: `/usage show <mode>`\n\nModes:\n- `session`: Show session totals\n- `provider`: Show by provider\n- `model`: Show by model\n- `off`: Hide usage display');
+            }
+            return;
+        }
+
+        if (subCmd === 'reset') {
+            try {
+                await fetch(`${this.serverUrl}/usage/reset`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                this.showSystemMessage('Usage counters reset.');
+            } catch (error) {
+                this.showError(`Failed to reset usage: ${error.message}`);
+            }
+            return;
+        }
+
+        // Period-based report (24h, week, month, year, all) or no args
         try {
+            const period = ['24h', 'week', 'month', 'year', 'all'].includes(subCmd) ? subCmd : null;
             const endpoint = period ? `/usage/report?period=${period}` : '/usage';
             const response = await fetch(`${this.serverUrl}${endpoint}`);
             const data = await response.json();
@@ -1049,20 +1236,25 @@ class PpxaiApp {
             let text = '**Usage Statistics:**\n\n';
 
             if (period) {
-                text += `Period: ${data.period}\n`;
-                text += `Sessions: ${data.session_count}\n\n`;
+                text += `**Period:** ${data.period}\n`;
+                text += `**Sessions:** ${data.session_count}\n\n`;
             }
 
-            text += `- Prompt tokens: ${data.prompt_tokens || 0}\n`;
-            text += `- Completion tokens: ${data.completion_tokens || 0}\n`;
-            text += `- Total tokens: ${data.total_tokens || 0}\n`;
+            // Summary stats as list
+            text += `- Total tokens: ${(data.total_tokens || 0).toLocaleString()} (${(data.prompt_tokens || 0).toLocaleString()}↓ / ${(data.completion_tokens || 0).toLocaleString()}↑)\n`;
             text += `- Estimated cost: $${(data.estimated_cost || data.total_cost || 0).toFixed(4)}\n`;
 
+            // Per-model breakdown as table (matching VSCode extension format)
             if (data.by_model && Object.keys(data.by_model).length > 0) {
-                text += '\n**By Model:**\n';
-                Object.entries(data.by_model).forEach(([model, stats]) => {
-                    text += `- ${model}: ${stats.total_tokens} tokens, $${stats.estimated_cost.toFixed(4)}\n`;
+                text += '\n**Usage by Model:**\n\n';
+                text += '| Provider | Model | In | Out | Cost |\n';
+                text += '|:---------|:------|---:|----:|-----:|\n';
+                Object.entries(data.by_model).sort().forEach(([key, stats]) => {
+                    const [provider, model] = key.includes('/') ? key.split('/', 2) : ['', key];
+                    text += `| ${provider} | ${model} | ${stats.prompt_tokens?.toLocaleString() || 0} | ${stats.completion_tokens?.toLocaleString() || 0} | $${stats.estimated_cost?.toFixed(4) || '0.0000'} |\n`;
                 });
+                // Totals row
+                text += `| **TOTAL** | | **${(data.prompt_tokens || 0).toLocaleString()}** | **${(data.completion_tokens || 0).toLocaleString()}** | **$${(data.estimated_cost || 0).toFixed(4)}** |\n`;
             }
 
             this.addMessage('system', text);
@@ -1582,32 +1774,90 @@ class PpxaiApp {
         if (size) info += info ? ` • ${(size / 1024).toFixed(1)} KB` : `${(size / 1024).toFixed(1)} KB`;
         this.elements.previewInfo.textContent = info;
 
-        // Determine language for syntax highlighting
+        // Determine file extension
         const ext = filename.split('.').pop().toLowerCase() || '';
-        const langMap = {
-            'py': 'python', 'js': 'javascript', 'ts': 'typescript', 'tsx': 'typescript',
-            'json': 'json', 'yaml': 'yaml', 'yml': 'yaml',
-            'md': 'markdown', 'html': 'html', 'css': 'css',
-            'sh': 'bash', 'bash': 'bash', 'rs': 'rust', 'go': 'go',
-            'java': 'java', 'cpp': 'cpp', 'c': 'c', 'h': 'c',
-            'rb': 'ruby', 'php': 'php', 'sql': 'sql', 'xml': 'xml'
-        };
-        const lang = langMap[ext] || '';
 
-        // Set content with syntax highlighting
-        this.elements.previewCode.textContent = content;
-        if (lang) {
-            this.elements.previewCode.className = `language-${lang}`;
+        // Check if markdown preview element exists (may not in older HTML versions)
+        const hasMarkdownPreview = this.elements.previewMarkdown !== null;
+
+        // Check if this is a markdown file and we have the preview element
+        if ((ext === 'md' || ext === 'markdown') && hasMarkdownPreview) {
+            // Render markdown with marked.js
+            this.elements.previewCode.parentElement.classList.add('hidden');
+            this.elements.previewMarkdown.classList.remove('hidden');
+
+            if (typeof marked !== 'undefined') {
+                // Configure marked for GFM (tables, code blocks, etc.)
+                marked.setOptions({
+                    gfm: true,
+                    breaks: true,
+                    headerIds: true,
+                    mangle: false
+                });
+
+                // Parse and render markdown
+                let html = marked.parse(content);
+
+                // Set the rendered HTML
+                this.elements.previewMarkdown.innerHTML = html;
+
+                // Apply syntax highlighting to code blocks
+                if (typeof hljs !== 'undefined') {
+                    this.elements.previewMarkdown.querySelectorAll('pre code').forEach(block => {
+                        hljs.highlightElement(block);
+                    });
+                }
+
+                // Intercept relative link clicks to show files in preview (v1.14.0)
+                this.elements.previewMarkdown.querySelectorAll('a').forEach(link => {
+                    const href = link.getAttribute('href');
+                    // Handle relative links to local files (not http/https/mailto)
+                    if (href && !href.startsWith('http') && !href.startsWith('mailto:') && !href.startsWith('#')) {
+                        link.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            // Resolve relative path from current file's directory
+                            const currentDir = filename.includes('/') ? filename.substring(0, filename.lastIndexOf('/')) : '';
+                            const resolvedPath = currentDir ? `${currentDir}/${href}` : href;
+                            this.handleShowCommand(resolvedPath);
+                        });
+                    }
+                });
+            } else {
+                // Fallback: show raw content if marked not available
+                this.elements.previewMarkdown.textContent = content;
+            }
         } else {
-            this.elements.previewCode.className = '';
-        }
+            // Non-markdown or no markdown preview: show code with syntax highlighting
+            if (hasMarkdownPreview) {
+                this.elements.previewMarkdown.classList.add('hidden');
+            }
+            this.elements.previewCode.parentElement.classList.remove('hidden');
 
-        // Apply syntax highlighting
-        if (typeof hljs !== 'undefined' && lang) {
-            try {
-                hljs.highlightElement(this.elements.previewCode);
-            } catch (e) {
-                // Highlighting failed, show plain text
+            const langMap = {
+                'py': 'python', 'js': 'javascript', 'ts': 'typescript', 'tsx': 'typescript',
+                'json': 'json', 'yaml': 'yaml', 'yml': 'yaml',
+                'html': 'html', 'css': 'css',
+                'sh': 'bash', 'bash': 'bash', 'rs': 'rust', 'go': 'go',
+                'java': 'java', 'cpp': 'cpp', 'c': 'c', 'h': 'c',
+                'rb': 'ruby', 'php': 'php', 'sql': 'sql', 'xml': 'xml'
+            };
+            const lang = langMap[ext] || '';
+
+            // Set content with syntax highlighting
+            this.elements.previewCode.textContent = content;
+            if (lang) {
+                this.elements.previewCode.className = `language-${lang}`;
+            } else {
+                this.elements.previewCode.className = '';
+            }
+
+            // Apply syntax highlighting
+            if (typeof hljs !== 'undefined' && lang) {
+                try {
+                    hljs.highlightElement(this.elements.previewCode);
+                } catch (e) {
+                    // Highlighting failed, show plain text
+                }
             }
         }
 

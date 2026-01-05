@@ -444,6 +444,181 @@ body {
     color: var(--text-primary);
 }
 
+/* Markdown Preview Styling (v1.14.0) */
+.markdown-preview {
+    padding: 24px;
+    color: var(--text-primary);
+    line-height: 1.6;
+    overflow-y: auto;
+}
+
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3,
+.markdown-preview h4,
+.markdown-preview h5,
+.markdown-preview h6 {
+    margin-top: 24px;
+    margin-bottom: 16px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--text-primary);
+}
+
+.markdown-preview h1 {
+    font-size: 2em;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.3em;
+}
+
+.markdown-preview h2 {
+    font-size: 1.5em;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.3em;
+}
+
+.markdown-preview h3 {
+    font-size: 1.25em;
+}
+
+.markdown-preview h4 {
+    font-size: 1em;
+}
+
+.markdown-preview p {
+    margin-top: 0;
+    margin-bottom: 16px;
+}
+
+.markdown-preview a {
+    color: var(--accent-color);
+    text-decoration: none;
+}
+
+.markdown-preview a:hover {
+    text-decoration: underline;
+}
+
+.markdown-preview ul,
+.markdown-preview ol {
+    padding-left: 2em;
+    margin-top: 0;
+    margin-bottom: 16px;
+}
+
+.markdown-preview li {
+    margin-bottom: 4px;
+}
+
+.markdown-preview li + li {
+    margin-top: 4px;
+}
+
+.markdown-preview blockquote {
+    margin: 0 0 16px 0;
+    padding: 0 16px;
+    color: var(--text-secondary);
+    border-left: 4px solid var(--border-color);
+}
+
+.markdown-preview pre {
+    padding: 16px;
+    overflow: auto;
+    font-size: 85%;
+    line-height: 1.45;
+    background-color: var(--bg-secondary);
+    border-radius: 6px;
+    margin-bottom: 16px;
+}
+
+.markdown-preview code {
+    padding: 0.2em 0.4em;
+    font-size: 85%;
+    background-color: var(--bg-tertiary, rgba(110, 118, 129, 0.2));
+    border-radius: 3px;
+    font-family: 'SF Mono', 'Fira Code', 'Monaco', monospace;
+}
+
+.markdown-preview pre code {
+    padding: 0;
+    background-color: transparent;
+    font-size: inherit;
+    border-radius: 0;
+}
+
+/* Markdown Tables */
+.markdown-preview table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 16px;
+    overflow: auto;
+}
+
+.markdown-preview table th,
+.markdown-preview table td {
+    padding: 8px 13px;
+    border: 1px solid var(--border-color);
+}
+
+.markdown-preview table th {
+    font-weight: 600;
+    background-color: var(--bg-secondary);
+}
+
+.markdown-preview table tr {
+    background-color: var(--bg-primary);
+}
+
+.markdown-preview table tr:nth-child(2n) {
+    background-color: var(--bg-secondary);
+}
+
+/* Horizontal Rule */
+.markdown-preview hr {
+    height: 4px;
+    padding: 0;
+    margin: 24px 0;
+    background-color: var(--border-color);
+    border: 0;
+}
+
+/* Images */
+.markdown-preview img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+}
+
+/* Task Lists */
+.markdown-preview input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+/* Strong and Emphasis */
+.markdown-preview strong {
+    font-weight: 600;
+}
+
+.markdown-preview em {
+    font-style: italic;
+}
+
+/* Definition Lists */
+.markdown-preview dl {
+    padding: 0;
+    margin-bottom: 16px;
+}
+
+.markdown-preview dt {
+    font-weight: 600;
+    margin-top: 16px;
+}
+
+.markdown-preview dd {
+    padding: 0 16px;
+    margin-bottom: 16px;
+}
+
 .welcome-message {
     text-align: center;
     padding: 40px 20px;
@@ -662,10 +837,30 @@ body {
 .message ul, .message ol {
     margin: 8px 0;
     padding-left: 24px;
+    list-style-position: outside;
+}
+
+.message ul {
+    list-style-type: disc;
+}
+
+.message ol {
+    list-style-type: decimal;
 }
 
 .message li {
     margin-bottom: 4px;
+    display: list-item;
+}
+
+/* Ensure markdown formatting is visible (v1.14.0) */
+.message strong {
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.message em {
+    font-style: italic;
 }
 
 .message blockquote {

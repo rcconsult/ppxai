@@ -5,6 +5,37 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.2] - 2026-01-05
+
+### Fixed - Desktop Web App & VSCode Extension
+
+#### Markdown Rendering
+- **Fixed bullet lists** - Changed from Unicode bullet (•) to markdown dash (-) for proper rendering
+- **Fixed `/usage` tables** - Both VSCode extension and Web App now show usage breakdown in table format
+- **Updated marked.js** - Upgraded Web App from v9.1.6 to v11.1.1 (matching VSCode extension)
+
+#### Desktop Web App
+- **Auto-detect server URL** - Web UI now uses `window.location.origin` instead of hardcoded port
+- **Favicon** - Added proper favicon (same icon as VSCode extension)
+- **Markdown preview** - File preview panel now renders `.md` files with full markdown support
+- **Preview link clicks** - Clicking relative links in markdown preview opens files instead of 404
+
+#### Shared Modules
+- **Command parity** - New shared JS/TS modules ensure identical commands across TUI, VSCode, and Web App
+- **Formatter parity** - Consistent markdown formatting for all command responses
+
+### Fixed - Cross-Platform Compatibility (Windows)
+
+#### Tests
+- **Path handling** - Tests now use `tempfile.gettempdir()` instead of hardcoded `/tmp`
+- **Filename references** - Tests use filename only, not full paths with platform-specific separators
+- **Rich console** - Added `legacy_windows=False` for OSC 8 hyperlink tests
+
+#### Configuration
+- **PEP 735** - Migrated from `[tool.uv].dev-dependencies` to `[dependency-groups].dev`
+
+---
+
 ## [1.13.1] - 2026-01-04
 
 ### Added - Desktop Web App

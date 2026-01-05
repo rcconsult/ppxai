@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ppxai - AI Chat</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231a1a2e'/%3E%3Ctext x='16' y='22' font-family='system-ui' font-size='16' font-weight='bold' fill='%2300d4ff' text-anchor='middle'%3Epp%3C/text%3E%3C/svg%3E">
+    <link rel="icon" type="image/png" href="favicon.png">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="lib/highlight-github-dark.css">
     <script src="lib/marked.min.js"></script>
@@ -16,7 +16,7 @@
         <header class="header">
             <div class="header-left">
                 <span class="logo">ppxai</span>
-                <span class="version-badge" id="versionBadge">v1.13.1</span>
+                <span class="version-badge" id="versionBadge">v1.14.0</span>
                 <button class="server-badge connected" id="serverBadge" title="Server status">
                     <span class="server-indicator"></span>
                     <span id="serverStatus">Connected</span>
@@ -97,6 +97,7 @@
                 </div>
                 <div class="preview-content" id="previewContent">
                     <pre><code id="previewCode"></code></pre>
+                    <div class="markdown-preview hidden" id="previewMarkdown"></div>
                 </div>
             </aside>
         </div>
@@ -173,6 +174,11 @@
         </div>
     </div>
 
+    <!-- Shared modules (must load before app.js) -->
+    <!-- These files export to window.SharedCommands, window.SharedFormatters, window.ApiClient -->
+    <script src="shared/commands.js"></script>
+    <script src="shared/formatters.js"></script>
+    <script src="shared/api-client.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

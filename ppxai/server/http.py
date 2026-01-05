@@ -644,6 +644,36 @@ async def set_tools_config(request: ToolsConfigRequest):
     }
 
 
+@app.get("/tools/help/{tool_name}")
+async def get_tool_help(tool_name: str):
+    """Get detailed help for a specific tool.
+
+    Returns tool definition including parameters, description, and usage examples.
+    """
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    if not engine.tools_enabled or not engine.tool_manager:
+        raise HTTPException(status_code=400, detail="Tools not enabled")
+
+    tool = engine.tool_manager.get_tool(tool_name)
+    if not tool:
+        available_tools = engine.tool_manager.list_tools()
+        tool_names = [t['name'] for t in available_tools]
+        raise HTTPException(
+            status_code=404,
+            detail=f"Tool not found: {tool_name}. Available: {', '.join(sorted(tool_names))}"
+        )
+
+    tool_info = tool.get_definition()
+    return {
+        "name": tool_name,
+        "description": tool_info.get("function", {}).get("description", ""),
+        "parameters": tool_info.get("function", {}).get("parameters", {}),
+    }
+
+
 # === Usage Statistics ===
 
 @app.get("/usage")
@@ -1321,6 +1351,42 @@ async def clear_file_checkpoints(request: dict = None):
     }
 
 
+@app.get("/checkpoint/info/{checkpoint_id}")
+async def get_checkpoint_info(checkpoint_id: str):
+    """Get details about a specific checkpoint.
+
+    Supports prefix matching - e.g., "abc123" matches "abc123def456".
+    """
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    checkpoints = engine.list_checkpoints(limit=20)
+
+    # Find matching checkpoint (prefix match)
+    matching = [cp for cp in checkpoints if cp.get("id", "").startswith(checkpoint_id)]
+
+    if not matching:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Checkpoint not found: {checkpoint_id}"
+        )
+
+    cp = matching[0]
+
+    # Check if this is the current checkpoint
+    status = engine.get_checkpoint_status()
+    is_current = status.get("last_checkpoint", "").startswith(checkpoint_id)
+
+    return {
+        "id": cp.get("id", ""),
+        "description": cp.get("description", ""),
+        "timestamp": cp.get("timestamp", ""),
+        "is_current": is_current,
+        "is_valid": status.get("is_valid") if is_current else False,
+        "status": "current" if is_current else "historical",
+    }
+
+
 # === Debug Logging (v1.11.2) ===
 
 @app.get("/debug-log")
@@ -1392,6 +1458,40 @@ async def serve_lib(filename: str):
         }
         media_type = content_types.get(suffix, 'application/octet-stream')
         return FileResponse(file_path, media_type=media_type)
+    raise HTTPException(status_code=404, detail="Not found")
+
+
+@app.get("/shared/{filename:path}")
+async def serve_shared(filename: str):
+    """Serve shared module files (v1.14.0)."""
+    file_path = WEB_UI_DIR / 'shared' / filename
+    if file_path.exists() and file_path.is_file():
+        suffix = file_path.suffix.lower()
+        content_types = {
+            '.js': 'application/javascript',
+            '.css': 'text/css',
+            '.json': 'application/json',
+        }
+        media_type = content_types.get(suffix, 'application/octet-stream')
+        return FileResponse(file_path, media_type=media_type)
+    raise HTTPException(status_code=404, detail="Not found")
+
+
+@app.get("/favicon.ico")
+async def serve_favicon_ico():
+    """Serve favicon.ico (redirect to favicon.png)."""
+    file_path = WEB_UI_DIR / 'favicon.png'
+    if file_path.exists():
+        return FileResponse(file_path, media_type='image/png')
+    raise HTTPException(status_code=404, detail="Not found")
+
+
+@app.get("/favicon.png")
+async def serve_favicon_png():
+    """Serve favicon.png."""
+    file_path = WEB_UI_DIR / 'favicon.png'
+    if file_path.exists():
+        return FileResponse(file_path, media_type='image/png')
     raise HTTPException(status_code=404, detail="Not found")
 
 

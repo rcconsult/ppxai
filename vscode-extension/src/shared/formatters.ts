@@ -1,0 +1,337 @@
+/**
+ * Shared Response Formatters
+ *
+ * Provides consistent markdown formatting for command responses across:
+ * - Desktop Web App (ppxai/web/app.js)
+ * - VSCode Extension (vscode-extension/src/chatPanel.ts)
+ *
+ * Uses bullet character (•) instead of markdown dash (-) for consistent
+ * rendering across different webview implementations.
+ *
+ * @version 1.14.0
+ */
+
+export interface ToolsStatusData {
+    enabled: boolean;
+    tools?: Array<{ name: string; description: string }>;
+    verbose?: boolean;
+    max_iterations?: number;
+    consent_mode?: string;
+}
+
+export interface CheckpointData {
+    backend?: string;
+    enabled?: boolean;
+    last_checkpoint?: string;
+    is_valid?: boolean;
+    validity_reason?: string;
+}
+
+export interface CheckpointInfoData {
+    id: string;
+    description: string;
+    timestamp: string;
+    is_current?: boolean;
+    is_valid?: boolean;
+    status?: string;
+}
+
+export interface UsageData {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+    estimated_cost?: number;
+    total_cost?: number;
+    period?: string;
+    session_count?: number;
+    by_model?: Record<string, { total_tokens: number; estimated_cost: number }>;
+}
+
+export interface StatusData {
+    provider: string;
+    model: string;
+    tools_enabled?: boolean;
+    auto_inject_context?: boolean;
+    message_count?: number;
+}
+
+export interface ProviderData {
+    id: string;
+    name: string;
+    has_api_key?: boolean;
+}
+
+export interface ModelData {
+    id: string;
+    name?: string;
+    description?: string;
+}
+
+export interface SessionData {
+    name: string;
+    provider: string;
+    model: string;
+    message_count: number;
+}
+
+export interface ToolHelpData {
+    name: string;
+    description: string;
+    parameters?: {
+        properties?: Record<string, { description?: string; type?: string }>;
+        required?: string[];
+    };
+}
+
+/**
+ * Format tools status response
+ */
+export function formatToolsStatus(data: ToolsStatusData): string {
+    let text = '**Tools Status:**\n\n';
+    text += `• Enabled: ${data.enabled ? 'yes' : 'no'}  \n`;
+    text += `• Tool count: ${data.tools?.length || 0}  \n`;
+    text += `• Verbose: ${data.verbose ? 'on' : 'off'}  \n`;
+    if (data.max_iterations) {
+        text += `• Max iterations: ${data.max_iterations}  \n`;
+    }
+    if (data.consent_mode) {
+        text += `• Consent mode: ${data.consent_mode}  \n`;
+    }
+    return text;
+}
+
+/**
+ * Format tools list response
+ */
+export function formatToolsList(tools: Array<{ name: string; description: string }>): string {
+    if (!tools || tools.length === 0) {
+        return '**Available Tools:**\n\nNo tools available. Use `/tools enable` first.';
+    }
+    let text = '**Available Tools:**\n\n';
+    tools.forEach(t => {
+        text += `• \`${t.name}\` - ${t.description}  \n`;
+    });
+    return text;
+}
+
+/**
+ * Format tool config response
+ */
+export function formatToolConfig(data: ToolsStatusData): string {
+    let text = '**Tool Configuration:**\n\n';
+    text += `• Enabled: ${data.enabled ? 'yes' : 'no'}  \n`;
+    text += `• Max iterations: ${data.max_iterations || 15}  \n`;
+    text += `• Verbose: ${data.verbose ? 'on' : 'off'}  \n`;
+    text += `• Consent mode: ${data.consent_mode || 'default'}  \n`;
+    text += `• Tool count: ${data.tools?.length || 0}  \n`;
+    return text;
+}
+
+/**
+ * Format tool help response
+ */
+export function formatToolHelp(data: ToolHelpData): string {
+    let text = `**Tool: ${data.name}**\n\n`;
+    text += `${data.description}\n\n`;
+    if (data.parameters && data.parameters.properties) {
+        text += '**Parameters:**\n\n';
+        const required = data.parameters.required || [];
+        Object.entries(data.parameters.properties).forEach(([name, prop]) => {
+            const isRequired = required.includes(name) ? ' *(required)*' : '';
+            text += `• \`${name}\`${isRequired}: ${prop.description || prop.type || 'no description'}  \n`;
+        });
+    }
+    return text;
+}
+
+/**
+ * Format agent status response
+ */
+export function formatAgentStatus(agentMode: boolean): string {
+    const status = agentMode ? 'ON' : 'OFF';
+    return `**Agent Mode:** ${status}\n\nUsage: \`/tools agent on|off\`\nOr use \`/agent <task>\` to run an autonomous task.`;
+}
+
+/**
+ * Format checkpoint status response
+ */
+export function formatCheckpointStatus(data: { checkpoint?: CheckpointData }): string {
+    let text = '**Checkpoint Status:**\n\n';
+    if (data.checkpoint) {
+        text += `• Backend: ${data.checkpoint.backend}  \n`;
+        text += `• Enabled: ${data.checkpoint.enabled ? 'yes' : 'no'}  \n`;
+        text += `• Last checkpoint: ${data.checkpoint.last_checkpoint || 'none'}  \n`;
+        text += `• Valid: ${data.checkpoint.is_valid ? 'yes' : 'no'}  \n`;
+        if (!data.checkpoint.is_valid && data.checkpoint.validity_reason) {
+            text += `• Reason: ${data.checkpoint.validity_reason}  \n`;
+        }
+    } else {
+        text += 'Checkpoint system not available.\n';
+    }
+    return text;
+}
+
+/**
+ * Format checkpoint list response
+ */
+export function formatCheckpointList(data: { checkpoints?: CheckpointInfoData[] }): string {
+    let text = '**Recent Checkpoints:**\n\n';
+    if (!data.checkpoints || data.checkpoints.length === 0) {
+        text += 'No checkpoints found.\n';
+    } else {
+        data.checkpoints.forEach(cp => {
+            text += `• \`${cp.id}\` - ${cp.description} (${cp.timestamp})  \n`;
+        });
+    }
+    return text;
+}
+
+/**
+ * Format checkpoint info response
+ */
+export function formatCheckpointInfo(data: CheckpointInfoData): string {
+    let text = '**Checkpoint Details:**\n\n';
+    text += `• ID: \`${data.id}\`  \n`;
+    text += `• Description: ${data.description}  \n`;
+    text += `• Timestamp: ${data.timestamp}  \n`;
+    const statusText = data.is_current
+        ? (data.is_valid ? 'Current (can undo)' : 'Stale (cannot undo)')
+        : 'Historical';
+    text += `• Status: ${statusText}  \n`;
+    return text;
+}
+
+/**
+ * Format checkpoint backend help
+ */
+export function formatCheckpointBackendHelp(): string {
+    return `**Checkpoint Backend**
+
+Usage: \`/checkpoint backend <git|file|auto|none>\`
+
+• \`git\`: Use git commits (recommended for git repos)
+• \`file\`: Use file snapshots (~/.ppxai/checkpoints/)
+• \`auto\`: Auto-detect best backend
+• \`none\`: Disable checkpoints`;
+}
+
+/**
+ * Format usage statistics response
+ */
+export function formatUsageStats(data: UsageData, period: string | null = null): string {
+    let text = '**Usage Statistics:**\n\n';
+
+    if (period) {
+        text += `**Period:** ${data.period}  \n`;
+        text += `**Sessions:** ${data.session_count}\n\n`;
+    }
+
+    text += `• Prompt tokens: ${data.prompt_tokens || 0}  \n`;
+    text += `• Completion tokens: ${data.completion_tokens || 0}  \n`;
+    text += `• Total tokens: ${data.total_tokens || 0}  \n`;
+    text += `• Estimated cost: $${(data.estimated_cost || data.total_cost || 0).toFixed(4)}  \n`;
+
+    if (data.by_model && Object.keys(data.by_model).length > 0) {
+        text += '\n**By Model:**\n\n';
+        Object.entries(data.by_model).forEach(([model, stats]) => {
+            text += `• ${model}: ${stats.total_tokens} tokens, $${stats.estimated_cost.toFixed(4)}  \n`;
+        });
+    }
+
+    return text;
+}
+
+/**
+ * Format usage display mode help
+ */
+export function formatUsageDisplayHelp(): string {
+    return `**Usage Display Mode**
+
+Usage: \`/usage show <mode>\`
+
+**Modes:**
+
+• \`session\`: Show session totals
+• \`provider\`: Show by provider
+• \`model\`: Show by model
+• \`off\`: Hide usage display`;
+}
+
+/**
+ * Format status response
+ */
+export function formatStatus(data: StatusData): string {
+    let text = '**Current Status:**\n\n';
+    text += `• Provider: ${data.provider}  \n`;
+    text += `• Model: ${data.model}  \n`;
+    text += `• Tools: ${data.tools_enabled ? 'enabled' : 'disabled'}  \n`;
+    if (data.auto_inject_context !== undefined) {
+        text += `• Auto-inject context: ${data.auto_inject_context ? 'yes' : 'no'}  \n`;
+    }
+    if (data.message_count !== undefined) {
+        text += `• Messages: ${data.message_count}  \n`;
+    }
+    return text;
+}
+
+/**
+ * Format providers list response
+ */
+export function formatProvidersList(providers: ProviderData[], currentProvider: string | null = null): string {
+    let text = '**Available Providers:**\n\n';
+    providers.forEach(p => {
+        const current = p.id === currentProvider ? ' *(current)*' : '';
+        const apiKey = p.has_api_key ? '' : ' (no API key)';
+        text += `• \`${p.id}\`${current} - ${p.name}${apiKey}  \n`;
+    });
+    return text;
+}
+
+/**
+ * Format models list response
+ */
+export function formatModelsList(models: ModelData[], currentModel: string | null = null): string {
+    let text = '**Available Models:**\n\n';
+    models.forEach(m => {
+        const current = m.id === currentModel ? ' *(current)*' : '';
+        text += `• \`${m.id}\`${current} - ${m.name || m.description}  \n`;
+    });
+    return text;
+}
+
+/**
+ * Format sessions list response
+ */
+export function formatSessionsList(sessions: SessionData[]): string {
+    if (!sessions || sessions.length === 0) {
+        return '**Saved Sessions:**\n\nNo saved sessions.';
+    }
+    let text = '**Saved Sessions:**\n\n';
+    sessions.forEach(s => {
+        text += `• \`${s.name}\` (${s.provider}/${s.model}, ${s.message_count} messages)  \n`;
+    });
+    return text;
+}
+
+/**
+ * Format file contents for /show command
+ */
+export function formatFileContents(filepath: string, content: string, language: string | null = null): string {
+    const ext = filepath.split('.').pop() || '';
+    const lang = language || ext || 'text';
+    return `**File: ${filepath}**\n\n\`\`\`${lang}\n${content}\n\`\`\``;
+}
+
+/**
+ * Format error message
+ */
+export function formatError(message: string): string {
+    return `**Error:** ${message}`;
+}
+
+/**
+ * Format success message
+ */
+export function formatSuccess(message: string): string {
+    return `✓ ${message}`;
+}

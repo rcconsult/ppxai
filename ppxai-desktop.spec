@@ -12,7 +12,9 @@ a = Analysis(
         ('ppxai/web/index.html', 'ppxai/web'),
         ('ppxai/web/app.js', 'ppxai/web'),
         ('ppxai/web/styles.css', 'ppxai/web'),
+        ('ppxai/web/favicon.png', 'ppxai/web'),  # Favicon (v1.14.0)
         ('ppxai/web/lib', 'ppxai/web/lib'),
+        ('ppxai/web/shared', 'ppxai/web/shared'),  # Shared modules (v1.14.0)
     ],
     hiddenimports=[],
     hookspath=[],
