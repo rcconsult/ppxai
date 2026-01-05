@@ -88,10 +88,10 @@ Migrated from `[tool.uv].dev-dependencies` to standard `[dependency-groups].dev`
 ## Test Results
 
 ```
-533 passed in 5.00s
+553 passed in 14.39s
 ```
 
-All tests pass on both Linux and Windows.
+All tests pass on Linux and Windows.
 
 ## Upgrade Instructions
 

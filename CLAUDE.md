@@ -495,7 +495,7 @@ python -c "from ppxai.config import validate_config; print(validate_config())"
 
 ## Testing
 
-- **533 tests** across multiple test modules (16 new shared module tests in v1.13.2)
+- **553 tests** across multiple test modules (20 new tests in v1.13.2)
 - **48 config tests** for the hybrid configuration system
 - Tests use `pytest` with `unittest.mock` for mocking
 - Custom endpoint integration tests require vLLM/Ollama running locally

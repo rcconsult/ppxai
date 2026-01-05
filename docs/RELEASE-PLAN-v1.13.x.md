@@ -103,8 +103,8 @@ See [RELEASE-NOTES-v1.13.2.md](RELEASE-NOTES-v1.13.2.md) for full details.
 | v1.13.1 | Desktop Web App | Working directory, file operations |
 | v1.13.2 | Bugfix | Markdown rendering, Windows compat |
 
-**Total New Tests:** 127+ across the series
-**Final Test Count:** 533 passing
+**Total New Tests:** 147+ across the series
+**Final Test Count:** 553 passing
 
 ---
 
