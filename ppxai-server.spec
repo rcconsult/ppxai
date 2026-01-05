@@ -109,6 +109,9 @@ a = Analysis(
         'ruff',
         # Exclude TUI-only packages (not needed for server)
         'prompt_toolkit',
+        # Exclude tkinter (not needed for server)
+        'tkinter',
+        '_tkinter',
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,

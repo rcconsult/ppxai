@@ -171,9 +171,11 @@ def main():
         return 0
 
     # Build uv sync command
+    # Note: dev-dependencies in [tool.uv] include pyinstaller, fastapi, uvicorn,
+    # google-genai, duckduckgo-search - everything needed for building releases
     sync_args = ["sync"]
     if args.all:
-        sync_args.append("--all-extras")
+        sync_args.extend(["--all-extras", "--dev"])
     else:
         if args.server:
             sync_args.extend(["--extra", "server"])

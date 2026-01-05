@@ -26,6 +26,12 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
   - `GET/POST /context/working_dir` - Get/set working directory
   - `POST /files/read` - Read file contents
   - `POST /files/search` - Search for files
+- **Build System Fixes (Linux):**
+  - `ppxai-server.spec`: Exclude tkinter to fix PyInstaller hook error
+  - `pyproject.toml`: All dev/build deps in `[tool.uv]` dev-dependencies
+  - `uv.lock`: Includes pyinstaller, fastapi, google-genai, duckduckgo-search
+  - `bootstrap.py`: `--all` flag now includes `--dev` for complete setup
+  - Fresh clone + `python scripts/bootstrap.py --all` gives full build environment
 - **Known Issues:** Several bugs still being fixed, not ready for release
 
 **What's New in v1.13.0 (Released 2026-01-03):**
@@ -299,7 +305,7 @@ If you prefer to install uv system-wide:
    ```bash
    uv sync --extra server   # HTTP + SSE server support
    uv sync --extra mcp      # MCP tool support
-   uv sync --dev            # Development tools (pytest, ruff)
+   uv sync --dev            # Dev tools (pytest, pyinstaller, fastapi, etc.)
    uv sync --all-extras     # Everything
    ```
 
