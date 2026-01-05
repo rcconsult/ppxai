@@ -673,7 +673,10 @@ When creating commits, do NOT include Claude credits or co-authored-by lines. Th
 
 ## Known Issues
 
-None currently. Previous issues resolved:
+**Suboptimal (accepted):**
+- **Perplexity/Gemini shell workarounds**: When tools are enabled for providers with native web search (Perplexity, Gemini), the AI may use `execute_shell_command` with curl to fetch web data (e.g., weather from wttr.in) instead of using its built-in web search capability. This is suboptimal because: (1) shell commands require consent, (2) no citations provided, (3) depends on external service. **Root cause**: The tool system prompt doesn't inform the AI that it has native web search. **Future fix**: Add provider-aware guidance to tool prompt. See ROADMAP.md "Future Considerations".
+
+**Previously resolved:**
 - **TUI Markdown Tables**: Fixed in v1.10.4
 - **Ctrl-C Message Alternation**: Fixed in v1.10.5
 
