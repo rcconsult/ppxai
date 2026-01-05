@@ -7,7 +7,11 @@
 class PpxaiApp {
     constructor() {
         // Configuration
-        this.serverUrl = localStorage.getItem('ppxai-server-url') || 'http://127.0.0.1:54320';
+        // Use current page origin as server URL (since server serves the web UI)
+        // Fall back to localStorage or default only if origin is file:// or about:
+        const pageOrigin = window.location.origin;
+        const usePageOrigin = pageOrigin && !pageOrigin.startsWith('file:') && pageOrigin !== 'null';
+        this.serverUrl = usePageOrigin ? pageOrigin : (localStorage.getItem('ppxai-server-url') || 'http://127.0.0.1:54320');
         this.theme = localStorage.getItem('ppxai-theme') || 'dark';
 
         // State

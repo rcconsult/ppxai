@@ -33,9 +33,11 @@ class TestContextInjector:
 
     def test_detect_at_file_references(self, injector, temp_file):
         """Test that @ file references are detected."""
-        message = f"Please edit @{temp_file}"
+        # Use just the filename (users type @filename.ext, not full paths)
+        filename = temp_file.name
+        message = f"Please edit @{filename}"
         files = injector.detect_file_references(message)
-        assert str(temp_file) in files
+        assert filename in files
 
     def test_detect_relative_file_references(self, injector):
         """Test that relative file references are detected."""
@@ -89,7 +91,9 @@ class TestContextInjector:
 
     def test_inject_context_with_at_reference(self, injector, temp_file):
         """Test that @ references are injected and cleaned from message."""
-        message = f"Please edit the title in @{temp_file}"
+        # Use just the filename (users type @filename.ext, not full paths)
+        filename = temp_file.name
+        message = f"Please edit the title in @{filename}"
         enhanced, contexts = injector.inject_context(message)
 
         # File content should be injected
@@ -103,19 +107,21 @@ class TestContextInjector:
         assert "# Test File" in enhanced
 
         # @ reference should be replaced with filename
-        assert f"@{temp_file}" not in enhanced
-        assert temp_file.name in enhanced
+        assert f"@{filename}" not in enhanced
+        assert filename in enhanced
 
     def test_inject_context_preserves_non_at_files(self, injector, temp_file):
         """Test that non-@ file references are not cleaned."""
-        message = f"Please read the file at {temp_file}"
+        # Use quoted filename (users type "filename.ext" for file references)
+        filename = temp_file.name
+        message = f'Please read the file "{filename}"'
         enhanced, contexts = injector.inject_context(message)
 
-        # Should still inject (short message)
+        # Should still inject (quoted file reference)
         assert len(contexts) == 1
 
-        # But original path should remain (no @ to remove)
-        assert str(temp_file) in enhanced
+        # But original quoted path should remain (no @ to remove)
+        assert filename in enhanced
 
     def test_inject_context_multiple_files(self, injector, temp_file):
         """Test injecting multiple files."""
@@ -125,7 +131,10 @@ class TestContextInjector:
             temp_file2 = Path(f.name)
 
         try:
-            message = f"Compare @{temp_file} and @{temp_file2}"
+            # Use just filenames (users type @filename.ext, not full paths)
+            filename1 = temp_file.name
+            filename2 = temp_file2.name
+            message = f"Compare @{filename1} and @{filename2}"
             enhanced, contexts = injector.inject_context(message)
 
             # Both files should be injected

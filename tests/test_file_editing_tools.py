@@ -470,10 +470,13 @@ async def test_file_not_found_error(engine_with_consent):
 @pytest.mark.asyncio
 async def test_not_a_file_error(engine_with_consent):
     """Test handling of directory path."""
+    import tempfile
     tool = ReplaceBlockTool(engine_with_consent)
 
+    # Use platform-appropriate temp directory
+    temp_dir = tempfile.gettempdir()
     result = await tool.execute(
-        file_path="/tmp",  # Directory, not file
+        file_path=temp_dir,  # Directory, not file
         search="test",
         replace="replacement"
     )

@@ -444,7 +444,8 @@ class TestLinkConversion:
     def test_render_with_links_produces_osc8(self):
         """Test that rendering produces OSC 8 hyperlink escape codes."""
         string_io = StringIO()
-        console = Console(file=string_io, force_terminal=True, width=80)
+        # force_terminal=True + legacy_windows=False ensures OSC 8 on all platforms
+        console = Console(file=string_io, force_terminal=True, legacy_windows=False, width=80)
 
         content = "Here is a citation [1](https://example.com)."
         render_markdown_with_tables(content, console)
@@ -459,7 +460,8 @@ class TestLinkConversion:
     def test_links_in_mixed_content(self):
         """Test links mixed with other markdown content."""
         string_io = StringIO()
-        console = Console(file=string_io, force_terminal=True, width=80)
+        # force_terminal=True + legacy_windows=False ensures OSC 8 on all platforms
+        console = Console(file=string_io, force_terminal=True, legacy_windows=False, width=80)
 
         content = """## References
 
