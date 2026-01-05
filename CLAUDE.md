@@ -8,6 +8,26 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current Version:** v1.13.1
 
+**Work in Progress (branch: updates/desktop-web-app-fixes):**
+- **Desktop Web App:** Standalone macOS app with embedded web UI
+  - Working directory context with folder badge in UI
+  - `/show` command with fuzzy file search
+  - Filesystem tools respect `engine.get_working_dir()` context
+  - `WORKING_DIR_CHANGED` event for UI notification
+- **Gemini Native Grounding:** Fixed google-genai package bundling in PyInstaller
+  - Added hidden imports for google-genai and dependencies
+  - Native Google Search Grounding now works in bundled binary
+  - Real-time weather, search queries return citations
+- **Filesystem Tool Classes:** Converted standalone functions to BaseTool classes
+  - `SetWorkingDirectoryTool`, `GetWorkingDirectoryTool`
+  - `ListDirectoryTool`, `SearchFilesTool`, `ReadFileTool`
+  - All resolve paths relative to engine working directory
+- **HTTP Server Endpoints:**
+  - `GET/POST /context/working_dir` - Get/set working directory
+  - `POST /files/read` - Read file contents
+  - `POST /files/search` - Search for files
+- **Known Issues:** Several bugs still being fixed, not ready for release
+
 **What's New in v1.13.0 (Released 2026-01-03):**
 - **NEW:** Premium web search tool for custom providers (vLLM, Ollama)
   - Priority fallback: Perplexity Sonar → Gemini Grounding → DuckDuckGo (free)
