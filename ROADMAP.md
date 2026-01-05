@@ -249,6 +249,7 @@ These are tracked but not prioritized:
 - **libghostty SDK** - Watch for stable C API (expected 2026)
 - **Per-provider tool config** - Enable/disable tools per provider
 - **Custom tools** - User-defined tools in `~/.ppxai/tools/`
+- **Provider-aware tool guidance** - Perplexity/Gemini with tools enabled should be told they have native web search built-in, so they use it for information queries rather than shell workarounds (curl to wttr.in). Add provider-specific instructions to tool system prompt: "You have native web search capability - use it for weather, news, search queries. Only use execute_shell_command for system operations."
 
 ---
 
