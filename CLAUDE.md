@@ -625,6 +625,20 @@ curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | 
 # ~/.local/share/icons/hicolor/128x128/apps/ppxai.png
 ```
 
+### Complete Installation Summary
+
+After installation, you should have:
+
+| Category | Files |
+|:---------|:------|
+| **Binaries** | `~/.local/bin/ppxai`, `ppxai-server`, `ppxai-desktop` |
+| **Desktop** | `~/.local/share/applications/ppxai.desktop` |
+| **Icon** | `~/.local/share/icons/hicolor/128x128/apps/ppxai.png` |
+| **Config** | `~/.ppxai/ppxai-config.json` (v1.1), `~/.ppxai/.env` |
+| **Data** | `~/.ppxai/sessions/`, `exports/`, `usage/`, `logs/` |
+
+**Configuration version:** 1.1 (includes `paths` section for binary discovery)
+
 See [docs/RELEASE-NOTES-v1.11.9.md](docs/RELEASE-NOTES-v1.11.9.md) for an example of proper release notes.
 
 ## GitHub CLI Authentication
