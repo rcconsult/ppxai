@@ -595,24 +595,28 @@ See [docs/RELEASE-NOTES-v1.11.9.md](docs/RELEASE-NOTES-v1.11.9.md) for an exampl
 
 ## GitHub CLI Authentication
 
-When using `gh` commands for releases and repository operations, **always use the project token file** to avoid conflicts with stale environment variables:
+When using `gh` commands or git push for releases and repository operations, use the token from `.github/gh-token.env` (gitignored, not committed):
 
 ```bash
-# Standard pattern for all gh commands
-unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN && gh <command>
+# Git push with token
+GH_TOKEN=$(cat .github/gh-token.env) && git remote set-url origin "https://rcconsult:${GH_TOKEN}@github.com/rcconsult/ppxai.git" && git push origin <branch>
 
-# Examples
-unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN && gh release list
-unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN && gh release create v1.x.x
+# gh CLI commands
+GH_TOKEN=$(cat .github/gh-token.env) gh release list
+GH_TOKEN=$(cat .github/gh-token.env) gh release create v1.x.x
 ```
+
+**Setup on new development host:**
+Copy your GitHub token to `.github/gh-token.env` (this file is in `.gitignore` and will not be committed).
 
 **Why this is needed:**
 - The `gh` CLI checks `GITHUB_TOKEN` env var first, then falls back to `GH_TOKEN`
-- Stale `GITHUB_TOKEN` values in the environment can cause 401 Unauthorized errors
-- The token in `.github/gh-tokenv.env` is the valid project token
-- Always unset `GITHUB_TOKEN` before sourcing to ensure clean state
+- The token in `.github/gh-token.env` is the valid project token
+- Username for git URL is `rcconsult`
 
-**Build scripts** (like `scripts/build-intel.sh`) handle this automatically.
+## Commit Message Guidelines
+
+When creating commits, do NOT include Claude credits or co-authored-by lines. The user will add these when needed. Keep commit messages clean with just the description of changes.
 
 ## Recent Features (v1.10.2)
 

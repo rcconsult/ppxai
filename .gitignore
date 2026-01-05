@@ -85,3 +85,4 @@ CLAUDE.md
 
 # GitHub token (for local release uploads)
 .github/gh-tokenv.env
+.github/gh-token.env
