@@ -1,6 +1,6 @@
 # Installation Guide
 
-This guide covers installing ppxai for both terminal (TUI) and VSCode extension use.
+This guide covers installing ppxai for terminal (TUI), Desktop Web App, and VSCode extension use.
 
 ## Quick Install
 
@@ -10,7 +10,7 @@ This guide covers installing ppxai for both terminal (TUI) and VSCode extension 
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash
 ```
 
-This installs both the terminal app (`ppxai`) and the server (`ppxai-server`) to `~/.local/bin`.
+This installs `ppxai` (TUI), `ppxai-server`, and `ppxai-desktop` (Desktop Web App) to `~/.local/bin`.
 
 #### Installation Options
 
@@ -21,8 +21,14 @@ curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | 
 # Install with VSCode extension
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-extension
 
+# Install with Linux desktop integration (adds to app menu)
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-desktop
+
 # Install only the server (for VSCode users who don't need TUI)
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --server-only
+
+# Install only TUI (no server or desktop)
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --tui-only
 
 # Install to custom directory
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --install-dir /usr/local/bin
@@ -120,6 +126,9 @@ ppxai --version
 
 # Check server
 ppxai-server --version
+
+# Check Desktop Web App
+ppxai-desktop --version
 ```
 
 ## Using the Terminal UI (TUI)
@@ -141,6 +150,43 @@ ppxai
 | `/clear` | Clear conversation |
 | `/save` | Save session |
 | `Ctrl+C` (x2) | Exit |
+
+## Using the Desktop Web App
+
+The Desktop Web App (v1.13.1+) launches a browser-based chat interface:
+
+```bash
+ppxai-desktop
+```
+
+This opens your default browser to the ppxai web UI. Features:
+- Full slash command support (`/provider`, `/model`, `/tools`, etc.)
+- Same `@file`, `@git`, `@tree` context injection as TUI
+- Markdown rendering with syntax highlighting
+- Agent mode with tool execution
+
+### macOS DMG Installer
+
+macOS users can download the `.dmg` installer from [GitHub Releases](https://github.com/rcconsult/ppxai/releases):
+
+1. Download `ppxai-VERSION-macos-arm64.dmg`
+2. Open the DMG and drag `ppxai.app` to Applications
+3. Launch from Applications or Spotlight
+
+The app bundle includes both `ppxai-desktop` and `ppxai-server`.
+
+### Linux Desktop Integration
+
+Add ppxai to your application menu:
+
+```bash
+# Install with desktop integration
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-desktop
+```
+
+This installs:
+- `~/.local/share/applications/ppxai.desktop` - Desktop entry
+- `~/.local/share/icons/hicolor/128x128/apps/ppxai.png` - App icon
 
 ## Using the VSCode Extension
 
@@ -209,12 +255,17 @@ ppxai-server
 
 Pre-built binaries are available for all platforms:
 
-| Platform | TUI Binary | Server Binary |
-|----------|------------|---------------|
-| macOS ARM (M1/M2) | `ppxai-macos-arm64` | `ppxai-server-macos-arm64` |
-| macOS Intel | `ppxai-macos-intel` | `ppxai-server-macos-intel` |
-| Linux x64 | `ppxai-linux-amd64` | `ppxai-server-linux-amd64` |
-| Windows | `ppxai-windows.exe` | `ppxai-server-windows.exe` |
+| Platform | TUI | Server | Desktop |
+|----------|-----|--------|---------|
+| macOS ARM (M1/M2) | `ppxai-macos-arm64` | `ppxai-server-macos-arm64` | `ppxai-desktop-macos-arm64` |
+| macOS Intel | `ppxai-macos-intel` | `ppxai-server-macos-intel` | `ppxai-desktop-macos-intel` |
+| Linux x64 | `ppxai-linux-amd64` | `ppxai-server-linux-amd64` | `ppxai-desktop-linux-amd64` |
+| Windows | `ppxai-windows.exe` | `ppxai-server-windows.exe` | `ppxai-desktop-windows.exe` |
+
+**Additional downloads:**
+- `ppxai-VERSION.vsix` - VSCode extension
+- `ppxai-VERSION-macos-arm64.dmg` - macOS app bundle installer
+- `ppxai-web-ui-VERSION.zip` - Web UI files (for self-hosting)
 
 Download from [GitHub Releases](https://github.com/rcconsult/ppxai/releases).
 
@@ -361,7 +412,12 @@ This will download and replace the binaries with the latest version.
 # Remove binaries
 rm ~/.local/bin/ppxai
 rm ~/.local/bin/ppxai-server
+rm ~/.local/bin/ppxai-desktop
 rm ~/.local/bin/ppxai-*.vsix
+
+# Remove desktop integration (if installed)
+rm ~/.local/share/applications/ppxai.desktop
+rm ~/.local/share/icons/hicolor/128x128/apps/ppxai.png
 
 # Remove configuration (optional)
 rm -rf ~/.ppxai

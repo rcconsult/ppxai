@@ -11,7 +11,7 @@
 | Locked to one AI vendor | Switch between Perplexity, Gemini, OpenAI, OpenRouter, Ollama anytime |
 | Expensive API costs | Use local models, free tiers, or cheapest provider that works |
 | Closed-source tools | Fully OSS—inspect, modify, self-host |
-| Terminal OR IDE | Same experience in both—TUI + VSCode extension |
+| Terminal OR IDE | Same experience everywhere—TUI, Desktop App, VSCode extension |
 
 ## Quick Start
 
@@ -21,7 +21,7 @@
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash
 ```
 
-This installs `ppxai` and `ppxai-server` to `~/.local/bin`. Then:
+This installs `ppxai`, `ppxai-server`, and `ppxai-desktop` to `~/.local/bin`. Then:
 
 ```bash
 # Add to PATH (if not already)
@@ -30,19 +30,27 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
 # Set up API key
 echo 'PERPLEXITY_API_KEY=pplx-xxxxx' > ~/.ppxai/.env
 
-# Run
+# Run TUI
 ppxai
+
+# Or run Desktop Web App (browser-based UI)
+ppxai-desktop
 ```
 
-With VSCode extension: `curl -sSL ... | bash -s -- --with-extension`
+**Installation options:**
+- With VSCode extension: `curl -sSL ... | bash -s -- --with-extension`
+- With Linux desktop integration: `curl -sSL ... | bash -s -- --with-desktop`
 
 See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed installation options.
 
 ### Option 2: Download Binaries
 
 Download from [Releases](../../releases):
-- `ppxai-{platform}` (TUI binary)
-- `ppxai-server-{platform}` + `ppxai-1.13.2.vsix` (for VSCode)
+- `ppxai-{platform}` - Terminal UI
+- `ppxai-server-{platform}` - HTTP server for VSCode
+- `ppxai-desktop-{platform}` - Desktop Web App
+- `ppxai-1.13.2.vsix` - VSCode extension
+- `ppxai-*-macos-arm64.dmg` - macOS app bundle installer
 
 ### Option 3: From Source
 
@@ -66,14 +74,16 @@ Switch providers anytime: `/provider gemini` or `/model gpt-4o`
 
 **Enhanced Gemini support (v1.12.5+):** Install `pip install ppxai[gemini]` for native Google Search Grounding with citations.
 
-### Dual Interface
-| TUI (Terminal) | VSCode Extension |
-|----------------|------------------|
-| Rich markdown rendering | Webview chat panel |
-| Tab autocomplete for `/` commands | Right-click: Explain, Test, Docs |
-| `@file`, `@git`, `@tree` context | Same context injection |
-| Status bar with provider/model | Provider/model switcher |
-| Streaming responses | SSE streaming |
+### Triple Interface
+| TUI (Terminal) | Desktop Web App | VSCode Extension |
+|----------------|-----------------|------------------|
+| Rich markdown rendering | Browser-based UI | Webview chat panel |
+| Tab autocomplete for `/` commands | Full slash commands | Right-click: Explain, Test, Docs |
+| `@file`, `@git`, `@tree` context | Same context injection | Same context injection |
+| Status bar with provider/model | Provider/model badges | Provider/model switcher |
+| Streaming responses | SSE streaming | SSE streaming |
+
+**Desktop Web App (v1.13.1+):** Run `ppxai-desktop` to launch a browser-based chat interface. macOS users can download the `.dmg` installer for a native app experience.
 
 ### UX Highlights
 - **Full Markdown Rendering** - Tables, code blocks with syntax highlighting, clickable links (OSC 8), citations with URLs
