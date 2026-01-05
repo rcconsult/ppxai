@@ -8,6 +8,20 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current Version:** v1.13.2
 
+**What's New in v1.13.3 (In Progress on branch `updates/desktop-web-app-fixes`):**
+- **NEW:** Windows PowerShell installer (`scripts/install.ps1`)
+  - One-line install: `irm https://raw.githubusercontent.com/rcconsult/ppxai/master/scripts/install.ps1 | iex`
+  - Downloads binaries from GitHub releases to `~\.ppxai\bin\`
+  - Creates ready-to-use config files with all providers documented
+  - Auto-updates PATH, supports `-Uninstall`, `-Force`, `-Version` flags
+- **FIX:** VSCode extension auto-starts ppxai-server when opening chat panel
+- **FIX:** VSCode extension input focus preserved during streaming (flag-based control)
+- **FIX:** web_search tool not appearing after provider switch (tools re-register on switch)
+- **FIX:** Longer retry delays for Windows Defender first-run scanning (2s→12s)
+- **NEW:** Config-based binary discovery with `{home}` template expansion
+- **NEW:** Comprehensive `.env.example` with all providers documented
+- **Docs:** Updated [INSTALLATION.md](docs/INSTALLATION.md) with Windows-specific instructions
+
 **What's New in v1.13.2 (Released 2026-01-05):**
 - **FIX:** Markdown rendering in VSCode extension and Desktop Web App
   - Fixed bullet lists (changed from `•` to `-` for proper markdown)
