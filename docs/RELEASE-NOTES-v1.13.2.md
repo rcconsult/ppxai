@@ -9,6 +9,7 @@ This is a bugfix release focusing on markdown rendering issues in both the Deskt
 - 🔧 **Fixed markdown rendering** - `/usage` and other commands now render properly with tables and lists
 - 🪟 **Windows compatibility** - Tests and configuration now work correctly on Windows
 - 📦 **Shared modules** - New shared code ensures feature parity across all UIs
+- 🚀 **Enhanced installer** - New flags for config generation, macOS app install, and uninstall
 
 ## Fixed - Markdown Rendering
 
@@ -134,6 +135,48 @@ code --install-extension ppxai-1.13.2.vsix
 | `vscode-extension/src/shared/*` | New shared modules |
 | `tests/*` | Cross-platform fixes |
 | `pyproject.toml` | PEP 735 dependency-groups |
+| `install.sh` | New flags: --with-config, --with-macos-app, --with-launchagent, --uninstall |
+| `docs/INSTALLATION.md` | Comprehensive install documentation |
+| `README.md` | Updated install options |
+
+## New - Enhanced Install Script (Linux/macOS)
+
+The `install.sh` script now has feature parity with the Windows PowerShell installer.
+
+### New Flags
+
+| Flag | Description |
+|------|-------------|
+| `--with-config` | Generate `~/.ppxai/ppxai-config.json` and `.env` template |
+| `--with-macos-app` | Download and install DMG to `/Applications/ppxai.app` |
+| `--with-launchagent` | Install LaunchAgent for server auto-start (macOS) |
+| `--uninstall` | Remove ppxai installation (preserves config) |
+
+### Example Usage
+
+```bash
+# First-time setup with config files
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-config
+
+# macOS: Full installation with app and auto-start
+curl -sSL ... | bash -s -- --with-macos-app --with-config --with-launchagent
+
+# Uninstall
+curl -sSL ... | bash -s -- --uninstall
+```
+
+### Config Generation
+
+The `--with-config` flag creates:
+- `~/.ppxai/ppxai-config.json` - All providers (Perplexity, Gemini, OpenAI, OpenRouter) with models and pricing
+- `~/.ppxai/.env` - Commented template with all API key options
+- Data directories: `sessions/`, `exports/`, `checkpoints/`
+
+### macOS Improvements
+
+- **Quarantine removal** - Automatically runs `xattr -cr` on downloaded binaries
+- **DMG installation** - Downloads, mounts, copies app, removes quarantine
+- **LaunchAgent** - Optional auto-start for ppxai-server
 
 ## Known Issues
 

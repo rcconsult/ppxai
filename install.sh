@@ -13,26 +13,41 @@
 #   --tui-only          Only install ppxai TUI
 #   --with-extension    Also download VSCode extension (.vsix)
 #   --with-desktop      Install Linux desktop integration (.desktop file, icon)
+#   --with-macos-app    Install macOS .app bundle to /Applications (macOS only)
+#   --with-config       Generate config files (~/.ppxai/ppxai-config.json, .env)
+#   --with-launchagent  Install LaunchAgent for server auto-start (macOS only)
 #   --install-dir DIR   Install directory (default: ~/.local/bin)
+#   --uninstall         Remove ppxai installation
 #   --help              Show this help message
 #
 # What gets installed:
 #   ~/.local/bin/ppxai              - Terminal UI application
 #   ~/.local/bin/ppxai-server       - HTTP server for VSCode extension
+#   ~/.local/bin/ppxai-desktop      - Desktop web app launcher
 #   ~/.local/bin/ppxai-VERSION.vsix - VSCode extension (with --with-extension)
-#   ~/.local/share/applications/ppxai.desktop - Desktop entry (with --with-desktop)
-#   ~/.local/share/icons/hicolor/128x128/apps/ppxai.png - Icon (with --with-desktop)
+#   ~/.ppxai/ppxai-config.json      - Provider configuration (with --with-config)
+#   ~/.ppxai/.env                   - API keys template (with --with-config)
+#   ~/.local/share/applications/ppxai.desktop - Desktop entry (with --with-desktop, Linux)
+#   ~/.local/share/icons/hicolor/128x128/apps/ppxai.png - Icon (with --with-desktop, Linux)
+#   /Applications/ppxai.app         - macOS app bundle (with --with-macos-app)
+#   ~/Library/LaunchAgents/com.ppxai.server.plist - LaunchAgent (with --with-launchagent, macOS)
 
 set -euo pipefail
 
 # --- Configuration ---
 REPO="rcconsult/ppxai"
 INSTALL_DIR="${HOME}/.local/bin"
+DATA_DIR="${HOME}/.ppxai"
 VERSION="latest"
 INSTALL_TUI=true
 INSTALL_SERVER=true
+INSTALL_DESKTOP_BIN=true
 INSTALL_EXTENSION=false
 INSTALL_DESKTOP=false
+INSTALL_MACOS_APP=false
+INSTALL_CONFIG=false
+INSTALL_LAUNCHAGENT=false
+UNINSTALL=false
 
 # Colors for output
 RED='\033[0;31m'
@@ -56,17 +71,24 @@ USAGE:
     curl -sSL ... | bash -s -- [OPTIONS]
 
 OPTIONS:
-    --version VERSION   Install specific version (default: latest)
-    --server-only       Only install ppxai-server (for VSCode extension)
-    --tui-only          Only install ppxai TUI (terminal app)
-    --with-extension    Also download VSCode extension (.vsix)
-    --with-desktop      Install Linux desktop integration (.desktop file, icon)
-    --install-dir DIR   Install directory (default: ~/.local/bin)
-    --help              Show this help message
+    --version VERSION     Install specific version (default: latest)
+    --server-only         Only install ppxai-server (for VSCode extension)
+    --tui-only            Only install ppxai TUI (terminal app)
+    --with-extension      Also download VSCode extension (.vsix)
+    --with-desktop        Install Linux desktop integration (.desktop file, icon)
+    --with-macos-app      Install macOS .app bundle to /Applications (macOS only)
+    --with-config         Generate config files (~/.ppxai/ppxai-config.json, .env)
+    --with-launchagent    Install LaunchAgent for server auto-start (macOS only)
+    --install-dir DIR     Install directory (default: ~/.local/bin)
+    --uninstall           Remove ppxai installation
+    --help                Show this help message
 
 EXAMPLES:
-    # Install latest version (TUI + server)
+    # Install latest version (TUI + server + desktop)
     curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash
+
+    # Install with config files (recommended for first-time setup)
+    curl -sSL ... | bash -s -- --with-config
 
     # Install specific version with VSCode extension
     curl -sSL ... | bash -s -- --version v1.13.0 --with-extension
@@ -74,19 +96,30 @@ EXAMPLES:
     # Install with Linux desktop integration (adds to app menu)
     curl -sSL ... | bash -s -- --with-desktop
 
+    # macOS: Install app bundle to /Applications
+    curl -sSL ... | bash -s -- --with-macos-app
+
+    # macOS: Full installation with app and auto-start server
+    curl -sSL ... | bash -s -- --with-macos-app --with-config --with-launchagent
+
     # Install only the server (for VSCode users)
     curl -sSL ... | bash -s -- --server-only
+
+    # Uninstall ppxai
+    curl -sSL ... | bash -s -- --uninstall
 
 AFTER INSTALLATION:
     1. Add ~/.local/bin to your PATH (if not already):
        echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
        source ~/.bashrc
 
-    2. Set up your API key:
+    2. Set up your API key (or use --with-config to generate template):
        echo 'PERPLEXITY_API_KEY=your-key-here' > ~/.ppxai/.env
 
     3. Run ppxai:
-       ppxai
+       ppxai              # Terminal UI
+       ppxai-desktop      # Desktop Web App
+       ppxai-server       # HTTP server for VSCode
 
     4. For VSCode extension (if downloaded with --with-extension):
        code --install-extension ~/.local/bin/ppxai-VERSION.vsix
@@ -108,10 +141,12 @@ while [[ $# -gt 0 ]]; do
             ;;
         --server-only)
             INSTALL_TUI=false
+            INSTALL_DESKTOP_BIN=false
             shift
             ;;
         --tui-only)
             INSTALL_SERVER=false
+            INSTALL_DESKTOP_BIN=false
             shift
             ;;
         --with-extension)
@@ -120,6 +155,22 @@ while [[ $# -gt 0 ]]; do
             ;;
         --with-desktop)
             INSTALL_DESKTOP=true
+            shift
+            ;;
+        --with-macos-app)
+            INSTALL_MACOS_APP=true
+            shift
+            ;;
+        --with-config)
+            INSTALL_CONFIG=true
+            shift
+            ;;
+        --with-launchagent)
+            INSTALL_LAUNCHAGENT=true
+            shift
+            ;;
+        --uninstall)
+            UNINSTALL=true
             shift
             ;;
         --help|-h)
@@ -281,8 +332,508 @@ install_desktop_integration() {
     fi
 }
 
+# --- Generate config file ---
+generate_config() {
+    local config_path="${DATA_DIR}/ppxai-config.json"
+
+    if [[ -f "$config_path" ]]; then
+        warn "ppxai-config.json already exists, skipping"
+        return 0
+    fi
+
+    info "Generating ppxai-config.json..."
+
+    cat > "$config_path" << 'CONFIGEOF'
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.1",
+  "default_provider": "perplexity",
+  "paths": {
+    "bin_search_paths": [
+      "{home}/.local/bin",
+      "{home}/.ppxai/bin",
+      "/usr/local/bin"
+    ],
+    "data_dir": "{home}/.ppxai"
+  },
+  "providers": {
+    "perplexity": {
+      "name": "Perplexity AI",
+      "base_url": "https://api.perplexity.ai",
+      "api_key_env": "PERPLEXITY_API_KEY",
+      "default_model": "sonar-pro",
+      "coding_model": "sonar-pro",
+      "models": {
+        "sonar": {
+          "name": "Sonar",
+          "description": "Lightweight search model with real-time grounding"
+        },
+        "sonar-pro": {
+          "name": "Sonar Pro",
+          "description": "Advanced search model for complex queries"
+        },
+        "sonar-reasoning-pro": {
+          "name": "Sonar Reasoning Pro",
+          "description": "Precision reasoning with Chain of Thought capabilities"
+        },
+        "sonar-deep-research": {
+          "name": "Sonar Deep Research",
+          "description": "Exhaustive research with comprehensive reports"
+        }
+      },
+      "pricing": {
+        "sonar": {"input": 0.20, "output": 0.20},
+        "sonar-pro": {"input": 3.00, "output": 15.00},
+        "sonar-reasoning-pro": {"input": 5.00, "output": 15.00},
+        "sonar-deep-research": {"input": 5.00, "output": 15.00}
+      },
+      "capabilities": {
+        "web_search": true,
+        "web_fetch": true,
+        "weather": true,
+        "realtime_info": true
+      }
+    },
+    "gemini": {
+      "name": "Google Gemini",
+      "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "api_key_env": "GEMINI_API_KEY",
+      "default_model": "gemini-2.0-flash",
+      "coding_model": "gemini-2.5-pro",
+      "models": {
+        "gemini-2.0-flash": {
+          "name": "Gemini 2.0 Flash",
+          "description": "Fast model with multimodal support"
+        },
+        "gemini-2.5-flash": {
+          "name": "Gemini 2.5 Flash",
+          "description": "Latest fast model, best price/performance"
+        },
+        "gemini-2.5-pro": {
+          "name": "Gemini 2.5 Pro",
+          "description": "Most capable model for complex reasoning"
+        }
+      },
+      "pricing": {
+        "gemini-2.0-flash": {"input": 0.10, "output": 0.40},
+        "gemini-2.5-flash": {"input": 0.15, "output": 0.60},
+        "gemini-2.5-pro": {"input": 1.25, "output": 5.00}
+      },
+      "capabilities": {
+        "web_search": true,
+        "web_fetch": false,
+        "weather": false,
+        "realtime_info": false
+      }
+    },
+    "openai": {
+      "name": "OpenAI ChatGPT",
+      "base_url": "https://api.openai.com/v1",
+      "api_key_env": "OPENAI_API_KEY",
+      "default_model": "gpt-4o",
+      "coding_model": "gpt-4o",
+      "models": {
+        "gpt-4o": {
+          "name": "GPT-4o",
+          "description": "Latest flagship model with vision"
+        },
+        "gpt-4o-mini": {
+          "name": "GPT-4o Mini",
+          "description": "Fast and affordable for simple tasks"
+        },
+        "o1": {
+          "name": "o1",
+          "description": "Advanced reasoning model"
+        }
+      },
+      "pricing": {
+        "gpt-4o": {"input": 2.50, "output": 10.00},
+        "gpt-4o-mini": {"input": 0.15, "output": 0.60},
+        "o1": {"input": 15.00, "output": 60.00}
+      },
+      "capabilities": {
+        "web_search": false,
+        "web_fetch": false,
+        "weather": false,
+        "realtime_info": false
+      }
+    },
+    "openrouter": {
+      "name": "OpenRouter",
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "default_model": "anthropic/claude-sonnet-4",
+      "coding_model": "anthropic/claude-sonnet-4",
+      "models": {
+        "anthropic/claude-sonnet-4": {
+          "name": "Claude Sonnet 4",
+          "description": "Anthropic's balanced model for most tasks"
+        },
+        "anthropic/claude-opus-4": {
+          "name": "Claude Opus 4",
+          "description": "Anthropic's most capable model"
+        },
+        "google/gemini-2.0-flash-001": {
+          "name": "Gemini 2.0 Flash",
+          "description": "Google's fast multimodal model"
+        }
+      },
+      "pricing": {
+        "anthropic/claude-sonnet-4": {"input": 3.00, "output": 15.00},
+        "anthropic/claude-opus-4": {"input": 15.00, "output": 75.00},
+        "google/gemini-2.0-flash-001": {"input": 0.10, "output": 0.40}
+      },
+      "capabilities": {
+        "web_search": false,
+        "web_fetch": false,
+        "weather": false,
+        "realtime_info": false
+      }
+    }
+  },
+  "tools": {
+    "shell": {
+      "require_consent": true,
+      "dangerous_commands": [
+        "^rm\\s+",
+        "^sudo\\s+",
+        "^chmod\\s+",
+        "^chown\\s+"
+      ],
+      "allowed_commands": [
+        "^ls\\s+",
+        "^cat\\s+",
+        "^echo\\s+",
+        "^pwd$",
+        "^whoami$"
+      ]
+    },
+    "agent": {
+      "max_iterations": 10,
+      "max_tool_iterations": 15,
+      "context_char_limit": 2000,
+      "min_task_words": 3,
+      "checkpoint_backend": "auto"
+    },
+    "web_search": {
+      "preferred": "auto"
+    }
+  }
+}
+CONFIGEOF
+
+    success "Created: $config_path"
+}
+
+# --- Generate .env template ---
+generate_env_template() {
+    local env_path="${DATA_DIR}/.env"
+
+    if [[ -f "$env_path" ]]; then
+        warn ".env already exists, skipping"
+        return 0
+    fi
+
+    info "Generating .env template..."
+
+    cat > "$env_path" << 'ENVEOF'
+# ppxai Environment Configuration
+# ================================
+# Add your API keys below. Uncomment the providers you want to use.
+# At least one provider key is required.
+#
+# Get API keys from:
+#   - Perplexity: https://www.perplexity.ai/settings/api
+#   - Gemini:     https://aistudio.google.com/apikey
+#   - OpenAI:     https://platform.openai.com/api-keys
+#   - OpenRouter: https://openrouter.ai/keys
+
+# =============================================================================
+# PERPLEXITY AI (Recommended - includes web search)
+# =============================================================================
+# Perplexity provides real-time web search with AI-powered answers.
+# Models: sonar (fast), sonar-pro (advanced), sonar-reasoning-pro, sonar-deep-research
+#
+# PERPLEXITY_API_KEY=pplx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# =============================================================================
+# GOOGLE GEMINI (Free tier available)
+# =============================================================================
+# Google's multimodal AI with web search grounding.
+# Models: gemini-2.0-flash, gemini-2.5-flash, gemini-2.5-pro
+#
+# GEMINI_API_KEY=AIzaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# =============================================================================
+# OPENAI (ChatGPT)
+# =============================================================================
+# OpenAI's GPT models including GPT-4o and o1.
+# Models: gpt-4o, gpt-4o-mini, o1, o1-mini
+#
+# OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# =============================================================================
+# OPENROUTER (Access to multiple providers)
+# =============================================================================
+# Access Claude, Gemini, Llama, and other models through one API.
+# See available models: https://openrouter.ai/models
+#
+# OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# =============================================================================
+# ADVANCED OPTIONS
+# =============================================================================
+
+# SSL Verification (for corporate proxies with SSL inspection)
+# Set to false if you get SSL certificate errors behind a corporate proxy
+# SSL_VERIFY=true
+
+# Custom provider API key (for local vLLM/Ollama servers)
+# LOCAL_API_KEY=dummy
+ENVEOF
+
+    success "Created: $env_path"
+    info "Edit $env_path to add your API keys"
+}
+
+# --- Create data directories ---
+create_data_directories() {
+    info "Creating data directories..."
+
+    local dirs=(
+        "$DATA_DIR"
+        "$DATA_DIR/sessions"
+        "$DATA_DIR/exports"
+        "$DATA_DIR/checkpoints"
+    )
+
+    for dir in "${dirs[@]}"; do
+        if [[ ! -d "$dir" ]]; then
+            mkdir -p "$dir"
+            success "Created: $dir"
+        fi
+    done
+}
+
+# --- Install macOS app bundle ---
+install_macos_app() {
+    local version="$1"
+
+    if [[ "$(uname -s)" != "Darwin" ]]; then
+        warn "--with-macos-app is only available on macOS"
+        return 0
+    fi
+
+    local arch
+    if [[ "$(uname -m)" == "arm64" ]]; then
+        arch="arm64"
+    else
+        arch="intel"
+    fi
+
+    local version_num="${version#v}"
+    local dmg_name="ppxai-${version_num}-macos-${arch}.dmg"
+    local dmg_url="https://github.com/${REPO}/releases/download/${version}/${dmg_name}"
+    local tmp_dmg="/tmp/${dmg_name}"
+    local mount_point="/Volumes/ppxai Desktop"
+
+    info "Installing macOS app bundle..."
+
+    # Download DMG
+    info "Downloading ${dmg_name}..."
+    if ! curl -sSL --fail "$dmg_url" -o "$tmp_dmg" 2>/dev/null; then
+        warn "DMG not available for ${arch} architecture"
+        warn "URL: $dmg_url"
+        warn "You can still use the command-line binaries"
+        return 0
+    fi
+
+    # Mount DMG
+    info "Mounting DMG..."
+    if ! hdiutil attach "$tmp_dmg" -nobrowse -quiet; then
+        error "Failed to mount DMG"
+        rm -f "$tmp_dmg"
+        return 1
+    fi
+
+    # Copy app to /Applications
+    info "Installing to /Applications..."
+    if [[ -d "/Applications/ppxai.app" ]]; then
+        warn "Removing existing /Applications/ppxai.app"
+        rm -rf "/Applications/ppxai.app"
+    fi
+
+    cp -R "${mount_point}/ppxai.app" /Applications/
+
+    # Unmount DMG
+    hdiutil detach "$mount_point" -quiet 2>/dev/null || true
+    rm -f "$tmp_dmg"
+
+    # Remove quarantine attribute
+    info "Removing quarantine attribute..."
+    xattr -cr /Applications/ppxai.app 2>/dev/null || true
+
+    success "Installed: /Applications/ppxai.app"
+    echo ""
+    info "Launch from Spotlight (Cmd+Space) or Applications folder"
+}
+
+# --- Install macOS LaunchAgent ---
+install_launchagent() {
+    if [[ "$(uname -s)" != "Darwin" ]]; then
+        warn "--with-launchagent is only available on macOS"
+        return 0
+    fi
+
+    local agents_dir="${HOME}/Library/LaunchAgents"
+    local plist_path="${agents_dir}/com.ppxai.server.plist"
+
+    info "Installing LaunchAgent for ppxai-server..."
+
+    mkdir -p "$agents_dir"
+
+    # Determine server path
+    local server_path="${INSTALL_DIR}/ppxai-server"
+    if [[ -d "/Applications/ppxai.app" ]]; then
+        server_path="/Applications/ppxai.app/Contents/MacOS/ppxai-server"
+    fi
+
+    cat > "$plist_path" << PLISTEOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ppxai.server</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>${server_path}</string>
+    </array>
+    <key>RunAtLoad</key>
+    <false/>
+    <key>KeepAlive</key>
+    <false/>
+    <key>StandardOutPath</key>
+    <string>${DATA_DIR}/ppxai-server.log</string>
+    <key>StandardErrorPath</key>
+    <string>${DATA_DIR}/ppxai-server.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:${INSTALL_DIR}</string>
+    </dict>
+</dict>
+</plist>
+PLISTEOF
+
+    success "Created: $plist_path"
+    echo ""
+    info "LaunchAgent commands:"
+    echo "    Start server:  launchctl load $plist_path"
+    echo "    Stop server:   launchctl unload $plist_path"
+    echo "    Enable at login: Change RunAtLoad to <true/> in plist"
+}
+
+# --- Remove quarantine from binaries (macOS) ---
+remove_quarantine() {
+    if [[ "$(uname -s)" != "Darwin" ]]; then
+        return 0
+    fi
+
+    info "Removing quarantine attribute from binaries..."
+
+    for binary in ppxai ppxai-server ppxai-desktop; do
+        local path="${INSTALL_DIR}/${binary}"
+        if [[ -f "$path" ]]; then
+            xattr -cr "$path" 2>/dev/null || true
+        fi
+    done
+
+    success "Quarantine attributes removed"
+}
+
+# --- Uninstall ppxai ---
+uninstall_ppxai() {
+    echo ""
+    echo "╔═══════════════════════════════════════╗"
+    echo "║        ppxai uninstaller              ║"
+    echo "╚═══════════════════════════════════════╝"
+    echo ""
+
+    local removed_something=false
+
+    # Remove binaries
+    for binary in ppxai ppxai-server ppxai-desktop; do
+        local path="${INSTALL_DIR}/${binary}"
+        if [[ -f "$path" ]]; then
+            rm -f "$path"
+            success "Removed: $path"
+            removed_something=true
+        fi
+    done
+
+    # Remove VSCode extensions
+    for vsix in "${INSTALL_DIR}"/ppxai-*.vsix; do
+        if [[ -f "$vsix" ]]; then
+            rm -f "$vsix"
+            success "Removed: $vsix"
+            removed_something=true
+        fi
+    done
+
+    # Remove Linux desktop integration
+    if [[ "$(uname -s)" == "Linux" ]]; then
+        local desktop_file="${HOME}/.local/share/applications/ppxai.desktop"
+        local icon_file="${HOME}/.local/share/icons/hicolor/128x128/apps/ppxai.png"
+
+        if [[ -f "$desktop_file" ]]; then
+            rm -f "$desktop_file"
+            success "Removed: $desktop_file"
+            removed_something=true
+        fi
+
+        if [[ -f "$icon_file" ]]; then
+            rm -f "$icon_file"
+            success "Removed: $icon_file"
+            removed_something=true
+        fi
+    fi
+
+    # Remove macOS app and LaunchAgent
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+        if [[ -d "/Applications/ppxai.app" ]]; then
+            rm -rf "/Applications/ppxai.app"
+            success "Removed: /Applications/ppxai.app"
+            removed_something=true
+        fi
+
+        local plist="${HOME}/Library/LaunchAgents/com.ppxai.server.plist"
+        if [[ -f "$plist" ]]; then
+            launchctl unload "$plist" 2>/dev/null || true
+            rm -f "$plist"
+            success "Removed: $plist"
+            removed_something=true
+        fi
+    fi
+
+    if [[ "$removed_something" == false ]]; then
+        warn "No ppxai installation found"
+    fi
+
+    echo ""
+    info "Configuration preserved at: $DATA_DIR"
+    echo "    To remove all data: rm -rf $DATA_DIR"
+    echo ""
+}
+
 # --- Main ---
 main() {
+    # Handle uninstall first
+    if [[ "$UNINSTALL" == true ]]; then
+        uninstall_ppxai
+        exit 0
+    fi
+
     echo ""
     echo "╔═══════════════════════════════════════╗"
     echo "║        ppxai installer                ║"
@@ -314,6 +865,9 @@ main() {
         mkdir -p "$INSTALL_DIR"
     fi
 
+    # Create data directories
+    create_data_directories
+
     echo ""
 
     # Download binaries
@@ -331,6 +885,15 @@ main() {
         fi
     fi
 
+    if [[ "$INSTALL_DESKTOP_BIN" == true ]]; then
+        if ! download_binary "ppxai-desktop" "$PLATFORM" "$VERSION"; then
+            warn "ppxai-desktop download failed (non-fatal)"
+        fi
+    fi
+
+    # Remove quarantine attribute on macOS
+    remove_quarantine
+
     if [[ "$INSTALL_EXTENSION" == true ]]; then
         if ! download_extension "$VERSION"; then
             warn "VSCode extension download failed (non-fatal)"
@@ -339,6 +902,19 @@ main() {
 
     if [[ "$INSTALL_DESKTOP" == true ]]; then
         install_desktop_integration "$VERSION"
+    fi
+
+    if [[ "$INSTALL_MACOS_APP" == true ]]; then
+        install_macos_app "$VERSION"
+    fi
+
+    if [[ "$INSTALL_CONFIG" == true ]]; then
+        generate_config
+        generate_env_template
+    fi
+
+    if [[ "$INSTALL_LAUNCHAGENT" == true ]]; then
+        install_launchagent
     fi
 
     if [[ "$failed" == true ]]; then
@@ -383,24 +959,17 @@ main() {
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     fi
 
-    # Create config directory if it doesn't exist
-    if [[ ! -d "$HOME/.ppxai" ]]; then
-        mkdir -p "$HOME/.ppxai"
-    fi
-
-    # Check for API key
-    if [[ ! -f "$HOME/.ppxai/.env" ]] && [[ -z "${PERPLEXITY_API_KEY:-}" ]]; then
+    # Check for API key (skip if config was generated)
+    if [[ "$INSTALL_CONFIG" != true ]] && [[ ! -f "${DATA_DIR}/.env" ]] && [[ -z "${PERPLEXITY_API_KEY:-}" ]]; then
         echo ""
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         info "Next: Set up your API key"
         echo ""
-        echo "Create ~/.ppxai/.env with your API key:"
+        echo "Option 1: Generate config files with templates:"
+        echo "    curl -sSL ... | bash -s -- --with-config"
         echo ""
+        echo "Option 2: Create ~/.ppxai/.env manually:"
         echo "    echo 'PERPLEXITY_API_KEY=your-key-here' > ~/.ppxai/.env"
-        echo ""
-        echo "Or set it as an environment variable:"
-        echo ""
-        echo "    export PERPLEXITY_API_KEY=your-key-here"
         echo ""
         echo "Get your API key at: https://www.perplexity.ai/settings/api"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -416,9 +985,20 @@ main() {
     if [[ "$INSTALL_SERVER" == true ]]; then
         echo "    Run 'ppxai-server' to start the HTTP server (for VSCode)"
     fi
+    if [[ "$INSTALL_DESKTOP_BIN" == true ]]; then
+        echo "    Run 'ppxai-desktop' to start the Desktop Web App"
+    fi
+    if [[ "$INSTALL_MACOS_APP" == true ]] && [[ -d "/Applications/ppxai.app" ]]; then
+        echo "    Launch 'ppxai' from Applications or Spotlight"
+    fi
     if [[ "$INSTALL_EXTENSION" == true ]]; then
         local version_num="${VERSION#v}"
         echo "    Run 'code --install-extension ~/.local/bin/ppxai-${version_num}.vsix' to install VSCode extension"
+    fi
+    if [[ "$INSTALL_CONFIG" == true ]]; then
+        echo ""
+        info "Config files created at ~/.ppxai/"
+        echo "    Edit ~/.ppxai/.env to add your API keys"
     fi
 
     echo ""

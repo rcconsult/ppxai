@@ -38,8 +38,12 @@ ppxai-desktop
 ```
 
 **Installation options:**
+- With config templates: `curl -sSL ... | bash -s -- --with-config` (recommended for first-time setup)
 - With VSCode extension: `curl -sSL ... | bash -s -- --with-extension`
 - With Linux desktop integration: `curl -sSL ... | bash -s -- --with-desktop`
+- macOS app bundle: `curl -sSL ... | bash -s -- --with-macos-app`
+- Full macOS setup: `curl -sSL ... | bash -s -- --with-macos-app --with-config --with-launchagent`
+- Uninstall: `curl -sSL ... | bash -s -- --uninstall`
 
 See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed installation options.
 

@@ -34,6 +34,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Configuration
 - **PEP 735** - Migrated from `[tool.uv].dev-dependencies` to `[dependency-groups].dev`
 
+### Added - Enhanced Install Script
+
+#### New Flags
+- **`--with-config`** - Generate `ppxai-config.json` and `.env` template with all providers
+- **`--with-macos-app`** - Download and install DMG to `/Applications/ppxai.app`
+- **`--with-launchagent`** - Install LaunchAgent for server auto-start (macOS)
+- **`--uninstall`** - Remove ppxai installation (preserves config files)
+
+#### macOS Improvements
+- **Quarantine removal** - Automatically runs `xattr -cr` on downloaded binaries
+- **DMG installation** - Downloads, mounts, copies app, removes quarantine attribute
+
+#### Documentation
+- **INSTALLATION.md** - Comprehensive guide with all new options and platform-specific instructions
+
 ---
 
 ## [1.13.1] - 2026-01-04

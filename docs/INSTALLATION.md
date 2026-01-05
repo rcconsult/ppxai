@@ -15,6 +15,12 @@ This installs `ppxai` (TUI), `ppxai-server`, and `ppxai-desktop` (Desktop Web Ap
 #### Installation Options
 
 ```bash
+# Install latest version (TUI + server + desktop)
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash
+
+# Install with config files (recommended for first-time setup)
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-config
+
 # Install specific version
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --version v1.13.2
 
@@ -24,6 +30,12 @@ curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | 
 # Install with Linux desktop integration (adds to app menu)
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-desktop
 
+# macOS: Install app bundle to /Applications
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-macos-app
+
+# macOS: Full installation with app, config, and auto-start server
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-macos-app --with-config --with-launchagent
+
 # Install only the server (for VSCode users who don't need TUI)
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --server-only
 
@@ -32,6 +44,9 @@ curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | 
 
 # Install to custom directory
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --install-dir /usr/local/bin
+
+# Uninstall ppxai
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --uninstall
 ```
 
 ### Windows
@@ -169,11 +184,49 @@ This opens your default browser to the ppxai web UI. Features:
 
 macOS users can download the `.dmg` installer from [GitHub Releases](https://github.com/rcconsult/ppxai/releases):
 
-1. Download `ppxai-VERSION-macos-arm64.dmg`
+**Option A: Automated Installation**
+
+```bash
+# Install app bundle to /Applications (auto-removes quarantine)
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-macos-app
+
+# Full macOS setup with config files and LaunchAgent
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-macos-app --with-config --with-launchagent
+```
+
+**Option B: Manual Installation**
+
+1. Download `ppxai-VERSION-macos-arm64.dmg` (or `macos-intel` for Intel Macs)
 2. Open the DMG and drag `ppxai.app` to Applications
-3. Launch from Applications or Spotlight
+3. **Important**: Remove quarantine attribute before first launch:
+   ```bash
+   xattr -cr /Applications/ppxai.app
+   ```
+4. Launch from Applications or Spotlight
 
 The app bundle includes both `ppxai-desktop` and `ppxai-server`.
+
+### macOS LaunchAgent (Auto-Start Server)
+
+To have `ppxai-server` start automatically (useful for VSCode integration):
+
+```bash
+# Install LaunchAgent
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-launchagent
+
+# Or manually create ~/Library/LaunchAgents/com.ppxai.server.plist
+```
+
+LaunchAgent commands:
+```bash
+# Start server
+launchctl load ~/Library/LaunchAgents/com.ppxai.server.plist
+
+# Stop server
+launchctl unload ~/Library/LaunchAgents/com.ppxai.server.plist
+
+# Enable at login (edit plist and change RunAtLoad to true)
+```
 
 ### Linux Desktop Integration
 
@@ -284,6 +337,23 @@ Move-Item ppxai-windows.exe $env:USERPROFILE\.ppxai\bin\ppxai.exe
 ```
 
 ## Configuration
+
+### Quick Setup with --with-config
+
+The easiest way to set up configuration is to use the `--with-config` flag:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-config
+```
+
+This creates:
+- `~/.ppxai/ppxai-config.json` - Provider configuration with all built-in providers
+- `~/.ppxai/.env` - Template with all API key options documented
+- `~/.ppxai/sessions/` - Session storage
+- `~/.ppxai/exports/` - Exported answers
+- `~/.ppxai/checkpoints/` - Agent checkpoints
+
+Then edit `~/.ppxai/.env` to uncomment and add your API keys.
 
 ### API Keys
 
@@ -406,7 +476,14 @@ This will download and replace the binaries with the latest version.
 
 ## Uninstalling
 
-### Linux / macOS
+### Linux / macOS (Automated)
+
+```bash
+# Uninstall ppxai (preserves config files)
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --uninstall
+```
+
+### Linux / macOS (Manual)
 
 ```bash
 # Remove binaries
@@ -415,9 +492,16 @@ rm ~/.local/bin/ppxai-server
 rm ~/.local/bin/ppxai-desktop
 rm ~/.local/bin/ppxai-*.vsix
 
-# Remove desktop integration (if installed)
+# Remove Linux desktop integration (if installed)
 rm ~/.local/share/applications/ppxai.desktop
 rm ~/.local/share/icons/hicolor/128x128/apps/ppxai.png
+
+# Remove macOS app (if installed)
+rm -rf /Applications/ppxai.app
+
+# Remove macOS LaunchAgent (if installed)
+launchctl unload ~/Library/LaunchAgents/com.ppxai.server.plist 2>/dev/null
+rm ~/Library/LaunchAgents/com.ppxai.server.plist
 
 # Remove configuration (optional)
 rm -rf ~/.ppxai
