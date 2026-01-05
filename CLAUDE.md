@@ -8,7 +8,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current Version:** v1.13.2
 
-**What's New in v1.13.3 (In Progress on branch `updates/desktop-web-app-fixes`):**
+**What's New in v1.13.2 (In Progress on branch `updates/desktop-web-app-fixes`):**
 - **NEW:** Windows PowerShell installer (`scripts/install.ps1`)
   - One-line install: `irm https://raw.githubusercontent.com/rcconsult/ppxai/master/scripts/install.ps1 | iex`
   - Downloads binaries from GitHub releases to `~\.ppxai\bin\`
@@ -20,9 +20,6 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **FIX:** Longer retry delays for Windows Defender first-run scanning (2s→12s)
 - **NEW:** Config-based binary discovery with `{home}` template expansion
 - **NEW:** Comprehensive `.env.example` with all providers documented
-- **Docs:** Updated [INSTALLATION.md](docs/INSTALLATION.md) with Windows-specific instructions
-
-**What's New in v1.13.2 (Released 2026-01-05):**
 - **FIX:** Markdown rendering in VSCode extension and Desktop Web App
   - Fixed bullet lists (changed from `•` to `-` for proper markdown)
   - Fixed `/usage` tables - now render correctly in both UIs
@@ -35,8 +32,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **FIX:** Windows compatibility
   - Tests use `tempfile.gettempdir()` instead of hardcoded `/tmp`
   - PEP 735 migration: `[dependency-groups].dev` format
-- **Tests:** 533 tests passing
-- **Docs:** [RELEASE-NOTES-v1.13.2.md](docs/RELEASE-NOTES-v1.13.2.md)
+- **Docs:** Updated [INSTALLATION.md](docs/INSTALLATION.md) with Windows-specific instructions
 
 **What's New in v1.13.1 (Released 2026-01-04):**
 - **NEW:** Desktop Web App - Standalone browser-based chat interface
