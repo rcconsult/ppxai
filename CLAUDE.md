@@ -32,6 +32,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
   - `uv.lock`: Includes pyinstaller, fastapi, google-genai, duckduckgo-search
   - `bootstrap.py`: `--all` flag now includes `--dev` for complete setup
   - Fresh clone + `python scripts/bootstrap.py --all` gives full build environment
+- **WSL2 Performance Note:** Working on `/mnt/c/` (Windows filesystem) causes very slow Python imports (~24s startup). For development on WSL2, clone to `~/` (Linux native filesystem) for 3x faster performance.
 - **Known Issues:** Several bugs still being fixed, not ready for release
 
 **What's New in v1.13.0 (Released 2026-01-03):**
