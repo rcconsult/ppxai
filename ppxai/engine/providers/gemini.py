@@ -82,7 +82,9 @@ class GeminiProvider:
         self,
         messages: List[Message],
         model: str,
-        stream: bool = True
+        stream: bool = True,
+        tools: Optional[List] = None,
+        **kwargs
     ) -> AsyncIterator[Event]:
         """Send chat request to Gemini API with streaming.
 
@@ -90,10 +92,18 @@ class GeminiProvider:
             messages: Conversation history
             model: Model ID to use (e.g., 'gemini-2.0-flash')
             stream: Whether to stream the response (default: True)
+            tools: Tool definitions (not yet supported, ignored)
+            **kwargs: Additional arguments (ignored for compatibility)
 
         Yields:
             Event objects including grounding citations when available
+
+        Note:
+            Custom tools are not yet supported with native Gemini provider.
+            Use grounding (Google Search) for web searches instead.
         """
+        # TODO: Implement tool calling support for Gemini
+        # For now, grounding handles search queries natively
         try:
             # Convert messages to Gemini format
             contents = self._convert_messages(messages)
