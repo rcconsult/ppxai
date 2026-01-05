@@ -228,6 +228,21 @@ class EngineClient:
             backend=checkpoint_backend
         )
 
+        # Emit working directory change event (v1.13.2)
+        # This event will be picked up by SSE stream and sent to clients
+        self._consent_event_queue.append(Event(
+            type=EventType.WORKING_DIR_CHANGED,
+            data={"path": path}
+        ))
+
+    def get_working_dir(self) -> str | None:
+        """Get current working directory.
+
+        Returns:
+            Working directory path or None if not set
+        """
+        return self.context_injector.working_dir
+
     def set_auto_inject(self, enabled: bool) -> bool:
         """Enable or disable automatic context injection.
 
@@ -1309,7 +1324,9 @@ class EngineClient:
                 if key != "tool" and key in expected_params:
                     arguments[key] = value
 
-            if arguments:
+            # v1.13.2: Handle tools with no required arguments (e.g., get_working_directory)
+            required_params = tool.parameters.get("required", [])
+            if arguments or not required_params:
                 return {"tool": tool_name, "arguments": arguments}
 
             return None

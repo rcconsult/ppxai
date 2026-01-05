@@ -20,6 +20,10 @@
                     <span class="server-indicator"></span>
                     <span id="serverStatus">Connected</span>
                 </button>
+                <button class="folder-badge" id="folderBadge" title="Click to change working directory">
+                    <span class="badge-icon">📁</span>
+                    <span id="folderPath">No folder</span>
+                </button>
             </div>
             <div class="header-center">
                 <select id="providerSelect" class="header-select" title="Select provider">
@@ -67,19 +71,34 @@
             </div>
         </header>
 
-        <!-- Messages Container -->
-        <main class="messages" id="messagesContainer">
-            <div class="welcome-message">
-                <h2>Welcome to ppxai</h2>
-                <p>AI-powered chat with multiple providers</p>
-                <div class="quick-commands">
-                    <button class="quick-cmd" data-cmd="/help">📖 Help</button>
-                    <button class="quick-cmd" data-cmd="/tools enable">🛠 Enable Tools</button>
-                    <button class="quick-cmd" data-cmd="/provider list">🔄 Providers</button>
-                    <button class="quick-cmd" data-cmd="/model list">📋 Models</button>
+        <!-- Main Content Area (split layout) -->
+        <div class="main-content" id="mainContent">
+            <!-- Messages Container -->
+            <main class="messages" id="messagesContainer">
+                <div class="welcome-message">
+                    <h2>Welcome to ppxai</h2>
+                    <p>AI-powered chat with multiple providers</p>
+                    <div class="quick-commands">
+                        <button class="quick-cmd" data-cmd="/help">📖 Help</button>
+                        <button class="quick-cmd" data-cmd="/tools enable">🛠 Enable Tools</button>
+                        <button class="quick-cmd" data-cmd="/provider list">🔄 Providers</button>
+                        <button class="quick-cmd" data-cmd="/model list">📋 Models</button>
+                    </div>
                 </div>
-            </div>
-        </main>
+            </main>
+
+            <!-- File Preview Panel -->
+            <aside class="preview-panel hidden" id="previewPanel">
+                <div class="preview-header">
+                    <span class="preview-filename" id="previewFilename">filename.ext</span>
+                    <span class="preview-info" id="previewInfo"></span>
+                    <button class="preview-close" id="previewClose" title="Close preview">&times;</button>
+                </div>
+                <div class="preview-content" id="previewContent">
+                    <pre><code id="previewCode"></code></pre>
+                </div>
+            </aside>
+        </div>
 
         <!-- Input Container -->
         <footer class="input-container">

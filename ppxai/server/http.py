@@ -19,9 +19,12 @@ import sys
 from contextlib import asynccontextmanager
 from typing import Optional, AsyncGenerator
 
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse, FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from ..engine import EngineClient, EventType
@@ -180,6 +183,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Web UI directory (installed by ppxai-desktop or manually)
+WEB_UI_DIR = Path.home() / '.ppxai' / 'web'
 
 
 # === Request/Response Models ===
@@ -763,6 +770,18 @@ async def get_usage_sessions(limit: int = 20, offset: int = 0):
 
 # === Context Settings ===
 
+@app.get("/context/working_dir")
+async def get_working_dir():
+    """Get the current working directory."""
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    import os
+    path = engine.get_working_dir() or os.getcwd()
+    return {"path": path}
+
+
 @app.post("/context/working_dir")
 async def set_working_dir(request: WorkingDirRequest):
     """Set the working directory for file path resolution."""
@@ -770,8 +789,16 @@ async def set_working_dir(request: WorkingDirRequest):
     if not engine:
         raise HTTPException(status_code=503, detail="Engine not initialized")
 
-    engine.set_working_dir(request.path)
-    return {"path": request.path, "success": True}
+    import os
+    # Expand tilde and resolve to absolute path
+    path = os.path.expanduser(request.path)
+    path = os.path.abspath(path)
+
+    if not os.path.isdir(path):
+        raise HTTPException(status_code=400, detail=f"Not a valid directory: {path}")
+
+    engine.set_working_dir(path)
+    return {"path": path, "success": True}
 
 
 @app.post("/context/auto_inject")
@@ -873,6 +900,107 @@ async def clear_session():
 
     engine.clear_history()
     return {"cleared": True}
+
+
+class FileReadRequest(BaseModel):
+    """Request to read a file."""
+    path: str
+
+
+@app.post("/files/read")
+async def read_file(request: FileReadRequest):
+    """Read file contents (v1.13.1 - for /show command).
+
+    Reads a file from the working directory or absolute path.
+    Supports @search-query format for fuzzy file matching.
+
+    Args:
+        request: FileReadRequest with path
+
+    Returns:
+        JSON: {"filename", "content", "size", "lines"}
+    """
+    global engine
+    if not engine:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
+
+    from pathlib import Path
+    import os
+
+    logger.info(f"HTTP POST /files/read - path: {request.path}")
+    logger.debug(f"  Working directory: {engine.get_working_dir()}")
+
+    filepath = request.path.strip()
+
+    # Handle @search-query by searching for files
+    if filepath.startswith('@'):
+        query = filepath[1:]  # Remove @
+        # Simple file search in working directory
+        working_dir = Path(engine.get_working_dir() or os.getcwd())
+        matches = []
+
+        try:
+            for path in working_dir.rglob('*'):
+                if path.is_file():
+                    if query.lower() in path.name.lower():
+                        matches.append(path)
+                        if len(matches) >= 1:  # Just get first match
+                            break
+        except PermissionError:
+            pass
+
+        if not matches:
+            raise HTTPException(status_code=404, detail=f"No files found matching: {query}")
+
+        filepath = str(matches[0])
+
+    # Resolve path - handle tilde expansion
+    if filepath.startswith('~'):
+        filepath = os.path.expanduser(filepath)
+
+    path = Path(filepath)
+    if not path.is_absolute():
+        working_dir = Path(engine.get_working_dir() or os.getcwd())
+        path = working_dir / filepath
+
+    path = path.resolve()
+    logger.debug(f"  Resolved path: {path}")
+
+    # Security: ensure path is within working directory or common locations
+    working_dir = Path(engine.get_working_dir() or os.getcwd()).resolve()
+    home_dir = Path.home().resolve()
+
+    # Allow files in working directory tree or home directory tree
+    if not (str(path).startswith(str(working_dir)) or str(path).startswith(str(home_dir))):
+        logger.warning(f"  Access denied: {path} not in {working_dir} or {home_dir}")
+        raise HTTPException(status_code=403, detail="Access denied: path outside allowed directories")
+
+    if not path.exists():
+        logger.warning(f"  File not found: {path}")
+        raise HTTPException(
+            status_code=404,
+            detail=f"File not found: {filepath} (resolved: {path})"
+        )
+
+    if not path.is_file():
+        raise HTTPException(status_code=400, detail=f"Not a file: {filepath}")
+
+    try:
+        content = path.read_text(encoding='utf-8')
+        lines = content.count('\n') + 1
+        size = path.stat().st_size
+
+        return {
+            "filename": path.name,
+            "path": str(path),
+            "content": content,
+            "size": size,
+            "lines": lines
+        }
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="Cannot read binary file")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
 
 
 @app.post("/interrupt")
@@ -1223,6 +1351,48 @@ async def set_debug_log(request: dict):
         "enabled": logger.enabled,
         "log_file": str(logger.log_file) if logger.log_file else None,
     }
+
+
+# === Web UI Static Files (must be after all API routes) ===
+
+@app.get("/")
+async def serve_index():
+    """Serve the web UI index.html."""
+    index_file = WEB_UI_DIR / 'index.html'
+    if index_file.exists():
+        return FileResponse(index_file, media_type='text/html')
+    return HTMLResponse(
+        content="<h1>ppxai Web UI not found</h1><p>Install web UI to ~/.ppxai/web/</p>",
+        status_code=404
+    )
+
+
+@app.get("/app.js")
+async def serve_app_js():
+    """Serve app.js."""
+    return FileResponse(WEB_UI_DIR / 'app.js', media_type='application/javascript')
+
+
+@app.get("/styles.css")
+async def serve_styles_css():
+    """Serve styles.css."""
+    return FileResponse(WEB_UI_DIR / 'styles.css', media_type='text/css')
+
+
+@app.get("/lib/{filename:path}")
+async def serve_lib(filename: str):
+    """Serve library files."""
+    file_path = WEB_UI_DIR / 'lib' / filename
+    if file_path.exists() and file_path.is_file():
+        suffix = file_path.suffix.lower()
+        content_types = {
+            '.js': 'application/javascript',
+            '.css': 'text/css',
+            '.json': 'application/json',
+        }
+        media_type = content_types.get(suffix, 'application/octet-stream')
+        return FileResponse(file_path, media_type=media_type)
+    raise HTTPException(status_code=404, detail="Not found")
 
 
 # === CLI Entry Point ===

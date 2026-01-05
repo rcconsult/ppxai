@@ -26,6 +26,12 @@ class PpxaiApp {
         // Track current assistant message for correct ordering
         this.currentAssistantMessage = null;
 
+        // Debounce flag for message sending
+        this.isSending = false;
+
+        // Guard for slash command handling
+        this.isHandlingCommand = false;
+
         // Usage tracking
         this.usage = { prompt: 0, completion: 0, cost: 0 };
 
@@ -44,6 +50,8 @@ class PpxaiApp {
             '/clear': { description: 'Clear conversation history', usage: '/clear' },
             '/save': { description: 'Save session to JSON', usage: '/save' },
             '/export': { description: 'Export last answer to markdown', usage: '/export [filename]' },
+            '/load': { description: 'Load a saved session', usage: '/load <session_name>' },
+            '/sessions': { description: 'List saved sessions', usage: '/sessions' },
             '/model': { description: 'Switch model or list models', usage: '/model [model_id|list]' },
             '/provider': { description: 'Switch provider or list providers', usage: '/provider [provider_id|list]' },
             '/tools': { description: 'Manage AI tools', usage: '/tools [enable|disable|status|list]' },
@@ -51,11 +59,15 @@ class PpxaiApp {
             '/checkpoint': { description: 'Manage checkpoints', usage: '/checkpoint [status|list|undo]' },
             '/usage': { description: 'Show token usage stats', usage: '/usage [24h|week|month|all]' },
             '/status': { description: 'Show current status', usage: '/status' },
+            '/show': { description: 'Display file contents', usage: '/show <filepath>' },
+            '/cat': { description: 'Alias for /show', usage: '/cat <filepath>' },
             '/generate': { description: 'Generate code from description', usage: '/generate <description>' },
             '/explain': { description: 'Explain code or concept', usage: '/explain <code or question>' },
             '/test': { description: 'Generate tests for code', usage: '/test <code or @file>' },
             '/docs': { description: 'Generate documentation', usage: '/docs <code or @file>' },
             '/debug': { description: 'Debug an error message', usage: '/debug <error message>' },
+            '/implement': { description: 'Implement from specification', usage: '/implement <specification>' },
+            '/convert': { description: 'Convert code between languages', usage: '/convert <src> <dest> <code>' },
             '/spec': { description: 'Show specification templates', usage: '/spec [api|cli|lib|algo|ui]' },
             '/theme': { description: 'Switch theme', usage: '/theme [dark|light]' },
         };
@@ -78,6 +90,8 @@ class PpxaiApp {
             versionBadge: document.getElementById('versionBadge'),
             serverBadge: document.getElementById('serverBadge'),
             serverStatus: document.getElementById('serverStatus'),
+            folderBadge: document.getElementById('folderBadge'),
+            folderPath: document.getElementById('folderPath'),
             providerSelect: document.getElementById('providerSelect'),
             modelSelect: document.getElementById('modelSelect'),
             toolsBadge: document.getElementById('toolsBadge'),
@@ -104,6 +118,13 @@ class PpxaiApp {
             messageInput: document.getElementById('messageInput'),
             sendBtn: document.getElementById('sendBtn'),
             autocompleteDropdown: document.getElementById('autocompleteDropdown'),
+
+            // Preview panel
+            previewPanel: document.getElementById('previewPanel'),
+            previewFilename: document.getElementById('previewFilename'),
+            previewInfo: document.getElementById('previewInfo'),
+            previewClose: document.getElementById('previewClose'),
+            previewCode: document.getElementById('previewCode'),
 
             // Modals
             consentModal: document.getElementById('consentModal'),
@@ -145,6 +166,9 @@ class PpxaiApp {
         // Server badge click to toggle connection
         this.elements.serverBadge.addEventListener('click', () => this.handleServerBadgeClick());
 
+        // Folder badge click to change working directory
+        this.elements.folderBadge.addEventListener('click', () => this.handleFolderBadgeClick());
+
         // Menu
         this.elements.menuBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -174,13 +198,17 @@ class PpxaiApp {
             this.connectToServer();
         });
 
-        // Quick commands
-        document.querySelectorAll('.quick-cmd').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const cmd = btn.dataset.cmd;
-                this.elements.messageInput.value = cmd;
+        // Preview panel close button
+        this.elements.previewClose.addEventListener('click', () => this.hidePreviewPanel());
+
+        // Quick commands - use event delegation on container
+        this.elements.messagesContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('.quick-cmd');
+            if (btn && btn.dataset.cmd) {
+                e.stopPropagation();
+                this.elements.messageInput.value = btn.dataset.cmd;
                 this.sendMessage();
-            });
+            }
         });
 
         // Keyboard shortcuts
@@ -268,6 +296,58 @@ class PpxaiApp {
         }
     }
 
+    async handleFolderBadgeClick() {
+        const currentPath = this.elements.folderPath.textContent || '';
+        const newPath = prompt('Enter working directory path:', currentPath === 'No folder' ? '' : currentPath);
+        if (newPath !== null && newPath.trim()) {
+            await this.setWorkingDir(newPath.trim());
+        }
+    }
+
+    async loadWorkingDir() {
+        try {
+            const resp = await fetch(`${this.serverUrl}/context/working_dir`);
+            if (resp.ok) {
+                const data = await resp.json();
+                this.updateFolderBadge(data.path);
+            }
+        } catch (e) {
+            console.error('Failed to load working directory:', e);
+        }
+    }
+
+    async setWorkingDir(path) {
+        try {
+            const resp = await fetch(`${this.serverUrl}/context/working_dir`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path })
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                this.updateFolderBadge(data.path);
+                this.showSystemMessage(`Working directory set to: ${data.path}`);
+            } else {
+                const error = await resp.json();
+                this.showError(`Failed to set working directory: ${error.detail}`);
+            }
+        } catch (e) {
+            this.showError(`Failed to set working directory: ${e.message}`);
+        }
+    }
+
+    updateFolderBadge(path) {
+        if (!path) {
+            this.elements.folderPath.textContent = 'No folder';
+            return;
+        }
+        // Show just the last component for brevity
+        const parts = path.split('/');
+        const shortName = parts[parts.length - 1] || parts[parts.length - 2] || path;
+        this.elements.folderPath.textContent = shortName;
+        this.elements.folderBadge.title = `Working directory: ${path}\nClick to change`;
+    }
+
     async loadInitialState() {
         try {
             // Load providers
@@ -289,6 +369,9 @@ class PpxaiApp {
 
             // Update badges
             this.updateToolsBadge();
+
+            // Load working directory
+            await this.loadWorkingDir();
 
             // Load tools status
             const toolsResp = await fetch(`${this.serverUrl}/tools`);
@@ -471,7 +554,10 @@ class PpxaiApp {
 
     async sendMessage() {
         const content = this.elements.messageInput.value.trim();
-        if (!content || this.isStreaming) return;
+        if (!content || this.isStreaming || this.isSending) return;
+
+        // Debounce guard to prevent rapid-fire
+        this.isSending = true;
 
         // Save to history
         if (content !== this.commandHistory[0]) {
@@ -492,14 +578,18 @@ class PpxaiApp {
 
         // Handle slash commands
         if (content.startsWith('/')) {
-            await this.handleSlashCommand(content);
+            try {
+                await this.handleSlashCommand(content);
+            } finally {
+                this.isSending = false;
+            }
             return;
         }
 
         // Show user message
         this.addMessage('user', content);
 
-        // Start streaming
+        // Start streaming (isSending will be reset by streamChat's finally block)
         await this.streamChat(content);
     }
 
@@ -565,6 +655,7 @@ class PpxaiApp {
             }
         } finally {
             this.isStreaming = false;
+            this.isSending = false;
             this.elements.streamingBadge.classList.add('hidden');
             this.currentAbortController = null;
             this.currentAssistantMessage = null;
@@ -616,6 +707,13 @@ class PpxaiApp {
                 this.showSystemMessage(event.data);
                 break;
 
+            case 'working_dir_changed':
+                // Update folder badge when working directory changes (v1.13.2)
+                if (event.data && event.data.path) {
+                    this.updateFolderBadge(event.data.path);
+                }
+                break;
+
             case 'agent_iteration':
                 const iter = event.data;
                 this.showSystemMessage(`━━━ Iteration ${iter.iteration || 0}/${iter.max || 10} ━━━`);
@@ -655,11 +753,19 @@ class PpxaiApp {
     // === Slash Commands ===
 
     async handleSlashCommand(input) {
-        const parts = input.trim().split(/\s+/);
-        const cmd = parts[0].toLowerCase();
-        const args = parts.slice(1).join(' ');
+        // Prevent recursive/repeated calls
+        if (this.isHandlingCommand) {
+            console.warn('handleSlashCommand called while already handling:', input);
+            return;
+        }
+        this.isHandlingCommand = true;
 
-        this.showSystemMessage(`> ${input}`);
+        try {
+            const parts = input.trim().split(/\s+/);
+            const cmd = parts[0].toLowerCase();
+            const args = parts.slice(1).join(' ');
+
+            this.showSystemMessage(`> ${input}`);
 
         switch (cmd) {
             case '/help':
@@ -676,6 +782,14 @@ class PpxaiApp {
 
             case '/export':
                 await this.exportAnswer(args);
+                break;
+
+            case '/load':
+                await this.loadSession(args);
+                break;
+
+            case '/sessions':
+                await this.listSessions();
                 break;
 
             case '/model':
@@ -720,11 +834,18 @@ class PpxaiApp {
                 this.handleThemeCommand(args);
                 break;
 
+            case '/show':
+            case '/cat':
+                await this.handleShowCommand(args);
+                break;
+
             case '/generate':
             case '/explain':
             case '/test':
             case '/docs':
             case '/debug':
+            case '/implement':
+            case '/convert':
             case '/spec':
                 // Send as regular message - server handles these
                 this.addMessage('user', input);
@@ -733,6 +854,9 @@ class PpxaiApp {
 
             default:
                 this.showError(`Unknown command: ${cmd}. Type /help for available commands.`);
+        }
+        } finally {
+            this.isHandlingCommand = false;
         }
     }
 
@@ -1329,13 +1453,7 @@ class PpxaiApp {
                     </div>
                 </div>
             `;
-            // Re-attach quick command listeners
-            document.querySelectorAll('.quick-cmd').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    this.elements.messageInput.value = btn.dataset.cmd;
-                    this.sendMessage();
-                });
-            });
+            // Quick command handlers use event delegation, no need to re-attach
             this.showSystemMessage('Conversation cleared');
         } catch (error) {
             this.showError(`Failed to clear: ${error.message}`);
@@ -1368,6 +1486,133 @@ class PpxaiApp {
         } catch (error) {
             this.showError(`Failed to export: ${error.message}`);
         }
+    }
+
+    async loadSession(name) {
+        if (!name) {
+            this.showError('Usage: /load <session_name>');
+            await this.listSessions();
+            return;
+        }
+
+        try {
+            const sessionName = encodeURIComponent(name.trim());
+            const response = await fetch(`${this.serverUrl}/sessions/load/${sessionName}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.showSystemMessage(`Session loaded: ${data.name}`);
+                // Refresh model/provider status after loading
+                await this.loadInitialState();
+            } else {
+                const error = await response.json();
+                this.showError(`Failed to load session: ${error.detail || 'Session not found'}`);
+            }
+        } catch (error) {
+            this.showError(`Failed to load session: ${error.message}`);
+        }
+    }
+
+    async listSessions() {
+        try {
+            const response = await fetch(`${this.serverUrl}/sessions`);
+            const data = await response.json();
+
+            if (!data.sessions || data.sessions.length === 0) {
+                this.showSystemMessage('No saved sessions found.');
+                return;
+            }
+
+            let text = '**Saved Sessions:**\n\n';
+            data.sessions.forEach(s => {
+                const date = s.created_at ? s.created_at.slice(0, 16).replace('T', ' ') : 'unknown';
+                text += `- \`${s.name}\` - ${s.message_count} msgs, ${s.provider}/${s.model} (${date})\n`;
+            });
+            text += '\n*Use `/load <session_name>` to load a session*';
+
+            this.addMessage('system', text);
+        } catch (error) {
+            this.showError(`Failed to list sessions: ${error.message}`);
+        }
+    }
+
+    async handleShowCommand(args) {
+        if (!args || !args.trim()) {
+            this.showError('Usage: /show <filepath> or /show @<search-query>');
+            return;
+        }
+
+        const filepath = args.trim();
+
+        try {
+            const response = await fetch(`${this.serverUrl}/files/read`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: filepath })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                // Show in preview panel
+                this.showPreviewPanel(data.filename || filepath, data.content, data.size, data.lines);
+            } else {
+                const error = await response.json();
+                this.showError(`Failed to read file: ${error.detail || 'File not found'}`);
+            }
+        } catch (error) {
+            this.showError(`Failed to read file: ${error.message}`);
+        }
+    }
+
+    showPreviewPanel(filename, content, size, lines) {
+        // Update filename
+        this.elements.previewFilename.textContent = filename;
+
+        // Update info
+        let info = '';
+        if (lines) info += `${lines} lines`;
+        if (size) info += info ? ` • ${(size / 1024).toFixed(1)} KB` : `${(size / 1024).toFixed(1)} KB`;
+        this.elements.previewInfo.textContent = info;
+
+        // Determine language for syntax highlighting
+        const ext = filename.split('.').pop().toLowerCase() || '';
+        const langMap = {
+            'py': 'python', 'js': 'javascript', 'ts': 'typescript', 'tsx': 'typescript',
+            'json': 'json', 'yaml': 'yaml', 'yml': 'yaml',
+            'md': 'markdown', 'html': 'html', 'css': 'css',
+            'sh': 'bash', 'bash': 'bash', 'rs': 'rust', 'go': 'go',
+            'java': 'java', 'cpp': 'cpp', 'c': 'c', 'h': 'c',
+            'rb': 'ruby', 'php': 'php', 'sql': 'sql', 'xml': 'xml'
+        };
+        const lang = langMap[ext] || '';
+
+        // Set content with syntax highlighting
+        this.elements.previewCode.textContent = content;
+        if (lang) {
+            this.elements.previewCode.className = `language-${lang}`;
+        } else {
+            this.elements.previewCode.className = '';
+        }
+
+        // Apply syntax highlighting
+        if (typeof hljs !== 'undefined' && lang) {
+            try {
+                hljs.highlightElement(this.elements.previewCode);
+            } catch (e) {
+                // Highlighting failed, show plain text
+            }
+        }
+
+        // Show the panel
+        this.elements.previewPanel.classList.remove('hidden');
+    }
+
+    hidePreviewPanel() {
+        this.elements.previewPanel.classList.add('hidden');
     }
 
     // === Debug Log ===

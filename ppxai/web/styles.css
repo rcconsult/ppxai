@@ -201,6 +201,34 @@ body {
     background: currentColor;
 }
 
+/* Folder badge */
+.folder-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    max-width: 200px;
+    overflow: hidden;
+}
+
+.folder-badge:hover {
+    background: var(--accent-color);
+    color: white;
+}
+
+.folder-badge #folderPath {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* Agent badge uses success color (green) when enabled */
 .agent-badge.enabled {
     background: var(--success-color);
@@ -319,12 +347,101 @@ body {
     box-shadow: 0 0 4px var(--success-color);
 }
 
+/* Main content - split layout */
+.main-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
 /* Messages container */
 .messages {
     flex: 1;
     overflow-y: auto;
     padding: 16px;
     scroll-behavior: smooth;
+}
+
+/* File Preview Panel */
+.preview-panel {
+    width: 50%;
+    min-width: 300px;
+    max-width: 70%;
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-primary);
+}
+
+.preview-panel.hidden {
+    display: none;
+}
+
+.preview-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.preview-filename {
+    font-family: 'SF Mono', 'Fira Code', 'Monaco', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.preview-filename::before {
+    content: '📄';
+}
+
+.preview-info {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-left: auto;
+}
+
+.preview-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 18px;
+    line-height: 1;
+    transition: all 0.15s;
+}
+
+.preview-close:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.preview-content {
+    flex: 1;
+    overflow: auto;
+    padding: 0;
+}
+
+.preview-content pre {
+    margin: 0;
+    padding: 16px;
+    font-family: 'SF Mono', 'Fira Code', 'Monaco', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    background: var(--bg-primary);
+}
+
+.preview-content code {
+    display: block;
+    color: var(--text-primary);
 }
 
 .welcome-message {

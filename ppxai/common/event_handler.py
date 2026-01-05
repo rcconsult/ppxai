@@ -255,6 +255,13 @@ class TUIEventHandler(EventHandler):
                 self.console.print(f"[cyan]{msg}[/cyan]")
             return True
 
+        # Working directory changed (v1.13.2)
+        elif event.type == EventType.WORKING_DIR_CHANGED:
+            path = event.data.get("path", "") if isinstance(event.data, dict) else str(event.data)
+            if path:
+                self.console.print(f"[cyan]📁 Working directory: {path}[/cyan]")
+            return True
+
         # Agent loop events (v1.11.8)
         elif event.type == EventType.AGENT_ITERATION:
             iteration = event.data.get("iteration", 0) if isinstance(event.data, dict) else 0

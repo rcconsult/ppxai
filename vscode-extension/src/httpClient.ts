@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 // === Types matching PythonBackend interface ===
 
 export interface StreamEvent {
-    type: 'thinking' | 'started' | 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'context_injected' | 'consent_request' | 'status' | 'agent_iteration' | 'agent_complete' | 'agent_max_iterations';
+    type: 'thinking' | 'started' | 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'context_injected' | 'consent_request' | 'status' | 'agent_iteration' | 'agent_complete' | 'agent_max_iterations' | 'working_dir_changed';
     content: string;
     metadata?: any;
 }
@@ -666,6 +666,13 @@ export class HttpClient {
                 return {
                     type: 'agent_max_iterations',
                     content: typeof event.data === 'object' ? JSON.stringify(event.data) : (event.data || ''),
+                    metadata: event.data
+                };
+            case 'working_dir_changed':
+                // v1.13.2: Working directory changed by tool
+                return {
+                    type: 'working_dir_changed',
+                    content: event.data?.path || '',
                     metadata: event.data
                 };
             case 'error':

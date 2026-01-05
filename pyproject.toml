@@ -65,7 +65,7 @@ build = [
 ]
 
 [project.scripts]
-ppxai = "ppxai:main"
+ppxai = "ppxai.main:main"
 ppxai-server = "ppxai.server.http:run_server"
 
 [project.urls]

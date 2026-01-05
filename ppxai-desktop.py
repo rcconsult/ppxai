@@ -16,9 +16,24 @@ from pathlib import Path
 
 
 def get_resource_path(relative_path: str) -> Path:
-    """Get absolute path to resource, works for dev and PyInstaller."""
+    """Get absolute path to resource, works for dev, PyInstaller, and .app bundle."""
     if getattr(sys, 'frozen', False):
         # Running as compiled executable
+        exe_path = Path(sys.executable)
+
+        # Check if we're inside a macOS .app bundle
+        # Structure: ppxai.app/Contents/MacOS/ppxai-desktop
+        if exe_path.parent.name == 'MacOS' and exe_path.parent.parent.name == 'Contents':
+            resources_dir = exe_path.parent.parent / 'Resources'
+            # Map 'ppxai/web' -> 'web' for app bundle
+            if relative_path == 'ppxai/web':
+                return resources_dir / 'web'
+            elif relative_path == 'ppxai-server':
+                # Server binary is in MacOS dir alongside us
+                return exe_path.parent / 'ppxai-server'
+            return resources_dir / relative_path
+
+        # Standard PyInstaller path
         base_path = Path(sys._MEIPASS)
     else:
         # Running as script
@@ -60,15 +75,17 @@ def install_web_ui():
     web_dir = Path.home() / '.ppxai' / 'web'
     source_dir = get_resource_path('ppxai/web')
 
-    # Check if web UI needs updating
+    # Check if web UI needs updating - compare file sizes and content hash
     if web_dir.exists():
-        # Check if source is newer (simple version check via app.js comment)
         source_app = source_dir / 'app.js'
         dest_app = web_dir / 'app.js'
         if source_app.exists() and dest_app.exists():
-            # Only update if source is different
-            if source_app.read_text()[:200] == dest_app.read_text()[:200]:
-                return web_dir
+            # Compare file sizes first (fast check)
+            if source_app.stat().st_size == dest_app.stat().st_size:
+                # If same size, compare full content
+                if source_app.read_text() == dest_app.read_text():
+                    return web_dir
+            # Files differ - will update below
 
     # Copy web UI files
     web_dir.mkdir(parents=True, exist_ok=True)
@@ -87,7 +104,7 @@ def install_web_ui():
     return web_dir
 
 
-def wait_for_server(port: int, timeout: float = 10.0) -> bool:
+def wait_for_server(port: int, timeout: float = 30.0) -> bool:
     """Wait for server to become available."""
     import urllib.request
     import urllib.error

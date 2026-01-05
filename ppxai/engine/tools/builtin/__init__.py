@@ -22,7 +22,7 @@ def register_all_builtin_tools(manager: 'ToolManager', provider: str = None, eng
     from . import filesystem, calculator, datetime_tool, web
 
     # Register tools from each module
-    filesystem.register_tools(manager)
+    filesystem.register_tools(manager, engine)
     calculator.register_tools(manager)
     datetime_tool.register_tools(manager)
 

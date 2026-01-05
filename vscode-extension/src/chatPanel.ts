@@ -469,6 +469,20 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     });
                 }
                 break;
+            case 'working_dir_changed':
+                // v1.13.2: Working directory changed by tool
+                try {
+                    const newPath = event.content || event.metadata?.path;
+                    if (newPath) {
+                        this._view.webview.postMessage({
+                            type: 'workingDirChanged',
+                            path: newPath
+                        });
+                    }
+                } catch {
+                    // Ignore errors
+                }
+                break;
             case 'error':
                 this._view.webview.postMessage({
                     type: 'error',
@@ -2423,44 +2437,23 @@ Use \`/usage show <session|provider|model|off>\` to change.`;
                 return;
             }
 
-            const content = fs.readFileSync(fullPath, 'utf-8');
-            const lines = content.split('\n');
-            const sizeKB = (stats.size / 1024).toFixed(1);
+            // Open file in VSCode editor (beside current editor)
+            const uri = vscode.Uri.file(fullPath);
+            const doc = await vscode.workspace.openTextDocument(uri);
+            await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+
             const filename = pathModule.basename(fullPath);
-            const ext = pathModule.extname(fullPath).toLowerCase();
-
-            // Map extension to language for syntax highlighting
-            const extToLang: Record<string, string> = {
-                '.py': 'python', '.js': 'javascript', '.ts': 'typescript',
-                '.json': 'json', '.yaml': 'yaml', '.yml': 'yaml',
-                '.md': 'markdown', '.html': 'html', '.css': 'css',
-                '.sh': 'bash', '.bash': 'bash', '.zsh': 'bash',
-                '.rs': 'rust', '.go': 'go', '.java': 'java',
-                '.c': 'c', '.cpp': 'cpp', '.h': 'c', '.hpp': 'cpp',
-                '.rb': 'ruby', '.php': 'php', '.sql': 'sql',
-                '.xml': 'xml', '.toml': 'toml', '.ini': 'ini',
-            };
-            const lang = extToLang[ext] || '';
-
-            // Format output - render markdown files directly, wrap others in code block
+            const sizeKB = (stats.size / 1024).toFixed(1);
             const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-            let markdown: string;
-            if (ext === '.md' || ext === '.markdown') {
-                // Render markdown files directly (not in code block)
-                markdown = `**${filename}** (${sizeKB} KB, ${lines.length} lines)\n\n---\n\n${content}\n\n---\n\n*${elapsed}s*`;
-            } else {
-                // Wrap code files in code block
-                markdown = `**${filename}** (${sizeKB} KB, ${lines.length} lines)\n\n\`\`\`${lang}\n${content}\n\`\`\`\n\n*${elapsed}s*`;
-            }
 
             this._view.webview.postMessage({
                 type: 'systemMessage',
-                content: markdown
+                content: `📂 Opened **${filename}** (${sizeKB} KB) in editor • *${elapsed}s*`
             });
         } catch (error) {
             this._view.webview.postMessage({
                 type: 'error',
-                content: `Error reading file: ${error}`
+                content: `Error opening file: ${error}`
             });
         }
     }
@@ -4439,6 +4432,22 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                         workspaceInfoEl.style.display = 'flex';
                     } else {
                         workspaceInfoEl.style.display = 'none';
+                    }
+                    break;
+
+                case 'workingDirChanged':
+                    // v1.13.2: Update workspace display when AI changes working directory
+                    const wdInfoEl = document.getElementById('workspaceInfo');
+                    const wdPathEl = document.getElementById('workspacePath');
+                    const wdNameEl = document.getElementById('workspaceName');
+
+                    if (message.path && wdInfoEl && wdPathEl && wdNameEl) {
+                        const parts = message.path.split('/');
+                        const name = parts[parts.length - 1] || message.path;
+                        wdPathEl.textContent = message.path;
+                        wdPathEl.title = message.path;
+                        wdNameEl.textContent = name;
+                        wdInfoEl.style.display = 'flex';
                     }
                     break;
 
