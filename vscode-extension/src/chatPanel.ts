@@ -147,7 +147,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 this.updateServerStatus(running);
             });
 
-            // Connect to ppxai-server if not running
+            // Connect to ppxai-server if not running (v1.13.2: auto-start server)
             if (!this._backend.isRunning()) {
                 // Show connecting state (v1.13.1)
                 this._view?.webview.postMessage({
@@ -159,7 +159,25 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     type: 'systemMessage',
                     content: 'Connecting to ppxai-server...'
                 });
-                const connected = await this._backend.start();
+
+                // First try to connect to existing server
+                let connected = await this._backend.start();
+
+                // v1.13.2: If no server running, auto-start it
+                if (!connected) {
+                    this._view?.webview.postMessage({
+                        type: 'systemMessage',
+                        content: 'Starting ppxai-server...'
+                    });
+
+                    // Start the server binary
+                    const serverStarted = await startServer();
+                    if (serverStarted) {
+                        // Server started, now connect
+                        connected = await this._backend.start();
+                    }
+                }
+
                 // Update server status (v1.13.1)
                 this._view?.webview.postMessage({
                     type: 'serverStatus',
@@ -4015,10 +4033,19 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             checkAutocomplete();
         });
 
+        // v1.13.2: Flag-based input control (matches web app pattern)
+        // This prevents out-of-order messages while keeping input focused
+        let isStreaming = false;
+        let isSending = false;
+
         // Send message
         function sendMessage() {
             const content = messageInput.value.trim();
-            if (!content) return;
+            // v1.13.2: Use flags instead of disabled state to prevent concurrent requests
+            if (!content || isStreaming || isSending) return;
+
+            // Set sending flag immediately to prevent double-sends
+            isSending = true;
 
             // Add to history
             if (commandHistory.length === 0 || commandHistory[commandHistory.length - 1] !== content) {
@@ -4033,10 +4060,7 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             vscode.postMessage({ type: 'chat', content });
             messageInput.value = '';
             messageInput.style.height = 'auto';
-            // v1.12.0: Disable BOTH input and button to prevent concurrent requests
-            sendBtn.disabled = true;
-            messageInput.disabled = true;
-            messageInput.placeholder = 'Waiting for response...';
+            // Input stays enabled but flags prevent sending - focus is preserved
         }
 
         sendBtn.addEventListener('click', sendMessage);
@@ -4205,10 +4229,9 @@ A: Use \`/tools disable\` or choose "never" when prompted.
 
                 case 'systemMessage':
                     addMessage('system', message.content, true);
-                    // v1.12.0: Re-enable input after system message (e.g., /help, /status)
-                    sendBtn.disabled = false;
-                    messageInput.disabled = false;
-                    messageInput.placeholder = 'Ask anything or type / for commands...';
+                    // v1.13.2: Reset flags after system message (e.g., /help, /status)
+                    isStreaming = false;
+                    isSending = false;
                     break;
 
                 case 'toolCall':
@@ -4253,6 +4276,9 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                     typingIndicator.textContent = 'Thinking... (Press Esc to stop)';
                     typingIndicator.classList.add('visible');
                     streamingBadge.style.display = 'block';  // Show streaming indicator
+                    // v1.13.2: Set streaming flag, clear sending flag (matches web app pattern)
+                    isStreaming = true;
+                    isSending = false;
                     currentResponseEl = null;
                     currentResponseContent = '';
                     responseStartTime = Date.now();
@@ -4292,10 +4318,9 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                 case 'endResponse':
                     typingIndicator.classList.remove('visible');
                     streamingBadge.style.display = 'none';  // Hide streaming indicator
-                    // v1.12.0: Re-enable input after response completes
-                    sendBtn.disabled = false;
-                    messageInput.disabled = false;
-                    messageInput.placeholder = 'Ask anything or type / for commands...';
+                    // v1.13.2: Reset flags after response (matches web app pattern)
+                    isStreaming = false;
+                    isSending = false;
                     // Full markdown render with syntax highlighting at the end
                     fullRender(true);
                     // Save last assistant message for export
@@ -4309,10 +4334,9 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                     typingIndicator.classList.remove('visible');
                     streamingBadge.style.display = 'none';  // Hide streaming indicator
                     addMessage('error', message.content, false);
-                    // v1.12.0: Re-enable input after error
-                    sendBtn.disabled = false;
-                    messageInput.disabled = false;
-                    messageInput.placeholder = 'Ask anything or type / for commands...';
+                    // v1.13.2: Reset flags after error (matches web app pattern)
+                    isStreaming = false;
+                    isSending = false;
                     break;
 
                 case 'status':

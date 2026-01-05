@@ -326,6 +326,15 @@ class EngineClient:
         if default_model:
             self.set_model(default_model)
 
+        # v1.13.2: Re-register tools when switching providers if tools are enabled
+        # This ensures provider-aware tools (like web_search) are correctly filtered
+        # for the new provider. Without this, switching from perplexity to custom
+        # would keep web_search excluded even though custom providers need it.
+        if self.tools_enabled:
+            self.tool_manager.clear()
+            register_all_builtin_tools(self.tool_manager, provider_name, engine=self)
+            self.tool_manager.max_iterations = self._agent_config.get("max_tool_iterations", 15)
+
         return True
 
     def list_providers(self) -> List[ProviderInfo]:

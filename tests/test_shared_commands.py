@@ -173,7 +173,7 @@ class TestWebAppIntegration:
     def test_index_html_loads_shared_modules(self):
         """Test that index.html loads the shared modules."""
         index_html = Path(__file__).parent.parent / "ppxai" / "web" / "index.html"
-        content = index_html.read_text()
+        content = index_html.read_text(encoding='utf-8')
 
         assert "shared/commands.js" in content, "commands.js not loaded in index.html"
         assert "shared/formatters.js" in content, "formatters.js not loaded in index.html"
@@ -181,7 +181,7 @@ class TestWebAppIntegration:
     def test_app_js_uses_shared_commands(self):
         """Test that app.js references SharedCommands."""
         app_js = Path(__file__).parent.parent / "ppxai" / "web" / "app.js"
-        content = app_js.read_text()
+        content = app_js.read_text(encoding='utf-8')
 
         assert "SharedCommands" in content, "SharedCommands not referenced in app.js"
 

@@ -48,22 +48,43 @@ def is_port_in_use(port: int) -> bool:
 
 
 def find_server_binary() -> Path | None:
-    """Find ppxai-server binary in common locations."""
-    locations = [
+    """Find ppxai-server binary in common locations (v1.13.2: config-based paths)."""
+    binary_name = 'ppxai-server.exe' if sys.platform == 'win32' else 'ppxai-server'
+
+    # Try to read paths from config file first
+    config_paths = []
+    for config_loc in [Path.home() / '.ppxai' / 'ppxai-config.json', Path('ppxai-config.json')]:
+        if config_loc.exists():
+            try:
+                import json
+                config = json.loads(config_loc.read_text())
+                if 'paths' in config and 'bin_search_paths' in config['paths']:
+                    for p in config['paths']['bin_search_paths']:
+                        expanded = p.replace('{home}', str(Path.home()))
+                        config_paths.append(Path(expanded) / binary_name)
+                    break
+            except Exception:
+                pass
+
+    # Default locations (fallback if no config)
+    default_locations = [
+        # Primary: ~/.ppxai/bin/ (v1.13.2)
+        Path.home() / '.ppxai' / 'bin' / binary_name,
         # Same directory as this script/binary
-        get_resource_path('ppxai-server'),
+        get_resource_path('ppxai-server' if sys.platform != 'win32' else 'ppxai-server.exe'),
         # User's local bin
-        Path.home() / '.local' / 'bin' / 'ppxai-server',
+        Path.home() / '.local' / 'bin' / binary_name,
+        # User bin
+        Path.home() / 'bin' / binary_name,
         # System paths
-        Path('/usr/local/bin/ppxai-server'),
-        Path('/usr/bin/ppxai-server'),
+        Path('/usr/local/bin') / binary_name,
+        Path('/usr/bin') / binary_name,
+        # Windows AppData
+        Path.home() / 'AppData' / 'Local' / 'ppxai' / binary_name,
     ]
 
-    # Add platform-specific names
-    if sys.platform == 'win32':
-        locations = [p.with_suffix('.exe') for p in locations] + locations
-
-    for loc in locations:
+    # Check config paths first, then defaults
+    for loc in config_paths + default_locations:
         if loc.exists():
             return loc
 

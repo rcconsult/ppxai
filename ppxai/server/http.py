@@ -127,6 +127,8 @@ async def http_shell_consent_handler(command: str, working_dir: str, risk_level:
 async def lifespan(app: FastAPI):
     """Manage application lifespan (startup/shutdown)."""
     global engine, chat_lock
+    import time
+    startup_start = time.time()
 
     # Startup: Initialize engine with consent callbacks (v1.11.0, v1.11.2)
     logger.info("Server starting up - initializing EngineClient")
@@ -146,7 +148,9 @@ async def lifespan(app: FastAPI):
     if providers:
         engine.set_provider(providers[0])
 
-    print(f"ppxai HTTP server started")
+    startup_time = time.time() - startup_start
+    logger.info(f"Server startup completed in {startup_time:.2f}s")
+    print(f"ppxai HTTP server started ({startup_time:.2f}s)")
     print(f"Provider: {engine.provider_name}")
     print(f"Model: {engine.model}")
 
@@ -387,6 +391,18 @@ async def health_check():
         "version": __version__,
         "engine": engine is not None,
     }
+
+
+@app.get("/config/paths")
+async def get_paths_config():
+    """Get paths configuration for binary and data locations (v1.13.2).
+
+    Returns:
+        bin_search_paths: List of directories to search for binaries
+        data_dir: Directory for sessions, exports, usage data
+    """
+    from ..config import get_paths_config as _get_paths_config
+    return _get_paths_config()
 
 
 @app.get("/status")

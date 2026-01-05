@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import * as os from 'os';
+import * as path from 'path';
+import * as fs from 'fs';
 import { HttpClient, getHttpClient, resetHttpClient } from './httpClient';
 import { ChatViewProvider } from './chatPanel';
 import { SessionsProvider } from './sessionsProvider';
@@ -30,16 +32,74 @@ function notifyServerStatus(running: boolean): void {
 }
 
 /**
- * Find the ppxai-server binary (v1.13.1)
- * Returns the binary name, expecting it to be in PATH (via install.sh or system)
+ * Default binary search paths (v1.13.2)
+ * These are used when ppxai-config.json is not found or has no paths section
+ */
+const DEFAULT_BIN_SEARCH_PATHS = [
+    '{home}/.ppxai/bin',
+    '{home}/.local/bin',
+    '{home}/bin',
+    '/usr/local/bin',
+    '{home}/AppData/Local/ppxai',
+];
+
+/**
+ * Expand path template variables (v1.13.2)
+ * Supports {home} for home directory
+ */
+function expandPathTemplate(template: string): string {
+    return template.replace('{home}', os.homedir());
+}
+
+/**
+ * Read paths config from ppxai-config.json (v1.13.2)
+ * Searches standard config locations, returns bin_search_paths or defaults
+ */
+function readPathsFromConfig(): string[] {
+    const homeDir = os.homedir();
+    const configLocations = [
+        path.join(homeDir, '.ppxai', 'ppxai-config.json'),
+        path.join(process.cwd(), 'ppxai-config.json'),
+    ];
+
+    for (const configPath of configLocations) {
+        if (fs.existsSync(configPath)) {
+            try {
+                const configContent = fs.readFileSync(configPath, 'utf-8');
+                const config = JSON.parse(configContent);
+                if (config.paths?.bin_search_paths) {
+                    return config.paths.bin_search_paths;
+                }
+            } catch {
+                // Ignore parse errors, use defaults
+            }
+        }
+    }
+
+    return DEFAULT_BIN_SEARCH_PATHS;
+}
+
+/**
+ * Find the ppxai-server binary (v1.13.2)
+ * Reads search paths from ppxai-config.json, falls back to defaults
  */
 function findServerBinary(): string {
     const platform = os.platform();
     const binaryName = platform === 'win32' ? 'ppxai-server.exe' : 'ppxai-server';
 
-    // Return just the binary name - let the shell find it in PATH
-    // If user installed via install.sh, ~/.local/bin should be in PATH
-    // Otherwise, uv run ppxai-server works as fallback
+    // Get search paths from config or use defaults
+    const searchPathTemplates = readPathsFromConfig();
+
+    // Expand templates and append binary name
+    for (const template of searchPathTemplates) {
+        const searchDir = expandPathTemplate(template);
+        const searchPath = path.join(searchDir, binaryName);
+        if (fs.existsSync(searchPath)) {
+            return searchPath;
+        }
+    }
+
+    // Fall back to binary name (rely on PATH)
     return binaryName;
 }
 
@@ -51,7 +111,7 @@ export async function isServerRunning(): Promise<boolean> {
 }
 
 /**
- * Start the ppxai-server in a terminal (v1.13.1)
+ * Start the ppxai-server in a terminal (v1.13.1, v1.13.2)
  */
 export async function startServer(): Promise<boolean> {
     // Check if already running
@@ -67,10 +127,13 @@ export async function startServer(): Promise<boolean> {
         serverTerminal = undefined;
     }
 
-    // Determine the command to run
-    // Try ppxai-server directly first (if in PATH via install.sh)
-    // Fall back to 'uv run ppxai-server' for dev environments
+    // Find the server binary
     const serverBinary = findServerBinary();
+    const binaryExists = fs.existsSync(serverBinary);
+
+    // Log for debugging
+    console.log(`[ppxai] Server binary path: ${serverBinary}`);
+    console.log(`[ppxai] Binary exists: ${binaryExists}`);
 
     // Create terminal with specific name
     serverTerminal = vscode.window.createTerminal({
@@ -79,16 +142,33 @@ export async function startServer(): Promise<boolean> {
         iconPath: new vscode.ThemeIcon('server-process')
     });
 
-    // Try running the server
-    // First try direct binary, if that fails user will see error and can try uv run
-    serverTerminal.sendText(`${serverBinary} || uv run ppxai-server`);
+    // v1.13.2: Build command based on platform and binary availability
+    let command: string;
+    if (binaryExists) {
+        // Quote path for Windows compatibility (handles spaces in path)
+        const quotedPath = serverBinary.includes(' ') ? `"${serverBinary}"` : serverBinary;
+        command = quotedPath;
+    } else {
+        // Fall back to uv run for dev environments
+        command = 'uv run ppxai-server';
+    }
+
+    console.log(`[ppxai] Starting server with command: ${command}`);
+    serverTerminal.sendText(command);
     serverTerminal.show(true); // Show but don't take focus
 
-    // Wait a bit for server to start, then check health
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Try to connect
-    const started = await backend.start();
+    // Wait for server to start with circuit breaker pattern (v1.13.2)
+    // Longer initial delays for Windows (antivirus scanning on first run)
+    // Delays: 2s, 3s, 4s, 5s, 8s, 12s then give up
+    const retryDelays = [2000, 3000, 4000, 5000, 8000, 12000];
+    let started = false;
+    for (const delay of retryDelays) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+        started = await backend.start();
+        if (started) {
+            break;
+        }
+    }
     if (started) {
         vscode.window.showInformationMessage('ppxai-server started successfully');
         notifyServerStatus(true);

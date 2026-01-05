@@ -1,8 +1,23 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "version": "1.0",
+  "version": "1.1",
   "default_provider": "perplexity",
   "comment": "Configuration for ppxai - customize providers, models, and autorouting behavior",
+  "paths": {
+    "__comment": "Binary and data paths (v1.13.2+). Use {home} for home directory",
+    "__comment_windows": "On Windows, {home} expands to %USERPROFILE% (e.g., C:\\Users\\YourName)",
+    "__comment_unix": "On Linux/macOS, {home} expands to $HOME (e.g., /home/username or /Users/username)",
+    "bin_search_paths": [
+      "{home}/.ppxai/bin",
+      "{home}/AppData/Local/ppxai",
+      "{home}/.local/bin",
+      "{home}/bin",
+      "/usr/local/bin"
+    ],
+    "__comment_bin_search_paths": "Directories to search for ppxai binaries (ppxai, ppxai-server, ppxai-desktop). Windows paths checked first.",
+    "data_dir": "{home}/.ppxai",
+    "__comment_data_dir": "Directory for sessions, exports, usage data, and config files"
+  },
   "providers": {
     "perplexity": {
       "name": "Perplexity AI",

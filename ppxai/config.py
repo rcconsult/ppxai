@@ -729,3 +729,84 @@ def get_tui_theme() -> str:
         Theme name string (e.g., "standard", "tron-legacy").
     """
     return get_tui_config().get("theme", "standard")
+
+
+# =============================================================================
+# Paths Configuration (v1.13.2 - Cross-platform binary discovery)
+# =============================================================================
+
+def _expand_path_template(template: str) -> str:
+    """Expand path template variables.
+
+    Supports:
+        {home} - User's home directory
+        {platform} - Platform name (win32, darwin, linux)
+
+    Args:
+        template: Path string with optional {home} and {platform} placeholders
+
+    Returns:
+        Expanded path string
+    """
+    import platform
+    return template.replace("{home}", str(Path.home())).replace("{platform}", platform.system().lower())
+
+
+def get_paths_config() -> Dict[str, Any]:
+    """Get paths configuration for binary and data locations.
+
+    Reads from ppxai-config.json under the "paths" key:
+    {
+        "paths": {
+            "bin_search_paths": ["{home}/.ppxai/bin", ...],
+            "data_dir": "{home}/.ppxai"
+        }
+    }
+
+    Returns:
+        Dict with expanded paths (templates like {home} are resolved).
+    """
+    defaults = {
+        "bin_search_paths": [
+            "{home}/.ppxai/bin",
+            "{home}/.local/bin",
+            "{home}/bin",
+            "/usr/local/bin",
+            "{home}/AppData/Local/ppxai",
+        ],
+        "data_dir": "{home}/.ppxai",
+    }
+
+    # Get config, merge with defaults
+    paths_config = _config.get("paths", {})
+    merged = {**defaults, **paths_config}
+
+    # Expand templates
+    result = {}
+    for key, value in merged.items():
+        if isinstance(value, list):
+            result[key] = [_expand_path_template(p) for p in value]
+        elif isinstance(value, str):
+            result[key] = _expand_path_template(value)
+        else:
+            result[key] = value
+
+    return result
+
+
+def get_bin_search_paths() -> List[str]:
+    """Get list of directories to search for ppxai binaries.
+
+    Returns:
+        List of expanded directory paths to search.
+    """
+    return get_paths_config().get("bin_search_paths", [])
+
+
+def get_data_dir() -> Path:
+    """Get the data directory for sessions, exports, etc.
+
+    Returns:
+        Path to data directory.
+    """
+    return Path(get_paths_config().get("data_dir", str(Path.home() / ".ppxai")))

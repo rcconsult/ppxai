@@ -2,9 +2,9 @@
 
 This guide covers installing ppxai for both terminal (TUI) and VSCode extension use.
 
-## Quick Install (Recommended)
+## Quick Install
 
-The easiest way to install ppxai is using the one-line installer:
+### Linux / macOS
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash
@@ -12,7 +12,7 @@ curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | 
 
 This installs both the terminal app (`ppxai`) and the server (`ppxai-server`) to `~/.local/bin`.
 
-### Installation Options
+#### Installation Options
 
 ```bash
 # Install specific version
@@ -28,11 +28,43 @@ curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | 
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --install-dir /usr/local/bin
 ```
 
+### Windows
+
+Open PowerShell and run:
+
+```powershell
+# Download and run the installer
+irm https://raw.githubusercontent.com/rcconsult/ppxai/master/scripts/install.ps1 | iex
+```
+
+Or download and run manually:
+
+```powershell
+# Download the installer
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/rcconsult/ppxai/master/scripts/install.ps1" -OutFile "install.ps1"
+
+# Run it (may require: Set-ExecutionPolicy RemoteSigned -Scope CurrentUser)
+.\install.ps1
+
+# Install specific version
+.\install.ps1 -Version v1.13.2
+
+# Force overwrite existing installation
+.\install.ps1 -Force
+```
+
+This installs to `%USERPROFILE%\.ppxai\`:
+- Binaries: `~\.ppxai\bin\`
+- Config: `~\.ppxai\ppxai-config.json`
+- API keys: `~\.ppxai\.env`
+
 ## Post-Installation Setup
 
 ### 1. Add to PATH
 
-If `~/.local/bin` is not in your PATH, add it to your shell configuration:
+#### Linux / macOS
+
+If `~/.local/bin` is not in your PATH, add it:
 
 **Bash (~/.bashrc or ~/.bash_profile):**
 ```bash
@@ -52,13 +84,30 @@ echo 'set -gx PATH $HOME/.local/bin $PATH' >> ~/.config/fish/config.fish
 source ~/.config/fish/config.fish
 ```
 
+#### Windows
+
+The installer automatically adds `~\.ppxai\bin` to your user PATH. Restart your terminal to apply.
+
+Or update PATH manually in PowerShell:
+```powershell
+$env:PATH = [Environment]::GetEnvironmentVariable("PATH", "User")
+```
+
 ### 2. Set Up API Key
 
-Create the ppxai config directory and add your API key:
+#### Linux / macOS
 
 ```bash
 mkdir -p ~/.ppxai
 echo 'PERPLEXITY_API_KEY=your-key-here' > ~/.ppxai/.env
+```
+
+#### Windows
+
+```powershell
+# The installer creates a template .env file
+# Edit it with your API keys:
+notepad $env:USERPROFILE\.ppxai\.env
 ```
 
 Get your API key at: https://www.perplexity.ai/settings/api
@@ -114,11 +163,15 @@ code --install-extension ~/.local/bin/ppxai-1.13.2.vsix
 
 The VSCode extension requires `ppxai-server` to be running. There are two ways to start it:
 
-**Option 1: Click the Server Badge (v1.13.1+)**
+**Option 1: Automatic (v1.13.2+)**
 
-In the ppxai chat panel, click the "Disconnected" badge to start the server automatically.
+The extension auto-starts `ppxai-server` when you open the chat panel. Just open the ppxai chat and wait a few seconds.
 
-**Option 2: Start Manually**
+**Option 2: Click the Server Badge (v1.13.1+)**
+
+In the ppxai chat panel, click the "Disconnected" badge to start the server.
+
+**Option 3: Start Manually**
 
 ```bash
 ppxai-server
@@ -129,7 +182,7 @@ The server runs on `http://127.0.0.1:54320` by default.
 ### Extension Features
 
 - **Chat Panel** - Full AI chat interface in the sidebar
-- **Server Control** - Start/stop server from the UI (v1.13.1+)
+- **Server Control** - Auto-start server from the UI (v1.13.2+)
 - **Tools** - Enable AI tools (file reading, shell commands, etc.)
 - **Agent Mode** - Autonomous task execution with checkpoints
 - **Code Actions** - Explain, generate tests, generate docs from context menu
@@ -163,7 +216,21 @@ Pre-built binaries are available for all platforms:
 | Linux x64 | `ppxai-linux-amd64` | `ppxai-server-linux-amd64` |
 | Windows | `ppxai-windows.exe` | `ppxai-server-windows.exe` |
 
-Download from [GitHub Releases](https://github.com/rcconsult/ppxai/releases), make executable, and move to your PATH.
+Download from [GitHub Releases](https://github.com/rcconsult/ppxai/releases).
+
+### Linux/macOS
+
+```bash
+chmod +x ppxai-linux-amd64
+mv ppxai-linux-amd64 ~/.local/bin/ppxai
+```
+
+### Windows
+
+```powershell
+# Move to installation directory
+Move-Item ppxai-windows.exe $env:USERPROFILE\.ppxai\bin\ppxai.exe
+```
 
 ## Configuration
 
@@ -172,17 +239,17 @@ Download from [GitHub Releases](https://github.com/rcconsult/ppxai/releases), ma
 ppxai supports multiple AI providers. Add keys to `~/.ppxai/.env`:
 
 ```bash
-# Perplexity (default)
-PERPLEXITY_API_KEY=your-key-here
+# Perplexity (default - includes web search)
+PERPLEXITY_API_KEY=pplx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-# Google Gemini
-GEMINI_API_KEY=your-key-here
+# Google Gemini (free tier available)
+GEMINI_API_KEY=AIzaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # OpenAI
-OPENAI_API_KEY=your-key-here
+OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-# OpenRouter
-OPENROUTER_API_KEY=your-key-here
+# OpenRouter (access multiple providers)
+OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 ### Provider Configuration
@@ -191,6 +258,7 @@ For advanced provider configuration, create `~/.ppxai/ppxai-config.json`:
 
 ```json
 {
+  "default_provider": "perplexity",
   "providers": {
     "custom-vllm": {
       "name": "Local vLLM",
@@ -206,7 +274,12 @@ For advanced provider configuration, create `~/.ppxai/ppxai-config.json`:
 
 ### "command not found: ppxai"
 
-Add `~/.local/bin` to your PATH (see Post-Installation Setup above).
+**Linux/macOS:** Add `~/.local/bin` to your PATH (see Post-Installation Setup above).
+
+**Windows:** Restart your terminal after installation, or run:
+```powershell
+$env:PATH = [Environment]::GetEnvironmentVariable("PATH", "User")
+```
 
 ### "Could not connect to ppxai-server"
 
@@ -215,53 +288,97 @@ Make sure the server is running:
 ppxai-server
 ```
 
-Or click the server badge in VSCode to start it.
+Or wait for the VSCode extension to auto-start it (v1.13.2+).
 
 ### "No API key configured"
 
 Add your API key to `~/.ppxai/.env`:
+
+**Linux/macOS:**
 ```bash
 echo 'PERPLEXITY_API_KEY=your-key-here' > ~/.ppxai/.env
 ```
 
-### Server Port Already in Use
-
-Kill any existing server process:
-```bash
-pkill -f ppxai-server
+**Windows:**
+```powershell
+notepad $env:USERPROFILE\.ppxai\.env
 ```
 
-Then restart:
+### Server Port Already in Use
+
+**Linux/macOS:**
 ```bash
+pkill -f ppxai-server
 ppxai-server
+```
+
+**Windows:**
+```powershell
+# Find and kill existing server
+Get-Process | Where-Object {$_.ProcessName -like "*ppxai-server*"} | Stop-Process
+ppxai-server
+```
+
+### Windows: First Run is Slow
+
+Windows Defender may scan the binary on first run. This is normal and should only happen once. The VSCode extension has retry logic to handle this delay.
+
+### Windows: SSL Certificate Errors (Corporate Proxy)
+
+If you're behind a corporate proxy with SSL inspection, add to your `.env`:
+```
+SSL_VERIFY=false
+```
+
+### Windows: ExecutionPolicy Error
+
+If PowerShell blocks the install script:
+```powershell
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
 ## Updating
 
-To update to the latest version:
+### Linux / macOS
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash
+```
+
+### Windows
+
+```powershell
+.\install.ps1 -Force
 ```
 
 This will download and replace the binaries with the latest version.
 
 ## Uninstalling
 
-Remove the installed binaries:
+### Linux / macOS
 
 ```bash
+# Remove binaries
 rm ~/.local/bin/ppxai
 rm ~/.local/bin/ppxai-server
 rm ~/.local/bin/ppxai-*.vsix
-```
 
-Remove configuration (optional):
-```bash
+# Remove configuration (optional)
 rm -rf ~/.ppxai
 ```
 
-Uninstall VSCode extension:
+### Windows
+
+```powershell
+# Run uninstaller
+.\install.ps1 -Uninstall
+
+# Or manually remove
+Remove-Item -Recurse $env:USERPROFILE\.ppxai
+```
+
+### VSCode Extension
+
 ```bash
 code --uninstall-extension ppxai.ppxai
 ```

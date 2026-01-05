@@ -578,3 +578,57 @@ class TestToolPricing:
         # DuckDuckGo is free, so pricing should be empty or have zero cost
         if pricing:
             assert pricing.get("cost", 0) == 0 or "per_query" not in pricing
+
+
+class TestPathsConfig:
+    """Tests for paths configuration (v1.13.2)."""
+
+    def test_get_paths_config_returns_dict(self):
+        """Test get_paths_config returns a dictionary."""
+        from ppxai.config import get_paths_config
+        paths = get_paths_config()
+        assert isinstance(paths, dict)
+
+    def test_get_paths_config_has_bin_search_paths(self):
+        """Test get_paths_config includes bin_search_paths."""
+        from ppxai.config import get_paths_config
+        paths = get_paths_config()
+        assert "bin_search_paths" in paths
+        assert isinstance(paths["bin_search_paths"], list)
+        assert len(paths["bin_search_paths"]) > 0
+
+    def test_get_paths_config_has_data_dir(self):
+        """Test get_paths_config includes data_dir."""
+        from ppxai.config import get_paths_config
+        paths = get_paths_config()
+        assert "data_dir" in paths
+        assert isinstance(paths["data_dir"], str)
+
+    def test_get_paths_config_expands_home(self):
+        """Test that {home} templates are expanded."""
+        from ppxai.config import get_paths_config
+        from pathlib import Path
+        paths = get_paths_config()
+        home = str(Path.home())
+        # At least one path should contain the actual home directory
+        found_home = False
+        for p in paths["bin_search_paths"]:
+            if home in p:
+                found_home = True
+                break
+        assert found_home, f"Expected home directory {home} in paths: {paths['bin_search_paths']}"
+
+    def test_get_bin_search_paths_returns_list(self):
+        """Test get_bin_search_paths returns a list of strings."""
+        from ppxai.config import get_bin_search_paths
+        paths = get_bin_search_paths()
+        assert isinstance(paths, list)
+        for p in paths:
+            assert isinstance(p, str)
+
+    def test_get_data_dir_returns_path(self):
+        """Test get_data_dir returns a Path object."""
+        from ppxai.config import get_data_dir
+        from pathlib import Path
+        data_dir = get_data_dir()
+        assert isinstance(data_dir, Path)

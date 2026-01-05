@@ -1,6 +1,16 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "default_provider": "perplexity",
+  "paths": {
+    "bin_search_paths": [
+      "{home}/.ppxai/bin",
+      "{home}/.local/bin",
+      "{home}/bin",
+      "/usr/local/bin",
+      "{home}/AppData/Local/ppxai"
+    ],
+    "data_dir": "{home}/.ppxai"
+  },
   "providers": {
     "perplexity": {
       "name": "Perplexity AI",
