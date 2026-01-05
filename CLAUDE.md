@@ -600,6 +600,30 @@ uv run python scripts/release.py v1.x.x --redo --force
 | `ppxai-server-macos-arm64` | Server binary (macOS ARM) |
 | `ppxai-server-macos-intel` | Server binary (macOS Intel) - optional |
 | `ppxai-server-windows.exe` | Server binary (Windows) |
+| `ppxai-desktop-linux-amd64` | Desktop Web App (Linux) |
+| `ppxai-desktop-macos-arm64` | Desktop Web App (macOS ARM) |
+| `ppxai-desktop-windows.exe` | Desktop Web App (Windows) |
+| `ppxai-{version}-macos-arm64.dmg` | macOS app bundle installer |
+| `ppxai-web-ui-{version}.zip` | Web UI static files |
+
+### Platform-Specific Assets
+
+| Platform | Icon Format | Installer |
+|----------|-------------|-----------|
+| Linux | `resources/ppxai.png` (128x128) | `install.sh --with-desktop` |
+| macOS | `resources/ppxai.icns` | `install.sh` or DMG |
+| Windows | `resources/ppxai.ico` | `scripts/install.ps1` |
+
+### Linux Desktop Integration
+
+```bash
+# Install with desktop menu entry
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-desktop
+
+# Installs:
+# ~/.local/share/applications/ppxai.desktop
+# ~/.local/share/icons/hicolor/128x128/apps/ppxai.png
+```
 
 See [docs/RELEASE-NOTES-v1.11.9.md](docs/RELEASE-NOTES-v1.11.9.md) for an example of proper release notes.
 
