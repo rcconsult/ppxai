@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.13.2 (January 2026)
+> **Current Version**: v1.13.3 (January 2026)
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
@@ -102,6 +102,26 @@ ppxai provides:
 - Desktop Web App: auto-detect server URL, proper favicon
 - Shared modules for command/formatter parity
 - Windows compatibility fixes (tests, PEP 735 config)
+
+### Gemini Tools + Grounding ✅ (v1.13.3)
+- **Gemini system instruction fix** - System messages now passed via `system_instruction` config
+- **Tools + grounding together** - Both work simultaneously (not mutually exclusive)
+- **Native web search guidance** - Tool prompt tells providers with native search to use it
+- **Provider options** - New `options` section in JSON config for provider-specific settings
+- **Detailed error tracebacks** - Full stack traces for Gemini API errors
+- **UTF-8 BOM handling** - Windows config file compatibility
+
+---
+
+## Infrastructure
+
+### CI/CD ✅
+- GitHub Actions workflow for releases (`.github/workflows/release.yml`)
+- Automated builds for Linux, Windows, macOS (ARM + Intel)
+- VSCode extension VSIX packaging
+- PyPI publishing via CI
+
+**Note:** CI/CD exists but wasn't visible to external code reviewers due to tree depth limits.
 
 ---
 
@@ -249,7 +269,10 @@ These are tracked but not prioritized:
 - **libghostty SDK** - Watch for stable C API (expected 2026)
 - **Per-provider tool config** - Enable/disable tools per provider
 - **Custom tools** - User-defined tools in `~/.ppxai/tools/`
-- **Provider-aware tool guidance** - Perplexity/Gemini with tools enabled should be told they have native web search built-in, so they use it for information queries rather than shell workarounds (curl to wttr.in). Add provider-specific instructions to tool system prompt: "You have native web search capability - use it for weather, news, search queries. Only use execute_shell_command for system operations."
+- ~~**Provider-aware tool guidance**~~ - ✅ Implemented in v1.13.3
+- **Cost display in `/usage`** - Show estimated $ cost alongside token counts (feedback from AI code review)
+- **Per-provider cost rates** - Configure pricing per model in JSON config
+- **Standardized error handling** - Apply detailed traceback logging pattern from Gemini provider to `openai_compat.py` and `perplexity.py` for consistent debugging (feedback from AI code review)
 
 ---
 
@@ -283,4 +306,4 @@ For archived planning documents:
 
 ---
 
-**Last Updated**: January 3, 2026
+**Last Updated**: January 7, 2026
