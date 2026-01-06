@@ -41,6 +41,14 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
   - `apply_patch` can create new files via `*** Add File:` syntax
   - `insert_text` can create new files when `line_number=1`
   - Support AI-generated search-replace diff format (GPT-OSS 120B style)
+- **FIX:** Gemini provider tools + grounding now work together
+  - System messages passed via `system_instruction` config (previously dropped)
+  - Both grounding AND system_instruction enabled simultaneously
+  - Grounding provides native web search with citations
+  - System instruction enables prompt-based tool calling
+- **NEW:** Provider options passthrough in JSON config
+  - New `options` section for provider-specific settings
+  - Example: `"enable_grounding": true` for Gemini provider
 - **Docs:** Updated [INSTALLATION.md](docs/INSTALLATION.md) with Windows-specific instructions
 
 **What's New in v1.13.1 (Released 2026-01-04):**
