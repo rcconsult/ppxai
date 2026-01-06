@@ -108,7 +108,12 @@ class EventHandler:
             return True
 
         elif event.type == EventType.TOOL_ERROR:
-            error_msg = str(event.data)
+            # event.data is {tool: "...", error: "..."} object
+            if isinstance(event.data, dict):
+                tool_name = event.data.get('tool', 'unknown')
+                error_msg = f"({tool_name}): {event.data.get('error', str(event.data))}"
+            else:
+                error_msg = str(event.data)
             self.on_tool_error(error_msg)
             return True
 
