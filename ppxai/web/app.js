@@ -704,7 +704,10 @@ class PpxaiApp {
                 break;
 
             case 'tool_error':
-                this.showError(`Tool error: ${event.data}`);
+                // event.data is {tool: "...", error: "..."} object
+                const toolErr = event.data;
+                const toolErrMsg = toolErr?.error || (typeof toolErr === 'string' ? toolErr : JSON.stringify(toolErr));
+                this.showError(`Tool error (${toolErr?.tool || 'unknown'}): ${toolErrMsg}`);
                 break;
 
             case 'consent_request':

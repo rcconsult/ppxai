@@ -633,7 +633,12 @@ export class HttpClient {
                 // tool_result data is {tool, result} object - stringify it
                 return { type: 'tool_result', content: typeof event.data === 'object' ? JSON.stringify(event.data) : (event.data || '') };
             case 'tool_error':
-                return { type: 'error', content: event.data || 'Tool error' };
+                // tool_error data is {tool, error} object - extract error message
+                const toolErr = event.data as { tool?: string; error?: string } | string;
+                const toolErrMsg = typeof toolErr === 'object'
+                    ? `Tool error (${toolErr?.tool || 'unknown'}): ${toolErr?.error || JSON.stringify(toolErr)}`
+                    : `Tool error: ${toolErr || 'Unknown error'}`;
+                return { type: 'error', content: toolErrMsg };
             case 'context_injected':
                 // context_injected data is an object - stringify it
                 return { type: 'context_injected', content: typeof event.data === 'object' ? JSON.stringify(event.data) : (event.data || '') };
