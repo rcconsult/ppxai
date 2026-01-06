@@ -1146,9 +1146,22 @@ class EngineClient:
                 # Prompt-based tool calling: add system message with tool instructions
                 tool_prompt = self.tool_manager.get_tools_prompt()
                 if tool_prompt:
-                    # Add citation URL instruction if provider has web search/citations OR web_search tool is available
+                    # Add provider-specific guidance for native capabilities (v1.13.3)
+                    # This tells models with native web search to use it for weather/web queries
                     has_native_search = self.provider and (self.provider.capabilities.citations or self.provider.capabilities.web_search)
                     has_search_tool = self.tool_manager.get_tool("web_search") is not None
+
+                    if has_native_search and not has_search_tool:
+                        # Provider has native web search but no web_search tool
+                        # Tell model to use its native capability for web queries
+                        tool_prompt += (
+                            "\n\n## Native Web Search Capability\n"
+                            "You have NATIVE web search capability built-in. For weather, current events, "
+                            "web searches, or any real-time information: simply answer the question directly "
+                            "using your native search - you do NOT need a tool for this. The tools above "
+                            "are for other capabilities like filesystem access, shell commands, etc."
+                        )
+
                     if has_native_search or has_search_tool:
                         tool_prompt += (
                             "\n\nWhen citing sources or URLs from search results, format them as markdown links "
