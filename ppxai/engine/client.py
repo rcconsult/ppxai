@@ -1324,7 +1324,14 @@ class EngineClient:
                 return None
 
             if "arguments" in data:
-                return data
+                args = data["arguments"]
+                # v1.13.2: Handle nested tool call structure from some models (e.g., GPT-OSS 120B via vLLM)
+                # Model sometimes outputs: {"tool": "apply_patch", "arguments": {"tool": "apply_patch", "arguments": {...}}}
+                # Unwrap the nested structure to get the actual arguments
+                if isinstance(args, dict) and "tool" in args and "arguments" in args:
+                    # Nested tool call - unwrap it
+                    args = args["arguments"]
+                return {"tool": tool_name, "arguments": args}
 
             # Model put parameters at top level
             expected_params = set(tool.parameters.get("properties", {}).keys())

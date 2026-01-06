@@ -68,6 +68,51 @@ class TestEngineToolCallParsing:
         assert "working_dir" in result["arguments"]
         assert result["arguments"]["working_dir"] == "/tmp"
 
+    def test_parse_doubly_nested_tool_call(self, engine_client):
+        """Test parsing doubly nested tool call structure.
+
+        v1.13.2: Some models (e.g., GPT-OSS 120B via vLLM) output tool calls
+        with nested structure like:
+        {"tool": "apply_patch", "arguments": {"tool": "apply_patch", "arguments": {...actual args...}}}
+
+        This should be unwrapped to extract the actual arguments.
+        """
+        # Mock tool for apply_patch
+        mock_tool = Mock()
+        mock_tool.name = "apply_patch"
+        mock_tool.parameters = {
+            "type": "object",
+            "properties": {
+                "file_path": {"type": "string"},
+                "unified_diff": {"type": "string"}
+            },
+            "required": ["file_path", "unified_diff"]
+        }
+        engine_client.tool_manager.get_tool = Mock(return_value=mock_tool)
+
+        # This is the problematic format from GPT-OSS 120B
+        text = '''{
+  "tool": "apply_patch",
+  "arguments": {
+    "tool": "apply_patch",
+    "arguments": {
+      "file_path": "C:\\\\test.ps1",
+      "unified_diff": "*** Begin Patch\\n*** End Patch"
+    }
+  }
+}'''
+
+        result = engine_client._parse_tool_call(text)
+
+        assert result is not None
+        assert result["tool"] == "apply_patch"
+        # The nested structure should be unwrapped
+        assert "file_path" in result["arguments"]
+        assert result["arguments"]["file_path"] == "C:\\test.ps1"
+        assert "unified_diff" in result["arguments"]
+        # Should NOT have nested tool/arguments keys
+        assert "tool" not in result["arguments"]
+
     def test_parse_tool_call_in_code_block(self, engine_client):
         """Test parsing tool call inside markdown code block."""
         text = '''Here's what I'll do:
