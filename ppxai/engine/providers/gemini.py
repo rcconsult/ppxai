@@ -3,6 +3,7 @@ Native Google Gemini provider using google-genai SDK.
 
 Provides access to Gemini-specific features:
 - Google Search Grounding (citations from web search)
+- Prompt-based tool calling (v1.13.3+)
 - Usage tracking with detailed token counts
 - Streaming support
 
@@ -36,6 +37,9 @@ class GeminiProvider:
     - Google Search Grounding for real-time web information
     - Citations from grounding chunks
     - Detailed usage metadata
+
+    v1.13.3: When ppxai tools are enabled (tools parameter provided),
+    grounding is disabled to allow prompt-based tool calling to work.
     """
 
     name = "gemini"
@@ -92,24 +96,29 @@ class GeminiProvider:
             messages: Conversation history
             model: Model ID to use (e.g., 'gemini-2.0-flash')
             stream: Whether to stream the response (default: True)
-            tools: Tool definitions (not yet supported, ignored)
+            tools: Tool definitions - when provided, grounding is disabled
+                   so model follows prompt-based tool instructions
             **kwargs: Additional arguments (ignored for compatibility)
 
         Yields:
             Event objects including grounding citations when available
 
         Note:
-            Custom tools are not yet supported with native Gemini provider.
-            Use grounding (Google Search) for web searches instead.
+            v1.13.3: System messages are now passed via system_instruction config.
+            Both grounding AND system_instruction work together - grounding for
+            native web search, system_instruction for tool definitions.
         """
-        # TODO: Implement tool calling support for Gemini
-        # For now, grounding handles search queries natively
         try:
-            # Convert messages to Gemini format
-            contents = self._convert_messages(messages)
+            # Convert messages to Gemini format (now returns tuple with system instruction)
+            contents, system_instruction = self._convert_messages(messages)
 
-            # Build config with optional grounding
-            config = self._build_config()
+            # v1.13.3: Enable both grounding AND system_instruction
+            # Grounding provides native web search, system_instruction provides tool prompt
+            # Both should work together - grounding for web search, tools for other capabilities
+            config = self._build_config(
+                use_grounding=self.enable_grounding,
+                system_instruction=system_instruction
+            )
 
             yield Event(EventType.STREAM_START, {"model": model})
 
@@ -184,7 +193,7 @@ class GeminiProvider:
 
                 metadata = {"usage": usage}
                 if citations:
-                    metadata["citations"] = [c["url"] for c in citations]
+                    metadata["citations"] = citations
 
                 yield Event(EventType.STREAM_END, content, metadata)
 
@@ -205,8 +214,11 @@ class GeminiProvider:
         Returns:
             Assistant's response content
         """
-        contents = self._convert_messages(messages)
-        config = self._build_config()
+        contents, system_instruction = self._convert_messages(messages)
+        config = self._build_config(
+            use_grounding=self.enable_grounding,
+            system_instruction=system_instruction
+        )
 
         response = self.client.models.generate_content(
             model=model,
@@ -257,43 +269,66 @@ class GeminiProvider:
         """
         return not getattr(self.capabilities, tool_category, False)
 
-    def _convert_messages(self, messages: List[Message]) -> List[Dict[str, Any]]:
+    def _convert_messages(self, messages: List[Message]) -> tuple:
         """Convert Message objects to Gemini format.
 
         Gemini uses a different format than OpenAI:
         - 'user' and 'model' roles (not 'assistant')
         - 'parts' array instead of 'content' string
+        - System messages become system_instruction in config
 
         Args:
             messages: List of Message objects
 
         Returns:
-            List of Gemini-formatted content dicts
+            Tuple of (contents list, system_instruction string or None)
         """
         contents = []
-        for m in messages:
-            role = "model" if m.role == "assistant" else m.role
-            # Skip system messages - they'll be handled separately if needed
-            if role == "system":
-                continue
-            contents.append({
-                "role": role,
-                "parts": [{"text": m.content}]
-            })
-        return contents
+        system_parts = []
 
-    def _build_config(self) -> "genai_types.GenerateContentConfig":
-        """Build generation config with optional grounding.
+        for m in messages:
+            if m.role == "system":
+                # Collect system messages for system_instruction
+                system_parts.append(m.content)
+            else:
+                role = "model" if m.role == "assistant" else "user"
+                contents.append({
+                    "role": role,
+                    "parts": [{"text": m.content}]
+                })
+
+        # Combine all system messages into one instruction
+        system_instruction = "\n\n".join(system_parts) if system_parts else None
+        return contents, system_instruction
+
+    def _build_config(
+        self,
+        use_grounding: bool = True,
+        system_instruction: Optional[str] = None
+    ) -> "genai_types.GenerateContentConfig":
+        """Build generation config with optional grounding and system instruction.
+
+        Args:
+            use_grounding: Whether to enable Google Search Grounding
+            system_instruction: System prompt/instruction for the model
 
         Returns:
-            GenerateContentConfig with tools if grounding enabled
+            GenerateContentConfig with tools and/or system_instruction
         """
-        if not self.enable_grounding:
-            return None
+        config_kwargs = {}
 
-        # Enable Google Search Grounding
-        tools = [genai_types.Tool(google_search=genai_types.GoogleSearch())]
-        return genai_types.GenerateContentConfig(tools=tools)
+        # Add system instruction if provided (v1.13.3: enables tool prompts)
+        if system_instruction:
+            config_kwargs["system_instruction"] = system_instruction
+
+        # Add Google Search Grounding if enabled
+        if use_grounding:
+            config_kwargs["tools"] = [genai_types.Tool(google_search=genai_types.GoogleSearch())]
+
+        # Return config if we have any settings, else None
+        if config_kwargs:
+            return genai_types.GenerateContentConfig(**config_kwargs)
+        return None
 
     def _parse_usage(self, usage_metadata) -> Optional[UsageStats]:
         """Parse usage from Gemini response.

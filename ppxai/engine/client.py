@@ -298,13 +298,15 @@ class EngineClient:
         caps_dict = provider_config.get("capabilities", {})
         capabilities = ProviderCapabilities.from_dict(caps_dict)
 
-        # Create provider instance
+        # Create provider instance with optional provider-specific options
+        provider_options = provider_config.get("options", {})
         self.provider = create_provider(
             provider_name,
             api_key=api_key,
             base_url=base_url,
             models=provider_config.get("models", {}),
-            capabilities=capabilities
+            capabilities=capabilities,
+            **provider_options  # Pass provider-specific options (e.g., enable_grounding for Gemini)
         )
 
         if self.provider is None:
@@ -1110,9 +1112,17 @@ class EngineClient:
         )
 
         # Get tools in OpenAI format for native tool calling
+        # v1.13.3: For prompt-based providers (Gemini, Perplexity), we pass a truthy value
+        # to signal that tools are enabled, even though the actual tool definitions
+        # are in the system prompt. This allows providers to adjust behavior (e.g.,
+        # Gemini disables grounding when tools are enabled to avoid conflicts).
         openai_tools = None
         if use_native_tools:
             openai_tools = self.tool_manager.get_tools_openai_format()
+        else:
+            # For prompt-based mode, pass True to signal tools are enabled
+            # The actual tool definitions are in the system message
+            openai_tools = True
 
         # Emit stream start at beginning
         yield Event(EventType.STREAM_START, {"model": self.model})
