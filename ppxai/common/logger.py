@@ -31,6 +31,37 @@ from typing import Optional, Dict
 import os
 
 
+def _sanitize_for_logging(text: str) -> str:
+    """Sanitize text for safe logging on Windows.
+
+    Windows console uses cp1252 encoding which can't handle many Unicode characters.
+    This replaces problematic characters with ASCII equivalents.
+
+    Args:
+        text: Text that may contain Unicode characters
+
+    Returns:
+        Text safe for Windows console logging
+    """
+    # Common Unicode characters that cause issues on Windows cp1252
+    replacements = {
+        '\u202f': ' ',    # Narrow no-break space -> regular space
+        '\u00a0': ' ',    # Non-breaking space -> regular space
+        '\u2018': "'",    # Left single quote
+        '\u2019': "'",    # Right single quote
+        '\u201c': '"',    # Left double quote
+        '\u201d': '"',    # Right double quote
+        '\u2013': '-',    # En dash
+        '\u2014': '--',   # Em dash
+        '\u2026': '...',  # Ellipsis
+        '\u2022': '*',    # Bullet
+        '\u00b7': '*',    # Middle dot
+    }
+    for char, replacement in replacements.items():
+        text = text.replace(char, replacement)
+    return text
+
+
 class Logger:
     """Unified logger for ppxai clients (TUI, Server, etc.)."""
 
@@ -80,9 +111,9 @@ class Logger:
         # Remove any existing handlers
         self._logger.handlers.clear()
 
-        # File handler
+        # File handler - use UTF-8 encoding for Windows compatibility
         self._log_file = log_dir / f'{self.name}-debug.log'
-        file_handler = logging.FileHandler(self._log_file, mode='a')
+        file_handler = logging.FileHandler(self._log_file, mode='a', encoding='utf-8')
         file_handler.setLevel(logging.DEBUG)
 
         # Format: timestamp | level | message
@@ -166,11 +197,11 @@ class Logger:
 
     def log_user_message(self, message: str):
         """Log user input."""
-        self.info(f"USER INPUT: {message[:200]}")
+        self.info(f"USER INPUT: {_sanitize_for_logging(message[:200])}")
 
     def log_assistant_message(self, message: str):
         """Log assistant response."""
-        self.info(f"ASSISTANT RESPONSE: {message[:200]}")
+        self.info(f"ASSISTANT RESPONSE: {_sanitize_for_logging(message[:200])}")
 
     def log_command(self, command: str):
         """Log slash command execution."""
