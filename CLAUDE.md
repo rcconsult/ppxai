@@ -32,6 +32,15 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **FIX:** Windows compatibility
   - Tests use `tempfile.gettempdir()` instead of hardcoded `/tmp`
   - PEP 735 migration: `[dependency-groups].dev` format
+- **FIX:** UX improvements for agent mode feedback
+  - Added thinking animation with bouncing dots during processing
+  - Display `info` SSE events showing "Processing... (iteration N)" progress
+  - Handle empty AI responses gracefully ("Task completed. No additional response from AI")
+  - Safari CSS compatibility (`-webkit-user-select` prefix)
+- **FIX:** File editing tools improvements
+  - `apply_patch` can create new files via `*** Add File:` syntax
+  - `insert_text` can create new files when `line_number=1`
+  - Support AI-generated search-replace diff format (GPT-OSS 120B style)
 - **Docs:** Updated [INSTALLATION.md](docs/INSTALLATION.md) with Windows-specific instructions
 
 **What's New in v1.13.1 (Released 2026-01-04):**

@@ -679,6 +679,10 @@ class PpxaiApp {
     handleStreamEvent(event, contentEl, fullContent) {
         switch (event.type) {
             case 'stream_chunk':
+                // v1.13.2: Clear thinking indicator when first content arrives
+                if (!fullContent && event.data) {
+                    this.clearThinkingIndicator(contentEl);
+                }
                 fullContent += event.data || '';
                 // Throttle markdown rendering
                 if (fullContent.length % 50 === 0 || fullContent.length < 100) {
@@ -688,10 +692,15 @@ class PpxaiApp {
                 break;
 
             case 'stream_end':
+                // v1.13.2: Clear thinking indicator on stream end
+                this.clearThinkingIndicator(contentEl);
                 // Full response (especially when tools are used)
                 if (event.data && event.data.trim()) {
                     fullContent = event.data;
                     contentEl.innerHTML = this.renderMarkdown(fullContent);
+                } else if (!fullContent) {
+                    // v1.13.2: Handle empty responses from AI (common with GPT-OSS 120B after tool iterations)
+                    contentEl.innerHTML = '<em class="empty-response">Task completed. (No additional response from AI)</em>';
                 }
                 break;
 
@@ -742,6 +751,15 @@ class PpxaiApp {
 
             case 'agent_max_iterations':
                 this.showSystemMessage('⚠️ Max iterations reached. Task may be incomplete.');
+                break;
+
+            case 'info':
+                // v1.13.2: Display processing/iteration info messages
+                // These are emitted during tool iterations to show progress
+                const infoMsg = typeof event.data === 'string' ? event.data : (event.data?.message || '');
+                if (infoMsg) {
+                    this.updateThinkingIndicator(infoMsg, contentEl);
+                }
                 break;
 
             case 'error':
@@ -1304,18 +1322,58 @@ class PpxaiApp {
 
         const timestamp = new Date().toLocaleTimeString();
 
+        // v1.13.2: Show thinking indicator for streaming assistant messages
+        const thinkingHtml = streaming && role === 'assistant'
+            ? '<div class="thinking-indicator"><span class="thinking-dots"></span><span class="thinking-text">Thinking...</span></div>'
+            : '';
+
         msgEl.innerHTML = `
             <div class="message-header">
                 <span class="message-role">${role === 'user' ? 'You' : role === 'assistant' ? 'Assistant' : 'System'}</span>
                 <span class="message-time">${timestamp}</span>
             </div>
-            <div class="message-content">${streaming ? '' : this.renderMarkdown(content)}</div>
+            <div class="message-content">${streaming ? thinkingHtml : this.renderMarkdown(content)}</div>
         `;
 
         this.elements.messagesContainer.appendChild(msgEl);
         this.scrollToBottom();
 
         return msgEl;
+    }
+
+    // v1.13.2: Update thinking indicator with processing status
+    updateThinkingIndicator(status, contentEl) {
+        if (!contentEl) return;
+
+        // Check if we have a thinking indicator
+        let indicator = contentEl.querySelector('.thinking-indicator');
+        if (!indicator) {
+            // Create one if content is empty
+            if (!contentEl.textContent.trim()) {
+                indicator = document.createElement('div');
+                indicator.className = 'thinking-indicator';
+                indicator.innerHTML = '<span class="thinking-dots"></span><span class="thinking-text"></span>';
+                contentEl.appendChild(indicator);
+            } else {
+                return; // Content already present, don't overlay
+            }
+        }
+
+        // Update the status text
+        const textEl = indicator.querySelector('.thinking-text');
+        if (textEl) {
+            textEl.textContent = status;
+        }
+        this.scrollToBottom();
+    }
+
+    // v1.13.2: Clear thinking indicator when content arrives
+    clearThinkingIndicator(contentEl) {
+        if (!contentEl) return;
+        const indicator = contentEl.querySelector('.thinking-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
     }
 
     showSystemMessage(content) {

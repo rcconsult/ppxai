@@ -137,11 +137,19 @@ class ToolManager:
             Tool result as string
 
         Raises:
-            ValueError: If tool not found or not available
+            ValueError: If tool not found or not available, or missing required arguments
         """
         tool = self.get_tool(name)
         if not tool:
             raise ValueError(f"Tool not found or not available: {name}")
+
+        # v1.13.2: Validate required arguments before execution
+        # Some models (e.g., GPT-OSS 120B via vLLM) sometimes send empty arguments
+        required = tool.parameters.get("required", [])
+        missing = [arg for arg in required if arg not in kwargs]
+        if missing:
+            raise ValueError(f"Missing required arguments for {name}: {', '.join(missing)}")
+
         return await tool.execute(**kwargs)
 
     def get_tools_prompt(self) -> str:

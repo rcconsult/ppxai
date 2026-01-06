@@ -515,6 +515,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         type: 'fullResponse',
                         content: event.content
                     });
+                } else {
+                    // v1.13.2: Handle empty responses (common with GPT-OSS 120B after tool iterations)
+                    // Notify webview that response is complete but empty
+                    this._view.webview.postMessage({
+                        type: 'emptyResponse'
+                    });
                 }
                 break;
         }
@@ -3478,10 +3484,28 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             padding: 8px 12px;
             color: var(--vscode-descriptionForeground);
             font-style: italic;
+            align-items: center;
+            gap: 8px;
         }
 
         .typing-indicator.visible {
-            display: block;
+            display: flex;
+        }
+
+        /* v1.13.2: Animated dots for typing indicator */
+        .typing-indicator::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--vscode-progressBar-background);
+            animation: typingPulse 1.4s ease-in-out infinite;
+        }
+
+        @keyframes typingPulse {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
         }
 
         /* Autocomplete dropdown */
@@ -4313,6 +4337,19 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                     }
                     currentResponseContent = message.content;
                     scheduleRender();
+                    break;
+
+                case 'emptyResponse':
+                    // v1.13.2: Handle empty responses (common with GPT-OSS 120B after tool iterations)
+                    typingIndicator.classList.remove('visible');
+                    if (!currentResponseEl) {
+                        currentResponseEl = addMessage('assistant', '', false);
+                    }
+                    // Show placeholder message for empty response
+                    if (!currentResponseContent) {
+                        currentResponseContent = '*Task completed. (No additional response from AI)*';
+                        scheduleRender();
+                    }
                     break;
 
                 case 'endResponse':

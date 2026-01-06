@@ -685,3 +685,117 @@ class TestNativeToolCalling:
         # Verify tools were NOT passed (because native_tool_calling is False)
         call_kwargs = create_mock.call_args[1]
         assert "tools" not in call_kwargs or call_kwargs.get("tools") is None
+
+
+class TestToolArgumentValidation:
+    """Test that tool execution validates required arguments.
+
+    v1.13.2: Some models (e.g., GPT-OSS 120B via vLLM) sometimes send empty
+    or incomplete arguments. The tool manager should validate and provide
+    clear error messages.
+    """
+
+    @pytest.fixture
+    def tool_manager(self):
+        """Create a tool manager with tools that have required arguments."""
+        from ppxai.engine.tools.manager import ToolManager
+        from ppxai.engine.tools.base import FunctionTool
+
+        manager = ToolManager()
+
+        # Register apply_patch tool with required arguments
+        async def apply_patch_handler(file_path: str, unified_diff: str):
+            return f"Patched: {file_path}"
+
+        apply_patch = FunctionTool(
+            name="apply_patch",
+            description="Apply a patch to a file",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "file_path": {"type": "string", "description": "Path to file"},
+                    "unified_diff": {"type": "string", "description": "Unified diff"}
+                },
+                "required": ["file_path", "unified_diff"]
+            },
+            handler=apply_patch_handler
+        )
+        manager.register_tool(apply_patch)
+
+        # Register read_file tool with one required argument
+        async def read_file_handler(filepath: str, max_lines: int = None):
+            return f"Contents of: {filepath}"
+
+        read_file = FunctionTool(
+            name="read_file",
+            description="Read a file",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "filepath": {"type": "string", "description": "Path to file"},
+                    "max_lines": {"type": "integer", "description": "Max lines"}
+                },
+                "required": ["filepath"]
+            },
+            handler=read_file_handler
+        )
+        manager.register_tool(read_file)
+
+        return manager
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_with_valid_arguments(self, tool_manager):
+        """Test successful execution with all required arguments."""
+        result = await tool_manager.execute_tool(
+            "apply_patch",
+            file_path="/test/file.py",
+            unified_diff="--- a\n+++ b\n"
+        )
+        assert "Patched: /test/file.py" in result
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_with_empty_arguments(self, tool_manager):
+        """Test that empty arguments raise clear error for apply_patch."""
+        with pytest.raises(ValueError) as exc_info:
+            await tool_manager.execute_tool("apply_patch")
+
+        error_msg = str(exc_info.value)
+        assert "Missing required arguments" in error_msg
+        assert "apply_patch" in error_msg
+        assert "file_path" in error_msg
+        assert "unified_diff" in error_msg
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_with_partial_arguments(self, tool_manager):
+        """Test that partial arguments raise error listing missing ones."""
+        with pytest.raises(ValueError) as exc_info:
+            await tool_manager.execute_tool(
+                "apply_patch",
+                file_path="/test/file.py"
+                # missing unified_diff
+            )
+
+        error_msg = str(exc_info.value)
+        assert "Missing required arguments" in error_msg
+        assert "unified_diff" in error_msg
+        assert "file_path" not in error_msg  # file_path was provided
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_with_optional_missing(self, tool_manager):
+        """Test that optional arguments can be omitted."""
+        result = await tool_manager.execute_tool(
+            "read_file",
+            filepath="/etc/hosts"
+            # max_lines is optional
+        )
+        assert "Contents of: /etc/hosts" in result
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_all_required_missing(self, tool_manager):
+        """Test error when all required arguments are missing."""
+        with pytest.raises(ValueError) as exc_info:
+            await tool_manager.execute_tool("read_file")
+
+        error_msg = str(exc_info.value)
+        assert "Missing required arguments" in error_msg
+        assert "filepath" in error_msg

@@ -753,16 +753,11 @@ class EngineClient:
 
         # v1.12.0: Create checkpoint before first file edit in agent mode
         # Only create once per chat turn (when no files have been edited yet)
+        # v1.13.2: create_checkpoint() already emits STATUS event - don't duplicate
         if self._agent_mode and self._checkpoint_manager and not self.session.allowed_files:
             # Extract filename for checkpoint description
             filename = path.name
-            checkpoint_id = self.create_checkpoint(f"Before editing {filename}")
-            if checkpoint_id:
-                # Emit checkpoint notification via STATUS event
-                self._consent_event_queue.append(Event(
-                    type=EventType.STATUS,
-                    data=f"✓ Checkpoint created: {checkpoint_id[:8]} (Before editing {filename})"
-                ))
+            self.create_checkpoint(f"Before editing {filename}")
 
         # Check global consent mode
         if self.session.edit_consent_mode == "always":

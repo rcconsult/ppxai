@@ -61,22 +61,31 @@ class ApplyPatchTool(BaseTool):
             if not await self.engine.request_file_edit_consent(str(path)):
                 return f"Error: User denied permission to edit {file_path}"
 
-            # Validate file exists
+            # v1.13.2: Detect new file creation from diff syntax
+            # Models like GPT-OSS 120B use "*** Add File:" or "+++ /dev/null" patterns
+            is_new_file = _is_new_file_diff(unified_diff)
+
+            # Validate file exists (unless creating new file)
             if not path.exists():
-                return f"Error: File not found: {file_path}"
-            if not path.is_file():
+                if is_new_file:
+                    # Create parent directories if needed
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    original_lines = []
+                    backup_content = None  # No backup needed for new file
+                else:
+                    return f"Error: File not found: {file_path}. Use '*** Add File:' syntax in diff to create new files."
+            elif not path.is_file():
                 return f"Error: Not a file: {file_path}"
-
-            # Read current content
-            with open(path, 'r', encoding='utf-8') as f:
-                original_lines = f.readlines()
-
-            # Backup original content for rollback
-            backup_content = ''.join(original_lines)
+            else:
+                # Read current content
+                with open(path, 'r', encoding='utf-8') as f:
+                    original_lines = f.readlines()
+                # Backup original content for rollback
+                backup_content = ''.join(original_lines)
 
             try:
                 # Apply patch
-                new_lines = _apply_unified_diff(original_lines, unified_diff)
+                new_lines = _apply_unified_diff(original_lines, unified_diff, is_new_file=is_new_file)
 
                 # Write atomically (write to temp, then rename)
                 temp_path = path.with_suffix(path.suffix + '.tmp')
@@ -86,16 +95,26 @@ class ApplyPatchTool(BaseTool):
                 # Replace original file
                 temp_path.replace(path)
 
-                lines_changed = sum(1 for a, b in zip(original_lines, new_lines) if a != b)
                 # v1.12.0: Track edited file for agent auto-commit
                 self.engine._agent_edited_files.add(str(path))
-                return f"✓ Successfully applied patch to {file_path} ({lines_changed} lines changed)"
+
+                if is_new_file and not original_lines:
+                    return f"✓ Successfully created {file_path} ({len(new_lines)} lines)"
+                else:
+                    lines_changed = sum(1 for a, b in zip(original_lines, new_lines) if a != b)
+                    return f"✓ Successfully applied patch to {file_path} ({lines_changed} lines changed)"
 
             except Exception as e:
-                # Rollback on failure
-                with open(path, 'w', encoding='utf-8') as f:
-                    f.write(backup_content)
-                return f"Error applying patch: {str(e)} (file restored)"
+                # Rollback on failure (only if we had backup)
+                if backup_content is not None:
+                    with open(path, 'w', encoding='utf-8') as f:
+                        f.write(backup_content)
+                    return f"Error applying patch: {str(e)} (file restored)"
+                else:
+                    # New file creation failed, remove if created
+                    if path.exists():
+                        path.unlink()
+                    return f"Error creating file: {str(e)}"
 
         except Exception as e:
             return f"Error: {str(e)}"
@@ -250,18 +269,25 @@ class InsertTextTool(BaseTool):
             if not await self.engine.request_file_edit_consent(str(path)):
                 return f"Error: User denied permission to edit {file_path}"
 
-            # Validate file exists
+            # v1.13.2: Support creating new files when inserting at line 1
+            is_new_file = False
             if not path.exists():
-                return f"Error: File not found: {file_path}"
-            if not path.is_file():
+                if line_number == 1:
+                    # Create parent directories if needed
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    lines = []
+                    backup_content = None
+                    is_new_file = True
+                else:
+                    return f"Error: File not found: {file_path}. Use line_number=1 to create a new file."
+            elif not path.is_file():
                 return f"Error: Not a file: {file_path}"
-
-            # Read current content
-            with open(path, 'r', encoding='utf-8') as f:
-                lines = f.readlines()
-
-            # Backup original
-            backup_content = ''.join(lines)
+            else:
+                # Read current content
+                with open(path, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                # Backup original
+                backup_content = ''.join(lines)
 
             # Validate line number
             if line_number < 1 or line_number > len(lines) + 1:
@@ -289,13 +315,23 @@ class InsertTextTool(BaseTool):
                 end_line = line_number + num_lines - 1
                 # v1.12.0: Track edited file for agent auto-commit
                 self.engine._agent_edited_files.add(str(path))
-                return f"✓ Successfully inserted text in {file_path} at lines {line_number}-{end_line}"
+
+                if is_new_file:
+                    return f"✓ Successfully created {file_path} ({num_lines} lines)"
+                else:
+                    return f"✓ Successfully inserted text in {file_path} at lines {line_number}-{end_line}"
 
             except Exception as e:
-                # Rollback on failure
-                with open(path, 'w', encoding='utf-8') as f:
-                    f.write(backup_content)
-                return f"Error during insertion: {str(e)} (file restored)"
+                # Rollback on failure (only if we had backup)
+                if backup_content is not None:
+                    with open(path, 'w', encoding='utf-8') as f:
+                        f.write(backup_content)
+                    return f"Error during insertion: {str(e)} (file restored)"
+                else:
+                    # New file creation failed, remove if created
+                    if path.exists():
+                        path.unlink()
+                    return f"Error creating file: {str(e)}"
 
         except Exception as e:
             return f"Error: {str(e)}"
@@ -404,20 +440,104 @@ class DeleteLinesTool(BaseTool):
             return f"Error: {str(e)}"
 
 
-def _apply_unified_diff(original_lines: list, diff_text: str) -> list:
+def _is_new_file_diff(diff_text: str) -> bool:
+    """Check if diff represents a new file creation.
+
+    v1.13.2: Models like GPT-OSS 120B use various patterns to indicate new files:
+    - "*** Add File:" (common in AI-generated patches)
+    - "--- /dev/null" (standard unified diff for new files)
+    - "@@ -0,0 +1" (hunk starting from line 0)
+
+    Args:
+        diff_text: Unified diff text
+
+    Returns:
+        True if this diff creates a new file
+    """
+    # Normalize line endings
+    lines = diff_text.replace('\r\n', '\n').split('\n')
+
+    for line in lines:
+        line_lower = line.lower().strip()
+        # AI model patterns
+        if '*** add file' in line_lower:
+            return True
+        if '*** new file' in line_lower:
+            return True
+        # Standard unified diff patterns for new files
+        if line.startswith('--- /dev/null'):
+            return True
+        if line.startswith('--- a/dev/null'):
+            return True
+        # Hunk starting from 0 (new file)
+        if line.startswith('@@') and '-0,0' in line:
+            return True
+
+    return False
+
+
+def _apply_unified_diff(original_lines: list, diff_text: str, is_new_file: bool = False) -> list:
     """Apply a unified diff to original lines.
 
     Args:
         original_lines: Original file lines (with newlines)
         diff_text: Unified diff text
+        is_new_file: If True, extract content from new file diff format
 
     Returns:
         New file lines after applying diff
     """
     diff_lines = diff_text.splitlines(keepends=True)
+
+    # v1.13.2: For new files, just extract the added lines
+    if is_new_file and not original_lines:
+        new_lines = []
+        in_content = False
+
+        for line in diff_lines:
+            # Skip headers and markers
+            if line.startswith('*** ') or line.startswith('--- ') or line.startswith('+++ '):
+                in_content = True
+                continue
+            if line.startswith('@@'):
+                in_content = True
+                continue
+
+            # Extract added lines (lines starting with +)
+            if in_content and line.startswith('+') and not line.startswith('+++'):
+                new_lines.append(line[1:])  # Remove the + prefix
+            elif in_content and not line.startswith('-') and not line.startswith('\\'):
+                # Also accept lines without +/- prefix (some models don't use proper diff format)
+                # But skip "\ No newline at end of file" markers
+                if line.strip() and not line.startswith('@@'):
+                    new_lines.append(line)
+
+        # Ensure lines end with newlines
+        result = []
+        for line in new_lines:
+            if not line.endswith('\n'):
+                line += '\n'
+            result.append(line)
+
+        return result
+
+    # Standard diff application for existing files
     new_lines = original_lines.copy()
     current_line = 0
 
+    # v1.13.2: Check if this is an AI-generated search-replace diff (no line numbers)
+    # Format: @@\n-old\n+new (without @@ -X,Y +X,Y @@)
+    has_line_numbers = any(
+        re.match(r'@@ -\d+', line.strip())
+        for line in diff_lines
+        if line.strip().startswith('@@')
+    )
+
+    if not has_line_numbers:
+        # AI model search-replace format - find old lines and replace with new
+        return _apply_search_replace_diff(original_lines, diff_text)
+
+    # Standard unified diff with line numbers
     for line in diff_lines:
         if line.startswith('@@'):
             # Parse hunk header: @@ -start,count +start,count @@
@@ -437,6 +557,127 @@ def _apply_unified_diff(original_lines: list, diff_text: str) -> list:
             current_line += 1
 
     return new_lines
+
+
+def _apply_search_replace_diff(original_lines: list, diff_text: str) -> list:
+    """Apply AI-generated search-replace diff format.
+
+    v1.13.2: Models like GPT-OSS 120B use a simpler format:
+    *** Begin Patch
+    *** Update File: filename.py
+    @@
+    -old line 1
+    -old line 2
+    +new line 1
+    +new line 2
+    *** End Patch
+
+    This finds the old lines in sequence and replaces them with new lines.
+
+    Args:
+        original_lines: Original file lines (with newlines)
+        diff_text: Diff text in search-replace format
+
+    Returns:
+        New file lines after applying diff
+    """
+    diff_lines = diff_text.splitlines(keepends=True)
+    content = ''.join(original_lines)
+
+    # Extract hunks (sections between @@ markers)
+    old_lines = []
+    new_lines_to_add = []
+    in_hunk = False
+
+    for line in diff_lines:
+        stripped = line.rstrip('\r\n')
+
+        # Skip headers
+        if stripped.startswith('*** ') or stripped.startswith('--- ') or stripped.startswith('+++ '):
+            continue
+
+        # Start of hunk
+        if stripped == '@@' or stripped.startswith('@@ '):
+            # Process previous hunk if any
+            if old_lines or new_lines_to_add:
+                content = _replace_hunk(content, old_lines, new_lines_to_add)
+                old_lines = []
+                new_lines_to_add = []
+            in_hunk = True
+            continue
+
+        if in_hunk:
+            if stripped.startswith('-') and not stripped.startswith('---'):
+                # Old line to find
+                old_lines.append(stripped[1:])  # Remove - prefix
+            elif stripped.startswith('+') and not stripped.startswith('+++'):
+                # New line to insert
+                new_lines_to_add.append(stripped[1:])  # Remove + prefix
+            elif stripped.startswith('\\'):
+                # "\ No newline at end of file" - ignore
+                continue
+            elif stripped:
+                # Context line (no prefix) - treat as old and new
+                old_lines.append(stripped)
+                new_lines_to_add.append(stripped)
+
+    # Process final hunk
+    if old_lines or new_lines_to_add:
+        content = _replace_hunk(content, old_lines, new_lines_to_add)
+
+    # Convert back to lines
+    result_lines = content.splitlines(keepends=True)
+    # Ensure last line has newline
+    if result_lines and not result_lines[-1].endswith('\n'):
+        result_lines[-1] += '\n'
+
+    return result_lines
+
+
+def _replace_hunk(content: str, old_lines: list, new_lines: list) -> str:
+    """Replace old lines with new lines in content.
+
+    Args:
+        content: File content as string
+        old_lines: Lines to find (without newlines)
+        new_lines: Lines to replace with (without newlines)
+
+    Returns:
+        Updated content
+    """
+    if not old_lines:
+        # Nothing to find, can't replace
+        return content
+
+    # Build search pattern (join with newline)
+    old_text = '\n'.join(old_lines)
+    new_text = '\n'.join(new_lines)
+
+    # Try exact match first
+    if old_text in content:
+        return content.replace(old_text, new_text, 1)
+
+    # Try with different line ending styles
+    old_text_crlf = '\r\n'.join(old_lines)
+    if old_text_crlf in content:
+        return content.replace(old_text_crlf, new_text.replace('\n', '\r\n'), 1)
+
+    # Try fuzzy match - strip leading/trailing whitespace from each line
+    old_stripped = '\n'.join(line.strip() for line in old_lines)
+    content_lines = content.splitlines(keepends=True)
+
+    for i in range(len(content_lines) - len(old_lines) + 1):
+        window = content_lines[i:i + len(old_lines)]
+        window_stripped = '\n'.join(line.strip() for line in window).rstrip('\n')
+        if window_stripped == old_stripped:
+            # Found match - replace
+            before = ''.join(content_lines[:i])
+            after = ''.join(content_lines[i + len(old_lines):])
+            new_with_newlines = '\n'.join(new_lines) + '\n'
+            return before + new_with_newlines + after
+
+    # No match found - return original
+    return content
 
 
 def register_tools(manager: 'ToolManager', engine: 'EngineClient'):
