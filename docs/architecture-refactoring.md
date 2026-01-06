@@ -816,3 +816,67 @@ See [docs/archive/sse-migration-plan.md](archive/sse-migration-plan.md) for deta
 - Current config: `ppxai/config.py`
 - Current server: `ppxai/server.py`
 - VSCode Extension: `vscode-extension/`
+
+---
+
+## Architecture Validation (v1.13.3)
+
+The layered architecture proved its value during v1.13.3 development. A fundamental change to how Gemini handles system messages required **zero changes** to any UI code.
+
+### The Problem
+
+Gemini's API differs from OpenAI-compatible APIs:
+- OpenAI: System messages go in the `messages` array
+- Gemini: System messages must be passed via `system_instruction` config parameter
+
+When tools were enabled with Gemini, the tool prompt (in a system message) was silently dropped, breaking tool functionality.
+
+### The Fix
+
+Changes were isolated to the provider layer:
+
+| File | Change | Lines Modified |
+|------|--------|----------------|
+| `ppxai/engine/providers/gemini.py` | Extract system messages, pass via `system_instruction` | ~30 |
+| `ppxai/engine/client.py` | Add native web search guidance to tool prompt | ~15 |
+| `ppxai/config.py` | Handle UTF-8 BOM in config files | ~5 |
+
+### What Didn't Need Changes
+
+| Component | Files | Reason |
+|-----------|-------|--------|
+| VSCode Extension | 0 | Consumes events, doesn't know provider internals |
+| TUI | 0 | Uses same event handlers |
+| Web App | 0 | Same HTTP/SSE contract |
+| HTTP Server | 0 | Passes events through unchanged |
+
+### The Firewall Pattern
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  UIs (VSCode Extension, TUI, Web App)                   │
+│  - Consume events, render responses                     │
+│  - No knowledge of provider internals                   │
+└─────────────────────────────────────────────────────────┘
+                          ▲
+                          │ Events (STREAM_CHUNK, TOOL_ERROR, etc.)
+                          │
+┌─────────────────────────────────────────────────────────┐
+│  Engine Client (client.py)                              │
+│  - Orchestrates providers, tools, sessions              │
+│  - Emits uniform events                                 │
+└─────────────────────────────────────────────────────────┘
+                          ▲
+                          │
+┌─────────────────────────────────────────────────────────┐
+│  Providers (gemini.py, perplexity.py, openai_compat.py) │
+│  - API-specific logic stays here                        │
+│  - Provider quirks isolated                             │
+└─────────────────────────────────────────────────────────┘
+```
+
+The event-based contract (`EventType.STREAM_CHUNK`, `TOOL_ERROR`, etc.) acts as the firewall. Provider internals can change dramatically—Gemini's `system_instruction` vs OpenAI's system messages—but consumers see the same event stream.
+
+### Key Insight
+
+Provider-specific quirks stay contained. The v1.7.0 refactoring that extracted the engine layer created this isolation, preventing "spaghetti effects" where one change cascades through the entire codebase.
