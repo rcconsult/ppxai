@@ -202,7 +202,9 @@ class GeminiProvider:
                 yield Event(EventType.STREAM_END, content, metadata)
 
         except Exception as e:
-            yield Event(EventType.ERROR, str(e))
+            import traceback
+            error_detail = f"{str(e)}\n{traceback.format_exc()}"
+            yield Event(EventType.ERROR, error_detail)
 
     def chat_sync_simple(
         self,
