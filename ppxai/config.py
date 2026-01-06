@@ -189,7 +189,8 @@ def _load_json_config(config_path: Path) -> Dict[str, Any]:
         ValueError: If the config file is invalid.
     """
     try:
-        with open(config_path, 'r', encoding='utf-8') as f:
+        # Use utf-8-sig to handle UTF-8 BOM (PowerShell on Windows may add BOM)
+        with open(config_path, 'r', encoding='utf-8-sig') as f:
             config = json.load(f)
         return config
     except json.JSONDecodeError as e:

@@ -175,7 +175,8 @@ function Install-Config {
         Write-Warning "ppxai-config.json already exists. Use -Force to overwrite."
     } else {
         $configContent = Get-ConfigTemplate
-        Set-Content -Path $configPath -Value $configContent -Encoding UTF8
+        # Write UTF-8 without BOM (PowerShell 5.1's -Encoding UTF8 adds BOM which breaks JSON parsing)
+        [System.IO.File]::WriteAllText($configPath, $configContent, [System.Text.UTF8Encoding]::new($false))
         Write-Success "Created ppxai-config.json"
     }
 
@@ -185,7 +186,8 @@ function Install-Config {
         Write-Warning ".env already exists. Use -Force to overwrite."
     } else {
         $envContent = Get-EnvTemplate
-        Set-Content -Path $envPath -Value $envContent -Encoding UTF8
+        # Write UTF-8 without BOM
+        [System.IO.File]::WriteAllText($envPath, $envContent, [System.Text.UTF8Encoding]::new($false))
         Write-Success "Created .env (edit to add your API keys)"
     }
 }
