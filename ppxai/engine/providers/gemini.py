@@ -134,6 +134,10 @@ class GeminiProvider:
                     config=config
                 )
 
+                if response_stream is None:
+                    yield Event(EventType.ERROR, "Gemini API returned no response stream")
+                    return
+
                 for chunk in response_stream:
                     # Extract text from chunk
                     if chunk.candidates and chunk.candidates[0].content:
@@ -285,6 +289,9 @@ class GeminiProvider:
         """
         contents = []
         system_parts = []
+
+        if not messages:
+            return contents, None
 
         for m in messages:
             if m.role == "system":
