@@ -291,6 +291,17 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 ## Development Setup
 
+### File Encoding: UTF-8 without BOM
+
+**IMPORTANT**: All source files MUST be UTF-8 encoded **without** BOM (Byte Order Mark).
+
+- Windows PowerShell's `Out-File` cmdlet adds BOM by default - avoid using it
+- Use `Set-Content -Encoding UTF8` or write files via Python with `encoding='utf-8'`
+- The config loader (`config.py`) uses `utf-8-sig` to handle BOM gracefully when reading
+- When creating new files, always specify `encoding='utf-8'` explicitly
+
+**Why this matters**: UTF-8 BOM causes JSON parse errors and crashes on Windows. The BOM bytes (`\xef\xbb\xbf`) appear as garbage characters at the start of files.
+
 ### Recommended: Using Bootstrap Script (easiest)
 
 The bootstrap script automatically downloads uv if not present and sets up the project:
