@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.13.2
+**Current Version:** v1.13.3
 
-**What's New in v1.13.2 (In Progress on branch `updates/desktop-web-app-fixes`):**
+**What's New in v1.13.3 (In Progress on branch `updates/desktop-web-app-fixes`):**
 - **NEW:** Windows PowerShell installer (`scripts/install.ps1`)
   - One-line install: `irm https://raw.githubusercontent.com/rcconsult/ppxai/master/scripts/install.ps1 | iex`
   - Downloads binaries from GitHub releases to `~\.ppxai\bin\`
@@ -284,10 +284,12 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - Automated GitHub Actions CI/CD for multi-platform builds (macOS ARM/Intel, Linux, Windows)
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.13.2
-- VSCode extension (package.json): v1.13.2
-- Git tag: v1.13.2 (released 2026-01-05)
-- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v1.13.2
+- Python package (pyproject.toml): v1.13.3
+- VSCode extension (package.json): v1.13.3
+- Git tag: v1.13.3 (pending release)
+- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v1.13.3
+
+**NOTE:** Version numbers have been bumped to v1.13.3. When running `/release`, do NOT bump versions again - they are already set.
 
 ## Development Setup
 
