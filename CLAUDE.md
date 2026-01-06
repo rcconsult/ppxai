@@ -46,6 +46,8 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
   - Both grounding AND system_instruction enabled simultaneously
   - Grounding provides native web search with citations
   - System instruction enables prompt-based tool calling
+  - Native web search guidance added to tool prompt for providers with built-in search
+  - Prevents "cannot provide weather" errors when tools enabled with Gemini
 - **NEW:** Provider options passthrough in JSON config
   - New `options` section for provider-specific settings
   - Example: `"enable_grounding": true` for Gemini provider

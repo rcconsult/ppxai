@@ -24,8 +24,9 @@ This release fixes critical issues with Gemini provider tools, improves error ha
 - Both grounding AND system_instruction work simultaneously
 - Grounding provides native web search with citations
 - System instruction enables prompt-based tool calling
+- Tool prompt now includes guidance for providers with native web search capability
 
-**Impact**: Users can now use Gemini with tools enabled AND still get web search with citations.
+**Impact**: Users can now use Gemini with tools enabled AND still get web search with citations. Weather and web queries work on the first request.
 
 ### New Provider Options
 
