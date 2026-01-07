@@ -1,8 +1,18 @@
+# Core dependencies (matches pyproject.toml [project].dependencies)
 openai>=1.0.0
 httpx>=0.24.0
 rich>=13.0.0
 prompt-toolkit>=3.0.0
 python-dotenv>=1.0.0
-tzdata>=2024.1  # Timezone data for Windows (zoneinfo needs this)
+tzdata>=2024.1
+
+# Server dependencies (matches [project.optional-dependencies].server)
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+sse-starlette>=1.6.0
+
+# Native Gemini provider (matches [project.optional-dependencies].gemini)
+google-genai>=1.0.0
+
+# Build tools
 pyinstaller>=6.0.0
-mcp>=0.1.0  # Model Context Protocol (optional, for tool support)

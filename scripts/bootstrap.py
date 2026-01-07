@@ -24,7 +24,7 @@ import zipfile
 from pathlib import Path
 
 # Pin uv version for reproducibility
-UV_VERSION = "0.5.4"
+UV_VERSION = "0.5.14"
 
 # Project root (parent of scripts/)
 PROJECT_ROOT = Path(__file__).parent.parent

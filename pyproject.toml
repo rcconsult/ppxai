@@ -35,6 +35,7 @@ dependencies = [
 server = [
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
+    "sse-starlette>=1.6.0",
 ]
 
 # MCP tool support
@@ -67,6 +68,7 @@ build = [
 [project.scripts]
 ppxai = "ppxai.main:main"
 ppxai-server = "ppxai.server.http:run_server"
+ppxai-desktop = "ppxai.server.http:run_desktop"
 
 [project.urls]
 Homepage = "https://github.com/rcconsult/ppxai"
