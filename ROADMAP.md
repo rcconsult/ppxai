@@ -274,6 +274,40 @@ These are tracked but not prioritized:
 - **Per-provider cost rates** - Configure pricing per model in JSON config
 - **Standardized error handling** - Apply detailed traceback logging pattern from Gemini provider to `openai_compat.py` and `perplexity.py` for consistent debugging (feedback from AI code review)
 
+### Jupyter Kernel Tool (Data Science Workflow)
+
+Enable AI to execute cells in a running JupyterLab kernel with real-time output streaming:
+
+| Package | Purpose |
+|---------|---------|
+| `jupyter_client` | Connect to running kernels via connection file |
+| `nbclient` | Higher-level cell execution with callbacks |
+| `websockets` | Real-time output streaming via Jupyter wire protocol |
+| `nbformat` | Read/write .ipynb files |
+
+**Use case:** Data developer asks AI to "run this notebook cell by cell" and watches output appear in JupyterLab UI in real-time.
+
+**Implementation sketch:**
+```python
+class JupyterKernelTool(BaseTool):
+    name = "execute_notebook_cell"
+
+    async def execute(self, notebook_path: str, cell_index: int):
+        # Connect to kernel, execute cell, stream outputs as SSE events
+```
+
+### Image Preview in Chat Panel
+
+Current `/show` command opens files in VSCode text editor. Need image preview for:
+- **Formats:** PNG, JPG, JPEG, GIF, SVG, WebP
+- **Display:** Inline in chat panel or split pane preview
+- **Use case:** AI generates chart (e.g., matplotlib), user wants to see it without leaving chat
+
+**Implementation options:**
+1. **Inline base64** - Embed `<img src="data:image/png;base64,...">` in chat
+2. **VSCode webview** - Use `vscode.Uri.file()` with webview resource mapping
+3. **Side panel** - Dedicated image preview panel alongside chat
+
 ---
 
 ## Non-Goals
