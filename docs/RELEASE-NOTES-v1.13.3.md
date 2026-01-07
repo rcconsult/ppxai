@@ -102,10 +102,10 @@ The logger now handles Windows console encoding issues that could cause crashes 
 ## Test Results
 
 ```
-569 passed in 4.27s
+583 passed in 4.27s
 ```
 
-All tests pass on Windows and Linux. (4 new BOM handling tests added)
+All tests pass on Windows and Linux. (14 new tests added including BOM handling)
 
 ## Upgrade Instructions
 
