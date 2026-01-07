@@ -58,6 +58,9 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
   - New `options` section for provider-specific settings
   - Example: `"enable_grounding": true` for Gemini provider
 - **Docs:** Updated [INSTALLATION.md](docs/INSTALLATION.md) with Windows-specific instructions
+- **NOTE:** This is the last release with `docs/archive/` folder. Will be removed in v1.14.x series.
+  - Archive contains legacy documentation from project origins
+  - After v1.13.3 release, archive is browsable at tag `v1.13.3` on GitHub
 
 **What's New in v1.13.1 (Released 2026-01-04):**
 - **NEW:** Desktop Web App - Standalone browser-based chat interface

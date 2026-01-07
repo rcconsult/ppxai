@@ -197,6 +197,8 @@ No telemetry. No tracking. Data only goes to the LLM provider you choose.
 | [File Editing](docs/FILE_EDITING_GUIDE.md) | Consent-based file operations |
 | [Specifications](SPECIFICATIONS.md) | Code generation templates |
 
+> **Note:** Legacy documentation from the project's origins is available in `docs/archive/`. This folder will be removed in v1.14.x. To browse the archive after removal, use [tag v1.13.3](https://github.com/rcconsult/ppxai/tree/v1.13.3/docs/archive).
+
 ## Project Structure
 
 ```
@@ -210,7 +212,7 @@ ppxai/
 ├── vscode-extension/         # VSCode extension (TypeScript)
 ├── scripts/                  # Build, release, install scripts
 ├── resources/                # Icons (PNG, ICO, ICNS) and desktop files
-├── tests/                    # 579 tests
+├── tests/                    # 583 tests
 └── docs/                     # Documentation
 ```
 
