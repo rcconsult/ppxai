@@ -6,9 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.13.3
+**Current Version:** v1.13.3 (Released 2026-01-07)
 
-**What's New in v1.13.3 (In Progress on branch `updates/desktop-web-app-fixes`):**
+**Post-v1.13.3 fixes (on master, pending next release):**
+- **FIX:** File editing tools now respect engine working directory
+  - `apply_patch`, `replace_block`, `insert_text`, `delete_lines` resolve relative paths against engine's working directory
+  - Previously files were created in `~/.ppxai/bin/` instead of the project directory shown in UI
+
+**What's New in v1.13.3:**
 - **NEW:** Windows PowerShell installer (`scripts/install.ps1`)
   - One-line install: `irm https://raw.githubusercontent.com/rcconsult/ppxai/master/scripts/install.ps1 | iex`
   - Downloads binaries from GitHub releases to `~\.ppxai\bin\`
