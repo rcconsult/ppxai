@@ -15,8 +15,9 @@ python scripts/release.py $ARGUMENTS
 
 The script handles everything automatically:
 1. ✅ Checks git status (clean working directory)
-2. ✅ Checks branch (must be on master, use `--force` to override)
-3. ✅ Updates ALL version references:
+2. ✅ Checks branch (must be on master, use `--force` to release from feature branch)
+3. ✅ Merges to master (if on feature branch with `--force`)
+4. ✅ Updates ALL version references:
    - pyproject.toml
    - ppxai/__init__.py
    - vscode-extension/package.json
@@ -26,16 +27,16 @@ The script handles everything automatically:
    - vscode-extension/README.md (vsix references)
    - CLAUDE.md (current version + version alignment)
    - ROADMAP.md (current release)
-4. ✅ Validates all version references with validate-release.py
-5. ✅ Creates release notes template if missing
-6. ✅ Runs TypeScript lint on VSCode extension
-7. ✅ Runs tests
-8. ✅ Creates commit and tag
-9. ✅ Pushes to GitHub
-10. ✅ Waits for CI to complete
-11. ✅ Publishes release notes to GitHub release
-12. ✅ Builds Intel Mac assets (auto-detects platform)
-13. ✅ Verifies all assets are present
+5. ✅ Validates all version references with validate-release.py
+6. ✅ Creates release notes template if missing
+7. ✅ Runs TypeScript lint on VSCode extension
+8. ✅ Runs tests
+9. ✅ Creates commit and tag
+10. ✅ Pushes to GitHub (always pushes master branch)
+11. ✅ Waits for CI to complete
+12. ✅ Publishes release notes to GitHub release
+13. ✅ Builds Intel Mac assets (auto-detects platform)
+14. ✅ Verifies all assets are present
 
 ## Script Options
 
@@ -49,7 +50,7 @@ python scripts/release.py v1.11.8 --skip-tests
 # Don't wait for CI (useful if you'll check manually)
 python scripts/release.py v1.11.8 --skip-ci-wait
 
-# Force release even with uncommitted changes
+# Force release from feature branch (merges to master first)
 python scripts/release.py v1.11.8 --force
 
 # REDO: Delete broken release and rebuild from scratch

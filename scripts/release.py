@@ -484,6 +484,41 @@ def delete_existing_release(version: str) -> bool:
     return True
 
 
+def merge_to_master_if_needed(current_branch: str) -> bool:
+    """Merge current branch to master if not already on master.
+
+    Returns True if successful, False if merge failed.
+    """
+    if current_branch == "master":
+        return True
+
+    print(f"  🔀 Merging {current_branch} to master...")
+
+    # Fetch latest master
+    run_command("git fetch origin master", check=False)
+
+    # Switch to master
+    result = run_command("git checkout master", check=False)
+    if result.returncode != 0:
+        print(f"  ❌ Failed to checkout master: {result.stderr}")
+        return False
+
+    # Pull latest master
+    run_command("git pull origin master", check=False)
+
+    # Merge feature branch into master
+    result = run_command(f"git merge {current_branch} --no-edit", check=False)
+    if result.returncode != 0:
+        print(f"  ❌ Merge failed: {result.stderr}")
+        print(f"     Resolve conflicts and try again")
+        # Switch back to original branch
+        run_command(f"git checkout {current_branch}", check=False)
+        return False
+
+    print(f"  ✅ Merged {current_branch} into master")
+    return True
+
+
 def create_and_push_tag(version: str):
     """Create tag and push to origin."""
     tag = f"v{version}"
@@ -495,7 +530,7 @@ def create_and_push_tag(version: str):
     run_command(f'git tag -a {tag} -m "{tag} release"')
     print(f"  ✅ Created tag: {tag}")
 
-    # Push master and tag
+    # Push master and tag (we are guaranteed to be on master at this point)
     run_command("git push origin master")
     run_command(f"git push origin {tag} --force")
     print(f"  ✅ Pushed to origin")
@@ -730,6 +765,9 @@ def main():
     current_version = get_current_version()
     date = datetime.now().strftime("%Y-%m-%d")
 
+    # Check branch early to calculate steps correctly
+    is_master_early, current_branch_early = check_branch()
+
     # Calculate total steps based on flags
     # Base steps: Git check, Branch check, Update versions, Validate, Release notes, TS Lint, Tests, Commit, Push, CI wait, Publish notes, Intel build, Verify = 13
     total_steps = 13
@@ -739,6 +777,8 @@ def main():
         total_steps -= 1  # Remove "Run tests" step
     if args.skip_ci_wait:
         total_steps -= 1  # Remove "Wait for CI" step
+    if not is_master_early and args.force:
+        total_steps += 1  # Add "Merge to Master" step
 
     print(f"\n{'━' * 50}")
     print(f"  🚀 ppxai Release Script")
@@ -781,13 +821,23 @@ def main():
     if not is_master and not args.force:
         print(f"  ❌ Not on master branch (current: {current_branch})")
         print(f"     Switch to master first: git checkout master")
-        print(f"     Or use --force to release from {current_branch}")
+        print(f"     Or use --force to release from {current_branch} (will merge to master)")
         sys.exit(1)
     if is_master:
         print(f"  ✅ On master branch")
     else:
-        print(f"  ⚠️  On {current_branch} branch (--force used)")
+        print(f"  ⚠️  On {current_branch} branch (--force used, will merge to master)")
     record_step("Branch Check")
+
+    # Step 2b: Merge to master if on feature branch
+    if not is_master:
+        step += 1
+        print_step(step, total_steps, "Merging to Master")
+        if not merge_to_master_if_needed(current_branch):
+            print(f"\n❌ Failed to merge {current_branch} to master")
+            print(f"   Resolve any conflicts and try again")
+            sys.exit(1)
+        record_step("Merge to Master")
 
     # Pre-flight check: Warn if release notes are still template
     if not check_release_notes_not_template(version):
