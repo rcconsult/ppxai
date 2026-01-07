@@ -122,7 +122,7 @@ python tests/test_prompt_tools.py   # Quick prompt tools test
 - Native capabilities: web_search, weather, real-time info
 - Tools: 6 registered (file operations + shell commands)
 
-✅ **Custom Self-Hosted** (Internal Code AI / GPT OSS 120B)
+✅ **Custom Self-Hosted** (vLLM / Llama 3.1 70B)
 - Models: gpt-oss-120b, custom-model
 - Enhanced with tools: datetime, weather, web_search, fetch_url, shell execution
 - Tools: 9 registered (all capabilities)

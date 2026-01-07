@@ -50,19 +50,19 @@
       }
     },
     "custom": {
-      "name": "Internal Code AI",
-      "base_url": "https://codeai.trad.int/v1",
+      "name": "Custom vLLM Server",
+      "base_url": "http://localhost:8000/v1",
       "api_key_env": "CUSTOM_API_KEY",
-      "default_model": "openai/gpt-oss-120b",
-      "coding_model": "openai/gpt-oss-120b",
+      "default_model": "meta-llama/Llama-3.1-70B-Instruct",
+      "coding_model": "meta-llama/Llama-3.1-70B-Instruct",
       "models": {
-        "openai/gpt-oss-120b": {
-          "name": "GPT OSS 120B",
-          "description": "Internal self-hosted GPT model with native tool calling via vLLM"
+        "meta-llama/Llama-3.1-70B-Instruct": {
+          "name": "Llama 3.1 70B",
+          "description": "Self-hosted Llama model with native tool calling via vLLM"
         }
       },
       "pricing": {
-        "openai/gpt-oss-120b": {"input": 0.0, "output": 0.0}
+        "meta-llama/Llama-3.1-70B-Instruct": {"input": 0.0, "output": 0.0}
       },
       "capabilities": {
         "web_search": false,
