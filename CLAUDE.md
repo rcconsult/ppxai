@@ -600,7 +600,7 @@ The release script (`scripts/release.py`) handles everything automatically:
 | `ppxai/common/event_handler.py` | `Version: v1.13.0` | Yes |
 | `README.md` | `ppxai-1.13.0.vsix` | No |
 | `vscode-extension/README.md` | `ppxai-1.13.0.vsix` | No |
-| `CLAUDE.md` | `**Current Version:** v1.13.2
+| `CLAUDE.md` | `**Current Version:** v1.13.3
 | `ROADMAP.md` | `> **Current Version**: v1.13.0` | Yes |
 
 ### Files Validated (Not Auto-Updated)
