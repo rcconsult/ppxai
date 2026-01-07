@@ -76,7 +76,16 @@ The tool parser now properly unwraps this structure to extract the tool call.
 
 ### UTF-8 BOM in Config Files
 
-PowerShell's `Out-File` cmdlet writes files with a UTF-8 BOM (Byte Order Mark). The config parser now handles this gracefully instead of failing with JSON parse errors.
+PowerShell's `Out-File` cmdlet writes files with a UTF-8 BOM (Byte Order Mark). Both JSON config and `.env` files now handle this gracefully:
+
+| File Type | Solution | Issue |
+|:----------|:---------|:------|
+| `ppxai-config.json` | `utf-8-sig` encoding | JSON parse errors |
+| `.env` | Custom `_load_dotenv_with_bom_handling()` | First API key corrupted |
+
+**Why `.env` needed special handling**: `python-dotenv` does NOT handle UTF-8 BOM. The BOM bytes (`\xef\xbb\xbf`) corrupt the first variable name, causing API authentication failures.
+
+**Cross-platform**: The fix works on all platforms (Windows, Linux, macOS) - files without BOM are read normally.
 
 ### Console Encoding
 
@@ -93,10 +102,10 @@ The logger now handles Windows console encoding issues that could cause crashes 
 ## Test Results
 
 ```
-579 passed in 15.23s
+569 passed in 4.27s
 ```
 
-All tests pass on Windows and Linux.
+All tests pass on Windows and Linux. (4 new BOM handling tests added)
 
 ## Upgrade Instructions
 
