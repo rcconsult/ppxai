@@ -57,6 +57,7 @@ export interface Message {
 export interface SessionInfo {
     name: string;
     created_at: string;
+    saved_at?: string;  // When session was last saved
     provider: string;
     model: string;
     message_count: number;

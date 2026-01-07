@@ -1784,9 +1784,12 @@ class PpxaiApp {
             }
 
             let text = '**Saved Sessions:**\n\n';
+            text += '| Session | Messages | Provider/Model | Created | Last Saved |\n';
+            text += '|:--------|:--------:|:---------------|:--------|:-----------|\n';
             data.sessions.forEach(s => {
-                const date = s.created_at ? s.created_at.slice(0, 16).replace('T', ' ') : 'unknown';
-                text += `- \`${s.name}\` - ${s.message_count} msgs, ${s.provider}/${s.model} (${date})\n`;
+                const created = s.created_at ? s.created_at.slice(0, 16).replace('T', ' ') : 'unknown';
+                const saved = s.saved_at ? s.saved_at.slice(0, 16).replace('T', ' ') : '-';
+                text += `| \`${s.name}\` | ${s.message_count} | ${s.provider}/${s.model} | ${created} | ${saved} |\n`;
             });
             text += '\n*Use `/load <session_name>` to load a session*';
 

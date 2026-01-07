@@ -367,13 +367,15 @@ def display_sessions(sessions):
     table.add_column("Messages", style="yellow", justify="right")
 
     for session in sessions:
-        created = session['created_at'][:19] if session['created_at'] != "Unknown" else "Unknown"
-        saved = session['saved_at'][:19] if session['saved_at'] != "Unknown" else "Unknown"
+        created = session.get('created_at', '')
+        created = created[:19] if created and created != "Unknown" else "Unknown"
+        saved = session.get('saved_at', '')
+        saved = saved[:19] if saved and saved != "Unknown" else "Unknown"
         table.add_row(
-            session['name'],
+            session.get('name', session.get('session_name', 'Unknown')),
             created,
             saved,
-            str(session['message_count'])
+            str(session.get('message_count', 0))
         )
 
     console.print(table)

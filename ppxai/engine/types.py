@@ -149,6 +149,7 @@ class SessionInfo:
     provider: str
     model: str
     message_count: int
+    saved_at: str = ""  # When session was last saved
 
 
 @dataclass

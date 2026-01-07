@@ -15,7 +15,7 @@ def check_version_in_file(file_path: Path, version: str, pattern: str) -> bool:
     if not file_path.exists():
         return False
 
-    content = file_path.read_text()
+    content = file_path.read_text(encoding='utf-8')
     match = re.search(pattern.format(version=re.escape(version)), content)
     return match is not None
 

@@ -69,6 +69,8 @@ export interface ModelData {
 
 export interface SessionData {
     name: string;
+    created_at?: string;
+    saved_at?: string;
     provider: string;
     model: string;
     message_count: number;
@@ -307,8 +309,12 @@ export function formatSessionsList(sessions: SessionData[]): string {
         return '**Saved Sessions:**\n\nNo saved sessions.';
     }
     let text = '**Saved Sessions:**\n\n';
+    text += '| Session | Messages | Provider/Model | Created | Last Saved |\n';
+    text += '|:--------|:--------:|:---------------|:--------|:-----------|\n';
     sessions.forEach(s => {
-        text += `• \`${s.name}\` (${s.provider}/${s.model}, ${s.message_count} messages)  \n`;
+        const created = s.created_at ? s.created_at.slice(0, 16).replace('T', ' ') : 'unknown';
+        const saved = s.saved_at ? s.saved_at.slice(0, 16).replace('T', ' ') : '-';
+        text += `| \`${s.name}\` | ${s.message_count} | ${s.provider}/${s.model} | ${created} | ${saved} |\n`;
     });
     return text;
 }

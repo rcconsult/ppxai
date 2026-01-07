@@ -395,7 +395,8 @@ class SessionManager:
                     created_at=metadata.get("created_at", ""),
                     provider=metadata.get("provider", "unknown"),
                     model=metadata.get("model", "unknown"),
-                    message_count=len(data.get("messages", []))
+                    message_count=len(data.get("messages", [])),
+                    saved_at=data.get("saved_at", "")
                 ))
             except Exception:
                 continue

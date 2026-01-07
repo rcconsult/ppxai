@@ -5,6 +5,24 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.3] - 2026-01-07
+
+### Fixed - Session Management
+
+- **TUI `/sessions` command** - Fixed KeyError 'saved_at' crash when listing sessions
+- **Session data alignment** - All UIs (TUI, Web App, VSCode) now show consistent session info with Created and Last Saved timestamps
+- **Robust session display** - `display_sessions()` now uses `.get()` for graceful handling of missing fields
+
+### Changed - UI Consistency
+
+- **Sessions table format** - All three UIs now display sessions in a markdown table with: Session, Messages, Provider/Model, Created, Last Saved columns
+- **SessionInfo dataclass** - Added `saved_at` field to `SessionInfo` in engine types
+- **HTTP endpoint** - `/sessions` endpoint now includes `saved_at` in response
+
+### Fixed - Build/Release
+
+- **validate-release.py** - Fixed UTF-8 encoding for Windows compatibility
+
 ## [1.13.2] - 2026-01-05
 
 ### Fixed - Desktop Web App & VSCode Extension

@@ -368,8 +368,9 @@ class CommandHandler:
         # Convert SessionInfo objects to dicts for display function
         session_dicts = [
             {
-                "session_name": s.name,
+                "name": s.name,
                 "created_at": s.created_at,
+                "saved_at": s.saved_at,
                 "provider": s.provider,
                 "model": s.model,
                 "message_count": s.message_count
@@ -385,8 +386,9 @@ class CommandHandler:
             sessions = self.engine_client.session.list_sessions()
             session_dicts = [
                 {
-                    "session_name": s.name,
+                    "name": s.name,
                     "created_at": s.created_at,
+                    "saved_at": s.saved_at,
                     "provider": s.provider,
                     "model": s.model,
                     "message_count": s.message_count

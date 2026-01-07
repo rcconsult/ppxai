@@ -883,6 +883,7 @@ async def get_sessions():
             {
                 "name": s.name,
                 "created_at": s.created_at,
+                "saved_at": s.saved_at,
                 "provider": s.provider,
                 "model": s.model,
                 "message_count": s.message_count,

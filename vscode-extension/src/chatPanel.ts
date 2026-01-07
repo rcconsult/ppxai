@@ -798,12 +798,17 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                             content: 'No saved sessions'
                         });
                     } else {
-                        const sessionList = sessions.map(s =>
-                            `• ${s.name} (${s.provider}/${s.model}, ${s.message_count} messages)`
-                        ).join('\n');
+                        let sessionText = '**Saved Sessions:**\n\n';
+                        sessionText += '| Session | Messages | Provider/Model | Created | Last Saved |\n';
+                        sessionText += '|:--------|:--------:|:---------------|:--------|:-----------|\n';
+                        sessions.forEach(s => {
+                            const created = s.created_at ? s.created_at.slice(0, 16).replace('T', ' ') : 'unknown';
+                            const saved = s.saved_at ? s.saved_at.slice(0, 16).replace('T', ' ') : '-';
+                            sessionText += `| \`${s.name}\` | ${s.message_count} | ${s.provider}/${s.model} | ${created} | ${saved} |\n`;
+                        });
                         this._view.webview.postMessage({
                             type: 'systemMessage',
-                            content: `**Saved Sessions:**\n${sessionList}`
+                            content: sessionText
                         });
                     }
                     break;
