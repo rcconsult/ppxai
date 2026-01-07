@@ -76,7 +76,7 @@ uv run ppxai                        # Start TUI
 
 Switch providers anytime: `/provider gemini` or `/model gpt-4o`
 
-**Enhanced Gemini support (v1.12.5+):** Install `pip install ppxai[gemini]` for native Google Search Grounding with citations.
+**Enhanced Gemini support (v1.12.5+):** Install `pip install ppxai[gemini]` for native Google Search Grounding with citations. **v1.13.3+:** Tools and grounding now work together—use file editing tools while keeping native web search with citations.
 
 ### Triple Interface
 | TUI (Terminal) | Desktop Web App | VSCode Extension |
@@ -203,7 +203,7 @@ ppxai/
 │   ├── engine/               # EngineClient, providers, tools
 │   └── server/               # HTTP + JSON-RPC servers
 ├── vscode-extension/         # VSCode extension (TypeScript)
-├── tests/                    # 525 tests
+├── tests/                    # 579 tests
 └── docs/                     # Documentation
 ```
 
