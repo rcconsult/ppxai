@@ -861,13 +861,76 @@ def main():
         record_step("Delete Release")
 
     if args.dry_run:
-        print(f"\n📋 Would update the following files:")
+        print(f"\n📋 DRY RUN - Would execute the following steps:\n")
+
+        dry_step = 0
+
+        # Show merge step if on feature branch
+        if not is_master_early:
+            dry_step += 1
+            print(f"  {dry_step}. 🔀 Merge {current_branch_early} to master")
+
+        # Version updates
+        dry_step += 1
+        print(f"  {dry_step}. 📝 Update version files:")
         for filepath in VERSION_FILES:
-            print(f"     - {filepath}")
+            print(f"       - {filepath}")
         for filepath in VSIX_FILES:
-            print(f"     - {filepath} (vsix refs)")
-        print(f"     - CLAUDE.md")
-        print(f"     - vscode-extension/package-lock.json")
+            print(f"       - {filepath} (vsix refs)")
+        print(f"       - CLAUDE.md")
+        print(f"       - ROADMAP.md")
+        print(f"       - vscode-extension/package-lock.json")
+
+        # Validation
+        dry_step += 1
+        print(f"  {dry_step}. 🔍 Validate version references")
+
+        # Release notes
+        dry_step += 1
+        notes_file = f"docs/RELEASE-NOTES-v{version}.md"
+        notes_exist = (PROJECT_ROOT / notes_file).exists()
+        if notes_exist:
+            print(f"  {dry_step}. 📄 Check release notes (exists: {notes_file})")
+        else:
+            print(f"  {dry_step}. 📄 Create release notes template: {notes_file}")
+
+        # TypeScript lint
+        dry_step += 1
+        print(f"  {dry_step}. 📋 Run TypeScript lint")
+
+        # Tests
+        if not args.skip_tests:
+            dry_step += 1
+            print(f"  {dry_step}. 🧪 Run tests")
+
+        # Commit
+        dry_step += 1
+        print(f"  {dry_step}. 💾 Create commit: feat: v{version} release")
+
+        # Push
+        dry_step += 1
+        print(f"  {dry_step}. 🚀 Push to GitHub (master + tag v{version})")
+
+        # CI wait
+        if not args.skip_ci_wait:
+            dry_step += 1
+            print(f"  {dry_step}. ⏳ Wait for CI to complete")
+
+        # Publish notes
+        dry_step += 1
+        print(f"  {dry_step}. 📢 Publish release notes to GitHub")
+
+        # Intel build
+        dry_step += 1
+        print(f"  {dry_step}. 🖥️  Build Intel Mac assets (if on Intel Mac)")
+
+        # Verify
+        dry_step += 1
+        print(f"  {dry_step}. ✅ Verify release assets")
+
+        print(f"\n{'━' * 50}")
+        print(f"  Total steps: {dry_step}")
+        print(f"{'━' * 50}")
         print(f"\n✅ Dry run complete. Use without --dry-run to execute.")
         return
 
