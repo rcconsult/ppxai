@@ -119,8 +119,9 @@ See [docs/CHECKPOINT_GUIDE.md](docs/CHECKPOINT_GUIDE.md) for details.
 Enable with `/tools enable` (or use Agent Mode):
 - `search_files`, `read_file`, `list_directory` - Filesystem access
 - `execute_shell_command` - With consent system (safe/dangerous/blocked)
-- `apply_patch`, `replace_block`, `insert_text` - File editing with consent
-- `calculator`, `get_datetime`, `web_search` - Utilities
+- `apply_patch`, `replace_block`, `insert_text`, `delete_lines` - File editing with consent
+- `calculator`, `get_datetime`, `get_working_directory` - Utilities
+- `web_search` - Premium web search (Perplexity/Gemini/DuckDuckGo fallback)
 
 ### Coding Commands
 ```
@@ -177,7 +178,9 @@ See [docs/PROVIDER_SETUP.md](docs/PROVIDER_SETUP.md) for detailed examples.
 All data stays on your machine:
 - `~/.ppxai/sessions/` - Conversation history
 - `~/.ppxai/exports/` - Markdown exports
-- `~/.ppxai/usage/` - Usage stats
+- `~/.ppxai/usage/` - Usage statistics
+- `~/.ppxai/checkpoints/` - File-based undo snapshots
+- `~/.ppxai/logs/` - Debug logs (when enabled)
 
 No telemetry. No tracking. Data only goes to the LLM provider you choose.
 
@@ -201,8 +204,12 @@ ppxai/
 ├── ppxai/                    # Core package
 │   ├── main.py               # TUI entry point
 │   ├── engine/               # EngineClient, providers, tools
-│   └── server/               # HTTP + JSON-RPC servers
+│   ├── server/               # HTTP + JSON-RPC servers
+│   ├── web/                  # Desktop Web App static files
+│   └── common/               # Shared utilities (logger, event handler)
 ├── vscode-extension/         # VSCode extension (TypeScript)
+├── scripts/                  # Build, release, install scripts
+├── resources/                # Icons (PNG, ICO, ICNS) and desktop files
 ├── tests/                    # 579 tests
 └── docs/                     # Documentation
 ```
