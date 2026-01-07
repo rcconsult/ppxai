@@ -14,16 +14,39 @@ Config file search order:
 
 import json
 import os
+from io import StringIO
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from dotenv import load_dotenv
+
+
+def _load_dotenv_with_bom_handling(dotenv_path: Path) -> None:
+    """Load .env file with UTF-8 BOM handling.
+
+    python-dotenv does NOT handle UTF-8 BOM, which corrupts the first key.
+    Windows PowerShell's Out-File creates files with BOM by default.
+    This function strips the BOM before parsing.
+    """
+    if not dotenv_path.exists():
+        return
+
+    try:
+        # Read with utf-8-sig to automatically strip BOM
+        content = dotenv_path.read_text(encoding='utf-8-sig')
+        # Load from string stream instead of file
+        load_dotenv(stream=StringIO(content))
+    except Exception:
+        # Fallback to standard loading if anything goes wrong
+        load_dotenv(dotenv_path)
+
 
 # Load .env files in priority order:
 # 1. Current working directory (project-specific)
 # 2. ~/.ppxai/.env (user-specific, for standalone binaries)
 # Later loads don't override existing environment variables
-load_dotenv()  # Current directory
-load_dotenv(Path.home() / ".ppxai" / ".env")  # User config directory
+# Use BOM-safe loading for Windows PowerShell compatibility
+_load_dotenv_with_bom_handling(Path.cwd() / ".env")
+_load_dotenv_with_bom_handling(Path.home() / ".ppxai" / ".env")
 
 # Directories for data storage
 PPXAI_HOME = Path.home() / ".ppxai"

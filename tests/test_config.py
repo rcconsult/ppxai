@@ -632,3 +632,93 @@ class TestPathsConfig:
         from pathlib import Path
         data_dir = get_data_dir()
         assert isinstance(data_dir, Path)
+
+
+class TestBOMHandling:
+    """Tests for UTF-8 BOM handling in .env files (v1.13.3).
+
+    Windows PowerShell's Out-File creates files with UTF-8 BOM by default.
+    python-dotenv does NOT handle BOM, which corrupts the first key.
+    These tests verify our custom BOM handling works correctly.
+    """
+
+    def test_load_dotenv_with_bom(self):
+        """Test that .env files with UTF-8 BOM are loaded correctly."""
+        from ppxai.config import _load_dotenv_with_bom_handling
+        import tempfile
+
+        # Create a temp .env file with UTF-8 BOM
+        with tempfile.NamedTemporaryFile(mode='wb', suffix='.env', delete=False) as f:
+            # UTF-8 BOM (EF BB BF) + content
+            f.write(b'\xef\xbb\xbfTEST_BOM_KEY=test_bom_value\n')
+            temp_path = f.name
+
+        try:
+            # Clear the env var if it exists
+            if 'TEST_BOM_KEY' in os.environ:
+                del os.environ['TEST_BOM_KEY']
+
+            _load_dotenv_with_bom_handling(Path(temp_path))
+
+            # Key should be loaded correctly without BOM corruption
+            assert os.environ.get('TEST_BOM_KEY') == 'test_bom_value', \
+                "BOM corrupted the first key in .env file"
+        finally:
+            os.unlink(temp_path)
+            if 'TEST_BOM_KEY' in os.environ:
+                del os.environ['TEST_BOM_KEY']
+
+    def test_load_dotenv_without_bom(self):
+        """Test that .env files without BOM still work."""
+        from ppxai.config import _load_dotenv_with_bom_handling
+        import tempfile
+
+        # Create a temp .env file without BOM
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.env', delete=False, encoding='utf-8') as f:
+            f.write('TEST_NO_BOM_KEY=test_no_bom_value\n')
+            temp_path = f.name
+
+        try:
+            if 'TEST_NO_BOM_KEY' in os.environ:
+                del os.environ['TEST_NO_BOM_KEY']
+
+            _load_dotenv_with_bom_handling(Path(temp_path))
+
+            assert os.environ.get('TEST_NO_BOM_KEY') == 'test_no_bom_value'
+        finally:
+            os.unlink(temp_path)
+            if 'TEST_NO_BOM_KEY' in os.environ:
+                del os.environ['TEST_NO_BOM_KEY']
+
+    def test_load_dotenv_nonexistent_file(self):
+        """Test that nonexistent .env files are handled gracefully."""
+        from ppxai.config import _load_dotenv_with_bom_handling
+
+        # Should not raise an exception
+        _load_dotenv_with_bom_handling(Path('/nonexistent/path/.env'))
+
+    def test_load_dotenv_multiple_keys_with_bom(self):
+        """Test that all keys are loaded correctly when file has BOM."""
+        from ppxai.config import _load_dotenv_with_bom_handling
+        import tempfile
+
+        # Create a temp .env file with BOM and multiple keys
+        with tempfile.NamedTemporaryFile(mode='wb', suffix='.env', delete=False) as f:
+            f.write(b'\xef\xbb\xbfFIRST_KEY=first_value\nSECOND_KEY=second_value\nTHIRD_KEY=third_value\n')
+            temp_path = f.name
+
+        try:
+            for key in ['FIRST_KEY', 'SECOND_KEY', 'THIRD_KEY']:
+                if key in os.environ:
+                    del os.environ[key]
+
+            _load_dotenv_with_bom_handling(Path(temp_path))
+
+            assert os.environ.get('FIRST_KEY') == 'first_value'
+            assert os.environ.get('SECOND_KEY') == 'second_value'
+            assert os.environ.get('THIRD_KEY') == 'third_value'
+        finally:
+            os.unlink(temp_path)
+            for key in ['FIRST_KEY', 'SECOND_KEY', 'THIRD_KEY']:
+                if key in os.environ:
+                    del os.environ[key]

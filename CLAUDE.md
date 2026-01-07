@@ -32,6 +32,12 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **FIX:** Windows compatibility
   - Tests use `tempfile.gettempdir()` instead of hardcoded `/tmp`
   - PEP 735 migration: `[dependency-groups].dev` format
+- **FIX:** UTF-8 BOM handling for `.env` files (cross-platform)
+  - Windows PowerShell's `Out-File` creates files with UTF-8 BOM by default
+  - `python-dotenv` does NOT handle BOM, corrupting the first API key
+  - New `_load_dotenv_with_bom_handling()` uses `utf-8-sig` encoding to strip BOM
+  - Works on all platforms (Windows, Linux, macOS)
+  - 4 new tests in `TestBOMHandling` class
 - **FIX:** UX improvements for agent mode feedback
   - Added thinking animation with bouncing dots during processing
   - Display `info` SSE events showing "Processing... (iteration N)" progress
@@ -301,10 +307,22 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 - Windows PowerShell's `Out-File` cmdlet adds BOM by default - avoid using it
 - Use `Set-Content -Encoding UTF8` or write files via Python with `encoding='utf-8'`
-- The config loader (`config.py`) uses `utf-8-sig` to handle BOM gracefully when reading
+- The config loader (`config.py`) uses `utf-8-sig` to handle BOM gracefully when reading JSON
+- The `.env` loader uses custom `_load_dotenv_with_bom_handling()` since `python-dotenv` doesn't handle BOM
 - When creating new files, always specify `encoding='utf-8'` explicitly
 
-**Why this matters**: UTF-8 BOM causes JSON parse errors and crashes on Windows. The BOM bytes (`\xef\xbb\xbf`) appear as garbage characters at the start of files.
+**Why this matters**: UTF-8 BOM causes JSON parse errors and corrupts the first key in `.env` files. The BOM bytes (`\xef\xbb\xbf`) appear as garbage characters at the start of files.
+
+**BOM-safe file reading patterns:**
+```python
+# JSON config files
+with open(path, 'r', encoding='utf-8-sig') as f:  # Strips BOM automatically
+    data = json.load(f)
+
+# .env files (use custom function in config.py)
+from ppxai.config import _load_dotenv_with_bom_handling
+_load_dotenv_with_bom_handling(Path('.env'))
+```
 
 ### Recommended: Using Bootstrap Script (easiest)
 
