@@ -17,11 +17,17 @@
 
 ### Option 1: One-Line Install (Recommended)
 
+**Linux / macOS:**
 ```bash
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash
 ```
 
-This installs `ppxai`, `ppxai-server`, and `ppxai-desktop` to `~/.local/bin`. Then:
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/rcconsult/ppxai/master/scripts/install.ps1 | iex
+```
+
+This installs `ppxai`, `ppxai-server`, and `ppxai-desktop`. Then:
 
 ```bash
 # Add to PATH (if not already)
@@ -37,7 +43,7 @@ ppxai
 ppxai-desktop
 ```
 
-**Installation options:**
+**Installation options (Linux/macOS):**
 - With config templates: `curl -sSL ... | bash -s -- --with-config` (recommended for first-time setup)
 - With VSCode extension: `curl -sSL ... | bash -s -- --with-extension`
 - With Linux desktop integration: `curl -sSL ... | bash -s -- --with-desktop`
@@ -45,7 +51,9 @@ ppxai-desktop
 - Full macOS setup: `curl -sSL ... | bash -s -- --with-macos-app --with-config --with-launchagent`
 - Uninstall: `curl -sSL ... | bash -s -- --uninstall`
 
-See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed installation options.
+**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.13.3` (specific version), `-Uninstall`
+
+See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed installation options including Windows.
 
 ### Option 2: Download Binaries
 
