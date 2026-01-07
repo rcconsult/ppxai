@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SessionInfo dataclass** - Added `saved_at` field to `SessionInfo` in engine types
 - **HTTP endpoint** - `/sessions` endpoint now includes `saved_at` in response
 
+### Fixed - File Editing Tools
+
+- **Working directory resolution** - `apply_patch`, `replace_block`, `insert_text`, `delete_lines` now resolve relative paths against the engine's working directory instead of the process working directory
+- **Critical fix** - Previously, when using file editing tools with a relative path like `task_analysis.ipynb`, the file would be created in `~/.ppxai/bin/` (where ppxai-server runs) instead of the project directory shown in the UI
+
 ### Fixed - Build/Release
 
 - **validate-release.py** - Fixed UTF-8 encoding for Windows compatibility

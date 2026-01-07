@@ -6,6 +6,7 @@ All tools check for user consent before modifying files.
 """
 
 import difflib
+import os
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Dict, Any
@@ -55,7 +56,16 @@ class ApplyPatchTool(BaseTool):
             Success/failure message
         """
         try:
-            path = Path(file_path).expanduser().resolve()
+            # v1.13.3: Resolve relative paths against engine's working directory
+            expanded = os.path.expanduser(file_path)
+            if not os.path.isabs(expanded):
+                working_dir = self.engine.get_working_dir()
+                if working_dir:
+                    path = (Path(working_dir) / expanded).resolve()
+                else:
+                    path = Path(expanded).resolve()
+            else:
+                path = Path(expanded).resolve()
 
             # Check consent
             if not await self.engine.request_file_edit_consent(str(path)):
@@ -163,7 +173,16 @@ class ReplaceBlockTool(BaseTool):
             Success/failure message
         """
         try:
-            path = Path(file_path).expanduser().resolve()
+            # v1.13.3: Resolve relative paths against engine's working directory
+            expanded = os.path.expanduser(file_path)
+            if not os.path.isabs(expanded):
+                working_dir = self.engine.get_working_dir()
+                if working_dir:
+                    path = (Path(working_dir) / expanded).resolve()
+                else:
+                    path = Path(expanded).resolve()
+            else:
+                path = Path(expanded).resolve()
 
             # Check consent
             if not await self.engine.request_file_edit_consent(str(path)):
@@ -263,7 +282,16 @@ class InsertTextTool(BaseTool):
             Success/failure message
         """
         try:
-            path = Path(file_path).expanduser().resolve()
+            # v1.13.3: Resolve relative paths against engine's working directory
+            expanded = os.path.expanduser(file_path)
+            if not os.path.isabs(expanded):
+                working_dir = self.engine.get_working_dir()
+                if working_dir:
+                    path = (Path(working_dir) / expanded).resolve()
+                else:
+                    path = Path(expanded).resolve()
+            else:
+                path = Path(expanded).resolve()
 
             # Check consent
             if not await self.engine.request_file_edit_consent(str(path)):
@@ -380,7 +408,16 @@ class DeleteLinesTool(BaseTool):
             Success/failure message
         """
         try:
-            path = Path(file_path).expanduser().resolve()
+            # v1.13.3: Resolve relative paths against engine's working directory
+            expanded = os.path.expanduser(file_path)
+            if not os.path.isabs(expanded):
+                working_dir = self.engine.get_working_dir()
+                if working_dir:
+                    path = (Path(working_dir) / expanded).resolve()
+                else:
+                    path = Path(expanded).resolve()
+            else:
+                path = Path(expanded).resolve()
 
             # Check consent
             if not await self.engine.request_file_edit_consent(str(path)):
