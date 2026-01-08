@@ -1,8 +1,8 @@
 # Release Plan: v1.13.x Series
 
 **Created:** January 3, 2026
-**Last Updated:** January 5, 2026
-**Status:** v1.13.2 Released (Series Complete)
+**Last Updated:** January 8, 2026
+**Status:** v1.13.5 Released (Series Complete)
 **Branch:** `master`
 
 ---
@@ -95,6 +95,52 @@ See [RELEASE-NOTES-v1.13.2.md](RELEASE-NOTES-v1.13.2.md) for full details.
 
 ---
 
+### v1.13.3 - Gemini Tools + Grounding ✅ RELEASED
+
+**Released:** January 7, 2026
+
+**Scope:**
+- Gemini system instruction fix - system messages now passed via `system_instruction` config
+- Tools + grounding work together (not mutually exclusive)
+- Native web search guidance in tool prompts
+- Provider options support in JSON config
+- UTF-8 BOM handling for Windows config files
+- Windows PowerShell installer script
+
+See [RELEASE-NOTES-v1.13.3.md](RELEASE-NOTES-v1.13.3.md) for full details.
+
+---
+
+### v1.13.4 - Error Handling & LLM Guidance ✅ RELEASED
+
+**Released:** January 8, 2026
+
+**Scope:**
+- SSL certificate support (`SSL_CERT_FILE`) for corporate proxies
+- Standardized error logging with full tracebacks
+- Windows shell guidance (bash heredocs don't work)
+- Better tool parameter documentation
+- Actionable error tips for file operations
+
+See [RELEASE-NOTES-v1.13.4.md](RELEASE-NOTES-v1.13.4.md) for full details.
+
+---
+
+### v1.13.5 - Session Isolation ✅ RELEASED
+
+**Released:** January 8, 2026
+
+**Scope:**
+- Critical fix: VSCode and Web App now get isolated sessions
+- `X-Session-Id` HTTP header for per-session routing
+- Per-session state: conversation history, working directory, consent
+- Sessions auto-expire after 1 hour
+- `/sessions/list` monitoring endpoint
+
+See [RELEASE-NOTES-v1.13.5.md](RELEASE-NOTES-v1.13.5.md) for full details.
+
+---
+
 ## Series Summary
 
 | Version | Theme | Key Features |
@@ -102,9 +148,12 @@ See [RELEASE-NOTES-v1.13.2.md](RELEASE-NOTES-v1.13.2.md) for full details.
 | v1.13.0 | Custom Provider Parity | Premium web search, tool usage tracking |
 | v1.13.1 | Desktop Web App | Working directory, file operations |
 | v1.13.2 | Bugfix | Markdown rendering, Windows compat |
+| v1.13.3 | Gemini Fixes | Tools + grounding, system instruction |
+| v1.13.4 | Error Handling | SSL certs, LLM guidance, error tips |
+| v1.13.5 | Session Isolation | Multi-client isolation, session lifecycle |
 
 **Total New Tests:** 147+ across the series
-**Final Test Count:** 553 passing
+**Final Test Count:** 583 passing
 
 ---
 
@@ -126,5 +175,8 @@ See [RELEASE-PLAN-v1.14.x.md](RELEASE-PLAN-v1.14.x.md) for the updated roadmap.
 - [v1.13.0 Release Notes](RELEASE-NOTES-v1.13.0.md)
 - [v1.13.1 Release Notes](RELEASE-NOTES-v1.13.1.md)
 - [v1.13.2 Release Notes](RELEASE-NOTES-v1.13.2.md)
+- [v1.13.3 Release Notes](RELEASE-NOTES-v1.13.3.md)
+- [v1.13.4 Release Notes](RELEASE-NOTES-v1.13.4.md)
+- [v1.13.5 Release Notes](RELEASE-NOTES-v1.13.5.md)
 - [ROADMAP.md](../ROADMAP.md)
 - [v1.14.x Release Plan](RELEASE-PLAN-v1.14.x.md)
