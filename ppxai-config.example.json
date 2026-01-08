@@ -371,9 +371,9 @@
           "__comment": "Perplexity Sonar pricing per 1M tokens"
         },
         "gemini_grounding": {
-          "per_query": 14.00,
+          "per_query": 0.035,
           "model": "per_query",
-          "__comment": "Gemini 3 Google Search Grounding: $14/1000 queries"
+          "__comment": "Google Search Grounding: $35/1000 queries = $0.035 per query"
         }
       }
     }
