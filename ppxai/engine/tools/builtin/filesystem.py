@@ -282,7 +282,12 @@ class ReadFileTool(BaseTool):
                 path = Path(expanded).resolve()
 
             if not path.exists():
-                return f"Error: File not found: {filepath}"
+                # Provide helpful suggestion for creating new files
+                return (
+                    f"Error: File not found: {filepath}\n"
+                    f"Tip: To create a new file, use insert_text tool with line_number=1, "
+                    f"or apply_patch with '*** Add File:' syntax."
+                )
             if not path.is_file():
                 return f"Error: Not a file: {filepath}"
 
