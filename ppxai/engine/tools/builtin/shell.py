@@ -1,11 +1,13 @@
 """
 Shell command execution tool with consent management (v1.11.2).
+
+v1.13.6: Interactive command lists now configurable via JSON config.
 """
 
 import os
 import subprocess
 import platform
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from ..base import BaseTool
 
@@ -14,19 +16,36 @@ if TYPE_CHECKING:
     from ..manager import ToolManager
 
 
-# Interactive commands that require user input
-INTERACTIVE_COMMANDS = [
-    'nano', 'vim', 'vi', 'emacs', 'pico', 'joe',  # Text editors
-    'less', 'more',  # Pagers
-    'top', 'htop', 'btop',  # System monitors
-    'python', 'python3', 'ipython', 'node', 'irb', 'ruby',  # REPLs (without args)
-    'ssh', 'telnet', 'ftp', 'sftp',  # Remote connections
-    'mysql', 'psql', 'mongo', 'redis-cli',  # Database CLIs
-    'bash', 'zsh', 'sh', 'fish', 'csh', 'tcsh',  # Shells (without args)
-]
+def _get_interactive_commands() -> tuple[List[str], List[str]]:
+    """Get interactive command lists from config.
 
-# Commands that are only interactive without arguments
-REPL_COMMANDS = ['python', 'python3', 'ipython', 'node', 'irb', 'ruby', 'bash', 'zsh', 'sh', 'fish', 'csh', 'tcsh']
+    Returns:
+        Tuple of (interactive_commands, non_interactive_with_args)
+    """
+    try:
+        from ....config import get_shell_config
+        shell_config = get_shell_config()
+        return (
+            shell_config.get("interactive_commands", []),
+            shell_config.get("non_interactive_with_args", [])
+        )
+    except ImportError:
+        # Fallback defaults if config not available
+        interactive = [
+            'nano', 'vim', 'vi', 'emacs', 'pico', 'joe',
+            'less', 'more',
+            'top', 'htop', 'btop',
+            'python', 'python3', 'ipython', 'node', 'irb', 'ruby',
+            'ssh', 'telnet', 'ftp', 'sftp',
+            'mysql', 'psql', 'mongo', 'redis-cli',
+            'bash', 'zsh', 'sh', 'fish', 'csh', 'tcsh',
+        ]
+        non_interactive_with_args = [
+            'python', 'python3', 'ipython', 'node', 'irb', 'ruby',
+            'bash', 'zsh', 'sh', 'fish', 'csh', 'tcsh',
+            'ssh', 'mysql', 'psql',
+        ]
+        return interactive, non_interactive_with_args
 
 
 class ShellExecuteTool(BaseTool):
@@ -85,16 +104,19 @@ class ShellExecuteTool(BaseTool):
             return f"Error: User denied permission to execute command: {command}"
 
         try:
+            # Get interactive command lists from config (v1.13.6)
+            interactive_commands, non_interactive_with_args = _get_interactive_commands()
+
             # Extract the base command
             cmd_parts = command.strip().split()
             if cmd_parts:
                 base_cmd = os.path.basename(cmd_parts[0].lower())
 
                 # Check if it's an interactive command
-                if base_cmd in INTERACTIVE_COMMANDS:
+                if base_cmd in interactive_commands:
                     # Some commands are only interactive without arguments
-                    if base_cmd in REPL_COMMANDS and len(cmd_parts) > 1:
-                        # Has arguments, likely not interactive (e.g., 'python script.py')
+                    if base_cmd in non_interactive_with_args and len(cmd_parts) > 1:
+                        # Has arguments, likely not interactive (e.g., 'python script.py', 'ssh host cmd')
                         pass
                     else:
                         return (

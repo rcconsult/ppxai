@@ -43,6 +43,14 @@ SESSION_TIMEOUT = 3600  # 1 hour - sessions expire after this period of inactivi
 # Default engine for backward compatibility (clients that don't send session ID)
 default_engine: Optional[EngineClient] = None
 
+# Inactivity auto-shutdown (v1.14.0)
+# Server shuts down after idle_timeout seconds with no client activity
+# Configurable via ppxai-config.json: {"server": {"idle_timeout": 300}}
+# 0 = disabled (server runs forever)
+last_activity: float = 0.0
+idle_shutdown_task: Optional[asyncio.Task] = None
+shutdown_requested: bool = False
+
 # Server logger (v1.11.2)
 logger = get_logger("server")
 
@@ -120,6 +128,46 @@ async def cleanup_expired_sessions():
             logger.warning(f"Failed to save usage for session {sid}: {e}")
 
 
+def update_activity():
+    """Update last activity timestamp (v1.14.0)."""
+    global last_activity
+    last_activity = time.time()
+
+
+async def check_idle_shutdown():
+    """Background task to check for idle shutdown (v1.14.0).
+
+    Shuts down server after idle_timeout seconds of no client activity.
+    Timeout is configurable via ppxai-config.json: {"server": {"idle_timeout": 300}}
+    Set to 0 to disable auto-shutdown.
+    """
+    global shutdown_requested
+    from ..config import get_idle_timeout
+
+    idle_timeout = get_idle_timeout()
+
+    # If timeout is 0 or negative, disable auto-shutdown
+    if idle_timeout <= 0:
+        logger.info("Idle auto-shutdown disabled (idle_timeout <= 0)")
+        return
+
+    while not shutdown_requested:
+        await asyncio.sleep(30)  # Check every 30 seconds
+
+        if shutdown_requested:
+            break
+
+        idle_time = time.time() - last_activity
+        if idle_time > idle_timeout:
+            logger.info(f"Server idle for {idle_time:.0f}s (>{idle_timeout}s), initiating shutdown")
+            print(f"\nAuto-shutdown: No activity for {idle_timeout // 60} minutes")
+            shutdown_requested = True
+            # Trigger graceful shutdown via os._exit after cleanup
+            # The lifespan context will handle cleanup
+            import os
+            os._exit(0)
+
+
 async def _session_consent_handler(session_id: str, file_path: str) -> tuple[bool, str]:
     """Handle file edit consent request for a specific session (v1.14.0)."""
     global pending_consent_requests
@@ -175,7 +223,7 @@ async def http_shell_consent_handler(command: str, working_dir: str, risk_level:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan (startup/shutdown)."""
-    global default_engine, default_chat_lock, sessions
+    global default_engine, default_chat_lock, sessions, idle_shutdown_task, last_activity
     import time
     startup_start = time.time()
 
@@ -195,6 +243,16 @@ async def lifespan(app: FastAPI):
     sessions = {}
     logger.info("Session management initialized (v1.14.0)")
 
+    # Initialize activity tracking and start idle shutdown checker (v1.14.0)
+    from ..config import get_idle_timeout
+    idle_timeout = get_idle_timeout()
+    last_activity = time.time()
+    idle_shutdown_task = asyncio.create_task(check_idle_shutdown())
+    if idle_timeout > 0:
+        logger.info(f"Idle shutdown checker started (timeout: {idle_timeout}s)")
+    else:
+        logger.info("Idle auto-shutdown disabled")
+
     # Set default provider (tries perplexity first, falls back to gemini)
     from ..config import get_available_providers
     providers = get_available_providers()
@@ -207,10 +265,24 @@ async def lifespan(app: FastAPI):
     print(f"Provider: {default_engine.provider_name}")
     print(f"Model: {default_engine.model}")
     print(f"Session isolation: enabled (X-Session-Id header)")
+    if idle_timeout > 0:
+        print(f"Auto-shutdown: {idle_timeout // 60} minutes of inactivity")
+    else:
+        print(f"Auto-shutdown: disabled")
 
     yield
 
     # Shutdown: Cleanup
+    # v1.14.0: Cancel idle shutdown task
+    global shutdown_requested
+    shutdown_requested = True
+    if idle_shutdown_task:
+        idle_shutdown_task.cancel()
+        try:
+            await idle_shutdown_task
+        except asyncio.CancelledError:
+            pass
+
     # v1.12.3: Save usage to persistent storage before shutdown
     if default_engine and default_engine.session:
         try:
@@ -251,6 +323,18 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["X-Session-Id"],  # v1.14.0: Allow clients to see session ID
 )
+
+
+@app.middleware("http")
+async def activity_tracking_middleware(request: Request, call_next):
+    """Track client activity for idle shutdown (v1.14.0).
+
+    Updates the last_activity timestamp on every request to reset
+    the idle shutdown timer.
+    """
+    update_activity()
+    response = await call_next(request)
+    return response
 
 
 # Web UI directory (installed by ppxai-desktop or manually)
@@ -453,11 +537,47 @@ async def sse_coding_task_generator(
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
+    from ..config import get_idle_timeout
+    idle_timeout = get_idle_timeout()
+
     return {
         "status": "ok",
         "version": __version__,
         "engine": default_engine is not None,
         "sessions": len(sessions),  # v1.14.0
+        "idle_timeout": idle_timeout,  # v1.13.6
+        "idle_since": int(time.time() - last_activity) if last_activity > 0 else 0,  # v1.13.6
+    }
+
+
+@app.post("/shutdown")
+async def shutdown_server():
+    """Gracefully shutdown the server (v1.13.6).
+
+    This endpoint allows clients to request server shutdown.
+    Useful for web app UI to stop the server via a button.
+
+    Returns:
+        JSON: {"shutdown": true, "message": "Server shutting down..."}
+    """
+    global shutdown_requested
+
+    logger.info("Shutdown requested via /shutdown endpoint")
+
+    # Mark shutdown as requested to stop background tasks
+    shutdown_requested = True
+
+    # Schedule the actual shutdown after response is sent
+    async def delayed_shutdown():
+        await asyncio.sleep(0.5)  # Give time for response to be sent
+        import os
+        os._exit(0)
+
+    asyncio.create_task(delayed_shutdown())
+
+    return {
+        "shutdown": True,
+        "message": "Server shutting down...",
     }
 
 

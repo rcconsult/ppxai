@@ -33,6 +33,7 @@ from ppxai.config import (
     load_config,
     get_tool_config,
     get_tool_pricing,
+    get_shell_config,
     _find_config_file,
     _load_json_config,
     _validate_provider_config,
@@ -543,6 +544,44 @@ class TestToolConfig:
             assert "max_iterations" in config or "min_task_words" in config
 
 
+class TestShellConfig:
+    """Tests for shell tool configuration helpers (v1.13.6)."""
+
+    def test_get_shell_config_returns_dict(self):
+        """Test get_shell_config returns a dictionary."""
+        config = get_shell_config()
+        assert isinstance(config, dict)
+
+    def test_get_shell_config_has_required_keys(self):
+        """Test get_shell_config returns all required keys."""
+        config = get_shell_config()
+        assert "require_consent" in config
+        assert "interactive_commands" in config
+        assert "non_interactive_with_args" in config
+
+    def test_get_shell_config_interactive_commands_list(self):
+        """Test interactive_commands is a non-empty list."""
+        config = get_shell_config()
+        assert isinstance(config["interactive_commands"], list)
+        assert len(config["interactive_commands"]) > 0
+
+    def test_get_shell_config_non_interactive_with_args_list(self):
+        """Test non_interactive_with_args is a non-empty list."""
+        config = get_shell_config()
+        assert isinstance(config["non_interactive_with_args"], list)
+        assert len(config["non_interactive_with_args"]) > 0
+
+    def test_get_shell_config_ssh_in_non_interactive(self):
+        """Test ssh is in non_interactive_with_args by default."""
+        config = get_shell_config()
+        assert "ssh" in config["non_interactive_with_args"]
+
+    def test_get_shell_config_ssh_in_interactive(self):
+        """Test ssh is in interactive_commands (blocked without args)."""
+        config = get_shell_config()
+        assert "ssh" in config["interactive_commands"]
+
+
 class TestToolPricing:
     """Tests for tool pricing configuration (v1.13.4)."""
 
@@ -722,3 +761,88 @@ class TestBOMHandling:
             for key in ['FIRST_KEY', 'SECOND_KEY', 'THIRD_KEY']:
                 if key in os.environ:
                     del os.environ[key]
+
+
+class TestSystemPromptConfig:
+    """Tests for system prompt configuration (v1.13.6)."""
+
+    def test_get_system_prompt_default(self):
+        """Test default system prompt for known providers."""
+        from ppxai.config import get_system_prompt, DEFAULT_SYSTEM_PROMPTS
+
+        # Without config file, should return defaults
+        with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": "/nonexistent/path.json"}):
+            prompt = get_system_prompt("custom")
+            assert "concise" in prompt.lower() or "brief" in prompt.lower()
+
+    def test_get_system_prompt_from_config(self):
+        """Test system prompt loaded from config file."""
+        from ppxai.config import get_system_prompt
+
+        config_data = {
+            "system_prompt": "Be very brief.",
+            "providers": {
+                "test-provider": {
+                    "name": "Test",
+                    "base_url": "http://test.com",
+                    "api_key_env": "TEST_KEY",
+                    "system_prompt": "Provider-specific prompt.",
+                    "models": {"m1": {"name": "M1", "description": "Test model"}}
+                }
+            }
+        }
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump(config_data, f)
+            f.flush()
+
+            with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": f.name}):
+                # Provider-specific prompt takes priority
+                prompt = get_system_prompt("test-provider")
+                assert prompt == "Provider-specific prompt."
+
+                # Unknown provider falls back to global
+                prompt = get_system_prompt("unknown-provider")
+                assert prompt == "Be very brief."
+
+        os.unlink(f.name)
+
+    def test_get_system_prompt_mode_default(self):
+        """Test default system prompt mode is 'prepend'."""
+        from ppxai.config import get_system_prompt_mode
+
+        with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": "/nonexistent/path.json"}):
+            mode = get_system_prompt_mode("any-provider")
+            assert mode == "prepend"
+
+    def test_get_system_prompt_mode_from_config(self):
+        """Test system prompt mode loaded from config file."""
+        from ppxai.config import get_system_prompt_mode
+
+        config_data = {
+            "system_prompt_mode": "append",
+            "providers": {
+                "test-provider": {
+                    "name": "Test",
+                    "base_url": "http://test.com",
+                    "api_key_env": "TEST_KEY",
+                    "system_prompt_mode": "replace",
+                    "models": {"m1": {"name": "M1", "description": "Test model"}}
+                }
+            }
+        }
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump(config_data, f)
+            f.flush()
+
+            with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": f.name}):
+                # Provider-specific mode takes priority
+                mode = get_system_prompt_mode("test-provider")
+                assert mode == "replace"
+
+                # Unknown provider falls back to global
+                mode = get_system_prompt_mode("unknown-provider")
+                assert mode == "append"
+
+        os.unlink(f.name)

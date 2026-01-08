@@ -548,6 +548,9 @@ def render_status_panel(
     usage_str: Optional[str] = None,
     checkpoint_str: Optional[str] = None,
     theme: Optional[Theme] = None,
+    version: Optional[str] = None,
+    working_dir: Optional[str] = None,
+    show_datetime: bool = False,
 ) -> Panel:
     """Render status line in a framed panel with badges.
 
@@ -559,6 +562,9 @@ def render_status_panel(
         usage_str: Usage statistics string
         checkpoint_str: Checkpoint status
         theme: Theme to use
+        version: Version string (e.g., "v1.13.5")
+        working_dir: Current working directory path
+        show_datetime: Whether to show current date/time
 
     Returns:
         Rich Panel with status badges
@@ -567,6 +573,11 @@ def render_status_panel(
         theme = get_theme(DEFAULT_THEME)
 
     badges = Text()
+
+    # Version badge (leftmost, subtle)
+    if version:
+        badges.append(f" {version} ", style=theme.version_badge)
+        badges.append(" ")
 
     # Provider badge
     badges.append(f" {provider} ", style=theme.provider_badge)
@@ -596,6 +607,33 @@ def render_status_panel(
     if usage_str:
         badges.append(" ")
         badges.append(f" {usage_str} ", style=theme.usage_badge)
+
+    # Working directory badge (compact path)
+    if working_dir:
+        # Shorten path for display
+        from pathlib import Path
+        import os
+        path = Path(working_dir)
+        # Use ~ for home directory
+        try:
+            home = Path.home()
+            if path.is_relative_to(home):
+                display_path = "~/" + str(path.relative_to(home)).replace("\\", "/")
+            else:
+                display_path = str(path).replace("\\", "/")
+        except (ValueError, RuntimeError):
+            display_path = str(path).replace("\\", "/")
+        # Truncate if too long (keep last 30 chars)
+        if len(display_path) > 35:
+            display_path = "..." + display_path[-32:]
+        badges.append(" ")
+        badges.append(f" {display_path} ", style=theme.cwd_badge)
+
+    # DateTime badge (rightmost)
+    if show_datetime:
+        now = datetime.now().strftime("%Y-%m-%d %H:%M")
+        badges.append(" ")
+        badges.append(f" {now} ", style=theme.datetime_badge)
 
     return Panel(
         badges,

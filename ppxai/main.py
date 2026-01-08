@@ -97,11 +97,23 @@ def get_status_line(handler, use_themed: bool = True):
     if use_themed:
         from ppxai.ui_components import render_status_line, render_status_panel
         from ppxai.themes import get_theme
-        from ppxai.config import get_tui_theme
+        from ppxai.config import get_tui_theme, get_tui_config
+        from ppxai.version import __version__
 
         # Use handler's current theme if set, otherwise fall back to config
         theme_name = getattr(handler, 'current_theme_name', None) or get_tui_theme()
         theme = get_theme(theme_name)
+
+        # Get TUI display options
+        tui_config = get_tui_config()
+        show_version = tui_config.get("show_version", True)
+        show_cwd = tui_config.get("show_cwd", True)
+        show_datetime = tui_config.get("show_datetime", False)
+
+        # Get working directory from engine
+        working_dir = None
+        if show_cwd and handler.engine_client:
+            working_dir = handler.engine_client.get_working_dir()
 
         # Use framed panel for status (experiment/rich-tui)
         return render_status_panel(
@@ -112,6 +124,9 @@ def get_status_line(handler, use_themed: bool = True):
             usage_str=usage_str,
             checkpoint_str=checkpoint_str,
             theme=theme,
+            version=f"v{__version__}" if show_version else None,
+            working_dir=working_dir,
+            show_datetime=show_datetime,
         )
 
     # Fallback: plain text status line
@@ -213,6 +228,13 @@ class PPXAICompleter(Completer):
         ('provider', 'Show current provider totals'),
         ('model', 'Show current model totals'),
         ('off', 'Hide usage from status line'),
+    ]
+
+    # Subcommands for /status
+    STATUS_SUBCOMMANDS = [
+        ('version', 'Show/toggle version display'),
+        ('cwd', 'Show/toggle working directory display'),
+        ('datetime', 'Show/toggle date/time display'),
     ]
 
     # Directories to ignore when searching for files
@@ -387,6 +409,21 @@ class PPXAICompleter(Completer):
                             yield Completion(
                                 backend,
                                 start_position=-len(parts[2]),
+                                display_meta=desc
+                            )
+                return
+
+            # Handle /status subcommands (v1.14.0)
+            if cmd_text.startswith('/status '):
+                parts = text.split()
+                if len(parts) == 2:
+                    # Completing subcommand: /status ver<tab>
+                    subquery = parts[1].lower()
+                    for subcmd, desc in self.STATUS_SUBCOMMANDS:
+                        if subcmd.startswith(subquery):
+                            yield Completion(
+                                subcmd,
+                                start_position=-len(parts[1]),
                                 display_meta=desc
                             )
                 return

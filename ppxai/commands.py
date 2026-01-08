@@ -964,9 +964,9 @@ class CommandHandler:
         subcommand = parts[0].lower() if parts else "status"
         subargs = parts[1:] if len(parts) > 1 else []
 
-        if subcommand == "enable":
+        if subcommand in ("enable", "on"):
             self._enable_tools()
-        elif subcommand == "disable":
+        elif subcommand in ("disable", "off"):
             self._disable_tools()
         elif subcommand == "list":
             self._list_tools()
@@ -992,7 +992,7 @@ class CommandHandler:
             self._tools_agent(subargs)
         else:
             console.print(f"[red]Unknown subcommand: {subcommand}[/red]")
-            console.print("[yellow]Available: enable, disable, list, status, config, set, help, agent[/yellow]\n")
+            console.print("[yellow]Available: on, off, list, status, config, set, help, agent[/yellow]\n")
 
     def _enable_tools(self):
         """Enable AI tools (including file editing tools with consent)."""
@@ -2100,8 +2100,86 @@ If more work is needed, explain what you're doing next and use the appropriate t
             self.handle_undo()
         elif command == "/checkpoint":
             self.handle_checkpoint(args)
+        elif command == "/status":
+            self.handle_status(args)
         else:
             console.print(f"[red]Unknown command: {user_input}[/red]")
             console.print("[yellow]Type /help for available commands[/yellow]\n")
 
         return False
+
+    def handle_status(self, args: str = ""):
+        """Show comprehensive status information.
+
+        Usage:
+            /status              - Show all status info
+            /status version      - Toggle version display in status bar
+            /status cwd          - Toggle working directory display
+            /status datetime     - Toggle date/time display
+        """
+        from ppxai.config import get_tui_config, get_provider_config
+        from ppxai.version import __version__
+
+        parts = args.strip().split() if args else []
+
+        # Handle toggle subcommands
+        if parts:
+            subcommand = parts[0].lower()
+            if subcommand in ("version", "cwd", "datetime"):
+                # Toggle the setting - note these require config file modification
+                # For now, just show current status and suggest config edit
+                tui_config = get_tui_config()
+                current_value = tui_config.get(f"show_{subcommand}", subcommand != "datetime")
+                console.print(f"\n[cyan]show_{subcommand}:[/cyan] {'[green]true[/green]' if current_value else '[dim]false[/dim]'}")
+                console.print(f"[dim]To change, edit ppxai-config.json: \"tui\": {{ \"show_{subcommand}\": {'false' if current_value else 'true'} }}[/dim]\n")
+                return
+
+        # Show comprehensive status
+        console.print("\n[bold cyan]━━━ ppxai Status ━━━[/bold cyan]")
+
+        # Version
+        console.print(f"  [cyan]Version:[/cyan] v{__version__}")
+
+        # Provider and model
+        provider_config = get_provider_config(self.provider)
+        console.print(f"  [cyan]Provider:[/cyan] {provider_config.get('name', self.provider)}")
+        console.print(f"  [cyan]Model:[/cyan] {self.current_model}")
+
+        # Working directory
+        if self.engine_client:
+            cwd = self.engine_client.working_dir or "[dim]not set[/dim]"
+            console.print(f"  [cyan]Working Dir:[/cyan] {cwd}")
+
+        # Tools status
+        tools_status = "[green]enabled[/green]" if (self.engine_client and self.engine_client.tools_enabled) else "[dim]disabled[/dim]"
+        console.print(f"  [cyan]Tools:[/cyan] {tools_status}")
+
+        # Agent mode
+        agent_status = "[green]active[/green]" if (self.engine_client and self.engine_client.agent_mode) else "[dim]inactive[/dim]"
+        console.print(f"  [cyan]Agent Mode:[/cyan] {agent_status}")
+
+        # Theme
+        console.print(f"  [cyan]Theme:[/cyan] {self.current_theme_name}")
+
+        # Session info
+        if self.engine_client and self.engine_client.session:
+            session = self.engine_client.session
+            msg_count = len(session.history) if session.history else 0
+            console.print(f"  [cyan]Messages:[/cyan] {msg_count}")
+
+            # Usage stats
+            total_usage = session.get_total_usage()
+            if total_usage:
+                console.print(f"  [cyan]Tokens:[/cyan] {total_usage.get('prompt_tokens', 0)}↓ / {total_usage.get('completion_tokens', 0)}↑")
+                cost = total_usage.get('estimated_cost', 0.0)
+                if cost > 0:
+                    console.print(f"  [cyan]Cost:[/cyan] ${cost:.4f}")
+
+        # Status bar display settings
+        tui_config = get_tui_config()
+        console.print("\n[bold dim]Status Bar Settings:[/bold dim]")
+        console.print(f"  show_version: {'[green]true[/green]' if tui_config.get('show_version', True) else '[dim]false[/dim]'}")
+        console.print(f"  show_cwd: {'[green]true[/green]' if tui_config.get('show_cwd', True) else '[dim]false[/dim]'}")
+        console.print(f"  show_datetime: {'[green]true[/green]' if tui_config.get('show_datetime', False) else '[dim]false[/dim]'}")
+
+        console.print()

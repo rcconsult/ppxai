@@ -583,6 +583,50 @@ def get_tool_config(tool_name: str) -> Dict[str, Any]:
     return tools_config.get(tool_name, {})
 
 
+def get_shell_config() -> Dict[str, Any]:
+    """Get shell tool configuration with defaults (v1.13.6).
+
+    Returns:
+        Shell config dict with:
+        - require_consent: bool (default True)
+        - dangerous_commands: list of regex patterns
+        - allowed_commands: list of regex patterns
+        - never_allow: list of regex patterns
+        - interactive_commands: list of commands that need TTY
+        - non_interactive_with_args: list of commands that are non-interactive when given args
+    """
+    shell_config = get_tool_config("shell")
+
+    # Default interactive commands (always blocked without args)
+    default_interactive = [
+        'nano', 'vim', 'vi', 'emacs', 'pico', 'joe',  # Text editors
+        'less', 'more',  # Pagers
+        'top', 'htop', 'btop',  # System monitors
+        'python', 'python3', 'ipython', 'node', 'irb', 'ruby',  # REPLs
+        'ssh', 'telnet', 'ftp', 'sftp',  # Remote connections
+        'mysql', 'psql', 'mongo', 'redis-cli',  # Database CLIs
+        'bash', 'zsh', 'sh', 'fish', 'csh', 'tcsh',  # Shells
+    ]
+
+    # Commands that become non-interactive when given arguments
+    default_non_interactive_with_args = [
+        'python', 'python3', 'ipython', 'node', 'irb', 'ruby',  # REPLs
+        'bash', 'zsh', 'sh', 'fish', 'csh', 'tcsh',  # Shells
+        'ssh',  # ssh host command runs non-interactively
+        'mysql', 'psql',  # mysql -e 'query', psql -c 'query'
+    ]
+
+    return {
+        "require_consent": shell_config.get("require_consent", True),
+        "dangerous_commands": shell_config.get("dangerous_commands", []),
+        "allowed_commands": shell_config.get("allowed_commands", []),
+        "never_allow": shell_config.get("never_allow", []),
+        "sandboxed_paths": shell_config.get("sandboxed_paths", []),
+        "interactive_commands": shell_config.get("interactive_commands", default_interactive),
+        "non_interactive_with_args": shell_config.get("non_interactive_with_args", default_non_interactive_with_args),
+    }
+
+
 def get_tool_pricing(tool_name: str, provider: str) -> Dict[str, Any]:
     """Get pricing configuration for a tool provider.
 
@@ -725,8 +769,9 @@ def get_tui_config() -> Dict[str, Any]:
     {
         "tui": {
             "theme": "standard",  // or "tron-legacy", "matrix", "nord"
-            "show_timestamps": true,
-            "show_header": true
+            "show_version": true,
+            "show_cwd": true,
+            "show_datetime": false
         }
     }
 
@@ -735,8 +780,9 @@ def get_tui_config() -> Dict[str, Any]:
     """
     defaults = {
         "theme": "standard",
-        "show_timestamps": True,
-        "show_header": True,
+        "show_version": True,
+        "show_cwd": True,
+        "show_datetime": False,
     }
 
     # Check if config has tui section
@@ -834,3 +880,156 @@ def get_data_dir() -> Path:
         Path to data directory.
     """
     return Path(get_paths_config().get("data_dir", str(Path.home() / ".ppxai")))
+
+
+# =============================================================================
+# Server Configuration (v1.14.0 - Idle shutdown)
+# =============================================================================
+
+def get_server_config() -> Dict[str, Any]:
+    """Get server-specific configuration.
+
+    Reads from ppxai-config.json under the "server" key:
+    {
+        "server": {
+            "idle_timeout": 300,  // Shutdown after N seconds of inactivity (0 = disabled)
+            "port": 54320
+        }
+    }
+
+    Returns:
+        Dict with server configuration options.
+    """
+    defaults = {
+        "idle_timeout": 300,  # 5 minutes, 0 = disabled
+        "port": 54320,
+    }
+
+    # Check if config has server section
+    server_config = _config.get("server", {})
+
+    # Merge with defaults
+    return {**defaults, **server_config}
+
+
+def get_idle_timeout() -> int:
+    """Get the server idle timeout in seconds.
+
+    Returns:
+        Idle timeout in seconds (0 = disabled).
+    """
+    return get_server_config().get("idle_timeout", 300)
+
+
+# =============================================================================
+# System Prompt Configuration (v1.13.6)
+# =============================================================================
+
+# Default system prompts for each provider type
+# These provide sensible defaults to reduce chattiness and improve tool usage
+DEFAULT_SYSTEM_PROMPTS = {
+    # Global default - applies to all providers unless overridden
+    "global": (
+        "You are a helpful AI assistant. Be concise and direct in your responses. "
+        "When using tools, report results briefly without unnecessary elaboration."
+    ),
+    # Provider-specific defaults
+    "perplexity": (
+        "You are a helpful AI assistant with web search capabilities. "
+        "Be concise. Cite sources as markdown links. "
+        "For tool results, report essential information only."
+    ),
+    "gemini": (
+        "You are a helpful AI assistant. Be concise and direct. "
+        "When using tools, report results briefly. "
+        "For web searches, cite sources as markdown links."
+    ),
+    "openai": (
+        "You are a helpful AI assistant. Be concise and direct. "
+        "When using tools, report results briefly without elaboration."
+    ),
+    "custom": (
+        "You are a helpful AI coding assistant. Be concise and direct. "
+        "When executing tools, report only the essential results. "
+        "Avoid lengthy explanations unless explicitly requested."
+    ),
+}
+
+
+def get_system_prompt(provider: str = None) -> str:
+    """Get the system prompt for the specified provider.
+
+    System prompts are configured in ppxai-config.json:
+    {
+        "system_prompt": "Global default prompt...",  // Optional global override
+        "providers": {
+            "custom": {
+                "system_prompt": "Provider-specific prompt...",  // Per-provider override
+                ...
+            }
+        }
+    }
+
+    Priority order (highest first):
+    1. Provider-specific system_prompt in config
+    2. Global system_prompt in config
+    3. DEFAULT_SYSTEM_PROMPTS for the provider
+    4. DEFAULT_SYSTEM_PROMPTS["global"]
+
+    Args:
+        provider: Provider ID. If None, uses active provider.
+
+    Returns:
+        System prompt string.
+    """
+    if provider is None:
+        provider = MODEL_PROVIDER
+
+    config_path = _find_config_file()
+    if config_path:
+        json_config = _load_json_config(config_path)
+
+        # Check provider-specific system_prompt
+        provider_config = json_config.get("providers", {}).get(provider, {})
+        if provider_config.get("system_prompt"):
+            return provider_config["system_prompt"]
+
+        # Check global system_prompt
+        if json_config.get("system_prompt"):
+            return json_config["system_prompt"]
+
+    # Fall back to defaults
+    return DEFAULT_SYSTEM_PROMPTS.get(provider, DEFAULT_SYSTEM_PROMPTS["global"])
+
+
+def get_system_prompt_mode(provider: str = None) -> str:
+    """Get the system prompt mode for the specified provider.
+
+    Modes:
+    - "prepend" (default): Add custom prompt before tool instructions
+    - "append": Add custom prompt after tool instructions
+    - "replace": Use custom prompt only, no tool instructions
+
+    Args:
+        provider: Provider ID. If None, uses active provider.
+
+    Returns:
+        System prompt mode string.
+    """
+    if provider is None:
+        provider = MODEL_PROVIDER
+
+    config_path = _find_config_file()
+    if config_path:
+        json_config = _load_json_config(config_path)
+
+        # Check provider-specific mode
+        provider_config = json_config.get("providers", {}).get(provider, {})
+        if provider_config.get("system_prompt_mode"):
+            return provider_config["system_prompt_mode"]
+
+        # Check global mode
+        if json_config.get("system_prompt_mode"):
+            return json_config["system_prompt_mode"]
+
+    return "prepend"  # Default mode

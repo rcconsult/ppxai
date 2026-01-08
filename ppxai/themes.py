@@ -33,6 +33,9 @@ class Theme:
     usage_badge: str          # Usage statistics badge
     agent_badge: str          # Agent mode badge
     checkpoint_badge: str     # Checkpoint status badge
+    version_badge: str        # Version number badge
+    cwd_badge: str            # Working directory badge
+    datetime_badge: str       # Date/time badge
 
     # Header/footer
     header_style: str         # Header panel style
@@ -68,6 +71,9 @@ THEMES: Dict[str, Theme] = {
         usage_badge="white on dark_green",
         agent_badge="white on magenta",
         checkpoint_badge="white on cyan",
+        version_badge="white on grey37",
+        cwd_badge="white on grey30",
+        datetime_badge="white on grey23",
         # Header/footer
         header_style="dim",
         footer_style="dim",
@@ -103,6 +109,9 @@ THEMES: Dict[str, Theme] = {
         usage_badge="black on yellow",
         agent_badge="black on bright_magenta",
         checkpoint_badge="black on bright_cyan",
+        version_badge="cyan on grey15",
+        cwd_badge="bright_cyan on grey11",
+        datetime_badge="cyan on grey7",
         # Header/footer
         header_style="cyan",
         footer_style="cyan",
@@ -134,6 +143,9 @@ THEMES: Dict[str, Theme] = {
         usage_badge="black on bright_green",
         agent_badge="black on bright_green",
         checkpoint_badge="black on green",
+        version_badge="bright_green on grey15",
+        cwd_badge="green on grey11",
+        datetime_badge="bright_green on grey7",
         # Header/footer
         header_style="bright_green",
         footer_style="bright_green",
@@ -166,6 +178,9 @@ THEMES: Dict[str, Theme] = {
         usage_badge="white on bright_magenta",
         agent_badge="white on magenta",
         checkpoint_badge="white on bright_blue",
+        version_badge="white on grey37",
+        cwd_badge="bright_magenta on grey30",
+        datetime_badge="white on grey23",
         # Header/footer
         header_style="bright_magenta",
         footer_style="bright_magenta",

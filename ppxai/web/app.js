@@ -272,27 +272,52 @@ class PpxaiApp {
 
     // === Server Connection ===
 
-    async connectToServer() {
+    /**
+     * Connect to the server with circuit breaker pattern (v1.13.6)
+     *
+     * @param {boolean} withRetry - If true, retry with exponential backoff
+     */
+    async connectToServer(withRetry = false) {
         this.updateServerStatus('connecting');
 
-        try {
-            const response = await fetch(`${this.serverUrl}/health`, {
-                signal: AbortSignal.timeout(3000)
-            });
+        // Circuit breaker pattern: retry with exponential backoff (v1.13.6)
+        const retryDelays = withRetry ? [1000, 2000, 3000, 5000] : [0];
 
-            if (response.ok) {
-                const health = await response.json();
-                this.elements.versionBadge.textContent = `v${health.version}`;
-                this.updateServerStatus('connected');
-                await this.loadInitialState();
-            } else {
-                this.updateServerStatus('disconnected');
-                this.showError('Server returned error. Is ppxai-server running?');
+        for (let i = 0; i < retryDelays.length; i++) {
+            if (i > 0) {
+                await new Promise(resolve => setTimeout(resolve, retryDelays[i]));
             }
-        } catch (error) {
-            this.updateServerStatus('disconnected');
+
+            try {
+                const response = await fetch(`${this.serverUrl}/health`, {
+                    signal: AbortSignal.timeout(3000)
+                });
+
+                if (response.ok) {
+                    const health = await response.json();
+                    this.elements.versionBadge.textContent = `v${health.version}`;
+                    this.updateServerStatus('connected');
+
+                    // Show idle timeout info if configured (v1.13.6)
+                    if (health.idle_timeout && health.idle_timeout > 0) {
+                        console.log(`[PpxaiApp] Server idle timeout: ${health.idle_timeout}s`);
+                    }
+
+                    await this.loadInitialState();
+                    return true;
+                }
+            } catch (error) {
+                // Continue to next retry
+                console.log(`[PpxaiApp] Connection attempt ${i + 1}/${retryDelays.length} failed`);
+            }
+        }
+
+        // All retries failed
+        this.updateServerStatus('disconnected');
+        if (!withRetry) {
             this.showError('Could not connect to server. Start with: ppxai-server');
         }
+        return false;
     }
 
     updateServerStatus(status) {
@@ -303,14 +328,17 @@ class PpxaiApp {
             case 'connected':
                 badge.classList.add('connected');
                 this.elements.serverStatus.textContent = 'Connected';
+                badge.title = 'Server connected. Click to stop server.';
                 break;
             case 'disconnected':
                 badge.classList.add('disconnected');
                 this.elements.serverStatus.textContent = 'Disconnected';
+                badge.title = 'Server not running. Click to retry connection.\nStart server with: ppxai-server';
                 break;
             case 'connecting':
                 badge.classList.add('connecting');
                 this.elements.serverStatus.textContent = 'Connecting...';
+                badge.title = 'Connecting to server...';
                 break;
         }
     }
@@ -318,8 +346,42 @@ class PpxaiApp {
     async handleServerBadgeClick() {
         const badge = this.elements.serverBadge;
         if (badge.classList.contains('disconnected')) {
+            // Try to reconnect
             await this.connectToServer();
+        } else if (badge.classList.contains('connected')) {
+            // Ask user if they want to stop the server (v1.13.6)
+            const confirmed = confirm('Stop the ppxai server?\n\nThe server will shutdown and you will need to restart it manually.');
+            if (confirmed) {
+                await this.shutdownServer();
+            }
         }
+    }
+
+    /**
+     * Shutdown the server via HTTP endpoint (v1.13.6)
+     */
+    async shutdownServer() {
+        try {
+            this.updateServerStatus('connecting');
+            this.elements.serverStatus.textContent = 'Stopping...';
+
+            const response = await fetch(`${this.serverUrl}/shutdown`, {
+                method: 'POST',
+                headers: this.getSessionHeaders(),
+                signal: AbortSignal.timeout(5000)
+            });
+
+            if (response.ok) {
+                this.showSystemMessage('Server shutdown initiated. Restart with: ppxai-server');
+            }
+        } catch (error) {
+            // Expected - server shuts down before responding
+            console.log('Server shutdown (connection closed as expected)');
+        }
+
+        // Update UI to show disconnected
+        this.updateServerStatus('disconnected');
+        this.showSystemMessage('Server stopped. To restart, run: ppxai-server');
     }
 
     async handleFolderBadgeClick() {

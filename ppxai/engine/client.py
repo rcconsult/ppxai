@@ -1167,7 +1167,23 @@ class EngineClient:
                             "\n\nWhen citing sources or URLs from search results, format them as markdown links "
                             "like [Source Name](https://example.com) so they are clickable."
                         )
-                    messages = [Message("system", tool_prompt)] + messages
+
+                    # v1.13.6: Apply custom system prompt from config
+                    from ..config import get_system_prompt, get_system_prompt_mode
+                    system_prompt = get_system_prompt(self.provider_id)
+                    prompt_mode = get_system_prompt_mode(self.provider_id)
+
+                    if prompt_mode == "replace":
+                        # Replace tool prompt entirely with custom system prompt
+                        final_prompt = system_prompt
+                    elif prompt_mode == "append":
+                        # Add custom prompt after tool instructions
+                        final_prompt = f"{tool_prompt}\n\n{system_prompt}"
+                    else:  # "prepend" (default)
+                        # Add custom prompt before tool instructions
+                        final_prompt = f"{system_prompt}\n\n{tool_prompt}"
+
+                    messages = [Message("system", final_prompt)] + messages
 
             # Get response from provider
             full_response = ""
