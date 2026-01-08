@@ -1,8 +1,8 @@
 # Release Plan: v1.14.x Series
 
 **Created:** January 5, 2026
-**Last Updated:** January 5, 2026
-**Status:** Planning
+**Last Updated:** January 8, 2026
+**Status:** Planning (after v1.13.5 completion)
 **Branch:** TBD
 
 ---
@@ -279,36 +279,21 @@ Prefer using tools over asking the user for information.
 
 ---
 
-### v1.14.4 - Installation & Server Control
+### v1.14.4 - Enhanced Context Providers
 
-**Goal:** Frictionless installation and VSCode server management
+**Goal:** Advanced context injection from external sources
 
 | Feature | Description |
 |---------|-------------|
-| `install.sh` | curl+bash installer for TUI and server binaries |
-| VSCode Server Badge | Click to start/stop ppxai-server from extension |
-| Terminal Integration | Server runs in VSCode terminal with output visible |
-| Installation Guide | Comprehensive docs/INSTALLATION.md |
+| `@url` provider | Fetch and inject web content into context |
+| `@clipboard` provider | Inject clipboard contents |
+| Context caching | Cache fetched URLs for session duration |
+| Error handling | Graceful fallback when sources unavailable |
 
-#### Installation Script (`install.sh`)
-
-```bash
-# One-line install
-curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash
-
-# Options
---version VERSION    # Specific version (default: latest)
---with-extension     # Also download VSCode VSIX
---server-only        # Only ppxai-server
---install-dir DIR    # Custom directory (default: ~/.local/bin)
-```
-
-#### VSCode Server Control
-
-- **Server Badge** - Shows connection status (Connected/Disconnected/Connecting)
-- **Click to Toggle** - Start or stop server directly from the UI
-- **Terminal Output** - Server runs in named terminal for visibility
-- **Auto-Reconnect** - Re-initializes after server starts
+**Note:** Installation & server control features originally planned here were completed in v1.13.x:
+- ✅ `install.sh` and `install.ps1` (v1.13.2)
+- ✅ VSCode server badge (v1.13.1)
+- ✅ docs/INSTALLATION.md (v1.13.2)
 
 ---
 
@@ -351,12 +336,11 @@ curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | 
 - [ ] Add context size to status bar
 
 ### v1.14.4
-- [ ] Create `install.sh` curl+bash installer
-- [ ] Add `--with-extension` option to download VSIX
-- [ ] Add VSCode server status badge
-- [ ] Add server start/stop via terminal
-- [ ] Add server control commands (start, stop, toggle, status)
-- [ ] Update README.md quick start
+- [ ] Implement `@url` context provider
+- [ ] Implement `@clipboard` context provider
+- [ ] Add URL content caching
+- [ ] Add timeout/error handling for URL fetch
+- [ ] Add tests for context providers
 
 ---
 
