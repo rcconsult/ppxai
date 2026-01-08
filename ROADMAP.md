@@ -184,7 +184,7 @@ These are tracked but not prioritized:
 - ~~**Provider-aware tool guidance**~~ - ✅ Implemented in v1.13.3
 - ~~**Cost display in `/usage`**~~ - ✅ Implemented (shows $ cost in session and reports)
 - ~~**Per-provider cost rates**~~ - ✅ Implemented in `config.py` (pricing per model)
-- **Standardized error handling** - Apply traceback pattern from Gemini to other providers
+- ~~**Standardized error handling**~~ - ✅ All providers now have detailed traceback logging
 - **`/rewind` browser** - Interactive checkpoint history viewer
 - **`/agent --dry-run`** - Preview changes without applying
 
@@ -235,8 +235,8 @@ uv run ppxai-server           # Start server for VSCode dev
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md).
 
 For archived planning documents:
-- [docs/archive/](docs/archive/) - Legacy documentation (to be removed in v1.14.x)
 - [docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.md) - Agentic workflow design
+- Legacy archive available at tag [v1.13.3](https://github.com/rcconsult/ppxai/tree/v1.13.3/docs/archive)
 
 ---
 

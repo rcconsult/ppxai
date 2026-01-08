@@ -45,17 +45,30 @@ class BaseProvider(ABC):
         self.models = models or {}
         self.capabilities = capabilities or self.default_capabilities
 
-        # Check if SSL verification should be disabled
-        ssl_verify = os.getenv("SSL_VERIFY", "true").lower() != "false"
+        # Check SSL configuration
+        # SSL_VERIFY=false disables SSL verification entirely
+        # SSL_CERT_FILE=/path/to/cert.pem uses a custom certificate (e.g., corporate proxy)
+        ssl_verify_env = os.getenv("SSL_VERIFY", "true").lower()
+        ssl_cert_file = os.getenv("SSL_CERT_FILE", "")
 
-        if not ssl_verify:
+        if ssl_verify_env == "false":
+            # Disable SSL verification entirely
             http_client = httpx.Client(verify=False)
             self.client = OpenAI(
                 api_key=api_key,
                 base_url=base_url,
                 http_client=http_client
             )
+        elif ssl_cert_file:
+            # Use custom SSL certificate (e.g., corporate proxy cert)
+            http_client = httpx.Client(verify=ssl_cert_file)
+            self.client = OpenAI(
+                api_key=api_key,
+                base_url=base_url,
+                http_client=http_client
+            )
         else:
+            # Default: use system SSL certificates
             self.client = OpenAI(
                 api_key=api_key,
                 base_url=base_url
