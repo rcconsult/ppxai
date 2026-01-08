@@ -8,14 +8,14 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current Version:** v1.13.5
 
-**Post-v1.13.3 fixes (on master, pending next release):**
-- **FIX:** File editing tools now respect engine working directory
-  - `apply_patch`, `replace_block`, `insert_text`, `delete_lines` resolve relative paths against engine's working directory
+**Post-v1.13.5 fixes (on master, pending next release):**
+- **FIX:** Release script Windows compatibility for `gh` CLI commands
+  - Uses Python environment variables instead of Unix shell syntax
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.13.3
-- VSCode extension (package.json): v1.13.3
-- Git tag: v1.13.3
+- Python package (pyproject.toml): v1.13.5
+- VSCode extension (package.json): v1.13.5
+- Git tag: v1.13.5
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
 
