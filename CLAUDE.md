@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.13.5
+**Current Version:** v1.13.6
 
 **Post-v1.13.5 fixes (on master, pending next release):**
 - **FIX:** Release script Windows compatibility for `gh` CLI commands

@@ -5,6 +5,44 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.6] - 2026-01-08
+
+### Added - Server Lifecycle & Configuration
+
+- **Server idle auto-shutdown** - Server automatically shuts down after configurable inactivity period (default 5 minutes)
+- **`/shutdown` endpoint** - Graceful server shutdown via HTTP POST request
+- **Activity tracking middleware** - Resets idle timer on every client request
+- **Server config section** - New `server.idle_timeout` and `server.port` in JSON config
+
+### Added - System Prompt Configuration
+
+- **Global system prompt** - Configure `system_prompt` at config root level
+- **Per-provider system prompts** - Override system prompt per provider (e.g., reduce GPT-OSS chattiness)
+- **Prompt modes** - `system_prompt_mode`: "prepend" (default), "append", or "replace"
+
+### Added - TUI Enhancements
+
+- **Status bar badges** - Version, current working directory, and date/time in TUI status bar
+- **`/status` command** - Show provider, model, tools status, and working directory
+- **`/tools on|off` aliases** - Shorter aliases for `/tools enable|disable`
+
+### Added - Shell Tool Configuration
+
+- **Configurable interactive commands** - `tools.shell.interactive_commands` list in JSON config
+- **Non-interactive with args** - `tools.shell.non_interactive_with_args` for commands like `ssh host command`
+- **SSH fix** - `ssh r1lx uptime` now works (previously blocked as "interactive")
+
+### Added - Web App Server Control
+
+- **Server badge click** - Click server badge to stop server (with confirmation)
+- **Circuit breaker reconnection** - Exponential backoff retry pattern for server connection
+
+### Fixed
+
+- **TUI crash** - Fixed `'EngineClient' object has no attribute 'working_dir'` error
+
+---
+
 ## [1.13.5] - 2026-01-08
 
 ### Fixed - Critical: Session Isolation

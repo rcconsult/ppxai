@@ -1,8 +1,19 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "version": "1.1",
+  "version": "1.2",
   "default_provider": "perplexity",
   "comment": "Configuration for ppxai - customize providers, models, and autorouting behavior",
+  "system_prompt": "You are a helpful AI assistant. Be concise and direct. Report tool results briefly.",
+  "__comment_system_prompt": "Global system prompt prepended to all conversations (v1.13.6+). Per-provider overrides below.",
+  "system_prompt_mode": "prepend",
+  "__comment_system_prompt_mode": "How to combine with tool instructions: 'prepend' (default), 'append', or 'replace'",
+  "server": {
+    "__comment": "HTTP server configuration (v1.13.6+)",
+    "idle_timeout": 300,
+    "__comment_idle_timeout": "Auto-shutdown after N seconds of inactivity. 0 = disabled (server runs forever)",
+    "port": 54320,
+    "__comment_port": "Default HTTP server port"
+  },
   "paths": {
     "__comment": "Binary and data paths (v1.13.2+). Use {home} for home directory",
     "__comment_windows": "On Windows, {home} expands to %USERPROFILE% (e.g., C:\\Users\\YourName)",
@@ -26,6 +37,8 @@
       "default_model": "sonar-pro",
       "coding_model": "sonar-pro",
       "__comment_coding_model": "Model used for autorouting coding commands (/generate, /test, /convert, etc.)",
+      "system_prompt": "You are a helpful AI assistant with web search. Be concise. Cite sources as markdown links.",
+      "__comment_system_prompt": "Per-provider system prompt override (v1.13.6+)",
       "models": {
         "sonar": {
           "name": "Sonar",
@@ -233,6 +246,8 @@
       "api_key_env": "VLLM_API_KEY",
       "default_model": "openai/gpt-oss-120b",
       "coding_model": "openai/gpt-oss-120b",
+      "system_prompt": "You are a helpful AI coding assistant. Be concise and direct. When executing tools, report only the essential results. Avoid lengthy explanations unless explicitly requested.",
+      "__comment_system_prompt": "Custom system prompt to reduce chattiness (v1.13.6+)",
       "models": {
         "openai/gpt-oss-120b": {
           "name": "GPT-OSS 120B",
@@ -319,7 +334,11 @@
         "mkfs\\.",
         "^\\s*>\\s*/dev/sda"
       ],
-      "sandboxed_paths": []
+      "sandboxed_paths": [],
+      "interactive_commands": ["nano", "vim", "vi", "emacs", "less", "more", "top", "htop", "python", "python3", "node", "ssh", "telnet", "ftp", "sftp", "mysql", "psql", "bash", "zsh", "sh"],
+      "__comment_interactive_commands": "Commands blocked by default (need TTY). Override to customize. (v1.13.6+)",
+      "non_interactive_with_args": ["python", "python3", "node", "bash", "zsh", "sh", "ssh", "mysql", "psql"],
+      "__comment_non_interactive_with_args": "Commands that become non-interactive when given arguments (v1.13.6+)"
     },
     "agent": {
       "__comment": "Agent mode configuration (v1.11.9+, v1.12.0 checkpoint features)",

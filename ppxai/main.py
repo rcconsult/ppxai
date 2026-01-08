@@ -113,7 +113,7 @@ def get_status_line(handler, use_themed: bool = True):
         # Get working directory from engine
         working_dir = None
         if show_cwd and handler.engine_client:
-            working_dir = handler.engine_client.working_dir
+            working_dir = handler.engine_client.get_working_dir()
 
         # Use framed panel for status (experiment/rich-tui)
         return render_status_panel(

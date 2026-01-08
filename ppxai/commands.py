@@ -964,9 +964,9 @@ class CommandHandler:
         subcommand = parts[0].lower() if parts else "status"
         subargs = parts[1:] if len(parts) > 1 else []
 
-        if subcommand == "enable":
+        if subcommand in ("enable", "on"):
             self._enable_tools()
-        elif subcommand == "disable":
+        elif subcommand in ("disable", "off"):
             self._disable_tools()
         elif subcommand == "list":
             self._list_tools()
@@ -992,7 +992,7 @@ class CommandHandler:
             self._tools_agent(subargs)
         else:
             console.print(f"[red]Unknown subcommand: {subcommand}[/red]")
-            console.print("[yellow]Available: enable, disable, list, status, config, set, help, agent[/yellow]\n")
+            console.print("[yellow]Available: on, off, list, status, config, set, help, agent[/yellow]\n")
 
     def _enable_tools(self):
         """Enable AI tools (including file editing tools with consent)."""
