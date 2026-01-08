@@ -85,6 +85,16 @@ In `ppxai-config.json`:
 
 Useful for VSCode extension users who want the server to automatically stop when not in use, freeing system resources.
 
+## Web App Quit Button
+
+The web UI now has a dedicated **Quit** button in the header that:
+
+1. Shows a confirmation dialog
+2. Shuts down the server via POST `/shutdown`
+3. Closes the browser tab (or shows a message to close manually if browser blocks it)
+
+This provides a clean way to stop the server from the web interface. The server status badge (green/red) now only shows connection status - it no longer has a click action.
+
 ## Custom System Prompts
 
 Configure system prompts at global and per-provider levels.
@@ -136,7 +146,10 @@ New shorter aliases for common commands:
 - `ppxai/engine/tools/builtin/shell.py` - Reads interactive commands from config
 - `ppxai/main.py` - Status bar badge enhancements
 - `ppxai/commands.py` - `/tools on|off` aliases
-- `ppxai/server/http.py` - Idle timeout support
+- `ppxai/server/http.py` - Idle timeout support, `/shutdown` endpoint
+- `ppxai/web/app.js` - Quit button handler, removed server badge click
+- `ppxai/web/index.html` - Added Quit button
+- `ppxai/web/styles.css` - Quit button styling
 - `ppxai-config.example.json` - New configuration options documented
 
 ### Tests
