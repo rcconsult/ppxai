@@ -5,6 +5,23 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.4] - 2026-01-08
+
+### Fixed - Error Handling & LLM Guidance
+
+- **SSL certificate support** - Added `SSL_CERT_FILE` environment variable support for corporate proxy certificates in all providers
+- **Standardized error logging** - All providers now include full traceback in error events for better debugging
+- **Windows shell guidance** - Added explicit warning in `execute_shell_command` that bash heredocs (`<<EOF`), `$()`, and bash builtins don't work on Windows
+- **Tool parameter emphasis** - `apply_patch` description now emphasizes REQUIRED parameters to prevent missing argument errors
+- **Actionable error tips** - File-not-found errors now suggest appropriate tools (`insert_text`, `list_directory`, `read_file`)
+- **Line number validation tips** - `delete_lines` invalid range errors now suggest using `read_file` to check file length first
+
+### Removed - Cleanup
+
+- **docs/archive/** - Removed 39 obsolete documentation files (13KB) - preserved at v1.13.3 tag
+
+---
+
 ## [1.13.3] - 2026-01-07
 
 ### Fixed - Session Management
