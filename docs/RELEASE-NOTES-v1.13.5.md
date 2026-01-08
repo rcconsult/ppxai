@@ -9,7 +9,7 @@ This release fixes a critical bug where VSCode extension and Desktop Web App sha
 ### The Problem
 
 When both VSCode and the Desktop Web App connected to the same ppxai-server:
-- Working directory set by VSCode (`c:\git\utils\ppxai`) would affect the web app
+- Working directory set by VSCode would affect the web app
 - Conversation history was shared between clients
 - Tool consent state leaked between sessions
 - LLM context was confused by mixed workspace information
@@ -60,7 +60,7 @@ Returns:
       "provider": "perplexity",
       "model": "sonar-pro",
       "message_count": 5,
-      "working_dir": "c:\\git\\utils\\ppxai"
+      "working_dir": "/path/to/project"
     }
   ],
   "count": 1,

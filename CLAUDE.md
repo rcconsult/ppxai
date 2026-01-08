@@ -11,6 +11,8 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 **Post-v1.13.5 fixes (on master, pending next release):**
 - **FIX:** Release script Windows compatibility for `gh` CLI commands
   - Uses Python environment variables instead of Unix shell syntax
+- **FIX:** UTF-8 encoding for release scripts on Windows
+  - `release.py` and `validate-release.py` now configure stdout/stderr for UTF-8
 
 **Version Alignment:**
 - Python package (pyproject.toml): v1.13.5

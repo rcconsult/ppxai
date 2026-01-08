@@ -111,6 +111,12 @@ ppxai provides:
 - **UTF-8 BOM handling** - Windows config file compatibility
 - **Windows PowerShell installer** - `scripts/install.ps1` for one-line Windows install
 
+### Error Handling & LLM Guidance ✅ (v1.13.4)
+- **SSL certificate support** - `SSL_CERT_FILE` environment variable for corporate proxies
+- **Windows shell guidance** - Explicit warnings that bash heredocs don't work on Windows
+- **Tool parameter emphasis** - Better error messages for missing arguments
+- **Actionable error tips** - Suggestions for appropriate tools on file-not-found errors
+
 ### Session Isolation ✅ (v1.13.5)
 - **Multi-client isolation** - VSCode and Web App get isolated sessions on same server
 - **Session ID header** - `X-Session-Id` HTTP header routes requests to per-session EngineClient
