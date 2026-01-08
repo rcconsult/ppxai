@@ -137,10 +137,15 @@ async def web_search_perplexity(query: str, num_results: int = 5) -> Tuple[str, 
     """
     import httpx
     from openai import AsyncOpenAI
+    from ppxai.config import get_tool_config
 
     api_key = os.getenv("PERPLEXITY_API_KEY")
     if not api_key:
         raise ValueError("PERPLEXITY_API_KEY not set")
+
+    # Get model from config, default to sonar
+    tool_config = get_tool_config("web_search")
+    perplexity_model = tool_config.get("perplexity_model", "sonar")
 
     # Respect SSL_VERIFY setting (for corporate proxies with SSL inspection)
     ssl_verify = os.getenv("SSL_VERIFY", "true").lower() != "false"
@@ -155,7 +160,7 @@ async def web_search_perplexity(query: str, num_results: int = 5) -> Tuple[str, 
     )
 
     response = await client.chat.completions.create(
-        model="sonar",
+        model=perplexity_model,
         messages=[{"role": "user", "content": query}]
     )
 
@@ -193,12 +198,17 @@ async def web_search_gemini(query: str, num_results: int = 5) -> Tuple[str, List
         ValueError: If GEMINI_API_KEY not set
     """
     import httpx
+    from ppxai.config import get_tool_config
 
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise ValueError("GEMINI_API_KEY not set")
 
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+    # Get model from config, default to gemini-2.0-flash
+    tool_config = get_tool_config("web_search")
+    gemini_model = tool_config.get("gemini_model", "gemini-2.0-flash")
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent"
 
     payload = {
         "contents": [{"parts": [{"text": query}]}],
