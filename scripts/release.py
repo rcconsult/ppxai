@@ -108,9 +108,9 @@ def run_command(cmd: str, capture: bool = True, check: bool = True) -> subproces
     return result
 
 
-def get_gh_token_cmd() -> str:
-    """Get the command prefix to set GH_TOKEN from the token file."""
-    token_file = PROJECT_ROOT / ".github/gh-tokenv.env"
+def get_gh_token() -> str | None:
+    """Get GH_TOKEN from the token file. Returns the token string or None."""
+    token_file = PROJECT_ROOT / ".github/gh-token.env"
     if token_file.exists():
         # Read token directly instead of using source
         content = token_file.read_text(encoding='utf-8')
@@ -118,8 +118,41 @@ def get_gh_token_cmd() -> str:
             if line.startswith('GH_TOKEN=') or line.startswith('export GH_TOKEN='):
                 # Extract the token value
                 token = line.split('=', 1)[1].strip().strip('"').strip("'")
-                return f'GH_TOKEN="{token}" '
-    return ""
+                return token
+    return None
+
+
+def run_gh_command(args: str, check: bool = True) -> subprocess.CompletedProcess:
+    """Run a gh CLI command with proper GH_TOKEN environment handling.
+
+    This works cross-platform by setting the environment variable in Python
+    rather than using shell-specific syntax.
+    """
+    # Build environment with GH_TOKEN if available
+    env = os.environ.copy()
+    token = get_gh_token()
+    if token:
+        env['GH_TOKEN'] = token
+
+    cmd = f"gh {args}"
+    print(f"  $ {cmd}")
+
+    result = subprocess.run(
+        cmd,
+        shell=True,
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        encoding='utf-8',
+        errors='replace',
+        env=env,
+    )
+
+    if check and result.returncode != 0:
+        print(f"  ❌ Command failed: {result.stderr or result.stdout}")
+        sys.exit(1)
+
+    return result
 
 
 def validate_version(version: str) -> str:
@@ -458,12 +491,11 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"""
 def delete_existing_release(version: str) -> bool:
     """Delete existing GitHub release and tags for redo."""
     tag = f"v{version}"
-    token_cmd = get_gh_token_cmd()
 
     print(f"\n🗑️  Deleting existing release v{version}...")
 
     # Delete GitHub release
-    result = run_command(f"{token_cmd}gh release delete {tag} --yes", check=False)
+    result = run_gh_command(f"release delete {tag} --yes", check=False)
     if result.returncode == 0:
         print(f"  ✅ Deleted GitHub release: {tag}")
     else:
@@ -554,16 +586,14 @@ def wait_for_ci(version: str, timeout_minutes: int = 10) -> bool:
     tag = f"v{version}"
     print(f"  Waiting for CI run on tag {tag} (timeout: {timeout_minutes}min)...")
 
-    token_cmd = get_gh_token_cmd()
-
     start_time = time.time()
     timeout_seconds = timeout_minutes * 60
     seen_in_progress = False  # Track if we've seen this run actually start
 
     while time.time() - start_time < timeout_seconds:
         # Get runs filtered by head branch (tag) with createdAt to check recency
-        result = run_command(
-            f"{token_cmd}gh run list --limit 5 --json status,conclusion,name,headBranch,createdAt",
+        result = run_gh_command(
+            "run list --limit 5 --json status,conclusion,name,headBranch,createdAt",
             check=False
         )
 
@@ -628,13 +658,11 @@ def publish_release_notes(version: str, max_retries: int = 12):
         print(f"  ⚠️  Release notes not found: {notes_file}")
         return
 
-    token_cmd = get_gh_token_cmd()
-
     # Try to publish, retrying if release doesn't exist yet (CI may still be creating it)
     for attempt in range(max_retries):
         # Update release notes AND mark as latest release
-        result = run_command(
-            f'{token_cmd}gh release edit {tag} --notes-file "{notes_file}" --latest',
+        result = run_gh_command(
+            f'release edit {tag} --notes-file "{notes_file}" --latest',
             check=False
         )
         if result.returncode == 0:
@@ -691,8 +719,7 @@ def build_intel_assets(version: str) -> bool:
 
 def verify_release(version: str) -> bool:
     """Verify release has all expected assets."""
-    token_cmd = get_gh_token_cmd()
-    result = run_command(f"{token_cmd}gh release view v{version} --json assets", check=False)
+    result = run_gh_command(f"release view v{version} --json assets", check=False)
 
     if result.returncode != 0:
         print(f"  ❌ Could not fetch release info")
