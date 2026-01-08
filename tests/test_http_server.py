@@ -79,21 +79,21 @@ def mock_client():
     # Create test client which will run startup event
     with TestClient(http_module.app, raise_server_exceptions=False) as test_client:
         # Now inject the mock engine after startup (replacing the real one)
-        original = http_module.engine
-        http_module.engine = mock_engine
+        original = http_module.default_engine
+        http_module.default_engine = mock_engine
         yield test_client, mock_engine
         # Restore original (may be real engine from startup)
-        http_module.engine = original
+        http_module.default_engine = original
 
 
 @pytest.fixture
 def no_engine_client():
     """Create a test client with no engine (set to None after startup)."""
     with TestClient(http_module.app, raise_server_exceptions=False) as test_client:
-        original = http_module.engine
-        http_module.engine = None
+        original = http_module.default_engine
+        http_module.default_engine = None
         yield test_client
-        http_module.engine = original
+        http_module.default_engine = original
 
 
 class TestHttpServerHealth:

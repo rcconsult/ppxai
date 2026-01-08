@@ -1,10 +1,15 @@
 /**
  * ppxai Web UI Application
  *
- * v1.14.1 - Standalone web-based chat interface
+ * v1.14.2 - Standalone web-based chat interface
  *
  * Uses shared modules for command definitions and formatters to maintain
  * parity with VSCode extension.
+ *
+ * v1.14.2 Changes:
+ * - Added session ID support for server session isolation
+ * - Each browser tab gets unique session ID via sessionStorage
+ * - All API requests now include X-Session-Id header
  *
  * v1.14.1 Changes:
  * - Fixed markdown rendering with proper list syntax (- instead of •)
@@ -25,6 +30,15 @@ class PpxaiApp {
         const usePageOrigin = pageOrigin && !pageOrigin.startsWith('file:') && pageOrigin !== 'null';
         this.serverUrl = usePageOrigin ? pageOrigin : (localStorage.getItem('ppxai-server-url') || 'http://127.0.0.1:54320');
         this.theme = localStorage.getItem('ppxai-theme') || 'dark';
+
+        // Session ID for server session isolation (v1.14.0)
+        // Each browser tab/window gets its own session ID
+        this.sessionId = sessionStorage.getItem('ppxai-session-id');
+        if (!this.sessionId) {
+            this.sessionId = `webapp-${this.generateUUID()}`;
+            sessionStorage.setItem('ppxai-session-id', this.sessionId);
+        }
+        console.log(`[PpxaiApp] Session ID: ${this.sessionId}`);
 
         // State
         this.currentProvider = '';
@@ -318,7 +332,9 @@ class PpxaiApp {
 
     async loadWorkingDir() {
         try {
-            const resp = await fetch(`${this.serverUrl}/context/working_dir`);
+            const resp = await fetch(`${this.serverUrl}/context/working_dir`, {
+                headers: this.getSessionHeaders()
+            });
             if (resp.ok) {
                 const data = await resp.json();
                 this.updateFolderBadge(data.path);
@@ -332,7 +348,7 @@ class PpxaiApp {
         try {
             const resp = await fetch(`${this.serverUrl}/context/working_dir`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getSessionHeaders(true),
                 body: JSON.stringify({ path })
             });
             if (resp.ok) {
@@ -363,12 +379,16 @@ class PpxaiApp {
     async loadInitialState() {
         try {
             // Load providers
-            const providersResp = await fetch(`${this.serverUrl}/providers`);
+            const providersResp = await fetch(`${this.serverUrl}/providers`, {
+                headers: this.getSessionHeaders()
+            });
             const providersData = await providersResp.json();
             this.populateProviders(providersData.providers);
 
             // Load status
-            const statusResp = await fetch(`${this.serverUrl}/status`);
+            const statusResp = await fetch(`${this.serverUrl}/status`, {
+                headers: this.getSessionHeaders()
+            });
             const status = await statusResp.json();
             this.currentProvider = status.provider;
             this.currentModel = status.model;
@@ -386,13 +406,17 @@ class PpxaiApp {
             await this.loadWorkingDir();
 
             // Load tools status
-            const toolsResp = await fetch(`${this.serverUrl}/tools`);
+            const toolsResp = await fetch(`${this.serverUrl}/tools`, {
+                headers: this.getSessionHeaders()
+            });
             const toolsData = await toolsResp.json();
             this.verbose = toolsData.verbose || false;
 
             // Load agent status
             try {
-                const agentResp = await fetch(`${this.serverUrl}/agent/status`);
+                const agentResp = await fetch(`${this.serverUrl}/agent/status`, {
+                    headers: this.getSessionHeaders()
+                });
                 const agentData = await agentResp.json();
                 this.agentMode = agentData.agent_mode;
                 this.updateAgentBadge();
@@ -412,7 +436,9 @@ class PpxaiApp {
 
             // Load debug log status
             try {
-                const debugResp = await fetch(`${this.serverUrl}/debug-log`);
+                const debugResp = await fetch(`${this.serverUrl}/debug-log`, {
+                    headers: this.getSessionHeaders()
+                });
                 const debugData = await debugResp.json();
                 this.debugLogEnabled = debugData.enabled;
                 this.updateDebugIndicator();
@@ -436,7 +462,9 @@ class PpxaiApp {
 
     async loadModels() {
         try {
-            const response = await fetch(`${this.serverUrl}/models`);
+            const response = await fetch(`${this.serverUrl}/models`, {
+                headers: this.getSessionHeaders()
+            });
             const data = await response.json();
 
             this.elements.modelSelect.innerHTML = '';
@@ -457,14 +485,16 @@ class PpxaiApp {
         try {
             await fetch(`${this.serverUrl}/providers`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getSessionHeaders(true),
                 body: JSON.stringify({ provider: providerId })
             });
             this.currentProvider = providerId;
             await this.loadModels();
 
             // Get new default model
-            const statusResp = await fetch(`${this.serverUrl}/status`);
+            const statusResp = await fetch(`${this.serverUrl}/status`, {
+                headers: this.getSessionHeaders()
+            });
             const status = await statusResp.json();
             this.currentModel = status.model;
             this.elements.modelSelect.value = this.currentModel;
@@ -480,7 +510,7 @@ class PpxaiApp {
         try {
             await fetch(`${this.serverUrl}/models`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getSessionHeaders(true),
                 body: JSON.stringify({ model: modelId })
             });
             this.currentModel = modelId;
@@ -497,7 +527,7 @@ class PpxaiApp {
             const newState = !this.toolsEnabled;
             await fetch(`${this.serverUrl}/tools`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getSessionHeaders(true),
                 body: JSON.stringify({ enabled: newState })
             });
             this.toolsEnabled = newState;
@@ -520,7 +550,7 @@ class PpxaiApp {
 
             const response = await fetch(`${this.serverUrl}${endpoint}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: this.getSessionHeaders(true)
             });
 
             if (response.ok) {
@@ -545,7 +575,7 @@ class PpxaiApp {
         try {
             const response = await fetch(`${this.serverUrl}/checkpoint/undo`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: this.getSessionHeaders(true)
             });
 
             if (response.ok) {
@@ -621,7 +651,7 @@ class PpxaiApp {
         try {
             const response = await fetch(`${this.serverUrl}/chat`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getSessionHeaders(true),
                 body: JSON.stringify({ message }),
                 signal: this.currentAbortController.signal
             });
@@ -774,6 +804,7 @@ class PpxaiApp {
         try {
             await fetch(`${this.serverUrl}/interrupt`, {
                 method: 'POST',
+                headers: this.getSessionHeaders(),
                 signal: AbortSignal.timeout(1000)
             });
         } catch {}
@@ -918,7 +949,9 @@ class PpxaiApp {
     async handleModelCommand(args) {
         if (!args || args === 'list') {
             try {
-                const response = await fetch(`${this.serverUrl}/models`);
+                const response = await fetch(`${this.serverUrl}/models`, {
+                    headers: this.getSessionHeaders()
+                });
                 const data = await response.json();
                 let text = '**Available Models:**\n\n';
                 data.models.forEach(m => {
@@ -938,7 +971,9 @@ class PpxaiApp {
     async handleProviderCommand(args) {
         if (!args || args === 'list') {
             try {
-                const response = await fetch(`${this.serverUrl}/providers`);
+                const response = await fetch(`${this.serverUrl}/providers`, {
+                    headers: this.getSessionHeaders()
+                });
                 const data = await response.json();
                 let text = '**Available Providers:**\n\n';
                 data.providers.forEach(p => {
@@ -973,7 +1008,9 @@ class PpxaiApp {
             case 'status':
             case '':
                 try {
-                    const response = await fetch(`${this.serverUrl}/tools`);
+                    const response = await fetch(`${this.serverUrl}/tools`, {
+                        headers: this.getSessionHeaders()
+                    });
                     const data = await response.json();
                     let text = '**Tools Status:**\n\n';
                     text += `- Enabled: ${data.enabled ? 'yes' : 'no'}\n`;
@@ -987,7 +1024,9 @@ class PpxaiApp {
 
             case 'list':
                 try {
-                    const response = await fetch(`${this.serverUrl}/tools`);
+                    const response = await fetch(`${this.serverUrl}/tools`, {
+                        headers: this.getSessionHeaders()
+                    });
                     const data = await response.json();
                     let text = '**Available Tools:**\n\n';
                     data.tools.forEach(t => {
@@ -1006,7 +1045,7 @@ class PpxaiApp {
                     try {
                         await fetch(`${this.serverUrl}/tools/config`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: this.getSessionHeaders(true),
                             body: JSON.stringify({ setting: 'verbose', value: value ? 'on' : 'off' })
                         });
                         this.verbose = value;
@@ -1021,7 +1060,9 @@ class PpxaiApp {
 
             case 'config':
                 try {
-                    const response = await fetch(`${this.serverUrl}/tools`);
+                    const response = await fetch(`${this.serverUrl}/tools`, {
+                        headers: this.getSessionHeaders()
+                    });
                     const data = await response.json();
                     let text = '**Tool Configuration:**\n\n';
                     text += `- Enabled: ${data.enabled ? 'yes' : 'no'}\n`;
@@ -1053,7 +1094,9 @@ class PpxaiApp {
                 const toolName = args.split(/\s+/)[1];
                 if (toolName) {
                     try {
-                        const response = await fetch(`${this.serverUrl}/tools/help/${encodeURIComponent(toolName)}`);
+                        const response = await fetch(`${this.serverUrl}/tools/help/${encodeURIComponent(toolName)}`, {
+                            headers: this.getSessionHeaders()
+                        });
                         if (!response.ok) {
                             const err = await response.json();
                             this.showError(err.detail || `Tool not found: ${toolName}`);
@@ -1090,7 +1133,9 @@ class PpxaiApp {
             case 'status':
             case '':
                 try {
-                    const response = await fetch(`${this.serverUrl}/agent/status`);
+                    const response = await fetch(`${this.serverUrl}/agent/status`, {
+                        headers: this.getSessionHeaders()
+                    });
                     const data = await response.json();
                     let text = '**Checkpoint Status:**\n\n';
                     if (data.checkpoint) {
@@ -1112,7 +1157,9 @@ class PpxaiApp {
 
             case 'list':
                 try {
-                    const response = await fetch(`${this.serverUrl}/checkpoint/list`);
+                    const response = await fetch(`${this.serverUrl}/checkpoint/list`, {
+                        headers: this.getSessionHeaders()
+                    });
                     const data = await response.json();
                     let text = '**Recent Checkpoints:**\n\n';
                     if (data.checkpoints.length === 0) {
@@ -1143,7 +1190,7 @@ class PpxaiApp {
                     try {
                         const response = await fetch(`${this.serverUrl}/checkpoint/backend`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: this.getSessionHeaders(true),
                             body: JSON.stringify({ backend: backendArg })
                         });
                         if (!response.ok) {
@@ -1165,7 +1212,7 @@ class PpxaiApp {
                 try {
                     const response = await fetch(`${this.serverUrl}/checkpoint/clear`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: this.getSessionHeaders(true),
                         body: JSON.stringify({ keep_last: 0 })
                     });
                     if (!response.ok) {
@@ -1184,7 +1231,9 @@ class PpxaiApp {
                 const checkpointId = args.split(/\s+/)[1];
                 if (checkpointId) {
                     try {
-                        const response = await fetch(`${this.serverUrl}/checkpoint/info/${encodeURIComponent(checkpointId)}`);
+                        const response = await fetch(`${this.serverUrl}/checkpoint/info/${encodeURIComponent(checkpointId)}`, {
+                            headers: this.getSessionHeaders()
+                        });
                         if (!response.ok) {
                             const err = await response.json();
                             this.showError(err.detail || `Checkpoint not found: ${checkpointId}`);
@@ -1221,7 +1270,7 @@ class PpxaiApp {
                 try {
                     await fetch(`${this.serverUrl}/usage/display`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: this.getSessionHeaders(true),
                         body: JSON.stringify({ mode })
                     });
                     this.showSystemMessage(`Usage display mode set to: ${mode}`);
@@ -1238,7 +1287,7 @@ class PpxaiApp {
             try {
                 await fetch(`${this.serverUrl}/usage/reset`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: this.getSessionHeaders(true)
                 });
                 this.showSystemMessage('Usage counters reset.');
             } catch (error) {
@@ -1251,7 +1300,9 @@ class PpxaiApp {
         try {
             const period = ['24h', 'week', 'month', 'year', 'all'].includes(subCmd) ? subCmd : null;
             const endpoint = period ? `/usage/report?period=${period}` : '/usage';
-            const response = await fetch(`${this.serverUrl}${endpoint}`);
+            const response = await fetch(`${this.serverUrl}${endpoint}`, {
+                headers: this.getSessionHeaders()
+            });
             const data = await response.json();
 
             let text = '**Usage Statistics:**\n\n';
@@ -1286,7 +1337,9 @@ class PpxaiApp {
 
     async showStatus() {
         try {
-            const response = await fetch(`${this.serverUrl}/status`);
+            const response = await fetch(`${this.serverUrl}/status`, {
+                headers: this.getSessionHeaders()
+            });
             const data = await response.json();
 
             let text = '**Current Status:**\n\n';
@@ -1511,7 +1564,7 @@ class PpxaiApp {
         try {
             await fetch(`${this.serverUrl}/consent`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getSessionHeaders(true),
                 body: JSON.stringify({ file_path: filePath, response })
             });
         } catch (error) {
@@ -1523,7 +1576,7 @@ class PpxaiApp {
         try {
             await fetch(`${this.serverUrl}/shell-consent`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getSessionHeaders(true),
                 body: JSON.stringify({ command, working_dir: workingDir, response })
             });
         } catch (error) {
@@ -1697,7 +1750,10 @@ class PpxaiApp {
 
     async clearConversation() {
         try {
-            await fetch(`${this.serverUrl}/sessions/clear`, { method: 'POST' });
+            await fetch(`${this.serverUrl}/sessions/clear`, {
+                method: 'POST',
+                headers: this.getSessionHeaders()
+            });
             this.elements.messagesContainer.innerHTML = `
                 <div class="welcome-message">
                     <h2>Welcome to ppxai</h2>
@@ -1721,7 +1777,7 @@ class PpxaiApp {
         try {
             const response = await fetch(`${this.serverUrl}/sessions/save`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getSessionHeaders(true),
                 body: name ? JSON.stringify({ name }) : '{}'
             });
             const data = await response.json();
@@ -1735,7 +1791,7 @@ class PpxaiApp {
         try {
             const response = await fetch(`${this.serverUrl}/export`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getSessionHeaders(true),
                 body: filename ? JSON.stringify({ filename }) : '{}'
             });
             const data = await response.json();
@@ -1756,7 +1812,7 @@ class PpxaiApp {
             const sessionName = encodeURIComponent(name.trim());
             const response = await fetch(`${this.serverUrl}/sessions/load/${sessionName}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: this.getSessionHeaders(true)
             });
 
             if (response.ok) {
@@ -1775,7 +1831,9 @@ class PpxaiApp {
 
     async listSessions() {
         try {
-            const response = await fetch(`${this.serverUrl}/sessions`);
+            const response = await fetch(`${this.serverUrl}/sessions`, {
+                headers: this.getSessionHeaders()
+            });
             const data = await response.json();
 
             if (!data.sessions || data.sessions.length === 0) {
@@ -1810,7 +1868,7 @@ class PpxaiApp {
         try {
             const response = await fetch(`${this.serverUrl}/files/read`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getSessionHeaders(true),
                 body: JSON.stringify({ path: filepath })
             });
 
@@ -1940,7 +1998,7 @@ class PpxaiApp {
             const newState = !this.debugLogEnabled;
             const response = await fetch(`${this.serverUrl}/debug-log`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getSessionHeaders(true),
                 body: JSON.stringify({ enabled: newState })
             });
             const data = await response.json();
@@ -1960,7 +2018,9 @@ class PpxaiApp {
 
     async updateUsage() {
         try {
-            const response = await fetch(`${this.serverUrl}/usage`);
+            const response = await fetch(`${this.serverUrl}/usage`, {
+                headers: this.getSessionHeaders()
+            });
             const data = await response.json();
 
             const prompt = data.prompt_tokens || 0;
@@ -2027,6 +2087,30 @@ class PpxaiApp {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    /**
+     * Generate a UUID v4 (v1.14.0)
+     */
+    generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    /**
+     * Get headers with session ID for API requests (v1.14.0)
+     */
+    getSessionHeaders(includeContentType = false) {
+        const headers = {
+            'X-Session-Id': this.sessionId
+        };
+        if (includeContentType) {
+            headers['Content-Type'] = 'application/json';
+        }
+        return headers;
     }
 
     scrollToBottom() {

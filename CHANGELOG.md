@@ -5,6 +5,31 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.5] - 2026-01-08
+
+### Fixed - Critical: Session Isolation
+
+- **Multi-client session isolation** - VSCode extension and Desktop Web App now have isolated sessions when connected to the same server
+- **Session ID via HTTP header** - All clients send `X-Session-Id` header; server routes requests to isolated EngineClient instances
+- **Per-session state** - Each session maintains its own: conversation history, working directory, provider/model, tool consent state
+- **Session lifecycle** - Sessions auto-expire after 1 hour of inactivity; usage saved on cleanup
+- **Backward compatibility** - Clients without session ID use shared `default_engine` (existing behavior)
+
+### Added - Session Management
+
+- **`/sessions/list` endpoint** - Monitor active sessions for debugging (GET /sessions/list)
+- **Session ID in responses** - `/status`, `/chat`, `/context/working_dir` return session ID
+- **VSCode extension** - Generates unique `vscode-{uuid}` session ID per extension instance
+- **Desktop Web App** - Generates unique `webapp-{uuid}` session ID per browser tab (via sessionStorage)
+
+### Technical Details
+
+- **Server**: New `get_or_create_session()` function routes requests to per-session EngineClient
+- **Consent handling**: Consent requests keyed by `(session_id, file_path)` for proper isolation
+- **Request serialization**: Each session has its own asyncio.Lock for chat request ordering
+
+---
+
 ## [1.13.4] - 2026-01-08
 
 ### Fixed - Error Handling & LLM Guidance

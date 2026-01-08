@@ -69,6 +69,7 @@ type StreamCallback = (event: StreamEvent) => void;
  * HTTP Client for ppxai-server communication
  *
  * Provides the same interface as PythonBackend for easy migration.
+ * v1.14.0: Added session isolation via X-Session-Id header.
  */
 export class HttpClient {
     private baseUrl: string;
@@ -78,10 +79,46 @@ export class HttpClient {
     private currentAbortController: AbortController | null = null;
     // v1.12.0: Track verbose mode for tool output display
     private _toolsVerbose: boolean = false;
+    // v1.14.0: Session ID for server-side session isolation
+    private _sessionId: string;
 
-    constructor(baseUrl: string = 'http://127.0.0.1:54320') {
+    constructor(baseUrl: string = 'http://127.0.0.1:54320', sessionId?: string) {
         this.baseUrl = baseUrl;
+        // v1.14.0: Generate unique session ID for this client instance
+        this._sessionId = sessionId || `vscode-${this.generateUUID()}`;
         this.outputChannel = vscode.window.createOutputChannel('ppxai HTTP');
+        this.outputChannel.appendLine(`[Session] ID: ${this._sessionId}`);
+    }
+
+    /**
+     * Generate a UUID v4 (v1.14.0)
+     */
+    private generateUUID(): string {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    /**
+     * Get session ID (v1.14.0)
+     */
+    get sessionId(): string {
+        return this._sessionId;
+    }
+
+    /**
+     * Get headers with session ID (v1.14.0)
+     */
+    private getHeaders(contentType: boolean = false): Record<string, string> {
+        const headers: Record<string, string> = {
+            'X-Session-Id': this._sessionId
+        };
+        if (contentType) {
+            headers['Content-Type'] = 'application/json';
+        }
+        return headers;
     }
 
     /**
@@ -161,7 +198,9 @@ export class HttpClient {
      * Get current engine status
      */
     async getStatus(): Promise<EngineStatus> {
-        const response = await fetch(`${this.baseUrl}/status`);
+        const response = await fetch(`${this.baseUrl}/status`, {
+            headers: this.getHeaders()
+        });
         if (!response.ok) {
             throw new Error(`Status check failed: ${response.statusText}`);
         }
@@ -178,7 +217,9 @@ export class HttpClient {
      * Get available providers
      */
     async getProviders(): Promise<ProviderInfo[]> {
-        const response = await fetch(`${this.baseUrl}/providers`);
+        const response = await fetch(`${this.baseUrl}/providers`, {
+            headers: this.getHeaders()
+        });
         if (!response.ok) {
             throw new Error(`Failed to get providers: ${response.statusText}`);
         }
@@ -192,7 +233,7 @@ export class HttpClient {
     async setProvider(providerId: string, model?: string): Promise<boolean> {
         const response = await fetch(`${this.baseUrl}/providers`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getHeaders(true),
             body: JSON.stringify({ provider: providerId, model })
         });
         return response.ok;
@@ -202,7 +243,9 @@ export class HttpClient {
      * Get available models for current provider
      */
     async getModels(): Promise<ModelInfo[]> {
-        const response = await fetch(`${this.baseUrl}/models`);
+        const response = await fetch(`${this.baseUrl}/models`, {
+            headers: this.getHeaders()
+        });
         if (!response.ok) {
             throw new Error(`Failed to get models: ${response.statusText}`);
         }
@@ -216,7 +259,7 @@ export class HttpClient {
     async setModel(modelId: string): Promise<boolean> {
         const response = await fetch(`${this.baseUrl}/models`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getHeaders(true),
             body: JSON.stringify({ model: modelId })
         });
         return response.ok;
@@ -226,7 +269,9 @@ export class HttpClient {
      * Get tools list
      */
     async listTools(): Promise<ToolInfo[]> {
-        const response = await fetch(`${this.baseUrl}/tools`);
+        const response = await fetch(`${this.baseUrl}/tools`, {
+            headers: this.getHeaders()
+        });
         if (!response.ok) {
             throw new Error(`Failed to get tools: ${response.statusText}`);
         }
@@ -238,7 +283,9 @@ export class HttpClient {
      * Get tools status
      */
     async getToolsStatus(): Promise<{ enabled: boolean; tool_count: number; max_iterations: number; consent_mode: string; verbose: boolean }> {
-        const response = await fetch(`${this.baseUrl}/tools`);
+        const response = await fetch(`${this.baseUrl}/tools`, {
+            headers: this.getHeaders()
+        });
         if (!response.ok) {
             throw new Error(`Failed to get tools: ${response.statusText}`);
         }
@@ -266,7 +313,7 @@ export class HttpClient {
     async enableTools(): Promise<boolean> {
         const response = await fetch(`${this.baseUrl}/tools`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getHeaders(true),
             body: JSON.stringify({ enabled: true })
         });
         return response.ok;
@@ -278,7 +325,7 @@ export class HttpClient {
     async disableTools(): Promise<boolean> {
         const response = await fetch(`${this.baseUrl}/tools`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getHeaders(true),
             body: JSON.stringify({ enabled: false })
         });
         return response.ok;
@@ -290,7 +337,7 @@ export class HttpClient {
     async setToolConfig(setting: string, value: any): Promise<boolean> {
         const response = await fetch(`${this.baseUrl}/tools/config`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getHeaders(true),
             body: JSON.stringify({ setting, value: String(value) })
         });
         // v1.12.0: Track verbose setting locally
@@ -306,7 +353,7 @@ export class HttpClient {
     async setWorkingDir(path: string): Promise<boolean> {
         const response = await fetch(`${this.baseUrl}/context/working_dir`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getHeaders(true),
             body: JSON.stringify({ path })
         });
         return response.ok;
@@ -318,7 +365,7 @@ export class HttpClient {
     async setAutoInject(enabled: boolean): Promise<boolean> {
         const response = await fetch(`${this.baseUrl}/context/auto_inject`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getHeaders(true),
             body: JSON.stringify({ enabled })
         });
         return response.ok;
@@ -329,7 +376,9 @@ export class HttpClient {
      */
     async getAutoInject(): Promise<boolean> {
         try {
-            const response = await fetch(`${this.baseUrl}/context/auto_inject`);
+            const response = await fetch(`${this.baseUrl}/context/auto_inject`, {
+                headers: this.getHeaders()
+            });
             if (!response.ok) {
                 return true; // Default to enabled
             }
@@ -350,7 +399,7 @@ export class HttpClient {
         try {
             const response = await fetch(`${this.baseUrl}/chat`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getHeaders(true),
                 body: JSON.stringify({ message }),
                 signal: this.currentAbortController.signal
             });
@@ -461,7 +510,7 @@ export class HttpClient {
         try {
             const response = await fetch(`${this.baseUrl}/coding_task`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getHeaders(true),
                 body: JSON.stringify({ message, task_type: taskType }),
                 signal: this.currentAbortController.signal
             });
@@ -569,7 +618,7 @@ export class HttpClient {
         try {
             const resp = await fetch(`${this.baseUrl}/consent`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getHeaders(true),
                 body: JSON.stringify({
                     file_path: filePath,
                     response: response
@@ -596,7 +645,7 @@ export class HttpClient {
         try {
             const resp = await fetch(`${this.baseUrl}/shell-consent`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this.getHeaders(true),
                 body: JSON.stringify({
                     command: command,
                     working_dir: workingDir,
@@ -702,7 +751,8 @@ export class HttpClient {
      */
     async clearHistory(): Promise<boolean> {
         const response = await fetch(`${this.baseUrl}/sessions/clear`, {
-            method: 'POST'
+            method: 'POST',
+            headers: this.getHeaders()
         });
         if (response.ok) {
             this.conversationHistory = [];
@@ -716,7 +766,7 @@ export class HttpClient {
     async saveSession(name?: string): Promise<string> {
         const response = await fetch(`${this.baseUrl}/sessions/save`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getHeaders(true),
             body: name ? JSON.stringify({ name }) : '{}'
         });
         if (!response.ok) {
@@ -732,7 +782,7 @@ export class HttpClient {
     async exportAnswer(filename?: string): Promise<string> {
         const response = await fetch(`${this.baseUrl}/export`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getHeaders(true),
             body: filename ? JSON.stringify({ filename }) : '{}'
         });
         if (!response.ok) {
@@ -747,7 +797,9 @@ export class HttpClient {
      * Get saved sessions
      */
     async getSessions(): Promise<SessionInfo[]> {
-        const response = await fetch(`${this.baseUrl}/sessions`);
+        const response = await fetch(`${this.baseUrl}/sessions`, {
+            headers: this.getHeaders()
+        });
         if (!response.ok) {
             throw new Error(`Failed to get sessions: ${response.statusText}`);
         }
@@ -760,7 +812,8 @@ export class HttpClient {
      */
     async loadSession(sessionName: string): Promise<boolean> {
         const response = await fetch(`${this.baseUrl}/sessions/load/${encodeURIComponent(sessionName)}`, {
-            method: 'POST'
+            method: 'POST',
+            headers: this.getHeaders()
         });
         return response.ok;
     }
@@ -781,7 +834,9 @@ export class HttpClient {
         }>;
         display_mode?: string;
     }> {
-        const response = await fetch(`${this.baseUrl}/usage`);
+        const response = await fetch(`${this.baseUrl}/usage`, {
+            headers: this.getHeaders()
+        });
         if (!response.ok) {
             throw new Error(`Failed to get usage: ${response.statusText}`);
         }
@@ -807,7 +862,7 @@ export class HttpClient {
     async setUsageDisplayMode(mode: string): Promise<{ mode: string; success: boolean }> {
         const response = await fetch(`${this.baseUrl}/usage/display`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getHeaders(true),
             body: JSON.stringify({ mode })
         });
         if (!response.ok) {
@@ -820,7 +875,9 @@ export class HttpClient {
      * Get current usage display mode (v1.12.2)
      */
     async getUsageDisplayMode(): Promise<{ mode: string }> {
-        const response = await fetch(`${this.baseUrl}/usage/display`);
+        const response = await fetch(`${this.baseUrl}/usage/display`, {
+            headers: this.getHeaders()
+        });
         if (!response.ok) {
             throw new Error(`Failed to get usage display mode: ${response.statusText}`);
         }
@@ -833,7 +890,7 @@ export class HttpClient {
     async resetUsage(): Promise<{ success: boolean }> {
         const response = await fetch(`${this.baseUrl}/usage/reset`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: this.getHeaders(true)
         });
         if (!response.ok) {
             throw new Error(`Failed to reset usage: ${response.statusText}`);
@@ -876,7 +933,9 @@ export class HttpClient {
             message_count: number;
         }>;
     }> {
-        const response = await fetch(`${this.baseUrl}/usage/report?period=${encodeURIComponent(period)}`);
+        const response = await fetch(`${this.baseUrl}/usage/report?period=${encodeURIComponent(period)}`, {
+            headers: this.getHeaders()
+        });
         if (!response.ok) {
             throw new Error(`Failed to get usage report: ${response.statusText}`);
         }
@@ -916,7 +975,9 @@ export class HttpClient {
      * Get debug log status (v1.11.2)
      */
     async getDebugLogStatus(): Promise<{ enabled: boolean; log_file: string | null }> {
-        const response = await fetch(`${this.baseUrl}/debug-log`);
+        const response = await fetch(`${this.baseUrl}/debug-log`, {
+            headers: this.getHeaders()
+        });
         if (!response.ok) {
             throw new Error(`Failed to get debug log status: ${response.statusText}`);
         }
@@ -931,7 +992,7 @@ export class HttpClient {
 
         const response = await fetch(`${this.baseUrl}/debug-log`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getHeaders(true),
             body: JSON.stringify({ enabled })
         });
         if (!response.ok) {
@@ -964,7 +1025,9 @@ export class HttpClient {
             status_description: string;
         };
     }> {
-        const response = await fetch(`${this.baseUrl}/agent/status`);
+        const response = await fetch(`${this.baseUrl}/agent/status`, {
+            headers: this.getHeaders()
+        });
         if (!response.ok) {
             throw new Error(`Failed to get agent status: ${response.statusText}`);
         }
@@ -987,7 +1050,9 @@ export class HttpClient {
      */
     async getAgentConfig(): Promise<{ max_iterations: number; context_char_limit: number; min_task_words: number }> {
         try {
-            const response = await fetch(`${this.baseUrl}/agent/config`);
+            const response = await fetch(`${this.baseUrl}/agent/config`, {
+                headers: this.getHeaders()
+            });
             if (!response.ok) {
                 // Return defaults if endpoint not available
                 return { max_iterations: 10, context_char_limit: 2000, min_task_words: 3 };
@@ -1008,7 +1073,7 @@ export class HttpClient {
 
         const response = await fetch(`${this.baseUrl}/agent/enable`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: this.getHeaders(true)
         });
 
         if (!response.ok) {
@@ -1029,7 +1094,7 @@ export class HttpClient {
 
         const response = await fetch(`${this.baseUrl}/agent/disable`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: this.getHeaders(true)
         });
 
         if (!response.ok) {
@@ -1055,7 +1120,7 @@ export class HttpClient {
 
         const response = await fetch(`${this.baseUrl}/checkpoint/undo`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: this.getHeaders(true)
         });
 
         if (!response.ok) {
@@ -1078,7 +1143,9 @@ export class HttpClient {
     }> {
         this.outputChannel.appendLine('[Checkpoint] Listing checkpoints...');
 
-        const response = await fetch(`${this.baseUrl}/checkpoint/list?limit=${limit}`);
+        const response = await fetch(`${this.baseUrl}/checkpoint/list?limit=${limit}`, {
+            headers: this.getHeaders()
+        });
 
         if (!response.ok) {
             const error = await response.text();
@@ -1103,7 +1170,9 @@ export class HttpClient {
     }> {
         this.outputChannel.appendLine('[Checkpoint] Getting status...');
 
-        const response = await fetch(`${this.baseUrl}/checkpoint/status`);
+        const response = await fetch(`${this.baseUrl}/checkpoint/status`, {
+            headers: this.getHeaders()
+        });
 
         if (!response.ok) {
             const error = await response.text();
@@ -1131,7 +1200,7 @@ export class HttpClient {
 
         const response = await fetch(`${this.baseUrl}/checkpoint/backend`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getHeaders(true),
             body: JSON.stringify({ backend })
         });
 
@@ -1159,7 +1228,7 @@ export class HttpClient {
 
         const response = await fetch(`${this.baseUrl}/checkpoint/clear`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getHeaders(true),
             body: JSON.stringify({ keep_last: keepLast })
         });
 

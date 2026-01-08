@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.13.4 (January 2026)
+> **Current Version**: v1.13.5 (January 2026)
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
@@ -110,6 +110,13 @@ ppxai provides:
 - **Detailed error tracebacks** - Full stack traces for Gemini API errors
 - **UTF-8 BOM handling** - Windows config file compatibility
 - **Windows PowerShell installer** - `scripts/install.ps1` for one-line Windows install
+
+### Session Isolation ✅ (v1.13.5)
+- **Multi-client isolation** - VSCode and Web App get isolated sessions on same server
+- **Session ID header** - `X-Session-Id` HTTP header routes requests to per-session EngineClient
+- **Per-session state** - Conversation history, working directory, provider/model, consent state
+- **Session lifecycle** - Auto-expire after 1 hour, usage saved on cleanup
+- **Monitoring endpoint** - `GET /sessions/list` for debugging active sessions
 
 ---
 

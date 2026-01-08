@@ -5,6 +5,7 @@ This server provides:
 - SSE streaming for chat responses (POST /chat)
 - REST endpoints for configuration (providers, models, tools)
 - Health check endpoint
+- Session isolation for multi-client support (v1.14.0)
 
 Usage:
     uv run ppxai-server
@@ -16,12 +17,14 @@ import argparse
 import asyncio
 import json
 import sys
+import time
+import uuid
 from contextlib import asynccontextmanager
 from typing import Optional, AsyncGenerator
 
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -31,143 +34,203 @@ from ..engine import EngineClient, EventType
 from ..common.logger import get_logger
 from ..version import __version__
 
-# Global engine instance (managed by lifespan)
-engine: Optional[EngineClient] = None
+# Session management (v1.14.0)
+# Each client gets isolated state via session ID in X-Session-Id header
+# Session structure: {"engine": EngineClient, "created_at": float, "last_used": float, "lock": asyncio.Lock}
+sessions: dict[str, dict] = {}
+SESSION_TIMEOUT = 3600  # 1 hour - sessions expire after this period of inactivity
+
+# Default engine for backward compatibility (clients that don't send session ID)
+default_engine: Optional[EngineClient] = None
 
 # Server logger (v1.11.2)
 logger = get_logger("server")
 
-# Request serialization lock (v1.12.0)
-# Prevents concurrent chat requests from corrupting conversation state
-chat_lock: asyncio.Lock = None
+# Global lock for default engine (v1.12.0) - sessions have their own locks
+default_chat_lock: asyncio.Lock = None
 
 # Consent request tracking (Phase 1C: v1.11.0, v1.11.2)
-# Maps file_path -> asyncio.Future[tuple[bool, str]]
-pending_consent_requests: dict[str, asyncio.Future] = {}
-# Maps command -> asyncio.Future[tuple[bool, str]]
-pending_shell_consent_requests: dict[str, asyncio.Future] = {}
+# v1.14.0: Keyed by (session_id, file_path) for session isolation
+pending_consent_requests: dict[tuple[str, str], asyncio.Future] = {}
+# v1.14.0: Keyed by (session_id, command) for session isolation
+pending_shell_consent_requests: dict[tuple[str, str], asyncio.Future] = {}
 
 
-async def http_consent_handler(file_path: str) -> tuple[bool, str]:
-    """
-    Handle file edit consent request via HTTP (Phase 1C: v1.11.0).
-
-    This function:
-    1. Creates a Future to wait for user response
-    2. Stores it in pending_consent_requests
-    3. Returns when /consent endpoint resolves the Future
-
-    The consent request event is emitted via SSE in the event generator.
+def get_or_create_session(session_id: Optional[str]) -> tuple[str, EngineClient, asyncio.Lock]:
+    """Get existing session or create new one (v1.14.0).
 
     Args:
-        file_path: Path to file that needs editing
+        session_id: Session ID from X-Session-Id header, or None for default
 
     Returns:
-        tuple: (approved: bool, response: str)
+        tuple: (session_id, engine, lock)
     """
-    global pending_consent_requests
+    global sessions, default_engine, default_chat_lock
 
-    # Create a future for this consent request
-    future = asyncio.Future()
-    pending_consent_requests[file_path] = future
+    # No session ID = use default engine (backward compatibility)
+    if not session_id:
+        if default_engine is None:
+            raise HTTPException(status_code=503, detail="Engine not initialized")
+        return ("default", default_engine, default_chat_lock)
 
-    # Wait for response from /consent endpoint (with timeout)
-    try:
-        approved, response = await asyncio.wait_for(future, timeout=300.0)  # 5 min timeout
-        return (approved, response)
-    except asyncio.TimeoutError:
-        # Timeout - deny for safety
-        pending_consent_requests.pop(file_path, None)
-        return (False, 'n')
-    finally:
-        # Cleanup
-        pending_consent_requests.pop(file_path, None)
+    # Check for existing session
+    if session_id in sessions:
+        session = sessions[session_id]
+        session["last_used"] = time.time()
+        return (session_id, session["engine"], session["lock"])
 
-
-async def http_shell_consent_handler(command: str, working_dir: str, risk_level: str) -> tuple[bool, str]:
-    """
-    Handle shell command consent request via HTTP (v1.11.2).
-
-    This function:
-    1. Creates a Future for the consent decision
-    2. Stores it in pending_shell_consent_requests
-    3. Returns when /shell-consent endpoint resolves the Future
-
-    The consent request event is emitted via SSE in the event generator.
-
-    Args:
-        command: Shell command to execute
-        working_dir: Working directory for the command
-        risk_level: Risk level classification
-
-    Returns:
-        tuple: (approved: bool, response: str)
-    """
-    global pending_shell_consent_requests
-
-    # Create a future for this consent request
-    future: asyncio.Future[tuple[bool, str]] = asyncio.Future()
-    pending_shell_consent_requests[command] = future
-
-    # Wait for response from /shell-consent endpoint (with timeout)
-    try:
-        # Wait up to 60 seconds for user response
-        approved, response = await asyncio.wait_for(future, timeout=60.0)
-        return (approved, response)
-    except asyncio.TimeoutError:
-        # Timeout - deny for safety
-        pending_shell_consent_requests.pop(command, None)
-        return (False, 'n')
-    finally:
-        # Cleanup
-        pending_shell_consent_requests.pop(command, None)
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Manage application lifespan (startup/shutdown)."""
-    global engine, chat_lock
-    import time
-    startup_start = time.time()
-
-    # Startup: Initialize engine with consent callbacks (v1.11.0, v1.11.2)
-    logger.info("Server starting up - initializing EngineClient")
+    # Create new session
+    logger.info(f"Creating new session: {session_id}")
     engine = EngineClient(
-        consent_callback=http_consent_handler,
-        shell_consent_callback=http_shell_consent_handler
+        consent_callback=lambda fp: _session_consent_handler(session_id, fp),
+        shell_consent_callback=lambda cmd, wd, rl: _session_shell_consent_handler(session_id, cmd, wd, rl)
     )
-    logger.info(f"EngineClient initialized - provider: {engine.provider_name}, model: {engine.model}")
 
-    # Initialize chat lock (v1.12.0)
-    chat_lock = asyncio.Lock()
-    logger.info("Chat request lock initialized")
-
-    # Set default provider (tries perplexity first, falls back to gemini)
+    # Set default provider
     from ..config import get_available_providers
     providers = get_available_providers()
     if providers:
         engine.set_provider(providers[0])
 
+    sessions[session_id] = {
+        "engine": engine,
+        "created_at": time.time(),
+        "last_used": time.time(),
+        "lock": asyncio.Lock(),
+    }
+
+    return (session_id, engine, sessions[session_id]["lock"])
+
+
+async def cleanup_expired_sessions():
+    """Remove sessions that haven't been used recently (v1.14.0)."""
+    global sessions
+    now = time.time()
+    expired = [
+        sid for sid, session in sessions.items()
+        if now - session["last_used"] > SESSION_TIMEOUT
+    ]
+    for sid in expired:
+        logger.info(f"Cleaning up expired session: {sid}")
+        session = sessions.pop(sid)
+        # Save usage before cleanup
+        try:
+            session["engine"].session.save_usage_to_persistent_storage()
+        except Exception as e:
+            logger.warning(f"Failed to save usage for session {sid}: {e}")
+
+
+async def _session_consent_handler(session_id: str, file_path: str) -> tuple[bool, str]:
+    """Handle file edit consent request for a specific session (v1.14.0)."""
+    global pending_consent_requests
+
+    key = (session_id, file_path)
+    future = asyncio.Future()
+    pending_consent_requests[key] = future
+
+    try:
+        approved, response = await asyncio.wait_for(future, timeout=300.0)
+        return (approved, response)
+    except asyncio.TimeoutError:
+        pending_consent_requests.pop(key, None)
+        return (False, 'n')
+    finally:
+        pending_consent_requests.pop(key, None)
+
+
+async def _session_shell_consent_handler(session_id: str, command: str, working_dir: str, risk_level: str) -> tuple[bool, str]:
+    """Handle shell command consent request for a specific session (v1.14.0)."""
+    global pending_shell_consent_requests
+
+    key = (session_id, command)
+    future: asyncio.Future[tuple[bool, str]] = asyncio.Future()
+    pending_shell_consent_requests[key] = future
+
+    try:
+        approved, response = await asyncio.wait_for(future, timeout=60.0)
+        return (approved, response)
+    except asyncio.TimeoutError:
+        pending_shell_consent_requests.pop(key, None)
+        return (False, 'n')
+    finally:
+        pending_shell_consent_requests.pop(key, None)
+
+
+async def http_consent_handler(file_path: str) -> tuple[bool, str]:
+    """
+    Handle file edit consent request via HTTP (Phase 1C: v1.11.0).
+    Used by default engine (backward compatibility).
+    """
+    return await _session_consent_handler("default", file_path)
+
+
+async def http_shell_consent_handler(command: str, working_dir: str, risk_level: str) -> tuple[bool, str]:
+    """
+    Handle shell command consent request via HTTP (v1.11.2).
+    Used by default engine (backward compatibility).
+    """
+    return await _session_shell_consent_handler("default", command, working_dir, risk_level)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifespan (startup/shutdown)."""
+    global default_engine, default_chat_lock, sessions
+    import time
+    startup_start = time.time()
+
+    # Startup: Initialize default engine with consent callbacks (v1.11.0, v1.11.2)
+    logger.info("Server starting up - initializing default EngineClient")
+    default_engine = EngineClient(
+        consent_callback=http_consent_handler,
+        shell_consent_callback=http_shell_consent_handler
+    )
+    logger.info(f"EngineClient initialized - provider: {default_engine.provider_name}, model: {default_engine.model}")
+
+    # Initialize chat lock (v1.12.0)
+    default_chat_lock = asyncio.Lock()
+    logger.info("Chat request lock initialized")
+
+    # Initialize sessions dict
+    sessions = {}
+    logger.info("Session management initialized (v1.14.0)")
+
+    # Set default provider (tries perplexity first, falls back to gemini)
+    from ..config import get_available_providers
+    providers = get_available_providers()
+    if providers:
+        default_engine.set_provider(providers[0])
+
     startup_time = time.time() - startup_start
     logger.info(f"Server startup completed in {startup_time:.2f}s")
     print(f"ppxai HTTP server started ({startup_time:.2f}s)")
-    print(f"Provider: {engine.provider_name}")
-    print(f"Model: {engine.model}")
+    print(f"Provider: {default_engine.provider_name}")
+    print(f"Model: {default_engine.model}")
+    print(f"Session isolation: enabled (X-Session-Id header)")
 
     yield
 
     # Shutdown: Cleanup
     # v1.12.3: Save usage to persistent storage before shutdown
-    if engine and engine.session:
+    if default_engine and default_engine.session:
         try:
-            engine.session.save_usage_to_persistent_storage()
-            logger.info("Session usage saved to persistent storage")
+            default_engine.session.save_usage_to_persistent_storage()
+            logger.info("Default session usage saved to persistent storage")
         except Exception as e:
             logger.warning(f"Failed to save usage to persistent storage: {e}")
 
+    # v1.14.0: Save all session usage
+    for sid, session in sessions.items():
+        try:
+            session["engine"].session.save_usage_to_persistent_storage()
+            logger.info(f"Session {sid} usage saved to persistent storage")
+        except Exception as e:
+            logger.warning(f"Failed to save usage for session {sid}: {e}")
+
     pending_consent_requests.clear()
     pending_shell_consent_requests.clear()
-    engine = None
+    sessions.clear()
+    default_engine = None
     print("ppxai HTTP server stopped")
 
 
@@ -186,6 +249,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Session-Id"],  # v1.14.0: Allow clients to see session ID
 )
 
 
@@ -258,15 +322,15 @@ class ShellConsentRequest(BaseModel):
 
 # === SSE Streaming ===
 
-async def sse_event_generator(prompt: str) -> AsyncGenerator[str, None]:
+async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str = "default") -> AsyncGenerator[str, None]:
     """Generate SSE events from engine chat.
 
     SSE format: data: {json}\n\n
     Each event is yielded immediately with a sleep(0) to force flush.
     Phase 1C: Also checks consent_event_queue for pending consent requests.
     v1.11.2: Added debug logging for troubleshooting.
+    v1.14.0: Takes engine as parameter for session isolation.
     """
-    global engine
     if not engine:
         logger.error("SSE event generator called but engine not initialized")
         yield f"data: {json.dumps({'type': 'error', 'data': 'Engine not initialized'})}\n\n"
@@ -340,10 +404,13 @@ async def sse_event_generator(prompt: str) -> AsyncGenerator[str, None]:
 
 async def sse_coding_task_generator(
     prompt: str,
-    task_type: str
+    task_type: str,
+    engine: EngineClient
 ) -> AsyncGenerator[str, None]:
-    """Generate SSE events from engine coding task."""
-    global engine
+    """Generate SSE events from engine coding task.
+
+    v1.14.0: Takes engine as parameter for session isolation.
+    """
     if not engine:
         yield f"data: {json.dumps({'type': 'error', 'data': 'Engine not initialized'})}\n\n"
         return
@@ -389,7 +456,8 @@ async def health_check():
     return {
         "status": "ok",
         "version": __version__,
-        "engine": engine is not None,
+        "engine": default_engine is not None,
+        "sessions": len(sessions),  # v1.14.0
     }
 
 
@@ -406,11 +474,12 @@ async def get_paths_config():
 
 
 @app.get("/status")
-async def get_status():
-    """Get current engine status."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def get_status(x_session_id: Optional[str] = Header(None)):
+    """Get current engine status.
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     return {
         "provider": engine.provider_name,
@@ -418,11 +487,45 @@ async def get_status():
         "tools_enabled": engine.tools_enabled,
         "agent_mode": engine.agent_mode,  # v1.11.8
         "auto_inject_context": engine.auto_inject_context,
+        "session_id": session_id,  # v1.14.0
+    }
+
+
+@app.get("/sessions/list")
+async def list_active_sessions():
+    """List all active sessions (v1.14.0).
+
+    Returns information about currently active sessions for debugging/monitoring.
+    """
+    global sessions
+
+    # Cleanup expired sessions first
+    await cleanup_expired_sessions()
+
+    session_list = []
+    for sid, session in sessions.items():
+        session_list.append({
+            "session_id": sid,
+            "created_at": session["created_at"],
+            "last_used": session["last_used"],
+            "provider": session["engine"].provider_name,
+            "model": session["engine"].model,
+            "message_count": len(session["engine"].session.messages),
+            "working_dir": session["engine"].get_working_dir(),
+        })
+
+    return {
+        "sessions": session_list,
+        "count": len(session_list),
+        "default_engine_active": default_engine is not None,
     }
 
 
 @app.post("/chat")
-async def chat(request: ChatRequest):
+async def chat(
+    request: ChatRequest,
+    x_session_id: Optional[str] = Header(None)
+):
     """Chat endpoint with SSE streaming (v1.11.2: added logging, v1.12.0: added request locking).
 
     Returns Server-Sent Events stream with chat response chunks.
@@ -430,17 +533,17 @@ async def chat(request: ChatRequest):
     v1.12.0: Serializes chat requests to prevent concurrent execution from
     corrupting conversation state. If agent is running, subsequent requests
     will wait for completion.
-    """
-    global engine, chat_lock
-    if not engine:
-        logger.error("Chat endpoint called but engine not initialized")
-        raise HTTPException(status_code=503, detail="Engine not initialized")
 
-    logger.log_http_request("POST", "/chat", "vscode")
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    Each session has its own conversation history, working directory, and state.
+    """
+    session_id, engine, chat_lock = get_or_create_session(x_session_id)
+
+    logger.log_http_request("POST", "/chat", f"session={session_id}")
 
     # Acquire lock to serialize chat requests (v1.12.0)
     async with chat_lock:
-        logger.info("Chat lock acquired - processing request")
+        logger.info(f"Chat lock acquired for session {session_id} - processing request")
 
         # Set provider/model if specified
         if request.provider:
@@ -453,9 +556,9 @@ async def chat(request: ChatRequest):
         # Wrap generator to ensure lock is held during streaming
         async def locked_generator():
             """Generator that streams events while holding the lock."""
-            async for event in sse_event_generator(request.message):
+            async for event in sse_event_generator(request.message, engine, session_id):
                 yield event
-            logger.info("Chat request completed - releasing lock")
+            logger.info(f"Chat request completed for session {session_id} - releasing lock")
 
         return StreamingResponse(
             locked_generator(),
@@ -464,25 +567,28 @@ async def chat(request: ChatRequest):
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
                 "X-Accel-Buffering": "no",  # Disable nginx buffering
+                "X-Session-Id": session_id,  # v1.14.0: Return session ID
             }
         )
 
 
 @app.post("/coding_task")
-async def coding_task(request: CodingTaskRequest):
+async def coding_task(
+    request: CodingTaskRequest,
+    x_session_id: Optional[str] = Header(None)
+):
     """Coding task endpoint with SSE streaming (v1.12.0: added request locking).
 
     Supports task types: generate, debug, explain, test, docs, implement
 
     v1.12.0: Serializes coding task requests to prevent concurrent execution.
+    v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    global engine, chat_lock
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+    session_id, engine, chat_lock = get_or_create_session(x_session_id)
 
     # Acquire lock to serialize requests (v1.12.0)
     async with chat_lock:
-        logger.info("Coding task lock acquired - processing request")
+        logger.info(f"Coding task lock acquired for session {session_id} - processing request")
 
         # Set provider/model if specified
         if request.provider:
@@ -493,9 +599,9 @@ async def coding_task(request: CodingTaskRequest):
         # Wrap generator to ensure lock is held during streaming
         async def locked_generator():
             """Generator that streams events while holding the lock."""
-            async for event in sse_coding_task_generator(request.message, request.task_type):
+            async for event in sse_coding_task_generator(request.message, request.task_type, engine):
                 yield event
-            logger.info("Coding task completed - releasing lock")
+            logger.info(f"Coding task completed for session {session_id} - releasing lock")
 
         return StreamingResponse(
             locked_generator(),
@@ -504,6 +610,7 @@ async def coding_task(request: CodingTaskRequest):
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
                 "X-Accel-Buffering": "no",
+                "X-Session-Id": session_id,  # v1.14.0
             }
         )
 
@@ -511,11 +618,12 @@ async def coding_task(request: CodingTaskRequest):
 # === Provider/Model Management ===
 
 @app.get("/providers")
-async def get_providers():
-    """Get list of available providers."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def get_providers(x_session_id: Optional[str] = Header(None)):
+    """Get list of available providers.
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     providers = engine.list_providers()
     return {
@@ -538,11 +646,15 @@ async def get_providers():
 
 
 @app.post("/providers")
-async def set_provider(request: SetProviderRequest):
-    """Set the active provider."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def set_provider(
+    request: SetProviderRequest,
+    x_session_id: Optional[str] = Header(None)
+):
+    """Set the active provider.
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     success = engine.set_provider(request.provider)
     if not success:
@@ -559,11 +671,12 @@ async def set_provider(request: SetProviderRequest):
 
 
 @app.get("/models")
-async def get_models():
-    """Get list of models for current provider."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def get_models(x_session_id: Optional[str] = Header(None)):
+    """Get list of models for current provider.
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     models = engine.list_models()
     return {
@@ -581,11 +694,15 @@ async def get_models():
 
 
 @app.post("/models")
-async def set_model(request: SetModelRequest):
-    """Set the active model."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def set_model(
+    request: SetModelRequest,
+    x_session_id: Optional[str] = Header(None)
+):
+    """Set the active model.
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     success = engine.set_model(request.model)
     if not success:
@@ -600,11 +717,12 @@ async def set_model(request: SetModelRequest):
 # === Tools Management ===
 
 @app.get("/tools")
-async def get_tools():
-    """Get list of available tools."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def get_tools(x_session_id: Optional[str] = Header(None)):
+    """Get list of available tools.
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     tools = engine.list_tools()
 
@@ -626,11 +744,15 @@ async def get_tools():
 
 
 @app.post("/tools")
-async def set_tools(request: ToolsRequest):
-    """Enable or disable tools."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def set_tools(
+    request: ToolsRequest,
+    x_session_id: Optional[str] = Header(None)
+):
+    """Enable or disable tools.
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     if request.enabled:
         engine.enable_tools()
@@ -643,11 +765,15 @@ async def set_tools(request: ToolsRequest):
 
 
 @app.post("/tools/config")
-async def set_tools_config(request: ToolsConfigRequest):
-    """Configure tool settings (e.g., max_iterations)."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def set_tools_config(
+    request: ToolsConfigRequest,
+    x_session_id: Optional[str] = Header(None)
+):
+    """Configure tool settings (e.g., max_iterations).
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     success = engine.set_tool_config(request.setting, request.value)
     if not success:
@@ -661,14 +787,17 @@ async def set_tools_config(request: ToolsConfigRequest):
 
 
 @app.get("/tools/help/{tool_name}")
-async def get_tool_help(tool_name: str):
+async def get_tool_help(
+    tool_name: str,
+    x_session_id: Optional[str] = Header(None)
+):
     """Get detailed help for a specific tool.
 
     Returns tool definition including parameters, description, and usage examples.
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     if not engine.tools_enabled or not engine.tool_manager:
         raise HTTPException(status_code=400, detail="Tools not enabled")
@@ -693,14 +822,13 @@ async def get_tool_help(tool_name: str):
 # === Usage Statistics ===
 
 @app.get("/usage")
-async def get_usage():
+async def get_usage(x_session_id: Optional[str] = Header(None)):
     """Get token usage statistics for current session.
 
     Returns full usage including per-model breakdown (v1.12.2).
+    v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     return engine.get_usage()
 
@@ -711,7 +839,10 @@ class UsageDisplayModeRequest(BaseModel):
 
 
 @app.post("/usage/display")
-async def set_usage_display_mode(request: UsageDisplayModeRequest):
+async def set_usage_display_mode(
+    request: UsageDisplayModeRequest,
+    x_session_id: Optional[str] = Header(None)
+):
     """Set usage display mode for status line (v1.12.2).
 
     Args:
@@ -720,10 +851,10 @@ async def set_usage_display_mode(request: UsageDisplayModeRequest):
             - provider: Show current provider totals
             - model: Show current model totals
             - off: Hide usage from status line
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     valid_modes = {"session", "provider", "model", "off"}
     if request.mode not in valid_modes:
@@ -737,21 +868,23 @@ async def set_usage_display_mode(request: UsageDisplayModeRequest):
 
 
 @app.get("/usage/display")
-async def get_usage_display_mode():
-    """Get current usage display mode (v1.12.2)."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def get_usage_display_mode(x_session_id: Optional[str] = Header(None)):
+    """Get current usage display mode (v1.12.2).
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     return {"mode": engine.session.usage_display_mode}
 
 
 @app.post("/usage/reset")
-async def reset_usage():
-    """Reset all usage statistics to zero (v1.12.2)."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def reset_usage(x_session_id: Optional[str] = Header(None)):
+    """Reset all usage statistics to zero (v1.12.2).
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     engine.session.reset_usage()
     return {"success": True}
@@ -817,23 +950,29 @@ async def get_usage_sessions(limit: int = 20, offset: int = 0):
 # === Context Settings ===
 
 @app.get("/context/working_dir")
-async def get_working_dir():
-    """Get the current working directory."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def get_working_dir(x_session_id: Optional[str] = Header(None)):
+    """Get the current working directory.
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     import os
     path = engine.get_working_dir() or os.getcwd()
-    return {"path": path}
+    return {"path": path, "session_id": session_id}
 
 
 @app.post("/context/working_dir")
-async def set_working_dir(request: WorkingDirRequest):
-    """Set the working directory for file path resolution."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def set_working_dir(
+    request: WorkingDirRequest,
+    x_session_id: Optional[str] = Header(None)
+):
+    """Set the working directory for file path resolution.
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    Each session maintains its own working directory.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     import os
     # Expand tilde and resolve to absolute path
@@ -844,26 +983,32 @@ async def set_working_dir(request: WorkingDirRequest):
         raise HTTPException(status_code=400, detail=f"Not a valid directory: {path}")
 
     engine.set_working_dir(path)
-    return {"path": path, "success": True}
+    logger.info(f"Session {session_id} working directory set to: {path}")
+    return {"path": path, "success": True, "session_id": session_id}
 
 
 @app.post("/context/auto_inject")
-async def set_auto_inject(request: AutoInjectRequest):
-    """Enable or disable automatic context injection."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def set_auto_inject(
+    request: AutoInjectRequest,
+    x_session_id: Optional[str] = Header(None)
+):
+    """Enable or disable automatic context injection.
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     engine.set_auto_inject(request.enabled)
     return {"enabled": request.enabled, "success": True}
 
 
 @app.get("/context/auto_inject")
-async def get_auto_inject():
-    """Get auto-inject context status."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def get_auto_inject(x_session_id: Optional[str] = Header(None)):
+    """Get auto-inject context status.
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     return {"enabled": engine.get_auto_inject()}
 
@@ -871,13 +1016,14 @@ async def get_auto_inject():
 # === Session Management ===
 
 @app.get("/sessions")
-async def get_sessions():
-    """Get list of saved sessions."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def get_sessions(x_session_id: Optional[str] = Header(None)):
+    """Get list of saved sessions.
 
-    sessions = engine.list_sessions()
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
+
+    sessions_list = engine.list_sessions()
     return {
         "sessions": [
             {
@@ -888,28 +1034,36 @@ async def get_sessions():
                 "model": s.model,
                 "message_count": s.message_count,
             }
-            for s in sessions
+            for s in sessions_list
         ]
     }
 
 
 @app.post("/sessions/save")
-async def save_session(name: Optional[str] = None):
-    """Save current session."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def save_session(
+    name: Optional[str] = None,
+    x_session_id: Optional[str] = Header(None)
+):
+    """Save current session.
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     saved_name = engine.save_session(name)
     return {"name": saved_name}
 
 
 @app.post("/export")
-async def export_answer(request: Request):
-    """Export last answer to markdown."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def export_answer(
+    request: Request,
+    x_session_id: Optional[str] = Header(None)
+):
+    """Export last answer to markdown.
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     try:
         body = await request.json()
@@ -925,11 +1079,15 @@ async def export_answer(request: Request):
 
 
 @app.post("/sessions/load/{name}")
-async def load_session(name: str):
-    """Load a saved session."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def load_session(
+    name: str,
+    x_session_id: Optional[str] = Header(None)
+):
+    """Load a saved session.
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     success = engine.load_session(name)
     if not success:
@@ -939,11 +1097,12 @@ async def load_session(name: str):
 
 
 @app.post("/sessions/clear")
-async def clear_session():
-    """Clear current session."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def clear_session(x_session_id: Optional[str] = Header(None)):
+    """Clear current session.
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     engine.clear_history()
     return {"cleared": True}
@@ -955,7 +1114,10 @@ class FileReadRequest(BaseModel):
 
 
 @app.post("/files/read")
-async def read_file(request: FileReadRequest):
+async def read_file(
+    request: FileReadRequest,
+    x_session_id: Optional[str] = Header(None)
+):
     """Read file contents (v1.13.1 - for /show command).
 
     Reads a file from the working directory or absolute path.
@@ -966,10 +1128,10 @@ async def read_file(request: FileReadRequest):
 
     Returns:
         JSON: {"filename", "content", "size", "lines"}
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     from pathlib import Path
     import os
@@ -1051,7 +1213,7 @@ async def read_file(request: FileReadRequest):
 
 
 @app.post("/interrupt")
-async def interrupt_stream():
+async def interrupt_stream(x_session_id: Optional[str] = Header(None)):
     """Interrupt the current streaming response.
 
     This sets a flag that the engine will check during streaming.
@@ -1059,17 +1221,20 @@ async def interrupt_stream():
 
     Returns:
         JSON: {"interrupted": true}
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     engine.interrupt_stream()
     return {"interrupted": True}
 
 
 @app.post("/consent")
-async def respond_to_consent(request: ConsentRequest):
+async def respond_to_consent(
+    request: ConsentRequest,
+    x_session_id: Optional[str] = Header(None)
+):
     """Respond to a file edit consent request (Phase 1C: v1.11.0).
 
     This endpoint is called by the VSCode extension when the user
@@ -1081,8 +1246,13 @@ async def respond_to_consent(request: ConsentRequest):
 
     Returns:
         JSON: {"file_path": str, "response": str, "resolved": bool}
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
     """
     global pending_consent_requests
+
+    # Determine session ID (use default if not provided)
+    session_id = x_session_id or "default"
 
     file_path = request.file_path
     response = request.response.lower()
@@ -1091,9 +1261,10 @@ async def respond_to_consent(request: ConsentRequest):
     if response not in ['y', 'n', 'always', 'never']:
         raise HTTPException(status_code=400, detail=f"Invalid response: {response}. Must be y, n, always, or never")
 
-    # Find and resolve the pending request
-    if file_path in pending_consent_requests:
-        future = pending_consent_requests[file_path]
+    # Find and resolve the pending request (v1.14.0: keyed by session)
+    key = (session_id, file_path)
+    if key in pending_consent_requests:
+        future = pending_consent_requests[key]
         if not future.done():
             # Resolve the future with (approved, response)
             approved = response in ['y', 'always']
@@ -1109,7 +1280,10 @@ async def respond_to_consent(request: ConsentRequest):
 
 
 @app.post("/shell-consent")
-async def respond_to_shell_consent(request: ShellConsentRequest):
+async def respond_to_shell_consent(
+    request: ShellConsentRequest,
+    x_session_id: Optional[str] = Header(None)
+):
     """Respond to a shell command consent request (v1.11.2).
 
     This endpoint is called by the VSCode extension when the user
@@ -1121,8 +1295,13 @@ async def respond_to_shell_consent(request: ShellConsentRequest):
 
     Returns:
         JSON: {"command": str, "response": str, "resolved": bool}
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
     """
     global pending_shell_consent_requests
+
+    # Determine session ID (use default if not provided)
+    session_id = x_session_id or "default"
 
     command = request.command
     response = request.response.lower()
@@ -1131,9 +1310,10 @@ async def respond_to_shell_consent(request: ShellConsentRequest):
     if response not in ['y', 'n', 'always', 'never']:
         raise HTTPException(status_code=400, detail=f"Invalid response: {response}. Must be y, n, always, or never")
 
-    # Find and resolve the pending request
-    if command in pending_shell_consent_requests:
-        future = pending_shell_consent_requests[command]
+    # Find and resolve the pending request (v1.14.0: keyed by session)
+    key = (session_id, command)
+    if key in pending_shell_consent_requests:
+        future = pending_shell_consent_requests[key]
         if not future.done():
             # Resolve the future with (approved, response)
             approved = response in ['y', 'always']
@@ -1151,11 +1331,12 @@ async def respond_to_shell_consent(request: ShellConsentRequest):
 # === Agent Mode (v1.11.8) ===
 
 @app.get("/agent/status")
-async def get_agent_status():
-    """Get agent mode status (v1.11.8, v1.12.0)."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def get_agent_status(x_session_id: Optional[str] = Header(None)):
+    """Get agent mode status (v1.11.8, v1.12.0).
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     # Include checkpoint status in v1.12.0+
     checkpoint_status = engine.get_checkpoint_status()
@@ -1168,27 +1349,28 @@ async def get_agent_status():
 
 
 @app.get("/agent/config")
-async def get_agent_config():
-    """Get agent configuration (v1.11.9)."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def get_agent_config(x_session_id: Optional[str] = Header(None)):
+    """Get agent configuration (v1.11.9).
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     return engine.get_agent_config()
 
 
 @app.post("/agent/enable")
-async def enable_agent_mode():
+async def enable_agent_mode(x_session_id: Optional[str] = Header(None)):
     """Enable agent mode for autonomous task execution (v1.11.8).
 
     Agent mode automatically enables tools if not already enabled.
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     engine.enable_agent_mode()
-    logger.info("Agent mode enabled via API")
+    logger.info(f"Agent mode enabled via API for session {session_id}")
 
     return {
         "ok": True,
@@ -1198,14 +1380,15 @@ async def enable_agent_mode():
 
 
 @app.post("/agent/disable")
-async def disable_agent_mode():
-    """Disable agent mode (v1.11.8)."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def disable_agent_mode(x_session_id: Optional[str] = Header(None)):
+    """Disable agent mode (v1.11.8).
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     engine.disable_agent_mode()
-    logger.info("Agent mode disabled via API")
+    logger.info(f"Agent mode disabled via API for session {session_id}")
 
     return {
         "ok": True,
@@ -1216,21 +1399,23 @@ async def disable_agent_mode():
 # === Checkpoint Management (v1.12.0) ===
 
 @app.get("/checkpoint/status")
-async def get_checkpoint_status():
-    """Get checkpoint system status (v1.12.0)."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def get_checkpoint_status(x_session_id: Optional[str] = Header(None)):
+    """Get checkpoint system status (v1.12.0).
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     return engine.get_checkpoint_status()
 
 
 @app.post("/checkpoint/undo")
-async def undo_last_checkpoint():
-    """Undo the last checkpoint (revert agent task changes) (v1.12.0)."""
-    global engine
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def undo_last_checkpoint(x_session_id: Optional[str] = Header(None)):
+    """Undo the last checkpoint (revert agent task changes) (v1.12.0).
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     # v1.12.0: Allow undo regardless of agent mode - checkpoints from previous sessions should be undoable
     # Check if checkpoints are enabled
@@ -1284,7 +1469,7 @@ async def undo_last_checkpoint():
             detail="Failed to undo checkpoint (git revert may have failed)"
         )
 
-    logger.info("Checkpoint undo successful via API")
+    logger.info(f"Checkpoint undo successful via API for session {session_id}")
 
     return {
         "success": True,
@@ -1295,10 +1480,15 @@ async def undo_last_checkpoint():
 
 
 @app.get("/checkpoint/list")
-async def list_checkpoints(limit: int = 10):
-    """List recent checkpoints (v1.12.4)."""
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+async def list_checkpoints(
+    limit: int = 10,
+    x_session_id: Optional[str] = Header(None)
+):
+    """List recent checkpoints (v1.12.4).
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     checkpoints = engine.list_checkpoints(limit=limit)
     return {
@@ -1308,13 +1498,17 @@ async def list_checkpoints(limit: int = 10):
 
 
 @app.post("/checkpoint/backend")
-async def set_checkpoint_backend(request: dict):
+async def set_checkpoint_backend(
+    request: dict,
+    x_session_id: Optional[str] = Header(None)
+):
     """Set the checkpoint backend (v1.12.4).
 
     Body: {"backend": "git" | "file" | "auto" | "none"}
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     backend = request.get("backend")
     if not backend:
@@ -1341,13 +1535,17 @@ async def set_checkpoint_backend(request: dict):
 
 
 @app.post("/checkpoint/clear")
-async def clear_file_checkpoints(request: dict = None):
+async def clear_file_checkpoints(
+    request: dict = None,
+    x_session_id: Optional[str] = Header(None)
+):
     """Clear old file-based checkpoint snapshots (v1.12.4).
 
     Body (optional): {"keep_last": 0}
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     keep_last = 0
     if request:
@@ -1369,13 +1567,17 @@ async def clear_file_checkpoints(request: dict = None):
 
 
 @app.get("/checkpoint/info/{checkpoint_id}")
-async def get_checkpoint_info(checkpoint_id: str):
+async def get_checkpoint_info(
+    checkpoint_id: str,
+    x_session_id: Optional[str] = Header(None)
+):
     """Get details about a specific checkpoint.
 
     Supports prefix matching - e.g., "abc123" matches "abc123def456".
+
+    v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    if not engine:
-        raise HTTPException(status_code=503, detail="Engine not initialized")
+    session_id, engine, _ = get_or_create_session(x_session_id)
 
     checkpoints = engine.list_checkpoints(limit=20)
 
@@ -1541,6 +1743,9 @@ def run_server():
     print("  POST /debug-log     - Enable/disable debug logging")
     print("  GET  /health        - Health check")
     print("  GET  /status        - Current status")
+    print("  GET  /sessions/list - List active sessions (v1.14.0)")
+    print()
+    print("Session isolation: Use X-Session-Id header for isolated sessions")
     print()
 
     # Check if running as frozen executable (PyInstaller)

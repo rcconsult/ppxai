@@ -9,11 +9,25 @@
  */
 
 /**
+ * Generate a UUID v4
+ */
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+/**
  * API Client class for ppxai server
  */
 class ApiClient {
-    constructor(serverUrl = 'http://127.0.0.1:54320') {
+    constructor(serverUrl = 'http://127.0.0.1:54320', sessionId = null) {
         this.serverUrl = serverUrl;
+        // Generate unique session ID for this client instance (v1.14.0)
+        this.sessionId = sessionId || `webapp-${generateUUID()}`;
+        console.log(`[ApiClient] Session ID: ${this.sessionId}`);
     }
 
     /**
@@ -24,10 +38,32 @@ class ApiClient {
     }
 
     /**
+     * Get the session ID
+     */
+    getSessionId() {
+        return this.sessionId;
+    }
+
+    /**
+     * Get headers with session ID (v1.14.0)
+     */
+    getHeaders(includeContentType = false) {
+        const headers = {
+            'X-Session-Id': this.sessionId
+        };
+        if (includeContentType) {
+            headers['Content-Type'] = 'application/json';
+        }
+        return headers;
+    }
+
+    /**
      * Make a GET request
      */
     async get(endpoint) {
-        const response = await fetch(`${this.serverUrl}${endpoint}`);
+        const response = await fetch(`${this.serverUrl}${endpoint}`, {
+            headers: this.getHeaders()
+        });
         if (!response.ok) {
             const error = await response.json().catch(() => ({ detail: response.statusText }));
             throw new Error(error.detail || `HTTP ${response.status}`);
@@ -41,7 +77,7 @@ class ApiClient {
     async post(endpoint, body = {}) {
         const response = await fetch(`${this.serverUrl}${endpoint}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: this.getHeaders(true),
             body: JSON.stringify(body)
         });
         if (!response.ok) {

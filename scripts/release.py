@@ -33,6 +33,11 @@ import time
 from pathlib import Path
 from datetime import datetime
 
+# Fix Windows console encoding for Unicode output
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+
 # Project root directory
 PROJECT_ROOT = Path(__file__).parent.parent
 
