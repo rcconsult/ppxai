@@ -135,6 +135,7 @@ class PpxaiApp {
             streamingBadge: document.getElementById('streamingBadge'),
             usageBadge: document.getElementById('usageBadge'),
             clearBtn: document.getElementById('clearBtn'),
+            quitBtn: document.getElementById('quitBtn'),
             themeBtn: document.getElementById('themeBtn'),
             menuBtn: document.getElementById('menuBtn'),
             menuDropdown: document.getElementById('menuDropdown'),
@@ -195,10 +196,8 @@ class PpxaiApp {
         this.elements.agentBadge.addEventListener('click', () => this.toggleAgent());
         this.elements.undoBadge.addEventListener('click', () => this.undoCheckpoint());
         this.elements.clearBtn.addEventListener('click', () => this.clearConversation());
+        this.elements.quitBtn.addEventListener('click', () => this.handleQuit());
         this.elements.themeBtn.addEventListener('click', () => this.cycleTheme());
-
-        // Server badge click to toggle connection
-        this.elements.serverBadge.addEventListener('click', () => this.handleServerBadgeClick());
 
         // Folder badge click to change working directory
         this.elements.folderBadge.addEventListener('click', () => this.handleFolderBadgeClick());
@@ -343,45 +342,33 @@ class PpxaiApp {
         }
     }
 
-    async handleServerBadgeClick() {
-        const badge = this.elements.serverBadge;
-        if (badge.classList.contains('disconnected')) {
-            // Try to reconnect
-            await this.connectToServer();
-        } else if (badge.classList.contains('connected')) {
-            // Ask user if they want to stop the server (v1.13.6)
-            const confirmed = confirm('Stop the ppxai server?\n\nThe server will shutdown and you will need to restart it manually.');
-            if (confirmed) {
-                await this.shutdownServer();
-            }
-        }
-    }
-
     /**
-     * Shutdown the server via HTTP endpoint (v1.13.6)
+     * Handle Quit button - shutdown server and close tab (v1.13.6)
      */
-    async shutdownServer() {
+    async handleQuit() {
+        const confirmed = confirm('Stop the ppxai server and close this tab?');
+        if (!confirmed) return;
+
         try {
             this.updateServerStatus('connecting');
             this.elements.serverStatus.textContent = 'Stopping...';
 
-            const response = await fetch(`${this.serverUrl}/shutdown`, {
+            await fetch(`${this.serverUrl}/shutdown`, {
                 method: 'POST',
                 headers: this.getSessionHeaders(),
                 signal: AbortSignal.timeout(5000)
             });
-
-            if (response.ok) {
-                this.showSystemMessage('Server shutdown initiated. Restart with: ppxai-server');
-            }
         } catch (error) {
             // Expected - server shuts down before responding
             console.log('Server shutdown (connection closed as expected)');
         }
 
-        // Update UI to show disconnected
+        // Close the tab
+        window.close();
+
+        // If window.close() didn't work (not opened by script), show message
         this.updateServerStatus('disconnected');
-        this.showSystemMessage('Server stopped. To restart, run: ppxai-server');
+        this.showSystemMessage('Server stopped. You can close this tab.');
     }
 
     async handleFolderBadgeClick() {

@@ -346,6 +346,15 @@ body {
     color: var(--text-primary);
 }
 
+.header-btn.quit-btn {
+    color: var(--error-color);
+}
+
+.header-btn.quit-btn:hover {
+    background: var(--error-color);
+    color: white;
+}
+
 /* Menu dropdown */
 .menu-container {
     position: relative;
