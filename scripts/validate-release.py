@@ -9,6 +9,11 @@ import re
 import sys
 from pathlib import Path
 
+# Fix Windows console encoding for Unicode output
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+
 
 def check_version_in_file(file_path: Path, version: str, pattern: str) -> bool:
     """Check if version appears in file matching pattern."""
