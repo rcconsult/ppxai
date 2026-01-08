@@ -79,12 +79,14 @@ DOC_FILES = {
 
 
 def run_command(cmd: str, capture: bool = True, check: bool = True) -> subprocess.CompletedProcess:
-    """Run a shell command using bash."""
+    """Run a shell command (cross-platform)."""
     print(f"  $ {cmd}")
+    # Use bash on Unix, default shell on Windows
+    executable = None if sys.platform == "win32" else "/bin/bash"
     result = subprocess.run(
         cmd,
         shell=True,
-        executable="/bin/bash",  # Use bash for 'source' support
+        executable=executable,
         cwd=PROJECT_ROOT,
         capture_output=capture,
         text=True,
