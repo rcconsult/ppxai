@@ -2164,7 +2164,7 @@ If more work is needed, explain what you're doing next and use the appropriate t
         # Session info
         if self.engine_client and self.engine_client.session:
             session = self.engine_client.session
-            msg_count = len(session.history) if session.history else 0
+            msg_count = len(session.get_messages())
             console.print(f"  [cyan]Messages:[/cyan] {msg_count}")
 
             # Usage stats
