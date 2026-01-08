@@ -182,8 +182,9 @@ These are tracked but not prioritized:
 - **Per-provider tool config** - Enable/disable tools per provider
 - **Custom tools** - User-defined tools in `~/.ppxai/tools/`
 - ~~**Provider-aware tool guidance**~~ - ✅ Implemented in v1.13.3
-- **Cost display in `/usage`** - Show estimated $ cost alongside token counts
-- **Per-provider cost rates** - Configure pricing per model in JSON config
+- ~~**Cost display in `/usage`**~~ - ✅ Implemented (shows $ cost in session and reports)
+- ~~**Per-provider cost rates**~~ - ✅ Implemented in `config.py` (pricing per model)
+- **Standardized error handling** - Apply traceback pattern from Gemini to other providers
 - **`/rewind` browser** - Interactive checkpoint history viewer
 - **`/agent --dry-run`** - Preview changes without applying
 
