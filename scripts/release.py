@@ -102,7 +102,7 @@ def get_gh_token_cmd() -> str:
     token_file = PROJECT_ROOT / ".github/gh-tokenv.env"
     if token_file.exists():
         # Read token directly instead of using source
-        content = token_file.read_text()
+        content = token_file.read_text(encoding='utf-8')
         for line in content.split('\n'):
             if line.startswith('GH_TOKEN=') or line.startswith('export GH_TOKEN='):
                 # Extract the token value
@@ -129,7 +129,7 @@ def validate_version(version: str) -> str:
 def get_current_version() -> str:
     """Get current version from pyproject.toml."""
     pyproject = PROJECT_ROOT / "pyproject.toml"
-    content = pyproject.read_text()
+    content = pyproject.read_text(encoding='utf-8')
     match = re.search(r'version = "([^"]+)"', content)
     if match:
         return match.group(1)
@@ -149,14 +149,14 @@ def update_version_in_file(filepath: str, pattern: str, replacement: str, versio
         print(f"  ⚠️  File not found: {filepath}")
         return False
 
-    content = full_path.read_text()
+    content = full_path.read_text(encoding='utf-8')
     new_content = re.sub(pattern, replacement.format(version=version), content)
 
     if content == new_content:
         print(f"  ⏭️  No change needed: {filepath}")
         return False
 
-    full_path.write_text(new_content)
+    full_path.write_text(new_content, encoding='utf-8')
     print(f"  ✅ Updated: {filepath}")
     return True
 
@@ -172,11 +172,11 @@ def update_vsix_references(version: str) -> int:
         if not full_path.exists():
             continue
 
-        content = full_path.read_text()
+        content = full_path.read_text(encoding='utf-8')
         new_content = re.sub(vsix_pattern, vsix_replacement, content)
 
         if content != new_content:
-            full_path.write_text(new_content)
+            full_path.write_text(new_content, encoding='utf-8')
             print(f"  ✅ Updated vsix refs: {filepath}")
             count += 1
 
@@ -189,7 +189,7 @@ def update_package_lock(version: str):
     if not lock_file.exists():
         return
 
-    content = lock_file.read_text()
+    content = lock_file.read_text(encoding='utf-8')
     data = json.loads(content)
 
     changed = False
@@ -203,14 +203,14 @@ def update_package_lock(version: str):
             changed = True
 
     if changed:
-        lock_file.write_text(json.dumps(data, indent=2) + "\n")
+        lock_file.write_text(json.dumps(data, indent=2) + "\n", encoding='utf-8')
         print(f"  ✅ Updated: vscode-extension/package-lock.json")
 
 
 def update_claude_md(version: str, date: str):
     """Update CLAUDE.md with new version info."""
     filepath = PROJECT_ROOT / "CLAUDE.md"
-    content = filepath.read_text()
+    content = filepath.read_text(encoding='utf-8')
 
     # Update current version line
     content = re.sub(
@@ -231,7 +231,7 @@ def update_claude_md(version: str, date: str):
         content
     )
 
-    filepath.write_text(content)
+    filepath.write_text(content, encoding='utf-8')
     print(f"  ✅ Updated: CLAUDE.md")
 
 
@@ -284,7 +284,7 @@ This is a drop-in replacement for the previous version. No configuration changes
 - **Full Changelog:** [CHANGELOG.md](../CHANGELOG.md)
 """
 
-    notes_file.write_text(template)
+    notes_file.write_text(template, encoding='utf-8')
     print(f"  ✅ Created: {notes_file.name}")
     print(f"  ⚠️  Please edit the release notes before continuing!")
 
@@ -296,7 +296,7 @@ def check_release_notes_not_template(version: str) -> bool:
     if not notes_file.exists():
         return True  # Will be created later, that's OK
 
-    content = notes_file.read_text()
+    content = notes_file.read_text(encoding='utf-8')
 
     # Check for template placeholders
     template_markers = [
@@ -435,7 +435,7 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"""
 
     # Write commit message to temp file to handle multiline
     msg_file = PROJECT_ROOT / ".git/RELEASE_COMMIT_MSG"
-    msg_file.write_text(commit_msg)
+    msg_file.write_text(commit_msg, encoding='utf-8')
 
     run_command(f'git commit -F "{msg_file}"')
     msg_file.unlink()
@@ -954,7 +954,7 @@ def main():
     # Update ROADMAP.md current version
     roadmap_path = PROJECT_ROOT / "ROADMAP.md"
     if roadmap_path.exists():
-        content = roadmap_path.read_text()
+        content = roadmap_path.read_text(encoding='utf-8')
         # Pattern: > **Current Version**: v1.11.9 (December 2025)
         month_year = datetime.now().strftime("%B %Y")  # e.g., "December 2025"
         content = re.sub(
@@ -962,7 +962,7 @@ def main():
             f'> **Current Version**: v{version} ({month_year})',
             content
         )
-        roadmap_path.write_text(content)
+        roadmap_path.write_text(content, encoding='utf-8')
         print(f"  ✅ Updated: ROADMAP.md")
     record_step("Update Versions")
 
