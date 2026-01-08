@@ -61,7 +61,7 @@ Download from [Releases](../../releases):
 - `ppxai-{platform}` - Terminal UI
 - `ppxai-server-{platform}` - HTTP server for VSCode
 - `ppxai-desktop-{platform}` - Desktop Web App
-- `ppxai-1.13.4.vsix` - VSCode extension
+- `ppxai-1.13.5.vsix` - VSCode extension
 - `ppxai-*-macos-arm64.dmg` - macOS app bundle installer
 
 ### Option 3: From Source

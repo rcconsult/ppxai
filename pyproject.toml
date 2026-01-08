@@ -1,6 +1,6 @@
 [project]
 name = "ppxai"
-version = "1.13.4"
+version = "1.13.5"
 description = "Terminal UI for interacting with multiple AI providers"
 readme = "README.md"
 license = { text = "MIT" }
