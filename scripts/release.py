@@ -90,6 +90,8 @@ def run_command(cmd: str, capture: bool = True, check: bool = True) -> subproces
         cwd=PROJECT_ROOT,
         capture_output=capture,
         text=True,
+        encoding='utf-8',
+        errors='replace',  # Replace undecodable chars instead of failing
     )
     if check and result.returncode != 0:
         print(f"  ❌ Command failed: {result.stderr or result.stdout}")
