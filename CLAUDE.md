@@ -207,4 +207,6 @@ code --install-extension ppxai-X.Y.Z.vsix
 
 ## Commit Guidelines
 
-Do NOT include Claude credits or co-authored-by lines. Keep commit messages clean.
+- Do NOT include Claude credits or co-authored-by lines. Keep commit messages clean.
+- **Never commit sensitive information:** tokens, API keys, passwords, hostnames, usernames, file paths with usernames, or other environment-specific details.
+- In PRs and documentation, use generic placeholders (e.g., `your-token`, `/path/to/project`) instead of real values.
