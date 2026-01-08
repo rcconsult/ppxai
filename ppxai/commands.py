@@ -2147,7 +2147,7 @@ If more work is needed, explain what you're doing next and use the appropriate t
 
         # Working directory
         if self.engine_client:
-            cwd = self.engine_client.working_dir or "[dim]not set[/dim]"
+            cwd = self.engine_client.get_working_dir() or "[dim]not set[/dim]"
             console.print(f"  [cyan]Working Dir:[/cyan] {cwd}")
 
         # Tools status
