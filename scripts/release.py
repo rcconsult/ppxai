@@ -46,6 +46,10 @@ VERSION_FILES = {
         "pattern": r'__version__ = "[\d.]+"',
         "replacement": '__version__ = "{version}"',
     },
+    "ppxai/version.py": {
+        "pattern": r'__version__ = "[\d.]+"',
+        "replacement": '__version__ = "{version}"',
+    },
     "vscode-extension/package.json": {
         "pattern": r'"version": "[\d.]+"',
         "replacement": '"version": "{version}"',
