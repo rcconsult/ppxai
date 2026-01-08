@@ -29,17 +29,21 @@ class ApplyPatchTool(BaseTool):
         """
         self.engine = engine
         self.name = "apply_patch"
-        self.description = "Apply a unified diff patch to a file"
+        self.description = (
+            "Apply a unified diff patch to a file. REQUIRED: Both 'file_path' AND 'unified_diff' must be provided. "
+            "For new files, use '*** Add File: filename' syntax. For existing files, use standard unified diff with @@ hunks. "
+            "To create a new file, use insert_text tool with line_number=1 instead - it's simpler."
+        )
         self.parameters = {
             "type": "object",
             "properties": {
                 "file_path": {
                     "type": "string",
-                    "description": "Path to file to patch"
+                    "description": "REQUIRED: Absolute or relative path to file to patch (e.g., 'src/main.py' or 'C:/project/file.txt')"
                 },
                 "unified_diff": {
                     "type": "string",
-                    "description": "Unified diff format patch"
+                    "description": "REQUIRED: Unified diff format patch starting with '*** Begin Patch' or standard @@ hunks"
                 }
             },
             "required": ["file_path", "unified_diff"]
@@ -190,7 +194,11 @@ class ReplaceBlockTool(BaseTool):
 
             # Validate file exists
             if not path.exists():
-                return f"Error: File not found: {file_path}"
+                return (
+                    f"Error: File not found: {file_path}\n"
+                    f"Tip: Use read_file or list_directory to verify the path. "
+                    f"For new files, use insert_text with line_number=1."
+                )
             if not path.is_file():
                 return f"Error: Not a file: {file_path}"
 
@@ -425,7 +433,10 @@ class DeleteLinesTool(BaseTool):
 
             # Validate file exists
             if not path.exists():
-                return f"Error: File not found: {file_path}"
+                return (
+                    f"Error: File not found: {file_path}\n"
+                    f"Tip: Use read_file or list_directory to verify the path exists."
+                )
             if not path.is_file():
                 return f"Error: Not a file: {file_path}"
 
@@ -438,9 +449,9 @@ class DeleteLinesTool(BaseTool):
 
             # Validate line numbers
             if start_line < 1 or start_line > len(lines):
-                return f"Error: Invalid start line {start_line} (file has {len(lines)} lines)"
+                return f"Error: Invalid start line {start_line} (file has {len(lines)} lines). Use read_file to check file contents first."
             if end_line < start_line or end_line > len(lines):
-                return f"Error: Invalid end line {end_line} (must be >= {start_line} and <= {len(lines)})"
+                return f"Error: Invalid end line {end_line} (must be >= {start_line} and <= {len(lines)}). Use read_file to check file length first."
 
             try:
                 # Convert to 0-indexed (inclusive end)

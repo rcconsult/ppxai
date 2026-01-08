@@ -46,7 +46,9 @@ class ShellExecuteTool(BaseTool):
             "Commands run with a 30-second timeout. "
             "IMPORTANT: Do NOT use for file editing (sed, awk, perl, etc.) - use file editing tools instead (replace_block, insert_text, delete_lines, apply_patch). "
             "Do NOT use recursive commands like 'ls -R', 'find', 'tree' - they produce too much output. "
-            "For file listing use list_directory. For file search use search_files. For reading files use read_file."
+            "For file listing use list_directory. For file search use search_files. For reading files use read_file. "
+            "WINDOWS NOTE: Bash-specific syntax like heredocs (<<EOF), $(), and bash builtins do NOT work on Windows. "
+            "Use PowerShell or simple commands instead. To create files, use insert_text or apply_patch tools."
         )
         self.parameters = {
             "type": "object",
