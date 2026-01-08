@@ -725,8 +725,9 @@ def get_tui_config() -> Dict[str, Any]:
     {
         "tui": {
             "theme": "standard",  // or "tron-legacy", "matrix", "nord"
-            "show_timestamps": true,
-            "show_header": true
+            "show_version": true,
+            "show_cwd": true,
+            "show_datetime": false
         }
     }
 
@@ -735,8 +736,9 @@ def get_tui_config() -> Dict[str, Any]:
     """
     defaults = {
         "theme": "standard",
-        "show_timestamps": True,
-        "show_header": True,
+        "show_version": True,
+        "show_cwd": True,
+        "show_datetime": False,
     }
 
     # Check if config has tui section
