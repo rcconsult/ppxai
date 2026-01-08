@@ -26,7 +26,7 @@ ppxai provides:
 
 ### Multi-Provider ✅
 - Perplexity AI (with citations)
-- Google Gemini (2.0 Flash, 2.5 Pro)
+- Google Gemini (2.0 Flash, 2.5 Flash, 2.5 Pro)
 - OpenAI (GPT-4o, o1)
 - OpenRouter (Claude, 100+ models)
 - Local models (Ollama, vLLM)
@@ -85,8 +85,7 @@ ppxai provides:
 - Premium web search tool for custom providers (vLLM, Ollama)
 - Priority fallback: Perplexity Sonar → Gemini Grounding → DuckDuckGo (free)
 - SSL_VERIFY environment variable for corporate proxy support
-- Custom provider tool calling tests (8 new tests)
-- Documentation updates: test counts, Gemini capabilities, deprecated models
+- Custom provider tool calling tests
 - Install: `pip install ppxai[gemini]` for Gemini Grounding support
 
 ### Desktop Web App ✅ (v1.13.1)
@@ -110,6 +109,7 @@ ppxai provides:
 - **Provider options** - New `options` section in JSON config for provider-specific settings
 - **Detailed error tracebacks** - Full stack traces for Gemini API errors
 - **UTF-8 BOM handling** - Windows config file compatibility
+- **Windows PowerShell installer** - `scripts/install.ps1` for one-line Windows install
 
 ---
 
@@ -121,35 +121,13 @@ ppxai provides:
 - VSCode extension VSIX packaging
 - PyPI publishing via CI
 
-**Note:** CI/CD exists but wasn't visible to external code reviewers due to tree depth limits.
-
 ---
 
-## v1.14.x Series - Session Bootstrap
+## v1.14.x Series - Session Bootstrap & Context
 
 **Theme**: Reproducible starting point for every session
 
 **User value**: Teams share project context. Consistent AI behavior across sessions.
-
-### Architecture (Researched)
-
-The implementation follows a separation of concerns pattern:
-
-1. **Discovery** - `ContextInjector.find_bootstrap_files()` in `ppxai/engine/context.py`
-   - Locates AGENTS.md or CLAUDE.md in the directory hierarchy
-   - AGENTS.md takes priority over CLAUDE.md when both exist
-
-2. **Caching** - `EngineClient._bootstrap_context` in `ppxai/engine/client.py`
-   - Loads once on startup, caches until explicit reload
-   - Tracks sources via `_bootstrap_sources: List[str]`
-
-3. **Injection** - `EngineClient._build_system_messages()`
-   - Prepends bootstrap context to system prompt
-   - Integrates with existing tool prompt logic
-
-4. **Status API** - `EngineClient.get_bootstrap_status()`
-   - Returns `{loaded: bool, sources: List[str], char_count: int}`
-   - Used by `/context show` (TUI) and `GET /context` (HTTP)
 
 ### v1.14.0 - AGENTS.md Support
 
@@ -160,21 +138,13 @@ The implementation follows a separation of concerns pattern:
 | **System prompt injection** | Append project context to system prompt | Planned |
 | **TUI + VSCode support** | Both interfaces load context via EngineClient | Planned |
 
-**Files to modify:**
-- `ppxai/engine/context.py` - Add `find_bootstrap_files()` method
-- `ppxai/engine/client.py` - Add bootstrap context loading and injection
-- `tests/test_bootstrap_context.py` - New test file
+**Architecture:**
+1. **Discovery** - `ContextInjector.find_bootstrap_files()` locates AGENTS.md/CLAUDE.md
+2. **Caching** - `EngineClient._bootstrap_context` loads once, caches until reload
+3. **Injection** - `EngineClient._build_system_messages()` prepends to system prompt
+4. **Status API** - `EngineClient.get_bootstrap_status()` returns loaded sources
 
-**Test cases:**
-```python
-test_finds_agents_md_in_working_dir()
-test_finds_claude_md_as_fallback()
-test_agents_md_takes_priority_over_claude_md()
-test_context_injected_into_system_prompt()
-test_context_cached_between_chat_calls()
-```
-
-### v1.14.1 - File Precedence
+### v1.14.1 - File Precedence & Merge
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -182,13 +152,6 @@ test_context_cached_between_chat_calls()
 | **Project context** | Load from project root AGENTS.md | Planned |
 | **Subdirectory context** | Load from current working directory | Planned |
 | **Merge strategy** | Global → Project → Subdir (concatenate) | Planned |
-
-**Precedence order:**
-1. `~/.ppxai/AGENTS.md` (global defaults)
-2. `{project_root}/AGENTS.md` (project-specific)
-3. `{cwd}/AGENTS.md` (subdirectory overrides)
-
-**Merge behavior:** Concatenate all found files with `\n\n---\n\n` separator.
 
 ### v1.14.2 - `/context` Commands
 
@@ -198,66 +161,15 @@ test_context_cached_between_chat_calls()
 | **`/context reload`** | Refresh context from disk | Planned |
 | **`/context edit`** | Open context file in editor | Planned |
 | **`/context clear`** | Temporarily disable context | Planned |
-| **Tab autocomplete** | Autocomplete for subcommands | Planned |
 
-**Note:** Using `/context` instead of `/agents` - clearer naming, avoids confusion with agent mode.
-
-**Files to modify:**
-- `ppxai/commands.py` - Add `/context` command handler
-- `ppxai/common/commands.py` - Add to COMMANDS list for autocomplete
-- `ppxai/server/http.py` - Add `GET /context`, `POST /context/reload`
-- `vscode-extension/src/httpClient.ts` - Add context API calls
-
-### v1.14.3 - Context Enhancements
+### v1.14.3 - Enhanced Context Providers
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **Context size display** | Show token count in status bar | Planned |
+| **`@url` provider** | Fetch and inject web content | Planned |
+| **`@clipboard`** | Inject clipboard contents | Planned |
 | **Conditional sections** | `<!-- if provider:gemini -->` blocks | Planned |
 | **Include directive** | `<!-- include: ./docs/style.md -->` | Planned |
-| **HTTP endpoint** | `GET /context` for VSCode | Planned |
-
-**Conditional syntax example:**
-```markdown
-<!-- if provider:gemini -->
-Use Google Search Grounding for real-time information.
-<!-- endif -->
-
-<!-- if provider:perplexity -->
-Cite sources using [1], [2] notation.
-<!-- endif -->
-```
-
----
-
-## v1.14.x Series - Enhanced Context Providers
-
-**Theme**: More ways to inject context
-
-### v1.14.0 - @url Context
-
-| Feature | Description | Priority |
-|---------|-------------|----------|
-| **`@url` provider** | Fetch and inject web content | High |
-| **HTML→Markdown** | Convert fetched HTML to markdown | High |
-| **Caching** | Cache fetched URLs for session | Medium |
-| **Rate limiting** | Prevent abuse of web fetching | Medium |
-
-### v1.14.1 - @clipboard Context
-
-| Feature | Description | Priority |
-|---------|-------------|----------|
-| **`@clipboard`** | Inject clipboard contents | Medium |
-| **Image support** | Handle clipboard images (base64) | Low |
-| **TUI + VSCode** | Both interfaces support clipboard | Medium |
-
-### v1.14.2 - Recovery Features
-
-| Feature | Description | Priority |
-|---------|-------------|----------|
-| **`/rewind` browser** | Interactive checkpoint history viewer | Medium |
-| **`/agent --dry-run`** | Preview changes without applying | Medium |
-| **Diff preview** | Show what would change before commit | Medium |
 
 ---
 
@@ -265,14 +177,15 @@ Cite sources using [1], [2] notation.
 
 These are tracked but not prioritized:
 
-- **Textual TUI migration** - Only if current TUI becomes limiting (~20-40 hrs)
+- **Textual TUI migration** - Only if current TUI becomes limiting
 - **libghostty SDK** - Watch for stable C API (expected 2026)
 - **Per-provider tool config** - Enable/disable tools per provider
 - **Custom tools** - User-defined tools in `~/.ppxai/tools/`
 - ~~**Provider-aware tool guidance**~~ - ✅ Implemented in v1.13.3
-- **Cost display in `/usage`** - Show estimated $ cost alongside token counts (feedback from AI code review)
+- **Cost display in `/usage`** - Show estimated $ cost alongside token counts
 - **Per-provider cost rates** - Configure pricing per model in JSON config
-- **Standardized error handling** - Apply detailed traceback logging pattern from Gemini provider to `openai_compat.py` and `perplexity.py` for consistent debugging (feedback from AI code review)
+- **`/rewind` browser** - Interactive checkpoint history viewer
+- **`/agent --dry-run`** - Preview changes without applying
 
 ### Jupyter Kernel Tool (Data Science Workflow)
 
@@ -287,26 +200,12 @@ Enable AI to execute cells in a running JupyterLab kernel with real-time output 
 
 **Use case:** Data developer asks AI to "run this notebook cell by cell" and watches output appear in JupyterLab UI in real-time.
 
-**Implementation sketch:**
-```python
-class JupyterKernelTool(BaseTool):
-    name = "execute_notebook_cell"
-
-    async def execute(self, notebook_path: str, cell_index: int):
-        # Connect to kernel, execute cell, stream outputs as SSE events
-```
-
 ### Image Preview in Chat Panel
 
 Current `/show` command opens files in VSCode text editor. Need image preview for:
 - **Formats:** PNG, JPG, JPEG, GIF, SVG, WebP
 - **Display:** Inline in chat panel or split pane preview
 - **Use case:** AI generates chart (e.g., matplotlib), user wants to see it without leaving chat
-
-**Implementation options:**
-1. **Inline base64** - Embed `<img src="data:image/png;base64,...">` in chat
-2. **VSCode webview** - Use `vscode.Uri.file()` with webview resource mapping
-3. **Side panel** - Dedicated image preview panel alongside chat
 
 ---
 
@@ -324,7 +223,7 @@ ppxai is **not** trying to be:
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ```bash
-uv run pytest tests/ -v       # Run tests (525 passing)
+uv run pytest tests/ -v       # Run tests (583 passing)
 uv run ppxai-server           # Start server for VSCode dev
 ```
 
@@ -335,9 +234,9 @@ uv run ppxai-server           # Start server for VSCode dev
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md).
 
 For archived planning documents:
-- [docs/archive/](docs/archive/) - Legacy documentation
+- [docs/archive/](docs/archive/) - Legacy documentation (to be removed in v1.14.x)
 - [docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.md) - Agentic workflow design
 
 ---
 
-**Last Updated**: January 7, 2026
+**Last Updated**: January 8, 2026
