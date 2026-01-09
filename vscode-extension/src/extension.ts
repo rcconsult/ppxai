@@ -518,6 +518,28 @@ export async function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ppxai.reloadConfig', async () => {
+            const running = await isServerRunning();
+            if (!running) {
+                vscode.window.showWarningMessage('ppxai-server is not running');
+                return;
+            }
+            try {
+                const result = await backend.reloadConfig();
+                if (result.success) {
+                    vscode.window.showInformationMessage(
+                        `Configuration reloaded from ${result.config_path || 'defaults'}`
+                    );
+                } else {
+                    vscode.window.showErrorMessage(`Failed to reload config: ${result.message}`);
+                }
+            } catch (error) {
+                vscode.window.showErrorMessage(`Failed to reload config: ${error}`);
+            }
+        })
+    );
+
     // Handle terminal close events to track server state
     context.subscriptions.push(
         vscode.window.onDidCloseTerminal((terminal) => {

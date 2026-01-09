@@ -34,7 +34,7 @@ from ppxai.config import (
     get_tool_config,
     get_tool_pricing,
     get_shell_config,
-    _find_config_file,
+    find_config_file,
     _load_json_config,
     _validate_provider_config,
     _build_legacy_custom_provider,
@@ -299,21 +299,21 @@ class TestConfigLoading:
                 _load_json_config(Path(f.name))
         os.unlink(f.name)
 
-    def test_find_config_file_env_override(self):
+    def testfind_config_file_env_override(self):
         """Test PPXAI_CONFIG_FILE env var takes precedence."""
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
             f.write("{}")
             f.flush()
             with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": f.name}):
-                found = _find_config_file()
+                found = find_config_file()
                 assert found == Path(f.name)
         os.unlink(f.name)
 
-    def test_find_config_file_nonexistent_env(self):
+    def testfind_config_file_nonexistent_env(self):
         """Test nonexistent PPXAI_CONFIG_FILE is ignored."""
         with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": "/nonexistent/path.json"}):
             # Should not return the nonexistent path
-            found = _find_config_file()
+            found = find_config_file()
             if found:
                 assert found != Path("/nonexistent/path.json")
 

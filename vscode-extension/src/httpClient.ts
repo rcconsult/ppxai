@@ -195,6 +195,20 @@ export class HttpClient {
     }
 
     /**
+     * Reload configuration from file without restarting server
+     */
+    async reloadConfig(): Promise<{ success: boolean; message: string; config_path: string | null }> {
+        const response = await fetch(`${this.baseUrl}/config/reload`, {
+            method: 'POST',
+            headers: this.getHeaders()
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to reload config: ${response.statusText}`);
+        }
+        return response.json() as Promise<{ success: boolean; message: string; config_path: string | null }>;
+    }
+
+    /**
      * Get current engine status
      */
     async getStatus(): Promise<EngineStatus> {

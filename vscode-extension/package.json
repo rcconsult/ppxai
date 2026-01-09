@@ -84,6 +84,12 @@
         "title": "Server Status",
         "category": "ppxai",
         "icon": "$(server-environment)"
+      },
+      {
+        "command": "ppxai.reloadConfig",
+        "title": "Reload Configuration",
+        "category": "ppxai",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {

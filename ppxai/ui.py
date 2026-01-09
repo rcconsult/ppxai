@@ -34,6 +34,10 @@ Welcome to the AI terminal interface!
 - `/usage` - Show current session usage statistics
 - `/clear` - Clear conversation history
 - `/model` - Change model
+- `/status` - Show status info
+- `/status datetime` - Toggle date/time in status bar
+- `/status version` - Toggle version in status bar
+- `/status cwd` - Toggle working dir in status bar
 - `/help` - Show this help message
 - `/quit` or `/exit` - Exit the application
 

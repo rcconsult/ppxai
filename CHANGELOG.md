@@ -5,6 +5,28 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.7] - 2026-01-09
+
+### Added - Hot Reload Configuration
+
+- **`/config reload` command** - Reload config without restarting TUI
+- **`POST /config/reload` endpoint** - Server-side config reload for web clients
+- **VSCode `ppxai.reloadConfig` command** - Reload config from VSCode command palette
+- **Web app "Reload Config" menu** - Reload config from web app settings menu
+
+### Added - TUI Improvements
+
+- **`/status` toggles that save** - `/status datetime|version|cwd` now toggles and persists to config
+- **TUI icon** - New bold `>_` symbol for better taskbar visibility
+
+### Fixed
+
+- **`provider_id` error** - Fixed `'EngineClient' object has no attribute 'provider_id'`
+- **`get_total_usage()` error** - Fixed `'SessionManager' object has no attribute 'get_total_usage'`
+- **Private function** - Renamed `_find_config_file()` to public `find_config_file()`
+
+---
+
 ## [1.13.6] - 2026-01-08
 
 ### Added - Server Lifecycle & Configuration

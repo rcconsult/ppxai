@@ -593,6 +593,34 @@ async def get_paths_config():
     return _get_paths_config()
 
 
+@app.post("/config/reload")
+async def reload_config_endpoint():
+    """Reload configuration from file without restarting server.
+
+    This allows hot-reloading of provider prompts, settings, and other
+    configuration changes from ppxai-config.json.
+
+    Returns:
+        success: Whether reload succeeded
+        message: Status message
+        config_path: Path to loaded config file
+    """
+    from ..config import reload_config, find_config_file
+
+    try:
+        reload_config()
+        config_path = find_config_file()
+        logger.info(f"Configuration reloaded from {config_path}")
+        return {
+            "success": True,
+            "message": "Configuration reloaded successfully",
+            "config_path": str(config_path) if config_path else None
+        }
+    except Exception as e:
+        logger.error(f"Failed to reload config: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to reload config: {e}")
+
+
 @app.get("/status")
 async def get_status(x_session_id: Optional[str] = Header(None)):
     """Get current engine status.

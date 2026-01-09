@@ -169,7 +169,7 @@ DEFAULT_CAPABILITIES = {
 # Configuration Loading
 # =============================================================================
 
-def _find_config_file() -> Optional[Path]:
+def find_config_file() -> Optional[Path]:
     """Find the configuration file following the search order.
 
     Search order:
@@ -315,7 +315,7 @@ def load_config() -> Dict[str, Any]:
         - default_provider: Default provider ID
         - providers: Dict of all provider configurations
     """
-    config_path = _find_config_file()
+    config_path = find_config_file()
 
     if config_path:
         # Load from JSON file
@@ -801,6 +801,58 @@ def get_tui_theme() -> str:
     return get_tui_config().get("theme", "standard")
 
 
+def set_tui_config(key: str, value: Any) -> bool:
+    """Set a TUI configuration value and save to config file.
+
+    Args:
+        key: Configuration key (e.g., "show_datetime", "theme")
+        value: Value to set
+
+    Returns:
+        True if saved successfully, False otherwise.
+    """
+    import json
+
+    # Find or create config file path
+    config_path = find_config_file()
+    if config_path is None:
+        # Create user config file
+        config_path = USER_CONFIG_FILE
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Load existing config or create empty
+    if config_path.exists():
+        try:
+            with open(config_path, "r", encoding="utf-8-sig") as f:
+                config_data = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            config_data = {}
+    else:
+        config_data = {}
+
+    # Ensure tui section exists
+    if "tui" not in config_data:
+        config_data["tui"] = {}
+
+    # Set the value
+    config_data["tui"][key] = value
+
+    # Save config file
+    try:
+        with open(config_path, "w", encoding="utf-8") as f:
+            json.dump(config_data, f, indent=2)
+
+        # Update in-memory config
+        global _config
+        if "tui" not in _config:
+            _config["tui"] = {}
+        _config["tui"][key] = value
+
+        return True
+    except IOError:
+        return False
+
+
 # =============================================================================
 # Paths Configuration (v1.13.2 - Cross-platform binary discovery)
 # =============================================================================
@@ -985,7 +1037,7 @@ def get_system_prompt(provider: str = None) -> str:
     if provider is None:
         provider = MODEL_PROVIDER
 
-    config_path = _find_config_file()
+    config_path = find_config_file()
     if config_path:
         json_config = _load_json_config(config_path)
 
@@ -1019,7 +1071,7 @@ def get_system_prompt_mode(provider: str = None) -> str:
     if provider is None:
         provider = MODEL_PROVIDER
 
-    config_path = _find_config_file()
+    config_path = find_config_file()
     if config_path:
         json_config = _load_json_config(config_path)
 

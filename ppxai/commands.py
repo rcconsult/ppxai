@@ -2102,6 +2102,8 @@ If more work is needed, explain what you're doing next and use the appropriate t
             self.handle_checkpoint(args)
         elif command == "/status":
             self.handle_status(args)
+        elif command == "/config":
+            self.handle_config(args)
         else:
             console.print(f"[red]Unknown command: {user_input}[/red]")
             console.print("[yellow]Type /help for available commands[/yellow]\n")
@@ -2117,7 +2119,7 @@ If more work is needed, explain what you're doing next and use the appropriate t
             /status cwd          - Toggle working directory display
             /status datetime     - Toggle date/time display
         """
-        from ppxai.config import get_tui_config, get_provider_config
+        from ppxai.config import get_tui_config, get_provider_config, set_tui_config
         from ppxai.version import __version__
 
         parts = args.strip().split() if args else []
@@ -2126,12 +2128,19 @@ If more work is needed, explain what you're doing next and use the appropriate t
         if parts:
             subcommand = parts[0].lower()
             if subcommand in ("version", "cwd", "datetime"):
-                # Toggle the setting - note these require config file modification
-                # For now, just show current status and suggest config edit
+                # Toggle the setting
                 tui_config = get_tui_config()
-                current_value = tui_config.get(f"show_{subcommand}", subcommand != "datetime")
-                console.print(f"\n[cyan]show_{subcommand}:[/cyan] {'[green]true[/green]' if current_value else '[dim]false[/dim]'}")
-                console.print(f"[dim]To change, edit ppxai-config.json: \"tui\": {{ \"show_{subcommand}\": {'false' if current_value else 'true'} }}[/dim]\n")
+                key = f"show_{subcommand}"
+                current_value = tui_config.get(key, subcommand != "datetime")
+                new_value = not current_value
+
+                if set_tui_config(key, new_value):
+                    status = "[green]enabled[/green]" if new_value else "[dim]disabled[/dim]"
+                    console.print(f"\n[cyan]{key}:[/cyan] {status}")
+                    console.print("[dim]Setting saved to config file.[/dim]\n")
+                else:
+                    console.print(f"\n[red]Failed to save setting.[/red]")
+                    console.print(f"[dim]Try manually editing ppxai-config.json: \"tui\": {{ \"{key}\": {str(new_value).lower()} }}[/dim]\n")
                 return
 
         # Show comprehensive status
@@ -2168,7 +2177,7 @@ If more work is needed, explain what you're doing next and use the appropriate t
             console.print(f"  [cyan]Messages:[/cyan] {msg_count}")
 
             # Usage stats
-            total_usage = session.get_total_usage()
+            total_usage = session.get_usage()
             if total_usage:
                 console.print(f"  [cyan]Tokens:[/cyan] {total_usage.get('prompt_tokens', 0)}↓ / {total_usage.get('completion_tokens', 0)}↑")
                 cost = total_usage.get('estimated_cost', 0.0)
@@ -2183,3 +2192,41 @@ If more work is needed, explain what you're doing next and use the appropriate t
         console.print(f"  show_datetime: {'[green]true[/green]' if tui_config.get('show_datetime', False) else '[dim]false[/dim]'}")
 
         console.print()
+
+    def handle_config(self, args: str = ""):
+        """Handle /config command for configuration management.
+
+        Usage:
+            /config reload    - Reload config from file without restarting
+            /config path      - Show config file path
+        """
+        from ppxai.config import reload_config, find_config_file
+
+        parts = args.strip().split() if args else []
+
+        if not parts:
+            console.print("\n[cyan]Config Commands:[/cyan]")
+            console.print("  /config reload  - Reload config from file")
+            console.print("  /config path    - Show config file path\n")
+            return
+
+        subcommand = parts[0].lower()
+
+        if subcommand == "reload":
+            try:
+                reload_config()
+                console.print("\n[green]Configuration reloaded successfully.[/green]")
+                console.print("[dim]Provider prompts and settings updated from config file.[/dim]\n")
+            except Exception as e:
+                console.print(f"\n[red]Failed to reload config: {e}[/red]\n")
+
+        elif subcommand == "path":
+            config_path = find_config_file()
+            if config_path:
+                console.print(f"\n[cyan]Config file:[/cyan] {config_path}\n")
+            else:
+                console.print("\n[dim]No config file found. Using defaults.[/dim]\n")
+
+        else:
+            console.print(f"[red]Unknown config subcommand: {subcommand}[/red]")
+            console.print("[dim]Use: /config reload | /config path[/dim]\n")

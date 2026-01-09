@@ -136,6 +136,7 @@ class PpxaiApp {
             usageBadge: document.getElementById('usageBadge'),
             clearBtn: document.getElementById('clearBtn'),
             quitBtn: document.getElementById('quitBtn'),
+            reloadConfigBtn: document.getElementById('reloadConfigBtn'),
             themeBtn: document.getElementById('themeBtn'),
             menuBtn: document.getElementById('menuBtn'),
             menuDropdown: document.getElementById('menuDropdown'),
@@ -213,6 +214,7 @@ class PpxaiApp {
         this.elements.saveSessionBtn.addEventListener('click', () => this.saveSession());
         this.elements.exportBtn.addEventListener('click', () => this.exportAnswer());
         this.elements.debugLogBtn.addEventListener('click', () => this.toggleDebugLog());
+        this.elements.reloadConfigBtn.addEventListener('click', () => this.reloadConfig());
         this.elements.settingsBtn.addEventListener('click', () => this.showSettings());
 
         // Settings modal
@@ -369,6 +371,27 @@ class PpxaiApp {
         // If window.close() didn't work (not opened by script), show message
         this.updateServerStatus('disconnected');
         this.showSystemMessage('Server stopped. You can close this tab.');
+    }
+
+    /**
+     * Reload configuration from file without restarting server
+     */
+    async reloadConfig() {
+        try {
+            const resp = await fetch(`${this.serverUrl}/config/reload`, {
+                method: 'POST',
+                headers: this.getSessionHeaders()
+            });
+            if (resp.ok) {
+                const result = await resp.json();
+                this.showSystemMessage(`Configuration reloaded from ${result.config_path || 'defaults'}`);
+            } else {
+                this.showSystemMessage('Failed to reload configuration', 'error');
+            }
+        } catch (error) {
+            console.error('Failed to reload config:', error);
+            this.showSystemMessage('Failed to reload configuration', 'error');
+        }
     }
 
     async handleFolderBadgeClick() {

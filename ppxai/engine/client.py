@@ -1170,8 +1170,8 @@ class EngineClient:
 
                     # v1.13.6: Apply custom system prompt from config
                     from ..config import get_system_prompt, get_system_prompt_mode
-                    system_prompt = get_system_prompt(self.provider_id)
-                    prompt_mode = get_system_prompt_mode(self.provider_id)
+                    system_prompt = get_system_prompt(self.provider_name)
+                    prompt_mode = get_system_prompt_mode(self.provider_name)
 
                     if prompt_mode == "replace":
                         # Replace tool prompt entirely with custom system prompt
