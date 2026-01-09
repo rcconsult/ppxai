@@ -8,16 +8,19 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current Version:** v1.13.7
 
-**Post-v1.13.5 fixes (on master, pending next release):**
-- **FIX:** Release script Windows compatibility for `gh` CLI commands
-  - Uses Python environment variables instead of Unix shell syntax
-- **FIX:** UTF-8 encoding for release scripts on Windows
-  - `release.py` and `validate-release.py` now configure stdout/stderr for UTF-8
+**v1.13.7 highlights:**
+- **NEW:** `/config reload` command - hot-reload `ppxai-config.json` without restart
+- **FIX:** `/status` command errors (session methods, working directory)
+- **FIX:** Gemini grounding pricing in example config ($35/1K requests)
+
+**v1.13.6 included:**
+- Release script Windows compatibility for `gh` CLI commands
+- UTF-8 encoding for release scripts on Windows
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.13.5
-- VSCode extension (package.json): v1.13.5
-- Git tag: v1.13.5
+- Python package (pyproject.toml): v1.13.7
+- VSCode extension (package.json): v1.13.7
+- Git tag: v1.13.7
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
 
