@@ -142,20 +142,30 @@ ppxai provides:
 
 **User value**: Teams share project context. Consistent AI behavior across sessions.
 
+**Prerequisite (v1.13.6):** System prompts are already supported via `ppxai-config.json`:
+- Global: `system_prompt` at root level
+- Per-provider: `providers.<name>.system_prompt`
+- Modes: `system_prompt_mode` = "prepend" | "append" | "replace"
+- Location: `ppxai/config.py:get_system_prompt()`, `ppxai/engine/client.py:1171-1186`
+
 ### v1.14.0 - AGENTS.md Support
 
 | Feature | Description | Status |
 |---------|-------------|--------|
 | **AGENTS.md loading** | Load project instructions from AGENTS.md on startup | Planned |
 | **CLAUDE.md fallback** | Support CLAUDE.md as alternative filename | Planned |
-| **System prompt injection** | Append project context to system prompt | Planned |
+| **Bootstrap context injection** | Inject project context into system prompt (respects existing mode) | Planned |
 | **TUI + VSCode support** | Both interfaces load context via EngineClient | Planned |
 
 **Architecture:**
 1. **Discovery** - `ContextInjector.find_bootstrap_files()` locates AGENTS.md/CLAUDE.md
 2. **Caching** - `EngineClient._bootstrap_context` loads once, caches until reload
-3. **Injection** - `EngineClient._build_system_messages()` prepends to system prompt
+3. **Injection** - Modify existing system prompt assembly at `client.py:1171-1186`:
+   - Bootstrap context is prepended to existing `system_prompt` (before mode is applied)
+   - Order: `[bootstrap_context] + [config system_prompt] + [tool_prompt]` (for prepend mode)
 4. **Status API** - `EngineClient.get_bootstrap_status()` returns loaded sources
+
+**No conflicts:** Bootstrap context extends the existing system prompt pipeline, doesn't replace it.
 
 ### v1.14.1 - File Precedence & Merge
 

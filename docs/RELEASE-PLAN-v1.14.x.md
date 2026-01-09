@@ -70,6 +70,20 @@ The v1.14.x series introduces "Session Bootstrap" - the ability to automatically
 └─────────────────────────────────────────────────────────────┘
 ```
 
+## Prerequisites (Already Implemented)
+
+**System Prompt Support (v1.13.6):**
+The system prompt infrastructure is already in place:
+- `ppxai/config.py:get_system_prompt()` - retrieves system prompt from config
+- `ppxai/config.py:get_system_prompt_mode()` - retrieves mode (prepend/append/replace)
+- `ppxai/engine/client.py:1171-1186` - assembles final prompt with tool instructions
+- Config: `system_prompt` (global) and `providers.<name>.system_prompt` (per-provider)
+
+**No Conflicts:** Bootstrap context will be injected *before* the existing system prompt,
+so it works alongside user-configured prompts without breaking existing behavior.
+
+---
+
 ## Release Schedule
 
 ### v1.14.0 - AGENTS.md Support (Core)
@@ -80,8 +94,18 @@ The v1.14.x series introduces "Session Bootstrap" - the ability to automatically
 |---------|------|-------------|
 | `find_bootstrap_files()` | `ppxai/engine/context.py` | Discover AGENTS.md/CLAUDE.md |
 | `load_bootstrap_context()` | `ppxai/engine/client.py` | Load and cache content |
-| `_build_system_messages()` | `ppxai/engine/client.py` | Inject into system prompt |
+| Modify prompt assembly | `ppxai/engine/client.py:1171-1186` | Prepend bootstrap to system prompt |
 | `get_bootstrap_status()` | `ppxai/engine/client.py` | Status API for UI |
+
+**Prompt Assembly Order:**
+```
+[Bootstrap Context (AGENTS.md)]
+---
+[Config System Prompt (if any)]
+---
+[Tool Instructions (if tools enabled)]
+```
+This respects the existing `system_prompt_mode` for config prompts.
 
 **Test Cases:**
 ```python
