@@ -1,7 +1,7 @@
 # Context Injection Guide
 
-**Version:** v1.13.0+
-**Last Updated:** 2026-01-03
+**Version:** v1.13.8+
+**Last Updated:** 2026-01-11
 
 ## Overview
 
@@ -76,6 +76,10 @@ diff --git a/file.py b/file.py
 diff --git a/file.js b/file.js
 ...
 ```
+
+**Limits:**
+- Maximum 100KB of diff content (truncated if larger)
+- UI shows "(truncated)" indicator when content was cut
 
 **Edge Cases:**
 - Returns `None` if not in a git repository

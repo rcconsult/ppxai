@@ -18,6 +18,9 @@
 | [Provider Setup Guide](PROVIDER_SETUP.md) | Configure AI providers (OpenAI, Gemini, Perplexity) |
 | [Autorouter Config](AUTOROUTER-CONFIG.md) | Automatic model routing for coding tasks |
 | [Custom Tool Development](CUSTOM_TOOL_DEVELOPMENT_GUIDE.md) | Create your own tools for ppxai |
+| [Agent Mode Guide](AGENT_MODE_GUIDE.md) | Autonomous multi-step task execution |
+| [Checkpoint Guide](CHECKPOINT_GUIDE.md) | Undo and rollback agent operations |
+| [Installation Guide](INSTALLATION.md) | Install ppxai on any platform |
 
 ### Technical Reference
 
@@ -53,6 +56,10 @@ ppxai includes built-in tools for AI-powered development:
 | `get_datetime` | Get current date/time |
 | `get_weather` | Get weather information |
 | `calculator` | Perform calculations |
+| `container_list` | List Docker/Podman containers |
+| `container_logs` | Get container logs |
+| `pod_list` | List Kubernetes pods |
+| `kubectl_apply` | Apply Kubernetes manifests |
 
 ### Enabling Tools
 
@@ -190,5 +197,5 @@ A: Type `@filename`, `@git`, or `@tree` in your messages. See [Context Injection
 
 ---
 
-**Current Version**: v1.13.5
-**Last Updated**: 2026-01-08
+**Current Version**: v1.13.8
+**Last Updated**: 2026-01-11

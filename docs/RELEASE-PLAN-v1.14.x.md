@@ -1,8 +1,8 @@
 # Release Plan: v1.14.x Series
 
 **Created:** January 5, 2026
-**Last Updated:** January 8, 2026
-**Status:** Planning (after v1.13.5 completion)
+**Last Updated:** January 11, 2026
+**Status:** Planning (after v1.13.8 completion)
 **Branch:** TBD
 
 ---

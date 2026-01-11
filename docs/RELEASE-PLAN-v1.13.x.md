@@ -1,8 +1,8 @@
 # Release Plan: v1.13.x Series
 
 **Created:** January 3, 2026
-**Last Updated:** January 8, 2026
-**Status:** v1.13.5 Released (Series Complete)
+**Last Updated:** January 11, 2026
+**Status:** v1.13.8 Released (Series Complete)
 **Branch:** `master`
 
 ---
@@ -141,6 +141,46 @@ See [RELEASE-NOTES-v1.13.5.md](RELEASE-NOTES-v1.13.5.md) for full details.
 
 ---
 
+### v1.13.6 - Release Script Fixes ✅ RELEASED
+
+**Released:** January 9, 2026
+
+**Scope:**
+- Windows `gh` CLI compatibility for release script
+- UTF-8 encoding fixes for release scripts on all platforms
+
+See [RELEASE-NOTES-v1.13.6.md](RELEASE-NOTES-v1.13.6.md) for full details.
+
+---
+
+### v1.13.7 - Config & Status Fixes ✅ RELEASED
+
+**Released:** January 9, 2026
+
+**Scope:**
+- `/config reload` command for hot-reloading configuration
+- `/status` command fixes for session methods and working directory
+- Gemini grounding pricing correction in example config
+
+See [RELEASE-NOTES-v1.13.7.md](RELEASE-NOTES-v1.13.7.md) for full details.
+
+---
+
+### v1.13.8 - Data Visualization & Container Tools ✅ RELEASED
+
+**Released:** January 11, 2026
+
+**Scope:**
+- **Data Visualization:** CSV/TSV table viewer, JSON/YAML tree viewer with sorting, filtering, expand/collapse
+- **Container Management Tools:** 16 tools for Docker, Podman, Kubernetes CLI
+- **View Toggle:** Rendered/Source toggle for data file previews (TUI + Web)
+- **E2E Testing:** 55 Playwright browser tests for data viewer components
+- **Bug Fixes:** @filename autocomplete in Web App and VSCode, autocomplete popup hide on send, @git truncation
+
+See [RELEASE-NOTES-v1.13.8.md](RELEASE-NOTES-v1.13.8.md) for full details.
+
+---
+
 ## Series Summary
 
 | Version | Theme | Key Features |
@@ -151,9 +191,12 @@ See [RELEASE-NOTES-v1.13.5.md](RELEASE-NOTES-v1.13.5.md) for full details.
 | v1.13.3 | Gemini Fixes | Tools + grounding, system instruction |
 | v1.13.4 | Error Handling | SSL certs, LLM guidance, error tips |
 | v1.13.5 | Session Isolation | Multi-client isolation, session lifecycle |
+| v1.13.6 | Release Script | Windows gh CLI, UTF-8 encoding |
+| v1.13.7 | Config & Status | Hot reload config, status fixes |
+| v1.13.8 | Data Visualization | CSV/JSON viewers, container tools, E2E tests |
 
-**Total New Tests:** 147+ across the series
-**Final Test Count:** 583 passing
+**Total New Tests:** 200+ across the series
+**Final Test Count:** 605 passing (Python) + 55 E2E Playwright tests
 
 ---
 
@@ -178,5 +221,8 @@ See [RELEASE-PLAN-v1.14.x.md](RELEASE-PLAN-v1.14.x.md) for the updated roadmap.
 - [v1.13.3 Release Notes](RELEASE-NOTES-v1.13.3.md)
 - [v1.13.4 Release Notes](RELEASE-NOTES-v1.13.4.md)
 - [v1.13.5 Release Notes](RELEASE-NOTES-v1.13.5.md)
+- [v1.13.6 Release Notes](RELEASE-NOTES-v1.13.6.md)
+- [v1.13.7 Release Notes](RELEASE-NOTES-v1.13.7.md)
+- [v1.13.8 Release Notes](RELEASE-NOTES-v1.13.8.md)
 - [ROADMAP.md](../ROADMAP.md)
 - [v1.14.x Release Plan](RELEASE-PLAN-v1.14.x.md)

@@ -22,7 +22,7 @@ curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | 
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-config
 
 # Install specific version
-curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --version v1.13.5
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --version v1.13.8
 
 # Install with VSCode extension
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-extension
@@ -68,7 +68,7 @@ Invoke-WebRequest -Uri "https://raw.githubusercontent.com/rcconsult/ppxai/master
 .\install.ps1
 
 # Install specific version
-.\install.ps1 -Version v1.13.5
+.\install.ps1 -Version v1.13.8
 
 # Force overwrite existing installation
 .\install.ps1 -Force
@@ -262,7 +262,7 @@ code --install-extension ~/.local/bin/ppxai-1.13.2.vsix
 
 The VSCode extension requires `ppxai-server` to be running. There are two ways to start it:
 
-**Option 1: Automatic (v1.13.5+)**
+**Option 1: Automatic (v1.13.8+)**
 
 The extension auto-starts `ppxai-server` when you open the chat panel. Just open the ppxai chat and wait a few seconds.
 
@@ -281,7 +281,7 @@ The server runs on `http://127.0.0.1:54320` by default.
 ### Extension Features
 
 - **Chat Panel** - Full AI chat interface in the sidebar
-- **Server Control** - Auto-start server from the UI (v1.13.5+)
+- **Server Control** - Auto-start server from the UI (v1.13.8+)
 - **Tools** - Enable AI tools (file reading, shell commands, etc.)
 - **Agent Mode** - Autonomous task execution with checkpoints
 - **Code Actions** - Explain, generate tests, generate docs from context menu
@@ -409,7 +409,7 @@ Make sure the server is running:
 ppxai-server
 ```
 
-Or wait for the VSCode extension to auto-start it (v1.13.5+).
+Or wait for the VSCode extension to auto-start it (v1.13.8+).
 
 ### "No API key configured"
 
