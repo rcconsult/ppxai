@@ -141,6 +141,8 @@ ppxai provides:
 - **Format auto-detection** - Extension-based and content sniffing for data files
 - **Visualization config** - `max_rows`, `page_size`, `tree_depth`, `csv_delimiter` options
 - **Optional dependencies** - `pip install ppxai[data]` for YAML/HCL parsing
+- **`@filename` autocomplete fix** - Web App and VSCode now show real file suggestions via `/files/search`
+- **E2E Playwright tests** - 55 browser tests for data viewer components
 
 ---
 

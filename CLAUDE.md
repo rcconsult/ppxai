@@ -13,6 +13,8 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **NEW:** Container Management Tools - Docker, Podman, and Kubernetes CLI integration (16 tools)
 - **NEW:** Rendered/Source toggle for data file previews in TUI and Web
 - **NEW:** E2E Playwright tests for web components (55 tests)
+- **FIX:** `@filename` autocomplete now works in Web App and VSCode (uses `/files/search` endpoint)
+- **FIX:** Autocomplete popup hides when sending messages
 
 **v1.13.7 included:**
 - `/config reload` command - hot-reload `ppxai-config.json` without restart

@@ -61,6 +61,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `pyyaml>=6.0` - YAML file parsing
   - `python-hcl2>=4.3` - HCL/Terraform file parsing
 
+### Added - Testing
+
+- **E2E Playwright tests** - 55 browser tests for DataTableViewer and DataTreeViewer components
+- **CI Playwright integration** - GitHub Actions runs E2E tests with Chromium
+
+### Fixed
+
+- **`@filename` autocomplete in Web App** - Now uses `/files/search` server endpoint for real file suggestions
+- **`@filename` autocomplete in VSCode** - `@git` and `@tree` now appear in autocomplete suggestions
+- **Autocomplete popup persistence** - Popup now hides when sending a message (fixed async race condition)
+- **`@git` truncation** - Git diff content now properly truncates at 100KB limit (was only setting flag, not truncating)
+
 ---
 
 ## [1.13.7] - 2026-01-09
