@@ -53,6 +53,13 @@ class PpxaiApp {
         this.verbose = false;
         this.lastCheckpoint = null;
 
+        // Preview panel state (v1.13.8)
+        this.previewViewMode = 'rendered';  // 'rendered' or 'source'
+        this.previewContent = null;         // Raw file content
+        this.previewFilename = null;        // Current filename
+        this.previewDataFormat = null;      // Detected data format
+        this.currentDataViewer = null;      // Current viewer instance
+
         // Track current assistant message for correct ordering
         this.currentAssistantMessage = null;
 
@@ -161,6 +168,9 @@ class PpxaiApp {
             previewClose: document.getElementById('previewClose'),
             previewCode: document.getElementById('previewCode'),
             previewMarkdown: document.getElementById('previewMarkdown'),
+            previewDataViewer: document.getElementById('previewDataViewer'),
+            previewViewToggle: document.getElementById('previewViewToggle'),
+            resizeHandle: document.getElementById('resizeHandle'),
 
             // Modals
             consentModal: document.getElementById('consentModal'),
@@ -235,6 +245,14 @@ class PpxaiApp {
 
         // Preview panel close button
         this.elements.previewClose.addEventListener('click', () => this.hidePreviewPanel());
+
+        // Preview panel view toggle (v1.13.8)
+        if (this.elements.previewViewToggle) {
+            this.elements.previewViewToggle.addEventListener('click', () => this.togglePreviewViewMode());
+        }
+
+        // Preview panel resize handle
+        this.initResizeHandle();
 
         // Quick commands - use event delegation on container
         this.elements.messagesContainer.addEventListener('click', (e) => {
@@ -1745,22 +1763,53 @@ class PpxaiApp {
     }
 
     async searchFilesForAutocomplete(query) {
-        // Note: In the web UI, we can't directly search files.
-        // We'd need a server endpoint for this. For now, show common patterns.
+        // v1.13.8: Use server endpoint for file search
         this.autocompleteType = 'file';
-        this.autocompleteItems = [
-            { label: '@git', description: 'Include git diff', value: '@git' },
-            { label: '@tree', description: 'Include project structure', value: '@tree' },
-        ];
 
-        if (query && query.length > 0) {
-            // Filter based on query
-            this.autocompleteItems = this.autocompleteItems.filter(item =>
-                item.label.toLowerCase().includes(query.toLowerCase())
-            );
+        try {
+            const response = await fetch(`${this.serverUrl}/files/search`, {
+                method: 'POST',
+                headers: this.getSessionHeaders(true),
+                body: JSON.stringify({ query: query || '', max_results: 20 })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.autocompleteItems = data.files.map(file => ({
+                    label: file.name.startsWith('@') ? file.name : `@${file.name}`,
+                    description: file.path,
+                    value: file.name.startsWith('@') ? file.name : `@${file.name}`
+                }));
+            } else {
+                // Fallback to special refs only
+                this.autocompleteItems = [
+                    { label: '@git', description: 'Include git diff', value: '@git' },
+                    { label: '@tree', description: 'Include project structure', value: '@tree' },
+                ];
+                if (query) {
+                    this.autocompleteItems = this.autocompleteItems.filter(item =>
+                        item.label.toLowerCase().includes(query.toLowerCase())
+                    );
+                }
+            }
+        } catch (error) {
+            // Fallback to special refs on error
+            this.autocompleteItems = [
+                { label: '@git', description: 'Include git diff', value: '@git' },
+                { label: '@tree', description: 'Include project structure', value: '@tree' },
+            ];
+            if (query) {
+                this.autocompleteItems = this.autocompleteItems.filter(item =>
+                    item.label.toLowerCase().includes(query.toLowerCase())
+                );
+            }
         }
 
         this.autocompleteIndex = 0;
+        // v1.13.8: Don't show if input was cleared (message sent during async request)
+        if (!this.elements.messageInput.value.includes('@')) {
+            return;
+        }
         this.showAutocomplete();
     }
 
@@ -1959,6 +2008,10 @@ class PpxaiApp {
     }
 
     showPreviewPanel(filename, content, size, lines) {
+        // Store content for view toggle (v1.13.8)
+        this.previewContent = content;
+        this.previewFilename = filename;
+
         // Update filename
         this.elements.previewFilename.textContent = filename;
 
@@ -1971,96 +2024,425 @@ class PpxaiApp {
         // Determine file extension
         const ext = filename.split('.').pop().toLowerCase() || '';
 
-        // Check if markdown preview element exists (may not in older HTML versions)
-        const hasMarkdownPreview = this.elements.previewMarkdown !== null;
+        // Detect data format (v1.13.8)
+        const dataFormats = {
+            'csv': 'table', 'tsv': 'table', 'tab': 'table',
+            'json': 'tree', 'yaml': 'tree', 'yml': 'tree',
+            'toml': 'tree', 'hcl': 'tree', 'tf': 'tree', 'tfvars': 'tree'
+        };
+        this.previewDataFormat = dataFormats[ext] || null;
 
-        // Check if this is a markdown file and we have the preview element
-        if ((ext === 'md' || ext === 'markdown') && hasMarkdownPreview) {
-            // Render markdown with marked.js
-            this.elements.previewCode.parentElement.classList.add('hidden');
-            this.elements.previewMarkdown.classList.remove('hidden');
-
-            if (typeof marked !== 'undefined') {
-                // Configure marked for GFM (tables, code blocks, etc.)
-                marked.setOptions({
-                    gfm: true,
-                    breaks: true,
-                    headerIds: true,
-                    mangle: false
-                });
-
-                // Parse and render markdown
-                let html = marked.parse(content);
-
-                // Set the rendered HTML
-                this.elements.previewMarkdown.innerHTML = html;
-
-                // Apply syntax highlighting to code blocks
-                if (typeof hljs !== 'undefined') {
-                    this.elements.previewMarkdown.querySelectorAll('pre code').forEach(block => {
-                        hljs.highlightElement(block);
-                    });
-                }
-
-                // Intercept relative link clicks to show files in preview (v1.14.0)
-                this.elements.previewMarkdown.querySelectorAll('a').forEach(link => {
-                    const href = link.getAttribute('href');
-                    // Handle relative links to local files (not http/https/mailto)
-                    if (href && !href.startsWith('http') && !href.startsWith('mailto:') && !href.startsWith('#')) {
-                        link.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            // Resolve relative path from current file's directory
-                            const currentDir = filename.includes('/') ? filename.substring(0, filename.lastIndexOf('/')) : '';
-                            const resolvedPath = currentDir ? `${currentDir}/${href}` : href;
-                            this.handleShowCommand(resolvedPath);
-                        });
-                    }
-                });
+        // Show/hide view toggle based on whether this is a data file
+        if (this.elements.previewViewToggle) {
+            if (this.previewDataFormat) {
+                this.elements.previewViewToggle.classList.remove('hidden');
+                this.updateViewToggleUI();
             } else {
-                // Fallback: show raw content if marked not available
-                this.elements.previewMarkdown.textContent = content;
-            }
-        } else {
-            // Non-markdown or no markdown preview: show code with syntax highlighting
-            if (hasMarkdownPreview) {
-                this.elements.previewMarkdown.classList.add('hidden');
-            }
-            this.elements.previewCode.parentElement.classList.remove('hidden');
-
-            const langMap = {
-                'py': 'python', 'js': 'javascript', 'ts': 'typescript', 'tsx': 'typescript',
-                'json': 'json', 'yaml': 'yaml', 'yml': 'yaml',
-                'html': 'html', 'css': 'css',
-                'sh': 'bash', 'bash': 'bash', 'rs': 'rust', 'go': 'go',
-                'java': 'java', 'cpp': 'cpp', 'c': 'c', 'h': 'c',
-                'rb': 'ruby', 'php': 'php', 'sql': 'sql', 'xml': 'xml'
-            };
-            const lang = langMap[ext] || '';
-
-            // Set content with syntax highlighting
-            this.elements.previewCode.textContent = content;
-            if (lang) {
-                this.elements.previewCode.className = `language-${lang}`;
-            } else {
-                this.elements.previewCode.className = '';
-            }
-
-            // Apply syntax highlighting
-            if (typeof hljs !== 'undefined' && lang) {
-                try {
-                    hljs.highlightElement(this.elements.previewCode);
-                } catch (e) {
-                    // Highlighting failed, show plain text
-                }
+                this.elements.previewViewToggle.classList.add('hidden');
             }
         }
 
-        // Show the panel
+        // Render based on view mode
+        this.renderPreviewContent();
+
+        // Show the panel and resize handle
+        this.elements.resizeHandle.classList.remove('hidden');
         this.elements.previewPanel.classList.remove('hidden');
+    }
+
+    /**
+     * Render preview content based on current view mode (v1.13.8)
+     */
+    renderPreviewContent() {
+        const content = this.previewContent;
+        const filename = this.previewFilename;
+        const ext = filename.split('.').pop().toLowerCase() || '';
+
+        // Clean up previous data viewer
+        if (this.currentDataViewer) {
+            this.currentDataViewer.destroy();
+            this.currentDataViewer = null;
+        }
+
+        // Hide all preview containers
+        this.elements.previewCode.parentElement.classList.add('hidden');
+        if (this.elements.previewMarkdown) {
+            this.elements.previewMarkdown.classList.add('hidden');
+        }
+        if (this.elements.previewDataViewer) {
+            this.elements.previewDataViewer.classList.add('hidden');
+            this.elements.previewDataViewer.innerHTML = '';
+        }
+
+        // Check if markdown preview element exists
+        const hasMarkdownPreview = this.elements.previewMarkdown !== null;
+        const hasDataViewer = this.elements.previewDataViewer !== null;
+
+        // Determine what to render
+        const isDataFile = this.previewDataFormat !== null;
+        const showRendered = isDataFile && this.previewViewMode === 'rendered';
+
+        if (showRendered && hasDataViewer) {
+            // Show data viewer (v1.13.8)
+            this.elements.previewDataViewer.classList.remove('hidden');
+            this.renderDataViewer(content, ext);
+        } else if ((ext === 'md' || ext === 'markdown') && hasMarkdownPreview) {
+            // Render markdown
+            this.elements.previewMarkdown.classList.remove('hidden');
+            this.renderMarkdownPreview(content, filename);
+        } else {
+            // Show code with syntax highlighting
+            this.elements.previewCode.parentElement.classList.remove('hidden');
+            this.renderCodePreview(content, ext);
+        }
+    }
+
+    /**
+     * Render data viewer for CSV/JSON/YAML/etc (v1.13.8)
+     */
+    renderDataViewer(content, ext) {
+        const container = this.elements.previewDataViewer;
+
+        if (this.previewDataFormat === 'table') {
+            // CSV/TSV - parse and show table
+            const delimiter = ext === 'tsv' || ext === 'tab' ? '\t' : this.detectCSVDelimiter(content);
+            const data = this.parseCSV(content, delimiter);
+
+            if (typeof DataTableViewer !== 'undefined') {
+                this.currentDataViewer = new DataTableViewer(container, data, {
+                    pageSize: 100,
+                    maxHeight: '500px'
+                });
+            } else {
+                container.innerHTML = '<div class="error">Table viewer not loaded</div>';
+            }
+        } else if (this.previewDataFormat === 'tree') {
+            // JSON/YAML/TOML/HCL - parse and show tree
+            try {
+                const tree = this.parseStructuredData(content, ext);
+
+                if (typeof DataTreeViewer !== 'undefined') {
+                    this.currentDataViewer = new DataTreeViewer(container, tree, {
+                        initialExpandDepth: 2
+                    });
+                } else {
+                    container.innerHTML = '<div class="error">Tree viewer not loaded</div>';
+                }
+            } catch (e) {
+                container.innerHTML = `<div class="error">Parse error: ${this.escapeHtml(e.message)}</div>`;
+            }
+        }
+    }
+
+    /**
+     * Render markdown preview
+     */
+    renderMarkdownPreview(content, filename) {
+        if (typeof marked !== 'undefined') {
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false
+            });
+
+            let html = marked.parse(content);
+            this.elements.previewMarkdown.innerHTML = html;
+
+            // Apply syntax highlighting to code blocks
+            if (typeof hljs !== 'undefined') {
+                this.elements.previewMarkdown.querySelectorAll('pre code').forEach(block => {
+                    hljs.highlightElement(block);
+                });
+            }
+
+            // Intercept relative link clicks
+            this.elements.previewMarkdown.querySelectorAll('a').forEach(link => {
+                const href = link.getAttribute('href');
+                if (href && !href.startsWith('http') && !href.startsWith('mailto:') && !href.startsWith('#')) {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const currentDir = filename.includes('/') ? filename.substring(0, filename.lastIndexOf('/')) : '';
+                        const resolvedPath = currentDir ? `${currentDir}/${href}` : href;
+                        this.handleShowCommand(resolvedPath);
+                    });
+                }
+            });
+        } else {
+            this.elements.previewMarkdown.textContent = content;
+        }
+    }
+
+    /**
+     * Render code preview with syntax highlighting
+     */
+    renderCodePreview(content, ext) {
+        const langMap = {
+            'py': 'python', 'js': 'javascript', 'ts': 'typescript', 'tsx': 'typescript',
+            'json': 'json', 'yaml': 'yaml', 'yml': 'yaml',
+            'html': 'html', 'css': 'css',
+            'sh': 'bash', 'bash': 'bash', 'rs': 'rust', 'go': 'go',
+            'java': 'java', 'cpp': 'cpp', 'c': 'c', 'h': 'c',
+            'rb': 'ruby', 'php': 'php', 'sql': 'sql', 'xml': 'xml',
+            'csv': 'text', 'tsv': 'text', 'toml': 'toml', 'hcl': 'hcl', 'tf': 'hcl'
+        };
+        const lang = langMap[ext] || '';
+
+        this.elements.previewCode.textContent = content;
+        this.elements.previewCode.className = lang ? `language-${lang}` : '';
+
+        if (typeof hljs !== 'undefined' && lang) {
+            try {
+                hljs.highlightElement(this.elements.previewCode);
+            } catch (e) {
+                // Highlighting failed, show plain text
+            }
+        }
+    }
+
+    /**
+     * Toggle between rendered and source view (v1.13.8)
+     */
+    togglePreviewViewMode() {
+        this.previewViewMode = this.previewViewMode === 'rendered' ? 'source' : 'rendered';
+        this.updateViewToggleUI();
+        this.renderPreviewContent();
+    }
+
+    /**
+     * Update view toggle button UI (v1.13.8)
+     */
+    updateViewToggleUI() {
+        if (!this.elements.previewViewToggle) return;
+
+        const renderedSpan = this.elements.previewViewToggle.querySelector('.toggle-rendered');
+        const sourceSpan = this.elements.previewViewToggle.querySelector('.toggle-source');
+
+        if (this.previewViewMode === 'rendered') {
+            renderedSpan?.classList.add('active');
+            sourceSpan?.classList.remove('active');
+        } else {
+            renderedSpan?.classList.remove('active');
+            sourceSpan?.classList.add('active');
+        }
+    }
+
+    /**
+     * Parse CSV/TSV content (v1.13.8)
+     */
+    parseCSV(content, delimiter = ',') {
+        const lines = content.split('\n');
+        const headers = [];
+        const rows = [];
+
+        lines.forEach((line, i) => {
+            if (!line.trim()) return;
+
+            const cells = this.parseCSVLine(line, delimiter);
+
+            if (i === 0) {
+                cells.forEach((cell, j) => {
+                    headers.push(cell.trim() || `Column ${j + 1}`);
+                });
+            } else {
+                // Pad row to match headers
+                while (cells.length < headers.length) {
+                    cells.push('');
+                }
+                rows.push(cells);
+            }
+        });
+
+        return {
+            headers,
+            rows,
+            rowCount: rows.length,
+            columnCount: headers.length
+        };
+    }
+
+    /**
+     * Parse a single CSV line handling quoted fields
+     */
+    parseCSVLine(line, delimiter) {
+        const cells = [];
+        let current = '';
+        let inQuotes = false;
+
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            const nextChar = line[i + 1];
+
+            if (inQuotes) {
+                if (char === '"' && nextChar === '"') {
+                    current += '"';
+                    i++; // Skip next quote
+                } else if (char === '"') {
+                    inQuotes = false;
+                } else {
+                    current += char;
+                }
+            } else {
+                if (char === '"') {
+                    inQuotes = true;
+                } else if (char === delimiter) {
+                    cells.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+        }
+        cells.push(current);
+        return cells;
+    }
+
+    /**
+     * Detect CSV delimiter (v1.13.8)
+     */
+    detectCSVDelimiter(content) {
+        const lines = content.split('\n').slice(0, 10);
+        const candidates = [',', '\t', ';', '|'];
+        const scores = {};
+
+        candidates.forEach(delim => {
+            const counts = lines.filter(l => l.trim()).map(l => (l.match(new RegExp(delim === '|' ? '\\|' : delim, 'g')) || []).length);
+            if (counts.length > 0) {
+                const unique = new Set(counts);
+                if (unique.size === 1 && counts[0] > 0) {
+                    scores[delim] = counts[0] * 10;
+                } else {
+                    const avg = counts.reduce((a, b) => a + b, 0) / counts.length;
+                    scores[delim] = avg;
+                }
+            }
+        });
+
+        return Object.keys(scores).reduce((a, b) => scores[a] > scores[b] ? a : b, ',');
+    }
+
+    /**
+     * Parse structured data (JSON/YAML/TOML) into tree format (v1.13.8)
+     */
+    parseStructuredData(content, ext) {
+        let data;
+
+        if (ext === 'json') {
+            data = JSON.parse(content);
+        } else if (ext === 'yaml' || ext === 'yml') {
+            // Simple YAML parsing (for complex YAML, would need js-yaml library)
+            // Fall back to treating as JSON if it looks like JSON
+            if (content.trim().startsWith('{') || content.trim().startsWith('[')) {
+                data = JSON.parse(content);
+            } else {
+                // Basic YAML-like structure for demo (in production, use js-yaml)
+                throw new Error('YAML parsing requires js-yaml library. Showing source view.');
+            }
+        } else if (ext === 'toml' || ext === 'hcl' || ext === 'tf' || ext === 'tfvars') {
+            // TOML/HCL parsing would require dedicated libraries
+            throw new Error(`${ext.toUpperCase()} parsing not available in browser. Showing source view.`);
+        } else {
+            data = JSON.parse(content);
+        }
+
+        return this.buildTreeNode('root', data, 0);
+    }
+
+    /**
+     * Build tree node from data (v1.13.8)
+     */
+    buildTreeNode(key, value, depth) {
+        const node = {
+            key: key,
+            value: null,
+            node_type: 'null',
+            children: [],
+            depth: depth
+        };
+
+        if (value === null) {
+            node.node_type = 'null';
+            node.value = null;
+        } else if (typeof value === 'boolean') {
+            node.node_type = 'boolean';
+            node.value = value;
+        } else if (typeof value === 'number') {
+            node.node_type = 'number';
+            node.value = value;
+        } else if (typeof value === 'string') {
+            node.node_type = 'string';
+            node.value = value;
+        } else if (Array.isArray(value)) {
+            node.node_type = 'array';
+            node.children = value.map((item, i) => this.buildTreeNode(`[${i}]`, item, depth + 1));
+        } else if (typeof value === 'object') {
+            node.node_type = 'object';
+            node.children = Object.keys(value).map(k => this.buildTreeNode(k, value[k], depth + 1));
+        }
+
+        return node;
     }
 
     hidePreviewPanel() {
         this.elements.previewPanel.classList.add('hidden');
+        this.elements.resizeHandle.classList.add('hidden');
+        // Clean up data viewer
+        if (this.currentDataViewer) {
+            this.currentDataViewer.destroy();
+            this.currentDataViewer = null;
+        }
+        // Reset state
+        this.previewContent = null;
+        this.previewFilename = null;
+        this.previewDataFormat = null;
+        this.previewViewMode = 'rendered';
+    }
+
+    /**
+     * Initialize drag-to-resize for preview panel
+     */
+    initResizeHandle() {
+        const handle = this.elements.resizeHandle;
+        const panel = this.elements.previewPanel;
+        const container = panel.parentElement;  // .main-content
+
+        let isDragging = false;
+        let startX = 0;
+        let startWidth = 0;
+
+        handle.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX;
+            startWidth = panel.offsetWidth;
+            handle.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+
+            const containerWidth = container.offsetWidth;
+            const deltaX = startX - e.clientX;  // Moving left increases panel width
+            let newWidth = startWidth + deltaX;
+
+            // Enforce min/max constraints (200px to 80% of container)
+            const minWidth = 200;
+            const maxWidth = containerWidth * 0.8;
+            newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+
+            panel.style.width = newWidth + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                handle.classList.remove('dragging');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        });
     }
 
     // === Debug Log ===

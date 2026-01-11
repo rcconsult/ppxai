@@ -46,3 +46,11 @@ def register_all_builtin_tools(manager: 'ToolManager', provider: str = None, eng
         except Exception:
             # Silently skip if consent-based tools fail to register
             pass
+
+        # Container management tools (v1.13.8)
+        try:
+            from . import container
+            container.register_tools(manager, engine)
+        except Exception:
+            # Silently skip if container tools fail to register
+            pass

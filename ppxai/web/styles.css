@@ -434,12 +434,29 @@ body {
     scroll-behavior: smooth;
 }
 
+/* Resize Handle */
+.resize-handle {
+    width: 6px;
+    cursor: col-resize;
+    background: var(--border-color);
+    transition: background 0.15s;
+    flex-shrink: 0;
+}
+
+.resize-handle:hover,
+.resize-handle.dragging {
+    background: var(--accent-color);
+}
+
+.resize-handle.hidden {
+    display: none;
+}
+
 /* File Preview Panel */
 .preview-panel {
     width: 50%;
-    min-width: 300px;
-    max-width: 70%;
-    border-left: 1px solid var(--border-color);
+    min-width: 200px;
+    max-width: 80%;
     display: flex;
     flex-direction: column;
     background: var(--bg-primary);

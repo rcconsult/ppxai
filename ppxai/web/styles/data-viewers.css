@@ -1,0 +1,608 @@
+/**
+ * Data Viewers Styles
+ * Styling for DataTableViewer and DataTreeViewer components
+ *
+ * @version 1.13.8
+ */
+
+/* =============================================================================
+   CSS Variables (inherit from main theme)
+   ============================================================================= */
+
+:root {
+    /* Table colors */
+    --table-header-bg: #2d2d30;
+    --table-row-alt-bg: #252526;
+    --table-border-color: #3c3c3c;
+    --table-hover-bg: #37373d;
+
+    /* Tree colors */
+    --tree-key-color: #9cdcfe;
+    --tree-string-color: #ce9178;
+    --tree-number-color: #b5cea8;
+    --tree-boolean-color: #569cd6;
+    --tree-null-color: #6a9955;
+    --tree-toggle-color: #858585;
+    --tree-preview-color: #6a6a6a;
+
+    /* Common */
+    --viewer-font: 'SF Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
+    --viewer-font-size: 13px;
+}
+
+/* Light theme overrides */
+[data-theme="light"] {
+    --table-header-bg: #f3f3f3;
+    --table-row-alt-bg: #fafafa;
+    --table-border-color: #e0e0e0;
+    --table-hover-bg: #e8e8e8;
+
+    --tree-key-color: #0451a5;
+    --tree-string-color: #a31515;
+    --tree-number-color: #098658;
+    --tree-boolean-color: #0000ff;
+    --tree-null-color: #098658;
+    --tree-toggle-color: #6a6a6a;
+    --tree-preview-color: #9a9a9a;
+}
+
+/* =============================================================================
+   Data Table Viewer
+   ============================================================================= */
+
+.data-table-viewer {
+    font-family: var(--viewer-font);
+    font-size: var(--viewer-font-size);
+}
+
+/* Filter bar */
+.data-table-filter {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+    padding: 8px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    position: relative;
+}
+
+.data-table-search {
+    flex: 1;
+    padding: 6px 10px;
+    background: var(--bg-primary);
+    border: 1px solid var(--table-border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.data-table-search:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.filter-count {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.filter-btn,
+.filter-clear-btn,
+.filter-regex-btn {
+    padding: 6px 12px;
+    background: var(--bg-primary);
+    border: 1px solid var(--table-border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+}
+
+.filter-btn:hover,
+.filter-clear-btn:hover,
+.filter-regex-btn:hover {
+    background: var(--table-hover-bg);
+}
+
+.filter-regex-btn {
+    font-family: var(--viewer-font);
+    font-weight: bold;
+    min-width: 32px;
+}
+
+.filter-regex-btn.active {
+    background: var(--accent-color);
+    color: var(--bg-primary);
+    border-color: var(--accent-color);
+}
+
+.filter-column-select {
+    padding: 6px 10px;
+    background: var(--bg-primary);
+    border: 1px solid var(--table-border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 12px;
+    min-width: 120px;
+    max-width: 200px;
+}
+
+.filter-column-select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.filter-help-btn {
+    padding: 6px 10px;
+    background: var(--bg-primary);
+    border: 1px solid var(--table-border-color);
+    border-radius: 50%;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: bold;
+    width: 28px;
+    height: 28px;
+}
+
+.filter-help-btn:hover {
+    background: var(--table-hover-bg);
+    color: var(--text-primary);
+}
+
+/* Regex help popup */
+.regex-help-popup {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 100;
+    background: var(--bg-secondary);
+    border: 1px solid var(--table-border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    padding: 12px;
+    margin-top: 4px;
+    min-width: 380px;
+}
+
+.regex-help-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.regex-help-close {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 0 4px;
+}
+
+.regex-help-close:hover {
+    color: var(--text-primary);
+}
+
+.regex-help-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.regex-help-table td {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--table-border-color);
+}
+
+.regex-help-table td:first-child {
+    width: 60px;
+    font-family: var(--viewer-font);
+}
+
+.regex-help-table td:nth-child(2) {
+    color: var(--text-secondary);
+}
+
+.regex-help-table td:nth-child(3) {
+    font-family: var(--viewer-font);
+    color: var(--tree-string-color);
+    font-size: 11px;
+}
+
+.regex-help-table code {
+    background: var(--bg-primary);
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
+.regex-help-footer {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Table wrapper */
+.data-table-wrapper {
+    border: 1px solid var(--table-border-color);
+    border-radius: 4px;
+    overflow: auto;
+}
+
+/* Table */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    white-space: nowrap;
+}
+
+/* Headers */
+.data-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.data-table th {
+    background: var(--table-header-bg);
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid var(--table-border-color);
+    user-select: none;
+}
+
+.data-table th.sortable {
+    cursor: pointer;
+}
+
+.data-table th.sortable:hover {
+    background: var(--table-hover-bg);
+}
+
+.data-table th .sort-indicator {
+    margin-left: 4px;
+    opacity: 0.3;
+}
+
+.data-table th.sort-asc .sort-indicator::after {
+    content: "\25B2";
+    opacity: 1;
+}
+
+.data-table th.sort-desc .sort-indicator::after {
+    content: "\25BC";
+    opacity: 1;
+}
+
+.data-table th.row-num-header {
+    width: 50px;
+    text-align: right;
+    color: var(--text-secondary);
+}
+
+/* Cells */
+.data-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--table-border-color);
+    max-width: 400px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.data-table td.row-num {
+    text-align: right;
+    color: var(--text-secondary);
+    font-size: 11px;
+}
+
+/* Alternating rows */
+.data-table tbody tr:nth-child(even) {
+    background: var(--table-row-alt-bg);
+}
+
+/* Hover */
+.data-table tbody tr:hover {
+    background: var(--table-hover-bg);
+}
+
+/* No data */
+.data-table .no-data {
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+    padding: 20px;
+}
+
+/* Pagination */
+.data-table-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 8px;
+}
+
+.page-btn {
+    padding: 6px 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--table-border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+}
+
+.page-btn:hover:not(:disabled) {
+    background: var(--table-hover-bg);
+}
+
+.page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.page-info {
+    color: var(--text-secondary);
+    font-size: 12px;
+    min-width: 100px;
+    text-align: center;
+}
+
+/* Info line */
+.data-table-info {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 11px;
+    margin-top: 8px;
+}
+
+/* =============================================================================
+   Data Tree Viewer
+   ============================================================================= */
+
+.data-tree-viewer {
+    font-family: var(--viewer-font);
+    font-size: var(--viewer-font-size);
+}
+
+/* Controls */
+.tree-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 8px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+}
+
+.tree-btn {
+    padding: 6px 12px;
+    background: var(--bg-primary);
+    border: 1px solid var(--table-border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+}
+
+.tree-btn:hover {
+    background: var(--table-hover-bg);
+}
+
+.tree-search {
+    flex: 1;
+    padding: 6px 10px;
+    background: var(--bg-primary);
+    border: 1px solid var(--table-border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.tree-search:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.search-count {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.search-regex-btn,
+.search-jq-btn {
+    font-family: var(--viewer-font);
+    font-weight: bold;
+    min-width: 32px;
+}
+
+.search-regex-btn.active,
+.search-jq-btn.active {
+    background: var(--accent-color);
+    color: var(--bg-primary);
+    border-color: var(--accent-color);
+}
+
+.search-help-btn {
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Tree content */
+.tree-content {
+    padding: 8px;
+    background: var(--bg-primary);
+    border: 1px solid var(--table-border-color);
+    border-radius: 4px;
+    overflow: auto;
+    max-height: 600px;
+}
+
+/* Tree nodes */
+.tree-node {
+    line-height: 1.6;
+}
+
+.tree-toggle {
+    display: inline-block;
+    width: 16px;
+    color: var(--tree-toggle-color);
+    cursor: pointer;
+    user-select: none;
+    font-size: 10px;
+    text-align: center;
+}
+
+.tree-toggle:hover {
+    color: var(--text-primary);
+}
+
+.tree-toggle-spacer {
+    display: inline-block;
+    width: 16px;
+}
+
+/* Key styling */
+.tree-key {
+    color: var(--tree-key-color);
+    cursor: pointer;
+}
+
+.tree-key:hover {
+    text-decoration: underline;
+}
+
+.tree-key.copied {
+    color: var(--success-color, #4ec9b0);
+}
+
+/* Type indicator */
+.tree-type-indicator {
+    color: var(--text-secondary);
+    font-size: 11px;
+    margin-left: 4px;
+}
+
+/* Separator */
+.tree-separator {
+    color: var(--text-secondary);
+}
+
+/* Value types */
+.tree-value {
+    word-break: break-word;
+}
+
+.tree-value.type-string {
+    color: var(--tree-string-color);
+}
+
+.tree-value.type-number {
+    color: var(--tree-number-color);
+}
+
+.tree-value.type-boolean {
+    color: var(--tree-boolean-color);
+}
+
+.tree-value.type-null {
+    color: var(--tree-null-color);
+    font-style: italic;
+}
+
+/* Children indentation */
+.tree-children {
+    margin-left: 20px;
+    padding-left: 8px;
+    border-left: 1px solid var(--table-border-color);
+}
+
+/* Collapsed preview */
+.tree-preview {
+    color: var(--tree-preview-color);
+    font-style: italic;
+    margin-left: 8px;
+}
+
+/* Search match highlight */
+.tree-node.search-match > .tree-key {
+    background: rgba(255, 215, 0, 0.3);
+    border-radius: 2px;
+    padding: 0 2px;
+}
+
+/* Truncated indicator */
+.tree-truncated {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* =============================================================================
+   View Toggle Button (for preview panel)
+   ============================================================================= */
+
+.view-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--table-border-color);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+}
+
+.view-toggle:hover {
+    background: var(--table-hover-bg);
+}
+
+.view-toggle .active {
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+/* =============================================================================
+   Responsive adjustments
+   ============================================================================= */
+
+@media (max-width: 768px) {
+    .data-table-filter {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .data-table-pagination {
+        flex-wrap: wrap;
+    }
+
+    .tree-controls {
+        flex-wrap: wrap;
+    }
+
+    .tree-search {
+        flex-basis: 100%;
+    }
+}

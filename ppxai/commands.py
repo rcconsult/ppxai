@@ -1404,7 +1404,15 @@ class CommandHandler:
         return augmented_message, [{'name': f['name'], 'path': f['path']} for f in resolved_files]
 
     def handle_show(self, args: str):
-        """Display file contents locally without LLM call."""
+        """Display file contents locally without LLM call.
+
+        Supports data format rendering for CSV, TSV, JSON, YAML, TOML, HCL files.
+
+        Flags:
+            --source, --raw: Force source/syntax view (skip data rendering)
+            --rendered: Force rendered view (default for data files)
+            --interactive, -i: Interactive mode with pagination/toggle (data files)
+        """
         from pathlib import Path
         from rich.syntax import Syntax
         import time
@@ -1412,14 +1420,25 @@ class CommandHandler:
         start_time = time.time()
 
         if not args.strip():
-            console.print("[red]Usage: /show <filepath> or /show @<search-query>[/red]")
+            console.print("[red]Usage: /show <filepath> [--source|--rendered][/red]")
             console.print("[dim]Examples:[/dim]")
             console.print("[dim]  /show README.md[/dim]")
-            console.print("[dim]  /show @architecture (searches for files)[/dim]")
-            console.print("[dim]  /show docs/README.md[/dim]\n")
+            console.print("[dim]  /show data.csv              # Rendered as table[/dim]")
+            console.print("[dim]  /show data.csv --source     # Raw CSV syntax[/dim]")
+            console.print("[dim]  /show config.json           # Rendered as tree[/dim]")
+            console.print("[dim]  /show @architecture         # Search for files[/dim]\n")
             return
 
-        query = args.strip()
+        # Parse flags
+        show_source = '--source' in args or '--raw' in args
+        show_rendered = '--rendered' in args
+        interactive = '--interactive' in args or '-i' in args
+
+        # Remove flags from args
+        query = args
+        for flag in ['--source', '--raw', '--rendered', '--interactive', '-i']:
+            query = query.replace(flag, '')
+        query = query.strip()
 
         # Extract @reference if present (ignore trailing words like "file", "in docs", etc.)
         import re
@@ -1474,6 +1493,7 @@ class CommandHandler:
                 '.c': 'c', '.cpp': 'cpp', '.h': 'c', '.hpp': 'cpp',
                 '.rb': 'ruby', '.php': 'php', '.sql': 'sql',
                 '.xml': 'xml', '.toml': 'toml', '.ini': 'ini',
+                '.csv': 'text', '.tsv': 'text', '.hcl': 'hcl', '.tf': 'hcl',
             }
             lang = ext_to_lang.get(path.suffix.lower(), 'text')
 
@@ -1481,8 +1501,60 @@ class CommandHandler:
             size_kb = path.stat().st_size / 1024
             console.print(f"\n[bold cyan]{path.name}[/bold cyan] [dim]({size_kb:.1f} KB, {len(lines)} lines)[/dim]\n")
 
-            # For markdown files, render them (including tables) instead of syntax highlighting
-            if path.suffix.lower() in ['.md', '.markdown']:
+            # Check for data formats (v1.13.8)
+            from .data import (
+                detect_format, is_data_format, detect_delimiter,
+                parse_csv, parse_structured,
+                render_table_tui, render_tree_tui,
+                InteractiveTableViewer, InteractiveTreeViewer,
+                TABULAR_FORMATS, STRUCTURED_FORMATS,
+            )
+
+            data_format = detect_format(str(path), content)
+            is_data_file = data_format is not None
+
+            # Determine view mode
+            # --source forces source view, --rendered forces data view
+            # Default: data view for data files, source view for others
+            use_data_view = is_data_file and not show_source
+
+            if use_data_view and data_format in TABULAR_FORMATS:
+                # CSV/TSV - render as table
+                delimiter = '\t' if data_format == 'tsv' else detect_delimiter(content)
+                data = parse_csv(content, delimiter=delimiter)
+
+                if interactive:
+                    # Interactive mode with pagination
+                    viewer = InteractiveTableViewer(data, console, str(path), content)
+                    viewer.run()
+                else:
+                    # Non-interactive - just show the table
+                    render_table_tui(data, console, title=path.name)
+
+            elif use_data_view and data_format in STRUCTURED_FORMATS:
+                # JSON/YAML/TOML/HCL - render as tree
+                try:
+                    tree = parse_structured(content, data_format, root_key=path.name)
+                    if interactive:
+                        viewer = InteractiveTreeViewer(tree, console, str(path), content)
+                        viewer.run()
+                    else:
+                        render_tree_tui(tree, console, title=path.name)
+                except ImportError as e:
+                    # Missing parser dependency - fall back to syntax view
+                    console.print(f"[yellow]Note: {e}[/yellow]")
+                    console.print("[dim]Falling back to syntax view[/dim]\n")
+                    syntax = Syntax(content, lang, theme="monokai", line_numbers=True)
+                    console.print(syntax)
+                except Exception as e:
+                    # Parse error - fall back to syntax view
+                    console.print(f"[yellow]Parse error: {e}[/yellow]")
+                    console.print("[dim]Falling back to syntax view[/dim]\n")
+                    syntax = Syntax(content, lang, theme="monokai", line_numbers=True)
+                    console.print(syntax)
+
+            elif path.suffix.lower() in ['.md', '.markdown']:
+                # For markdown files, render them (including tables) instead of syntax highlighting
                 from .markdown_tables import render_markdown_with_tables
                 # Pass the file's parent directory for resolving relative links
                 render_markdown_with_tables(content, console, working_dir=str(path.parent))

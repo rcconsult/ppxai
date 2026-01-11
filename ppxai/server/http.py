@@ -1261,6 +1261,78 @@ class FileReadRequest(BaseModel):
     path: str
 
 
+class FileSearchRequest(BaseModel):
+    """Request to search for files."""
+    query: str = ""
+    max_results: int = 50
+
+
+# Directories to ignore when searching for files (same as TUI completer)
+IGNORE_DIRS = {'.git', 'node_modules', '__pycache__', '.venv', 'venv', '.tox', 'dist', 'build', '.eggs', '.mypy_cache'}
+
+
+@app.post("/files/search")
+async def search_files(
+    request: FileSearchRequest,
+    x_session_id: Optional[str] = Header(None)
+):
+    """Search for files in working directory (v1.13.8 - for @file autocomplete).
+
+    Searches files recursively in the working directory, filtering by query.
+    Returns list of matching files with relative paths.
+
+    Args:
+        request: FileSearchRequest with query and max_results
+
+    Returns:
+        JSON: {"files": [{"name": "file.py", "path": "src/file.py"}, ...]}
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
+
+    from pathlib import Path
+    import os
+
+    logger.info(f"HTTP POST /files/search - query: {request.query}")
+
+    working_dir = Path(engine.get_working_dir() or os.getcwd())
+    query = request.query.lower()
+    results = []
+
+    try:
+        for path in working_dir.rglob('*'):
+            if len(results) >= request.max_results:
+                break
+            if path.is_file():
+                # Skip files in ignored directories
+                if any(ignored in path.parts for ignored in IGNORE_DIRS):
+                    continue
+                try:
+                    rel_path = str(path.relative_to(working_dir))
+                    filename = path.name
+                    # Match query against filename or path
+                    if not query or query in filename.lower() or query in rel_path.lower():
+                        results.append({
+                            "name": filename,
+                            "path": rel_path
+                        })
+                except ValueError:
+                    pass
+    except PermissionError:
+        pass
+
+    # Also add special @ references
+    special_refs = [
+        {"name": "@git", "path": "Include git diff"},
+        {"name": "@tree", "path": "Include project structure"},
+    ]
+
+    # Filter special refs by query
+    if query:
+        special_refs = [ref for ref in special_refs if query in ref["name"].lower()]
+
+    return {"files": special_refs + results}
+
+
 @app.post("/files/read")
 async def read_file(
     request: FileReadRequest,
@@ -1844,6 +1916,31 @@ async def serve_shared(filename: str):
     raise HTTPException(status_code=404, detail="Not found")
 
 
+@app.get("/components/{filename:path}")
+async def serve_components(filename: str):
+    """Serve component files (v1.13.8 data viewers)."""
+    file_path = WEB_UI_DIR / 'components' / filename
+    if file_path.exists() and file_path.is_file():
+        suffix = file_path.suffix.lower()
+        content_types = {
+            '.js': 'application/javascript',
+            '.css': 'text/css',
+            '.json': 'application/json',
+        }
+        media_type = content_types.get(suffix, 'application/octet-stream')
+        return FileResponse(file_path, media_type=media_type)
+    raise HTTPException(status_code=404, detail="Not found")
+
+
+@app.get("/styles/{filename:path}")
+async def serve_styles(filename: str):
+    """Serve additional style files (v1.13.8 data viewers)."""
+    file_path = WEB_UI_DIR / 'styles' / filename
+    if file_path.exists() and file_path.is_file():
+        return FileResponse(file_path, media_type='text/css')
+    raise HTTPException(status_code=404, detail="Not found")
+
+
 @app.get("/favicon.ico")
 async def serve_favicon_ico():
     """Serve favicon.ico (redirect to favicon.png)."""
@@ -1914,6 +2011,61 @@ def run_server():
             port=args.port,
             reload=args.reload,
             log_level="info",
+        )
+
+
+def run_desktop():
+    """Run desktop web app - starts server and opens browser (CLI entry point).
+
+    This is the development-friendly entry point that:
+    1. Starts the HTTP server (Python via uvicorn)
+    2. Opens the default web browser to the UI
+
+    Usage:
+        uv run ppxai-desktop        # Development
+        ./ppxai-desktop             # Production binary
+    """
+    import webbrowser
+    import threading
+    import time
+    import uvicorn
+
+    parser = argparse.ArgumentParser(description="ppxai Desktop Web App")
+    parser.add_argument("--host", default="127.0.0.1", help="Host to bind to")
+    parser.add_argument("--port", type=int, default=54320, help="Port to bind to")
+    parser.add_argument("--no-browser", action="store_true", help="Don't open browser")
+
+    args = parser.parse_args()
+
+    url = f"http://{args.host}:{args.port}"
+
+    # Open browser after short delay (let server start)
+    if not args.no_browser:
+        def open_browser():
+            time.sleep(1.5)  # Wait for server to start
+            print(f"Opening browser: {url}")
+            webbrowser.open(url)
+
+        threading.Thread(target=open_browser, daemon=True).start()
+
+    print(f"Starting ppxai Desktop Web App on {url}")
+    print("Press Ctrl+C to stop")
+    print()
+
+    # Check if running as frozen executable (PyInstaller)
+    if getattr(sys, 'frozen', False):
+        uvicorn.run(
+            app,
+            host=args.host,
+            port=args.port,
+            log_level="warning",  # Less verbose for desktop app
+        )
+    else:
+        uvicorn.run(
+            "ppxai.server.http:app",
+            host=args.host,
+            port=args.port,
+            log_level="warning",
         )
 
 

@@ -6,23 +6,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.13.7
+**Current Version:** v1.13.8
 
-**v1.13.7 highlights:**
-- **NEW:** `/config reload` command - hot-reload `ppxai-config.json` without restart
-- **FIX:** `/status` command errors (session methods, working directory)
-- **FIX:** Gemini grounding pricing in example config ($35/1K requests)
+**v1.13.8 highlights:**
+- **NEW:** Data Visualization - CSV/TSV table viewer, JSON/YAML tree viewer with sorting, filtering, and expand/collapse
+- **NEW:** Container Management Tools - Docker, Podman, and Kubernetes CLI integration (16 tools)
+- **NEW:** Rendered/Source toggle for data file previews in TUI and Web
+- **NEW:** E2E Playwright tests for web components (55 tests)
 
-**v1.13.6 included:**
-- Release script Windows compatibility for `gh` CLI commands
-- UTF-8 encoding for release scripts on Windows
+**v1.13.7 included:**
+- `/config reload` command - hot-reload `ppxai-config.json` without restart
+- `/status` command fixes
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.13.7
-- VSCode extension (package.json): v1.13.7
-- Git tag: v1.13.7
+- Python package (pyproject.toml): v1.13.8
+- VSCode extension (package.json): v1.13.8
+- Git tag: v1.13.8
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
+
+## Codebase Statistics (v1.13.8)
+
+| Language | Files | Lines |
+|----------|------:|------:|
+| Python (core) | 54 | ~22,300 |
+| Python (tests) | 26 | ~10,300 |
+| TypeScript (VSCode) | 10 | ~8,300 |
+| JavaScript (Web) | 7 | ~4,300 |
+| CSS | 3 | ~1,800 |
+| **Total** | **~100** | **~47,000** |
+
+Breakdown: ~70% Python, ~18% TypeScript, ~9% JavaScript, ~3% CSS/HTML
 
 ## Development Setup
 

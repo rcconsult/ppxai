@@ -27,8 +27,25 @@ jobs:
     - name: Install dependencies
       run: uv sync --frozen --dev
 
-    - name: Run tests
-      run: uv run pytest tests/ -v --ignore=tests/test_custom_endpoint_integration.py
+    - name: Run Python tests
+      run: uv run pytest tests/ -v --ignore=tests/test_custom_endpoint_integration.py --ignore=tests/e2e
+
+    - name: Setup Node.js for E2E tests
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Playwright dependencies
+      working-directory: tests/e2e
+      run: npm ci
+
+    - name: Install Playwright browsers
+      working-directory: tests/e2e
+      run: npx playwright install chromium --with-deps
+
+    - name: Run E2E tests
+      working-directory: tests/e2e
+      run: npx playwright test
 
     - name: Run benchmark
       env:

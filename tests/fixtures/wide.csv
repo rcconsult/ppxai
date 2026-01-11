@@ -1,0 +1,11 @@
+id,name,email,phone,address,city,state,zip,country,company,department,title,salary,start_date,end_date,manager,status,notes
+1,Alice Johnson,alice@example.com,555-0101,123 Main St,New York,NY,10001,USA,Acme Corp,Engineering,Senior Developer,125000,2020-01-15,,Bob Smith,Active,Team lead for backend services
+2,Bob Smith,bob@example.com,555-0102,456 Oak Ave,Los Angeles,CA,90001,USA,Acme Corp,Engineering,Engineering Manager,150000,2018-06-01,,Carol White,Active,Manages 8 engineers
+3,Carol White,carol@example.com,555-0103,789 Pine Rd,Chicago,IL,60601,USA,Acme Corp,Executive,VP Engineering,250000,2015-03-20,,CEO,Active,Reports directly to CEO
+4,David Lee,david@example.com,555-0104,321 Elm St,Houston,TX,77001,USA,Acme Corp,Engineering,Junior Developer,85000,2023-02-01,,Alice Johnson,Active,New hire from bootcamp
+5,Eve Martinez,eve@example.com,555-0105,654 Cedar Ln,Phoenix,AZ,85001,USA,Acme Corp,Engineering,Mid Developer,105000,2021-09-15,,Alice Johnson,Active,Full stack specialist
+6,Frank Brown,frank@example.com,555-0106,987 Birch Dr,Philadelphia,PA,19101,USA,Acme Corp,Sales,Sales Rep,95000,2022-04-01,,Grace Kim,Active,Northeast territory
+7,Grace Kim,grace@example.com,555-0107,147 Maple Way,San Antonio,TX,78201,USA,Acme Corp,Sales,Sales Director,175000,2017-11-30,,Carol White,Active,Leads sales team of 12
+8,Henry Wilson,henry@example.com,555-0108,258 Walnut Ct,San Diego,CA,92101,USA,Acme Corp,Marketing,Marketing Manager,130000,2019-08-15,,Carol White,Active,Brand and digital marketing
+9,Ivy Chen,ivy@example.com,555-0109,369 Cherry Blvd,Dallas,TX,75201,USA,Acme Corp,Engineering,DevOps Engineer,115000,2020-12-01,,Bob Smith,Active,Infrastructure and CI/CD
+10,Jack Taylor,jack@example.com,555-0110,480 Spruce Ave,San Jose,CA,95101,USA,Acme Corp,Engineering,Staff Engineer,160000,2016-07-22,,Bob Smith,Active,Architecture and design

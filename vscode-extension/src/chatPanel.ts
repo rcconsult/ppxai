@@ -123,6 +123,18 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             const workspaceFolders = vscode.workspace.workspaceFolders;
             const pathModule = require('path');
 
+            // v1.13.8: Include special refs (@git, @tree) at the start
+            const specialRefs = [
+                { name: '@git', path: 'Include git diff' },
+                { name: '@tree', path: 'Include project structure' },
+            ];
+
+            // Filter special refs by query
+            const queryLower = (query || '').toLowerCase();
+            const filteredSpecialRefs = specialRefs.filter(ref =>
+                ref.name.toLowerCase().includes(queryLower)
+            );
+
             const files = matches.map(m => {
                 const name = m.path.split('/').pop() || '';
                 const relPath = workspaceFolders
@@ -133,7 +145,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
             this._view.webview.postMessage({
                 type: 'fileSuggestions',
-                files
+                files: [...filteredSpecialRefs, ...files]
             });
         } catch (error) {
             // Silently fail - autocomplete is optional
@@ -3972,7 +3984,8 @@ A: Use \`/tools disable\` or choose "never" when prompted.
 
             let insertText;
             if (autocompleteMode === 'file') {
-                insertText = '@' + item.name;
+                // v1.13.8: Don't add @ prefix if name already has it (e.g., @git, @tree)
+                insertText = item.name.startsWith('@') ? item.name : '@' + item.name;
             } else {
                 insertText = item.name;
             }
@@ -4019,20 +4032,8 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             if (atMatch) {
                 autocompleteStartPos = cursorPos - atMatch[0].length;
                 autocompleteQuery = atMatch[1];
-                // Skip autocomplete for special context providers (@git, @tree)
-                // These are handled by the backend, not as file references
-                // Also skip partial matches (e.g., "tre" could become "tree")
-                const specialProviders = ['git', 'tree'];
-                const queryLower = autocompleteQuery.toLowerCase();
-                const isSpecialProvider = specialProviders.includes(queryLower);
-                const couldBeSpecialProvider = specialProviders.some(sp => sp.startsWith(queryLower) && queryLower.length > 0);
-                if (isSpecialProvider || couldBeSpecialProvider) {
-                    autocompleteDisabled = true;
-                    hideAutocomplete();
-                    return;
-                }
                 autocompleteDisabled = false;
-                // Request file suggestions from extension
+                // v1.13.8: Request file suggestions (now includes @git, @tree)
                 vscode.postMessage({ type: 'searchFiles', query: autocompleteQuery || '' });
                 return;
             }
@@ -4089,6 +4090,7 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             vscode.postMessage({ type: 'chat', content });
             messageInput.value = '';
             messageInput.style.height = 'auto';
+            hideAutocomplete(); // v1.13.8: Hide autocomplete when sending
             // Input stays enabled but flags prevent sending - focus is preserved
         }
 
@@ -4559,6 +4561,10 @@ A: Use \`/tools disable\` or choose "never" when prompted.
 
                 case 'fileSuggestions':
                     // Received file suggestions for autocomplete
+                    // v1.13.8: Don't show if input was cleared (message sent during async request)
+                    if (!messageInput.value.includes('@')) {
+                        break;
+                    }
                     // Don't show if autocomplete is disabled (e.g., @git, @tree special providers)
                     if (!autocompleteDisabled && (autocompleteMode === 'file' || message.files.length > 0)) {
                         showAutocomplete(message.files, 'file');

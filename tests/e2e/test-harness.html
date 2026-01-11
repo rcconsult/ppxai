@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Viewers Test Harness</title>
+    <link rel="stylesheet" href="../../ppxai/web/styles/data-viewers.css">
+    <style>
+        :root {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252526;
+            --text-primary: #cccccc;
+            --text-secondary: #858585;
+            --accent-color: #0078d4;
+            --border-color: #3c3c3c;
+            --success-color: #4ec9b0;
+        }
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px;
+            margin: 0;
+        }
+        .test-container {
+            margin-bottom: 40px;
+        }
+        h2 {
+            color: var(--accent-color);
+            margin-bottom: 16px;
+        }
+        #table-container, #tree-container {
+            min-height: 200px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Data Viewers Test Harness</h1>
+
+    <div class="test-container">
+        <h2>Table Viewer</h2>
+        <div id="table-container"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>Tree Viewer</h2>
+        <div id="tree-container"></div>
+    </div>
+
+    <script src="../../ppxai/web/components/table-viewer.js"></script>
+    <script src="../../ppxai/web/components/tree-viewer.js"></script>
+    <script>
+        // Sample table data
+        const tableData = {
+            headers: ['ID', 'Name', 'Email', 'Status', 'Score'],
+            rows: [
+                ['1', 'Alice Smith', 'alice@example.com', 'active', '95'],
+                ['2', 'Bob Johnson', 'bob@example.com', 'inactive', '82'],
+                ['3', 'Charlie Brown', 'charlie@example.com', 'active', '88'],
+                ['4', 'Diana Ross', 'diana@example.com', 'pending', '91'],
+                ['5', 'Eve Wilson', 'eve@example.com', 'active', '77'],
+                ['6', 'Frank Miller', 'frank@example.com', 'inactive', '65'],
+                ['7', 'Grace Lee', 'grace@example.com', 'active', '99'],
+                ['8', 'Henry Adams', 'henry@example.com', 'pending', '73'],
+                ['9', 'Ivy Chen', 'ivy@example.com', 'active', '86'],
+                ['10', 'Jack White', 'jack@example.com', 'inactive', '70'],
+            ],
+            row_count: 10,
+            column_count: 5
+        };
+
+        // Sample tree data (JSON structure) - uses node_type property
+        const treeData = {
+            key: 'root',
+            node_type: 'object',
+            value: null,
+            children: [
+                {
+                    key: 'name',
+                    node_type: 'string',
+                    value: 'Test Application',
+                    children: null
+                },
+                {
+                    key: 'version',
+                    node_type: 'string',
+                    value: '1.0.0',
+                    children: null
+                },
+                {
+                    key: 'config',
+                    node_type: 'object',
+                    value: null,
+                    children: [
+                        {
+                            key: 'debug',
+                            node_type: 'boolean',
+                            value: true,
+                            children: null
+                        },
+                        {
+                            key: 'port',
+                            node_type: 'number',
+                            value: 8080,
+                            children: null
+                        },
+                        {
+                            key: 'host',
+                            node_type: 'string',
+                            value: 'localhost',
+                            children: null
+                        }
+                    ]
+                },
+                {
+                    key: 'users',
+                    node_type: 'array',
+                    value: null,
+                    children: [
+                        {
+                            key: '0',
+                            node_type: 'object',
+                            value: null,
+                            children: [
+                                { key: 'id', node_type: 'number', value: 1, children: null },
+                                { key: 'name', node_type: 'string', value: 'Alice', children: null }
+                            ]
+                        },
+                        {
+                            key: '1',
+                            node_type: 'object',
+                            value: null,
+                            children: [
+                                { key: 'id', node_type: 'number', value: 2, children: null },
+                                { key: 'name', node_type: 'string', value: 'Bob', children: null }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    key: 'nullable',
+                    node_type: 'null',
+                    value: null,
+                    children: null
+                }
+            ]
+        };
+
+        // Initialize viewers
+        window.tableViewer = new DataTableViewer(
+            document.getElementById('table-container'),
+            tableData,
+            { pageSize: 5, sortable: true, filterable: true }
+        );
+
+        window.treeViewer = new DataTreeViewer(
+            document.getElementById('tree-container'),
+            treeData,
+            { initialExpandDepth: 2, searchable: true }
+        );
+    </script>
+</body>
+</html>

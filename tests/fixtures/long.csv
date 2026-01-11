@@ -1,0 +1,251 @@
+timestamp,level,service,message,request_id,duration_ms
+2026-01-11T10:00:00,DEBUG,auth-service,Cache hit,req-1000,432
+2026-01-11T10:00:02,WARN,api-gateway,Cache hit,req-1001,373
+2026-01-11T10:00:04,DEBUG,notification-service,Health check passed,req-1002,220
+2026-01-11T10:00:06,ERROR,user-service,Retry attempt,req-1003,4525
+2026-01-11T10:00:08,ERROR,notification-service,Authentication successful,req-1004,2397
+2026-01-11T10:00:10,DEBUG,api-gateway,Database query completed,req-1005,148
+2026-01-11T10:00:12,INFO,notification-service,Rate limit exceeded,req-1006,443
+2026-01-11T10:00:14,ERROR,api-gateway,Cache hit,req-1007,3578
+2026-01-11T10:00:16,ERROR,payment-service,Rate limit exceeded,req-1008,2425
+2026-01-11T10:00:18,WARN,auth-service,Rate limit exceeded,req-1009,448
+2026-01-11T10:00:20,INFO,auth-service,Cache miss - fetching from DB,req-1010,152
+2026-01-11T10:00:22,ERROR,api-gateway,Authentication successful,req-1011,2661
+2026-01-11T10:00:24,ERROR,notification-service,Cache hit,req-1012,2089
+2026-01-11T10:00:26,ERROR,api-gateway,Retry attempt,req-1013,3377
+2026-01-11T10:00:28,WARN,api-gateway,Request processed successfully,req-1014,298
+2026-01-11T10:00:30,DEBUG,auth-service,Service started,req-1015,390
+2026-01-11T10:00:32,DEBUG,auth-service,Cache hit,req-1016,316
+2026-01-11T10:00:34,ERROR,notification-service,Retry attempt,req-1017,3060
+2026-01-11T10:00:36,INFO,user-service,Connection timeout,req-1018,37
+2026-01-11T10:00:38,ERROR,auth-service,Request processed successfully,req-1019,4830
+2026-01-11T10:00:40,DEBUG,auth-service,Request processed successfully,req-1020,196
+2026-01-11T10:00:42,DEBUG,user-service,Retry attempt,req-1021,381
+2026-01-11T10:00:44,DEBUG,api-gateway,Rate limit exceeded,req-1022,328
+2026-01-11T10:00:46,DEBUG,api-gateway,Service started,req-1023,271
+2026-01-11T10:00:48,DEBUG,user-service,Retry attempt,req-1024,58
+2026-01-11T10:00:50,INFO,notification-service,Cache hit,req-1025,244
+2026-01-11T10:00:52,WARN,user-service,Retry attempt,req-1026,399
+2026-01-11T10:00:54,DEBUG,api-gateway,Retry attempt,req-1027,181
+2026-01-11T10:00:56,DEBUG,payment-service,Cache miss - fetching from DB,req-1028,121
+2026-01-11T10:00:58,INFO,auth-service,Connection timeout,req-1029,309
+2026-01-11T10:01:00,INFO,notification-service,Health check passed,req-1030,432
+2026-01-11T10:01:02,ERROR,user-service,Service started,req-1031,2236
+2026-01-11T10:01:04,WARN,api-gateway,Retry attempt,req-1032,76
+2026-01-11T10:01:06,DEBUG,user-service,Health check passed,req-1033,397
+2026-01-11T10:01:08,INFO,api-gateway,Service started,req-1034,13
+2026-01-11T10:01:10,DEBUG,auth-service,Retry attempt,req-1035,420
+2026-01-11T10:01:12,INFO,notification-service,Retry attempt,req-1036,154
+2026-01-11T10:01:14,INFO,notification-service,Authentication successful,req-1037,17
+2026-01-11T10:01:16,ERROR,notification-service,Cache miss - fetching from DB,req-1038,4298
+2026-01-11T10:01:18,DEBUG,api-gateway,Connection timeout,req-1039,6
+2026-01-11T10:01:20,ERROR,user-service,Database query completed,req-1040,3208
+2026-01-11T10:01:22,DEBUG,auth-service,Rate limit exceeded,req-1041,126
+2026-01-11T10:01:24,WARN,auth-service,Retry attempt,req-1042,222
+2026-01-11T10:01:26,WARN,auth-service,Database query completed,req-1043,121
+2026-01-11T10:01:28,ERROR,api-gateway,Rate limit exceeded,req-1044,1378
+2026-01-11T10:01:30,WARN,notification-service,Cache hit,req-1045,383
+2026-01-11T10:01:32,DEBUG,api-gateway,Service started,req-1046,227
+2026-01-11T10:01:34,INFO,payment-service,Authentication successful,req-1047,58
+2026-01-11T10:01:36,WARN,user-service,Retry attempt,req-1048,158
+2026-01-11T10:01:38,INFO,user-service,Service started,req-1049,282
+2026-01-11T10:01:40,DEBUG,api-gateway,Request processed successfully,req-1050,422
+2026-01-11T10:01:42,ERROR,notification-service,Database query completed,req-1051,4219
+2026-01-11T10:01:44,WARN,payment-service,Cache hit,req-1052,280
+2026-01-11T10:01:46,DEBUG,payment-service,Authentication successful,req-1053,143
+2026-01-11T10:01:48,INFO,api-gateway,Retry attempt,req-1054,109
+2026-01-11T10:01:50,WARN,api-gateway,Authentication successful,req-1055,443
+2026-01-11T10:01:52,ERROR,notification-service,Service started,req-1056,4660
+2026-01-11T10:01:54,WARN,api-gateway,Retry attempt,req-1057,456
+2026-01-11T10:01:56,ERROR,api-gateway,Authentication successful,req-1058,2275
+2026-01-11T10:01:58,WARN,notification-service,Retry attempt,req-1059,233
+2026-01-11T10:02:00,WARN,user-service,Cache hit,req-1060,138
+2026-01-11T10:02:02,ERROR,user-service,Health check passed,req-1061,4709
+2026-01-11T10:02:04,DEBUG,user-service,Connection timeout,req-1062,416
+2026-01-11T10:02:06,ERROR,auth-service,Connection timeout,req-1063,1749
+2026-01-11T10:02:08,DEBUG,notification-service,Cache hit,req-1064,441
+2026-01-11T10:02:10,DEBUG,payment-service,Connection timeout,req-1065,198
+2026-01-11T10:02:12,DEBUG,api-gateway,Health check passed,req-1066,71
+2026-01-11T10:02:14,WARN,user-service,Cache miss - fetching from DB,req-1067,206
+2026-01-11T10:02:16,WARN,payment-service,Retry attempt,req-1068,252
+2026-01-11T10:02:18,DEBUG,notification-service,Database query completed,req-1069,418
+2026-01-11T10:02:20,WARN,auth-service,Rate limit exceeded,req-1070,394
+2026-01-11T10:02:22,WARN,auth-service,Connection timeout,req-1071,471
+2026-01-11T10:02:24,INFO,user-service,Retry attempt,req-1072,441
+2026-01-11T10:02:26,INFO,user-service,Rate limit exceeded,req-1073,364
+2026-01-11T10:02:28,WARN,payment-service,Retry attempt,req-1074,236
+2026-01-11T10:02:30,ERROR,user-service,Health check passed,req-1075,1007
+2026-01-11T10:02:32,WARN,user-service,Cache hit,req-1076,488
+2026-01-11T10:02:34,WARN,user-service,Authentication successful,req-1077,287
+2026-01-11T10:02:36,ERROR,notification-service,Cache miss - fetching from DB,req-1078,2578
+2026-01-11T10:02:38,INFO,api-gateway,Database query completed,req-1079,271
+2026-01-11T10:02:40,ERROR,notification-service,Health check passed,req-1080,3260
+2026-01-11T10:02:42,DEBUG,payment-service,Retry attempt,req-1081,338
+2026-01-11T10:02:44,INFO,api-gateway,Health check passed,req-1082,217
+2026-01-11T10:02:46,WARN,api-gateway,Connection timeout,req-1083,304
+2026-01-11T10:02:48,WARN,notification-service,Health check passed,req-1084,251
+2026-01-11T10:02:50,INFO,notification-service,Cache miss - fetching from DB,req-1085,7
+2026-01-11T10:02:52,DEBUG,payment-service,Connection timeout,req-1086,195
+2026-01-11T10:02:54,INFO,user-service,Cache miss - fetching from DB,req-1087,125
+2026-01-11T10:02:56,DEBUG,api-gateway,Rate limit exceeded,req-1088,308
+2026-01-11T10:02:58,ERROR,auth-service,Connection timeout,req-1089,3576
+2026-01-11T10:03:00,INFO,notification-service,Health check passed,req-1090,333
+2026-01-11T10:03:02,WARN,api-gateway,Cache hit,req-1091,309
+2026-01-11T10:03:04,ERROR,notification-service,Cache hit,req-1092,4356
+2026-01-11T10:03:06,DEBUG,user-service,Cache hit,req-1093,479
+2026-01-11T10:03:08,ERROR,user-service,Cache hit,req-1094,2981
+2026-01-11T10:03:10,WARN,payment-service,Service started,req-1095,235
+2026-01-11T10:03:12,DEBUG,payment-service,Authentication successful,req-1096,388
+2026-01-11T10:03:14,DEBUG,auth-service,Request processed successfully,req-1097,285
+2026-01-11T10:03:16,ERROR,auth-service,Rate limit exceeded,req-1098,3687
+2026-01-11T10:03:18,ERROR,notification-service,Connection timeout,req-1099,2615
+2026-01-11T10:03:20,DEBUG,user-service,Authentication successful,req-1100,246
+2026-01-11T10:03:22,WARN,payment-service,Retry attempt,req-1101,408
+2026-01-11T10:03:24,ERROR,auth-service,Connection timeout,req-1102,1219
+2026-01-11T10:03:26,ERROR,user-service,Service started,req-1103,1604
+2026-01-11T10:03:28,ERROR,auth-service,Cache hit,req-1104,2689
+2026-01-11T10:03:30,INFO,notification-service,Service started,req-1105,145
+2026-01-11T10:03:32,DEBUG,auth-service,Request processed successfully,req-1106,68
+2026-01-11T10:03:34,INFO,auth-service,Service started,req-1107,395
+2026-01-11T10:03:36,WARN,notification-service,Retry attempt,req-1108,202
+2026-01-11T10:03:38,ERROR,user-service,Service started,req-1109,3173
+2026-01-11T10:03:40,DEBUG,api-gateway,Database query completed,req-1110,322
+2026-01-11T10:03:42,WARN,payment-service,Cache hit,req-1111,300
+2026-01-11T10:03:44,DEBUG,payment-service,Rate limit exceeded,req-1112,235
+2026-01-11T10:03:46,INFO,api-gateway,Database query completed,req-1113,448
+2026-01-11T10:03:48,INFO,auth-service,Request processed successfully,req-1114,193
+2026-01-11T10:03:50,ERROR,auth-service,Request processed successfully,req-1115,4322
+2026-01-11T10:03:52,WARN,notification-service,Cache hit,req-1116,135
+2026-01-11T10:03:54,ERROR,api-gateway,Request processed successfully,req-1117,4329
+2026-01-11T10:03:56,ERROR,payment-service,Retry attempt,req-1118,2432
+2026-01-11T10:03:58,INFO,auth-service,Rate limit exceeded,req-1119,144
+2026-01-11T10:04:00,ERROR,user-service,Cache hit,req-1120,3250
+2026-01-11T10:04:02,INFO,auth-service,Service started,req-1121,273
+2026-01-11T10:04:04,INFO,user-service,Service started,req-1122,115
+2026-01-11T10:04:06,WARN,api-gateway,Retry attempt,req-1123,72
+2026-01-11T10:04:08,ERROR,payment-service,Health check passed,req-1124,1242
+2026-01-11T10:04:10,ERROR,user-service,Database query completed,req-1125,3528
+2026-01-11T10:04:12,WARN,payment-service,Health check passed,req-1126,322
+2026-01-11T10:04:14,ERROR,notification-service,Health check passed,req-1127,1122
+2026-01-11T10:04:16,DEBUG,payment-service,Request processed successfully,req-1128,135
+2026-01-11T10:04:18,WARN,user-service,Connection timeout,req-1129,446
+2026-01-11T10:04:20,ERROR,payment-service,Connection timeout,req-1130,1784
+2026-01-11T10:04:22,ERROR,user-service,Retry attempt,req-1131,1281
+2026-01-11T10:04:24,INFO,user-service,Service started,req-1132,422
+2026-01-11T10:04:26,WARN,api-gateway,Rate limit exceeded,req-1133,288
+2026-01-11T10:04:28,DEBUG,user-service,Database query completed,req-1134,401
+2026-01-11T10:04:30,INFO,user-service,Retry attempt,req-1135,419
+2026-01-11T10:04:32,INFO,notification-service,Cache miss - fetching from DB,req-1136,6
+2026-01-11T10:04:34,ERROR,api-gateway,Database query completed,req-1137,2284
+2026-01-11T10:04:36,WARN,payment-service,Health check passed,req-1138,122
+2026-01-11T10:04:38,INFO,notification-service,Request processed successfully,req-1139,33
+2026-01-11T10:04:40,DEBUG,notification-service,Request processed successfully,req-1140,362
+2026-01-11T10:04:42,WARN,user-service,Connection timeout,req-1141,31
+2026-01-11T10:04:44,INFO,user-service,Request processed successfully,req-1142,243
+2026-01-11T10:04:46,WARN,user-service,Authentication successful,req-1143,424
+2026-01-11T10:04:48,INFO,api-gateway,Retry attempt,req-1144,136
+2026-01-11T10:04:50,DEBUG,auth-service,Request processed successfully,req-1145,179
+2026-01-11T10:04:52,ERROR,api-gateway,Health check passed,req-1146,3305
+2026-01-11T10:04:54,DEBUG,notification-service,Connection timeout,req-1147,469
+2026-01-11T10:04:56,INFO,notification-service,Authentication successful,req-1148,21
+2026-01-11T10:04:58,INFO,payment-service,Cache miss - fetching from DB,req-1149,267
+2026-01-11T10:05:00,INFO,notification-service,Rate limit exceeded,req-1150,220
+2026-01-11T10:05:02,DEBUG,api-gateway,Cache hit,req-1151,336
+2026-01-11T10:05:04,WARN,payment-service,Connection timeout,req-1152,46
+2026-01-11T10:05:06,INFO,payment-service,Rate limit exceeded,req-1153,492
+2026-01-11T10:05:08,ERROR,user-service,Authentication successful,req-1154,1716
+2026-01-11T10:05:10,DEBUG,user-service,Rate limit exceeded,req-1155,338
+2026-01-11T10:05:12,INFO,user-service,Request processed successfully,req-1156,93
+2026-01-11T10:05:14,ERROR,notification-service,Health check passed,req-1157,3274
+2026-01-11T10:05:16,ERROR,user-service,Cache hit,req-1158,1783
+2026-01-11T10:05:18,WARN,api-gateway,Retry attempt,req-1159,459
+2026-01-11T10:05:20,ERROR,auth-service,Connection timeout,req-1160,3664
+2026-01-11T10:05:22,DEBUG,api-gateway,Service started,req-1161,64
+2026-01-11T10:05:24,DEBUG,auth-service,Health check passed,req-1162,216
+2026-01-11T10:05:26,INFO,user-service,Service started,req-1163,62
+2026-01-11T10:05:28,INFO,notification-service,Health check passed,req-1164,213
+2026-01-11T10:05:30,DEBUG,payment-service,Health check passed,req-1165,309
+2026-01-11T10:05:32,DEBUG,notification-service,Health check passed,req-1166,358
+2026-01-11T10:05:34,WARN,api-gateway,Rate limit exceeded,req-1167,113
+2026-01-11T10:05:36,INFO,api-gateway,Connection timeout,req-1168,497
+2026-01-11T10:05:38,WARN,user-service,Rate limit exceeded,req-1169,430
+2026-01-11T10:05:40,INFO,notification-service,Database query completed,req-1170,374
+2026-01-11T10:05:42,INFO,notification-service,Retry attempt,req-1171,410
+2026-01-11T10:05:44,WARN,notification-service,Authentication successful,req-1172,195
+2026-01-11T10:05:46,INFO,payment-service,Rate limit exceeded,req-1173,48
+2026-01-11T10:05:48,WARN,auth-service,Retry attempt,req-1174,491
+2026-01-11T10:05:50,DEBUG,api-gateway,Cache miss - fetching from DB,req-1175,141
+2026-01-11T10:05:52,DEBUG,api-gateway,Request processed successfully,req-1176,350
+2026-01-11T10:05:54,INFO,api-gateway,Service started,req-1177,440
+2026-01-11T10:05:56,INFO,notification-service,Request processed successfully,req-1178,109
+2026-01-11T10:05:58,ERROR,payment-service,Cache miss - fetching from DB,req-1179,2979
+2026-01-11T10:06:00,WARN,notification-service,Cache hit,req-1180,421
+2026-01-11T10:06:02,ERROR,notification-service,Connection timeout,req-1181,4499
+2026-01-11T10:06:04,INFO,auth-service,Authentication successful,req-1182,395
+2026-01-11T10:06:06,WARN,notification-service,Request processed successfully,req-1183,426
+2026-01-11T10:06:08,INFO,api-gateway,Request processed successfully,req-1184,411
+2026-01-11T10:06:10,WARN,user-service,Cache miss - fetching from DB,req-1185,351
+2026-01-11T10:06:12,WARN,auth-service,Database query completed,req-1186,259
+2026-01-11T10:06:14,ERROR,api-gateway,Rate limit exceeded,req-1187,1660
+2026-01-11T10:06:16,WARN,user-service,Health check passed,req-1188,298
+2026-01-11T10:06:18,ERROR,api-gateway,Retry attempt,req-1189,4849
+2026-01-11T10:06:20,DEBUG,notification-service,Rate limit exceeded,req-1190,37
+2026-01-11T10:06:22,DEBUG,notification-service,Cache hit,req-1191,378
+2026-01-11T10:06:24,DEBUG,user-service,Retry attempt,req-1192,115
+2026-01-11T10:06:26,INFO,user-service,Database query completed,req-1193,136
+2026-01-11T10:06:28,WARN,notification-service,Health check passed,req-1194,425
+2026-01-11T10:06:30,INFO,auth-service,Rate limit exceeded,req-1195,423
+2026-01-11T10:06:32,ERROR,notification-service,Cache miss - fetching from DB,req-1196,4186
+2026-01-11T10:06:34,ERROR,payment-service,Retry attempt,req-1197,1521
+2026-01-11T10:06:36,WARN,notification-service,Health check passed,req-1198,49
+2026-01-11T10:06:38,ERROR,notification-service,Database query completed,req-1199,1192
+2026-01-11T10:06:40,WARN,api-gateway,Cache miss - fetching from DB,req-1200,75
+2026-01-11T10:06:42,INFO,payment-service,Authentication successful,req-1201,24
+2026-01-11T10:06:44,WARN,notification-service,Authentication successful,req-1202,101
+2026-01-11T10:06:46,INFO,payment-service,Health check passed,req-1203,212
+2026-01-11T10:06:48,DEBUG,notification-service,Health check passed,req-1204,68
+2026-01-11T10:06:50,INFO,auth-service,Retry attempt,req-1205,378
+2026-01-11T10:06:52,DEBUG,api-gateway,Authentication successful,req-1206,264
+2026-01-11T10:06:54,ERROR,payment-service,Retry attempt,req-1207,3260
+2026-01-11T10:06:56,INFO,payment-service,Rate limit exceeded,req-1208,76
+2026-01-11T10:06:58,ERROR,api-gateway,Authentication successful,req-1209,4493
+2026-01-11T10:07:00,DEBUG,user-service,Request processed successfully,req-1210,117
+2026-01-11T10:07:02,WARN,auth-service,Rate limit exceeded,req-1211,240
+2026-01-11T10:07:04,DEBUG,user-service,Request processed successfully,req-1212,405
+2026-01-11T10:07:06,ERROR,payment-service,Health check passed,req-1213,1493
+2026-01-11T10:07:08,WARN,notification-service,Cache hit,req-1214,186
+2026-01-11T10:07:10,INFO,api-gateway,Authentication successful,req-1215,241
+2026-01-11T10:07:12,WARN,notification-service,Health check passed,req-1216,186
+2026-01-11T10:07:14,DEBUG,user-service,Retry attempt,req-1217,176
+2026-01-11T10:07:16,WARN,api-gateway,Rate limit exceeded,req-1218,484
+2026-01-11T10:07:18,DEBUG,user-service,Database query completed,req-1219,145
+2026-01-11T10:07:20,WARN,notification-service,Connection timeout,req-1220,41
+2026-01-11T10:07:22,DEBUG,payment-service,Service started,req-1221,448
+2026-01-11T10:07:24,INFO,notification-service,Service started,req-1222,347
+2026-01-11T10:07:26,WARN,payment-service,Connection timeout,req-1223,274
+2026-01-11T10:07:28,ERROR,payment-service,Rate limit exceeded,req-1224,1001
+2026-01-11T10:07:30,WARN,auth-service,Cache miss - fetching from DB,req-1225,385
+2026-01-11T10:07:32,ERROR,notification-service,Request processed successfully,req-1226,4088
+2026-01-11T10:07:34,WARN,user-service,Connection timeout,req-1227,60
+2026-01-11T10:07:36,INFO,notification-service,Connection timeout,req-1228,159
+2026-01-11T10:07:38,ERROR,notification-service,Rate limit exceeded,req-1229,1411
+2026-01-11T10:07:40,DEBUG,auth-service,Service started,req-1230,454
+2026-01-11T10:07:42,ERROR,api-gateway,Database query completed,req-1231,1388
+2026-01-11T10:07:44,DEBUG,user-service,Connection timeout,req-1232,404
+2026-01-11T10:07:46,WARN,auth-service,Rate limit exceeded,req-1233,384
+2026-01-11T10:07:48,DEBUG,api-gateway,Database query completed,req-1234,260
+2026-01-11T10:07:50,WARN,user-service,Database query completed,req-1235,98
+2026-01-11T10:07:52,INFO,notification-service,Service started,req-1236,5
+2026-01-11T10:07:54,WARN,auth-service,Retry attempt,req-1237,452
+2026-01-11T10:07:56,INFO,api-gateway,Cache miss - fetching from DB,req-1238,27
+2026-01-11T10:07:58,ERROR,user-service,Database query completed,req-1239,3958
+2026-01-11T10:08:00,INFO,auth-service,Request processed successfully,req-1240,105
+2026-01-11T10:08:02,INFO,api-gateway,Database query completed,req-1241,251
+2026-01-11T10:08:04,WARN,payment-service,Retry attempt,req-1242,436
+2026-01-11T10:08:06,INFO,user-service,Health check passed,req-1243,179
+2026-01-11T10:08:08,ERROR,api-gateway,Connection timeout,req-1244,4396
+2026-01-11T10:08:10,INFO,payment-service,Cache miss - fetching from DB,req-1245,185
+2026-01-11T10:08:12,ERROR,notification-service,Authentication successful,req-1246,2975
+2026-01-11T10:08:14,WARN,notification-service,Service started,req-1247,132
+2026-01-11T10:08:16,DEBUG,user-service,Authentication successful,req-1248,268
+2026-01-11T10:08:18,WARN,api-gateway,Cache hit,req-1249,490

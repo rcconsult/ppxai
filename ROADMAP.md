@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.13.7 (January 2026)
+> **Current Version**: v1.13.8 (January 2026)
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
@@ -124,6 +124,24 @@ ppxai provides:
 - **Session lifecycle** - Auto-expire after 1 hour, usage saved on cleanup
 - **Monitoring endpoint** - `GET /sessions/list` for debugging active sessions
 
+### Release Script Fixes ✅ (v1.13.6)
+- **Windows `gh` CLI compatibility** - Release script works on Windows PowerShell
+- **UTF-8 encoding** - Release scripts use proper encoding on all platforms
+
+### Config & Status Fixes ✅ (v1.13.7)
+- **`/config reload` command** - Hot-reload `ppxai-config.json` without restart
+- **`/status` command fixes** - Fixed session methods and working directory display
+- **Gemini grounding pricing** - Corrected pricing in example config ($35/1K requests)
+
+### Data Visualization & Container Tools ✅ (v1.13.8)
+- **CSV/TSV table viewer** - Rich tables in TUI, interactive DataTableViewer in Web App
+- **JSON/YAML/TOML/HCL tree viewer** - Collapsible trees with syntax highlighting
+- **Rendered/Source toggle** - Switch between formatted view and raw source (TUI + Web)
+- **Container management tools** - 16 tools for Docker, Podman, Kubernetes CLI
+- **Format auto-detection** - Extension-based and content sniffing for data files
+- **Visualization config** - `max_rows`, `page_size`, `tree_depth`, `csv_delimiter` options
+- **Optional dependencies** - `pip install ppxai[data]` for YAML/HCL parsing
+
 ---
 
 ## Infrastructure
@@ -211,6 +229,26 @@ These are tracked but not prioritized:
 - **`/rewind` browser** - Interactive checkpoint history viewer
 - **`/agent --dry-run`** - Preview changes without applying
 
+### Data Visualization Library Upgrade (Web App)
+
+Current: Vanilla JavaScript (`DataTableViewer`, `DataTreeViewer`) - lightweight, no dependencies.
+
+**Alternative libraries to consider if advanced features needed:**
+
+| Library | Size | Use Case |
+|---------|------|----------|
+| **Tabulator** | ~100KB | Virtual scrolling, column resize, export (10K+ rows) |
+| **AG Grid** (Free) | ~500KB | Professional tables, filtering, grouping |
+| **json-viewer** | ~10KB | Focused JSON tree visualization |
+| **JSONEditor** | ~200KB | Tree + code view with editing |
+
+**Criteria for upgrade:**
+- User requests column resizing or virtual scrolling for large files
+- Performance issues with current implementation (>5000 rows)
+- Need for data export (CSV, Excel) from preview
+
+**Current vanilla JS is sufficient for v1.13.x preview use case.**
+
 ### Jupyter Kernel Tool (Data Science Workflow)
 
 Enable AI to execute cells in a running JupyterLab kernel with real-time output streaming:
@@ -230,6 +268,14 @@ Current `/show` command opens files in VSCode text editor. Need image preview fo
 - **Formats:** PNG, JPG, JPEG, GIF, SVG, WebP
 - **Display:** Inline in chat panel or split pane preview
 - **Use case:** AI generates chart (e.g., matplotlib), user wants to see it without leaving chat
+
+---
+
+## Known Issues
+
+| Issue | Description | Status |
+|-------|-------------|--------|
+| **`@filename` injection broken** | Web app file injection via `@filename` stopped working after agent context fix. `@git` and `@tree` work correctly. | Deferred to v1.13.9 |
 
 ---
 
@@ -263,4 +309,4 @@ For archived planning documents:
 
 ---
 
-**Last Updated**: January 8, 2026
+**Last Updated**: January 11, 2026

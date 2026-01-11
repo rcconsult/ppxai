@@ -7,6 +7,7 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="lib/highlight-github-dark.css">
+    <link rel="stylesheet" href="styles/data-viewers.css">
     <script src="lib/marked.min.js"></script>
     <script src="lib/highlight.min.js"></script>
 </head>
@@ -90,16 +91,25 @@
                 </div>
             </main>
 
+            <!-- Resize Handle -->
+            <div class="resize-handle hidden" id="resizeHandle"></div>
+
             <!-- File Preview Panel -->
             <aside class="preview-panel hidden" id="previewPanel">
                 <div class="preview-header">
                     <span class="preview-filename" id="previewFilename">filename.ext</span>
                     <span class="preview-info" id="previewInfo"></span>
+                    <button class="view-toggle hidden" id="previewViewToggle" title="Toggle Rendered/Source">
+                        <span class="toggle-rendered active">Rendered</span>
+                        <span class="toggle-sep">|</span>
+                        <span class="toggle-source">Source</span>
+                    </button>
                     <button class="preview-close" id="previewClose" title="Close preview">&times;</button>
                 </div>
                 <div class="preview-content" id="previewContent">
                     <pre><code id="previewCode"></code></pre>
                     <div class="markdown-preview hidden" id="previewMarkdown"></div>
+                    <div class="data-viewer hidden" id="previewDataViewer"></div>
                 </div>
             </aside>
         </div>
@@ -181,6 +191,8 @@
     <script src="shared/commands.js"></script>
     <script src="shared/formatters.js"></script>
     <script src="shared/api-client.js"></script>
+    <script src="components/table-viewer.js"></script>
+    <script src="components/tree-viewer.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

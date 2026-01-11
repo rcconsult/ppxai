@@ -5,6 +5,64 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.8] - 2026-01-11
+
+### Added - Data Visualization
+
+- **CSV/TSV Table Viewer** - Interactive table display with sorting, pagination, and filtering
+  - TUI: Rich tables with pagination controls (`n`/`p` for next/prev, `s` for source view)
+  - Web: Interactive DataTableViewer component with column sorting and search
+- **JSON/YAML Tree Viewer** - Collapsible tree view for structured data
+  - TUI: Rich tree with expand/collapse controls
+  - Web: Interactive DataTreeViewer with expand all/collapse all
+- **Format Detection** - Auto-detect CSV, TSV, JSON, YAML, TOML, HCL from extension and content
+- **View Toggle** - Switch between rendered (table/tree) and source (syntax-highlighted) views
+  - TUI: `/show file.csv --source` flag or `s` key during viewing
+  - Web: "Rendered | Source" toggle button in preview panel
+- **TOML/HCL Support** - Parse and display TOML and HCL/Terraform files as trees
+
+### Added - Container Management Tools
+
+- **Docker/Podman Tools** - Container lifecycle management with consent for destructive operations
+  - `container_list` - List containers (running or all)
+  - `container_logs` - Get container logs with tail/since options
+  - `container_inspect` - Detailed container information
+  - `container_start/stop/restart` - State management (requires consent)
+  - `container_exec` - Execute commands in containers (requires consent)
+  - `image_list` - List container images
+- **Kubernetes Tools** - Pod and deployment management
+  - `pod_list` - List pods across namespaces
+  - `pod_logs` - Get pod logs with container selection
+  - `pod_describe` - Detailed pod information
+  - `deployment_list` - List deployments
+  - `service_list` - List services
+  - `kubectl_apply` - Apply manifests (requires consent)
+  - `pod_exec` - Execute in pods (requires consent)
+  - `namespace_list` - List namespaces
+- **Runtime Detection** - Auto-detect Docker, Podman, and kubectl availability
+- **Note**: Container tools are new and may require additional testing - please report issues
+
+### Added - Configuration Options
+
+- **Visualization Config** - New `visualization` section in ppxai-config.json
+  - `max_rows` - Limit rows loaded for large CSV files (default: 10000)
+  - `page_size` - Rows per page in TUI view (default: 50)
+  - `tree_depth` - Initial tree expansion depth (default: 3)
+  - `auto_detect` - Enable content-based format detection
+  - `csv_delimiter` - Force delimiter or use 'auto'
+- **Container Config** - New `tools.container` section
+  - `enabled` - Enable/disable container tools
+  - `require_consent` - Require consent for destructive operations
+  - `timeout` - Command execution timeout
+
+### Added - Dependencies
+
+- **Optional `data` extras** - `pip install ppxai[data]` for YAML/HCL parsing
+  - `pyyaml>=6.0` - YAML file parsing
+  - `python-hcl2>=4.3` - HCL/Terraform file parsing
+
+---
+
 ## [1.13.7] - 2026-01-09
 
 ### Added - Hot Reload Configuration

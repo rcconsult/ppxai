@@ -627,6 +627,53 @@ def get_shell_config() -> Dict[str, Any]:
     }
 
 
+def get_visualization_config() -> Dict[str, Any]:
+    """Get data visualization configuration (v1.13.8).
+
+    Returns:
+        Visualization config dict with:
+        - max_rows: Maximum rows to load for CSV/TSV (default: 10000)
+        - max_columns: Maximum columns to display (default: 50)
+        - page_size: Rows per page in TUI table view (default: 50)
+        - tree_depth: Initial expansion depth for JSON/YAML trees (default: 3)
+        - auto_detect: Auto-detect format from content (default: True)
+        - csv_delimiter: CSV delimiter ('auto', ',', '\\t', ';', '|') (default: 'auto')
+        - theme: Color theme ('default', 'monochrome') (default: 'default')
+    """
+    config = load_config()
+    viz_config = config.get("visualization", {})
+
+    return {
+        "max_rows": viz_config.get("max_rows", 10000),
+        "max_columns": viz_config.get("max_columns", 50),
+        "page_size": viz_config.get("page_size", 50),
+        "tree_depth": viz_config.get("tree_depth", 3),
+        "auto_detect": viz_config.get("auto_detect", True),
+        "csv_delimiter": viz_config.get("csv_delimiter", "auto"),
+        "theme": viz_config.get("theme", "default"),
+    }
+
+
+def get_container_config() -> Dict[str, Any]:
+    """Get container tools configuration (v1.13.8).
+
+    Returns:
+        Container config dict with:
+        - enabled: Enable container tools (default: True)
+        - require_consent: Require consent for destructive operations (default: True)
+        - default_runtime: Container runtime ('auto', 'docker', 'podman') (default: 'auto')
+        - timeout: Command timeout in seconds (default: 60)
+    """
+    tool_config = get_tool_config("container")
+
+    return {
+        "enabled": tool_config.get("enabled", True),
+        "require_consent": tool_config.get("require_consent", True),
+        "default_runtime": tool_config.get("default_runtime", "auto"),
+        "timeout": tool_config.get("timeout", 60),
+    }
+
+
 def get_tool_pricing(tool_name: str, provider: str) -> Dict[str, Any]:
     """Get pricing configuration for a tool provider.
 

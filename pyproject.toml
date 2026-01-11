@@ -1,6 +1,6 @@
 [project]
 name = "ppxai"
-version = "1.13.7"
+version = "1.13.8"
 description = "Terminal UI for interacting with multiple AI providers"
 readme = "README.md"
 license = { text = "MIT" }
@@ -51,6 +51,12 @@ search = [
 # Native Gemini provider (v1.12.5+)
 gemini = [
     "google-genai>=1.0.0",
+]
+
+# Data visualization support (v1.13.8)
+data = [
+    "pyyaml>=6.0",
+    "python-hcl2>=4.3",
 ]
 
 # Development dependencies

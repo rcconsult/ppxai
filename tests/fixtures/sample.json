@@ -1,0 +1,24 @@
+{
+  "name": "ppxai",
+  "version": "1.13.8",
+  "features": {
+    "visualization": {
+      "csv": true,
+      "json": true,
+      "yaml": true
+    },
+    "tools": ["container", "kubernetes"]
+  },
+  "settings": {
+    "theme": "dark",
+    "maxRows": 10000,
+    "nested": {
+      "level1": {
+        "level2": {
+          "value": "deep"
+        }
+      }
+    }
+  },
+  "tags": ["ai", "cli", "visualization"]
+}

@@ -281,12 +281,19 @@ class ContextInjector:
             if not content:
                 content = "No changes in working directory"
 
+            # Truncate if too large (same as regular files)
+            original_size = len(content)
+            truncated = False
+            if len(content) > self.MAX_FILE_SIZE:
+                content = content[:self.MAX_FILE_SIZE]
+                truncated = True
+
             return InjectedContext(
                 source="@git",
                 content=content,
                 language="diff",
-                truncated=len(content) > self.MAX_FILE_SIZE,
-                size=len(content)
+                truncated=truncated,
+                size=original_size
             )
 
         except (subprocess.CalledProcessError, FileNotFoundError):
