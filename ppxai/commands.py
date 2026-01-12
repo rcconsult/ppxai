@@ -1279,15 +1279,15 @@ class CommandHandler:
             console.print("[yellow]Usage: /debug-log [on|off|show|clear][/yellow]\n")
 
     def _search_files(self, query: str, max_results: int = 10) -> list:
-        """Search for files matching query in current directory."""
+        """Search for files matching query in engine's working directory."""
         from pathlib import Path
         import fnmatch
 
         # Remove @ prefix if present
         query = query.lstrip('@').strip()
 
-        # Get search root (current working directory)
-        root = Path.cwd()
+        # Get search root from engine client (respects cd command)
+        root = Path(self.engine_client.get_working_dir())
 
         # Build search patterns
         patterns = []
@@ -1446,10 +1446,13 @@ class CommandHandler:
         if at_match:
             query = at_match.group(1)  # Use just the reference without @
 
+        # Get working directory from engine client (respects cd command)
+        working_dir = Path(self.engine_client.get_working_dir())
+
         # Check if it's a direct path first
         direct_path = Path(query).expanduser()
         if not direct_path.is_absolute():
-            direct_path = Path.cwd() / query
+            direct_path = working_dir / query
 
         if direct_path.exists() and direct_path.is_file():
             path = direct_path.resolve()
@@ -1464,12 +1467,12 @@ class CommandHandler:
 
             if len(matches) == 1:
                 path = matches[0]
-                console.print(f"[dim]Found: {path.relative_to(Path.cwd())}[/dim]\n")
+                console.print(f"[dim]Found: {path.relative_to(working_dir)}[/dim]\n")
             else:
                 # Multiple matches - let user choose
                 console.print(f"\n[yellow]Multiple files found ({len(matches)}):[/yellow]")
                 for i, match in enumerate(matches, 1):
-                    rel_path = match.relative_to(Path.cwd())
+                    rel_path = match.relative_to(working_dir)
                     console.print(f"  [cyan]{i}[/cyan]. {rel_path}")
 
                 console.print("\n[dim]Use exact path: /show <path>[/dim]\n")
