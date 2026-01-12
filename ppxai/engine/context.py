@@ -369,11 +369,17 @@ class ContextInjector:
         content += f"Max depth: {max_depth}\n\n"
         content += tree
 
+        # Truncate if too large (v1.13.8)
+        truncated = False
+        if len(content) > MAX_FILE_SIZE:
+            content = content[:MAX_FILE_SIZE] + "\n\n... (tree truncated)"
+            truncated = True
+
         return InjectedContext(
             source="@tree",
             content=content,
             language="text",
-            truncated=False,
+            truncated=truncated,
             size=len(content)
         )
 

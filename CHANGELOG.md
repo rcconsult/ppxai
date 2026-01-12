@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Shell `cd` command updates engine working directory** - When AI calls `execute_shell_command` with `cd`, it now updates `engine.set_working_dir()` instead of running a subprocess (which only changed the subprocess directory). Fixes `list_directory` showing wrong directory after AI-issued `cd` command.
+- **@tree context truncation** - `@tree` injection now truncates at 100KB limit (same as `@file` and `@git`) to prevent "too many tokens" errors with large codebases
 - **TUI @file autocomplete after cd** - File completion now uses engine's working directory instead of process cwd, so @filename autocomplete correctly shows files from the current directory after using cd command
 - **TUI /show command after cd** - `/show @filename` and `/show filename` now search in the engine's working directory (set by cd) instead of the process cwd
 - **Desktop app missing data viewers** - Added `components/` and `styles/` directories to `ppxai-desktop.spec` so data viewer CSS/JS files are bundled and deployed to `~/.ppxai/web/`

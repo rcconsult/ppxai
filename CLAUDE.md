@@ -11,6 +11,8 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 **v1.13.9 highlights:**
 - **NEW:** Session Persistence & Auto-Recovery - sessions auto-saved after each chat, crash recovery, command history preserved
 - **NEW:** Session config options - `auto_restore` ("always", "prompt", "never"), `auto_save_interval`
+- **FIX:** Shell `cd` via AI tool now updates engine working directory (fixes `list_directory` after cd)
+- **FIX:** `@tree` context truncation at 100KB limit (prevents token overflow)
 - **FIX:** TUI `@file` autocomplete now uses engine working directory after `cd` command
 - **FIX:** `/show` command respects `cd` working directory
 - **FIX:** Desktop app bundles data viewer CSS/JS files correctly
