@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.13.8 (January 2026)
+> **Current Version**: v1.13.9 (January 2026)
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
@@ -143,6 +143,16 @@ ppxai provides:
 - **Optional dependencies** - `pip install ppxai[data]` for YAML/HCL parsing
 - **`@filename` autocomplete fix** - Web App and VSCode now show real file suggestions via `/files/search`
 - **E2E Playwright tests** - 55 browser tests for data viewer components
+
+### Session Persistence & Windows Fixes ✅ (v1.13.9)
+- **Session auto-save** - Sessions saved after each chat exchange with crash recovery
+- **Command history persistence** - User input history saved per session
+- **Working directory persistence** - `cd` command changes remembered across restarts
+- **Auto-restore on startup** - Configurable: `"always"`, `"prompt"`, `"never"`
+- **Tool parameter aliasing** - Handle model variations (`filepath` vs `file_path`)
+- **Context overflow prevention** - Friendly error when `@file` exceeds 128K limit
+- **Empty responses after tools** - Prompt model for summary when response is empty
+- **Reasoning model support** - Handle `reasoning_content` field from DeepSeek R1
 
 ---
 

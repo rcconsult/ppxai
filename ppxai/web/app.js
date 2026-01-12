@@ -798,10 +798,18 @@ class PpxaiApp {
 
     handleStreamEvent(event, contentEl, fullContent) {
         switch (event.type) {
+            case 'reasoning_chunk':
+                // v1.13.9: Reasoning tokens from DeepSeek R1, GPT-OSS 120B
+                // Show in collapsible thinking section
+                this.appendReasoningChunk(contentEl, event.data);
+                break;
+
             case 'stream_chunk':
                 // v1.13.2: Clear thinking indicator when first content arrives
                 if (!fullContent && event.data) {
                     this.clearThinkingIndicator(contentEl);
+                    // v1.13.9: Close reasoning section when content starts
+                    this.closeReasoningSection(contentEl);
                 }
                 fullContent += event.data || '';
                 // Throttle markdown rendering
@@ -1516,6 +1524,52 @@ class PpxaiApp {
         const indicator = contentEl.querySelector('.thinking-indicator');
         if (indicator) {
             indicator.remove();
+        }
+    }
+
+    // v1.13.9: Append reasoning chunk to collapsible section
+    appendReasoningChunk(contentEl, chunk) {
+        if (!contentEl || !chunk) return;
+
+        // Clear thinking indicator when reasoning starts
+        this.clearThinkingIndicator(contentEl);
+
+        // Find or create reasoning section
+        let reasoningSection = contentEl.querySelector('.reasoning-section');
+        if (!reasoningSection) {
+            reasoningSection = document.createElement('details');
+            reasoningSection.className = 'reasoning-section';
+            reasoningSection.open = true; // Start open while streaming
+            reasoningSection.innerHTML = `
+                <summary class="reasoning-header">
+                    <span class="reasoning-icon">💭</span>
+                    <span class="reasoning-title">Thinking...</span>
+                </summary>
+                <div class="reasoning-content"></div>
+            `;
+            contentEl.appendChild(reasoningSection);
+        }
+
+        // Append chunk to reasoning content
+        const reasoningContent = reasoningSection.querySelector('.reasoning-content');
+        if (reasoningContent) {
+            reasoningContent.textContent += chunk;
+        }
+        this.scrollToBottom();
+    }
+
+    // v1.13.9: Close reasoning section when main content starts
+    closeReasoningSection(contentEl) {
+        if (!contentEl) return;
+        const reasoningSection = contentEl.querySelector('.reasoning-section');
+        if (reasoningSection) {
+            // Update title to show it's complete
+            const title = reasoningSection.querySelector('.reasoning-title');
+            if (title) {
+                title.textContent = 'Thought process';
+            }
+            // Collapse the section
+            reasoningSection.open = false;
         }
     }
 

@@ -383,6 +383,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     content: event.content
                 });
                 break;
+            case 'reasoning_chunk':
+                // v1.13.9: Reasoning tokens from DeepSeek R1, GPT-OSS 120B
+                this._view.webview.postMessage({
+                    type: 'reasoning_chunk',
+                    content: event.content
+                });
+                break;
             case 'chunk':
                 this._view.webview.postMessage({
                     type: 'chunk',
@@ -3225,6 +3232,56 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             overflow-y: auto;
         }
 
+        /* v1.13.9: Reasoning section for DeepSeek R1, GPT-OSS 120B */
+        .reasoning-section {
+            margin-bottom: 12px;
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 4px;
+            background: var(--vscode-textBlockQuote-background);
+            overflow: hidden;
+        }
+
+        .reasoning-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            color: var(--vscode-descriptionForeground);
+            font-size: 12px;
+        }
+
+        .reasoning-header:hover {
+            background: var(--vscode-list-hoverBackground);
+        }
+
+        .reasoning-icon {
+            font-size: 14px;
+        }
+
+        .reasoning-title {
+            flex: 1;
+            font-style: italic;
+        }
+
+        .reasoning-section[open] .reasoning-header {
+            border-bottom: 1px solid var(--vscode-panel-border);
+        }
+
+        .reasoning-content {
+            padding: 10px;
+            font-size: 11px;
+            color: var(--vscode-descriptionForeground);
+            font-style: italic;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 250px;
+            overflow-y: auto;
+            line-height: 1.4;
+        }
+
         /* VSCode-style Markdown rendering */
         .message h1, .message h2, .message h3, .message h4, .message h5, .message h6 {
             margin-top: 24px;
@@ -4326,11 +4383,23 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                     typingIndicator.textContent = 'Waiting for response...';
                     break;
 
+                case 'reasoning_chunk':
+                    // v1.13.9: Reasoning tokens from DeepSeek R1, GPT-OSS 120B
+                    typingIndicator.classList.remove('visible');
+                    if (!currentResponseEl) {
+                        currentResponseEl = addMessage('assistant', '', false);
+                    }
+                    // Append to reasoning section (collapsible)
+                    appendReasoningChunk(currentResponseEl, message.content);
+                    break;
+
                 case 'chunk':
                     if (!currentResponseEl) {
                         currentResponseEl = addMessage('assistant', '', false);
                         typingIndicator.classList.remove('visible');
                     }
+                    // v1.13.9: Close reasoning section when content starts
+                    closeReasoningSection(currentResponseEl);
                     currentResponseContent += message.content;
                     scheduleRender(); // Throttled simple render during streaming
                     break;
@@ -4684,6 +4753,55 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             messagesContainer.insertBefore(el, typingIndicator);
             scrollToBottom();
             return el;
+        }
+
+        // v1.13.9: Append reasoning chunk to collapsible section
+        function appendReasoningChunk(messageEl, chunk) {
+            if (!messageEl || !chunk) return;
+
+            const contentEl = messageEl.querySelector('.message-content');
+            if (!contentEl) return;
+
+            // Find or create reasoning section
+            let reasoningSection = contentEl.querySelector('.reasoning-section');
+            if (!reasoningSection) {
+                reasoningSection = document.createElement('details');
+                reasoningSection.className = 'reasoning-section';
+                reasoningSection.open = true; // Start open while streaming
+                reasoningSection.innerHTML = \`
+                    <summary class="reasoning-header">
+                        <span class="reasoning-icon">💭</span>
+                        <span class="reasoning-title">Thinking...</span>
+                    </summary>
+                    <div class="reasoning-content"></div>
+                \`;
+                contentEl.insertBefore(reasoningSection, contentEl.firstChild);
+            }
+
+            // Append chunk to reasoning content
+            const reasoningContent = reasoningSection.querySelector('.reasoning-content');
+            if (reasoningContent) {
+                reasoningContent.textContent += chunk;
+            }
+            scrollToBottom();
+        }
+
+        // v1.13.9: Close reasoning section when main content starts
+        function closeReasoningSection(messageEl) {
+            if (!messageEl) return;
+            const contentEl = messageEl.querySelector('.message-content');
+            if (!contentEl) return;
+
+            const reasoningSection = contentEl.querySelector('.reasoning-section');
+            if (reasoningSection) {
+                // Update title to show it's complete
+                const title = reasoningSection.querySelector('.reasoning-title');
+                if (title) {
+                    title.textContent = 'Thought process';
+                }
+                // Collapse the section
+                reasoningSection.open = false;
+            }
         }
 
         // v1.12.0: Add tool message with collapsible details

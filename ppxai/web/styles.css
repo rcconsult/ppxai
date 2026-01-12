@@ -314,6 +314,56 @@ body {
     font-size: 0.9em;
 }
 
+/* v1.13.9: Reasoning section for DeepSeek R1, GPT-OSS 120B */
+.reasoning-section {
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-tertiary);
+    overflow: hidden;
+}
+
+.reasoning-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
+.reasoning-header:hover {
+    background: var(--bg-hover);
+}
+
+.reasoning-icon {
+    font-size: 1.1em;
+}
+
+.reasoning-title {
+    flex: 1;
+    font-style: italic;
+}
+
+.reasoning-section[open] .reasoning-header {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.reasoning-content {
+    padding: 12px;
+    font-size: 0.85em;
+    color: var(--text-muted);
+    font-style: italic;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 300px;
+    overflow-y: auto;
+    line-height: 1.5;
+}
+
 .usage-badge {
     padding: 4px 8px;
     font-size: 10px;

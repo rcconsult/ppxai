@@ -6,36 +6,32 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.13.8
+**Current Version:** v1.13.9
 
-**v1.13.8 highlights:**
-- **NEW:** Data Visualization - CSV/TSV table viewer, JSON/YAML tree viewer with sorting, filtering, and expand/collapse
-- **NEW:** Container Management Tools - Docker, Podman, and Kubernetes CLI integration (16 tools)
-- **NEW:** Rendered/Source toggle for data file previews in TUI and Web
-- **NEW:** E2E Playwright tests for web components (55 tests)
-- **FIX:** `@filename` autocomplete now works in Web App and VSCode (uses `/files/search` endpoint)
-- **FIX:** Autocomplete popup hides when sending messages
-
-**v1.13.8 Windows bugfixes (bugfix/windows-fixes branch):**
+**v1.13.9 highlights:**
+- **NEW:** Session Persistence & Auto-Recovery - sessions auto-saved after each chat, crash recovery, command history preserved
+- **NEW:** Session config options - `auto_restore` ("always", "prompt", "never"), `auto_save_interval`
 - **FIX:** TUI `@file` autocomplete now uses engine working directory after `cd` command
 - **FIX:** `/show` command respects `cd` working directory
 - **FIX:** Desktop app bundles data viewer CSS/JS files correctly
 - **FIX:** Tool parameter aliasing - handles model variations (`filepath` vs `file_path`, etc.)
 - **FIX:** Context overflow prevention - friendly error when `@file` injections exceed 128K limit
 - **FIX:** Empty responses after tool calls - prompts model for summary when needed
+- **FIX:** Reasoning model support - handle `reasoning_content` field from DeepSeek R1/GPT-OSS
 
-**v1.13.7 included:**
-- `/config reload` command - hot-reload `ppxai-config.json` without restart
-- `/status` command fixes
+**v1.13.8 included:**
+- Data Visualization - CSV/TSV table viewer, JSON/YAML tree viewer
+- Container Management Tools - Docker, Podman, and Kubernetes CLI integration (16 tools)
+- E2E Playwright tests for web components (55 tests)
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.13.8
-- VSCode extension (package.json): v1.13.8
-- Git tag: v1.13.8
+- Python package (pyproject.toml): v1.13.9
+- VSCode extension (package.json): v1.13.9
+- Git tag: v1.13.9
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
 
-## Codebase Statistics (v1.13.8)
+## Codebase Statistics (v1.13.9)
 
 | Language | Files | Lines |
 |----------|------:|------:|

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "version": "1.2",
+  "version": "1.3",
   "default_provider": "perplexity",
   "comment": "Configuration for ppxai - customize providers, models, and autorouting behavior",
   "system_prompt": "You are a helpful AI assistant. Be concise and direct. Report tool results briefly.",
@@ -13,6 +13,13 @@
     "__comment_idle_timeout": "Auto-shutdown after N seconds of inactivity. 0 = disabled (server runs forever)",
     "port": 54320,
     "__comment_port": "Default HTTP server port"
+  },
+  "session": {
+    "__comment": "Session persistence and auto-recovery (v1.13.9+)",
+    "auto_restore": "prompt",
+    "__comment_auto_restore": "How to restore sessions on startup: 'always', 'prompt' (default), 'never'",
+    "auto_save_interval": 1,
+    "__comment_auto_save_interval": "Save session every N messages (0 = every message, 1 = default)"
   },
   "paths": {
     "__comment": "Binary and data paths (v1.13.2+). Use {home} for home directory",

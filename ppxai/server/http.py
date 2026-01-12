@@ -414,6 +414,8 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
     Phase 1C: Also checks consent_event_queue for pending consent requests.
     v1.11.2: Added debug logging for troubleshooting.
     v1.14.0: Takes engine as parameter for session isolation.
+    v1.13.9: Added explicit [DONE] termination for robust stream completion.
+             Helps prevent aiohttp ClientPayloadError in downstream clients.
     """
     if not engine:
         logger.error("SSE event generator called but engine not initialized")
@@ -485,6 +487,13 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
     except Exception as save_error:
         logger.warning(f"Failed to auto-save usage: {save_error}")
 
+    # v1.13.9: Send explicit [DONE] termination signal
+    # This follows OpenAI's SSE convention and helps prevent ClientPayloadError
+    # in aiohttp-based clients (like Open WebUI) by signaling clean stream end
+    logger.log_sse_event("done", "[DONE]")
+    yield "data: [DONE]\n\n"
+    await asyncio.sleep(0)  # Ensure final event is flushed
+
 
 async def sse_coding_task_generator(
     prompt: str,
@@ -494,6 +503,7 @@ async def sse_coding_task_generator(
     """Generate SSE events from engine coding task.
 
     v1.14.0: Takes engine as parameter for session isolation.
+    v1.13.9: Added explicit [DONE] termination for robust stream completion.
     """
     if not engine:
         yield f"data: {json.dumps({'type': 'error', 'data': 'Engine not initialized'})}\n\n"
@@ -530,6 +540,11 @@ async def sse_coding_task_generator(
             engine.session.save_usage_to_persistent_storage()
     except Exception as save_error:
         logger.warning(f"Failed to auto-save usage: {save_error}")
+
+    # v1.13.9: Send explicit [DONE] termination signal
+    logger.log_sse_event("done", "[DONE]")
+    yield "data: [DONE]\n\n"
+    await asyncio.sleep(0)  # Ensure final event is flushed
 
 
 # === API Endpoints ===

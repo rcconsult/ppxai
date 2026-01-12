@@ -901,6 +901,61 @@ def set_tui_config(key: str, value: Any) -> bool:
 
 
 # =============================================================================
+# Session Configuration (v1.13.9 - Session persistence and auto-recovery)
+# =============================================================================
+
+def get_session_config() -> Dict[str, Any]:
+    """Get session-specific configuration.
+
+    Reads from ppxai-config.json under the "session" key:
+    {
+        "session": {
+            "auto_restore": "prompt",  // "always", "prompt", "never"
+            "auto_save_interval": 1    // save after N messages (0=every message)
+        }
+    }
+
+    auto_restore modes:
+        - "always": Automatically restore last session on startup
+        - "prompt": Ask user whether to restore (default)
+        - "never": Always start fresh session
+
+    Returns:
+        Dict with session configuration options.
+    """
+    defaults = {
+        "auto_restore": "prompt",  # Default: ask user
+        "auto_save_interval": 1,   # Save after every message
+    }
+
+    # Get config, merge with defaults
+    session_config = _config.get("session", {})
+    return {**defaults, **session_config}
+
+
+def get_auto_restore_mode() -> str:
+    """Get the auto-restore mode for sessions.
+
+    Returns:
+        One of "always", "prompt", "never"
+    """
+    mode = get_session_config().get("auto_restore", "prompt")
+    if mode not in ("always", "prompt", "never"):
+        return "prompt"
+    return mode
+
+
+def get_auto_save_interval() -> int:
+    """Get the auto-save interval (number of messages between saves).
+
+    Returns:
+        Number of messages between auto-saves (0 = every message)
+    """
+    interval = get_session_config().get("auto_save_interval", 1)
+    return max(0, int(interval))
+
+
+# =============================================================================
 # Paths Configuration (v1.13.2 - Cross-platform binary discovery)
 # =============================================================================
 

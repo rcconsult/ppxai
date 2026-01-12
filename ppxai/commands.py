@@ -314,6 +314,13 @@ class CommandHandler:
             # Non-critical - don't fail on usage persistence errors
             pass
 
+        # v1.13.9: Mark session clean on graceful exit
+        try:
+            self.engine_client.session.mark_clean()
+        except Exception as e:
+            # Non-critical - don't fail on state file errors
+            pass
+
         console.print("\n[yellow]Goodbye![/yellow]")
         return True
 

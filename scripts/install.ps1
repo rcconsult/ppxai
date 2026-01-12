@@ -196,8 +196,12 @@ function Get-ConfigTemplate {
     return @'
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "version": "1.1",
+  "version": "1.3",
   "default_provider": "perplexity",
+  "session": {
+    "auto_restore": "prompt",
+    "auto_save_interval": 1
+  },
   "paths": {
     "bin_search_paths": [
       "{home}/.ppxai/bin",

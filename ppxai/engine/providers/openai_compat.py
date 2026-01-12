@@ -138,6 +138,7 @@ class OpenAICompatibleProvider(BaseProvider):
                         raise
 
                 full_response = []
+                reasoning_response = []  # v1.13.9: Collect reasoning tokens
                 tool_calls = []
                 current_tool_call = None
                 usage = None
@@ -173,6 +174,13 @@ class OpenAICompatibleProvider(BaseProvider):
                                     if tc_chunk.function.arguments:
                                         current_tool_call["function"]["arguments"] += tc_chunk.function.arguments
 
+                    # v1.13.9: Process reasoning tokens (DeepSeek R1, GPT-OSS 120B)
+                    # These models emit reasoning_content before the main content
+                    reasoning_content = getattr(delta, 'reasoning_content', None)
+                    if reasoning_content:
+                        reasoning_response.append(reasoning_content)
+                        yield Event(EventType.REASONING_CHUNK, reasoning_content)
+
                     # Process content chunks
                     if delta.content:
                         content = delta.content
@@ -195,10 +203,15 @@ class OpenAICompatibleProvider(BaseProvider):
                             })
 
                 final_content = "".join(full_response)
+                final_reasoning = "".join(reasoning_response)  # v1.13.9
                 metadata = {"usage": usage} if usage else None
                 if tool_calls:
                     metadata = metadata or {}
                     metadata["tool_calls"] = tool_calls
+                # v1.13.9: Include reasoning in metadata if present
+                if final_reasoning:
+                    metadata = metadata or {}
+                    metadata["reasoning"] = final_reasoning
                 yield Event(EventType.STREAM_END, final_content, metadata)
 
             else:
@@ -211,6 +224,9 @@ class OpenAICompatibleProvider(BaseProvider):
                 message = response.choices[0].message
                 content = message.content or ""
                 usage = self._parse_usage(response.usage)
+
+                # v1.13.9: Handle reasoning content in non-streaming response
+                reasoning_content = getattr(message, 'reasoning_content', None)
 
                 # Handle native tool calls
                 if hasattr(message, 'tool_calls') and message.tool_calls:
@@ -232,6 +248,9 @@ class OpenAICompatibleProvider(BaseProvider):
                         {"id": tc.id, "function": {"name": tc.function.name, "arguments": tc.function.arguments}}
                         for tc in message.tool_calls
                     ]
+                # v1.13.9: Include reasoning in metadata if present
+                if reasoning_content:
+                    metadata["reasoning"] = reasoning_content
                 yield Event(EventType.STREAM_END, content, metadata)
 
         except Exception as e:

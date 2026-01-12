@@ -2,14 +2,21 @@
 Session management for the ppxai engine.
 
 Handles conversation history, session persistence, and usage tracking.
+
+v1.13.9: Added session state file for auto-recovery and command history persistence.
 """
 
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 from .types import Message, UsageStats, SessionInfo
+
+
+# Session state file location
+SESSION_STATE_FILE = Path.home() / ".ppxai" / "session-state.json"
 
 
 class SessionManager:
@@ -64,6 +71,11 @@ class SessionManager:
         # Shell command consent state (v1.11.2)
         self.allowed_commands: set[str] = set()  # Commands user consented to run
         self.shell_consent_mode: str = "ask"  # "ask", "always", "never"
+
+        # v1.13.9: Session persistence and recovery
+        self.command_history: List[str] = []  # User input history for this session
+        self.working_dir: str = os.getcwd()  # Working directory for this session
+        self._dirty: bool = False  # True if session has unsaved changes
 
     def add_message(self, message: Message):
         """Add a message to the conversation history.
@@ -502,3 +514,170 @@ class SessionManager:
             total_tokens=self.usage.total_tokens,
             message_count=len(self.messages)
         )
+
+    # =========================================================================
+    # v1.13.9: Session State File Management
+    # =========================================================================
+
+    def add_to_history(self, command: str):
+        """Add a command to the session's command history.
+
+        Args:
+            command: User input to add to history
+        """
+        if command and command.strip():
+            self.command_history.append(command.strip())
+
+    def set_working_dir(self, path: str):
+        """Set the working directory for this session.
+
+        Args:
+            path: Working directory path
+        """
+        self.working_dir = path
+
+    def save_dirty(self) -> str:
+        """Save session and mark it as dirty (unsaved changes).
+
+        This is called after each roundtrip to keep the session file synced.
+
+        Returns:
+            Session name
+        """
+        # Save the session file
+        self._save_with_extras()
+
+        # Update state file to mark session as dirty
+        self._update_state_file(dirty=True)
+
+        self._dirty = True
+        return self.session_name
+
+    def mark_clean(self):
+        """Mark session as clean (graceful exit).
+
+        Called when the application exits gracefully to indicate
+        the session was properly saved.
+        """
+        self._update_state_file(dirty=False)
+        self._dirty = False
+
+    def _save_with_extras(self) -> str:
+        """Save session with command history and working directory.
+
+        Internal method that saves the full session data including
+        the new v1.13.9 fields.
+
+        Returns:
+            Session name
+        """
+        filepath = self.sessions_dir / f"{self.session_name}.json"
+
+        session_data = {
+            "session_name": self.session_name,
+            "metadata": self.metadata,
+            "messages": [{"role": m.role, "content": m.content} for m in self.messages],
+            "usage": self.get_usage(),
+            "saved_at": datetime.now().isoformat(),
+            # v1.13.9: New fields
+            "command_history": self.command_history,
+            "working_dir": self.working_dir
+        }
+
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(session_data, f, indent=2)
+
+        return self.session_name
+
+    def _update_state_file(self, dirty: bool):
+        """Update the session state file.
+
+        Args:
+            dirty: Whether the session has unsaved changes
+        """
+        # Ensure parent directory exists
+        SESSION_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+        state_data = {
+            "version": 1,
+            "last_session": {
+                "name": self.session_name,
+                "dirty": dirty,
+                "provider": self.metadata.get("provider"),
+                "model": self.metadata.get("model"),
+                "working_dir": self.working_dir,
+                "message_count": len(self.messages)
+            },
+            "updated_at": datetime.now().isoformat()
+        }
+
+        with open(SESSION_STATE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(state_data, f, indent=2)
+
+    @staticmethod
+    def get_last_session_state() -> Optional[Dict[str, Any]]:
+        """Get the last session state from the state file.
+
+        Returns:
+            Dictionary with last session info, or None if no state file exists
+        """
+        if not SESSION_STATE_FILE.exists():
+            return None
+
+        try:
+            with open(SESSION_STATE_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return data.get("last_session")
+        except Exception:
+            return None
+
+    @staticmethod
+    def clear_state_file():
+        """Clear the session state file.
+
+        Called when starting a fresh session to prevent auto-restore.
+        """
+        if SESSION_STATE_FILE.exists():
+            SESSION_STATE_FILE.unlink()
+
+    def load_with_extras(self, name: str) -> bool:
+        """Load a saved session including command history and working directory.
+
+        Args:
+            name: Session name to load
+
+        Returns:
+            True if loaded successfully
+        """
+        filepath = self.sessions_dir / f"{name}.json"
+
+        if not filepath.exists():
+            return False
+
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            self.session_name = data.get("session_name", name)
+            self.metadata = data.get("metadata", {})
+            self.messages = [
+                Message(role=m["role"], content=m["content"])
+                for m in data.get("messages", [])
+            ]
+
+            usage_data = data.get("usage", {})
+            self.usage = UsageStats(
+                total_tokens=usage_data.get("total_tokens", 0),
+                prompt_tokens=usage_data.get("prompt_tokens", 0),
+                completion_tokens=usage_data.get("completion_tokens", 0),
+                estimated_cost=usage_data.get("estimated_cost", 0.0)
+            )
+
+            # v1.13.9: Load new fields
+            self.command_history = data.get("command_history", [])
+            self.working_dir = data.get("working_dir", os.getcwd())
+
+            return True
+
+        except Exception:
+            return False

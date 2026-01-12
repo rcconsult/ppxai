@@ -516,10 +516,14 @@ class TestTUIFileReferences:
         message = f"Please edit @{temp_file.name}"
 
         # Set working directory to temp file's directory
+        # v1.13.9: Need to set both OS cwd and engine client's working directory
         import os
         old_cwd = os.getcwd()
+        old_engine_cwd = handler.engine_client.get_working_dir()
         try:
             os.chdir(temp_file.parent)
+            # Also set the engine client's working directory (used by _search_files)
+            handler.engine_client.set_working_dir(str(temp_file.parent))
             augmented, resolved = handler.process_file_references(message)
 
             # File should be resolved
@@ -534,6 +538,8 @@ class TestTUIFileReferences:
             assert "# Test File" in augmented  # File content should be in augmented message
         finally:
             os.chdir(old_cwd)
+            if old_engine_cwd:
+                handler.engine_client.set_working_dir(old_engine_cwd)
 
     def test_process_file_references_no_matches(self, handler):
         """Test that messages without @ references are unchanged."""

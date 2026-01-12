@@ -20,8 +20,11 @@ from .config import (
     get_api_key,
     get_base_url,
     get_provider_config,
+    get_auto_restore_mode,
+    get_auto_save_interval,
 )
 from .ui import console, display_welcome, select_model, select_provider
+from .engine.session import SessionManager
 from .engine.types import EventType
 from .markdown_tables import render_markdown_with_tables
 
@@ -477,6 +480,111 @@ class PPXAICompleter(Completer):
 # Note: Environment variables are loaded in config.py
 
 
+def check_session_recovery() -> tuple[bool, dict | None]:
+    """Check if there's a session to recover.
+
+    v1.13.9: Implements session recovery logic based on config.
+
+    Returns:
+        Tuple of (should_restore, session_state) where:
+        - should_restore: True if we should restore a session
+        - session_state: Dict with session info if available
+    """
+    auto_restore = get_auto_restore_mode()
+
+    # Get last session state
+    last_state = SessionManager.get_last_session_state()
+    if not last_state:
+        return False, None
+
+    session_name = last_state.get("name")
+    is_dirty = last_state.get("dirty", False)
+    message_count = last_state.get("message_count", 0)
+
+    # Skip if no messages in last session
+    if message_count == 0:
+        return False, None
+
+    # If session was dirty (crash), always try to recover
+    if is_dirty:
+        console.print(f"\n[yellow]⚠ Recovering from interrupted session:[/yellow] {session_name}")
+        console.print(f"[dim]  {message_count} messages, last provider: {last_state.get('provider', 'unknown')}[/dim]")
+        return True, last_state
+
+    # Handle based on auto_restore config
+    if auto_restore == "never":
+        return False, None
+
+    if auto_restore == "always":
+        console.print(f"\n[cyan]↻ Restoring last session:[/cyan] {session_name}")
+        console.print(f"[dim]  {message_count} messages[/dim]")
+        return True, last_state
+
+    # auto_restore == "prompt"
+    console.print(f"\n[cyan]Last session available:[/cyan] {session_name}")
+    console.print(f"[dim]  {message_count} messages, provider: {last_state.get('provider', 'unknown')}[/dim]")
+
+    try:
+        response = console.input("[cyan]Restore? (y/n): [/cyan]").strip().lower()
+        if response in ('y', 'yes'):
+            return True, last_state
+    except (KeyboardInterrupt, EOFError):
+        console.print()
+        pass
+
+    return False, None
+
+
+def restore_session_to_handler(handler: CommandHandler, session_state: dict) -> bool:
+    """Restore a session to the command handler.
+
+    Args:
+        handler: CommandHandler to restore to
+        session_state: Session state dict from state file
+
+    Returns:
+        True if restored successfully
+    """
+    session_name = session_state.get("name")
+    if not session_name:
+        return False
+
+    # Load the session
+    if not handler.engine_client.session.load_with_extras(session_name):
+        console.print(f"[red]Failed to load session: {session_name}[/red]")
+        return False
+
+    # Restore provider/model if available
+    stored_provider = session_state.get("provider")
+    stored_model = session_state.get("model")
+
+    if stored_provider and stored_provider in PROVIDERS:
+        try:
+            handler.engine_client.set_provider(stored_provider)
+            handler.provider = stored_provider
+        except Exception:
+            pass
+
+    if stored_model:
+        try:
+            handler.engine_client.set_model(stored_model)
+            handler.current_model = stored_model
+        except Exception:
+            pass
+
+    # Restore working directory
+    working_dir = session_state.get("working_dir")
+    if working_dir and os.path.isdir(working_dir):
+        try:
+            os.chdir(working_dir)
+            handler.engine_client.set_working_dir(working_dir)
+        except Exception:
+            pass
+
+    console.print(f"[green]✓ Session restored:[/green] {session_name} ({len(handler.engine_client.session.messages)} messages)")
+    return True
+
+
 def main():
     """Main application loop."""
     # Check if provider selection is needed or use environment default
@@ -519,11 +627,23 @@ def main():
     # v1.12.0: Create command handler with provider info (no legacy client)
     handler = CommandHandler(api_key, current_model, base_url, provider)
 
+    # v1.13.9: Check for session recovery
+    should_restore, session_state = check_session_recovery()
+    if should_restore and session_state:
+        if restore_session_to_handler(handler, session_state):
+            # Update local variables from restored session
+            provider = handler.provider
+            current_model = handler.current_model
+
     # Create prompt session with history and completer
-    # Pass handler to completer for tool name autocomplete
+    # v1.13.9: Pre-populate history from restored session
+    history = InMemoryHistory()
+    for cmd in handler.engine_client.session.command_history:
+        history.append_string(cmd)
+
     completer = PPXAICompleter(command_handler=handler)
     session = PromptSession(
-        history=InMemoryHistory(),
+        history=history,
         completer=completer,
         complete_while_typing=True,
         auto_suggest=AutoSuggestFromHistory(),
@@ -557,6 +677,9 @@ def main():
 
             if not user_input:
                 continue
+
+            # v1.13.9: Add to command history
+            handler.engine_client.session.add_to_history(user_input)
 
             # Handle commands
             if user_input.startswith("/"):
@@ -623,10 +746,11 @@ def main():
             if response and handler.engine_client:
                 message_count = len(handler.engine_client.session.messages)
 
-                # Auto-save session after every 10 messages
-                if message_count > 0 and message_count % 10 == 0:
+                # v1.13.9: Auto-save session based on config interval (dirty save for recovery)
+                save_interval = get_auto_save_interval()
+                if message_count > 0 and (save_interval == 0 or message_count % max(1, save_interval) == 0):
                     try:
-                        handler.engine_client.session.save()
+                        handler.engine_client.session.save_dirty()
                     except Exception:
                         pass  # Silent fail on auto-save
 
@@ -652,12 +776,22 @@ def main():
             else:
                 # Second Ctrl-C: Exit gracefully
                 console.print("\n[yellow]Exiting gracefully...[/yellow]")
+                # v1.13.9: Mark session clean on graceful exit
+                try:
+                    handler.engine_client.session.mark_clean()
+                except Exception:
+                    pass
                 break
 
             continue
 
         except EOFError:
             console.print("\n[yellow]Goodbye![/yellow]")
+            # v1.13.9: Mark session clean on graceful exit
+            try:
+                handler.engine_client.session.mark_clean()
+            except Exception:
+                pass
             break
 
         except Exception as e:

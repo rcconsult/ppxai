@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 // === Types matching PythonBackend interface ===
 
 export interface StreamEvent {
-    type: 'thinking' | 'started' | 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'context_injected' | 'consent_request' | 'status' | 'agent_iteration' | 'agent_complete' | 'agent_max_iterations' | 'working_dir_changed';
+    type: 'thinking' | 'started' | 'reasoning_chunk' | 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'context_injected' | 'consent_request' | 'status' | 'agent_iteration' | 'agent_complete' | 'agent_max_iterations' | 'working_dir_changed';
     content: string;
     metadata?: any;
 }
@@ -687,6 +687,9 @@ export class HttpClient {
         switch (event.type) {
             case 'stream_start':
                 return { type: 'started', content: '' };
+            case 'reasoning_chunk':
+                // v1.13.9: Reasoning tokens from DeepSeek R1, GPT-OSS 120B
+                return { type: 'reasoning_chunk', content: event.data || '' };
             case 'stream_chunk':
                 return { type: 'chunk', content: event.data || '' };
             case 'stream_end':
