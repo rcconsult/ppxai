@@ -126,6 +126,71 @@ class ToolManager:
             for tool in tools
         ]
 
+    # Parameter alias groups: variations that should be treated as equivalent
+    # Some models (e.g., GPT-OSS 120B via vLLM) use different parameter names
+    # Each group contains variations that mean the same thing
+    PARAM_ALIAS_GROUPS = [
+        # File path variations (read_file uses 'filepath', editor tools use 'file_path')
+        {"filepath", "file_path", "filePath", "file"},
+        # Directory/path variations (set_working_directory uses 'path', search uses 'directory')
+        {"path", "directory", "dir_path", "dirPath", "dir", "folder"},
+        # Command variations (shell tool uses 'command')
+        {"command", "cmd", "shell_command"},
+        # Query variations (web_search uses 'query')
+        {"query", "query_text", "search_query"},
+        # Diff/patch variations (apply_patch uses 'unified_diff')
+        {"unified_diff", "diff", "patch"},
+        # URL variations (fetch_url uses 'url')
+        {"url", "link", "webpage", "uri"},
+        # Location variations (get_weather uses 'location')
+        {"location", "city", "place"},
+        # Container variations (container tools use 'container')
+        {"container", "container_id", "container_name"},
+        # Pod variations (kubernetes tools use 'pod')
+        {"pod", "pod_name", "pod_id"},
+        # Text/content variations (insert_text uses 'text')
+        {"text", "content", "body"},
+        # Search/replace variations (replace_block uses 'search' and 'replace')
+        {"search", "find", "old_text", "original"},
+        {"replace", "replacement", "new_text"},
+    ]
+
+    def _normalize_params(self, tool: BaseTool, kwargs: dict) -> dict:
+        """Normalize parameter names to match tool's expected names.
+
+        v1.13.9: Different tools use different naming conventions:
+        - read_file uses 'filepath' (no underscore)
+        - apply_patch uses 'file_path' (with underscore)
+
+        This method maps model-provided parameter names to what the tool expects.
+
+        Args:
+            tool: The tool being called
+            kwargs: Parameters provided by the model
+
+        Returns:
+            Parameters with names normalized to tool's expectations
+        """
+        tool_params = set(tool.parameters.get("properties", {}).keys())
+
+        for alias_group in self.PARAM_ALIAS_GROUPS:
+            # Find which canonical name the tool expects from this group
+            expected = alias_group & tool_params
+            if not expected:
+                continue
+            canonical = next(iter(expected))
+
+            # Find if model provided any alias from this group
+            provided = alias_group & set(kwargs.keys())
+            if not provided or canonical in kwargs:
+                continue
+
+            # Map the provided alias to the canonical name
+            alias = next(iter(provided))
+            kwargs[canonical] = kwargs.pop(alias)
+
+        return kwargs
+
     async def execute_tool(self, name: str, **kwargs) -> str:
         """Execute a tool by name.
 
@@ -142,6 +207,10 @@ class ToolManager:
         tool = self.get_tool(name)
         if not tool:
             raise ValueError(f"Tool not found or not available: {name}")
+
+        # v1.13.9: Normalize parameter names to match tool's expectations
+        # Some models use file_path, others use filepath - map to what tool expects
+        kwargs = self._normalize_params(tool, kwargs)
 
         # v1.13.2: Validate required arguments before execution
         # Some models (e.g., GPT-OSS 120B via vLLM) sometimes send empty arguments
@@ -213,9 +282,9 @@ class ToolManager:
 
         prompt += f"{instruction_num}. When calling a tool, output ONLY the JSON block, nothing else.\n"
         instruction_num += 1
-        prompt += f"{instruction_num}. **COMPLETE THE TASK FULLY**: If the user asks to read multiple files, read ALL of them one by one. Don't stop after one file.\n"
+        prompt += f"{instruction_num}. **COMPLETE ALL STEPS**: If the user asks for multiple actions (e.g., 'run X and then verify Y'), you MUST complete ALL steps before responding. Do not stop after the first step - continue using tools until every part of the request is done.\n"
         instruction_num += 1
-        prompt += f"{instruction_num}. After receiving tool results, either call another tool if more work is needed, or provide your final answer.\n"
+        prompt += f"{instruction_num}. After receiving tool results, ask yourself: 'Did I complete everything the user asked?' If not, call another tool. Only respond when ALL parts are done.\n"
         instruction_num += 1
         prompt += f"{instruction_num}. NEVER say 'I don't have access to real-time data' or 'I can't execute commands' - you DO have access via these tools!\n"
         instruction_num += 1

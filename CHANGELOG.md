@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **TUI @file autocomplete after cd** - File completion now uses engine's working directory instead of process cwd, so @filename autocomplete correctly shows files from the current directory after using cd command
 - **TUI /show command after cd** - `/show @filename` and `/show filename` now search in the engine's working directory (set by cd) instead of the process cwd
 - **Desktop app missing data viewers** - Added `components/` and `styles/` directories to `ppxai-desktop.spec` so data viewer CSS/JS files are bundled and deployed to `~/.ppxai/web/`
+- **Tool parameter aliasing** - Added dynamic parameter normalization in ToolManager to handle model variations. Different tools use different naming conventions (`read_file` expects `filepath`, `apply_patch` expects `file_path`), and models may use either. The new `_normalize_params()` method maps model-provided names to what each tool expects. Comprehensive alias groups cover: file paths, directories, commands, queries, diffs, URLs, locations, containers, pods, text content, and search/replace operations.
+- **Context overflow prevention** - Added token estimation in OpenAI-compatible provider to prevent "max_tokens must be at least 1" errors from vLLM when injected `@file` context exceeds model's 128K context window. Now shows a friendly error message suggesting to remove file references or start a new conversation instead of cryptic API error.
+- **Empty responses after tool calls** - Fixed issue where some models (e.g., GPT-OSS 120B via vLLM) would execute tools correctly but return empty text responses instead of summarizing the results. Now detects empty responses after tool iterations and prompts the model for a summary.
 
 ## [1.13.8] - 2026-01-11
 

@@ -35,6 +35,42 @@ class OpenAICompatibleProvider(BaseProvider):
         native_tool_calling=False  # Override per-provider if vLLM has tool calling enabled
     )
 
+    # v1.13.9: Token estimation for context overflow prevention
+    # Conservative estimate: ~4 chars per token for English text
+    CHARS_PER_TOKEN = 4
+    # Default context limit if not specified (128K tokens is common for vLLM deployments)
+    DEFAULT_CONTEXT_LIMIT = 128_000
+    # Reserve tokens for response generation
+    MIN_RESPONSE_TOKENS = 2048
+
+    def _estimate_tokens(self, messages: List[Dict[str, Any]]) -> int:
+        """Estimate token count for messages.
+
+        This is a rough estimate using character count / 4.
+        Actual tokenization varies by model, but this is good enough
+        for preventing obvious context overflow.
+
+        Args:
+            messages: API-formatted messages
+
+        Returns:
+            Estimated token count
+        """
+        total_chars = 0
+        for msg in messages:
+            content = msg.get("content", "")
+            if isinstance(content, str):
+                total_chars += len(content)
+            elif isinstance(content, list):
+                # Multimodal content (list of text/image blocks)
+                for part in content:
+                    if isinstance(part, dict) and part.get("type") == "text":
+                        total_chars += len(part.get("text", ""))
+            # Add overhead for role, etc.
+            total_chars += 20
+
+        return total_chars // self.CHARS_PER_TOKEN
+
     async def chat(
         self,
         messages: List[Message],
@@ -55,6 +91,19 @@ class OpenAICompatibleProvider(BaseProvider):
         """
         try:
             api_messages = self._convert_messages(messages)
+
+            # v1.13.9: Estimate token count and check for context overflow
+            # This prevents the "max_tokens must be at least 1" error from vLLM
+            estimated_tokens = self._estimate_tokens(api_messages)
+            max_allowed = self.DEFAULT_CONTEXT_LIMIT - self.MIN_RESPONSE_TOKENS
+
+            if estimated_tokens > max_allowed:
+                yield Event(EventType.ERROR, (
+                    f"Context too large: ~{estimated_tokens:,} tokens estimated, "
+                    f"but model limit is {self.DEFAULT_CONTEXT_LIMIT:,} tokens. "
+                    f"Try removing some @file references or starting a new conversation."
+                ))
+                return
 
             yield Event(EventType.STREAM_START, {"model": model})
 

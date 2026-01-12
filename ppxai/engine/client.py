@@ -1269,7 +1269,7 @@ class EngineClient:
                     ))
                     self.session.add_message(Message(
                         "user",
-                        f"The {tool_name} tool returned:\n\n{result}\n\nNow use this information to answer my original question. Do NOT just repeat or echo the tool output - synthesize it into a helpful response. If you need more information, call another tool."
+                        f"The {tool_name} tool returned:\n\n{result}\n\nNow respond to the user based on this result. For simple commands like 'ls' or 'pwd', just present the output clearly. For complex tasks, synthesize the information. If you need more information to complete the CURRENT request, call another tool."
                     ))
 
                 except Exception as e:
@@ -1300,6 +1300,43 @@ class EngineClient:
                 #
                 # The response was already fetched with stream=False during tool iterations.
                 # Just emit it as the final response.
+
+                # v1.13.9 FIX: Handle empty responses after tool iterations
+                # Some models (e.g., GPT-OSS 120B via vLLM) correctly execute tools but
+                # return empty text responses instead of summarizing results. If we have
+                # executed tools (iteration > 1) and the response is empty, prompt for summary.
+                if iteration > 1 and not full_response.strip():
+                    # Ask model to summarize tool results
+                    self.session.add_message(Message(
+                        "user",
+                        "Please provide a summary or answer based on the tool results above. "
+                        "Do not call any more tools - just synthesize the information into a helpful response."
+                    ))
+
+                    # Get the summary response
+                    summary_response = ""
+                    async for event in self.provider.chat(
+                        self.session.get_messages(), self.model, stream=False, tools=None
+                    ):
+                        if event.type == EventType.ERROR:
+                            yield event
+                            return
+                        elif event.type == EventType.STREAM_END:
+                            summary_response = event.data
+                            # Accumulate usage
+                            if event.metadata and event.metadata.get("usage"):
+                                usage = event.metadata["usage"]
+                                accumulated_usage.prompt_tokens += usage.prompt_tokens
+                                accumulated_usage.completion_tokens += usage.completion_tokens
+                                accumulated_usage.total_tokens += usage.total_tokens
+
+                    # Use summary as final response (or fallback message if still empty)
+                    full_response = summary_response.strip() or "[Tool execution completed but no summary generated]"
+
+                    # Remove the prompt message from history (it was just for getting summary)
+                    if self.session.messages and self.session.messages[-1].role == "user":
+                        self.session.messages.pop()
+
                 self.session.add_message(Message("assistant", full_response))
 
                 # v1.12.0: Commit agent changes after successful task completion
