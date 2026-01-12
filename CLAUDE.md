@@ -16,6 +16,14 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **FIX:** `@filename` autocomplete now works in Web App and VSCode (uses `/files/search` endpoint)
 - **FIX:** Autocomplete popup hides when sending messages
 
+**v1.13.8 Windows bugfixes (bugfix/windows-fixes branch):**
+- **FIX:** TUI `@file` autocomplete now uses engine working directory after `cd` command
+- **FIX:** `/show` command respects `cd` working directory
+- **FIX:** Desktop app bundles data viewer CSS/JS files correctly
+- **FIX:** Tool parameter aliasing - handles model variations (`filepath` vs `file_path`, etc.)
+- **FIX:** Context overflow prevention - friendly error when `@file` injections exceed 128K limit
+- **FIX:** Empty responses after tool calls - prompts model for summary when needed
+
 **v1.13.7 included:**
 - `/config reload` command - hot-reload `ppxai-config.json` without restart
 - `/status` command fixes
