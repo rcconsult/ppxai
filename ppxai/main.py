@@ -243,18 +243,28 @@ class PPXAICompleter(Completer):
     def __init__(self, command_handler=None):
         self._file_cache = {}
         self._cache_time = 0
+        self._cache_dir = None  # Track which directory the cache is for
         self._command_handler = command_handler
+
+    def _get_working_dir(self) -> Path:
+        """Get the current working directory from engine client or fallback to os.cwd()."""
+        if self._command_handler and hasattr(self._command_handler, 'engine_client'):
+            return Path(self._command_handler.engine_client.get_working_dir())
+        return Path.cwd()
 
     def _get_files(self, max_files: int = 100) -> list[tuple[str, str]]:
         """Get files in the current directory for completion."""
         import time
         now = time.time()
 
-        # Cache for 5 seconds
-        if now - self._cache_time < 5 and self._file_cache:
+        root = self._get_working_dir()
+
+        # Cache for 5 seconds, but invalidate if directory changed
+        if (now - self._cache_time < 5 and
+            self._file_cache and
+            self._cache_dir == root):
             return list(self._file_cache.items())[:max_files]
 
-        root = Path.cwd()
         files = {}
 
         try:
@@ -275,6 +285,7 @@ class PPXAICompleter(Completer):
 
         self._file_cache = files
         self._cache_time = now
+        self._cache_dir = root  # Remember which directory this cache is for
         return list(files.items())[:max_files]
 
     def get_completions(self, document, complete_event):
