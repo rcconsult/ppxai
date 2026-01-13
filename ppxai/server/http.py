@@ -1297,7 +1297,19 @@ async def load_session(
     if not success:
         raise HTTPException(status_code=404, detail=f"Session not found: {name}")
 
-    return {"name": name, "loaded": True}
+    # v1.13.9: Apply restored session state to engine
+    # Session.load() now loads working_dir and tools_enabled
+    if engine.session.working_dir and os.path.isdir(engine.session.working_dir):
+        engine.set_working_dir(engine.session.working_dir)
+    if engine.session.tools_enabled:
+        engine.enable_tools()
+
+    return {
+        "name": name,
+        "loaded": True,
+        "working_dir": engine.get_working_dir(),
+        "tools_enabled": engine.tools_enabled
+    }
 
 
 @app.post("/sessions/clear")

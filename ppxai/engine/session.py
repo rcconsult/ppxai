@@ -384,6 +384,11 @@ class SessionManager:
                 estimated_cost=usage_data.get("estimated_cost", 0.0)
             )
 
+            # v1.13.9: Load persistence fields (same as load_with_extras)
+            self.command_history = data.get("command_history", [])
+            self.working_dir = data.get("working_dir", os.getcwd())
+            self.tools_enabled = data.get("tools_enabled", False)
+
             return True
 
         except Exception:
