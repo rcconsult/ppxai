@@ -90,6 +90,18 @@
         "title": "Reload Configuration",
         "category": "ppxai",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "ppxai.showContextUsage",
+        "title": "Show Context Usage",
+        "category": "ppxai",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "ppxai.clearContextInjections",
+        "title": "Clear Injected Files from Context",
+        "category": "ppxai",
+        "icon": "$(trash)"
       }
     ],
     "menus": {

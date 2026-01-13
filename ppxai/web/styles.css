@@ -375,6 +375,25 @@ body {
     color: var(--success-color);
 }
 
+/* Context usage badge v1.13.9 */
+.context-usage-badge {
+    padding: 4px 10px;
+    font-size: 11px;
+    transition: all 0.3s ease;
+}
+
+.context-usage-badge.warning {
+    background: var(--warning-color);
+    color: var(--bg-primary);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.context-usage-badge.critical {
+    background: var(--error-color);
+    color: white;
+    animation: pulse 1s ease-in-out infinite;
+}
+
 .hidden {
     display: none !important;
 }

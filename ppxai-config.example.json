@@ -21,6 +21,15 @@
     "auto_save_interval": 1,
     "__comment_auto_save_interval": "Save session every N messages (0 = every message, 1 = default)"
   },
+  "context": {
+    "__comment": "Context limits and truncation settings (v1.13.9+)",
+    "max_injection_size": 100000,
+    "__comment_max_injection_size": "Max chars per @file/@git/@tree injection (default: 100KB). Increase for larger files.",
+    "default_context_limit": 128000,
+    "__comment_default_context_limit": "Default model context window in tokens. Override per-model in providers section.",
+    "warn_at_percent": 80,
+    "__comment_warn_at_percent": "Show warning when context usage exceeds this % of model limit (0 = disabled)"
+  },
   "paths": {
     "__comment": "Binary and data paths (v1.13.2+). Use {home} for home directory",
     "__comment_windows": "On Windows, {home} expands to %USERPROFILE% (e.g., C:\\Users\\YourName)",
@@ -53,7 +62,8 @@
         },
         "sonar-pro": {
           "name": "Sonar Pro",
-          "description": "Advanced search model for complex queries"
+          "description": "Advanced search model for complex queries",
+          "context_limit": 200000
         },
         "sonar-reasoning-pro": {
           "name": "Sonar Reasoning Pro",
@@ -90,31 +100,38 @@
       "models": {
         "gemini-2.0-flash": {
           "name": "Gemini 2.0 Flash",
-          "description": "Fast model with multimodal support"
+          "description": "Fast model with multimodal support",
+          "context_limit": 1000000
         },
         "gemini-2.0-flash-lite": {
           "name": "Gemini 2.0 Flash Lite",
-          "description": "Cost-efficient for high-volume tasks"
+          "description": "Cost-efficient for high-volume tasks",
+          "context_limit": 1000000
         },
         "gemini-2.5-flash": {
           "name": "Gemini 2.5 Flash",
-          "description": "Latest fast model, best price/performance"
+          "description": "Latest fast model, best price/performance",
+          "context_limit": 1000000
         },
         "gemini-2.5-pro": {
           "name": "Gemini 2.5 Pro",
-          "description": "Most capable model for complex reasoning"
+          "description": "Most capable model for complex reasoning",
+          "context_limit": 1000000
         },
         "gemini-2.5-flash-lite": {
           "name": "Gemini 2.5 Flash Lite",
-          "description": "For simple tasks that need to be done quickly"
+          "description": "For simple tasks that need to be done quickly",
+          "context_limit": 1000000
         },
         "gemini-3-flash-preview": {
           "name": "Gemini 3 Flash Preview",
-          "description": "Speed-optimized preview with frontier intelligence and 1M context"
+          "description": "Speed-optimized preview with frontier intelligence and 1M context",
+          "context_limit": 1000000
         },
         "gemini-3-pro-preview": {
           "name": "Gemini 3 Pro Preview",
-          "description": "Most powerful agentic model with 1M context, code execution, and search grounding"
+          "description": "Most powerful agentic model with 1M context, code execution, and search grounding",
+          "context_limit": 1000000
         }
       },
       "pricing": {
@@ -154,11 +171,19 @@
         },
         "o1": {
           "name": "o1",
-          "description": "Advanced reasoning model"
+          "description": "Advanced reasoning (limited: no streaming, no system prompts via Chat API)"
         },
         "o1-mini": {
           "name": "o1 Mini",
-          "description": "Fast reasoning model"
+          "description": "Fast reasoning (limited: no streaming, no system prompts via Chat API)"
+        },
+        "o3-mini": {
+          "name": "o3 Mini",
+          "description": "Latest reasoning (limited: no streaming, no system prompts via Chat API)"
+        },
+        "o4-mini": {
+          "name": "o4 Mini",
+          "description": "Newest reasoning model (limited: no streaming, no system prompts via Chat API)"
         }
       },
       "pricing": {
@@ -166,7 +191,9 @@
         "gpt-4o-mini": {"input": 0.15, "output": 0.60},
         "gpt-4-turbo": {"input": 10.00, "output": 30.00},
         "o1": {"input": 15.00, "output": 60.00},
-        "o1-mini": {"input": 3.00, "output": 12.00}
+        "o1-mini": {"input": 3.00, "output": 12.00},
+        "o3-mini": {"input": 1.10, "output": 4.40},
+        "o4-mini": {"input": 1.10, "output": 4.40}
       },
       "capabilities": {
         "web_search": false,
@@ -258,7 +285,9 @@
       "models": {
         "openai/gpt-oss-120b": {
           "name": "GPT-OSS 120B",
-          "description": "GPT-OSS 120B model with native tool calling via vLLM"
+          "description": "GPT-OSS 120B model with native tool calling via vLLM",
+          "context_limit": 131072,
+          "__comment_context_limit": "vLLM requires power of 2. Model supports ~120K, rounded up to 2^17=131072"
         }
       },
       "pricing": {

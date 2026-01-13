@@ -52,6 +52,10 @@
                     ⏹ Streaming...
                 </button>
                 <span class="usage-badge" id="usageBadge" title="Token usage">0↓/0↑</span>
+                <button class="badge context-usage-badge" id="contextBadge" title="Context usage - Click to clear injected files">
+                    <span class="badge-icon">📊</span>
+                    <span id="contextUsage">0%</span>
+                </button>
             </div>
             <div class="header-actions">
                 <button class="header-btn" id="clearBtn" title="Clear conversation">Clear</button>
@@ -68,6 +72,7 @@
                             Debug Log
                         </div>
                         <div class="menu-item" id="reloadConfigBtn">🔄 Reload Config</div>
+                        <div class="menu-item" id="clearContextBtn">🧹 Clear Injected Context</div>
                         <div class="menu-separator"></div>
                         <div class="menu-item" id="settingsBtn">⚙️ Settings</div>
                     </div>

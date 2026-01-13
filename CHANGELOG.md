@@ -31,6 +31,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   }
   ```
 
+- **Context limits config section** - New `"context"` key for configurable truncation and model limits:
+  ```json
+  {
+    "context": {
+      "max_injection_size": 100000,
+      "default_context_limit": 128000,
+      "warn_at_percent": 80
+    }
+  }
+  ```
+
+- **Per-model context_limit** - Models can specify their context window size:
+  ```json
+  {
+    "providers": {
+      "vllm-gpt-oss": {
+        "models": {
+          "openai/gpt-oss-120b": {
+            "context_limit": 131072
+          }
+        }
+      }
+    }
+  }
+  ```
+
+- **Context usage warning** - Shows warning when approaching context limit (configurable threshold)
+- **Tools enable notification** - Shows context limit and truncation info when enabling tools
+- **`/context` command** - Show context usage, injected files, and visual progress bar (TUI, Web, VSCode)
+- **`/context clear` command** - Remove injected @file/@git/@tree content from history to free context space
+- **Context badge in TUI** - Status line shows `Ctx: X%` with color coding (green <80%, yellow 80-99%, red ≥100%)
+- **Context badge in VSCode** - Header shows context usage percentage with click-to-clear functionality
+
 ### Fixed
 
 - **Shell `cd` command updates engine working directory** - When AI calls `execute_shell_command` with `cd`, it now updates `engine.set_working_dir()` instead of running a subprocess (which only changed the subprocess directory). Fixes `list_directory` showing wrong directory after AI-issued `cd` command.
@@ -42,6 +75,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Context overflow prevention** - Added token estimation in OpenAI-compatible provider to prevent "max_tokens must be at least 1" errors from vLLM when injected `@file` context exceeds model's 128K context window. Now shows a friendly error message suggesting to remove file references or start a new conversation instead of cryptic API error.
 - **Empty responses after tool calls** - Fixed issue where some models (e.g., GPT-OSS 120B via vLLM) would execute tools correctly but return empty text responses instead of summarizing the results. Now detects empty responses after tool iterations and prompts the model for a summary.
 - **Reasoning model support** - Handle models that return content in `reasoning_content` instead of `content` field
+- **Hash-based context deduplication** - Injecting same content twice (e.g., `@git` with unchanged diff) no longer duplicates. Uses MD5 hash to detect identical content and skip re-injection.
+- **Gemini model context limits** - Added `context_limit: 1000000` for all Gemini models in example and project configs (was falling back to 128K default)
 
 ## [1.13.8] - 2026-01-11
 

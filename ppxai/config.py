@@ -371,6 +371,7 @@ def load_config() -> Dict[str, Any]:
             "default_provider": default_provider,
             "providers": providers,
             "tools": json_config.get("tools", {}),  # v1.11.2: Include tools configuration
+            "context": json_config.get("context", {}),  # v1.13.9: Context limits
         }
 
     else:
@@ -395,6 +396,7 @@ def load_config() -> Dict[str, Any]:
             "default_provider": "perplexity",
             "providers": providers,
             "tools": {},  # v1.11.2: No tools config when using builtin
+            "context": {},  # v1.13.9: No context config when using builtin
         }
 
 
@@ -1187,3 +1189,104 @@ def get_system_prompt_mode(provider: str = None) -> str:
             return json_config["system_prompt_mode"]
 
     return "prepend"  # Default mode
+
+
+# =============================================================================
+# Context Configuration (v1.13.9 - Configurable context limits)
+# =============================================================================
+
+# Default context limits
+DEFAULT_MAX_INJECTION_SIZE = 100_000  # 100KB per @file/@git/@tree
+DEFAULT_CONTEXT_LIMIT = 128_000  # 128K tokens default
+DEFAULT_CONTEXT_WARN_PERCENT = 80  # Warn at 80% usage
+
+
+def get_context_config() -> Dict[str, Any]:
+    """Get context and truncation configuration.
+
+    Reads from ppxai-config.json under the "context" key:
+    {
+        "context": {
+            "max_injection_size": 100000,   // Max chars per @file/@git/@tree
+            "default_context_limit": 128000, // Default model context in tokens
+            "warn_at_percent": 80           // Warn when exceeding this %
+        }
+    }
+
+    Returns:
+        Dict with context configuration options.
+    """
+    defaults = {
+        "max_injection_size": DEFAULT_MAX_INJECTION_SIZE,
+        "default_context_limit": DEFAULT_CONTEXT_LIMIT,
+        "warn_at_percent": DEFAULT_CONTEXT_WARN_PERCENT,
+    }
+
+    # Get config, merge with defaults
+    context_config = _config.get("context", {})
+    return {**defaults, **context_config}
+
+
+def get_max_injection_size() -> int:
+    """Get the maximum size (in chars) for @file/@git/@tree injections.
+
+    Returns:
+        Max injection size in characters.
+    """
+    return get_context_config().get("max_injection_size", DEFAULT_MAX_INJECTION_SIZE)
+
+
+def get_default_context_limit() -> int:
+    """Get the default model context limit in tokens.
+
+    This is used when a model doesn't have a specific context_limit set.
+
+    Returns:
+        Context limit in tokens.
+    """
+    return get_context_config().get("default_context_limit", DEFAULT_CONTEXT_LIMIT)
+
+
+def get_context_warn_percent() -> int:
+    """Get the percentage threshold for context usage warnings.
+
+    Returns:
+        Warning threshold percentage (0-100, 0 = disabled).
+    """
+    return get_context_config().get("warn_at_percent", DEFAULT_CONTEXT_WARN_PERCENT)
+
+
+def get_model_context_limit(provider: str = None, model: str = None) -> int:
+    """Get the context limit for a specific model.
+
+    Checks in order:
+    1. Model-specific context_limit in provider config
+    2. Default context_limit from context config
+    3. Built-in default (128K tokens)
+
+    Args:
+        provider: Provider ID. If None, uses active provider.
+        model: Model ID. If None, uses provider's default model.
+
+    Returns:
+        Context limit in tokens.
+    """
+    if provider is None:
+        provider = MODEL_PROVIDER
+
+    if model is None:
+        model = get_default_model(provider)
+
+    # Try to get model-specific context_limit from config file
+    config_path = find_config_file()
+    if config_path:
+        json_config = _load_json_config(config_path)
+        provider_config = json_config.get("providers", {}).get(provider, {})
+        models = provider_config.get("models", {})
+        model_config = models.get(model, {})
+
+        if "context_limit" in model_config:
+            return model_config["context_limit"]
+
+    # Fall back to default
+    return get_default_context_limit()

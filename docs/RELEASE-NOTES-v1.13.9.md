@@ -75,6 +75,11 @@ Critical fixes for Windows users and reasoning models like DeepSeek R1:
 - **Empty response handling** - Prompt model for summary if response is empty after tools
 
 ### Context Management
+- **`/context` command** - Shows context window usage vs model limit across all clients (TUI, Web, VSCode)
+- **`/context clear`** - Removes all injected context (@file, @git, @tree) from current session
+- **Context badge** - TUI status line and VSCode header show context usage percentage
+- **Hash-based deduplication** - Prevents duplicate @git/@tree injections (uses MD5 content hash)
+- **Per-model context limits** - Configure `context_limit` per model in config (Gemini models: 1M tokens)
 - **Token estimation** - Prevent context overflow errors from vLLM
 - **Friendly errors** - Clear message when `@file` content exceeds limits
 

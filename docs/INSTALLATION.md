@@ -2,6 +2,16 @@
 
 This guide covers installing ppxai for terminal (TUI), Desktop Web App, and VSCode extension use.
 
+## Installation Locations Summary
+
+| Item | Linux | macOS | Windows |
+|------|-------|-------|---------|
+| **Binaries** | `~/.local/bin/` | `~/.local/bin/` | `~/.ppxai/bin/` |
+| **App bundle** | - | `/Applications/ppxai.app` | - |
+| **Config** | `~/.ppxai/ppxai-config.json` | `~/.ppxai/ppxai-config.json` | `~/.ppxai/ppxai-config.json` |
+| **API keys** | `~/.ppxai/.env` | `~/.ppxai/.env` | `~/.ppxai/.env` |
+| **Data** | `~/.ppxai/` | `~/.ppxai/` | `~/.ppxai/` |
+
 ## Quick Install
 
 ### Linux / macOS

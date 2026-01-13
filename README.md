@@ -100,7 +100,8 @@ Switch providers anytime: `/provider gemini` or `/model gpt-4o`
 ### UX Highlights
 - **Full Markdown Rendering** - Tables, code blocks with syntax highlighting, clickable links (OSC 8), citations with URLs
 - **Context Preservation** - Switch providers/models mid-conversation without losing history. Start with cheap model, switch to powerful one when needed
-- **Smart Context Injection** - `@file` for code, `@git` for uncommitted changes, `@tree` for project structure
+- **Smart Context Injection** - `@file` for code, `@git` for uncommitted changes, `@tree` for project structure. Hash-based deduplication prevents duplicate injections.
+- **Context Management** - `/context` shows usage vs model limit, `/context clear` removes injected files. Context badge shows percentage in TUI status line and VSCode header.
 - **Cost Control** - Use Perplexity for research, Gemini for long context, local models for sensitive code—all in one session
 - **Real-time Usage Tracking** - Token counts and cost estimates in status line (`1.2K↓/0.5K↑ $0.0045`)
 - **Themed TUI Panels** - 4 themes: Standard, Tron Legacy, Matrix, Nord (`/theme` to switch)

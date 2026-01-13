@@ -404,6 +404,53 @@ export class HttpClient {
     }
 
     /**
+     * Get context usage information (v1.13.9)
+     */
+    async getContextInfo(): Promise<{
+        estimated_tokens: number;
+        context_limit: number;
+        usage_percent: number;
+        injected_contexts: Array<{ source: string; size: number; truncated: boolean }>;
+        injected_tokens: number;
+        message_count: number;
+        total_chars: number;
+        provider: string;
+        model: string;
+    }> {
+        const response = await fetch(`${this.baseUrl}/context/info`, {
+            headers: this.getHeaders()
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to get context info: ${response.statusText}`);
+        }
+        return response.json() as Promise<{
+            estimated_tokens: number;
+            context_limit: number;
+            usage_percent: number;
+            injected_contexts: Array<{ source: string; size: number; truncated: boolean }>;
+            injected_tokens: number;
+            message_count: number;
+            total_chars: number;
+            provider: string;
+            model: string;
+        }>;
+    }
+
+    /**
+     * Clear injected file contents from context (v1.13.9)
+     */
+    async clearContextInjections(): Promise<{ removed_count: number; success: boolean }> {
+        const response = await fetch(`${this.baseUrl}/context/clear`, {
+            method: 'POST',
+            headers: this.getHeaders()
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to clear context: ${response.statusText}`);
+        }
+        return response.json() as Promise<{ removed_count: number; success: boolean }>;
+    }
+
+    /**
      * Send chat message with SSE streaming
      */
     async chat(message: string, streamCallback?: StreamCallback): Promise<string> {

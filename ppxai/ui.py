@@ -38,6 +38,8 @@ Welcome to the AI terminal interface!
 - `/status datetime` - Toggle date/time in status bar
 - `/status version` - Toggle version in status bar
 - `/status cwd` - Toggle working dir in status bar
+- `/context` - Show context usage (tokens, injected files)
+- `/context clear` - Remove injected @file/@git/@tree from history
 - `/help` - Show this help message
 - `/quit` or `/exit` - Exit the application
 

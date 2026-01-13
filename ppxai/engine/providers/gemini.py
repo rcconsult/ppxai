@@ -57,6 +57,8 @@ class GeminiProvider:
         models: Optional[Dict[str, Dict[str, str]]] = None,
         capabilities: Optional[ProviderCapabilities] = None,
         enable_grounding: bool = True,
+        enable_thinking: bool = True,
+        thinking_budget: Optional[int] = None,
         **kwargs
     ):
         """Initialize the Gemini provider.
@@ -66,6 +68,8 @@ class GeminiProvider:
             models: Dictionary of available models
             capabilities: Provider capabilities
             enable_grounding: Whether to enable Google Search Grounding (default: True)
+            enable_thinking: Whether to include thinking summaries (default: True)
+            thinking_budget: Token budget for thinking (None = dynamic, 0 = disabled)
             **kwargs: Additional options (ignored for compatibility)
         """
         if not _genai_available:
@@ -78,6 +82,8 @@ class GeminiProvider:
         self.models = models or {}
         self.capabilities = capabilities or self.default_capabilities
         self.enable_grounding = enable_grounding
+        self.enable_thinking = enable_thinking
+        self.thinking_budget = thinking_budget
 
         # Initialize the Gemini client
         self.client = genai.Client(api_key=api_key)
@@ -125,6 +131,7 @@ class GeminiProvider:
             if stream:
                 # Streaming response
                 full_response = []
+                reasoning_response = []
                 usage = None
                 citations = []
 
@@ -146,8 +153,14 @@ class GeminiProvider:
                             for part in content.parts:
                                 if hasattr(part, 'text') and part.text:
                                     text = part.text
-                                    full_response.append(text)
-                                    yield Event(EventType.STREAM_CHUNK, text)
+                                    # Check if this is a thinking/reasoning part
+                                    is_thought = getattr(part, 'thought', False)
+                                    if is_thought:
+                                        reasoning_response.append(text)
+                                        yield Event(EventType.REASONING_CHUNK, text)
+                                    else:
+                                        full_response.append(text)
+                                        yield Event(EventType.STREAM_CHUNK, text)
 
                     # Check for usage in final chunk
                     if chunk.usage_metadata:
@@ -158,6 +171,7 @@ class GeminiProvider:
                         citations = self._parse_grounding(chunk.candidates[0].grounding_metadata)
 
                 final_content = "".join(full_response)
+                final_reasoning = "".join(reasoning_response)
 
                 # Inject citation URLs if we have grounding
                 if citations:
@@ -168,6 +182,8 @@ class GeminiProvider:
                     metadata["usage"] = usage
                 if citations:
                     metadata["citations"] = [c["url"] for c in citations]
+                if final_reasoning:
+                    metadata["reasoning"] = final_reasoning
                 yield Event(EventType.STREAM_END, final_content, metadata if metadata else None)
 
             else:
@@ -179,10 +195,16 @@ class GeminiProvider:
                 )
 
                 content = ""
+                reasoning = ""
                 if response.candidates and response.candidates[0].content:
                     for part in response.candidates[0].content.parts:
                         if hasattr(part, 'text') and part.text:
-                            content += part.text
+                            # Check if this is a thinking/reasoning part
+                            is_thought = getattr(part, 'thought', False)
+                            if is_thought:
+                                reasoning += part.text
+                            else:
+                                content += part.text
 
                 usage = self._parse_usage(response.usage_metadata)
 
@@ -198,6 +220,8 @@ class GeminiProvider:
                 metadata = {"usage": usage}
                 if citations:
                     metadata["citations"] = citations
+                if reasoning:
+                    metadata["reasoning"] = reasoning
 
                 yield Event(EventType.STREAM_END, content, metadata)
 
@@ -315,14 +339,14 @@ class GeminiProvider:
         use_grounding: bool = True,
         system_instruction: Optional[str] = None
     ) -> "genai_types.GenerateContentConfig":
-        """Build generation config with optional grounding and system instruction.
+        """Build generation config with optional grounding, thinking, and system instruction.
 
         Args:
             use_grounding: Whether to enable Google Search Grounding
             system_instruction: System prompt/instruction for the model
 
         Returns:
-            GenerateContentConfig with tools and/or system_instruction
+            GenerateContentConfig with tools, thinking_config, and/or system_instruction
         """
         config_kwargs = {}
 
@@ -333,6 +357,14 @@ class GeminiProvider:
         # Add Google Search Grounding if enabled
         if use_grounding:
             config_kwargs["tools"] = [genai_types.Tool(google_search=genai_types.GoogleSearch())]
+
+        # Add thinking configuration for Gemini 2.5+ models
+        # include_thoughts=True returns thinking summaries in response parts
+        if self.enable_thinking:
+            thinking_config = {"include_thoughts": True}
+            if self.thinking_budget is not None:
+                thinking_config["thinking_budget"] = self.thinking_budget
+            config_kwargs["thinking_config"] = thinking_config
 
         # Return config if we have any settings, else None
         if config_kwargs:

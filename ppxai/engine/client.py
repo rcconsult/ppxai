@@ -6,9 +6,11 @@ It has no UI dependencies and communicates via events.
 """
 
 import asyncio
+import hashlib
 import json
 import re
 from dataclasses import asdict
+from datetime import datetime
 from typing import List, AsyncIterator, Optional, Dict, Any
 from pathlib import Path
 
@@ -65,6 +67,9 @@ class EngineClient:
         # Context injection for automatic file content inclusion
         self.context_injector = ContextInjector()
         self.auto_inject_context: bool = True  # Enabled by default
+
+        # v1.13.9: Track injected contexts for /context command
+        self._injected_contexts: List[Dict[str, Any]] = []
 
         # Interrupt handling for graceful stream cancellation
         self._interrupted: bool = False
@@ -1025,9 +1030,13 @@ class EngineClient:
         injected_contexts = []
 
         if self.auto_inject_context:
-            message, injected_contexts = self.context_injector.inject_context(message)
+            # v1.13.10: Pass existing hashes to skip duplicate content at injection time
+            existing_hashes = {c.get('hash') for c in self._injected_contexts if c.get('hash')}
+            message, injected_contexts = self.context_injector.inject_context(
+                message, skip_hashes=existing_hashes
+            )
 
-            # Emit events for each injected file
+            # Emit events for each injected file and track them
             for ctx in injected_contexts:
                 yield Event(EventType.CONTEXT_INJECTED, {
                     'source': ctx.source,
@@ -1035,6 +1044,25 @@ class EngineClient:
                     'truncated': ctx.truncated,
                     'size': ctx.size
                 })
+                # v1.13.9: Track for /context command
+                # v1.13.10: Hash computed in inject_context, track here
+                # Check if same source exists with different content
+                existing_idx = next(
+                    (i for i, c in enumerate(self._injected_contexts) if c['source'] == ctx.source),
+                    None
+                )
+                injection_entry = {
+                    'source': ctx.source,
+                    'size': ctx.size,
+                    'truncated': ctx.truncated,
+                    'timestamp': datetime.now().isoformat(),
+                    'hash': ctx.hash
+                }
+                if existing_idx is not None:
+                    # Replace - same source, different content (e.g., @git updated)
+                    self._injected_contexts[existing_idx] = injection_entry
+                else:
+                    self._injected_contexts.append(injection_entry)
 
         # Add message to history (with injected content)
         self.session.add_message(Message("user", message))
@@ -1821,6 +1849,82 @@ class EngineClient:
             "has_api_key": self.provider is not None,
             "message_count": len(self.session.messages)
         }
+
+    # === Context Management (v1.13.9) ===
+
+    def get_context_info(self) -> Dict[str, Any]:
+        """Get context usage information for /context command.
+
+        Returns:
+            Dict with context usage info:
+            - estimated_tokens: Estimated total tokens
+            - context_limit: Model context limit
+            - usage_percent: Usage percentage
+            - injected_contexts: List of injected @file/@git/@tree
+            - message_count: Number of messages in history
+            - total_chars: Total characters in history
+        """
+        # Calculate total characters in message history
+        total_chars = sum(len(m.content) for m in self.session.messages)
+
+        # Estimate tokens (~4 chars per token)
+        estimated_tokens = total_chars // 4
+
+        # Get context limit for current model
+        try:
+            from ..config import get_model_context_limit
+            context_limit = get_model_context_limit(self.provider_name, self.model)
+        except ImportError:
+            context_limit = 128_000
+
+        usage_percent = (estimated_tokens / context_limit) * 100 if context_limit > 0 else 0
+
+        # Calculate injected context size
+        injected_size = sum(ctx.get('size', 0) for ctx in self._injected_contexts)
+        injected_tokens = injected_size // 4
+
+        return {
+            "estimated_tokens": estimated_tokens,
+            "context_limit": context_limit,
+            "usage_percent": usage_percent,
+            "injected_contexts": self._injected_contexts.copy(),
+            "injected_tokens": injected_tokens,
+            "message_count": len(self.session.messages),
+            "total_chars": total_chars,
+            "provider": self.provider_name,
+            "model": self.model
+        }
+
+    def clear_injected_contexts(self) -> int:
+        """Clear tracked injected contexts and remove from message history.
+
+        This removes the injected file content from messages but keeps
+        the conversation flow intact.
+
+        Returns:
+            Number of injections removed
+        """
+        removed_count = len(self._injected_contexts)
+
+        if removed_count == 0:
+            return 0
+
+        # Pattern to match injected context blocks
+        import re
+        injection_pattern = re.compile(
+            r'\n---\n\*\*`@[^`]+`\*\*[^\n]*:\n```[^\n]*\n.*?```\n',
+            re.DOTALL
+        )
+
+        # Remove injected blocks from all user messages
+        for msg in self.session.messages:
+            if msg.role == "user":
+                msg.content = injection_pattern.sub('', msg.content)
+
+        # Clear the tracking list
+        self._injected_contexts.clear()
+
+        return removed_count
 
     # === Cleanup ===
 

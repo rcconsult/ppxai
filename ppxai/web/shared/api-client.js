@@ -255,6 +255,16 @@ class ApiClient {
         return this.post('/context/auto_inject', { enabled });
     }
 
+    // === Context Info (v1.13.9) ===
+
+    async getContextInfo() {
+        return this.get('/context/info');
+    }
+
+    async clearContextInjections() {
+        return this.post('/context/clear');
+    }
+
     // === Interrupt ===
 
     async interrupt() {

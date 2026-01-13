@@ -111,6 +111,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 case 'interrupt':
                     await this.handleInterrupt();
                     break;
+                case 'clearContext':
+                    await this.handleClearContext();
+                    break;
             }
         });
     }
@@ -995,6 +998,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     await this.handleCheckpointCommand(args);
                     break;
 
+                case '/context':
+                    await this.handleContextCommand(args);
+                    break;
+
                 default:
                     this._view.webview.postMessage({
                         type: 'error',
@@ -1702,6 +1709,84 @@ Review your previous actions and continue. If the task is complete, respond with
         }
     }
 
+    /**
+     * Handle /context command - show context usage and injected files (v1.13.9)
+     */
+    private async handleContextCommand(args: string[]) {
+        if (!this._view) { return; }
+
+        const subcommand = args[0]?.toLowerCase();
+
+        try {
+            if (subcommand === 'clear') {
+                // Clear injected contexts
+                const result = await this._backend.clearContextInjections();
+                if (result.removed_count > 0) {
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: `✓ Cleared ${result.removed_count} injected context(s) from conversation.`
+                    });
+                } else {
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: 'No injected contexts to clear.'
+                    });
+                }
+                // Update status to refresh context badge
+                await this.updateStatus();
+            } else {
+                // Show context usage info
+                const info = await this._backend.getContextInfo();
+
+                // Build progress bar
+                const percent = info.usage_percent;
+                const barLength = 30;
+                const filled = Math.min(barLength, Math.round(barLength * Math.min(percent, 100) / 100));
+                const bar = '█'.repeat(filled) + '░'.repeat(barLength - filled);
+
+                // Color indicator
+                let colorIcon = '🟢';
+                if (percent >= 100) { colorIcon = '🔴'; }
+                else if (percent >= 80) { colorIcon = '🟡'; }
+
+                let contextMsg = '**Context Usage:**\n';
+                contextMsg += `  Estimated: ~${info.estimated_tokens.toLocaleString()} / ${info.context_limit.toLocaleString()} tokens (${percent.toFixed(1)}%)\n`;
+                contextMsg += `  Model: ${info.model} (${info.provider})\n`;
+                contextMsg += `  Messages: ${info.message_count}\n`;
+                contextMsg += `  ${colorIcon} [${bar}] ${percent.toFixed(0)}%\n`;
+
+                // Show injected files
+                if (info.injected_contexts && info.injected_contexts.length > 0) {
+                    contextMsg += `\n**Injected Contexts:** (${info.injected_tokens.toLocaleString()} tokens)\n`;
+                    info.injected_contexts.forEach((ctx: { source: string; size: number; truncated: boolean }) => {
+                        const sizeKB = (ctx.size / 1024).toFixed(1);
+                        const truncated = ctx.truncated ? ' ⚠ truncated' : '';
+                        contextMsg += `  • ${ctx.source} (${sizeKB} KB${truncated})\n`;
+                    });
+                    contextMsg += '\n*Tip: `/context clear` removes injected files, keeps chat*';
+                }
+
+                // Show tips if over limit
+                if (percent >= 100) {
+                    contextMsg += '\n\n**⚠ Over context limit!** Tips:\n';
+                    contextMsg += '  • `/clear` - Start fresh session\n';
+                    contextMsg += '  • `/save` - Save session before clearing\n';
+                    contextMsg += '  • Consider a model with larger context\n';
+                }
+
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: contextMsg
+                });
+            }
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Context error: ${error}`
+            });
+        }
+    }
+
     private async showHelp() {
         if (!this._view) { return; }
 
@@ -1751,6 +1836,67 @@ Review your previous actions and continue. If the task is complete, respond with
                 type: 'error',
                 content: `Failed to toggle tools: ${error}`
             });
+        }
+    }
+
+    /**
+     * Handle clear context request from webview badge click (v1.13.9)
+     */
+    private async handleClearContext() {
+        if (!this._view) { return; }
+
+        try {
+            const result = await this._backend.clearContextInjections();
+            if (result.removed_count > 0) {
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: `✓ Cleared ${result.removed_count} injected context(s)`
+                });
+            } else {
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: 'No injected contexts to clear'
+                });
+            }
+            // Update the context badge
+            await this.updateContextBadge();
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Failed to clear context: ${error}`
+            });
+        }
+    }
+
+    /**
+     * Update context badge with current usage (v1.13.9)
+     */
+    private async updateContextBadge() {
+        if (!this._view) { return; }
+
+        try {
+            const info = await this._backend.getContextInfo();
+            const percent = info.usage_percent || 0;
+
+            // Determine badge state
+            let badgeClass = '';
+            let suffix = '';
+            if (percent >= 100) {
+                badgeClass = 'critical';
+                suffix = '!';
+            } else if (percent >= 80) {
+                badgeClass = 'warning';
+                suffix = '~';
+            }
+
+            this._view.webview.postMessage({
+                type: 'updateContext',
+                percent: percent,
+                badgeClass: badgeClass,
+                suffix: suffix
+            });
+        } catch (error) {
+            // Silently ignore errors
         }
     }
 
@@ -2606,6 +2752,9 @@ Use \`/usage show <session|provider|model|off>\` to change.`;
                 usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0, estimatedCost: 0 }
             });
         }
+
+        // v1.13.9: Also update context badge
+        await this.updateContextBadge();
     }
 
     public async refreshHistory() {
@@ -2992,6 +3141,35 @@ A: Use \`/tools disable\` or choose "never" when prompted.
 
         .usage-badge.has-cost {
             color: var(--vscode-charts-green, #89d185);
+        }
+
+        /* v1.13.9: Context usage badge */
+        .context-badge {
+            background: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .context-badge:hover {
+            opacity: 0.8;
+        }
+        .context-badge.warning {
+            background: var(--vscode-editorWarning-foreground, #cca700);
+            color: var(--vscode-editor-background, #1e1e1e);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        .context-badge.critical {
+            background: var(--vscode-errorForeground, #f48771);
+            color: white;
+            animation: pulse 1s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
         }
 
         /* v1.12.0: Tool messages with collapsible details */
@@ -3705,6 +3883,9 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             <button class="undo-badge" id="undoBadge" title="No checkpoint to undo">↶ Undo</button>
             <button class="streaming-badge" id="streamingBadge" style="display: none;" title="Press Esc to stop">⏹ Streaming...</button>
             <span class="usage-badge" id="usageBadge" title="Session token usage and cost">0↓/0↑</span>
+            <button class="context-badge" id="contextBadge" title="Context window usage - Click to clear injected files">
+                <span id="contextUsage">Ctx: 0%</span>
+            </button>
         </div>
         <div class="workspace-info" id="workspaceInfo" style="display: none;">
             <span class="workspace-icon">📁</span>
@@ -3764,6 +3945,8 @@ A: Use \`/tools disable\` or choose "never" when prompted.
         const toolsBadge = document.getElementById('toolsBadge');
         const streamingBadge = document.getElementById('streamingBadge');
         const usageBadge = document.getElementById('usageBadge');
+        const contextBadge = document.getElementById('contextBadge');
+        const contextUsage = document.getElementById('contextUsage');
         const clearBtn = document.getElementById('clearBtn');
         const menuBtn = document.getElementById('menuBtn');
         const menuDropdown = document.getElementById('menuDropdown');
@@ -4281,6 +4464,11 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             vscode.postMessage({ type: 'interrupt' });
         });
 
+        // Context badge click handler - clear injected contexts (v1.13.9)
+        contextBadge.addEventListener('click', () => {
+            vscode.postMessage({ type: 'clearContext' });
+        });
+
         // Handle link clicks - open external URLs
         messagesContainer.addEventListener('click', (e) => {
             // Use closest() to catch clicks on elements inside links
@@ -4593,6 +4781,19 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                         wdPathEl.title = message.path;
                         wdNameEl.textContent = name;
                         wdInfoEl.style.display = 'flex';
+                    }
+                    break;
+
+                case 'updateContext':
+                    // v1.13.9: Update context usage badge
+                    if (contextBadge && contextUsage) {
+                        const percent = message.percent || 0;
+                        contextUsage.textContent = 'Ctx: ' + percent.toFixed(0) + '%' + (message.suffix || '');
+                        contextBadge.classList.remove('warning', 'critical');
+                        if (message.badgeClass) {
+                            contextBadge.classList.add(message.badgeClass);
+                        }
+                        contextBadge.title = 'Context: ' + percent.toFixed(1) + '% used - Click to clear injected files';
                     }
                     break;
 

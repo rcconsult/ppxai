@@ -274,13 +274,19 @@ jobs:
         path: vscode-extension/*.vsix
 
   build-dmg:
-    needs: [build-desktop, build-server]
+    needs: [build-tui, build-desktop, build-server]
     runs-on: macos-latest
     if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Download TUI artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ppxai-macos-arm64
+        path: dist/
 
     - name: Download desktop artifact
       uses: actions/download-artifact@v4
@@ -353,13 +359,55 @@ jobs:
         </plist>
         PLIST
 
-        # Create DMG
+        # Create DMG with all binaries
         DMG_CONTENTS="dist/dmg-contents"
         mkdir -p "$DMG_CONTENTS"
+        mkdir -p "$DMG_CONTENTS/CLI Tools"
+
+        # Copy .app bundle
         cp -r "$APP_DIR" "$DMG_CONTENTS/"
         ln -s /Applications "$DMG_CONTENTS/Applications"
 
-        hdiutil create -volname "ppxai Desktop" \
+        # Copy CLI binaries for terminal users
+        cp dist/ppxai "$DMG_CONTENTS/CLI Tools/ppxai"
+        cp dist/ppxai-server-bin "$DMG_CONTENTS/CLI Tools/ppxai-server"
+        chmod +x "$DMG_CONTENTS/CLI Tools/"*
+
+        # Add README for CLI tools
+        cat > "$DMG_CONTENTS/CLI Tools/README.txt" << 'EOF'
+        ppxai CLI Tools
+        ===============
+
+        Installation:
+
+        1. Copy binaries to ~/.local/bin (recommended):
+
+           mkdir -p ~/.local/bin
+           cp ppxai ppxai-server ~/.local/bin/
+
+        2. Add ~/.local/bin to PATH (if not already):
+
+           # For zsh (~/.zshrc):
+           echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+           source ~/.zshrc
+
+           # For bash (~/.bashrc or ~/.bash_profile):
+           echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+           source ~/.bashrc
+
+        3. Run:
+
+           ppxai         - Interactive TUI
+           ppxai-server  - HTTP server for VSCode extension
+
+        Alternative: Use the automated installer:
+
+           curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash
+
+        More info: https://github.com/rcconsult/ppxai
+        EOF
+
+        hdiutil create -volname "ppxai ${{ steps.version.outputs.version }}" \
             -srcfolder "$DMG_CONTENTS" \
             -ov -format UDZO \
             "dist/ppxai-${{ steps.version.outputs.version }}-macos-arm64.dmg"

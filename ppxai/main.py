@@ -2,11 +2,14 @@
 Main entry point for the ppxai application.
 """
 
+import argparse
 import os
 import sys
 import asyncio
 import time
 from pathlib import Path
+
+from .version import __version__
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
@@ -118,6 +121,15 @@ def get_status_line(handler, use_themed: bool = True):
         if show_cwd and handler.engine_client:
             working_dir = handler.engine_client.get_working_dir()
 
+        # v1.13.9: Get context usage percentage
+        context_percent = None
+        if handler.engine_client:
+            try:
+                context_info = handler.engine_client.get_context_info()
+                context_percent = context_info.get('usage_percent', 0)
+            except Exception:
+                pass  # Silently ignore errors getting context info
+
         # Use framed panel for status (experiment/rich-tui)
         return render_status_panel(
             provider=provider_name,
@@ -130,6 +142,7 @@ def get_status_line(handler, use_themed: bool = True):
             version=f"v{__version__}" if show_version else None,
             working_dir=working_dir,
             show_datetime=show_datetime,
+            context_percent=context_percent,
         )
 
     # Fallback: plain text status line
@@ -587,6 +600,11 @@ def restore_session_to_handler(handler: CommandHandler, session_state: dict) -> 
 
 def main():
     """Main application loop."""
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="ppxai - Terminal UI for AI providers")
+    parser.add_argument("--version", "-v", action="version", version=f"ppxai {__version__}")
+    parser.parse_args()
+
     # Check if provider selection is needed or use environment default
     provider = MODEL_PROVIDER
 

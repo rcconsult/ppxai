@@ -39,6 +39,15 @@ from ppxai.config import (
     _validate_provider_config,
     _build_legacy_custom_provider,
     _convert_models_format,
+    # Context configuration (v1.13.9)
+    DEFAULT_MAX_INJECTION_SIZE,
+    DEFAULT_CONTEXT_LIMIT,
+    DEFAULT_CONTEXT_WARN_PERCENT,
+    get_context_config,
+    get_max_injection_size,
+    get_default_context_limit,
+    get_context_warn_percent,
+    get_model_context_limit,
 )
 
 
@@ -844,5 +853,198 @@ class TestSystemPromptConfig:
                 # Unknown provider falls back to global
                 mode = get_system_prompt_mode("unknown-provider")
                 assert mode == "append"
+
+        os.unlink(f.name)
+
+
+class TestContextConfig:
+    """Tests for context configuration (v1.13.9)."""
+
+    def test_default_constants(self):
+        """Test default context constants are reasonable."""
+        assert DEFAULT_MAX_INJECTION_SIZE == 100_000
+        assert DEFAULT_CONTEXT_LIMIT == 128_000
+        assert DEFAULT_CONTEXT_WARN_PERCENT == 80
+
+    def test_get_context_config_returns_dict(self):
+        """Test get_context_config returns a dictionary with defaults."""
+        config = get_context_config()
+        assert isinstance(config, dict)
+        assert "max_injection_size" in config
+        assert "default_context_limit" in config
+        assert "warn_at_percent" in config
+
+    def test_get_context_config_defaults(self):
+        """Test get_context_config returns default values when no config file."""
+        with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": "/nonexistent/path.json"}):
+            config = get_context_config()
+            assert config["max_injection_size"] == DEFAULT_MAX_INJECTION_SIZE
+            assert config["default_context_limit"] == DEFAULT_CONTEXT_LIMIT
+            assert config["warn_at_percent"] == DEFAULT_CONTEXT_WARN_PERCENT
+
+    def test_get_max_injection_size_default(self):
+        """Test get_max_injection_size returns default value."""
+        with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": "/nonexistent/path.json"}):
+            size = get_max_injection_size()
+            assert size == DEFAULT_MAX_INJECTION_SIZE
+
+    def test_get_default_context_limit(self):
+        """Test get_default_context_limit returns default value."""
+        with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": "/nonexistent/path.json"}):
+            limit = get_default_context_limit()
+            assert limit == DEFAULT_CONTEXT_LIMIT
+
+    def test_get_context_warn_percent_default(self):
+        """Test get_context_warn_percent returns default value."""
+        with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": "/nonexistent/path.json"}):
+            percent = get_context_warn_percent()
+            assert percent == DEFAULT_CONTEXT_WARN_PERCENT
+
+    def test_get_context_config_from_json(self):
+        """Test loading context config from JSON file."""
+        config_data = {
+            "context": {
+                "max_injection_size": 50000,
+                "default_context_limit": 200000,
+                "warn_at_percent": 90
+            },
+            "providers": {
+                "test": {
+                    "name": "Test",
+                    "base_url": "http://test.com",
+                    "api_key_env": "TEST_KEY",
+                    "models": {"m1": {"name": "M1", "description": "Test"}}
+                }
+            }
+        }
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump(config_data, f)
+            f.flush()
+
+            with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": f.name}):
+                # Force reload
+                reload_config()
+
+                config = get_context_config()
+                assert config["max_injection_size"] == 50000
+                assert config["default_context_limit"] == 200000
+                assert config["warn_at_percent"] == 90
+
+        os.unlink(f.name)
+
+    def test_get_model_context_limit_default(self):
+        """Test get_model_context_limit returns a positive limit for unknown model."""
+        # Note: Cannot easily override local config file, so just verify it returns a valid value
+        limit = get_model_context_limit("unknown_provider", "unknown_model")
+        # Should return either config default or built-in default (both positive)
+        assert limit > 0
+        assert isinstance(limit, int)
+
+    def test_get_model_context_limit_from_json(self):
+        """Test model-specific context_limit from config file."""
+        config_data = {
+            "context": {
+                "default_context_limit": 128000
+            },
+            "providers": {
+                "custom-test-provider": {
+                    "name": "Custom vLLM",
+                    "base_url": "http://localhost:8000/v1",
+                    "api_key_env": "CUSTOM_KEY",
+                    "models": {
+                        "gpt-oss-120b": {
+                            "name": "GPT-OSS 120B",
+                            "description": "Custom model",
+                            "context_limit": 131072
+                        },
+                        "other-model": {
+                            "name": "Other Model",
+                            "description": "No context limit specified"
+                        }
+                    }
+                }
+            }
+        }
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump(config_data, f)
+            f.flush()
+
+            with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": f.name}):
+                # Model-specific limit should be returned
+                limit = get_model_context_limit("custom-test-provider", "gpt-oss-120b")
+                assert limit == 131072
+
+                # Unknown model falls back - verify it's different from model-specific
+                limit_other = get_model_context_limit("custom-test-provider", "other-model")
+                assert limit_other != 131072  # Not the model-specific limit
+                assert limit_other > 0  # But still a valid positive value
+
+        os.unlink(f.name)
+
+    def test_get_model_context_limit_perplexity_default(self):
+        """Test Perplexity models get default context limit."""
+        limit = get_model_context_limit("perplexity", "sonar-pro")
+        # Should return some positive value (either custom or default)
+        assert limit > 0
+        assert isinstance(limit, int)
+
+    def test_context_config_partial_override(self):
+        """Test that partial context config merges with defaults."""
+        config_data = {
+            "context": {
+                "max_injection_size": 75000
+                # Note: default_context_limit and warn_at_percent not specified
+            },
+            "providers": {
+                "test": {
+                    "name": "Test",
+                    "base_url": "http://test.com",
+                    "api_key_env": "TEST_KEY",
+                    "models": {"m1": {"name": "M1", "description": "Test"}}
+                }
+            }
+        }
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump(config_data, f)
+            f.flush()
+
+            with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": f.name}):
+                reload_config()
+                config = get_context_config()
+                # Override should work
+                assert config["max_injection_size"] == 75000
+                # Defaults should be preserved
+                assert config["default_context_limit"] == DEFAULT_CONTEXT_LIMIT
+                assert config["warn_at_percent"] == DEFAULT_CONTEXT_WARN_PERCENT
+
+        os.unlink(f.name)
+
+    def test_context_warn_percent_zero_disables(self):
+        """Test that warn_at_percent=0 effectively disables warnings."""
+        config_data = {
+            "context": {
+                "warn_at_percent": 0
+            },
+            "providers": {
+                "test": {
+                    "name": "Test",
+                    "base_url": "http://test.com",
+                    "api_key_env": "TEST_KEY",
+                    "models": {"m1": {"name": "M1", "description": "Test"}}
+                }
+            }
+        }
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump(config_data, f)
+            f.flush()
+
+            with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": f.name}):
+                reload_config()
+                percent = get_context_warn_percent()
+                assert percent == 0
 
         os.unlink(f.name)

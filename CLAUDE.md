@@ -9,22 +9,16 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 **Current Version:** v1.13.9
 
 **v1.13.9 highlights:**
-- **NEW:** Session Persistence & Auto-Recovery - sessions auto-saved after each chat, crash recovery, command history preserved
-- **NEW:** Session config options - `auto_restore` ("always", "prompt", "never"), `auto_save_interval`
-- **FIX:** Shell `cd` via AI tool now updates engine working directory (fixes `list_directory` after cd)
-- **FIX:** `@tree` context truncation at 100KB limit (prevents token overflow)
-- **FIX:** TUI `@file` autocomplete now uses engine working directory after `cd` command
-- **FIX:** `/show` command respects `cd` working directory
-- **FIX:** Desktop app bundles data viewer CSS/JS files correctly
+- **NEW:** Session Persistence & Auto-Recovery - sessions auto-saved after each chat, crash recovery
+- **NEW:** `/context` command - show context usage across all clients (TUI, Web, VSCode)
+- **NEW:** `/context clear` - remove injected @file/@git/@tree content from history
+- **NEW:** Context badge in TUI status line (`Ctx: X%` with green/yellow/red colors)
+- **NEW:** Context badge in VSCode header with click-to-clear
+- **NEW:** Context config section - `max_injection_size`, `default_context_limit`, `warn_at_percent`
+- **FIX:** Hash-based context deduplication - prevents duplicate @git/@tree injections
+- **FIX:** Gemini model context limits - added `context_limit: 1000000` for all models
+- **FIX:** Shell `cd` via AI tool now updates engine working directory
 - **FIX:** Tool parameter aliasing - handles model variations (`filepath` vs `file_path`, etc.)
-- **FIX:** Context overflow prevention - friendly error when `@file` injections exceed 128K limit
-- **FIX:** Empty responses after tool calls - prompts model for summary when needed
-- **FIX:** Reasoning model support - handle `reasoning_content` field from DeepSeek R1/GPT-OSS
-
-**v1.13.8 included:**
-- Data Visualization - CSV/TSV table viewer, JSON/YAML tree viewer
-- Container Management Tools - Docker, Podman, and Kubernetes CLI integration (16 tools)
-- E2E Playwright tests for web components (55 tests)
 
 **Version Alignment:**
 - Python package (pyproject.toml): v1.13.9

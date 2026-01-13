@@ -551,6 +551,7 @@ def render_status_panel(
     version: Optional[str] = None,
     working_dir: Optional[str] = None,
     show_datetime: bool = False,
+    context_percent: Optional[float] = None,
 ) -> Panel:
     """Render status line in a framed panel with badges.
 
@@ -565,6 +566,7 @@ def render_status_panel(
         version: Version string (e.g., "v1.13.5")
         working_dir: Current working directory path
         show_datetime: Whether to show current date/time
+        context_percent: Context window usage percentage (v1.13.9)
 
     Returns:
         Rich Panel with status badges
@@ -607,6 +609,21 @@ def render_status_panel(
     if usage_str:
         badges.append(" ")
         badges.append(f" {usage_str} ", style=theme.usage_badge)
+
+    # Context usage badge (v1.13.9) - shows context window utilization
+    if context_percent is not None:
+        badges.append(" ")
+        # Dynamic color based on percentage
+        if context_percent >= 100:
+            ctx_style = "white on red"
+            ctx_icon = "!"
+        elif context_percent >= 80:
+            ctx_style = "black on yellow"
+            ctx_icon = "~"
+        else:
+            ctx_style = "white on dark_green"
+            ctx_icon = ""
+        badges.append(f" Ctx: {context_percent:.0f}%{ctx_icon} ", style=ctx_style)
 
     # Working directory badge (compact path)
     if working_dir:

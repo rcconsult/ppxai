@@ -312,6 +312,25 @@ export class PythonBackend {
         return this.request<boolean>('get_auto_inject');
     }
 
+    // Context usage methods (v1.13.9)
+    async getContextInfo(): Promise<{
+        estimated_tokens: number;
+        context_limit: number;
+        usage_percent: number;
+        injected_contexts: Array<{ source: string; size: number; truncated: boolean }>;
+        injected_tokens: number;
+        message_count: number;
+        total_chars: number;
+        provider: string;
+        model: string;
+    }> {
+        return this.request('get_context_info');
+    }
+
+    async clearContextInjections(): Promise<{ removed_count: number; success: boolean }> {
+        return this.request('clear_context_injections');
+    }
+
     async chat(message: string, streamCallback?: StreamCallback): Promise<string> {
         // 5 minute timeout for chat (tool calls can take a while)
         return this.request<string>('chat', { message, stream: !!streamCallback }, streamCallback, 300000);

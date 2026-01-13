@@ -25,7 +25,8 @@
         },
         "sonar-pro": {
           "name": "Sonar Pro",
-          "description": "Advanced search model for complex queries"
+          "description": "Advanced search model for complex queries",
+          "context_limit": 200000
         },
         "sonar-reasoning-pro": {
           "name": "Sonar Reasoning Pro",
@@ -81,31 +82,38 @@
       "models": {
         "gemini-2.0-flash": {
           "name": "Gemini 2.0 Flash",
-          "description": "Fast model with multimodal support"
+          "description": "Fast model with multimodal support",
+          "context_limit": 1000000
         },
         "gemini-2.0-flash-lite": {
           "name": "Gemini 2.0 Flash Lite",
-          "description": "Cost-efficient for high-volume tasks"
+          "description": "Cost-efficient for high-volume tasks",
+          "context_limit": 1000000
         },
         "gemini-2.5-flash": {
           "name": "Gemini 2.5 Flash",
-          "description": "Latest fast model, best price/performance"
+          "description": "Latest fast model, best price/performance",
+          "context_limit": 1000000
         },
         "gemini-2.5-pro": {
           "name": "Gemini 2.5 Pro",
-          "description": "Most capable model for complex reasoning"
+          "description": "Most capable model for complex reasoning",
+          "context_limit": 1000000
         },
         "gemini-2.5-flash-lite": {
           "name": "Gemini 2.5 Flash Lite",
-          "description": "For simple tasks that need to be done quickly"
+          "description": "For simple tasks that need to be done quickly",
+          "context_limit": 1000000
         },
         "gemini-3-flash-preview": {
           "name": "Gemini 3 Flash Preview",
-          "description": "Speed-optimized preview with frontier intelligence and 1M context"
+          "description": "Speed-optimized preview with frontier intelligence and 1M context",
+          "context_limit": 1000000
         },
         "gemini-3-pro-preview": {
           "name": "Gemini 3 Pro Preview",
-          "description": "Most powerful agentic model with 1M context, code execution, and search grounding"
+          "description": "Most powerful agentic model with 1M context, code execution, and search grounding",
+          "context_limit": 1000000
         }
       },
       "pricing": {

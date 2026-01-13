@@ -152,6 +152,9 @@ class PpxaiApp {
             debugLogBtn: document.getElementById('debugLogBtn'),
             debugIndicator: document.getElementById('debugIndicator'),
             settingsBtn: document.getElementById('settingsBtn'),
+            contextBadge: document.getElementById('contextBadge'),
+            contextUsage: document.getElementById('contextUsage'),
+            clearContextBtn: document.getElementById('clearContextBtn'),
 
             // Messages
             messagesContainer: document.getElementById('messagesContainer'),
@@ -226,6 +229,8 @@ class PpxaiApp {
         this.elements.debugLogBtn.addEventListener('click', () => this.toggleDebugLog());
         this.elements.reloadConfigBtn.addEventListener('click', () => this.reloadConfig());
         this.elements.settingsBtn.addEventListener('click', () => this.showSettings());
+        this.elements.contextBadge.addEventListener('click', () => this.clearContextInjections());
+        this.elements.clearContextBtn.addEventListener('click', () => this.clearContextInjections());
 
         // Settings modal
         this.elements.closeSettings.addEventListener('click', () => this.hideSettings());
@@ -521,8 +526,9 @@ class PpxaiApp {
                 }
             } catch {}
 
-            // Load usage
+            // Load usage and context info
             await this.updateUsage();
+            await this.updateContextInfo();
 
             // Load debug log status
             try {
@@ -792,6 +798,7 @@ class PpxaiApp {
             this.currentAbortController = null;
             this.currentAssistantMessage = null;
             await this.updateUsage();
+            await this.updateContextInfo();
             this.scrollToBottom();
         }
     }
@@ -990,6 +997,10 @@ class PpxaiApp {
 
             case '/status':
                 await this.showStatus();
+                break;
+
+            case '/context':
+                await this.handleContextCommand(args);
                 break;
 
             case '/theme':
@@ -1430,6 +1441,79 @@ class PpxaiApp {
             this.addMessage('system', text);
         } catch (error) {
             this.showError(`Failed to get usage: ${error.message}`);
+        }
+    }
+
+    /**
+     * Handle /context command - show context usage and injected files (v1.13.9)
+     */
+    async handleContextCommand(args) {
+        const subCmd = args.trim().toLowerCase();
+
+        try {
+            if (subCmd === 'clear') {
+                // Clear injected contexts
+                const response = await fetch(`${this.serverUrl}/context/clear`, {
+                    method: 'POST',
+                    headers: this.getSessionHeaders(true)
+                });
+                const data = await response.json();
+
+                if (data.removed_count > 0) {
+                    this.addSystemMessage(`Cleared ${data.removed_count} injected context(s) from conversation.`);
+                } else {
+                    this.addSystemMessage('No injected contexts to clear.');
+                }
+                // Update badge
+                await this.updateContextInfo();
+            } else {
+                // Show context usage info
+                const response = await fetch(`${this.serverUrl}/context/info`, {
+                    headers: this.getSessionHeaders()
+                });
+                const info = await response.json();
+
+                // Build progress bar
+                const percent = info.usage_percent || 0;
+                const barLength = 30;
+                const filled = Math.min(barLength, Math.round(barLength * Math.min(percent, 100) / 100));
+                const bar = '█'.repeat(filled) + '░'.repeat(barLength - filled);
+
+                // Color indicator
+                let colorIcon = '🟢';
+                if (percent >= 100) { colorIcon = '🔴'; }
+                else if (percent >= 80) { colorIcon = '🟡'; }
+
+                let contextMsg = '**Context Usage:**\n';
+                contextMsg += `  Estimated: ~${(info.estimated_tokens || 0).toLocaleString()} / ${(info.context_limit || 0).toLocaleString()} tokens (${percent.toFixed(1)}%)\n`;
+                contextMsg += `  Model: ${info.model || 'unknown'} (${info.provider || 'unknown'})\n`;
+                contextMsg += `  Messages: ${info.message_count || 0}\n`;
+                contextMsg += `  ${colorIcon} [${bar}] ${percent.toFixed(0)}%\n`;
+
+                // Show injected files
+                const injected = info.injected_contexts || [];
+                if (injected.length > 0) {
+                    contextMsg += `\n**Injected Contexts:** (${(info.injected_tokens || 0).toLocaleString()} tokens)\n`;
+                    injected.forEach(ctx => {
+                        const sizeKB = (ctx.size / 1024).toFixed(1);
+                        const truncated = ctx.truncated ? ' ⚠ truncated' : '';
+                        contextMsg += `  • ${ctx.source} (${sizeKB} KB${truncated})\n`;
+                    });
+                    contextMsg += '\n*Tip: `/context clear` removes injected files, keeps chat*';
+                }
+
+                // Show tips if over limit
+                if (percent >= 100) {
+                    contextMsg += '\n\n**⚠ Over context limit!** Tips:\n';
+                    contextMsg += '  • `/clear` - Start fresh session\n';
+                    contextMsg += '  • `/save` - Save session before clearing\n';
+                    contextMsg += '  • Consider a model with larger context\n';
+                }
+
+                this.addMessage('system', contextMsg);
+            }
+        } catch (error) {
+            this.showError(`Failed to get context info: ${error.message}`);
         }
     }
 
@@ -2542,6 +2626,62 @@ class PpxaiApp {
             this.elements.usageBadge.textContent = `${formatTokens(prompt)}↓/${formatTokens(completion)}↑ $${cost.toFixed(4)}`;
             this.elements.usageBadge.title = `Prompt: ${prompt}, Completion: ${completion}, Cost: $${cost.toFixed(4)}`;
         } catch {}
+    }
+
+    // === Context Info (v1.13.9) ===
+
+    async updateContextInfo() {
+        try {
+            const response = await fetch(`${this.serverUrl}/context/info`, {
+                headers: this.getSessionHeaders()
+            });
+            const data = await response.json();
+
+            const percent = data.usage_percent || 0;
+            const tokens = data.estimated_tokens || 0;
+            const limit = data.context_limit || 128000;
+            const injectedCount = (data.injected_contexts || []).length;
+
+            // Format the display
+            const formatTokens = (n) => n >= 1000 ? `${(n/1000).toFixed(0)}K` : n;
+            this.elements.contextUsage.textContent = `${percent.toFixed(0)}% (${formatTokens(tokens)}/${formatTokens(limit)})`;
+
+            // Update badge state based on usage percentage
+            this.elements.contextBadge.classList.remove('warning', 'critical');
+            if (percent >= 100) {
+                this.elements.contextBadge.classList.add('critical');
+            } else if (percent >= 80) {
+                this.elements.contextBadge.classList.add('warning');
+            }
+
+            // Update tooltip with details
+            let tooltip = `Context: ${percent.toFixed(1)}%\n${formatTokens(tokens)} / ${formatTokens(limit)} tokens`;
+            if (injectedCount > 0) {
+                tooltip += `\n${injectedCount} injected file(s) - Click to clear`;
+            }
+            this.elements.contextBadge.title = tooltip;
+        } catch {}
+    }
+
+    async clearContextInjections() {
+        try {
+            const response = await fetch(`${this.serverUrl}/context/clear`, {
+                method: 'POST',
+                headers: this.getSessionHeaders(true)
+            });
+            const data = await response.json();
+
+            if (data.removed_count > 0) {
+                this.addSystemMessage(`Cleared ${data.removed_count} injected context(s) from conversation.`);
+            } else {
+                this.addSystemMessage('No injected contexts to clear.');
+            }
+
+            // Update the badge
+            await this.updateContextInfo();
+        } catch (error) {
+            console.error('Failed to clear context:', error);
+        }
     }
 
     // === Theme ===

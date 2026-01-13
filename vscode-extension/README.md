@@ -183,6 +183,8 @@ Type these directly in the chat input:
 |---------|-------------|
 | `/help` | Show all available commands |
 | `/status` | Show current provider/model |
+| `/context` | Show context window usage and injected files |
+| `/context clear` | Remove all injected context |
 | `/provider [id]` | Switch or list providers |
 | `/model [id]` | Switch or list models |
 | `/tools [enable\|disable]` | Manage AI tools |

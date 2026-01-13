@@ -540,6 +540,58 @@ export async function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    // Context usage commands (v1.13.9)
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ppxai.showContextUsage', async () => {
+            const running = await isServerRunning();
+            if (!running) {
+                vscode.window.showWarningMessage('ppxai-server is not running');
+                return;
+            }
+            try {
+                const info = await backend.getContextInfo();
+                const usageBar = '█'.repeat(Math.floor(info.usage_percent / 10)) +
+                                '░'.repeat(10 - Math.floor(info.usage_percent / 10));
+                const injectionList = info.injected_contexts.length > 0
+                    ? info.injected_contexts.map(c => `  • ${c.source} (${Math.round(c.size/1000)}KB${c.truncated ? ', truncated' : ''})`).join('\n')
+                    : '  (none)';
+
+                vscode.window.showInformationMessage(
+                    `Context Usage: ${info.usage_percent.toFixed(1)}%\n` +
+                    `[${usageBar}] ${info.estimated_tokens.toLocaleString()}/${info.context_limit.toLocaleString()} tokens\n` +
+                    `Messages: ${info.message_count} | Injections: ${info.injected_contexts.length}`,
+                    { modal: false }
+                );
+            } catch (error) {
+                vscode.window.showErrorMessage(`Failed to get context info: ${error}`);
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ppxai.clearContextInjections', async () => {
+            const running = await isServerRunning();
+            if (!running) {
+                vscode.window.showWarningMessage('ppxai-server is not running');
+                return;
+            }
+            try {
+                const result = await backend.clearContextInjections();
+                if (result.success) {
+                    if (result.removed_count > 0) {
+                        vscode.window.showInformationMessage(
+                            `Cleared ${result.removed_count} injected file(s) from context`
+                        );
+                    } else {
+                        vscode.window.showInformationMessage('No injected files to clear');
+                    }
+                }
+            } catch (error) {
+                vscode.window.showErrorMessage(`Failed to clear context: ${error}`);
+            }
+        })
+    );
+
     // Handle terminal close events to track server state
     context.subscriptions.push(
         vscode.window.onDidCloseTerminal((terminal) => {
