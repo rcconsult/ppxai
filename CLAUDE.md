@@ -6,28 +6,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.13.9
+**Current Version:** v1.13.10
 
-**v1.13.9 highlights:**
-- **NEW:** Session Persistence & Auto-Recovery - sessions auto-saved after each chat, crash recovery
-- **NEW:** `/context` command - show context usage across all clients (TUI, Web, VSCode)
-- **NEW:** `/context clear` - remove injected @file/@git/@tree content from history
-- **NEW:** Context badge in TUI status line (`Ctx: X%` with green/yellow/red colors)
-- **NEW:** Context badge in VSCode header with click-to-clear
-- **NEW:** Context config section - `max_injection_size`, `default_context_limit`, `warn_at_percent`
-- **FIX:** Hash-based context deduplication - prevents duplicate @git/@tree injections
-- **FIX:** Gemini model context limits - added `context_limit: 1000000` for all models
-- **FIX:** Shell `cd` via AI tool now updates engine working directory
-- **FIX:** Tool parameter aliasing - handles model variations (`filepath` vs `file_path`, etc.)
+**v1.13.10 highlights:**
+- **NEW:** Auto-retry for empty model responses (`auto_retry_empty` setting, default: 3)
+- **NEW:** Web app session restore prompt on startup
+- **NEW:** `/sessions/last` and `/sessions/restore` API endpoints
+- **FIX:** Session save now includes `working_dir` and `tools_enabled` for proper restore
+- **FIX:** JSON-RPC session load applies restored working directory and tools state
+- **FIX:** Web app correctly restores working directory after session load
+- **FIX:** Unwrap nested native tool call arguments from vLLM models (GPT-OSS 120B)
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.13.9
-- VSCode extension (package.json): v1.13.9
-- Git tag: v1.13.9
+- Python package (pyproject.toml): v1.13.10
+- VSCode extension (package.json): v1.13.10
+- Git tag: v1.13.10
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
 
-## Codebase Statistics (v1.13.9)
+## Codebase Statistics (v1.13.10)
 
 | Language | Files | Lines |
 |----------|------:|------:|
