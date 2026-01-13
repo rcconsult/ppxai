@@ -182,12 +182,24 @@ class ToolManager:
 
             # Find if model provided any alias from this group
             provided = alias_group & set(kwargs.keys())
-            if not provided or canonical in kwargs:
+            if not provided:
                 continue
 
-            # Map the provided alias to the canonical name
+            # If canonical already exists, just remove any duplicate aliases
+            # (model may send both 'file_path' and 'filepath' in same call)
+            if canonical in kwargs:
+                for alias in provided:
+                    if alias != canonical and alias in kwargs:
+                        del kwargs[alias]
+                continue
+
+            # Map the provided alias to the canonical name and remove others
             alias = next(iter(provided))
             kwargs[canonical] = kwargs.pop(alias)
+            # Remove any remaining aliases from this group
+            for other_alias in provided:
+                if other_alias != alias and other_alias in kwargs:
+                    del kwargs[other_alias]
 
         return kwargs
 
