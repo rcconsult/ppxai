@@ -965,7 +965,7 @@ class EngineClient:
         """Configure tool settings.
 
         Args:
-            setting: Setting name (e.g., 'max_iterations', 'verbose')
+            setting: Setting name (e.g., 'max_iterations', 'verbose', 'auto_retry_empty')
             value: Setting value
 
         Returns:
@@ -977,6 +977,10 @@ class EngineClient:
         elif setting == "verbose":
             # v1.12.0: Store verbose setting for tool output display
             self._tools_verbose = value in [True, "on", "true", "1", "yes"]
+            return True
+        elif setting == "auto_retry_empty":
+            # v1.13.9: Auto-retry on empty responses (0=disabled)
+            self.tool_manager.auto_retry_empty = int(value)
             return True
         return False
 
@@ -990,6 +994,7 @@ class EngineClient:
             "enabled": self.tools_enabled,
             "tool_count": len(self.tool_manager.list_tools()) if self.tools_enabled else 0,
             "max_iterations": self.tool_manager.max_iterations,
+            "auto_retry_empty": self.tool_manager.auto_retry_empty,  # v1.13.9
             "verbose": self._tools_verbose  # v1.12.0: Include verbose setting
         }
 
@@ -1078,49 +1083,78 @@ class EngineClient:
                 yield event
 
     async def _chat_simple(self, stream: bool) -> AsyncIterator[Event]:
-        """Simple chat without tools."""
-        messages = self.session.get_messages()
+        """Simple chat without tools.
 
-        # Add system prompt for inline citation URLs if provider has web search/citations
-        if self.provider and (self.provider.capabilities.citations or self.provider.capabilities.web_search):
-            citation_prompt = Message(
-                "system",
-                "When citing sources, always include the full URL in parentheses after "
-                "the citation number, like [1](https://example.com). This helps users "
-                "click through to the sources directly."
-            )
-            messages = [citation_prompt] + messages
+        v1.13.10: Added auto-retry for empty responses (same as _chat_with_tools).
+        """
+        # v1.13.10: Auto-retry loop for empty responses
+        max_retries = self.tool_manager.auto_retry_empty
+        retry_count = 0
 
-        async for event in self.provider.chat(messages, self.model, stream):
-            # Check for interrupt
-            if self._interrupted:
-                yield Event(EventType.ERROR, "Interrupted by user")
-                break
+        while True:
+            messages = self.session.get_messages()
+
+            # Add system prompt for inline citation URLs if provider has web search/citations
+            if self.provider and (self.provider.capabilities.citations or self.provider.capabilities.web_search):
+                citation_prompt = Message(
+                    "system",
+                    "When citing sources, always include the full URL in parentheses after "
+                    "the citation number, like [1](https://example.com). This helps users "
+                    "click through to the sources directly."
+                )
+                messages = [citation_prompt] + messages
+
+            full_response = ""
+            response_metadata = None
+
+            async for event in self.provider.chat(messages, self.model, stream):
+                # Check for interrupt
+                if self._interrupted:
+                    yield Event(EventType.ERROR, "Interrupted by user")
+                    return
+
+                if event.type == EventType.STREAM_END:
+                    full_response = event.data or ""
+                    response_metadata = event.metadata
+                elif event.type == EventType.STREAM_CHUNK:
+                    # For streaming, yield chunks immediately
+                    yield event
+
+            # v1.13.10: Check for empty response and retry
+            if not full_response.strip() and retry_count < max_retries and max_retries > 0:
+                retry_count += 1
+                yield Event(EventType.INFO, f"Empty response, retrying... ({retry_count}/{max_retries})")
+                self.session.add_message(Message(
+                    "user",
+                    "Please proceed with the task. If you need more information, ask. "
+                    "If you can help, please respond."
+                ))
+                continue  # Retry
 
             # CRITICAL FIX: Add assistant message to session BEFORE yielding STREAM_END
             # because the caller (TUI main loop) may break out of the loop after receiving it
-            if event.type == EventType.STREAM_END:
-                self.session.add_message(Message("assistant", event.data))
-                if event.metadata and event.metadata.get("usage"):
-                    usage = event.metadata["usage"]
-                    # Calculate cost based on model and provider
-                    usage.estimated_cost = calculate_cost(
-                        usage.prompt_tokens,
-                        usage.completion_tokens,
-                        self.model,
-                        self.provider_name  # Fixed: was provider_id
-                    )
-                    # v1.13.4: Add tool usage from this response
-                    if hasattr(self, '_current_tool_usage'):
-                        usage.tool_calls = self._current_tool_usage
-                        self._current_tool_usage = {}  # Reset for next response
-                    # v1.12.2: Pass provider and model for per-model tracking
-                    self.session.update_usage(usage, self.provider_name, self.model)
-                    # Convert UsageStats to dict for JSON serialization
-                    event.metadata["usage"] = asdict(usage)
+            self.session.add_message(Message("assistant", full_response))
+            if response_metadata and response_metadata.get("usage"):
+                usage = response_metadata["usage"]
+                # Calculate cost based on model and provider
+                usage.estimated_cost = calculate_cost(
+                    usage.prompt_tokens,
+                    usage.completion_tokens,
+                    self.model,
+                    self.provider_name  # Fixed: was provider_id
+                )
+                # v1.13.4: Add tool usage from this response
+                if hasattr(self, '_current_tool_usage'):
+                    usage.tool_calls = self._current_tool_usage
+                    self._current_tool_usage = {}  # Reset for next response
+                # v1.12.2: Pass provider and model for per-model tracking
+                self.session.update_usage(usage, self.provider_name, self.model)
+                # Convert UsageStats to dict for JSON serialization
+                response_metadata["usage"] = asdict(usage)
 
-            # Now yield the event to caller (TUI may break after this)
-            yield event
+            # Now yield the final event to caller
+            yield Event(EventType.STREAM_END, full_response, response_metadata)
+            return  # Done
 
     async def _chat_with_tools(self, stream: bool) -> AsyncIterator[Event]:
         """Chat with tool support.
@@ -1240,7 +1274,13 @@ class EngineClient:
             if native_tool_calls:
                 # Use first native tool call (models typically call one at a time)
                 tc = native_tool_calls[0]
-                tool_call = {"tool": tc["tool"], "arguments": tc.get("arguments", {})}
+                tool_args = tc.get("arguments", {})
+                # v1.13.11: Handle nested tool call structure from some models (e.g., GPT-OSS 120B via vLLM)
+                # Model sometimes outputs: {"tool": "apply_patch", "arguments": {"tool": "apply_patch", "arguments": {...}}}
+                # Unwrap the nested structure to get the actual arguments
+                if isinstance(tool_args, dict) and "tool" in tool_args and "arguments" in tool_args:
+                    tool_args = tool_args["arguments"]
+                tool_call = {"tool": tc["tool"], "arguments": tool_args}
             else:
                 # Fallback: parse tool call from text response
                 tool_call = self._parse_tool_call(full_response)
@@ -1331,6 +1371,31 @@ class EngineClient:
                 #
                 # The response was already fetched with stream=False during tool iterations.
                 # Just emit it as the final response.
+
+                # v1.13.9 FIX: Handle empty responses from models like GPT-OSS 120B
+                # Auto-retry with nudge prompt when model returns empty on first iteration
+                if iteration == 1 and not full_response.strip() and self.tool_manager.auto_retry_empty > 0:
+                    # Track retry attempts for this request
+                    if not hasattr(self, '_empty_retry_count'):
+                        self._empty_retry_count = 0
+                    self._empty_retry_count += 1
+
+                    if self._empty_retry_count <= self.tool_manager.auto_retry_empty:
+                        # Add nudge message and retry
+                        yield Event(EventType.INFO, f"Empty response, retrying... ({self._empty_retry_count}/{self.tool_manager.auto_retry_empty})")
+                        self.session.add_message(Message(
+                            "user",
+                            "Please proceed with the task. If you need more information, ask. "
+                            "If you can help, please respond."
+                        ))
+                        continue  # Retry the loop
+
+                    # Max retries reached, reset and proceed
+                    self._empty_retry_count = 0
+
+                # Reset retry counter on successful response
+                if hasattr(self, '_empty_retry_count'):
+                    self._empty_retry_count = 0
 
                 # v1.13.9 FIX: Handle empty responses after tool iterations
                 # Some models (e.g., GPT-OSS 120B via vLLM) correctly execute tools but

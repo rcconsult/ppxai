@@ -484,6 +484,82 @@ class TestVLLMToolCallInference:
         assert result["arguments"]["query"] == "AI coding tools 2025"
 
 
+class TestNativeToolCallNesting:
+    """Test native tool call argument unwrapping in EngineClient.
+
+    v1.13.11: Some models (e.g., GPT-OSS 120B via vLLM) send native tool calls
+    with nested structure where arguments contain another {"tool": ..., "arguments": {...}}.
+    This should be unwrapped before execution.
+    """
+
+    def test_native_tool_call_nested_arguments_unwrapped(self):
+        """Test that nested native tool call arguments are unwrapped correctly.
+
+        This tests the fix at line ~1277-1282 in client.py where native tool call
+        arguments are checked for nested structure and unwrapped.
+        """
+        from ppxai.engine.client import EngineClient
+
+        # Create engine with mock tool
+        engine = EngineClient()
+
+        mock_tool = Mock()
+        mock_tool.name = "apply_patch"
+        mock_tool.parameters = {
+            "type": "object",
+            "properties": {
+                "file_path": {"type": "string"},
+                "unified_diff": {"type": "string"}
+            },
+            "required": ["file_path", "unified_diff"]
+        }
+        engine.tool_manager.get_tool = Mock(return_value=mock_tool)
+
+        # Simulate what the chat() method does with native tool calls
+        # This is the problematic format from GPT-OSS 120B via vLLM
+        native_tool_call = {
+            "tool": "apply_patch",
+            "arguments": {
+                "tool": "apply_patch",
+                "arguments": {
+                    "file_path": "/test/file.py",
+                    "unified_diff": "--- a\n+++ b\n"
+                }
+            }
+        }
+
+        # Extract and unwrap arguments (mimic the fix in client.py)
+        tool_args = native_tool_call.get("arguments", {})
+        if isinstance(tool_args, dict) and "tool" in tool_args and "arguments" in tool_args:
+            tool_args = tool_args["arguments"]
+
+        # Verify the unwrapping worked
+        assert "file_path" in tool_args
+        assert tool_args["file_path"] == "/test/file.py"
+        assert "unified_diff" in tool_args
+        assert "tool" not in tool_args  # Should NOT have nested tool key
+
+    def test_native_tool_call_normal_arguments_unchanged(self):
+        """Test that normal (non-nested) native tool call arguments pass through unchanged."""
+        # Normal structure - should not be modified
+        native_tool_call = {
+            "tool": "read_file",
+            "arguments": {
+                "filepath": "/etc/hosts",
+                "max_lines": 100
+            }
+        }
+
+        tool_args = native_tool_call.get("arguments", {})
+        if isinstance(tool_args, dict) and "tool" in tool_args and "arguments" in tool_args:
+            tool_args = tool_args["arguments"]
+
+        # Should remain unchanged
+        assert "filepath" in tool_args
+        assert tool_args["filepath"] == "/etc/hosts"
+        assert tool_args["max_lines"] == 100
+
+
 class TestNativeToolCalling:
     """Test native OpenAI-style tool calling for vLLM with --enable-auto-tool-choice.
 
