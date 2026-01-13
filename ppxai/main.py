@@ -585,8 +585,9 @@ def restore_session_to_handler(handler: CommandHandler, session_state: dict) -> 
         except Exception:
             pass
 
-    # Restore working directory
-    working_dir = session_state.get("working_dir")
+    # Restore working directory - prefer session file over state file
+    # Session file is more authoritative (updated on every save)
+    working_dir = handler.engine_client.session.working_dir or session_state.get("working_dir")
     if working_dir and os.path.isdir(working_dir):
         try:
             os.chdir(working_dir)
@@ -594,8 +595,8 @@ def restore_session_to_handler(handler: CommandHandler, session_state: dict) -> 
         except Exception:
             pass
 
-    # Restore tools state
-    tools_enabled = session_state.get("tools_enabled", False)
+    # Restore tools state - prefer session file over state file
+    tools_enabled = handler.engine_client.session.tools_enabled or session_state.get("tools_enabled", False)
     if tools_enabled:
         handler.engine_client.enable_tools()
 
