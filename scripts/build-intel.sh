@@ -6,6 +6,7 @@
 #   - ppxai (TUI application)
 #   - ppxai-server (HTTP server for VSCode extension)
 #   - ppxai-desktop (Desktop launcher for web UI)
+#   - ppxai-VERSION-macos-intel.dmg (DMG installer with app bundle)
 #
 # Usage:
 #   ./scripts/build-intel.sh v1.9.0    # Build and upload to specific release
@@ -142,6 +143,16 @@ if [ -n "$VERSION" ]; then
 
     # Upload all three assets
     gh release upload "$VERSION" "dist/$TUI_ASSET" "dist/$SERVER_ASSET" "dist/$DESKTOP_ASSET" --clobber
+
+    echo ""
+    echo "Binaries uploaded!"
+
+    # Create and upload DMG installer
+    echo ""
+    echo "========================================"
+    echo "Creating macOS Intel DMG installer"
+    echo "========================================"
+    bash "$SCRIPT_DIR/create-macos-app.sh" "$VERSION"
 
     echo ""
     echo "Upload complete!"
