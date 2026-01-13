@@ -222,6 +222,7 @@ class EngineClient:
             path: Working directory path
         """
         self.context_injector.set_working_dir(path)
+        self.session.set_working_dir(path)  # Also update session for persistence
         self._init_checkpoint_manager(path)
 
         # Initialize checkpoint manager for this working directory (v1.12.0)
@@ -433,6 +434,7 @@ class EngineClient:
             # v1.12.0: Apply configurable max_tool_iterations
             self.tool_manager.max_iterations = self._agent_config.get("max_tool_iterations", 15)
             self.tools_enabled = True
+            self.session.tools_enabled = True  # Sync for session persistence
         return True
 
     def disable_tools(self) -> bool:
@@ -442,6 +444,7 @@ class EngineClient:
             True if tools were disabled
         """
         self.tools_enabled = False
+        self.session.tools_enabled = False  # Sync for session persistence
         self.tool_manager.clear()
         return True
 

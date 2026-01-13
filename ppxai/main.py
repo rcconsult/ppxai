@@ -594,6 +594,11 @@ def restore_session_to_handler(handler: CommandHandler, session_state: dict) -> 
         except Exception:
             pass
 
+    # Restore tools state
+    tools_enabled = session_state.get("tools_enabled", False)
+    if tools_enabled:
+        handler.engine_client.enable_tools()
+
     console.print(f"[green]✓ Session restored:[/green] {session_name} ({len(handler.engine_client.session.messages)} messages)")
     return True
 

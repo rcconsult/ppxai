@@ -75,6 +75,7 @@ class SessionManager:
         # v1.13.9: Session persistence and recovery
         self.command_history: List[str] = []  # User input history for this session
         self.working_dir: str = os.getcwd()  # Working directory for this session
+        self.tools_enabled: bool = False  # Whether tools were enabled
         self._dirty: bool = False  # True if session has unsaved changes
 
     def add_message(self, message: Message):
@@ -581,7 +582,8 @@ class SessionManager:
             "saved_at": datetime.now().isoformat(),
             # v1.13.9: New fields
             "command_history": self.command_history,
-            "working_dir": self.working_dir
+            "working_dir": self.working_dir,
+            "tools_enabled": self.tools_enabled
         }
 
         with open(filepath, 'w', encoding='utf-8') as f:
@@ -606,6 +608,7 @@ class SessionManager:
                 "provider": self.metadata.get("provider"),
                 "model": self.metadata.get("model"),
                 "working_dir": self.working_dir,
+                "tools_enabled": self.tools_enabled,
                 "message_count": len(self.messages)
             },
             "updated_at": datetime.now().isoformat()
@@ -676,6 +679,7 @@ class SessionManager:
             # v1.13.9: Load new fields
             self.command_history = data.get("command_history", [])
             self.working_dir = data.get("working_dir", os.getcwd())
+            self.tools_enabled = data.get("tools_enabled", False)
 
             return True
 
