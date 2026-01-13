@@ -422,3 +422,78 @@ class TestHttpServerCheckpointInfo:
         response = client.get("/checkpoint/info/unknown")
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()
+
+
+class TestSSETermination:
+    """Test SSE stream termination signals (v1.13.9)."""
+
+    @pytest.mark.asyncio
+    async def test_sse_generator_sends_done_signal(self):
+        """Test that sse_event_generator sends [DONE] termination signal."""
+        from ppxai.server.http import sse_event_generator
+        from ppxai.engine.types import Event, EventType
+        from unittest.mock import AsyncMock
+
+        # Create mock engine that yields a simple response
+        mock_engine = AsyncMock()
+        mock_engine.session = MagicMock()
+        mock_engine.session.save_usage_to_persistent_storage = MagicMock()
+        mock_engine._consent_event_queue = []
+
+        # Mock chat to yield start, chunk, end events
+        async def mock_chat(prompt):
+            yield Event(EventType.STREAM_START, None)
+            yield Event(EventType.STREAM_CHUNK, "Hello")
+            yield Event(EventType.STREAM_END, "Hello")
+
+        mock_engine.chat = mock_chat
+
+        # Collect all SSE events
+        events = []
+        async for event in sse_event_generator("test", mock_engine, "test-session"):
+            events.append(event)
+
+        # Verify [DONE] is the last event
+        assert len(events) >= 1
+        assert events[-1] == "data: [DONE]\n\n"
+
+    @pytest.mark.asyncio
+    async def test_sse_coding_task_generator_sends_done_signal(self):
+        """Test that sse_coding_task_generator sends [DONE] termination signal."""
+        from ppxai.server.http import sse_coding_task_generator
+        from ppxai.engine.types import Event, EventType
+        from unittest.mock import AsyncMock
+
+        # Create mock engine
+        mock_engine = AsyncMock()
+        mock_engine.session = MagicMock()
+        mock_engine.session.save_usage_to_persistent_storage = MagicMock()
+
+        # Mock coding_task to yield events
+        async def mock_coding_task(prompt, task_type):
+            yield Event(EventType.STREAM_START, None)
+            yield Event(EventType.STREAM_CHUNK, "Code here")
+            yield Event(EventType.STREAM_END, "Code here")
+
+        mock_engine.coding_task = mock_coding_task
+
+        # Collect all SSE events
+        events = []
+        async for event in sse_coding_task_generator("test", "generate", mock_engine):
+            events.append(event)
+
+        # Verify [DONE] is the last event
+        assert len(events) >= 1
+        assert events[-1] == "data: [DONE]\n\n"
+
+    def test_done_signal_is_valid_sse_format(self):
+        """Test that [DONE] signal follows SSE format specification."""
+        done_signal = "data: [DONE]\n\n"
+
+        # Verify format: starts with "data: ", ends with double newline
+        assert done_signal.startswith("data: ")
+        assert done_signal.endswith("\n\n")
+
+        # Verify content is exactly [DONE] (OpenAI convention)
+        content = done_signal[6:-2]  # Strip "data: " prefix and "\n\n" suffix
+        assert content == "[DONE]"

@@ -414,6 +414,8 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
     Phase 1C: Also checks consent_event_queue for pending consent requests.
     v1.11.2: Added debug logging for troubleshooting.
     v1.14.0: Takes engine as parameter for session isolation.
+    v1.13.9: Added explicit [DONE] termination for robust stream completion.
+             Helps prevent aiohttp ClientPayloadError in downstream clients.
     """
     if not engine:
         logger.error("SSE event generator called but engine not initialized")
@@ -485,6 +487,13 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
     except Exception as save_error:
         logger.warning(f"Failed to auto-save usage: {save_error}")
 
+    # v1.13.9: Send explicit [DONE] termination signal
+    # This follows OpenAI's SSE convention and helps prevent ClientPayloadError
+    # in aiohttp-based clients (like Open WebUI) by signaling clean stream end
+    logger.log_sse_event("done", "[DONE]")
+    yield "data: [DONE]\n\n"
+    await asyncio.sleep(0)  # Ensure final event is flushed
+
 
 async def sse_coding_task_generator(
     prompt: str,
@@ -494,6 +503,7 @@ async def sse_coding_task_generator(
     """Generate SSE events from engine coding task.
 
     v1.14.0: Takes engine as parameter for session isolation.
+    v1.13.9: Added explicit [DONE] termination for robust stream completion.
     """
     if not engine:
         yield f"data: {json.dumps({'type': 'error', 'data': 'Engine not initialized'})}\n\n"
@@ -530,6 +540,11 @@ async def sse_coding_task_generator(
             engine.session.save_usage_to_persistent_storage()
     except Exception as save_error:
         logger.warning(f"Failed to auto-save usage: {save_error}")
+
+    # v1.13.9: Send explicit [DONE] termination signal
+    logger.log_sse_event("done", "[DONE]")
+    yield "data: [DONE]\n\n"
+    await asyncio.sleep(0)  # Ensure final event is flushed
 
 
 # === API Endpoints ===
@@ -1159,6 +1174,47 @@ async def get_auto_inject(x_session_id: Optional[str] = Header(None)):
     session_id, engine, _ = get_or_create_session(x_session_id)
 
     return {"enabled": engine.get_auto_inject()}
+
+
+@app.get("/context/info")
+async def get_context_info(x_session_id: Optional[str] = Header(None)):
+    """Get context usage information.
+
+    v1.13.9: Returns token usage, context limit, and injected files.
+
+    Returns:
+        - estimated_tokens: Estimated total tokens in conversation
+        - context_limit: Model's context window limit
+        - usage_percent: Percentage of context used
+        - injected_contexts: List of injected @file/@git/@tree references
+        - injected_tokens: Tokens used by injections
+        - message_count: Number of messages in history
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
+
+    info = engine.get_context_info()
+    return {**info, "session_id": session_id}
+
+
+@app.post("/context/clear")
+async def clear_context_injections(x_session_id: Optional[str] = Header(None)):
+    """Clear injected @file/@git/@tree content from conversation history.
+
+    v1.13.9: Removes injection blocks from messages to free context space.
+    The conversation flow is preserved, only the injected content is removed.
+
+    Returns:
+        - removed_count: Number of injections removed
+        - success: True if operation completed
+    """
+    session_id, engine, _ = get_or_create_session(x_session_id)
+
+    removed_count = engine.clear_injected_contexts()
+    return {
+        "removed_count": removed_count,
+        "success": True,
+        "session_id": session_id
+    }
 
 
 # === Session Management ===
@@ -1966,6 +2022,7 @@ def run_server():
     import uvicorn
 
     parser = argparse.ArgumentParser(description="ppxai HTTP Server")
+    parser.add_argument("--version", "-v", action="version", version=f"ppxai-server {__version__}")
     parser.add_argument("--host", default="127.0.0.1", help="Host to bind to")
     parser.add_argument("--port", type=int, default=54320, help="Port to bind to")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
@@ -2031,6 +2088,7 @@ def run_desktop():
     import uvicorn
 
     parser = argparse.ArgumentParser(description="ppxai Desktop Web App")
+    parser.add_argument("--version", "-v", action="version", version=f"ppxai-desktop {__version__}")
     parser.add_argument("--host", default="127.0.0.1", help="Host to bind to")
     parser.add_argument("--port", type=int, default=54320, help="Port to bind to")
     parser.add_argument("--no-browser", action="store_true", help="Don't open browser")

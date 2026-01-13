@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 // === Types matching PythonBackend interface ===
 
 export interface StreamEvent {
-    type: 'thinking' | 'started' | 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'context_injected' | 'consent_request' | 'status' | 'agent_iteration' | 'agent_complete' | 'agent_max_iterations' | 'working_dir_changed';
+    type: 'thinking' | 'started' | 'reasoning_chunk' | 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'context_injected' | 'consent_request' | 'status' | 'agent_iteration' | 'agent_complete' | 'agent_max_iterations' | 'working_dir_changed';
     content: string;
     metadata?: any;
 }
@@ -404,6 +404,53 @@ export class HttpClient {
     }
 
     /**
+     * Get context usage information (v1.13.9)
+     */
+    async getContextInfo(): Promise<{
+        estimated_tokens: number;
+        context_limit: number;
+        usage_percent: number;
+        injected_contexts: Array<{ source: string; size: number; truncated: boolean }>;
+        injected_tokens: number;
+        message_count: number;
+        total_chars: number;
+        provider: string;
+        model: string;
+    }> {
+        const response = await fetch(`${this.baseUrl}/context/info`, {
+            headers: this.getHeaders()
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to get context info: ${response.statusText}`);
+        }
+        return response.json() as Promise<{
+            estimated_tokens: number;
+            context_limit: number;
+            usage_percent: number;
+            injected_contexts: Array<{ source: string; size: number; truncated: boolean }>;
+            injected_tokens: number;
+            message_count: number;
+            total_chars: number;
+            provider: string;
+            model: string;
+        }>;
+    }
+
+    /**
+     * Clear injected file contents from context (v1.13.9)
+     */
+    async clearContextInjections(): Promise<{ removed_count: number; success: boolean }> {
+        const response = await fetch(`${this.baseUrl}/context/clear`, {
+            method: 'POST',
+            headers: this.getHeaders()
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to clear context: ${response.statusText}`);
+        }
+        return response.json() as Promise<{ removed_count: number; success: boolean }>;
+    }
+
+    /**
      * Send chat message with SSE streaming
      */
     async chat(message: string, streamCallback?: StreamCallback): Promise<string> {
@@ -687,6 +734,9 @@ export class HttpClient {
         switch (event.type) {
             case 'stream_start':
                 return { type: 'started', content: '' };
+            case 'reasoning_chunk':
+                // v1.13.9: Reasoning tokens from DeepSeek R1, GPT-OSS 120B
+                return { type: 'reasoning_chunk', content: event.data || '' };
             case 'stream_chunk':
                 return { type: 'chunk', content: event.data || '' };
             case 'stream_end':

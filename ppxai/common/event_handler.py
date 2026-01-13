@@ -9,7 +9,7 @@ Architecture:
 - Callbacks are provided by the client for rendering
 - Business logic is centralized, UI is delegated
 
-Version: v1.13.8
+Version: v1.13.9
 """
 
 from typing import AsyncIterator, Callable, Optional, Any, Dict
@@ -41,6 +41,7 @@ class EventHandler:
         self,
         on_stream_start: Optional[Callable[[], None]] = None,
         on_stream_chunk: Optional[Callable[[str], None]] = None,
+        on_reasoning_chunk: Optional[Callable[[str], None]] = None,  # v1.13.9
         on_stream_end: Optional[Callable[[str], None]] = None,
         on_tool_call: Optional[Callable[[Dict[str, Any]], None]] = None,
         on_tool_result: Optional[Callable[[Any], None]] = None,
@@ -54,6 +55,7 @@ class EventHandler:
         Args:
             on_stream_start: Called when streaming starts (no args)
             on_stream_chunk: Called for each chunk with chunk text
+            on_reasoning_chunk: Called for reasoning tokens (DeepSeek R1, GPT-OSS 120B) (v1.13.9)
             on_stream_end: Called when streaming ends with full response
             on_tool_call: Called when tool is invoked with {tool, arguments}
             on_tool_result: Called when tool returns with result data
@@ -63,6 +65,7 @@ class EventHandler:
         """
         self.on_stream_start = on_stream_start or (lambda: None)
         self.on_stream_chunk = on_stream_chunk or (lambda x: None)
+        self.on_reasoning_chunk = on_reasoning_chunk or (lambda x: None)  # v1.13.9
         self.on_stream_end = on_stream_end or (lambda x: None)
         self.on_tool_call = on_tool_call or (lambda x: None)
         self.on_tool_result = on_tool_result or (lambda x: None)
@@ -72,6 +75,7 @@ class EventHandler:
 
         # Internal state for accumulation
         self._full_response = ""
+        self._reasoning_response = ""  # v1.13.9
         self._should_break = False
 
     async def handle_event(self, event: Event) -> bool:
@@ -86,8 +90,15 @@ class EventHandler:
         """
         if event.type == EventType.STREAM_START:
             self._full_response = ""
+            self._reasoning_response = ""  # v1.13.9
             self._should_break = False
             self.on_stream_start()
+            return True
+
+        elif event.type == EventType.REASONING_CHUNK:
+            # v1.13.9: Reasoning tokens from DeepSeek R1, GPT-OSS 120B
+            self._reasoning_response += event.data
+            self.on_reasoning_chunk(event.data)
             return True
 
         elif event.type == EventType.STREAM_CHUNK:
@@ -221,6 +232,7 @@ class TUIEventHandler(EventHandler):
         super().__init__(
             on_stream_start=self._on_stream_start,
             on_stream_chunk=self._on_stream_chunk,
+            on_reasoning_chunk=self._on_reasoning_chunk,  # v1.13.9
             on_stream_end=self._on_stream_end,
             on_tool_call=self._on_tool_call,
             on_tool_result=self._on_tool_result,
@@ -230,6 +242,8 @@ class TUIEventHandler(EventHandler):
 
         # Track injected contexts for display
         self._injected_contexts = []
+        # v1.13.9: Track reasoning state for collapsible display
+        self._reasoning_started = False
 
     async def handle_event(self, event: Event) -> bool:
         """Override to handle CONTEXT_INJECTED and AGENT_* events for TUI display."""
@@ -292,11 +306,27 @@ class TUIEventHandler(EventHandler):
 
     def _on_stream_start(self):
         """Handle stream start for TUI."""
+        # Reset reasoning state for new turn (v1.13.9)
+        self._reasoning_started = False
         # With themed panels, we show header after content is complete
         pass
 
+    def _on_reasoning_chunk(self, chunk: str):
+        """Handle reasoning chunk for TUI (v1.13.9 - DeepSeek R1, GPT-OSS 120B)."""
+        # Show reasoning header on first chunk
+        if not self._reasoning_started:
+            self._reasoning_started = True
+            self.console.print("[dim italic]💭 Thinking...[/dim italic]")
+        # Stream reasoning in dim italic style
+        self.console.print(f"[dim italic]{chunk}[/dim italic]", end="")
+
     def _on_stream_chunk(self, chunk: str):
         """Handle stream chunk for TUI (silent accumulation for final render)."""
+        # If we were in reasoning mode, add separator before content
+        if self._reasoning_started and self._full_response == "":
+            self.console.print()  # Newline after reasoning
+            self.console.print("[dim]───[/dim]")  # Separator
+            self._reasoning_started = False  # Reset for next turn
         # Accumulate silently - render at end with proper formatting
         pass
 

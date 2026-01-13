@@ -1,8 +1,8 @@
 # Release Plan: v1.14.x Series
 
 **Created:** January 5, 2026
-**Last Updated:** January 11, 2026
-**Status:** Planning (after v1.13.8 completion)
+**Last Updated:** January 13, 2026
+**Status:** Planning (after v1.13.9 completion)
 **Branch:** TBD
 
 ---
@@ -216,16 +216,19 @@ def test_missing_intermediate_is_fine():
 
 ---
 
-### v1.14.2 - `/context` Commands
+### v1.14.2 - `/context` Commands for Bootstrap
 
-**Goal:** User control over loaded context
+**Goal:** User control over bootstrap context (AGENTS.md/CLAUDE.md)
+
+**Note:** v1.13.9 implemented `/context` and `/context clear` for **injected context** (@file/@git/@tree).
+This release extends `/context` to also manage **bootstrap context**.
 
 | Command | Description |
 |---------|-------------|
-| `/context show` | Display loaded sources and content preview |
-| `/context reload` | Refresh from disk |
-| `/context edit` | Open context file in editor |
-| `/context clear` | Temporarily disable context |
+| `/context` | Show bootstrap sources alongside injected context (extends v1.13.9) |
+| `/context reload` | Refresh AGENTS.md from disk |
+| `/context edit` | Open AGENTS.md in editor |
+| Integration | Unified view: bootstrap + injected context in one output |
 
 **Files to Modify:**
 
@@ -344,14 +347,15 @@ Prefer using tools over asking the user for information.
 - [ ] Add tests for precedence
 
 ### v1.14.2
-- [ ] Add `/context` command handler
-- [ ] Implement `show` subcommand
-- [ ] Implement `reload` subcommand
+- [x] Add `/context` command handler (v1.13.9 - for injected context)
+- [x] Implement context display (v1.13.9 - shows injected files + usage)
+- [ ] Extend to show bootstrap sources (AGENTS.md)
+- [ ] Implement `reload` subcommand (for AGENTS.md)
 - [ ] Implement `edit` subcommand
-- [ ] Implement `clear` subcommand
-- [ ] Add tab autocomplete
-- [ ] Add HTTP endpoints
-- [ ] Update VSCode extension
+- [x] Implement `clear` subcommand (v1.13.9 - clears injected context)
+- [x] Add tab autocomplete (v1.13.9)
+- [x] Add HTTP endpoints (v1.13.9 - /context, /context/clear)
+- [x] Update VSCode extension (v1.13.9 - context badge + /context command)
 
 ### v1.14.3
 - [ ] Add token counting

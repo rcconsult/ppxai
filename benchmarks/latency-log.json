@@ -3626,6 +3626,612 @@
           "iteration": 3
         }
       ]
+    },
+    {
+      "timestamp": "2026-01-12T18:59:09.667879",
+      "version": "1.13.8",
+      "git_commit": "89b89c6",
+      "git_branch": "bugfix/windows-fixes",
+      "provider": "custom",
+      "model": "openai/gpt-oss-120b",
+      "summary": {
+        "total_runs": 6,
+        "successful_runs": 6,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 312.16,
+          "min": 186.87,
+          "max": 635.73,
+          "stdev": 170.7
+        },
+        "total_ms": {
+          "mean": 2077.67,
+          "min": 255.95,
+          "max": 5288.89,
+          "stdev": 2296.82
+        },
+        "tokens_per_sec": {
+          "mean": 80.4,
+          "min": 14.07,
+          "max": 114.96
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 356.7,
+          "total_ms": 426.3,
+          "tokens": 6,
+          "tokens_per_sec": 14.07,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 186.87,
+          "total_ms": 255.95,
+          "tokens": 6,
+          "tokens_per_sec": 23.44,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 196.35,
+          "total_ms": 809.31,
+          "tokens": 90,
+          "tokens_per_sec": 111.21,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 218.43,
+          "total_ms": 940.19,
+          "tokens": 106,
+          "tokens_per_sec": 112.74,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 635.73,
+          "total_ms": 4745.4,
+          "tokens": 503,
+          "tokens_per_sec": 106.0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 278.86,
+          "total_ms": 5288.89,
+          "tokens": 608,
+          "tokens_per_sec": 114.96,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 2
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-12T18:59:37.201136",
+      "version": "1.13.8",
+      "git_commit": "89b89c6",
+      "git_branch": "bugfix/windows-fixes",
+      "provider": "perplexity",
+      "model": "sonar-pro",
+      "summary": {
+        "total_runs": 6,
+        "successful_runs": 6,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 1436.52,
+          "min": 1228.41,
+          "max": 1668.38,
+          "stdev": 180.29
+        },
+        "total_ms": {
+          "mean": 3097.77,
+          "min": 2263.26,
+          "max": 4154.76,
+          "stdev": 746.34
+        },
+        "tokens_per_sec": {
+          "mean": 48.76,
+          "min": 28.55,
+          "max": 72.69
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 1668.38,
+          "total_ms": 2767.34,
+          "tokens": 79,
+          "tokens_per_sec": 28.55,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1397.01,
+          "total_ms": 2533.82,
+          "tokens": 97,
+          "tokens_per_sec": 38.28,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 1377.25,
+          "total_ms": 3034.6,
+          "tokens": 140,
+          "tokens_per_sec": 46.13,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1228.41,
+          "total_ms": 2263.26,
+          "tokens": 89,
+          "tokens_per_sec": 39.32,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 1304.39,
+          "total_ms": 3832.82,
+          "tokens": 259,
+          "tokens_per_sec": 67.57,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1643.7,
+          "total_ms": 4154.76,
+          "tokens": 302,
+          "tokens_per_sec": 72.69,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 2
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-12T19:01:50.490099",
+      "version": "1.13.8",
+      "git_commit": "89b89c6",
+      "git_branch": "bugfix/windows-fixes",
+      "provider": "custom",
+      "model": "openai/gpt-oss-120b",
+      "summary": {
+        "total_runs": 6,
+        "successful_runs": 6,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 1102.59,
+          "min": 225.27,
+          "max": 5173.9,
+          "stdev": 1995.41
+        },
+        "total_ms": {
+          "mean": 3196.82,
+          "min": 355.86,
+          "max": 6633.42,
+          "stdev": 2764.66
+        },
+        "tokens_per_sec": {
+          "mean": 77.57,
+          "min": 1.14,
+          "max": 115.16
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 286.2,
+          "total_ms": 355.86,
+          "tokens": 6,
+          "tokens_per_sec": 16.86,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 5173.9,
+          "total_ms": 5242.6,
+          "tokens": 6,
+          "tokens_per_sec": 1.14,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 230.46,
+          "total_ms": 863.8,
+          "tokens": 93,
+          "tokens_per_sec": 107.66,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 225.27,
+          "total_ms": 961.78,
+          "tokens": 108,
+          "tokens_per_sec": 112.29,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 386.57,
+          "total_ms": 6633.42,
+          "tokens": 745,
+          "tokens_per_sec": 112.31,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 313.13,
+          "total_ms": 5123.45,
+          "tokens": 590,
+          "tokens_per_sec": 115.16,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 2
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-12T19:02:19.195915",
+      "version": "1.13.8",
+      "git_commit": "89b89c6",
+      "git_branch": "bugfix/windows-fixes",
+      "provider": "perplexity",
+      "model": "sonar-pro",
+      "summary": {
+        "total_runs": 6,
+        "successful_runs": 6,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 1343.3,
+          "min": 1099.11,
+          "max": 1683.92,
+          "stdev": 213.24
+        },
+        "total_ms": {
+          "mean": 3441.66,
+          "min": 2686.73,
+          "max": 4265.36,
+          "stdev": 612.78
+        },
+        "tokens_per_sec": {
+          "mean": 61.73,
+          "min": 46.52,
+          "max": 75.82
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 1243.61,
+          "total_ms": 4265.36,
+          "tokens": 297,
+          "tokens_per_sec": 69.63,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1099.11,
+          "total_ms": 3376.26,
+          "tokens": 256,
+          "tokens_per_sec": 75.82,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 1340.26,
+          "total_ms": 2686.73,
+          "tokens": 125,
+          "tokens_per_sec": 46.52,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1201.99,
+          "total_ms": 2800.75,
+          "tokens": 141,
+          "tokens_per_sec": 50.34,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 1490.88,
+          "total_ms": 3686.84,
+          "tokens": 224,
+          "tokens_per_sec": 60.76,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1683.92,
+          "total_ms": 3834.01,
+          "tokens": 258,
+          "tokens_per_sec": 67.29,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 2
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-12T19:02:43.251657",
+      "version": "1.13.8",
+      "git_commit": "89b89c6",
+      "git_branch": "bugfix/windows-fixes",
+      "provider": "gemini",
+      "model": "gemini-2.0-flash",
+      "summary": {
+        "total_runs": 6,
+        "successful_runs": 6,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 1405.07,
+          "min": 924.2,
+          "max": 2099.81,
+          "stdev": 477.48
+        },
+        "total_ms": {
+          "mean": 2637.57,
+          "min": 1878.67,
+          "max": 3677.05,
+          "stdev": 706.63
+        },
+        "tokens_per_sec": {
+          "mean": 40.84,
+          "min": 6.66,
+          "max": 81.04
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 2099.81,
+          "total_ms": 2100.56,
+          "tokens": 14,
+          "tokens_per_sec": 6.66,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1836.53,
+          "total_ms": 2268.54,
+          "tokens": 32,
+          "tokens_per_sec": 14.11,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 1332.55,
+          "total_ms": 3281.96,
+          "tokens": 96,
+          "tokens_per_sec": 29.25,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1306.49,
+          "total_ms": 1878.67,
+          "tokens": 75,
+          "tokens_per_sec": 39.92,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 924.2,
+          "total_ms": 2618.63,
+          "tokens": 194,
+          "tokens_per_sec": 74.08,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 930.81,
+          "total_ms": 3677.05,
+          "tokens": 298,
+          "tokens_per_sec": 81.04,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 2
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-12T22:26:41.083048",
+      "version": "1.13.9",
+      "git_commit": "cf5b02e",
+      "git_branch": "bugfix/windows-fixes",
+      "provider": "mock",
+      "model": "mock-model",
+      "summary": {
+        "total_runs": 9,
+        "successful_runs": 9,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 225.89,
+          "min": 163.21,
+          "max": 273.6,
+          "stdev": 41.38
+        },
+        "total_ms": {
+          "mean": 1555.67,
+          "min": 1037.93,
+          "max": 1851.46,
+          "stdev": 300.82
+        },
+        "tokens_per_sec": {
+          "mean": 41.63,
+          "min": 11.44,
+          "max": 92.49
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "prompt_type": "simple",
+          "iteration": 1,
+          "ttft_ms": 182.41,
+          "total_ms": 1596.6,
+          "tokens": 95,
+          "tokens_per_sec": 59.5
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 2,
+          "ttft_ms": 273.6,
+          "total_ms": 1799.97,
+          "tokens": 26,
+          "tokens_per_sec": 14.44
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 3,
+          "ttft_ms": 205.1,
+          "total_ms": 1836.17,
+          "tokens": 21,
+          "tokens_per_sec": 11.44
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 1,
+          "ttft_ms": 211.34,
+          "total_ms": 1250.19,
+          "tokens": 92,
+          "tokens_per_sec": 73.59
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 2,
+          "ttft_ms": 264.91,
+          "total_ms": 1641.71,
+          "tokens": 98,
+          "tokens_per_sec": 59.69
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 3,
+          "ttft_ms": 259.03,
+          "total_ms": 1851.46,
+          "tokens": 32,
+          "tokens_per_sec": 17.28
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 1,
+          "ttft_ms": 163.21,
+          "total_ms": 1248.64,
+          "tokens": 24,
+          "tokens_per_sec": 19.22
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 2,
+          "ttft_ms": 269.16,
+          "total_ms": 1738.33,
+          "tokens": 47,
+          "tokens_per_sec": 27.04
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 3,
+          "ttft_ms": 204.23,
+          "total_ms": 1037.93,
+          "tokens": 96,
+          "tokens_per_sec": 92.49
+        }
+      ]
     }
   ]
 }

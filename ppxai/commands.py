@@ -314,6 +314,13 @@ class CommandHandler:
             # Non-critical - don't fail on usage persistence errors
             pass
 
+        # v1.13.9: Mark session clean on graceful exit
+        try:
+            self.engine_client.session.mark_clean()
+        except Exception as e:
+            # Non-critical - don't fail on state file errors
+            pass
+
         console.print("\n[yellow]Goodbye![/yellow]")
         return True
 
@@ -1011,6 +1018,16 @@ class CommandHandler:
 
         console.print("[green]✓ Tools enabled![/green]")
         console.print("[dim]Includes file editing tools (apply_patch, replace_block, insert_text, delete_lines)[/dim]")
+
+        # v1.13.9: Show context limit info
+        try:
+            from .config import get_model_context_limit, get_max_injection_size
+            context_limit = get_model_context_limit(self.provider, self.current_model)
+            max_injection = get_max_injection_size()
+            console.print(f"[dim]Context limit: {context_limit:,} tokens | @file/@git/@tree truncated at {max_injection // 1000}KB[/dim]")
+        except ImportError:
+            pass
+
         console.print("[dim]Use '/tools list' to see available tools[/dim]\n")
 
     def _disable_tools(self):
@@ -1279,15 +1296,15 @@ class CommandHandler:
             console.print("[yellow]Usage: /debug-log [on|off|show|clear][/yellow]\n")
 
     def _search_files(self, query: str, max_results: int = 10) -> list:
-        """Search for files matching query in current directory."""
+        """Search for files matching query in engine's working directory."""
         from pathlib import Path
         import fnmatch
 
         # Remove @ prefix if present
         query = query.lstrip('@').strip()
 
-        # Get search root (current working directory)
-        root = Path.cwd()
+        # Get search root from engine client (respects cd command)
+        root = Path(self.engine_client.get_working_dir())
 
         # Build search patterns
         patterns = []
@@ -1446,10 +1463,13 @@ class CommandHandler:
         if at_match:
             query = at_match.group(1)  # Use just the reference without @
 
+        # Get working directory from engine client (respects cd command)
+        working_dir = Path(self.engine_client.get_working_dir())
+
         # Check if it's a direct path first
         direct_path = Path(query).expanduser()
         if not direct_path.is_absolute():
-            direct_path = Path.cwd() / query
+            direct_path = working_dir / query
 
         if direct_path.exists() and direct_path.is_file():
             path = direct_path.resolve()
@@ -1464,12 +1484,12 @@ class CommandHandler:
 
             if len(matches) == 1:
                 path = matches[0]
-                console.print(f"[dim]Found: {path.relative_to(Path.cwd())}[/dim]\n")
+                console.print(f"[dim]Found: {path.relative_to(working_dir)}[/dim]\n")
             else:
                 # Multiple matches - let user choose
                 console.print(f"\n[yellow]Multiple files found ({len(matches)}):[/yellow]")
                 for i, match in enumerate(matches, 1):
-                    rel_path = match.relative_to(Path.cwd())
+                    rel_path = match.relative_to(working_dir)
                     console.print(f"  [cyan]{i}[/cyan]. {rel_path}")
 
                 console.print("\n[dim]Use exact path: /show <path>[/dim]\n")
@@ -2174,6 +2194,8 @@ If more work is needed, explain what you're doing next and use the appropriate t
             self.handle_checkpoint(args)
         elif command == "/status":
             self.handle_status(args)
+        elif command == "/context":
+            self.handle_context(args)
         elif command == "/config":
             self.handle_config(args)
         else:
@@ -2263,6 +2285,69 @@ If more work is needed, explain what you're doing next and use the appropriate t
         console.print(f"  show_cwd: {'[green]true[/green]' if tui_config.get('show_cwd', True) else '[dim]false[/dim]'}")
         console.print(f"  show_datetime: {'[green]true[/green]' if tui_config.get('show_datetime', False) else '[dim]false[/dim]'}")
 
+        console.print()
+
+    def handle_context(self, args: str = ""):
+        """Handle /context command for context usage information (v1.13.9).
+
+        Usage:
+            /context          - Show context usage and injected files
+            /context clear    - Remove injected @file/@git/@tree content from history
+        """
+        if not self.engine_client:
+            console.print("[red]Error: Engine client not available[/red]\n")
+            return
+
+        parts = args.strip().split() if args else []
+
+        if parts and parts[0].lower() == "clear":
+            # Clear injected contexts
+            removed = self.engine_client.clear_injected_contexts()
+            if removed > 0:
+                console.print(f"\n[green]Cleared {removed} injected context(s) from history.[/green]")
+                # Show updated usage
+                info = self.engine_client.get_context_info()
+                console.print(f"[dim]New estimated usage: ~{info['estimated_tokens']:,} tokens ({info['usage_percent']:.0f}%)[/dim]\n")
+            else:
+                console.print("\n[yellow]No injected contexts to clear.[/yellow]\n")
+            return
+
+        # Show context usage info
+        info = self.engine_client.get_context_info()
+
+        console.print("\n[cyan]Context Usage:[/cyan]")
+        console.print(f"  Estimated: ~{info['estimated_tokens']:,} / {info['context_limit']:,} tokens ({info['usage_percent']:.1f}%)")
+        console.print(f"  Model: {info['model']} ({info['provider']})")
+        console.print(f"  Messages: {info['message_count']}")
+
+        # Show progress bar
+        pct = min(info['usage_percent'], 100)
+        bar_width = 30
+        filled = int(bar_width * pct / 100)
+        bar = "[green]" + "█" * filled + "[/green]" + "[dim]░[/dim]" * (bar_width - filled)
+        if pct >= 80:
+            bar = "[yellow]" + "█" * filled + "[/yellow]" + "[dim]░[/dim]" * (bar_width - filled)
+        if pct >= 95:
+            bar = "[red]" + "█" * filled + "[/red]" + "[dim]░[/dim]" * (bar_width - filled)
+        console.print(f"  [{bar}] {pct:.0f}%")
+
+        # Show injected contexts
+        injected = info.get('injected_contexts', [])
+        if injected:
+            console.print(f"\n[cyan]Injected Contexts:[/cyan] ({info['injected_tokens']:,} tokens)")
+            for ctx in injected:
+                size_kb = ctx['size'] / 1024
+                truncated = " [yellow](truncated)[/yellow]" if ctx.get('truncated') else ""
+                console.print(f"  {ctx['source']}: {size_kb:.1f} KB{truncated}")
+
+        # Show tips
+        console.print("\n[dim]Tips:[/dim]")
+        if injected:
+            console.print("  [dim]• /context clear - Remove injected files, keep chat[/dim]")
+        console.print("  [dim]• /new - Start fresh session[/dim]")
+        console.print("  [dim]• /save - Save session before clearing[/dim]")
+        if info['usage_percent'] >= 80:
+            console.print("  [dim]• Consider switching to a model with larger context[/dim]")
         console.print()
 
     def handle_config(self, args: str = ""):

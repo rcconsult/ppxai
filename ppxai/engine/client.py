@@ -6,9 +6,11 @@ It has no UI dependencies and communicates via events.
 """
 
 import asyncio
+import hashlib
 import json
 import re
 from dataclasses import asdict
+from datetime import datetime
 from typing import List, AsyncIterator, Optional, Dict, Any
 from pathlib import Path
 
@@ -65,6 +67,9 @@ class EngineClient:
         # Context injection for automatic file content inclusion
         self.context_injector = ContextInjector()
         self.auto_inject_context: bool = True  # Enabled by default
+
+        # v1.13.9: Track injected contexts for /context command
+        self._injected_contexts: List[Dict[str, Any]] = []
 
         # Interrupt handling for graceful stream cancellation
         self._interrupted: bool = False
@@ -1025,9 +1030,13 @@ class EngineClient:
         injected_contexts = []
 
         if self.auto_inject_context:
-            message, injected_contexts = self.context_injector.inject_context(message)
+            # v1.13.10: Pass existing hashes to skip duplicate content at injection time
+            existing_hashes = {c.get('hash') for c in self._injected_contexts if c.get('hash')}
+            message, injected_contexts = self.context_injector.inject_context(
+                message, skip_hashes=existing_hashes
+            )
 
-            # Emit events for each injected file
+            # Emit events for each injected file and track them
             for ctx in injected_contexts:
                 yield Event(EventType.CONTEXT_INJECTED, {
                     'source': ctx.source,
@@ -1035,6 +1044,25 @@ class EngineClient:
                     'truncated': ctx.truncated,
                     'size': ctx.size
                 })
+                # v1.13.9: Track for /context command
+                # v1.13.10: Hash computed in inject_context, track here
+                # Check if same source exists with different content
+                existing_idx = next(
+                    (i for i, c in enumerate(self._injected_contexts) if c['source'] == ctx.source),
+                    None
+                )
+                injection_entry = {
+                    'source': ctx.source,
+                    'size': ctx.size,
+                    'truncated': ctx.truncated,
+                    'timestamp': datetime.now().isoformat(),
+                    'hash': ctx.hash
+                }
+                if existing_idx is not None:
+                    # Replace - same source, different content (e.g., @git updated)
+                    self._injected_contexts[existing_idx] = injection_entry
+                else:
+                    self._injected_contexts.append(injection_entry)
 
         # Add message to history (with injected content)
         self.session.add_message(Message("user", message))
@@ -1269,7 +1297,7 @@ class EngineClient:
                     ))
                     self.session.add_message(Message(
                         "user",
-                        f"The {tool_name} tool returned:\n\n{result}\n\nNow use this information to answer my original question. Do NOT just repeat or echo the tool output - synthesize it into a helpful response. If you need more information, call another tool."
+                        f"The {tool_name} tool returned:\n\n{result}\n\nNow respond to the user based on this result. For simple commands like 'ls' or 'pwd', just present the output clearly. For complex tasks, synthesize the information. If you need more information to complete the CURRENT request, call another tool."
                     ))
 
                 except Exception as e:
@@ -1300,6 +1328,43 @@ class EngineClient:
                 #
                 # The response was already fetched with stream=False during tool iterations.
                 # Just emit it as the final response.
+
+                # v1.13.9 FIX: Handle empty responses after tool iterations
+                # Some models (e.g., GPT-OSS 120B via vLLM) correctly execute tools but
+                # return empty text responses instead of summarizing results. If we have
+                # executed tools (iteration > 1) and the response is empty, prompt for summary.
+                if iteration > 1 and not full_response.strip():
+                    # Ask model to summarize tool results
+                    self.session.add_message(Message(
+                        "user",
+                        "Please provide a summary or answer based on the tool results above. "
+                        "Do not call any more tools - just synthesize the information into a helpful response."
+                    ))
+
+                    # Get the summary response
+                    summary_response = ""
+                    async for event in self.provider.chat(
+                        self.session.get_messages(), self.model, stream=False, tools=None
+                    ):
+                        if event.type == EventType.ERROR:
+                            yield event
+                            return
+                        elif event.type == EventType.STREAM_END:
+                            summary_response = event.data
+                            # Accumulate usage
+                            if event.metadata and event.metadata.get("usage"):
+                                usage = event.metadata["usage"]
+                                accumulated_usage.prompt_tokens += usage.prompt_tokens
+                                accumulated_usage.completion_tokens += usage.completion_tokens
+                                accumulated_usage.total_tokens += usage.total_tokens
+
+                    # Use summary as final response (or fallback message if still empty)
+                    full_response = summary_response.strip() or "[Tool execution completed but no summary generated]"
+
+                    # Remove the prompt message from history (it was just for getting summary)
+                    if self.session.messages and self.session.messages[-1].role == "user":
+                        self.session.messages.pop()
+
                 self.session.add_message(Message("assistant", full_response))
 
                 # v1.12.0: Commit agent changes after successful task completion
@@ -1784,6 +1849,82 @@ class EngineClient:
             "has_api_key": self.provider is not None,
             "message_count": len(self.session.messages)
         }
+
+    # === Context Management (v1.13.9) ===
+
+    def get_context_info(self) -> Dict[str, Any]:
+        """Get context usage information for /context command.
+
+        Returns:
+            Dict with context usage info:
+            - estimated_tokens: Estimated total tokens
+            - context_limit: Model context limit
+            - usage_percent: Usage percentage
+            - injected_contexts: List of injected @file/@git/@tree
+            - message_count: Number of messages in history
+            - total_chars: Total characters in history
+        """
+        # Calculate total characters in message history
+        total_chars = sum(len(m.content) for m in self.session.messages)
+
+        # Estimate tokens (~4 chars per token)
+        estimated_tokens = total_chars // 4
+
+        # Get context limit for current model
+        try:
+            from ..config import get_model_context_limit
+            context_limit = get_model_context_limit(self.provider_name, self.model)
+        except ImportError:
+            context_limit = 128_000
+
+        usage_percent = (estimated_tokens / context_limit) * 100 if context_limit > 0 else 0
+
+        # Calculate injected context size
+        injected_size = sum(ctx.get('size', 0) for ctx in self._injected_contexts)
+        injected_tokens = injected_size // 4
+
+        return {
+            "estimated_tokens": estimated_tokens,
+            "context_limit": context_limit,
+            "usage_percent": usage_percent,
+            "injected_contexts": self._injected_contexts.copy(),
+            "injected_tokens": injected_tokens,
+            "message_count": len(self.session.messages),
+            "total_chars": total_chars,
+            "provider": self.provider_name,
+            "model": self.model
+        }
+
+    def clear_injected_contexts(self) -> int:
+        """Clear tracked injected contexts and remove from message history.
+
+        This removes the injected file content from messages but keeps
+        the conversation flow intact.
+
+        Returns:
+            Number of injections removed
+        """
+        removed_count = len(self._injected_contexts)
+
+        if removed_count == 0:
+            return 0
+
+        # Pattern to match injected context blocks
+        import re
+        injection_pattern = re.compile(
+            r'\n---\n\*\*`@[^`]+`\*\*[^\n]*:\n```[^\n]*\n.*?```\n',
+            re.DOTALL
+        )
+
+        # Remove injected blocks from all user messages
+        for msg in self.session.messages:
+            if msg.role == "user":
+                msg.content = injection_pattern.sub('', msg.content)
+
+        # Clear the tracking list
+        self._injected_contexts.clear()
+
+        return removed_count
 
     # === Cleanup ===
 

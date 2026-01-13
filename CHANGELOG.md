@@ -5,6 +5,79 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [1.13.9] - 2026-01-12
+
+### Added - Session Persistence & Auto-Recovery
+
+- **Session state file** - New `~/.ppxai/session-state.json` tracks session dirty/clean state for crash recovery
+- **Command history persistence** - User input history is saved per session and restored on reload
+- **Working directory persistence** - Session remembers the working directory set via `cd` command
+- **Auto-save after each roundtrip** - Sessions are automatically saved after each chat exchange (configurable interval)
+- **Auto-restore on startup** - Configurable behavior: `"always"`, `"prompt"` (default), or `"never"`
+- **Crash recovery** - Dirty sessions (from crashes/force-quit) are automatically detected and recovered
+- **Graceful exit handling** - Sessions marked clean on `/quit`, Ctrl-C (double), or EOF
+
+### Added - Configuration
+
+- **Session config section** - New `"session"` key in `ppxai-config.json`:
+  ```json
+  {
+    "session": {
+      "auto_restore": "prompt",
+      "auto_save_interval": 1
+    }
+  }
+  ```
+
+- **Context limits config section** - New `"context"` key for configurable truncation and model limits:
+  ```json
+  {
+    "context": {
+      "max_injection_size": 100000,
+      "default_context_limit": 128000,
+      "warn_at_percent": 80
+    }
+  }
+  ```
+
+- **Per-model context_limit** - Models can specify their context window size:
+  ```json
+  {
+    "providers": {
+      "vllm-gpt-oss": {
+        "models": {
+          "openai/gpt-oss-120b": {
+            "context_limit": 131072
+          }
+        }
+      }
+    }
+  }
+  ```
+
+- **Context usage warning** - Shows warning when approaching context limit (configurable threshold)
+- **Tools enable notification** - Shows context limit and truncation info when enabling tools
+- **`/context` command** - Show context usage, injected files, and visual progress bar (TUI, Web, VSCode)
+- **`/context clear` command** - Remove injected @file/@git/@tree content from history to free context space
+- **Context badge in TUI** - Status line shows `Ctx: X%` with color coding (green <80%, yellow 80-99%, red ≥100%)
+- **Context badge in VSCode** - Header shows context usage percentage with click-to-clear functionality
+
+### Fixed
+
+- **Shell `cd` command updates engine working directory** - When AI calls `execute_shell_command` with `cd`, it now updates `engine.set_working_dir()` instead of running a subprocess (which only changed the subprocess directory). Fixes `list_directory` showing wrong directory after AI-issued `cd` command.
+- **@tree context truncation** - `@tree` injection now truncates at 100KB limit (same as `@file` and `@git`) to prevent "too many tokens" errors with large codebases
+- **TUI @file autocomplete after cd** - File completion now uses engine's working directory instead of process cwd, so @filename autocomplete correctly shows files from the current directory after using cd command
+- **TUI /show command after cd** - `/show @filename` and `/show filename` now search in the engine's working directory (set by cd) instead of the process cwd
+- **Desktop app missing data viewers** - Added `components/` and `styles/` directories to `ppxai-desktop.spec` so data viewer CSS/JS files are bundled and deployed to `~/.ppxai/web/`
+- **Tool parameter aliasing** - Added dynamic parameter normalization in ToolManager to handle model variations. Different tools use different naming conventions (`read_file` expects `filepath`, `apply_patch` expects `file_path`), and models may use either. The new `_normalize_params()` method maps model-provided names to what each tool expects. Comprehensive alias groups cover: file paths, directories, commands, queries, diffs, URLs, locations, containers, pods, text content, and search/replace operations.
+- **Context overflow prevention** - Added token estimation in OpenAI-compatible provider to prevent "max_tokens must be at least 1" errors from vLLM when injected `@file` context exceeds model's 128K context window. Now shows a friendly error message suggesting to remove file references or start a new conversation instead of cryptic API error.
+- **Empty responses after tool calls** - Fixed issue where some models (e.g., GPT-OSS 120B via vLLM) would execute tools correctly but return empty text responses instead of summarizing the results. Now detects empty responses after tool iterations and prompts the model for a summary.
+- **Reasoning model support** - Handle models that return content in `reasoning_content` instead of `content` field
+- **Hash-based context deduplication** - Injecting same content twice (e.g., `@git` with unchanged diff) no longer duplicates. Uses MD5 hash to detect identical content and skip re-injection.
+- **Gemini model context limits** - Added `context_limit: 1000000` for all Gemini models in example and project configs (was falling back to 128K default)
+
 ## [1.13.8] - 2026-01-11
 
 ### Added - Data Visualization
@@ -205,7 +278,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed - Desktop Web App & VSCode Extension
 
 #### Markdown Rendering
-- **Fixed bullet lists** - Changed from Unicode bullet (•) to markdown dash (-) for proper rendering
+- **Fixed bullet lists** - Changed from Unicode bullet (â€¢) to markdown dash (-) for proper rendering
 - **Fixed `/usage` tables** - Both VSCode extension and Web App now show usage breakdown in table format
 - **Updated marked.js** - Upgraded Web App from v9.1.6 to v11.1.1 (matching VSCode extension)
 
@@ -347,7 +420,7 @@ pip install ppxai[gemini]   # For enhanced Gemini support
 
 #### Web Search Tool Upgrade
 - **`ddgs` package** - Upgraded to use `ddgs>=9.0.0` for more reliable DuckDuckGo search
-- **Fallback chain** - Uses ddgs → duckduckgo-search → HTML scraping
+- **Fallback chain** - Uses ddgs â†’ duckduckgo-search â†’ HTML scraping
 - **No API key needed** - Works out of the box for all providers
 
 ### New Endpoints
@@ -413,7 +486,7 @@ pip install ppxai[gemini]   # For enhanced Gemini support
 - **Removed obsolete** `tui_logger.py` (replaced by `ppxai/common/logger.py`)
 
 #### TUI Display
-- **Checkpoint status** - Shows `↶` symbol instead of full git hash for cleaner display
+- **Checkpoint status** - Shows `â†¶` symbol instead of full git hash for cleaner display
 - **Panel alignment** - Text symbols instead of emojis for consistent column alignment
 
 ### Testing
@@ -455,7 +528,7 @@ pip install ppxai[gemini]   # For enhanced Gemini support
 
 ## [1.12.0] - 2025-12-29
 
-### Added - Checkpoint System & Usage Tracking 🔒📊
+### Added - Checkpoint System & Usage Tracking ðŸ”’ðŸ“Š
 
 This release introduces a checkpoint system for atomic multi-file rollback and real-time token usage tracking with cost estimation.
 
@@ -463,14 +536,14 @@ This release introduces a checkpoint system for atomic multi-file rollback and r
 - **Git-based checkpoints** - Auto-commits changes before agent tasks for atomic rollback
 - **`/undo` command** - Revert last agent task with single command (`git revert HEAD`)
 - **File-based fallback** - Snapshots to `~/.ppxai/checkpoints/` when git unavailable
-- **Auto-detection** - Automatically selects best backend (git → file → none)
+- **Auto-detection** - Automatically selects best backend (git â†’ file â†’ none)
 - **Stale detection** - Checkpoints invalidated when new commits are made after them
 - **VSCode Undo button** - One-click rollback with confirmation dialog
 
 #### Token Usage & Cost Tracking
 - **Real-time streaming usage** - Extract tokens from streaming responses
 - **Cost estimation** - Automatic USD cost calculation based on per-model pricing
-- **TUI status line** - Shows `1.2K↓/0.5K↑ $0.0045` in status bar
+- **TUI status line** - Shows `1.2Kâ†“/0.5Kâ†‘ $0.0045` in status bar
 - **VSCode usage badge** - Live-updating badge with tooltip breakdown
 - **All providers supported** - OpenAI, Perplexity, Gemini streaming
 
@@ -497,7 +570,7 @@ This release introduces a checkpoint system for atomic multi-file rollback and r
 
 ## [1.11.9] - 2025-12-27
 
-### Fixed - Critical Agent Mode Safety 🔒
+### Fixed - Critical Agent Mode Safety ðŸ”’
 
 This release fixes a critical safety issue where `/agent on|off` commands were being interpreted as tasks instead of toggle commands.
 
@@ -530,7 +603,7 @@ This release fixes a critical safety issue where `/agent on|off` commands were b
 
 ## [1.11.8] - 2025-12-27
 
-### Added - Agent Mode + Release Fixes 🤖
+### Added - Agent Mode + Release Fixes ðŸ¤–
 
 This release introduces Agent Mode for autonomous task execution in the VSCode extension.
 
@@ -548,7 +621,7 @@ This release introduces Agent Mode for autonomous task execution in the VSCode e
   - Added `make_latest: true` to GitHub Actions workflow
   - Release script now uses `--latest` flag when publishing notes
 - **Documentation Links** - Fixed 12 broken internal links
-  - `custom-tools-guide.md` → `CUSTOM_TOOL_DEVELOPMENT_GUIDE.md`
+  - `custom-tools-guide.md` â†’ `CUSTOM_TOOL_DEVELOPMENT_GUIDE.md`
   - Archived docs now properly reference `docs/archive/` paths
 
 ### Fixed
@@ -557,7 +630,7 @@ This release introduces Agent Mode for autonomous task execution in the VSCode e
 
 ## [1.11.6] - 2025-12-26
 
-### Fixed - /tools Commands After Provider Switch 🔧
+### Fixed - /tools Commands After Provider Switch ðŸ”§
 
 - **`/tools list` After Provider Switch** - Now correctly lists tools after `/provider gemini`
   - Root cause: `_list_tools()` checked `isinstance(self.client, PerplexityClientPromptTools)` which is False for non-Perplexity providers
@@ -576,7 +649,7 @@ This release introduces Agent Mode for autonomous task execution in the VSCode e
 
 ## [1.11.5] - 2025-12-26
 
-### Fixed - Ctrl-C and Tools Status Display 🔧
+### Fixed - Ctrl-C and Tools Status Display ðŸ”§
 
 - **Ctrl-C Message Alternation Error** - Fixed 400 error after interrupting streaming with Ctrl-C
   - Root cause: Ctrl-C cleanup only removed user message from legacy `client.conversation_history`, not from `engine_client.session.messages`
@@ -593,7 +666,7 @@ This release introduces Agent Mode for autonomous task execution in the VSCode e
 
 ## [1.11.4] - 2025-12-24
 
-### Added - @git and @tree Context Injection 📂
+### Added - @git and @tree Context Injection ðŸ“‚
 
 Automatic context injection for git changes and directory structure in AI messages.
 
@@ -602,7 +675,7 @@ Automatic context injection for git changes and directory structure in AI messag
 - **@tree injection**: Automatically includes directory tree structure when you type `@tree` in messages
 - **Combined contexts**: Use `@file`, `@git`, and `@tree` together in the same message
 - **Provider-agnostic**: Works with all providers (Perplexity, Gemini, OpenAI, custom)
-- **TUI feedback**: Shows what was injected with size (e.g., "→ Injected context: @git (31 B)")
+- **TUI feedback**: Shows what was injected with size (e.g., "â†’ Injected context: @git (31 B)")
 
 #### Architecture Changes
 - **Unified TUI and VSCode**: Both now always use shared EngineClient (unified architecture)
@@ -617,7 +690,7 @@ Automatic context injection for git changes and directory structure in AI messag
 
 ## [1.11.7] - 2025-12-26
 
-### Major - Legacy Code Removal + Clickable Citations 🎉🔗
+### Major - Legacy Code Removal + Clickable Citations ðŸŽ‰ðŸ”—
 
 This release completes the migration to EngineClient and adds clickable citations/links across all interfaces.
 
@@ -634,7 +707,7 @@ This release completes the migration to EngineClient and adds clickable citation
 - **Autocomplete for `/tools`** - Tab completion for subcommands and tool names
 - **Custom Tool Development Guide** - [docs/CUSTOM_TOOL_DEVELOPMENT_GUIDE.md](docs/CUSTOM_TOOL_DEVELOPMENT_GUIDE.md)
 
-### Fixed - Clickable Citations 🔗
+### Fixed - Clickable Citations ðŸ”—
 
 - **Perplexity Citations Clickable** - `inject_citation_urls()` converts `[1]` to `[1](url)` format
   - Perplexity API returns citations as separate metadata array
@@ -653,7 +726,7 @@ This release completes the migration to EngineClient and adds clickable citation
 
 ## [1.11.3] - 2025-12-24
 
-### Added - Foundation Refactoring + Critical Bugfixes ⚙️🔧
+### Added - Foundation Refactoring + Critical Bugfixes âš™ï¸ðŸ”§
 
 **Note:** This release consolidates v1.11.2.1 and v1.11.2.2 into v1.11.3 due to VSCode extension versioning constraints (only supports 3-part semantic versioning: major.minor.patch).
 
@@ -665,14 +738,14 @@ This release combines two critical patches: provider abstraction improvements an
   - **Problem**: Using `/convert`, `/generate`, etc. with Gemini/OpenAI caused 404 errors
   - **Root Cause**: 7 coding command handlers didn't pass `self.provider` to `send_coding_task()`
   - **Fix**: All 7 handlers now pass current provider parameter
-  - **Impact**: Autorouting now respects provider (Perplexity→sonar-pro, Gemini→gemini-2.5-pro, OpenAI→gpt-4o, etc.)
+  - **Impact**: Autorouting now respects provider (Perplexityâ†’sonar-pro, Geminiâ†’gemini-2.5-pro, OpenAIâ†’gpt-4o, etc.)
 
 #### Provider Abstraction Improvements (from v1.11.2.2)
 
 - **Configurable Default Provider** - No more hardcoded "perplexity"
   - New `get_default_provider()` function with smart fallback chain
   - `DEFAULT_PROVIDER` environment variable support (`.env`)
-  - Fallback order: env var → first available provider → perplexity
+  - Fallback order: env var â†’ first available provider â†’ perplexity
   - Documented in `.env.example`
 
 - **Provider-Specific Pricing** - Each provider can have its own pricing model
@@ -684,20 +757,20 @@ This release combines two critical patches: provider abstraction improvements an
   - Updated docstring: "works with ALL providers (not just Perplexity)"
   - Both names supported for backward compatibility
 
-### Fixed - Critical TUI Bugs 🔧
+### Fixed - Critical TUI Bugs ðŸ”§
 
 **From branch `bugfix/gemini-tool-calling`**
 
 - **Bug #1: Tools Status Not Persisting** - Tools now stay ON when switching providers
-  - **Before**: Enable tools on Perplexity → switch to Gemini → Tools show OFF ❌
-  - **After**: Tools remain ON across provider switches ✅
+  - **Before**: Enable tools on Perplexity â†’ switch to Gemini â†’ Tools show OFF âŒ
+  - **After**: Tools remain ON across provider switches âœ…
   - **Root Cause**: `handle_provider()` didn't check if tools were enabled before switching
   - **Fix**: Added tools persistence logic in `ppxai/commands.py` (lines 388-420)
   - **Testing**: Manual TUI testing confirms fix works
 
 - **Bug #2: Gemini Tool Call Parsing Failure** - Fixed nested JSON parsing
-  - **Before**: Gemini showed raw JSON instead of executing tools ❌
-  - **After**: Gemini tool calls execute correctly ✅
+  - **Before**: Gemini showed raw JSON instead of executing tools âŒ
+  - **After**: Gemini tool calls execute correctly âœ…
   - **Root Cause**: Regex pattern `r'\{\s*"tool"\s*:\s*"[^"]+"\s*[^}]*\}'` broke on nested `arguments` object
   - **Fix**: Extract JSON using first/last brace positions instead of regex (`perplexity_tools_prompt_based.py` lines 1054-1083)
   - **Testing**: 4/4 new regression tests passing
@@ -728,9 +801,9 @@ This release combines two critical patches: provider abstraction improvements an
 
 ### Impact
 
-- ✅ **Adding new providers now requires ZERO code changes** (config-only)
-- ✅ Tools work correctly with all providers (Perplexity, Gemini, OpenAI, OpenRouter, Ollama)
-- ✅ Solid foundation for v1.12.0+ features (deprecation warnings, code cleanup)
+- âœ… **Adding new providers now requires ZERO code changes** (config-only)
+- âœ… Tools work correctly with all providers (Perplexity, Gemini, OpenAI, OpenRouter, Ollama)
+- âœ… Solid foundation for v1.12.0+ features (deprecation warnings, code cleanup)
 
 ### Migration Guide
 
@@ -744,11 +817,11 @@ This release combines two critical patches: provider abstraction improvements an
 
 ### VSCode Extension Versioning Note
 
-⚠️ **Important**: VSCode extensions only support 3-part semantic versioning (`major.minor.patch`). This is why v1.11.2.1 and v1.11.2.2 were consolidated into v1.11.3. Future releases will use 3-part versions only (e.g., 1.11.3 → 1.11.4 → 1.12.0).
+âš ï¸ **Important**: VSCode extensions only support 3-part semantic versioning (`major.minor.patch`). This is why v1.11.2.1 and v1.11.2.2 were consolidated into v1.11.3. Future releases will use 3-part versions only (e.g., 1.11.3 â†’ 1.11.4 â†’ 1.12.0).
 
 ## [1.11.2] - 2025-12-22
 
-### Added - Shell Command Consent Security + Shared Modules Refactoring 🔒
+### Added - Shell Command Consent Security + Shared Modules Refactoring ðŸ”’
 
 This release introduces two major improvements: a comprehensive shell command consent system for secure AI command execution, and complete shared modules architecture refactoring.
 
@@ -858,7 +931,7 @@ This release introduces two major improvements: a comprehensive shell command co
 
 ## [1.11.1] - 2025-12-22
 
-### Fixed - Critical TUI Regression ⚠️
+### Fixed - Critical TUI Regression âš ï¸
 
 This release fixes a critical regression in v1.11.0 where the TUI failed to display AI responses when tools were enabled.
 
@@ -886,8 +959,8 @@ This release fixes a critical regression in v1.11.0 where the TUI failed to disp
 
 #### Files Changed
 - `ppxai/main.py` - Added event-based streaming loop (lines 268-325)
-- `pyproject.toml` - Version 1.11.0 → 1.11.1
-- `vscode-extension/package.json` - Version 1.11.0 → 1.11.1
+- `pyproject.toml` - Version 1.11.0 â†’ 1.11.1
+- `vscode-extension/package.json` - Version 1.11.0 â†’ 1.11.1
 - `README.md` - Updated version references and installation instructions
 - `vscode-extension/README.md` - Updated version references
 - `docs/README.md` - Updated version references
@@ -925,7 +998,7 @@ This release fixes a critical regression in v1.11.0 where the TUI failed to disp
 
 ## [1.11.0] - 2025-12-21
 
-### Added - File Editing Tools with User Consent 🎯
+### Added - File Editing Tools with User Consent ðŸŽ¯
 
 This release introduces **autonomous file editing** capabilities with a comprehensive consent system, transforming ppxai into the first phase of an agentic developer assistant.
 
@@ -1010,7 +1083,7 @@ This release introduces **autonomous file editing** capabilities with a comprehe
 - VSCode extension "Save Answer" button now saves to exports folder with auto-generated filenames
 
 ### Improved
-- VSCode extension interrupt UX - orange pulsing "⏹ Streaming..." badge in header
+- VSCode extension interrupt UX - orange pulsing "â¹ Streaming..." badge in header
 - Streaming interrupt no longer shows red error message on user-initiated stop
 
 ---

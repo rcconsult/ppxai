@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.13.8 (January 2026)
+> **Current Version**: v1.13.9 (January 2026)
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
@@ -144,6 +144,21 @@ ppxai provides:
 - **`@filename` autocomplete fix** - Web App and VSCode now show real file suggestions via `/files/search`
 - **E2E Playwright tests** - 55 browser tests for data viewer components
 
+### Session Persistence & Windows Fixes ✅ (v1.13.9)
+- **Session auto-save** - Sessions saved after each chat exchange with crash recovery
+- **Command history persistence** - User input history saved per session
+- **Working directory persistence** - `cd` command changes remembered across restarts
+- **Auto-restore on startup** - Configurable: `"always"`, `"prompt"`, `"never"`
+- **Tool parameter aliasing** - Handle model variations (`filepath` vs `file_path`)
+- **Context overflow prevention** - Friendly error when `@file` exceeds 128K limit
+- **Empty responses after tools** - Prompt model for summary when response is empty
+- **Reasoning model support** - Handle `reasoning_content` field from DeepSeek R1
+- **`/context` command** - Show context usage vs model limit, injected files list (TUI, Web, VSCode)
+- **`/context clear`** - Remove all injected @file/@git/@tree content from current session
+- **Context badge** - TUI status line and VSCode header show context usage percentage
+- **Hash-based deduplication** - Prevents duplicate @git/@tree injections (MD5 content hash)
+- **Per-model context limits** - Configure `context_limit` per model (Gemini: 1M tokens)
+
 ---
 
 ## Infrastructure
@@ -196,14 +211,17 @@ ppxai provides:
 | **Subdirectory context** | Load from current working directory | Planned |
 | **Merge strategy** | Global → Project → Subdir (concatenate) | Planned |
 
-### v1.14.2 - `/context` Commands
+### v1.14.2 - `/context` Commands for Bootstrap
+
+**Note:** v1.13.9 implemented `/context` and `/context clear` for **injected context** (@file/@git/@tree).
+v1.14.2 extends `/context` to also manage **bootstrap context** (AGENTS.md/CLAUDE.md).
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **`/context show`** | Display loaded context sources | Planned |
-| **`/context reload`** | Refresh context from disk | Planned |
-| **`/context edit`** | Open context file in editor | Planned |
-| **`/context clear`** | Temporarily disable context | Planned |
+| **`/context show`** | Display AGENTS.md sources (extends existing `/context`) | Planned |
+| **`/context reload`** | Refresh AGENTS.md from disk | Planned |
+| **`/context edit`** | Open AGENTS.md in editor | Planned |
+| **Integration** | Unified view of bootstrap + injected context | Planned |
 
 ### v1.14.3 - Enhanced Context Providers
 
@@ -277,7 +295,7 @@ Current `/show` command opens files in VSCode text editor. Need image preview fo
 
 | Issue | Description | Status |
 |-------|-------------|--------|
-| **`@filename` injection broken** | Web app file injection via `@filename` stopped working after agent context fix. `@git` and `@tree` work correctly. | Deferred to v1.13.9 |
+| ~~**`@filename` injection broken**~~ | ~~Web app file injection via `@filename` stopped working after agent context fix.~~ | ✅ Fixed in v1.13.8 |
 
 ---
 
@@ -311,4 +329,4 @@ For archived planning documents:
 
 ---
 
-**Last Updated**: January 11, 2026
+**Last Updated**: January 13, 2026

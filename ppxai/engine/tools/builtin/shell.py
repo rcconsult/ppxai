@@ -112,6 +112,23 @@ class ShellExecuteTool(BaseTool):
             if cmd_parts:
                 base_cmd = os.path.basename(cmd_parts[0].lower())
 
+                # Handle cd command specially - update engine working directory (v1.13.8)
+                if base_cmd == "cd" and len(cmd_parts) >= 2:
+                    target_path = " ".join(cmd_parts[1:])  # Handle paths with spaces
+                    # Expand ~ and resolve relative to current working dir
+                    expanded = os.path.expanduser(target_path)
+                    if not os.path.isabs(expanded):
+                        base_dir = working_dir if working_dir and working_dir != "." else os.getcwd()
+                        resolved = os.path.normpath(os.path.join(base_dir, expanded))
+                    else:
+                        resolved = expanded
+
+                    if os.path.isdir(resolved):
+                        self.engine.set_working_dir(resolved)
+                        return f"Changed directory to: {resolved}"
+                    else:
+                        return f"Error: Directory not found: {target_path}"
+
                 # Check if it's an interactive command
                 if base_cmd in interactive_commands:
                     # Some commands are only interactive without arguments

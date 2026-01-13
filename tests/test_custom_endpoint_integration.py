@@ -201,9 +201,28 @@ Add docstrings and type hints."""
             max_tokens=1500
         )
 
-        assistant_message = response.choices[0].message.content
+        # v1.13.9: Handle reasoning models that may return content in reasoning_content
+        # instead of the regular content field (e.g., DeepSeek R1, GPT-OSS-120B)
+        choice = response.choices[0]
+        assistant_message = choice.message.content
 
-        assert assistant_message is not None
+        # Check for reasoning_content if regular content is empty
+        if not assistant_message:
+            # Try to get reasoning content from message attributes
+            reasoning_content = getattr(choice.message, 'reasoning_content', None)
+            if reasoning_content:
+                assistant_message = reasoning_content
+
+        # Also check for refusal field which some models use
+        if not assistant_message:
+            refusal = getattr(choice.message, 'refusal', None)
+            if refusal:
+                pytest.skip(f"Model refused to respond: {refusal}")
+
+        assert assistant_message is not None, (
+            f"Response content is None. Choice: {choice}, "
+            f"Message attrs: {dir(choice.message)}"
+        )
         assert len(assistant_message) > 0
 
         # Check that the response contains expected Python code elements

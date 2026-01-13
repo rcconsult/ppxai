@@ -111,6 +111,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 case 'interrupt':
                     await this.handleInterrupt();
                     break;
+                case 'clearContext':
+                    await this.handleClearContext();
+                    break;
             }
         });
     }
@@ -380,6 +383,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 // API call started, waiting for tokens
                 this._view.webview.postMessage({
                     type: 'started',
+                    content: event.content
+                });
+                break;
+            case 'reasoning_chunk':
+                // v1.13.9: Reasoning tokens from DeepSeek R1, GPT-OSS 120B
+                this._view.webview.postMessage({
+                    type: 'reasoning_chunk',
                     content: event.content
                 });
                 break;
@@ -986,6 +996,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
                 case '/checkpoint':
                     await this.handleCheckpointCommand(args);
+                    break;
+
+                case '/context':
+                    await this.handleContextCommand(args);
                     break;
 
                 default:
@@ -1695,6 +1709,84 @@ Review your previous actions and continue. If the task is complete, respond with
         }
     }
 
+    /**
+     * Handle /context command - show context usage and injected files (v1.13.9)
+     */
+    private async handleContextCommand(args: string[]) {
+        if (!this._view) { return; }
+
+        const subcommand = args[0]?.toLowerCase();
+
+        try {
+            if (subcommand === 'clear') {
+                // Clear injected contexts
+                const result = await this._backend.clearContextInjections();
+                if (result.removed_count > 0) {
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: `✓ Cleared ${result.removed_count} injected context(s) from conversation.`
+                    });
+                } else {
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: 'No injected contexts to clear.'
+                    });
+                }
+                // Update status to refresh context badge
+                await this.updateStatus();
+            } else {
+                // Show context usage info
+                const info = await this._backend.getContextInfo();
+
+                // Build progress bar
+                const percent = info.usage_percent;
+                const barLength = 30;
+                const filled = Math.min(barLength, Math.round(barLength * Math.min(percent, 100) / 100));
+                const bar = '█'.repeat(filled) + '░'.repeat(barLength - filled);
+
+                // Color indicator
+                let colorIcon = '🟢';
+                if (percent >= 100) { colorIcon = '🔴'; }
+                else if (percent >= 80) { colorIcon = '🟡'; }
+
+                let contextMsg = '**Context Usage:**\n';
+                contextMsg += `  Estimated: ~${info.estimated_tokens.toLocaleString()} / ${info.context_limit.toLocaleString()} tokens (${percent.toFixed(1)}%)\n`;
+                contextMsg += `  Model: ${info.model} (${info.provider})\n`;
+                contextMsg += `  Messages: ${info.message_count}\n`;
+                contextMsg += `  ${colorIcon} [${bar}] ${percent.toFixed(0)}%\n`;
+
+                // Show injected files
+                if (info.injected_contexts && info.injected_contexts.length > 0) {
+                    contextMsg += `\n**Injected Contexts:** (${info.injected_tokens.toLocaleString()} tokens)\n`;
+                    info.injected_contexts.forEach((ctx: { source: string; size: number; truncated: boolean }) => {
+                        const sizeKB = (ctx.size / 1024).toFixed(1);
+                        const truncated = ctx.truncated ? ' ⚠ truncated' : '';
+                        contextMsg += `  • ${ctx.source} (${sizeKB} KB${truncated})\n`;
+                    });
+                    contextMsg += '\n*Tip: `/context clear` removes injected files, keeps chat*';
+                }
+
+                // Show tips if over limit
+                if (percent >= 100) {
+                    contextMsg += '\n\n**⚠ Over context limit!** Tips:\n';
+                    contextMsg += '  • `/clear` - Start fresh session\n';
+                    contextMsg += '  • `/save` - Save session before clearing\n';
+                    contextMsg += '  • Consider a model with larger context\n';
+                }
+
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: contextMsg
+                });
+            }
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Context error: ${error}`
+            });
+        }
+    }
+
     private async showHelp() {
         if (!this._view) { return; }
 
@@ -1744,6 +1836,67 @@ Review your previous actions and continue. If the task is complete, respond with
                 type: 'error',
                 content: `Failed to toggle tools: ${error}`
             });
+        }
+    }
+
+    /**
+     * Handle clear context request from webview badge click (v1.13.9)
+     */
+    private async handleClearContext() {
+        if (!this._view) { return; }
+
+        try {
+            const result = await this._backend.clearContextInjections();
+            if (result.removed_count > 0) {
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: `✓ Cleared ${result.removed_count} injected context(s)`
+                });
+            } else {
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: 'No injected contexts to clear'
+                });
+            }
+            // Update the context badge
+            await this.updateContextBadge();
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Failed to clear context: ${error}`
+            });
+        }
+    }
+
+    /**
+     * Update context badge with current usage (v1.13.9)
+     */
+    private async updateContextBadge() {
+        if (!this._view) { return; }
+
+        try {
+            const info = await this._backend.getContextInfo();
+            const percent = info.usage_percent || 0;
+
+            // Determine badge state
+            let badgeClass = '';
+            let suffix = '';
+            if (percent >= 100) {
+                badgeClass = 'critical';
+                suffix = '!';
+            } else if (percent >= 80) {
+                badgeClass = 'warning';
+                suffix = '~';
+            }
+
+            this._view.webview.postMessage({
+                type: 'updateContext',
+                percent: percent,
+                badgeClass: badgeClass,
+                suffix: suffix
+            });
+        } catch (error) {
+            // Silently ignore errors
         }
     }
 
@@ -2599,6 +2752,9 @@ Use \`/usage show <session|provider|model|off>\` to change.`;
                 usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0, estimatedCost: 0 }
             });
         }
+
+        // v1.13.9: Also update context badge
+        await this.updateContextBadge();
     }
 
     public async refreshHistory() {
@@ -2987,6 +3143,35 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             color: var(--vscode-charts-green, #89d185);
         }
 
+        /* v1.13.9: Context usage badge */
+        .context-badge {
+            background: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .context-badge:hover {
+            opacity: 0.8;
+        }
+        .context-badge.warning {
+            background: var(--vscode-editorWarning-foreground, #cca700);
+            color: var(--vscode-editor-background, #1e1e1e);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        .context-badge.critical {
+            background: var(--vscode-errorForeground, #f48771);
+            color: white;
+            animation: pulse 1s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
         /* v1.12.0: Tool messages with collapsible details */
         .tool-title {
             font-size: 13px;
@@ -3223,6 +3408,56 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             font-size: 12px;
             max-height: 200px;
             overflow-y: auto;
+        }
+
+        /* v1.13.9: Reasoning section for DeepSeek R1, GPT-OSS 120B */
+        .reasoning-section {
+            margin-bottom: 12px;
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 4px;
+            background: var(--vscode-textBlockQuote-background);
+            overflow: hidden;
+        }
+
+        .reasoning-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            color: var(--vscode-descriptionForeground);
+            font-size: 12px;
+        }
+
+        .reasoning-header:hover {
+            background: var(--vscode-list-hoverBackground);
+        }
+
+        .reasoning-icon {
+            font-size: 14px;
+        }
+
+        .reasoning-title {
+            flex: 1;
+            font-style: italic;
+        }
+
+        .reasoning-section[open] .reasoning-header {
+            border-bottom: 1px solid var(--vscode-panel-border);
+        }
+
+        .reasoning-content {
+            padding: 10px;
+            font-size: 11px;
+            color: var(--vscode-descriptionForeground);
+            font-style: italic;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 250px;
+            overflow-y: auto;
+            line-height: 1.4;
         }
 
         /* VSCode-style Markdown rendering */
@@ -3648,6 +3883,9 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             <button class="undo-badge" id="undoBadge" title="No checkpoint to undo">↶ Undo</button>
             <button class="streaming-badge" id="streamingBadge" style="display: none;" title="Press Esc to stop">⏹ Streaming...</button>
             <span class="usage-badge" id="usageBadge" title="Session token usage and cost">0↓/0↑</span>
+            <button class="context-badge" id="contextBadge" title="Context window usage - Click to clear injected files">
+                <span id="contextUsage">Ctx: 0%</span>
+            </button>
         </div>
         <div class="workspace-info" id="workspaceInfo" style="display: none;">
             <span class="workspace-icon">📁</span>
@@ -3707,6 +3945,8 @@ A: Use \`/tools disable\` or choose "never" when prompted.
         const toolsBadge = document.getElementById('toolsBadge');
         const streamingBadge = document.getElementById('streamingBadge');
         const usageBadge = document.getElementById('usageBadge');
+        const contextBadge = document.getElementById('contextBadge');
+        const contextUsage = document.getElementById('contextUsage');
         const clearBtn = document.getElementById('clearBtn');
         const menuBtn = document.getElementById('menuBtn');
         const menuDropdown = document.getElementById('menuDropdown');
@@ -4224,6 +4464,11 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             vscode.postMessage({ type: 'interrupt' });
         });
 
+        // Context badge click handler - clear injected contexts (v1.13.9)
+        contextBadge.addEventListener('click', () => {
+            vscode.postMessage({ type: 'clearContext' });
+        });
+
         // Handle link clicks - open external URLs
         messagesContainer.addEventListener('click', (e) => {
             // Use closest() to catch clicks on elements inside links
@@ -4326,11 +4571,23 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                     typingIndicator.textContent = 'Waiting for response...';
                     break;
 
+                case 'reasoning_chunk':
+                    // v1.13.9: Reasoning tokens from DeepSeek R1, GPT-OSS 120B
+                    typingIndicator.classList.remove('visible');
+                    if (!currentResponseEl) {
+                        currentResponseEl = addMessage('assistant', '', false);
+                    }
+                    // Append to reasoning section (collapsible)
+                    appendReasoningChunk(currentResponseEl, message.content);
+                    break;
+
                 case 'chunk':
                     if (!currentResponseEl) {
                         currentResponseEl = addMessage('assistant', '', false);
                         typingIndicator.classList.remove('visible');
                     }
+                    // v1.13.9: Close reasoning section when content starts
+                    closeReasoningSection(currentResponseEl);
                     currentResponseContent += message.content;
                     scheduleRender(); // Throttled simple render during streaming
                     break;
@@ -4527,6 +4784,19 @@ A: Use \`/tools disable\` or choose "never" when prompted.
                     }
                     break;
 
+                case 'updateContext':
+                    // v1.13.9: Update context usage badge
+                    if (contextBadge && contextUsage) {
+                        const percent = message.percent || 0;
+                        contextUsage.textContent = 'Ctx: ' + percent.toFixed(0) + '%' + (message.suffix || '');
+                        contextBadge.classList.remove('warning', 'critical');
+                        if (message.badgeClass) {
+                            contextBadge.classList.add(message.badgeClass);
+                        }
+                        contextBadge.title = 'Context: ' + percent.toFixed(1) + '% used - Click to clear injected files';
+                    }
+                    break;
+
                 case 'serverStatus':
                     // Update server status badge (v1.13.1)
                     updateServerStatus(message.connected, message.connecting);
@@ -4684,6 +4954,55 @@ A: Use \`/tools disable\` or choose "never" when prompted.
             messagesContainer.insertBefore(el, typingIndicator);
             scrollToBottom();
             return el;
+        }
+
+        // v1.13.9: Append reasoning chunk to collapsible section
+        function appendReasoningChunk(messageEl, chunk) {
+            if (!messageEl || !chunk) return;
+
+            const contentEl = messageEl.querySelector('.message-content');
+            if (!contentEl) return;
+
+            // Find or create reasoning section
+            let reasoningSection = contentEl.querySelector('.reasoning-section');
+            if (!reasoningSection) {
+                reasoningSection = document.createElement('details');
+                reasoningSection.className = 'reasoning-section';
+                reasoningSection.open = true; // Start open while streaming
+                reasoningSection.innerHTML = \`
+                    <summary class="reasoning-header">
+                        <span class="reasoning-icon">💭</span>
+                        <span class="reasoning-title">Thinking...</span>
+                    </summary>
+                    <div class="reasoning-content"></div>
+                \`;
+                contentEl.insertBefore(reasoningSection, contentEl.firstChild);
+            }
+
+            // Append chunk to reasoning content
+            const reasoningContent = reasoningSection.querySelector('.reasoning-content');
+            if (reasoningContent) {
+                reasoningContent.textContent += chunk;
+            }
+            scrollToBottom();
+        }
+
+        // v1.13.9: Close reasoning section when main content starts
+        function closeReasoningSection(messageEl) {
+            if (!messageEl) return;
+            const contentEl = messageEl.querySelector('.message-content');
+            if (!contentEl) return;
+
+            const reasoningSection = contentEl.querySelector('.reasoning-section');
+            if (reasoningSection) {
+                // Update title to show it's complete
+                const title = reasoningSection.querySelector('.reasoning-title');
+                if (title) {
+                    title.textContent = 'Thought process';
+                }
+                // Collapse the section
+                reasoningSection.open = false;
+            }
         }
 
         // v1.12.0: Add tool message with collapsible details

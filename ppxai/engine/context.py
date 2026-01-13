@@ -3,12 +3,16 @@ Context injection for automatic file/URL content inclusion.
 
 Detects file references in messages and injects content directly into prompts,
 eliminating the need for tool calls for simple file reading operations.
+
+v1.13.9: Configurable max_injection_size via ppxai-config.json
+v1.13.10: Content hash deduplication to prevent duplicate injections
 """
 
+import hashlib
 import re
 import os
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Set
 from dataclasses import dataclass
 
 
@@ -20,13 +24,47 @@ class InjectedContext:
     language: str        # detected language (for code files)
     truncated: bool      # whether content was truncated
     size: int            # original size in bytes
+    hash: str = ""       # v1.13.10: content hash for deduplication
+
+
+def compute_content_hash(content: str) -> str:
+    """Compute a short hash of content for deduplication.
+
+    Args:
+        content: Content to hash
+
+    Returns:
+        12-character MD5 hash (fast, collision-resistant enough for this use)
+    """
+    return hashlib.md5(content.encode()).hexdigest()[:12]
+
+
+def _get_max_injection_size() -> int:
+    """Get max injection size from config, with fallback.
+
+    Returns:
+        Max injection size in characters.
+    """
+    try:
+        from ...config import get_max_injection_size
+        return get_max_injection_size()
+    except ImportError:
+        return 100_000  # Default fallback
+
+
+# Module-level constant for backwards compatibility
+MAX_FILE_SIZE = _get_max_injection_size()
 
 
 class ContextInjector:
     """Detects and injects file/URL content into messages."""
 
-    MAX_FILE_SIZE = 100_000  # ~100KB max per file
     MAX_TOTAL_CONTEXT = 200_000  # ~200KB total injected context
+
+    @property
+    def MAX_FILE_SIZE(self) -> int:
+        """Get configurable max file size."""
+        return _get_max_injection_size()
 
     # Patterns to detect file references
     FILE_PATTERNS = [
@@ -369,19 +407,30 @@ class ContextInjector:
         content += f"Max depth: {max_depth}\n\n"
         content += tree
 
+        # Truncate if too large (v1.13.8)
+        truncated = False
+        if len(content) > MAX_FILE_SIZE:
+            content = content[:MAX_FILE_SIZE] + "\n\n... (tree truncated)"
+            truncated = True
+
         return InjectedContext(
             source="@tree",
             content=content,
             language="text",
-            truncated=False,
+            truncated=truncated,
             size=len(content)
         )
 
-    def inject_context(self, message: str) -> Tuple[str, List[InjectedContext]]:
+    def inject_context(
+        self,
+        message: str,
+        skip_hashes: Optional[Set[str]] = None
+    ) -> Tuple[str, List[InjectedContext]]:
         """Process message and inject file/git/tree contents if appropriate.
 
         Args:
             message: User message
+            skip_hashes: v1.13.10 - Set of content hashes to skip (deduplication)
 
         Returns:
             Tuple of (modified_message, list_of_injected_contexts)
@@ -389,23 +438,30 @@ class ContextInjector:
         injected = []
         total_size = 0
         cleaned_message = message
+        skip_hashes = skip_hashes or set()
 
         # Check for @git pattern
         if re.search(self.GIT_PATTERN, message):
             git_ctx = self.inject_git_context()
             if git_ctx:
-                injected.append(git_ctx)
-                total_size += len(git_ctx.content)
-                # Remove @git from message
+                # v1.13.10: Compute hash and skip if duplicate
+                git_ctx.hash = compute_content_hash(git_ctx.content)
+                if git_ctx.hash not in skip_hashes:
+                    injected.append(git_ctx)
+                    total_size += len(git_ctx.content)
+                # Remove @git from message even if skipped (already in context)
                 cleaned_message = re.sub(self.GIT_PATTERN, '`git diff`', cleaned_message)
 
         # Check for @tree pattern
         if re.search(self.TREE_PATTERN, message):
             tree_ctx = self.inject_tree_context()
             if tree_ctx:
-                injected.append(tree_ctx)
-                total_size += len(tree_ctx.content)
-                # Remove @tree from message
+                # v1.13.10: Compute hash and skip if duplicate
+                tree_ctx.hash = compute_content_hash(tree_ctx.content)
+                if tree_ctx.hash not in skip_hashes:
+                    injected.append(tree_ctx)
+                    total_size += len(tree_ctx.content)
+                # Remove @tree from message even if skipped
                 cleaned_message = re.sub(self.TREE_PATTERN, '`project tree`', cleaned_message)
 
         # Check for file references
@@ -418,8 +474,11 @@ class ContextInjector:
 
                 ctx = self.read_file(filepath)
                 if ctx:
-                    injected.append(ctx)
-                    total_size += len(ctx.content)
+                    # v1.13.10: Compute hash and skip if duplicate
+                    ctx.hash = compute_content_hash(ctx.content)
+                    if ctx.hash not in skip_hashes:
+                        injected.append(ctx)
+                        total_size += len(ctx.content)
 
             # Remove @ file references from message (they've been injected)
             # This prevents the AI from seeing @/path/file.ext and getting confused

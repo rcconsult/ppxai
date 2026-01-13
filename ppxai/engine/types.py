@@ -13,6 +13,7 @@ class EventType(Enum):
     """Types of events emitted by the engine."""
     STREAM_START = "stream_start"
     STREAM_CHUNK = "stream_chunk"
+    REASONING_CHUNK = "reasoning_chunk"  # v1.13.9: Reasoning tokens (DeepSeek R1, GPT-OSS 120B)
     STREAM_END = "stream_end"
     TOOL_CALL = "tool_call"
     TOOL_RESULT = "tool_result"

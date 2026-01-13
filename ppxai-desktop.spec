@@ -15,6 +15,8 @@ a = Analysis(
         ('ppxai/web/favicon.png', 'ppxai/web'),  # Favicon (v1.14.0)
         ('ppxai/web/lib', 'ppxai/web/lib'),
         ('ppxai/web/shared', 'ppxai/web/shared'),  # Shared modules (v1.14.0)
+        ('ppxai/web/components', 'ppxai/web/components'),  # Data viewers (v1.13.8)
+        ('ppxai/web/styles', 'ppxai/web/styles'),  # Data viewer styles (v1.13.8)
     ],
     hiddenimports=[],
     hookspath=[],

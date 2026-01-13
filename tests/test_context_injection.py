@@ -10,7 +10,7 @@ These tests cover:
 import pytest
 import tempfile
 from pathlib import Path
-from ppxai.engine.context import ContextInjector
+from ppxai.engine.context import ContextInjector, MAX_FILE_SIZE
 
 
 class TestContextInjector:
@@ -172,7 +172,7 @@ class TestContextInjector:
         """Test that large files are truncated."""
         with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, dir=injector.working_dir) as f:
             # Write content larger than MAX_FILE_SIZE
-            large_content = "x" * (ContextInjector.MAX_FILE_SIZE + 1000)
+            large_content = "x" * (MAX_FILE_SIZE + 1000)
             f.write(large_content)
             temp_path = Path(f.name)
 
@@ -180,7 +180,7 @@ class TestContextInjector:
             ctx = injector.read_file(str(temp_path))
             assert ctx is not None
             assert ctx.truncated is True
-            assert len(ctx.content) <= ContextInjector.MAX_FILE_SIZE
+            assert len(ctx.content) <= MAX_FILE_SIZE
         finally:
             if temp_path.exists():
                 temp_path.unlink()
@@ -190,7 +190,7 @@ class TestContextInjector:
         with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, dir=injector.working_dir) as f:
             # Actually write content larger than MAX_FILE_SIZE * 2
             # (sparse files don't work for text files)
-            large_content = "x" * (ContextInjector.MAX_FILE_SIZE * 2 + 1000)
+            large_content = "x" * (MAX_FILE_SIZE * 2 + 1000)
             f.write(large_content)
             temp_path = Path(f.name)
 
@@ -516,10 +516,14 @@ class TestTUIFileReferences:
         message = f"Please edit @{temp_file.name}"
 
         # Set working directory to temp file's directory
+        # v1.13.9: Need to set both OS cwd and engine client's working directory
         import os
         old_cwd = os.getcwd()
+        old_engine_cwd = handler.engine_client.get_working_dir()
         try:
             os.chdir(temp_file.parent)
+            # Also set the engine client's working directory (used by _search_files)
+            handler.engine_client.set_working_dir(str(temp_file.parent))
             augmented, resolved = handler.process_file_references(message)
 
             # File should be resolved
@@ -534,6 +538,8 @@ class TestTUIFileReferences:
             assert "# Test File" in augmented  # File content should be in augmented message
         finally:
             os.chdir(old_cwd)
+            if old_engine_cwd:
+                handler.engine_client.set_working_dir(old_engine_cwd)
 
     def test_process_file_references_no_matches(self, handler):
         """Test that messages without @ references are unchanged."""
