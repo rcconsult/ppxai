@@ -50,6 +50,29 @@ from ppxai.config import (
     get_model_context_limit,
 )
 
+# Import the module itself to allow modifying its globals
+import ppxai.config as config_module
+
+
+@pytest.fixture
+def restore_config():
+    """Fixture that restores config state after tests that call reload_config.
+
+    Use this fixture for any test that calls reload_config() to ensure
+    test isolation and prevent state leakage between tests.
+    """
+    # Save original state
+    original_config = config_module._config.copy()
+    original_providers = config_module.PROVIDERS.copy()
+    original_model_provider = config_module.MODEL_PROVIDER
+
+    yield
+
+    # Restore original state after test
+    config_module._config = original_config
+    config_module.PROVIDERS = original_providers
+    config_module.MODEL_PROVIDER = original_model_provider
+
 
 class TestConfig:
     """Tests for configuration constants."""
@@ -427,7 +450,7 @@ class TestConfigHelpers:
 class TestConfigReload:
     """Tests for configuration reload functionality."""
 
-    def test_reload_config_returns_dict(self):
+    def test_reload_config_returns_dict(self, restore_config):
         """Test reload_config returns configuration dict."""
         result = reload_config()
         assert isinstance(result, dict)
@@ -900,7 +923,7 @@ class TestContextConfig:
             percent = get_context_warn_percent()
             assert percent == DEFAULT_CONTEXT_WARN_PERCENT
 
-    def test_get_context_config_from_json(self):
+    def test_get_context_config_from_json(self, restore_config):
         """Test loading context config from JSON file."""
         config_data = {
             "context": {
@@ -990,7 +1013,7 @@ class TestContextConfig:
         assert limit > 0
         assert isinstance(limit, int)
 
-    def test_context_config_partial_override(self):
+    def test_context_config_partial_override(self, restore_config):
         """Test that partial context config merges with defaults."""
         config_data = {
             "context": {
@@ -1022,7 +1045,7 @@ class TestContextConfig:
 
         os.unlink(f.name)
 
-    def test_context_warn_percent_zero_disables(self):
+    def test_context_warn_percent_zero_disables(self, restore_config):
         """Test that warn_at_percent=0 effectively disables warnings."""
         config_data = {
             "context": {
