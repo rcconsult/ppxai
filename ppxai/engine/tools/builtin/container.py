@@ -5,12 +5,12 @@ Provides read-only inspection and management operations with consent
 for destructive actions.
 
 v1.13.8: Initial implementation
+v1.13.10: Refactored to reduce code duplication using parameterized base classes
 """
 
 import shutil
 import subprocess
-import asyncio
-from typing import TYPE_CHECKING, Optional, List, Dict, Any
+from typing import TYPE_CHECKING, Optional, List, Dict, Any, Callable
 
 from ..base import BaseTool
 
@@ -78,14 +78,124 @@ def _run_command(
 
 
 # =============================================================================
-# Docker/Podman Tools
+# Base Classes for CLI Tools (reduces duplication)
 # =============================================================================
 
-class ContainerListTool(BaseTool):
-    """List containers."""
+class CLITool(BaseTool):
+    """
+    Base class for read-only CLI tools.
+
+    Subclasses define:
+        - name, description, parameters (tool metadata)
+        - build_command(): returns the command list
+        - runtime_check(): returns error string or None
+    """
 
     def __init__(self, engine: 'EngineClient'):
         self.engine = engine
+        self._timeout = 30
+
+    def runtime_check(self) -> Optional[str]:
+        """Override to check runtime availability. Return error string or None."""
+        return None
+
+    def build_command(self, **kwargs) -> List[str]:
+        """Override to build the command. Return list of command args."""
+        raise NotImplementedError
+
+    async def execute(self, **kwargs) -> str:
+        error = self.runtime_check()
+        if error:
+            return error
+        cmd = self.build_command(**kwargs)
+        return _run_command(cmd, timeout=self._timeout)
+
+
+class ConsentCLITool(CLITool):
+    """
+    Base class for CLI tools requiring user consent.
+
+    Adds consent request before command execution.
+    """
+
+    def __init__(self, engine: 'EngineClient'):
+        super().__init__(engine)
+        self._timeout = 60
+
+    def build_consent_description(self, **kwargs) -> str:
+        """Override to build human-readable command description for consent."""
+        cmd = self.build_command(**kwargs)
+        return ' '.join(cmd)
+
+    async def execute(self, **kwargs) -> str:
+        error = self.runtime_check()
+        if error:
+            return error
+
+        # Request consent
+        cmd_str = self.build_consent_description(**kwargs)
+        working_dir = self.engine.get_working_dir() or "."
+        consent = await self.engine.request_shell_consent(cmd_str, working_dir)
+        if not consent:
+            return f"Error: User denied permission to execute: {cmd_str}"
+
+        cmd = self.build_command(**kwargs)
+        return _run_command(cmd, timeout=self._timeout)
+
+
+class DockerTool(CLITool):
+    """Base class for Docker/Podman tools."""
+
+    def runtime_check(self) -> Optional[str]:
+        if not detect_container_runtime():
+            return "Error: No container runtime found. Install Docker or Podman."
+        return None
+
+    @property
+    def runtime(self) -> str:
+        return detect_container_runtime() or 'docker'
+
+
+class DockerConsentTool(ConsentCLITool):
+    """Base class for Docker/Podman tools requiring consent."""
+
+    def runtime_check(self) -> Optional[str]:
+        if not detect_container_runtime():
+            return "Error: No container runtime found. Install Docker or Podman."
+        return None
+
+    @property
+    def runtime(self) -> str:
+        return detect_container_runtime() or 'docker'
+
+
+class KubeTool(CLITool):
+    """Base class for Kubernetes tools."""
+
+    def runtime_check(self) -> Optional[str]:
+        if not detect_kubernetes_cli():
+            return "Error: kubectl not found. Install Kubernetes CLI."
+        return None
+
+
+class KubeConsentTool(ConsentCLITool):
+    """Base class for Kubernetes tools requiring consent."""
+
+    def runtime_check(self) -> Optional[str]:
+        if not detect_kubernetes_cli():
+            return "Error: kubectl not found. Install Kubernetes CLI."
+        return None
+
+
+# =============================================================================
+# Docker/Podman Tools
+# =============================================================================
+
+class ContainerListTool(DockerTool):
+    """List containers."""
+
+    def __init__(self, engine: 'EngineClient'):
+        super().__init__(engine)
         self.name = "container_list"
         self.description = (
             "List Docker/Podman containers. Shows container ID, name, image, and status. "
@@ -106,28 +216,23 @@ class ContainerListTool(BaseTool):
             "required": []
         }
 
-    async def execute(self, all: bool = False, filter: str = None, **kwargs) -> str:
-        runtime = detect_container_runtime()
-        if not runtime:
-            return "Error: No container runtime found. Install Docker or Podman."
-
+    def build_command(self, all: bool = False, filter: str = None, **kwargs) -> List[str]:
         cmd = [
-            runtime, 'ps',
+            self.runtime, 'ps',
             '--format', 'table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
         ]
         if all:
             cmd.insert(2, '-a')
         if filter:
             cmd.extend(['--filter', filter])
+        return cmd
 
-        return _run_command(cmd)
 
-
-class ContainerLogsTool(BaseTool):
+class ContainerLogsTool(DockerTool):
     """Get container logs."""
 
     def __init__(self, engine: 'EngineClient'):
-        self.engine = engine
+        super().__init__(engine)
         self.name = "container_logs"
         self.description = (
             "Get logs from a Docker/Podman container. "
@@ -152,30 +257,19 @@ class ContainerLogsTool(BaseTool):
             "required": ["container"]
         }
 
-    async def execute(
-        self,
-        container: str,
-        tail: int = 100,
-        since: str = None,
-        **kwargs
-    ) -> str:
-        runtime = detect_container_runtime()
-        if not runtime:
-            return "Error: No container runtime found."
-
-        cmd = [runtime, 'logs', '--tail', str(tail)]
+    def build_command(self, container: str, tail: int = 100, since: str = None, **kwargs) -> List[str]:
+        cmd = [self.runtime, 'logs', '--tail', str(tail)]
         if since:
             cmd.extend(['--since', since])
         cmd.append(container)
+        return cmd
 
-        return _run_command(cmd, timeout=30)
 
-
-class ContainerInspectTool(BaseTool):
+class ContainerInspectTool(DockerTool):
     """Inspect container details."""
 
     def __init__(self, engine: 'EngineClient'):
-        self.engine = engine
+        super().__init__(engine)
         self.name = "container_inspect"
         self.description = (
             "Get detailed information about a container including "
@@ -196,24 +290,19 @@ class ContainerInspectTool(BaseTool):
             "required": ["container"]
         }
 
-    async def execute(self, container: str, format: str = None, **kwargs) -> str:
-        runtime = detect_container_runtime()
-        if not runtime:
-            return "Error: No container runtime found."
-
-        cmd = [runtime, 'inspect']
+    def build_command(self, container: str, format: str = None, **kwargs) -> List[str]:
+        cmd = [self.runtime, 'inspect']
         if format:
             cmd.extend(['--format', format])
         cmd.append(container)
+        return cmd
 
-        return _run_command(cmd)
 
-
-class ContainerStartStopTool(BaseTool):
+class ContainerStartStopTool(DockerConsentTool):
     """Start, stop, or restart a container (requires consent)."""
 
     def __init__(self, engine: 'EngineClient', action: str):
-        self.engine = engine
+        super().__init__(engine)
         self.action = action  # 'start', 'stop', 'restart'
         self.name = f"container_{action}"
         self.description = f"{action.title()} a Docker/Podman container."
@@ -228,27 +317,16 @@ class ContainerStartStopTool(BaseTool):
             "required": ["container"]
         }
 
-    async def execute(self, container: str, **kwargs) -> str:
-        runtime = detect_container_runtime()
-        if not runtime:
-            return "Error: No container runtime found."
-
-        # Request consent for state-changing operation
-        cmd_str = f"{runtime} {self.action} {container}"
-        working_dir = self.engine.get_working_dir() or "."
-
-        consent = await self.engine.request_shell_consent(cmd_str, working_dir)
-        if not consent:
-            return f"Error: User denied permission to {self.action} container '{container}'"
-
-        return _run_command([runtime, self.action, container], timeout=60)
+    def build_command(self, container: str, **kwargs) -> List[str]:
+        return [self.runtime, self.action, container]
 
 
-class ContainerExecTool(BaseTool):
+class ContainerExecTool(DockerConsentTool):
     """Execute command in a running container (requires consent)."""
 
     def __init__(self, engine: 'EngineClient'):
-        self.engine = engine
+        super().__init__(engine)
+        self._timeout = 30
         self.name = "container_exec"
         self.description = (
             "Execute a command inside a running container. "
@@ -273,39 +351,23 @@ class ContainerExecTool(BaseTool):
             "required": ["container", "command"]
         }
 
-    async def execute(
-        self,
-        container: str,
-        command: str,
-        workdir: str = None,
-        **kwargs
-    ) -> str:
-        runtime = detect_container_runtime()
-        if not runtime:
-            return "Error: No container runtime found."
-
-        # Request consent
-        cmd_str = f"{runtime} exec {container} {command}"
-        working_dir = self.engine.get_working_dir() or "."
-
-        consent = await self.engine.request_shell_consent(cmd_str, working_dir)
-        if not consent:
-            return "Error: User denied permission to execute command in container"
-
-        cmd = [runtime, 'exec']
+    def build_command(self, container: str, command: str, workdir: str = None, **kwargs) -> List[str]:
+        cmd = [self.runtime, 'exec']
         if workdir:
             cmd.extend(['-w', workdir])
         cmd.append(container)
         cmd.extend(command.split())
+        return cmd
 
-        return _run_command(cmd, timeout=30)
+    def build_consent_description(self, container: str, command: str, **kwargs) -> str:
+        return f"{self.runtime} exec {container} {command}"
 
 
-class ImageListTool(BaseTool):
+class ImageListTool(DockerTool):
     """List container images."""
 
     def __init__(self, engine: 'EngineClient'):
-        self.engine = engine
+        super().__init__(engine)
         self.name = "image_list"
         self.description = "List Docker/Podman images."
         self.parameters = {
@@ -323,32 +385,27 @@ class ImageListTool(BaseTool):
             "required": []
         }
 
-    async def execute(self, all: bool = False, filter: str = None, **kwargs) -> str:
-        runtime = detect_container_runtime()
-        if not runtime:
-            return "Error: No container runtime found."
-
+    def build_command(self, all: bool = False, filter: str = None, **kwargs) -> List[str]:
         cmd = [
-            runtime, 'images',
+            self.runtime, 'images',
             '--format', 'table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.Size}}\t{{.CreatedSince}}'
         ]
         if all:
             cmd.insert(2, '-a')
         if filter:
             cmd.extend(['--filter', filter])
-
-        return _run_command(cmd)
+        return cmd
 
 
 # =============================================================================
 # Kubernetes Tools
 # =============================================================================
 
-class KubePodListTool(BaseTool):
+class KubePodListTool(KubeTool):
     """List Kubernetes pods."""
 
     def __init__(self, engine: 'EngineClient'):
-        self.engine = engine
+        super().__init__(engine)
         self.name = "pod_list"
         self.description = (
             "List Kubernetes pods. Can filter by namespace or show all namespaces."
@@ -372,16 +429,7 @@ class KubePodListTool(BaseTool):
             "required": []
         }
 
-    async def execute(
-        self,
-        namespace: str = None,
-        all_namespaces: bool = False,
-        selector: str = None,
-        **kwargs
-    ) -> str:
-        if not detect_kubernetes_cli():
-            return "Error: kubectl not found. Install Kubernetes CLI."
-
+    def build_command(self, namespace: str = None, all_namespaces: bool = False, selector: str = None, **kwargs) -> List[str]:
         cmd = ['kubectl', 'get', 'pods', '-o', 'wide']
         if all_namespaces:
             cmd.append('-A')
@@ -389,15 +437,14 @@ class KubePodListTool(BaseTool):
             cmd.extend(['-n', namespace])
         if selector:
             cmd.extend(['-l', selector])
+        return cmd
 
-        return _run_command(cmd)
 
-
-class KubePodLogsTool(BaseTool):
+class KubePodLogsTool(KubeTool):
     """Get pod logs."""
 
     def __init__(self, engine: 'EngineClient'):
-        self.engine = engine
+        super().__init__(engine)
         self.name = "pod_logs"
         self.description = (
             "Get logs from a Kubernetes pod. "
@@ -430,18 +477,7 @@ class KubePodLogsTool(BaseTool):
             "required": ["pod"]
         }
 
-    async def execute(
-        self,
-        pod: str,
-        namespace: str = None,
-        container: str = None,
-        tail: int = 100,
-        previous: bool = False,
-        **kwargs
-    ) -> str:
-        if not detect_kubernetes_cli():
-            return "Error: kubectl not found."
-
+    def build_command(self, pod: str, namespace: str = None, container: str = None, tail: int = 100, previous: bool = False, **kwargs) -> List[str]:
         cmd = ['kubectl', 'logs', pod, '--tail', str(tail)]
         if namespace:
             cmd.extend(['-n', namespace])
@@ -449,15 +485,14 @@ class KubePodLogsTool(BaseTool):
             cmd.extend(['-c', container])
         if previous:
             cmd.append('--previous')
+        return cmd
 
-        return _run_command(cmd, timeout=30)
 
-
-class KubePodDescribeTool(BaseTool):
+class KubePodDescribeTool(KubeTool):
     """Describe a pod."""
 
     def __init__(self, engine: 'EngineClient'):
-        self.engine = engine
+        super().__init__(engine)
         self.name = "pod_describe"
         self.description = (
             "Get detailed information about a Kubernetes pod including "
@@ -478,22 +513,18 @@ class KubePodDescribeTool(BaseTool):
             "required": ["pod"]
         }
 
-    async def execute(self, pod: str, namespace: str = None, **kwargs) -> str:
-        if not detect_kubernetes_cli():
-            return "Error: kubectl not found."
-
+    def build_command(self, pod: str, namespace: str = None, **kwargs) -> List[str]:
         cmd = ['kubectl', 'describe', 'pod', pod]
         if namespace:
             cmd.extend(['-n', namespace])
+        return cmd
 
-        return _run_command(cmd)
 
-
-class KubeDeploymentListTool(BaseTool):
+class KubeDeploymentListTool(KubeTool):
     """List deployments."""
 
     def __init__(self, engine: 'EngineClient'):
-        self.engine = engine
+        super().__init__(engine)
         self.name = "deployment_list"
         self.description = "List Kubernetes deployments."
         self.parameters = {
@@ -511,29 +542,20 @@ class KubeDeploymentListTool(BaseTool):
             "required": []
         }
 
-    async def execute(
-        self,
-        namespace: str = None,
-        all_namespaces: bool = False,
-        **kwargs
-    ) -> str:
-        if not detect_kubernetes_cli():
-            return "Error: kubectl not found."
-
+    def build_command(self, namespace: str = None, all_namespaces: bool = False, **kwargs) -> List[str]:
         cmd = ['kubectl', 'get', 'deployments', '-o', 'wide']
         if all_namespaces:
             cmd.append('-A')
         elif namespace:
             cmd.extend(['-n', namespace])
+        return cmd
 
-        return _run_command(cmd)
 
-
-class KubeServiceListTool(BaseTool):
+class KubeServiceListTool(KubeTool):
     """List services."""
 
     def __init__(self, engine: 'EngineClient'):
-        self.engine = engine
+        super().__init__(engine)
         self.name = "service_list"
         self.description = "List Kubernetes services."
         self.parameters = {
@@ -551,29 +573,20 @@ class KubeServiceListTool(BaseTool):
             "required": []
         }
 
-    async def execute(
-        self,
-        namespace: str = None,
-        all_namespaces: bool = False,
-        **kwargs
-    ) -> str:
-        if not detect_kubernetes_cli():
-            return "Error: kubectl not found."
-
+    def build_command(self, namespace: str = None, all_namespaces: bool = False, **kwargs) -> List[str]:
         cmd = ['kubectl', 'get', 'services', '-o', 'wide']
         if all_namespaces:
             cmd.append('-A')
         elif namespace:
             cmd.extend(['-n', namespace])
+        return cmd
 
-        return _run_command(cmd)
 
-
-class KubeApplyTool(BaseTool):
+class KubeApplyTool(KubeConsentTool):
     """Apply Kubernetes manifest (requires consent)."""
 
     def __init__(self, engine: 'EngineClient'):
-        self.engine = engine
+        super().__init__(engine)
         self.name = "kubectl_apply"
         self.description = (
             "Apply a Kubernetes manifest file. "
@@ -598,42 +611,29 @@ class KubeApplyTool(BaseTool):
             "required": ["file"]
         }
 
-    async def execute(
-        self,
-        file: str,
-        namespace: str = None,
-        dry_run: bool = False,
-        **kwargs
-    ) -> str:
-        if not detect_kubernetes_cli():
-            return "Error: kubectl not found."
-
-        # Request consent (even for dry-run, to be safe)
-        cmd_str = f"kubectl apply -f {file}"
-        if namespace:
-            cmd_str += f" -n {namespace}"
-        if dry_run:
-            cmd_str += " --dry-run=client"
-
-        working_dir = self.engine.get_working_dir() or "."
-        consent = await self.engine.request_shell_consent(cmd_str, working_dir)
-        if not consent:
-            return "Error: User denied permission to apply Kubernetes manifest"
-
+    def build_command(self, file: str, namespace: str = None, dry_run: bool = False, **kwargs) -> List[str]:
         cmd = ['kubectl', 'apply', '-f', file]
         if namespace:
             cmd.extend(['-n', namespace])
         if dry_run:
             cmd.append('--dry-run=client')
+        return cmd
 
-        return _run_command(cmd, timeout=60)
+    def build_consent_description(self, file: str, namespace: str = None, dry_run: bool = False, **kwargs) -> str:
+        cmd_str = f"kubectl apply -f {file}"
+        if namespace:
+            cmd_str += f" -n {namespace}"
+        if dry_run:
+            cmd_str += " --dry-run=client"
+        return cmd_str
 
 
-class KubePodExecTool(BaseTool):
+class KubePodExecTool(KubeConsentTool):
     """Execute command in a pod (requires consent)."""
 
     def __init__(self, engine: 'EngineClient'):
-        self.engine = engine
+        super().__init__(engine)
+        self._timeout = 30
         self.name = "pod_exec"
         self.description = (
             "Execute a command inside a Kubernetes pod. "
@@ -662,25 +662,7 @@ class KubePodExecTool(BaseTool):
             "required": ["pod", "command"]
         }
 
-    async def execute(
-        self,
-        pod: str,
-        command: str,
-        namespace: str = None,
-        container: str = None,
-        **kwargs
-    ) -> str:
-        if not detect_kubernetes_cli():
-            return "Error: kubectl not found."
-
-        # Request consent
-        cmd_str = f"kubectl exec {pod} -- {command}"
-        working_dir = self.engine.get_working_dir() or "."
-
-        consent = await self.engine.request_shell_consent(cmd_str, working_dir)
-        if not consent:
-            return "Error: User denied permission to execute command in pod"
-
+    def build_command(self, pod: str, command: str, namespace: str = None, container: str = None, **kwargs) -> List[str]:
         cmd = ['kubectl', 'exec', pod]
         if namespace:
             cmd.extend(['-n', namespace])
@@ -688,15 +670,17 @@ class KubePodExecTool(BaseTool):
             cmd.extend(['-c', container])
         cmd.append('--')
         cmd.extend(command.split())
+        return cmd
 
-        return _run_command(cmd, timeout=30)
+    def build_consent_description(self, pod: str, command: str, **kwargs) -> str:
+        return f"kubectl exec {pod} -- {command}"
 
 
-class KubeNamespaceListTool(BaseTool):
+class KubeNamespaceListTool(KubeTool):
     """List namespaces."""
 
     def __init__(self, engine: 'EngineClient'):
-        self.engine = engine
+        super().__init__(engine)
         self.name = "namespace_list"
         self.description = "List Kubernetes namespaces."
         self.parameters = {
@@ -705,11 +689,8 @@ class KubeNamespaceListTool(BaseTool):
             "required": []
         }
 
-    async def execute(self, **kwargs) -> str:
-        if not detect_kubernetes_cli():
-            return "Error: kubectl not found."
-
-        return _run_command(['kubectl', 'get', 'namespaces'])
+    def build_command(self, **kwargs) -> List[str]:
+        return ['kubectl', 'get', 'namespaces']
 
 
 # =============================================================================
