@@ -19,8 +19,13 @@ class ToolManager:
         """Initialize the tool manager."""
         self._tools: Dict[str, BaseTool] = {}
         self._provider: Optional[str] = None
+        self._model: Optional[str] = None  # v1.13.10: Track model for description overrides
+        self._description_overrides: Dict[str, str] = {}  # v1.13.10: Cached description overrides
         self.max_iterations: int = 15
         self.auto_retry_empty: int = 3  # v1.13.10: Max retries for empty responses (0=disabled)
+        # v1.13.10: Loop detection - prevent models from calling same tool repeatedly
+        self.max_same_tool_calls: int = 3  # Max consecutive calls to same tool (0=disabled)
+        self._tool_call_history: List[str] = []  # Track recent tool calls for loop detection
 
     def register_tool(self, tool: BaseTool):
         """Register a tool.
@@ -66,6 +71,44 @@ class ToolManager:
             provider: Provider name
         """
         self._provider = provider
+        self._update_description_overrides()
+
+    def set_model(self, model: str):
+        """Set current model (for description overrides).
+
+        v1.13.10: Different models may benefit from different tool descriptions.
+        Small models often work better with minimal descriptions.
+
+        Args:
+            model: Model name (e.g., 'qwen2.5-coder:0.5b')
+        """
+        self._model = model
+        self._update_description_overrides()
+
+    def _update_description_overrides(self):
+        """Refresh description overrides from config based on current provider/model."""
+        try:
+            from ...config import get_tool_description_overrides
+            self._description_overrides = get_tool_description_overrides(
+                provider=self._provider,
+                model=self._model
+            )
+        except ImportError:
+            # Config module not available (e.g., in tests)
+            self._description_overrides = {}
+
+    def _get_tool_description(self, tool: BaseTool) -> str:
+        """Get tool description, applying any config overrides.
+
+        v1.13.10: Allows per-provider/model description customization.
+
+        Args:
+            tool: Tool to get description for
+
+        Returns:
+            Tool description (override if configured, otherwise default)
+        """
+        return self._description_overrides.get(tool.name, tool.description)
 
     def get_tool(self, name: str) -> Optional[BaseTool]:
         """Get a specific tool by name.
@@ -100,7 +143,7 @@ class ToolManager:
             List of tool info dicts with name, description, and source
         """
         return [
-            {"name": t.name, "description": t.description, "source": "engine"}
+            {"name": t.name, "description": self._get_tool_description(t), "source": "engine"}
             for t in self.get_available_tools()
         ]
 
@@ -109,6 +152,8 @@ class ToolManager:
 
         This format is used by vLLM with --enable-auto-tool-choice and other
         OpenAI-compatible endpoints that support native tool calling.
+
+        v1.13.10: Uses description overrides from config if configured.
 
         Returns:
             List of tool definitions in OpenAI format:
@@ -120,7 +165,7 @@ class ToolManager:
                 "type": "function",
                 "function": {
                     "name": tool.name,
-                    "description": tool.description,
+                    "description": self._get_tool_description(tool),
                     "parameters": tool.parameters,
                 }
             }
@@ -232,6 +277,13 @@ class ToolManager:
         if missing:
             raise ValueError(f"Missing required arguments for {name}: {', '.join(missing)}")
 
+        # v1.13.10: Filter out unexpected parameters that model might hallucinate
+        # Small models sometimes add parameters that don't exist in the tool schema
+        tool_params = set(tool.parameters.get("properties", {}).keys())
+        unexpected = [k for k in kwargs if k not in tool_params]
+        for param in unexpected:
+            del kwargs[param]
+
         return await tool.execute(**kwargs)
 
     def get_tools_prompt(self) -> str:
@@ -254,7 +306,7 @@ class ToolManager:
 
         for tool in tools:
             prompt += f"### {tool.name}\n"
-            prompt += f"{tool.description}\n"
+            prompt += f"{self._get_tool_description(tool)}\n"
             if tool.parameters.get("properties"):
                 prompt += "Parameters:\n"
                 for param, info in tool.parameters["properties"].items():
@@ -308,6 +360,64 @@ class ToolManager:
     def clear(self):
         """Remove all registered tools."""
         self._tools.clear()
+
+    # === Loop Detection (v1.13.10) ===
+
+    def reset_tool_history(self):
+        """Reset tool call history for a new chat turn.
+
+        Should be called at the start of each chat() invocation.
+        """
+        self._tool_call_history.clear()
+
+    def record_tool_call(self, tool_name: str):
+        """Record a tool call for loop detection.
+
+        Args:
+            tool_name: Name of the tool being called
+        """
+        self._tool_call_history.append(tool_name)
+
+    def is_tool_loop_detected(self, tool_name: str) -> bool:
+        """Check if calling this tool would create a loop.
+
+        A loop is detected when the same tool has been called
+        max_same_tool_calls times consecutively.
+
+        Args:
+            tool_name: Name of the tool about to be called
+
+        Returns:
+            True if this call would exceed the loop threshold
+        """
+        if self.max_same_tool_calls <= 0:
+            return False  # Loop detection disabled
+
+        # Count consecutive calls to this tool from the end of history
+        consecutive = 0
+        for prev_tool in reversed(self._tool_call_history):
+            if prev_tool == tool_name:
+                consecutive += 1
+            else:
+                break
+
+        # Would this call exceed the threshold?
+        return consecutive >= self.max_same_tool_calls
+
+    def get_loop_message(self, tool_name: str) -> str:
+        """Get a message to inject when a loop is detected.
+
+        Args:
+            tool_name: Tool that was being called repeatedly
+
+        Returns:
+            Message prompting the model to synthesize instead of loop
+        """
+        return (
+            f"You have called the '{tool_name}' tool {self.max_same_tool_calls} times consecutively. "
+            "Please stop calling tools and provide a response based on the results you already have. "
+            "Synthesize the information into a helpful answer for the user."
+        )
 
     async def cleanup(self):
         """Clean up resources (for MCP tools, etc)."""

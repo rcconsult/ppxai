@@ -150,10 +150,12 @@ class EngineClient:
 
             # v1.11.9: Load agent configuration
             # v1.12.0: Added max_tool_iterations for inner tool loop
+            # v1.13.10: Added max_same_tool_calls for loop detection
             agent_config = full_config.get("tools", {}).get("agent", {})
             self._agent_config = {
                 "max_iterations": agent_config.get("max_iterations", 10),
                 "max_tool_iterations": agent_config.get("max_tool_iterations", 15),
+                "max_same_tool_calls": agent_config.get("max_same_tool_calls", 3),
                 "context_char_limit": agent_config.get("context_char_limit", 2000),
                 "min_task_words": agent_config.get("min_task_words", 3),
             }
@@ -183,9 +185,11 @@ class EngineClient:
             }
             # v1.11.9: Default agent configuration
             # v1.12.0: Added max_tool_iterations
+            # v1.13.10: Added max_same_tool_calls for loop detection
             self._agent_config = {
                 "max_iterations": 10,
                 "max_tool_iterations": 15,
+                "max_same_tool_calls": 3,
                 "context_char_limit": 2000,
                 "min_task_words": 3,
             }
@@ -342,6 +346,7 @@ class EngineClient:
             self.tool_manager.clear()
             register_all_builtin_tools(self.tool_manager, provider_name, engine=self)
             self.tool_manager.max_iterations = self._agent_config.get("max_tool_iterations", 15)
+            self.tool_manager.max_same_tool_calls = self._agent_config.get("max_same_tool_calls", 3)
 
         return True
 
@@ -379,11 +384,12 @@ class EngineClient:
 
     # === Model Management ===
 
-    def set_model(self, model_id: str) -> bool:
+    def set_model(self, model_id: str, strict: bool = False) -> bool:
         """Set the current model.
 
         Args:
             model_id: Model ID to use
+            strict: If True, reject models not in provider's configured list (v1.13.10)
 
         Returns:
             True if model was set successfully
@@ -392,12 +398,18 @@ class EngineClient:
             return False
 
         models = self.provider.list_models()
-        if any(m.id == model_id for m in models):
+        model_exists = any(m.id == model_id for m in models)
+
+        if model_exists:
             self.model = model_id
             self.session.set_model(model_id)
             return True
 
-        # Allow setting model even if not in list (for flexibility)
+        if strict:
+            # v1.13.10: Strict mode - reject unavailable models (used for session restore)
+            return False
+
+        # Allow setting model even if not in list (for flexibility with custom endpoints)
         self.model = model_id
         self.session.set_model(model_id)
         return True
@@ -433,6 +445,8 @@ class EngineClient:
             register_all_builtin_tools(self.tool_manager, self.provider_name, engine=self)
             # v1.12.0: Apply configurable max_tool_iterations
             self.tool_manager.max_iterations = self._agent_config.get("max_tool_iterations", 15)
+            # v1.13.10: Apply configurable loop detection threshold
+            self.tool_manager.max_same_tool_calls = self._agent_config.get("max_same_tool_calls", 3)
             self.tools_enabled = True
             self.session.tools_enabled = True  # Sync for session persistence
         return True
@@ -965,7 +979,7 @@ class EngineClient:
         """Configure tool settings.
 
         Args:
-            setting: Setting name (e.g., 'max_iterations', 'verbose', 'auto_retry_empty')
+            setting: Setting name (e.g., 'max_iterations', 'verbose', 'auto_retry_empty', 'max_same_tool_calls')
             value: Setting value
 
         Returns:
@@ -982,6 +996,10 @@ class EngineClient:
             # v1.13.9: Auto-retry on empty responses (0=disabled)
             self.tool_manager.auto_retry_empty = int(value)
             return True
+        elif setting == "max_same_tool_calls":
+            # v1.13.10: Loop detection threshold (0=disabled)
+            self.tool_manager.max_same_tool_calls = int(value)
+            return True
         return False
 
     def get_tools_status(self) -> Dict[str, Any]:
@@ -995,6 +1013,7 @@ class EngineClient:
             "tool_count": len(self.tool_manager.list_tools()) if self.tools_enabled else 0,
             "max_iterations": self.tool_manager.max_iterations,
             "auto_retry_empty": self.tool_manager.auto_retry_empty,  # v1.13.9
+            "max_same_tool_calls": self.tool_manager.max_same_tool_calls,  # v1.13.10
             "verbose": self._tools_verbose  # v1.12.0: Include verbose setting
         }
 
@@ -1166,6 +1185,9 @@ class EngineClient:
         iteration = 0
         max_iterations = self.tool_manager.max_iterations
 
+        # v1.13.10: Reset tool call history for loop detection
+        self.tool_manager.reset_tool_history()
+
         # Track accumulated usage across all provider calls (v1.12.0)
         accumulated_usage = UsageStats()
 
@@ -1275,7 +1297,7 @@ class EngineClient:
                 # Use first native tool call (models typically call one at a time)
                 tc = native_tool_calls[0]
                 tool_args = tc.get("arguments", {})
-                # v1.13.11: Handle nested tool call structure from some models (e.g., GPT-OSS 120B via vLLM)
+                # v1.13.10: Handle nested tool call structure from some models (e.g., GPT-OSS 120B via vLLM)
                 # Model sometimes outputs: {"tool": "apply_patch", "arguments": {"tool": "apply_patch", "arguments": {...}}}
                 # Unwrap the nested structure to get the actual arguments
                 if isinstance(tool_args, dict) and "tool" in tool_args and "arguments" in tool_args:
@@ -1288,6 +1310,17 @@ class EngineClient:
             if tool_call:
                 tool_name = tool_call["tool"]
                 tool_args = tool_call.get("arguments", {})
+
+                # v1.13.10: Check for tool loop before executing
+                if self.tool_manager.is_tool_loop_detected(tool_name):
+                    # Loop detected - inject message to force synthesis
+                    yield Event(EventType.INFO, f"Loop detected: '{tool_name}' called {self.tool_manager.max_same_tool_calls}x, forcing synthesis")
+                    loop_msg = self.tool_manager.get_loop_message(tool_name)
+                    self.session.add_message(Message("user", loop_msg))
+                    continue  # Skip execution, let model synthesize on next iteration
+
+                # Record this tool call for loop tracking
+                self.tool_manager.record_tool_call(tool_name)
 
                 yield Event(EventType.TOOL_CALL, {
                     "tool": tool_name,
@@ -1482,9 +1515,10 @@ class EngineClient:
             Tool call dict with 'tool' and 'arguments' keys, or None
         """
         def normalize_tool_call(data: dict) -> Optional[dict]:
-            if "tool" not in data:
+            # Support both "tool" and "name" keys (some models use OpenAI function format)
+            tool_name = data.get("tool") or data.get("name")
+            if not tool_name:
                 return None
-            tool_name = data["tool"]
 
             tool = self.tool_manager.get_tool(tool_name)
             if not tool:
@@ -1522,8 +1556,8 @@ class EngineClient:
 
             Uses a configuration-driven dispatcher pattern for maintainability.
             """
-            if "tool" in data:
-                return None  # Already has tool key, use normalize_tool_call instead
+            if "tool" in data or "name" in data:
+                return None  # Already has tool/name key, use normalize_tool_call instead
 
             keys = set(data.keys())
 

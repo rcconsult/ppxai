@@ -306,36 +306,68 @@
       "name": "Ollama Local",
       "base_url": "http://localhost:11434/v1",
       "api_key_env": "OLLAMA_API_KEY",
-      "default_model": "llama3.2",
-      "coding_model": "codellama",
+      "__comment_api_key": "Ollama doesn't require auth, but OpenAI-compat API expects a key. Set OLLAMA_API_KEY=ollama in .env",
+      "default_model": "qwen2.5-coder:3b",
+      "coding_model": "qwen2.5-coder:3b",
+      "__comment_vram": "RTX 3050 6GB VRAM - only Qwen models with tool calling support listed",
+      "__comment_benchmark": "Tested 2026-01-14: Only Qwen family supports tool calling. Others (deepseek, starcoder, codegemma, codellama) return errors.",
+      "system_prompt": "You are an expert coding assistant running locally via Ollama. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
       "models": {
-        "llama3.2": {
-          "name": "Llama 3.2",
-          "description": "Latest Llama model via Ollama"
+        "qwen2.5-coder:3b": {
+          "name": "Qwen2.5 Coder 3B",
+          "description": "Best coding model: 3.38GB VRAM, 75% tool accuracy, ~60 tok/s (recommended)",
+          "context_length": 32768
         },
-        "codellama": {
-          "name": "Code Llama",
-          "description": "Specialized coding model"
+        "qwen2.5:3b": {
+          "name": "Qwen2.5 3B General",
+          "description": "Highest tool accuracy: 3.38GB VRAM, 79.2% tool accuracy, better reasoning",
+          "context_length": 32768
         },
-        "mistral": {
-          "name": "Mistral 7B",
-          "description": "Fast and efficient model"
+        "qwen2.5-coder:0.5b": {
+          "name": "Qwen2.5 Coder 0.5B",
+          "description": "Fast router: 1.44GB VRAM, 70.8% tool accuracy, 448ms latency",
+          "context_length": 32768
         }
       },
       "pricing": {
-        "llama3.2": {"input": 0.0, "output": 0.0},
-        "codellama": {"input": 0.0, "output": 0.0},
-        "mistral": {"input": 0.0, "output": 0.0}
+        "qwen2.5-coder:3b": {"input": 0.0, "output": 0.0},
+        "qwen2.5:3b": {"input": 0.0, "output": 0.0},
+        "qwen2.5-coder:0.5b": {"input": 0.0, "output": 0.0}
       },
       "capabilities": {
-        "web_search": false,
-        "web_fetch": false,
-        "weather": false,
-        "realtime_info": false
+        "web_search": true,
+        "web_fetch": true,
+        "weather": true,
+        "realtime_info": true,
+        "native_tool_calling": true,
+        "__comment_native_tool_calling": "Qwen2.5 models support tool calling via Ollama's OpenAI-compatible API"
       }
     }
   },
   "tools": {
+    "__comment_overrides": "Tool description overrides - customize descriptions per provider/model for better accuracy (v1.13.10)",
+    "overrides": {
+      "__comment": "Global description overrides (apply to all providers/models)",
+      "search_files": "Find files by glob pattern (*.py, test*, *config*) - use when searching for files by NAME"
+    },
+    "provider_overrides": {
+      "__comment": "Provider-specific overrides (override global)",
+      "ollama": {
+        "list_directory": "Show all files in a folder",
+        "search_files": "Find files by pattern like *.py"
+      }
+    },
+    "model_overrides": {
+      "__comment": "Model-specific overrides (highest priority - override provider overrides)",
+      "qwen2.5-coder:0.5b": {
+        "shell": "Run command",
+        "read_file": "Read file",
+        "write_file": "Write file",
+        "edit_file": "Edit file",
+        "list_directory": "List directory",
+        "search_files": "Search files by pattern"
+      }
+    },
     "shell": {
       "require_consent": true,
       "dangerous_commands": [
@@ -377,11 +409,13 @@
       "__comment_non_interactive_with_args": "Commands that become non-interactive when given arguments (v1.13.6+)"
     },
     "agent": {
-      "__comment": "Agent mode configuration (v1.11.9+, v1.12.0 checkpoint features)",
+      "__comment": "Agent mode configuration (v1.11.9+, v1.12.0 checkpoint features, v1.13.10 loop detection)",
       "max_iterations": 10,
       "__comment_max_iterations": "Maximum number of agent loop iterations (outer loop: full conversation turns)",
       "max_tool_iterations": 15,
       "__comment_max_tool_iterations": "Maximum tool calls per conversation turn (inner loop: tool chain limit)",
+      "max_same_tool_calls": 3,
+      "__comment_max_same_tool_calls": "Loop detection: max consecutive calls to same tool before forcing synthesis (0=disabled)",
       "context_char_limit": 2000,
       "__comment_context_char_limit": "Character limit for tool output display in verbose mode",
       "min_task_words": 3,

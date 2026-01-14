@@ -579,11 +579,16 @@ def restore_session_to_handler(handler: CommandHandler, session_state: dict) -> 
             pass
 
     if stored_model:
-        try:
-            handler.engine_client.set_model(stored_model)
+        # v1.13.10: Use strict mode to validate model exists before restoring
+        if handler.engine_client.set_model(stored_model, strict=True):
             handler.current_model = stored_model
-        except Exception:
-            pass
+        else:
+            # Model not available - use provider's default model
+            default_model = handler.engine_client.provider.default_model if handler.engine_client.provider else None
+            if default_model:
+                handler.engine_client.set_model(default_model)
+                handler.current_model = default_model
+                console.print(f"[yellow]⚠ Model '{stored_model}' not available, using default: {default_model}[/yellow]")
 
     # Restore working directory - prefer session file over state file
     # Session file is more authoritative (updated on every save)

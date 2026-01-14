@@ -875,3 +875,21 @@ class TestToolArgumentValidation:
         error_msg = str(exc_info.value)
         assert "Missing required arguments" in error_msg
         assert "filepath" in error_msg
+
+    @pytest.mark.asyncio
+    async def test_execute_tool_unexpected_params_filtered(self, tool_manager):
+        """Test that unexpected parameters are silently filtered out.
+
+        v1.13.11: Small models sometimes hallucinate parameters that don't
+        exist in the tool schema (e.g., 'language' for web_search).
+        These should be filtered out instead of causing errors.
+        """
+        # read_file only accepts 'filepath' and 'max_lines' - 'language' should be filtered
+        result = await tool_manager.execute_tool(
+            "read_file",
+            filepath="/etc/hosts",
+            language="en",  # unexpected parameter - should be filtered
+            encoding="utf-8"  # another unexpected parameter
+        )
+        # Should succeed despite unexpected parameters
+        assert "Contents of: /etc/hosts" in result

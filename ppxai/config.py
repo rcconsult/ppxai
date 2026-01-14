@@ -585,6 +585,66 @@ def get_tool_config(tool_name: str) -> Dict[str, Any]:
     return tools_config.get(tool_name, {})
 
 
+def get_tool_description_overrides(provider: str = None, model: str = None) -> Dict[str, str]:
+    """Get tool description overrides from config (v1.13.11).
+
+    Allows customizing tool descriptions per provider/model to optimize
+    tool selection accuracy for different models.
+
+    Config structure:
+    ```json
+    {
+      "tools": {
+        "overrides": {
+          "search_files": "Find files by glob pattern (*.py, test*)"
+        },
+        "provider_overrides": {
+          "ollama": {
+            "search_files": "Search for files using patterns like *.py"
+          }
+        },
+        "model_overrides": {
+          "qwen2.5-coder:0.5b": {
+            "search_files": "Find files by pattern"
+          }
+        }
+      }
+    }
+    ```
+
+    Priority order (highest to lowest):
+    1. model_overrides[model][tool]
+    2. provider_overrides[provider][tool]
+    3. overrides[tool]
+    4. Default tool description (not returned here)
+
+    Args:
+        provider: Provider name (e.g., 'ollama', 'perplexity')
+        model: Model name (e.g., 'qwen2.5-coder:0.5b')
+
+    Returns:
+        Dict mapping tool names to description overrides
+    """
+    tools_config = _config.get("tools", {})
+    result = {}
+
+    # Layer 1: Global overrides
+    global_overrides = tools_config.get("overrides", {})
+    result.update(global_overrides)
+
+    # Layer 2: Provider-specific overrides
+    if provider:
+        provider_overrides = tools_config.get("provider_overrides", {}).get(provider, {})
+        result.update(provider_overrides)
+
+    # Layer 3: Model-specific overrides (highest priority)
+    if model:
+        model_overrides = tools_config.get("model_overrides", {}).get(model, {})
+        result.update(model_overrides)
+
+    return result
+
+
 def get_shell_config() -> Dict[str, Any]:
     """Get shell tool configuration with defaults (v1.13.6).
 

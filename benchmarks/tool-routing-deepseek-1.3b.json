@@ -1,0 +1,108 @@
+{
+  "model": "deepseek-coder:1.3b",
+  "total": 24,
+  "correct_tool": 0,
+  "correct_args": 0,
+  "false_positive": 0,
+  "false_negative": 0,
+  "wrong_tool": 0,
+  "latencies_ms": [],
+  "details": [
+    {
+      "query": "run git status",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "execute npm install",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "list running processes",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "check disk usage",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "show current directory",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "show me the contents of config.json",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "what's in README.md?",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "read the package.json file",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "cat main.py",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "create a new file called test.txt with hello world",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "write 'print(1)' to script.py",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "save this code to output.js",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "replace 'old' with 'new' in file.txt",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "change the port from 3000 to 8080 in config.json",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "fix the typo in README.md",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "what files are in src/",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "show me the contents of the tests folder",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "list all files in the current directory",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "find all python files",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "search for files named test*",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "find config files in the project",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "what is python?",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "explain async/await",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    },
+    {
+      "query": "how do I use git?",
+      "error": "Error code: 400 - {'error': {'message': 'registry.ollama.ai/library/deepseek-coder:1.3b does not support tools', 'type': 'api_error', 'param': None, 'code': None}}"
+    }
+  ]
+}

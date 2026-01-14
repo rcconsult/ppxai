@@ -1,0 +1,325 @@
+{
+  "model": "qwen2.5-coder:3b",
+  "mode": "native+content_parse",
+  "total": 24,
+  "correct_tool": 16,
+  "correct_args": 15,
+  "false_positive": 2,
+  "false_negative": 4,
+  "wrong_tool": 2,
+  "latencies_ms": [
+    7452.530525624752,
+    514.9346021935344,
+    511.0320169478655,
+    529.5395907014608,
+    497.68450390547514,
+    1072.1673369407654,
+    1502.6386138051748,
+    270.13712376356125,
+    531.2949288636446,
+    649.3180459365249,
+    663.2042555138469,
+    663.5447489097714,
+    779.149642214179,
+    304.2675852775574,
+    811.0152771696448,
+    498.9149197936058,
+    301.53030063956976,
+    483.38817432522774,
+    483.06326009333134,
+    2086.363712325692,
+    591.6058113798499,
+    430.9955555945635,
+    4442.811635322869,
+    4452.404400333762
+  ],
+  "details": [
+    {
+      "query": "run git status",
+      "expected_tool": "shell",
+      "actual_tool": "shell",
+      "expected_args_contains": "git status",
+      "actual_args": {
+        "command": "git status"
+      },
+      "tool_correct": true,
+      "args_match": true,
+      "latency_ms": 7452.530525624752
+    },
+    {
+      "query": "execute npm install",
+      "expected_tool": "shell",
+      "actual_tool": "shell",
+      "expected_args_contains": "npm install",
+      "actual_args": {
+        "command": "npm install"
+      },
+      "tool_correct": true,
+      "args_match": true,
+      "latency_ms": 514.9346021935344
+    },
+    {
+      "query": "list running processes",
+      "expected_tool": "shell",
+      "actual_tool": "shell",
+      "expected_args_contains": "ps",
+      "actual_args": {
+        "command": "ps aux"
+      },
+      "tool_correct": true,
+      "args_match": true,
+      "latency_ms": 511.0320169478655
+    },
+    {
+      "query": "check disk usage",
+      "expected_tool": "shell",
+      "actual_tool": "shell",
+      "expected_args_contains": "df",
+      "actual_args": {
+        "command": "df -h"
+      },
+      "tool_correct": true,
+      "args_match": true,
+      "latency_ms": 529.5395907014608
+    },
+    {
+      "query": "show current directory",
+      "expected_tool": "shell",
+      "actual_tool": "shell",
+      "expected_args_contains": "pwd",
+      "actual_args": {
+        "command": "pwd"
+      },
+      "tool_correct": true,
+      "args_match": true,
+      "latency_ms": 497.68450390547514
+    },
+    {
+      "query": "show me the contents of config.json",
+      "expected_tool": "read_file",
+      "actual_tool": null,
+      "expected_args_contains": "config.json",
+      "actual_args": null,
+      "tool_correct": false,
+      "args_match": false,
+      "latency_ms": 1072.1673369407654
+    },
+    {
+      "query": "what's in README.md?",
+      "expected_tool": "read_file",
+      "actual_tool": null,
+      "expected_args_contains": "README.md",
+      "actual_args": null,
+      "tool_correct": false,
+      "args_match": false,
+      "latency_ms": 1502.6386138051748
+    },
+    {
+      "query": "read the package.json file",
+      "expected_tool": "read_file",
+      "actual_tool": null,
+      "expected_args_contains": "package.json",
+      "actual_args": null,
+      "tool_correct": false,
+      "args_match": false,
+      "latency_ms": 270.13712376356125
+    },
+    {
+      "query": "cat main.py",
+      "expected_tool": "read_file",
+      "actual_tool": "read_file",
+      "expected_args_contains": "main.py",
+      "actual_args": {
+        "path": "main.py"
+      },
+      "tool_correct": true,
+      "args_match": true,
+      "latency_ms": 531.2949288636446
+    },
+    {
+      "query": "create a new file called test.txt with hello world",
+      "expected_tool": "write_file",
+      "actual_tool": "write_file",
+      "expected_args_contains": "test.txt",
+      "actual_args": {
+        "path": "test.txt",
+        "content": "hello world"
+      },
+      "tool_correct": true,
+      "args_match": true,
+      "latency_ms": 649.3180459365249
+    },
+    {
+      "query": "write 'print(1)' to script.py",
+      "expected_tool": "write_file",
+      "actual_tool": "write_file",
+      "expected_args_contains": "script.py",
+      "actual_args": {
+        "path": "script.py",
+        "content": "print(1)"
+      },
+      "tool_correct": true,
+      "args_match": true,
+      "latency_ms": 663.2042555138469
+    },
+    {
+      "query": "save this code to output.js",
+      "expected_tool": "write_file",
+      "actual_tool": "write_file",
+      "expected_args_contains": "output.js",
+      "actual_args": {
+        "path": "output.js",
+        "content": "// Your code here"
+      },
+      "tool_correct": true,
+      "args_match": true,
+      "latency_ms": 663.5447489097714
+    },
+    {
+      "query": "replace 'old' with 'new' in file.txt",
+      "expected_tool": "edit_file",
+      "actual_tool": "edit_file",
+      "expected_args_contains": "file.txt",
+      "actual_args": {
+        "path": "file.txt",
+        "old_text": "old",
+        "new_text": "new"
+      },
+      "tool_correct": true,
+      "args_match": true,
+      "latency_ms": 779.149642214179
+    },
+    {
+      "query": "change the port from 3000 to 8080 in config.json",
+      "expected_tool": "edit_file",
+      "actual_tool": null,
+      "expected_args_contains": "config.json",
+      "actual_args": null,
+      "tool_correct": false,
+      "args_match": false,
+      "latency_ms": 304.2675852775574
+    },
+    {
+      "query": "fix the typo in README.md",
+      "expected_tool": "edit_file",
+      "actual_tool": "edit_file",
+      "expected_args_contains": "README.md",
+      "actual_args": {
+        "path": "README.md",
+        "old_text": "typo",
+        "new_text": "corrected"
+      },
+      "tool_correct": true,
+      "args_match": true,
+      "latency_ms": 811.0152771696448
+    },
+    {
+      "query": "what files are in src/",
+      "expected_tool": "list_directory",
+      "actual_tool": "list_directory",
+      "expected_args_contains": "src",
+      "actual_args": {
+        "path": "src/"
+      },
+      "tool_correct": true,
+      "args_match": true,
+      "latency_ms": 498.9149197936058
+    },
+    {
+      "query": "show me the contents of the tests folder",
+      "expected_tool": "list_directory",
+      "actual_tool": "list_directory",
+      "expected_args_contains": "tests",
+      "actual_args": {
+        "path": "tests"
+      },
+      "tool_correct": true,
+      "args_match": true,
+      "latency_ms": 301.53030063956976
+    },
+    {
+      "query": "list all files in the current directory",
+      "expected_tool": "list_directory",
+      "actual_tool": "list_directory",
+      "expected_args_contains": null,
+      "actual_args": {
+        "path": "."
+      },
+      "tool_correct": true,
+      "args_match": false,
+      "latency_ms": 483.38817432522774
+    },
+    {
+      "query": "find all python files",
+      "expected_tool": "search_files",
+      "actual_tool": "list_directory",
+      "expected_args_contains": "*.py",
+      "actual_args": {
+        "path": "."
+      },
+      "tool_correct": false,
+      "args_match": false,
+      "latency_ms": 483.06326009333134
+    },
+    {
+      "query": "search for files named test*",
+      "expected_tool": "search_files",
+      "actual_tool": "search_files",
+      "expected_args_contains": "test*",
+      "actual_args": {
+        "pattern": "test*",
+        "path": "."
+      },
+      "tool_correct": true,
+      "args_match": true,
+      "latency_ms": 2086.363712325692
+    },
+    {
+      "query": "find config files in the project",
+      "expected_tool": "search_files",
+      "actual_tool": "list_directory",
+      "expected_args_contains": "config",
+      "actual_args": {
+        "path": "."
+      },
+      "tool_correct": false,
+      "args_match": false,
+      "latency_ms": 591.6058113798499
+    },
+    {
+      "query": "what is python?",
+      "expected_tool": null,
+      "actual_tool": "search_files",
+      "expected_args_contains": null,
+      "actual_args": {
+        "path": ".",
+        "pattern": "*.py"
+      },
+      "tool_correct": false,
+      "args_match": false,
+      "latency_ms": 430.9955555945635
+    },
+    {
+      "query": "explain async/await",
+      "expected_tool": null,
+      "actual_tool": null,
+      "expected_args_contains": null,
+      "actual_args": null,
+      "tool_correct": true,
+      "args_match": true,
+      "latency_ms": 4442.811635322869
+    },
+    {
+      "query": "how do I use git?",
+      "expected_tool": null,
+      "actual_tool": "shell",
+      "expected_args_contains": null,
+      "actual_args": {
+        "command": "git init"
+      },
+      "tool_correct": false,
+      "args_match": false,
+      "latency_ms": 4452.404400333762
+    }
+  ]
+}

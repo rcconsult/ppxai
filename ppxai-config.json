@@ -1,13 +1,23 @@
 {
-  "version": "1.1",
+  "version": "1.3",
   "default_provider": "perplexity",
+  "system_prompt": "You are a helpful AI assistant. Be concise and direct. Report tool results briefly.",
+  "system_prompt_mode": "prepend",
+  "server": {
+    "idle_timeout": 300,
+    "port": 54320
+  },
+  "session": {
+    "auto_restore": "prompt",
+    "auto_save_interval": 1
+  },
   "paths": {
     "bin_search_paths": [
       "{home}/.ppxai/bin",
+      "{home}/AppData/Local/ppxai",
       "{home}/.local/bin",
       "{home}/bin",
-      "/usr/local/bin",
-      "{home}/AppData/Local/ppxai"
+      "/usr/local/bin"
     ],
     "data_dir": "{home}/.ppxai"
   },
@@ -18,6 +28,7 @@
       "api_key_env": "PERPLEXITY_API_KEY",
       "default_model": "sonar-pro",
       "coding_model": "sonar-pro",
+      "system_prompt": "You have two capabilities: (1) NATIVE WEB SEARCH for research, facts, and current information - use this automatically for questions and cite sources as markdown links. (2) EXTERNAL TOOLS for file operations, shell commands, and editing - when tools are available and the user asks to DO something (cd, ls, edit, fix, run, create, analyze), execute the appropriate tool immediately instead of explaining how. For actions: act first, report results briefly. For questions: search and cite. Never tell the user to do manually what a tool can do.",
       "models": {
         "sonar": {
           "name": "Sonar",
@@ -50,35 +61,16 @@
         "realtime_info": true
       }
     },
-    "custom": {
-      "name": "Custom vLLM Server",
-      "base_url": "http://localhost:8000/v1",
-      "api_key_env": "CUSTOM_API_KEY",
-      "default_model": "meta-llama/Llama-3.1-70B-Instruct",
-      "coding_model": "meta-llama/Llama-3.1-70B-Instruct",
-      "models": {
-        "meta-llama/Llama-3.1-70B-Instruct": {
-          "name": "Llama 3.1 70B",
-          "description": "Self-hosted Llama model with native tool calling via vLLM"
-        }
-      },
-      "pricing": {
-        "meta-llama/Llama-3.1-70B-Instruct": {"input": 0.0, "output": 0.0}
-      },
-      "capabilities": {
-        "web_search": false,
-        "web_fetch": false,
-        "weather": false,
-        "realtime_info": false,
-        "native_tool_calling": true
-      }
-    },
     "gemini": {
       "name": "Google Gemini",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
       "api_key_env": "GEMINI_API_KEY",
       "default_model": "gemini-2.0-flash",
       "coding_model": "gemini-2.5-pro",
+      "system_prompt": "You are a helpful AI assistant. Be concise and direct. When using tools, report results briefly. Cite sources as markdown links.",
+      "options": {
+        "enable_grounding": true
+      },
       "models": {
         "gemini-2.0-flash": {
           "name": "Gemini 2.0 Flash",
@@ -132,6 +124,156 @@
         "realtime_info": true,
         "citations": true
       }
+    },
+    "openai": {
+      "name": "OpenAI ChatGPT",
+      "base_url": "https://api.openai.com/v1",
+      "api_key_env": "OPENAI_API_KEY",
+      "default_model": "gpt-4o",
+      "coding_model": "gpt-4o",
+      "web_search": {
+        "preferred": "gemini"
+      },
+      "models": {
+        "gpt-4o": {
+          "name": "GPT-4o",
+          "description": "Latest flagship model with vision"
+        },
+        "gpt-4o-mini": {
+          "name": "GPT-4o Mini",
+          "description": "Fast and affordable for simple tasks"
+        },
+        "gpt-4-turbo": {
+          "name": "GPT-4 Turbo",
+          "description": "Previous generation with 128K context"
+        },
+        "o1": {
+          "name": "o1",
+          "description": "Advanced reasoning model"
+        },
+        "o1-mini": {
+          "name": "o1 Mini",
+          "description": "Fast reasoning model"
+        }
+      },
+      "pricing": {
+        "gpt-4o": {"input": 2.50, "output": 10.00},
+        "gpt-4o-mini": {"input": 0.15, "output": 0.60},
+        "gpt-4-turbo": {"input": 10.00, "output": 30.00},
+        "o1": {"input": 15.00, "output": 60.00},
+        "o1-mini": {"input": 3.00, "output": 12.00}
+      },
+      "capabilities": {
+        "web_search": false,
+        "web_fetch": false,
+        "weather": false,
+        "realtime_info": false
+      }
+    },
+    "openrouter": {
+      "name": "OpenRouter",
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "default_model": "anthropic/claude-sonnet-4",
+      "coding_model": "anthropic/claude-sonnet-4",
+      "models": {
+        "anthropic/claude-sonnet-4": {
+          "name": "Claude Sonnet 4",
+          "description": "Anthropic's balanced model for most tasks"
+        },
+        "anthropic/claude-opus-4": {
+          "name": "Claude Opus 4",
+          "description": "Anthropic's most capable model"
+        },
+        "anthropic/claude-haiku": {
+          "name": "Claude Haiku",
+          "description": "Fast and affordable Claude model"
+        },
+        "google/gemini-2.0-flash-001": {
+          "name": "Gemini 2.0 Flash",
+          "description": "Google's fast multimodal model"
+        },
+        "meta-llama/llama-3.1-405b-instruct": {
+          "name": "Llama 3.1 405B",
+          "description": "Meta's largest open model"
+        }
+      },
+      "pricing": {
+        "anthropic/claude-sonnet-4": {"input": 3.00, "output": 15.00},
+        "anthropic/claude-opus-4": {"input": 15.00, "output": 75.00},
+        "anthropic/claude-haiku": {"input": 0.25, "output": 1.25},
+        "google/gemini-2.0-flash-001": {"input": 0.10, "output": 0.40},
+        "meta-llama/llama-3.1-405b-instruct": {"input": 3.00, "output": 3.00}
+      },
+      "capabilities": {
+        "web_search": false,
+        "web_fetch": false,
+        "weather": false,
+        "realtime_info": false
+      }
+    },
+    "ollama": {
+      "name": "Ollama Local",
+      "base_url": "http://localhost:11434/v1",
+      "api_key_env": "OLLAMA_API_KEY",
+      "default_model": "qwen2.5-coder:3b",
+      "coding_model": "qwen2.5-coder:3b",
+      "__comment_vram": "RTX 3050 6GB VRAM - only Qwen models with tool calling support listed",
+      "__comment_benchmark": "Tested 2026-01-14: Only Qwen family supports tool calling. Others (deepseek, starcoder, codegemma, codellama) return errors.",
+      "system_prompt": "You are an expert coding assistant running locally via Ollama. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
+      "models": {
+        "qwen2.5-coder:3b": {
+          "name": "Qwen2.5 Coder 3B",
+          "description": "Best coding model: 3.38GB VRAM, 75% tool accuracy, ~60 tok/s (recommended)",
+          "context_length": 32768
+        },
+        "qwen2.5:3b": {
+          "name": "Qwen2.5 3B General",
+          "description": "Highest tool accuracy: 3.38GB VRAM, 79.2% tool accuracy, better reasoning",
+          "context_length": 32768
+        },
+        "qwen2.5-coder:0.5b": {
+          "name": "Qwen2.5 Coder 0.5B",
+          "description": "Fast router: 1.44GB VRAM, 70.8% tool accuracy, 448ms latency",
+          "context_length": 32768
+        }
+      },
+      "pricing": {
+        "qwen2.5-coder:3b": {"input": 0.0, "output": 0.0},
+        "qwen2.5:3b": {"input": 0.0, "output": 0.0},
+        "qwen2.5-coder:0.5b": {"input": 0.0, "output": 0.0}
+      },
+      "capabilities": {
+        "web_search": true,
+        "web_fetch": true,
+        "weather": true,
+        "realtime_info": true,
+        "native_tool_calling": true
+      }
+    },
+    "custom": {
+      "name": "Custom vLLM Server",
+      "base_url": "http://localhost:8000/v1",
+      "api_key_env": "CUSTOM_API_KEY",
+      "default_model": "meta-llama/Llama-3.1-70B-Instruct",
+      "coding_model": "meta-llama/Llama-3.1-70B-Instruct",
+      "system_prompt": "You are a helpful AI coding assistant. Be concise and direct. When executing tools, report only the essential results. Avoid lengthy explanations unless explicitly requested.",
+      "models": {
+        "meta-llama/Llama-3.1-70B-Instruct": {
+          "name": "Llama 3.1 70B",
+          "description": "Self-hosted Llama model with native tool calling via vLLM"
+        }
+      },
+      "pricing": {
+        "meta-llama/Llama-3.1-70B-Instruct": {"input": 0.0, "output": 0.0}
+      },
+      "capabilities": {
+        "web_search": false,
+        "web_fetch": false,
+        "weather": false,
+        "realtime_info": false,
+        "native_tool_calling": true
+      }
     }
   },
   "tools": {
@@ -169,14 +311,47 @@
         "mkfs\\.",
         "^\\s*>\\s*/dev/sda"
       ],
-      "sandboxed_paths": []
+      "sandboxed_paths": [],
+      "interactive_commands": [
+        "nano", "vim", "vi", "emacs", "pico", "joe",
+        "less", "more", "top", "htop", "btop",
+        "python", "python3", "ipython", "node", "irb", "ruby",
+        "ssh", "telnet", "ftp", "sftp",
+        "mysql", "psql", "mongo", "redis-cli",
+        "bash", "zsh", "sh", "fish", "csh", "tcsh"
+      ],
+      "non_interactive_with_args": [
+        "python", "python3", "ipython", "node", "irb", "ruby",
+        "bash", "zsh", "sh", "fish", "csh", "tcsh",
+        "ssh", "mysql", "psql"
+      ]
     },
     "agent": {
-      "max_iterations": 15,
-      "max_tool_iterations": 20,
-      "context_char_limit": 2000,
+      "max_iterations": 25,
+      "max_tool_iterations": 25,
+      "max_same_tool_calls": 3,
+      "context_char_limit": 4096,
       "min_task_words": 3,
       "checkpoint_backend": "auto"
+    },
+    "web_search": {
+      "preferred": "auto",
+      "perplexity_model": "sonar",
+      "gemini_model": "gemini-2.5-flash",
+      "pricing": {
+        "perplexity": {
+          "input": 0.20,
+          "output": 0.20,
+          "model": "per_token"
+        },
+        "gemini_grounding": {
+          "per_query": 0.035,
+          "model": "per_query"
+        }
+      }
     }
+  },
+  "tui": {
+    "show_datetime": true
   }
 }
