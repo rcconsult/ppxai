@@ -249,6 +249,91 @@ These are tracked but not prioritized:
 - **`/rewind` browser** - Interactive checkpoint history viewer
 - **`/agent --dry-run`** - Preview changes without applying
 
+### Multi-Model Orchestration (Research)
+
+**Reference:** [docs/2512.15943v1.pdf](docs/2512.15943v1.pdf) - "Small Language Models for Efficient Agentic Tool Calling" (AWS, Dec 2025)
+
+**Paper Summary:**
+- Fine-tuned `facebook/opt-350m` (350M params) on ToolBench dataset (187,542 examples, 16,000+ APIs)
+- Single epoch training with SFT (Supervised Fine-Tuning) using HuggingFace TRL
+- Hyperparameters: lr=5×10⁻⁵, batch=32, gradient clipping=0.3, FP16, AdamW
+
+**Benchmark Results (ToolBench - 1,100 test queries across 6 categories):**
+
+| Model | Params | Pass Rate | Gap |
+|-------|--------|-----------|-----|
+| **Fine-tuned SLM** | **350M** | **77.55%** | – |
+| ToolLLaMA-DFS | 7B | 30.18% | -47% |
+| ChatGPT-CoT | 175B | 26.00% | -52% |
+| ToolLLaMA-CoT | 7B | 16.27% | -61% |
+| Claude-CoT | 52B | 2.73% | -75% |
+
+**Why Small Models Win at Tool Calling:**
+1. **Parameter efficiency** - All capacity focused on tool patterns, not general language
+2. **Behavioral focus** - Learns structured Thought-Action-Observation patterns
+3. **No overgeneralization** - Precise API calls vs verbose explanations
+
+**Implication for ppxai:** Specialized small models can dramatically outperform general-purpose LLMs at specific tasks like tool selection. A 350M router could achieve 77% accuracy while ChatGPT achieves only 26%.
+
+**Proposed Architecture - Dual Model Orchestration:**
+
+```
+User Query → Tool Router (small, fast) → Decision
+                                            ↓
+                            [tool_needed?] ─┬─ Yes → Execute Tool → Response Generator (larger)
+                                            └─ No  → Response Generator (larger)
+```
+
+| Component | Model Size | Role | Latency |
+|-----------|------------|------|---------|
+| Tool Router | 350M-1.3B | Decide if/which tool to call | <50ms |
+| Response Generator | 3B-7B | Generate code, explanations | ~60 tok/s |
+
+**Benefits:**
+- Faster tool decisions (small model = instant routing)
+- Better tool selection accuracy (specialized > general)
+- Reduced load on main model (only generates, doesn't decide)
+- Fits 6GB VRAM: router (500MB) + generator (1.9GB-4.7GB)
+
+**Implementation Path:**
+
+| Phase | Task | Effort |
+|-------|------|--------|
+| 1 | Add tool-calling benchmark to test suite | Low |
+| 2 | Test existing small models (Qwen2.5-0.5B, DeepSeek-Coder 1.3B) on ppxai tools | Medium |
+| 3 | Config option: `tool_router_model` separate from `default_model` | Medium |
+| 4 | Fine-tune ppxai-specific tool router on our schema (follow paper's SFT approach) | High |
+
+**Ollama Multi-Model Setup:**
+```bash
+# Router model (stays loaded, instant)
+ollama pull qwen2.5-coder:0.5b  # 398MB
+
+# Generator model (loaded on demand)
+ollama pull qwen2.5-coder:3b    # 1.9GB
+
+# Run both with OLLAMA_NUM_PARALLEL=2
+OLLAMA_NUM_PARALLEL=2 ollama serve
+```
+
+**Config example:**
+```json
+{
+  "ollama": {
+    "tool_router_model": "qwen2.5-coder:0.5b",
+    "default_model": "qwen2.5-coder:3b",
+    "orchestration": "router_generator"
+  }
+}
+```
+
+**Paper Limitations to Consider:**
+- Model optimized for ToolBench format - may not generalize to ppxai's tool schema
+- 350M limit may struggle with complex contextual nuances
+- Requires retraining as tools evolve
+
+**Status:** Research phase. PDF saved to `docs/`. Next: benchmark existing small models on ppxai tool schema before implementation.
+
 ### Data Visualization Library Upgrade (Web App)
 
 Current: Vanilla JavaScript (`DataTableViewer`, `DataTreeViewer`) - lightweight, no dependencies.
