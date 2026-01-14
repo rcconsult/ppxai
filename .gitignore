@@ -79,6 +79,8 @@ Thumbs.db
 !.claude/commands/
 CLAUDE.md
 .ppxai/tools.config.json
+tmpclaude-*-cwd
+nul
 
 # uv binary cache (downloaded by bootstrap.py)
 .uv/
