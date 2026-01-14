@@ -1109,13 +1109,17 @@ class CommandHandler:
 
         if not args:
             # Show current config
-            max_iter = getattr(self.engine_client, 'tool_max_iterations', 15)
+            status = self.engine_client.get_tools_status()
+            max_iter = status.get('max_iterations', 15)
+            auto_retry = status.get('auto_retry_empty', 2)
             console.print("[bold]Tool Configuration[/bold]")
             console.print(f"  max_iterations: {max_iter}")
+            console.print(f"  auto_retry_empty: {auto_retry}")
             console.print()
             console.print("[dim]Usage: /tools config <setting> <value>[/dim]")
             console.print("[dim]Available settings:[/dim]")
-            console.print("[dim]  max_iterations <number> - Max tool calls per query (1-50)[/dim]\n")
+            console.print("[dim]  max_iterations <number> - Max tool calls per query (1-50)[/dim]")
+            console.print("[dim]  auto_retry_empty <number> - Auto-retry on empty response (0=off, 1-5)[/dim]\n")
             return
 
         if len(args) < 2:
@@ -1131,13 +1135,24 @@ class CommandHandler:
                 if num < 1 or num > 50:
                     console.print("[red]max_iterations must be between 1 and 50[/red]\n")
                     return
-                self.engine_client.tool_max_iterations = num
+                self.engine_client.set_tool_config("max_iterations", num)
                 console.print(f"[green]✓ max_iterations set to {num}[/green]\n")
+            except ValueError:
+                console.print(f"[red]Invalid number: {value}[/red]\n")
+        elif setting == "auto_retry_empty":
+            try:
+                num = int(value)
+                if num < 0 or num > 5:
+                    console.print("[red]auto_retry_empty must be between 0 and 5[/red]\n")
+                    return
+                self.engine_client.set_tool_config("auto_retry_empty", num)
+                status = "disabled" if num == 0 else f"{num} retries"
+                console.print(f"[green]✓ auto_retry_empty set to {status}[/green]\n")
             except ValueError:
                 console.print(f"[red]Invalid number: {value}[/red]\n")
         else:
             console.print(f"[red]Unknown setting: {setting}[/red]")
-            console.print("[dim]Available: max_iterations[/dim]\n")
+            console.print("[dim]Available: max_iterations, auto_retry_empty[/dim]\n")
 
     def _tools_set(self, args: list):
         """Set tool settings (verbose mode)."""

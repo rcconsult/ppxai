@@ -540,8 +540,74 @@ class PpxaiApp {
                 this.updateDebugIndicator();
             } catch {}
 
+            // v1.13.9: Check for last session to restore
+            await this.checkSessionRestore();
+
         } catch (error) {
             this.showError(`Failed to load initial state: ${error.message}`);
+        }
+    }
+
+    /**
+     * Check if there's a last session to restore (v1.13.9)
+     */
+    async checkSessionRestore() {
+        try {
+            const response = await fetch(`${this.serverUrl}/sessions/last`, {
+                headers: this.getSessionHeaders()
+            });
+            const data = await response.json();
+
+            if (data.last_session && data.last_session.name) {
+                const session = data.last_session;
+                const msgCount = session.message_count || 0;
+
+                // Prompt user to restore
+                const restorePrompt = session.dirty
+                    ? `Restore interrupted session "${session.name}" (${msgCount} messages)?`
+                    : `Restore last session "${session.name}" (${msgCount} messages)?`;
+
+                if (confirm(restorePrompt)) {
+                    await this.restoreLastSession();
+                }
+            }
+        } catch (error) {
+            console.log('[PpxaiApp] No session to restore:', error.message);
+        }
+    }
+
+    /**
+     * Restore the last session (v1.13.9)
+     */
+    async restoreLastSession() {
+        try {
+            const response = await fetch(`${this.serverUrl}/sessions/restore`, {
+                method: 'POST',
+                headers: this.getSessionHeaders()
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.showSystemMessage(`✓ Session restored: ${data.name} (${data.message_count} messages)`);
+
+                // Update state from restored session
+                if (data.working_dir) {
+                    this.elements.folderPath.textContent = data.working_dir;
+                }
+                if (data.tools_enabled) {
+                    this.toolsEnabled = true;
+                    this.updateToolsBadge();
+                }
+
+                // Reload working dir badge
+                await this.loadWorkingDir();
+            } else {
+                const error = await response.json();
+                this.showSystemMessage(`Failed to restore session: ${error.detail}`, 'error');
+            }
+        } catch (error) {
+            console.error('[PpxaiApp] Failed to restore session:', error);
+            this.showSystemMessage('Failed to restore session', 'error');
         }
     }
 

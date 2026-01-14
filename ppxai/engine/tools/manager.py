@@ -20,6 +20,7 @@ class ToolManager:
         self._tools: Dict[str, BaseTool] = {}
         self._provider: Optional[str] = None
         self.max_iterations: int = 15
+        self.auto_retry_empty: int = 3  # v1.13.10: Max retries for empty responses (0=disabled)
 
     def register_tool(self, tool: BaseTool):
         """Register a tool.

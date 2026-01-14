@@ -332,6 +332,8 @@ class SessionManager:
 
         Returns:
             Session name
+
+        v1.13.9: Now includes working_dir and tools_enabled for session persistence.
         """
         if name:
             self.session_name = name
@@ -343,7 +345,11 @@ class SessionManager:
             "metadata": self.metadata,
             "messages": [{"role": m.role, "content": m.content} for m in self.messages],
             "usage": self.get_usage(),
-            "saved_at": datetime.now().isoformat()
+            "saved_at": datetime.now().isoformat(),
+            # v1.13.9: Include persistence fields
+            "command_history": self.command_history,
+            "working_dir": self.working_dir,
+            "tools_enabled": self.tools_enabled
         }
 
         with open(filepath, 'w', encoding='utf-8') as f:

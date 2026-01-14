@@ -16,6 +16,7 @@ Usage:
 import argparse
 import asyncio
 import json
+import os
 import sys
 import time
 import uuid
@@ -897,12 +898,16 @@ async def get_tools(x_session_id: Optional[str] = Header(None)):
     except Exception:
         pass
 
+    # v1.13.9: Get full status including auto_retry_empty
+    status = engine.get_tools_status()
+
     return {
         "tools": tools,  # Already list of {"name": ..., "description": ...}
         "enabled": engine.tools_enabled,
-        "max_iterations": getattr(engine, 'tool_max_iterations', 15),
+        "max_iterations": status.get('max_iterations', 15),
+        "auto_retry_empty": status.get('auto_retry_empty', 2),  # v1.13.9
         "consent_mode": consent_mode,
-        "verbose": getattr(engine, '_tools_verbose', False),  # v1.12.0
+        "verbose": status.get('verbose', False),  # v1.12.0
     }
 
 
@@ -1322,6 +1327,73 @@ async def clear_session(x_session_id: Optional[str] = Header(None)):
 
     engine.clear_history()
     return {"cleared": True}
+
+
+@app.get("/sessions/last")
+async def get_last_session(x_session_id: Optional[str] = Header(None)):
+    """Get last session state from state file.
+
+    v1.13.9: Returns info about the last session for auto-restore prompts.
+
+    Returns:
+        JSON with last session info or null if no state file exists
+    """
+    from ..engine.session import SessionManager
+
+    state = SessionManager.get_last_session_state()
+    if not state:
+        return {"last_session": None}
+
+    return {
+        "last_session": {
+            "name": state.get("name"),
+            "dirty": state.get("dirty", False),
+            "provider": state.get("provider"),
+            "model": state.get("model"),
+            "working_dir": state.get("working_dir"),
+            "tools_enabled": state.get("tools_enabled", False),
+            "message_count": state.get("message_count", 0)
+        }
+    }
+
+
+@app.post("/sessions/restore")
+async def restore_last_session(x_session_id: Optional[str] = Header(None)):
+    """Restore the last session automatically.
+
+    v1.13.9: Auto-restore last session including working_dir and tools state.
+
+    Returns:
+        JSON with restored session info
+    """
+    from ..engine.session import SessionManager
+
+    session_id, engine, _ = get_or_create_session(x_session_id)
+
+    state = SessionManager.get_last_session_state()
+    if not state or not state.get("name"):
+        raise HTTPException(status_code=404, detail="No last session found")
+
+    session_name = state["name"]
+
+    # Load the session
+    success = engine.load_session(session_name)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Session not found: {session_name}")
+
+    # Apply restored session state to engine
+    if engine.session.working_dir and os.path.isdir(engine.session.working_dir):
+        engine.set_working_dir(engine.session.working_dir)
+    if engine.session.tools_enabled:
+        engine.enable_tools()
+
+    return {
+        "name": session_name,
+        "restored": True,
+        "working_dir": engine.get_working_dir(),
+        "tools_enabled": engine.tools_enabled,
+        "message_count": len(engine.session.messages)
+    }
 
 
 class FileReadRequest(BaseModel):
