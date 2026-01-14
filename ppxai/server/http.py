@@ -1554,14 +1554,46 @@ async def read_file(
     if not path.is_file():
         raise HTTPException(status_code=400, detail=f"Not a file: {filepath}")
 
+    # v1.13.10: Image and PDF preview support
+    image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp', '.ico'}
+    ext = path.suffix.lower()
+    size = path.stat().st_size
+
+    if ext in image_extensions or ext == '.pdf':
+        # Return base64-encoded binary for preview
+        import base64
+        try:
+            content_bytes = path.read_bytes()
+            content_b64 = base64.b64encode(content_bytes).decode('ascii')
+
+            # Determine MIME type and file type
+            mime_types = {
+                '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+                '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
+                '.bmp': 'image/bmp', '.ico': 'image/x-icon', '.pdf': 'application/pdf'
+            }
+            mime_type = mime_types.get(ext, 'application/octet-stream')
+            file_type = 'pdf' if ext == '.pdf' else 'image'
+
+            return {
+                "filename": path.name,
+                "path": str(path),
+                "type": file_type,
+                "mime_type": mime_type,
+                "content": content_b64,
+                "size": size
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error reading {file_type}: {str(e)}")
+
     try:
         content = path.read_text(encoding='utf-8')
         lines = content.count('\n') + 1
-        size = path.stat().st_size
 
         return {
             "filename": path.name,
             "path": str(path),
+            "type": "text",
             "content": content,
             "size": size,
             "lines": lines

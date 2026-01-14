@@ -2200,8 +2200,15 @@ class PpxaiApp {
             if (response.ok) {
                 const data = await response.json();
 
-                // Show in preview panel
-                this.showPreviewPanel(data.filename || filepath, data.content, data.size, data.lines);
+                // v1.13.10: Handle image and PDF files
+                if (data.type === 'image') {
+                    this.showImagePreview(data.filename || filepath, data.content, data.mime_type, data.size);
+                } else if (data.type === 'pdf') {
+                    this.showPdfPreview(data.filename || filepath, data.content, data.size);
+                } else {
+                    // Show text in preview panel
+                    this.showPreviewPanel(data.filename || filepath, data.content, data.size, data.lines);
+                }
             } else {
                 const error = await response.json();
                 this.showError(`Failed to read file: ${error.detail || 'File not found'}`);
@@ -2246,12 +2253,134 @@ class PpxaiApp {
             }
         }
 
+        // v1.13.10: Hide image and PDF containers when showing text
+        const imageContainer = this.elements.previewPanel.querySelector('.preview-image-container');
+        if (imageContainer) {
+            imageContainer.classList.add('hidden');
+        }
+        const pdfContainer = this.elements.previewPanel.querySelector('.preview-pdf-container');
+        if (pdfContainer) {
+            pdfContainer.classList.add('hidden');
+        }
+
         // Render based on view mode
         this.renderPreviewContent();
 
         // Show the panel and resize handle
         this.elements.resizeHandle.classList.remove('hidden');
         this.elements.previewPanel.classList.remove('hidden');
+    }
+
+    /**
+     * Show image preview (v1.13.10)
+     */
+    showImagePreview(filename, base64Content, mimeType, size) {
+        // Update filename
+        this.elements.previewFilename.textContent = filename;
+
+        // Update info
+        const sizeKB = (size / 1024).toFixed(1);
+        const sizeMB = (size / 1024 / 1024).toFixed(2);
+        const sizeStr = size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+        this.elements.previewInfo.textContent = `Image • ${sizeStr}`;
+
+        // Hide view toggle (not applicable for images)
+        if (this.elements.previewViewToggle) {
+            this.elements.previewViewToggle.classList.add('hidden');
+        }
+
+        // Hide all other preview containers
+        this.elements.previewCode.parentElement.classList.add('hidden');
+        if (this.elements.previewMarkdown) {
+            this.elements.previewMarkdown.classList.add('hidden');
+        }
+        if (this.elements.previewDataViewer) {
+            this.elements.previewDataViewer.classList.add('hidden');
+        }
+        const pdfContainer = this.elements.previewPanel.querySelector('.preview-pdf-container');
+        if (pdfContainer) {
+            pdfContainer.classList.add('hidden');
+        }
+
+        // Create or reuse image container (append to preview-content div)
+        const previewContentEl = this.elements.previewCode.parentElement.parentElement;
+        let imageContainer = previewContentEl.querySelector('.preview-image-container');
+        if (!imageContainer) {
+            imageContainer = document.createElement('div');
+            imageContainer.className = 'preview-image-container';
+            imageContainer.style.cssText = 'padding: 1rem; text-align: center; overflow: auto; height: 100%;';
+            previewContentEl.appendChild(imageContainer);
+        }
+        imageContainer.classList.remove('hidden');
+
+        // Create image element
+        const dataUrl = `data:${mimeType};base64,${base64Content}`;
+        imageContainer.innerHTML = `<img src="${dataUrl}" alt="${filename}" style="max-width: 100%; max-height: calc(100vh - 200px); object-fit: contain; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">`;
+
+        // Show the panel and resize handle
+        this.elements.resizeHandle.classList.remove('hidden');
+        this.elements.previewPanel.classList.remove('hidden');
+
+        // Clear text preview state
+        this.previewContent = null;
+        this.previewFilename = filename;
+        this.previewDataFormat = null;
+    }
+
+    /**
+     * Show PDF preview (v1.13.10)
+     */
+    showPdfPreview(filename, base64Content, size) {
+        // Update filename
+        this.elements.previewFilename.textContent = filename;
+
+        // Update info
+        const sizeMB = (size / 1024 / 1024).toFixed(2);
+        const sizeKB = (size / 1024).toFixed(1);
+        const sizeStr = size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+        this.elements.previewInfo.textContent = `PDF • ${sizeStr}`;
+
+        // Hide view toggle (not applicable for PDFs)
+        if (this.elements.previewViewToggle) {
+            this.elements.previewViewToggle.classList.add('hidden');
+        }
+
+        // Hide all other preview containers
+        this.elements.previewCode.parentElement.classList.add('hidden');
+        if (this.elements.previewMarkdown) {
+            this.elements.previewMarkdown.classList.add('hidden');
+        }
+        if (this.elements.previewDataViewer) {
+            this.elements.previewDataViewer.classList.add('hidden');
+        }
+        const imageContainer = this.elements.previewPanel.querySelector('.preview-image-container');
+        if (imageContainer) {
+            imageContainer.classList.add('hidden');
+        }
+
+        // Create or reuse PDF container
+        const previewContentEl = this.elements.previewCode.parentElement.parentElement;
+        let pdfContainer = previewContentEl.querySelector('.preview-pdf-container');
+        if (!pdfContainer) {
+            pdfContainer = document.createElement('div');
+            pdfContainer.className = 'preview-pdf-container';
+            pdfContainer.style.cssText = 'height: 100%; width: 100%;';
+            previewContentEl.appendChild(pdfContainer);
+        }
+        pdfContainer.classList.remove('hidden');
+
+        // Create PDF embed using data URL
+        const dataUrl = `data:application/pdf;base64,${base64Content}`;
+        pdfContainer.innerHTML = `<embed src="${dataUrl}" type="application/pdf" width="100%" height="100%" style="border: none;">`;
+
+        // Show the panel and resize handle
+        this.elements.resizeHandle.classList.remove('hidden');
+        this.elements.previewPanel.classList.remove('hidden');
+
+        // Clear text preview state
+        this.previewContent = null;
+        this.previewFilename = filename;
+        this.previewDataFormat = null;
     }
 
     /**

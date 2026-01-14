@@ -9,13 +9,12 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 **Current Version:** v1.13.10
 
 **v1.13.10 highlights:**
+- **NEW:** Web app `/show` command now supports image preview (PNG, JPG, GIF, WebP, SVG, BMP, ICO)
+- **NEW:** Web app `/show` command now supports PDF preview (native browser PDF viewer)
+- **NEW:** Loop detection for tool calls (`max_same_tool_calls` setting, default: 3)
 - **NEW:** Auto-retry for empty model responses (`auto_retry_empty` setting, default: 3)
-- **NEW:** Web app session restore prompt on startup
-- **NEW:** `/sessions/last` and `/sessions/restore` API endpoints
-- **FIX:** Session save now includes `working_dir` and `tools_enabled` for proper restore
-- **FIX:** JSON-RPC session load applies restored working directory and tools state
-- **FIX:** Web app correctly restores working directory after session load
-- **FIX:** Unwrap nested native tool call arguments from vLLM models (GPT-OSS 120B)
+- **FIX:** Session restore now properly restores `working_dir` and `tools_enabled` state
+- **FIX:** Tool parameter aliasing with duplicate canonical/alias names
 
 **Version Alignment:**
 - Python package (pyproject.toml): v1.13.10

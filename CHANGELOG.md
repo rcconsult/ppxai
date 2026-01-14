@@ -7,7 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.10] - 2026-01-14
+
+### Added - Web App Enhancements
+
+- **Image preview in /show command** - Web app now displays PNG, JPG, GIF, WebP, SVG, BMP, ICO files directly in the preview panel
+- **PDF preview in /show command** - Web app now displays PDF files using the browser's native PDF viewer
+- **Loop detection for tool calls** - Configurable `max_same_tool_calls` (default: 3) prevents models from calling the same tool repeatedly. Forces synthesis after threshold is reached.
+
 ### Fixed
+
 - **Tool parameter aliasing with duplicates** - Fixed issue where models send both canonical and alias names in same call (e.g., both `file_path` AND `filepath`). Now removes duplicate aliases instead of passing them to tool execution.
 - **Session restore working directory** - Fixed issue where status bar showed wrong working directory after session restore. Now `set_working_dir()` updates both `context_injector.working_dir` and `session.working_dir`.
 - **Session restore tools state** - Session now saves and restores `tools_enabled` state. Tools are automatically re-enabled when restoring a session that had tools enabled.
