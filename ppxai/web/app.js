@@ -2672,9 +2672,25 @@ class PpxaiApp {
             } else {
                 throw new Error('YAML parsing requires js-yaml library. Showing source view.');
             }
-        } else if (ext === 'toml' || ext === 'hcl' || ext === 'tf' || ext === 'tfvars') {
-            // TOML/HCL/Terraform - no browser-compatible library available
-            throw new Error(`${ext.toUpperCase()} parsing not available in browser. Showing source view.`);
+        } else if (ext === 'toml') {
+            // Use toml-js library for TOML parsing (v1.13.11)
+            if (typeof toml !== 'undefined') {
+                data = toml.parse(content);
+            } else {
+                throw new Error('TOML parsing requires toml-js library. Showing source view.');
+            }
+        } else if (ext === 'hcl' || ext === 'tf' || ext === 'tfvars') {
+            // Use hcl2-parser library for HCL/Terraform parsing (v1.13.11)
+            if (typeof hcl2 !== 'undefined' && hcl2.parseToObject) {
+                const result = hcl2.parseToObject(content);
+                // parseToObject returns [object, error] - check for error
+                if (result[1]) {
+                    throw new Error(`HCL parse error: ${result[1]}`);
+                }
+                data = result[0];
+            } else {
+                throw new Error('HCL parsing requires hcl2-parser library. Showing source view.');
+            }
         } else {
             data = JSON.parse(content);
         }
