@@ -1348,3 +1348,57 @@ def get_model_context_limit(provider: str = None, model: str = None) -> int:
 
     # Fall back to default
     return get_default_context_limit()
+
+
+def get_model_max_tokens(provider: str = None, model: str = None) -> Optional[int]:
+    """Get the max_tokens setting for output generation.
+
+    v1.13.11: This ensures vLLM and other backends generate complete responses.
+    Without explicit max_tokens, vLLM defaults to 2048 which truncates output.
+
+    Checks in order:
+    1. Model-specific max_tokens in provider config
+    2. Provider-level default_max_tokens
+    3. None (let API use its default)
+
+    Config example:
+        "providers": {
+            "custom": {
+                "default_max_tokens": 8192,
+                "models": {
+                    "openai/gpt-oss-120b": {
+                        "max_tokens": 16384
+                    }
+                }
+            }
+        }
+
+    Args:
+        provider: Provider ID. If None, uses active provider.
+        model: Model ID. If None, uses provider's default model.
+
+    Returns:
+        max_tokens value or None to use provider default.
+    """
+    if provider is None:
+        provider = MODEL_PROVIDER
+
+    if model is None:
+        model = get_default_model(provider)
+
+    config_path = find_config_file()
+    if config_path:
+        json_config = _load_json_config(config_path)
+        provider_config = json_config.get("providers", {}).get(provider, {})
+
+        # Check model-specific max_tokens first
+        models = provider_config.get("models", {})
+        model_config = models.get(model, {})
+        if "max_tokens" in model_config:
+            return model_config["max_tokens"]
+
+        # Fall back to provider-level default
+        if "default_max_tokens" in provider_config:
+            return provider_config["default_max_tokens"]
+
+    return None

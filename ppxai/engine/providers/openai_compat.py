@@ -77,6 +77,24 @@ class OpenAICompatibleProvider(BaseProvider):
         except ImportError:
             return 80  # Default
 
+    def _get_max_tokens(self, model: str) -> Optional[int]:
+        """Get max_tokens for output generation.
+
+        v1.13.11: This ensures vLLM and other backends generate complete responses
+        instead of using their often-too-small defaults (e.g., 2048).
+
+        Args:
+            model: Model ID to check
+
+        Returns:
+            max_tokens value or None to use provider default
+        """
+        try:
+            from ...config import get_model_max_tokens
+            return get_model_max_tokens(self.provider_id, model)
+        except (ImportError, AttributeError):
+            return None  # Let provider use its default
+
     def _estimate_tokens(self, messages: List[Dict[str, Any]]) -> int:
         """Estimate token count for messages.
 
@@ -187,6 +205,12 @@ class OpenAICompatibleProvider(BaseProvider):
                 "model": model,
                 "messages": api_messages,
             }
+
+            # v1.13.11: Add max_tokens if configured for this model or provider
+            # This ensures vLLM and other backends don't use too-small defaults
+            max_tokens = self._get_max_tokens(model)
+            if max_tokens:
+                request_kwargs["max_tokens"] = max_tokens
 
             # Add tools if native tool calling is enabled
             if tools and self.capabilities.native_tool_calling:

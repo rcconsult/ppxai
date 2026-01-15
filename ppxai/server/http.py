@@ -1049,7 +1049,11 @@ async def set_working_dir(
     import os
     # Expand tilde and resolve to absolute path
     path = os.path.expanduser(request.path)
-    path = os.path.abspath(path)
+
+    # If relative path, resolve relative to session's current working dir (not server cwd)
+    if not os.path.isabs(path):
+        current_wd = engine.get_working_dir() or os.getcwd()
+        path = os.path.normpath(os.path.join(current_wd, path))
 
     if not os.path.isdir(path):
         raise HTTPException(status_code=400, detail=f"Not a valid directory: {path}")
