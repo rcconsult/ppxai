@@ -4,7 +4,8 @@ Tool manager for the ppxai engine.
 Handles tool registration, filtering by provider, and execution.
 """
 
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
+import json
 from .base import BaseTool, FunctionTool
 from ..types import Event, EventType, ToolCallInfo
 
@@ -23,9 +24,9 @@ class ToolManager:
         self._description_overrides: Dict[str, str] = {}  # v1.13.10: Cached description overrides
         self.max_iterations: int = 15
         self.auto_retry_empty: int = 3  # v1.13.10: Max retries for empty responses (0=disabled)
-        # v1.13.10: Loop detection - prevent models from calling same tool repeatedly
-        self.max_same_tool_calls: int = 3  # Max consecutive calls to same tool (0=disabled)
-        self._tool_call_history: List[str] = []  # Track recent tool calls for loop detection
+        # v1.13.10: Loop detection - prevent models from calling same tool with same args repeatedly
+        self.max_same_tool_calls: int = 3  # Max consecutive calls to same tool+args (0=disabled)
+        self._tool_call_history: List[Tuple[str, str]] = []  # Track (tool_name, args_hash) for loop detection
 
     def register_tool(self, tool: BaseTool):
         """Register a tool.
@@ -370,22 +371,41 @@ class ToolManager:
         """
         self._tool_call_history.clear()
 
-    def record_tool_call(self, tool_name: str):
+    def _hash_args(self, args: Dict[str, Any]) -> str:
+        """Create a stable hash of tool arguments for loop detection.
+
+        Args:
+            args: Tool arguments dict
+
+        Returns:
+            JSON string representation of sorted args (for comparison)
+        """
+        try:
+            return json.dumps(args, sort_keys=True, default=str)
+        except (TypeError, ValueError):
+            return str(args)
+
+    def record_tool_call(self, tool_name: str, args: Optional[Dict[str, Any]] = None):
         """Record a tool call for loop detection.
 
         Args:
             tool_name: Name of the tool being called
+            args: Tool arguments (optional, for argument-aware loop detection)
         """
-        self._tool_call_history.append(tool_name)
+        args_hash = self._hash_args(args or {})
+        self._tool_call_history.append((tool_name, args_hash))
 
-    def is_tool_loop_detected(self, tool_name: str) -> bool:
-        """Check if calling this tool would create a loop.
+    def is_tool_loop_detected(self, tool_name: str, args: Optional[Dict[str, Any]] = None) -> bool:
+        """Check if calling this tool with these args would create a loop.
 
-        A loop is detected when the same tool has been called
-        max_same_tool_calls times consecutively.
+        A loop is detected when the same tool with the same arguments has been
+        called max_same_tool_calls times consecutively. Calling the same tool
+        with different arguments (e.g., list_directory on different paths) is
+        allowed and does not trigger loop detection.
 
         Args:
             tool_name: Name of the tool about to be called
+            args: Tool arguments (optional)
 
         Returns:
             True if this call would exceed the loop threshold
@@ -393,10 +413,12 @@ class ToolManager:
         if self.max_same_tool_calls <= 0:
             return False  # Loop detection disabled
 
-        # Count consecutive calls to this tool from the end of history
+        args_hash = self._hash_args(args or {})
+
+        # Count consecutive calls to this tool with same args from the end of history
         consecutive = 0
-        for prev_tool in reversed(self._tool_call_history):
-            if prev_tool == tool_name:
+        for prev_tool, prev_args_hash in reversed(self._tool_call_history):
+            if prev_tool == tool_name and prev_args_hash == args_hash:
                 consecutive += 1
             else:
                 break
@@ -414,7 +436,7 @@ class ToolManager:
             Message prompting the model to synthesize instead of loop
         """
         return (
-            f"You have called the '{tool_name}' tool {self.max_same_tool_calls} times consecutively. "
+            f"You have called the '{tool_name}' tool with the same arguments {self.max_same_tool_calls} times consecutively. "
             "Please stop calling tools and provide a response based on the results you already have. "
             "Synthesize the information into a helpful answer for the user."
         )

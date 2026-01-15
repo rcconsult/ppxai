@@ -1302,16 +1302,16 @@ class EngineClient:
                 tool_name = tool_call["tool"]
                 tool_args = tool_call.get("arguments", {})
 
-                # v1.13.10: Check for tool loop before executing
-                if self.tool_manager.is_tool_loop_detected(tool_name):
+                # v1.13.10: Check for tool loop before executing (now checks args too)
+                if self.tool_manager.is_tool_loop_detected(tool_name, tool_args):
                     # Loop detected - inject message to force synthesis
-                    yield Event(EventType.INFO, f"Loop detected: '{tool_name}' called {self.tool_manager.max_same_tool_calls}x, forcing synthesis")
+                    yield Event(EventType.INFO, f"Loop detected: '{tool_name}' called {self.tool_manager.max_same_tool_calls}x with same args, forcing synthesis")
                     loop_msg = self.tool_manager.get_loop_message(tool_name)
                     self.session.add_message(Message("user", loop_msg))
                     continue  # Skip execution, let model synthesize on next iteration
 
-                # Record this tool call for loop tracking
-                self.tool_manager.record_tool_call(tool_name)
+                # Record this tool call for loop tracking (with args for accurate detection)
+                self.tool_manager.record_tool_call(tool_name, tool_args)
 
                 yield Event(EventType.TOOL_CALL, {
                     "tool": tool_name,
