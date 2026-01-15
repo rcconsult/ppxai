@@ -92,21 +92,39 @@ def find_server_binary() -> Path | None:
 
 
 def install_web_ui():
-    """Install web UI files to ~/.ppxai/web/ if not present."""
+    """Install web UI files to ~/.ppxai/web/ if not present or outdated."""
     web_dir = Path.home() / '.ppxai' / 'web'
     source_dir = get_resource_path('ppxai/web')
 
-    # Check if web UI needs updating - compare file sizes and content hash
-    if web_dir.exists():
-        source_app = source_dir / 'app.js'
-        dest_app = web_dir / 'app.js'
-        if source_app.exists() and dest_app.exists():
-            # Compare file sizes first (fast check)
-            if source_app.stat().st_size == dest_app.stat().st_size:
-                # If same size, compare full content
-                if source_app.read_text() == dest_app.read_text():
-                    return web_dir
-            # Files differ - will update below
+    needs_update = False
+
+    if not web_dir.exists():
+        needs_update = True
+    else:
+        # Check if any source files are missing or different in destination
+        # Compare both file names AND sizes to detect content changes
+        for item in source_dir.iterdir():
+            dest = web_dir / item.name
+            if item.is_dir():
+                if not dest.exists():
+                    needs_update = True
+                    break
+                # Compare files by name AND size
+                source_files = {f.name: f.stat().st_size for f in item.rglob('*') if f.is_file()}
+                dest_files = {f.name: f.stat().st_size for f in dest.rglob('*') if f.is_file()}
+                if source_files != dest_files:
+                    needs_update = True
+                    break
+            else:
+                if not dest.exists():
+                    needs_update = True
+                    break
+                if item.stat().st_size != dest.stat().st_size:
+                    needs_update = True
+                    break
+
+    if not needs_update:
+        return web_dir
 
     # Copy web UI files
     web_dir.mkdir(parents=True, exist_ok=True)

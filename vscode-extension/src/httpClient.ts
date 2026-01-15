@@ -362,15 +362,42 @@ export class HttpClient {
     }
 
     /**
+     * Get working directory
+     */
+    async getWorkingDir(): Promise<string> {
+        try {
+            const response = await fetch(`${this.baseUrl}/context/working_dir`, {
+                headers: this.getHeaders()
+            });
+            if (!response.ok) {
+                return process.cwd();
+            }
+            const data = await response.json() as { path: string };
+            return data.path;
+        } catch {
+            return process.cwd();
+        }
+    }
+
+    /**
      * Set working directory for file path resolution
      */
-    async setWorkingDir(path: string): Promise<boolean> {
-        const response = await fetch(`${this.baseUrl}/context/working_dir`, {
-            method: 'POST',
-            headers: this.getHeaders(true),
-            body: JSON.stringify({ path })
-        });
-        return response.ok;
+    async setWorkingDir(path: string): Promise<{ path: string; success: boolean; error?: string }> {
+        try {
+            const response = await fetch(`${this.baseUrl}/context/working_dir`, {
+                method: 'POST',
+                headers: this.getHeaders(true),
+                body: JSON.stringify({ path })
+            });
+            if (!response.ok) {
+                const error = await response.json() as { detail?: string };
+                return { path, success: false, error: error.detail || 'Unknown error' };
+            }
+            const data = await response.json() as { path: string; success: boolean };
+            return data;
+        } catch (e) {
+            return { path, success: false, error: String(e) };
+        }
     }
 
     /**

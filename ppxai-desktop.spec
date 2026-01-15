@@ -8,15 +8,8 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
-        # Include web UI files
-        ('ppxai/web/index.html', 'ppxai/web'),
-        ('ppxai/web/app.js', 'ppxai/web'),
-        ('ppxai/web/styles.css', 'ppxai/web'),
-        ('ppxai/web/favicon.png', 'ppxai/web'),  # Favicon (v1.14.0)
-        ('ppxai/web/lib', 'ppxai/web/lib'),
-        ('ppxai/web/shared', 'ppxai/web/shared'),  # Shared modules (v1.14.0)
-        ('ppxai/web/components', 'ppxai/web/components'),  # Data viewers (v1.13.8)
-        ('ppxai/web/styles', 'ppxai/web/styles'),  # Data viewer styles (v1.13.8)
+        # Include entire web UI directory tree
+        ('ppxai/web', 'ppxai/web'),
     ],
     hiddenimports=[],
     hookspath=[],
@@ -57,7 +50,7 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,  # No console window (GUI app)
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,

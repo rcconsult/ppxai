@@ -2224,6 +2224,10 @@ If more work is needed, explain what you're doing next and use the appropriate t
             self.handle_context(args)
         elif command == "/config":
             self.handle_config(args)
+        elif command == "/cd":
+            self.handle_cd(args)
+        elif command == "/pwd":
+            self.handle_pwd()
         else:
             console.print(f"[red]Unknown command: {user_input}[/red]")
             console.print("[yellow]Type /help for available commands[/yellow]\n")
@@ -2408,3 +2412,48 @@ If more work is needed, explain what you're doing next and use the appropriate t
         else:
             console.print(f"[red]Unknown config subcommand: {subcommand}[/red]")
             console.print("[dim]Use: /config reload | /config path[/dim]\n")
+
+    def handle_cd(self, args: str = ""):
+        """Handle /cd command for changing working directory.
+
+        Usage:
+            /cd <path>  - Change to specified directory
+            /cd         - Show current working directory (same as /pwd)
+        """
+        if not self.engine_client:
+            console.print("[red]Error: Engine client not available[/red]\n")
+            return
+
+        if not args.strip():
+            # No args - show current directory
+            self.handle_pwd()
+            return
+
+        target_path = args.strip()
+
+        try:
+            # Expand ~ and resolve path
+            expanded = os.path.expanduser(target_path)
+            resolved = os.path.abspath(expanded)
+
+            if not os.path.isdir(resolved):
+                console.print(f"[red]Not a valid directory: {target_path}[/red]\n")
+                return
+
+            self.engine_client.set_working_dir(resolved)
+            console.print(f"\n[green]Working directory changed to:[/green] {resolved}\n")
+
+        except Exception as e:
+            console.print(f"[red]Failed to change directory: {e}[/red]\n")
+
+    def handle_pwd(self):
+        """Handle /pwd command for showing current working directory."""
+        if not self.engine_client:
+            console.print("[red]Error: Engine client not available[/red]\n")
+            return
+
+        cwd = self.engine_client.get_working_dir()
+        if cwd:
+            console.print(f"\n[cyan]Current working directory:[/cyan] {cwd}\n")
+        else:
+            console.print("\n[yellow]Working directory not set.[/yellow]\n")

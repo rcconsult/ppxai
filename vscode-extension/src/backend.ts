@@ -300,8 +300,12 @@ export class PythonBackend {
     }
 
     // Context injection methods
-    async setWorkingDir(path: string): Promise<boolean> {
-        return this.request<boolean>('set_working_dir', { path });
+    async getWorkingDir(): Promise<string> {
+        return this.request<string>('get_working_dir');
+    }
+
+    async setWorkingDir(path: string): Promise<{ path: string; success: boolean; error?: string }> {
+        return this.request('set_working_dir', { path });
     }
 
     async setAutoInject(enabled: boolean): Promise<boolean> {

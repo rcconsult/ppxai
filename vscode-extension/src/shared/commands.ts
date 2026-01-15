@@ -132,6 +132,16 @@ export const SLASH_COMMANDS: Record<string, CommandDefinition> = {
         usage: '/cat <filepath>',
         category: CommandCategory.FILE
     },
+    '/cd': {
+        description: 'Change working directory',
+        usage: '/cd <path>',
+        category: CommandCategory.FILE
+    },
+    '/pwd': {
+        description: 'Print working directory',
+        usage: '/pwd',
+        category: CommandCategory.FILE
+    },
 
     // === Coding Tasks (forwarded to AI) ===
     '/generate': {

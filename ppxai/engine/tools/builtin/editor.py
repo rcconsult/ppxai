@@ -79,6 +79,9 @@ class ApplyPatchTool(BaseTool):
             # Models like GPT-OSS 120B use "*** Add File:" or "+++ /dev/null" patterns
             is_new_file = _is_new_file_diff(unified_diff)
 
+            # v1.14.0: Detect delete+recreate pattern (replaces entire file)
+            is_delete_recreate = _is_delete_and_recreate_diff(unified_diff)
+
             # Validate file exists (unless creating new file)
             if not path.exists():
                 if is_new_file:
@@ -98,8 +101,22 @@ class ApplyPatchTool(BaseTool):
                 backup_content = ''.join(original_lines)
 
             try:
-                # Apply patch
-                new_lines = _apply_unified_diff(original_lines, unified_diff, is_new_file=is_new_file)
+                # v1.14.0: For delete+recreate, treat as new file (ignore original content)
+                if is_delete_recreate and path.exists():
+                    new_lines = _apply_unified_diff([], unified_diff, is_new_file=True)
+                else:
+                    # Apply patch
+                    new_lines = _apply_unified_diff(original_lines, unified_diff, is_new_file=is_new_file)
+
+                # v1.14.0: Check if any changes were actually made
+                original_content = ''.join(original_lines)
+                new_content = ''.join(new_lines)
+                if original_content == new_content:
+                    return (
+                        f"Error: No changes applied to {file_path}. "
+                        f"The patch did not match the file content. "
+                        f"Try using write_file tool to overwrite the file directly."
+                    )
 
                 # Write atomically (write to temp, then rename)
                 temp_path = path.with_suffix(path.suffix + '.tmp')
@@ -114,9 +131,12 @@ class ApplyPatchTool(BaseTool):
 
                 if is_new_file and not original_lines:
                     return f"✓ Successfully created {file_path} ({len(new_lines)} lines)"
+                elif is_delete_recreate:
+                    return f"✓ Successfully replaced {file_path} ({len(new_lines)} lines)"
                 else:
                     lines_changed = sum(1 for a, b in zip(original_lines, new_lines) if a != b)
-                    return f"✓ Successfully applied patch to {file_path} ({lines_changed} lines changed)"
+                    lines_added = len(new_lines) - len(original_lines)
+                    return f"✓ Successfully applied patch to {file_path} ({lines_changed} lines modified, {lines_added:+d} lines)"
 
             except Exception as e:
                 # Rollback on failure (only if we had backup)
@@ -522,6 +542,35 @@ def _is_new_file_diff(diff_text: str) -> bool:
             return True
 
     return False
+
+
+def _is_delete_and_recreate_diff(diff_text: str) -> bool:
+    """Check if diff is a delete-then-recreate pattern.
+
+    v1.14.0: Models like GPT-OSS 120B sometimes use:
+    *** Delete File: filename
+    *** Add File: filename
+
+    This should completely replace file contents.
+
+    Args:
+        diff_text: Unified diff text
+
+    Returns:
+        True if this is a delete+recreate pattern
+    """
+    lines = diff_text.replace('\r\n', '\n').split('\n')
+    has_delete = False
+    has_add = False
+
+    for line in lines:
+        line_lower = line.lower().strip()
+        if '*** delete file' in line_lower:
+            has_delete = True
+        if '*** add file' in line_lower:
+            has_add = True
+
+    return has_delete and has_add
 
 
 def _apply_unified_diff(original_lines: list, diff_text: str, is_new_file: bool = False) -> list:

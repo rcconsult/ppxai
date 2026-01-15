@@ -1439,13 +1439,32 @@ async def read_file(
     path = path.resolve()
     logger.debug(f"  Resolved path: {path}")
 
-    # Security: ensure path is within working directory or common locations
+    # Security: ensure path is within working directory tree or home directory
     working_dir = Path(engine.get_working_dir() or os.getcwd()).resolve()
     home_dir = Path.home().resolve()
 
-    # Allow files in working directory tree or home directory tree
-    if not (str(path).startswith(str(working_dir)) or str(path).startswith(str(home_dir))):
-        logger.warning(f"  Access denied: {path} not in {working_dir} or {home_dir}")
+    # Find common ancestor - allow any path that shares a common root with working_dir
+    # This allows accessing parent directories (e.g., ../sample.yaml from temp/)
+    # as long as they're within the same project tree
+    def is_path_allowed(target: Path, base: Path) -> bool:
+        """Check if target is within base's tree (parent or child)."""
+        try:
+            # Check if target is a child of base
+            target.relative_to(base)
+            return True
+        except ValueError:
+            pass
+        try:
+            # Check if base is a child of target (target is parent)
+            base.relative_to(target)
+            return True
+        except ValueError:
+            pass
+        return False
+
+    # Allow files in working directory tree (parent or child) or home directory tree
+    if not (is_path_allowed(path, working_dir) or str(path).startswith(str(home_dir))):
+        logger.warning(f"  Access denied: {path} not in {working_dir} tree or {home_dir}")
         raise HTTPException(status_code=403, detail="Access denied: path outside allowed directories")
 
     if not path.exists():

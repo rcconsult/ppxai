@@ -940,6 +940,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     await this.handleShowCommand(args);
                     break;
 
+                case '/cd':
+                    await this.handleCdCommand(args);
+                    break;
+
+                case '/pwd':
+                    await this.handlePwdCommand();
+                    break;
+
                 case '/usage':
                     await this.handleUsageCommand(args);
                     break;
@@ -2656,6 +2664,60 @@ Use \`/usage show <session|provider|model|off>\` to change.`;
             this._view.webview.postMessage({
                 type: 'error',
                 content: `Error opening file: ${error}`
+            });
+        }
+    }
+
+    private async handleCdCommand(args: string[]) {
+        if (!this._view) { return; }
+
+        if (args.length === 0) {
+            // No args - show current directory (same as /pwd)
+            await this.handlePwdCommand();
+            return;
+        }
+
+        const targetPath = args.join(' ');
+
+        try {
+            const result = await this._backend.setWorkingDir(targetPath);
+            if (result.success) {
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: `Working directory changed to: \`${result.path}\``
+                });
+                // Update the workspace display badge
+                this._view.webview.postMessage({
+                    type: 'workingDirChanged',
+                    path: result.path
+                });
+            } else {
+                this._view.webview.postMessage({
+                    type: 'error',
+                    content: `Failed to change directory: ${result.error || 'Unknown error'}`
+                });
+            }
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Failed to change directory: ${error}`
+            });
+        }
+    }
+
+    private async handlePwdCommand() {
+        if (!this._view) { return; }
+
+        try {
+            const path = await this._backend.getWorkingDir();
+            this._view.webview.postMessage({
+                type: 'systemMessage',
+                content: `Current working directory: \`${path}\``
+            });
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Failed to get working directory: ${error}`
             });
         }
     }

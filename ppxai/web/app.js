@@ -101,6 +101,8 @@ class PpxaiApp {
                 '/status': { description: 'Show current status', usage: '/status' },
                 '/show': { description: 'Display file contents', usage: '/show <filepath>' },
                 '/cat': { description: 'Alias for /show', usage: '/cat <filepath>' },
+                '/cd': { description: 'Change working directory', usage: '/cd <path>' },
+                '/pwd': { description: 'Print working directory', usage: '/pwd' },
                 '/generate': { description: 'Generate code from description', usage: '/generate <description>' },
                 '/explain': { description: 'Explain code or concept', usage: '/explain <code or question>' },
                 '/test': { description: 'Generate tests for code', usage: '/test <code or @file>' },
@@ -1076,6 +1078,14 @@ class PpxaiApp {
             case '/show':
             case '/cat':
                 await this.handleShowCommand(args);
+                break;
+
+            case '/cd':
+                await this.handleCdCommand(args);
+                break;
+
+            case '/pwd':
+                await this.handlePwdCommand();
                 break;
 
             case '/generate':
@@ -2179,6 +2189,53 @@ class PpxaiApp {
             this.addMessage('system', text);
         } catch (error) {
             this.showError(`Failed to list sessions: ${error.message}`);
+        }
+    }
+
+    async handleCdCommand(args) {
+        if (!args || !args.trim()) {
+            // No args - show current working directory (same as /pwd)
+            await this.handlePwdCommand();
+            return;
+        }
+
+        const targetPath = args.trim();
+
+        try {
+            const response = await fetch(`${this.serverUrl}/context/working_dir`, {
+                method: 'POST',
+                headers: this.getSessionHeaders(true),
+                body: JSON.stringify({ path: targetPath })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.showSystemMessage(`Working directory changed to: \`${data.path}\``);
+                // Update the folder badge
+                this.updateFolderBadge(data.path);
+            } else {
+                const error = await response.json();
+                this.showError(`Failed to change directory: ${error.detail || 'Unknown error'}`);
+            }
+        } catch (error) {
+            this.showError(`Failed to change directory: ${error.message}`);
+        }
+    }
+
+    async handlePwdCommand() {
+        try {
+            const response = await fetch(`${this.serverUrl}/context/working_dir`, {
+                headers: this.getSessionHeaders()
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.showSystemMessage(`Current working directory: \`${data.path}\``);
+            } else {
+                this.showError('Failed to get working directory');
+            }
+        } catch (error) {
+            this.showError(`Failed to get working directory: ${error.message}`);
         }
     }
 
