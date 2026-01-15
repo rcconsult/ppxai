@@ -1,0 +1,32 @@
+# Sample TOML file for e2e testing
+title = "TOML Test"
+version = "1.0.0"
+
+[server]
+host = "localhost"
+port = 8080
+enabled = true
+
+[database]
+driver = "postgres"
+connection_string = "postgresql://localhost:5432/testdb"
+max_connections = 10
+timeout = 30.5
+
+[features]
+debug = false
+logging = true
+
+[[users]]
+id = 1
+name = "Alice"
+role = "admin"
+
+[[users]]
+id = 2
+name = "Bob"
+role = "user"
+
+[metadata]
+created = 2024-01-15T10:30:00Z
+tags = ["test", "sample", "config"]

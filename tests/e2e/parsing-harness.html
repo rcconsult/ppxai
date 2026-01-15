@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parsing Libraries Test Harness</title>
+    <link rel="stylesheet" href="../../ppxai/web/styles/data-viewers.css">
+    <!-- Load parsing libraries -->
+    <script src="../../ppxai/web/lib/js-yaml.min.js"></script>
+    <script src="../../ppxai/web/lib/toml.min.js"></script>
+    <script src="../../ppxai/web/lib/hcl2-browser.js"></script>
+    <script src="../../ppxai/web/lib/hcl2-parser.min.js"></script>
+    <script>if (typeof hcl2Init === 'function') hcl2Init();</script>
+    <style>
+        :root {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252526;
+            --text-primary: #cccccc;
+            --text-secondary: #858585;
+            --accent-color: #0078d4;
+            --border-color: #3c3c3c;
+            --success-color: #4ec9b0;
+            --error-color: #f14c4c;
+        }
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px;
+            margin: 0;
+        }
+        .test-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+        }
+        h1 { color: var(--accent-color); }
+        h2 { color: var(--text-primary); margin-bottom: 16px; }
+        .status {
+            padding: 8px 16px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+        .status.success { background: rgba(78, 201, 176, 0.2); color: var(--success-color); }
+        .status.error { background: rgba(241, 76, 76, 0.2); color: var(--error-color); }
+        .status.pending { background: rgba(255, 255, 255, 0.1); color: var(--text-secondary); }
+        pre {
+            background: var(--bg-primary);
+            padding: 16px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+        .tree-container {
+            min-height: 200px;
+            margin-top: 16px;
+        }
+        #lib-status {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+        .lib-check {
+            padding: 10px 20px;
+            border-radius: 4px;
+            background: var(--bg-secondary);
+        }
+        .lib-check.available { border-left: 3px solid var(--success-color); }
+        .lib-check.missing { border-left: 3px solid var(--error-color); }
+    </style>
+</head>
+<body>
+    <h1>Parsing Libraries Test Harness</h1>
+
+    <div id="lib-status">
+        <div class="lib-check" id="yaml-status">js-yaml: checking...</div>
+        <div class="lib-check" id="toml-status">toml: checking...</div>
+        <div class="lib-check" id="hcl-status">hcl2: checking...</div>
+    </div>
+
+    <div class="test-section" id="yaml-section">
+        <h2>YAML Parsing</h2>
+        <div class="status pending" id="yaml-parse-status">Pending...</div>
+        <pre id="yaml-input"></pre>
+        <div class="tree-container" id="yaml-tree"></div>
+    </div>
+
+    <div class="test-section" id="toml-section">
+        <h2>TOML Parsing</h2>
+        <div class="status pending" id="toml-parse-status">Pending...</div>
+        <pre id="toml-input"></pre>
+        <div class="tree-container" id="toml-tree"></div>
+    </div>
+
+    <div class="test-section" id="hcl-section">
+        <h2>HCL/Terraform Parsing</h2>
+        <div class="status pending" id="hcl-parse-status">Pending...</div>
+        <pre id="hcl-input"></pre>
+        <div class="tree-container" id="hcl-tree"></div>
+    </div>
+
+    <script src="../../ppxai/web/components/tree-viewer.js"></script>
+    <script>
+        // Sample data for testing
+        const sampleYAML = `name: Test Application
+version: "1.0.0"
+server:
+  host: localhost
+  port: 8080
+  enabled: true
+users:
+  - id: 1
+    name: Alice
+  - id: 2
+    name: Bob
+metadata:
+  debug: false
+  count: 42`;
+
+        // Note: toml-js (0.0.8) doesn't support [[array]] syntax
+        // Using simple nested objects instead
+        const sampleTOML = `title = "TOMLTest"
+version = "1.0.0"
+
+[server]
+host = "localhost"
+port = 8080
+enabled = true
+
+[database]
+driver = "postgres"
+maxconn = 10
+
+[metadata]
+debug = false
+count = 42`;
+
+        const sampleHCL = `resource "aws_instance" "web" {
+  ami           = "ami-12345678"
+  instance_type = "t3.micro"
+
+  tags = {
+    Name        = "web-server"
+    Environment = "test"
+  }
+}
+
+variable "environment" {
+  description = "Deployment environment"
+  type        = "string"
+  default     = "development"
+}`;
+
+        // Check library availability
+        function checkLibraries() {
+            const yamlStatus = document.getElementById('yaml-status');
+            const tomlStatus = document.getElementById('toml-status');
+            const hclStatus = document.getElementById('hcl-status');
+
+            if (typeof jsyaml !== 'undefined') {
+                yamlStatus.textContent = 'js-yaml: available';
+                yamlStatus.classList.add('available');
+            } else {
+                yamlStatus.textContent = 'js-yaml: MISSING';
+                yamlStatus.classList.add('missing');
+            }
+
+            if (typeof toml !== 'undefined') {
+                tomlStatus.textContent = 'toml: available';
+                tomlStatus.classList.add('available');
+            } else {
+                tomlStatus.textContent = 'toml: MISSING';
+                tomlStatus.classList.add('missing');
+            }
+
+            if (typeof hcl2 !== 'undefined' && hcl2.parseToObject) {
+                hclStatus.textContent = 'hcl2: available';
+                hclStatus.classList.add('available');
+            } else {
+                hclStatus.textContent = 'hcl2: MISSING';
+                hclStatus.classList.add('missing');
+            }
+        }
+
+        // Build tree node structure (same as app.js)
+        function buildTreeNode(key, value, depth) {
+            const node = {
+                key: key,
+                value: null,
+                node_type: 'null',
+                children: [],
+                depth: depth
+            };
+
+            if (value === null || value === undefined) {
+                node.node_type = 'null';
+                node.value = null;
+            } else if (typeof value === 'boolean') {
+                node.node_type = 'boolean';
+                node.value = value;
+            } else if (typeof value === 'number') {
+                node.node_type = 'number';
+                node.value = value;
+            } else if (typeof value === 'string') {
+                node.node_type = 'string';
+                node.value = value;
+            } else if (Array.isArray(value)) {
+                node.node_type = 'array';
+                node.children = value.map((item, index) =>
+                    buildTreeNode(String(index), item, depth + 1)
+                );
+            } else if (typeof value === 'object') {
+                node.node_type = 'object';
+                node.children = Object.entries(value).map(([k, v]) =>
+                    buildTreeNode(k, v, depth + 1)
+                );
+            }
+
+            return node;
+        }
+
+        // Test YAML parsing
+        function testYAML() {
+            document.getElementById('yaml-input').textContent = sampleYAML;
+            const statusEl = document.getElementById('yaml-parse-status');
+            const treeEl = document.getElementById('yaml-tree');
+
+            try {
+                if (typeof jsyaml === 'undefined') {
+                    throw new Error('js-yaml library not loaded');
+                }
+                const parsed = jsyaml.load(sampleYAML);
+                const tree = buildTreeNode('root', parsed, 0);
+
+                window.yamlViewer = new DataTreeViewer(treeEl, tree, {
+                    initialExpandDepth: 2,
+                    searchable: true
+                });
+
+                statusEl.textContent = 'YAML parsed successfully';
+                statusEl.className = 'status success';
+            } catch (e) {
+                statusEl.textContent = `YAML parse error: ${e.message}`;
+                statusEl.className = 'status error';
+            }
+        }
+
+        // Test TOML parsing
+        function testTOML() {
+            document.getElementById('toml-input').textContent = sampleTOML;
+            const statusEl = document.getElementById('toml-parse-status');
+            const treeEl = document.getElementById('toml-tree');
+
+            try {
+                if (typeof toml === 'undefined') {
+                    throw new Error('toml library not loaded');
+                }
+                const parsed = toml.parse(sampleTOML);
+                const tree = buildTreeNode('root', parsed, 0);
+
+                window.tomlViewer = new DataTreeViewer(treeEl, tree, {
+                    initialExpandDepth: 2,
+                    searchable: true
+                });
+
+                statusEl.textContent = 'TOML parsed successfully';
+                statusEl.className = 'status success';
+            } catch (e) {
+                statusEl.textContent = `TOML parse error: ${e.message}`;
+                statusEl.className = 'status error';
+            }
+        }
+
+        // Test HCL parsing
+        function testHCL() {
+            document.getElementById('hcl-input').textContent = sampleHCL;
+            const statusEl = document.getElementById('hcl-parse-status');
+            const treeEl = document.getElementById('hcl-tree');
+
+            try {
+                if (typeof hcl2 === 'undefined' || !hcl2.parseToObject) {
+                    throw new Error('hcl2-parser library not loaded');
+                }
+                const result = hcl2.parseToObject(sampleHCL);
+                if (result[1]) {
+                    throw new Error(result[1]);
+                }
+                const parsed = result[0];
+                const tree = buildTreeNode('root', parsed, 0);
+
+                window.hclViewer = new DataTreeViewer(treeEl, tree, {
+                    initialExpandDepth: 2,
+                    searchable: true
+                });
+
+                statusEl.textContent = 'HCL parsed successfully';
+                statusEl.className = 'status success';
+            } catch (e) {
+                statusEl.textContent = `HCL parse error: ${e.message}`;
+                statusEl.className = 'status error';
+            }
+        }
+
+        // Run all tests
+        checkLibraries();
+        testYAML();
+        testTOML();
+        testHCL();
+    </script>
+</body>
+</html>

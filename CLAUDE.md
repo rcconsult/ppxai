@@ -36,6 +36,60 @@ For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE
 
 Breakdown: ~70% Python, ~18% TypeScript, ~9% JavaScript, ~3% CSS/HTML
 
+## Installation Locations (CRITICAL)
+
+**IMPORTANT: Follow these exact paths. NEVER use `AppData\Local\ppxai` on Windows.**
+
+| Item | Linux | macOS | Windows |
+|------|-------|-------|---------|
+| **Binaries** | `~/.local/bin/` | `~/.local/bin/` | `~/.ppxai/` |
+| **App bundle** | - | `/Applications/ppxai.app` | - |
+| **Config** | `~/.ppxai/ppxai-config.json` | `~/.ppxai/ppxai-config.json` | `~/.ppxai/ppxai-config.json` |
+| **API keys** | `~/.ppxai/.env` | `~/.ppxai/.env` | `~/.ppxai/.env` |
+| **Data** | `~/.ppxai/` | `~/.ppxai/` | `~/.ppxai/` |
+| **Web UI** | `~/.ppxai/web/` | `~/.ppxai/web/` | `~/.ppxai/web/` |
+
+**Windows structure (`%USERPROFILE%\.ppxai\`):**
+```
+~/.ppxai/
+├── web/                    # Web UI files (app.js, index.html, lib/)
+│   ├── lib/               # JavaScript libraries (js-yaml, toml, hcl2-parser, etc.)
+│   └── shared/            # Shared command definitions
+├── sessions/              # Saved sessions
+├── exports/               # Exported markdown files
+├── checkpoints/           # File-based undo snapshots
+├── logs/                  # Debug logs
+├── usage/                 # Usage statistics
+├── ppxai-server.exe       # Server binary
+├── ppxai-desktop.exe      # Desktop app binary
+├── ppxai-config.json      # User configuration
+└── .env                   # API keys
+```
+
+**Linux/macOS structure:**
+```
+~/.local/bin/
+├── ppxai                   # TUI binary
+├── ppxai-server            # Server binary
+└── ppxai-desktop           # Desktop app binary
+
+~/.ppxai/
+├── web/                    # Web UI files
+├── sessions/              # Saved sessions
+├── exports/               # Exported markdown files
+├── checkpoints/           # File-based undo snapshots
+├── logs/                  # Debug logs
+├── usage/                 # Usage statistics
+├── ppxai-config.json      # User configuration
+└── .env                   # API keys
+```
+
+**When deploying/copying files:**
+- **Windows**: Use `~/.ppxai/` for everything (binaries + data + web)
+- **Linux/macOS**: Use `~/.local/bin/` for binaries, `~/.ppxai/` for data + web
+
+The `AppData\Local\ppxai` path exists only as a **search path** for finding binaries, NOT as an installation target.
+
 ## Development Setup
 
 ### File Encoding: UTF-8 without BOM

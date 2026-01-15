@@ -1,0 +1,49 @@
+# Sample YAML file for e2e testing
+name: YAML Test Application
+version: "1.0.0"
+
+server:
+  host: localhost
+  port: 8080
+  ssl:
+    enabled: true
+    cert_path: /etc/ssl/cert.pem
+
+database:
+  driver: postgres
+  connection:
+    host: localhost
+    port: 5432
+    database: testdb
+  pool:
+    min: 5
+    max: 20
+    timeout: 30
+
+users:
+  - id: 1
+    name: Alice
+    email: alice@example.com
+    roles:
+      - admin
+      - developer
+  - id: 2
+    name: Bob
+    email: bob@example.com
+    roles:
+      - user
+
+features:
+  debug: false
+  logging: true
+  cache:
+    enabled: true
+    ttl: 3600
+
+metadata:
+  created: 2024-01-15
+  environment: development
+  tags:
+    - test
+    - sample
+    - config
