@@ -21,15 +21,23 @@ from .config import (
     MODEL_PROVIDER,
     PROVIDERS,
     get_api_key,
-    get_base_url,
-    get_provider_config,
     get_auto_restore_mode,
     get_auto_save_interval,
+    get_base_url,
+    get_provider_config,
+    get_tui_config,
+    get_tui_theme,
 )
 from .ui import console, display_welcome, select_model, select_provider
+from .ui_components import format_usage_string, render_status_line, render_status_panel
 from .engine.session import SessionManager
 from .engine.types import EventType
 from .markdown_tables import render_markdown_with_tables
+from .themes import get_theme
+from .common.logger import get_logger
+from .common.event_handler import TUIEventHandler
+
+logger = get_logger("tui")
 
 
 def format_tokens(count: int) -> str:
@@ -93,7 +101,6 @@ def get_status_line(handler, use_themed: bool = True):
             label = usage_display.get("label")  # Provider/model label or None
 
             if prompt_tokens > 0 or completion_tokens > 0:
-                from ppxai.ui_components import format_usage_string
                 usage_str = format_usage_string(prompt_tokens, completion_tokens, cost)
                 # Add label prefix for provider/model modes
                 if label:
@@ -101,11 +108,6 @@ def get_status_line(handler, use_themed: bool = True):
 
     # Use themed status line if available (experiment/rich-tui)
     if use_themed:
-        from ppxai.ui_components import render_status_line, render_status_panel
-        from ppxai.themes import get_theme
-        from ppxai.config import get_tui_theme, get_tui_config
-        from ppxai.version import __version__
-
         # Use handler's current theme if set, otherwise fall back to config
         theme_name = getattr(handler, 'current_theme_name', None) or get_tui_theme()
         theme = get_theme(theme_name)
@@ -575,8 +577,8 @@ def restore_session_to_handler(handler: CommandHandler, session_state: dict) -> 
         try:
             handler.engine_client.set_provider(stored_provider)
             handler.provider = stored_provider
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Failed to restore provider '{stored_provider}': {e}")
 
     if stored_model:
         # v1.13.10: Use strict mode to validate model exists before restoring
@@ -719,9 +721,7 @@ def main():
                 current_model = handler.current_model
                 continue
 
-            # Log user input (use new shared logger)
-            from ppxai.common.logger import get_logger
-            logger = get_logger("tui")
+            # Log user input
             if user_input.startswith('/'):
                 logger.log_command(user_input)
             else:
@@ -735,8 +735,6 @@ def main():
                 # EngineClient handles all context injection (@file, @git, @tree) internally
                 async def stream_engine_response():
                     """Stream response from EngineClient using shared TUIEventHandler."""
-                    from ppxai.common.event_handler import TUIEventHandler
-
                     # Create TUI-specific event handler with verbose setting, theme, and emoji mode
                     verbose = hasattr(handler, 'tools_verbose') and handler.tools_verbose
                     theme_name = getattr(handler, 'current_theme_name', None)
@@ -780,8 +778,8 @@ def main():
                 if message_count > 0 and (save_interval == 0 or message_count % max(1, save_interval) == 0):
                     try:
                         handler.engine_client.session.save_dirty()
-                    except Exception:
-                        pass  # Silent fail on auto-save
+                    except Exception as e:
+                        logger.warning(f"Auto-save failed: {e}")
 
         except KeyboardInterrupt:
             # Implement double Ctrl-C to exit

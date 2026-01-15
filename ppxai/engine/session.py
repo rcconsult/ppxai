@@ -13,6 +13,9 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 from .types import Message, UsageStats, SessionInfo
+from ..common.logger import get_logger
+
+logger = get_logger("tui")
 
 
 # Session state file location
@@ -422,7 +425,8 @@ class SessionManager:
                     message_count=len(data.get("messages", [])),
                     saved_at=data.get("saved_at", "")
                 ))
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Skipping corrupted session file '{filepath.name}': {e}")
                 continue
 
         return sessions

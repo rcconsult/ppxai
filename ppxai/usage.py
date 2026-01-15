@@ -14,6 +14,10 @@ from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, asdict, field
 import uuid
 
+from .common.logger import get_logger
+
+logger = get_logger("tui")
+
 
 @dataclass
 class SessionUsageRecord:
@@ -81,8 +85,8 @@ class UsageStorage:
                         return data
                     # Future: handle version migrations
                     return data
-            except (json.JSONDecodeError, IOError):
-                pass
+            except (json.JSONDecodeError, IOError) as e:
+                logger.debug(f"Failed to load usage data from {self.usage_file}: {e}")
 
         # Return empty structure
         return {

@@ -4,7 +4,7 @@ FastAPI HTTP Server with SSE streaming for ppxai.
 This server provides:
 - SSE streaming for chat responses (POST /chat)
 - REST endpoints for configuration (providers, models, tools)
-- Health check endpoint
+- Health and readiness endpoints for container orchestration
 - Session isolation for multi-client support (v1.14.0)
 
 Usage:
@@ -34,231 +34,119 @@ from pydantic import BaseModel
 from ..engine import EngineClient, EventType
 from ..common.logger import get_logger
 from ..version import __version__
-
-# Session management (v1.14.0)
-# Each client gets isolated state via session ID in X-Session-Id header
-# Session structure: {"engine": EngineClient, "created_at": float, "last_used": float, "lock": asyncio.Lock}
-sessions: dict[str, dict] = {}
-SESSION_TIMEOUT = 3600  # 1 hour - sessions expire after this period of inactivity
-
-# Default engine for backward compatibility (clients that don't send session ID)
-default_engine: Optional[EngineClient] = None
-
-# Inactivity auto-shutdown (v1.14.0)
-# Server shuts down after idle_timeout seconds with no client activity
-# Configurable via ppxai-config.json: {"server": {"idle_timeout": 300}}
-# 0 = disabled (server runs forever)
-last_activity: float = 0.0
-idle_shutdown_task: Optional[asyncio.Task] = None
-shutdown_requested: bool = False
+from .session_manager import SessionManager
 
 # Server logger (v1.11.2)
 logger = get_logger("server")
 
-# Global lock for default engine (v1.12.0) - sessions have their own locks
-default_chat_lock: asyncio.Lock = None
-
-# Consent request tracking (Phase 1C: v1.11.0, v1.11.2)
-# v1.14.0: Keyed by (session_id, file_path) for session isolation
-pending_consent_requests: dict[tuple[str, str], asyncio.Future] = {}
-# v1.14.0: Keyed by (session_id, command) for session isolation
-pending_shell_consent_requests: dict[tuple[str, str], asyncio.Future] = {}
+# Session manager singleton (v1.13.10)
+# Replaces global variables for thread-safe session management
+# All state is now managed by SessionManager class
+session_manager: SessionManager = None
 
 
-def get_or_create_session(session_id: Optional[str]) -> tuple[str, EngineClient, asyncio.Lock]:
-    """Get existing session or create new one (v1.14.0).
+async def get_or_create_session(session_id: Optional[str]) -> tuple[str, EngineClient, asyncio.Lock]:
+    """Get existing session or create new one (v1.14.0, v1.13.10 refactored).
 
     Args:
         session_id: Session ID from X-Session-Id header, or None for default
 
     Returns:
         tuple: (session_id, engine, lock)
+
+    Note: v1.13.10 - Now delegates to SessionManager for thread-safe operation.
     """
-    global sessions, default_engine, default_chat_lock
+    global session_manager
 
-    # No session ID = use default engine (backward compatibility)
-    if not session_id:
-        if default_engine is None:
-            raise HTTPException(status_code=503, detail="Engine not initialized")
-        return ("default", default_engine, default_chat_lock)
+    if session_manager is None or not session_manager.is_initialized:
+        raise HTTPException(status_code=503, detail="Engine not initialized")
 
-    # Check for existing session
-    if session_id in sessions:
-        session = sessions[session_id]
-        session["last_used"] = time.time()
-        return (session_id, session["engine"], session["lock"])
-
-    # Create new session
-    logger.info(f"Creating new session: {session_id}")
-    engine = EngineClient(
-        consent_callback=lambda fp: _session_consent_handler(session_id, fp),
-        shell_consent_callback=lambda cmd, wd, rl: _session_shell_consent_handler(session_id, cmd, wd, rl)
-    )
-
-    # Set default provider
-    from ..config import get_available_providers
-    providers = get_available_providers()
-    if providers:
-        engine.set_provider(providers[0])
-
-    sessions[session_id] = {
-        "engine": engine,
-        "created_at": time.time(),
-        "last_used": time.time(),
-        "lock": asyncio.Lock(),
-    }
-
-    return (session_id, engine, sessions[session_id]["lock"])
+    try:
+        return await session_manager.get_or_create_session(session_id)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
 
 async def cleanup_expired_sessions():
-    """Remove sessions that haven't been used recently (v1.14.0)."""
-    global sessions
-    now = time.time()
-    expired = [
-        sid for sid, session in sessions.items()
-        if now - session["last_used"] > SESSION_TIMEOUT
-    ]
-    for sid in expired:
-        logger.info(f"Cleaning up expired session: {sid}")
-        session = sessions.pop(sid)
-        # Save usage before cleanup
-        try:
-            session["engine"].session.save_usage_to_persistent_storage()
-        except Exception as e:
-            logger.warning(f"Failed to save usage for session {sid}: {e}")
+    """Remove sessions that haven't been used recently (v1.14.0).
+
+    Note: v1.13.10 - Now delegates to SessionManager.
+    """
+    global session_manager
+    if session_manager:
+        await session_manager.cleanup_expired_sessions()
 
 
 def update_activity():
-    """Update last activity timestamp (v1.14.0)."""
-    global last_activity
-    last_activity = time.time()
+    """Update last activity timestamp (v1.14.0).
+
+    Note: v1.13.10 - Now delegates to SessionManager.
+    """
+    global session_manager
+    if session_manager:
+        session_manager.update_activity()
 
 
 async def check_idle_shutdown():
     """Background task to check for idle shutdown (v1.14.0).
 
-    Shuts down server after idle_timeout seconds of no client activity.
-    Timeout is configurable via ppxai-config.json: {"server": {"idle_timeout": 300}}
-    Set to 0 to disable auto-shutdown.
+    Note: v1.13.10 - This function is now a no-op as idle shutdown
+    is handled by SessionManager.start_idle_monitor().
+    Kept for backward compatibility.
     """
-    global shutdown_requested
-    from ..config import get_idle_timeout
-
-    idle_timeout = get_idle_timeout()
-
-    # If timeout is 0 or negative, disable auto-shutdown
-    if idle_timeout <= 0:
-        logger.info("Idle auto-shutdown disabled (idle_timeout <= 0)")
-        return
-
-    while not shutdown_requested:
-        await asyncio.sleep(30)  # Check every 30 seconds
-
-        if shutdown_requested:
-            break
-
-        idle_time = time.time() - last_activity
-        if idle_time > idle_timeout:
-            logger.info(f"Server idle for {idle_time:.0f}s (>{idle_timeout}s), initiating shutdown")
-            print(f"\nAuto-shutdown: No activity for {idle_timeout // 60} minutes")
-            shutdown_requested = True
-            # Trigger graceful shutdown via os._exit after cleanup
-            # The lifespan context will handle cleanup
-            import os
-            os._exit(0)
-
-
-async def _session_consent_handler(session_id: str, file_path: str) -> tuple[bool, str]:
-    """Handle file edit consent request for a specific session (v1.14.0)."""
-    global pending_consent_requests
-
-    key = (session_id, file_path)
-    future = asyncio.Future()
-    pending_consent_requests[key] = future
-
-    try:
-        approved, response = await asyncio.wait_for(future, timeout=300.0)
-        return (approved, response)
-    except asyncio.TimeoutError:
-        pending_consent_requests.pop(key, None)
-        return (False, 'n')
-    finally:
-        pending_consent_requests.pop(key, None)
-
-
-async def _session_shell_consent_handler(session_id: str, command: str, working_dir: str, risk_level: str) -> tuple[bool, str]:
-    """Handle shell command consent request for a specific session (v1.14.0)."""
-    global pending_shell_consent_requests
-
-    key = (session_id, command)
-    future: asyncio.Future[tuple[bool, str]] = asyncio.Future()
-    pending_shell_consent_requests[key] = future
-
-    try:
-        approved, response = await asyncio.wait_for(future, timeout=60.0)
-        return (approved, response)
-    except asyncio.TimeoutError:
-        pending_shell_consent_requests.pop(key, None)
-        return (False, 'n')
-    finally:
-        pending_shell_consent_requests.pop(key, None)
+    # Idle shutdown is now managed by SessionManager
+    pass
 
 
 async def http_consent_handler(file_path: str) -> tuple[bool, str]:
     """
     Handle file edit consent request via HTTP (Phase 1C: v1.11.0).
     Used by default engine (backward compatibility).
+
+    Note: v1.13.10 - Now delegates to SessionManager.
     """
-    return await _session_consent_handler("default", file_path)
+    global session_manager
+    return await session_manager._handle_consent("default", file_path)
 
 
 async def http_shell_consent_handler(command: str, working_dir: str, risk_level: str) -> tuple[bool, str]:
     """
     Handle shell command consent request via HTTP (v1.11.2).
     Used by default engine (backward compatibility).
+
+    Note: v1.13.10 - Now delegates to SessionManager.
     """
-    return await _session_shell_consent_handler("default", command, working_dir, risk_level)
+    global session_manager
+    return await session_manager._handle_shell_consent("default", command, working_dir, risk_level)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Manage application lifespan (startup/shutdown)."""
-    global default_engine, default_chat_lock, sessions, idle_shutdown_task, last_activity
-    import time
+    """Manage application lifespan (startup/shutdown).
+
+    v1.13.10: Refactored to use SessionManager for thread-safe state management.
+    """
+    global session_manager
     startup_start = time.time()
 
-    # Startup: Initialize default engine with consent callbacks (v1.11.0, v1.11.2)
-    logger.info("Server starting up - initializing default EngineClient")
-    default_engine = EngineClient(
+    # Initialize SessionManager singleton (v1.13.10)
+    logger.info("Server starting up - initializing SessionManager")
+    session_manager = SessionManager.get_instance()
+
+    # Initialize with consent callbacks
+    await session_manager.initialize(
         consent_callback=http_consent_handler,
         shell_consent_callback=http_shell_consent_handler
     )
+
+    default_engine = session_manager.default_engine
     logger.info(f"EngineClient initialized - provider: {default_engine.provider_name}, model: {default_engine.model}")
+    logger.info("Session management initialized (v1.14.0, v1.13.10 thread-safe)")
 
-    # Initialize chat lock (v1.12.0)
-    default_chat_lock = asyncio.Lock()
-    logger.info("Chat request lock initialized")
-
-    # Initialize sessions dict
-    sessions = {}
-    logger.info("Session management initialized (v1.14.0)")
-
-    # Initialize activity tracking and start idle shutdown checker (v1.14.0)
+    # Start idle shutdown monitor (v1.14.0)
     from ..config import get_idle_timeout
     idle_timeout = get_idle_timeout()
-    last_activity = time.time()
-    idle_shutdown_task = asyncio.create_task(check_idle_shutdown())
-    if idle_timeout > 0:
-        logger.info(f"Idle shutdown checker started (timeout: {idle_timeout}s)")
-    else:
-        logger.info("Idle auto-shutdown disabled")
-
-    # Set default provider (tries perplexity first, falls back to gemini)
-    from ..config import get_available_providers
-    providers = get_available_providers()
-    if providers:
-        default_engine.set_provider(providers[0])
+    await session_manager.start_idle_monitor(idle_timeout)
 
     startup_time = time.time() - startup_start
     logger.info(f"Server startup completed in {startup_time:.2f}s")
@@ -273,37 +161,9 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Shutdown: Cleanup
-    # v1.14.0: Cancel idle shutdown task
-    global shutdown_requested
-    shutdown_requested = True
-    if idle_shutdown_task:
-        idle_shutdown_task.cancel()
-        try:
-            await idle_shutdown_task
-        except asyncio.CancelledError:
-            pass
-
-    # v1.12.3: Save usage to persistent storage before shutdown
-    if default_engine and default_engine.session:
-        try:
-            default_engine.session.save_usage_to_persistent_storage()
-            logger.info("Default session usage saved to persistent storage")
-        except Exception as e:
-            logger.warning(f"Failed to save usage to persistent storage: {e}")
-
-    # v1.14.0: Save all session usage
-    for sid, session in sessions.items():
-        try:
-            session["engine"].session.save_usage_to_persistent_storage()
-            logger.info(f"Session {sid} usage saved to persistent storage")
-        except Exception as e:
-            logger.warning(f"Failed to save usage for session {sid}: {e}")
-
-    pending_consent_requests.clear()
-    pending_shell_consent_requests.clear()
-    sessions.clear()
-    default_engine = None
+    # Shutdown: Cleanup via SessionManager (v1.13.10)
+    logger.info("Server shutting down - cleaning up SessionManager")
+    await session_manager.shutdown()
     print("ppxai HTTP server stopped")
 
 
@@ -552,17 +412,68 @@ async def sse_coding_task_generator(
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
+    """Health check endpoint for container orchestration.
+
+    Returns basic server status. Use /ready for detailed readiness checks.
+
+    v1.13.10: Updated to use SessionManager and enhanced for Kubernetes.
+    """
+    global session_manager
     from ..config import get_idle_timeout
     idle_timeout = get_idle_timeout()
 
+    last_activity = session_manager.last_activity if session_manager else 0
+
     return {
-        "status": "ok",
+        "status": "healthy",
         "version": __version__,
-        "engine": default_engine is not None,
-        "sessions": len(sessions),  # v1.14.0
-        "idle_timeout": idle_timeout,  # v1.13.6
-        "idle_since": int(time.time() - last_activity) if last_activity > 0 else 0,  # v1.13.6
+        "engine": session_manager.is_initialized if session_manager else False,
+        "sessions": session_manager.session_count if session_manager else 0,
+        "idle_timeout": idle_timeout,
+        "idle_since": int(time.time() - last_activity) if last_activity > 0 else 0,
+    }
+
+
+@app.get("/ready")
+async def readiness_check():
+    """Readiness check endpoint for container orchestration (v1.13.10).
+
+    Returns detailed readiness status. Use for Kubernetes readiness probes.
+    Returns 503 if server is not ready to accept traffic.
+
+    Checks:
+    - SessionManager initialized
+    - Default engine available
+    - Provider configured
+    """
+    global session_manager
+
+    # Check if session manager is ready
+    if session_manager is None or not session_manager.is_initialized:
+        raise HTTPException(
+            status_code=503,
+            detail="Server not ready: SessionManager not initialized"
+        )
+
+    default_engine = session_manager.default_engine
+    if default_engine is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Server not ready: Default engine not available"
+        )
+
+    # Get available providers
+    from ..config import get_available_providers
+    providers = get_available_providers()
+
+    return {
+        "status": "ready",
+        "version": __version__,
+        "provider": default_engine.provider_name,
+        "model": default_engine.model,
+        "providers_available": len(providers),
+        "sessions_active": session_manager.session_count,
+        "shutdown_requested": session_manager.shutdown_requested,
     }
 
 
@@ -575,13 +486,16 @@ async def shutdown_server():
 
     Returns:
         JSON: {"shutdown": true, "message": "Server shutting down..."}
+
+    Note: v1.13.10 - Now uses SessionManager.request_shutdown().
     """
-    global shutdown_requested
+    global session_manager
 
     logger.info("Shutdown requested via /shutdown endpoint")
 
-    # Mark shutdown as requested to stop background tasks
-    shutdown_requested = True
+    # Mark shutdown as requested via SessionManager
+    if session_manager:
+        session_manager.request_shutdown()
 
     # Schedule the actual shutdown after response is sent
     async def delayed_shutdown():
@@ -643,7 +557,7 @@ async def get_status(x_session_id: Optional[str] = Header(None)):
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     return {
         "provider": engine.provider_name,
@@ -660,28 +574,18 @@ async def list_active_sessions():
     """List all active sessions (v1.14.0).
 
     Returns information about currently active sessions for debugging/monitoring.
+
+    Note: v1.13.10 - Now uses SessionManager.list_sessions().
     """
-    global sessions
+    global session_manager
 
-    # Cleanup expired sessions first
-    await cleanup_expired_sessions()
-
-    session_list = []
-    for sid, session in sessions.items():
-        session_list.append({
-            "session_id": sid,
-            "created_at": session["created_at"],
-            "last_used": session["last_used"],
-            "provider": session["engine"].provider_name,
-            "model": session["engine"].model,
-            "message_count": len(session["engine"].session.messages),
-            "working_dir": session["engine"].get_working_dir(),
-        })
+    # Get sessions via SessionManager (includes cleanup)
+    session_list = await session_manager.list_sessions()
 
     return {
         "sessions": session_list,
         "count": len(session_list),
-        "default_engine_active": default_engine is not None,
+        "default_engine_active": session_manager.is_initialized,
     }
 
 
@@ -701,7 +605,7 @@ async def chat(
     v1.14.0: Supports X-Session-Id header for session isolation.
     Each session has its own conversation history, working directory, and state.
     """
-    session_id, engine, chat_lock = get_or_create_session(x_session_id)
+    session_id, engine, chat_lock = await get_or_create_session(x_session_id)
 
     logger.log_http_request("POST", "/chat", f"session={session_id}")
 
@@ -748,7 +652,7 @@ async def coding_task(
     v1.12.0: Serializes coding task requests to prevent concurrent execution.
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, chat_lock = get_or_create_session(x_session_id)
+    session_id, engine, chat_lock = await get_or_create_session(x_session_id)
 
     # Acquire lock to serialize requests (v1.12.0)
     async with chat_lock:
@@ -787,7 +691,7 @@ async def get_providers(x_session_id: Optional[str] = Header(None)):
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     providers = engine.list_providers()
     return {
@@ -818,7 +722,7 @@ async def set_provider(
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     success = engine.set_provider(request.provider)
     if not success:
@@ -840,7 +744,7 @@ async def get_models(x_session_id: Optional[str] = Header(None)):
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     models = engine.list_models()
     return {
@@ -866,7 +770,7 @@ async def set_model(
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     success = engine.set_model(request.model)
     if not success:
@@ -886,7 +790,7 @@ async def get_tools(x_session_id: Optional[str] = Header(None)):
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     tools = engine.list_tools()
 
@@ -895,8 +799,8 @@ async def get_tools(x_session_id: Optional[str] = Header(None)):
     try:
         if hasattr(engine, 'session') and hasattr(engine.session, 'edit_consent_mode'):
             consent_mode = engine.session.edit_consent_mode
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Failed to get consent mode from session: {e}")
 
     # v1.13.9: Get full status including auto_retry_empty
     status = engine.get_tools_status()
@@ -920,7 +824,7 @@ async def set_tools(
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     if request.enabled:
         engine.enable_tools()
@@ -941,7 +845,7 @@ async def set_tools_config(
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     success = engine.set_tool_config(request.setting, request.value)
     if not success:
@@ -965,7 +869,7 @@ async def get_tool_help(
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     if not engine.tools_enabled or not engine.tool_manager:
         raise HTTPException(status_code=400, detail="Tools not enabled")
@@ -996,7 +900,7 @@ async def get_usage(x_session_id: Optional[str] = Header(None)):
     Returns full usage including per-model breakdown (v1.12.2).
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     return engine.get_usage()
 
@@ -1022,7 +926,7 @@ async def set_usage_display_mode(
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     valid_modes = {"session", "provider", "model", "off"}
     if request.mode not in valid_modes:
@@ -1041,7 +945,7 @@ async def get_usage_display_mode(x_session_id: Optional[str] = Header(None)):
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     return {"mode": engine.session.usage_display_mode}
 
@@ -1052,7 +956,7 @@ async def reset_usage(x_session_id: Optional[str] = Header(None)):
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     engine.session.reset_usage()
     return {"success": True}
@@ -1123,7 +1027,7 @@ async def get_working_dir(x_session_id: Optional[str] = Header(None)):
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     import os
     path = engine.get_working_dir() or os.getcwd()
@@ -1140,7 +1044,7 @@ async def set_working_dir(
     v1.14.0: Supports X-Session-Id header for session isolation.
     Each session maintains its own working directory.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     import os
     # Expand tilde and resolve to absolute path
@@ -1164,7 +1068,7 @@ async def set_auto_inject(
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     engine.set_auto_inject(request.enabled)
     return {"enabled": request.enabled, "success": True}
@@ -1176,7 +1080,7 @@ async def get_auto_inject(x_session_id: Optional[str] = Header(None)):
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     return {"enabled": engine.get_auto_inject()}
 
@@ -1195,7 +1099,7 @@ async def get_context_info(x_session_id: Optional[str] = Header(None)):
         - injected_tokens: Tokens used by injections
         - message_count: Number of messages in history
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     info = engine.get_context_info()
     return {**info, "session_id": session_id}
@@ -1212,7 +1116,7 @@ async def clear_context_injections(x_session_id: Optional[str] = Header(None)):
         - removed_count: Number of injections removed
         - success: True if operation completed
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     removed_count = engine.clear_injected_contexts()
     return {
@@ -1230,7 +1134,7 @@ async def get_sessions(x_session_id: Optional[str] = Header(None)):
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     sessions_list = engine.list_sessions()
     return {
@@ -1257,7 +1161,7 @@ async def save_session(
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     saved_name = engine.save_session(name)
     return {"name": saved_name}
@@ -1272,7 +1176,7 @@ async def export_answer(
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     try:
         body = await request.json()
@@ -1296,7 +1200,7 @@ async def load_session(
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     success = engine.load_session(name)
     if not success:
@@ -1323,7 +1227,7 @@ async def clear_session(x_session_id: Optional[str] = Header(None)):
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     engine.clear_history()
     return {"cleared": True}
@@ -1368,7 +1272,7 @@ async def restore_last_session(x_session_id: Optional[str] = Header(None)):
     """
     from ..engine.session import SessionManager
 
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     state = SessionManager.get_last_session_state()
     if not state or not state.get("name"):
@@ -1427,7 +1331,7 @@ async def search_files(
     Returns:
         JSON: {"files": [{"name": "file.py", "path": "src/file.py"}, ...]}
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     from pathlib import Path
     import os
@@ -1491,7 +1395,7 @@ async def read_file(
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     from pathlib import Path
     import os
@@ -1616,7 +1520,7 @@ async def interrupt_stream(x_session_id: Optional[str] = Header(None)):
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     engine.interrupt_stream()
     return {"interrupted": True}
@@ -1640,8 +1544,9 @@ async def respond_to_consent(
         JSON: {"file_path": str, "response": str, "resolved": bool}
 
     v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Now uses SessionManager.resolve_consent().
     """
-    global pending_consent_requests
+    global session_manager
 
     # Determine session ID (use default if not provided)
     session_id = x_session_id or "default"
@@ -1653,19 +1558,14 @@ async def respond_to_consent(
     if response not in ['y', 'n', 'always', 'never']:
         raise HTTPException(status_code=400, detail=f"Invalid response: {response}. Must be y, n, always, or never")
 
-    # Find and resolve the pending request (v1.14.0: keyed by session)
-    key = (session_id, file_path)
-    if key in pending_consent_requests:
-        future = pending_consent_requests[key]
-        if not future.done():
-            # Resolve the future with (approved, response)
-            approved = response in ['y', 'always']
-            future.set_result((approved, response))
-            return {
-                "file_path": file_path,
-                "response": response,
-                "resolved": True
-            }
+    # Resolve via SessionManager (v1.13.10)
+    resolved = await session_manager.resolve_consent(session_id, file_path, response)
+    if resolved:
+        return {
+            "file_path": file_path,
+            "response": response,
+            "resolved": True
+        }
 
     # No pending request found
     raise HTTPException(status_code=404, detail=f"No pending consent request for: {file_path}")
@@ -1689,8 +1589,9 @@ async def respond_to_shell_consent(
         JSON: {"command": str, "response": str, "resolved": bool}
 
     v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Now uses SessionManager.resolve_shell_consent().
     """
-    global pending_shell_consent_requests
+    global session_manager
 
     # Determine session ID (use default if not provided)
     session_id = x_session_id or "default"
@@ -1702,19 +1603,14 @@ async def respond_to_shell_consent(
     if response not in ['y', 'n', 'always', 'never']:
         raise HTTPException(status_code=400, detail=f"Invalid response: {response}. Must be y, n, always, or never")
 
-    # Find and resolve the pending request (v1.14.0: keyed by session)
-    key = (session_id, command)
-    if key in pending_shell_consent_requests:
-        future = pending_shell_consent_requests[key]
-        if not future.done():
-            # Resolve the future with (approved, response)
-            approved = response in ['y', 'always']
-            future.set_result((approved, response))
-            return {
-                "command": command,
-                "response": response,
-                "resolved": True
-            }
+    # Resolve via SessionManager (v1.13.10)
+    resolved = await session_manager.resolve_shell_consent(session_id, command, response)
+    if resolved:
+        return {
+            "command": command,
+            "response": response,
+            "resolved": True
+        }
 
     # No pending request found
     raise HTTPException(status_code=404, detail=f"No pending shell consent request for: {command}")
@@ -1728,7 +1624,7 @@ async def get_agent_status(x_session_id: Optional[str] = Header(None)):
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     # Include checkpoint status in v1.12.0+
     checkpoint_status = engine.get_checkpoint_status()
@@ -1746,7 +1642,7 @@ async def get_agent_config(x_session_id: Optional[str] = Header(None)):
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     return engine.get_agent_config()
 
@@ -1759,7 +1655,7 @@ async def enable_agent_mode(x_session_id: Optional[str] = Header(None)):
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     engine.enable_agent_mode()
     logger.info(f"Agent mode enabled via API for session {session_id}")
@@ -1777,7 +1673,7 @@ async def disable_agent_mode(x_session_id: Optional[str] = Header(None)):
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     engine.disable_agent_mode()
     logger.info(f"Agent mode disabled via API for session {session_id}")
@@ -1796,7 +1692,7 @@ async def get_checkpoint_status(x_session_id: Optional[str] = Header(None)):
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     return engine.get_checkpoint_status()
 
@@ -1807,7 +1703,7 @@ async def undo_last_checkpoint(x_session_id: Optional[str] = Header(None)):
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     # v1.12.0: Allow undo regardless of agent mode - checkpoints from previous sessions should be undoable
     # Check if checkpoints are enabled
@@ -1880,7 +1776,7 @@ async def list_checkpoints(
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     checkpoints = engine.list_checkpoints(limit=limit)
     return {
@@ -1900,7 +1796,7 @@ async def set_checkpoint_backend(
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     backend = request.get("backend")
     if not backend:
@@ -1937,7 +1833,7 @@ async def clear_file_checkpoints(
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     keep_last = 0
     if request:
@@ -1969,7 +1865,7 @@ async def get_checkpoint_info(
 
     v1.14.0: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = get_or_create_session(x_session_id)
+    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     checkpoints = engine.list_checkpoints(limit=20)
 

@@ -1,5 +1,8 @@
 """
 Command handlers for the ppxai application.
+
+This module provides the CommandHandler class which handles all slash commands
+in the TUI application (/help, /model, /save, /load, etc.).
 """
 
 import os
@@ -11,7 +14,22 @@ from rich.console import Console
 from prompt_toolkit import prompt as pt_prompt
 from prompt_toolkit.validation import Validator, ValidationError
 
-from .config import CODING_MODEL, get_coding_model, get_provider_config, get_api_key, get_base_url, PROVIDERS
+from .config import (
+    CODING_MODEL,
+    PROVIDERS,
+    find_config_file,
+    get_api_key,
+    get_base_url,
+    get_coding_model,
+    get_default_provider,
+    get_provider_config,
+    get_tui_config,
+    get_tui_theme,
+    reload_config,
+    set_tui_config,
+)
+from .engine import EngineClient
+from .engine.tools.builtin import web_premium
 from .prompts import CODING_PROMPTS
 from .utils import read_file_content
 from .ui import (
@@ -29,6 +47,10 @@ from .ui import (
 )
 from .themes import get_theme, list_themes, Theme, DEFAULT_THEME
 from .ui_components import render_theme_list
+from .common.logger import get_logger
+from .version import __version__
+
+logger = get_logger("tui")
 
 
 class ConsentValidator(Validator):
@@ -231,8 +253,6 @@ class CommandHandler:
             CommandHandler(client, api_key, current_model, base_url, provider)
             The client parameter is ignored - all operations use EngineClient.
         """
-        from ppxai.config import get_default_provider, get_base_url
-
         # Detect signature based on first argument type
         # If first arg is a string, it's the new signature (api_key first)
         # If first arg is not a string, it's the old signature (client first)
@@ -257,9 +277,6 @@ class CommandHandler:
 
         # v1.12.0: EngineClient is REQUIRED for all operations
         # No legacy client fallback - engine handles everything
-        from ppxai.engine import EngineClient
-        import os
-
         # Create engine client with consent callbacks
         self.engine_client = EngineClient(
             consent_callback=tui_consent_handler,
@@ -278,7 +295,6 @@ class CommandHandler:
         self.auto_route = True
 
         # v1.12.0: TUI theme support - load from config
-        from ppxai.config import get_tui_theme
         try:
             config_theme = get_tui_theme()
             self.current_theme_name = config_theme
@@ -294,7 +310,6 @@ class CommandHandler:
         self.emoji_mode = False  # Default: text symbols for reliable alignment
 
         # v1.12.1: Initialize logger for agent mode event handling
-        from ppxai.common.logger import get_logger
         self.logger = get_logger("tui")
 
     def handle_quit(self) -> bool:
@@ -666,7 +681,6 @@ class CommandHandler:
 
         if args == "list":
             # List available models
-            from .config import get_provider_config
             config = get_provider_config(self.provider)
             models = config.get("models", {})
 
@@ -678,7 +692,6 @@ class CommandHandler:
             console.print()
         elif args:
             # Direct model selection by ID
-            from .config import get_provider_config
             config = get_provider_config(self.provider)
             models = config.get("models", {})
 
@@ -1069,8 +1082,8 @@ class CommandHandler:
             if self.engine_client.tool_manager:
                 try:
                     tool_count = len(self.engine_client.tool_manager.list_tools())
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Failed to get tool count: {e}")
 
             console.print(f"[green]✓ Tools enabled[/green] ({tool_count} tools available)")
 
@@ -1078,12 +1091,11 @@ class CommandHandler:
             try:
                 consent_mode = self.engine_client.session.edit_consent_mode
                 console.print(f"[dim]Consent mode: {consent_mode}[/dim]")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to get consent mode: {e}")
 
             # v1.13.4: Show web search provider
             try:
-                from ppxai.engine.tools.builtin import web_premium
                 if web_premium.is_available():
                     provider = web_premium.get_premium_search_provider(self.provider)
                     if provider:
@@ -1249,11 +1261,9 @@ class CommandHandler:
 
     def handle_debug_log(self, args: str):
         """Handle /debug-log command to enable/disable debug logging."""
-        # v1.12.1: Use common logger (same as main.py) to fix logging mismatch
-        from ppxai.common.logger import get_logger
         from pathlib import Path
 
-        logger = get_logger("tui")
+        debug_logger = get_logger("tui")
 
         if not args:
             # Show status
@@ -1362,8 +1372,8 @@ class CommandHandler:
 
                     if len(matches) >= max_results * 2:  # Get more for sorting
                         break
-        except PermissionError:
-            pass
+        except PermissionError as e:
+            logger.debug(f"Permission denied during file search: {e}")
 
         # Sort by relevance (shorter paths and exact filename matches first)
         def score(p):
@@ -1652,8 +1662,9 @@ class CommandHandler:
                     console.print("[yellow]⚠️  Cannot undo: uncommitted changes in working directory[/yellow]")
                     console.print("[dim]Commit or stash your changes first, then try again[/dim]\n")
                     return
-            except subprocess.CalledProcessError:
-                pass  # If git status fails, let the undo attempt proceed
+            except subprocess.CalledProcessError as e:
+                logger.debug(f"git status failed during undo check: {e}")
+                # Let the undo attempt proceed
 
         # Show what will be undone
         console.print(f"\n[bold yellow]⚠️  Undo Last Agent Task[/bold yellow]")
@@ -2228,9 +2239,6 @@ If more work is needed, explain what you're doing next and use the appropriate t
             /status cwd          - Toggle working directory display
             /status datetime     - Toggle date/time display
         """
-        from ppxai.config import get_tui_config, get_provider_config, set_tui_config
-        from ppxai.version import __version__
-
         parts = args.strip().split() if args else []
 
         # Handle toggle subcommands
@@ -2372,8 +2380,6 @@ If more work is needed, explain what you're doing next and use the appropriate t
             /config reload    - Reload config from file without restarting
             /config path      - Show config file path
         """
-        from ppxai.config import reload_config, find_config_file
-
         parts = args.strip().split() if args else []
 
         if not parts:

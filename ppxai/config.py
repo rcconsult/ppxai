@@ -14,6 +14,8 @@ Config file search order:
 
 import json
 import os
+import platform
+import warnings
 from io import StringIO
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -352,7 +354,6 @@ def load_config() -> Dict[str, Any]:
             providers[provider_id] = processed
 
         if validation_errors:
-            import warnings
             for error in validation_errors:
                 warnings.warn(f"Config validation: {error}")
 
@@ -920,8 +921,6 @@ def set_tui_config(key: str, value: Any) -> bool:
     Returns:
         True if saved successfully, False otherwise.
     """
-    import json
-
     # Find or create config file path
     config_path = find_config_file()
     if config_path is None:
@@ -1034,7 +1033,6 @@ def _expand_path_template(template: str) -> str:
     Returns:
         Expanded path string
     """
-    import platform
     return template.replace("{home}", str(Path.home())).replace("{platform}", platform.system().lower())
 
 

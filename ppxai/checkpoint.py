@@ -24,6 +24,9 @@ from pathlib import Path
 from typing import Optional, List, Tuple
 
 from .config import SESSIONS_DIR
+from .common.logger import get_logger
+
+logger = get_logger("tui")
 
 
 class CheckpointBackend(ABC):
@@ -407,9 +410,9 @@ class CheckpointManager:
         try:
             checkpoint_id = self.backend.create_checkpoint(description)
             return checkpoint_id if checkpoint_id else None
-        except Exception:
-            # If checkpoint creation fails, continue without checkpoint
-            # (Better to let agent run than block on checkpoint failure)
+        except Exception as e:
+            logger.debug(f"Checkpoint creation failed: {e}")
+            # Better to let agent run than block on checkpoint failure
             return None
 
     def restore_checkpoint(self, checkpoint_id: str) -> bool:

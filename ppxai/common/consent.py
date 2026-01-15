@@ -7,11 +7,13 @@ Provides a client-agnostic consent system where:
 - Consent decisions are consistent across all clients
 
 Architecture:
-- ConsentManager: Session-scoped consent tracking
+- BaseConsentManager: Shared logic for all consent managers
+- ConsentManager: Async consent manager (primary)
+- SyncConsentManager: Synchronous consent manager (legacy)
 - ConsentDecision: Enum for decision types (YES, NO, ALWAYS, NEVER)
 - Clients provide consent_callback that returns (approved: bool, decision: str)
 
-Version: v1.11.7
+Version: v1.13.10
 """
 
 import re
@@ -19,6 +21,10 @@ from enum import Enum
 from dataclasses import dataclass
 from typing import Callable, Awaitable, Dict, Set, List, Optional
 from pathlib import Path
+
+from .logger import get_logger
+
+logger = get_logger("tui")
 
 
 class ConsentDecision(Enum):
@@ -46,56 +52,32 @@ class ShellConsentRequest:
     tool_name: str = "shell"
 
 
-class ConsentManager:
+class BaseConsentManager:
     """
-    Session-scoped file editing consent manager.
+    Base class for consent managers with shared logic.
 
-    Tracks consent decisions and enforces policies:
-    - Per-file consent (YES/NO)
-    - Session-wide always/never
-    - Approved files cache
-
-    Usage:
-        # TUI
-        async def tui_consent_prompt(request):
-            response = await prompt_toolkit_input("Allow edit? ")
-            return (response in ['y', 'yes', 'always'], response)
-
-        manager = ConsentManager(consent_callback=tui_consent_prompt)
-        approved = await manager.request_consent("/path/to/file.py")
-
-        # VSCode (via HTTP)
-        async def vscode_consent_prompt(request):
-            response = await send_sse_event("consent_request", request)
-            return (response.approved, response.decision)
-
-        manager = ConsentManager(consent_callback=vscode_consent_prompt)
-        approved = await manager.request_consent("/path/to/file.py")
+    Contains all non-callback-dependent logic:
+    - State initialization
+    - Shell config loading and pattern matching
+    - Command classification
+    - Status reporting
+    - File/command approval checking (non-prompting)
     """
 
-    def __init__(
-        self,
-        consent_callback: Callable[[ConsentRequest], Awaitable[tuple[bool, str]]] = None,
-        shell_consent_callback: Callable[[ShellConsentRequest], Awaitable[tuple[bool, str]]] = None,
-        shell_config: Optional[Dict] = None
-    ):
+    def __init__(self, shell_config: Optional[Dict] = None):
         """
-        Initialize consent manager.
+        Initialize base consent manager state.
 
         Args:
-            consent_callback: Async function that prompts user for file edit consent
-            shell_consent_callback: Async function that prompts user for shell command consent
             shell_config: Shell tool configuration with dangerous/allowed/never patterns
         """
-        # File editing consent
-        self.consent_callback = consent_callback
+        # File editing consent state
         self._always_approve = False
         self._never_approve = False
         self._approved_files: Set[str] = set()
         self._denied_files: Set[str] = set()
 
-        # Shell command consent
-        self.shell_consent_callback = shell_consent_callback
+        # Shell command consent state
         self._always_approve_shell = False
         self._never_approve_shell = False
         self._approved_commands: Set[str] = set()
@@ -119,22 +101,22 @@ class ConsentManager:
         for pattern in config.get("dangerous_commands", []):
             try:
                 self._dangerous_patterns.append(re.compile(pattern))
-            except re.error:
-                pass  # Skip invalid patterns
+            except re.error as e:
+                logger.warning(f"Invalid dangerous_commands regex pattern '{pattern}': {e}")
 
         # Compile allowed command patterns (bypass consent)
         for pattern in config.get("allowed_commands", []):
             try:
                 self._allowed_patterns.append(re.compile(pattern))
-            except re.error:
-                pass
+            except re.error as e:
+                logger.warning(f"Invalid allowed_commands regex pattern '{pattern}': {e}")
 
         # Compile never-allow patterns (always block)
         for pattern in config.get("never_allow", []):
             try:
                 self._never_allow_patterns.append(re.compile(pattern))
-            except re.error:
-                pass
+            except re.error as e:
+                logger.warning(f"Invalid never_allow regex pattern '{pattern}': {e}")
 
     def _is_never_allowed_command(self, command: str) -> bool:
         """
@@ -215,6 +197,170 @@ class ConsentManager:
         self._approved_commands.clear()
         self._denied_commands.clear()
 
+    def get_status(self) -> Dict[str, any]:
+        """
+        Get current consent status.
+
+        Returns:
+            dict: Status information for files and shell commands
+        """
+        return {
+            "file_mode": "always" if self._always_approve else ("never" if self._never_approve else "prompt"),
+            "approved_files": len(self._approved_files),
+            "denied_files": len(self._denied_files),
+            "shell_mode": "always" if self._always_approve_shell else ("never" if self._never_approve_shell else "prompt"),
+            "approved_commands": len(self._approved_commands),
+            "denied_commands": len(self._denied_commands),
+        }
+
+    def is_file_approved(self, file_path: str) -> bool:
+        """
+        Check if file is already approved (without prompting).
+
+        Args:
+            file_path: Path to check
+
+        Returns:
+            bool: True if in approved set or always_approve mode
+        """
+        if self._always_approve:
+            return True
+
+        if self._never_approve:
+            return False
+
+        file_path_normalized = str(Path(file_path).resolve())
+        return file_path_normalized in self._approved_files
+
+    def is_command_approved(self, command: str) -> bool:
+        """
+        Check if command is already approved (without prompting).
+
+        Args:
+            command: Shell command to check
+
+        Returns:
+            bool: True if approved, False if denied or unknown
+        """
+        # Check risk level
+        risk_level = self._classify_command(command)
+
+        # Never-allow always returns False
+        if risk_level == "never":
+            return False
+
+        # Safe commands always return True
+        if risk_level == "safe":
+            return True
+
+        # Check session-wide decisions
+        if self._always_approve_shell:
+            return True
+
+        if self._never_approve_shell:
+            return False
+
+        # Check command-specific cache
+        return command in self._approved_commands
+
+    def _process_file_decision(self, decision: str, file_path_normalized: str) -> bool:
+        """
+        Process a consent decision for file operations.
+
+        Args:
+            decision: The decision string (always, never, yes, y, no, etc.)
+            file_path_normalized: Normalized file path
+
+        Returns:
+            bool: True if approved, False if denied
+        """
+        decision = decision.lower().strip()
+
+        if decision == "always":
+            self._always_approve = True
+            return True
+        elif decision == "never":
+            self._never_approve = True
+            return False
+        elif decision in ["yes", "y"]:
+            self._approved_files.add(file_path_normalized)
+            return True
+        else:  # "no", "n", or anything else
+            self._denied_files.add(file_path_normalized)
+            return False
+
+    def _process_shell_decision(self, decision: str, command: str) -> bool:
+        """
+        Process a consent decision for shell commands.
+
+        Args:
+            decision: The decision string (always, never, yes, y, no, etc.)
+            command: The shell command
+
+        Returns:
+            bool: True if approved, False if denied
+        """
+        decision = decision.lower().strip()
+
+        if decision == "always":
+            self._always_approve_shell = True
+            return True
+        elif decision == "never":
+            self._never_approve_shell = True
+            return False
+        elif decision in ["yes", "y"]:
+            self._approved_commands.add(command)
+            return True
+        else:  # "no", "n", or anything else
+            self._denied_commands.add(command)
+            return False
+
+
+class ConsentManager(BaseConsentManager):
+    """
+    Async session-scoped consent manager.
+
+    Tracks consent decisions and enforces policies:
+    - Per-file consent (YES/NO)
+    - Session-wide always/never
+    - Approved files cache
+
+    Usage:
+        # TUI
+        async def tui_consent_prompt(request):
+            response = await prompt_toolkit_input("Allow edit? ")
+            return (response in ['y', 'yes', 'always'], response)
+
+        manager = ConsentManager(consent_callback=tui_consent_prompt)
+        approved = await manager.request_consent("/path/to/file.py")
+
+        # VSCode (via HTTP)
+        async def vscode_consent_prompt(request):
+            response = await send_sse_event("consent_request", request)
+            return (response.approved, response.decision)
+
+        manager = ConsentManager(consent_callback=vscode_consent_prompt)
+        approved = await manager.request_consent("/path/to/file.py")
+    """
+
+    def __init__(
+        self,
+        consent_callback: Callable[[ConsentRequest], Awaitable[tuple[bool, str]]] = None,
+        shell_consent_callback: Callable[[ShellConsentRequest], Awaitable[tuple[bool, str]]] = None,
+        shell_config: Optional[Dict] = None
+    ):
+        """
+        Initialize async consent manager.
+
+        Args:
+            consent_callback: Async function that prompts user for file edit consent
+            shell_consent_callback: Async function that prompts user for shell command consent
+            shell_config: Shell tool configuration with dangerous/allowed/never patterns
+        """
+        super().__init__(shell_config)
+        self.consent_callback = consent_callback
+        self.shell_consent_callback = shell_consent_callback
+
     async def request_consent(
         self,
         file_path: str,
@@ -261,60 +407,11 @@ class ConsentManager:
 
         try:
             approved, decision = await self.consent_callback(request)
-            decision = decision.lower().strip()
-
-            # Process decision
-            if decision == "always":
-                self._always_approve = True
-                return True
-            elif decision == "never":
-                self._never_approve = True
-                return False
-            elif decision in ["yes", "y"]:
-                self._approved_files.add(file_path_normalized)
-                return True
-            else:  # "no", "n", or anything else
-                self._denied_files.add(file_path_normalized)
-                return False
+            return self._process_file_decision(decision, file_path_normalized)
 
         except Exception as e:
             # Error during consent - deny for safety
             return False
-
-    def get_status(self) -> Dict[str, any]:
-        """
-        Get current consent status.
-
-        Returns:
-            dict: Status information for files and shell commands
-        """
-        return {
-            "file_mode": "always" if self._always_approve else ("never" if self._never_approve else "prompt"),
-            "approved_files": len(self._approved_files),
-            "denied_files": len(self._denied_files),
-            "shell_mode": "always" if self._always_approve_shell else ("never" if self._never_approve_shell else "prompt"),
-            "approved_commands": len(self._approved_commands),
-            "denied_commands": len(self._denied_commands),
-        }
-
-    def is_file_approved(self, file_path: str) -> bool:
-        """
-        Check if file is already approved (without prompting).
-
-        Args:
-            file_path: Path to check
-
-        Returns:
-            bool: True if in approved set or always_approve mode
-        """
-        if self._always_approve:
-            return True
-
-        if self._never_approve:
-            return False
-
-        file_path_normalized = str(Path(file_path).resolve())
-        return file_path_normalized in self._approved_files
 
     async def request_shell_consent(
         self,
@@ -370,64 +467,19 @@ class ConsentManager:
 
         try:
             approved, decision = await self.shell_consent_callback(request)
-            decision = decision.lower().strip()
-
-            # Process decision
-            if decision == "always":
-                self._always_approve_shell = True
-                return True
-            elif decision == "never":
-                self._never_approve_shell = True
-                return False
-            elif decision in ["yes", "y"]:
-                self._approved_commands.add(command)
-                return True
-            else:  # "no", "n", or anything else
-                self._denied_commands.add(command)
-                return False
+            return self._process_shell_decision(decision, command)
 
         except Exception:
             # Error during consent - deny for safety
             return False
 
-    def is_command_approved(self, command: str) -> bool:
-        """
-        Check if command is already approved (without prompting).
 
-        Args:
-            command: Shell command to check
-
-        Returns:
-            bool: True if approved, False if denied or unknown
-        """
-        # Check risk level
-        risk_level = self._classify_command(command)
-
-        # Never-allow always returns False
-        if risk_level == "never":
-            return False
-
-        # Safe commands always return True
-        if risk_level == "safe":
-            return True
-
-        # Check session-wide decisions
-        if self._always_approve_shell:
-            return True
-
-        if self._never_approve_shell:
-            return False
-
-        # Check command-specific cache
-        return command in self._approved_commands
-
-
-# Synchronous wrapper for non-async contexts
-class SyncConsentManager:
+class SyncConsentManager(BaseConsentManager):
     """
     Synchronous consent manager for legacy code.
 
-    Wraps ConsentManager with synchronous interface.
+    Provides synchronous versions of request_consent and request_shell_consent.
+    Inherits all other functionality from BaseConsentManager.
     """
 
     def __init__(
@@ -444,92 +496,9 @@ class SyncConsentManager:
             shell_consent_callback: Synchronous function that prompts user for shell commands
             shell_config: Shell tool configuration
         """
-        # File editing consent
+        super().__init__(shell_config)
         self.consent_callback = consent_callback
-        self._always_approve = False
-        self._never_approve = False
-        self._approved_files: Set[str] = set()
-        self._denied_files: Set[str] = set()
-
-        # Shell command consent
         self.shell_consent_callback = shell_consent_callback
-        self._always_approve_shell = False
-        self._never_approve_shell = False
-        self._approved_commands: Set[str] = set()
-        self._denied_commands: Set[str] = set()
-
-        # Load shell configuration patterns
-        self._load_shell_config(shell_config or {})
-
-    def _load_shell_config(self, config: Dict):
-        """Load shell command patterns from configuration."""
-        self._dangerous_patterns: List[re.Pattern] = []
-        self._allowed_patterns: List[re.Pattern] = []
-        self._never_allow_patterns: List[re.Pattern] = []
-
-        for pattern in config.get("dangerous_commands", []):
-            try:
-                self._dangerous_patterns.append(re.compile(pattern))
-            except re.error:
-                pass
-
-        for pattern in config.get("allowed_commands", []):
-            try:
-                self._allowed_patterns.append(re.compile(pattern))
-            except re.error:
-                pass
-
-        for pattern in config.get("never_allow", []):
-            try:
-                self._never_allow_patterns.append(re.compile(pattern))
-            except re.error:
-                pass
-
-    def _is_never_allowed_command(self, command: str) -> bool:
-        """Check if command matches never-allow patterns."""
-        for pattern in self._never_allow_patterns:
-            if pattern.search(command):
-                return True
-        return False
-
-    def _is_allowed_command(self, command: str) -> bool:
-        """Check if command matches allowed patterns."""
-        for pattern in self._allowed_patterns:
-            if pattern.search(command):
-                return True
-        return False
-
-    def _is_dangerous_command(self, command: str) -> bool:
-        """Check if command matches dangerous patterns."""
-        for pattern in self._dangerous_patterns:
-            if pattern.search(command):
-                return True
-        return False
-
-    def _classify_command(self, command: str) -> str:
-        """Classify command risk level."""
-        if self._is_never_allowed_command(command):
-            return "never"
-        elif self._is_dangerous_command(command):
-            return "dangerous"
-        elif self._is_allowed_command(command):
-            return "safe"
-        else:
-            return "dangerous"
-
-    def reset(self):
-        """Reset all consent decisions."""
-        # File editing reset
-        self._always_approve = False
-        self._never_approve = False
-        self._approved_files.clear()
-        self._denied_files.clear()
-
-        # Shell command reset
-        self._always_approve_shell = False
-        self._never_approve_shell = False
-        self._approved_commands.clear()
-        self._denied_commands.clear()
 
     def request_consent(
         self,
@@ -576,34 +545,10 @@ class SyncConsentManager:
 
         try:
             approved, decision = self.consent_callback(request)
-            decision = decision.lower().strip()
-
-            if decision == "always":
-                self._always_approve = True
-                return True
-            elif decision == "never":
-                self._never_approve = True
-                return False
-            elif decision in ["yes", "y"]:
-                self._approved_files.add(file_path_normalized)
-                return True
-            else:
-                self._denied_files.add(file_path_normalized)
-                return False
+            return self._process_file_decision(decision, file_path_normalized)
 
         except Exception:
             return False
-
-    def get_status(self) -> Dict[str, any]:
-        """Get current consent status."""
-        return {
-            "file_mode": "always" if self._always_approve else ("never" if self._never_approve else "prompt"),
-            "approved_files": len(self._approved_files),
-            "denied_files": len(self._denied_files),
-            "shell_mode": "always" if self._always_approve_shell else ("never" if self._never_approve_shell else "prompt"),
-            "approved_commands": len(self._approved_commands),
-            "denied_commands": len(self._denied_commands),
-        }
 
     def request_shell_consent(
         self,
@@ -658,46 +603,7 @@ class SyncConsentManager:
 
         try:
             approved, decision = self.shell_consent_callback(request)
-            decision = decision.lower().strip()
-
-            if decision == "always":
-                self._always_approve_shell = True
-                return True
-            elif decision == "never":
-                self._never_approve_shell = True
-                return False
-            elif decision in ["yes", "y"]:
-                self._approved_commands.add(command)
-                return True
-            else:
-                self._denied_commands.add(command)
-                return False
+            return self._process_shell_decision(decision, command)
 
         except Exception:
             return False
-
-    def is_command_approved(self, command: str) -> bool:
-        """
-        Check if command is already approved (without prompting).
-
-        Args:
-            command: Shell command to check
-
-        Returns:
-            bool: True if approved, False if denied or unknown
-        """
-        risk_level = self._classify_command(command)
-
-        if risk_level == "never":
-            return False
-
-        if risk_level == "safe":
-            return True
-
-        if self._always_approve_shell:
-            return True
-
-        if self._never_approve_shell:
-            return False
-
-        return command in self._approved_commands

@@ -2,10 +2,13 @@
 Tests for the ppxai HTTP server.
 
 These tests verify the FastAPI HTTP server endpoints work correctly.
+
+v1.13.10: Updated to work with SessionManager instead of global default_engine.
 """
 
 import pytest
-from unittest.mock import MagicMock
+import asyncio
+from unittest.mock import MagicMock, AsyncMock, patch
 
 
 # Skip tests if server dependencies not installed
@@ -15,6 +18,7 @@ pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient
 import ppxai.server.http as http_module
+from ppxai.server.session_manager import SessionManager
 
 
 def create_mock_engine():
@@ -71,29 +75,62 @@ def create_mock_engine():
     return engine
 
 
+def create_mock_session_manager(mock_engine=None):
+    """Create a mock SessionManager with a mock engine."""
+    manager = MagicMock(spec=SessionManager)
+    manager.is_initialized = mock_engine is not None
+    manager._default_engine = mock_engine
+    manager.default_engine = mock_engine
+    manager.session_count = 0
+    manager.last_activity = 0.0
+    manager.shutdown_requested = False
+
+    # Configure async method get_or_create_session to return (session_id, engine, lock)
+    mock_lock = asyncio.Lock()
+    if mock_engine:
+        manager.get_or_create_session = AsyncMock(
+            return_value=("default", mock_engine, mock_lock)
+        )
+    else:
+        # When no engine, raise RuntimeError as SessionManager would
+        manager.get_or_create_session = AsyncMock(
+            side_effect=RuntimeError("SessionManager not initialized")
+        )
+
+    # Configure other async methods
+    manager.list_sessions = AsyncMock(return_value=[])
+    manager.cleanup_expired_sessions = AsyncMock(return_value=0)
+    manager.shutdown = AsyncMock()
+
+    return manager
+
+
 @pytest.fixture
 def mock_client():
-    """Create a test client with a mock engine injected after startup."""
+    """Create a test client with a mock engine injected via SessionManager."""
     mock_engine = create_mock_engine()
+    mock_manager = create_mock_session_manager(mock_engine)
 
     # Create test client which will run startup event
     with TestClient(http_module.app, raise_server_exceptions=False) as test_client:
-        # Now inject the mock engine after startup (replacing the real one)
-        original = http_module.default_engine
-        http_module.default_engine = mock_engine
+        # Inject the mock session manager after startup
+        original = http_module.session_manager
+        http_module.session_manager = mock_manager
         yield test_client, mock_engine
-        # Restore original (may be real engine from startup)
-        http_module.default_engine = original
+        # Restore original
+        http_module.session_manager = original
 
 
 @pytest.fixture
 def no_engine_client():
-    """Create a test client with no engine (set to None after startup)."""
+    """Create a test client with no engine (SessionManager not initialized)."""
+    mock_manager = create_mock_session_manager(None)
+
     with TestClient(http_module.app, raise_server_exceptions=False) as test_client:
-        original = http_module.default_engine
-        http_module.default_engine = None
+        original = http_module.session_manager
+        http_module.session_manager = mock_manager
         yield test_client
-        http_module.default_engine = original
+        http_module.session_manager = original
 
 
 class TestHttpServerHealth:
@@ -105,7 +142,7 @@ class TestHttpServerHealth:
         response = client.get("/health")
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "ok"
+        assert data["status"] == "healthy"
         assert "version" in data
 
     def test_health_check_without_engine(self, no_engine_client):

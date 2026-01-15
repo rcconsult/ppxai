@@ -27,6 +27,9 @@ from .session import SessionManager
 from .context import ContextInjector
 from ..checkpoint import CheckpointManager
 from ..config import calculate_cost
+from ..common.logger import get_logger
+
+logger = get_logger("tui")
 
 
 class EngineClient:
@@ -216,8 +219,9 @@ class EngineClient:
             if checkpoints:
                 # list_checkpoints returns [(id, description, timestamp), ...] sorted by recency
                 self._last_checkpoint_id = checkpoints[0][0]
-        except Exception:
-            pass  # Ignore errors - checkpoint ID will be None until first checkpoint is created
+        except Exception as e:
+            logger.debug(f"Failed to restore checkpoint ID: {e}")
+            # Checkpoint ID will be None until first checkpoint is created
 
     def set_working_dir(self, path: str):
         """Set working directory for file path resolution.
@@ -844,8 +848,8 @@ class EngineClient:
             try:
                 if re.search(pattern, command):
                     return "never"
-            except re.error:
-                pass
+            except re.error as e:
+                logger.warning(f"Invalid never_allow regex pattern '{pattern}': {e}")
 
         # Check dangerous patterns (require consent)
         dangerous = self._shell_config.get("dangerous_commands", [])
@@ -853,8 +857,8 @@ class EngineClient:
             try:
                 if re.search(pattern, command):
                     return "dangerous"
-            except re.error:
-                pass
+            except re.error as e:
+                logger.warning(f"Invalid dangerous_commands regex pattern '{pattern}': {e}")
 
         # Check allowed patterns (safe)
         allowed = self._shell_config.get("allowed_commands", [])
@@ -862,8 +866,8 @@ class EngineClient:
             try:
                 if re.search(pattern, command):
                     return "safe"
-            except re.error:
-                pass
+            except re.error as e:
+                logger.warning(f"Invalid allowed_commands regex pattern '{pattern}': {e}")
 
         # Unknown commands are treated as dangerous for safety
         return "dangerous"
@@ -888,13 +892,8 @@ class EngineClient:
         # Classify command risk
         risk_level = self._classify_shell_command(command)
 
-        # Debug logging (v1.11.2, v1.12.1: use common logger)
-        try:
-            from ppxai.common.logger import get_logger
-            logger = get_logger("tui")
-            logger.debug(f"Shell consent: command='{command[:50]}...' risk={risk_level} callback={self.shell_consent_callback is not None}")
-        except:
-            pass
+        # Debug logging
+        logger.debug(f"Shell consent: command='{command[:50]}...' risk={risk_level} callback={self.shell_consent_callback is not None}")
 
         # Never-allow commands are always blocked
         if risk_level == "never":
@@ -920,13 +919,8 @@ class EngineClient:
 
         # Request consent from user via callback
         try:
-            # Debug logging (v1.12.1: use common logger)
-            try:
-                from ppxai.common.logger import get_logger
-                logger = get_logger("tui")
-                logger.debug(f"Requesting shell consent for: {command[:50]}...")
-            except:
-                pass
+            # Debug logging
+            logger.debug(f"Requesting shell consent for: {command[:50]}...")
 
             # Emit consent request event (for HTTP/SSE support)
             consent_event = Event(
@@ -945,10 +939,7 @@ class EngineClient:
             approved, response = await self.shell_consent_callback(command, working_dir, risk_level)
 
             # Debug logging
-            try:
-                logger.debug(f"Shell consent response: approved={approved} response={response}")
-            except:
-                pass
+            logger.debug(f"Shell consent response: approved={approved} response={response}")
 
             if response == "y":
                 self.session.allowed_commands.add(command)
