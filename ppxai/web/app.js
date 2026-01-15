@@ -2663,16 +2663,17 @@ class PpxaiApp {
         if (ext === 'json') {
             data = JSON.parse(content);
         } else if (ext === 'yaml' || ext === 'yml') {
-            // Simple YAML parsing (for complex YAML, would need js-yaml library)
-            // Fall back to treating as JSON if it looks like JSON
-            if (content.trim().startsWith('{') || content.trim().startsWith('[')) {
+            // Use js-yaml library for YAML parsing (v1.13.11)
+            if (typeof jsyaml !== 'undefined') {
+                data = jsyaml.load(content);
+            } else if (content.trim().startsWith('{') || content.trim().startsWith('[')) {
+                // Fallback: treat JSON-like YAML as JSON
                 data = JSON.parse(content);
             } else {
-                // Basic YAML-like structure for demo (in production, use js-yaml)
                 throw new Error('YAML parsing requires js-yaml library. Showing source view.');
             }
         } else if (ext === 'toml' || ext === 'hcl' || ext === 'tf' || ext === 'tfvars') {
-            // TOML/HCL parsing would require dedicated libraries
+            // TOML/HCL/Terraform - no browser-compatible library available
             throw new Error(`${ext.toUpperCase()} parsing not available in browser. Showing source view.`);
         } else {
             data = JSON.parse(content);
