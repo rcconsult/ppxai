@@ -14,6 +14,7 @@ from unittest.mock import patch, MagicMock
 
 from ppxai.engine.session import SessionManager, SESSION_STATE_FILE
 from ppxai.config import get_session_config, get_auto_restore_mode, get_auto_save_interval
+from ppxai.config.store import ConfigStore
 
 
 @pytest.fixture
@@ -42,6 +43,17 @@ def session_manager(temp_sessions_dir, temp_exports_dir):
 def temp_state_file(tmp_path):
     """Create a temporary state file path."""
     return tmp_path / "session-state.json"
+
+
+@pytest.fixture
+def config_store():
+    """Provide ConfigStore for test configuration injection.
+
+    Yields the ConfigStore instance and resets it after the test.
+    """
+    store = ConfigStore.get_instance()
+    yield store
+    store.reset()
 
 
 class TestSessionManagerCommandHistory:
@@ -259,50 +271,97 @@ class TestSessionLoadWithExtras:
 class TestSessionConfig:
     """Tests for session configuration."""
 
-    def test_get_session_config_defaults(self):
+    def test_get_session_config_defaults(self, config_store):
         """Test default session config values."""
-        with patch('ppxai.config._config', {}):
-            config = get_session_config()
-            assert config["auto_restore"] == "prompt"
-            assert config["auto_save_interval"] == 1
+        # Minimal config with required fields
+        config_store.set_for_testing({
+            "config_source": "test",
+            "default_provider": "perplexity",
+            "providers": {},
+            "tools": {},
+            "context": {},
+        })
+        config = get_session_config()
+        assert config["auto_restore"] == "prompt"
+        assert config["auto_save_interval"] == 1
 
-    def test_get_session_config_custom(self):
+    def test_get_session_config_custom(self, config_store):
         """Test custom session config values."""
-        with patch('ppxai.config._config', {
+        config_store.set_for_testing({
+            "config_source": "test",
+            "default_provider": "perplexity",
+            "providers": {},
+            "tools": {},
+            "context": {},
             "session": {
                 "auto_restore": "always",
                 "auto_save_interval": 5
             }
-        }):
-            config = get_session_config()
-            assert config["auto_restore"] == "always"
-            assert config["auto_save_interval"] == 5
+        })
+        config = get_session_config()
+        assert config["auto_restore"] == "always"
+        assert config["auto_save_interval"] == 5
 
-    def test_get_auto_restore_mode_valid_values(self):
+    def test_get_auto_restore_mode_valid_values(self, config_store):
         """Test valid auto_restore values."""
         for mode in ["always", "prompt", "never"]:
-            with patch('ppxai.config._config', {"session": {"auto_restore": mode}}):
-                assert get_auto_restore_mode() == mode
+            config_store.set_for_testing({
+                "config_source": "test",
+                "default_provider": "perplexity",
+                "providers": {},
+                "tools": {},
+                "context": {},
+                "session": {"auto_restore": mode}
+            })
+            assert get_auto_restore_mode() == mode
 
-    def test_get_auto_restore_mode_invalid_defaults_to_prompt(self):
+    def test_get_auto_restore_mode_invalid_defaults_to_prompt(self, config_store):
         """Test invalid auto_restore value defaults to prompt."""
-        with patch('ppxai.config._config', {"session": {"auto_restore": "invalid"}}):
-            assert get_auto_restore_mode() == "prompt"
+        config_store.set_for_testing({
+            "config_source": "test",
+            "default_provider": "perplexity",
+            "providers": {},
+            "tools": {},
+            "context": {},
+            "session": {"auto_restore": "invalid"}
+        })
+        assert get_auto_restore_mode() == "prompt"
 
-    def test_get_auto_save_interval_valid(self):
+    def test_get_auto_save_interval_valid(self, config_store):
         """Test valid auto_save_interval values."""
-        with patch('ppxai.config._config', {"session": {"auto_save_interval": 10}}):
-            assert get_auto_save_interval() == 10
+        config_store.set_for_testing({
+            "config_source": "test",
+            "default_provider": "perplexity",
+            "providers": {},
+            "tools": {},
+            "context": {},
+            "session": {"auto_save_interval": 10}
+        })
+        assert get_auto_save_interval() == 10
 
-    def test_get_auto_save_interval_zero(self):
+    def test_get_auto_save_interval_zero(self, config_store):
         """Test auto_save_interval of 0 (every message)."""
-        with patch('ppxai.config._config', {"session": {"auto_save_interval": 0}}):
-            assert get_auto_save_interval() == 0
+        config_store.set_for_testing({
+            "config_source": "test",
+            "default_provider": "perplexity",
+            "providers": {},
+            "tools": {},
+            "context": {},
+            "session": {"auto_save_interval": 0}
+        })
+        assert get_auto_save_interval() == 0
 
-    def test_get_auto_save_interval_negative_clamped(self):
+    def test_get_auto_save_interval_negative_clamped(self, config_store):
         """Test negative auto_save_interval is clamped to 0."""
-        with patch('ppxai.config._config', {"session": {"auto_save_interval": -5}}):
-            assert get_auto_save_interval() == 0
+        config_store.set_for_testing({
+            "config_source": "test",
+            "default_provider": "perplexity",
+            "providers": {},
+            "tools": {},
+            "context": {},
+            "session": {"auto_save_interval": -5}
+        })
+        assert get_auto_save_interval() == 0
 
 
 class TestSessionFullFlow:

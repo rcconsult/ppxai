@@ -42,7 +42,7 @@ Breakdown: ~70% Python, ~18% TypeScript, ~9% JavaScript, ~3% CSS/HTML
 
 | Item | Linux | macOS | Windows |
 |------|-------|-------|---------|
-| **Binaries** | `~/.local/bin/` | `~/.local/bin/` | `~/.ppxai/` |
+| **Binaries** | `~/.local/bin/` | `~/.local/bin/` | `~/.ppxai/bin/` |
 | **App bundle** | - | `/Applications/ppxai.app` | - |
 | **Config** | `~/.ppxai/ppxai-config.json` | `~/.ppxai/ppxai-config.json` | `~/.ppxai/ppxai-config.json` |
 | **API keys** | `~/.ppxai/.env` | `~/.ppxai/.env` | `~/.ppxai/.env` |
@@ -52,6 +52,10 @@ Breakdown: ~70% Python, ~18% TypeScript, ~9% JavaScript, ~3% CSS/HTML
 **Windows structure (`%USERPROFILE%\.ppxai\`):**
 ```
 ~/.ppxai/
+├── bin/                    # Binaries
+│   ├── ppxai.exe          # TUI binary
+│   ├── ppxai-server.exe   # Server binary
+│   └── ppxai-desktop.exe  # Desktop app binary
 ├── web/                    # Web UI files (app.js, index.html, lib/)
 │   ├── lib/               # JavaScript libraries (js-yaml, toml, hcl2-parser, etc.)
 │   └── shared/            # Shared command definitions
@@ -60,8 +64,6 @@ Breakdown: ~70% Python, ~18% TypeScript, ~9% JavaScript, ~3% CSS/HTML
 ├── checkpoints/           # File-based undo snapshots
 ├── logs/                  # Debug logs
 ├── usage/                 # Usage statistics
-├── ppxai-server.exe       # Server binary
-├── ppxai-desktop.exe      # Desktop app binary
 ├── ppxai-config.json      # User configuration
 └── .env                   # API keys
 ```
@@ -85,7 +87,7 @@ Breakdown: ~70% Python, ~18% TypeScript, ~9% JavaScript, ~3% CSS/HTML
 ```
 
 **When deploying/copying files:**
-- **Windows**: Use `~/.ppxai/` for everything (binaries + data + web)
+- **Windows**: Use `~/.ppxai/bin/` for binaries, `~/.ppxai/` for data + web
 - **Linux/macOS**: Use `~/.local/bin/` for binaries, `~/.ppxai/` for data + web
 
 The `AppData\Local\ppxai` path exists only as a **search path** for finding binaries, NOT as an installation target.

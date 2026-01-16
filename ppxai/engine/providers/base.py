@@ -184,3 +184,100 @@ class BaseProvider(ABC):
             completion_tokens=getattr(usage, 'completion_tokens', 0) or 0,
             total_tokens=getattr(usage, 'total_tokens', 0) or 0,
         )
+
+    def _format_error(self, e: Exception) -> str:
+        """Format exception into user-friendly error message.
+
+        Provides clear, actionable messages for common errors while preserving
+        technical details for debugging when needed.
+
+        Args:
+            e: The exception to format
+
+        Returns:
+            User-friendly error message
+        """
+        import openai
+
+        error_type = type(e).__name__
+        error_str = str(e)
+
+        # Connection errors (no network, DNS failure, VPN required)
+        if isinstance(e, openai.APIConnectionError):
+            # Extract the root cause
+            if "getaddrinfo failed" in error_str:
+                return (
+                    f"Connection failed: Unable to resolve hostname.\n"
+                    f"Check that:\n"
+                    f"  - You have network connectivity\n"
+                    f"  - VPN is connected (if required for this endpoint)\n"
+                    f"  - The API endpoint URL is correct"
+                )
+            elif "Connection refused" in error_str:
+                return (
+                    f"Connection refused: Server is not reachable.\n"
+                    f"Check that:\n"
+                    f"  - The server is running\n"
+                    f"  - The port number is correct\n"
+                    f"  - Firewall is not blocking the connection"
+                )
+            elif "timed out" in error_str.lower():
+                return (
+                    f"Connection timed out: Server did not respond.\n"
+                    f"Check that:\n"
+                    f"  - The server is running and responsive\n"
+                    f"  - Network latency is acceptable"
+                )
+            else:
+                return f"Connection failed: Unable to reach the server."
+
+        # Authentication errors
+        if isinstance(e, openai.AuthenticationError):
+            return (
+                f"Authentication failed: Invalid API key.\n"
+                f"Check that your API key is correct in .env or ppxai-config.json"
+            )
+
+        # Rate limiting
+        if isinstance(e, openai.RateLimitError):
+            return f"Rate limit exceeded. Please wait before retrying."
+
+        # Bad request (invalid parameters)
+        if isinstance(e, openai.BadRequestError):
+            # Extract just the error message, not the full JSON
+            if "'message':" in error_str:
+                import re
+                match = re.search(r"'message':\s*'([^']+)'", error_str)
+                if match:
+                    return f"Invalid request: {match.group(1)}"
+            return f"Invalid request: {error_str}"
+
+        # API errors (server-side issues)
+        if isinstance(e, openai.APIStatusError):
+            return f"API error ({e.status_code}): {error_str}"
+
+        # httpx-level connection errors
+        if isinstance(e, httpx.ConnectError):
+            return f"Connection failed: Unable to connect to the server."
+
+        # Fallback: return the exception type and message without full traceback
+        return f"{error_type}: {error_str}"
+
+    def _log_error_traceback(self, e: Exception) -> None:
+        """Log full exception traceback to debug log for troubleshooting.
+
+        This preserves detailed error information for debugging while keeping
+        the user-facing message clean.
+
+        Args:
+            e: The exception to log
+        """
+        import traceback
+        try:
+            from ppxai.common.logger import get_logger
+            logger = get_logger("tui")
+            if logger.enabled:
+                logger.error(f"Provider error: {type(e).__name__}: {e}")
+                logger.debug(f"Full traceback:\n{traceback.format_exc()}")
+        except ImportError:
+            pass  # Logger not available, skip

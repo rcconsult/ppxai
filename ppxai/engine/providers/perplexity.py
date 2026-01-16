@@ -149,9 +149,9 @@ class PerplexityProvider(BaseProvider):
                 yield Event(EventType.STREAM_END, content, metadata)
 
         except Exception as e:
-            import traceback
-            error_detail = f"{str(e)}\n{traceback.format_exc()}"
-            yield Event(EventType.ERROR, error_detail)
+            error_msg = self._format_error(e)
+            yield Event(EventType.ERROR, error_msg)
+            self._log_error_traceback(e)
 
     def chat_sync_simple(
         self,
