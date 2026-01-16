@@ -51,7 +51,7 @@ ppxai-desktop
 - Full macOS setup: `curl -sSL ... | bash -s -- --with-macos-app --with-config --with-launchagent`
 - Uninstall: `curl -sSL ... | bash -s -- --uninstall`
 
-**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.13.3` (specific version), `-Uninstall`
+**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.13.10` (specific version), `-Uninstall`
 
 See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed installation options including Windows.
 

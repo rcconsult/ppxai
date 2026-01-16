@@ -68,7 +68,7 @@ Or in VSCode: Extensions → `...` menu → "Install from VSIX..."
 
 The extension can auto-start `ppxai-server` when you open the chat panel. Just configure the binary path in VS Code settings or place it in a standard location:
 - `~/.local/bin/ppxai-server` (Linux/macOS)
-- `~/.ppxai/bin/ppxai-server` (all platforms)
+- `~/.ppxai/bin/ppxai-server.exe` (Windows)
 - `/Applications/ppxai.app/Contents/MacOS/ppxai-server` (macOS app bundle)
 
 **Option B: Manual Start**

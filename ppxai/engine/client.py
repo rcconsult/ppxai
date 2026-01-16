@@ -115,14 +115,14 @@ class EngineClient:
                 get_api_key,
                 get_base_url,
                 get_default_model,
-                MODEL_PROVIDER,
+                get_default_provider,
                 load_config,
             )
             self._providers_config = PROVIDERS
             self._get_api_key = get_api_key
             self._get_base_url = get_base_url
             self._get_default_model = get_default_model
-            self._default_provider = MODEL_PROVIDER
+            self._default_provider = get_default_provider()
 
             # Load shell tool configuration (v1.11.2)
             # v1.11.9: Add default dangerous patterns for safety
@@ -1120,10 +1120,17 @@ class EngineClient:
             async for event in self.provider.chat(messages, self.model, stream):
                 # Check for interrupt
                 if self._interrupted:
+                    # Rollback user message to maintain alternation
+                    self.session.remove_last_message()
                     yield Event(EventType.ERROR, "Interrupted by user")
                     return
 
-                if event.type == EventType.STREAM_END:
+                if event.type == EventType.ERROR:
+                    # Rollback user message to maintain alternation
+                    self.session.remove_last_message()
+                    yield event
+                    return
+                elif event.type == EventType.STREAM_END:
                     full_response = event.data or ""
                     response_metadata = event.metadata
                 elif event.type == EventType.STREAM_CHUNK:
@@ -1268,6 +1275,9 @@ class EngineClient:
             native_tool_calls = []  # Collect native tool calls from provider
             async for event in self.provider.chat(messages, self.model, stream=False, tools=openai_tools):
                 if event.type == EventType.ERROR:
+                    # Rollback user message to maintain alternation (only on first iteration)
+                    if iteration == 0:
+                        self.session.remove_last_message()
                     yield event
                     return
                 elif event.type == EventType.TOOL_CALL:
