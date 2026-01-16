@@ -14,7 +14,7 @@ from rich.console import Console
 from prompt_toolkit import prompt as pt_prompt
 from prompt_toolkit.validation import Validator, ValidationError
 
-from .config import (
+from ..config import (
     CODING_MODEL,
     PROVIDERS,
     find_config_file,
@@ -28,11 +28,11 @@ from .config import (
     reload_config,
     set_tui_config,
 )
-from .engine import EngineClient
-from .engine.tools.builtin import web_premium
-from .prompts import CODING_PROMPTS
-from .utils import read_file_content
-from .ui import (
+from ..engine import EngineClient
+from ..engine.tools.builtin import web_premium
+from ..prompts import CODING_PROMPTS
+from ..utils import read_file_content
+from ..ui import (
     console,
     display_welcome,
     display_spec_help,
@@ -45,10 +45,14 @@ from .ui import (
     display_global_usage,
     display_tools_table,
 )
-from .themes import get_theme, list_themes, Theme, DEFAULT_THEME
-from .ui_components import render_theme_list
-from .common.logger import get_logger
-from .version import __version__
+from ..themes import get_theme, list_themes, Theme, DEFAULT_THEME
+from ..ui_components import render_theme_list
+from ..common.logger import get_logger
+from ..version import __version__
+
+# Import command modules to trigger self-registration
+from .factory import CommandFactory
+from . import session  # noqa: F401 - imported for side-effect (registration)
 
 logger = get_logger("tui")
 
@@ -207,8 +211,8 @@ def send_coding_task(handler: 'CommandHandler', task_type: str, user_message: st
 
     # v1.12.0: Use engine client for coding tasks
     import asyncio
-    from .engine.types import EventType
-    from .markdown_tables import render_markdown_with_tables
+    from ..engine.types import EventType
+    from ..markdown_tables import render_markdown_with_tables
 
     async def run_coding_task():
         content = ""
@@ -588,7 +592,7 @@ class CommandHandler:
             period: One of "24h", "week", "month", "year", "all"
         """
         from rich.table import Table
-        from .usage import get_usage_report
+        from ..usage import get_usage_report
 
         report = get_usage_report(period)
 
@@ -1034,7 +1038,7 @@ class CommandHandler:
 
         # v1.13.9: Show context limit info
         try:
-            from .config import get_model_context_limit, get_max_injection_size
+            from ..config import get_model_context_limit, get_max_injection_size
             context_limit = get_model_context_limit(self.provider, self.current_model)
             max_injection = get_max_injection_size()
             console.print(f"[dim]Context limit: {context_limit:,} tokens | @file/@git/@tree truncated at {max_injection // 1000}KB[/dim]")
@@ -1547,7 +1551,7 @@ class CommandHandler:
             console.print(f"\n[bold cyan]{path.name}[/bold cyan] [dim]({size_kb:.1f} KB, {len(lines)} lines)[/dim]\n")
 
             # Check for data formats (v1.13.8)
-            from .data import (
+            from ..data import (
                 detect_format, is_data_format, detect_delimiter,
                 parse_csv, parse_structured,
                 render_table_tui, render_tree_tui,
@@ -1600,7 +1604,7 @@ class CommandHandler:
 
             elif path.suffix.lower() in ['.md', '.markdown']:
                 # For markdown files, render them (including tables) instead of syntax highlighting
-                from .markdown_tables import render_markdown_with_tables
+                from ..markdown_tables import render_markdown_with_tables
                 # Pass the file's parent directory for resolving relative links
                 render_markdown_with_tables(content, console, working_dir=str(path.parent))
             else:
@@ -2067,7 +2071,7 @@ class CommandHandler:
                 console.print("[dim]Changes cannot be undone with /undo[/dim]\n")
 
         async def run_agent_loop():
-            from .common.event_handler import TUIEventHandler
+            from ..common.event_handler import TUIEventHandler
 
             iteration = 0
             task_complete = False
@@ -2164,20 +2168,25 @@ If more work is needed, explain what you're doing next and use the appropriate t
         command = command_parts[0].lower()
         args = command_parts[1] if len(command_parts) > 1 else ""
 
+        # Strip leading / for factory lookup
+        cmd_name = command[1:] if command.startswith("/") else command
+
+        # Special case: quit/exit must return True
         if command in ["/quit", "/exit"]:
             return self.handle_quit()
-        elif command == "/save":
-            self.handle_save(args)
-        elif command == "/export":
-            self.handle_export(args)
-        elif command == "/sessions":
-            self.handle_sessions()
-        elif command == "/load":
-            self.handle_load(args)
-        elif command == "/usage":
+
+        # Try CommandFactory first (for migrated commands)
+        if CommandFactory.get(cmd_name):
+            try:
+                CommandFactory.dispatch(cmd_name, self, args)
+                return False
+            except Exception as e:
+                console.print(f"[red]Error executing /{cmd_name}: {e}[/red]\n")
+                return False
+
+        # Legacy dispatch for commands not yet migrated
+        if command == "/usage":
             self.handle_usage(args)
-        elif command == "/clear":
-            self.handle_clear()
         elif command == "/model":
             self.handle_model(args)
         elif command == "/provider":
