@@ -55,6 +55,8 @@ from .factory import CommandFactory
 from . import session  # noqa: F401 - imported for side-effect (registration)
 from . import provider  # noqa: F401 - imported for side-effect (registration)
 from . import system  # noqa: F401 - imported for side-effect (registration)
+from . import coding  # noqa: F401 - imported for side-effect (registration)
+from . import utility  # noqa: F401 - imported for side-effect (registration)
 
 logger = get_logger("tui")
 
@@ -2189,22 +2191,6 @@ If more work is needed, explain what you're doing next and use the appropriate t
         # Legacy dispatch for commands not yet migrated
         if command == "/usage":
             self.handle_usage(args)
-        elif command == "/generate":
-            self.handle_generate(args)
-        elif command == "/test":
-            self.handle_test(args)
-        elif command == "/docs":
-            self.handle_docs(args)
-        elif command == "/implement":
-            self.handle_implement(args)
-        elif command == "/debug":
-            self.handle_debug(args)
-        elif command == "/debug-log":
-            self.handle_debug_log(args)
-        elif command == "/explain":
-            self.handle_explain(args)
-        elif command == "/convert":
-            self.handle_convert(args)
         elif command == "/tools":
             self.handle_tools(args)
         elif command == "/show":
@@ -2217,14 +2203,6 @@ If more work is needed, explain what you're doing next and use the appropriate t
             self.handle_undo()
         elif command == "/checkpoint":
             self.handle_checkpoint(args)
-        elif command == "/context":
-            self.handle_context(args)
-        elif command == "/config":
-            self.handle_config(args)
-        elif command == "/cd":
-            self.handle_cd(args)
-        elif command == "/pwd":
-            self.handle_pwd()
         else:
             console.print(f"[red]Unknown command: {user_input}[/red]")
             console.print("[yellow]Type /help for available commands[/yellow]\n")
