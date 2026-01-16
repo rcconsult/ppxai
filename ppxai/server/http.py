@@ -44,6 +44,10 @@ logger = get_logger("server")
 # All state is now managed by SessionManager class
 session_manager: SessionManager = None
 
+# Shutdown event for graceful termination (v1.13.10)
+# Used by /shutdown endpoint to signal uvicorn to stop
+_shutdown_event: asyncio.Event = None
+
 
 async def get_or_create_session(session_id: Optional[str]) -> tuple[str, EngineClient, asyncio.Lock]:
     """Get existing session or create new one (v1.13.10, v1.13.10 refactored).
@@ -125,9 +129,13 @@ async def lifespan(app: FastAPI):
     """Manage application lifespan (startup/shutdown).
 
     v1.13.10: Refactored to use SessionManager for thread-safe state management.
+    v1.13.10: Added graceful shutdown via _shutdown_event.
     """
-    global session_manager
+    global session_manager, _shutdown_event
     startup_start = time.time()
+
+    # Initialize shutdown event for graceful termination (v1.13.10)
+    _shutdown_event = asyncio.Event()
 
     # Initialize SessionManager singleton (v1.13.10)
     logger.info("Server starting up - initializing SessionManager")
@@ -487,9 +495,10 @@ async def shutdown_server():
     Returns:
         JSON: {"shutdown": true, "message": "Server shutting down..."}
 
-    Note: v1.13.10 - Now uses SessionManager.request_shutdown().
+    Note: v1.13.10 - Uses graceful shutdown via asyncio event instead of os._exit().
+    This allows cleanup handlers (atexit) to run properly.
     """
-    global session_manager
+    global session_manager, _shutdown_event
 
     logger.info("Shutdown requested via /shutdown endpoint")
 
@@ -497,11 +506,16 @@ async def shutdown_server():
     if session_manager:
         session_manager.request_shutdown()
 
-    # Schedule the actual shutdown after response is sent
+    # Schedule graceful shutdown after response is sent (v1.13.10)
     async def delayed_shutdown():
         await asyncio.sleep(0.5)  # Give time for response to be sent
-        import os
-        os._exit(0)
+        logger.info("Initiating graceful shutdown")
+        if _shutdown_event:
+            _shutdown_event.set()
+        else:
+            # Fallback for edge cases where event wasn't initialized
+            import signal
+            signal.raise_signal(signal.SIGTERM)
 
     asyncio.create_task(delayed_shutdown())
 
@@ -2052,6 +2066,52 @@ async def serve_favicon_png():
 
 # === CLI Entry Point ===
 
+async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_level: str = "info"):
+    """Run uvicorn server with graceful shutdown support (v1.13.10).
+
+    This uses uvicorn.Server directly to enable graceful shutdown via
+    the _shutdown_event, avoiding os._exit() which bypasses cleanup handlers.
+
+    Args:
+        app_ref: The FastAPI app (object or string for --reload)
+        host: Host to bind to
+        port: Port to bind to
+        log_level: Logging level
+    """
+    import uvicorn
+    global _shutdown_event
+
+    config = uvicorn.Config(
+        app_ref,
+        host=host,
+        port=port,
+        log_level=log_level,
+    )
+    server = uvicorn.Server(config)
+
+    # Create shutdown listener task
+    async def shutdown_listener():
+        global _shutdown_event
+        # Wait for shutdown event to be created (happens in lifespan)
+        while _shutdown_event is None:
+            await asyncio.sleep(0.1)
+        # Wait for shutdown signal
+        await _shutdown_event.wait()
+        logger.info("Shutdown event received, stopping server")
+        server.should_exit = True
+
+    # Run both server and shutdown listener concurrently
+    shutdown_task = asyncio.create_task(shutdown_listener())
+    try:
+        await server.serve()
+    finally:
+        shutdown_task.cancel()
+        try:
+            await shutdown_task
+        except asyncio.CancelledError:
+            pass
+
+
 def run_server():
     """Run the HTTP server (CLI entry point)."""
     import uvicorn
@@ -2093,21 +2153,32 @@ def run_server():
     if getattr(sys, 'frozen', False):
         # Running as bundled executable - use app object directly
         # (string import doesn't work in frozen apps)
-        uvicorn.run(
+        # v1.13.10: Use graceful shutdown handler
+        asyncio.run(_run_server_with_graceful_shutdown(
             app,
             host=args.host,
             port=args.port,
             log_level="info",
-        )
+        ))
     else:
-        # Running from source - use string import (supports --reload)
-        uvicorn.run(
-            "ppxai.server.http:app",
-            host=args.host,
-            port=args.port,
-            reload=args.reload,
-            log_level="info",
-        )
+        # Running from source - use string import
+        # Note: --reload requires uvicorn.run() directly, not our custom wrapper
+        if args.reload:
+            uvicorn.run(
+                "ppxai.server.http:app",
+                host=args.host,
+                port=args.port,
+                reload=True,
+                log_level="info",
+            )
+        else:
+            # v1.13.10: Use graceful shutdown handler
+            asyncio.run(_run_server_with_graceful_shutdown(
+                "ppxai.server.http:app",
+                host=args.host,
+                port=args.port,
+                log_level="info",
+            ))
 
 
 def run_desktop():
@@ -2150,20 +2221,21 @@ def run_desktop():
     print()
 
     # Check if running as frozen executable (PyInstaller)
+    # v1.13.10: Use graceful shutdown handler
     if getattr(sys, 'frozen', False):
-        uvicorn.run(
+        asyncio.run(_run_server_with_graceful_shutdown(
             app,
             host=args.host,
             port=args.port,
             log_level="warning",  # Less verbose for desktop app
-        )
+        ))
     else:
-        uvicorn.run(
+        asyncio.run(_run_server_with_graceful_shutdown(
             "ppxai.server.http:app",
             host=args.host,
             port=args.port,
             log_level="warning",
-        )
+        ))
 
 
 if __name__ == "__main__":

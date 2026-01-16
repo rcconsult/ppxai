@@ -49,6 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replaced dangerous `eval()` with AST-based safe evaluation in calculator
 - Added selective logging to 22 silent error handling instances
 - Documented DAG import structure in `ARCHITECTURE.md`
+- Replaced `os._exit()` with graceful shutdown via `asyncio.Event` for proper cleanup
 
 ## [1.13.9] - 2026-01-12
 

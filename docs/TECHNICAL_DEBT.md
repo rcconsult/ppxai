@@ -230,15 +230,16 @@ Key improvements:
 
 ### 11. Abrupt Process Termination
 
-**Status:** Open
+**Status:** ✅ Completed (v1.13.10)
 **File:** [ppxai/server/http.py](../ppxai/server/http.py)
 
-- Line 169: `os._exit(0)`
-- Line 590: `os._exit(0)`
-
-**Issue:** Bypasses cleanup handlers (atexit), skips resource cleanup.
-
-**Recommendation:** Use proper asyncio shutdown or SystemExit.
+**Resolution (v1.13.10):**
+- Replaced `os._exit(0)` with graceful shutdown via `asyncio.Event`
+- Added `_shutdown_event` global for signaling shutdown
+- Created `_run_server_with_graceful_shutdown()` helper using `uvicorn.Server` directly
+- `/shutdown` endpoint now sets event instead of calling `os._exit()`
+- Cleanup handlers (atexit) now run properly
+- Lifespan shutdown hooks execute correctly
 
 ---
 
@@ -348,6 +349,7 @@ Items moved here after being addressed:
 | #7 | eval() usage - Replaced with AST-based safe evaluation | v1.13.10 | 2026-01-15 |
 | #10 | config.py complexity - Split into config/ package with ConfigStore pattern | v1.13.10 | 2026-01-16 |
 | #9 | HTTP error handling - Standardized on HTTPException, removed unused JSONResponse | v1.13.10 | 2026-01-16 |
+| #11 | Abrupt process termination - Graceful shutdown via asyncio.Event | v1.13.10 | 2026-01-16 |
 | - | Magic strings - Created ppxai/constants.py with centralized constants | v1.13.10 | 2026-01-16 |
 | - | BUILTIN_PROVIDERS removal - JSON config as single source of truth | v1.13.10 | 2026-01-16 |
 
