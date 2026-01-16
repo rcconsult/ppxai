@@ -192,15 +192,21 @@ Both `ConsentManager` (async) and `SyncConsentManager` now inherit from `BaseCon
 
 ### 9. Inconsistent Error Handling in HTTP Endpoints
 
-**Status:** Open
+**Status:** ✅ Partially Addressed (v1.13.11)
 **File:** [ppxai/server/http.py](../ppxai/server/http.py)
 
-**Mixed patterns:**
-- HTTPException (standard): lines 825, 873, 948
-- Silent pass: lines 292, 300, 1459, 1519
-- JSONResponse for errors: line 464
+**Resolution (v1.13.11):**
+- Removed unused `JSONResponse` import
+- Standardized static file 404 error messages to include requested filename
+- Fixed string concatenation in error details (use f-strings consistently)
+- All error responses now use `HTTPException` exclusively (45 occurrences)
 
-**Recommendation:** Standardize on HTTPException; use custom exception handlers.
+**Remaining items:**
+- Silent pass patterns for expected errors (intentional, kept for graceful degradation)
+
+**Original mixed patterns (now resolved):**
+- ~~JSONResponse for errors~~ → Removed (was unused import)
+- HTTPException (standard) → All errors now use this pattern consistently
 
 ---
 
@@ -341,6 +347,9 @@ Items moved here after being addressed:
 | #6 | Import structure - Refactored commands.py to DAG imports, updated ARCHITECTURE.md | v1.13.10 | 2026-01-15 |
 | #7 | eval() usage - Replaced with AST-based safe evaluation | v1.13.10 | 2026-01-15 |
 | #10 | config.py complexity - Split into config/ package with ConfigStore pattern | v1.13.10 | 2026-01-16 |
+| #9 | HTTP error handling - Standardized on HTTPException, removed unused JSONResponse | v1.13.11 | 2026-01-16 |
+| - | Magic strings - Created ppxai/constants.py with centralized constants | v1.13.11 | 2026-01-16 |
+| - | BUILTIN_PROVIDERS removal - JSON config as single source of truth | v1.13.11 | 2026-01-16 |
 
 ---
 
@@ -356,10 +365,10 @@ Items moved here after being addressed:
 | ~~**High**~~ | ~~Circular imports~~ | ~~Medium~~ | ✅ Documented |
 | ~~**High**~~ | ~~eval() usage~~ | ~~Low~~ | ✅ Done |
 | **Medium** | Type hints | Medium | IDE support |
-| **Medium** | HTTP error handling | Medium | Consistency |
+| ~~**Medium**~~ | ~~HTTP error handling~~ | ~~Medium~~ | ✅ Done |
 | ~~**Medium**~~ | ~~Config complexity~~ | ~~Medium~~ | ✅ Done |
 | **Low** | Legacy compatibility | Low | Code clarity |
-| **Low** | Magic strings | Low | Type safety |
+| ~~**Low**~~ | ~~Magic strings~~ | ~~Low~~ | ✅ Done (constants.py) |
 
 ---
 
