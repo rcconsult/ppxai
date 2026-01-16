@@ -255,7 +255,12 @@ class EngineClient:
 ### Phase 4: Enable Dynamic Loading
 1. Add user tool directory scanning
 2. Support `~/.ppxai/tools/` for custom tools
-3. Hot-reload capability (optional)
+3. Hot-reload capability via `/reload` command
+
+### Phase 5: Documentation
+1. Create CUSTOM_TOOL_DEVELOPMENT_GUIDE.md (similar to [CUSTOM_COMMAND_DEVELOPMENT_GUIDE.md](CUSTOM_COMMAND_DEVELOPMENT_GUIDE.md))
+2. Add examples to `~/.ppxai/tools/examples/`
+3. Update README with custom tools section
 
 ---
 
@@ -274,8 +279,60 @@ ToolFactory.register(ToolSpec(
     name="my_custom_tool",
     description="My custom tool",
     parameters={"arg1": {"type": "string", "required": True}},
-    fn=my_custom_tool
+    fn=my_custom_tool,
+    category="custom"
 ))
+```
+
+After creating this file and running `/reload`, the tool is available:
+```
+> /reload
+User tools reloaded.
+
+> /tools
+...
+custom: my_custom_tool
+```
+
+### Dynamic Reloading
+
+User tools can be reloaded at runtime without restarting (via `/reload` command):
+
+```python
+# In ToolFactory
+@classmethod
+def reload_user_tools(cls):
+    """Reload user tools from ~/.ppxai/tools/"""
+    import sys
+    import importlib
+    from pathlib import Path
+
+    # Unregister existing user tools
+    user_tools = [name for name, spec in cls._registry.items()
+                  if spec.category == "custom"]
+    for name in user_tools:
+        del cls._registry[name]
+
+    # Re-scan and import user tools
+    user_tools_dir = Path.home() / ".ppxai" / "tools"
+    if not user_tools_dir.exists():
+        return 0
+
+    count = 0
+    sys.path.insert(0, str(user_tools_dir))
+    for py_file in user_tools_dir.glob("*.py"):
+        if not py_file.name.startswith("_"):
+            module_name = py_file.stem
+            try:
+                if module_name in sys.modules:
+                    importlib.reload(sys.modules[module_name])
+                else:
+                    importlib.import_module(module_name)
+                count += 1
+            except Exception:
+                pass
+    sys.path.pop(0)
+    return count
 ```
 
 ### Tool Versioning

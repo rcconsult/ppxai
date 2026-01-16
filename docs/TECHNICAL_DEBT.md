@@ -56,7 +56,7 @@ Attempted conversion to `config/` package failed due to Python import mechanics:
 
 **Recommendation:**
 - config.py: Keep as single file, add section documentation (lower priority)
-- commands.py: Can be safely split with method extraction (high priority)
+- commands.py: Refactor using Command Factory pattern - see [DESIGN-COMMAND-FACTORY.md](DESIGN-COMMAND-FACTORY.md)
 - client.py: Extract chat loop and tool parsing (medium priority)
 
 ---
