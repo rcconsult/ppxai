@@ -194,4 +194,6 @@ class TestDesktopSpecIncludesShared:
         spec_file = Path(__file__).parent.parent / "ppxai-desktop.spec"
         content = spec_file.read_text()
 
-        assert "ppxai/web/shared" in content, "shared directory not in ppxai-desktop.spec"
+        # Check that shared is included (either explicitly or via parent directory)
+        assert "ppxai/web/shared" in content or "('ppxai/web', 'ppxai/web')" in content, \
+            "shared directory not in ppxai-desktop.spec (neither explicit nor via ppxai/web)"

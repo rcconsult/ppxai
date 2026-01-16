@@ -1097,7 +1097,7 @@ def get_data_dir() -> Path:
 
 
 # =============================================================================
-# Server Configuration (v1.14.0 - Idle shutdown)
+# Server Configuration (v1.13.10 - Idle shutdown)
 # =============================================================================
 
 def get_server_config() -> Dict[str, Any]:

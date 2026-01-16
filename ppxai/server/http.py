@@ -5,7 +5,7 @@ This server provides:
 - SSE streaming for chat responses (POST /chat)
 - REST endpoints for configuration (providers, models, tools)
 - Health and readiness endpoints for container orchestration
-- Session isolation for multi-client support (v1.14.0)
+- Session isolation for multi-client support (v1.13.10)
 
 Usage:
     uv run ppxai-server
@@ -46,7 +46,7 @@ session_manager: SessionManager = None
 
 
 async def get_or_create_session(session_id: Optional[str]) -> tuple[str, EngineClient, asyncio.Lock]:
-    """Get existing session or create new one (v1.14.0, v1.13.10 refactored).
+    """Get existing session or create new one (v1.13.10, v1.13.10 refactored).
 
     Args:
         session_id: Session ID from X-Session-Id header, or None for default
@@ -68,7 +68,7 @@ async def get_or_create_session(session_id: Optional[str]) -> tuple[str, EngineC
 
 
 async def cleanup_expired_sessions():
-    """Remove sessions that haven't been used recently (v1.14.0).
+    """Remove sessions that haven't been used recently (v1.13.10).
 
     Note: v1.13.10 - Now delegates to SessionManager.
     """
@@ -78,7 +78,7 @@ async def cleanup_expired_sessions():
 
 
 def update_activity():
-    """Update last activity timestamp (v1.14.0).
+    """Update last activity timestamp (v1.13.10).
 
     Note: v1.13.10 - Now delegates to SessionManager.
     """
@@ -88,7 +88,7 @@ def update_activity():
 
 
 async def check_idle_shutdown():
-    """Background task to check for idle shutdown (v1.14.0).
+    """Background task to check for idle shutdown (v1.13.10).
 
     Note: v1.13.10 - This function is now a no-op as idle shutdown
     is handled by SessionManager.start_idle_monitor().
@@ -141,9 +141,9 @@ async def lifespan(app: FastAPI):
 
     default_engine = session_manager.default_engine
     logger.info(f"EngineClient initialized - provider: {default_engine.provider_name}, model: {default_engine.model}")
-    logger.info("Session management initialized (v1.14.0, v1.13.10 thread-safe)")
+    logger.info("Session management initialized (v1.13.10, v1.13.10 thread-safe)")
 
-    # Start idle shutdown monitor (v1.14.0)
+    # Start idle shutdown monitor (v1.13.10)
     from ..config import get_idle_timeout
     idle_timeout = get_idle_timeout()
     await session_manager.start_idle_monitor(idle_timeout)
@@ -182,13 +182,13 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["X-Session-Id"],  # v1.14.0: Allow clients to see session ID
+    expose_headers=["X-Session-Id"],  # v1.13.10: Allow clients to see session ID
 )
 
 
 @app.middleware("http")
 async def activity_tracking_middleware(request: Request, call_next):
-    """Track client activity for idle shutdown (v1.14.0).
+    """Track client activity for idle shutdown (v1.13.10).
 
     Updates the last_activity timestamp on every request to reset
     the idle shutdown timer.
@@ -274,7 +274,7 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
     Each event is yielded immediately with a sleep(0) to force flush.
     Phase 1C: Also checks consent_event_queue for pending consent requests.
     v1.11.2: Added debug logging for troubleshooting.
-    v1.14.0: Takes engine as parameter for session isolation.
+    v1.13.10: Takes engine as parameter for session isolation.
     v1.13.9: Added explicit [DONE] termination for robust stream completion.
              Helps prevent aiohttp ClientPayloadError in downstream clients.
     """
@@ -363,7 +363,7 @@ async def sse_coding_task_generator(
 ) -> AsyncGenerator[str, None]:
     """Generate SSE events from engine coding task.
 
-    v1.14.0: Takes engine as parameter for session isolation.
+    v1.13.10: Takes engine as parameter for session isolation.
     v1.13.9: Added explicit [DONE] termination for robust stream completion.
     """
     if not engine:
@@ -555,7 +555,7 @@ async def reload_config_endpoint():
 async def get_status(x_session_id: Optional[str] = Header(None)):
     """Get current engine status.
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -565,13 +565,13 @@ async def get_status(x_session_id: Optional[str] = Header(None)):
         "tools_enabled": engine.tools_enabled,
         "agent_mode": engine.agent_mode,  # v1.11.8
         "auto_inject_context": engine.auto_inject_context,
-        "session_id": session_id,  # v1.14.0
+        "session_id": session_id,  # v1.13.10
     }
 
 
 @app.get("/sessions/list")
 async def list_active_sessions():
-    """List all active sessions (v1.14.0).
+    """List all active sessions (v1.13.10).
 
     Returns information about currently active sessions for debugging/monitoring.
 
@@ -602,7 +602,7 @@ async def chat(
     corrupting conversation state. If agent is running, subsequent requests
     will wait for completion.
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     Each session has its own conversation history, working directory, and state.
     """
     session_id, engine, chat_lock = await get_or_create_session(x_session_id)
@@ -635,7 +635,7 @@ async def chat(
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
                 "X-Accel-Buffering": "no",  # Disable nginx buffering
-                "X-Session-Id": session_id,  # v1.14.0: Return session ID
+                "X-Session-Id": session_id,  # v1.13.10: Return session ID
             }
         )
 
@@ -650,7 +650,7 @@ async def coding_task(
     Supports task types: generate, debug, explain, test, docs, implement
 
     v1.12.0: Serializes coding task requests to prevent concurrent execution.
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, chat_lock = await get_or_create_session(x_session_id)
 
@@ -678,7 +678,7 @@ async def coding_task(
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
                 "X-Accel-Buffering": "no",
-                "X-Session-Id": session_id,  # v1.14.0
+                "X-Session-Id": session_id,  # v1.13.10
             }
         )
 
@@ -689,7 +689,7 @@ async def coding_task(
 async def get_providers(x_session_id: Optional[str] = Header(None)):
     """Get list of available providers.
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -720,7 +720,7 @@ async def set_provider(
 ):
     """Set the active provider.
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -742,7 +742,7 @@ async def set_provider(
 async def get_models(x_session_id: Optional[str] = Header(None)):
     """Get list of models for current provider.
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -768,7 +768,7 @@ async def set_model(
 ):
     """Set the active model.
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -788,7 +788,7 @@ async def set_model(
 async def get_tools(x_session_id: Optional[str] = Header(None)):
     """Get list of available tools.
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -822,7 +822,7 @@ async def set_tools(
 ):
     """Enable or disable tools.
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -843,7 +843,7 @@ async def set_tools_config(
 ):
     """Configure tool settings (e.g., max_iterations).
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -867,7 +867,7 @@ async def get_tool_help(
 
     Returns tool definition including parameters, description, and usage examples.
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -898,7 +898,7 @@ async def get_usage(x_session_id: Optional[str] = Header(None)):
     """Get token usage statistics for current session.
 
     Returns full usage including per-model breakdown (v1.12.2).
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -924,7 +924,7 @@ async def set_usage_display_mode(
             - model: Show current model totals
             - off: Hide usage from status line
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -943,7 +943,7 @@ async def set_usage_display_mode(
 async def get_usage_display_mode(x_session_id: Optional[str] = Header(None)):
     """Get current usage display mode (v1.12.2).
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -954,7 +954,7 @@ async def get_usage_display_mode(x_session_id: Optional[str] = Header(None)):
 async def reset_usage(x_session_id: Optional[str] = Header(None)):
     """Reset all usage statistics to zero (v1.12.2).
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1025,7 +1025,7 @@ async def get_usage_sessions(limit: int = 20, offset: int = 0):
 async def get_working_dir(x_session_id: Optional[str] = Header(None)):
     """Get the current working directory.
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1041,7 +1041,7 @@ async def set_working_dir(
 ):
     """Set the working directory for file path resolution.
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     Each session maintains its own working directory.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
@@ -1070,7 +1070,7 @@ async def set_auto_inject(
 ):
     """Enable or disable automatic context injection.
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1082,7 +1082,7 @@ async def set_auto_inject(
 async def get_auto_inject(x_session_id: Optional[str] = Header(None)):
     """Get auto-inject context status.
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1136,7 +1136,7 @@ async def clear_context_injections(x_session_id: Optional[str] = Header(None)):
 async def get_sessions(x_session_id: Optional[str] = Header(None)):
     """Get list of saved sessions.
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1163,7 +1163,7 @@ async def save_session(
 ):
     """Save current session.
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1178,7 +1178,7 @@ async def export_answer(
 ):
     """Export last answer to markdown.
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1202,7 +1202,7 @@ async def load_session(
 ):
     """Load a saved session.
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1229,7 +1229,7 @@ async def load_session(
 async def clear_session(x_session_id: Optional[str] = Header(None)):
     """Clear current session.
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1397,7 +1397,7 @@ async def read_file(
     Returns:
         JSON: {"filename", "content", "size", "lines"}
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1541,7 +1541,7 @@ async def interrupt_stream(x_session_id: Optional[str] = Header(None)):
     Returns:
         JSON: {"interrupted": true}
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1566,7 +1566,7 @@ async def respond_to_consent(
     Returns:
         JSON: {"file_path": str, "response": str, "resolved": bool}
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     v1.13.10: Now uses SessionManager.resolve_consent().
     """
     global session_manager
@@ -1611,7 +1611,7 @@ async def respond_to_shell_consent(
     Returns:
         JSON: {"command": str, "response": str, "resolved": bool}
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     v1.13.10: Now uses SessionManager.resolve_shell_consent().
     """
     global session_manager
@@ -1645,7 +1645,7 @@ async def respond_to_shell_consent(
 async def get_agent_status(x_session_id: Optional[str] = Header(None)):
     """Get agent mode status (v1.11.8, v1.12.0).
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1663,7 +1663,7 @@ async def get_agent_status(x_session_id: Optional[str] = Header(None)):
 async def get_agent_config(x_session_id: Optional[str] = Header(None)):
     """Get agent configuration (v1.11.9).
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1676,7 +1676,7 @@ async def enable_agent_mode(x_session_id: Optional[str] = Header(None)):
 
     Agent mode automatically enables tools if not already enabled.
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1694,7 +1694,7 @@ async def enable_agent_mode(x_session_id: Optional[str] = Header(None)):
 async def disable_agent_mode(x_session_id: Optional[str] = Header(None)):
     """Disable agent mode (v1.11.8).
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1713,7 +1713,7 @@ async def disable_agent_mode(x_session_id: Optional[str] = Header(None)):
 async def get_checkpoint_status(x_session_id: Optional[str] = Header(None)):
     """Get checkpoint system status (v1.12.0).
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1724,7 +1724,7 @@ async def get_checkpoint_status(x_session_id: Optional[str] = Header(None)):
 async def undo_last_checkpoint(x_session_id: Optional[str] = Header(None)):
     """Undo the last checkpoint (revert agent task changes) (v1.12.0).
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1797,7 +1797,7 @@ async def list_checkpoints(
 ):
     """List recent checkpoints (v1.12.4).
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1817,7 +1817,7 @@ async def set_checkpoint_backend(
 
     Body: {"backend": "git" | "file" | "auto" | "none"}
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1854,7 +1854,7 @@ async def clear_file_checkpoints(
 
     Body (optional): {"keep_last": 0}
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1886,7 +1886,7 @@ async def get_checkpoint_info(
 
     Supports prefix matching - e.g., "abc123" matches "abc123def456".
 
-    v1.14.0: Supports X-Session-Id header for session isolation.
+    v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1993,7 +1993,7 @@ async def serve_lib(filename: str):
 
 @app.get("/shared/{filename:path}")
 async def serve_shared(filename: str):
-    """Serve shared module files (v1.14.0)."""
+    """Serve shared module files (v1.13.10)."""
     file_path = WEB_UI_DIR / 'shared' / filename
     if file_path.exists() and file_path.is_file():
         suffix = file_path.suffix.lower()
@@ -2080,7 +2080,7 @@ def run_server():
     print("  POST /debug-log     - Enable/disable debug logging")
     print("  GET  /health        - Health check")
     print("  GET  /status        - Current status")
-    print("  GET  /sessions/list - List active sessions (v1.14.0)")
+    print("  GET  /sessions/list - List active sessions (v1.13.10)")
     print()
     print("Session isolation: Use X-Session-Id header for isolated sessions")
     print()

@@ -79,7 +79,7 @@ class ApplyPatchTool(BaseTool):
             # Models like GPT-OSS 120B use "*** Add File:" or "+++ /dev/null" patterns
             is_new_file = _is_new_file_diff(unified_diff)
 
-            # v1.14.0: Detect delete+recreate pattern (replaces entire file)
+            # v1.13.10: Detect delete+recreate pattern (replaces entire file)
             is_delete_recreate = _is_delete_and_recreate_diff(unified_diff)
 
             # Validate file exists (unless creating new file)
@@ -101,14 +101,14 @@ class ApplyPatchTool(BaseTool):
                 backup_content = ''.join(original_lines)
 
             try:
-                # v1.14.0: For delete+recreate, treat as new file (ignore original content)
+                # v1.13.10: For delete+recreate, treat as new file (ignore original content)
                 if is_delete_recreate and path.exists():
                     new_lines = _apply_unified_diff([], unified_diff, is_new_file=True)
                 else:
                     # Apply patch
                     new_lines = _apply_unified_diff(original_lines, unified_diff, is_new_file=is_new_file)
 
-                # v1.14.0: Check if any changes were actually made
+                # v1.13.10: Check if any changes were actually made
                 original_content = ''.join(original_lines)
                 new_content = ''.join(new_lines)
                 if original_content == new_content:
@@ -547,7 +547,7 @@ def _is_new_file_diff(diff_text: str) -> bool:
 def _is_delete_and_recreate_diff(diff_text: str) -> bool:
     """Check if diff is a delete-then-recreate pattern.
 
-    v1.14.0: Models like GPT-OSS 120B sometimes use:
+    v1.13.10: Models like GPT-OSS 120B sometimes use:
     *** Delete File: filename
     *** Add File: filename
 

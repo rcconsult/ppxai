@@ -442,7 +442,7 @@ class PPXAICompleter(Completer):
                             )
                 return
 
-            # Handle /status subcommands (v1.14.0)
+            # Handle /status subcommands (v1.13.10)
             if cmd_text.startswith('/status '):
                 parts = text.split()
                 if len(parts) == 2:
