@@ -97,13 +97,13 @@ class TestCommandHandlerBothProviders:
     def test_clear_command_perplexity(self, handler_perplexity, mock_engine_client):
         """Test /clear command with Perplexity provider."""
         mock_engine_client.session.messages = [Mock(role="user", content="test")]
-        handler_perplexity.handle_clear()
+        handler_perplexity.handle_command("/clear")
         mock_engine_client.session.clear.assert_called_once()
 
     def test_clear_command_custom(self, handler_custom, mock_engine_client):
         """Test /clear command with custom provider."""
         mock_engine_client.session.messages = [Mock(role="user", content="test")]
-        handler_custom.handle_clear()
+        handler_custom.handle_command("/clear")
         mock_engine_client.session.clear.assert_called_once()
 
     # ==================== /usage Command ====================
@@ -121,7 +121,7 @@ class TestCommandHandlerBothProviders:
         mock_engine_client.session.get_usage.return_value = mock_usage
 
         # v1.12.2: /usage now uses _display_usage_report instead of display_usage
-        handler_perplexity.handle_usage()
+        handler_perplexity.handle_command("/usage")
         mock_engine_client.session.get_usage.assert_called_once()
 
     def test_usage_command_custom(self, handler_custom, mock_engine_client):
@@ -137,7 +137,7 @@ class TestCommandHandlerBothProviders:
         mock_engine_client.session.get_usage.return_value = mock_usage
 
         # v1.12.2: /usage now uses _display_usage_report instead of display_usage
-        handler_custom.handle_usage()
+        handler_custom.handle_command("/usage")
         mock_engine_client.session.get_usage.assert_called_once()
 
     def test_usage_show_command_perplexity(self, handler_perplexity, mock_engine_client):
@@ -145,43 +145,43 @@ class TestCommandHandlerBothProviders:
         mock_engine_client.session.set_usage_display_mode = Mock(return_value=True)
 
         # Test setting display mode to 'model'
-        handler_perplexity.handle_usage("show model")
+        handler_perplexity.handle_command("/usage show model")
         mock_engine_client.session.set_usage_display_mode.assert_called_with("model")
 
         # Test setting display mode to 'provider'
-        handler_perplexity.handle_usage("show provider")
+        handler_perplexity.handle_command("/usage show provider")
         mock_engine_client.session.set_usage_display_mode.assert_called_with("provider")
 
         # Test setting display mode to 'off'
-        handler_perplexity.handle_usage("show off")
+        handler_perplexity.handle_command("/usage show off")
         mock_engine_client.session.set_usage_display_mode.assert_called_with("off")
 
     def test_usage_reset_command_perplexity(self, handler_perplexity, mock_engine_client):
         """Test /usage reset command (v1.12.2)."""
         mock_engine_client.session.reset_usage = Mock()
 
-        handler_perplexity.handle_usage("reset")
+        handler_perplexity.handle_command("/usage reset")
         mock_engine_client.session.reset_usage.assert_called_once()
 
     # ==================== /model Command ====================
 
-    @patch('ppxai.commands.handler.select_model')
+    @patch('ppxai.ui.select_model')
     def test_model_command_perplexity(self, mock_select, handler_perplexity, mock_engine_client):
         """Test /model command with Perplexity provider."""
         mock_select.return_value = "sonar-reasoning"
         mock_engine_client.set_model = Mock(return_value=True)
-        handler_perplexity.handle_model()
+        handler_perplexity.handle_command("/model")
 
         assert handler_perplexity.current_model == "sonar-reasoning"
         mock_engine_client.set_model.assert_called_once_with("sonar-reasoning")
         mock_select.assert_called_once_with("perplexity")
 
-    @patch('ppxai.commands.handler.select_model')
+    @patch('ppxai.ui.select_model')
     def test_model_command_custom(self, mock_select, handler_custom, mock_engine_client):
         """Test /model command with custom provider."""
         mock_select.return_value = "gpt-oss-120b"
         mock_engine_client.set_model = Mock(return_value=True)
-        handler_custom.handle_model()
+        handler_custom.handle_command("/model")
 
         assert handler_custom.current_model == "gpt-oss-120b"
         mock_engine_client.set_model.assert_called_once_with("gpt-oss-120b")
@@ -192,13 +192,13 @@ class TestCommandHandlerBothProviders:
     def test_save_command_perplexity(self, handler_perplexity, mock_engine_client):
         """Test /save command with Perplexity provider - saves session to JSON."""
         mock_engine_client.session.save = Mock()
-        handler_perplexity.handle_save("")
+        handler_perplexity.handle_command("/save")
         mock_engine_client.session.save.assert_called_once()
 
     def test_save_command_custom(self, handler_custom, mock_engine_client):
         """Test /save command with custom provider - saves session to JSON."""
         mock_engine_client.session.save = Mock()
-        handler_custom.handle_save("")
+        handler_custom.handle_command("/save")
         mock_engine_client.session.save.assert_called_once()
 
     # ==================== /export Command ====================
@@ -209,7 +209,7 @@ class TestCommandHandlerBothProviders:
             Mock(role="user", content="Hello"),
             Mock(role="assistant", content="Hi there!")
         ]
-        handler_perplexity.handle_export("my_export")
+        handler_perplexity.handle_command("/export my_export")
         # Should write last assistant message to exports folder
 
     def test_export_without_filename_perplexity(self, handler_perplexity, mock_engine_client):
@@ -218,7 +218,7 @@ class TestCommandHandlerBothProviders:
             Mock(role="user", content="Hello"),
             Mock(role="assistant", content="Hi there!")
         ]
-        handler_perplexity.handle_export("")
+        handler_perplexity.handle_command("/export")
         # Should write last assistant message with auto-generated filename
 
     def test_export_no_assistant_message(self, handler_perplexity, mock_engine_client):
@@ -226,12 +226,12 @@ class TestCommandHandlerBothProviders:
         mock_engine_client.session.messages = [
             Mock(role="user", content="Hello")
         ]
-        handler_perplexity.handle_export("")
+        handler_perplexity.handle_command("/export")
         # Should show warning message
 
     # ==================== /sessions Command ====================
 
-    @patch('ppxai.commands.handler.display_sessions')
+    @patch('ppxai.ui.display_sessions')
     def test_sessions_command_perplexity(self, mock_display, handler_perplexity, mock_engine_client):
         """Test /sessions command with Perplexity provider."""
         # Create mock SessionInfo objects with expected attributes
@@ -251,11 +251,11 @@ class TestCommandHandlerBothProviders:
 
         mock_sessions = [session1, session2]
         mock_engine_client.session.list_sessions = Mock(return_value=mock_sessions)
-        handler_perplexity.handle_sessions()
+        handler_perplexity.handle_command("/sessions")
         mock_engine_client.session.list_sessions.assert_called_once()
         mock_display.assert_called_once()
 
-    @patch('ppxai.commands.handler.display_sessions')
+    @patch('ppxai.ui.display_sessions')
     def test_sessions_command_custom(self, mock_display, handler_custom, mock_engine_client):
         """Test /sessions command with custom provider."""
         # Create mock SessionInfo objects with expected attributes
@@ -268,7 +268,7 @@ class TestCommandHandlerBothProviders:
 
         mock_sessions = [session1]
         mock_engine_client.session.list_sessions = Mock(return_value=mock_sessions)
-        handler_custom.handle_sessions()
+        handler_custom.handle_command("/sessions")
         mock_engine_client.session.list_sessions.assert_called_once()
         mock_display.assert_called_once()
 
@@ -279,7 +279,7 @@ class TestCommandHandlerBothProviders:
         """Test /autoroute on with Perplexity provider."""
         mock_get_coding.return_value = "sonar-reasoning"
         handler_perplexity.auto_route = False
-        handler_perplexity.handle_autoroute("on")
+        handler_perplexity.handle_command("/autoroute on")
         assert handler_perplexity.auto_route is True
 
     @patch('ppxai.commands.handler.get_coding_model')
@@ -287,7 +287,7 @@ class TestCommandHandlerBothProviders:
         """Test /autoroute on with custom provider."""
         mock_get_coding.return_value = "gpt-oss-120b"
         handler_custom.auto_route = False
-        handler_custom.handle_autoroute("on")
+        handler_custom.handle_command("/autoroute on")
         assert handler_custom.auto_route is True
 
     @patch('ppxai.commands.handler.get_coding_model')
@@ -295,7 +295,7 @@ class TestCommandHandlerBothProviders:
         """Test /autoroute off with Perplexity provider."""
         mock_get_coding.return_value = "sonar-reasoning"
         handler_perplexity.auto_route = True
-        handler_perplexity.handle_autoroute("off")
+        handler_perplexity.handle_command("/autoroute off")
         assert handler_perplexity.auto_route is False
 
     @patch('ppxai.commands.handler.get_coding_model')
@@ -303,7 +303,7 @@ class TestCommandHandlerBothProviders:
         """Test /autoroute off with custom provider."""
         mock_get_coding.return_value = "gpt-oss-120b"
         handler_custom.auto_route = True
-        handler_custom.handle_autoroute("off")
+        handler_custom.handle_command("/autoroute off")
         assert handler_custom.auto_route is False
 
     @patch('ppxai.commands.handler.get_coding_model')
@@ -311,7 +311,7 @@ class TestCommandHandlerBothProviders:
         """Test /autoroute status check with Perplexity provider."""
         mock_get_coding.return_value = "sonar-reasoning"
         handler_perplexity.auto_route = True
-        handler_perplexity.handle_autoroute("")
+        handler_perplexity.handle_command("/autoroute")
         # Should not change current status
         assert handler_perplexity.auto_route is True
 
@@ -320,16 +320,16 @@ class TestCommandHandlerBothProviders:
         """Test /autoroute status check with custom provider."""
         mock_get_coding.return_value = "gpt-oss-120b"
         handler_custom.auto_route = True
-        handler_custom.handle_autoroute("")
+        handler_custom.handle_command("/autoroute")
         assert handler_custom.auto_route is True
 
     # ==================== /provider Command ====================
 
-    @patch('ppxai.commands.handler.select_provider')
-    @patch('ppxai.commands.handler.select_model')
-    @patch('ppxai.commands.handler.get_api_key')
-    @patch('ppxai.commands.handler.get_base_url')
-    @patch('ppxai.commands.handler.get_provider_config')
+    @patch('ppxai.ui.select_provider')
+    @patch('ppxai.ui.select_model')
+    @patch('ppxai.config.get_api_key')
+    @patch('ppxai.config.get_base_url')
+    @patch('ppxai.config.get_provider_config')
     def test_provider_switch_perplexity_to_custom(
         self,
         mock_get_config,
@@ -350,7 +350,7 @@ class TestCommandHandlerBothProviders:
         mock_engine_client.set_provider = Mock(return_value=True)
         mock_engine_client.set_model = Mock(return_value=True)
 
-        handler_perplexity.handle_provider()
+        handler_perplexity.handle_command("/provider")
 
         # Verify provider switched
         assert handler_perplexity.provider == "custom"
@@ -358,11 +358,11 @@ class TestCommandHandlerBothProviders:
         assert handler_perplexity.base_url == "https://custom.example.com/v1"
         assert handler_perplexity.current_model == "gpt-oss-120b"
 
-    @patch('ppxai.commands.handler.select_provider')
-    @patch('ppxai.commands.handler.select_model')
-    @patch('ppxai.commands.handler.get_api_key')
-    @patch('ppxai.commands.handler.get_base_url')
-    @patch('ppxai.commands.handler.get_provider_config')
+    @patch('ppxai.ui.select_provider')
+    @patch('ppxai.ui.select_model')
+    @patch('ppxai.config.get_api_key')
+    @patch('ppxai.config.get_base_url')
+    @patch('ppxai.config.get_provider_config')
     def test_provider_switch_custom_to_perplexity(
         self,
         mock_get_config,
@@ -383,7 +383,7 @@ class TestCommandHandlerBothProviders:
         mock_engine_client.set_provider = Mock(return_value=True)
         mock_engine_client.set_model = Mock(return_value=True)
 
-        handler_custom.handle_provider()
+        handler_custom.handle_command("/provider")
 
         # Verify provider switched
         assert handler_custom.provider == "perplexity"
@@ -391,26 +391,26 @@ class TestCommandHandlerBothProviders:
         assert handler_custom.base_url == "https://api.perplexity.ai"
         assert handler_custom.current_model == "sonar-pro"
 
-    @patch('ppxai.commands.handler.select_provider')
+    @patch('ppxai.ui.select_provider')
     def test_provider_same_selection_perplexity(self, mock_select, handler_perplexity):
         """Test selecting same provider (Perplexity)."""
         mock_select.return_value = "perplexity"
         original_provider = handler_perplexity.provider
-        handler_perplexity.handle_provider()
+        handler_perplexity.handle_command("/provider")
         # Should stay the same
         assert handler_perplexity.provider == original_provider
 
-    @patch('ppxai.commands.handler.select_provider')
+    @patch('ppxai.ui.select_provider')
     def test_provider_same_selection_custom(self, mock_select, handler_custom):
         """Test selecting same provider (custom)."""
         mock_select.return_value = "custom"
         original_provider = handler_custom.provider
-        handler_custom.handle_provider()
+        handler_custom.handle_command("/provider")
         assert handler_custom.provider == original_provider
 
-    @patch('ppxai.commands.handler.select_provider')
-    @patch('ppxai.commands.handler.get_api_key')
-    @patch('ppxai.commands.handler.get_provider_config')
+    @patch('ppxai.ui.select_provider')
+    @patch('ppxai.config.get_api_key')
+    @patch('ppxai.config.get_provider_config')
     def test_provider_switch_missing_api_key_perplexity(
         self,
         mock_get_config,
@@ -424,14 +424,14 @@ class TestCommandHandlerBothProviders:
         mock_get_config.return_value = {"api_key_env": "CUSTOM_API_KEY"}
 
         original_provider = handler_perplexity.provider
-        handler_perplexity.handle_provider()
+        handler_perplexity.handle_command("/provider")
 
         # Should stay on original provider
         assert handler_perplexity.provider == original_provider
 
-    @patch('ppxai.commands.handler.select_provider')
-    @patch('ppxai.commands.handler.get_api_key')
-    @patch('ppxai.commands.handler.get_provider_config')
+    @patch('ppxai.ui.select_provider')
+    @patch('ppxai.config.get_api_key')
+    @patch('ppxai.config.get_provider_config')
     def test_provider_switch_missing_api_key_custom(
         self,
         mock_get_config,
@@ -445,7 +445,7 @@ class TestCommandHandlerBothProviders:
         mock_get_config.return_value = {"api_key_env": "PERPLEXITY_API_KEY"}
 
         original_provider = handler_custom.provider
-        handler_custom.handle_provider()
+        handler_custom.handle_command("/provider")
 
         assert handler_custom.provider == original_provider
 
@@ -497,7 +497,7 @@ class TestCodingCommands:
     @patch('ppxai.commands.handler.send_coding_task')
     def test_generate_perplexity(self, mock_send, handler_perplexity):
         """Test /generate command with Perplexity."""
-        handler_perplexity.handle_generate("a fibonacci function")
+        handler_perplexity.handle_command("/generate a fibonacci function")
         mock_send.assert_called_once()
         args = mock_send.call_args
         assert args[0][1] == "generate"
@@ -507,7 +507,7 @@ class TestCodingCommands:
     @patch('ppxai.commands.handler.send_coding_task')
     def test_generate_custom(self, mock_send, handler_custom):
         """Test /generate command with custom provider."""
-        handler_custom.handle_generate("a sorting algorithm")
+        handler_custom.handle_command("/generate a sorting algorithm")
         mock_send.assert_called_once()
         args = mock_send.call_args
         assert args[0][1] == "generate"
@@ -517,11 +517,11 @@ class TestCodingCommands:
     def test_generate_no_args_perplexity(self, handler_perplexity):
         """Test /generate without arguments for Perplexity."""
         # Should print error, not crash
-        handler_perplexity.handle_generate("")
+        handler_perplexity.handle_command("/generate")
 
     def test_generate_no_args_custom(self, handler_custom):
         """Test /generate without arguments for custom provider."""
-        handler_custom.handle_generate("")
+        handler_custom.handle_command("/generate")
 
     # ==================== /debug Command ====================
 
@@ -529,7 +529,7 @@ class TestCodingCommands:
     def test_debug_perplexity(self, mock_send, handler_perplexity):
         """Test /debug command with Perplexity."""
         error_msg = "TypeError: 'NoneType' object is not subscriptable"
-        handler_perplexity.handle_debug(error_msg)
+        handler_perplexity.handle_command(f"/debug {error_msg}")
         mock_send.assert_called_once()
         args = mock_send.call_args
         assert args[0][1] == "debug"
@@ -539,7 +539,7 @@ class TestCodingCommands:
     def test_debug_custom(self, mock_send, handler_custom):
         """Test /debug command with custom provider."""
         error_msg = "IndexError: list index out of range"
-        handler_custom.handle_debug(error_msg)
+        handler_custom.handle_command(f"/debug {error_msg}")
         mock_send.assert_called_once()
         args = mock_send.call_args
         assert args[0][1] == "debug"
@@ -547,11 +547,11 @@ class TestCodingCommands:
 
     def test_debug_no_args_perplexity(self, handler_perplexity):
         """Test /debug without arguments for Perplexity."""
-        handler_perplexity.handle_debug("")
+        handler_perplexity.handle_command("/debug")
 
     def test_debug_no_args_custom(self, handler_custom):
         """Test /debug without arguments for custom provider."""
-        handler_custom.handle_debug("")
+        handler_custom.handle_command("/debug")
 
     # ==================== /implement Command ====================
 
@@ -559,7 +559,7 @@ class TestCodingCommands:
     def test_implement_perplexity(self, mock_send, handler_perplexity):
         """Test /implement command with Perplexity."""
         spec = "a REST API endpoint for user authentication"
-        handler_perplexity.handle_implement(spec)
+        handler_perplexity.handle_command(f"/implement {spec}")
         mock_send.assert_called_once()
         args = mock_send.call_args
         assert args[0][1] == "implement"
@@ -569,7 +569,7 @@ class TestCodingCommands:
     def test_implement_custom(self, mock_send, handler_custom):
         """Test /implement command with custom provider."""
         spec = "a caching layer with Redis"
-        handler_custom.handle_implement(spec)
+        handler_custom.handle_command(f"/implement {spec}")
         mock_send.assert_called_once()
         args = mock_send.call_args
         assert args[0][1] == "implement"
@@ -577,11 +577,11 @@ class TestCodingCommands:
 
     def test_implement_no_args_perplexity(self, handler_perplexity):
         """Test /implement without arguments for Perplexity."""
-        handler_perplexity.handle_implement("")
+        handler_perplexity.handle_command("/implement")
 
     def test_implement_no_args_custom(self, handler_custom):
         """Test /implement without arguments for custom provider."""
-        handler_custom.handle_implement("")
+        handler_custom.handle_command("/implement")
 
 
 class TestToolsCommands:
@@ -632,77 +632,77 @@ class TestToolsCommands:
 
     def test_tools_status_disabled_perplexity(self, handler_perplexity):
         """Test /tools status when disabled for Perplexity."""
-        handler_perplexity.handle_tools("status")
+        handler_perplexity.handle_command("/tools status")
         # Should show tools not enabled
 
     def test_tools_status_disabled_custom(self, handler_custom):
         """Test /tools status when disabled for custom provider."""
-        handler_custom.handle_tools("status")
+        handler_custom.handle_command("/tools status")
 
     @patch('ppxai.commands.handler.asyncio.run')
     def test_tools_enable_perplexity(self, mock_asyncio, handler_perplexity, mock_engine_client):
         """Test /tools enable for Perplexity."""
-        handler_perplexity.handle_tools("enable")
+        handler_perplexity.handle_command("/tools enable")
         # Should call engine_client.enable_tools()
         mock_engine_client.enable_tools.assert_called_once()
 
     @patch('ppxai.commands.handler.asyncio.run')
     def test_tools_enable_custom(self, mock_asyncio, handler_custom, mock_engine_client):
         """Test /tools enable for custom provider."""
-        handler_custom.handle_tools("enable")
+        handler_custom.handle_command("/tools enable")
         # Should call engine_client.enable_tools()
         mock_engine_client.enable_tools.assert_called_once()
 
     def test_tools_unavailable_perplexity(self, handler_perplexity):
         """Test /tools when not available for Perplexity."""
         handler_perplexity.tools_available = False
-        handler_perplexity.handle_tools("enable")
+        handler_perplexity.handle_command("/tools enable")
         # Should show error message
 
     def test_tools_unavailable_custom(self, handler_custom):
         """Test /tools when not available for custom provider."""
         handler_custom.tools_available = False
-        handler_custom.handle_tools("enable")
+        handler_custom.handle_command("/tools enable")
 
     def test_tools_invalid_subcommand_perplexity(self, handler_perplexity):
         """Test /tools with invalid subcommand for Perplexity."""
-        handler_perplexity.handle_tools("invalid")
+        handler_perplexity.handle_command("/tools invalid")
         # Should show error
 
     def test_tools_invalid_subcommand_custom(self, handler_custom):
         """Test /tools with invalid subcommand for custom provider."""
-        handler_custom.handle_tools("invalid")
+        handler_custom.handle_command("/tools invalid")
 
-    @patch('ppxai.commands.handler.display_file_editing_help')
+    @patch('ppxai.ui.display_file_editing_help')
     def test_tools_help_editing_perplexity(self, mock_help, handler_perplexity):
         """Test /tools help editing for Perplexity."""
-        handler_perplexity.handle_tools("help editing")
+        handler_perplexity.handle_command("/tools help editing")
         mock_help.assert_called_once()
 
-    @patch('ppxai.commands.handler.display_file_editing_help')
+    @patch('ppxai.ui.display_file_editing_help')
     def test_tools_help_editing_custom(self, mock_help, handler_custom):
         """Test /tools help editing for custom provider."""
-        handler_custom.handle_tools("help editing")
+        handler_custom.handle_command("/tools help editing")
         mock_help.assert_called_once()
 
     def test_tools_help_no_topic_perplexity(self, handler_perplexity):
         """Test /tools help without topic for Perplexity."""
-        handler_perplexity.handle_tools("help")
+        handler_perplexity.handle_command("/tools help")
         # Should show available topics
 
     def test_tools_help_no_topic_custom(self, handler_custom):
         """Test /tools help without topic for custom provider."""
-        handler_custom.handle_tools("help")
+        handler_custom.handle_command("/tools help")
         # Should show available topics
 
     def test_tools_help_invalid_topic_perplexity(self, handler_perplexity):
         """Test /tools help with invalid topic for Perplexity."""
-        handler_perplexity.handle_tools("help invalid_topic")
+        handler_perplexity.handle_command("/tools help invalid_topic")
         # Should show available topics
 
     def test_tools_help_invalid_topic_custom(self, handler_custom):
         """Test /tools help with invalid topic for custom provider."""
-        handler_custom.handle_tools("help invalid_topic")
+        handler_custom.handle_command("/tools help invalid_topic")
         # Should show available topics
 
 

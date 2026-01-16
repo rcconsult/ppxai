@@ -1,0 +1,606 @@
+"""
+Tools and usage commands - tool management and usage statistics.
+
+Commands for enabling/disabling tools, tool configuration, and usage tracking.
+
+v1.13.10: Migrated to Command Factory pattern
+"""
+
+from typing import TYPE_CHECKING, List
+
+from .factory import CommandFactory, CommandSpec
+
+if TYPE_CHECKING:
+    from .handler import CommandHandler
+
+
+def handle_tools(handler: "CommandHandler", args: str) -> None:
+    """Handle /tools command for tool management.
+
+    Subcommands:
+        /tools status    - Show tools status (default)
+        /tools on/enable - Enable tools
+        /tools off/disable - Disable tools
+        /tools list      - List available tools
+        /tools config    - Configure tool settings
+        /tools set       - Set tool display options
+        /tools help      - Show tool help
+        /tools agent     - Control agent mode
+
+    Args:
+        handler: CommandHandler instance providing context
+        args: Subcommand and arguments
+    """
+    from ..engine.tools.builtin import web_premium
+    from ..ui import console, display_file_editing_help, display_tool_help, display_tools_table
+    from ..common.logger import get_logger
+
+    logger = get_logger("tui")
+
+    if not handler.tools_available:
+        console.print("[red]Error: Tool support not available.[/red]")
+        console.print("[yellow]Missing dependencies. Check docs/TOOL_CREATION_GUIDE.md[/yellow]\n")
+        return
+
+    parts = args.strip().split() if args else []
+    subcommand = parts[0].lower() if parts else "status"
+    subargs = parts[1:] if len(parts) > 1 else []
+
+    if subcommand in ("enable", "on"):
+        _enable_tools(handler)
+    elif subcommand in ("disable", "off"):
+        _disable_tools(handler)
+    elif subcommand == "list":
+        _list_tools(handler)
+    elif subcommand == "status":
+        _tools_status(handler)
+    elif subcommand == "config":
+        _tools_config(handler, subargs)
+    elif subcommand == "set":
+        _tools_set(handler, subargs)
+    elif subcommand == "help":
+        if subargs:
+            if subargs[0] == "editing":
+                display_file_editing_help()
+            else:
+                # Show help for specific tool
+                _show_tool_help(handler, subargs[0])
+        else:
+            console.print("[yellow]Tool Help[/yellow]")
+            console.print("[dim]Usage: /tools help <tool-name>  - Show help for a specific tool[/dim]")
+            console.print("[dim]       /tools help editing      - Show file editing guide[/dim]\n")
+    elif subcommand == "agent":
+        # Agent mode control (v1.11.8)
+        _tools_agent(handler, subargs)
+    else:
+        console.print(f"[red]Unknown subcommand: {subcommand}[/red]")
+        console.print("[yellow]Available: on, off, list, status, config, set, help, agent[/yellow]\n")
+
+
+def _enable_tools(handler: "CommandHandler") -> None:
+    """Enable AI tools (including file editing tools with consent)."""
+    from ..ui import console
+
+    if not handler.engine_client:
+        console.print("[red]Error: Engine client not available[/red]\n")
+        return
+
+    if handler.engine_client.tools_enabled:
+        console.print("[yellow]Tools already enabled[/yellow]\n")
+        return
+
+    console.print("[cyan]Enabling tools...[/cyan]")
+    handler.engine_client.enable_tools()
+
+    console.print("[green]* Tools enabled![/green]")
+    console.print("[dim]Includes file editing tools (apply_patch, replace_block, insert_text, delete_lines)[/dim]")
+
+    # Show context limit info
+    try:
+        from ..config import get_model_context_limit, get_max_injection_size
+        context_limit = get_model_context_limit(handler.provider, handler.current_model)
+        max_injection = get_max_injection_size()
+        console.print(f"[dim]Context limit: {context_limit:,} tokens | @file/@git/@tree truncated at {max_injection // 1000}KB[/dim]")
+    except ImportError:
+        pass
+
+    console.print("[dim]Use '/tools list' to see available tools[/dim]\n")
+
+
+def _disable_tools(handler: "CommandHandler") -> None:
+    """Disable AI tools."""
+    from ..ui import console
+
+    if not handler.engine_client:
+        console.print("[red]Error: Engine client not available[/red]\n")
+        return
+
+    if not handler.engine_client.tools_enabled:
+        console.print("[yellow]Tools not enabled[/yellow]\n")
+        return
+
+    handler.engine_client.disable_tools()
+    console.print("[yellow]Tools disabled[/yellow]\n")
+
+
+def _list_tools(handler: "CommandHandler") -> None:
+    """List available tools."""
+    from ..ui import console, display_tools_table
+
+    if not handler.engine_client or not handler.engine_client.tools_enabled:
+        console.print("[yellow]Tools not enabled. Use '/tools enable' first[/yellow]\n")
+        return
+
+    if handler.engine_client.tool_manager:
+        engine_tools = handler.engine_client.tool_manager.list_tools()
+        if engine_tools:
+            display_tools_table(engine_tools)
+        else:
+            console.print("[yellow]No tools available[/yellow]\n")
+
+
+def _tools_status(handler: "CommandHandler") -> None:
+    """Show tools status."""
+    from ..engine.tools.builtin import web_premium
+    from ..ui import console
+    from ..common.logger import get_logger
+
+    logger = get_logger("tui")
+
+    if handler.engine_client and handler.engine_client.tools_enabled:
+        # Get tool count from engine
+        tool_count = 0
+        if handler.engine_client.tool_manager:
+            try:
+                tool_count = len(handler.engine_client.tool_manager.list_tools())
+            except Exception as e:
+                logger.debug(f"Failed to get tool count: {e}")
+
+        console.print(f"[green]* Tools enabled[/green] ({tool_count} tools available)")
+
+        # Show consent mode
+        try:
+            consent_mode = handler.engine_client.session.edit_consent_mode
+            console.print(f"[dim]Consent mode: {consent_mode}[/dim]")
+        except Exception as e:
+            logger.debug(f"Failed to get consent mode: {e}")
+
+        # Show web search provider
+        try:
+            if web_premium.is_available():
+                provider = web_premium.get_premium_search_provider(handler.provider)
+                if provider:
+                    console.print(f"[dim]Web Search: {provider.title()} (premium)[/dim]")
+                else:
+                    console.print(f"[dim]Web Search: DuckDuckGo (free)[/dim]")
+            else:
+                console.print(f"[dim]Web Search: DuckDuckGo (free)[/dim]")
+        except Exception:
+            console.print(f"[dim]Web Search: DuckDuckGo (free)[/dim]")
+
+        console.print("[dim]Use '/tools list' to see available tools[/dim]\n")
+    else:
+        console.print("[yellow]Tools not enabled[/yellow]")
+        console.print("[dim]Use '/tools enable' to activate AI tools[/dim]\n")
+
+
+def _tools_config(handler: "CommandHandler", args: List[str]) -> None:
+    """Configure tool settings."""
+    from ..ui import console
+
+    if not handler.engine_client or not handler.engine_client.tools_enabled:
+        console.print("[yellow]Tools not enabled. Use '/tools enable' first[/yellow]\n")
+        return
+
+    if not args:
+        # Show current config
+        status = handler.engine_client.get_tools_status()
+        max_iter = status.get('max_iterations', 15)
+        auto_retry = status.get('auto_retry_empty', 2)
+        console.print("[bold]Tool Configuration[/bold]")
+        console.print(f"  max_iterations: {max_iter}")
+        console.print(f"  auto_retry_empty: {auto_retry}")
+        console.print()
+        console.print("[dim]Usage: /tools config <setting> <value>[/dim]")
+        console.print("[dim]Available settings:[/dim]")
+        console.print("[dim]  max_iterations <number> - Max tool calls per query (1-50)[/dim]")
+        console.print("[dim]  auto_retry_empty <number> - Auto-retry on empty response (0=off, 1-5)[/dim]\n")
+        return
+
+    if len(args) < 2:
+        console.print("[red]Usage: /tools config <setting> <value>[/red]\n")
+        return
+
+    setting = args[0].lower()
+    value = args[1]
+
+    if setting == "max_iterations":
+        try:
+            num = int(value)
+            if num < 1 or num > 50:
+                console.print("[red]max_iterations must be between 1 and 50[/red]\n")
+                return
+            handler.engine_client.set_tool_config("max_iterations", num)
+            console.print(f"[green]* max_iterations set to {num}[/green]\n")
+        except ValueError:
+            console.print(f"[red]Invalid number: {value}[/red]\n")
+    elif setting == "auto_retry_empty":
+        try:
+            num = int(value)
+            if num < 0 or num > 5:
+                console.print("[red]auto_retry_empty must be between 0 and 5[/red]\n")
+                return
+            handler.engine_client.set_tool_config("auto_retry_empty", num)
+            status = "disabled" if num == 0 else f"{num} retries"
+            console.print(f"[green]* auto_retry_empty set to {status}[/green]\n")
+        except ValueError:
+            console.print(f"[red]Invalid number: {value}[/red]\n")
+    else:
+        console.print(f"[red]Unknown setting: {setting}[/red]")
+        console.print("[dim]Available: max_iterations, auto_retry_empty[/dim]\n")
+
+
+def _tools_set(handler: "CommandHandler", args: List[str]) -> None:
+    """Set tool settings (verbose mode)."""
+    from ..ui import console
+
+    if not args:
+        # Show current settings
+        verbose_status = "enabled" if handler.tools_verbose else "disabled"
+        console.print("[bold]Tool Settings[/bold]")
+        console.print(f"  verbose: {verbose_status}")
+        console.print()
+        console.print("[dim]Usage: /tools set <setting> <value>[/dim]")
+        console.print("[dim]Available settings:[/dim]")
+        console.print("[dim]  verbose on/off - Show tool inputs and outputs[/dim]\n")
+        return
+
+    if len(args) < 2:
+        console.print("[red]Usage: /tools set <setting> <value>[/red]\n")
+        return
+
+    setting = args[0].lower()
+    value = args[1].lower()
+
+    if setting == "verbose":
+        if value in ["on", "true", "1", "yes"]:
+            handler.tools_verbose = True
+            console.print("[green]* Verbose tool logging enabled[/green]")
+            console.print("[dim]Tool inputs and outputs will be displayed during execution[/dim]\n")
+        elif value in ["off", "false", "0", "no"]:
+            handler.tools_verbose = False
+            console.print("[yellow]Verbose tool logging disabled[/yellow]\n")
+        else:
+            console.print(f"[red]Invalid value: {value}[/red]")
+            console.print("[dim]Use: on, off, true, false, 1, 0, yes, or no[/dim]\n")
+    else:
+        console.print(f"[red]Unknown setting: {setting}[/red]")
+        console.print("[dim]Available: verbose[/dim]\n")
+
+
+def _tools_agent(handler: "CommandHandler", args: List[str]) -> None:
+    """Control agent mode for autonomous task execution."""
+    from ..ui import console
+
+    if not handler.engine_client:
+        console.print("[red]Error: Engine client not available[/red]\n")
+        return
+
+    if not args:
+        # Show current agent mode status
+        status = "[green]ON[/green]" if handler.engine_client.agent_mode else "[dim]OFF[/dim]"
+        console.print(f"[bold]Agent Mode:[/bold] {status}")
+        console.print("[dim]Usage: /tools agent on|off[/dim]")
+        console.print("[dim]       /agent <task>  - Run autonomous task[/dim]\n")
+        return
+
+    action = args[0].lower()
+    if action in ["on", "enable"]:
+        handler.engine_client.enable_agent_mode()
+        console.print("[green]Agent mode enabled[/green]")
+        console.print("[dim]Tools auto-enabled. Use '/agent <task>' to start autonomous execution.[/dim]\n")
+    elif action in ["off", "disable"]:
+        handler.engine_client.disable_agent_mode()
+        console.print("[yellow]Agent mode disabled[/yellow]\n")
+    else:
+        console.print(f"[red]Unknown action: {action}[/red]")
+        console.print("[dim]Usage: /tools agent on|off[/dim]\n")
+
+
+def _show_tool_help(handler: "CommandHandler", tool_name: str) -> None:
+    """Show detailed help for a specific tool."""
+    from ..ui import console, display_tool_help
+
+    if not handler.engine_client or not handler.engine_client.tools_enabled:
+        console.print("[yellow]Tools not enabled. Use '/tools enable' first[/yellow]\n")
+        return
+
+    if not handler.engine_client.tool_manager:
+        console.print("[red]Tool manager not available[/red]\n")
+        return
+
+    # Get the tool
+    tool = handler.engine_client.tool_manager.get_tool(tool_name)
+    if not tool:
+        # Tool not found - show available tools
+        available_tools = handler.engine_client.tool_manager.list_tools()
+        tool_names = [t['name'] for t in available_tools]
+
+        console.print(f"[red]Tool not found: {tool_name}[/red]")
+        console.print("[dim]Available tools:[/dim]")
+        for name in sorted(tool_names):
+            console.print(f"[dim]  - {name}[/dim]")
+        console.print()
+        return
+
+    # Get tool definition and display help
+    tool_info = tool.get_definition()
+    display_tool_help(tool_name, tool_info)
+
+
+def handle_usage(handler: "CommandHandler", args: str) -> None:
+    """Handle /usage command for usage statistics.
+
+    Subcommands:
+        /usage              - Show session usage totals
+        /usage 24h          - Show usage for last 24 hours
+        /usage week         - Show usage for last 7 days
+        /usage month        - Show usage for last 30 days
+        /usage year         - Show usage for last 365 days
+        /usage all          - Show all-time usage
+        /usage show session - Status line shows session totals (default)
+        /usage show provider - Status line shows current provider totals
+        /usage show model   - Status line shows current model totals
+        /usage show off     - Hide usage from status line
+        /usage reset        - Reset all usage counters
+
+    Args:
+        handler: CommandHandler instance providing context
+        args: Subcommand and arguments
+    """
+    from ..ui import console
+
+    args = args.strip().lower()
+
+    if not args:
+        # Default: show session totals with per-model breakdown
+        _display_usage_report(handler)
+        return
+
+    parts = args.split()
+    sub_command = parts[0]
+
+    # Time-based usage reports
+    time_periods = {"24h", "week", "month", "year", "all"}
+    if sub_command in time_periods:
+        _display_global_usage_report(handler, sub_command)
+        return
+
+    if sub_command == "show":
+        if len(parts) < 2:
+            console.print("\n[yellow]Usage: /usage show <session|provider|model|off>[/yellow]")
+            console.print(f"  Current mode: [cyan]{handler.engine_client.session.usage_display_mode}[/cyan]\n")
+            return
+
+        mode = parts[1]
+        valid_modes = {"session", "provider", "model", "off"}
+        if mode not in valid_modes:
+            console.print(f"\n[red]Invalid mode: {mode}[/red]")
+            console.print(f"  Valid modes: {', '.join(valid_modes)}\n")
+            return
+
+        if handler.engine_client.session.set_usage_display_mode(mode):
+            mode_descriptions = {
+                "session": "session totals",
+                "provider": f"current provider ({handler.provider}) totals",
+                "model": f"current model ({handler.current_model}) totals",
+                "off": "hidden"
+            }
+            console.print(f"\n[green]Usage display set to: {mode_descriptions[mode]}[/green]\n")
+        else:
+            console.print(f"\n[red]Failed to set display mode[/red]\n")
+
+    elif sub_command == "reset":
+        handler.engine_client.session.reset_usage()
+        console.print("\n[green]Usage counters reset to zero.[/green]\n")
+
+    else:
+        console.print(f"\n[red]Unknown sub-command: {sub_command}[/red]")
+        console.print("  Available: 24h, week, month, year, all, show, reset\n")
+
+
+def _display_usage_report(handler: "CommandHandler") -> None:
+    """Display detailed usage report with per-model breakdown."""
+    from rich.table import Table
+    from ..ui import console
+
+    usage = handler.engine_client.session.get_usage()
+
+    # Session totals
+    console.print()
+    console.print("[bold cyan]Session Usage Statistics[/bold cyan]")
+    console.print(f"  Total tokens: {usage['total_tokens']:,} ({usage['prompt_tokens']:,}* / {usage['completion_tokens']:,}^)")
+    console.print(f"  Estimated cost: ${usage['estimated_cost']:.4f}")
+
+    # Per-model breakdown if available
+    by_model = usage.get("by_model", {})
+    if by_model:
+        console.print()
+        table = Table(title="Usage by Model", show_header=True, header_style="bold magenta")
+        table.add_column("Provider", style="cyan")
+        table.add_column("Model", style="cyan")
+        table.add_column("In", justify="right", style="green")
+        table.add_column("Out", justify="right", style="green")
+        table.add_column("Cost", justify="right", style="yellow")
+
+        for key, stats in sorted(by_model.items()):
+            parts = key.split("/", 1)
+            provider = parts[0]
+            model = parts[1] if len(parts) > 1 else key
+            table.add_row(
+                provider,
+                model,
+                f"{stats['prompt_tokens']:,}",
+                f"{stats['completion_tokens']:,}",
+                f"${stats['estimated_cost']:.4f}"
+            )
+
+        # Add totals row
+        table.add_row(
+            "[bold]TOTAL[/bold]",
+            "",
+            f"[bold]{usage['prompt_tokens']:,}[/bold]",
+            f"[bold]{usage['completion_tokens']:,}[/bold]",
+            f"[bold]${usage['estimated_cost']:.4f}[/bold]"
+        )
+
+        console.print(table)
+
+    # Tool usage breakdown
+    tool_calls = usage.get("tool_calls", {})
+    if tool_calls:
+        console.print()
+        tool_table = Table(title="Tool Usage", show_header=True, header_style="bold magenta")
+        tool_table.add_column("Tool", style="cyan")
+        tool_table.add_column("Provider", style="cyan")
+        tool_table.add_column("Calls", justify="right", style="green")
+        tool_table.add_column("Tokens In", justify="right", style="green")
+        tool_table.add_column("Tokens Out", justify="right", style="green")
+        tool_table.add_column("Cost", justify="right", style="yellow")
+
+        total_tool_cost = 0.0
+        for tool_name, tool_stats in sorted(tool_calls.items()):
+            provider = tool_stats.get("provider", "unknown")
+            tool_table.add_row(
+                tool_name,
+                provider.title() if provider != "duckduckgo" else "DuckDuckGo",
+                f"{tool_stats.get('call_count', 0)}",
+                f"{tool_stats.get('tokens_in', 0):,}",
+                f"{tool_stats.get('tokens_out', 0):,}",
+                f"${tool_stats.get('estimated_cost', 0.0):.4f}"
+            )
+            total_tool_cost += tool_stats.get('estimated_cost', 0.0)
+
+        console.print(tool_table)
+        total_cost = usage['estimated_cost'] + total_tool_cost
+        console.print(f"\n[bold cyan]Total Session Cost:[/bold cyan] [bold yellow]${total_cost:.4f}[/bold yellow]")
+        console.print(f"  Model cost: ${usage['estimated_cost']:.4f}")
+        console.print(f"  Tool cost: ${total_tool_cost:.4f}")
+    else:
+        console.print(f"\n[bold cyan]Total Session Cost:[/bold cyan] [bold yellow]${usage['estimated_cost']:.4f}[/bold yellow]")
+
+    # Display mode
+    display_mode = usage.get("display_mode", "session")
+    console.print(f"\n  Status line display: [cyan]{display_mode}[/cyan]")
+    console.print("  (Change with /usage show <session|provider|model|off>)\n")
+
+
+def _display_global_usage_report(handler: "CommandHandler", period: str) -> None:
+    """Display usage report for a time period.
+
+    Args:
+        period: One of "24h", "week", "month", "year", "all"
+    """
+    from rich.table import Table
+    from ..usage import get_usage_report
+    from ..ui import console
+
+    report = get_usage_report(period)
+
+    # Header with period info
+    period_labels = {
+        "24h": "Last 24 Hours",
+        "week": "Last 7 Days",
+        "month": "Last 30 Days",
+        "year": "Last 365 Days",
+        "all": "All Time"
+    }
+    console.print()
+    console.print(f"[bold cyan]Usage Report: {period_labels.get(period, period)}[/bold cyan]")
+
+    if report["start_date"]:
+        console.print(f"[dim]Period: {report['start_date']} to {report['end_date']}[/dim]")
+    else:
+        console.print(f"[dim]Period: All recorded sessions[/dim]")
+
+    # Summary stats
+    console.print(f"\n  Sessions: [cyan]{report['session_count']}[/cyan]")
+    console.print(f"  Total tokens: [cyan]{report['total_tokens']:,}[/cyan]")
+    console.print(f"  Estimated cost: [yellow]${report['total_cost']:.4f}[/yellow]")
+
+    # By provider breakdown
+    by_provider = report.get("by_provider", {})
+    if by_provider:
+        console.print()
+        table = Table(title="By Provider", show_header=True, header_style="bold magenta")
+        table.add_column("Provider", style="cyan")
+        table.add_column("Tokens", justify="right", style="green")
+        table.add_column("Cost", justify="right", style="yellow")
+        table.add_column("Sessions", justify="right", style="dim")
+
+        for provider, stats in sorted(by_provider.items()):
+            table.add_row(
+                provider,
+                f"{stats['total_tokens']:,}",
+                f"${stats['estimated_cost']:.4f}",
+                str(stats['session_count'])
+            )
+
+        console.print(table)
+
+    # By model breakdown
+    by_model = report.get("by_model", {})
+    if by_model:
+        console.print()
+        table = Table(title="By Model", show_header=True, header_style="bold magenta")
+        table.add_column("Provider", style="cyan")
+        table.add_column("Model", style="cyan")
+        table.add_column("In", justify="right", style="green")
+        table.add_column("Out", justify="right", style="green")
+        table.add_column("Cost", justify="right", style="yellow")
+
+        for key, stats in sorted(by_model.items()):
+            parts = key.split("/", 1)
+            provider = parts[0]
+            model = parts[1] if len(parts) > 1 else key
+            table.add_row(
+                provider,
+                model,
+                f"{stats['prompt_tokens']:,}",
+                f"{stats['completion_tokens']:,}",
+                f"${stats['estimated_cost']:.4f}"
+            )
+
+        console.print(table)
+
+    # Recent sessions (limit to 5)
+    sessions = report.get("sessions", [])[:5]
+    if sessions:
+        console.print()
+        console.print("[bold]Recent Sessions:[/bold]")
+        for s in sessions:
+            ended = s.get("ended_at", "")[:16].replace("T", " ")
+            console.print(f"  [dim]{ended}[/dim] - {s.get('total_tokens', 0):,} tokens, ${s.get('total_cost', 0):.4f}")
+
+    console.print()
+
+
+# =============================================================================
+# Command Registration
+# =============================================================================
+
+CommandFactory.register(CommandSpec(
+    name="tools",
+    description="Manage AI tools and tool settings",
+    handler=handle_tools,
+    category="tools",
+    usage="/tools [on|off|list|status|config|set|help|agent]"
+))
+
+CommandFactory.register(CommandSpec(
+    name="usage",
+    description="Show usage statistics",
+    handler=handle_usage,
+    category="tools",
+    usage="/usage [24h|week|month|year|all|show|reset]"
+))

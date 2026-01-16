@@ -1,6 +1,6 @@
 # Technical Debt Tracker
 
-**Last Updated:** 2026-01-15
+**Last Updated:** 2026-01-16
 **Version:** v1.13.10
 
 This document tracks identified technical debt and refactoring opportunities in the ppxai codebase. Items are removed as they are addressed.
@@ -37,15 +37,27 @@ This document tracks identified technical debt and refactoring opportunities in 
 
 | File | Lines | Issue | Status |
 |------|------:|-------|--------|
-| [ppxai/commands.py](../ppxai/commands.py) | 2,404 | 68+ methods in CommandHandler class | Open |
+| [ppxai/commands/handler.py](../ppxai/commands/handler.py) | 507 | CommandHandler class (legacy methods commented) | ✅ Command Factory |
 | [ppxai/server/http.py](../ppxai/server/http.py) | 2,247 | HTTP + session + consent mixed | ✅ SessionManager extracted |
 | [ppxai/engine/client.py](../ppxai/engine/client.py) | 2,035 | Core logic, providers, tools, sessions | Open |
 | [ppxai/config.py](../ppxai/config.py) | 1,352 | 90+ functions | ⚠️ Blocked (see below) |
 | [vscode-extension/src/chatPanel.ts](../vscode-extension/src/chatPanel.ts) | 5,061 | Massive event handling | Open |
 
 **Large Functions:**
-- `commands.py:1438-1609` (handle_show): 172 lines
 - `client.py:1100-1400` (chat loop): 300+ lines
+
+**commands.py Refactoring - ✅ Completed (v1.13.10):**
+Migrated to Command Factory pattern in `ppxai/commands/` package:
+- `factory.py` - CommandSpec, CommandFactory registry with self-registration
+- `session.py` - /save, /export, /sessions, /load
+- `provider.py` - /model, /provider, /autoroute
+- `system.py` - /help, /theme, /status, /spec
+- `coding.py` - /generate, /test, /docs, /implement, /debug, /explain, /convert
+- `utility.py` - /cd, /pwd, /config, /debug_log, /context
+- `tools.py` - /tools, /usage
+- `display.py` - /show
+- `agent.py` - /agent, /undo, /checkpoint
+- Legacy methods in handler.py commented with deprecation notice (removal in v1.14.x)
 
 **config.py Package Conversion - Blocked:**
 Attempted conversion to `config/` package failed due to Python import mechanics:
@@ -56,7 +68,6 @@ Attempted conversion to `config/` package failed due to Python import mechanics:
 
 **Recommendation:**
 - config.py: Keep as single file, add section documentation (lower priority)
-- commands.py: Refactor using Command Factory pattern - see [DESIGN-COMMAND-FACTORY.md](DESIGN-COMMAND-FACTORY.md)
 - client.py: Extract chat loop and tool parsing (medium priority)
 
 ---
@@ -319,6 +330,7 @@ Items moved here after being addressed:
 | Item | Description | Fixed In | Date |
 |------|-------------|----------|------|
 | #1 | Global state management - SessionManager singleton with thread safety | v1.13.10 | 2026-01-14 |
+| #2 | commands.py - Migrated to Command Factory pattern in commands/ package | v1.13.10 | 2026-01-16 |
 | #3 | Silent error handling - Added selective logging to 22 instances | v1.13.10 | 2026-01-15 |
 | #4 | Container tools code duplication - refactored to CLITool hierarchy | v1.13.10 | 2026-01-14 |
 | #5 | Consent Manager duplication - Extracted BaseConsentManager class | v1.13.10 | 2026-01-15 |
@@ -349,8 +361,8 @@ Items moved here after being addressed:
 ## Files Most in Need of Refactoring
 
 1. ~~**`ppxai/server/http.py`**~~ - ✅ Done (SessionManager extracted)
-2. **`ppxai/commands.py`** - Split into `commands/` package
-3. **`ppxai/config.py`** - Split into `config/` package
+2. ~~**`ppxai/commands.py`**~~ - ✅ Done (Command Factory pattern in `commands/` package)
+3. **`ppxai/config.py`** - Split into `config/` package (blocked - see notes above)
 4. **`ppxai/engine/client.py`** - Extract tool execution, message building
 5. ~~**`ppxai/engine/tools/builtin/container.py`**~~ - ✅ Done (refactored to CLITool hierarchy)
 6. **`vscode-extension/src/chatPanel.ts`** - Extract handlers, formatters, UI

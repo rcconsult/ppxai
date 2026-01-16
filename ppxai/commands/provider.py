@@ -140,7 +140,8 @@ def handle_provider(handler: "CommandHandler", args: str) -> None:
     # Re-enable tools if they were enabled before switching
     if tools_were_enabled:
         console.print("[dim]Re-enabling tools for new provider...[/dim]")
-        handler._enable_tools()
+        from .tools import _enable_tools
+        _enable_tools(handler)
     else:
         console.print()
 

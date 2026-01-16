@@ -302,7 +302,7 @@ class TestCustomEndpointToolCalling:
 
         tool_calls, tool_results, response = asyncio.run(chat_with_tools())
 
-        print(f"\nFinal response: {response[:200]}...")
+        print(f"\nFinal response: {response[:200].encode('ascii', 'replace').decode()}...")
 
         # Verify calculator was called (if model decided to use it)
         # Note: prompt-based tool calling may not always trigger
