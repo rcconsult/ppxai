@@ -27,7 +27,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse, FileResponse, HTMLResponse
+from fastapi.responses import StreamingResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -1866,7 +1866,7 @@ async def clear_file_checkpoints(
     if status.get("backend") != "file":
         raise HTTPException(
             status_code=400,
-            detail="Clear only applies to file-based checkpoints. Current backend: " + status.get("backend", "none")
+            detail=f"Clear only applies to file-based checkpoints. Current backend: {status.get('backend', 'none')}"
         )
 
     removed = engine.clear_file_checkpoints(keep_last=keep_last)
@@ -1988,7 +1988,7 @@ async def serve_lib(filename: str):
         }
         media_type = content_types.get(suffix, 'application/octet-stream')
         return FileResponse(file_path, media_type=media_type)
-    raise HTTPException(status_code=404, detail="Not found")
+    raise HTTPException(status_code=404, detail=f"Library file not found: {filename}")
 
 
 @app.get("/shared/{filename:path}")
@@ -2004,7 +2004,7 @@ async def serve_shared(filename: str):
         }
         media_type = content_types.get(suffix, 'application/octet-stream')
         return FileResponse(file_path, media_type=media_type)
-    raise HTTPException(status_code=404, detail="Not found")
+    raise HTTPException(status_code=404, detail=f"Shared file not found: {filename}")
 
 
 @app.get("/components/{filename:path}")
@@ -2020,7 +2020,7 @@ async def serve_components(filename: str):
         }
         media_type = content_types.get(suffix, 'application/octet-stream')
         return FileResponse(file_path, media_type=media_type)
-    raise HTTPException(status_code=404, detail="Not found")
+    raise HTTPException(status_code=404, detail=f"Component file not found: {filename}")
 
 
 @app.get("/styles/{filename:path}")
@@ -2029,7 +2029,7 @@ async def serve_styles(filename: str):
     file_path = WEB_UI_DIR / 'styles' / filename
     if file_path.exists() and file_path.is_file():
         return FileResponse(file_path, media_type='text/css')
-    raise HTTPException(status_code=404, detail="Not found")
+    raise HTTPException(status_code=404, detail=f"Style file not found: {filename}")
 
 
 @app.get("/favicon.ico")
@@ -2038,7 +2038,7 @@ async def serve_favicon_ico():
     file_path = WEB_UI_DIR / 'favicon.png'
     if file_path.exists():
         return FileResponse(file_path, media_type='image/png')
-    raise HTTPException(status_code=404, detail="Not found")
+    raise HTTPException(status_code=404, detail="Favicon not found")
 
 
 @app.get("/favicon.png")
@@ -2047,7 +2047,7 @@ async def serve_favicon_png():
     file_path = WEB_UI_DIR / 'favicon.png'
     if file_path.exists():
         return FileResponse(file_path, media_type='image/png')
-    raise HTTPException(status_code=404, detail="Not found")
+    raise HTTPException(status_code=404, detail="Favicon not found")
 
 
 # === CLI Entry Point ===
