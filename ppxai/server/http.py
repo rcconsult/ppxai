@@ -2064,6 +2064,10 @@ def run_server():
 
     args = parser.parse_args()
 
+    # Initialize configuration system (v1.13.11: explicit initialization)
+    from ..config import initialize
+    initialize()
+
     print(f"Starting ppxai HTTP server on http://{args.host}:{args.port}")
     print("Endpoints:")
     print("  POST /chat          - Chat with SSE streaming")

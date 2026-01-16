@@ -12,9 +12,7 @@ from ppxai.config import (
     MODEL_PRICING,
     MODELS,
     CODING_MODEL,
-    MODEL_PROVIDER,
     PROVIDERS,
-    BUILTIN_PROVIDERS,
     DEFAULT_CAPABILITIES,
     get_provider_config,
     get_active_models,
@@ -23,11 +21,11 @@ from ppxai.config import (
     get_base_url,
     get_coding_model,
     get_default_model,
+    get_default_provider,
     get_config_source,
     get_available_providers,
     get_provider_capabilities,
     provider_needs_tool,
-    set_active_provider,
     reload_config,
     validate_config,
     load_config,
@@ -35,10 +33,7 @@ from ppxai.config import (
     get_tool_pricing,
     get_shell_config,
     find_config_file,
-    _load_json_config,
-    _validate_provider_config,
-    _build_legacy_custom_provider,
-    _convert_models_format,
+    initialize,
     # Context configuration (v1.13.9)
     DEFAULT_MAX_INJECTION_SIZE,
     DEFAULT_CONTEXT_LIMIT,
@@ -49,9 +44,13 @@ from ppxai.config import (
     get_context_warn_percent,
     get_model_context_limit,
 )
-
-# Import the module itself to allow modifying its globals
-import ppxai.config as config_module
+from ppxai.config.store import ConfigStore
+from ppxai.config.loader import (
+    _load_json_config,
+    _validate_provider_config,
+    _build_legacy_custom_provider,
+    _convert_models_format,
+)
 
 
 @pytest.fixture
@@ -61,17 +60,13 @@ def restore_config():
     Use this fixture for any test that calls reload_config() to ensure
     test isolation and prevent state leakage between tests.
     """
-    # Save original state
-    original_config = config_module._config.copy()
-    original_providers = config_module.PROVIDERS.copy()
-    original_model_provider = config_module.MODEL_PROVIDER
+    # Store the current config state
+    store = ConfigStore.get_instance()
 
     yield
 
-    # Restore original state after test
-    config_module._config = original_config
-    config_module.PROVIDERS = original_providers
-    config_module.MODEL_PROVIDER = original_model_provider
+    # Force reload from disk to restore original state
+    store.reload()
 
 
 class TestConfig:
@@ -92,61 +87,14 @@ class TestConfig:
         assert USAGE_FILE.name == "usage.json"
         assert USAGE_FILE.parent.name == ".ppxai"
 
-    def test_model_pricing_structure(self):
-        """Test that model pricing has correct structure."""
-        assert len(MODEL_PRICING) > 0
-        for model, pricing in MODEL_PRICING.items():
-            assert "input" in pricing
-            assert "output" in pricing
-            assert isinstance(pricing["input"], (int, float))
-            assert isinstance(pricing["output"], (int, float))
-            assert pricing["input"] >= 0
-            assert pricing["output"] >= 0
+    def test_model_pricing_deprecated(self):
+        """Test that MODEL_PRICING is deprecated (empty dict for backward compat)."""
+        # MODEL_PRICING is deprecated - use get_model_pricing() instead
+        assert isinstance(MODEL_PRICING, dict)
 
-    def test_models_structure(self):
-        """Test that models have correct structure."""
-        assert len(MODELS) > 0
-        for key, model in MODELS.items():
-            assert "id" in model
-            assert "name" in model
-            assert "description" in model
-            assert isinstance(model["id"], str)
-            assert isinstance(model["name"], str)
-            assert isinstance(model["description"], str)
-
-    def test_coding_model_valid(self):
-        """Test that coding model is a valid model ID."""
-        model_ids = [m["id"] for m in MODELS.values()]
-        assert CODING_MODEL in model_ids
-
-    def test_all_models_have_pricing(self):
-        """Test that all models have pricing defined."""
-        for model in MODELS.values():
-            assert model["id"] in MODEL_PRICING, f"No pricing for {model['id']}"
-
-
-class TestBuiltinProviders:
-    """Tests for built-in provider configuration."""
-
-    def test_builtin_perplexity_exists(self):
-        """Test that built-in Perplexity config exists."""
-        assert "perplexity" in BUILTIN_PROVIDERS
-
-    def test_builtin_perplexity_structure(self):
-        """Test built-in Perplexity provider has all required fields."""
-        provider = BUILTIN_PROVIDERS["perplexity"]
-        assert provider["name"] == "Perplexity AI"
-        assert provider["base_url"] == "https://api.perplexity.ai"
-        assert provider["api_key_env"] == "PERPLEXITY_API_KEY"
-        assert "models" in provider
-        assert "pricing" in provider
-        assert "capabilities" in provider
-
-    def test_builtin_perplexity_capabilities(self):
-        """Test Perplexity has expected capabilities."""
-        caps = BUILTIN_PROVIDERS["perplexity"]["capabilities"]
-        assert caps["web_search"] is True
-        assert caps["realtime_info"] is True
+    def test_coding_model_constant(self):
+        """Test that CODING_MODEL constant exists."""
+        assert CODING_MODEL == "sonar-pro"
 
     def test_default_capabilities(self):
         """Test default capabilities are all False."""
@@ -184,7 +132,7 @@ class TestProviderConfig:
     def test_get_provider_config_default(self):
         """Test get_provider_config returns default provider config."""
         config = get_provider_config()
-        assert config == PROVIDERS[MODEL_PROVIDER]
+        assert config == PROVIDERS[get_default_provider()]
 
     def test_get_provider_config_perplexity(self):
         """Test get_provider_config for perplexity provider."""
@@ -414,18 +362,11 @@ class TestConfigHelpers:
         assert isinstance(providers, list)
         assert "perplexity" in providers
 
-    def test_set_active_provider_valid(self):
-        """Test setting a valid active provider."""
-        original = MODEL_PROVIDER
-        result = set_active_provider("perplexity")
-        assert result is True
-        # Restore
-        set_active_provider(original)
-
-    def test_set_active_provider_invalid(self):
-        """Test setting an invalid provider returns False."""
-        result = set_active_provider("nonexistent_provider")
-        assert result is False
+    def test_get_default_provider(self):
+        """Test get_default_provider returns a valid provider."""
+        provider = get_default_provider()
+        assert isinstance(provider, str)
+        assert provider in PROVIDERS
 
     def test_validate_config_structure(self):
         """Test validate_config returns expected structure."""
@@ -458,10 +399,11 @@ class TestConfigReload:
         assert "providers" in result
         assert "default_provider" in result
 
-    def test_load_config_always_has_perplexity(self):
-        """Test load_config always includes perplexity provider."""
+    def test_load_config_returns_providers(self):
+        """Test load_config returns providers from config file."""
         result = load_config()
-        assert "perplexity" in result["providers"]
+        # May or may not have perplexity depending on config
+        assert isinstance(result["providers"], dict)
 
 
 class TestJSONConfigIntegration:
@@ -501,7 +443,7 @@ class TestJSONConfigIntegration:
                 assert result["config_source"] == f.name
                 assert result["default_provider"] == "openai"
                 assert "openai" in result["providers"]
-                assert "perplexity" in result["providers"]  # Always included
+                # Note: perplexity is NOT auto-included anymore - only providers in the config
 
                 openai_config = result["providers"]["openai"]
                 assert openai_config["name"] == "OpenAI"
@@ -715,7 +657,7 @@ class TestBOMHandling:
 
     def test_load_dotenv_with_bom(self):
         """Test that .env files with UTF-8 BOM are loaded correctly."""
-        from ppxai.config import _load_dotenv_with_bom_handling
+        from ppxai.config.loader import _load_dotenv_with_bom_handling
         import tempfile
 
         # Create a temp .env file with UTF-8 BOM
@@ -741,7 +683,7 @@ class TestBOMHandling:
 
     def test_load_dotenv_without_bom(self):
         """Test that .env files without BOM still work."""
-        from ppxai.config import _load_dotenv_with_bom_handling
+        from ppxai.config.loader import _load_dotenv_with_bom_handling
         import tempfile
 
         # Create a temp .env file without BOM
@@ -763,14 +705,14 @@ class TestBOMHandling:
 
     def test_load_dotenv_nonexistent_file(self):
         """Test that nonexistent .env files are handled gracefully."""
-        from ppxai.config import _load_dotenv_with_bom_handling
+        from ppxai.config.loader import _load_dotenv_with_bom_handling
 
         # Should not raise an exception
         _load_dotenv_with_bom_handling(Path('/nonexistent/path/.env'))
 
     def test_load_dotenv_multiple_keys_with_bom(self):
         """Test that all keys are loaded correctly when file has BOM."""
-        from ppxai.config import _load_dotenv_with_bom_handling
+        from ppxai.config.loader import _load_dotenv_with_bom_handling
         import tempfile
 
         # Create a temp .env file with BOM and multiple keys

@@ -10,6 +10,7 @@ a = Analysis(
     datas=[
         # Include entire web UI directory tree
         ('ppxai/web', 'ppxai/web'),
+        ('ppxai-config.example.json', '.'),
     ],
     hiddenimports=[],
     hookspath=[],

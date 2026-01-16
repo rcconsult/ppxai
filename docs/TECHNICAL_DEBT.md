@@ -40,7 +40,7 @@ This document tracks identified technical debt and refactoring opportunities in 
 | [ppxai/commands/handler.py](../ppxai/commands/handler.py) | 507 | CommandHandler class (legacy methods commented) | ✅ Command Factory |
 | [ppxai/server/http.py](../ppxai/server/http.py) | 2,247 | HTTP + session + consent mixed | ✅ SessionManager extracted |
 | [ppxai/engine/client.py](../ppxai/engine/client.py) | 2,035 | Core logic, providers, tools, sessions | Open |
-| [ppxai/config.py](../ppxai/config.py) | 1,352 | 90+ functions | ⚠️ Blocked (see below) |
+| [ppxai/config/](../ppxai/config/) | ~700 | Config package with store, loader, public API | ✅ ConfigStore pattern |
 | [vscode-extension/src/chatPanel.ts](../vscode-extension/src/chatPanel.ts) | 5,061 | Massive event handling | Open |
 
 **Large Functions:**
@@ -59,15 +59,20 @@ Migrated to Command Factory pattern in `ppxai/commands/` package:
 - `agent.py` - /agent, /undo, /checkpoint
 - Legacy methods in handler.py commented with deprecation notice (removal in v1.14.x)
 
-**config.py Package Conversion - Blocked:**
-Attempted conversion to `config/` package failed due to Python import mechanics:
-- Tests patch `ppxai.config._config` module variable directly
-- Re-exporting `_config` from package creates a copy, not a reference
-- Patching the package's `_config` doesn't affect the implementation module's `_config`
-- Would require rewriting 15+ tests to patch `ppxai._config_impl._config` instead
+**config.py Package Conversion - ✅ Completed (v1.13.10):**
+Converted monolithic `config.py` (1,352 lines) to `config/` package (~700 lines):
+- `config/store.py` - Thread-safe ConfigStore singleton with double-check locking
+- `config/loader.py` - Config loading, validation, environment handling
+- `config/__init__.py` - Full public API with module-level `__getattr__`
+
+Key improvements:
+- Thread-safe and asyncio-safe for containerized deployments
+- `ConfigStore.set_for_testing()` replaces direct `_config` patching in tests
+- Module-level `__getattr__` provides lazy `PROVIDERS` and `MODELS` access
+- Removed legacy globals: `MODEL_PROVIDER`, `set_active_provider()`
+- Added `get_default_provider()` function for runtime provider resolution
 
 **Recommendation:**
-- config.py: Keep as single file, add section documentation (lower priority)
 - client.py: Extract chat loop and tool parsing (medium priority)
 
 ---
@@ -201,20 +206,19 @@ Both `ConsentManager` (async) and `SyncConsentManager` now inherit from `BaseCon
 
 ### 10. Configuration Complexity
 
-**Status:** Open
-**File:** [ppxai/config.py](../ppxai/config.py) (1,352 lines)
+**Status:** ✅ Completed (v1.13.10)
+**File:** [ppxai/config/](../ppxai/config/) (~700 lines across 3 files)
 
-**Issues:**
-- 90+ functions in single file
-- Built-in provider config hardcoded (lines 66-154)
-- No clear separation: defaults vs user config vs session overrides
+**Resolution:** Split monolithic `config.py` into `config/` package:
+- `config/store.py` - Thread-safe ConfigStore singleton
+- `config/loader.py` - Loading, validation, built-in providers
+- `config/__init__.py` - Public API with 50+ functions
 
-**Recommendation:** Split into:
-- `config/defaults.py`
-- `config/providers.py`
-- `config/tools.py`
-- `config/schema.py`
-- `ConfigManager` class
+Key improvements:
+- Clear separation of concerns (storage vs loading vs API)
+- Thread-safe and asyncio-safe for multi-worker deployments
+- Lazy loading via proxy classes (_ProvidersProxy, _ModelsProxy)
+- Test-friendly with `ConfigStore.set_for_testing()` method
 
 ---
 
@@ -336,6 +340,7 @@ Items moved here after being addressed:
 | #5 | Consent Manager duplication - Extracted BaseConsentManager class | v1.13.10 | 2026-01-15 |
 | #6 | Import structure - Refactored commands.py to DAG imports, updated ARCHITECTURE.md | v1.13.10 | 2026-01-15 |
 | #7 | eval() usage - Replaced with AST-based safe evaluation | v1.13.10 | 2026-01-15 |
+| #10 | config.py complexity - Split into config/ package with ConfigStore pattern | v1.13.10 | 2026-01-16 |
 
 ---
 
@@ -352,7 +357,7 @@ Items moved here after being addressed:
 | ~~**High**~~ | ~~eval() usage~~ | ~~Low~~ | ✅ Done |
 | **Medium** | Type hints | Medium | IDE support |
 | **Medium** | HTTP error handling | Medium | Consistency |
-| **Medium** | Config complexity | Medium | Maintainability |
+| ~~**Medium**~~ | ~~Config complexity~~ | ~~Medium~~ | ✅ Done |
 | **Low** | Legacy compatibility | Low | Code clarity |
 | **Low** | Magic strings | Low | Type safety |
 
@@ -362,7 +367,7 @@ Items moved here after being addressed:
 
 1. ~~**`ppxai/server/http.py`**~~ - ✅ Done (SessionManager extracted)
 2. ~~**`ppxai/commands.py`**~~ - ✅ Done (Command Factory pattern in `commands/` package)
-3. **`ppxai/config.py`** - Split into `config/` package (blocked - see notes above)
+3. ~~**`ppxai/config.py`**~~ - ✅ Done (Split into `config/` package with ConfigStore)
 4. **`ppxai/engine/client.py`** - Extract tool execution, message building
 5. ~~**`ppxai/engine/tools/builtin/container.py`**~~ - ✅ Done (refactored to CLITool hierarchy)
 6. **`vscode-extension/src/chatPanel.ts`** - Extract handlers, formatters, UI

@@ -18,8 +18,8 @@ from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 
 from .commands import CommandHandler
 from .config import (
-    MODEL_PROVIDER,
     PROVIDERS,
+    get_default_provider,
     get_api_key,
     get_auto_restore_mode,
     get_auto_save_interval,
@@ -618,8 +618,12 @@ def main():
     parser.add_argument("--version", "-v", action="version", version=f"ppxai {__version__}")
     parser.parse_args()
 
+    # Initialize configuration system (v1.13.11: explicit initialization)
+    from .config import initialize
+    initialize()
+
     # Check if provider selection is needed or use environment default
-    provider = MODEL_PROVIDER
+    provider = get_default_provider()
 
     # Allow provider selection at startup if multiple providers configured
     if len(PROVIDERS) > 1:

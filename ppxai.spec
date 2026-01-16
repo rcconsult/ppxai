@@ -8,6 +8,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ('.env.example', '.'),
+        ('ppxai-config.example.json', '.'),
     ],
     hiddenimports=[
         'openai',
