@@ -487,7 +487,7 @@ class TestVLLMToolCallInference:
 class TestNativeToolCallNesting:
     """Test native tool call argument unwrapping in EngineClient.
 
-    v1.13.11: Some models (e.g., GPT-OSS 120B via vLLM) send native tool calls
+    v1.13.10: Some models (e.g., GPT-OSS 120B via vLLM) send native tool calls
     with nested structure where arguments contain another {"tool": ..., "arguments": {...}}.
     This should be unwrapped before execution.
     """
@@ -880,7 +880,7 @@ class TestToolArgumentValidation:
     async def test_execute_tool_unexpected_params_filtered(self, tool_manager):
         """Test that unexpected parameters are silently filtered out.
 
-        v1.13.11: Small models sometimes hallucinate parameters that don't
+        v1.13.10: Small models sometimes hallucinate parameters that don't
         exist in the tool schema (e.g., 'language' for web_search).
         These should be filtered out instead of causing errors.
         """

@@ -7,19 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.13.10] - 2026-01-14
+## [1.13.10] - 2026-01-16
 
 ### Added - Web App Enhancements
 
 - **Image preview in /show command** - Web app now displays PNG, JPG, GIF, WebP, SVG, BMP, ICO files directly in the preview panel
 - **PDF preview in /show command** - Web app now displays PDF files using the browser's native PDF viewer
+- **YAML/TOML/HCL parsing for /show** - Web app now supports structure-aware previews for YAML, TOML, and HCL/Terraform files
 - **Loop detection for tool calls** - Configurable `max_same_tool_calls` (default: 3) prevents models from calling the same tool repeatedly. Forces synthesis after threshold is reached.
+
+### Added - Architecture Improvements
+
+- **Command Factory pattern** - Migrated all slash commands to factory pattern in `ppxai/commands/` package with self-registration
+- **SessionManager singleton** - Thread-safe session management for HTTP server with proper async locks
+- **ConfigStore pattern** - Thread-safe configuration with explicit `initialize()` at entry points
+- **Config seeding on first run** - Bundled `ppxai-config.example.json` is copied to `~/.ppxai/` on first run
+- **Constants module** - New `ppxai/constants.py` centralizes magic strings and default values
+- **Improved provider error formatting** - User-friendly error messages for connection, auth, and rate limit errors
 
 ### Fixed
 
 - **Tool parameter aliasing with duplicates** - Fixed issue where models send both canonical and alias names in same call (e.g., both `file_path` AND `filepath`). Now removes duplicate aliases instead of passing them to tool execution.
 - **Session restore working directory** - Fixed issue where status bar showed wrong working directory after session restore. Now `set_working_dir()` updates both `context_injector.working_dir` and `session.working_dir`.
 - **Session restore tools state** - Session now saves and restores `tools_enabled` state. Tools are automatically re-enabled when restoring a session that had tools enabled.
+- **Message alternation on errors** - User message is now rolled back when provider returns error or user interrupts, preventing "messages must alternate" errors on retry.
+- **Relative /cd path resolution** - `/cd` command now correctly resolves relative paths.
+- **apply_patch tool** - Now handles delete+recreate pattern and detects no-change errors.
+- **Loop detection argument checking** - Loop detection now checks tool arguments, not just tool names.
+
+### Changed
+
+- **Removed BUILTIN_PROVIDERS** - JSON config is now the single source of truth for provider definitions
+- **Explicit config initialization** - Entry points must call `initialize()` before using config (no import-time side effects)
+- **HTTP error handling** - Standardized on `HTTPException` exclusively, removed unused `JSONResponse`
+
+### Technical Debt Addressed
+
+- Extracted `SessionManager` from `http.py` (467 lines)
+- Extracted `BaseConsentManager` reducing consent.py by 14%
+- Refactored container tools to `CLITool` hierarchy reducing boilerplate by 40%
+- Replaced dangerous `eval()` with AST-based safe evaluation in calculator
+- Added selective logging to 22 silent error handling instances
+- Documented DAG import structure in `ARCHITECTURE.md`
 
 ## [1.13.9] - 2026-01-12
 

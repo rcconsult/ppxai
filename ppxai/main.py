@@ -618,7 +618,7 @@ def main():
     parser.add_argument("--version", "-v", action="version", version=f"ppxai {__version__}")
     parser.parse_args()
 
-    # Initialize configuration system (v1.13.11: explicit initialization)
+    # Initialize configuration system (v1.13.10: explicit initialization)
     from .config import initialize
     initialize()
 

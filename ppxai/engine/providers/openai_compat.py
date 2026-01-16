@@ -80,7 +80,7 @@ class OpenAICompatibleProvider(BaseProvider):
     def _get_max_tokens(self, model: str) -> Optional[int]:
         """Get max_tokens for output generation.
 
-        v1.13.11: This ensures vLLM and other backends generate complete responses
+        v1.13.10: This ensures vLLM and other backends generate complete responses
         instead of using their often-too-small defaults (e.g., 2048).
 
         Args:
@@ -206,7 +206,7 @@ class OpenAICompatibleProvider(BaseProvider):
                 "messages": api_messages,
             }
 
-            # v1.13.11: Add max_tokens if configured for this model or provider
+            # v1.13.10: Add max_tokens if configured for this model or provider
             # This ensures vLLM and other backends don't use too-small defaults
             max_tokens = self._get_max_tokens(model)
             if max_tokens:

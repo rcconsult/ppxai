@@ -4,7 +4,7 @@ Central constants module for ppxai.
 This module consolidates magic strings and default values used throughout
 the codebase to improve maintainability and type safety.
 
-v1.13.11: Created as part of technical debt reduction
+v1.13.10: Created as part of technical debt reduction
 """
 
 from enum import Enum

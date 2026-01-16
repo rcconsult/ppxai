@@ -192,10 +192,10 @@ Both `ConsentManager` (async) and `SyncConsentManager` now inherit from `BaseCon
 
 ### 9. Inconsistent Error Handling in HTTP Endpoints
 
-**Status:** ✅ Partially Addressed (v1.13.11)
+**Status:** ✅ Partially Addressed (v1.13.10)
 **File:** [ppxai/server/http.py](../ppxai/server/http.py)
 
-**Resolution (v1.13.11):**
+**Resolution (v1.13.10):**
 - Removed unused `JSONResponse` import
 - Standardized static file 404 error messages to include requested filename
 - Fixed string concatenation in error details (use f-strings consistently)
@@ -347,9 +347,9 @@ Items moved here after being addressed:
 | #6 | Import structure - Refactored commands.py to DAG imports, updated ARCHITECTURE.md | v1.13.10 | 2026-01-15 |
 | #7 | eval() usage - Replaced with AST-based safe evaluation | v1.13.10 | 2026-01-15 |
 | #10 | config.py complexity - Split into config/ package with ConfigStore pattern | v1.13.10 | 2026-01-16 |
-| #9 | HTTP error handling - Standardized on HTTPException, removed unused JSONResponse | v1.13.11 | 2026-01-16 |
-| - | Magic strings - Created ppxai/constants.py with centralized constants | v1.13.11 | 2026-01-16 |
-| - | BUILTIN_PROVIDERS removal - JSON config as single source of truth | v1.13.11 | 2026-01-16 |
+| #9 | HTTP error handling - Standardized on HTTPException, removed unused JSONResponse | v1.13.10 | 2026-01-16 |
+| - | Magic strings - Created ppxai/constants.py with centralized constants | v1.13.10 | 2026-01-16 |
+| - | BUILTIN_PROVIDERS removal - JSON config as single source of truth | v1.13.10 | 2026-01-16 |
 
 ---
 

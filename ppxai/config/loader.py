@@ -8,7 +8,7 @@ Handles:
 - First-run config seeding from bundled example
 
 v1.13.10: Extracted from config.py as part of package refactoring
-v1.13.11: Removed BUILTIN_PROVIDERS - use ppxai-config.example.json instead
+v1.13.10: Removed BUILTIN_PROVIDERS - use ppxai-config.example.json instead
 """
 
 import json

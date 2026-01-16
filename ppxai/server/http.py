@@ -2064,7 +2064,7 @@ def run_server():
 
     args = parser.parse_args()
 
-    # Initialize configuration system (v1.13.11: explicit initialization)
+    # Initialize configuration system (v1.13.10: explicit initialization)
     from ..config import initialize
     initialize()
 
