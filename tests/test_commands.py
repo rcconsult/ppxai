@@ -948,14 +948,14 @@ class TestCommandHandlerIntegration:
         result = handler_custom.handle_command("/exit")
         assert result is True
 
-    @patch('ppxai.commands.handler.display_welcome')
+    @patch('ppxai.ui.display_welcome')
     def test_handle_help_command_perplexity(self, mock_welcome, handler_perplexity):
         """Test /help command for Perplexity."""
         result = handler_perplexity.handle_command("/help")
         assert result is False  # Should not exit
         mock_welcome.assert_called()
 
-    @patch('ppxai.commands.handler.display_welcome')
+    @patch('ppxai.ui.display_welcome')
     def test_handle_help_command_custom(self, mock_welcome, handler_custom):
         """Test /help command for custom provider."""
         result = handler_custom.handle_command("/help")

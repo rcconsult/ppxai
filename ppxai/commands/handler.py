@@ -53,6 +53,8 @@ from ..version import __version__
 # Import command modules to trigger self-registration
 from .factory import CommandFactory
 from . import session  # noqa: F401 - imported for side-effect (registration)
+from . import provider  # noqa: F401 - imported for side-effect (registration)
+from . import system  # noqa: F401 - imported for side-effect (registration)
 
 logger = get_logger("tui")
 
@@ -2187,14 +2189,6 @@ If more work is needed, explain what you're doing next and use the appropriate t
         # Legacy dispatch for commands not yet migrated
         if command == "/usage":
             self.handle_usage(args)
-        elif command == "/model":
-            self.handle_model(args)
-        elif command == "/provider":
-            self.handle_provider(args)
-        elif command == "/help":
-            self.handle_help()
-        elif command == "/theme":
-            self.handle_theme(args)
         elif command == "/generate":
             self.handle_generate(args)
         elif command == "/test":
@@ -2211,10 +2205,6 @@ If more work is needed, explain what you're doing next and use the appropriate t
             self.handle_explain(args)
         elif command == "/convert":
             self.handle_convert(args)
-        elif command == "/autoroute":
-            self.handle_autoroute(args)
-        elif command == "/spec":
-            self.handle_spec(args)
         elif command == "/tools":
             self.handle_tools(args)
         elif command == "/show":
@@ -2227,8 +2217,6 @@ If more work is needed, explain what you're doing next and use the appropriate t
             self.handle_undo()
         elif command == "/checkpoint":
             self.handle_checkpoint(args)
-        elif command == "/status":
-            self.handle_status(args)
         elif command == "/context":
             self.handle_context(args)
         elif command == "/config":
