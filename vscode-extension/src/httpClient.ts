@@ -9,10 +9,39 @@ import * as vscode from 'vscode';
 
 // === Types matching PythonBackend interface ===
 
+// === Consent Request Types ===
+
+export interface FileConsentRequest {
+    file_path: string;
+    operation?: 'edit' | 'create' | 'delete';
+    tool_name?: string;
+}
+
+export interface ShellConsentRequest {
+    type: 'shell';
+    command: string;
+    working_dir?: string;
+    risk_level?: 'safe' | 'dangerous' | 'never' | 'unknown';
+    tool_name?: string;
+}
+
+export type ConsentRequest = FileConsentRequest | ShellConsentRequest;
+
+export type ConsentResponse = 'y' | 'n' | 'always' | 'never';
+
+// === Stream Event Types ===
+
+export interface EventMetadata {
+    file_path?: string;
+    operation?: string;
+    tool_name?: string;
+    [key: string]: unknown;
+}
+
 export interface StreamEvent {
     type: 'thinking' | 'started' | 'reasoning_chunk' | 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'context_injected' | 'consent_request' | 'status' | 'agent_iteration' | 'agent_complete' | 'agent_max_iterations' | 'working_dir_changed';
     content: string;
-    metadata?: any;
+    metadata?: EventMetadata;
 }
 
 export interface ProviderInfo {

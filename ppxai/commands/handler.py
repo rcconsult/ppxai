@@ -276,6 +276,14 @@ class CommandHandler:
         else:
             # Legacy signature: (client, api_key, current_model, base_url, provider)
             # client is ignored in v1.12.0
+            import warnings
+            warnings.warn(
+                "Passing client object to CommandHandler is deprecated. "
+                "Use CommandHandler(api_key, model, base_url, provider) instead. "
+                "The client parameter is ignored. Will be removed in v2.0.0.",
+                DeprecationWarning,
+                stacklevel=2
+            )
             self.api_key = api_key_or_model
             self.current_model = current_model_or_base_url
             base_url = base_url_or_provider

@@ -9,7 +9,7 @@
  */
 
 import * as vscode from 'vscode';
-import { HttpClient, StreamEvent } from './httpClient';
+import { HttpClient, StreamEvent, FileConsentRequest, ShellConsentRequest, EventMetadata, ConsentResponse } from './httpClient';
 import { startServer, stopServer, onServerStatusChange } from './extension';
 
 // Import shared modules for command definitions and formatters
@@ -571,7 +571,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private async handleFileConsentRequest(data: any, metadata: any) {
+    private async handleFileConsentRequest(data: FileConsentRequest, metadata?: EventMetadata) {
         /**
          * Handle file edit consent request (Phase 1C: v1.11.0)
          *
@@ -617,7 +617,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             });
 
             // Map selection to response
-            const response: 'y' | 'n' | 'always' | 'never' = (selected?.value as 'y' | 'n' | 'always' | 'never') || 'n';
+            const response: ConsentResponse = (selected?.value as ConsentResponse) || 'n';
 
             // Send consent response to server
             await this._backend.consent(filePath, response);
@@ -636,7 +636,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private async handleShellConsentRequest(data: any) {
+    private async handleShellConsentRequest(data: ShellConsentRequest) {
         /**
          * Handle shell command consent request (v1.11.2)
          *
@@ -696,7 +696,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             });
 
             // Map selection to response
-            const response: 'y' | 'n' | 'always' | 'never' = (selected?.value as 'y' | 'n' | 'always' | 'never') || 'n';
+            const response: ConsentResponse = (selected?.value as ConsentResponse) || 'n';
 
             // Send shell consent response to server
             await this._backend.shellConsent(command, workingDir, response);
