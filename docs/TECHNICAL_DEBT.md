@@ -175,18 +175,17 @@ Both `ConsentManager` (async) and `SyncConsentManager` now inherit from `BaseCon
 
 ### 8. Missing Type Hints
 
-**Status:** Open
+**Status:** ✅ Partially Addressed (v1.13.10)
 
-**TypeScript (any types):**
-- `http.py:15` - `metadata?: any`
-- `chatPanel.ts:574, 639` - `data: any`
-- `backend.ts:25, 64` - `result?: any`, `resolve: (value: any) => void`
+**TypeScript (resolved):**
+- Created `FileConsentRequest`, `ShellConsentRequest` interfaces in httpClient.ts
+- Added `EventMetadata` interface replacing `metadata?: any`
+- Added `ConsentResponse` type for consent response values
+- Updated chatPanel.ts to use new types
 
-**Python:**
-- Various provider methods returning `None` without type hints
-- Tool manager signatures inconsistent
-
-**Recommendation:** Create discriminated union types; define proper interfaces.
+**Remaining (low priority):**
+- `backend.ts:25, 64` - generic result types (truly polymorphic)
+- Python provider methods - already have good type coverage in base.py
 
 ---
 
@@ -247,17 +246,21 @@ Key improvements:
 
 ### 12. Legacy Backward Compatibility Code
 
-**Status:** Open
-**File:** [ppxai/commands.py:222-298](../ppxai/commands.py)
+**Status:** ✅ Addressed (v1.13.10)
+**File:** [ppxai/commands/handler.py](../ppxai/commands/handler.py)
 
+**Resolution:** Added deprecation warning for legacy constructor signature:
 ```python
-def __init__(self, client_or_api_key, api_key_or_model: str = None, ...):
-    """Supports both old and new signatures for backward compatibility."""
+warnings.warn(
+    "Passing client object to CommandHandler is deprecated. "
+    "Use CommandHandler(api_key, model, base_url, provider) instead. "
+    "Will be removed in v2.0.0.",
+    DeprecationWarning,
+    stacklevel=2
+)
 ```
 
-**Issue:** Complex constructor with dual-purpose parameters, no deprecation warning.
-
-**Recommendation:** Add deprecation warning; set EOL date (e.g., v2.0.0).
+**Next step:** Remove legacy signature in v2.0.0.
 
 ---
 
@@ -356,6 +359,8 @@ Items moved here after being addressed:
 | #15 | TypeScript let vs const - Verified all 46 uses are correct | v1.13.10 | 2026-01-16 |
 | - | Magic strings - Created ppxai/constants.py with centralized constants | v1.13.10 | 2026-01-16 |
 | - | BUILTIN_PROVIDERS removal - JSON config as single source of truth | v1.13.10 | 2026-01-16 |
+| #8 | Type hints - Added TypeScript interfaces for consent requests | v1.13.10 | 2026-01-17 |
+| #12 | Legacy compat - Added deprecation warning for CommandHandler | v1.13.10 | 2026-01-17 |
 
 ---
 
@@ -370,10 +375,10 @@ Items moved here after being addressed:
 | ~~**High**~~ | ~~Consent duplication~~ | ~~Medium~~ | ✅ Done |
 | ~~**High**~~ | ~~Circular imports~~ | ~~Medium~~ | ✅ Documented |
 | ~~**High**~~ | ~~eval() usage~~ | ~~Low~~ | ✅ Done |
-| **Medium** | Type hints | Medium | IDE support |
+| ~~**Medium**~~ | ~~Type hints~~ | ~~Medium~~ | ✅ Partial |
 | ~~**Medium**~~ | ~~HTTP error handling~~ | ~~Medium~~ | ✅ Done |
 | ~~**Medium**~~ | ~~Config complexity~~ | ~~Medium~~ | ✅ Done |
-| **Low** | Legacy compatibility | Low | Code clarity |
+| ~~**Low**~~ | ~~Legacy compatibility~~ | ~~Low~~ | ✅ Done |
 | ~~**Low**~~ | ~~Magic strings~~ | ~~Low~~ | ✅ Done (constants.py) |
 
 ---
