@@ -10,29 +10,26 @@ Architecture:
 - BaseConsentManager: Shared logic for all consent managers
 - ConsentManager: Async consent manager (primary)
 - SyncConsentManager: Synchronous consent manager (legacy)
-- ConsentDecision: Enum for decision types (YES, NO, ALWAYS, NEVER)
+- ConsentDecision: Enum for decision types (YES, NO, ALWAYS, NEVER) - from constants.py
 - Clients provide consent_callback that returns (approved: bool, decision: str)
 
-Version: v1.13.10
+Version: v1.13.11 - Migrated to centralized constants
 """
 
 import re
-from enum import Enum
 from dataclasses import dataclass
 from typing import Callable, Awaitable, Dict, Set, List, Optional
 from pathlib import Path
 
 from .logger import get_logger
+from ..constants import (
+    ConsentDecision,
+    ConsentMode,
+    ConsentResponse,
+    ShellRiskLevel,
+)
 
 logger = get_logger("tui")
-
-
-class ConsentDecision(Enum):
-    """Possible consent decisions."""
-    YES = "yes"          # Allow this file
-    NO = "no"            # Deny this file
-    ALWAYS = "always"    # Allow all files (session)
-    NEVER = "never"      # Deny all files (session)
 
 
 @dataclass
@@ -171,17 +168,17 @@ class BaseConsentManager:
             command: Shell command to classify
 
         Returns:
-            str: Risk level - "never", "dangerous", or "safe"
+            str: Risk level - ShellRiskLevel value
         """
         if self._is_never_allowed_command(command):
-            return "never"
+            return ShellRiskLevel.NEVER
         elif self._is_dangerous_command(command):
-            return "dangerous"
+            return ShellRiskLevel.DANGEROUS
         elif self._is_allowed_command(command):
-            return "safe"
+            return ShellRiskLevel.SAFE
         else:
             # Unknown command - treat as dangerous for safety
-            return "dangerous"
+            return ShellRiskLevel.DANGEROUS
 
     def reset(self):
         """Reset all consent decisions (new session)."""
@@ -205,10 +202,10 @@ class BaseConsentManager:
             dict: Status information for files and shell commands
         """
         return {
-            "file_mode": "always" if self._always_approve else ("never" if self._never_approve else "prompt"),
+            "file_mode": ConsentMode.ALWAYS if self._always_approve else (ConsentMode.NEVER if self._never_approve else ConsentMode.PROMPT),
             "approved_files": len(self._approved_files),
             "denied_files": len(self._denied_files),
-            "shell_mode": "always" if self._always_approve_shell else ("never" if self._never_approve_shell else "prompt"),
+            "shell_mode": ConsentMode.ALWAYS if self._always_approve_shell else (ConsentMode.NEVER if self._never_approve_shell else ConsentMode.PROMPT),
             "approved_commands": len(self._approved_commands),
             "denied_commands": len(self._denied_commands),
         }
@@ -246,11 +243,11 @@ class BaseConsentManager:
         risk_level = self._classify_command(command)
 
         # Never-allow always returns False
-        if risk_level == "never":
+        if risk_level == ShellRiskLevel.NEVER:
             return False
 
         # Safe commands always return True
-        if risk_level == "safe":
+        if risk_level == ShellRiskLevel.SAFE:
             return True
 
         # Check session-wide decisions
@@ -276,13 +273,13 @@ class BaseConsentManager:
         """
         decision = decision.lower().strip()
 
-        if decision == "always":
+        if decision == ConsentDecision.ALWAYS:
             self._always_approve = True
             return True
-        elif decision == "never":
+        elif decision == ConsentDecision.NEVER:
             self._never_approve = True
             return False
-        elif decision in ["yes", "y"]:
+        elif decision in [ConsentDecision.YES, ConsentResponse.YES]:
             self._approved_files.add(file_path_normalized)
             return True
         else:  # "no", "n", or anything else
@@ -302,13 +299,13 @@ class BaseConsentManager:
         """
         decision = decision.lower().strip()
 
-        if decision == "always":
+        if decision == ConsentDecision.ALWAYS:
             self._always_approve_shell = True
             return True
-        elif decision == "never":
+        elif decision == ConsentDecision.NEVER:
             self._never_approve_shell = True
             return False
-        elif decision in ["yes", "y"]:
+        elif decision in [ConsentDecision.YES, ConsentResponse.YES]:
             self._approved_commands.add(command)
             return True
         else:  # "no", "n", or anything else
@@ -432,11 +429,11 @@ class ConsentManager(BaseConsentManager):
         risk_level = self._classify_command(command)
 
         # Never-allow commands are always blocked
-        if risk_level == "never":
+        if risk_level == ShellRiskLevel.NEVER:
             return False
 
         # Safe commands are always allowed (no consent needed)
-        if risk_level == "safe":
+        if risk_level == ShellRiskLevel.SAFE:
             return True
 
         # Check session-wide shell decisions
@@ -569,11 +566,11 @@ class SyncConsentManager(BaseConsentManager):
         risk_level = self._classify_command(command)
 
         # Never-allow commands are always blocked
-        if risk_level == "never":
+        if risk_level == ShellRiskLevel.NEVER:
             return False
 
         # Safe commands are always allowed
-        if risk_level == "safe":
+        if risk_level == ShellRiskLevel.SAFE:
             return True
 
         # Check session-wide shell decisions

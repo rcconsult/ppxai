@@ -1,7 +1,7 @@
 # Technical Debt Tracker
 
-**Last Updated:** 2026-01-16
-**Version:** v1.13.10
+**Last Updated:** 2026-01-17
+**Version:** v1.13.11
 
 This document tracks identified technical debt and refactoring opportunities in the ppxai codebase. Items are removed as they are addressed.
 
@@ -279,14 +279,21 @@ warnings.warn(
 
 ### 14. Magic String Literals
 
-**Status:** Open
+**Status:** ✅ Completed (v1.13.11)
+**File:** [ppxai/constants.py](../ppxai/constants.py)
 
-**Examples:**
-- Response parsing: `'y', 'n', 'yes', 'no', 'always', 'never'`
-- Event types: `'chat', 'clear', 'save', 'saveAnswer'`
-- Command names: `'explain', 'test', 'docs', 'debug', 'implement'`
+**Resolution:** Converted class-based constants to `str, Enum` with validation helpers:
+- `ProviderName`, `MessageRole`, `ConsentMode`, `ConsentResponse` - Now proper enums
+- `SystemPromptMode`, `ShellRiskLevel`, `FileEncoding`, `CheckpointBackend` - Now proper enums
+- Added `is_valid_*()` helper functions for runtime validation
+- Added generic `is_valid_enum()` and `get_enum_values()` helpers
+- Kept `ConfigKey`, `ToolSetting`, `Default`, `APIEndpoint` as classes (dict keys/URLs/integers)
 
-**Recommendation:** Use enums for command types and response types.
+**Benefits:**
+- Seamless string comparison (no `.value` needed due to `str, Enum`)
+- IDE autocompletion and type safety
+- Runtime validation via helper functions
+- Works with Python 3.10+ (no StrEnum dependency)
 
 ---
 
@@ -361,6 +368,7 @@ Items moved here after being addressed:
 | - | BUILTIN_PROVIDERS removal - JSON config as single source of truth | v1.13.10 | 2026-01-16 |
 | #8 | Type hints - Added TypeScript interfaces for consent requests | v1.13.10 | 2026-01-17 |
 | #12 | Legacy compat - Added deprecation warning for CommandHandler | v1.13.10 | 2026-01-17 |
+| #14 | Magic strings - Converted constants.py to str,Enum with validation helpers | v1.13.11 | 2026-01-17 |
 
 ---
 

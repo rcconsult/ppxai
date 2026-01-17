@@ -49,6 +49,7 @@ from ..themes import get_theme, list_themes, Theme, DEFAULT_THEME
 from ..ui_components import render_theme_list
 from ..common.logger import get_logger
 from ..version import __version__
+from ..constants import ConsentResponse, ConsentDecision, ShellRiskLevel
 
 # Import command modules to trigger self-registration
 from .factory import CommandFactory
@@ -67,9 +68,16 @@ logger = get_logger("tui")
 class ConsentValidator(Validator):
     """Validator for file edit consent responses."""
 
+    # Valid responses: short forms (y, n) and long forms (yes, no, always, never)
+    VALID_RESPONSES = [
+        ConsentResponse.YES, ConsentResponse.NO,  # "y", "n"
+        ConsentResponse.ALWAYS, ConsentResponse.NEVER,  # "always", "never"
+        ConsentDecision.YES, ConsentDecision.NO,  # "yes", "no"
+    ]
+
     def validate(self, document):
         text = document.text.strip().lower()
-        if text not in ['y', 'n', 'yes', 'no', 'always', 'never']:
+        if text not in self.VALID_RESPONSES:
             raise ValidationError(
                 message="Please enter: y (yes), n (no), always, or never",
                 cursor_position=len(document.text)
@@ -107,20 +115,19 @@ async def tui_consent_handler(file_path: str) -> tuple[bool, str]:
         response = response.strip().lower()
 
         # Normalize response
-        if response in ['yes', 'y']:
-            response = 'y'
+        if response in [ConsentDecision.YES, ConsentResponse.YES]:
+            response = ConsentResponse.YES
             approved = True
             console.print("[green]✓ Edit approved for this file[/green]\n")
-        elif response == 'always':
+        elif response == ConsentResponse.ALWAYS:
             approved = True
             console.print("[green]✓ All file edits approved for this session[/green]\n")
-        elif response == 'never':
+        elif response == ConsentResponse.NEVER:
             approved = False
-            response = 'never'
             console.print("[yellow]✗ All file edits blocked for this session[/yellow]\n")
         else:  # 'no', 'n'
             approved = False
-            response = 'n'
+            response = ConsentResponse.NO
             console.print("[yellow]✗ Edit denied for this file[/yellow]\n")
 
         return (approved, response)
@@ -128,7 +135,7 @@ async def tui_consent_handler(file_path: str) -> tuple[bool, str]:
     except (KeyboardInterrupt, EOFError):
         # User cancelled - deny for safety
         console.print("\n[yellow]✗ Edit cancelled[/yellow]\n")
-        return (False, 'n')
+        return (False, ConsentResponse.NO)
 
 
 async def tui_shell_consent_handler(command: str, working_dir: str, risk_level: str) -> tuple[bool, str]:
@@ -151,9 +158,9 @@ async def tui_shell_consent_handler(command: str, working_dir: str, risk_level: 
     """
     # Determine risk color
     risk_color = {
-        "never": "red",
-        "dangerous": "yellow",
-        "safe": "green"
+        ShellRiskLevel.NEVER: "red",
+        ShellRiskLevel.DANGEROUS: "yellow",
+        ShellRiskLevel.SAFE: "green"
     }.get(risk_level, "yellow")
 
     console.print(f"\n[bold {risk_color}]⚠️  Shell Command Request[/bold {risk_color}]")
@@ -173,20 +180,19 @@ async def tui_shell_consent_handler(command: str, working_dir: str, risk_level: 
         response = response.strip().lower()
 
         # Normalize response
-        if response in ['yes', 'y']:
-            response = 'y'
+        if response in [ConsentDecision.YES, ConsentResponse.YES]:
+            response = ConsentResponse.YES
             approved = True
             console.print("[green]✓ Command approved[/green]\n")
-        elif response == 'always':
+        elif response == ConsentResponse.ALWAYS:
             approved = True
             console.print("[green]✓ All shell commands approved for this session[/green]\n")
-        elif response == 'never':
+        elif response == ConsentResponse.NEVER:
             approved = False
-            response = 'never'
             console.print("[yellow]✗ All shell commands blocked for this session[/yellow]\n")
         else:  # 'no', 'n'
             approved = False
-            response = 'n'
+            response = ConsentResponse.NO
             console.print("[yellow]✗ Command denied[/yellow]\n")
 
         return (approved, response)
@@ -194,7 +200,7 @@ async def tui_shell_consent_handler(command: str, working_dir: str, risk_level: 
     except (KeyboardInterrupt, EOFError):
         # User cancelled - deny for safety
         console.print("\n[yellow]✗ Command cancelled[/yellow]\n")
-        return (False, 'n')
+        return (False, ConsentResponse.NO)
 
 
 def send_coding_task(handler: 'CommandHandler', task_type: str, user_message: str, model: str, provider: str = None) -> Optional[str]:

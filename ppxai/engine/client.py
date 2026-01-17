@@ -28,6 +28,7 @@ from .context import ContextInjector
 from ..checkpoint import CheckpointManager
 from ..config import calculate_cost
 from ..common.logger import get_logger
+from ..constants import ConsentMode, ConsentResponse, ShellRiskLevel
 
 logger = get_logger("tui")
 
@@ -788,9 +789,9 @@ class EngineClient:
             self.create_checkpoint(f"Before editing {filename}")
 
         # Check global consent mode
-        if self.session.edit_consent_mode == "always":
+        if self.session.edit_consent_mode == ConsentMode.ALWAYS:
             return True
-        if self.session.edit_consent_mode == "never":
+        if self.session.edit_consent_mode == ConsentMode.NEVER:
             return False
 
         # Check if already consented for this file
@@ -814,14 +815,14 @@ class EngineClient:
             # Call consent callback and wait for response
             approved, response = await self.consent_callback(str(path))
 
-            if response == "y":
+            if response == ConsentResponse.YES:
                 self.session.allowed_files.add(path)
                 return True
-            elif response == "always":
-                self.session.edit_consent_mode = "always"
+            elif response == ConsentResponse.ALWAYS:
+                self.session.edit_consent_mode = ConsentMode.ALWAYS
                 return True
-            elif response == "never":
-                self.session.edit_consent_mode = "never"
+            elif response == ConsentResponse.NEVER:
+                self.session.edit_consent_mode = ConsentMode.NEVER
                 return False
             else:  # "n" or anything else
                 return False
@@ -838,7 +839,7 @@ class EngineClient:
             command: Shell command to classify
 
         Returns:
-            Risk level: "never", "dangerous", or "safe"
+            Risk level: ShellRiskLevel value
         """
         import re
 
@@ -847,7 +848,7 @@ class EngineClient:
         for pattern in never_allow:
             try:
                 if re.search(pattern, command):
-                    return "never"
+                    return ShellRiskLevel.NEVER
             except re.error as e:
                 logger.warning(f"Invalid never_allow regex pattern '{pattern}': {e}")
 
@@ -856,7 +857,7 @@ class EngineClient:
         for pattern in dangerous:
             try:
                 if re.search(pattern, command):
-                    return "dangerous"
+                    return ShellRiskLevel.DANGEROUS
             except re.error as e:
                 logger.warning(f"Invalid dangerous_commands regex pattern '{pattern}': {e}")
 
@@ -865,12 +866,12 @@ class EngineClient:
         for pattern in allowed:
             try:
                 if re.search(pattern, command):
-                    return "safe"
+                    return ShellRiskLevel.SAFE
             except re.error as e:
                 logger.warning(f"Invalid allowed_commands regex pattern '{pattern}': {e}")
 
         # Unknown commands are treated as dangerous for safety
-        return "dangerous"
+        return ShellRiskLevel.DANGEROUS
 
     async def request_shell_consent(self, command: str, working_dir: str = ".") -> bool:
         """Request user consent for shell command execution (v1.11.2).
@@ -896,17 +897,17 @@ class EngineClient:
         logger.debug(f"Shell consent: command='{command[:50]}...' risk={risk_level} callback={self.shell_consent_callback is not None}")
 
         # Never-allow commands are always blocked
-        if risk_level == "never":
+        if risk_level == ShellRiskLevel.NEVER:
             return False
 
         # Safe commands are always allowed (no consent needed)
-        if risk_level == "safe":
+        if risk_level == ShellRiskLevel.SAFE:
             return True
 
         # Check global shell consent mode
-        if self.session.shell_consent_mode == "always":
+        if self.session.shell_consent_mode == ConsentMode.ALWAYS:
             return True
-        if self.session.shell_consent_mode == "never":
+        if self.session.shell_consent_mode == ConsentMode.NEVER:
             return False
 
         # Check if already consented for this specific command
@@ -941,14 +942,14 @@ class EngineClient:
             # Debug logging
             logger.debug(f"Shell consent response: approved={approved} response={response}")
 
-            if response == "y":
+            if response == ConsentResponse.YES:
                 self.session.allowed_commands.add(command)
                 return True
-            elif response == "always":
-                self.session.shell_consent_mode = "always"
+            elif response == ConsentResponse.ALWAYS:
+                self.session.shell_consent_mode = ConsentMode.ALWAYS
                 return True
-            elif response == "never":
-                self.session.shell_consent_mode = "never"
+            elif response == ConsentResponse.NEVER:
+                self.session.shell_consent_mode = ConsentMode.NEVER
                 return False
             else:  # "n" or anything else
                 return False

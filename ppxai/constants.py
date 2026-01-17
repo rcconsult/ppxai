@@ -4,60 +4,138 @@ Central constants module for ppxai.
 This module consolidates magic strings and default values used throughout
 the codebase to improve maintainability and type safety.
 
+String enums use `str, Enum` pattern for:
+- Type safety with IDE autocompletion
+- Seamless string comparison (no .value needed)
+- Validation via is_valid_*() helpers
+
 v1.13.10: Created as part of technical debt reduction
+v1.13.11: Converted to str, Enum with validation helpers
 """
 
 from enum import Enum
-from typing import Final
+from typing import Final, Type, TypeVar
+
+T = TypeVar('T', bound=Enum)
+
+
+# =============================================================================
+# Validation Helpers
+# =============================================================================
+
+def is_valid_enum(enum_class: Type[T], value: str) -> bool:
+    """Check if value is a valid member of the enum.
+
+    Args:
+        enum_class: The enum class to check against
+        value: String value to validate
+
+    Returns:
+        True if value matches an enum member's value
+    """
+    return value in {e.value for e in enum_class}
+
+
+def get_enum_values(enum_class: Type[T]) -> set[str]:
+    """Get all valid values for an enum class.
+
+    Args:
+        enum_class: The enum class
+
+    Returns:
+        Set of all valid string values
+    """
+    return {e.value for e in enum_class}
 
 
 # =============================================================================
 # Provider Names
 # =============================================================================
 
-class ProviderName:
+class ProviderName(str, Enum):
     """Provider identifier constants."""
-    PERPLEXITY: Final[str] = "perplexity"
-    GEMINI: Final[str] = "gemini"
-    OPENAI: Final[str] = "openai"
-    OPENROUTER: Final[str] = "openrouter"
-    LOCAL: Final[str] = "local"
-    CUSTOM: Final[str] = "custom"
+    PERPLEXITY = "perplexity"
+    GEMINI = "gemini"
+    OPENAI = "openai"
+    OPENROUTER = "openrouter"
+    LOCAL = "local"
+    CUSTOM = "custom"
+
+
+def is_valid_provider(value: str) -> bool:
+    """Check if value is a valid provider name."""
+    return is_valid_enum(ProviderName, value)
 
 
 # =============================================================================
 # Message Roles
 # =============================================================================
 
-class MessageRole:
+class MessageRole(str, Enum):
     """Chat message role constants."""
-    USER: Final[str] = "user"
-    ASSISTANT: Final[str] = "assistant"
-    SYSTEM: Final[str] = "system"
-    TOOL: Final[str] = "tool"
+    USER = "user"
+    ASSISTANT = "assistant"
+    SYSTEM = "system"
+    TOOL = "tool"
+
+
+def is_valid_role(value: str) -> bool:
+    """Check if value is a valid message role."""
+    return is_valid_enum(MessageRole, value)
 
 
 # =============================================================================
 # Consent Modes
 # =============================================================================
 
-class ConsentMode:
+class ConsentMode(str, Enum):
     """Consent behavior mode constants."""
-    ALWAYS: Final[str] = "always"
-    NEVER: Final[str] = "never"
-    PROMPT: Final[str] = "prompt"
+    ALWAYS = "always"
+    NEVER = "never"
+    PROMPT = "prompt"
 
 
-class ConsentResponse:
-    """Consent response constants."""
-    YES: Final[str] = "y"
-    NO: Final[str] = "n"
-    ALWAYS: Final[str] = "always"
-    NEVER: Final[str] = "never"
+def is_valid_consent_mode(value: str) -> bool:
+    """Check if value is a valid consent mode."""
+    return is_valid_enum(ConsentMode, value)
+
+
+class ConsentResponse(str, Enum):
+    """Consent response constants - user input values.
+
+    Used for validating user input at consent prompts.
+    Accepts short forms: "y", "n" and long forms: "always", "never"
+    """
+    YES = "y"
+    NO = "n"
+    ALWAYS = "always"
+    NEVER = "never"
+
+
+def is_valid_consent_response(value: str) -> bool:
+    """Check if value is a valid consent response."""
+    return is_valid_enum(ConsentResponse, value)
+
+
+class ConsentDecision(str, Enum):
+    """Consent decision constants - internal state values.
+
+    Used for tracking consent decisions internally.
+    Uses long forms: "yes", "no", "always", "never"
+    """
+    YES = "yes"
+    NO = "no"
+    ALWAYS = "always"
+    NEVER = "never"
+
+
+def is_valid_consent_decision(value: str) -> bool:
+    """Check if value is a valid consent decision."""
+    return is_valid_enum(ConsentDecision, value)
 
 
 # =============================================================================
-# Configuration Keys
+# Configuration Keys (not enums - used as dictionary keys)
 # =============================================================================
 
 class ConfigKey:
@@ -93,15 +171,20 @@ class ConfigKey:
 # System Prompt Modes
 # =============================================================================
 
-class SystemPromptMode:
+class SystemPromptMode(str, Enum):
     """System prompt combination mode constants."""
-    PREPEND: Final[str] = "prepend"
-    APPEND: Final[str] = "append"
-    REPLACE: Final[str] = "replace"
+    PREPEND = "prepend"
+    APPEND = "append"
+    REPLACE = "replace"
+
+
+def is_valid_prompt_mode(value: str) -> bool:
+    """Check if value is a valid system prompt mode."""
+    return is_valid_enum(SystemPromptMode, value)
 
 
 # =============================================================================
-# Tool Settings
+# Tool Settings (not enums - used as dictionary keys)
 # =============================================================================
 
 class ToolSetting:
@@ -116,7 +199,7 @@ class ToolSetting:
 
 
 # =============================================================================
-# Default Values
+# Default Values (not enums - integer values)
 # =============================================================================
 
 class Default:
@@ -146,25 +229,35 @@ class Default:
 # Shell Command Risk Levels
 # =============================================================================
 
-class ShellRiskLevel:
+class ShellRiskLevel(str, Enum):
     """Shell command risk classification constants."""
-    SAFE: Final[str] = "safe"
-    DANGEROUS: Final[str] = "dangerous"
-    NEVER: Final[str] = "never"
+    SAFE = "safe"
+    DANGEROUS = "dangerous"
+    NEVER = "never"
+
+
+def is_valid_risk_level(value: str) -> bool:
+    """Check if value is a valid shell risk level."""
+    return is_valid_enum(ShellRiskLevel, value)
 
 
 # =============================================================================
 # File Encodings
 # =============================================================================
 
-class FileEncoding:
+class FileEncoding(str, Enum):
     """File encoding constants."""
-    UTF8: Final[str] = "utf-8"
-    UTF8_WITH_BOM: Final[str] = "utf-8-sig"
+    UTF8 = "utf-8"
+    UTF8_WITH_BOM = "utf-8-sig"
+
+
+def is_valid_encoding(value: str) -> bool:
+    """Check if value is a valid file encoding."""
+    return is_valid_enum(FileEncoding, value)
 
 
 # =============================================================================
-# API Endpoints (for tools that need external APIs)
+# API Endpoints (not enums - URLs don't benefit from enum semantics)
 # =============================================================================
 
 class APIEndpoint:
@@ -178,9 +271,14 @@ class APIEndpoint:
 # Checkpoint Backend Types
 # =============================================================================
 
-class CheckpointBackend:
+class CheckpointBackend(str, Enum):
     """Checkpoint backend type constants."""
-    AUTO: Final[str] = "auto"
-    GIT: Final[str] = "git"
-    FILE: Final[str] = "file"
-    NONE: Final[str] = "none"
+    AUTO = "auto"
+    GIT = "git"
+    FILE = "file"
+    NONE = "none"
+
+
+def is_valid_checkpoint_backend(value: str) -> bool:
+    """Check if value is a valid checkpoint backend."""
+    return is_valid_enum(CheckpointBackend, value)

@@ -16,6 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from ppxai.engine import EngineClient
 from ppxai.engine.session import SessionManager
+from ppxai.constants import ConsentMode
 from ppxai.engine.tools.builtin.editor import (
     ApplyPatchTool,
     ReplaceBlockTool,
@@ -69,7 +70,7 @@ def test_session_consent_state_initialization():
     assert hasattr(session, 'allowed_files')
     assert hasattr(session, 'edit_consent_mode')
     assert session.allowed_files == set()
-    assert session.edit_consent_mode == 'ask'
+    assert session.edit_consent_mode == ConsentMode.PROMPT
 
 
 def test_session_consent_state_cleared_on_clear():
@@ -78,14 +79,14 @@ def test_session_consent_state_cleared_on_clear():
 
     # Add some consent state
     session.allowed_files.add(Path('/tmp/test.txt'))
-    session.edit_consent_mode = 'always'
+    session.edit_consent_mode = ConsentMode.ALWAYS
 
     # Clear session
     session.clear()
 
     # Verify reset
     assert session.allowed_files == set()
-    assert session.edit_consent_mode == 'ask'
+    assert session.edit_consent_mode == ConsentMode.PROMPT
 
 
 def test_session_remove_last_message():

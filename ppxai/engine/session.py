@@ -4,6 +4,7 @@ Session management for the ppxai engine.
 Handles conversation history, session persistence, and usage tracking.
 
 v1.13.9: Added session state file for auto-recovery and command history persistence.
+v1.13.11: Migrated to centralized constants (ConsentMode)
 """
 
 import json
@@ -14,6 +15,7 @@ from typing import List, Dict, Any, Optional
 
 from .types import Message, UsageStats, SessionInfo
 from ..common.logger import get_logger
+from ..constants import ConsentMode
 
 logger = get_logger("tui")
 
@@ -69,11 +71,11 @@ class SessionManager:
 
         # File editing consent state (Phase 1: v1.11.0)
         self.allowed_files: set[Path] = set()  # Files user consented to edit
-        self.edit_consent_mode: str = "ask"  # "ask", "always", "never"
+        self.edit_consent_mode: str = ConsentMode.PROMPT  # ConsentMode: PROMPT, ALWAYS, NEVER
 
         # Shell command consent state (v1.11.2)
         self.allowed_commands: set[str] = set()  # Commands user consented to run
-        self.shell_consent_mode: str = "ask"  # "ask", "always", "never"
+        self.shell_consent_mode: str = ConsentMode.PROMPT  # ConsentMode: PROMPT, ALWAYS, NEVER
 
         # v1.13.9: Session persistence and recovery
         self.command_history: List[str] = []  # User input history for this session
@@ -127,7 +129,7 @@ class SessionManager:
         self.metadata["message_count"] = 0
         # Reset file editing consent state
         self.allowed_files.clear()
-        self.edit_consent_mode = "ask"
+        self.edit_consent_mode = ConsentMode.PROMPT
 
     def set_provider(self, provider: str):
         """Set the current provider.

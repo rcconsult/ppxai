@@ -14,13 +14,13 @@ Modules:
 - commands: Command execution (slash commands like /tools, /model, etc.)
 - consent: File editing consent management
 
-Version: v1.11.7
+Version: v1.13.11 - Centralized constants
 """
 
 from ppxai.common.event_handler import EventHandler
 from ppxai.common.logger import get_logger, Logger
 from ppxai.common.commands import CommandHandler, CommandResult
-from ppxai.common.consent import ConsentManager, ConsentDecision
+from ppxai.common.consent import ConsentManager
 
 __all__ = [
     "EventHandler",
@@ -29,5 +29,4 @@ __all__ = [
     "CommandHandler",
     "CommandResult",
     "ConsentManager",
-    "ConsentDecision",
 ]

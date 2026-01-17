@@ -103,8 +103,8 @@ dev = [
     "sse-starlette>=1.6.0",
     # Gemini native SDK
     "google-genai>=1.0.0",
-    # Web search
-    "duckduckgo-search>=7.0.0",
+    # Web search (ddgs - renamed from duckduckgo-search)
+    "ddgs>=9.0.0",
     # Interactive shell
     "ipython>=8.37.0",
 ]
