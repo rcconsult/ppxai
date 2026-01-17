@@ -266,14 +266,34 @@ warnings.warn(
 
 ### 13. Version Marker Comments
 
-**Status:** Open
-**Scope:** Throughout codebase
+**Status:** Policy Defined
+**Scope:** Throughout codebase (~150+ markers)
 
 **Pattern:** Code annotated with version numbers (v1.11.0, v1.12.0, v1.13.x) scattered as comments.
 
 **Impact:** Maintenance burden, harder to track when compatibility code can be removed.
 
-**Recommendation:** Extract compatibility layer with clear EOL dates.
+**Policy (Agreed):**
+
+1. **Remove informational markers** - Feature annotations like `# v1.13.4: Tool usage tracking` provide no value; git history serves this purpose
+
+2. **Keep only compatibility markers** - Code that needs removal in a future version should use:
+   ```python
+   # COMPAT(v2.0.0): Remove legacy signature support
+   ```
+
+3. **EOL dates** - Compatibility code has 3-month EOL from introduction
+
+**Cleanup Schedule:**
+- Cleanup happens at **minor version releases**
+- Example: When releasing v1.14.0, remove all v1.13.x informational markers
+- Compatibility markers remain until their stated EOL version
+
+**Files Most Affected:**
+- `vscode-extension/src/chatPanel.ts` (~45 markers)
+- `ppxai/engine/client.py` (~20 markers)
+- `vscode-extension/src/httpClient.ts` (~15 markers)
+- `ppxai/engine/session.py` (~12 markers)
 
 ---
 
