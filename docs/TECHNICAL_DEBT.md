@@ -1,7 +1,7 @@
 # Technical Debt Tracker
 
 **Last Updated:** 2026-01-17
-**Version:** v1.13.11
+**Version:** v1.13.10
 
 This document tracks identified technical debt and refactoring opportunities in the ppxai codebase. Items are removed as they are addressed.
 
@@ -279,7 +279,7 @@ warnings.warn(
 
 ### 14. Magic String Literals
 
-**Status:** ✅ Completed (v1.13.11)
+**Status:** ✅ Completed (v1.13.10)
 **File:** [ppxai/constants.py](../ppxai/constants.py)
 
 **Resolution:** Converted class-based constants to `str, Enum` with validation helpers:
@@ -314,36 +314,40 @@ warnings.warn(
 
 ### 16. Container Deployment Support
 
-**Status:** Open
-**Scope:** New files needed
+**Status:** ✅ Completed (v1.13.10)
+**Scope:** New files created
 
-**Issue:** No containerized deployment support exists:
-- No `Dockerfile` for building container images
-- No `docker-compose.yaml` for local development
-- No Kubernetes manifests for orchestrated deployment
-- No `/health` endpoint for container health checks
-- No `/ready` endpoint for readiness probes
+**Resolution:** Full containerized deployment support added:
+- [Dockerfile](../Dockerfile) - Multi-stage build with uv package manager
+- [docker-compose.yaml](../docker-compose.yaml) - Local development setup
+- [kubernetes/deployment.yaml](../kubernetes/deployment.yaml) - Deployment with health probes
+- [kubernetes/service.yaml](../kubernetes/service.yaml) - ClusterIP service
+- [kubernetes/ingress.yaml](../kubernetes/ingress.yaml) - Nginx ingress with SSE support
 
-**Impact:** Cannot deploy ppxai-server in containerized environments (Docker, Podman, Kubernetes).
+**Health endpoints** (added in v1.13.10):
+- `/health` - Liveness probe (always returns 200)
+- `/ready` - Readiness probe (checks session manager)
 
-**Files to Create:**
+**Files Created:**
 ```
 ppxai/
-├── Dockerfile                    # Multi-stage build
-├── docker-compose.yaml           # Local development
+├── Dockerfile                    # Multi-stage build (Python 3.11-slim)
+├── docker-compose.yaml           # Local dev with volume mounts
 └── kubernetes/
-    ├── deployment.yaml           # Deployment spec
-    ├── service.yaml              # Service exposure
-    ├── configmap.yaml            # Config injection
-    └── secret.yaml               # API keys template
+    ├── deployment.yaml           # 1 replica, resource limits, probes
+    ├── service.yaml              # ClusterIP on port 80
+    └── ingress.yaml              # Nginx with SSE proxy settings
 ```
 
-**Recommendation:**
-1. Add `/health` and `/ready` endpoints to http.py
-2. Create Dockerfile with multi-stage build (builder + runtime)
-3. Create docker-compose.yaml for local testing
-4. Create Kubernetes manifests for production deployment
-5. Document environment variable configuration for secrets
+**Usage:**
+```bash
+# Docker
+docker compose up --build
+
+# Kubernetes
+kubectl create secret generic ppxai-secrets --from-literal=PERPLEXITY_API_KEY=xxx
+kubectl apply -f kubernetes/
+```
 
 ---
 
@@ -368,7 +372,8 @@ Items moved here after being addressed:
 | - | BUILTIN_PROVIDERS removal - JSON config as single source of truth | v1.13.10 | 2026-01-16 |
 | #8 | Type hints - Added TypeScript interfaces for consent requests | v1.13.10 | 2026-01-17 |
 | #12 | Legacy compat - Added deprecation warning for CommandHandler | v1.13.10 | 2026-01-17 |
-| #14 | Magic strings - Converted constants.py to str,Enum with validation helpers | v1.13.11 | 2026-01-17 |
+| #14 | Magic strings - Converted constants.py to str,Enum with validation helpers | v1.13.10 | 2026-01-17 |
+| #16 | Container deployment - Dockerfile, docker-compose, K8s manifests | v1.13.10 | 2026-01-17 |
 
 ---
 

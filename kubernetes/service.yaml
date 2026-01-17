@@ -1,0 +1,22 @@
+# Kubernetes Service for ppxai-server
+#
+# Exposes the ppxai-server deployment within the cluster.
+# Use with Ingress for external access.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ppxai-server
+  labels:
+    app: ppxai-server
+    app.kubernetes.io/name: ppxai-server
+    app.kubernetes.io/component: server
+spec:
+  type: ClusterIP
+  selector:
+    app: ppxai-server
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

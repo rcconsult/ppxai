@@ -1,0 +1,40 @@
+# docker-compose.yaml for ppxai-server local development
+#
+# Usage:
+#   docker compose up        # Start server
+#   docker compose up -d     # Start in background
+#   docker compose down      # Stop and remove
+#   docker compose logs -f   # Follow logs
+#
+# Environment:
+#   Copy .env.example to .env and add your API keys
+
+services:
+  ppxai-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ppxai-server
+    ports:
+      - "54320:54320"
+    env_file:
+      - .env
+    environment:
+      # Override default settings via environment
+      - PPXAI_LOG_LEVEL=${PPXAI_LOG_LEVEL:-INFO}
+    volumes:
+      # Persist sessions and data
+      - ppxai-data:/home/ppxai/.ppxai
+      # Mount config file (optional, for custom provider configs)
+      # - ./ppxai-config.json:/home/ppxai/.ppxai/ppxai-config.json:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:54320/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  ppxai-data:
+    driver: local

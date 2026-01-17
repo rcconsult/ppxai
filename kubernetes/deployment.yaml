@@ -1,0 +1,90 @@
+# Kubernetes Deployment for ppxai-server
+#
+# Usage:
+#   kubectl apply -f kubernetes/
+#
+# Prerequisites:
+#   1. Create secret with API keys:
+#      kubectl create secret generic ppxai-secrets \
+#        --from-literal=PERPLEXITY_API_KEY=your-key \
+#        --from-literal=OPENAI_API_KEY=your-key
+#
+#   2. (Optional) Create configmap for custom config:
+#      kubectl create configmap ppxai-config \
+#        --from-file=ppxai-config.json
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ppxai-server
+  labels:
+    app: ppxai-server
+    app.kubernetes.io/name: ppxai-server
+    app.kubernetes.io/component: server
+    app.kubernetes.io/version: "1.13.10"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ppxai-server
+  template:
+    metadata:
+      labels:
+        app: ppxai-server
+        app.kubernetes.io/name: ppxai-server
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: ppxai-server
+          image: ppxai-server:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 54320
+              protocol: TCP
+          envFrom:
+            - secretRef:
+                name: ppxai-secrets
+                optional: true
+          env:
+            - name: PPXAI_LOG_LEVEL
+              value: "INFO"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: data
+              mountPath: /home/ppxai/.ppxai
+      volumes:
+        - name: data
+          emptyDir: {}
