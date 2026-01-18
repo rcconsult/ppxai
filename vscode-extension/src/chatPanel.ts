@@ -37,6 +37,13 @@ import {
     formatSessionsList
 } from './shared/formatters';
 
+// Import extracted command handlers (Phase 2 refactoring)
+import {
+    HandlerContext,
+    handleToolsCommand as toolsHandler,
+    handleCheckpointCommand as checkpointHandler
+} from './handlers';
+
 export class ChatViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'ppxai.chatView';
 
@@ -50,6 +57,27 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     ) {
         this._context = context;
         this._backend = backend;
+    }
+
+    /**
+     * Create handler context for dependency injection (IoC pattern).
+     * Provides extracted handlers with necessary dependencies without
+     * exposing ChatViewProvider internals.
+     */
+    private getHandlerContext(): HandlerContext | null {
+        if (!this._view) { return null; }
+
+        const view = this._view;
+        return {
+            postMessage: (msg) => view.webview.postMessage(msg),
+            backend: this._backend,
+            updateStatus: () => this.updateStatus(),
+            updateAgentStatus: () => this.updateAgentStatus(),
+            dialogs: {
+                showWarningMessage: (message, options, ...actions) =>
+                    vscode.window.showWarningMessage(message, options, ...actions)
+            }
+        };
     }
 
     public resolveWebviewView(
@@ -1024,226 +1052,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private async handleToolsCommand(args: string[]) {
-        if (!this._view) { return; }
-
-        const subcommand = args[0]?.toLowerCase() || 'status';
-
-        switch (subcommand) {
-            case 'enable':
-                await this._backend.enableTools();
-                const tools = await this._backend.listTools();
-                this._view.webview.postMessage({
-                    type: 'systemMessage',
-                    content: `✓ Tools enabled (${tools.length} tools available)`
-                });
-                await this.updateStatus();
-                break;
-
-            case 'disable':
-                await this._backend.disableTools();
-                this._view.webview.postMessage({
-                    type: 'systemMessage',
-                    content: '✓ Tools disabled'
-                });
-                await this.updateStatus();
-                break;
-
-            case 'list':
-                const toolsList = await this._backend.listTools();
-                if (toolsList.length === 0) {
-                    this._view.webview.postMessage({
-                        type: 'systemMessage',
-                        content: 'No tools available. Use `/tools enable` first.'
-                    });
-                } else {
-                    const list = toolsList.map(t => `• **${t.name}**: ${t.description}`).join('\n');
-                    this._view.webview.postMessage({
-                        type: 'systemMessage',
-                        content: `**Available Tools:**\n${list}`
-                    });
-                }
-                break;
-
-            case 'config':
-                if (args.length >= 3) {
-                    const setting = args[1];
-                    const value = args[2];
-                    await this._backend.setToolConfig(setting, value);
-                    this._view.webview.postMessage({
-                        type: 'systemMessage',
-                        content: `✓ Set ${setting} = ${value}`
-                    });
-                } else {
-                    // Show current config (matches TUI behavior)
-                    const configStatus = await this._backend.getToolsStatus();
-                    this._view.webview.postMessage({
-                        type: 'systemMessage',
-                        content: `**Tool Configuration:**
-• max_iterations: ${configStatus.max_iterations}
-
-Usage: \`/tools config <setting> <value>\`
-Available settings:
-  max_iterations <number> - Max tool calls per query (1-50)`
-                    });
-                }
-                break;
-
-            case 'set':
-                // v1.11.9: Add /tools set verbose on|off (matches TUI)
-                if (args.length >= 3) {
-                    const setting = args[1]?.toLowerCase();
-                    const value = args[2]?.toLowerCase();
-                    if (setting === 'verbose') {
-                        const enabled = ['on', 'true', '1', 'yes'].includes(value);
-                        await this._backend.setToolConfig('verbose', enabled ? 'on' : 'off');
-                        this._view.webview.postMessage({
-                            type: 'systemMessage',
-                            content: enabled
-                                ? '✓ Verbose tool logging enabled\n*Tool inputs and outputs will be displayed during execution*'
-                                : '✓ Verbose tool logging disabled'
-                        });
-                    } else {
-                        this._view.webview.postMessage({
-                            type: 'error',
-                            content: `Unknown setting: ${setting}\nAvailable: verbose`
-                        });
-                    }
-                } else {
-                    this._view.webview.postMessage({
-                        type: 'systemMessage',
-                        content: `**Tool Settings:**
-• verbose: off
-
-Usage: \`/tools set <setting> <value>\`
-Available settings:
-  verbose on|off - Show tool inputs and outputs`
-                    });
-                }
-                break;
-
-            case 'agent':
-                // v1.11.9: Add /tools agent on|off (matches TUI)
-                if (args.length >= 2) {
-                    const action = args[1]?.toLowerCase();
-                    if (['on', 'enable'].includes(action)) {
-                        await this._backend.enableAgentMode();
-                        this._view.webview.postMessage({
-                            type: 'systemMessage',
-                            content: '✓ Agent mode enabled\n*Tools auto-enabled. Use `/agent <task>` to start autonomous execution.*'
-                        });
-                        await this.updateAgentStatus();
-                        await this.updateStatus();
-                    } else if (['off', 'disable'].includes(action)) {
-                        await this._backend.disableAgentMode();
-                        this._view.webview.postMessage({
-                            type: 'systemMessage',
-                            content: '✓ Agent mode disabled'
-                        });
-                        await this.updateAgentStatus();
-                    } else {
-                        this._view.webview.postMessage({
-                            type: 'error',
-                            content: `Unknown action: ${action}\nUsage: /tools agent on|off`
-                        });
-                    }
-                } else {
-                    // Show current agent status
-                    const agentStatus = await this._backend.getAgentStatus();
-                    this._view.webview.postMessage({
-                        type: 'systemMessage',
-                        content: `**Agent Mode:** ${agentStatus.agent_mode ? 'ON' : 'OFF'}
-
-Usage: \`/tools agent on|off\`
-       \`/agent <task>\` - Run autonomous task`
-                    });
-                }
-                break;
-
-            case 'help':
-                if (args[1] === 'editing') {
-                    this._view.webview.postMessage({
-                        type: 'systemMessage',
-                        content: this.getFileEditingHelp()
-                    });
-                } else if (args[1]) {
-                    // v1.11.9: Show help for specific tool (matches TUI)
-                    await this.showToolHelp(args[1]);
-                } else {
-                    this._view.webview.postMessage({
-                        type: 'systemMessage',
-                        content: `**Tool Help:**
-Usage: \`/tools help <tool-name>\` - Show help for a specific tool
-       \`/tools help editing\` - Show file editing guide
-
-Use \`/tools list\` to see available tool names.`
-                    });
-                }
-                break;
-
-            case 'status':
-            default:
-                const status = await this._backend.getToolsStatus();
-                const available = status.enabled ? await this._backend.listTools() : [];
-                const agentMode = await this._backend.getAgentStatus();
-                this._view.webview.postMessage({
-                    type: 'systemMessage',
-                    content: `**Tools Status:**
-• Enabled: ${status.enabled ? 'yes' : 'no'}
-• Agent mode: ${agentMode.agent_mode ? 'ON' : 'OFF'}
-• Available: ${available.length} tools
-• Max iterations: ${status.max_iterations}
-• Consent mode: ${status.consent_mode || 'default'}
-
-Use \`/tools enable\` to enable tools, \`/tools list\` to see available tools.`
-                });
-                break;
-        }
-    }
-
     /**
-     * Show help for a specific tool (v1.11.9)
+     * Handle /tools command - delegates to extracted handler (Phase 2 refactoring)
      */
-    private async showToolHelp(toolName: string) {
-        if (!this._view) { return; }
-
-        try {
-            const toolsList = await this._backend.listTools();
-            const tool = toolsList.find(t => t.name.toLowerCase() === toolName.toLowerCase());
-
-            if (!tool) {
-                this._view.webview.postMessage({
-                    type: 'error',
-                    content: `Tool not found: ${toolName}\nUse \`/tools list\` to see available tools.`
-                });
-                return;
-            }
-
-            // Format parameters if available
-            let paramsInfo = '';
-            if (tool.parameters && Object.keys(tool.parameters).length > 0) {
-                const params = Object.entries(tool.parameters)
-                    .map(([name, schema]: [string, any]) => {
-                        const required = schema.required ? ' (required)' : '';
-                        const desc = schema.description || '';
-                        return `  • **${name}**${required}: ${desc}`;
-                    })
-                    .join('\n');
-                paramsInfo = `\n\n**Parameters:**\n${params}`;
-            }
-
-            this._view.webview.postMessage({
-                type: 'systemMessage',
-                content: `**Tool: ${tool.name}**
-
-${tool.description}${paramsInfo}`
-            });
-        } catch (error) {
-            this._view.webview.postMessage({
-                type: 'error',
-                content: `Failed to get tool help: ${error}`
-            });
-        }
+    private async handleToolsCommand(args: string[]): Promise<void> {
+        const ctx = this.getHandlerContext();
+        if (!ctx) { return; }
+        await toolsHandler(ctx, args);
     }
 
     /**
@@ -1564,157 +1379,12 @@ Review your previous actions and continue. If the task is complete, respond with
     }
 
     /**
-     * Handle /checkpoint command for checkpoint management (v1.12.4)
+     * Handle /checkpoint command - delegates to extracted handler (Phase 2 refactoring)
      */
-    private async handleCheckpointCommand(args: string[]) {
-        if (!this._view) { return; }
-
-        const subcommand = args[0]?.toLowerCase() || 'status';
-
-        try {
-            switch (subcommand) {
-                case 'status':
-                    const status = await this._backend.getCheckpointStatus();
-                    let statusMsg = '**Checkpoint Status**\n';
-                    const backendDisplay = status.backend === 'git' ? '🟢 git (atomic)' :
-                                          status.backend === 'file' ? '🟡 file (snapshot)' :
-                                          '🔴 none (disabled)';
-                    statusMsg += `• Backend: ${backendDisplay}\n`;
-                    statusMsg += `• Enabled: ${status.enabled ? 'Yes' : 'No'}\n`;
-                    if (status.last_checkpoint) {
-                        const cpId = status.last_checkpoint.substring(0, 8);
-                        const validity = status.is_valid ? '✓ valid' : '⚠ stale';
-                        statusMsg += `• Last checkpoint: \`${cpId}\` (${validity})\n`;
-                        if (!status.is_valid) {
-                            statusMsg += `  ${status.validity_reason}\n`;
-                        }
-                    } else {
-                        statusMsg += '• Last checkpoint: None\n';
-                    }
-                    this._view.webview.postMessage({
-                        type: 'systemMessage',
-                        content: statusMsg
-                    });
-                    break;
-
-                case 'list':
-                    const result = await this._backend.listCheckpoints(10);
-                    if (result.checkpoints.length === 0) {
-                        this._view.webview.postMessage({
-                            type: 'systemMessage',
-                            content: 'No checkpoints found.\nRun an `/agent` task to create checkpoints.'
-                        });
-                    } else {
-                        let listMsg = '**Recent Checkpoints**\n';
-                        result.checkpoints.forEach((cp, i) => {
-                            const cpId = cp.id.substring(0, 8);
-                            const ts = cp.timestamp.substring(0, 19);
-                            const desc = cp.description.substring(0, 50);
-                            listMsg += `${i + 1}. \`${cpId}\`  ${ts}  ${desc}\n`;
-                        });
-                        this._view.webview.postMessage({
-                            type: 'systemMessage',
-                            content: listMsg
-                        });
-                    }
-                    break;
-
-                case 'backend':
-                    const backend = args[1]?.toLowerCase() as 'git' | 'file' | 'auto' | 'none';
-                    if (!backend) {
-                        const currentStatus = await this._backend.getCheckpointStatus();
-                        this._view.webview.postMessage({
-                            type: 'systemMessage',
-                            content: `Current backend: **${currentStatus.backend}**\n\nUsage: \`/checkpoint backend <git|file|auto|none>\``
-                        });
-                    } else if (!['git', 'file', 'auto', 'none'].includes(backend)) {
-                        this._view.webview.postMessage({
-                            type: 'error',
-                            content: `Invalid backend: ${backend}\nValid options: git, file, auto, none`
-                        });
-                    } else {
-                        const backendResult = await this._backend.setCheckpointBackend(backend);
-                        this._view.webview.postMessage({
-                            type: 'systemMessage',
-                            content: `✓ Checkpoint backend set to: **${backendResult.backend}**`
-                        });
-                    }
-                    break;
-
-                case 'clear':
-                    const clearStatus = await this._backend.getCheckpointStatus();
-                    if (clearStatus.backend !== 'file') {
-                        this._view.webview.postMessage({
-                            type: 'systemMessage',
-                            content: `Clear only applies to file-based checkpoints.\nCurrent backend: ${clearStatus.backend}`
-                        });
-                    } else {
-                        const confirm = await vscode.window.showWarningMessage(
-                            'Clear all file-based checkpoints?',
-                            { modal: true },
-                            'Clear'
-                        );
-                        if (confirm === 'Clear') {
-                            const clearResult = await this._backend.clearFileCheckpoints(0);
-                            this._view.webview.postMessage({
-                                type: 'systemMessage',
-                                content: `✓ Cleared ${clearResult.removed} checkpoint(s)`
-                            });
-                        }
-                    }
-                    break;
-
-                case 'info':
-                    const cpId = args[1];
-                    if (!cpId) {
-                        this._view.webview.postMessage({
-                            type: 'error',
-                            content: 'Usage: `/checkpoint info <checkpoint_id>`\nUse `/checkpoint list` to see available checkpoints.'
-                        });
-                    } else {
-                        const checkpoints = await this._backend.listCheckpoints(20);
-                        const matching = checkpoints.checkpoints.find(cp => cp.id.startsWith(cpId));
-                        if (!matching) {
-                            this._view.webview.postMessage({
-                                type: 'error',
-                                content: `Checkpoint not found: ${cpId}\nUse \`/checkpoint list\` to see available checkpoints.`
-                            });
-                        } else {
-                            let infoMsg = '**Checkpoint Details**\n';
-                            infoMsg += `• ID: \`${matching.id}\`\n`;
-                            infoMsg += `• Description: ${matching.description}\n`;
-                            infoMsg += `• Timestamp: ${matching.timestamp}\n`;
-                            this._view.webview.postMessage({
-                                type: 'systemMessage',
-                                content: infoMsg
-                            });
-                        }
-                    }
-                    break;
-
-                case 'undo':
-                    // Delegate to existing undo functionality
-                    const undoResult = await this._backend.undoCheckpoint();
-                    this._view.webview.postMessage({
-                        type: 'systemMessage',
-                        content: undoResult.success
-                            ? `✓ ${undoResult.message}`
-                            : `✗ ${undoResult.message}`
-                    });
-                    break;
-
-                default:
-                    this._view.webview.postMessage({
-                        type: 'error',
-                        content: `Unknown subcommand: ${subcommand}\nAvailable: status, list, backend, clear, info, undo`
-                    });
-            }
-        } catch (error) {
-            this._view.webview.postMessage({
-                type: 'error',
-                content: `Checkpoint error: ${error}`
-            });
-        }
+    private async handleCheckpointCommand(args: string[]): Promise<void> {
+        const ctx = this.getHandlerContext();
+        if (!ctx) { return; }
+        await checkpointHandler(ctx, args);
     }
 
     /**
@@ -2841,109 +2511,6 @@ Use \`/usage show <session|provider|model|off>\` to change.`;
         }
         return text;
     }
-
-    private getFileEditingHelp(): string {
-        return `# File Editing Tools Guide 🎯
-
-## Overview
-ppxai can now **autonomously edit files** during conversations! All edits require your **explicit consent** before any changes are made.
-
-## Quick Start
-1. **Enable tools**: \`/tools enable\`
-2. **Ask AI to edit**: Just request file changes naturally!
-3. **Grant consent**: Choose y/n/always/never when prompted
-
-## Consent System
-
-When AI wants to edit a file, you'll see a modal dialog with 4 options:
-
-| Option | Behavior | Use When |
-|--------|----------|----------|
-| **y** (yes) | Allow editing this file (this session) | You want this specific edit |
-| **n** (no) | Deny editing this file | You don't trust this specific edit |
-| **always** | Allow all file edits (this session) | You trust the AI completely |
-| **never** | Block all file edits (this session) | You want read-only mode |
-
-**Session-Scoped:** Your consent persists for the current session only.
-
-## Available Tools
-
-### 1. apply_patch
-Apply unified diff patches (like git patches).
-
-**Example:**
-\`\`\`
-Apply this patch to fix the bug in auth.py:
-[paste unified diff]
-\`\`\`
-
-### 2. replace_block
-Find and replace exact text blocks.
-
-**Example:**
-\`\`\`
-In config.py, replace "database = 'test.db'" with "database = 'production.db'"
-\`\`\`
-
-### 3. insert_text
-Insert text at specific line numbers.
-
-**Example:**
-\`\`\`
-Add a print statement at line 42 in debug.py: print("Debug checkpoint")
-\`\`\`
-
-### 4. delete_lines
-Delete line ranges from files.
-
-**Example:**
-\`\`\`
-Delete lines 10-15 from old_code.py
-\`\`\`
-
-## Pro Tips 💡
-
-✅ **Do:**
-- Start with small, focused edits
-- Review consent prompts carefully
-- Use "y" for individual edits when learning
-- Use "always" when you fully trust the AI
-
-❌ **Don't:**
-- Grant "always" consent without understanding
-- Edit files you haven't backed up
-- Use with critical system files
-
-## Safety Features ✅
-
-- **User consent required** - Every file edit needs your approval
-- **Atomic operations** - Edits rollback automatically on failure
-- **Session-scoped** - Consent resets when you restart
-- **File existence checks** - Won't edit non-existent files
-
-## Troubleshooting
-
-**Q: AI keeps asking for consent?**
-A: Use "always" mode if you trust it for this session.
-
-**Q: Edit failed?**
-A: Check file permissions, file exists, and exact text matches.
-
-**Q: How do I disable?**
-A: Use \`/tools disable\` or choose "never" when prompted.
-
-## Commands Reference
-
-- \`/tools enable\` - Enable file editing tools
-- \`/tools status\` - Check current consent mode
-- \`/tools list\` - Show all available tools
-- \`/tools help editing\` - Show this help
-
----
-
-**Ready to try?** Type \`/tools enable\` and ask the AI to edit a file!`;
-    }
-
 
     private _getHtmlForWebview(webview: vscode.Webview): string {
         // Get URIs for local resources

@@ -1,10 +1,10 @@
 # chatPanel.ts Refactoring Design
 
-**Status:** Phase 1 Complete
+**Status:** Phase 2 Complete
 **Target:** v1.14.x
 **Original Size:** 5,123 lines
-**Current Size:** 3,045 lines (41% reduction)
-**Goal:** < 1,500 lines (70% reduction) - Phases 2-4 deferred
+**Current Size:** 2,612 lines (49% reduction)
+**Goal:** < 1,500 lines (70% reduction) - Phases 3-4 deferred
 
 ---
 
@@ -176,16 +176,16 @@ export async function handleShellConsentRequest(
 | Phase | Lines Removed | Cumulative | New Files | Status |
 |-------|-------------:|------------|-----------|--------|
 | 1. Webview template | 2,078 | 3,045 | 2 (css, js) | ✅ Complete |
-| 2. Command handlers | ~400 | ~2,600 | 1 (commandHandlers.ts) | Deferred |
+| 2. Command handlers | 433 | 2,612 | 3 (handlers/*) | ✅ Complete |
 | 3. Event handlers | ~200 | ~2,400 | 1 (eventHandlers.ts) | Deferred |
 | 4. Consent handlers | ~220 | ~2,200 | 1 (consentHandlers.ts) | Deferred |
 
 **Phase 1 achieved:** 41% reduction (5,123 → 3,045 lines)
 
-**Phases 2-4 deferred:** Command, event, and consent handlers are tightly coupled to
-VSCode Webview API and instance state (`this._view`, `this._backend`, `updateStatus()`).
-Extracting them would require significant interface changes for diminishing returns (~15%
-additional reduction). Recommend deferring to future refactoring cycle.
+**Phase 2 achieved:** 14% additional reduction (3,045 → 2,612 lines) using IoC pattern
+
+**Phases 3-4 deferred:** Event and consent handlers have complex internal dependencies
+(processFileReferences, handleStreamEvent, agent loop). Recommend deferring to future cycle.
 
 ---
 
@@ -219,6 +219,7 @@ additional reduction). Recommend deferring to future refactoring cycle.
 ## Success Criteria
 
 - [x] chatPanel.ts < 3,500 lines (Phase 1 target) - ✅ 3,045 lines
+- [x] chatPanel.ts < 2,700 lines (Phase 2 target) - ✅ 2,612 lines
 - [x] All VSCode extension tests pass - ✅ TypeScript compiles
 - [x] Extension packages to VSIX - ✅ 1.04MB
 - [x] No TypeScript compilation errors - ✅
@@ -246,3 +247,33 @@ to external files in `media/webview/`.
 - TypeScript compiles successfully
 - Extension packages to VSIX (1.04MB)
 - All 694 Python backend tests pass
+
+---
+
+**Phase 2 Complete:** Extracted `/tools` and `/checkpoint` command handlers using
+Inversion of Control (IoC) pattern with `HandlerContext` interface.
+
+**Files Created:**
+- `src/handlers/types.ts` - 58 lines (HandlerContext interface, types)
+- `src/handlers/commands.ts` - 496 lines (handleToolsCommand, handleCheckpointCommand)
+- `src/handlers/index.ts` - 9 lines (barrel exports)
+
+**Files Modified:**
+- `src/chatPanel.ts` - Reduced from 3,045 to 2,612 lines (14% additional reduction)
+- Added `getHandlerContext()` method for dependency injection
+- Command handlers now delegate to extracted handlers via context
+
+**Pattern Used:**
+```typescript
+interface HandlerContext {
+    postMessage: (msg: HandlerResult) => void;
+    backend: HttpClient;
+    updateStatus: () => Promise<void>;
+    updateAgentStatus: () => Promise<void>;
+    dialogs: DialogCallbacks;
+}
+```
+
+**Verification:**
+- TypeScript compiles successfully
+- Extension packages to VSIX (1.04MB)
