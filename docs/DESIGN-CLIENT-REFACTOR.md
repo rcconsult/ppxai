@@ -265,42 +265,36 @@ This refactoring aligns by:
 
 ## Summary
 
-| Phase | Lines Moved | Risk | Test Scope |
-|-------|------------:|------|------------|
-| 1. Config cleanup | ~50 | Low | engine tests |
-| 2. Tool parser | ~250 | Low | tool parsing tests |
-| 3. Shell classify | ~50 | Low | command tests |
-| 4. Chat extraction | ~500 | Medium | streaming tests |
-| 5. Interface cleanup | ~100 | Low | full suite |
-| **Total** | **~950** | - | - |
+| Phase | Lines Moved | Status | Notes |
+|-------|------------:|--------|-------|
+| 1. Config cleanup | ~70 | ✅ Complete | defaults.py created, lazy imports removed |
+| 2. Tool parser | ~230 | ✅ Complete | tools/parser.py created |
+| 3. Shell classify | ~30 | ✅ Complete | classify_shell_command() in consent.py |
+| 4. Chat extraction | ~360 | ✅ Complete | chat.py with ChatContext Protocol |
+| 5. Interface cleanup | 0 | ⏸️ Deferred | Keeping wrappers for API stability |
+| **Total** | **~690** | - | - |
 
-**Final client.py:** ~1,100 lines (46% reduction)
-
----
-
-## Open Questions
-
-1. **Phase 1 config changes** - Should shell/agent config defaults live in `config/loader.py` or a new `config/defaults.py`?
-
-2. **Phase 4 Protocol** - Should `ChatContext` be a formal `Protocol` class or just type hints with `TYPE_CHECKING`?
-
-3. **Phase 5 breaking changes** - Is it acceptable to remove thin wrappers like `save_session()` if callers can use `client.session.save()` directly?
+**Final client.py:** 1,340 lines (34% reduction from 2,037)
 
 ---
 
-## Decision Record
+## Implementation Record
 
-**Decision:** Approved for v1.13.10
+**Completed:** 2026-01-18
 
-**Decisions on Open Questions:**
+**Phase 5 Decision Change:** After reviewing usage, the thin wrapper methods
+(`save_session`, `load_session`, `list_sessions`, `clear_history`) are used by
+http.py and jsonrpc.py. Removing them would break the HTTP/JSONRPC APIs.
+For v1.13.10 stability, these wrappers are retained. Future cleanup can add
+deprecation notices if we want to phase them out in v1.14.x.
 
-1. **Config defaults location** → `config/defaults.py` (new file)
-2. **ChatContext** → Formal `Protocol` class (better architecture, prevents future debt)
-3. **Thin wrappers** → Remove them, adjust callers to use direct calls
+**Files Created:**
+- `ppxai/config/defaults.py` - Centralized default constants
+- `ppxai/engine/tools/parser.py` - Tool call parsing
+- `ppxai/engine/chat.py` - Chat implementation with Protocol
 
-**Implementation Order:**
-1. Phase 1: Config cleanup (remove lazy imports)
-2. Phase 2: Extract tool parser
-3. Phase 3: Move shell classification
-4. Phase 4: Extract chat with Protocol
-5. Phase 5: Remove thin wrappers
+**Files Modified:**
+- `ppxai/engine/client.py` - Facade reduced from 2,037 to 1,340 lines
+- `ppxai/config/__init__.py` - Added get_agent_config()
+- `ppxai/common/consent.py` - Added classify_shell_command()
+- `ppxai/engine/tools/__init__.py` - Export parse_tool_call
