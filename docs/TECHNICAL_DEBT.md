@@ -41,7 +41,7 @@ This document tracks identified technical debt and refactoring opportunities in 
 | [ppxai/server/http.py](../ppxai/server/http.py) | 2,247 | HTTP + session + consent mixed | ✅ SessionManager extracted |
 | [ppxai/engine/client.py](../ppxai/engine/client.py) | 1,311 | Core logic, providers, tools, sessions | ✅ Refactored (36% reduction) |
 | [ppxai/config/](../ppxai/config/) | ~700 | Config package with store, loader, public API | ✅ ConfigStore pattern |
-| [vscode-extension/src/chatPanel.ts](../vscode-extension/src/chatPanel.ts) | 5,061 | Massive event handling | Open |
+| [vscode-extension/src/chatPanel.ts](../vscode-extension/src/chatPanel.ts) | 3,045 | Event/command handling | ✅ Phase 1 (41% reduction) |
 
 **client.py Refactoring - ✅ Completed (v1.13.10):**
 See [DESIGN-CLIENT-REFACTOR.md](DESIGN-CLIENT-REFACTOR.md) for full details:
@@ -64,7 +64,10 @@ Migrated to Command Factory pattern in `ppxai/commands/` package:
 - `agent.py` - /agent, /undo, /checkpoint
 - Legacy methods in handler.py commented with deprecation notice (removal in v1.14.x)
 
-**Remaining:** Only `chatPanel.ts` (5,061 lines) remains to be refactored.
+**chatPanel.ts Refactoring - ✅ Phase 1 Completed (v1.13.10):**
+See [DESIGN-CHATPANEL-REFACTOR.md](DESIGN-CHATPANEL-REFACTOR.md) for full details:
+- Phase 1: Extracted webview CSS/JS to `media/webview/` (41% reduction, 5,123→3,045 lines)
+- Phases 2-4: Deferred (command/event/consent handlers tightly coupled to VSCode API)
 
 **config.py Package Conversion - ✅ Completed (v1.13.10):**
 Converted monolithic `config.py` (1,352 lines) to `config/` package (~700 lines):
@@ -428,7 +431,7 @@ Items moved here after being addressed:
 3. ~~**`ppxai/config.py`**~~ - ✅ Done (Split into `config/` package with ConfigStore)
 4. ~~**`ppxai/engine/client.py`**~~ - ✅ Done (5-phase refactoring, see DESIGN-CLIENT-REFACTOR.md)
 5. ~~**`ppxai/engine/tools/builtin/container.py`**~~ - ✅ Done (refactored to CLITool hierarchy)
-6. **`vscode-extension/src/chatPanel.ts`** - Extract handlers, formatters, UI (5,061 lines)
+6. ~~**`vscode-extension/src/chatPanel.ts`**~~ - ✅ Phase 1 Done (41% reduction, 5,123→3,045 lines)
 
 ---
 
