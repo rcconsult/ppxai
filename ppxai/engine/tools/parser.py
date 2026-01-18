@@ -1,0 +1,308 @@
+"""
+Tool call parser for the ppxai engine.
+
+This is a LEAF MODULE - no ppxai imports allowed (except types).
+Parses model responses to extract tool calls in various formats.
+
+Aligns with the future Tool Factory pattern by using a simple callable
+for tool lookup rather than depending on ToolManager directly.
+"""
+
+import json
+import re
+from typing import Any, Callable, Dict, List, Optional, Protocol
+
+
+class ToolLike(Protocol):
+    """Protocol for tool lookup results - used for type checking only."""
+    @property
+    def parameters(self) -> Dict[str, Any]: ...
+
+
+# Type alias for tool lookup function
+ToolLookupFunc = Callable[[str], Optional[ToolLike]]
+
+
+# Tool inference rules for models that output raw JSON without 'tool' key.
+# Each rule defines how to detect and normalize a tool call.
+# Format: {
+#   "tool": tool name,
+#   "required": keys that MUST be present (any one from list),
+#   "allowed": all keys that can be present (superset check),
+#   "aliases": {canonical_param: [alias1, alias2, ...]} for normalization
+# }
+TOOL_INFERENCE_RULES: List[Dict[str, Any]] = [
+    {
+        "tool": "web_search",
+        "required": ["query"],
+        "allowed": {"query", "num_results", "top_n", "count", "limit", "max_results", "recency_days"},
+        "aliases": {
+            "num_results": ["top_n", "count", "limit", "max_results"],
+        }
+    },
+    {
+        "tool": "read_file",
+        "required": ["path", "filepath"],  # Either one satisfies
+        "allowed": {"path", "filepath", "line_start", "line_end", "max_lines"},
+        "aliases": {
+            "filepath": ["path"],  # Normalize path -> filepath
+        }
+    },
+    {
+        "tool": "list_directory",
+        "required": [],  # No required keys, but must have at least one allowed key
+        "allowed": {"path", "format"},
+        "aliases": {}
+    },
+    {
+        "tool": "execute_shell_command",
+        "required": ["command"],
+        "allowed": {"command", "working_dir"},
+        "aliases": {}
+    },
+    {
+        "tool": "fetch_url",
+        "required": ["url"],
+        "allowed": {"url", "max_length"},
+        "aliases": {}
+    },
+    {
+        "tool": "get_weather",
+        "required": ["location"],
+        "allowed": {"location", "format"},
+        "aliases": {}
+    },
+    {
+        "tool": "calculator",
+        "required": ["expression"],
+        "allowed": {"expression"},
+        "aliases": {}
+    },
+]
+
+
+def _try_parse_json(json_str: str) -> Optional[Dict[str, Any]]:
+    """Try to parse JSON, including handling single quotes.
+
+    Args:
+        json_str: JSON string to parse
+
+    Returns:
+        Parsed dict or None if parsing fails
+    """
+    try:
+        return json.loads(json_str)
+    except json.JSONDecodeError:
+        # Try converting single quotes to double quotes (Python dict style)
+        # This handles cases where models output {'tool': 'name'} instead of {"tool": "name"}
+        try:
+            fixed = json_str.replace("'", '"')
+            return json.loads(fixed)
+        except json.JSONDecodeError:
+            return None
+
+
+def _normalize_tool_call(
+    data: Dict[str, Any],
+    get_tool: ToolLookupFunc
+) -> Optional[Dict[str, Any]]:
+    """Normalize a parsed tool call dict to standard format.
+
+    Args:
+        data: Parsed JSON data containing tool call
+        get_tool: Function to look up tool by name
+
+    Returns:
+        Normalized dict with 'tool' and 'arguments' keys, or None
+    """
+    # Support both "tool" and "name" keys (some models use OpenAI function format)
+    tool_name = data.get("tool") or data.get("name")
+    if not tool_name:
+        return None
+
+    tool = get_tool(tool_name)
+    if not tool:
+        return None
+
+    if "arguments" in data:
+        args = data["arguments"]
+        # v1.13.2: Handle nested tool call structure from some models (e.g., GPT-OSS 120B via vLLM)
+        # Model sometimes outputs: {"tool": "apply_patch", "arguments": {"tool": "apply_patch", "arguments": {...}}}
+        # Unwrap the nested structure to get the actual arguments
+        if isinstance(args, dict) and "tool" in args and "arguments" in args:
+            # Nested tool call - unwrap it
+            args = args["arguments"]
+        return {"tool": tool_name, "arguments": args}
+
+    # Model put parameters at top level
+    expected_params = set(tool.parameters.get("properties", {}).keys())
+    arguments = {}
+    for key, value in data.items():
+        if key != "tool" and key in expected_params:
+            arguments[key] = value
+
+    # v1.13.2: Handle tools with no required arguments (e.g., get_working_directory)
+    required_params = tool.parameters.get("required", [])
+    if arguments or not required_params:
+        return {"tool": tool_name, "arguments": arguments}
+
+    return None
+
+
+def _infer_tool_from_arguments(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Infer which tool based on argument patterns when 'tool' key is missing.
+
+    This handles models (like vLLM-served models) that output raw JSON arguments
+    without the required 'tool' wrapper.
+
+    Uses a configuration-driven dispatcher pattern for maintainability.
+
+    Args:
+        data: JSON data without explicit tool key
+
+    Returns:
+        Normalized tool call dict or None
+    """
+    if "tool" in data or "name" in data:
+        return None  # Already has tool/name key, use _normalize_tool_call instead
+
+    keys = set(data.keys())
+
+    def match_rule(rule: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Check if data matches a tool rule and return normalized arguments."""
+        tool_name = rule["tool"]
+        required = rule["required"]
+        allowed = rule["allowed"]
+        aliases = rule["aliases"]
+
+        # Check required keys (any one from list must be present)
+        if required:
+            if not any(req in keys for req in required):
+                return None
+        elif not keys:
+            # No required keys defined, but data must have at least one allowed key
+            return None
+
+        # Check that all keys are in allowed set
+        if not keys <= allowed:
+            return None
+
+        # Normalize arguments using aliases
+        args = {}
+        for key, value in data.items():
+            # Check if this key should be mapped to a canonical name
+            canonical = key
+            for canon, alias_list in aliases.items():
+                if key in alias_list:
+                    canonical = canon
+                    break
+            args[canonical] = value
+
+        return {"tool": tool_name, "arguments": args}
+
+    # Try each rule in order (first match wins)
+    for rule in TOOL_INFERENCE_RULES:
+        result = match_rule(rule)
+        if result:
+            return result
+
+    return None
+
+
+def parse_tool_call(
+    text: str,
+    get_tool: ToolLookupFunc
+) -> Optional[Dict[str, Any]]:
+    """Parse a tool call from model response text.
+
+    Tries multiple parsing strategies:
+    1. Entire response as JSON
+    2. JSON in markdown code blocks
+    3. JSON with 'tool' key anywhere in text
+
+    Args:
+        text: Model response text
+        get_tool: Function to look up tool by name (returns tool or None)
+
+    Returns:
+        Tool call dict with 'tool' and 'arguments' keys, or None if not found
+    """
+    # Try entire response as JSON first (most common case for tool calls)
+    text_stripped = text.strip()
+    if text_stripped.startswith('{') and text_stripped.endswith('}'):
+        data = _try_parse_json(text_stripped)
+        if data:
+            normalized = _normalize_tool_call(data, get_tool)
+            if normalized:
+                return normalized
+            # Fallback: try to infer tool from arguments (for models like vLLM)
+            inferred = _infer_tool_from_arguments(data)
+            if inferred:
+                return inferred
+
+    # Try extracting JSON from markdown code blocks
+    # Match ```json ... ``` or ``` ... ``` blocks
+    code_block_pattern = r'```(?:json)?\s*([\s\S]*?)```'
+    matches = re.findall(code_block_pattern, text)
+
+    for match in matches:
+        match_stripped = match.strip()
+        if match_stripped.startswith('{') and match_stripped.endswith('}'):
+            data = _try_parse_json(match_stripped)
+            if data:
+                normalized = _normalize_tool_call(data, get_tool)
+                if normalized:
+                    return normalized
+                # Fallback: try to infer tool from arguments
+                inferred = _infer_tool_from_arguments(data)
+                if inferred:
+                    return inferred
+
+    # Try JSON in code blocks - use greedy match for nested braces (fallback)
+    code_block_pattern2 = r'```(?:json)?\s*(\{[\s\S]*?\})\s*```'
+    matches = re.findall(code_block_pattern2, text)
+
+    for match in matches:
+        data = _try_parse_json(match)
+        if data:
+            normalized = _normalize_tool_call(data, get_tool)
+            if normalized:
+                return normalized
+            # Fallback: try to infer tool from arguments
+            inferred = _infer_tool_from_arguments(data)
+            if inferred:
+                return inferred
+
+    # Try to find JSON objects with "tool" key using a more robust approach
+    # Look for complete JSON objects by counting braces
+    # Also try single-quote style: {'tool'
+    for pattern in ['{"tool"', "{'tool'"]:
+        start_idx = 0
+        while True:
+            start = text.find(pattern, start_idx)
+            if start == -1:
+                break
+
+            # Find matching closing brace
+            depth = 0
+            end = start
+            for i, char in enumerate(text[start:], start):
+                if char == '{':
+                    depth += 1
+                elif char == '}':
+                    depth -= 1
+                    if depth == 0:
+                        end = i + 1
+                        break
+
+            if depth == 0 and end > start:
+                json_str = text[start:end]
+                data = _try_parse_json(json_str)
+                if data:
+                    normalized = _normalize_tool_call(data, get_tool)
+                    if normalized:
+                        return normalized
+
+            start_idx = end if end > start else start + 1
+
+    return None
