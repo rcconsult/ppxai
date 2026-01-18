@@ -189,13 +189,25 @@ export async function startServer(): Promise<boolean> {
 }
 
 /**
- * Stop the ppxai-server (v1.13.1)
+ * Stop the ppxai-server (v1.13.1, v1.13.10: use HTTP endpoint)
+ *
+ * v1.13.10: Uses POST /shutdown endpoint for graceful shutdown
+ * (same as web app), instead of sending Ctrl+C to terminal.
  */
 export async function stopServer(): Promise<void> {
+    // v1.13.10: Use HTTP endpoint for graceful shutdown (like web app)
+    try {
+        await backend.shutdown();
+    } catch (error) {
+        // Server may already be down or unreachable
+        console.log('Server shutdown request completed (may have been already down)');
+    }
+
+    // Wait for server to finish shutdown
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Clean up terminal if we started one
     if (serverTerminal) {
-        // Send Ctrl+C to gracefully stop
-        serverTerminal.sendText('\x03'); // Ctrl+C
-        await new Promise(resolve => setTimeout(resolve, 500));
         serverTerminal.dispose();
         serverTerminal = undefined;
     }

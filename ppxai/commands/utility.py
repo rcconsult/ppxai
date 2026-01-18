@@ -121,7 +121,7 @@ def handle_debug_log(handler: "CommandHandler", args: str) -> None:
     """
     from pathlib import Path
 
-    from ..common.debug import get_logger
+    from ..common.logger import get_logger
     from ..ui import console
 
     logger = get_logger("tui")

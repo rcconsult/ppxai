@@ -1363,6 +1363,36 @@ export class HttpClient {
             message: string;
         }>;
     }
+
+    /**
+     * Request server shutdown via HTTP endpoint (v1.13.10)
+     *
+     * This is the preferred method to stop the server gracefully.
+     * Uses the same endpoint as the web app (/shutdown).
+     *
+     * @returns Promise that resolves when shutdown is initiated
+     * @throws Error if server is unreachable (which is often expected during shutdown)
+     */
+    async shutdown(): Promise<void> {
+        this.outputChannel.appendLine('[Server] Requesting shutdown via /shutdown endpoint...');
+
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+            await fetch(`${this.baseUrl}/shutdown`, {
+                method: 'POST',
+                headers: this.getHeaders(),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+            this.outputChannel.appendLine('[Server] Shutdown request acknowledged');
+        } catch (error) {
+            // Expected - server shuts down before responding
+            this.outputChannel.appendLine('[Server] Shutdown initiated (connection closed as expected)');
+        }
+    }
 }
 
 /**

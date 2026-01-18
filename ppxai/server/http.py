@@ -2116,7 +2116,8 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
         log_level: Logging level
     """
     import uvicorn
-    global _shutdown_event
+    import signal
+    global _shutdown_event, session_manager
 
     config = uvicorn.Config(
         app_ref,
@@ -2125,6 +2126,19 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
         log_level=log_level,
     )
     server = uvicorn.Server(config)
+
+    # Set up signal handlers to capture shutdown reason
+    def handle_signal(signum, frame):
+        sig_name = signal.Signals(signum).name
+        reason = "ctrl_c" if signum == signal.SIGINT else "signal"
+        logger.info(f"Received {sig_name}, initiating shutdown")
+        if session_manager:
+            session_manager.request_shutdown(reason)
+        server.should_exit = True
+
+    # Install signal handlers (uvicorn's defaults will be overridden)
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
 
     # Create shutdown listener task
     async def shutdown_listener():
