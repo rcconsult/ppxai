@@ -1,6 +1,6 @@
 # Technical Debt Tracker
 
-**Last Updated:** 2026-01-17
+**Last Updated:** 2026-01-18
 **Version:** v1.13.10
 
 This document tracks identified technical debt and refactoring opportunities in the ppxai codebase. Items are removed as they are addressed.
@@ -33,18 +33,23 @@ This document tracks identified technical debt and refactoring opportunities in 
 
 ### 2. Monolithic Files
 
-**Status:** Partially Addressed (v1.13.10)
+**Status:** Mostly Addressed (v1.13.10)
 
 | File | Lines | Issue | Status |
 |------|------:|-------|--------|
 | [ppxai/commands/handler.py](../ppxai/commands/handler.py) | 507 | CommandHandler class (legacy methods commented) | ✅ Command Factory |
 | [ppxai/server/http.py](../ppxai/server/http.py) | 2,247 | HTTP + session + consent mixed | ✅ SessionManager extracted |
-| [ppxai/engine/client.py](../ppxai/engine/client.py) | 2,035 | Core logic, providers, tools, sessions | Open |
+| [ppxai/engine/client.py](../ppxai/engine/client.py) | 1,311 | Core logic, providers, tools, sessions | ✅ Refactored (36% reduction) |
 | [ppxai/config/](../ppxai/config/) | ~700 | Config package with store, loader, public API | ✅ ConfigStore pattern |
 | [vscode-extension/src/chatPanel.ts](../vscode-extension/src/chatPanel.ts) | 5,061 | Massive event handling | Open |
 
-**Large Functions:**
-- `client.py:1100-1400` (chat loop): 300+ lines
+**client.py Refactoring - ✅ Completed (v1.13.10):**
+See [DESIGN-CLIENT-REFACTOR.md](DESIGN-CLIENT-REFACTOR.md) for full details:
+- Phase 1: Config cleanup - Created `config/defaults.py`, removed lazy imports
+- Phase 2: Tool parser - Extracted to `tools/parser.py` (308 lines)
+- Phase 3: Shell classify - Moved `classify_shell_command()` to consent.py
+- Phase 4: Chat extraction - Created `engine/chat.py` with ChatContext Protocol (433 lines)
+- Phase 5: Interface cleanup - Removed session wrappers, use `engine.session` directly
 
 **commands.py Refactoring - ✅ Completed (v1.13.10):**
 Migrated to Command Factory pattern in `ppxai/commands/` package:
@@ -59,6 +64,8 @@ Migrated to Command Factory pattern in `ppxai/commands/` package:
 - `agent.py` - /agent, /undo, /checkpoint
 - Legacy methods in handler.py commented with deprecation notice (removal in v1.14.x)
 
+**Remaining:** Only `chatPanel.ts` (5,061 lines) remains to be refactored.
+
 **config.py Package Conversion - ✅ Completed (v1.13.10):**
 Converted monolithic `config.py` (1,352 lines) to `config/` package (~700 lines):
 - `config/store.py` - Thread-safe ConfigStore singleton with double-check locking
@@ -71,9 +78,6 @@ Key improvements:
 - Module-level `__getattr__` provides lazy `PROVIDERS` and `MODELS` access
 - Removed legacy globals: `MODEL_PROVIDER`, `set_active_provider()`
 - Added `get_default_provider()` function for runtime provider resolution
-
-**Recommendation:**
-- client.py: Extract chat loop and tool parsing (medium priority)
 
 ---
 
@@ -394,6 +398,7 @@ Items moved here after being addressed:
 | #12 | Legacy compat - Added deprecation warning for CommandHandler | v1.13.10 | 2026-01-17 |
 | #14 | Magic strings - Converted constants.py to str,Enum with validation helpers | v1.13.10 | 2026-01-17 |
 | #16 | Container deployment - Dockerfile, docker-compose, K8s manifests | v1.13.10 | 2026-01-17 |
+| #2 | client.py refactoring - 5 phases, 36% reduction (2,037→1,311 lines) | v1.13.10 | 2026-01-18 |
 
 ---
 
@@ -402,7 +407,7 @@ Items moved here after being addressed:
 | Priority | Category | Effort | Impact |
 |----------|----------|--------|--------|
 | ~~**Critical**~~ | ~~Global state~~ | ~~High~~ | ✅ Done |
-| **Critical** | Monolithic files | High | Maintainability |
+| ~~**Critical**~~ | ~~Monolithic files~~ | ~~High~~ | ✅ Mostly Done (chatPanel.ts remains) |
 | ~~**Critical**~~ | ~~Silent errors~~ | ~~Medium~~ | ✅ Done |
 | ~~**High**~~ | ~~Container tools duplication~~ | ~~Medium~~ | ✅ Done |
 | ~~**High**~~ | ~~Consent duplication~~ | ~~Medium~~ | ✅ Done |
@@ -421,9 +426,9 @@ Items moved here after being addressed:
 1. ~~**`ppxai/server/http.py`**~~ - ✅ Done (SessionManager extracted)
 2. ~~**`ppxai/commands.py`**~~ - ✅ Done (Command Factory pattern in `commands/` package)
 3. ~~**`ppxai/config.py`**~~ - ✅ Done (Split into `config/` package with ConfigStore)
-4. **`ppxai/engine/client.py`** - Extract tool execution, message building
+4. ~~**`ppxai/engine/client.py`**~~ - ✅ Done (5-phase refactoring, see DESIGN-CLIENT-REFACTOR.md)
 5. ~~**`ppxai/engine/tools/builtin/container.py`**~~ - ✅ Done (refactored to CLITool hierarchy)
-6. **`vscode-extension/src/chatPanel.ts`** - Extract handlers, formatters, UI
+6. **`vscode-extension/src/chatPanel.ts`** - Extract handlers, formatters, UI (5,061 lines)
 
 ---
 
