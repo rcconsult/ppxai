@@ -1,10 +1,10 @@
 # chatPanel.ts Refactoring Design
 
-**Status:** Phase 2 Complete
+**Status:** Phase 2 Complete, Phases 3-4 Designed
 **Target:** v1.14.x
 **Original Size:** 5,123 lines
 **Current Size:** 2,612 lines (49% reduction)
-**Goal:** < 1,500 lines (70% reduction) - Phases 3-4 deferred
+**Goal:** ~1,200 lines (77% reduction) via EventBus + State Machine
 
 ---
 
@@ -177,15 +177,19 @@ export async function handleShellConsentRequest(
 |-------|-------------:|------------|-----------|--------|
 | 1. Webview template | 2,078 | 3,045 | 2 (css, js) | ✅ Complete |
 | 2. Command handlers | 433 | 2,612 | 3 (handlers/*) | ✅ Complete |
-| 3. Event handlers | ~200 | ~2,400 | 1 (eventHandlers.ts) | Deferred |
-| 4. Consent handlers | ~220 | ~2,200 | 1 (consentHandlers.ts) | Deferred |
+| 3a. EventBus foundation | +80 | 2,612 | eventBus.ts | Planned |
+| 3b. Stream handlers | ~180 | ~2,430 | stream.ts | Planned |
+| 3c. UI subscriptions | ~50 | ~2,380 | chatPanel.ts | Planned |
+| 4a. Agent state machine | +250 | ~2,380 | agentStateMachine.ts | Planned |
+| 4b. Consent handlers | ~180 | ~2,200 | consent.ts | Planned |
+| 4c. Agent integration | ~1,000 | ~1,200 | chatPanel.ts | Planned |
 
 **Phase 1 achieved:** 41% reduction (5,123 → 3,045 lines)
 
 **Phase 2 achieved:** 14% additional reduction (3,045 → 2,612 lines) using IoC pattern
 
-**Phases 3-4 deferred:** Event and consent handlers have complex internal dependencies
-(processFileReferences, handleStreamEvent, agent loop). Recommend deferring to future cycle.
+**Phases 3-4 planned:** EventBus + State Machine architecture to decouple remaining
+handlers. See "Phase 3-4: EventBus + State Machine Architecture" section below.
 
 ---
 
@@ -223,7 +227,10 @@ export async function handleShellConsentRequest(
 - [x] All VSCode extension tests pass - ✅ TypeScript compiles
 - [x] Extension packages to VSIX - ✅ 1.04MB
 - [x] No TypeScript compilation errors - ✅
-- [ ] chatPanel.ts < 1,500 lines (Full target) - Deferred
+- [ ] chatPanel.ts < 2,400 lines (Phase 3 target) - Planned
+- [ ] chatPanel.ts < 1,200 lines (Phase 4 target) - Planned
+- [ ] EventBus enables isolated handler testing - Planned
+- [ ] Agent state machine makes flow explicit - Planned
 
 ---
 
@@ -277,3 +284,408 @@ interface HandlerContext {
 **Verification:**
 - TypeScript compiles successfully
 - Extension packages to VSIX (1.04MB)
+
+---
+
+## Phase 3-4: EventBus + State Machine Architecture
+
+**Status:** Planned
+**Target:** v1.14.x
+
+### Problem: Bidirectional Coupling
+
+The remaining handlers (events, consent, agent) form a "ball of mud":
+- `handleStreamEvent()` calls `handleConsentRequest()` → calls `this._backend.consent()`
+- `handleAgentCommand()` runs a loop that calls `handleStreamEvent()` in callbacks
+- Agent loop tracks state in local variables, not explicit state machine
+- All paths lead back to `this._view.webview.postMessage()`
+
+### Solution: EventBus + State Machine
+
+Introduce two architectural patterns to decouple components:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     chatPanel.ts                                │
+│                  (orchestrator only)                            │
+│  • Creates EventBus + StateMachine                              │
+│  • Wires subscriptions in resolveWebviewView()                  │
+│  • Manages webview lifecycle                                    │
+└─────────────────────────────────────────────────────────────────┘
+              │                    │                    │
+              ▼                    ▼                    ▼
+       ┌──────────┐         ┌──────────┐         ┌──────────────┐
+       │ handlers/│         │ handlers/│         │   handlers/  │
+       │ commands │         │  stream  │         │    agent     │
+       │   .ts    │         │   .ts    │         │ StateMachine │
+       └──────────┘         └──────────┘         └──────────────┘
+              │                    │                    │
+              └────────────────────┼────────────────────┘
+                                   ▼
+                          ┌───────────────┐
+                          │   EventBus    │
+                          │   (pub/sub)   │
+                          └───────────────┘
+                                   ▲
+              ┌────────────────────┼────────────────────┐
+              │                    │                    │
+       ┌──────────┐         ┌──────────┐         ┌──────────┐
+       │ handlers/│         │ handlers/│         │ webview  │
+       │ consent  │         │   ui     │         │ (renders │
+       │   .ts    │         │   .ts    │         │  events) │
+       └──────────┘         └──────────┘         └──────────┘
+```
+
+---
+
+### EventBus Design
+
+```typescript
+// handlers/eventBus.ts
+
+/** Events emitted by stream handlers */
+interface StreamEvents {
+    'stream:thinking': (content: string) => void;
+    'stream:started': (content: string) => void;
+    'stream:chunk': (content: string) => void;
+    'stream:reasoning': (content: string) => void;
+    'stream:tool_call': (data: ToolCallData) => void;
+    'stream:tool_result': (data: ToolResultData) => void;
+    'stream:context_injected': (data: ContextData) => void;
+    'stream:done': (content: string) => void;
+    'stream:error': (content: string) => void;
+}
+
+/** Events emitted by consent handlers */
+interface ConsentEvents {
+    'consent:file_request': (data: FileConsentRequest, metadata?: EventMetadata) => void;
+    'consent:shell_request': (data: ShellConsentRequest) => void;
+    'consent:resolved': (response: ConsentResponse) => void;
+}
+
+/** Events emitted by agent state machine */
+interface AgentEvents {
+    'agent:started': (task: string) => void;
+    'agent:iteration': (n: number, max: number) => void;
+    'agent:complete': (summary: string) => void;
+    'agent:max_iterations': (iterations: number) => void;
+    'agent:error': (message: string) => void;
+    'agent:interrupted': () => void;
+}
+
+/** Events for UI updates */
+interface UIEvents {
+    'ui:status_update': () => void;
+    'ui:working_dir_changed': (path: string) => void;
+    'ui:clear': () => void;
+}
+
+/** Combined event map */
+type ChatEvents = StreamEvents & ConsentEvents & AgentEvents & UIEvents;
+
+/** Type-safe event emitter */
+class ChatEventBus {
+    private listeners = new Map<string, Set<Function>>();
+
+    on<K extends keyof ChatEvents>(event: K, handler: ChatEvents[K]): () => void;
+    off<K extends keyof ChatEvents>(event: K, handler: ChatEvents[K]): void;
+    emit<K extends keyof ChatEvents>(event: K, ...args: Parameters<ChatEvents[K]>): void;
+    once<K extends keyof ChatEvents>(event: K, handler: ChatEvents[K]): () => void;
+}
+```
+
+---
+
+### State Machine Design
+
+```typescript
+// handlers/agentStateMachine.ts
+
+/** Agent conversation states */
+type AgentState =
+    | { status: 'idle' }
+    | { status: 'validating'; task: string }
+    | { status: 'starting'; task: string; config: AgentConfig }
+    | { status: 'iterating'; task: string; iteration: number; maxIterations: number }
+    | { status: 'streaming'; task: string; iteration: number; response: string }
+    | { status: 'awaiting_consent'; task: string; iteration: number; request: ConsentRequest }
+    | { status: 'complete'; task: string; summary: string }
+    | { status: 'max_iterations'; task: string; iterations: number }
+    | { status: 'error'; task: string; message: string }
+    | { status: 'interrupted'; task: string };
+
+/** State machine events (inputs) */
+type AgentInput =
+    | { type: 'START'; task: string }
+    | { type: 'CONFIG_LOADED'; config: AgentConfig }
+    | { type: 'VALIDATION_FAILED'; reason: string }
+    | { type: 'STREAM_CHUNK'; content: string }
+    | { type: 'STREAM_END'; response: string }
+    | { type: 'TASK_COMPLETE'; summary: string }
+    | { type: 'CONSENT_REQUIRED'; request: ConsentRequest }
+    | { type: 'CONSENT_RESOLVED'; response: ConsentResponse }
+    | { type: 'MAX_ITERATIONS' }
+    | { type: 'ERROR'; message: string }
+    | { type: 'INTERRUPT' };
+
+/** State machine with explicit transitions */
+class AgentStateMachine {
+    private state: AgentState = { status: 'idle' };
+    private eventBus: ChatEventBus;
+    private backend: HttpClient;
+
+    constructor(eventBus: ChatEventBus, backend: HttpClient);
+
+    /** Current state (read-only) */
+    getState(): AgentState;
+
+    /** Process input and transition state */
+    send(input: AgentInput): void;
+
+    /** Start agent task */
+    start(task: string): Promise<void>;
+
+    /** Interrupt running task */
+    interrupt(): void;
+
+    /** State transition logic (pure function) */
+    private transition(state: AgentState, input: AgentInput): AgentState;
+
+    /** Side effects for state transitions */
+    private onTransition(from: AgentState, to: AgentState, input: AgentInput): void;
+}
+```
+
+---
+
+### State Machine Transitions
+
+```
+idle ──START──> validating ──CONFIG_LOADED──> starting ──> iterating
+                    │                                          │
+                    │                                          ▼
+                    │                                      streaming
+                    │                                          │
+                    ▼                         ┌────────────────┴────────────────┐
+              error                           │                                 │
+                                     STREAM_END                        CONSENT_REQUIRED
+                                              │                                 │
+                                              ▼                                 ▼
+                                         [check for                      awaiting_consent
+                                          TASK_COMPLETE]                        │
+                                              │                     CONSENT_RESOLVED
+                                   ┌─────────┴─────────┐                        │
+                                   │                   │                        │
+                              complete         [next iteration]                 │
+                                                       │                        │
+                                                       └────────────────────────┘
+```
+
+---
+
+### Implementation Phases (Updated)
+
+| Phase | Description | Files | Effort | Lines |
+|-------|-------------|-------|--------|------:|
+| 3a | EventBus foundation | `handlers/eventBus.ts` | Low | ~80 |
+| 3b | Stream handlers extraction | `handlers/stream.ts` | Medium | ~150 |
+| 3c | UI subscriptions | Wire in chatPanel.ts | Low | ~50 |
+| 4a | Agent state machine | `handlers/agentStateMachine.ts` | High | ~250 |
+| 4b | Consent handlers | `handlers/consent.ts` | Medium | ~180 |
+| 4c | Agent integration | Update chatPanel.ts | Medium | -400 |
+
+---
+
+### Phase 3a: EventBus Foundation
+
+**Files:**
+- `handlers/eventBus.ts` - Type-safe event emitter (~80 lines)
+- Update `handlers/index.ts` - Export EventBus
+
+**Implementation:**
+```typescript
+// handlers/eventBus.ts
+export class ChatEventBus {
+    private listeners = new Map<string, Set<Function>>();
+
+    on<K extends keyof ChatEvents>(event: K, handler: ChatEvents[K]): () => void {
+        if (!this.listeners.has(event)) {
+            this.listeners.set(event, new Set());
+        }
+        this.listeners.get(event)!.add(handler);
+        return () => this.off(event, handler);
+    }
+
+    off<K extends keyof ChatEvents>(event: K, handler: ChatEvents[K]): void {
+        this.listeners.get(event)?.delete(handler);
+    }
+
+    emit<K extends keyof ChatEvents>(event: K, ...args: Parameters<ChatEvents[K]>): void {
+        this.listeners.get(event)?.forEach(handler => {
+            try {
+                (handler as Function)(...args);
+            } catch (e) {
+                console.error(`EventBus error in ${event}:`, e);
+            }
+        });
+    }
+}
+```
+
+---
+
+### Phase 3b: Stream Handlers Extraction
+
+**Files:**
+- `handlers/stream.ts` - Stream event processor (~150 lines)
+
+**Implementation:**
+```typescript
+// handlers/stream.ts
+import { ChatEventBus } from './eventBus';
+import { StreamEvent } from '../httpClient';
+
+export function processStreamEvent(event: StreamEvent, emit: ChatEventBus['emit']): void {
+    switch (event.type) {
+        case 'thinking':
+            emit('stream:thinking', event.content);
+            break;
+        case 'chunk':
+            emit('stream:chunk', event.content);
+            break;
+        case 'tool_call':
+            const toolData = JSON.parse(event.content);
+            emit('stream:tool_call', toolData);
+            break;
+        case 'consent_request':
+            const consentData = JSON.parse(event.content);
+            if (consentData.type === 'shell' || consentData.command) {
+                emit('consent:shell_request', consentData);
+            } else {
+                emit('consent:file_request', consentData, event.metadata);
+            }
+            break;
+        // ... other cases
+    }
+}
+```
+
+---
+
+### Phase 3c: UI Subscriptions
+
+**In chatPanel.ts:**
+```typescript
+private eventBus = new ChatEventBus();
+
+public resolveWebviewView(...) {
+    // Wire up UI subscriptions (one-time setup)
+    this.eventBus.on('stream:chunk', (content) => {
+        this._view?.webview.postMessage({ type: 'chunk', content });
+    });
+
+    this.eventBus.on('stream:tool_call', (data) => {
+        this._view?.webview.postMessage({
+            type: 'toolCall',
+            tool: data.tool,
+            arguments: data.arguments,
+            verbose: this._backend.toolsVerbose
+        });
+    });
+
+    this.eventBus.on('agent:iteration', (n, max) => {
+        this._view?.webview.postMessage({
+            type: 'systemMessage',
+            content: `━━━ Iteration ${n}/${max} ━━━`
+        });
+    });
+
+    // Consent events trigger VSCode dialogs
+    this.eventBus.on('consent:file_request', async (data, metadata) => {
+        await handleFileConsent(data, metadata, this._backend, this.eventBus);
+    });
+}
+```
+
+---
+
+### Phase 4a: Agent State Machine
+
+**Files:**
+- `handlers/agentStateMachine.ts` - State machine (~250 lines)
+
+**Key benefits:**
+- Explicit state eliminates hidden variables
+- Transitions are testable pure functions
+- Side effects are isolated in `onTransition()`
+- Interruption handled cleanly via `INTERRUPT` input
+
+---
+
+### Phase 4b: Consent Handlers
+
+**Files:**
+- `handlers/consent.ts` - Consent logic (~180 lines)
+
+**Implementation:**
+```typescript
+// handlers/consent.ts
+export async function handleFileConsent(
+    data: FileConsentRequest,
+    metadata: EventMetadata | undefined,
+    backend: HttpClient,
+    emit: ChatEventBus['emit']
+): Promise<void> {
+    const options = ['Yes', 'No', 'Always', 'Never'];
+    const result = await vscode.window.showWarningMessage(
+        `Allow edit to ${data.filepath}?`,
+        { modal: true, detail: formatDiff(data) },
+        ...options
+    );
+
+    const response = mapResponse(result);
+    await backend.consent(data.filepath, response);
+    emit('consent:resolved', { filepath: data.filepath, response });
+}
+```
+
+---
+
+### Benefits of This Architecture
+
+| Aspect | Before | After |
+|--------|--------|-------|
+| **Testability** | Must mock entire ChatViewProvider | Mock EventBus, test handlers in isolation |
+| **Coupling** | Handlers call each other directly | Handlers communicate via events |
+| **State management** | Implicit in local variables | Explicit state machine |
+| **Debugging** | Follow call stack through spaghetti | Log events, inspect state transitions |
+| **Extensibility** | Add code to chatPanel.ts | Add new subscribers |
+
+---
+
+### Projected Line Counts
+
+| Component | Current | After Refactor |
+|-----------|--------:|--------------:|
+| chatPanel.ts | 2,612 | ~1,200 |
+| handlers/eventBus.ts | - | ~80 |
+| handlers/stream.ts | - | ~150 |
+| handlers/consent.ts | - | ~180 |
+| handlers/agentStateMachine.ts | - | ~250 |
+| handlers/types.ts | 58 | ~100 |
+| handlers/commands.ts | 496 | 496 |
+| **Total handlers/** | 563 | ~1,256 |
+
+**Net reduction:** chatPanel.ts from 2,612 to ~1,200 lines (54% from current, 77% from original)
+
+---
+
+### Risk Assessment (Phases 3-4)
+
+| Risk | Mitigation |
+|------|------------|
+| Event ordering issues | Events are synchronous; test sequences |
+| State machine bugs | Explicit transitions are testable |
+| Performance overhead | EventBus is lightweight; measure if needed |
+| Breaking changes | Incremental rollout per phase |
+| Over-engineering | Start with EventBus only; add state machine if needed |
