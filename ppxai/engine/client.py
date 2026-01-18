@@ -42,6 +42,7 @@ from ..config import (
     EXPORTS_DIR,
 )
 from ..common.logger import get_logger
+from ..common.consent import classify_shell_command
 from ..constants import ConsentMode, ConsentResponse, ShellRiskLevel
 
 logger = get_logger("tui")
@@ -767,45 +768,17 @@ class EngineClient:
             return False
 
     def _classify_shell_command(self, command: str) -> str:
-        """Classify shell command risk level (v1.11.2).
+        """Classify shell command risk level.
+
+        Delegates to common.consent.classify_shell_command().
 
         Args:
             command: Shell command to classify
 
         Returns:
-            Risk level: ShellRiskLevel value
+            Risk level: ShellRiskLevel value (NEVER, DANGEROUS, or SAFE)
         """
-        import re
-
-        # Check never-allow patterns (catastrophic commands)
-        never_allow = self._shell_config.get("never_allow", [])
-        for pattern in never_allow:
-            try:
-                if re.search(pattern, command):
-                    return ShellRiskLevel.NEVER
-            except re.error as e:
-                logger.warning(f"Invalid never_allow regex pattern '{pattern}': {e}")
-
-        # Check dangerous patterns (require consent)
-        dangerous = self._shell_config.get("dangerous_commands", [])
-        for pattern in dangerous:
-            try:
-                if re.search(pattern, command):
-                    return ShellRiskLevel.DANGEROUS
-            except re.error as e:
-                logger.warning(f"Invalid dangerous_commands regex pattern '{pattern}': {e}")
-
-        # Check allowed patterns (safe)
-        allowed = self._shell_config.get("allowed_commands", [])
-        for pattern in allowed:
-            try:
-                if re.search(pattern, command):
-                    return ShellRiskLevel.SAFE
-            except re.error as e:
-                logger.warning(f"Invalid allowed_commands regex pattern '{pattern}': {e}")
-
-        # Unknown commands are treated as dangerous for safety
-        return ShellRiskLevel.DANGEROUS
+        return classify_shell_command(command, self._shell_config)
 
     async def request_shell_consent(self, command: str, working_dir: str = ".") -> bool:
         """Request user consent for shell command execution (v1.11.2).

@@ -12,8 +12,7 @@ Architecture:
 - SyncConsentManager: Synchronous consent manager (legacy)
 - ConsentDecision: Enum for decision types (YES, NO, ALWAYS, NEVER) - from constants.py
 - Clients provide consent_callback that returns (approved: bool, decision: str)
-
-Version: v1.13.11 - Migrated to centralized constants
+- classify_shell_command(): Standalone function for command risk classification
 """
 
 import re
@@ -30,6 +29,50 @@ from ..constants import (
 )
 
 logger = get_logger("tui")
+
+
+def classify_shell_command(command: str, config: Dict[str, List[str]]) -> str:
+    """Classify shell command risk level.
+
+    This is a standalone function for use by EngineClient and other modules
+    that need command classification without instantiating a ConsentManager.
+
+    Args:
+        command: Shell command to classify
+        config: Shell config dict with keys:
+            - never_allow: List of regex patterns for blocked commands
+            - dangerous_commands: List of regex patterns for dangerous commands
+            - allowed_commands: List of regex patterns for safe commands
+
+    Returns:
+        ShellRiskLevel value: NEVER, DANGEROUS, or SAFE
+    """
+    # Check never-allow patterns (catastrophic commands)
+    for pattern in config.get("never_allow", []):
+        try:
+            if re.search(pattern, command):
+                return ShellRiskLevel.NEVER
+        except re.error as e:
+            logger.warning(f"Invalid never_allow regex pattern '{pattern}': {e}")
+
+    # Check dangerous patterns (require consent)
+    for pattern in config.get("dangerous_commands", []):
+        try:
+            if re.search(pattern, command):
+                return ShellRiskLevel.DANGEROUS
+        except re.error as e:
+            logger.warning(f"Invalid dangerous_commands regex pattern '{pattern}': {e}")
+
+    # Check allowed patterns (safe, no consent needed)
+    for pattern in config.get("allowed_commands", []):
+        try:
+            if re.search(pattern, command):
+                return ShellRiskLevel.SAFE
+        except re.error as e:
+            logger.warning(f"Invalid allowed_commands regex pattern '{pattern}': {e}")
+
+    # Unknown commands are treated as dangerous for safety
+    return ShellRiskLevel.DANGEROUS
 
 
 @dataclass
