@@ -37,11 +37,17 @@ import {
     formatSessionsList
 } from './shared/formatters';
 
-// Import extracted command handlers (Phase 2 refactoring)
+// Import extracted handlers (Phase 2-4 refactoring)
 import {
     HandlerContext,
     handleToolsCommand as toolsHandler,
-    handleCheckpointCommand as checkpointHandler
+    handleCheckpointCommand as checkpointHandler,
+    ChatEventBus,
+    processStreamEvent,
+    AgentStateMachine,
+    handleFileConsent,
+    handleShellConsent,
+    ConsentContext
 } from './handlers';
 
 export class ChatViewProvider implements vscode.WebviewViewProvider {
@@ -50,6 +56,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView;
     private _backend: HttpClient;
     private _context: vscode.ExtensionContext;
+
+    // Phase 3a: EventBus for decoupled event handling
+    private _eventBus: ChatEventBus = new ChatEventBus();
+
+    // Phase 4a: Agent state machine (initialized lazily after backend available)
+    private _agentStateMachine?: AgentStateMachine;
 
     constructor(
         context: vscode.ExtensionContext,
@@ -80,6 +92,152 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         };
     }
 
+    /**
+     * Create consent context for dependency injection (Phase 4b).
+     * Bridges VSCode-agnostic consent handlers with VSCode APIs.
+     */
+    private getConsentContext(): ConsentContext {
+        return {
+            backend: this._backend,
+            eventBus: this._eventBus,
+            dialogs: {
+                showQuickPick: async (items, options) => {
+                    const result = await vscode.window.showQuickPick(items, options);
+                    return result as { label: string; detail: string; value: 'y' | 'n' | 'always' | 'never' } | undefined;
+                }
+            }
+        };
+    }
+
+    /**
+     * Get or create the agent state machine (Phase 4a).
+     * Lazy initialization to ensure backend is available.
+     */
+    private getAgentStateMachine(): AgentStateMachine {
+        if (!this._agentStateMachine) {
+            this._agentStateMachine = new AgentStateMachine(this._eventBus, this._backend);
+        }
+        return this._agentStateMachine;
+    }
+
+    /**
+     * Wire up EventBus subscriptions for UI updates.
+     * Phase 3c: Translates EventBus events to webview postMessage calls.
+     *
+     * This decouples event producers (stream handlers, consent handlers)
+     * from UI rendering, enabling isolated testing of each component.
+     */
+    private wireUISubscriptions(): void {
+        const postMessage = (msg: unknown) => this._view?.webview.postMessage(msg);
+
+        // Stream events -> webview messages
+        this._eventBus.on('stream:thinking', (content) => {
+            postMessage({ type: 'thinking', content });
+        });
+
+        this._eventBus.on('stream:started', (content) => {
+            postMessage({ type: 'started', content });
+        });
+
+        this._eventBus.on('stream:chunk', (content) => {
+            postMessage({ type: 'chunk', content });
+        });
+
+        this._eventBus.on('stream:reasoning', (content) => {
+            postMessage({ type: 'reasoning_chunk', content });
+        });
+
+        this._eventBus.on('stream:tool_call', (data) => {
+            postMessage({
+                type: 'toolCall',
+                tool: data.tool,
+                arguments: data.arguments,
+                verbose: this._backend.toolsVerbose
+            });
+        });
+
+        this._eventBus.on('stream:tool_result', (data) => {
+            postMessage({
+                type: 'toolResult',
+                tool: data.tool,
+                result: data.result,
+                verbose: this._backend.toolsVerbose
+            });
+        });
+
+        this._eventBus.on('stream:context_injected', (data) => {
+            postMessage({
+                type: 'contextInjected',
+                source: data.source,
+                language: data.language,
+                size: data.size,
+                truncated: data.truncated
+            });
+        });
+
+        this._eventBus.on('stream:done', (content) => {
+            if (content && content.trim()) {
+                postMessage({ type: 'fullResponse', content });
+            } else {
+                postMessage({ type: 'emptyResponse' });
+            }
+        });
+
+        this._eventBus.on('stream:error', (content) => {
+            postMessage({ type: 'error', content });
+        });
+
+        // Agent events -> webview messages
+        this._eventBus.on('agent:iteration', (n, max) => {
+            postMessage({
+                type: 'systemMessage',
+                content: `━━━ Iteration ${n}/${max} ━━━`
+            });
+        });
+
+        this._eventBus.on('agent:complete', (summary) => {
+            let message = '✅ Task completed!';
+            if (summary) {
+                message += `\nSummary: ${summary}`;
+            }
+            postMessage({ type: 'systemMessage', content: message });
+        });
+
+        this._eventBus.on('agent:max_iterations', (iterations) => {
+            postMessage({
+                type: 'systemMessage',
+                content: `⚠️  Max iterations (${iterations}) reached\nTask may be incomplete. Review output above.`
+            });
+        });
+
+        this._eventBus.on('agent:error', (message) => {
+            postMessage({ type: 'error', content: message });
+        });
+
+        // UI events
+        this._eventBus.on('ui:working_dir_changed', (path) => {
+            postMessage({ type: 'workingDirChanged', path });
+        });
+
+        this._eventBus.on('ui:status_update', () => {
+            this.updateStatus();
+        });
+
+        this._eventBus.on('ui:clear', () => {
+            postMessage({ type: 'cleared' });
+        });
+
+        // Consent events -> VSCode dialogs (Phase 4b: uses extracted handlers)
+        const consentCtx = this.getConsentContext();
+        this._eventBus.on('consent:file_request', async (data, metadata) => {
+            await handleFileConsent(consentCtx, data, metadata);
+        });
+
+        this._eventBus.on('consent:shell_request', async (data) => {
+            await handleShellConsent(consentCtx, data);
+        });
+    }
+
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
         _context: vscode.WebviewViewResolveContext,
@@ -93,6 +251,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         };
 
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
+
+        // Phase 3c: Wire up EventBus subscriptions for decoupled UI updates
+        this.wireUISubscriptions();
 
         // Handle messages from the webview
         webviewView.webview.onDidReceiveMessage(async (message) => {
