@@ -25,8 +25,21 @@ from .tools.manager import ToolManager
 from .tools.builtin import register_all_builtin_tools
 from .session import SessionManager
 from .context import ContextInjector
-from ..checkpoint import CheckpointManager
-from ..config import calculate_cost
+from ..checkpoint import CheckpointManager, FileCheckpointBackend
+from ..config import (
+    calculate_cost,
+    get_api_key,
+    get_base_url,
+    get_default_model,
+    get_default_provider,
+    get_system_prompt,
+    get_system_prompt_mode,
+    get_model_context_limit,
+    get_shell_config,
+    get_agent_config,
+    PROVIDERS,
+    EXPORTS_DIR,
+)
 from ..common.logger import get_logger
 from ..constants import ConsentMode, ConsentResponse, ShellRiskLevel
 
@@ -109,94 +122,16 @@ class EngineClient:
 
     def _load_config(self):
         """Load configuration from ppxai-config.json and .env."""
-        # Import from existing config module to reuse configuration loading
-        try:
-            from ..config import (
-                PROVIDERS,
-                get_api_key,
-                get_base_url,
-                get_default_model,
-                get_default_provider,
-                load_config,
-            )
-            self._providers_config = PROVIDERS
-            self._get_api_key = get_api_key
-            self._get_base_url = get_base_url
-            self._get_default_model = get_default_model
-            self._default_provider = get_default_provider()
+        # Store references to config functions for provider management
+        self._providers_config = PROVIDERS
+        self._get_api_key = get_api_key
+        self._get_base_url = get_base_url
+        self._get_default_model = get_default_model
+        self._default_provider = get_default_provider()
 
-            # Load shell tool configuration (v1.11.2)
-            # v1.11.9: Add default dangerous patterns for safety
-            full_config = load_config()
-            user_shell_config = full_config.get("tools", {}).get("shell", {})
-
-            # Built-in defaults merged with user config
-            default_dangerous = [
-                r"^rm\s+", r"^mv\s+", r"^dd\s+", r"^chmod\s+", r"^chown\s+",
-                r"^sudo\s+", r"^curl.*\|.*bash", r"^wget.*\|.*bash",
-                r">\s*/dev/", r"^kill\s+", r"^pkill\s+", r"^killall\s+"
-            ]
-            default_never = [
-                r"rm\s+-rf\s+/", r"dd\s+.*of=/dev/", r":\(\)\{\s*:\|:&\s*\};:",
-                r"mkfs\.", r"^\s*>\s*/dev/sda"
-            ]
-            default_allowed = [
-                r"^ls\s+", r"^cat\s+(?!.*[><])", r"^grep\s+",
-                r"^echo\s+(?!.*>)", r"^pwd$", r"^which\s+",
-                r"^whoami$", r"^date$", r"^uname\s+"
-            ]
-
-            self._shell_config = {
-                "dangerous_commands": user_shell_config.get("dangerous_commands", default_dangerous),
-                "never_allow": user_shell_config.get("never_allow", default_never),
-                "allowed_commands": user_shell_config.get("allowed_commands", default_allowed),
-            }
-
-            # v1.11.9: Load agent configuration
-            # v1.12.0: Added max_tool_iterations for inner tool loop
-            # v1.13.10: Added max_same_tool_calls for loop detection
-            agent_config = full_config.get("tools", {}).get("agent", {})
-            self._agent_config = {
-                "max_iterations": agent_config.get("max_iterations", 10),
-                "max_tool_iterations": agent_config.get("max_tool_iterations", 15),
-                "max_same_tool_calls": agent_config.get("max_same_tool_calls", 3),
-                "context_char_limit": agent_config.get("context_char_limit", 2000),
-                "min_task_words": agent_config.get("min_task_words", 3),
-            }
-        except ImportError:
-            # Fallback if old config not available
-            self._providers_config = {}
-            self._get_api_key = lambda p: None
-            self._get_base_url = lambda p: None
-            self._get_default_model = lambda: None
-            self._default_provider = "perplexity"
-            # v1.11.9: Built-in shell safety defaults
-            self._shell_config = {
-                "dangerous_commands": [
-                    r"^rm\s+", r"^mv\s+", r"^dd\s+", r"^chmod\s+", r"^chown\s+",
-                    r"^sudo\s+", r"^curl.*\|.*bash", r"^wget.*\|.*bash",
-                    r">\s*/dev/", r"^kill\s+", r"^pkill\s+", r"^killall\s+"
-                ],
-                "never_allow": [
-                    r"rm\s+-rf\s+/", r"dd\s+.*of=/dev/", r":\(\)\{\s*:\|:&\s*\};:",
-                    r"mkfs\.", r"^\s*>\s*/dev/sda"
-                ],
-                "allowed_commands": [
-                    r"^ls\s+", r"^cat\s+(?!.*[><])", r"^grep\s+",
-                    r"^echo\s+(?!.*>)", r"^pwd$", r"^which\s+",
-                    r"^whoami$", r"^date$", r"^uname\s+"
-                ],
-            }
-            # v1.11.9: Default agent configuration
-            # v1.12.0: Added max_tool_iterations
-            # v1.13.10: Added max_same_tool_calls for loop detection
-            self._agent_config = {
-                "max_iterations": 10,
-                "max_tool_iterations": 15,
-                "max_same_tool_calls": 3,
-                "context_char_limit": 2000,
-                "min_task_words": 3,
-            }
+        # Use centralized config functions with defaults from config/defaults.py
+        self._shell_config = get_shell_config()
+        self._agent_config = get_agent_config()
 
     # === Context Injection ===
 
@@ -750,8 +685,6 @@ class EngineClient:
         if not self._checkpoint_manager:
             return 0
 
-        from ..checkpoint import FileCheckpointBackend
-
         if isinstance(self._checkpoint_manager.backend, FileCheckpointBackend):
             before_count = len(self._checkpoint_manager.list_checkpoints())
             self._checkpoint_manager.backend.cleanup_old_checkpoints(keep_last=keep_last)
@@ -1254,8 +1187,7 @@ class EngineClient:
                             "like [Source Name](https://example.com) so they are clickable."
                         )
 
-                    # v1.13.6: Apply custom system prompt from config
-                    from ..config import get_system_prompt, get_system_prompt_mode
+                    # Apply custom system prompt from config
                     system_prompt = get_system_prompt(self.provider_name)
                     prompt_mode = get_system_prompt_mode(self.provider_name)
 
@@ -1899,9 +1831,6 @@ class EngineClient:
         Raises:
             ValueError: If no assistant message found
         """
-        from datetime import datetime
-        from ..config import EXPORTS_DIR
-
         # Find last assistant message
         last_assistant_msg = None
         for msg in reversed(self.session.messages):
@@ -1975,11 +1904,7 @@ class EngineClient:
         estimated_tokens = total_chars // 4
 
         # Get context limit for current model
-        try:
-            from ..config import get_model_context_limit
-            context_limit = get_model_context_limit(self.provider_name, self.model)
-        except ImportError:
-            context_limit = 128_000
+        context_limit = get_model_context_limit(self.provider_name, self.model)
 
         usage_percent = (estimated_tokens / context_limit) * 100 if context_limit > 0 else 0
 

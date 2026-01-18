@@ -34,6 +34,19 @@ from .loader import (
     _load_json_config,
     _convert_models_format,
 )
+from .defaults import (
+    # Shell tool defaults
+    DEFAULT_DANGEROUS_COMMANDS,
+    DEFAULT_NEVER_ALLOW,
+    DEFAULT_ALLOWED_COMMANDS,
+    # Agent defaults
+    DEFAULT_AGENT_MAX_ITERATIONS,
+    DEFAULT_AGENT_MAX_TOOL_ITERATIONS,
+    DEFAULT_AGENT_MAX_SAME_TOOL_CALLS,
+    DEFAULT_AGENT_CONTEXT_CHAR_LIMIT,
+    DEFAULT_AGENT_MIN_TASK_WORDS,
+    DEFAULT_AGENT_AUTO_RETRY_EMPTY,
+)
 
 
 # =============================================================================
@@ -249,7 +262,7 @@ def get_tool_description_overrides(provider: str = None, model: str = None) -> D
 
 
 def get_shell_config() -> Dict[str, Any]:
-    """Get shell tool configuration with defaults."""
+    """Get shell tool configuration with defaults from defaults.py."""
     shell_config = get_tool_config("shell")
 
     default_interactive = [
@@ -271,12 +284,26 @@ def get_shell_config() -> Dict[str, Any]:
 
     return {
         "require_consent": shell_config.get("require_consent", True),
-        "dangerous_commands": shell_config.get("dangerous_commands", []),
-        "allowed_commands": shell_config.get("allowed_commands", []),
-        "never_allow": shell_config.get("never_allow", []),
+        "dangerous_commands": shell_config.get("dangerous_commands", DEFAULT_DANGEROUS_COMMANDS),
+        "allowed_commands": shell_config.get("allowed_commands", DEFAULT_ALLOWED_COMMANDS),
+        "never_allow": shell_config.get("never_allow", DEFAULT_NEVER_ALLOW),
         "sandboxed_paths": shell_config.get("sandboxed_paths", []),
         "interactive_commands": shell_config.get("interactive_commands", default_interactive),
         "non_interactive_with_args": shell_config.get("non_interactive_with_args", default_non_interactive_with_args),
+    }
+
+
+def get_agent_config() -> Dict[str, Any]:
+    """Get agent tool configuration with defaults from defaults.py."""
+    agent_config = get_tool_config("agent")
+
+    return {
+        "max_iterations": agent_config.get("max_iterations", DEFAULT_AGENT_MAX_ITERATIONS),
+        "max_tool_iterations": agent_config.get("max_tool_iterations", DEFAULT_AGENT_MAX_TOOL_ITERATIONS),
+        "max_same_tool_calls": agent_config.get("max_same_tool_calls", DEFAULT_AGENT_MAX_SAME_TOOL_CALLS),
+        "context_char_limit": agent_config.get("context_char_limit", DEFAULT_AGENT_CONTEXT_CHAR_LIMIT),
+        "min_task_words": agent_config.get("min_task_words", DEFAULT_AGENT_MIN_TASK_WORDS),
+        "auto_retry_empty": agent_config.get("auto_retry_empty", DEFAULT_AGENT_AUTO_RETRY_EMPTY),
     }
 
 

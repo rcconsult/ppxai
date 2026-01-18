@@ -290,9 +290,17 @@ This refactoring aligns by:
 
 ## Decision Record
 
-**Decision:** Deferred - needs review
+**Decision:** Approved for v1.13.10
 
-**Next Steps:**
-1. Review this plan
-2. Decide on open questions
-3. Schedule implementation (recommend v1.14.x)
+**Decisions on Open Questions:**
+
+1. **Config defaults location** → `config/defaults.py` (new file)
+2. **ChatContext** → Formal `Protocol` class (better architecture, prevents future debt)
+3. **Thin wrappers** → Remove them, adjust callers to use direct calls
+
+**Implementation Order:**
+1. Phase 1: Config cleanup (remove lazy imports)
+2. Phase 2: Extract tool parser
+3. Phase 3: Move shell classification
+4. Phase 4: Extract chat with Protocol
+5. Phase 5: Remove thin wrappers
