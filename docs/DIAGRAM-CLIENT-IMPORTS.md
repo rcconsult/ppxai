@@ -20,7 +20,7 @@
     ┌───────────────────────────────────────────────────┴───────────────────────────────────────────────────┐
     │                                                                                                       │
     │                                      ppxai/engine/client.py                                          │
-    │                                    (1,340 lines, was 2,037)                                          │
+    │                                    (1,311 lines, was 2,037)                                          │
     │                                         FACADE ONLY                                                   │
     │                                                                                                       │
     └───────────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -127,7 +127,7 @@
     ┌──────────────────────────────────────────────────────────────────────────────────────┐
     │                                                                                      │
     │                              ppxai/engine/client.py                                  │
-    │                            EngineClient (1,340 lines)                                │
+    │                            EngineClient (1,311 lines)                                │
     │                                                                                      │
     │         Implements ChatContext Protocol for dependency injection                     │
     │                                                                                      │
@@ -226,7 +226,7 @@
            └──────────────────────────┼─────────────────────────┘
                                       │
                                       ▼
-                         client.py (1,340 lines)
+                         client.py (1,311 lines)
                          ┌─────────────────────────────────────────┐
                          │  FACADE PATTERN                         │
                          │  • ChatContext implementation           │
@@ -238,7 +238,7 @@
     ┌─────────────────────────────────────────────────────────────────────────────────────┐
     │  METRICS                                                                            │
     │                                                                                     │
-    │  Lines: 2,037 → 1,340  (34% reduction, -697 lines)                                 │
+    │  Lines: 2,037 → 1,311  (36% reduction, -726 lines)                                 │
     │  Lazy imports: 5 → 0   (100% eliminated)                                           │
     │  New modules: 3        (defaults.py, parser.py, chat.py)                           │
     │  Import cycles: Reduced (parser.py and defaults.py are LEAF modules)              │
