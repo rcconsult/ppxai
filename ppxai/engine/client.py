@@ -1143,40 +1143,11 @@ class EngineClient:
             yield event
 
     # === Session Management ===
-
-    def save_session(self, name: Optional[str] = None) -> str:
-        """Save current session.
-
-        Args:
-            name: Optional session name
-
-        Returns:
-            Session name
-        """
-        return self.session.save(name)
-
-    def load_session(self, name: str) -> bool:
-        """Load a saved session.
-
-        Args:
-            name: Session name
-
-        Returns:
-            True if loaded successfully
-        """
-        return self.session.load(name)
-
-    def list_sessions(self) -> List[SessionInfo]:
-        """List saved sessions.
-
-        Returns:
-            List of SessionInfo objects
-        """
-        return self.session.list_sessions()
-
-    def clear_history(self):
-        """Clear conversation history."""
-        self.session.clear()
+    # Note: For session operations, use engine.session directly:
+    # - engine.session.save(name)
+    # - engine.session.load(name)
+    # - engine.session.list_sessions()
+    # - engine.session.clear()
 
     def get_history(self) -> List[Dict[str, str]]:
         """Get conversation history as dicts.

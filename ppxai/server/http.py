@@ -1154,7 +1154,7 @@ async def get_sessions(x_session_id: Optional[str] = Header(None)):
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    sessions_list = engine.list_sessions()
+    sessions_list = engine.session.list_sessions()
     return {
         "sessions": [
             {
@@ -1181,7 +1181,7 @@ async def save_session(
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    saved_name = engine.save_session(name)
+    saved_name = engine.session.save(name)
     return {"name": saved_name}
 
 
@@ -1220,7 +1220,7 @@ async def load_session(
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    success = engine.load_session(name)
+    success = engine.session.load(name)
     if not success:
         raise HTTPException(status_code=404, detail=f"Session not found: {name}")
 
@@ -1247,7 +1247,7 @@ async def clear_session(x_session_id: Optional[str] = Header(None)):
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    engine.clear_history()
+    engine.session.clear()
     return {"cleared": True}
 
 
@@ -1299,7 +1299,7 @@ async def restore_last_session(x_session_id: Optional[str] = Header(None)):
     session_name = state["name"]
 
     # Load the session
-    success = engine.load_session(session_name)
+    success = engine.session.load(session_name)
     if not success:
         raise HTTPException(status_code=404, detail=f"Session not found: {session_name}")
 

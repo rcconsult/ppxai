@@ -244,7 +244,7 @@ class JsonRpcServer:
 
     def get_sessions(self) -> list:
         """Get list of saved sessions."""
-        sessions = self.engine.list_sessions()
+        sessions = self.engine.session.list_sessions()
         return [
             {
                 "name": s.name,
@@ -262,7 +262,7 @@ class JsonRpcServer:
         v1.13.9: Apply restored working_dir and tools_enabled state.
         """
         import os
-        success = self.engine.load_session(session_name)
+        success = self.engine.session.load(session_name)
         if success:
             # Apply restored session state to engine
             if self.engine.session.working_dir and os.path.isdir(self.engine.session.working_dir):
@@ -273,7 +273,7 @@ class JsonRpcServer:
 
     def save_session(self) -> str:
         """Save current session."""
-        return self.engine.save_session()
+        return self.engine.session.save()
 
     def export_answer(self, filename: Optional[str] = None) -> str:
         """Export last answer to markdown."""
@@ -286,7 +286,7 @@ class JsonRpcServer:
 
     def clear_history(self) -> bool:
         """Clear conversation history."""
-        self.engine.clear_history()
+        self.engine.session.clear()
         return True
 
     def get_usage(self) -> dict:

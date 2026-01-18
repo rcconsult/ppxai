@@ -314,7 +314,7 @@ class TestHttpServerSessions:
         client, mock_engine = mock_client
         response = client.post("/sessions/clear")
         assert response.status_code == 200
-        mock_engine.clear_history.assert_called_once()
+        mock_engine.session.clear.assert_called_once()
 
     def test_sessions_without_engine(self, no_engine_client):
         """Test GET /sessions returns 503 without engine."""
