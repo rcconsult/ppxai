@@ -92,6 +92,7 @@ class SessionManager:
         # Activity tracking
         self._last_activity: float = 0.0
         self._shutdown_requested: bool = False
+        self._shutdown_reason: str = "unknown"
 
         # Idle shutdown task
         self._idle_task: Optional[asyncio.Task] = None
@@ -152,14 +153,19 @@ class SessionManager:
 
         logger.info(f"SessionManager initialized with provider: {self._default_engine.provider_name}")
 
-    async def start_idle_monitor(self, idle_timeout: int) -> None:
-        """Start the idle shutdown monitor task."""
+    async def start_idle_monitor(self, idle_timeout: int, shutdown_callback: Callable[[], None] = None) -> None:
+        """Start the idle shutdown monitor task.
+
+        Args:
+            idle_timeout: Seconds of inactivity before shutdown
+            shutdown_callback: Optional callback to trigger graceful shutdown
+        """
         if idle_timeout <= 0:
             logger.info("Idle auto-shutdown disabled (timeout <= 0)")
             return
 
         self._idle_task = asyncio.create_task(
-            self._idle_shutdown_loop(idle_timeout)
+            self._idle_shutdown_loop(idle_timeout, shutdown_callback)
         )
         logger.info(f"Idle shutdown monitor started (timeout: {idle_timeout}s)")
 
@@ -319,13 +325,28 @@ class SessionManager:
         """Check if shutdown has been requested."""
         return self._shutdown_requested
 
-    def request_shutdown(self) -> None:
-        """Request graceful shutdown."""
-        self._shutdown_requested = True
-        logger.info("Shutdown requested")
+    @property
+    def shutdown_reason(self) -> str:
+        """Get the reason for shutdown."""
+        return self._shutdown_reason
 
-    async def _idle_shutdown_loop(self, idle_timeout: int) -> None:
-        """Background task to check for idle shutdown."""
+    def request_shutdown(self, reason: str = "user_request") -> None:
+        """Request graceful shutdown with reason.
+
+        Args:
+            reason: Reason for shutdown (e.g., 'user_request', 'idle_timeout', 'api_request')
+        """
+        self._shutdown_requested = True
+        self._shutdown_reason = reason
+        logger.info(f"Shutdown requested (reason: {reason})")
+
+    async def _idle_shutdown_loop(self, idle_timeout: int, shutdown_callback: Callable[[], None] = None) -> None:
+        """Background task to check for idle shutdown.
+
+        Args:
+            idle_timeout: Seconds of inactivity before shutdown
+            shutdown_callback: Optional callback to trigger graceful shutdown
+        """
         while not self._shutdown_requested:
             await asyncio.sleep(30)  # Check every 30 seconds
 
@@ -336,9 +357,13 @@ class SessionManager:
             if idle_time > idle_timeout:
                 logger.info(f"Server idle for {idle_time:.0f}s (>{idle_timeout}s), initiating shutdown")
                 print(f"\nAuto-shutdown: No activity for {idle_timeout // 60} minutes")
-                self._shutdown_requested = True
-                import os
-                os._exit(0)
+                self.request_shutdown("idle_timeout")
+                # Use callback for graceful shutdown if provided, else fallback to os._exit
+                if shutdown_callback:
+                    shutdown_callback()
+                else:
+                    import os
+                    os._exit(0)
 
     # =========================================================================
     # Consent Management

@@ -48,6 +48,9 @@ session_manager: SessionManager = None
 # Used by /shutdown endpoint to signal uvicorn to stop
 _shutdown_event: asyncio.Event = None
 
+# Server start time for uptime tracking (v1.13.10)
+_server_start_time: float = 0
+
 
 async def get_or_create_session(session_id: Optional[str]) -> tuple[str, EngineClient, asyncio.Lock]:
     """Get existing session or create new one (v1.13.10, v1.13.10 refactored).
@@ -124,14 +127,29 @@ async def http_shell_consent_handler(command: str, working_dir: str, risk_level:
     return await session_manager._handle_shell_consent("default", command, working_dir, risk_level)
 
 
+def _format_uptime(seconds: float) -> str:
+    """Format uptime in human-readable format."""
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    elif seconds < 3600:
+        mins = int(seconds // 60)
+        secs = int(seconds % 60)
+        return f"{mins}m {secs}s"
+    else:
+        hours = int(seconds // 3600)
+        mins = int((seconds % 3600) // 60)
+        return f"{hours}h {mins}m"
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan (startup/shutdown).
 
     v1.13.10: Refactored to use SessionManager for thread-safe state management.
     v1.13.10: Added graceful shutdown via _shutdown_event.
+    v1.13.10: Added startup/shutdown logging with uptime tracking.
     """
-    global session_manager, _shutdown_event
+    global session_manager, _shutdown_event, _server_start_time
     startup_start = time.time()
 
     # Initialize shutdown event for graceful termination (v1.13.10)
@@ -152,12 +170,24 @@ async def lifespan(app: FastAPI):
     logger.info("Session management initialized (v1.13.10, v1.13.10 thread-safe)")
 
     # Start idle shutdown monitor (v1.13.10)
+    # Pass shutdown callback for graceful shutdown instead of os._exit
     from ..config import get_idle_timeout
     idle_timeout = get_idle_timeout()
-    await session_manager.start_idle_monitor(idle_timeout)
+
+    def idle_shutdown_callback():
+        """Callback to trigger graceful shutdown from idle monitor."""
+        if _shutdown_event:
+            _shutdown_event.set()
+
+    await session_manager.start_idle_monitor(idle_timeout, idle_shutdown_callback)
 
     startup_time = time.time() - startup_start
-    logger.info(f"Server startup completed in {startup_time:.2f}s")
+    _server_start_time = time.time()
+
+    # Log startup with timestamp
+    from datetime import datetime
+    start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    logger.info(f"Server started at {start_timestamp} (startup took {startup_time:.2f}s)")
     print(f"ppxai HTTP server started ({startup_time:.2f}s)")
     print(f"Provider: {default_engine.provider_name}")
     print(f"Model: {default_engine.model}")
@@ -170,9 +200,16 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown: Cleanup via SessionManager (v1.13.10)
+    # Calculate and log uptime
+    uptime = time.time() - _server_start_time
+    uptime_str = _format_uptime(uptime)
+    shutdown_reason = session_manager.shutdown_reason if session_manager else "unknown"
+    stop_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    logger.info(f"Server stopped at {stop_timestamp} (uptime: {uptime_str}, reason: {shutdown_reason})")
     logger.info("Server shutting down - cleaning up SessionManager")
     await session_manager.shutdown()
-    print("ppxai HTTP server stopped")
+    print(f"ppxai HTTP server stopped (uptime: {uptime_str}, reason: {shutdown_reason})")
 
 
 # Create FastAPI app with lifespan
@@ -504,7 +541,7 @@ async def shutdown_server():
 
     # Mark shutdown as requested via SessionManager
     if session_manager:
-        session_manager.request_shutdown()
+        session_manager.request_shutdown("api_request")
 
     # Schedule graceful shutdown after response is sent (v1.13.10)
     async def delayed_shutdown():
