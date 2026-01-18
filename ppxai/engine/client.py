@@ -24,6 +24,7 @@ from .providers.base import BaseProvider
 from .tools.manager import ToolManager
 from .tools.builtin import register_all_builtin_tools
 from .tools.parser import parse_tool_call
+from .chat import chat_simple, chat_with_tools
 from .session import SessionManager
 from .context import ContextInjector
 from ..checkpoint import CheckpointManager, FileCheckpointBackend
@@ -916,6 +917,38 @@ class EngineClient:
             "verbose": self._tools_verbose  # v1.12.0: Include verbose setting
         }
 
+    # === ChatContext Interface ===
+
+    @property
+    def is_interrupted(self) -> bool:
+        """Whether the current operation is interrupted (ChatContext interface)."""
+        return self._interrupted
+
+    def get_consent_events(self) -> List[Event]:
+        """Get and clear queued consent events (ChatContext interface)."""
+        events = list(self._consent_event_queue)
+        self._consent_event_queue.clear()
+        return events
+
+    def track_tool_usage(self, tool_name: str, usage: Dict[str, Any]) -> None:
+        """Track tool usage for cost calculation (ChatContext interface)."""
+        if not hasattr(self, '_current_tool_usage'):
+            self._current_tool_usage = {}
+        self._current_tool_usage[tool_name] = usage
+
+    def commit_agent_changes_if_needed(self, message: str) -> Optional[str]:
+        """Commit agent changes if in agent mode (ChatContext interface).
+
+        Returns:
+            Commit hash if changes were committed, None otherwise.
+        """
+        if self._agent_mode and self._checkpoint_manager and self._agent_edited_files:
+            commit_hash = self.commit_agent_changes(message)
+            if commit_hash:
+                self._agent_edited_files.clear()
+                return commit_hash
+        return None
+
     # === Chat ===
 
     async def chat(
@@ -1003,415 +1036,18 @@ class EngineClient:
     async def _chat_simple(self, stream: bool) -> AsyncIterator[Event]:
         """Simple chat without tools.
 
-        v1.13.10: Added auto-retry for empty responses (same as _chat_with_tools).
+        Delegates to chat.chat_simple() with self as ChatContext.
         """
-        # v1.13.10: Auto-retry loop for empty responses
-        max_retries = self.tool_manager.auto_retry_empty
-        retry_count = 0
-
-        while True:
-            messages = self.session.get_messages()
-
-            # Add system prompt for inline citation URLs if provider has web search/citations
-            if self.provider and (self.provider.capabilities.citations or self.provider.capabilities.web_search):
-                citation_prompt = Message(
-                    "system",
-                    "When citing sources, always include the full URL in parentheses after "
-                    "the citation number, like [1](https://example.com). This helps users "
-                    "click through to the sources directly."
-                )
-                messages = [citation_prompt] + messages
-
-            full_response = ""
-            response_metadata = None
-
-            async for event in self.provider.chat(messages, self.model, stream):
-                # Check for interrupt
-                if self._interrupted:
-                    # Rollback user message to maintain alternation
-                    self.session.remove_last_message()
-                    yield Event(EventType.ERROR, "Interrupted by user")
-                    return
-
-                if event.type == EventType.ERROR:
-                    # Rollback user message to maintain alternation
-                    self.session.remove_last_message()
-                    yield event
-                    return
-                elif event.type == EventType.STREAM_END:
-                    full_response = event.data or ""
-                    response_metadata = event.metadata
-                elif event.type == EventType.STREAM_CHUNK:
-                    # For streaming, yield chunks immediately
-                    yield event
-
-            # v1.13.10: Check for empty response and retry
-            if not full_response.strip() and retry_count < max_retries and max_retries > 0:
-                retry_count += 1
-                yield Event(EventType.INFO, f"Empty response, retrying... ({retry_count}/{max_retries})")
-                self.session.add_message(Message(
-                    "user",
-                    "Please proceed with the task. If you need more information, ask. "
-                    "If you can help, please respond."
-                ))
-                continue  # Retry
-
-            # CRITICAL FIX: Add assistant message to session BEFORE yielding STREAM_END
-            # because the caller (TUI main loop) may break out of the loop after receiving it
-            self.session.add_message(Message("assistant", full_response))
-            if response_metadata and response_metadata.get("usage"):
-                usage = response_metadata["usage"]
-                # Calculate cost based on model and provider
-                usage.estimated_cost = calculate_cost(
-                    usage.prompt_tokens,
-                    usage.completion_tokens,
-                    self.model,
-                    self.provider_name  # Fixed: was provider_id
-                )
-                # v1.13.4: Add tool usage from this response
-                if hasattr(self, '_current_tool_usage'):
-                    usage.tool_calls = self._current_tool_usage
-                    self._current_tool_usage = {}  # Reset for next response
-                # v1.12.2: Pass provider and model for per-model tracking
-                self.session.update_usage(usage, self.provider_name, self.model)
-                # Convert UsageStats to dict for JSON serialization
-                response_metadata["usage"] = asdict(usage)
-
-            # Now yield the final event to caller
-            yield Event(EventType.STREAM_END, full_response, response_metadata)
-            return  # Done
+        async for event in chat_simple(self, stream):
+            yield event
 
     async def _chat_with_tools(self, stream: bool) -> AsyncIterator[Event]:
         """Chat with tool support.
 
-        Supports two modes:
-        1. Native tool calling (vLLM with --enable-auto-tool-choice): Provider returns TOOL_CALL events
-        2. Prompt-based (fallback): Parse tool calls from model's text response
+        Delegates to chat.chat_with_tools() with self as ChatContext.
         """
-        iteration = 0
-        max_iterations = self.tool_manager.max_iterations
-
-        # v1.13.10: Reset tool call history for loop detection
-        self.tool_manager.reset_tool_history()
-
-        # Track accumulated usage across all provider calls (v1.12.0)
-        accumulated_usage = UsageStats()
-
-        # Check if provider supports native tool calling (v1.13.x)
-        use_native_tools = (
-            self.provider and
-            hasattr(self.provider, 'capabilities') and
-            self.provider.capabilities.native_tool_calling
-        )
-
-        # Get tools in OpenAI format for native tool calling
-        # v1.13.3: For prompt-based providers (Gemini, Perplexity), we pass a truthy value
-        # to signal that tools are enabled, even though the actual tool definitions
-        # are in the system prompt. This allows providers to adjust behavior (e.g.,
-        # Gemini disables grounding when tools are enabled to avoid conflicts).
-        openai_tools = None
-        if use_native_tools:
-            openai_tools = self.tool_manager.get_tools_openai_format()
-        else:
-            # For prompt-based mode, pass True to signal tools are enabled
-            # The actual tool definitions are in the system message
-            openai_tools = True
-
-        # Emit stream start at beginning
-        yield Event(EventType.STREAM_START, {"model": self.model})
-
-        while iteration < max_iterations:
-            # Check for interrupt
-            if self._interrupted:
-                yield Event(EventType.ERROR, "Interrupted by user")
-                return
-
-            iteration += 1
-
-            # Emit progress for tool iterations (after first)
-            if iteration > 1:
-                yield Event(EventType.INFO, f"Processing... (iteration {iteration})")
-
-            # Build messages with tool prompt (only for prompt-based mode)
-            messages = self.session.get_messages()
-
-            if not use_native_tools:
-                # Prompt-based tool calling: add system message with tool instructions
-                tool_prompt = self.tool_manager.get_tools_prompt()
-                if tool_prompt:
-                    # Add provider-specific guidance for native capabilities (v1.13.3)
-                    # This tells models with native web search to use it for weather/web queries
-                    has_native_search = self.provider and (self.provider.capabilities.citations or self.provider.capabilities.web_search)
-                    has_search_tool = self.tool_manager.get_tool("web_search") is not None
-
-                    if has_native_search and not has_search_tool:
-                        # Provider has native web search but no web_search tool
-                        # Tell model to use its native capability for web queries
-                        tool_prompt += (
-                            "\n\n## Native Web Search Capability\n"
-                            "You have NATIVE web search capability built-in. For weather, current events, "
-                            "web searches, or any real-time information: simply answer the question directly "
-                            "using your native search - you do NOT need a tool for this. The tools above "
-                            "are for other capabilities like filesystem access, shell commands, etc."
-                        )
-
-                    if has_native_search or has_search_tool:
-                        tool_prompt += (
-                            "\n\nWhen citing sources or URLs from search results, format them as markdown links "
-                            "like [Source Name](https://example.com) so they are clickable."
-                        )
-
-                    # Apply custom system prompt from config
-                    system_prompt = get_system_prompt(self.provider_name)
-                    prompt_mode = get_system_prompt_mode(self.provider_name)
-
-                    if prompt_mode == "replace":
-                        # Replace tool prompt entirely with custom system prompt
-                        final_prompt = system_prompt
-                    elif prompt_mode == "append":
-                        # Add custom prompt after tool instructions
-                        final_prompt = f"{tool_prompt}\n\n{system_prompt}"
-                    else:  # "prepend" (default)
-                        # Add custom prompt before tool instructions
-                        final_prompt = f"{system_prompt}\n\n{tool_prompt}"
-
-                    messages = [Message("system", final_prompt)] + messages
-
-            # Get response from provider
-            full_response = ""
-            native_tool_calls = []  # Collect native tool calls from provider
-            async for event in self.provider.chat(messages, self.model, stream=False, tools=openai_tools):
-                if event.type == EventType.ERROR:
-                    # Rollback user message to maintain alternation (only on first iteration)
-                    if iteration == 0:
-                        self.session.remove_last_message()
-                    yield event
-                    return
-                elif event.type == EventType.TOOL_CALL:
-                    # Native tool call from provider (vLLM with --enable-auto-tool-choice)
-                    native_tool_calls.append(event.data)
-                elif event.type == EventType.STREAM_END:
-                    full_response = event.data
-                    # Accumulate usage from this provider call (v1.12.0)
-                    if event.metadata and event.metadata.get("usage"):
-                        usage = event.metadata["usage"]
-                        accumulated_usage.prompt_tokens += usage.prompt_tokens
-                        accumulated_usage.completion_tokens += usage.completion_tokens
-                        accumulated_usage.total_tokens += usage.total_tokens
-
-            # Determine tool call: native takes precedence, then parse from text
-            tool_call = None
-            if native_tool_calls:
-                # Use first native tool call (models typically call one at a time)
-                tc = native_tool_calls[0]
-                tool_args = tc.get("arguments", {})
-                # v1.13.10: Handle nested tool call structure from some models (e.g., GPT-OSS 120B via vLLM)
-                # Model sometimes outputs: {"tool": "apply_patch", "arguments": {"tool": "apply_patch", "arguments": {...}}}
-                # Unwrap the nested structure to get the actual arguments
-                if isinstance(tool_args, dict) and "tool" in tool_args and "arguments" in tool_args:
-                    tool_args = tool_args["arguments"]
-                tool_call = {"tool": tc["tool"], "arguments": tool_args}
-            else:
-                # Fallback: parse tool call from text response
-                tool_call = self._parse_tool_call(full_response)
-
-            if tool_call:
-                tool_name = tool_call["tool"]
-                tool_args = tool_call.get("arguments", {})
-
-                # v1.13.10: Check for tool loop before executing (now checks args too)
-                if self.tool_manager.is_tool_loop_detected(tool_name, tool_args):
-                    # Loop detected - inject message to force synthesis
-                    yield Event(EventType.INFO, f"Loop detected: '{tool_name}' called {self.tool_manager.max_same_tool_calls}x with same args, forcing synthesis")
-                    loop_msg = self.tool_manager.get_loop_message(tool_name)
-                    self.session.add_message(Message("user", loop_msg))
-                    continue  # Skip execution, let model synthesize on next iteration
-
-                # Record this tool call for loop tracking (with args for accurate detection)
-                self.tool_manager.record_tool_call(tool_name, tool_args)
-
-                yield Event(EventType.TOOL_CALL, {
-                    "tool": tool_name,
-                    "arguments": tool_args
-                })
-
-                # Execute tool
-                try:
-                    # Execute tool in background to allow consent events to be yielded
-                    tool_task = asyncio.create_task(self.tool_manager.execute_tool(tool_name, **tool_args))
-
-                    # Poll consent event queue while tool is running
-                    # (file editing tools will add consent requests to queue during execution)
-                    while not tool_task.done():
-                        while self._consent_event_queue:
-                            consent_event = self._consent_event_queue.pop(0)
-                            yield consent_event
-                        await asyncio.sleep(0.05)  # Poll every 50ms
-
-                    # Drain any remaining consent events
-                    while self._consent_event_queue:
-                        consent_event = self._consent_event_queue.pop(0)
-                        yield consent_event
-
-                    # Get tool result
-                    result = await tool_task
-
-                    # v1.13.4: Track tool usage for premium search
-                    if tool_name == "web_search":
-                        try:
-                            from .tools.builtin import web_premium
-                            tool_usage = web_premium.get_last_tool_usage()
-
-                            if tool_usage:
-                                if not hasattr(self, '_current_tool_usage'):
-                                    self._current_tool_usage = {}
-                                self._current_tool_usage[tool_name] = tool_usage
-                        except Exception:
-                            pass  # Ignore if tracking fails
-
-                    yield Event(EventType.TOOL_RESULT, {
-                        "tool": tool_name,
-                        "result": result[:2000] + "..." if len(result) > 2000 else result
-                    })
-
-                    # Add to conversation history
-                    self.session.add_message(Message(
-                        "assistant",
-                        f"I'll use the {tool_name} tool.\n```json\n{json.dumps(tool_call, indent=2)}\n```"
-                    ))
-                    self.session.add_message(Message(
-                        "user",
-                        f"The {tool_name} tool returned:\n\n{result}\n\nNow respond to the user based on this result. For simple commands like 'ls' or 'pwd', just present the output clearly. For complex tasks, synthesize the information. If you need more information to complete the CURRENT request, call another tool."
-                    ))
-
-                except Exception as e:
-                    error_msg = str(e)
-                    yield Event(EventType.TOOL_ERROR, {
-                        "tool": tool_name,
-                        "error": error_msg
-                    })
-
-                    self.session.add_message(Message(
-                        "assistant",
-                        f"I'll use the {tool_name} tool.\n```json\n{json.dumps(tool_call, indent=2)}\n```"
-                    ))
-                    self.session.add_message(Message(
-                        "user",
-                        f"The {tool_name} tool failed with error: {error_msg}\n\nPlease provide an answer without using that tool, or try a different approach."
-                    ))
-
-                # Continue loop for next iteration
-                continue
-
-            else:
-                # No tool call - this is the final response
-                # v1.11.7 FIX: Don't re-request with streaming - use the response we already have.
-                # Re-requesting caused bugs where the model would output a tool call on the
-                # second request, which would then be sent as the final response without
-                # being parsed as a tool call.
-                #
-                # The response was already fetched with stream=False during tool iterations.
-                # Just emit it as the final response.
-
-                # v1.13.9 FIX: Handle empty responses from models like GPT-OSS 120B
-                # Auto-retry with nudge prompt when model returns empty on first iteration
-                if iteration == 1 and not full_response.strip() and self.tool_manager.auto_retry_empty > 0:
-                    # Track retry attempts for this request
-                    if not hasattr(self, '_empty_retry_count'):
-                        self._empty_retry_count = 0
-                    self._empty_retry_count += 1
-
-                    if self._empty_retry_count <= self.tool_manager.auto_retry_empty:
-                        # Add nudge message and retry
-                        yield Event(EventType.INFO, f"Empty response, retrying... ({self._empty_retry_count}/{self.tool_manager.auto_retry_empty})")
-                        self.session.add_message(Message(
-                            "user",
-                            "Please proceed with the task. If you need more information, ask. "
-                            "If you can help, please respond."
-                        ))
-                        continue  # Retry the loop
-
-                    # Max retries reached, reset and proceed
-                    self._empty_retry_count = 0
-
-                # Reset retry counter on successful response
-                if hasattr(self, '_empty_retry_count'):
-                    self._empty_retry_count = 0
-
-                # v1.13.9 FIX: Handle empty responses after tool iterations
-                # Some models (e.g., GPT-OSS 120B via vLLM) correctly execute tools but
-                # return empty text responses instead of summarizing results. If we have
-                # executed tools (iteration > 1) and the response is empty, prompt for summary.
-                if iteration > 1 and not full_response.strip():
-                    # Ask model to summarize tool results
-                    self.session.add_message(Message(
-                        "user",
-                        "Please provide a summary or answer based on the tool results above. "
-                        "Do not call any more tools - just synthesize the information into a helpful response."
-                    ))
-
-                    # Get the summary response
-                    summary_response = ""
-                    async for event in self.provider.chat(
-                        self.session.get_messages(), self.model, stream=False, tools=None
-                    ):
-                        if event.type == EventType.ERROR:
-                            yield event
-                            return
-                        elif event.type == EventType.STREAM_END:
-                            summary_response = event.data
-                            # Accumulate usage
-                            if event.metadata and event.metadata.get("usage"):
-                                usage = event.metadata["usage"]
-                                accumulated_usage.prompt_tokens += usage.prompt_tokens
-                                accumulated_usage.completion_tokens += usage.completion_tokens
-                                accumulated_usage.total_tokens += usage.total_tokens
-
-                    # Use summary as final response (or fallback message if still empty)
-                    full_response = summary_response.strip() or "[Tool execution completed but no summary generated]"
-
-                    # Remove the prompt message from history (it was just for getting summary)
-                    if self.session.messages and self.session.messages[-1].role == "user":
-                        self.session.messages.pop()
-
-                self.session.add_message(Message("assistant", full_response))
-
-                # v1.12.0: Commit agent changes after successful task completion
-                # NOTE: Only commit if agent made file edits (tracked via _agent_edited_files)
-                # This prevents committing unrelated changes from other tools (e.g., Claude Code)
-                if self._agent_mode and self._checkpoint_manager and self._agent_edited_files:
-                    commit_hash = self.commit_agent_changes("Task completed")
-                    if commit_hash:
-                        yield Event(EventType.STATUS, f"✓ Changes committed: {commit_hash[:8]}")
-                    # Reset edited files tracking for next task
-                    self._agent_edited_files.clear()
-
-                # v1.12.0: Calculate cost and update session with accumulated usage
-                metadata = None
-                if accumulated_usage.total_tokens > 0:
-                    accumulated_usage.estimated_cost = calculate_cost(
-                        accumulated_usage.prompt_tokens,
-                        accumulated_usage.completion_tokens,
-                        self.model,
-                        self.provider_name
-                    )
-                    # v1.13.4: Add tool usage from tools executed during this request
-                    if hasattr(self, '_current_tool_usage'):
-                        accumulated_usage.tool_calls = self._current_tool_usage
-                        self._current_tool_usage = {}  # Reset for next request
-                    # v1.12.2: Pass provider and model for per-model tracking
-                    self.session.update_usage(accumulated_usage, self.provider_name, self.model)
-                    metadata = {"usage": asdict(accumulated_usage)}
-
-                yield Event(EventType.STREAM_END, full_response, metadata)
-                return
-
-        # Max iterations reached
-        yield Event(EventType.INFO, "Maximum tool iterations reached")
-        self.session.add_message(Message(
-            "assistant",
-            "[Tool iterations limit reached. Please try again with a simpler query.]"
-        ))
+        async for event in chat_with_tools(self, stream):
+            yield event
 
     def _parse_tool_call(self, text: str) -> Optional[Dict[str, Any]]:
         """Parse a tool call from model response.
