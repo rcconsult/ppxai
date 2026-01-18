@@ -41,7 +41,7 @@ class EventHandler:
         self,
         on_stream_start: Optional[Callable[[], None]] = None,
         on_stream_chunk: Optional[Callable[[str], None]] = None,
-        on_reasoning_chunk: Optional[Callable[[str], None]] = None,  # v1.13.9
+        on_reasoning_chunk: Optional[Callable[[str], None]] = None,
         on_stream_end: Optional[Callable[[str], None]] = None,
         on_tool_call: Optional[Callable[[Dict[str, Any]], None]] = None,
         on_tool_result: Optional[Callable[[Any], None]] = None,
@@ -65,7 +65,7 @@ class EventHandler:
         """
         self.on_stream_start = on_stream_start or (lambda: None)
         self.on_stream_chunk = on_stream_chunk or (lambda x: None)
-        self.on_reasoning_chunk = on_reasoning_chunk or (lambda x: None)  # v1.13.9
+        self.on_reasoning_chunk = on_reasoning_chunk or (lambda x: None)
         self.on_stream_end = on_stream_end or (lambda x: None)
         self.on_tool_call = on_tool_call or (lambda x: None)
         self.on_tool_result = on_tool_result or (lambda x: None)
@@ -75,7 +75,7 @@ class EventHandler:
 
         # Internal state for accumulation
         self._full_response = ""
-        self._reasoning_response = ""  # v1.13.9
+        self._reasoning_response = ""
         self._should_break = False
 
     async def handle_event(self, event: Event) -> bool:
@@ -90,13 +90,13 @@ class EventHandler:
         """
         if event.type == EventType.STREAM_START:
             self._full_response = ""
-            self._reasoning_response = ""  # v1.13.9
+            self._reasoning_response = ""
             self._should_break = False
             self.on_stream_start()
             return True
 
         elif event.type == EventType.REASONING_CHUNK:
-            # v1.13.9: Reasoning tokens from DeepSeek R1, GPT-OSS 120B
+            # Reasoning tokens from DeepSeek R1, GPT-OSS 120B
             self._reasoning_response += event.data
             self.on_reasoning_chunk(event.data)
             return True
@@ -218,7 +218,7 @@ class TUIEventHandler(EventHandler):
         self.console = console
         self.logger = logger
         self.verbose = verbose
-        self.emoji_mode = emoji_mode  # v1.12.1: emoji rendering mode
+        self.emoji_mode = emoji_mode  # emoji rendering mode
         self._render_markdown = render_markdown_with_tables
 
         # Get theme (from arg, config, or default)
@@ -232,7 +232,7 @@ class TUIEventHandler(EventHandler):
         super().__init__(
             on_stream_start=self._on_stream_start,
             on_stream_chunk=self._on_stream_chunk,
-            on_reasoning_chunk=self._on_reasoning_chunk,  # v1.13.9
+            on_reasoning_chunk=self._on_reasoning_chunk,
             on_stream_end=self._on_stream_end,
             on_tool_call=self._on_tool_call,
             on_tool_result=self._on_tool_result,
@@ -242,7 +242,7 @@ class TUIEventHandler(EventHandler):
 
         # Track injected contexts for display
         self._injected_contexts = []
-        # v1.13.9: Track reasoning state for collapsible display
+        # Track reasoning state for collapsible display
         self._reasoning_started = False
 
     async def handle_event(self, event: Event) -> bool:
@@ -386,7 +386,7 @@ class TUIEventHandler(EventHandler):
             try:
                 error_code = int(error.split("Error code:")[1].split()[0])
                 self.logger.log_api_error(error_code, error)
-            except:
+            except (ValueError, IndexError):
                 self.logger.error(f"API Error: {error}")
         else:
             self.logger.error(f"Error: {error}")

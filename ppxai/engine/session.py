@@ -58,11 +58,11 @@ class SessionManager:
         }
         self.usage = UsageStats()
 
-        # v1.12.2: Per-model usage tracking
+        # Per-model usage tracking
         # Keys are "provider/model" strings, e.g., "perplexity/sonar-pro"
         self.usage_by_model: Dict[str, UsageStats] = {}
 
-        # v1.12.2: Usage display mode for status line
+        # Usage display mode for status line
         # "session" = total session usage (default)
         # "provider" = current provider usage only
         # "model" = current model usage only
@@ -77,7 +77,7 @@ class SessionManager:
         self.allowed_commands: set[str] = set()  # Commands user consented to run
         self.shell_consent_mode: str = ConsentMode.PROMPT  # ConsentMode: PROMPT, ALWAYS, NEVER
 
-        # v1.13.9: Session persistence and recovery
+        # Session persistence and recovery
         self.command_history: List[str] = []  # User input history for this session
         self.working_dir: str = os.getcwd()  # Working directory for this session
         self.tools_enabled: bool = False  # Whether tools were enabled
@@ -161,7 +161,7 @@ class SessionManager:
         self.usage.total_tokens += usage.total_tokens
         self.usage.estimated_cost += usage.estimated_cost
 
-        # v1.12.2: Update per-model tracking
+        # Update per-model tracking
         if provider and model:
             key = f"{provider}/{model}"
             if key not in self.usage_by_model:
@@ -173,7 +173,7 @@ class SessionManager:
             model_usage.total_tokens += usage.total_tokens
             model_usage.estimated_cost += usage.estimated_cost
 
-        # v1.13.4: Merge tool usage
+        # Merge tool usage
         for tool_name, tool_usage in usage.tool_calls.items():
             if tool_name not in self.usage.tool_calls:
                 from .types import ToolUsage
@@ -194,7 +194,7 @@ class SessionManager:
             "prompt_tokens": self.usage.prompt_tokens,
             "completion_tokens": self.usage.completion_tokens,
             "estimated_cost": self.usage.estimated_cost,
-            # v1.12.2: Add per-model breakdown
+            # Add per-model breakdown
             "by_model": {
                 key: {
                     "total_tokens": stats.total_tokens,
@@ -204,7 +204,7 @@ class SessionManager:
                 }
                 for key, stats in self.usage_by_model.items()
             },
-            # v1.13.4: Add tool usage breakdown
+            # Add tool usage breakdown
             "tool_calls": {
                 tool_name: {
                     "call_count": tool_usage.call_count,
@@ -351,7 +351,7 @@ class SessionManager:
             "messages": [{"role": m.role, "content": m.content} for m in self.messages],
             "usage": self.get_usage(),
             "saved_at": datetime.now().isoformat(),
-            # v1.13.9: Include persistence fields
+            # Include persistence fields
             "command_history": self.command_history,
             "working_dir": self.working_dir,
             "tools_enabled": self.tools_enabled
@@ -395,7 +395,7 @@ class SessionManager:
                 estimated_cost=usage_data.get("estimated_cost", 0.0)
             )
 
-            # v1.13.9: Load persistence fields (same as load_with_extras)
+            # Load persistence fields (same as load_with_extras)
             self.command_history = data.get("command_history", [])
             self.working_dir = data.get("working_dir", os.getcwd())
             self.tools_enabled = data.get("tools_enabled", False)
@@ -534,7 +534,7 @@ class SessionManager:
         )
 
     # =========================================================================
-    # v1.13.9: Session State File Management
+    # Session State File Management
     # =========================================================================
 
     def add_to_history(self, command: str):
@@ -597,7 +597,7 @@ class SessionManager:
             "messages": [{"role": m.role, "content": m.content} for m in self.messages],
             "usage": self.get_usage(),
             "saved_at": datetime.now().isoformat(),
-            # v1.13.9: New fields
+            # New fields
             "command_history": self.command_history,
             "working_dir": self.working_dir,
             "tools_enabled": self.tools_enabled
@@ -693,7 +693,7 @@ class SessionManager:
                 estimated_cost=usage_data.get("estimated_cost", 0.0)
             )
 
-            # v1.13.9: Load new fields
+            # Load new fields
             self.command_history = data.get("command_history", [])
             self.working_dir = data.get("working_dir", os.getcwd())
             self.tools_enabled = data.get("tools_enabled", False)

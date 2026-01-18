@@ -29,7 +29,7 @@ class SessionUsageRecord:
     total_cost: float
     total_tokens: int
     message_count: int
-    tool_calls: Dict[str, Dict[str, Any]] = field(default_factory=dict)  # v1.13.4: Tool usage tracking
+    tool_calls: Dict[str, Dict[str, Any]] = field(default_factory=dict)  # Tool usage tracking
 
 
 class UsageStorage:
@@ -113,7 +113,7 @@ class UsageStorage:
         total_cost: float,
         total_tokens: int,
         message_count: int,
-        tool_calls: Dict[str, Dict[str, Any]] = None  # v1.13.4: Tool usage tracking
+        tool_calls: Dict[str, Dict[str, Any]] = None  # Tool usage tracking
     ):
         """Save a session's usage data.
 
@@ -143,7 +143,7 @@ class UsageStorage:
             total_cost=total_cost,
             total_tokens=total_tokens,
             message_count=message_count,
-            tool_calls=tool_calls or {}  # v1.13.4: Store tool usage
+            tool_calls=tool_calls or {}  # Store tool usage
         )
 
         # Update existing session or append new one (v1.12.3)
@@ -210,7 +210,7 @@ class UsageStorage:
         total_cost = 0.0
         by_provider: Dict[str, Dict[str, Any]] = {}
         by_model: Dict[str, Dict[str, Any]] = {}
-        by_tool: Dict[str, Dict[str, Any]] = {}  # v1.13.4: Tool usage aggregation
+        by_tool: Dict[str, Dict[str, Any]] = {}  # Tool usage aggregation
 
         for session in filtered_sessions:
             total_tokens += session.get("total_tokens", 0)
@@ -248,7 +248,7 @@ class UsageStorage:
                 by_provider[provider]["estimated_cost"] += usage.get("estimated_cost", 0.0)
                 by_provider[provider]["session_count"] += 1
 
-            # v1.13.4: Aggregate by tool
+            # Aggregate by tool
             for tool_name, tool_usage in session.get("tool_calls", {}).items():
                 if tool_name not in by_tool:
                     by_tool[tool_name] = {
@@ -285,7 +285,7 @@ class UsageStorage:
             "session_count": len(filtered_sessions),
             "by_provider": by_provider,
             "by_model": by_model,
-            "by_tool": by_tool,  # v1.13.4: Tool usage aggregation
+            "by_tool": by_tool,  # Tool usage aggregation
             "sessions": session_summaries
         }
 

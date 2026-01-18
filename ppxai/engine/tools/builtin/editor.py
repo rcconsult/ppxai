@@ -60,7 +60,7 @@ class ApplyPatchTool(BaseTool):
             Success/failure message
         """
         try:
-            # v1.13.3: Resolve relative paths against engine's working directory
+            # Resolve relative paths against engine's working directory
             expanded = os.path.expanduser(file_path)
             if not os.path.isabs(expanded):
                 working_dir = self.engine.get_working_dir()
@@ -75,11 +75,11 @@ class ApplyPatchTool(BaseTool):
             if not await self.engine.request_file_edit_consent(str(path)):
                 return f"Error: User denied permission to edit {file_path}"
 
-            # v1.13.2: Detect new file creation from diff syntax
+            # Detect new file creation from diff syntax
             # Models like GPT-OSS 120B use "*** Add File:" or "+++ /dev/null" patterns
             is_new_file = _is_new_file_diff(unified_diff)
 
-            # v1.13.10: Detect delete+recreate pattern (replaces entire file)
+            # Detect delete+recreate pattern (replaces entire file)
             is_delete_recreate = _is_delete_and_recreate_diff(unified_diff)
 
             # Validate file exists (unless creating new file)
@@ -101,14 +101,14 @@ class ApplyPatchTool(BaseTool):
                 backup_content = ''.join(original_lines)
 
             try:
-                # v1.13.10: For delete+recreate, treat as new file (ignore original content)
+                # For delete+recreate, treat as new file (ignore original content)
                 if is_delete_recreate and path.exists():
                     new_lines = _apply_unified_diff([], unified_diff, is_new_file=True)
                 else:
                     # Apply patch
                     new_lines = _apply_unified_diff(original_lines, unified_diff, is_new_file=is_new_file)
 
-                # v1.13.10: Check if any changes were actually made
+                # Check if any changes were actually made
                 original_content = ''.join(original_lines)
                 new_content = ''.join(new_lines)
                 if original_content == new_content:
@@ -126,7 +126,7 @@ class ApplyPatchTool(BaseTool):
                 # Replace original file
                 temp_path.replace(path)
 
-                # v1.12.0: Track edited file for agent auto-commit
+                # Track edited file for agent auto-commit
                 self.engine._agent_edited_files.add(str(path))
 
                 if is_new_file and not original_lines:
@@ -197,7 +197,7 @@ class ReplaceBlockTool(BaseTool):
             Success/failure message
         """
         try:
-            # v1.13.3: Resolve relative paths against engine's working directory
+            # Resolve relative paths against engine's working directory
             expanded = os.path.expanduser(file_path)
             if not os.path.isabs(expanded):
                 working_dir = self.engine.get_working_dir()
@@ -253,7 +253,7 @@ class ReplaceBlockTool(BaseTool):
                 temp_path.replace(path)
 
                 lines_added = replace.count('\n') - search.count('\n')
-                # v1.12.0: Track edited file for agent auto-commit
+                # Track edited file for agent auto-commit
                 self.engine._agent_edited_files.add(str(path))
                 return f"✓ Successfully replaced block in {file_path} at line {line_num} ({lines_added:+d} lines)"
 
@@ -310,7 +310,7 @@ class InsertTextTool(BaseTool):
             Success/failure message
         """
         try:
-            # v1.13.3: Resolve relative paths against engine's working directory
+            # Resolve relative paths against engine's working directory
             expanded = os.path.expanduser(file_path)
             if not os.path.isabs(expanded):
                 working_dir = self.engine.get_working_dir()
@@ -325,7 +325,7 @@ class InsertTextTool(BaseTool):
             if not await self.engine.request_file_edit_consent(str(path)):
                 return f"Error: User denied permission to edit {file_path}"
 
-            # v1.13.2: Support creating new files when inserting at line 1
+            # Support creating new files when inserting at line 1
             is_new_file = False
             if not path.exists():
                 if line_number == 1:
@@ -369,7 +369,7 @@ class InsertTextTool(BaseTool):
 
                 num_lines = text.count('\n') + (0 if text.endswith('\n') else 1)
                 end_line = line_number + num_lines - 1
-                # v1.12.0: Track edited file for agent auto-commit
+                # Track edited file for agent auto-commit
                 self.engine._agent_edited_files.add(str(path))
 
                 if is_new_file:
@@ -436,7 +436,7 @@ class DeleteLinesTool(BaseTool):
             Success/failure message
         """
         try:
-            # v1.13.3: Resolve relative paths against engine's working directory
+            # Resolve relative paths against engine's working directory
             expanded = os.path.expanduser(file_path)
             if not os.path.isabs(expanded):
                 working_dir = self.engine.get_working_dir()
@@ -494,7 +494,7 @@ class DeleteLinesTool(BaseTool):
 
                 num_deleted = end_line - start_line + 1
                 preview = deleted_content[:100] + "..." if len(deleted_content) > 100 else deleted_content
-                # v1.12.0: Track edited file for agent auto-commit
+                # Track edited file for agent auto-commit
                 self.engine._agent_edited_files.add(str(path))
                 return f"✓ Successfully deleted lines {start_line}-{end_line} from {file_path} ({num_deleted} lines)\nDeleted content:\n{preview}"
 
@@ -586,7 +586,7 @@ def _apply_unified_diff(original_lines: list, diff_text: str, is_new_file: bool 
     """
     diff_lines = diff_text.splitlines(keepends=True)
 
-    # v1.13.2: For new files, just extract the added lines
+    # For new files, just extract the added lines
     if is_new_file and not original_lines:
         new_lines = []
         in_content = False
@@ -622,7 +622,7 @@ def _apply_unified_diff(original_lines: list, diff_text: str, is_new_file: bool 
     new_lines = original_lines.copy()
     current_line = 0
 
-    # v1.13.2: Check if this is an AI-generated search-replace diff (no line numbers)
+    # Check if this is an AI-generated search-replace diff (no line numbers)
     # Format: @@\n-old\n+new (without @@ -X,Y +X,Y @@)
     has_line_numbers = any(
         re.match(r'@@ -\d+', line.strip())

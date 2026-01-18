@@ -20,11 +20,11 @@ class ToolManager:
         """Initialize the tool manager."""
         self._tools: Dict[str, BaseTool] = {}
         self._provider: Optional[str] = None
-        self._model: Optional[str] = None  # v1.13.10: Track model for description overrides
-        self._description_overrides: Dict[str, str] = {}  # v1.13.10: Cached description overrides
+        self._model: Optional[str] = None  # Track model for description overrides
+        self._description_overrides: Dict[str, str] = {}  # Cached description overrides
         self.max_iterations: int = 15
-        self.auto_retry_empty: int = 3  # v1.13.10: Max retries for empty responses (0=disabled)
-        # v1.13.10: Loop detection - prevent models from calling same tool with same args repeatedly
+        self.auto_retry_empty: int = 3  # Max retries for empty responses (0=disabled)
+        # Loop detection - prevent models from calling same tool with same args repeatedly
         self.max_same_tool_calls: int = 3  # Max consecutive calls to same tool+args (0=disabled)
         self._tool_call_history: List[Tuple[str, str]] = []  # Track (tool_name, args_hash) for loop detection
 
@@ -267,18 +267,18 @@ class ToolManager:
         if not tool:
             raise ValueError(f"Tool not found or not available: {name}")
 
-        # v1.13.9: Normalize parameter names to match tool's expectations
+        # Normalize parameter names to match tool's expectations
         # Some models use file_path, others use filepath - map to what tool expects
         kwargs = self._normalize_params(tool, kwargs)
 
-        # v1.13.2: Validate required arguments before execution
+        # Validate required arguments before execution
         # Some models (e.g., GPT-OSS 120B via vLLM) sometimes send empty arguments
         required = tool.parameters.get("required", [])
         missing = [arg for arg in required if arg not in kwargs]
         if missing:
             raise ValueError(f"Missing required arguments for {name}: {', '.join(missing)}")
 
-        # v1.13.10: Filter out unexpected parameters that model might hallucinate
+        # Filter out unexpected parameters that model might hallucinate
         # Small models sometimes add parameters that don't exist in the tool schema
         tool_params = set(tool.parameters.get("properties", {}).keys())
         unexpected = [k for k in kwargs if k not in tool_params]

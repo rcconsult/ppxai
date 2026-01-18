@@ -161,7 +161,7 @@ class GitCheckpointBackend(CheckpointBackend):
             # Verify the commit exists and is a ppxai commit (checkpoint or agent)
             result = self._run_git("log", "-1", "--format=%s", checkpoint_id, check=False)
             msg = result.stdout.strip()
-            # v1.12.0: Accept both checkpoint commits and agent task commits
+            # Accept both checkpoint commits and agent task commits
             if not (msg.startswith("ppxai checkpoint:") or msg.startswith("ppxai agent:")):
                 return False
 
@@ -174,7 +174,7 @@ class GitCheckpointBackend(CheckpointBackend):
     def list_checkpoints(self) -> List[Tuple[str, str, str]]:
         """List ppxai checkpoint and agent commits (undoable commits)."""
         try:
-            # v1.12.0: Include both checkpoint and agent commits
+            # Include both checkpoint and agent commits
             result = self._run_git(
                 "log",
                 "--grep=^ppxai checkpoint:\\|^ppxai agent:",

@@ -30,7 +30,7 @@ class OpenAICompatibleProvider(BaseProvider):
 
     name = "openai_compatible"
 
-    # v1.13.9: OpenAI reasoning model prefixes (o1, o3, o4 series)
+    # OpenAI reasoning model prefixes (o1, o3, o4 series)
     REASONING_MODEL_PREFIXES = ("o1", "o3", "o4")
     default_capabilities = ProviderCapabilities(
         web_search=False,
@@ -41,10 +41,10 @@ class OpenAICompatibleProvider(BaseProvider):
         native_tool_calling=False  # Override per-provider if vLLM has tool calling enabled
     )
 
-    # v1.13.9: OpenAI native endpoint detection
+    # OpenAI native endpoint detection
     OPENAI_NATIVE_HOSTS = ("api.openai.com",)
 
-    # v1.13.9: Token estimation for context overflow prevention
+    # Token estimation for context overflow prevention
     # Conservative estimate: ~4 chars per token for English text
     CHARS_PER_TOKEN = 4
     # Reserve tokens for response generation
@@ -165,7 +165,7 @@ class OpenAICompatibleProvider(BaseProvider):
         try:
             api_messages = self._convert_messages(messages)
 
-            # v1.13.9: Estimate token count and check for context overflow
+            # Estimate token count and check for context overflow
             # This prevents the "max_tokens must be at least 1" error from vLLM
             estimated_tokens = self._estimate_tokens(api_messages)
             context_limit = self._get_context_limit(model)
@@ -191,7 +191,7 @@ class OpenAICompatibleProvider(BaseProvider):
 
             yield Event(EventType.STREAM_START, {"model": model})
 
-            # v1.13.9: Warn about OpenAI reasoning model limitations via Chat API
+            # Warn about OpenAI reasoning model limitations via Chat API
             if self._is_openai_native() and self._is_reasoning_model(model):
                 yield Event(
                     EventType.INFO,
@@ -206,7 +206,7 @@ class OpenAICompatibleProvider(BaseProvider):
                 "messages": api_messages,
             }
 
-            # v1.13.10: Add max_tokens if configured for this model or provider
+            # Add max_tokens if configured for this model or provider
             # This ensures vLLM and other backends don't use too-small defaults
             max_tokens = self._get_max_tokens(model)
             if max_tokens:
@@ -237,7 +237,7 @@ class OpenAICompatibleProvider(BaseProvider):
                         raise
 
                 full_response = []
-                reasoning_response = []  # v1.13.9: Collect reasoning tokens
+                reasoning_response = []  # Collect reasoning tokens
                 tool_calls = []
                 current_tool_call = None
                 usage = None
@@ -273,7 +273,7 @@ class OpenAICompatibleProvider(BaseProvider):
                                     if tc_chunk.function.arguments:
                                         current_tool_call["function"]["arguments"] += tc_chunk.function.arguments
 
-                    # v1.13.9+: Process reasoning tokens from various providers
+                    # Process reasoning tokens from various providers
                     # DeepSeek R1, GPT-OSS: reasoning_content field
                     # OpenRouter: reasoning field
                     reasoning_content = getattr(delta, 'reasoning_content', None) or getattr(delta, 'reasoning', None)
@@ -303,12 +303,12 @@ class OpenAICompatibleProvider(BaseProvider):
                             })
 
                 final_content = "".join(full_response)
-                final_reasoning = "".join(reasoning_response)  # v1.13.9
+                final_reasoning = "".join(reasoning_response)
                 metadata = {"usage": usage} if usage else None
                 if tool_calls:
                     metadata = metadata or {}
                     metadata["tool_calls"] = tool_calls
-                # v1.13.9: Include reasoning in metadata if present
+                # Include reasoning in metadata if present
                 if final_reasoning:
                     metadata = metadata or {}
                     metadata["reasoning"] = final_reasoning
@@ -350,7 +350,7 @@ class OpenAICompatibleProvider(BaseProvider):
                         {"id": tc.id, "function": {"name": tc.function.name, "arguments": tc.function.arguments}}
                         for tc in message.tool_calls
                     ]
-                # v1.13.9: Include reasoning in metadata if present
+                # Include reasoning in metadata if present
                 if reasoning_content:
                     metadata["reasoning"] = reasoning_content
                 yield Event(EventType.STREAM_END, content, metadata)

@@ -88,7 +88,7 @@ def get_status_line(handler, use_themed: bool = True):
     # Get session usage stats (v1.12.0, v1.12.2: display mode support)
     usage_str = None
     if handler.engine_client:
-        # v1.12.2: Use display mode-aware method
+        # Use display mode-aware method
         usage_display = handler.engine_client.session.get_usage_for_display(
             current_provider=handler.provider,
             current_model=handler.current_model
@@ -123,7 +123,7 @@ def get_status_line(handler, use_themed: bool = True):
         if show_cwd and handler.engine_client:
             working_dir = handler.engine_client.get_working_dir()
 
-        # v1.13.9: Get context usage percentage
+        # Get context usage percentage
         context_percent = None
         if handler.engine_client:
             try:
@@ -581,7 +581,7 @@ def restore_session_to_handler(handler: CommandHandler, session_state: dict) -> 
             logger.debug(f"Failed to restore provider '{stored_provider}': {e}")
 
     if stored_model:
-        # v1.13.10: Use strict mode to validate model exists before restoring
+        # Use strict mode to validate model exists before restoring
         if handler.engine_client.set_model(stored_model, strict=True):
             handler.current_model = stored_model
         else:
@@ -659,10 +659,10 @@ def main():
     # Select initial model (from provider's available models)
     current_model = select_model(provider)
 
-    # v1.12.0: Create command handler with provider info (no legacy client)
+    # Create command handler with provider info (no legacy client)
     handler = CommandHandler(api_key, current_model, base_url, provider)
 
-    # v1.13.9: Check for session recovery
+    # Check for session recovery
     should_restore, session_state = check_session_recovery()
     if should_restore and session_state:
         if restore_session_to_handler(handler, session_state):
@@ -671,7 +671,7 @@ def main():
             current_model = handler.current_model
 
     # Create prompt session with history and completer
-    # v1.13.9: Pre-populate history from restored session
+    # Pre-populate history from restored session
     history = InMemoryHistory()
     for cmd in handler.engine_client.session.command_history:
         history.append_string(cmd)
@@ -713,7 +713,7 @@ def main():
             if not user_input:
                 continue
 
-            # v1.13.9: Add to command history
+            # Add to command history
             handler.engine_client.session.add_to_history(user_input)
 
             # Handle commands
@@ -721,7 +721,7 @@ def main():
                 should_exit = handler.handle_command(user_input)
                 if should_exit:
                     break
-                # v1.12.0: Update current_model from handler (no legacy client)
+                # Update current_model from handler (no legacy client)
                 current_model = handler.current_model
                 continue
 
@@ -732,7 +732,7 @@ def main():
                 logger.log_user_message(user_input)
 
             # Send message to API
-            # v1.11.4: ALWAYS use EngineClient (created at startup)
+            # ALWAYS use EngineClient (created at startup)
             # This ensures @git/@tree/@file context injection always works
             if handler.engine_client:
                 # Use engine with event-based streaming
@@ -767,7 +767,7 @@ def main():
 
                 response = asyncio.run(stream_engine_response())
 
-            # v1.12.0: EngineClient is REQUIRED - no fallback
+            # EngineClient is REQUIRED - no fallback
             if not handler.engine_client:
                 console.print("[red]Error: EngineClient not available. This is a critical error.[/red]")
                 console.print("[yellow]Please report this issue: https://github.com/rcconsult/ppxai/issues[/yellow]")
@@ -777,7 +777,7 @@ def main():
             if response and handler.engine_client:
                 message_count = len(handler.engine_client.session.messages)
 
-                # v1.13.9: Auto-save session based on config interval (dirty save for recovery)
+                # Auto-save session based on config interval (dirty save for recovery)
                 save_interval = get_auto_save_interval()
                 if message_count > 0 and (save_interval == 0 or message_count % max(1, save_interval) == 0):
                     try:
@@ -807,7 +807,7 @@ def main():
             else:
                 # Second Ctrl-C: Exit gracefully
                 console.print("\n[yellow]Exiting gracefully...[/yellow]")
-                # v1.13.9: Mark session clean on graceful exit
+                # Mark session clean on graceful exit
                 try:
                     handler.engine_client.session.mark_clean()
                 except Exception:
@@ -818,7 +818,7 @@ def main():
 
         except EOFError:
             console.print("\n[yellow]Goodbye![/yellow]")
-            # v1.13.9: Mark session clean on graceful exit
+            # Mark session clean on graceful exit
             try:
                 handler.engine_client.session.mark_clean()
             except Exception:

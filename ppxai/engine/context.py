@@ -24,7 +24,7 @@ class InjectedContext:
     language: str        # detected language (for code files)
     truncated: bool      # whether content was truncated
     size: int            # original size in bytes
-    hash: str = ""       # v1.13.10: content hash for deduplication
+    hash: str = ""       # content hash for deduplication
 
 
 def compute_content_hash(content: str) -> str:
@@ -444,7 +444,7 @@ class ContextInjector:
         if re.search(self.GIT_PATTERN, message):
             git_ctx = self.inject_git_context()
             if git_ctx:
-                # v1.13.10: Compute hash and skip if duplicate
+                # Compute hash and skip if duplicate
                 git_ctx.hash = compute_content_hash(git_ctx.content)
                 if git_ctx.hash not in skip_hashes:
                     injected.append(git_ctx)
@@ -456,7 +456,7 @@ class ContextInjector:
         if re.search(self.TREE_PATTERN, message):
             tree_ctx = self.inject_tree_context()
             if tree_ctx:
-                # v1.13.10: Compute hash and skip if duplicate
+                # Compute hash and skip if duplicate
                 tree_ctx.hash = compute_content_hash(tree_ctx.content)
                 if tree_ctx.hash not in skip_hashes:
                     injected.append(tree_ctx)
@@ -474,7 +474,7 @@ class ContextInjector:
 
                 ctx = self.read_file(filepath)
                 if ctx:
-                    # v1.13.10: Compute hash and skip if duplicate
+                    # Compute hash and skip if duplicate
                     ctx.hash = compute_content_hash(ctx.content)
                     if ctx.hash not in skip_hashes:
                         injected.append(ctx)

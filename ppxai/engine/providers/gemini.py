@@ -118,7 +118,7 @@ class GeminiProvider:
             # Convert messages to Gemini format (now returns tuple with system instruction)
             contents, system_instruction = self._convert_messages(messages)
 
-            # v1.13.3: Enable both grounding AND system_instruction
+            # Enable both grounding AND system_instruction
             # Grounding provides native web search, system_instruction provides tool prompt
             # Both should work together - grounding for web search, tools for other capabilities
             config = self._build_config(

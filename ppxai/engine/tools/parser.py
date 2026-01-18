@@ -126,7 +126,7 @@ def _normalize_tool_call(
 
     if "arguments" in data:
         args = data["arguments"]
-        # v1.13.2: Handle nested tool call structure from some models (e.g., GPT-OSS 120B via vLLM)
+        # Handle nested tool call structure from some models (e.g., GPT-OSS 120B via vLLM)
         # Model sometimes outputs: {"tool": "apply_patch", "arguments": {"tool": "apply_patch", "arguments": {...}}}
         # Unwrap the nested structure to get the actual arguments
         if isinstance(args, dict) and "tool" in args and "arguments" in args:
@@ -141,7 +141,7 @@ def _normalize_tool_call(
         if key != "tool" and key in expected_params:
             arguments[key] = value
 
-    # v1.13.2: Handle tools with no required arguments (e.g., get_working_directory)
+    # Handle tools with no required arguments (e.g., get_working_directory)
     required_params = tool.parameters.get("required", [])
     if arguments or not required_params:
         return {"tool": tool_name, "arguments": arguments}

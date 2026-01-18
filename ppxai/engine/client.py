@@ -88,7 +88,7 @@ class EngineClient:
         self.context_injector = ContextInjector()
         self.auto_inject_context: bool = True  # Enabled by default
 
-        # v1.13.9: Track injected contexts for /context command
+        # Track injected contexts for /context command
         self._injected_contexts: List[Dict[str, Any]] = []
 
         # Interrupt handling for graceful stream cancellation
@@ -109,7 +109,7 @@ class EngineClient:
         # Track files edited by agent during current task (v1.12.0)
         self._agent_edited_files: set = set()
 
-        # v1.12.0: Verbose mode for tool output display (matches TUI behavior)
+        # Verbose mode for tool output display (matches TUI behavior)
         self._tools_verbose: bool = False
 
         # Event emitter for consent requests (Phase 1C: HTTP/SSE support)
@@ -119,7 +119,7 @@ class EngineClient:
         # Load configuration (including shell command patterns)
         self._load_config()
 
-        # v1.12.0: Initialize checkpoint manager with default working directory
+        # Initialize checkpoint manager with default working directory
         # This ensures TUI has checkpoints available without explicit set_working_dir call
         self._init_checkpoint_manager(self.context_injector.working_dir)
 
@@ -281,7 +281,7 @@ class EngineClient:
         if default_model:
             self.set_model(default_model)
 
-        # v1.13.2: Re-register tools when switching providers if tools are enabled
+        # Re-register tools when switching providers if tools are enabled
         # This ensures provider-aware tools (like web_search) are correctly filtered
         # for the new provider. Without this, switching from perplexity to custom
         # would keep web_search excluded even though custom providers need it.
@@ -349,7 +349,7 @@ class EngineClient:
             return True
 
         if strict:
-            # v1.13.10: Strict mode - reject unavailable models (used for session restore)
+            # Strict mode - reject unavailable models (used for session restore)
             return False
 
         # Allow setting model even if not in list (for flexibility with custom endpoints)
@@ -386,9 +386,9 @@ class EngineClient:
         if not self.tools_enabled:
             # Register all built-in tools (including file editing tools v1.11.0)
             register_all_builtin_tools(self.tool_manager, self.provider_name, engine=self)
-            # v1.12.0: Apply configurable max_tool_iterations
+            # Apply configurable max_tool_iterations
             self.tool_manager.max_iterations = self._agent_config.get("max_tool_iterations", 15)
-            # v1.13.10: Apply configurable loop detection threshold
+            # Apply configurable loop detection threshold
             self.tool_manager.max_same_tool_calls = self._agent_config.get("max_same_tool_calls", 3)
             self.tools_enabled = True
             self.session.tools_enabled = True  # Sync for session persistence
@@ -613,7 +613,7 @@ class EngineClient:
                 "validity_reason": "Checkpointing is disabled",
             }
 
-        # v1.12.1: Check if checkpoint is still valid (not stale)
+        # Check if checkpoint is still valid (not stale)
         is_valid = False
         validity_reason = "No checkpoint available"
         checkpoint_id = self._last_checkpoint_id  # Capture before potential clearing
@@ -716,9 +716,9 @@ class EngineClient:
 
         path = Path(file_path).resolve()
 
-        # v1.12.0: Create checkpoint before first file edit in agent mode
+        # Create checkpoint before first file edit in agent mode
         # Only create once per chat turn (when no files have been edited yet)
-        # v1.13.2: create_checkpoint() already emits STATUS event - don't duplicate
+        # create_checkpoint() already emits STATUS event - don't duplicate
         if self._agent_mode and self._checkpoint_manager and not self.session.allowed_files:
             # Extract filename for checkpoint description
             filename = path.name
@@ -889,15 +889,15 @@ class EngineClient:
             self.tool_manager.max_iterations = int(value)
             return True
         elif setting == "verbose":
-            # v1.12.0: Store verbose setting for tool output display
+            # Store verbose setting for tool output display
             self._tools_verbose = value in [True, "on", "true", "1", "yes"]
             return True
         elif setting == "auto_retry_empty":
-            # v1.13.9: Auto-retry on empty responses (0=disabled)
+            # Auto-retry on empty responses (0=disabled)
             self.tool_manager.auto_retry_empty = int(value)
             return True
         elif setting == "max_same_tool_calls":
-            # v1.13.10: Loop detection threshold (0=disabled)
+            # Loop detection threshold (0=disabled)
             self.tool_manager.max_same_tool_calls = int(value)
             return True
         return False
@@ -912,9 +912,9 @@ class EngineClient:
             "enabled": self.tools_enabled,
             "tool_count": len(self.tool_manager.list_tools()) if self.tools_enabled else 0,
             "max_iterations": self.tool_manager.max_iterations,
-            "auto_retry_empty": self.tool_manager.auto_retry_empty,  # v1.13.9
-            "max_same_tool_calls": self.tool_manager.max_same_tool_calls,  # v1.13.10
-            "verbose": self._tools_verbose  # v1.12.0: Include verbose setting
+            "auto_retry_empty": self.tool_manager.auto_retry_empty,
+            "max_same_tool_calls": self.tool_manager.max_same_tool_calls,
+            "verbose": self._tools_verbose  # Include verbose setting
         }
 
     # === ChatContext Interface ===
@@ -989,7 +989,7 @@ class EngineClient:
         injected_contexts = []
 
         if self.auto_inject_context:
-            # v1.13.10: Pass existing hashes to skip duplicate content at injection time
+            # Pass existing hashes to skip duplicate content at injection time
             existing_hashes = {c.get('hash') for c in self._injected_contexts if c.get('hash')}
             message, injected_contexts = self.context_injector.inject_context(
                 message, skip_hashes=existing_hashes
@@ -1003,8 +1003,8 @@ class EngineClient:
                     'truncated': ctx.truncated,
                     'size': ctx.size
                 })
-                # v1.13.9: Track for /context command
-                # v1.13.10: Hash computed in inject_context, track here
+                # Track for /context command
+                # Hash computed in inject_context, track here
                 # Check if same source exists with different content
                 existing_idx = next(
                     (i for i, c in enumerate(self._injected_contexts) if c['source'] == ctx.source),

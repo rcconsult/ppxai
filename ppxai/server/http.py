@@ -190,7 +190,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["X-Session-Id"],  # v1.13.10: Allow clients to see session ID
+    expose_headers=["X-Session-Id"],  # Allow clients to see session ID
 )
 
 
@@ -334,7 +334,7 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
         error_str = str(e)
         yield f"data: {json.dumps({'type': 'error', 'data': error_str})}\n\n"
 
-        # v1.12.0: Session cleanup for message alternation errors
+        # Session cleanup for message alternation errors
         # When we get a 400 error about message alternation, it means the session
         # has consecutive user messages. Clean up by removing the last user message.
         if "alternation" in error_str.lower() or "alternate" in error_str.lower():
@@ -348,7 +348,7 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
             except Exception as cleanup_error:
                 logger.error(f"Session cleanup failed: {cleanup_error}")
 
-    # v1.12.3: Auto-save usage to persistent storage after each chat
+    # Auto-save usage to persistent storage after each chat
     # This ensures usage is never lost even if server crashes
     try:
         if engine and engine.session:
@@ -356,7 +356,7 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
     except Exception as save_error:
         logger.warning(f"Failed to auto-save usage: {save_error}")
 
-    # v1.13.9: Send explicit [DONE] termination signal
+    # Send explicit [DONE] termination signal
     # This follows OpenAI's SSE convention and helps prevent ClientPayloadError
     # in aiohttp-based clients (like Open WebUI) by signaling clean stream end
     logger.log_sse_event("done", "[DONE]")
@@ -393,7 +393,7 @@ async def sse_coding_task_generator(
         error_str = str(e)
         yield f"data: {json.dumps({'type': 'error', 'data': error_str})}\n\n"
 
-        # v1.12.0: Session cleanup for message alternation errors
+        # Session cleanup for message alternation errors
         if "alternation" in error_str.lower() or "alternate" in error_str.lower():
             try:
                 messages = engine.session.messages
@@ -403,14 +403,14 @@ async def sse_coding_task_generator(
             except Exception as cleanup_error:
                 logger.error(f"Session cleanup failed: {cleanup_error}")
 
-    # v1.12.3: Auto-save usage to persistent storage after each coding task
+    # Auto-save usage to persistent storage after each coding task
     try:
         if engine and engine.session:
             engine.session.save_usage_to_persistent_storage()
     except Exception as save_error:
         logger.warning(f"Failed to auto-save usage: {save_error}")
 
-    # v1.13.9: Send explicit [DONE] termination signal
+    # Send explicit [DONE] termination signal
     logger.log_sse_event("done", "[DONE]")
     yield "data: [DONE]\n\n"
     await asyncio.sleep(0)  # Ensure final event is flushed
@@ -577,9 +577,9 @@ async def get_status(x_session_id: Optional[str] = Header(None)):
         "provider": engine.provider_name,
         "model": engine.model,
         "tools_enabled": engine.tools_enabled,
-        "agent_mode": engine.agent_mode,  # v1.11.8
+        "agent_mode": engine.agent_mode,
         "auto_inject_context": engine.auto_inject_context,
-        "session_id": session_id,  # v1.13.10
+        "session_id": session_id,
     }
 
 
@@ -649,7 +649,7 @@ async def chat(
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
                 "X-Accel-Buffering": "no",  # Disable nginx buffering
-                "X-Session-Id": session_id,  # v1.13.10: Return session ID
+                "X-Session-Id": session_id,  # Return session ID
             }
         )
 
@@ -692,7 +692,7 @@ async def coding_task(
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
                 "X-Accel-Buffering": "no",
-                "X-Session-Id": session_id,  # v1.13.10
+                "X-Session-Id": session_id,
             }
         )
 
@@ -816,16 +816,16 @@ async def get_tools(x_session_id: Optional[str] = Header(None)):
     except Exception as e:
         logger.debug(f"Failed to get consent mode from session: {e}")
 
-    # v1.13.9: Get full status including auto_retry_empty
+    # Get full status including auto_retry_empty
     status = engine.get_tools_status()
 
     return {
         "tools": tools,  # Already list of {"name": ..., "description": ...}
         "enabled": engine.tools_enabled,
         "max_iterations": status.get('max_iterations', 15),
-        "auto_retry_empty": status.get('auto_retry_empty', 2),  # v1.13.9
+        "auto_retry_empty": status.get('auto_retry_empty', 2),
         "consent_mode": consent_mode,
-        "verbose": status.get('verbose', False),  # v1.12.0
+        "verbose": status.get('verbose', False),
     }
 
 
@@ -1224,7 +1224,7 @@ async def load_session(
     if not success:
         raise HTTPException(status_code=404, detail=f"Session not found: {name}")
 
-    # v1.13.9: Apply restored session state to engine
+    # Apply restored session state to engine
     # Session.load() now loads working_dir and tools_enabled
     if engine.session.working_dir and os.path.isdir(engine.session.working_dir):
         engine.set_working_dir(engine.session.working_dir)
@@ -1495,7 +1495,7 @@ async def read_file(
     if not path.is_file():
         raise HTTPException(status_code=400, detail=f"Not a file: {filepath}")
 
-    # v1.13.10: Image and PDF preview support
+    # Image and PDF preview support
     image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp', '.ico'}
     ext = path.suffix.lower()
     size = path.stat().st_size
@@ -1669,7 +1669,7 @@ async def get_agent_status(x_session_id: Optional[str] = Header(None)):
     return {
         "agent_mode": engine.agent_mode,
         "tools_enabled": engine.tools_enabled,
-        "checkpoint": checkpoint_status,  # v1.12.0
+        "checkpoint": checkpoint_status,
     }
 
 
@@ -1742,7 +1742,7 @@ async def undo_last_checkpoint(x_session_id: Optional[str] = Header(None)):
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    # v1.12.0: Allow undo regardless of agent mode - checkpoints from previous sessions should be undoable
+    # Allow undo regardless of agent mode - checkpoints from previous sessions should be undoable
     # Check if checkpoints are enabled
     status = engine.get_checkpoint_status()
     if not status.get("enabled"):
@@ -1758,7 +1758,7 @@ async def undo_last_checkpoint(x_session_id: Optional[str] = Header(None)):
             detail="No checkpoint to undo (run an agent task first)"
         )
 
-    # v1.12.1: Check if checkpoint is still valid (not stale)
+    # Check if checkpoint is still valid (not stale)
     # CRITICAL: Prevents reverting wrong commit when newer commits exist
     if not status.get("is_valid", True):  # Default to True for backward compat
         validity_reason = status.get("validity_reason", "Checkpoint is stale")
@@ -1768,7 +1768,7 @@ async def undo_last_checkpoint(x_session_id: Optional[str] = Header(None)):
                    f"Use 'git revert {status.get('last_checkpoint', '')[:8]}' manually if you still want to revert."
         )
 
-    # v1.12.0: Check for uncommitted changes before undo (git revert requires clean working tree)
+    # Check for uncommitted changes before undo (git revert requires clean working tree)
     if status.get("backend") == "git":
         import subprocess
         try:
@@ -2153,7 +2153,7 @@ def run_server():
     if getattr(sys, 'frozen', False):
         # Running as bundled executable - use app object directly
         # (string import doesn't work in frozen apps)
-        # v1.13.10: Use graceful shutdown handler
+        # Use graceful shutdown handler
         asyncio.run(_run_server_with_graceful_shutdown(
             app,
             host=args.host,
@@ -2172,7 +2172,7 @@ def run_server():
                 log_level="info",
             )
         else:
-            # v1.13.10: Use graceful shutdown handler
+            # Use graceful shutdown handler
             asyncio.run(_run_server_with_graceful_shutdown(
                 "ppxai.server.http:app",
                 host=args.host,
@@ -2221,7 +2221,7 @@ def run_desktop():
     print()
 
     # Check if running as frozen executable (PyInstaller)
-    # v1.13.10: Use graceful shutdown handler
+    # Use graceful shutdown handler
     if getattr(sys, 'frozen', False):
         asyncio.run(_run_server_with_graceful_shutdown(
             app,
