@@ -86,11 +86,11 @@ if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
         // Some models (Gemini 2.0 Flash, Gemini 3 Pro) wrap output in triple-backtick markdown blocks
         // which would cause syntax highlighting instead of rendering
         // Simply extract the content and let marked parse it normally
-        // Use \\x60 hex escape for backticks to avoid template literal parsing issues
-        text = text.replace(/\\x60\\x60\\x60(?:markdown|md)\\s*\\n([\\s\\S]*?)\\x60\\x60\\x60/g, '$1');
+        // Use \x60 hex escape for backticks to avoid template literal parsing issues
+        text = text.replace(/\x60\x60\x60(?:markdown|md)\s*\n([\s\S]*?)\x60\x60\x60/g, '$1');
 
         // Convert backtick-wrapped URLs to links BEFORE marked processes them
-        text = text.replace(/\\x60(https?:\\/\\/[^\\x60]+)\\x60/g, '<a href="$1" target="_blank" rel="noopener" class="url-link">$1</a>');
+        text = text.replace(/\x60(https?:\/\/[^\x60]+)\x60/g, '<a href="$1" target="_blank" rel="noopener" class="url-link">$1</a>');
 
         // Parse with marked
         return marked.parse(text);
@@ -102,19 +102,19 @@ if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
     parseMarkdown = function(text) {
         if (!text) return '';
         // Code blocks first (before escaping HTML)
-        text = text.replace(/\`\`\`(\\w*)\\n([\\s\\S]*?)\`\`\`/g, function(m, lang, code) {
+        text = text.replace(/\`\`\`(\w*)\n([\s\S]*?)\`\`\`/g, function(m, lang, code) {
             code = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             return '<pre><code class="' + lang + '">' + code + '</code></pre>';
         });
         // Inline code - but convert URL-only code to links instead
-        text = text.replace(/\`(https?:\\/\\/[^\`]+)\`/g, '<a href="$1" target="_blank" rel="noopener" class="url-link">$1</a>');
+        text = text.replace(/\`(https?:\/\/[^\`]+)\`/g, '<a href="$1" target="_blank" rel="noopener" class="url-link">$1</a>');
         text = text.replace(/\`([^\`]+)\`/g, function(m, code) {
             code = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             return '<code>' + code + '</code>';
         });
         // Escape remaining HTML
         text = text.replace(/&(?!amp;|lt;|gt;)/g, '&amp;');
-        text = text.replace(/<(?!\\/?(pre|code|h[1-6]|strong|em|ul|ol|li|p|blockquote)[ >])/g, '&lt;');
+        text = text.replace(/<(?!\/?(pre|code|h[1-6]|strong|em|ul|ol|li|p|blockquote)[ >])/g, '&lt;');
         // Headers
         text = text.replace(/^###### (.+)$/gm, '<h6>$1</h6>');
         text = text.replace(/^##### (.+)$/gm, '<h5>$1</h5>');
@@ -123,23 +123,23 @@ if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
         text = text.replace(/^## (.+)$/gm, '<h2>$1</h2>');
         text = text.replace(/^# (.+)$/gm, '<h1>$1</h1>');
         // Bold
-        text = text.replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>');
+        text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
         // Italic
-        text = text.replace(/\\*([^*]+)\\*/g, '<em>$1</em>');
+        text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
         // Links [text](url)
-        text = text.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+        text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
         // Bare URLs (http/https) - convert to clickable links
-        text = text.replace(/(^|[^"'>])(https?:\\/\\/[^\\s<)\\]]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+        text = text.replace(/(^|[^"'>])(https?:\/\/[^\s<)\]]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
         // Lists
         text = text.replace(/^- (.+)$/gm, '<li>$1</li>');
-        text = text.replace(/(<li>.*<\\/li>\\n?)+/g, '<ul>$&</ul>');
+        text = text.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
         // Paragraphs
-        var lines = text.split('\\n');
+        var lines = text.split('\n');
         text = lines.map(function(line) {
             if (line.trim() === '' || line.match(/^<(pre|h[1-6]|ul|ol|li|blockquote)/)) return line;
             if (!line.match(/^<[a-z]/)) return '<p>' + line + '</p>';
             return line;
-        }).join('\\n');
+        }).join('\n');
         return text;
     };
 }
@@ -179,22 +179,22 @@ function simpleFormat(text) {
     // Escape HTML
     text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     // Basic code blocks
-    text = text.replace(/\`\`\`(\\w*)\\n([\\s\\S]*?)\`\`\`/g, '<pre><code>$2</code></pre>');
+    text = text.replace(/\`\`\`(\w*)\n([\s\S]*?)\`\`\`/g, '<pre><code>$2</code></pre>');
     // Inline code - but convert URL-only code to links instead
-    text = text.replace(/\`(https?:\\/\\/[^\`]+)\`/g, '<a href="$1" target="_blank" rel="noopener" class="url-link">$1</a>');
+    text = text.replace(/\`(https?:\/\/[^\`]+)\`/g, '<a href="$1" target="_blank" rel="noopener" class="url-link">$1</a>');
     text = text.replace(/\`([^\`]+)\`/g, '<code>$1</code>');
     // Bold
-    text = text.replace(/\\*\\*([^*]+)\\*\\*/g, '<strong>$1</strong>');
+    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     // Headers (basic support during streaming)
     text = text.replace(/^### (.+)$/gm, '<h3>$1</h3>');
     text = text.replace(/^## (.+)$/gm, '<h2>$1</h2>');
     text = text.replace(/^# (.+)$/gm, '<h1>$1</h1>');
     // Links [text](url)
-    text = text.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
     // Bare URLs (convert https://... to clickable links)
-    text = text.replace(/(^|[^"'>])(https?:\\/\\/[^\\s<)\\]]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+    text = text.replace(/(^|[^"'>])(https?:\/\/[^\s<)\]]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
     // Line breaks
-    text = text.replace(/\\n/g, '<br>');
+    text = text.replace(/\n/g, '<br>');
     return text;
 }
 
@@ -333,7 +333,7 @@ function checkAutocomplete() {
     const textBeforeCursor = value.substring(0, cursorPos);
 
     // Check for @ file reference
-    const atMatch = textBeforeCursor.match(/@([\\w.\\-\\/]*)$/);
+    const atMatch = textBeforeCursor.match(/@([\w.\-\/]*)$/);
     if (atMatch) {
         autocompleteStartPos = cursorPos - atMatch[0].length;
         autocompleteQuery = atMatch[1];
@@ -344,7 +344,7 @@ function checkAutocomplete() {
     }
 
     // Check for / command at start of line
-    const cmdMatch = textBeforeCursor.match(/^(\\/[\\w]*)$/);
+    const cmdMatch = textBeforeCursor.match(/^(\/[\w]*)$/);
     if (cmdMatch) {
         autocompleteStartPos = 0;
         autocompleteQuery = cmdMatch[1].toLowerCase();
@@ -481,7 +481,9 @@ debugLogMenuItem.addEventListener('click', () => {
 // Tools badge click handler - toggle tools on/off
 // Server badge click handler - toggle server on/off (v1.13.1)
 serverBadge.addEventListener('click', () => {
+    console.log('[ppxai webview] serverBadge clicked');
     const isConnected = serverBadge.classList.contains('connected');
+    console.log(`[ppxai webview] isConnected=${isConnected}, sending toggleServer`);
     vscode.postMessage({ type: 'toggleServer', stop: isConnected });
 });
 
@@ -765,15 +767,15 @@ window.addEventListener('message', (event) => {
                     if (backend === 'git') {
                         agentBadgeEl.classList.add('checkpoint-git');
                         agentBadgeEl.textContent = 'Agent 🔒';
-                        agentBadgeEl.title = 'Agent mode ON (Checkpoints: git)\\n• Auto-commits before tasks\\n• Use Undo button to revert';
+                        agentBadgeEl.title = 'Agent mode ON (Checkpoints: git)\n• Auto-commits before tasks\n• Use Undo button to revert';
                     } else if (backend === 'file') {
                         agentBadgeEl.classList.add('checkpoint-file');
                         agentBadgeEl.textContent = 'Agent ⚠️';
-                        agentBadgeEl.title = 'Agent mode ON (Checkpoints: file)\\n• Snapshots saved to ~/.ppxai/checkpoints\\n• Use Undo button to revert\\n• Tip: Init git repo for atomic commits';
+                        agentBadgeEl.title = 'Agent mode ON (Checkpoints: file)\n• Snapshots saved to ~/.ppxai/checkpoints\n• Use Undo button to revert\n• Tip: Init git repo for atomic commits';
                     } else {
                         agentBadgeEl.classList.add('checkpoint-none');
                         agentBadgeEl.textContent = 'Agent ⚠️';
-                        agentBadgeEl.title = 'Agent mode ON (Checkpoints: DISABLED)\\n• Changes CANNOT be undone\\n• Initialize git repo to enable checkpoints';
+                        agentBadgeEl.title = 'Agent mode ON (Checkpoints: DISABLED)\n• Changes CANNOT be undone\n• Initialize git repo to enable checkpoints';
                     }
 
                     // Update undo button (v1.12.1: validity-aware styling)
@@ -787,12 +789,12 @@ window.addEventListener('message', (event) => {
                         if (isValid) {
                             // Valid checkpoint: blue enabled
                             undoBadgeEl.classList.add('enabled');
-                            undoBadgeEl.title = \`Undo Last Agent Task\\nCheckpoint: \${shortId} (\${backend})\`;
+                            undoBadgeEl.title = `Undo Last Agent Task\nCheckpoint: ${shortId} (${backend})`;
                         } else {
                             // Stale checkpoint: red disabled
                             undoBadgeEl.classList.add('stale');
                             const reason = message.checkpoint.validity_reason || 'Checkpoint is stale';
-                            undoBadgeEl.title = \`Cannot Undo: \${reason}\\nCheckpoint: \${shortId} (STALE)\\nUse 'git revert \${shortId}' manually if needed\`;
+                            undoBadgeEl.title = `Cannot Undo: ${reason}\nCheckpoint: ${shortId} (STALE)\nUse 'git revert ${shortId}' manually if needed`;
                         }
                     } else {
                         // No checkpoint: grey disabled
@@ -1034,13 +1036,13 @@ function appendReasoningChunk(messageEl, chunk) {
         reasoningSection = document.createElement('details');
         reasoningSection.className = 'reasoning-section';
         reasoningSection.open = true; // Start open while streaming
-        reasoningSection.innerHTML = \`
+        reasoningSection.innerHTML = `
             <summary class="reasoning-header">
                 <span class="reasoning-icon">💭</span>
                 <span class="reasoning-title">Thinking...</span>
             </summary>
             <div class="reasoning-content"></div>
-        \`;
+        `;
         contentEl.insertBefore(reasoningSection, contentEl.firstChild);
     }
 

@@ -253,10 +253,18 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
         // Phase 3c: Wire up EventBus subscriptions for decoupled UI updates
-        this.wireUISubscriptions();
+        try {
+            console.log('[ppxai] Wiring UI subscriptions...');
+            this.wireUISubscriptions();
+            console.log('[ppxai] UI subscriptions wired successfully');
+        } catch (e) {
+            console.error('[ppxai] Error wiring UI subscriptions:', e);
+        }
 
         // Handle messages from the webview
+        console.log('[ppxai] Setting up webview message handler...');
         webviewView.webview.onDidReceiveMessage(async (message) => {
+            console.log('[ppxai] Received message from webview:', message.type);
             switch (message.type) {
                 case 'chat':
                     await this.handleChat(message.content);
@@ -1767,7 +1775,11 @@ Review your previous actions and continue. If the task is complete, respond with
      * Handle server start/stop toggle (v1.13.1)
      */
     private async handleToggleServer(stop: boolean) {
-        if (!this._view) { return; }
+        console.log(`[ppxai] handleToggleServer called with stop=${stop}`);
+        if (!this._view) {
+            console.log('[ppxai] handleToggleServer: no view, returning');
+            return;
+        }
 
         // Show connecting state
         this._view.webview.postMessage({
