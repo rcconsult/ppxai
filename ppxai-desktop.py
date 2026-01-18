@@ -6,6 +6,7 @@ Launches ppxai-server in background and opens web UI in default browser.
 Provides a double-click desktop app experience.
 """
 
+import argparse
 import os
 import socket
 import subprocess
@@ -13,6 +14,9 @@ import sys
 import time
 import webbrowser
 from pathlib import Path
+
+# Version - keep in sync with ppxai/__init__.py
+__version__ = "1.13.10"
 
 
 def get_resource_path(relative_path: str) -> Path:
@@ -192,6 +196,18 @@ def start_server(server_path: Path) -> subprocess.Popen | None:
 
 
 def main():
+    # Handle --version before anything else
+    parser = argparse.ArgumentParser(
+        description="ppxai Desktop - Web UI launcher",
+        add_help=True
+    )
+    parser.add_argument(
+        '--version', '-V',
+        action='version',
+        version=f'ppxai-desktop {__version__}'
+    )
+    parser.parse_args()
+
     port = 54320
     url = f'http://127.0.0.1:{port}'
 
