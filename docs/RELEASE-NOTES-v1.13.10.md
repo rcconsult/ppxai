@@ -86,6 +86,24 @@ Add to `ppxai-config.json`:
 
 - `max_same_tool_calls`: Maximum consecutive calls to the same tool before forcing synthesis (default: 3, 0 = disabled)
 
+## VSCode Extension Architecture
+
+Major refactoring of `chatPanel.ts` using EventBus + State Machine patterns:
+
+**handlers/ Module (1,658 lines)**
+- `eventBus.ts` - Type-safe pub/sub communication between components
+- `stream.ts` - Stream event processing with EventBus integration
+- `agentStateMachine.ts` - Explicit agent loop state machine (idle→validating→iterating→complete)
+- `consent.ts` - Consent dialog handlers with IoC pattern for testability
+- `commands.ts` - /tools and /checkpoint command handlers
+- `types.ts` - HandlerContext interface for dependency injection
+
+**Architectural Benefits**
+- Decoupled event producers from consumers (stream → EventBus → UI)
+- Explicit state transitions replace implicit local variables
+- Testable handlers via context injection
+- chatPanel.ts reduced from 5,123 to 2,773 lines (46% reduction)
+
 ## Files Changed
 
 ### Server
@@ -97,6 +115,16 @@ Add to `ppxai-config.json`:
 ### Engine
 - `ppxai/engine/tools/manager.py` - Tool loop detection (`is_tool_loop_detected()`, `get_loop_message()`)
 - `ppxai/engine/client.py` - Loop detection integration in tool execution flow
+
+### VSCode Extension
+- `src/chatPanel.ts` - Orchestrator with EventBus + State Machine integration
+- `src/handlers/eventBus.ts` - Type-safe ChatEventBus (211 lines)
+- `src/handlers/stream.ts` - Stream event processor (212 lines)
+- `src/handlers/agentStateMachine.ts` - Agent state machine (375 lines)
+- `src/handlers/consent.ts` - Consent handlers with IoC (246 lines)
+- `src/handlers/commands.ts` - Command handlers (496 lines)
+- `src/handlers/types.ts` - HandlerContext interface (58 lines)
+- `src/handlers/index.ts` - Barrel exports (60 lines)
 
 ## Upgrade Instructions
 

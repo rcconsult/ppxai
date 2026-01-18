@@ -50,6 +50,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added selective logging to 22 silent error handling instances
 - Documented DAG import structure in `ARCHITECTURE.md`
 - Replaced `os._exit()` with graceful shutdown via `asyncio.Event` for proper cleanup
+- Refactored `client.py` via 5-phase extraction (2,037→1,311 lines, 36% reduction)
+- Refactored `chatPanel.ts` with EventBus + State Machine architecture (5,123→2,773 lines, 46% reduction)
+- Created `handlers/` module with 1,658 lines of extracted handler code
 
 ## [1.13.9] - 2026-01-12
 

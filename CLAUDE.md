@@ -29,12 +29,12 @@ For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE
 |----------|------:|------:|
 | Python (core) | 54 | ~22,300 |
 | Python (tests) | 26 | ~10,300 |
-| TypeScript (VSCode) | 10 | ~8,300 |
+| TypeScript (VSCode) | 14 | ~9,900 |
 | JavaScript (Web) | 7 | ~4,300 |
 | CSS | 3 | ~1,800 |
-| **Total** | **~100** | **~47,000** |
+| **Total** | **~104** | **~48,600** |
 
-Breakdown: ~70% Python, ~18% TypeScript, ~9% JavaScript, ~3% CSS/HTML
+Breakdown: ~67% Python, ~20% TypeScript, ~9% JavaScript, ~4% CSS/HTML
 
 ## Installation Locations (CRITICAL)
 
@@ -154,7 +154,13 @@ vscode-extension/        # TypeScript VSCode extension
 ├── src/
 │   ├── extension.ts     # Entry point
 │   ├── httpClient.ts    # HTTP + SSE client
-│   └── chatPanel.ts     # Webview chat UI
+│   ├── chatPanel.ts     # Webview chat UI
+│   └── handlers/        # Extracted handlers (Phase 2-4)
+│       ├── eventBus.ts  # Pub/sub communication
+│       ├── stream.ts    # Stream event processing
+│       ├── consent.ts   # Consent dialog handlers
+│       └── agentStateMachine.ts  # Agent loop state
+├── media/webview/       # External CSS/JS (Phase 1)
 └── package.json
 ```
 

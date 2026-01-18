@@ -159,6 +159,16 @@ ppxai provides:
 - **Hash-based deduplication** - Prevents duplicate @git/@tree injections (MD5 content hash)
 - **Per-model context limits** - Configure `context_limit` per model (Gemini: 1M tokens)
 
+### Stabilization & Architecture ✅ (v1.13.10)
+- **Tool loop detection** - Configurable `max_same_tool_calls` prevents infinite loops with Ollama models
+- **Image/PDF preview** - Web app `/show` command supports image and PDF preview
+- **VSCode chatPanel.ts refactoring** - Reduced 5,123 to 2,773 lines with EventBus + State Machine architecture
+- **EventBus pub/sub** - Decoupled stream handlers, consent handlers, and UI updates
+- **Agent state machine** - Explicit state transitions replace implicit local variables
+- **handlers/ module** - 1,658 lines of extracted handler code with IoC pattern
+- **client.py refactoring** - 36% reduction (2,037→1,311 lines) via 5-phase extraction
+- **Technical debt cleared** - All 16 critical/high priority items addressed
+
 ---
 
 ## Infrastructure
@@ -414,4 +424,4 @@ For archived planning documents:
 
 ---
 
-**Last Updated**: January 13, 2026
+**Last Updated**: January 18, 2026
