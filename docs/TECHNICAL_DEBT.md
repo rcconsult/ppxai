@@ -1,7 +1,7 @@
 # Technical Debt Tracker
 
 **Last Updated:** 2026-01-18
-**Version:** v1.13.10
+**Version:** v1.13.10 (chatPanel.ts refactoring complete)
 
 This document tracks identified technical debt and refactoring opportunities in the ppxai codebase. Items are removed as they are addressed.
 
@@ -41,7 +41,8 @@ This document tracks identified technical debt and refactoring opportunities in 
 | [ppxai/server/http.py](../ppxai/server/http.py) | 2,247 | HTTP + session + consent mixed | ✅ SessionManager extracted |
 | [ppxai/engine/client.py](../ppxai/engine/client.py) | 1,311 | Core logic, providers, tools, sessions | ✅ Refactored (36% reduction) |
 | [ppxai/config/](../ppxai/config/) | ~700 | Config package with store, loader, public API | ✅ ConfigStore pattern |
-| [vscode-extension/src/chatPanel.ts](../vscode-extension/src/chatPanel.ts) | 3,045 | Event/command handling | ✅ Phase 1 (41% reduction) |
+| [vscode-extension/src/chatPanel.ts](../vscode-extension/src/chatPanel.ts) | 2,773 | Event/command handling | ✅ Phase 4 Complete |
+| [vscode-extension/src/handlers/](../vscode-extension/src/handlers/) | 1,658 | Extracted handlers module | ✅ New (Phases 2-4) |
 
 **client.py Refactoring - ✅ Completed (v1.13.10):**
 See [DESIGN-CLIENT-REFACTOR.md](DESIGN-CLIENT-REFACTOR.md) for full details:
@@ -64,10 +65,14 @@ Migrated to Command Factory pattern in `ppxai/commands/` package:
 - `agent.py` - /agent, /undo, /checkpoint
 - Legacy methods in handler.py commented with deprecation notice (removal in v1.14.x)
 
-**chatPanel.ts Refactoring - ✅ Phase 1 Completed (v1.13.10):**
+**chatPanel.ts Refactoring - ✅ Completed (v1.13.10):**
 See [DESIGN-CHATPANEL-REFACTOR.md](DESIGN-CHATPANEL-REFACTOR.md) for full details:
 - Phase 1: Extracted webview CSS/JS to `media/webview/` (41% reduction, 5,123→3,045 lines)
-- Phases 2-4: Deferred (command/event/consent handlers tightly coupled to VSCode API)
+- Phase 2: Command handlers with IoC pattern (handlers/commands.ts, types.ts)
+- Phase 3: EventBus architecture (eventBus.ts, stream.ts, UI subscriptions)
+- Phase 4: State machine + consent handlers (agentStateMachine.ts, consent.ts)
+
+**Result:** chatPanel.ts 2,773 lines + handlers/ 1,658 lines = clean separation of concerns
 
 **config.py Package Conversion - ✅ Completed (v1.13.10):**
 Converted monolithic `config.py` (1,352 lines) to `config/` package (~700 lines):
@@ -402,6 +407,7 @@ Items moved here after being addressed:
 | #14 | Magic strings - Converted constants.py to str,Enum with validation helpers | v1.13.10 | 2026-01-17 |
 | #16 | Container deployment - Dockerfile, docker-compose, K8s manifests | v1.13.10 | 2026-01-17 |
 | #2 | client.py refactoring - 5 phases, 36% reduction (2,037→1,311 lines) | v1.13.10 | 2026-01-18 |
+| - | chatPanel.ts Phases 2-4 - EventBus + State Machine architecture (1,658 lines handlers/) | v1.13.10 | 2026-01-18 |
 
 ---
 
@@ -410,7 +416,7 @@ Items moved here after being addressed:
 | Priority | Category | Effort | Impact |
 |----------|----------|--------|--------|
 | ~~**Critical**~~ | ~~Global state~~ | ~~High~~ | ✅ Done |
-| ~~**Critical**~~ | ~~Monolithic files~~ | ~~High~~ | ✅ Mostly Done (chatPanel.ts remains) |
+| ~~**Critical**~~ | ~~Monolithic files~~ | ~~High~~ | ✅ Done (all files refactored) |
 | ~~**Critical**~~ | ~~Silent errors~~ | ~~Medium~~ | ✅ Done |
 | ~~**High**~~ | ~~Container tools duplication~~ | ~~Medium~~ | ✅ Done |
 | ~~**High**~~ | ~~Consent duplication~~ | ~~Medium~~ | ✅ Done |
@@ -431,7 +437,9 @@ Items moved here after being addressed:
 3. ~~**`ppxai/config.py`**~~ - ✅ Done (Split into `config/` package with ConfigStore)
 4. ~~**`ppxai/engine/client.py`**~~ - ✅ Done (5-phase refactoring, see DESIGN-CLIENT-REFACTOR.md)
 5. ~~**`ppxai/engine/tools/builtin/container.py`**~~ - ✅ Done (refactored to CLITool hierarchy)
-6. ~~**`vscode-extension/src/chatPanel.ts`**~~ - ✅ Phase 1 Done (41% reduction, 5,123→3,045 lines)
+6. ~~**`vscode-extension/src/chatPanel.ts`**~~ - ✅ Done (Phases 1-4, EventBus + State Machine)
+
+**All critical monolithic files have been refactored.** No major refactoring debt remains.
 
 ---
 

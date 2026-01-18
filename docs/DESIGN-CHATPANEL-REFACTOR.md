@@ -1,7 +1,7 @@
 # chatPanel.ts Refactoring Design
 
 **Status:** Phase 4 Complete (EventBus + State Machine Architecture Implemented)
-**Target:** v1.14.x
+**Target:** v1.13.10
 **Original Size:** 5,123 lines
 **Current Size:** 2,773 lines chatPanel.ts + 1,658 lines handlers/ = 4,431 lines total
 **Reduction:** 46% from original (architecture in place for future cleanup)

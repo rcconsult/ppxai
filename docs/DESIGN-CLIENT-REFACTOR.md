@@ -1,7 +1,8 @@
 # Design: client.py Refactoring Plan
 
-**Status:** Proposed
+**Status:** ✅ Complete
 **Created:** 2026-01-17
+**Completed:** 2026-01-18
 **Related:** [TECHNICAL_DEBT.md](TECHNICAL_DEBT.md) Item #2 (Monolithic Files)
 
 ---
@@ -271,10 +272,10 @@ This refactoring aligns by:
 | 2. Tool parser | ~230 | ✅ Complete | tools/parser.py created |
 | 3. Shell classify | ~30 | ✅ Complete | classify_shell_command() in consent.py |
 | 4. Chat extraction | ~360 | ✅ Complete | chat.py with ChatContext Protocol |
-| 5. Interface cleanup | 0 | ⏸️ Deferred | Keeping wrappers for API stability |
-| **Total** | **~690** | - | - |
+| 5. Interface cleanup | ~30 | ✅ Complete | Removed session wrappers, use engine.session |
+| **Total** | **~720** | - | - |
 
-**Final client.py:** 1,340 lines (34% reduction from 2,037)
+**Final client.py:** 1,311 lines (36% reduction from 2,037)
 
 ---
 
@@ -282,11 +283,9 @@ This refactoring aligns by:
 
 **Completed:** 2026-01-18
 
-**Phase 5 Decision Change:** After reviewing usage, the thin wrapper methods
-(`save_session`, `load_session`, `list_sessions`, `clear_history`) are used by
-http.py and jsonrpc.py. Removing them would break the HTTP/JSONRPC APIs.
-For v1.13.10 stability, these wrappers are retained. Future cleanup can add
-deprecation notices if we want to phase them out in v1.14.x.
+**Phase 5 Complete:** Removed thin wrapper methods (`save_session`, `load_session`,
+`list_sessions`, `clear_history`) and updated http.py and jsonrpc.py to use
+`engine.session` directly. This simplifies the EngineClient interface.
 
 **Files Created:**
 - `ppxai/config/defaults.py` - Centralized default constants
