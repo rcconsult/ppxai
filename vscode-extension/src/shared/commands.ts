@@ -116,9 +116,9 @@ export const SLASH_COMMANDS: Record<string, CommandDefinition> = {
     },
     '/context': {
         description: 'Show context window usage and injected files',
-        usage: '/context [clear]',
+        usage: '/context [clear|hints]',
         category: CommandCategory.USAGE,
-        subcommands: ['clear']
+        subcommands: ['clear', 'hints']
     },
 
     // === File Display ===

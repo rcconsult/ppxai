@@ -507,6 +507,41 @@ export class HttpClient {
     }
 
     /**
+     * Get active bootstrap hints for current provider/model (v1.14.0)
+     */
+    async getActiveHints(): Promise<{
+        loaded: boolean;
+        source: string;
+        provider: string;
+        model: string;
+        provider_hints: Array<[string, string]>;
+        model_hints: Array<[string, string]>;
+        inherited_local: boolean;
+        matched_patterns: string[];
+        all_provider_keys: string[];
+        all_model_patterns: string[];
+    }> {
+        const response = await fetch(`${this.baseUrl}/context/hints`, {
+            headers: this.getHeaders()
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to get hints: ${response.statusText}`);
+        }
+        return response.json() as Promise<{
+            loaded: boolean;
+            source: string;
+            provider: string;
+            model: string;
+            provider_hints: Array<[string, string]>;
+            model_hints: Array<[string, string]>;
+            inherited_local: boolean;
+            matched_patterns: string[];
+            all_provider_keys: string[];
+            all_model_patterns: string[];
+        }>;
+    }
+
+    /**
      * Send chat message with SSE streaming
      */
     async chat(message: string, streamCallback?: StreamCallback): Promise<string> {

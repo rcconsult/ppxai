@@ -1581,6 +1581,67 @@ Review your previous actions and continue. If the task is complete, respond with
                 }
                 // Update status to refresh context badge
                 await this.updateStatus();
+            } else if (subcommand === 'hints') {
+                // Show active bootstrap hints (v1.14.0)
+                const hints = await this._backend.getActiveHints();
+
+                if (!hints.loaded) {
+                    const workingDir = await this._backend.getWorkingDir();
+                    let msg = '**No bootstrap context loaded.**\n';
+                    msg += `Working directory: \`${workingDir || 'unknown'}\`\n`;
+                    msg += '\n*Create AGENTS.md or CLAUDE.md in your project directory,*\n';
+                    msg += '*or use `/wd <path>` to navigate to a directory with one.*';
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: msg
+                    });
+                    return;
+                }
+
+                let msg = '**Active Bootstrap Hints**\n';
+                msg += `  Source: \`${hints.source}\`\n`;
+                msg += `  Provider: ${hints.provider}\n`;
+                msg += `  Model: ${hints.model}\n`;
+
+                // Provider hints
+                if (hints.provider_hints.length > 0) {
+                    msg += `\n**Provider Hints:** (${hints.provider_hints.length} active)`;
+                    if (hints.inherited_local) {
+                        msg += ' *(includes inherited "local" hints)*';
+                    }
+                    msg += '\n';
+                    for (const [source, hint] of hints.provider_hints) {
+                        const displayHint = hint.length > 80 ? hint.substring(0, 80) + '...' : hint;
+                        msg += `  • [${source}] ${displayHint}\n`;
+                    }
+                } else {
+                    msg += '\n**Provider Hints:** *none active*';
+                    if (hints.all_provider_keys.length > 0) {
+                        msg += `\n  Available: ${hints.all_provider_keys.join(', ')}`;
+                    }
+                    msg += '\n';
+                }
+
+                // Model hints
+                if (hints.model_hints.length > 0) {
+                    msg += `\n**Model Hints:** (${hints.model_hints.length} active)`;
+                    msg += `\n  Matched patterns: ${hints.matched_patterns.join(', ')}\n`;
+                    for (const [pattern, hint] of hints.model_hints) {
+                        const displayHint = hint.length > 80 ? hint.substring(0, 80) + '...' : hint;
+                        msg += `  • [${pattern}] ${displayHint}\n`;
+                    }
+                } else {
+                    msg += '\n**Model Hints:** *none active*';
+                    if (hints.all_model_patterns.length > 0) {
+                        msg += `\n  Available patterns: ${hints.all_model_patterns.join(', ')}`;
+                    }
+                    msg += '\n';
+                }
+
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: msg
+                });
             } else {
                 // Show context usage info
                 const info = await this._backend.getContextInfo();

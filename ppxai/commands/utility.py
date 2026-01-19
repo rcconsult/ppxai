@@ -190,7 +190,10 @@ def _show_active_hints(handler: "CommandHandler", console) -> None:
 
     if not hints_info["loaded"]:
         console.print("\n[yellow]No bootstrap context loaded.[/yellow]")
-        console.print("[dim]Create AGENTS.md or CLAUDE.md in your project directory.[/dim]\n")
+        cwd = handler.engine_client.get_working_dir() or "unknown"
+        console.print(f"[dim]Working directory: {cwd}[/dim]")
+        console.print("[dim]Create AGENTS.md or CLAUDE.md in your project directory,[/dim]")
+        console.print("[dim]or use /cd <path> to navigate to a directory with one.[/dim]\n")
         return
 
     console.print("\n[bold cyan]━━━ Active Bootstrap Hints ━━━[/bold cyan]")

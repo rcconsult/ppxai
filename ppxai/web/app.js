@@ -1522,6 +1522,7 @@ class PpxaiApp {
 
     /**
      * Handle /context command - show context usage and injected files (v1.13.9)
+     * v1.14.0: Added 'hints' subcommand for bootstrap context
      */
     async handleContextCommand(args) {
         const subCmd = args.trim().toLowerCase();
@@ -1542,6 +1543,73 @@ class PpxaiApp {
                 }
                 // Update badge
                 await this.updateContextInfo();
+            } else if (subCmd === 'hints') {
+                // Show active bootstrap hints (v1.14.0)
+                const response = await fetch(`${this.serverUrl}/context/hints`, {
+                    headers: this.getSessionHeaders()
+                });
+                const hints = await response.json();
+
+                if (!hints.loaded) {
+                    // Get working directory for context
+                    let workingDir = 'unknown';
+                    try {
+                        const wdResp = await fetch(`${this.serverUrl}/context/working_dir`, {
+                            headers: this.getSessionHeaders()
+                        });
+                        const wdData = await wdResp.json();
+                        workingDir = wdData.path || 'unknown';
+                    } catch (e) { /* ignore */ }
+
+                    let msg = '**No bootstrap context loaded.**\n';
+                    msg += `Working directory: \`${workingDir}\`\n`;
+                    msg += '\n*Create AGENTS.md or CLAUDE.md in your project directory,*\n';
+                    msg += '*or use `/wd <path>` to navigate to a directory with one.*';
+                    this.addMessage('system', msg);
+                    return;
+                }
+
+                let msg = '**Active Bootstrap Hints**\n';
+                msg += `  Source: \`${hints.source}\`\n`;
+                msg += `  Provider: ${hints.provider}\n`;
+                msg += `  Model: ${hints.model}\n`;
+
+                // Provider hints
+                if (hints.provider_hints && hints.provider_hints.length > 0) {
+                    msg += `\n**Provider Hints:** (${hints.provider_hints.length} active)`;
+                    if (hints.inherited_local) {
+                        msg += ' *(includes inherited "local" hints)*';
+                    }
+                    msg += '\n';
+                    for (const [source, hint] of hints.provider_hints) {
+                        const displayHint = hint.length > 80 ? hint.substring(0, 80) + '...' : hint;
+                        msg += `  • [${source}] ${displayHint}\n`;
+                    }
+                } else {
+                    msg += '\n**Provider Hints:** *none active*';
+                    if (hints.all_provider_keys && hints.all_provider_keys.length > 0) {
+                        msg += `\n  Available: ${hints.all_provider_keys.join(', ')}`;
+                    }
+                    msg += '\n';
+                }
+
+                // Model hints
+                if (hints.model_hints && hints.model_hints.length > 0) {
+                    msg += `\n**Model Hints:** (${hints.model_hints.length} active)`;
+                    msg += `\n  Matched patterns: ${hints.matched_patterns.join(', ')}\n`;
+                    for (const [pattern, hint] of hints.model_hints) {
+                        const displayHint = hint.length > 80 ? hint.substring(0, 80) + '...' : hint;
+                        msg += `  • [${pattern}] ${displayHint}\n`;
+                    }
+                } else {
+                    msg += '\n**Model Hints:** *none active*';
+                    if (hints.all_model_patterns && hints.all_model_patterns.length > 0) {
+                        msg += `\n  Available patterns: ${hints.all_model_patterns.join(', ')}`;
+                    }
+                    msg += '\n';
+                }
+
+                this.addMessage('system', msg);
             } else {
                 // Show context usage info
                 const response = await fetch(`${this.serverUrl}/context/info`, {
