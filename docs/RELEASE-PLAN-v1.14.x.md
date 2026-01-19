@@ -1,8 +1,8 @@
 # Release Plan: v1.14.x Series
 
 **Created:** January 5, 2026
-**Last Updated:** January 13, 2026
-**Status:** Planning (after v1.13.9 completion)
+**Last Updated:** January 19, 2026
+**Status:** Planning (after v1.13.10 completion)
 **Branch:** TBD
 
 ---
@@ -86,25 +86,106 @@ so it works alongside user-configured prompts without breaking existing behavior
 
 ## Release Schedule
 
-### v1.14.0 - AGENTS.md Support (Core)
+### v1.14.0 - AGENTS.md Support with Provider Hints (Core)
 
-**Goal:** Load project context from working directory
+**Goal:** Load project context from working directory with provider/model-aware hints
 
 | Feature | File | Description |
 |---------|------|-------------|
+| `BootstrapContext` class | `ppxai/engine/bootstrap.py` | Parse AGENTS.md with YAML front matter |
 | `find_bootstrap_files()` | `ppxai/engine/context.py` | Discover AGENTS.md/CLAUDE.md |
-| `load_bootstrap_context()` | `ppxai/engine/client.py` | Load and cache content |
-| Modify prompt assembly | `ppxai/engine/client.py:1171-1186` | Prepend bootstrap to system prompt |
+| `load_bootstrap_context()` | `ppxai/engine/client.py` | Load and cache BootstrapContext |
+| Dynamic prompt assembly | `ppxai/engine/client.py` | Rebuild on provider/model switch |
 | `get_bootstrap_status()` | `ppxai/engine/client.py` | Status API for UI |
+
+**Design Decision: YAML Front Matter Format**
+
+The problem: When switching from Gemini to Ollama mid-session, the system prompt needs to adapt:
+- **Ollama/local models** need: "Complete tasks fully, don't stop on empty responses"
+- **Gemini** needs: "Use Google Search grounding for current information"
+- **DeepSeek R1** needs: "Show reasoning before taking actions"
+
+**AGENTS.md File Format:**
+```markdown
+---
+# Provider-specific hints (appended when provider is active)
+provider_hints:
+  ollama:
+    - "Complete tasks fully. Don't stop after tool calls - synthesize results."
+    - "If a tool returns empty output, explain what you tried and continue."
+  local:  # Applies to all local providers (ollama, vllm, lmstudio)
+    - "Use tools proactively. Don't ask for permission - just execute."
+  gemini:
+    - "Use your built-in web search for current information."
+
+# Pattern-matched against model ID (regex)
+model_hints:
+  "deepseek-r1*":
+    - "Show <think> reasoning before actions."
+  "qwen2.5-coder*":
+    - "Prefer edit_file over apply_patch for modifications."
+  "llama*":
+    - "Always provide complete file contents, not diffs."
+---
+
+# MyProject Development Guide
+
+## Code Standards
+- Python 3.11+, type hints required
+- pytest for testing, 80% coverage minimum
+```
+
+**BootstrapContext Class:**
+```python
+# ppxai/engine/bootstrap.py
+
+class BootstrapContext:
+    def __init__(self, agents_md_path: str):
+        self.base_instructions: str = ""
+        self.provider_hints: dict[str, list[str]] = {}
+        self.model_hints: dict[str, list[str]] = {}  # regex patterns
+        self._parse(agents_md_path)
+
+    def get_prompt_for(self, provider: str, model: str) -> str:
+        """Build system prompt for current provider/model."""
+        parts = [self.base_instructions]
+
+        # Add provider hints (with 'local' inheritance)
+        hints = self._get_provider_hints(provider)
+        if hints:
+            parts.append("\n## Provider Guidance\n" + "\n".join(f"- {h}" for h in hints))
+
+        # Add model hints (regex match)
+        for pattern, model_hints in self.model_hints.items():
+            if re.match(pattern.replace("*", ".*"), model):
+                parts.append("\n## Model Guidance\n" + "\n".join(f"- {h}" for h in model_hints))
+
+        return "\n".join(parts)
+
+    def _get_provider_hints(self, provider: str) -> list[str]:
+        """Get hints for provider, with 'local' inheritance."""
+        LOCAL_PROVIDERS = {"ollama", "vllm", "lmstudio"}
+        hints = list(self.provider_hints.get(provider, []))
+        if provider in LOCAL_PROVIDERS and "local" in self.provider_hints:
+            hints = self.provider_hints["local"] + hints
+        return hints
+```
 
 **Prompt Assembly Order:**
 ```
-[Bootstrap Context (AGENTS.md)]
----
-[Config System Prompt (if any)]
----
-[Tool Instructions (if tools enabled)]
+1. [Bootstrap base_instructions (below ---)]
+2. [Matching provider_hints]
+3. [Matching model_hints]
+4. [Config system_prompt (from ppxai-config.json)]
+5. [Tool prompt (if tools enabled)]
 ```
+
+**Behavior Rules:**
+- `local` provider hints apply to: ollama, vllm, lmstudio (inheritance)
+- Both provider AND model hints concatenate (additive, not override)
+- On `/provider` or `/model` switch: immediate prompt rebuild
+- On `/context reload`: re-parse AGENTS.md and rebuild
+
 This respects the existing `system_prompt_mode` for config prompts.
 
 **Test Cases:**
@@ -274,24 +355,10 @@ Bootstrap Context:
 | Feature | Description |
 |---------|-------------|
 | Token count display | Show in status bar |
-| Conditional sections | Provider-specific rules |
 | Include directive | Reference other files |
+| Hint templates | Reusable hint sets |
 
-**Conditional Syntax:**
-```markdown
-<!-- if provider:gemini -->
-Use Google Search Grounding for real-time information.
-Always cite sources from grounding results.
-<!-- endif -->
-
-<!-- if provider:perplexity -->
-Cite sources using [1], [2] notation from citations array.
-<!-- endif -->
-
-<!-- if tools:enabled -->
-Prefer using tools over asking the user for information.
-<!-- endif -->
-```
+**Note:** Provider/model-specific conditionals are now handled via YAML front matter (v1.14.0).
 
 **Include Directive:**
 ```markdown
@@ -302,6 +369,28 @@ Prefer using tools over asking the user for information.
 
 ## Additional Notes
 ...
+```
+
+**Hint Templates:**
+Reusable hint sets that can be referenced by name:
+```yaml
+---
+# Define reusable hint templates
+hint_templates:
+  tool-heavy:
+    - "Use tools proactively for file operations"
+    - "Don't ask permission - just execute safe operations"
+  reasoning:
+    - "Show step-by-step reasoning before complex decisions"
+    - "Explain your approach before implementing"
+
+# Apply templates to providers
+provider_hints:
+  ollama:
+    templates: [tool-heavy, reasoning]
+  gemini:
+    - "Use Google Search grounding"
+---
 ```
 
 ---
@@ -327,17 +416,22 @@ Prefer using tools over asking the user for information.
 ## Implementation Checklist
 
 ### v1.14.0
+- [ ] Create `ppxai/engine/bootstrap.py` with `BootstrapContext` class
+- [ ] Implement YAML front matter parsing (provider_hints, model_hints)
 - [ ] Add `find_bootstrap_files()` to ContextInjector
-- [ ] Add `_bootstrap_context` to EngineClient
+- [ ] Add `_bootstrap_context: BootstrapContext` to EngineClient
 - [ ] Add `load_bootstrap_context()` method
 - [ ] Add `get_bootstrap_status()` method
-- [ ] Modify `_build_system_messages()` to include context
+- [ ] Implement `get_prompt_for(provider, model)` with dynamic hints
+- [ ] Implement `local` provider inheritance (ollama, vllm, lmstudio)
+- [ ] Modify `_build_system_messages()` to use BootstrapContext
+- [ ] Trigger prompt rebuild in `set_provider()` and `set_model()`
 - [ ] Call `load_bootstrap_context()` in `__init__`
 - [ ] Call `load_bootstrap_context()` in `set_working_dir()`
 - [ ] Create `tests/test_bootstrap_context.py`
 - [ ] Update `/status` to show bootstrap info
-- [ ] Test in TUI
-- [ ] Test in VSCode extension
+- [ ] Test provider switching with different hints
+- [ ] Test in TUI, VSCode, and Web app
 
 ### v1.14.1
 - [ ] Add global path search (`~/.ppxai/`)
@@ -358,9 +452,9 @@ Prefer using tools over asking the user for information.
 - [x] Update VSCode extension (v1.13.9 - context badge + /context command)
 
 ### v1.14.3
-- [ ] Add token counting
-- [ ] Implement conditional parsing
-- [ ] Implement include directive
+- [ ] Add token counting to `/context` output
+- [ ] Implement include directive (`<!-- include: path -->`)
+- [ ] Implement hint templates (`hint_templates:` + `templates: [...]`)
 - [ ] Add context size to status bar
 
 ### v1.14.4

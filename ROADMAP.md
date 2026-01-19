@@ -187,28 +187,90 @@ ppxai provides:
 
 **User value**: Teams share project context. Consistent AI behavior across sessions.
 
+**Detailed Plan**: [docs/RELEASE-PLAN-v1.14.x.md](docs/RELEASE-PLAN-v1.14.x.md)
+
 **Prerequisite (v1.13.6):** System prompts are already supported via `ppxai-config.json`:
 - Global: `system_prompt` at root level
 - Per-provider: `providers.<name>.system_prompt`
 - Modes: `system_prompt_mode` = "prepend" | "append" | "replace"
 - Location: `ppxai/config.py:get_system_prompt()`, `ppxai/engine/client.py:1171-1186`
 
-### v1.14.0 - AGENTS.md Support
+### v1.14.0 - AGENTS.md Support with Provider Hints
 
 | Feature | Description | Status |
 |---------|-------------|--------|
 | **AGENTS.md loading** | Load project instructions from AGENTS.md on startup | Planned |
 | **CLAUDE.md fallback** | Support CLAUDE.md as alternative filename | Planned |
-| **Bootstrap context injection** | Inject project context into system prompt (respects existing mode) | Planned |
-| **TUI + VSCode support** | Both interfaces load context via EngineClient | Planned |
+| **YAML front matter** | Provider/model-specific hints in structured header | Planned |
+| **Dynamic prompt assembly** | Rebuild system prompt on provider/model switch | Planned |
+| **TUI + VSCode + Web support** | All interfaces load context via EngineClient | Planned |
+
+**Design Decision: YAML Front Matter Format**
+
+The problem: When switching from Gemini to Ollama mid-session, the system prompt needs to adapt because:
+- **Ollama/local models** need: "Complete tasks fully, don't stop on empty responses"
+- **Gemini** needs: "Use Google Search grounding for current information"
+- **DeepSeek R1** needs: "Show reasoning before taking actions"
+
+**File Format:**
+
+```markdown
+---
+# Provider-specific hints (appended when provider is active)
+provider_hints:
+  ollama:
+    - "Complete tasks fully. Don't stop after tool calls - synthesize results."
+    - "If a tool returns empty output, explain what you tried and continue."
+  local:  # Applies to all local providers (ollama, vllm, lmstudio)
+    - "Use tools proactively. Don't ask for permission - just execute."
+  gemini:
+    - "Use your built-in web search for current information."
+
+# Pattern-matched against model ID (regex)
+model_hints:
+  "deepseek-r1*":
+    - "Show <think> reasoning before actions."
+  "qwen2.5-coder*":
+    - "Prefer edit_file over apply_patch for modifications."
+  "llama*":
+    - "Always provide complete file contents, not diffs."
+---
+
+# MyProject Development Guide
+
+## Code Standards
+- Python 3.11+, type hints required
+- pytest for testing, 80% coverage minimum
+```
 
 **Architecture:**
-1. **Discovery** - `ContextInjector.find_bootstrap_files()` locates AGENTS.md/CLAUDE.md
-2. **Caching** - `EngineClient._bootstrap_context` loads once, caches until reload
-3. **Injection** - Modify existing system prompt assembly at `client.py:1171-1186`:
-   - Bootstrap context is prepended to existing `system_prompt` (before mode is applied)
-   - Order: `[bootstrap_context] + [config system_prompt] + [tool_prompt]` (for prepend mode)
-4. **Status API** - `EngineClient.get_bootstrap_status()` returns loaded sources
+
+```
+ppxai/engine/bootstrap.py (new)
+├── BootstrapContext class
+│   ├── base_instructions: str      # Content below ---
+│   ├── provider_hints: dict        # provider_id → list[str]
+│   ├── model_hints: dict           # regex pattern → list[str]
+│   └── get_prompt_for(provider, model) → str
+│
+└── Integration points:
+    ├── EngineClient._bootstrap_context: BootstrapContext
+    ├── EngineClient.set_provider() → triggers prompt rebuild
+    └── EngineClient.set_model() → triggers prompt rebuild
+```
+
+**Prompt Assembly Order:**
+1. `[bootstrap base_instructions]`
+2. `[matching provider_hints]` (if provider matches)
+3. `[matching model_hints]` (if model regex matches)
+4. `[config system_prompt]` (from ppxai-config.json)
+5. `[tool_prompt]` (if tools enabled)
+
+**Behavior Rules:**
+- `local` provider hints apply to: ollama, vllm, lmstudio (inheritance)
+- Both provider AND model hints concatenate (additive, not override)
+- On `/provider` or `/model` switch: immediate prompt rebuild
+- On `/context reload`: re-parse AGENTS.md and rebuild
 
 **No conflicts:** Bootstrap context extends the existing system prompt pipeline, doesn't replace it.
 
@@ -239,8 +301,10 @@ v1.14.2 extends `/context` to also manage **bootstrap context** (AGENTS.md/CLAUD
 |---------|-------------|--------|
 | **`@url` provider** | Fetch and inject web content | Planned |
 | **`@clipboard`** | Inject clipboard contents | Planned |
-| **Conditional sections** | `<!-- if provider:gemini -->` blocks | Planned |
-| **Include directive** | `<!-- include: ./docs/style.md -->` | Planned |
+| **Include directive** | `<!-- include: ./docs/style.md -->` in AGENTS.md | Planned |
+| **Hint templates** | Reusable hint sets: `hints: [tool-heavy, reasoning]` | Planned |
+
+**Note:** Provider/model conditional sections replaced by YAML front matter in v1.14.0.
 
 ---
 
@@ -424,4 +488,4 @@ For archived planning documents:
 
 ---
 
-**Last Updated**: January 18, 2026
+**Last Updated**: January 19, 2026
