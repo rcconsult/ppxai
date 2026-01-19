@@ -7,6 +7,7 @@
  * v1.14.x - Enables isolated testing of consent flows
  */
 
+import * as vscode from 'vscode';
 import { HttpClient, FileConsentRequest, ShellConsentRequest, EventMetadata, ConsentResponse } from '../httpClient';
 import { ChatEventBus } from './eventBus';
 

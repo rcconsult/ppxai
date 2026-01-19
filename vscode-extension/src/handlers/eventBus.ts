@@ -138,7 +138,7 @@ export class ChatEventBus {
         if (!this.listeners.has(event)) {
             this.listeners.set(event, new Set());
         }
-        this.listeners.get(event)!.add(handler);
+        this.listeners.get(event)!.add(handler as (...args: unknown[]) => void);
         return () => this.off(event, handler);
     }
 
@@ -148,7 +148,7 @@ export class ChatEventBus {
      * @param handler Handler function to remove
      */
     off<K extends keyof ChatEvents>(event: K, handler: ChatEvents[K]): void {
-        this.listeners.get(event)?.delete(handler);
+        this.listeners.get(event)?.delete(handler as (...args: unknown[]) => void);
     }
 
     /**
