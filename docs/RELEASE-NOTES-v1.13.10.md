@@ -23,7 +23,7 @@ The `/show` command in the web app now supports previewing images, PDFs, and str
 **Structured Data Preview (Tree Viewer)**
 - **JSON** - Collapsible tree with syntax highlighting
 - **YAML** - Parsed via js-yaml library with tree navigation
-- **TOML** - Parsed via toml-js library with tree navigation
+- **TOML** - Parsed via smol-toml library with tree navigation (TOML 1.0 support)
 - **HCL/Terraform** - Parsed via hcl2-parser with tree navigation
 - Expand/collapse all, search within tree, type indicators
 - Rendered/Source toggle to switch between formatted view and raw text
@@ -65,7 +65,7 @@ When a model calls the same tool 3 times consecutively, ppxai injects a message 
 
 ### Structured Data Tree Viewer (Web App)
 - **DataTreeViewer component** - Collapsible tree with expand/collapse all controls
-- **Multi-format support** - JSON (native), YAML (js-yaml), TOML (toml-js), HCL (hcl2-parser)
+- **Multi-format support** - JSON (native), YAML (js-yaml), TOML (smol-toml), HCL (hcl2-parser)
 - **Type indicators** - Visual badges for string, number, boolean, null, array, object
 - **Search within tree** - Filter nodes by key or value
 - **Rendered/Source toggle** - Switch between tree view and raw text
@@ -132,7 +132,7 @@ Major refactoring of `chatPanel.ts` using EventBus + State Machine patterns:
 - `ppxai/web/components/tree-viewer.js` - `DataTreeViewer` class for structured data
 - `ppxai/web/styles/data-viewers.css` - Styling for tree viewer components
 - `ppxai/web/lib/js-yaml.min.js` - YAML parsing library
-- `ppxai/web/lib/toml.min.js` - TOML parsing library
+- `ppxai/web/lib/smol-toml.min.js` - TOML parsing library (TOML 1.0 support)
 - `ppxai/web/lib/hcl2-parser.min.js` - HCL/Terraform parsing library
 
 ### Engine
