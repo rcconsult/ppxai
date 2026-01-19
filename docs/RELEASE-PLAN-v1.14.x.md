@@ -308,8 +308,43 @@ This release extends `/context` to also manage **bootstrap context**.
 |---------|-------------|
 | `/context` | Show bootstrap sources alongside injected context (extends v1.13.9) |
 | `/context reload` | Refresh AGENTS.md from disk |
-| `/context edit` | Open AGENTS.md in editor |
+| `/context edit` | Open AGENTS.md in editor (platform-dependent behavior) |
 | Integration | Unified view: bootstrap + injected context in one output |
+
+**`/context edit` Platform Behavior:**
+
+| Platform | Behavior |
+|----------|----------|
+| **VSCode** | Opens AGENTS.md in a native editor tab (straightforward) |
+| **Web App** | Shows file path + copy-to-clipboard button (browser security prevents direct file system access) |
+| **TUI** | Shows file path + instructions to edit externally |
+
+**TUI Constraints (Design Decision):**
+
+The TUI intentionally disables interactive commands. This is a technical design choice based on Rich SDK limitations:
+
+1. **Rich is output-only** - The Rich library provides formatting/rendering but has no built-in editor widget
+2. **No editor subprocess** - Launching `$EDITOR` would conflict with Rich's terminal control (it manages the entire screen state)
+3. **Alternatives rejected** - Textual or prompt_toolkit would require major architectural changes
+
+**TUI `/context edit` implementation:**
+```
+/context edit
+
+  Bootstrap file: /path/to/project/AGENTS.md
+
+  Edit this file externally, then run:
+    /context reload
+
+  Tip: VS Code users can open with:
+    code /path/to/project/AGENTS.md
+```
+
+This approach:
+- Maintains Rich SDK compatibility
+- Provides a clear workflow (edit → reload)
+- Works consistently across all terminal emulators
+- Avoids the complexity of terminal editor integration
 
 **Files to Modify:**
 
