@@ -182,12 +182,70 @@ def handle_debug_log(handler: "CommandHandler", args: str) -> None:
         console.print("[yellow]Usage: /debug-log [on|off|show|clear][/yellow]\n")
 
 
+def _show_active_hints(handler: "CommandHandler", console) -> None:
+    """Display active bootstrap hints for current provider/model (v1.14.0)."""
+    from pathlib import Path
+
+    hints_info = handler.engine_client.get_active_hints()
+
+    if not hints_info["loaded"]:
+        console.print("\n[yellow]No bootstrap context loaded.[/yellow]")
+        console.print("[dim]Create AGENTS.md or CLAUDE.md in your project directory.[/dim]\n")
+        return
+
+    console.print("\n[bold cyan]━━━ Active Bootstrap Hints ━━━[/bold cyan]")
+
+    # Source file
+    source_name = Path(hints_info["source"]).name
+    console.print(f"  [cyan]Source:[/cyan] {hints_info['source']}")
+
+    # Current provider/model
+    console.print(f"  [cyan]Provider:[/cyan] {hints_info['provider']}")
+    console.print(f"  [cyan]Model:[/cyan] {hints_info['model']}")
+
+    # Provider hints
+    provider_hints = hints_info["provider_hints"]
+    if provider_hints:
+        console.print(f"\n[cyan]Provider Hints:[/cyan] ({len(provider_hints)} active)")
+        if hints_info["inherited_local"]:
+            console.print("  [dim](includes inherited 'local' hints)[/dim]")
+        for source, hint in provider_hints:
+            # Truncate long hints for display
+            display_hint = hint[:80] + "..." if len(hint) > 80 else hint
+            console.print(f"  [green]•[/green] [{source}] {display_hint}")
+    else:
+        console.print(f"\n[cyan]Provider Hints:[/cyan] [dim]none active[/dim]")
+        available = hints_info["all_provider_keys"]
+        if available:
+            console.print(f"  [dim]Available: {', '.join(available)}[/dim]")
+
+    # Model hints
+    model_hints = hints_info["model_hints"]
+    if model_hints:
+        patterns = hints_info["matched_patterns"]
+        console.print(f"\n[cyan]Model Hints:[/cyan] ({len(model_hints)} active)")
+        console.print(f"  [dim]Matched patterns: {', '.join(patterns)}[/dim]")
+        for pattern, hint in model_hints:
+            display_hint = hint[:80] + "..." if len(hint) > 80 else hint
+            console.print(f"  [green]•[/green] [{pattern}] {display_hint}")
+    else:
+        console.print(f"\n[cyan]Model Hints:[/cyan] [dim]none active[/dim]")
+        available = hints_info["all_model_patterns"]
+        if available:
+            console.print(f"  [dim]Available patterns: {', '.join(available)}[/dim]")
+
+    # Summary
+    total_hints = len(provider_hints) + len(model_hints)
+    console.print(f"\n[dim]Total active hints: {total_hints}[/dim]")
+    console.print("[dim]Use /context to see full context usage[/dim]\n")
+
+
 def handle_context(handler: "CommandHandler", args: str) -> None:
     """Handle /context command - context usage information.
 
     Args:
         handler: CommandHandler instance providing context
-        args: "clear" to remove injected content
+        args: "clear" to remove injected content, "hints" to show active hints
     """
     from ..ui import console
 
@@ -207,6 +265,11 @@ def handle_context(handler: "CommandHandler", args: str) -> None:
             console.print(f"[dim]New estimated usage: ~{info['estimated_tokens']:,} tokens ({info['usage_percent']:.0f}%)[/dim]\n")
         else:
             console.print("\n[yellow]No injected contexts to clear.[/yellow]\n")
+        return
+
+    if parts and parts[0].lower() == "hints":
+        # Show active bootstrap hints (v1.14.0)
+        _show_active_hints(handler, console)
         return
 
     # Show context usage info
@@ -286,8 +349,8 @@ CommandFactory.register(CommandSpec(
 
 CommandFactory.register(CommandSpec(
     name="context",
-    description="Show context usage and manage injected files",
+    description="Show context usage, hints, and manage injected files",
     handler=handle_context,
     category="utility",
-    usage="/context [clear]"
+    usage="/context [clear|hints]"
 ))

@@ -177,6 +177,51 @@ Instructions.
         ctx = BootstrapContext.from_content(content, "test.md")
         assert ctx.char_count == len("Hello world!")
 
+    def test_get_active_hints_for(self):
+        """Test get_active_hints_for returns detailed breakdown."""
+        content = """---
+provider_hints:
+  local:
+    - "Local hint."
+  ollama:
+    - "Ollama hint."
+  custom:
+    - "Custom hint."
+model_hints:
+  "deepseek-r1*":
+    - "Show reasoning."
+  "qwen*":
+    - "Qwen hint."
+---
+
+Instructions.
+"""
+        ctx = BootstrapContext.from_content(content, "test.md")
+
+        # Test ollama with deepseek model (inherits local)
+        hints = ctx.get_active_hints_for("ollama", "deepseek-r1:7b")
+        assert hints["inherited_local"] is True
+        assert len(hints["provider_hints"]) == 2  # local + ollama
+        assert ("local", "Local hint.") in hints["provider_hints"]
+        assert ("ollama", "Ollama hint.") in hints["provider_hints"]
+        assert len(hints["model_hints"]) == 1
+        assert ("deepseek-r1*", "Show reasoning.") in hints["model_hints"]
+        assert "deepseek-r1*" in hints["matched_patterns"]
+
+        # Test custom provider (no local inheritance)
+        hints = ctx.get_active_hints_for("custom", "gpt-oss-120b")
+        assert hints["inherited_local"] is False
+        assert len(hints["provider_hints"]) == 1
+        assert ("custom", "Custom hint.") in hints["provider_hints"]
+        assert len(hints["model_hints"]) == 0  # no match
+        assert hints["matched_patterns"] == []
+
+        # Test perplexity (no hints)
+        hints = ctx.get_active_hints_for("perplexity", "sonar-pro")
+        assert hints["inherited_local"] is False
+        assert len(hints["provider_hints"]) == 0
+        assert len(hints["model_hints"]) == 0
+
     def test_from_file(self):
         """Test loading from file."""
         with temp_dir() as d:

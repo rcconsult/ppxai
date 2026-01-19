@@ -146,16 +146,30 @@ def handle_status(handler: "CommandHandler", args: str) -> None:
             sources = bootstrap_status.get("sources", [])
             source_name = Path(sources[0]).name if sources else "unknown"
             char_count = bootstrap_status.get("char_count", 0)
-            hint_info = ""
-            if bootstrap_status.get("has_hints"):
-                provider_count = len(bootstrap_status.get("provider_hints", []))
-                model_count = len(bootstrap_status.get("model_hints", []))
-                hints = []
-                if provider_count:
-                    hints.append(f"{provider_count} provider")
-                if model_count:
-                    hints.append(f"{model_count} model")
-                hint_info = f" ({', '.join(hints)} hints)"
+
+            # Show active hints for current provider/model
+            active_hints = handler.engine_client.get_active_hints()
+            active_provider = len(active_hints.get("provider_hints", []))
+            active_model = len(active_hints.get("model_hints", []))
+            total_active = active_provider + active_model
+
+            if total_active > 0:
+                hint_parts = []
+                if active_provider:
+                    inherited = "+" if active_hints.get("inherited_local") else ""
+                    hint_parts.append(f"{active_provider}{inherited} provider")
+                if active_model:
+                    hint_parts.append(f"{active_model} model")
+                hint_info = f" [green]({', '.join(hint_parts)} hints active)[/green]"
+            else:
+                # Show defined but not active
+                defined_providers = len(bootstrap_status.get("provider_hints", []))
+                defined_models = len(bootstrap_status.get("model_hints", []))
+                if defined_providers or defined_models:
+                    hint_info = f" [dim]({defined_providers} provider, {defined_models} model patterns defined)[/dim]"
+                else:
+                    hint_info = ""
+
             console.print(f"  [cyan]Bootstrap:[/cyan] [green]{source_name}[/green] ({char_count:,} chars){hint_info}")
         else:
             console.print(f"  [cyan]Bootstrap:[/cyan] [dim]none[/dim]")

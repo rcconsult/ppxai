@@ -1,6 +1,6 @@
 # ppxai - Multi-LLM Interface for Developers
 
-![Version](https://img.shields.io/badge/version-1.13.10-blue) ![Tests](https://img.shields.io/badge/tests-707%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen)
+![Version](https://img.shields.io/badge/version-1.14.0-blue) ![Tests](https://img.shields.io/badge/tests-707%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen)
 
 **Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
 
@@ -51,7 +51,7 @@ ppxai-desktop
 - Full macOS setup: `curl -sSL ... | bash -s -- --with-macos-app --with-config --with-launchagent`
 - Uninstall: `curl -sSL ... | bash -s -- --uninstall`
 
-**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.13.10` (specific version), `-Uninstall`
+**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.14.0` (specific version), `-Uninstall`
 
 See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed installation options including Windows.
 
@@ -61,7 +61,7 @@ Download from [Releases](../../releases):
 - `ppxai-{platform}` - Terminal UI
 - `ppxai-server-{platform}` - HTTP server for VSCode
 - `ppxai-desktop-{platform}` - Desktop Web App
-- `ppxai-1.13.10.vsix` - VSCode extension
+- `ppxai-1.14.0.vsix` - VSCode extension
 - `ppxai-*-macos-arm64.dmg` - macOS app bundle installer
 
 ### Option 3: From Source
@@ -114,6 +114,33 @@ Enable with `/agent on` or click the Agent button in VSCode:
 - Works with any provider that supports tool calling
 
 See [docs/AGENT_MODE_GUIDE.md](docs/AGENT_MODE_GUIDE.md) for details.
+
+### Bootstrap Context (v1.14.0+)
+Load project-specific instructions from `AGENTS.md` or `CLAUDE.md`:
+- **Auto-discovery** - Looks for `AGENTS.md`, then `CLAUDE.md` in project root
+- **Provider hints** - Different instructions for Ollama vs Gemini vs OpenAI
+- **Model hints** - Pattern-matched guidance (e.g., `deepseek-r1*` gets reasoning prompts)
+- **`local` inheritance** - Ollama, vLLM, LMStudio inherit from `local` hints
+- **Dynamic assembly** - Hints change instantly when you switch provider/model
+
+Example `AGENTS.md`:
+```markdown
+---
+provider_hints:
+  local:
+    - "Complete tasks fully without stopping on empty responses."
+  ollama:
+    - "Keep responses concise - limited context window."
+model_hints:
+  "deepseek-r1*":
+    - "Show reasoning before taking actions."
+---
+
+# Project Instructions
+Python 3.11+, type hints required, pytest for testing.
+```
+
+Use `/context hints` to see which hints are active for current provider/model.
 
 ### Checkpoint & Undo (v1.12.0+)
 Atomic rollback for multi-file agent operations:

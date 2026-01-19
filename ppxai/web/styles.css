@@ -1062,14 +1062,16 @@ body {
     border-collapse: collapse;
     margin: 12px 0;
     width: 100%;
-    display: block;
-    overflow-x: auto;
+    table-layout: fixed;  /* v1.14.0: Fixed layout for consistent column widths */
 }
 
 .message th, .message td {
     border: 1px solid var(--border-color);
     padding: 8px 12px;
     text-align: left;
+    word-wrap: break-word;  /* v1.14.0: Word wrap for better readability */
+    overflow-wrap: break-word;
+    vertical-align: top;
 }
 
 .message th {

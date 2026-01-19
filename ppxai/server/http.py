@@ -1183,6 +1183,34 @@ async def clear_context_injections(x_session_id: Optional[str] = Header(None)):
     }
 
 
+@app.get("/context/hints")
+async def get_active_hints(x_session_id: Optional[str] = Header(None)):
+    """Get active bootstrap hints for current provider/model.
+
+    v1.14.0: Returns detailed breakdown of which hints from AGENTS.md/CLAUDE.md
+    are currently active based on the provider and model.
+
+    Returns:
+        - loaded: bool - whether bootstrap context is loaded
+        - source: str - path to bootstrap file
+        - provider: str - current provider
+        - model: str - current model
+        - provider_hints: List of [source, hint] tuples
+        - model_hints: List of [pattern, hint] tuples
+        - inherited_local: bool - whether 'local' hints were inherited
+        - matched_patterns: List of matched model patterns
+        - all_provider_keys: List of all provider hint keys in file
+        - all_model_patterns: List of all model patterns in file
+    """
+    session_id, engine, _ = await get_or_create_session(x_session_id)
+
+    hints_info = engine.get_active_hints()
+    return {
+        **hints_info,
+        "session_id": session_id
+    }
+
+
 # === Session Management ===
 
 @app.get("/sessions")

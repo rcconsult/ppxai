@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-01-19
+
+### Added - Bootstrap Context System
+
+- **AGENTS.md/CLAUDE.md support** - Load project-specific instructions from bootstrap files on startup
+- **YAML front matter** - Provider and model-specific hints in structured header
+- **Dynamic prompt assembly** - System prompt rebuilds automatically when switching provider/model
+- **`local` provider inheritance** - ollama, vllm, lmstudio providers inherit from `local` hints
+- **Model pattern matching** - Glob-style patterns match model IDs (e.g., `deepseek-r1*`)
+- **Configurable file aliases** - User-defined fallback list via `bootstrap.files` config
+- **Bootstrap enable/disable** - Toggle via `bootstrap.enabled` config option
+
+### Added - Context Hints Debugging
+
+- **`/context hints` command** - Shows active provider/model hints for current session
+- **`/status` hints display** - Shows count of active hints with inheritance indicator (e.g., `3+ provider hints`)
+- **Debug logging on switch** - Logs hint transitions when provider/model changes (with `/debug-log on`)
+- **`/context/hints` HTTP endpoint** - VSCode extension can query active hints
+
+### Fixed
+
+- **VSCode/Web table rendering** - Markdown tables now use word-wrap instead of horizontal scrollbars
+- **CSS table-layout** - Changed from `display: block` with `overflow-x` to `table-layout: fixed` with `word-wrap`
+
+### Architecture
+
+- **`ppxai/engine/bootstrap.py`** - New module with `BootstrapContext` class for parsing and prompt assembly
+- **`EngineClient._bootstrap_context`** - Stores parsed bootstrap context for session
+- **`get_active_hints()` method** - Returns detailed breakdown of active hints
+- **`get_active_hints_for()` method** - `BootstrapContext` method for provider/model-specific hint retrieval
+
 ## [1.13.10] - 2026-01-16
 
 ### Added - Web App Enhancements

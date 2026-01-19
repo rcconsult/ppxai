@@ -6,26 +6,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.13.10
+**Current Version:** v1.14.0
 
-**v1.13.10 highlights:**
-- **NEW:** Web app `/show` command now supports image preview (PNG, JPG, GIF, WebP, SVG, BMP, ICO)
-- **NEW:** Web app `/show` command now supports PDF preview (native browser PDF viewer)
-- **NEW:** Structured data tree viewer for JSON, YAML, TOML, HCL/Terraform files
-- **NEW:** Loop detection for tool calls (`max_same_tool_calls` setting, default: 3)
-- **NEW:** Auto-retry for empty model responses (`auto_retry_empty` setting, default: 3)
-- **REFACTOR:** VSCode extension chatPanel.ts refactored using EventBus + State Machine patterns (46% reduction)
-- **FIX:** Session restore now properly restores `working_dir` and `tools_enabled` state
-- **FIX:** Tool parameter aliasing with duplicate canonical/alias names
+**v1.14.0 highlights:**
+- **NEW:** AGENTS.md/CLAUDE.md bootstrap context support - project-specific instructions loaded on startup
+- **NEW:** YAML front matter for provider/model-specific hints (dynamic prompt assembly)
+- **NEW:** `local` provider inheritance - ollama, vllm, lmstudio inherit from `local` hints
+- **NEW:** `/context hints` command - shows active provider/model hints for debugging
+- **NEW:** `/status` now displays active hints count with inheritance indicator
+- **NEW:** Debug logging on provider/model switch (logs hint transitions)
+- **NEW:** `/context/hints` HTTP endpoint for VSCode extension
+- **FIX:** VSCode/Web markdown tables now use word-wrap instead of horizontal scrollbars
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.13.10
-- VSCode extension (package.json): v1.13.10
-- Git tag: v1.13.10
+- Python package (pyproject.toml): v1.14.0
+- VSCode extension (package.json): v1.14.0
+- Git tag: v1.14.0
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
 
-## Codebase Statistics (v1.13.10)
+## Codebase Statistics (v1.14.0)
 
 | Language | Files | Lines |
 |----------|------:|------:|

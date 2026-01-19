@@ -28,7 +28,7 @@ Your content here...
 
 import re
 from pathlib import Path
-from typing import Optional, Dict, List
+from typing import Any, Optional, Dict, List
 from dataclasses import dataclass, field
 
 
@@ -249,6 +249,51 @@ class BootstrapContext:
                 continue
 
         return hints
+
+    def get_active_hints_for(self, provider: str, model: str) -> Dict[str, Any]:
+        """Get detailed breakdown of active hints for provider/model.
+
+        Args:
+            provider: Current provider ID
+            model: Current model ID
+
+        Returns:
+            Dict with:
+            - provider_hints: List of (source, hint) tuples
+            - model_hints: List of (pattern, hint) tuples
+            - inherited_local: bool - whether 'local' hints were inherited
+            - matched_patterns: List of matched model patterns
+        """
+        result: Dict[str, Any] = {
+            "provider_hints": [],
+            "model_hints": [],
+            "inherited_local": False,
+            "matched_patterns": [],
+        }
+
+        # Check for 'local' inheritance
+        if provider in LOCAL_PROVIDERS and "local" in self.provider_hints:
+            result["inherited_local"] = True
+            for hint in self.provider_hints["local"]:
+                result["provider_hints"].append(("local", hint))
+
+        # Provider-specific hints
+        if provider in self.provider_hints:
+            for hint in self.provider_hints[provider]:
+                result["provider_hints"].append((provider, hint))
+
+        # Model hints with pattern tracking
+        for pattern, pattern_hints in self.model_hints.items():
+            regex = pattern.replace("*", ".*")
+            try:
+                if re.match(regex, model, re.IGNORECASE):
+                    result["matched_patterns"].append(pattern)
+                    for hint in pattern_hints:
+                        result["model_hints"].append((pattern, hint))
+            except re.error:
+                continue
+
+        return result
 
     @property
     def char_count(self) -> int:

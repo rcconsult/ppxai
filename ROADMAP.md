@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.13.10 (January 2026)
+> **Current Version**: v1.14.0 (January 2026)
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
@@ -195,15 +195,19 @@ ppxai provides:
 - Modes: `system_prompt_mode` = "prepend" | "append" | "replace"
 - Location: `ppxai/config.py:get_system_prompt()`, `ppxai/engine/client.py:1171-1186`
 
-### v1.14.0 - AGENTS.md Support with Provider Hints
+### v1.14.0 - AGENTS.md Support with Provider Hints ✅
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **AGENTS.md loading** | Load project instructions from AGENTS.md on startup | Planned |
-| **Configurable file aliases** | User-defined fallback list: `bootstrap_files: ["AGENTS.md", "CLAUDE.md", ...]` | Planned |
-| **YAML front matter** | Provider/model-specific hints in structured header | Planned |
-| **Dynamic prompt assembly** | Rebuild system prompt on provider/model switch | Planned |
-| **TUI + VSCode + Web support** | All interfaces load context via EngineClient | Planned |
+| **AGENTS.md loading** | Load project instructions from AGENTS.md on startup | ✅ Done |
+| **Configurable file aliases** | User-defined fallback list: `bootstrap_files: ["AGENTS.md", "CLAUDE.md", ...]` | ✅ Done |
+| **YAML front matter** | Provider/model-specific hints in structured header | ✅ Done |
+| **Dynamic prompt assembly** | Rebuild system prompt on provider/model switch | ✅ Done |
+| **TUI + VSCode + Web support** | All interfaces load context via EngineClient | ✅ Done |
+| **`/context hints` command** | Show active provider/model hints for debugging | ✅ Done |
+| **`/status` hints display** | Show active hints count in status output | ✅ Done |
+| **Debug logging on switch** | Log hint transitions when provider/model changes | ✅ Done |
+| **CSS table word-wrap** | VSCode/Web tables use word-wrap instead of horizontal scroll | ✅ Done |
 
 **Design Decision: YAML Front Matter Format**
 

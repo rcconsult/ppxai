@@ -36,10 +36,10 @@ Multi-provider AI chat interface for VS Code, powered by ppxai.
 #### 1. Download binaries from [GitHub Releases](https://github.com/rcconsult/ppxai/releases)
 
 Download for your platform:
-- **macOS (Apple Silicon):** `ppxai-server-macos-arm64` + `ppxai-1.13.10.vsix`
-- **macOS (Intel):** `ppxai-server-macos-intel` + `ppxai-1.13.10.vsix`
-- **Linux:** `ppxai-server-linux-amd64` + `ppxai-1.13.10.vsix`
-- **Windows:** `ppxai-server-windows.exe` + `ppxai-1.13.10.vsix`
+- **macOS (Apple Silicon):** `ppxai-server-macos-arm64` + `ppxai-1.14.0.vsix`
+- **macOS (Intel):** `ppxai-server-macos-intel` + `ppxai-1.14.0.vsix`
+- **Linux:** `ppxai-server-linux-amd64` + `ppxai-1.14.0.vsix`
+- **Windows:** `ppxai-server-windows.exe` + `ppxai-1.14.0.vsix`
 
 #### 2. Configure API keys
 
@@ -57,7 +57,7 @@ OPENAI_API_KEY=sk-xxxxxxxxxxxx
 #### 3. Install the VSCode extension
 
 ```bash
-code --install-extension ppxai-1.13.10.vsix
+code --install-extension ppxai-1.14.0.vsix
 ```
 
 Or in VSCode: Extensions → `...` menu → "Install from VSIX..."
@@ -120,7 +120,7 @@ OPENAI_API_KEY=sk-xxxxxxxxxxxx
 Download the `.vsix` file from [GitHub Releases](https://github.com/rcconsult/ppxai/releases) and install:
 
 ```bash
-code --install-extension ppxai-1.13.10.vsix
+code --install-extension ppxai-1.14.0.vsix
 ```
 
 Or in VSCode: Extensions → `...` menu → "Install from VSIX..."
@@ -216,7 +216,7 @@ vscode-extension/
 │   ├── httpClient.ts      # HTTP + SSE client for ppxai-server
 │   ├── chatPanel.ts       # Webview chat UI (orchestrator)
 │   ├── sessionsProvider.ts # Sessions tree view
-│   └── handlers/          # Extracted handlers (v1.13.10+)
+│   └── handlers/          # Extracted handlers (v1.14.0+)
 │       ├── eventBus.ts    # Type-safe pub/sub communication
 │       ├── stream.ts      # Stream event processing
 │       ├── consent.ts     # Consent dialog handlers

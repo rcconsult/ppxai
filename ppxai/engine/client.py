@@ -297,6 +297,53 @@ class EngineClient:
             return ""
         return self._bootstrap_context.get_prompt_for(self.provider_name, self.model)
 
+    def get_active_hints(self) -> Dict[str, Any]:
+        """Get detailed breakdown of active hints for current provider/model.
+
+        Returns:
+            Dict with:
+            - loaded: bool - whether bootstrap context is loaded
+            - source: str - path to bootstrap file
+            - provider: str - current provider
+            - model: str - current model
+            - provider_hints: List of (source, hint) tuples
+            - model_hints: List of (pattern, hint) tuples
+            - inherited_local: bool - whether 'local' hints were inherited
+            - matched_patterns: List of matched model patterns
+            - all_provider_keys: List of all provider hint keys in file
+            - all_model_patterns: List of all model patterns in file
+        """
+        if not self._bootstrap_context:
+            return {
+                "loaded": False,
+                "source": "",
+                "provider": self.provider_name,
+                "model": self.model,
+                "provider_hints": [],
+                "model_hints": [],
+                "inherited_local": False,
+                "matched_patterns": [],
+                "all_provider_keys": [],
+                "all_model_patterns": [],
+            }
+
+        active = self._bootstrap_context.get_active_hints_for(
+            self.provider_name, self.model
+        )
+
+        return {
+            "loaded": True,
+            "source": self._bootstrap_context.source_file,
+            "provider": self.provider_name,
+            "model": self.model,
+            "provider_hints": active["provider_hints"],
+            "model_hints": active["model_hints"],
+            "inherited_local": active["inherited_local"],
+            "matched_patterns": active["matched_patterns"],
+            "all_provider_keys": list(self._bootstrap_context.provider_hints.keys()),
+            "all_model_patterns": list(self._bootstrap_context.model_hints.keys()),
+        }
+
     # === Interrupt Handling ===
 
     def interrupt_stream(self) -> None:
@@ -372,6 +419,19 @@ class EngineClient:
             self.tool_manager.max_iterations = self._agent_config.get("max_tool_iterations", 15)
             self.tool_manager.max_same_tool_calls = self._agent_config.get("max_same_tool_calls", 3)
 
+        # Log hints transition for debugging (v1.14.0)
+        if self._bootstrap_context:
+            hints_info = self.get_active_hints()
+            provider_count = len(hints_info["provider_hints"])
+            model_count = len(hints_info["model_hints"])
+            inherited = " (inherited local)" if hints_info["inherited_local"] else ""
+            patterns = hints_info["matched_patterns"]
+            logger.debug(
+                f"Provider switch to '{provider_name}': "
+                f"{provider_count} provider hints{inherited}, "
+                f"{model_count} model hints (patterns: {patterns})"
+            )
+
         return True
 
     def list_providers(self) -> List[ProviderInfo]:
@@ -427,6 +487,7 @@ class EngineClient:
         if model_exists:
             self.model = model_id
             self.session.set_model(model_id)
+            self._log_model_hints_transition(model_id)
             return True
 
         if strict:
@@ -436,7 +497,31 @@ class EngineClient:
         # Allow setting model even if not in list (for flexibility with custom endpoints)
         self.model = model_id
         self.session.set_model(model_id)
+        self._log_model_hints_transition(model_id)
         return True
+
+    def _log_model_hints_transition(self, model_id: str) -> None:
+        """Log hints transition when model changes (v1.14.0)."""
+        if not self._bootstrap_context:
+            return
+
+        hints_info = self.get_active_hints()
+        model_count = len(hints_info["model_hints"])
+        patterns = hints_info["matched_patterns"]
+
+        if patterns:
+            logger.debug(
+                f"Model switch to '{model_id}': "
+                f"{model_count} model hints (matched: {patterns})"
+            )
+        else:
+            # Log available patterns when no match
+            available = hints_info["all_model_patterns"]
+            if available:
+                logger.debug(
+                    f"Model switch to '{model_id}': "
+                    f"no model hints matched (available patterns: {available})"
+                )
 
     def list_models(self) -> List[ModelInfo]:
         """List available models for current provider.

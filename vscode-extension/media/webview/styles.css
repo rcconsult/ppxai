@@ -657,15 +657,16 @@ body {
     border-collapse: collapse;
     margin: 12px 0;
     width: 100%;
-    display: block;
-    overflow-x: auto;  /* v1.12.0: Horizontal scroll for wide tables */
+    table-layout: fixed;  /* v1.14.0: Fixed layout for consistent column widths */
 }
 
 .message th, .message td {
     border: 1px solid var(--vscode-panel-border);
     padding: 6px 12px;
     text-align: left;
-    white-space: nowrap;  /* v1.12.0: Prevent cell content wrapping */
+    word-wrap: break-word;  /* v1.14.0: Word wrap for better readability */
+    overflow-wrap: break-word;
+    vertical-align: top;
 }
 
 .message th {
