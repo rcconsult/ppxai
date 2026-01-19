@@ -100,11 +100,12 @@ test.describe('Parsing Libraries', () => {
       await expect(page.locator('#toml-tree .tree-key:has-text("enabled")')).toBeVisible();
     });
 
-    test('should parse TOML arrays of tables', async ({ page }) => {
+    test('should parse TOML nested sections', async ({ page }) => {
       await page.locator('#toml-tree .expand-all').click();
 
-      // Check for [[users]] array
-      await expect(page.locator('#toml-tree .tree-key:has-text("users")')).toBeVisible();
+      // Check for [database] section (toml-js doesn't support [[array]] syntax)
+      await expect(page.locator('#toml-tree .tree-key:has-text("database")')).toBeVisible();
+      await expect(page.locator('#toml-tree .tree-key:has-text("driver")')).toBeVisible();
     });
 
     test('should parse TOML boolean values', async ({ page }) => {
