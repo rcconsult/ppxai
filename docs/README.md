@@ -3,8 +3,9 @@
 ## Quick Start
 
 **New to ppxai?** Start here:
-1. [File Editing Guide](FILE_EDITING_GUIDE.md) - AI-powered file editing with consent
-2. [Shell Consent Guide](SHELL_CONSENT_GUIDE.md) - Secure shell command execution
+1. [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md) - Project-specific instructions via AGENTS.md
+2. [File Editing Guide](FILE_EDITING_GUIDE.md) - AI-powered file editing with consent
+3. [Shell Consent Guide](SHELL_CONSENT_GUIDE.md) - Secure shell command execution
 
 ## Documentation Index
 
@@ -12,6 +13,7 @@
 
 | Document | Description |
 |----------|-------------|
+| [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md) | Project-specific instructions via AGENTS.md (v1.14.0+) |
 | [File Editing Guide](FILE_EDITING_GUIDE.md) | AI-powered file editing with user consent |
 | [Shell Consent Guide](SHELL_CONSENT_GUIDE.md) | Shell command security with consent system |
 | [Context Injection Guide](CONTEXT-INJECTION.md) | `@file`, `@git`, `@tree` context providers |
@@ -20,6 +22,7 @@
 | [Custom Tool Development](CUSTOM_TOOL_DEVELOPMENT_GUIDE.md) | Create your own tools for ppxai |
 | [Agent Mode Guide](AGENT_MODE_GUIDE.md) | Autonomous multi-step task execution |
 | [Checkpoint Guide](CHECKPOINT_GUIDE.md) | Undo and rollback agent operations |
+| [Ollama Limitations](ollama-limitations.md) | Local model constraints and workarounds |
 | [Installation Guide](INSTALLATION.md) | Install ppxai on any platform |
 
 ### Technical Reference
@@ -197,5 +200,5 @@ A: Type `@filename`, `@git`, or `@tree` in your messages. See [Context Injection
 
 ---
 
-**Current Version**: v1.13.8
-**Last Updated**: 2026-01-11
+**Current Version**: v1.14.0
+**Last Updated**: 2026-01-19

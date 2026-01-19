@@ -1,6 +1,6 @@
 # Agent Mode User Guide
 
-**Version**: v1.13.0+
+**Version**: v1.14.0+
 **Status**: Production Ready
 
 This guide explains how to use ppxai's autonomous agent mode for multi-step task execution.
@@ -358,6 +358,50 @@ Agent mode behavior can be customized in `ppxai-config.json`:
   }
 }
 ```
+
+### Bootstrap Context for Agents (v1.14.0)
+
+You can provide agent-specific guidance via `AGENTS.md` bootstrap files. This is especially useful for:
+- Guiding agent behavior based on provider/model capabilities
+- Setting project-specific coding standards
+- Improving small model performance with targeted hints
+
+**Example AGENTS.md for agent workflows:**
+
+```markdown
+---
+provider_hints:
+  local:
+    - "Complete tasks fully without stopping on empty responses."
+    - "Use tools proactively - don't ask for permission."
+    - "When editing files, make all changes in a single edit_file call."
+  ollama:
+    - "Keep responses concise - limited context window."
+    - "Prefer smaller, focused tool calls over complex multi-step operations."
+model_hints:
+  "qwen2.5-coder:3b":
+    - "Focus on code quality and correctness."
+    - "Use edit_file for surgical changes, write_file only for new files."
+  "deepseek-r1*":
+    - "Show your reasoning process before taking actions."
+    - "Think step-by-step for complex problems."
+---
+
+# Project: My App
+
+## Agent Guidelines
+- Run tests after making changes: `pytest tests/ -v`
+- Follow PEP 8 style guidelines
+- Add docstrings to new functions
+
+## Code Standards
+- Python 3.11+, type hints required
+- Use dataclasses for data structures
+```
+
+Use `/context hints` to see which hints are active for your current provider/model.
+
+See [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md) for full documentation.
 
 ### Configuration Options
 

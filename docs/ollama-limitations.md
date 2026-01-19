@@ -1,8 +1,7 @@
 # Ollama Local Model Limitations
 
-**Document Version:** v1.13.10
-**Last Updated:** January 14, 2026
-**Branch:** bugfix/stabilization-before-1.14.x
+**Document Version:** v1.14.0
+**Last Updated:** January 19, 2026
 
 ## Overview
 
@@ -73,6 +72,39 @@ User: "Show me the weather forecast for Lausanne"
 ```
 
 ## Workarounds
+
+### 0. Bootstrap Context Hints (v1.14.0)
+
+Use `AGENTS.md` to provide model-specific guidance that helps small models perform better:
+
+```markdown
+---
+provider_hints:
+  local:
+    - "Complete tasks fully without stopping on empty responses."
+    - "If a tool returns empty output, explain what you tried and continue."
+  ollama:
+    - "Keep responses concise - you have limited context window."
+    - "Prefer smaller, focused tool calls over complex multi-step operations."
+model_hints:
+  "qwen2.5-coder:0.5b":
+    - "Focus on simple, direct tool calls."
+    - "Avoid complex multi-step reasoning."
+  "qwen2.5-coder:3b":
+    - "You can handle moderate complexity but keep responses focused."
+---
+
+# Project Instructions
+...
+```
+
+**Benefits:**
+- Hints are automatically applied when using Ollama
+- `local` hints apply to all local providers (Ollama, vLLM, LMStudio)
+- Model-specific hints refine behavior for each model size
+- Use `/context hints` to verify which hints are active
+
+See [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md) for full documentation.
 
 ### 1. Tool Loop Detection (v1.13.10)
 

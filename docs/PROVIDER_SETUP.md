@@ -562,3 +562,71 @@ This setting is respected by:
 - URL fetching tools
 
 **⚠️ Security Warning**: Only use `SSL_VERIFY=false` in trusted corporate environments where SSL inspection is required.
+
+---
+
+## Provider-Specific Hints (v1.14.0+)
+
+You can provide provider-specific instructions via `AGENTS.md` bootstrap files. This is especially useful when switching between providers mid-session.
+
+### Creating AGENTS.md
+
+Create an `AGENTS.md` file in your project root:
+
+```markdown
+---
+provider_hints:
+  local:
+    - "Complete tasks fully without stopping on empty responses."
+    - "Use tools proactively - don't ask for permission."
+  ollama:
+    - "Keep responses concise - limited context window."
+  gemini:
+    - "Use Google Search grounding for current information."
+  perplexity:
+    - "Use your native web search - don't use web_search tool."
+    - "Cite sources as markdown links inline."
+model_hints:
+  "deepseek-r1*":
+    - "Show reasoning before taking actions."
+  "qwen2.5-coder*":
+    - "Focus on code quality and correctness."
+---
+
+# Project Instructions
+
+Your project-specific instructions here...
+```
+
+### How It Works
+
+- **Provider hints** apply when using that provider (e.g., `ollama` hints for Ollama)
+- **`local` hints** apply to all local providers: `ollama`, `vllm`, `lmstudio`
+- **Model hints** match against model names using glob patterns (`*` = any characters)
+- Hints are dynamically applied when you switch provider/model with `/provider` or `/model`
+
+### Combining with System Prompts
+
+Bootstrap context works alongside `system_prompt` in `ppxai-config.json`:
+
+```json
+{
+  "system_prompt": "You are a helpful coding assistant.",
+  "system_prompt_mode": "prepend"
+}
+```
+
+Modes:
+- `prepend` (default): Config prompt appears before bootstrap content
+- `append`: Config prompt appears after bootstrap content
+- `replace`: Config prompt replaces bootstrap (not recommended)
+
+### Debugging Hints
+
+Use `/context hints` to see which hints are active for your current provider/model:
+
+```
+/context hints
+```
+
+See [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md) for full documentation.

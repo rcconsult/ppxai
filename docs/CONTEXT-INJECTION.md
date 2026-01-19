@@ -1,11 +1,20 @@
 # Context Injection Guide
 
-**Version:** v1.13.8+
-**Last Updated:** 2026-01-11
+**Version:** v1.14.0+
+**Last Updated:** 2026-01-19
 
 ## Overview
 
-ppxai supports automatic context injection via `@` references. Type special keywords in your messages to automatically include file contents, git changes, or project structure in your AI conversations.
+ppxai supports two types of context injection:
+
+1. **Runtime injection** (`@file`, `@git`, `@tree`) - Include content in specific messages
+2. **Bootstrap context** (`AGENTS.md`) - Project instructions loaded at session start
+
+This guide covers runtime injection. For bootstrap context, see [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md).
+
+### Runtime Injection
+
+Type special keywords in your messages to automatically include file contents, git changes, or project structure in your AI conversations.
 
 ## Supported Context Providers
 
@@ -380,12 +389,14 @@ class InjectedContext:
 
 ## Related Documentation
 
+- [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md) - Session-level project instructions (v1.14.0+)
 - [v1.11.0 Agentic Workflow Plan](v1.11.0-agentic-workflow-plan.md) - Context injection roadmap
 - [Architecture Refactoring](architecture-refactoring.md) - Engine layer design
 - [CLAUDE.md](../CLAUDE.md) - AI assistant development guide
 
 ## Version History
 
+- **v1.14.0** (2026-01-19): Added bootstrap context (AGENTS.md) - see [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md)
 - **v1.11.4** (2025-12-24): Added `@git` and `@tree` context providers
 - **v1.8.0** (2025-01-XX): Initial `@file` context injection
 - **v1.7.0** (2025-01-XX): Engine layer foundation
