@@ -11,8 +11,10 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 **v1.13.10 highlights:**
 - **NEW:** Web app `/show` command now supports image preview (PNG, JPG, GIF, WebP, SVG, BMP, ICO)
 - **NEW:** Web app `/show` command now supports PDF preview (native browser PDF viewer)
+- **NEW:** Structured data tree viewer for JSON, YAML, TOML, HCL/Terraform files
 - **NEW:** Loop detection for tool calls (`max_same_tool_calls` setting, default: 3)
 - **NEW:** Auto-retry for empty model responses (`auto_retry_empty` setting, default: 3)
+- **REFACTOR:** VSCode extension chatPanel.ts refactored using EventBus + State Machine patterns (46% reduction)
 - **FIX:** Session restore now properly restores `working_dir` and `tools_enabled` state
 - **FIX:** Tool parameter aliasing with duplicate canonical/alias names
 
@@ -27,14 +29,14 @@ For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE
 
 | Language | Files | Lines |
 |----------|------:|------:|
-| Python (core) | 54 | ~22,300 |
-| Python (tests) | 26 | ~10,300 |
-| TypeScript (VSCode) | 14 | ~9,900 |
-| JavaScript (Web) | 7 | ~4,300 |
-| CSS | 3 | ~1,800 |
-| **Total** | **~104** | **~48,600** |
+| Python (core) | 66 | ~24,100 |
+| Python (tests) | 30 | ~11,800 |
+| TypeScript (VSCode) | 17 | ~8,300 |
+| JavaScript (Web) | 7 | ~5,200 |
+| CSS | 3 | ~2,000 |
+| **Total** | **~123** | **~51,400** |
 
-Breakdown: ~67% Python, ~20% TypeScript, ~9% JavaScript, ~4% CSS/HTML
+Breakdown: ~70% Python, ~16% TypeScript, ~10% JavaScript, ~4% CSS/HTML
 
 ## Installation Locations (CRITICAL)
 

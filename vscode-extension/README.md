@@ -214,9 +214,16 @@ vscode-extension/
 ├── src/
 │   ├── extension.ts       # Extension entry point
 │   ├── httpClient.ts      # HTTP + SSE client for ppxai-server
-│   ├── chatPanel.ts       # Webview chat UI
-│   └── sessionsProvider.ts # Sessions tree view
-├── webview/               # (future) Separate webview assets
+│   ├── chatPanel.ts       # Webview chat UI (orchestrator)
+│   ├── sessionsProvider.ts # Sessions tree view
+│   └── handlers/          # Extracted handlers (v1.13.10+)
+│       ├── eventBus.ts    # Type-safe pub/sub communication
+│       ├── stream.ts      # Stream event processing
+│       ├── consent.ts     # Consent dialog handlers
+│       ├── agentStateMachine.ts # Agent loop state machine
+│       ├── commands.ts    # Slash command handlers
+│       └── types.ts       # HandlerContext interface
+├── media/webview/         # External CSS/JS for webview
 └── resources/
     └── icon.svg           # Activity bar icon
 ```
