@@ -63,6 +63,15 @@ New commands help you understand what hints are active for your current session:
 
 Markdown tables in the VSCode extension and Web App now use word-wrap instead of horizontal scrollbars, making them more readable.
 
+### Session Alternation Bug Fixes
+
+Critical fixes for the Perplexity "messages must alternate" error and related session corruption issues:
+
+- **Session validation on load/save** - New `validate_and_fix_alternation()` method automatically sanitizes sessions, removing leading assistant messages that break API rules
+- **HTTP server autosave** - Server now properly autosaves sessions after each chat response (was only saving usage stats)
+- **Error rollback fix** - User message rollback in `chat_with_tools` now only happens on first iteration, preventing corruption during multi-turn tool calls
+- **Logger routing** - Session logs now appear in server-debug.log instead of tui-debug.log
+
 ## Configuration
 
 ### Bootstrap Config Options

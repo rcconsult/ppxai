@@ -211,6 +211,120 @@ class TestEngineClientStreaming:
             assert client.session.messages[0].role == "user"
 
 
+class TestErrorRollback:
+    """Tests for user message rollback when errors occur during chat.
+
+    Regression test for bug where errors during chat_with_tools didn't
+    rollback the user message, causing message alternation errors on retry.
+    """
+
+    @pytest.mark.asyncio
+    async def test_error_on_first_iteration_rolls_back_user_message(self):
+        """Test that errors on first tool iteration rollback the user message.
+
+        This is the critical fix for the bug where:
+        1. User sends message with tools enabled
+        2. API call fails (connection error, auth error, etc.)
+        3. User message was NOT removed from session
+        4. Next message caused "messages must alternate" error
+
+        The fix ensures remove_last_message() is called when iteration == 1
+        (the first iteration after increment).
+        """
+        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+            client = EngineClient()
+            client.set_provider("perplexity")
+            client.set_model("sonar")
+
+        # Enable tools to exercise chat_with_tools path
+        client.tools_enabled = True
+
+        with patch.object(client.provider, 'chat') as mock_chat:
+            # Simulate error on first API call
+            mock_chat.return_value = async_event_generator([
+                Event(EventType.STREAM_START, {"model": "sonar"}),
+                Event(EventType.ERROR, "Connection failed: Unable to reach server"),
+            ])
+
+            client.session.messages = []
+
+            # First message fails
+            events = []
+            async for event in client.chat("test message", stream=True):
+                events.append(event)
+
+            # Should have received ERROR event
+            assert any(e.type == EventType.ERROR for e in events)
+
+            # Session should be empty - user message should have been rolled back
+            assert len(client.session.messages) == 0, \
+                f"Expected 0 messages after error rollback, got {len(client.session.messages)}"
+
+    @pytest.mark.asyncio
+    async def test_error_rollback_allows_retry(self):
+        """Test that after error rollback, a retry succeeds without alternation errors."""
+        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+            client = EngineClient()
+            client.set_provider("perplexity")
+            client.set_model("sonar")
+
+        client.tools_enabled = True
+        client.session.messages = []
+
+        with patch.object(client.provider, 'chat') as mock_chat:
+            # First call fails
+            mock_chat.return_value = async_event_generator([
+                Event(EventType.STREAM_START, {"model": "sonar"}),
+                Event(EventType.ERROR, "Connection failed"),
+            ])
+
+            async for event in client.chat("first try", stream=True):
+                pass
+
+            # After error, session should be clean
+            assert len(client.session.messages) == 0
+
+            # Second call succeeds
+            mock_chat.return_value = async_event_generator([
+                Event(EventType.STREAM_START, {"model": "sonar"}),
+                Event(EventType.STREAM_END, "Success!"),
+            ])
+
+            async for event in client.chat("second try", stream=True):
+                pass
+
+            # Should have proper user/assistant pair now
+            assert len(client.session.messages) == 2
+            assert client.session.messages[0].role == "user"
+            assert client.session.messages[1].role == "assistant"
+
+    @pytest.mark.asyncio
+    async def test_multiple_errors_dont_corrupt_session(self):
+        """Test that multiple consecutive errors don't leave orphan messages."""
+        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+            client = EngineClient()
+            client.set_provider("perplexity")
+            client.set_model("sonar")
+
+        client.tools_enabled = True
+        client.session.messages = []
+
+        with patch.object(client.provider, 'chat') as mock_chat:
+            # Fail three times in a row
+            for i in range(3):
+                mock_chat.return_value = async_event_generator([
+                    Event(EventType.STREAM_START, {"model": "sonar"}),
+                    Event(EventType.ERROR, f"Error {i+1}"),
+                ])
+
+                async for event in client.chat(f"attempt {i+1}", stream=True):
+                    pass
+
+                # Session should always be empty after each error
+                assert len(client.session.messages) == 0, \
+                    f"Session should be empty after error {i+1}, got {len(client.session.messages)}"
+
+
 class TestMessageAlternationValidation:
     """Tests to ensure message alternation is always valid."""
 
@@ -245,6 +359,184 @@ class TestMessageAlternationValidation:
                 break
 
         assert has_invalid, "Should detect invalid alternation"
+
+
+class TestSessionAlternationFix:
+    """Tests for session validate_and_fix_alternation method (v1.14.1)."""
+
+    def test_fix_consecutive_user_messages(self):
+        """Test that consecutive user messages are fixed."""
+        from ppxai.engine.session import SessionManager
+
+        session = SessionManager()
+        session.messages = [
+            Message("user", "Hello"),
+            Message("assistant", "Hi"),
+            Message("user", "First question"),
+            Message("user", "Second question"),  # Invalid - consecutive user
+            Message("assistant", "Answer"),
+        ]
+
+        removed = session.validate_and_fix_alternation()
+
+        assert removed == 1
+        assert len(session.messages) == 4
+        # Should keep first user message in the consecutive pair
+        assert session.messages[2].content == "First question"
+        assert session.messages[3].content == "Answer"
+
+    def test_fix_trailing_user_message(self):
+        """Test that trailing user message (orphan) is removed."""
+        from ppxai.engine.session import SessionManager
+
+        session = SessionManager()
+        session.messages = [
+            Message("user", "Hello"),
+            Message("assistant", "Hi"),
+            Message("user", "Orphan message"),  # Invalid - no assistant response
+        ]
+
+        removed = session.validate_and_fix_alternation()
+
+        assert removed == 1
+        assert len(session.messages) == 2
+        assert session.messages[-1].role == "assistant"
+
+    def test_fix_multiple_issues(self):
+        """Test fixing multiple alternation issues at once."""
+        from ppxai.engine.session import SessionManager
+
+        session = SessionManager()
+        session.messages = [
+            Message("user", "Hello"),
+            Message("user", "Hello again"),  # Invalid
+            Message("assistant", "Hi"),
+            Message("user", "Question 1"),
+            Message("user", "Question 2"),  # Invalid
+            Message("user", "Question 3"),  # Invalid
+            Message("assistant", "Answer"),
+            Message("user", "Final orphan"),  # Invalid - trailing
+        ]
+
+        removed = session.validate_and_fix_alternation()
+
+        assert removed == 4
+        assert len(session.messages) == 4
+        # Verify proper alternation
+        for i in range(len(session.messages) - 1):
+            assert session.messages[i].role != session.messages[i + 1].role
+
+    def test_valid_session_unchanged(self):
+        """Test that valid sessions are not modified."""
+        from ppxai.engine.session import SessionManager
+
+        session = SessionManager()
+        session.messages = [
+            Message("user", "Hello"),
+            Message("assistant", "Hi"),
+            Message("user", "How are you?"),
+            Message("assistant", "I'm good!"),
+        ]
+
+        removed = session.validate_and_fix_alternation()
+
+        assert removed == 0
+        assert len(session.messages) == 4
+
+    def test_empty_session_unchanged(self):
+        """Test that empty sessions don't cause errors."""
+        from ppxai.engine.session import SessionManager
+
+        session = SessionManager()
+        session.messages = []
+
+        removed = session.validate_and_fix_alternation()
+
+        assert removed == 0
+        assert len(session.messages) == 0
+
+    def test_single_user_message_removed(self):
+        """Test that a single trailing user message is removed.
+
+        A session with just a user message (no assistant response) would cause
+        alternation errors when the next message is sent.
+        """
+        from ppxai.engine.session import SessionManager
+
+        session = SessionManager()
+        session.messages = [Message("user", "Hello")]
+
+        removed = session.validate_and_fix_alternation()
+
+        # Single user message is an orphan - removed
+        assert removed == 1
+        assert len(session.messages) == 0
+
+    def test_single_assistant_message_removed(self):
+        """Test that a single leading assistant message is removed.
+
+        Sessions starting with assistant break alternation when system prompt
+        is prepended (API requires user/tool after system).
+        """
+        from ppxai.engine.session import SessionManager
+
+        session = SessionManager()
+        session.messages = [Message("assistant", "Welcome!")]
+
+        removed = session.validate_and_fix_alternation()
+
+        # Leading assistant message is removed
+        assert removed == 1
+        assert len(session.messages) == 0
+
+    def test_leading_assistant_messages_removed(self):
+        """Test that leading assistant messages are stripped.
+
+        This is the case that caused the Perplexity alternation bug:
+        - Tool-use session saved with assistant message first
+        - On restore, system prompt prepended
+        - API error: "after system, user/tool must follow"
+        """
+        from ppxai.engine.session import SessionManager
+
+        session = SessionManager()
+        session.messages = [
+            Message("assistant", "I'll use the tool"),  # Leading - remove
+            Message("user", "Tool result here"),
+            Message("assistant", "Based on the result..."),
+            Message("user", "Thanks"),
+            Message("assistant", "You're welcome"),
+        ]
+
+        removed = session.validate_and_fix_alternation()
+
+        assert removed == 1
+        assert len(session.messages) == 4
+        assert session.messages[0].role == "user"
+        assert session.messages[0].content == "Tool result here"
+
+    def test_multiple_leading_assistant_messages_removed(self):
+        """Test that multiple leading assistant messages are all removed."""
+        from ppxai.engine.session import SessionManager
+
+        session = SessionManager()
+        session.messages = [
+            Message("assistant", "First assistant"),  # Remove
+            Message("assistant", "Second assistant"),  # Remove (consecutive)
+            Message("user", "Hello"),
+            Message("assistant", "Hi there"),
+        ]
+
+        removed = session.validate_and_fix_alternation()
+
+        # Both leading assistants removed, then consecutive check removes one more
+        # Actually: first two are leading assistants, removed. Then user, assistant - valid.
+        # Wait, after removing leading, we have [user, assistant] which is valid
+        # But original had assistant, assistant at start - first pass removes leading
+        # Actually the loop removes LEADING assistants first, then the main loop handles rest
+        assert removed == 2  # Both leading assistants
+        assert len(session.messages) == 2
+        assert session.messages[0].role == "user"
 
 
 if __name__ == "__main__":

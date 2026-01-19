@@ -385,13 +385,15 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
             except Exception as cleanup_error:
                 logger.error(f"Session cleanup failed: {cleanup_error}")
 
-    # Auto-save usage to persistent storage after each chat
+    # Auto-save usage and session to persistent storage after each chat
     # This ensures usage is never lost even if server crashes
+    # v1.14.1: Also saves session with validate_and_fix_alternation()
     try:
         if engine and engine.session:
             engine.session.save_usage_to_persistent_storage()
+            engine.session.save_dirty()  # v1.14.1: autosave with alternation fix
     except Exception as save_error:
-        logger.warning(f"Failed to auto-save usage: {save_error}")
+        logger.warning(f"Failed to auto-save: {save_error}")
 
     # Send explicit [DONE] termination signal
     # This follows OpenAI's SSE convention and helps prevent ClientPayloadError
@@ -440,12 +442,14 @@ async def sse_coding_task_generator(
             except Exception as cleanup_error:
                 logger.error(f"Session cleanup failed: {cleanup_error}")
 
-    # Auto-save usage to persistent storage after each coding task
+    # Auto-save usage and session to persistent storage after each coding task
+    # v1.14.1: Also saves session with validate_and_fix_alternation()
     try:
         if engine and engine.session:
             engine.session.save_usage_to_persistent_storage()
+            engine.session.save_dirty()  # v1.14.1: autosave with alternation fix
     except Exception as save_error:
-        logger.warning(f"Failed to auto-save usage: {save_error}")
+        logger.warning(f"Failed to auto-save: {save_error}")
 
     # Send explicit [DONE] termination signal
     logger.log_sse_event("done", "[DONE]")

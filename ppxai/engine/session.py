@@ -17,7 +17,7 @@ from .types import Message, UsageStats, SessionInfo
 from ..common.logger import get_logger
 from ..constants import ConsentMode
 
-logger = get_logger("tui")
+logger = get_logger("session")
 
 
 # Session state file location
@@ -122,6 +122,95 @@ class SessionManager:
             self.metadata["message_count"] = len(self.messages)
             return True
         return False
+
+    def validate_and_fix_alternation(self) -> int:
+        """Validate and fix message alternation issues.
+
+        Ensures messages alternate between user and assistant roles.
+        Removes orphan messages that break alternation (consecutive same-role messages).
+
+        Also ensures session starts with user message (not assistant), because
+        when tools are enabled a system prompt is prepended, and APIs require
+        user/tool messages after system messages.
+
+        User messages are considered less valuable than assistant responses since
+        user input is available in command history and logs.
+
+        Returns:
+            Number of messages removed to fix alternation issues
+        """
+        if not self.messages:
+            return 0
+
+        removed_count = 0
+
+        # Remove leading assistant messages (they break alternation when system prompt is prepended)
+        # This can happen when a tool-use session is restored after an interruption
+        while self.messages and self.messages[0].role == "assistant":
+            removed = self.messages.pop(0)
+            removed_count += 1
+            logger.warning(
+                f"Session alternation fix: removed leading assistant message "
+                f"(len={len(removed.content)})"
+            )
+
+        if not self.messages:
+            # All messages were assistant messages
+            self.metadata["message_count"] = 0
+            if removed_count > 0:
+                logger.info(
+                    f"Session alternation fixed: removed {removed_count} messages, "
+                    f"0 remaining"
+                )
+            return removed_count
+
+        fixed_messages = []
+
+        for i, msg in enumerate(self.messages):
+            if not fixed_messages:
+                # First message - always keep (already ensured it's user)
+                fixed_messages.append(msg)
+            elif fixed_messages[-1].role != msg.role:
+                # Proper alternation - keep
+                fixed_messages.append(msg)
+            else:
+                # Same role as previous - this breaks alternation
+                # Strategy: keep the one with more content (likely more valuable)
+                # But prefer assistant messages over user messages
+                prev = fixed_messages[-1]
+                if msg.role == "assistant":
+                    # Two assistant messages in a row - keep longer one
+                    if len(msg.content) > len(prev.content):
+                        fixed_messages[-1] = msg
+                else:
+                    # Two user messages in a row - keep first one (already in fixed_messages)
+                    pass
+                removed_count += 1
+                logger.warning(
+                    f"Session alternation fix: removed duplicate {msg.role} message "
+                    f"(len={len(msg.content)}) at position {i}"
+                )
+
+        # Also ensure session ends with assistant message (not orphan user)
+        # A trailing user message without assistant response will cause alternation
+        # errors when the next message is sent
+        if fixed_messages and fixed_messages[-1].role == "user":
+            removed = fixed_messages.pop()
+            removed_count += 1
+            logger.warning(
+                f"Session alternation fix: removed trailing user message "
+                f"(len={len(removed.content)})"
+            )
+
+        if removed_count > 0:
+            self.messages = fixed_messages
+            self.metadata["message_count"] = len(self.messages)
+            logger.info(
+                f"Session alternation fixed: removed {removed_count} messages, "
+                f"{len(self.messages)} remaining"
+            )
+
+        return removed_count
 
     def clear(self):
         """Clear conversation history and reset consent state."""
@@ -339,9 +428,13 @@ class SessionManager:
             Session name
 
         v1.13.9: Now includes working_dir and tools_enabled for session persistence.
+        v1.14.1: Validates and fixes message alternation before saving.
         """
         if name:
             self.session_name = name
+
+        # Validate and fix alternation issues before saving (v1.14.1)
+        self.validate_and_fix_alternation()
 
         filepath = self.sessions_dir / f"{self.session_name}.json"
 
@@ -370,6 +463,8 @@ class SessionManager:
 
         Returns:
             True if loaded successfully
+
+        v1.14.1: Validates and fixes message alternation after loading.
         """
         filepath = self.sessions_dir / f"{name}.json"
 
@@ -399,6 +494,13 @@ class SessionManager:
             self.command_history = data.get("command_history", [])
             self.working_dir = data.get("working_dir", os.getcwd())
             self.tools_enabled = data.get("tools_enabled", False)
+
+            # Validate and fix alternation issues after loading (v1.14.1)
+            fixed_count = self.validate_and_fix_alternation()
+            if fixed_count > 0:
+                logger.warning(
+                    f"Loaded session '{name}' had {fixed_count} message alternation issues - auto-fixed"
+                )
 
             return True
 
@@ -586,9 +688,14 @@ class SessionManager:
         Internal method that saves the full session data including
         the new v1.13.9 fields.
 
+        v1.14.1: Validates and fixes message alternation before saving.
+
         Returns:
             Session name
         """
+        # Validate and fix alternation issues before saving (v1.14.1)
+        self.validate_and_fix_alternation()
+
         filepath = self.sessions_dir / f"{self.session_name}.json"
 
         session_data = {
@@ -668,6 +775,8 @@ class SessionManager:
 
         Returns:
             True if loaded successfully
+
+        v1.14.1: Validates and fixes message alternation after loading.
         """
         filepath = self.sessions_dir / f"{name}.json"
 
@@ -697,6 +806,13 @@ class SessionManager:
             self.command_history = data.get("command_history", [])
             self.working_dir = data.get("working_dir", os.getcwd())
             self.tools_enabled = data.get("tools_enabled", False)
+
+            # Validate and fix alternation issues after loading (v1.14.1)
+            fixed_count = self.validate_and_fix_alternation()
+            if fixed_count > 0:
+                logger.warning(
+                    f"Loaded session '{name}' had {fixed_count} message alternation issues - auto-fixed"
+                )
 
             return True
 

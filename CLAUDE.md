@@ -17,6 +17,9 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **NEW:** Debug logging on provider/model switch (logs hint transitions)
 - **NEW:** `/context/hints` HTTP endpoint for VSCode extension
 - **FIX:** VSCode/Web markdown tables now use word-wrap instead of horizontal scrollbars
+- **FIX:** Perplexity "messages must alternate" error when restoring tool-use sessions
+- **FIX:** HTTP server session autosave with alternation validation
+- **FIX:** Error rollback in `chat_with_tools` only on first iteration
 
 **Version Alignment:**
 - Python package (pyproject.toml): v1.14.0

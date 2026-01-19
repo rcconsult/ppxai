@@ -21,6 +21,9 @@ from .tools.manager import ToolManager
 from .tools.parser import parse_tool_call
 from .providers.base import BaseProvider
 from ..config import get_system_prompt, get_system_prompt_mode, calculate_cost
+from ..common.logger import get_logger
+
+logger = get_logger("chat")
 
 
 class ChatContext(Protocol):
@@ -118,7 +121,11 @@ async def chat_simple(
                 return
 
             if event.type == EventType.ERROR:
-                ctx.session.remove_last_message()
+                removed = ctx.session.remove_last_message()
+                logger.info(
+                    f"Error rollback (simple): removed={removed}, "
+                    f"messages_left={len(ctx.session.messages)}"
+                )
                 yield event
                 return
             elif event.type == EventType.STREAM_END:
@@ -196,6 +203,12 @@ async def chat_with_tools(
     else:
         openai_tools = True  # Signal tools enabled for prompt-based mode
 
+    # Debug: log session state at start of chat_with_tools
+    logger.debug(
+        f"chat_with_tools start: messages={len(ctx.session.messages)}, "
+        f"roles={[m.role for m in ctx.session.messages[-5:]]}"  # Last 5 message roles
+    )
+
     yield Event(EventType.STREAM_START, {"model": ctx.model})
 
     empty_retry_count = 0
@@ -267,8 +280,14 @@ async def chat_with_tools(
 
         async for event in ctx.provider.chat(messages, ctx.model, stream=False, tools=openai_tools):
             if event.type == EventType.ERROR:
-                if iteration == 0:
-                    ctx.session.remove_last_message()
+                # Only remove user message on first iteration (before any tool results added)
+                # This prevents session corruption from orphan user messages (v1.14.1)
+                if iteration == 1:
+                    removed = ctx.session.remove_last_message()
+                    logger.info(
+                        f"Error rollback: iteration={iteration}, removed={removed}, "
+                        f"messages_left={len(ctx.session.messages)}"
+                    )
                 yield event
                 return
             elif event.type == EventType.TOOL_CALL:

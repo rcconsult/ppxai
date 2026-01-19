@@ -30,6 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **VSCode/Web table rendering** - Markdown tables now use word-wrap instead of horizontal scrollbars
 - **CSS table-layout** - Changed from `display: block` with `overflow-x` to `table-layout: fixed` with `word-wrap`
+- **Perplexity "messages must alternate" error** - Fixed session corruption when restoring tool-use sessions that start with assistant messages
+- **HTTP server session autosave** - Server now calls `save_dirty()` after each chat response (was only saving usage stats)
+- **Session alternation validation** - New `validate_and_fix_alternation()` method sanitizes sessions on load/save, removing leading assistant messages
+- **Error rollback in chat_with_tools** - User message rollback now only happens on first iteration, preventing session corruption during multi-turn tool calls
+- **Session logger routing** - Changed session.py logger from "tui" to "session" for proper server-debug.log output
 
 ### Architecture
 

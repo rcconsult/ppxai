@@ -170,7 +170,10 @@ class SessionManager:
         logger.info(f"Idle shutdown monitor started (timeout: {idle_timeout}s)")
 
     async def shutdown(self) -> None:
-        """Gracefully shutdown the session manager."""
+        """Gracefully shutdown the session manager.
+
+        v1.14.1: Now also calls save_dirty() to save session with alternation fix.
+        """
         self._shutdown_requested = True
 
         # Cancel idle monitor
@@ -181,22 +184,30 @@ class SessionManager:
             except asyncio.CancelledError:
                 pass
 
-        # Save default engine usage
+        # Save default engine session and usage
         if self._default_engine and self._default_engine.session:
             try:
                 self._default_engine.session.save_usage_to_persistent_storage()
-                logger.info("Default session usage saved")
+                # v1.14.1: Also save session with alternation validation
+                if self._default_engine.session.messages:
+                    self._default_engine.session.save_dirty()
+                    self._default_engine.session.mark_clean()
+                logger.info("Default session saved")
             except Exception as e:
-                logger.warning(f"Failed to save default session usage: {e}")
+                logger.warning(f"Failed to save default session: {e}")
 
-        # Save all session usage
+        # Save all session usage and data
         async with self._sessions_lock:
             for sid, session in self._sessions.items():
                 try:
                     session.engine.session.save_usage_to_persistent_storage()
-                    logger.info(f"Session {sid} usage saved")
+                    # v1.14.1: Also save session with alternation validation
+                    if session.engine.session.messages:
+                        session.engine.session.save_dirty()
+                        session.engine.session.mark_clean()
+                    logger.info(f"Session {sid} saved")
                 except Exception as e:
-                    logger.warning(f"Failed to save session {sid} usage: {e}")
+                    logger.warning(f"Failed to save session {sid}: {e}")
 
         logger.info("SessionManager shutdown complete")
 
