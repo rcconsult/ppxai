@@ -306,6 +306,33 @@ v1.14.2 extends `/context` to also manage **bootstrap context** (AGENTS.md/CLAUD
 
 **Note:** Provider/model conditional sections replaced by YAML front matter in v1.14.0.
 
+### v1.14.4 - Documentation Site (GitHub Pages)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **MkDocs setup** | `mkdocs.yml` with Material theme | Planned |
+| **Auto-deploy workflow** | GitHub Actions deploys on release tag | Planned |
+| **Versioned docs** | `mike` plugin for version selector | Planned |
+| **Search** | Built-in full-text search | Planned |
+| **Release integration** | Docs deploy as part of release process | Planned |
+
+**Technology Stack:**
+- **MkDocs** - Static site generator from markdown
+- **Material for MkDocs** - Theme with dark mode, search, code highlighting
+- **mike** - Versioning plugin (each release gets archived docs)
+- **GitHub Pages** - Hosting at `rcconsult.github.io/ppxai`
+
+**URL Structure:**
+```
+https://rcconsult.github.io/ppxai/
+├── /                      # Latest version (alias)
+├── /1.14.4/              # Specific version
+├── /1.13.10/             # Previous version
+└── /getting-started/     # Navigation sections
+```
+
+**Automation:** On release tag push, GitHub Actions builds and deploys docs automatically.
+
 ---
 
 ## Future Considerations

@@ -383,17 +383,20 @@ Bootstrap Context:
 
 ---
 
-### v1.14.3 - Context Enhancements
+### v1.14.3 - Enhanced Context Providers
 
-**Goal:** Advanced context features
+**Goal:** Advanced context features and external source injection
 
 | Feature | Description |
 |---------|-------------|
-| Token count display | Show in status bar |
-| Include directive | Reference other files |
-| Hint templates | Reusable hint sets |
+| `@url` provider | Fetch and inject web content into context |
+| `@clipboard` provider | Inject clipboard contents |
+| Include directive | `<!-- include: ./docs/style.md -->` in AGENTS.md |
+| Hint templates | Reusable hint sets: `hints: [tool-heavy, reasoning]` |
+| Token count display | Show context size in status bar |
+| Context caching | Cache fetched URLs for session duration |
 
-**Note:** Provider/model-specific conditionals are now handled via YAML front matter (v1.14.0).
+**Note:** Provider/model-specific conditionals are handled via YAML front matter (v1.14.0).
 
 **Include Directive:**
 ```markdown
@@ -430,21 +433,150 @@ provider_hints:
 
 ---
 
-### v1.14.4 - Enhanced Context Providers
+### v1.14.4 - Documentation Site (GitHub Pages)
 
-**Goal:** Advanced context injection from external sources
+**Goal:** Professional documentation site with versioning and search
 
 | Feature | Description |
 |---------|-------------|
-| `@url` provider | Fetch and inject web content into context |
-| `@clipboard` provider | Inject clipboard contents |
-| Context caching | Cache fetched URLs for session duration |
-| Error handling | Graceful fallback when sources unavailable |
+| MkDocs setup | `mkdocs.yml` with Material theme configuration |
+| Auto-deploy workflow | GitHub Actions deploys on release tag |
+| Versioned docs | `mike` plugin for version selector |
+| Full-text search | Built-in search across all documentation |
+| Release integration | Docs deploy automatically as part of release |
 
-**Note:** Installation & server control features originally planned here were completed in v1.13.x:
-- ✅ `install.sh` and `install.ps1` (v1.13.2)
-- ✅ VSCode server badge (v1.13.1)
-- ✅ docs/INSTALLATION.md (v1.13.2)
+**Technology Stack:**
+- **MkDocs** - Static site generator that uses existing markdown files
+- **Material for MkDocs** - Theme with dark mode, search, code highlighting
+- **mike** - Versioning plugin (each release archives its docs)
+- **GitHub Pages** - Hosting at `rcconsult.github.io/ppxai`
+
+**File Structure:**
+```
+ppxai/
+├── docs/                      # Existing - source markdown
+│   ├── INSTALLATION.md
+│   ├── AGENT_MODE_GUIDE.md
+│   └── ...
+├── mkdocs.yml                 # NEW: Site configuration
+└── .github/workflows/
+    └── docs.yml               # NEW: Auto-deploy workflow
+```
+
+**mkdocs.yml Configuration:**
+```yaml
+site_name: ppxai Documentation
+site_url: https://rcconsult.github.io/ppxai/
+repo_url: https://github.com/rcconsult/ppxai
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.instant
+    - navigation.sections
+    - search.highlight
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: INSTALLATION.md
+    - Quick Start: ../README.md
+  - User Guides:
+    - Agent Mode: AGENT_MODE_GUIDE.md
+    - Checkpoint & Undo: CHECKPOINT_GUIDE.md
+    - Provider Setup: PROVIDER_SETUP.md
+  - Development:
+    - Custom Tools: CUSTOM_TOOL_DEVELOPMENT_GUIDE.md
+    - VSCode Extension: ../vscode-extension/README.md
+  - Release Notes:
+    - v1.14.x: RELEASE-NOTES-v1.14.0.md
+
+plugins:
+  - search
+  - mike:
+      version_selector: true
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - admonition
+  - toc:
+      permalink: true
+```
+
+**GitHub Actions Workflow (`.github/workflows/docs.yml`):**
+```yaml
+name: Deploy Documentation
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy'
+        required: true
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install mkdocs-material mike
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Deploy docs
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          mike deploy --push --update-aliases $VERSION latest
+          mike set-default --push latest
+```
+
+**URL Structure:**
+```
+https://rcconsult.github.io/ppxai/
+├── /                      # Latest version (alias)
+├── /1.14.4/              # Specific version
+├── /1.13.10/             # Previous version
+└── /getting-started/     # Navigation sections
+```
+
+**Benefits:**
+- Zero changes to existing markdown docs
+- Automatic versioning per release
+- Full-text search
+- Dark/light mode toggle
+- Mobile responsive
+- Professional appearance
 
 ---
 
@@ -487,17 +619,26 @@ provider_hints:
 - [x] Update VSCode extension (v1.13.9 - context badge + /context command)
 
 ### v1.14.3
-- [ ] Add token counting to `/context` output
-- [ ] Implement include directive (`<!-- include: path -->`)
-- [ ] Implement hint templates (`hint_templates:` + `templates: [...]`)
-- [ ] Add context size to status bar
-
-### v1.14.4
 - [ ] Implement `@url` context provider
 - [ ] Implement `@clipboard` context provider
+- [ ] Implement include directive (`<!-- include: path -->`)
+- [ ] Implement hint templates (`hint_templates:` + `templates: [...]`)
+- [ ] Add token counting to `/context` output
+- [ ] Add context size to status bar
 - [ ] Add URL content caching
 - [ ] Add timeout/error handling for URL fetch
 - [ ] Add tests for context providers
+
+### v1.14.4
+- [ ] Create `mkdocs.yml` configuration file
+- [ ] Create `docs/index.md` landing page
+- [ ] Create `.github/workflows/docs.yml` workflow
+- [ ] Enable GitHub Pages in repository settings
+- [ ] Test local preview with `mkdocs serve`
+- [ ] Deploy initial version with `mike`
+- [ ] Verify versioned docs work correctly
+- [ ] Add docs deployment step to release script
+- [ ] Update README with docs site link
 
 ---
 
