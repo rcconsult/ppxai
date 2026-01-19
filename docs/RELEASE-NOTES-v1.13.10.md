@@ -1,6 +1,6 @@
 # Release Notes - v1.13.10
 
-**Release Date:** 2026-01-14
+**Release Date:** 2026-01-19
 
 This is a stabilization release focusing on web app enhancements, session restore fixes, and tool loop detection before the v1.14.x series.
 
@@ -8,7 +8,7 @@ This is a stabilization release focusing on web app enhancements, session restor
 
 ### Web App File Preview
 
-The `/show` command in the web app now supports previewing images and PDFs directly in the preview panel:
+The `/show` command in the web app now supports previewing images, PDFs, and structured data files directly in the preview panel:
 
 **Image Preview**
 - Supported formats: PNG, JPG, JPEG, GIF, WebP, SVG, BMP, ICO
@@ -20,9 +20,19 @@ The `/show` command in the web app now supports previewing images and PDFs direc
 - Full navigation, zoom, and search capabilities
 - Shows file size in the header
 
+**Structured Data Preview (Tree Viewer)**
+- **JSON** - Collapsible tree with syntax highlighting
+- **YAML** - Parsed via js-yaml library with tree navigation
+- **TOML** - Parsed via toml-js library with tree navigation
+- **HCL/Terraform** - Parsed via hcl2-parser with tree navigation
+- Expand/collapse all, search within tree, type indicators
+- Rendered/Source toggle to switch between formatted view and raw text
+
 ```
 /show ./docs/architecture.png
 /show ~/documents/report.pdf
+/show ./config.yaml
+/show ./terraform/main.tf
 ```
 
 ### Tool Loop Detection
@@ -52,6 +62,14 @@ When a model calls the same tool 3 times consecutively, ppxai injects a message 
 - Base64-encoded PDFs served via `/files/read` API
 - Native browser PDF viewer via `<embed>` element
 - Works with all modern browsers
+
+### Structured Data Tree Viewer (Web App)
+- **DataTreeViewer component** - Collapsible tree with expand/collapse all controls
+- **Multi-format support** - JSON (native), YAML (js-yaml), TOML (toml-js), HCL (hcl2-parser)
+- **Type indicators** - Visual badges for string, number, boolean, null, array, object
+- **Search within tree** - Filter nodes by key or value
+- **Rendered/Source toggle** - Switch between tree view and raw text
+- **Parsing libraries** - Bundled in `ppxai/web/lib/` directory
 
 ### Tool Loop Detection
 - Configurable threshold (0 = disabled)
@@ -110,7 +128,12 @@ Major refactoring of `chatPanel.ts` using EventBus + State Machine patterns:
 - `ppxai/server/http.py` - Image and PDF preview support in `/files/read` endpoint
 
 ### Web App
-- `ppxai/web/app.js` - New `showImagePreview()` and `showPdfPreview()` methods
+- `ppxai/web/app.js` - New `showImagePreview()`, `showPdfPreview()`, and `showDataTreePreview()` methods
+- `ppxai/web/components/tree-viewer.js` - `DataTreeViewer` class for structured data
+- `ppxai/web/styles/data-viewers.css` - Styling for tree viewer components
+- `ppxai/web/lib/js-yaml.min.js` - YAML parsing library
+- `ppxai/web/lib/toml.min.js` - TOML parsing library
+- `ppxai/web/lib/hcl2-parser.min.js` - HCL/Terraform parsing library
 
 ### Engine
 - `ppxai/engine/tools/manager.py` - Tool loop detection (`is_tool_loop_detected()`, `get_loop_message()`)
@@ -137,6 +160,11 @@ Major refactoring of `chatPanel.ts` using EventBus + State Machine patterns:
 
 ## What's Next (v1.14.x)
 
-- Session isolation for multi-client support
-- Enhanced MCP server integration
-- Improved agent mode with conversation branching
+The v1.14.x series focuses on **Session Bootstrap & Context** - reproducible starting points for every session:
+
+- **AGENTS.md / CLAUDE.md support** - Load project instructions from markdown files on startup
+- **Bootstrap context hierarchy** - Global (`~/.ppxai/`) → Project → Subdirectory context merging
+- **`/context` extensions** - Show, reload, and edit bootstrap context files
+- **Enhanced context providers** - `@url` for web content, `@clipboard` support, conditional sections
+
+See [ROADMAP.md](../ROADMAP.md) for detailed v1.14.x planning.
