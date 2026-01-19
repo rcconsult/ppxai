@@ -230,7 +230,7 @@ export async function handleShellConsent(
  */
 export function createVSCodeConsentContext(
     backend: HttpClient,
-    vscodeWindow: { showQuickPick: Function },
+    vscodeWindow: { showQuickPick: <T extends vscode.QuickPickItem>(items: T[], options?: vscode.QuickPickOptions) => Thenable<T | undefined> },
     eventBus?: ChatEventBus
 ): ConsentContext {
     return {

@@ -126,7 +126,7 @@ export type ChatEvents = StreamEvents & ConsentEvents & AgentEvents & UIEvents;
  * ```
  */
 export class ChatEventBus {
-    private listeners = new Map<string, Set<Function>>();
+    private listeners = new Map<string, Set<(...args: unknown[]) => void>>();
 
     /**
      * Subscribe to an event.
@@ -160,7 +160,7 @@ export class ChatEventBus {
     emit<K extends keyof ChatEvents>(event: K, ...args: Parameters<ChatEvents[K]>): void {
         this.listeners.get(event)?.forEach(handler => {
             try {
-                (handler as Function)(...args);
+                handler(...args);
             } catch (e) {
                 console.error(`EventBus error in ${event}:`, e);
             }
@@ -177,7 +177,7 @@ export class ChatEventBus {
     once<K extends keyof ChatEvents>(event: K, handler: ChatEvents[K]): () => void {
         const wrapper = ((...args: Parameters<ChatEvents[K]>) => {
             this.off(event, wrapper as ChatEvents[K]);
-            (handler as Function)(...args);
+            (handler as (...a: unknown[]) => void)(...args);
         }) as ChatEvents[K];
         return this.on(event, wrapper);
     }
