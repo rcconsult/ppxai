@@ -30,6 +30,13 @@
     "warn_at_percent": 80,
     "__comment_warn_at_percent": "Show warning when context usage exceeds this % of model limit (0 = disabled)"
   },
+  "bootstrap": {
+    "__comment": "Bootstrap context from project instruction files (v1.14.0+)",
+    "files": ["AGENTS.md", "CLAUDE.md"],
+    "__comment_files": "Filenames to search for project instructions. First match wins. Empty list disables bootstrap.",
+    "enabled": true,
+    "__comment_enabled": "Set to false to disable bootstrap context loading entirely"
+  },
   "paths": {
     "__comment": "Binary and data paths (v1.13.2+). Use {home} for home directory",
     "__comment_windows": "On Windows, {home} expands to %USERPROFILE% (e.g., C:\\Users\\YourName)",

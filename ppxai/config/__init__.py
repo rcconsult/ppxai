@@ -604,6 +604,54 @@ def get_context_config() -> Dict[str, Any]:
     return {**defaults, **context_config}
 
 
+# =============================================================================
+# Bootstrap Configuration (v1.14.0)
+# =============================================================================
+
+# Default bootstrap file aliases (checked in order)
+DEFAULT_BOOTSTRAP_FILES = ["AGENTS.md", "CLAUDE.md"]
+
+
+def get_bootstrap_config() -> Dict[str, Any]:
+    """Get bootstrap context configuration.
+
+    Returns:
+        Dict with 'files' (list of filenames) and 'enabled' (bool)
+    """
+    defaults = {
+        "files": DEFAULT_BOOTSTRAP_FILES,
+        "enabled": True,
+    }
+
+    config = ConfigStore.get_instance().config
+    bootstrap_config = config.get("bootstrap", {})
+    return {**defaults, **bootstrap_config}
+
+
+def get_bootstrap_files() -> List[str]:
+    """Get list of bootstrap file aliases to search for.
+
+    Returns:
+        List of filenames (e.g., ["AGENTS.md", "CLAUDE.md"])
+    """
+    return get_bootstrap_config().get("files", DEFAULT_BOOTSTRAP_FILES)
+
+
+def is_bootstrap_enabled() -> bool:
+    """Check if bootstrap context loading is enabled.
+
+    Returns:
+        True if bootstrap is enabled (default), False if disabled
+    """
+    config = get_bootstrap_config()
+    # Disabled if enabled=false OR if files list is empty
+    if not config.get("enabled", True):
+        return False
+    if not config.get("files", DEFAULT_BOOTSTRAP_FILES):
+        return False
+    return True
+
+
 def get_max_injection_size() -> int:
     """Get the maximum size (in chars) for @file/@git/@tree injections."""
     return get_context_config().get("max_injection_size", DEFAULT_MAX_INJECTION_SIZE)
@@ -745,4 +793,9 @@ __all__ = [
     "get_context_warn_percent",
     "get_model_context_limit",
     "get_model_max_tokens",
+    # Bootstrap functions (v1.14.0)
+    "DEFAULT_BOOTSTRAP_FILES",
+    "get_bootstrap_config",
+    "get_bootstrap_files",
+    "is_bootstrap_enabled",
 ]

@@ -200,7 +200,7 @@ ppxai provides:
 | Feature | Description | Status |
 |---------|-------------|--------|
 | **AGENTS.md loading** | Load project instructions from AGENTS.md on startup | Planned |
-| **CLAUDE.md fallback** | Support CLAUDE.md as alternative filename | Planned |
+| **Configurable file aliases** | User-defined fallback list: `bootstrap_files: ["AGENTS.md", "CLAUDE.md", ...]` | Planned |
 | **YAML front matter** | Provider/model-specific hints in structured header | Planned |
 | **Dynamic prompt assembly** | Rebuild system prompt on provider/model switch | Planned |
 | **TUI + VSCode + Web support** | All interfaces load context via EngineClient | Planned |

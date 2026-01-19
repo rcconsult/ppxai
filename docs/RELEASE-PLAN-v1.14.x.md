@@ -93,10 +93,42 @@ so it works alongside user-configured prompts without breaking existing behavior
 | Feature | File | Description |
 |---------|------|-------------|
 | `BootstrapContext` class | `ppxai/engine/bootstrap.py` | Parse AGENTS.md with YAML front matter |
-| `find_bootstrap_files()` | `ppxai/engine/context.py` | Discover AGENTS.md/CLAUDE.md |
+| `find_bootstrap_files()` | `ppxai/engine/context.py` | Discover bootstrap files with configurable aliases |
 | `load_bootstrap_context()` | `ppxai/engine/client.py` | Load and cache BootstrapContext |
 | Dynamic prompt assembly | `ppxai/engine/client.py` | Rebuild on provider/model switch |
 | `get_bootstrap_status()` | `ppxai/engine/client.py` | Status API for UI |
+| Configurable file aliases | `ppxai-config.json` | User-defined fallback filenames |
+
+**Design Decision: Configurable Bootstrap File Aliases**
+
+By default, ppxai looks for `AGENTS.md` first, then falls back to `CLAUDE.md`. Users can customize this list via `ppxai-config.json` to support other naming conventions (e.g., `COPILOT.md`, `AI.md`, `CURSOR.md`).
+
+**Configuration (ppxai-config.json):**
+```json
+{
+  "bootstrap": {
+    "files": ["AGENTS.md", "CLAUDE.md", "COPILOT.md", "AI.md"],
+    "enabled": true
+  }
+}
+```
+
+**Behavior:**
+- Files are checked in order; first match wins (no merging at same directory level)
+- Default: `["AGENTS.md", "CLAUDE.md"]` if not configured
+- Case-sensitive on Linux/macOS, case-insensitive on Windows
+- Empty list `[]` or `enabled: false` disables bootstrap file loading entirely
+
+**Lookup Algorithm:**
+```python
+def find_bootstrap_file(directory: Path, aliases: list[str]) -> Path | None:
+    """Find first matching bootstrap file in directory."""
+    for filename in aliases:
+        path = directory / filename
+        if path.is_file():
+            return path
+    return None
+```
 
 **Design Decision: YAML Front Matter Format**
 
@@ -211,7 +243,7 @@ def test_finds_claude_md_as_fallback():
         assert files[0].name == "CLAUDE.md"
 
 def test_agents_md_takes_priority():
-    """When both exist, AGENTS.md wins."""
+    """When both exist, AGENTS.md wins (first in alias list)."""
     with temp_dir() as d:
         (d / "AGENTS.md").write_text("Agents rules")
         (d / "CLAUDE.md").write_text("Claude rules")
@@ -219,6 +251,40 @@ def test_agents_md_takes_priority():
         files = injector.find_bootstrap_files()
         assert len(files) == 1
         assert files[0].name == "AGENTS.md"
+
+def test_custom_alias_list():
+    """User-configured alias list is respected."""
+    with temp_dir() as d:
+        (d / "COPILOT.md").write_text("Copilot rules")
+        (d / "CLAUDE.md").write_text("Claude rules")
+        # Custom order: COPILOT.md first
+        injector = ContextInjector(
+            working_dir=str(d),
+            bootstrap_files=["COPILOT.md", "CLAUDE.md", "AGENTS.md"]
+        )
+        files = injector.find_bootstrap_files()
+        assert len(files) == 1
+        assert files[0].name == "COPILOT.md"
+
+def test_custom_alias_fallback_order():
+    """Falls back through alias list in order."""
+    with temp_dir() as d:
+        (d / "AI.md").write_text("AI rules")  # Third in list
+        injector = ContextInjector(
+            working_dir=str(d),
+            bootstrap_files=["AGENTS.md", "CLAUDE.md", "AI.md"]
+        )
+        files = injector.find_bootstrap_files()
+        assert len(files) == 1
+        assert files[0].name == "AI.md"
+
+def test_empty_alias_list_disables_bootstrap():
+    """Empty bootstrap_files list disables loading."""
+    with temp_dir() as d:
+        (d / "AGENTS.md").write_text("Should be ignored")
+        injector = ContextInjector(working_dir=str(d), bootstrap_files=[])
+        files = injector.find_bootstrap_files()
+        assert len(files) == 0
 
 def test_context_injected_into_system_prompt():
     """Bootstrap context appears in messages sent to LLM."""
@@ -585,7 +651,9 @@ https://rcconsult.github.io/ppxai/
 ### v1.14.0
 - [ ] Create `ppxai/engine/bootstrap.py` with `BootstrapContext` class
 - [ ] Implement YAML front matter parsing (provider_hints, model_hints)
-- [ ] Add `find_bootstrap_files()` to ContextInjector
+- [ ] Add `find_bootstrap_files()` to ContextInjector with configurable aliases
+- [ ] Add `bootstrap_files` config option to `ppxai/config/` (default: `["AGENTS.md", "CLAUDE.md"]`)
+- [ ] Add `get_bootstrap_files()` helper function to config module
 - [ ] Add `_bootstrap_context: BootstrapContext` to EngineClient
 - [ ] Add `load_bootstrap_context()` method
 - [ ] Add `get_bootstrap_status()` method
@@ -596,6 +664,8 @@ https://rcconsult.github.io/ppxai/
 - [ ] Call `load_bootstrap_context()` in `__init__`
 - [ ] Call `load_bootstrap_context()` in `set_working_dir()`
 - [ ] Create `tests/test_bootstrap_context.py`
+- [ ] Add tests for custom alias list configuration
+- [ ] Add tests for empty alias list (disabled bootstrap)
 - [ ] Update `/status` to show bootstrap info
 - [ ] Test provider switching with different hints
 - [ ] Test in TUI, VSCode, and Web app

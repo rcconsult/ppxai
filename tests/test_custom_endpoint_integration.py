@@ -4,22 +4,55 @@ This test actually connects to the custom endpoint to verify it works.
 Run with: pytest tests/test_custom_endpoint_integration.py -v -s
 
 NOTE: These tests require a running vLLM/Ollama server with CUSTOM_* env vars configured.
+      These tests modify global config state and should be run in isolation:
+      - Run specifically: pytest tests/test_custom_endpoint_integration.py -v
+      - Or exclude when running all: pytest tests/ --ignore=tests/test_custom_endpoint_integration.py
 """
 import os
 import pytest
 from dotenv import load_dotenv
 
 
+def _is_running_full_test_suite():
+    """Check if we're running the full test suite or just this module.
+
+    Returns True if running all tests, False if running just this test file.
+    This is used to skip integration tests that modify global config state.
+    """
+    import sys
+    # Check if pytest was invoked with a specific test file path
+    for arg in sys.argv:
+        if 'test_custom_endpoint' in arg:
+            return False  # Running this file specifically
+    return True  # Running all tests
+
+
 @pytest.fixture(scope="module", autouse=True)
 def load_env():
     """Load environment variables before any tests in this module."""
+    import importlib
+
+    # Save original config state
+    import ppxai.config.store
+    original_instance = ppxai.config.store.ConfigStore._instance
+
     # Load environment variables from the project root .env file
     # Use override=True to reload even if already loaded/cleared by other tests
     env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
     load_dotenv(dotenv_path=env_path, override=True)
+
     yield
+
     # Reload again after tests in case they were cleared
     load_dotenv(dotenv_path=env_path, override=True)
+
+    # Restore original config state after all tests in this module
+    ppxai.config.store.ConfigStore._instance = original_instance
+    import ppxai.config.loader
+    import ppxai.config
+    importlib.reload(ppxai.config.loader)
+    importlib.reload(ppxai.config.store)
+    importlib.reload(ppxai.config)
 
 
 @pytest.fixture
@@ -28,16 +61,41 @@ def custom_engine():
 
     This fixture requires a custom vLLM/Ollama server to be running
     and configured via CUSTOM_* env vars or ppxai-config.json.
+
+    Note: SSL_VERIFY is loaded early via conftest.py pytest_configure hook
+    to ensure it's set before any ppxai modules are imported during test collection.
     """
     import importlib
+    import sys
 
-    # Reload dotenv to ensure we have fresh environment variables
-    # This is needed because test_config.py may clear environment
+    # Load project .env for API keys
     env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
     load_dotenv(dotenv_path=env_path, override=True)
 
-    # Reload config module to pick up new environment variables
+    # Also load from user's .ppxai directory for provider config and SSL_VERIFY
+    user_env_path = os.path.expanduser('~/.ppxai/.env')
+    if os.path.exists(user_env_path):
+        load_dotenv(dotenv_path=user_env_path, override=True)
+
+    # Force reload of the base provider module to ensure fresh SSL_VERIFY reading
+    # This is critical because BaseProvider reads SSL_VERIFY at __init__ time
+    # and a previous test might have created a provider with different SSL settings
+    for mod_name in list(sys.modules.keys()):
+        if 'ppxai.engine.providers' in mod_name:
+            del sys.modules[mod_name]
+
+    # Save original ConfigStore state
+    import ppxai.config.store
+    original_instance = ppxai.config.store.ConfigStore._instance
+
+    # Reset ConfigStore singleton to force reload with fresh env vars
+    ppxai.config.store.ConfigStore._instance = None
+
+    # Reload config modules to pick up new environment variables
+    import ppxai.config.loader
     import ppxai.config
+    importlib.reload(ppxai.config.loader)
+    importlib.reload(ppxai.config.store)
     importlib.reload(ppxai.config)
 
     from ppxai.config import PROVIDERS
@@ -45,23 +103,36 @@ def custom_engine():
 
     # Check if "custom" provider is explicitly configured (not a fallback)
     if "custom" not in PROVIDERS:
+        # Restore original state before skipping
+        ppxai.config.store.ConfigStore._instance = original_instance
         pytest.skip("Custom provider not configured in PROVIDERS")
 
     # Verify it has a custom base_url (not the Perplexity URL)
     custom_config = PROVIDERS.get("custom", {})
     base_url = custom_config.get("base_url", "")
     if "perplexity.ai" in base_url:
+        # Restore original state before skipping
+        ppxai.config.store.ConfigStore._instance = original_instance
         pytest.skip("Custom provider base_url is Perplexity (fallback) - need real custom endpoint")
 
     # Check for custom API key
     api_key_env = custom_config.get("api_key_env", "CUSTOM_API_KEY")
     api_key = os.getenv(api_key_env, "")
     if not api_key:
+        # Restore original state before skipping
+        ppxai.config.store.ConfigStore._instance = original_instance
         pytest.skip(f"{api_key_env} not configured")
 
     engine = EngineClient()
     engine.set_provider("custom")
-    return engine
+
+    yield engine
+
+    # Restore original ConfigStore state after test
+    ppxai.config.store.ConfigStore._instance = original_instance
+    importlib.reload(ppxai.config.loader)
+    importlib.reload(ppxai.config.store)
+    importlib.reload(ppxai.config)
 
 
 @pytest.fixture

@@ -4,8 +4,10 @@ System commands - help, status, theme, and configuration.
 Commands for displaying help, status, themes, and system configuration.
 
 v1.13.10: Migrated to Command Factory pattern
+v1.14.0: Added bootstrap context status to /status command
 """
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .factory import CommandFactory, CommandSpec
@@ -136,6 +138,27 @@ def handle_status(handler: "CommandHandler", args: str) -> None:
     # Agent mode
     agent_status = "[green]active[/green]" if (handler.engine_client and handler.engine_client.agent_mode) else "[dim]inactive[/dim]"
     console.print(f"  [cyan]Agent Mode:[/cyan] {agent_status}")
+
+    # Bootstrap context (v1.14.0)
+    if handler.engine_client:
+        bootstrap_status = handler.engine_client.get_bootstrap_status()
+        if bootstrap_status.get("loaded"):
+            sources = bootstrap_status.get("sources", [])
+            source_name = Path(sources[0]).name if sources else "unknown"
+            char_count = bootstrap_status.get("char_count", 0)
+            hint_info = ""
+            if bootstrap_status.get("has_hints"):
+                provider_count = len(bootstrap_status.get("provider_hints", []))
+                model_count = len(bootstrap_status.get("model_hints", []))
+                hints = []
+                if provider_count:
+                    hints.append(f"{provider_count} provider")
+                if model_count:
+                    hints.append(f"{model_count} model")
+                hint_info = f" ({', '.join(hints)} hints)"
+            console.print(f"  [cyan]Bootstrap:[/cyan] [green]{source_name}[/green] ({char_count:,} chars){hint_info}")
+        else:
+            console.print(f"  [cyan]Bootstrap:[/cyan] [dim]none[/dim]")
 
     # Theme
     console.print(f"  [cyan]Theme:[/cyan] {handler.current_theme_name}")

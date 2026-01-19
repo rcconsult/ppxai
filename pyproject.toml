@@ -120,3 +120,9 @@ ignore = ["E501"]  # Line length handled by formatter
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+# Exclude integration tests by default (they modify global config state)
+# Run them explicitly with: pytest tests/test_custom_endpoint_integration.py -v
+addopts = "--ignore=tests/test_custom_endpoint_integration.py"
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+]

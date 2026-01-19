@@ -72,6 +72,10 @@ class ChatContext(Protocol):
         """Commit agent changes if in agent mode. Returns commit hash or None."""
         ...
 
+    def get_bootstrap_prompt(self) -> str:
+        """Get bootstrap prompt for current provider/model (v1.14.0)."""
+        ...
+
 
 async def chat_simple(
     ctx: ChatContext,
@@ -236,12 +240,24 @@ async def chat_with_tools(
                 system_prompt = get_system_prompt(ctx.provider_name)
                 prompt_mode = get_system_prompt_mode(ctx.provider_name)
 
+                # Get bootstrap prompt (v1.14.0)
+                bootstrap_prompt = ctx.get_bootstrap_prompt()
+
+                # Assemble final prompt:
+                # 1. Bootstrap (project context) - if present
+                # 2. System prompt (user config)
+                # 3. Tool prompt
+                # Note: prompt_mode affects system_prompt placement relative to tool_prompt
                 if prompt_mode == "replace":
                     final_prompt = system_prompt
                 elif prompt_mode == "append":
                     final_prompt = f"{tool_prompt}\n\n{system_prompt}"
                 else:  # "prepend" (default)
                     final_prompt = f"{system_prompt}\n\n{tool_prompt}"
+
+                # Prepend bootstrap prompt if present (always first)
+                if bootstrap_prompt:
+                    final_prompt = f"{bootstrap_prompt}\n\n---\n\n{final_prompt}"
 
                 messages = [Message("system", final_prompt)] + messages
 

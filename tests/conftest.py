@@ -1,8 +1,23 @@
+import os
 import pytest
 from _pytest.terminal import TerminalReporter
+from dotenv import load_dotenv
+
 
 def pytest_configure(config):
+    """Configure pytest before test collection.
+
+    This is the earliest hook that runs before any test modules are imported.
+    We load user's .env here so SSL_VERIFY and other env vars are available
+    when provider modules are imported.
+    """
     config._test_durations = []
+
+    # Load user's .ppxai/.env for integration tests that need SSL_VERIFY=false
+    # This must happen before any ppxai modules are imported
+    user_env_path = os.path.expanduser('~/.ppxai/.env')
+    if os.path.exists(user_env_path):
+        load_dotenv(dotenv_path=user_env_path, override=True)
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):

@@ -607,6 +607,7 @@ async def get_status(x_session_id: Optional[str] = Header(None)):
     """Get current engine status.
 
     v1.13.10: Supports X-Session-Id header for session isolation.
+    v1.14.0: Added bootstrap context status.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -617,6 +618,7 @@ async def get_status(x_session_id: Optional[str] = Header(None)):
         "agent_mode": engine.agent_mode,
         "auto_inject_context": engine.auto_inject_context,
         "session_id": session_id,
+        "bootstrap": engine.get_bootstrap_status(),  # v1.14.0
     }
 
 

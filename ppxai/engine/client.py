@@ -27,6 +27,7 @@ from .tools.parser import parse_tool_call
 from .chat import chat_simple, chat_with_tools
 from .session import SessionManager
 from .context import ContextInjector
+from .bootstrap import BootstrapContext
 from ..checkpoint import CheckpointManager, FileCheckpointBackend
 from ..config import (
     calculate_cost,
@@ -91,6 +92,10 @@ class EngineClient:
         # Track injected contexts for /context command
         self._injected_contexts: List[Dict[str, Any]] = []
 
+        # Bootstrap context from AGENTS.md/CLAUDE.md (v1.14.0)
+        self._bootstrap_context: Optional[BootstrapContext] = None
+        self._bootstrap_sources: List[str] = []
+
         # Interrupt handling for graceful stream cancellation
         self._interrupted: bool = False
 
@@ -122,6 +127,9 @@ class EngineClient:
         # Initialize checkpoint manager with default working directory
         # This ensures TUI has checkpoints available without explicit set_working_dir call
         self._init_checkpoint_manager(self.context_injector.working_dir)
+
+        # Load bootstrap context from AGENTS.md/CLAUDE.md (v1.14.0)
+        self.load_bootstrap_context()
 
     def _load_config(self):
         """Load configuration from ppxai-config.json and .env."""
@@ -188,6 +196,9 @@ class EngineClient:
             data={"path": path}
         ))
 
+        # Reload bootstrap context for new working directory (v1.14.0)
+        self.load_bootstrap_context()
+
     def get_working_dir(self) -> str | None:
         """Get current working directory.
 
@@ -215,6 +226,76 @@ class EngineClient:
             True if enabled
         """
         return self.auto_inject_context
+
+    # === Bootstrap Context (v1.14.0) ===
+
+    def load_bootstrap_context(self) -> bool:
+        """Load bootstrap context from AGENTS.md/CLAUDE.md in working directory.
+
+        Searches for bootstrap files using the configured alias list and parses
+        YAML front matter for provider/model-specific hints.
+
+        Returns:
+            True if bootstrap context was loaded, False if no file found
+        """
+        ctx = self.context_injector.load_bootstrap_context()
+        if ctx:
+            self._bootstrap_context = ctx
+            self._bootstrap_sources = [ctx.source_file]
+            return True
+        else:
+            self._bootstrap_context = None
+            self._bootstrap_sources = []
+            return False
+
+    def reload_bootstrap_context(self) -> bool:
+        """Reload bootstrap context from disk.
+
+        Returns:
+            True if bootstrap context was loaded, False if no file found
+        """
+        return self.load_bootstrap_context()
+
+    def get_bootstrap_status(self) -> Dict[str, Any]:
+        """Get status of loaded bootstrap context.
+
+        Returns:
+            Dict with:
+            - loaded: bool - whether bootstrap context is loaded
+            - sources: List[str] - paths to loaded bootstrap files
+            - char_count: int - total characters in base instructions
+            - has_hints: bool - whether provider/model hints are defined
+            - provider_hints: List[str] - list of providers with hints
+            - model_hints: List[str] - list of model patterns with hints
+        """
+        if not self._bootstrap_context:
+            return {
+                "loaded": False,
+                "sources": [],
+                "char_count": 0,
+                "has_hints": False,
+                "provider_hints": [],
+                "model_hints": [],
+            }
+
+        return {
+            "loaded": True,
+            "sources": self._bootstrap_sources,
+            "char_count": self._bootstrap_context.char_count,
+            "has_hints": self._bootstrap_context.has_hints,
+            "provider_hints": list(self._bootstrap_context.provider_hints.keys()),
+            "model_hints": list(self._bootstrap_context.model_hints.keys()),
+        }
+
+    def get_bootstrap_prompt(self) -> str:
+        """Get the bootstrap prompt for the current provider/model.
+
+        Returns:
+            Assembled bootstrap prompt string, or empty string if not loaded
+        """
+        if not self._bootstrap_context:
+            return ""
+        return self._bootstrap_context.get_prompt_for(self.provider_name, self.model)
 
     # === Interrupt Handling ===
 

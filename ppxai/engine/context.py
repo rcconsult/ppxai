@@ -6,14 +6,19 @@ eliminating the need for tool calls for simple file reading operations.
 
 v1.13.9: Configurable max_injection_size via ppxai-config.json
 v1.13.10: Content hash deduplication to prevent duplicate injections
+v1.14.0: Bootstrap context loading from AGENTS.md/CLAUDE.md
 """
 
 import hashlib
 import re
 import os
 from pathlib import Path
-from typing import List, Tuple, Optional, Set
+from typing import List, Tuple, Optional, Set, TYPE_CHECKING
+
 from dataclasses import dataclass
+
+if TYPE_CHECKING:
+    from .bootstrap import BootstrapContext
 
 
 @dataclass
@@ -72,6 +77,9 @@ class ContextInjector:
         r'(?:^|\s)([./~][\w./\-_]+\.\w+)',   # ./path/file.ext, ~/file.ext
         r'(?:^|\s)(/[\w./\-_]+\.\w+)',        # /absolute/path/file.ext
     ]
+
+    # Default bootstrap file aliases (v1.14.0)
+    DEFAULT_BOOTSTRAP_FILES = ["AGENTS.md", "CLAUDE.md"]
 
     # Patterns for special context providers
     GIT_PATTERN = r'@git\b'
@@ -132,17 +140,89 @@ class ContextInjector:
         '.tf': 'terraform', '.tfvars': 'terraform',
     }
 
-    def __init__(self, working_dir: Optional[str] = None):
+    def __init__(
+        self,
+        working_dir: Optional[str] = None,
+        bootstrap_files: Optional[List[str]] = None
+    ):
         """Initialize the context injector.
 
         Args:
             working_dir: Base directory for resolving relative paths
+            bootstrap_files: List of filenames to search for bootstrap context (v1.14.0)
         """
         self.working_dir = working_dir or os.getcwd()
+        self._bootstrap_files = bootstrap_files  # None = use config default
 
     def set_working_dir(self, path: str):
         """Set the working directory for relative paths."""
         self.working_dir = path
+
+    @property
+    def bootstrap_files(self) -> List[str]:
+        """Get bootstrap file aliases (from init or config).
+
+        Returns:
+            List of filenames to search for bootstrap context
+        """
+        if self._bootstrap_files is not None:
+            return self._bootstrap_files
+        # Load from config if not explicitly set
+        try:
+            from ..config import get_bootstrap_files
+            return get_bootstrap_files()
+        except ImportError:
+            return self.DEFAULT_BOOTSTRAP_FILES
+
+    def find_bootstrap_files(self) -> List[Path]:
+        """Find bootstrap files (AGENTS.md, CLAUDE.md, etc.) in working directory.
+
+        Searches for files in the configured alias list, returning the first match.
+        Only one file is returned per directory (first match wins).
+
+        Returns:
+            List containing the first matching bootstrap file, or empty list
+        """
+        # Check if bootstrap is enabled
+        try:
+            from ..config import is_bootstrap_enabled
+            if not is_bootstrap_enabled():
+                return []
+        except ImportError:
+            pass
+
+        aliases = self.bootstrap_files
+        if not aliases:
+            return []
+
+        work_dir = Path(self.working_dir)
+        if not work_dir.exists() or not work_dir.is_dir():
+            return []
+
+        # Find first matching file
+        for filename in aliases:
+            path = work_dir / filename
+            if path.is_file():
+                return [path]
+
+        return []
+
+    def load_bootstrap_context(self) -> Optional["BootstrapContext"]:
+        """Load and parse bootstrap context from working directory.
+
+        Returns:
+            BootstrapContext if found, None otherwise
+        """
+        from .bootstrap import BootstrapContext
+
+        files = self.find_bootstrap_files()
+        if not files:
+            return None
+
+        try:
+            return BootstrapContext.from_file(files[0])
+        except Exception:
+            return None
 
     def detect_file_references(self, message: str) -> List[str]:
         """Detect file paths mentioned in the message.
