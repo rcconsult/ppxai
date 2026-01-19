@@ -2730,11 +2730,11 @@ class PpxaiApp {
                 throw new Error('YAML parsing requires js-yaml library. Showing source view.');
             }
         } else if (ext === 'toml') {
-            // Use toml-js library for TOML parsing (v1.13.11)
-            if (typeof toml !== 'undefined') {
-                data = toml.parse(content);
+            // Use smol-toml library for TOML 1.0 parsing (v1.13.11)
+            if (typeof smolToml !== 'undefined') {
+                data = smolToml.parse(content);
             } else {
-                throw new Error('TOML parsing requires toml-js library. Showing source view.');
+                throw new Error('TOML parsing requires smol-toml library. Showing source view.');
             }
         } else if (ext === 'hcl' || ext === 'tf' || ext === 'tfvars') {
             // Use hcl2-parser library for HCL/Terraform parsing (v1.13.11)

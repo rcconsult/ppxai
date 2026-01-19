@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="../../ppxai/web/styles/data-viewers.css">
     <!-- Load parsing libraries -->
     <script src="../../ppxai/web/lib/js-yaml.min.js"></script>
-    <script src="../../ppxai/web/lib/toml.min.js"></script>
+    <script src="../../ppxai/web/lib/smol-toml.min.js"></script>
     <script src="../../ppxai/web/lib/hcl2-browser.js"></script>
     <script src="../../ppxai/web/lib/hcl2-parser.min.js"></script>
     <script>if (typeof hcl2Init === 'function') hcl2Init();</script>
@@ -76,7 +76,7 @@
 
     <div id="lib-status">
         <div class="lib-check" id="yaml-status">js-yaml: checking...</div>
-        <div class="lib-check" id="toml-status">toml: checking...</div>
+        <div class="lib-check" id="toml-status">smolToml: checking...</div>
         <div class="lib-check" id="hcl-status">hcl2: checking...</div>
     </div>
 
@@ -119,10 +119,13 @@ metadata:
   debug: false
   count: 42`;
 
-        // Note: toml-js (0.0.8) doesn't support [[array]] syntax
-        // Using simple nested objects instead
+        // Note: smol-toml supports TOML 1.0 including [[array]] and inline table syntax
         const sampleTOML = `title = "TOMLTest"
 version = "1.0.0"
+license = { text = "MIT" }
+authors = [
+  { name = "Test Author", email = "test@example.com" }
+]
 
 [server]
 host = "localhost"
@@ -132,6 +135,14 @@ enabled = true
 [database]
 driver = "postgres"
 maxconn = 10
+
+[[plugins]]
+name = "plugin-a"
+enabled = true
+
+[[plugins]]
+name = "plugin-b"
+enabled = false
 
 [metadata]
 debug = false
@@ -167,11 +178,11 @@ variable "environment" {
                 yamlStatus.classList.add('missing');
             }
 
-            if (typeof toml !== 'undefined') {
-                tomlStatus.textContent = 'toml: available';
+            if (typeof smolToml !== 'undefined') {
+                tomlStatus.textContent = 'smolToml: available';
                 tomlStatus.classList.add('available');
             } else {
-                tomlStatus.textContent = 'toml: MISSING';
+                tomlStatus.textContent = 'smolToml: MISSING';
                 tomlStatus.classList.add('missing');
             }
 
@@ -254,10 +265,10 @@ variable "environment" {
             const treeEl = document.getElementById('toml-tree');
 
             try {
-                if (typeof toml === 'undefined') {
-                    throw new Error('toml library not loaded');
+                if (typeof smolToml === 'undefined') {
+                    throw new Error('smolToml library not loaded');
                 }
-                const parsed = toml.parse(sampleTOML);
+                const parsed = smolToml.parse(sampleTOML);
                 const tree = buildTreeNode('root', parsed, 0);
 
                 window.tomlViewer = new DataTreeViewer(treeEl, tree, {

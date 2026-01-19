@@ -17,10 +17,10 @@ test.describe('Parsing Libraries', () => {
       await expect(yamlStatus).toContainText('js-yaml: available');
     });
 
-    test('toml library should be available', async ({ page }) => {
+    test('smolToml library should be available', async ({ page }) => {
       const tomlStatus = page.locator('#toml-status');
       await expect(tomlStatus).toHaveClass(/available/);
-      await expect(tomlStatus).toContainText('toml: available');
+      await expect(tomlStatus).toContainText('smolToml: available');
     });
 
     test('hcl2 library should be available', async ({ page }) => {
@@ -97,15 +97,30 @@ test.describe('Parsing Libraries', () => {
       // Check for [server] section keys
       await expect(page.locator('#toml-tree .tree-key:has-text("host")')).toBeVisible();
       await expect(page.locator('#toml-tree .tree-key:has-text("port")')).toBeVisible();
-      await expect(page.locator('#toml-tree .tree-key:has-text("enabled")')).toBeVisible();
+      // Use first() since 'enabled' appears in server and plugins sections
+      await expect(page.locator('#toml-tree .tree-key:has-text("enabled")').first()).toBeVisible();
     });
 
     test('should parse TOML nested sections', async ({ page }) => {
       await page.locator('#toml-tree .expand-all').click();
 
-      // Check for [database] section (toml-js doesn't support [[array]] syntax)
+      // Check for [database] section
       await expect(page.locator('#toml-tree .tree-key:has-text("database")')).toBeVisible();
       await expect(page.locator('#toml-tree .tree-key:has-text("driver")')).toBeVisible();
+    });
+
+    test('should parse TOML inline tables', async ({ page }) => {
+      await page.locator('#toml-tree .expand-all').click();
+
+      // smol-toml supports TOML 1.0 inline tables: license = { text = "MIT" }
+      await expect(page.locator('#toml-tree .tree-key:has-text("license")')).toBeVisible();
+    });
+
+    test('should parse TOML array of tables', async ({ page }) => {
+      await page.locator('#toml-tree .expand-all').click();
+
+      // smol-toml supports [[array]] syntax
+      await expect(page.locator('#toml-tree .tree-key:has-text("plugins")')).toBeVisible();
     });
 
     test('should parse TOML boolean values', async ({ page }) => {
