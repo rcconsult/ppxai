@@ -2050,14 +2050,22 @@ async def serve_index():
 
 @app.get("/app.js")
 async def serve_app_js():
-    """Serve app.js."""
-    return FileResponse(WEB_UI_DIR / 'app.js', media_type='application/javascript')
+    """Serve app.js with no-cache headers to ensure fresh content."""
+    return FileResponse(
+        WEB_UI_DIR / 'app.js',
+        media_type='application/javascript',
+        headers={"Cache-Control": "no-cache, must-revalidate"}
+    )
 
 
 @app.get("/styles.css")
 async def serve_styles_css():
-    """Serve styles.css."""
-    return FileResponse(WEB_UI_DIR / 'styles.css', media_type='text/css')
+    """Serve styles.css with no-cache headers."""
+    return FileResponse(
+        WEB_UI_DIR / 'styles.css',
+        media_type='text/css',
+        headers={"Cache-Control": "no-cache, must-revalidate"}
+    )
 
 
 @app.get("/lib/{filename:path}")
