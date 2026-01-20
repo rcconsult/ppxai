@@ -20,6 +20,7 @@ from .commands import CommandHandler
 from .config import (
     PROVIDERS,
     get_default_provider,
+    get_default_model,
     get_api_key,
     get_auto_restore_mode,
     get_auto_save_interval,
@@ -586,7 +587,7 @@ def restore_session_to_handler(handler: CommandHandler, session_state: dict) -> 
             handler.current_model = stored_model
         else:
             # Model not available - use provider's default model
-            default_model = handler.engine_client.provider.default_model if handler.engine_client.provider else None
+            default_model = get_default_model(handler.engine_client.provider_name) if handler.engine_client.provider else None
             if default_model:
                 handler.engine_client.set_model(default_model)
                 handler.current_model = default_model
