@@ -339,11 +339,75 @@ https://rcconsult.github.io/ppxai/
 
 ---
 
+## v1.15.x Series - Alternative TUI (ppxaide)
+
+**Theme**: Modern Textual-based TUI as an alternative interface
+
+**User value**: Visual-focused TUI with mouse support, CSS theming, and widget-based UI
+
+**Prerequisites**: Complete v1.14.x bootstrap context features
+
+### v1.15.0 - ppxaide Core TUI
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Textual SDK integration** | Build on current `ppxai/engine/` architecture | Planned |
+| **New entry point** | `ppxaide` command (separate from `ppxai`) | Planned |
+| **Core chat UI** | Streaming responses with Markdown rendering | Planned |
+| **Status badges** | Provider, model, tools, context in header | Planned |
+| **Mouse support** | Click-to-scroll, selectable text | Planned |
+| **CSS themes** | 4 themes: standard, tron-legacy, matrix, nord | Planned |
+
+**Architecture:**
+
+```
+ppxai/tui/                     # New module (Textual-based)
+├── __init__.py                # Entry point: ppxaide command
+├── app.py                     # PPXAIDEApp(textual.App)
+├── widgets/                   # Custom widgets
+│   ├── message_box.py         # Chat message display
+│   ├── streaming.py           # Streaming response widget
+│   ├── tool_call.py           # Collapsible tool call display
+│   └── status.py              # Status badges
+└── themes/                    # CSS theme files
+    ├── standard.tcss
+    ├── tron-legacy.tcss
+    ├── matrix.tcss
+    └── nord.tcss
+```
+
+**Key design decisions:**
+- **Separate command** - `ppxaide` coexists with `ppxai` (not a replacement)
+- **Shared engine** - Uses existing `EngineClient` via composition
+- **Feature parity target** - Match current TUI commands over v1.15.x releases
+- **CSS-first theming** - Leverage Textual's CSS for consistent styling
+
+### v1.15.1 - Commands & Sessions
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Full command support** | `/help`, `/model`, `/provider`, `/tools`, `/agent` | Planned |
+| **Session commands** | `/session`, `/save`, `/load`, `/export` | Planned |
+| **Checkpoint commands** | `/checkpoint`, `/undo` | Planned |
+| **Context commands** | `/context`, `/context hints`, `/context clear` | Planned |
+
+### v1.15.2 - Visual Enhancements
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Data viewers** | CSV/JSON/YAML tree views (port from Web App) | Planned |
+| **Image preview** | Inline image display in terminal (if supported) | Planned |
+| **Split panes** | Code preview alongside chat | Planned |
+| **Tool call accordion** | Expandable tool execution history | Planned |
+
+**Dependencies:**
+- `textual>=0.47.0` (added to optional extras: `pip install ppxai[tui]`)
+
+---
+
 ## Future Considerations
 
 These are tracked but not prioritized:
-
-- **Textual TUI migration** - Only if current TUI becomes limiting
 - **libghostty SDK** - Watch for stable C API (expected 2026)
 - **Per-provider tool config** - Enable/disable tools per provider
 - **Custom tools** - User-defined tools in `~/.ppxai/tools/`
@@ -519,4 +583,4 @@ For archived planning documents:
 
 ---
 
-**Last Updated**: January 19, 2026
+**Last Updated**: January 20, 2026
