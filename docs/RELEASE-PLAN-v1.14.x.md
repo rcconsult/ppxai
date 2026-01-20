@@ -1,9 +1,9 @@
 # Release Plan: v1.14.x Series
 
 **Created:** January 5, 2026
-**Last Updated:** January 19, 2026
-**Status:** Planning (after v1.13.10 completion)
-**Branch:** TBD
+**Last Updated:** January 20, 2026
+**Status:** v1.14.0 complete, v1.14.1 in planning
+**Branch:** `feature/agents-bootstrap-context` (v1.14.0), `feature/context-hierarchy-management` (v1.14.1+)
 
 ---
 
@@ -316,7 +316,123 @@ def test_no_bootstrap_file_is_fine():
 
 ---
 
-### v1.14.1 - File Precedence
+### v1.14.1 - `/edit` Command & Context Reload
+
+**Goal:** Enable edit-test-save workflow for bootstrap context tuning
+
+| Feature | Description |
+|---------|-------------|
+| `/edit` command | Open file in editor (all interfaces) |
+| `/context reload` | Refresh AGENTS.md from disk |
+| Auto-reload on save | `/edit AGENTS.md` + save triggers context reload |
+| `POST /files/write` | Server endpoint for file writes |
+
+**Implementation by Interface:**
+
+| Interface | `/edit` Implementation |
+|-----------|------------------------|
+| **VSCode** | Delegate to `vscode.window.showTextDocument()` |
+| **TUI (Rich)** | Simple line editor (prompt-based, no terminal takeover) |
+| **Web App** | CodeMirror 6 split-pane editor |
+
+**TUI Simple Line Editor:**
+
+The TUI cannot delegate to external editors (would conflict with Rich's terminal control).
+Instead, we provide a prompt-based line editor:
+
+```
+/edit src/main.py:42
+───────────────────────────────────────────────────────
+ Editing: src/main.py (line 42)
+───────────────────────────────────────────────────────
+  40 │ def process_data(items):
+  41 │     """Process a list of items."""
+► 42 │     for item in items:
+  43 │         result = transform(item)
+  44 │         yield result
+───────────────────────────────────────────────────────
+ [r]eplace line | [i]nsert after | [d]elete | [↑↓/jk] navigate | [s]ave | [q]uit
+───────────────────────────────────────────────────────
+> r
+Enter new line 42: for item in items:
+───────────────────────────────────────────────────────
+ Saved: src/main.py
+───────────────────────────────────────────────────────
+```
+
+**Web App CodeMirror 6 Editor:**
+
+Split-pane design with syntax highlighting:
+```
+┌────────────────────────────┬─────────────────────────────────┐
+│  Chat messages...          │  AGENTS.md                [×]   │
+│                            │─────────────────────────────────│
+│  You: /edit AGENTS.md      │  ---                            │
+│                            │  provider_hints:                │
+│  System: Opened in editor  │    ollama:                      │
+│                            │      - "Complete tasks fully."  │
+│                            │  ---                            │
+│                            │  # Project Rules                │
+│                            │                                 │
+│  [input field]             │  [Save] [Save As...] [Discard]  │
+└────────────────────────────┴─────────────────────────────────┘
+```
+
+**CodeMirror 6 Language Support:**
+- Config files: Markdown, YAML, TOML, JSON, HCL
+- Programming: Python, Go, C/C++, JavaScript, TypeScript
+- Shell: Bash/Zsh/Csh, Perl
+
+**Bundle size:** ~200KB (core + language modules, loaded on demand)
+
+**Server Endpoint:**
+```python
+@app.post("/files/write")
+async def write_file(request: Request):
+    """Write content to file (with path validation)."""
+    data = await request.json()
+    path = Path(data["path"])
+    content = data["content"]
+
+    # Security: validate path is within working directory
+    working_dir = Path(session_manager.working_dir)
+    resolved = path.resolve()
+    if not resolved.is_relative_to(working_dir):
+        raise HTTPException(403, "Path outside working directory")
+
+    resolved.write_text(content, encoding="utf-8")
+    return {"status": "saved", "path": str(resolved)}
+```
+
+**Files to Modify:**
+
+| File | Changes |
+|------|---------|
+| `ppxai/server/http.py` | Add `POST /files/write` endpoint |
+| `ppxai/commands.py` | Add `/edit` command handler |
+| `ppxai/engine/client.py` | Add `reload_bootstrap_context()` method |
+| `ppxai/web/app.js` | Add CodeMirror 6 editor component |
+| `ppxai/web/lib/` | Add CodeMirror 6 modules |
+| `vscode-extension/src/chatPanel.ts` | Add `/edit` → showTextDocument() |
+
+**Test Cases:**
+```python
+def test_edit_opens_file_in_editor():
+    """TUI /edit displays line editor UI."""
+
+def test_context_reload_refreshes_hints():
+    """/context reload re-parses AGENTS.md."""
+
+def test_file_write_validates_path():
+    """POST /files/write rejects paths outside working dir."""
+
+def test_auto_reload_on_agents_md_save():
+    """Saving AGENTS.md triggers context reload."""
+```
+
+---
+
+### v1.14.2 - File Precedence & Merge
 
 **Goal:** Support global, project, and subdirectory contexts
 
@@ -326,6 +442,7 @@ def test_no_bootstrap_file_is_fine():
 | Project context | Load from git root AGENTS.md |
 | Subdirectory context | Load from cwd AGENTS.md |
 | Merge strategy | Concatenate with separator |
+| `/context show` | Display AGENTS.md sources with hierarchy |
 
 **Precedence Order:**
 ```
@@ -346,6 +463,22 @@ def _merge_contexts(self, files: List[Path]) -> str:
     return "\n\n---\n\n".join(contents)
 ```
 
+**TUI Output Example:**
+```
+/context show
+Bootstrap Context:
+  Sources:
+    1. ~/.ppxai/AGENTS.md (1.2 KB) [global]
+    2. /project/AGENTS.md (3.4 KB) [project]
+    3. /project/src/AGENTS.md (0.5 KB) [subdir]
+
+  Total: 5.1 KB (~1,300 tokens)
+
+  Active Hints (ollama + deepseek-r1:7b):
+    Provider: 3 hints (2 from local, 1 from ollama)
+    Model: 1 hint (deepseek-r1*)
+```
+
 **Test Cases:**
 ```python
 def test_global_context_loaded():
@@ -363,95 +496,12 @@ def test_missing_intermediate_is_fine():
 
 ---
 
-### v1.14.2 - `/context` Commands for Bootstrap
-
-**Goal:** User control over bootstrap context (AGENTS.md/CLAUDE.md)
-
-**Note:** v1.13.9 implemented `/context` and `/context clear` for **injected context** (@file/@git/@tree).
-This release extends `/context` to also manage **bootstrap context**.
-
-| Command | Description |
-|---------|-------------|
-| `/context` | Show bootstrap sources alongside injected context (extends v1.13.9) |
-| `/context reload` | Refresh AGENTS.md from disk |
-| `/context edit` | Open AGENTS.md in editor (platform-dependent behavior) |
-| Integration | Unified view: bootstrap + injected context in one output |
-
-**`/context edit` Platform Behavior:**
-
-| Platform | Behavior |
-|----------|----------|
-| **VSCode** | Opens AGENTS.md in a native editor tab (straightforward) |
-| **Web App** | Shows file path + copy-to-clipboard button (browser security prevents direct file system access) |
-| **TUI** | Shows file path + instructions to edit externally |
-
-**TUI Constraints (Design Decision):**
-
-The TUI intentionally disables interactive commands. This is a technical design choice based on Rich SDK limitations:
-
-1. **Rich is output-only** - The Rich library provides formatting/rendering but has no built-in editor widget
-2. **No editor subprocess** - Launching `$EDITOR` would conflict with Rich's terminal control (it manages the entire screen state)
-3. **Alternatives rejected** - Textual or prompt_toolkit would require major architectural changes
-
-**TUI `/context edit` implementation:**
-```
-/context edit
-
-  Bootstrap file: /path/to/project/AGENTS.md
-
-  Edit this file externally, then run:
-    /context reload
-
-  Tip: VS Code users can open with:
-    code /path/to/project/AGENTS.md
-```
-
-This approach:
-- Maintains Rich SDK compatibility
-- Provides a clear workflow (edit → reload)
-- Works consistently across all terminal emulators
-- Avoids the complexity of terminal editor integration
-
-**Files to Modify:**
-
-| File | Changes |
-|------|---------|
-| `ppxai/commands.py` | Add `handle_context_command()` |
-| `ppxai/common/commands.py` | Add to COMMANDS list |
-| `ppxai/server/http.py` | Add `/context` endpoints |
-| `vscode-extension/src/httpClient.ts` | Add context API |
-
-**HTTP Endpoints:**
-```
-GET  /context         → {loaded, sources, char_count, preview}
-POST /context/reload  → {success, sources}
-POST /context/clear   → {success}
-```
-
-**TUI Output Example:**
-```
-/context show
-Bootstrap Context:
-  Sources:
-    1. ~/.ppxai/AGENTS.md (1.2 KB)
-    2. /project/AGENTS.md (3.4 KB)
-
-  Total: 4.6 KB (~1,200 tokens)
-
-  Preview:
-  ─────────────────────────────
-  <!-- Source: ~/.ppxai/AGENTS.md -->
-  # Global Defaults
-  - Use TypeScript for all new code
-  - Follow ESLint rules
-  ...
-```
-
----
-
 ### v1.14.3 - Enhanced Context Providers
 
 **Goal:** Advanced context features and external source injection
+
+**Note:** v1.13.9 implemented `/context` and `/context clear` for **injected context** (@file/@git/@tree).
+v1.14.3 extends context providers with additional sources.
 
 | Feature | Description |
 |---------|-------------|
@@ -461,8 +511,6 @@ Bootstrap Context:
 | Hint templates | Reusable hint sets: `hints: [tool-heavy, reasoning]` |
 | Token count display | Show context size in status bar |
 | Context caching | Cache fetched URLs for session duration |
-
-**Note:** Provider/model-specific conditionals are handled via YAML front matter (v1.14.0).
 
 **Include Directive:**
 ```markdown
@@ -648,47 +696,61 @@ https://rcconsult.github.io/ppxai/
 
 ## Implementation Checklist
 
-### v1.14.0
-- [ ] Create `ppxai/engine/bootstrap.py` with `BootstrapContext` class
-- [ ] Implement YAML front matter parsing (provider_hints, model_hints)
-- [ ] Add `find_bootstrap_files()` to ContextInjector with configurable aliases
-- [ ] Add `bootstrap_files` config option to `ppxai/config/` (default: `["AGENTS.md", "CLAUDE.md"]`)
-- [ ] Add `get_bootstrap_files()` helper function to config module
-- [ ] Add `_bootstrap_context: BootstrapContext` to EngineClient
-- [ ] Add `load_bootstrap_context()` method
-- [ ] Add `get_bootstrap_status()` method
-- [ ] Implement `get_prompt_for(provider, model)` with dynamic hints
-- [ ] Implement `local` provider inheritance (ollama, vllm, lmstudio)
-- [ ] Modify `_build_system_messages()` to use BootstrapContext
-- [ ] Trigger prompt rebuild in `set_provider()` and `set_model()`
-- [ ] Call `load_bootstrap_context()` in `__init__`
-- [ ] Call `load_bootstrap_context()` in `set_working_dir()`
-- [ ] Create `tests/test_bootstrap_context.py`
-- [ ] Add tests for custom alias list configuration
-- [ ] Add tests for empty alias list (disabled bootstrap)
-- [ ] Update `/status` to show bootstrap info
-- [ ] Test provider switching with different hints
-- [ ] Test in TUI, VSCode, and Web app
+### v1.14.0 ✅ Complete
+- [x] Create `ppxai/engine/bootstrap.py` with `BootstrapContext` class
+- [x] Implement YAML front matter parsing (provider_hints, model_hints)
+- [x] Add `find_bootstrap_files()` to ContextInjector with configurable aliases
+- [x] Add `bootstrap_files` config option to `ppxai/config/` (default: `["AGENTS.md", "CLAUDE.md"]`)
+- [x] Add `get_bootstrap_files()` helper function to config module
+- [x] Add `_bootstrap_context: BootstrapContext` to EngineClient
+- [x] Add `load_bootstrap_context()` method
+- [x] Add `get_bootstrap_status()` method
+- [x] Implement `get_prompt_for(provider, model)` with dynamic hints
+- [x] Implement `local` provider inheritance (ollama, vllm, lmstudio)
+- [x] Modify `_build_system_messages()` to use BootstrapContext
+- [x] Trigger prompt rebuild in `set_provider()` and `set_model()`
+- [x] Call `load_bootstrap_context()` in `__init__`
+- [x] Call `load_bootstrap_context()` in `set_working_dir()`
+- [x] Create `tests/test_bootstrap_context.py`
+- [x] Add tests for custom alias list configuration
+- [x] Add tests for empty alias list (disabled bootstrap)
+- [x] Update `/status` to show bootstrap info
+- [x] Add `/context hints` command (TUI, VSCode, Web)
+- [x] Add `GET /context/hints` HTTP endpoint
+- [x] Add CSS table word-wrap fix for VSCode/Web
+- [x] Fix session alternation bugs (Perplexity "messages must alternate")
+- [x] Test provider switching with different hints
+- [x] Test in TUI, VSCode, and Web app
 
-### v1.14.1
-- [ ] Add global path search (`~/.ppxai/`)
-- [ ] Add git root detection
-- [ ] Implement merge strategy
+### v1.14.1 - `/edit` Command & Context Reload
+- [ ] Add `POST /files/write` server endpoint with path validation
+- [ ] Add `/edit` command to TUI (simple line editor)
+- [ ] Add `/edit` command to VSCode (delegate to showTextDocument)
+- [ ] Add CodeMirror 6 editor to Web App
+  - [ ] Add core modules to `ppxai/web/lib/`
+  - [ ] Add language modules (markdown, yaml, toml, json, hcl)
+  - [ ] Add language modules (python, go, c/cpp, js, ts)
+  - [ ] Add language modules (bash/zsh/csh, perl)
+  - [ ] Implement split-pane editor UI
+  - [ ] Add Save/Save As/Discard buttons
+- [ ] Add `reload_bootstrap_context()` method to EngineClient
+- [ ] Add `/context reload` command (TUI, VSCode, Web)
+- [ ] Add `POST /context/reload` HTTP endpoint
+- [ ] Implement auto-reload when AGENTS.md saved via `/edit`
+- [ ] Add tests for `/edit` command
+- [ ] Add tests for `/context reload`
+- [ ] Add tests for file write path validation
+
+### v1.14.2 - File Precedence & Merge
+- [ ] Add global path search (`~/.ppxai/AGENTS.md`)
+- [ ] Add git root detection for project context
+- [ ] Implement merge strategy (global → project → subdir)
 - [ ] Add source tracking for each file
-- [ ] Add tests for precedence
+- [ ] Extend `/context show` to display hierarchy
+- [ ] Add tests for precedence order
+- [ ] Add tests for missing intermediate files
 
-### v1.14.2
-- [x] Add `/context` command handler (v1.13.9 - for injected context)
-- [x] Implement context display (v1.13.9 - shows injected files + usage)
-- [ ] Extend to show bootstrap sources (AGENTS.md)
-- [ ] Implement `reload` subcommand (for AGENTS.md)
-- [ ] Implement `edit` subcommand
-- [x] Implement `clear` subcommand (v1.13.9 - clears injected context)
-- [x] Add tab autocomplete (v1.13.9)
-- [x] Add HTTP endpoints (v1.13.9 - /context, /context/clear)
-- [x] Update VSCode extension (v1.13.9 - context badge + /context command)
-
-### v1.14.3
+### v1.14.3 - Enhanced Context Providers
 - [ ] Implement `@url` context provider
 - [ ] Implement `@clipboard` context provider
 - [ ] Implement include directive (`<!-- include: path -->`)
@@ -699,7 +761,7 @@ https://rcconsult.github.io/ppxai/
 - [ ] Add timeout/error handling for URL fetch
 - [ ] Add tests for context providers
 
-### v1.14.4
+### v1.14.4 - Documentation Site (GitHub Pages)
 - [ ] Create `mkdocs.yml` configuration file
 - [ ] Create `docs/index.md` landing page
 - [ ] Create `.github/workflows/docs.yml` workflow
