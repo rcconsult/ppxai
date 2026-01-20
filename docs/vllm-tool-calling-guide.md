@@ -2,6 +2,8 @@
 
 This guide explains how ppxai implements tool calling for vLLM backends (including GPT-OSS-120B) and provides a working approach that avoids the `HarmonyError` issues.
 
+**Quick Start:** See [examples/prompt_based_tools.py](../examples/prompt_based_tools.py) for a complete standalone example.
+
 ## The Problem
 
 When using vLLM with `--enable-auto-tool-choice` and GPT-OSS models, you may encounter:
