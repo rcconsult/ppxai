@@ -289,6 +289,38 @@ code --install-extension ppxai-X.Y.Z.vsix
 
 **Resolved:** TUI Markdown Tables (v1.10.4), Ctrl-C Message Alternation (v1.10.5)
 
+## vLLM/GPT-OSS Tool Calling Reference
+
+**Problem:** vLLM with GPT-OSS models can hit `HarmonyError: unexpected tokens remaining in message header` when using native tool calling (`--enable-auto-tool-choice --tool-call-parser openai`). This is a known vLLM/Harmony library issue ([vLLM #23567](https://github.com/vllm-project/vllm/issues/23567)).
+
+**ppxai supports two tool calling modes:**
+
+| Mode | Config | vLLM Flags | Reliability |
+|------|--------|------------|-------------|
+| **Native** | `native_tool_calling: true` | `--enable-auto-tool-choice --tool-call-parser openai` | ⚠️ HarmonyError risk |
+| **Prompt-Based** | `native_tool_calling: false` | None required | ✅ Stable |
+
+**Key insight:** vLLM only triggers Harmony parsing when `request.tools` is provided. With `native_tool_calling: false`, ppxai doesn't send `tools` parameter, so vLLM returns plain text that ppxai parses client-side.
+
+**Implementation details:**
+- Tool prompt injection: `ppxai/engine/tools/manager.py:get_tools_prompt()`
+- Multi-strategy parser: `ppxai/engine/tools/parser.py:parse_tool_call()`
+- GPT-OSS nested unwrapping: `ppxai/engine/tools/parser.py:_normalize_tool_call()`
+- Parameter aliasing: `ppxai/engine/tools/manager.py:PARAM_ALIAS_GROUPS`
+
+**Documentation:**
+- [docs/vllm-tool-calling-guide.md](docs/vllm-tool-calling-guide.md) - ppxai-specific guide
+- [docs/prompt-based-tool-calling.md](docs/prompt-based-tool-calling.md) - General developer guide
+- [examples/prompt_based_tools.py](examples/prompt_based_tools.py) - Standalone example
+
+**Current production setup:**
+- vLLM 0.11.x nightly with LMCache
+- `--tool-call-parser openai` (correct flag)
+- Model: `openai/gpt-oss-120b`
+- ppxai default: `native_tool_calling: true`
+
+**For developers hitting HarmonyError:** Set `native_tool_calling: false` in provider config, or use the standalone example for non-ppxai applications.
+
 ## Commit Guidelines
 
 - Do NOT include Claude credits or co-authored-by lines. Keep commit messages clean.
