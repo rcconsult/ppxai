@@ -278,7 +278,65 @@ ppxai/engine/bootstrap.py (new)
 
 **No conflicts:** Bootstrap context extends the existing system prompt pipeline, doesn't replace it.
 
-### v1.14.1 - File Precedence & Merge
+### v1.14.1 - `/edit` Command & Context Reload
+
+**Theme**: Edit-test-save workflow for bootstrap context tuning
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **`/edit` command** | Open file in editor (all interfaces) | Planned |
+| **`/context reload`** | Refresh AGENTS.md from disk | Planned |
+| **Auto-reload on save** | `/edit AGENTS.md` + save triggers context reload | Planned |
+| **`POST /files/write`** | Server endpoint for file writes | Planned |
+
+**Implementation by Interface:**
+
+| Interface | `/edit` Implementation |
+|-----------|------------------------|
+| **VSCode** | Delegate to `vscode.window.showTextDocument()` |
+| **TUI (Rich)** | Simple line editor (prompt-based, no terminal takeover) |
+| **Web App** | CodeMirror 6 split-pane editor |
+
+**TUI Simple Line Editor:**
+```
+/edit src/main.py:42
+───────────────────────────────────────────────────────
+ Editing: src/main.py (line 42)
+───────────────────────────────────────────────────────
+  40 │ def process_data(items):
+  41 │     """Process a list of items."""
+► 42 │     for item in items:
+───────────────────────────────────────────────────────
+ [r]eplace | [i]nsert | [d]elete | [↑↓] navigate | [s]ave | [q]uit
+───────────────────────────────────────────────────────
+```
+
+**Web App CodeMirror Editor:**
+
+Split-pane design with syntax highlighting:
+```
+┌────────────────────────────┬─────────────────────────────────┐
+│  Chat messages...          │  AGENTS.md                [×]   │
+│                            │─────────────────────────────────│
+│  You: /edit AGENTS.md      │  ---                            │
+│                            │  provider_hints:                │
+│  System: Opened in editor  │    ollama:                      │
+│                            │      - "Complete tasks fully."  │
+│                            │  ---                            │
+│                            │  # Project Rules                │
+│                            │                                 │
+│  [input field]             │  [Save] [Save As...] [Discard]  │
+└────────────────────────────┴─────────────────────────────────┘
+```
+
+**CodeMirror 6 Language Support:**
+- Config files: Markdown, YAML, TOML, JSON, HCL
+- Programming: Python, Go, C/C++, JavaScript, TypeScript
+- Shell: Bash/Zsh/Csh, Perl
+
+**Bundle size:** ~200KB (core + languages, loaded on demand)
+
+### v1.14.2 - File Precedence & Merge
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -286,20 +344,12 @@ ppxai/engine/bootstrap.py (new)
 | **Project context** | Load from project root AGENTS.md | Planned |
 | **Subdirectory context** | Load from current working directory | Planned |
 | **Merge strategy** | Global → Project → Subdir (concatenate) | Planned |
-
-### v1.14.2 - `/context` Commands for Bootstrap
-
-**Note:** v1.13.9 implemented `/context` and `/context clear` for **injected context** (@file/@git/@tree).
-v1.14.2 extends `/context` to also manage **bootstrap context** (AGENTS.md/CLAUDE.md).
-
-| Feature | Description | Status |
-|---------|-------------|--------|
-| **`/context show`** | Display AGENTS.md sources (extends existing `/context`) | Planned |
-| **`/context reload`** | Refresh AGENTS.md from disk | Planned |
-| **`/context edit`** | Open AGENTS.md in editor | Planned |
-| **Integration** | Unified view of bootstrap + injected context | Planned |
+| **`/context show`** | Display AGENTS.md sources with hierarchy | Planned |
 
 ### v1.14.3 - Enhanced Context Providers
+
+**Note:** v1.13.9 implemented `/context` and `/context clear` for **injected context** (@file/@git/@tree).
+v1.14.3 extends context providers with additional sources.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -307,8 +357,6 @@ v1.14.2 extends `/context` to also manage **bootstrap context** (AGENTS.md/CLAUD
 | **`@clipboard`** | Inject clipboard contents | Planned |
 | **Include directive** | `<!-- include: ./docs/style.md -->` in AGENTS.md | Planned |
 | **Hint templates** | Reusable hint sets: `hints: [tool-heavy, reasoning]` | Planned |
-
-**Note:** Provider/model conditional sections replaced by YAML front matter in v1.14.0.
 
 ### v1.14.4 - Documentation Site (GitHub Pages)
 
