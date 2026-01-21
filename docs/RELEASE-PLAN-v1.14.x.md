@@ -320,6 +320,11 @@ def test_no_bootstrap_file_is_fine():
 
 **Goal:** Enable edit-test-save workflow for bootstrap context tuning
 
+**Design Principles:**
+- Follow current refactored architecture (EventBus, handlers, IoC) - minimize new technical debt
+- Unify `/edit` and `/show` backends where possible (single editor component, read-write vs read-only modes)
+- Keep dependencies minimal - no large preview frameworks
+
 | Feature | Description |
 |---------|-------------|
 | `/edit` command | Open file in editor (all interfaces) |
@@ -331,9 +336,9 @@ def test_no_bootstrap_file_is_fine():
 
 | Interface | `/edit` Implementation |
 |-----------|------------------------|
-| **VSCode** | Delegate to `vscode.window.showTextDocument()` |
+| **VSCode** | Delegate to `vscode.window.showTextDocument()` with proper language mode |
 | **TUI (Rich)** | Simple line editor (prompt-based, no terminal takeover) |
-| **Web App** | CodeMirror 6 split-pane editor |
+| **Web App** | CodeMirror 6 split-pane editor (unified with `/show` preview) |
 
 **TUI Simple Line Editor:**
 
@@ -360,12 +365,47 @@ Enter new line 42: for item in items:
 ───────────────────────────────────────────────────────
 ```
 
+**VSCode Extension Details:**
+
+The `/edit` command delegates to VSCode's native editor with proper language support:
+
+```typescript
+// vscode-extension/src/handlers/edit.ts
+async function handleEditCommand(filePath: string, line?: number) {
+    const uri = vscode.Uri.file(filePath);
+    const doc = await vscode.workspace.openTextDocument(uri);
+
+    // VSCode auto-detects language from file extension
+    // User's installed extensions (Python, Go, etc.) provide full IDE support
+    const editor = await vscode.window.showTextDocument(doc, {
+        viewColumn: vscode.ViewColumn.Beside,  // Split pane
+        preview: false,  // Keep tab open
+        selection: line ? new vscode.Range(line - 1, 0, line - 1, 0) : undefined
+    });
+}
+```
+
+**Benefits:**
+- Full language support from user's installed extensions
+- Syntax highlighting, IntelliSense, linting, formatting
+- Native VSCode experience (no custom editor needed)
+- Split pane alongside chat panel
+
+---
+
 **Web App CodeMirror 6 Editor:**
 
-Split-pane design with syntax highlighting:
+**Unified Component for `/edit` and `/show`:**
+
+The same CodeMirror 6 editor component handles both commands:
+- `/edit file.py` → Opens in **read-write mode** with Save/Discard buttons
+- `/show file.py` → Opens in **read-only mode** (replaces current preview implementation)
+
+This consolidates the preview backend and reduces code duplication.
+
 ```
 ┌────────────────────────────┬─────────────────────────────────┐
-│  Chat messages...          │  AGENTS.md                [×]   │
+│  Chat messages...          │  AGENTS.md           [Edit] [×] │
 │                            │─────────────────────────────────│
 │  You: /edit AGENTS.md      │  ---                            │
 │                            │  provider_hints:                │
@@ -378,12 +418,36 @@ Split-pane design with syntax highlighting:
 └────────────────────────────┴─────────────────────────────────┘
 ```
 
+**Preview Support (built-in, no extra dependencies):**
+
+For files with renderable output, show split preview:
+- **Markdown:** Render using existing marked.js (already in web app)
+- **HTML:** Render in sandboxed iframe
+- **CSV/JSON/YAML:** Use existing DataTableViewer/DataTreeViewer
+
+```
+┌────────────────────────────┬─────────────────────────────────┐
+│  Chat messages...          │  README.md       [Source] [×]   │
+│                            │─────────────────────────────────│
+│  You: /show README.md      │  ┌─────────────┬───────────────┐│
+│                            │  │ # Title     │ rendered HTML ││
+│  System: Preview opened    │  │ ```code```  │ with styling  ││
+│                            │  │ - list      │               ││
+│                            │  └─────────────┴───────────────┘│
+│  [input field]             │  [Source] toggles to raw editor │
+└────────────────────────────┴─────────────────────────────────┘
+```
+
 **CodeMirror 6 Language Support:**
 - Config files: Markdown, YAML, TOML, JSON, HCL
 - Programming: Python, Go, C/C++, JavaScript, TypeScript
 - Shell: Bash/Zsh/Csh, Perl
 
 **Bundle size:** ~200KB (core + language modules, loaded on demand)
+
+**Migration from current `/show`:**
+- Current: Custom viewers (DataTableViewer, DataTreeViewer, image preview)
+- New: CodeMirror 6 as primary, existing viewers for specialized formats (CSV tables, images, PDFs)
 
 **Server Endpoint:**
 ```python
@@ -723,23 +787,44 @@ https://rcconsult.github.io/ppxai/
 - [x] Test in TUI, VSCode, and Web app
 
 ### v1.14.1 - `/edit` Command & Context Reload
+
+**Architecture Notes:**
+- Follow EventBus/handlers/IoC patterns from v1.13.10 refactoring
+- Minimize new technical debt - use existing abstractions
+- Unify `/edit` and `/show` in Web App (single CodeMirror component)
+
+**Server:**
 - [ ] Add `POST /files/write` server endpoint with path validation
-- [ ] Add `/edit` command to TUI (simple line editor)
-- [ ] Add `/edit` command to VSCode (delegate to showTextDocument)
-- [ ] Add CodeMirror 6 editor to Web App
-  - [ ] Add core modules to `ppxai/web/lib/`
-  - [ ] Add language modules (markdown, yaml, toml, json, hcl)
-  - [ ] Add language modules (python, go, c/cpp, js, ts)
-  - [ ] Add language modules (bash/zsh/csh, perl)
-  - [ ] Implement split-pane editor UI
-  - [ ] Add Save/Save As/Discard buttons
+
+**TUI:**
+- [ ] Add `/edit` command (simple line editor, prompt-based)
+
+**VSCode Extension:**
+- [ ] Add `/edit` command handler in `handlers/edit.ts`
+- [ ] Delegate to `vscode.window.showTextDocument()` with proper options
+- [ ] Ensure file opens with correct language mode (auto-detected from extension)
+- [ ] Support line number: `/edit file.py:42` jumps to line 42
+
+**Web App (CodeMirror 6):**
+- [ ] Add CodeMirror 6 core modules to `ppxai/web/lib/`
+- [ ] Add language modules (markdown, yaml, toml, json, hcl)
+- [ ] Add language modules (python, go, c/cpp, js, ts, bash/shell, perl)
+- [ ] Create unified editor component for `/edit` and `/show`
+  - [ ] Read-write mode for `/edit` (Save/Save As/Discard buttons)
+  - [ ] Read-only mode for `/show` (replaces current preview backend)
+- [ ] Add markdown preview split-pane (reuse existing marked.js)
+- [ ] Keep existing viewers for specialized formats (CSV tables, images, PDFs)
+
+**Context Reload:**
 - [ ] Add `reload_bootstrap_context()` method to EngineClient
 - [ ] Add `/context reload` command (TUI, VSCode, Web)
 - [ ] Add `POST /context/reload` HTTP endpoint
 - [ ] Implement auto-reload when AGENTS.md saved via `/edit`
-- [ ] Add tests for `/edit` command
+
+**Tests:**
+- [ ] Add tests for `/edit` command (all interfaces)
 - [ ] Add tests for `/context reload`
-- [ ] Add tests for file write path validation
+- [ ] Add tests for file write path validation (security)
 
 ### v1.14.2 - File Precedence & Merge
 - [ ] Add global path search (`~/.ppxai/AGENTS.md`)
