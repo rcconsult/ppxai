@@ -673,23 +673,37 @@ class TestFileWritePathValidation:
         assert "denied" in response.json()["detail"].lower()
 
     def test_file_write_path_traversal_blocked(self, mock_client, tmp_path):
-        """Test POST /files/write blocks path traversal attempts."""
+        """Test POST /files/write blocks path traversal to outside directories.
+
+        Note: On Windows, tmp_path is often under user's home directory, so path
+        traversal to parent may be allowed by the home_dir check. On Linux, temp
+        is /tmp which is outside home_dir, so path traversal is blocked.
+
+        This test uses a path completely outside both working_dir and home_dir.
+        """
+        import os
         client, mock_engine = mock_client
-        mock_engine.get_working_dir.return_value = str(tmp_path)
 
         # Create a subdirectory as working dir
         subdir = tmp_path / "workdir"
         subdir.mkdir()
         mock_engine.get_working_dir.return_value = str(subdir)
 
-        # Attempt path traversal - this should resolve to tmp_path (parent of workdir)
-        # which is allowed since it's in the working dir tree
+        # Attempt to write to a path that's definitely outside working_dir tree AND home_dir
+        if os.name == 'nt':
+            # Use a UNC path or different drive letter that doesn't exist
+            outside_path = "Z:\\definitely\\outside\\path.txt"
+        else:
+            # Use /var which is outside /home on Linux
+            outside_path = "/var/tmp/ppxai_test_blocked.txt"
+
         response = client.post(
             "/files/write",
-            json={"path": "../traversal.txt", "content": "Traversal test"}
+            json={"path": outside_path, "content": "Should be blocked"}
         )
-        # Path traversal within working dir tree is allowed
-        assert response.status_code == 200
+        # Path outside allowed directories is blocked
+        assert response.status_code == 403
+        assert "denied" in response.json()["detail"].lower()
 
     def test_file_write_home_dir_allowed(self, mock_client, tmp_path):
         """Test POST /files/write allows writing to home directory."""
