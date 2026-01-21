@@ -4748,6 +4748,200 @@
           "iteration": 3
         }
       ]
+    },
+    {
+      "timestamp": "2026-01-21T19:09:05.490735",
+      "version": "1.14.1",
+      "git_commit": "26155d8",
+      "git_branch": "feature/editor-command-support",
+      "provider": "custom",
+      "model": "openai/gpt-oss-120b",
+      "summary": {
+        "total_runs": 3,
+        "successful_runs": 3,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 561.53,
+          "min": 267.0,
+          "max": 815.75,
+          "stdev": 276.59
+        },
+        "total_ms": {
+          "mean": 2291.33,
+          "min": 893.58,
+          "max": 5062.42,
+          "stdev": 2399.87
+        },
+        "tokens_per_sec": {
+          "mean": 71.93,
+          "min": 6.71,
+          "max": 106.67
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 815.75,
+          "total_ms": 893.58,
+          "tokens": 6,
+          "tokens_per_sec": 6.71,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 267.0,
+          "total_ms": 917.98,
+          "tokens": 94,
+          "tokens_per_sec": 102.4,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 601.83,
+          "total_ms": 5062.42,
+          "tokens": 540,
+          "tokens_per_sec": 106.67,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-21T19:09:22.307573",
+      "version": "1.14.1",
+      "git_commit": "26155d8",
+      "git_branch": "feature/editor-command-support",
+      "provider": "perplexity",
+      "model": "sonar-pro",
+      "summary": {
+        "total_runs": 3,
+        "successful_runs": 3,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 1619.64,
+          "min": 1484.82,
+          "max": 1844.15,
+          "stdev": 195.73
+        },
+        "total_ms": {
+          "mean": 3336.54,
+          "min": 2023.63,
+          "max": 4722.23,
+          "stdev": 1350.77
+        },
+        "tokens_per_sec": {
+          "mean": 40.34,
+          "min": 19.27,
+          "max": 55.48
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 1484.82,
+          "total_ms": 2023.63,
+          "tokens": 39,
+          "tokens_per_sec": 19.27,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1529.96,
+          "total_ms": 3263.76,
+          "tokens": 151,
+          "tokens_per_sec": 46.27,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1844.15,
+          "total_ms": 4722.23,
+          "tokens": 262,
+          "tokens_per_sec": 55.48,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-21T19:10:13.895888",
+      "version": "1.14.1",
+      "git_commit": "26155d8",
+      "git_branch": "feature/editor-command-support",
+      "provider": "gemini",
+      "model": "gemini-2.0-flash",
+      "summary": {
+        "error": "No valid results"
+      },
+      "detailed_results": [
+        {
+          "prompt_type": "simple",
+          "iteration": 1,
+          "error": "'GeminiProvider' object has no attribute '_format_error'"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 1,
+          "error": "'GeminiProvider' object has no attribute '_format_error'"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 1,
+          "error": "'GeminiProvider' object has no attribute '_format_error'"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-21T19:12:06.303670",
+      "version": "1.14.1",
+      "git_commit": "26155d8",
+      "git_branch": "feature/editor-command-support",
+      "provider": "gemini",
+      "model": "gemini-2.0-flash",
+      "summary": {
+        "error": "No valid results"
+      },
+      "detailed_results": [
+        {
+          "prompt_type": "simple",
+          "iteration": 1,
+          "error": "API Error: Gemini error (ConnectError): [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1032)"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 1,
+          "error": "API Error: Gemini error (ConnectError): [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1032)"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 1,
+          "error": "API Error: Gemini error (ConnectError): [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1032)"
+        }
+      ]
     }
   ]
 }

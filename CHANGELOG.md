@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.14.1] - 2026-01-21
+
+### Added - Editor Command Support
+
+- **`/edit` command for VSCode** - Opens file in native VSCode editor with proper language mode, supports `file:line:col` syntax
+- **`/edit` command for Web App** - Monaco-style editor with syntax highlighting, line numbers, Ctrl+S save
+- **`/context reload` command** - Refresh AGENTS.md/CLAUDE.md from disk without restarting session (TUI, VSCode, Web)
+- **`POST /files/write` endpoint** - Server-side file write support for VSCode/Web editors
+- **Auto-reload on save** - Editing AGENTS.md or CLAUDE.md automatically offers to reload bootstrap context
+
+### Fixed
+
+- **Gemini provider error formatting** - Added missing `_format_error` and `_log_error_traceback` methods to GeminiProvider class
+
+### Deferred
+
+- **TUI `/edit` command** - Deferred to v1.15.x; simple line editor approach had UX issues (stacked views, no horizontal cursor movement)
+
 ## [1.14.0] - 2026-01-19
 
 ### Added - Bootstrap Context System

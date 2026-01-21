@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.14.0 (January 2026)
+> **Current Version**: v1.14.1 (January 2026)
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
@@ -278,16 +278,19 @@ ppxai/engine/bootstrap.py (new)
 
 **No conflicts:** Bootstrap context extends the existing system prompt pipeline, doesn't replace it.
 
-### v1.14.1 - `/edit` Command & Context Reload
+### v1.14.1 - `/edit` Command & Context Reload ✅
 
 **Theme**: Edit-test-save workflow for bootstrap context tuning
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **`/edit` command** | Open file in editor (all interfaces) | Planned |
-| **`/context reload`** | Refresh AGENTS.md from disk | Planned |
-| **Auto-reload on save** | `/edit AGENTS.md` + save triggers context reload | Planned |
-| **`POST /files/write`** | Server endpoint for file writes | Planned |
+| **`/edit` command (VSCode)** | Opens file in native VSCode editor | ✅ Done |
+| **`/edit` command (Web App)** | Monaco-style editor with syntax highlighting | ✅ Done |
+| **`/edit` command (TUI)** | Simple line editor | ⏳ Deferred to v1.15.x |
+| **`/context reload`** | Refresh AGENTS.md from disk | ✅ Done |
+| **Auto-reload on save** | `/edit AGENTS.md` + save triggers context reload | ✅ Done |
+| **`POST /files/write`** | Server endpoint for file writes | ✅ Done |
+| **Gemini error handling** | Added `_format_error` method to GeminiProvider | ✅ Done |
 
 **Implementation by Interface:**
 

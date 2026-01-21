@@ -453,3 +453,49 @@ class GeminiProvider:
             content += "\n\n**Sources:**\n" + "\n".join(citation_lines)
 
         return content
+
+    def _format_error(self, e: Exception) -> str:
+        """Format exception into user-friendly error message.
+
+        Args:
+            e: The exception to format
+
+        Returns:
+            User-friendly error message
+        """
+        error_type = type(e).__name__
+        error_str = str(e)
+
+        # API key errors
+        if "API_KEY" in error_str.upper() or "INVALID_API_KEY" in error_str.upper():
+            return "Gemini API key error. Check your GEMINI_API_KEY in ~/.ppxai/.env"
+
+        # Quota/rate limit errors
+        if "RESOURCE_EXHAUSTED" in error_str or "quota" in error_str.lower():
+            return "Gemini quota exceeded. Please wait before trying again."
+
+        # Safety filter errors
+        if "SAFETY" in error_str.upper() or "blocked" in error_str.lower():
+            return "Response blocked by Gemini safety filters."
+
+        # Model not found
+        if "NOT_FOUND" in error_str or "model" in error_str.lower() and "not found" in error_str.lower():
+            return f"Gemini model not found. Check model ID is valid."
+
+        # Connection errors
+        if "connect" in error_str.lower() or "timeout" in error_str.lower():
+            return f"Connection to Gemini API failed: {error_str}"
+
+        # Generic error with type
+        return f"Gemini error ({error_type}): {error_str}"
+
+    def _log_error_traceback(self, e: Exception) -> None:
+        """Log full error traceback for debugging.
+
+        Args:
+            e: The exception to log
+        """
+        import traceback
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug(f"Gemini error traceback:\n{traceback.format_exc()}")

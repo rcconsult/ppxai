@@ -275,6 +275,20 @@ def handle_context(handler: "CommandHandler", args: str) -> None:
         _show_active_hints(handler, console)
         return
 
+    if parts and parts[0].lower() == "reload":
+        # Reload bootstrap context from disk (v1.14.1)
+        if handler.engine_client.reload_bootstrap_context():
+            status = handler.engine_client.get_bootstrap_status()
+            source = status.get('source', 'unknown')
+            char_count = status.get('char_count', 0)
+            console.print(f"\n[green]✓ Bootstrap context reloaded[/green]")
+            console.print(f"  [dim]Source: {source}[/dim]")
+            console.print(f"  [dim]Size: {char_count:,} chars[/dim]\n")
+        else:
+            console.print("\n[yellow]No bootstrap context file found in working directory[/yellow]")
+            console.print("  [dim]Looking for: AGENTS.md, CLAUDE.md[/dim]\n")
+        return
+
     # Show context usage info
     info = handler.engine_client.get_context_info()
 
@@ -355,5 +369,5 @@ CommandFactory.register(CommandSpec(
     description="Show context usage, hints, and manage injected files",
     handler=handle_context,
     category="utility",
-    usage="/context [clear|hints]"
+    usage="/context [clear|hints|reload]"
 ))

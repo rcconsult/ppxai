@@ -12,6 +12,14 @@
  * - All API requests now include X-Session-Id header
  *
  * v1.14.1 Changes:
+ * - Added /edit command with CodeMirror 6 editor (lazy-loaded by extension)
+ * - Added /context reload command to reload AGENTS.md from disk
+ * - CodeMirror bundles: markdown, yaml, json, python, javascript
+ * - Editor panel with save/discard toolbar, Ctrl+S support
+ * - File position support: /edit filepath:line:col
+ * - Path validation via POST /files/write endpoint
+ *
+ * v1.14.0 Changes:
  * - Fixed markdown rendering with proper list syntax (- instead of •)
  * - Added table format for /usage command (matching VSCode extension)
  * - Updated marked.js to v11.1.1
@@ -101,6 +109,8 @@ class PpxaiApp {
                 '/status': { description: 'Show current status', usage: '/status' },
                 '/show': { description: 'Display file contents', usage: '/show <filepath>' },
                 '/cat': { description: 'Alias for /show', usage: '/cat <filepath>' },
+                '/edit': { description: 'Edit file in CodeMirror editor', usage: '/edit <filepath[:line[:col]]>' },
+                '/context': { description: 'Manage context', usage: '/context [clear|hints|reload]' },
                 '/cd': { description: 'Change working directory', usage: '/cd <path>' },
                 '/pwd': { description: 'Print working directory', usage: '/pwd' },
                 '/generate': { description: 'Generate code from description', usage: '/generate <description>' },
@@ -1080,6 +1090,10 @@ class PpxaiApp {
                 await this.handleShowCommand(args);
                 break;
 
+            case '/edit':
+                await this.handleEditCommand(args);
+                break;
+
             case '/cd':
                 await this.handleCdCommand(args);
                 break;
@@ -1537,12 +1551,30 @@ class PpxaiApp {
                 const data = await response.json();
 
                 if (data.removed_count > 0) {
-                    this.addSystemMessage(`Cleared ${data.removed_count} injected context(s) from conversation.`);
+                    this.showSystemMessage(`Cleared ${data.removed_count} injected context(s) from conversation.`);
                 } else {
-                    this.addSystemMessage('No injected contexts to clear.');
+                    this.showSystemMessage('No injected contexts to clear.');
                 }
                 // Update badge
                 await this.updateContextInfo();
+            } else if (subCmd === 'reload') {
+                // Reload bootstrap context (v1.14.1)
+                const response = await fetch(`${this.serverUrl}/context/reload`, {
+                    method: 'POST',
+                    headers: this.getSessionHeaders(true)
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    const status = data.status || {};
+                    if (status.loaded) {
+                        this.showSystemMessage(`✓ Bootstrap context reloaded from \`${status.source}\` (${status.size || 'unknown'} bytes)`);
+                    } else {
+                        this.showSystemMessage('Bootstrap context reloaded (no AGENTS.md/CLAUDE.md found in working directory).');
+                    }
+                } else {
+                    this.showError(`Failed to reload context: ${data.error || 'Unknown error'}`);
+                }
             } else if (subCmd === 'hints') {
                 // Show active bootstrap hints (v1.14.0)
                 const response = await fetch(`${this.serverUrl}/context/hints`, {
@@ -2307,6 +2339,502 @@ class PpxaiApp {
         }
     }
 
+    /**
+     * Handle /edit command - open file in CodeMirror 6 editor (v1.14.1)
+     * Syntax: /edit filepath[:line[:col]]
+     */
+    async handleEditCommand(args) {
+        if (!args || !args.trim()) {
+            this.showError('Usage: /edit <filepath[:line[:col]]>');
+            return;
+        }
+
+        // Parse filepath and optional line:col
+        const input = args.trim();
+        let filepath = input;
+        let line = 1;
+        let col = 1;
+
+        // Pattern: filepath:line or filepath:line:col
+        const match = input.match(/^(.+?):(\d+)(?::(\d+))?$/);
+        if (match) {
+            filepath = match[1];
+            line = parseInt(match[2], 10);
+            col = match[3] ? parseInt(match[3], 10) : 1;
+        }
+
+        try {
+            const response = await fetch(`${this.serverUrl}/files/read`, {
+                method: 'POST',
+                headers: this.getSessionHeaders(true),
+                body: JSON.stringify({ path: filepath })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                // Don't allow editing binary files
+                if (data.type === 'image' || data.type === 'pdf') {
+                    this.showError(`Cannot edit binary file: ${filepath}`);
+                    return;
+                }
+
+                // Show editor panel
+                this.showEditorPanel(data.filename || filepath, data.content, line, col);
+            } else {
+                // File doesn't exist - create new file
+                const error = await response.json();
+                if (response.status === 404) {
+                    // Create new empty file
+                    this.showEditorPanel(filepath, '', line, col, true);
+                } else {
+                    this.showError(`Failed to read file: ${error.detail || 'Unknown error'}`);
+                }
+            }
+        } catch (error) {
+            this.showError(`Failed to open file: ${error.message}`);
+        }
+    }
+
+    /**
+     * Show the CodeMirror 6 editor panel (v1.14.1)
+     */
+    showEditorPanel(filename, content, line = 1, col = 1, isNewFile = false) {
+        // Store state
+        this.editorFilename = filename;
+        this.editorContent = content;
+        this.editorOriginalContent = content;
+        this.editorIsNewFile = isNewFile;
+
+        // Update header
+        this.elements.previewFilename.textContent = filename + (isNewFile ? ' (new)' : '');
+        this.elements.previewInfo.textContent = isNewFile ? 'New file' : `${content.split('\n').length} lines`;
+
+        // Hide view toggle (not for editor mode)
+        if (this.elements.previewViewToggle) {
+            this.elements.previewViewToggle.classList.add('hidden');
+        }
+
+        // Hide other preview containers
+        this.elements.previewCode.parentElement.classList.add('hidden');
+        if (this.elements.previewMarkdown) {
+            this.elements.previewMarkdown.classList.add('hidden');
+        }
+        if (this.elements.previewDataViewer) {
+            this.elements.previewDataViewer.classList.add('hidden');
+        }
+
+        // Get or create editor container
+        const previewContentEl = this.elements.previewCode.parentElement.parentElement;
+        let editorContainer = previewContentEl.querySelector('.editor-container');
+        if (!editorContainer) {
+            editorContainer = document.createElement('div');
+            editorContainer.className = 'editor-container';
+            editorContainer.style.cssText = 'height: 100%; display: flex; flex-direction: column;';
+            previewContentEl.appendChild(editorContainer);
+        }
+        editorContainer.classList.remove('hidden');
+        editorContainer.innerHTML = '';
+
+        // Detect file extension for syntax selector
+        const ext = filename.split('.').pop().toLowerCase();
+        const langMap = {
+            'py': 'python', 'python': 'python',
+            'js': 'javascript', 'mjs': 'javascript', 'cjs': 'javascript', 'ts': 'javascript', 'tsx': 'javascript',
+            'json': 'json',
+            'yaml': 'yaml', 'yml': 'yaml',
+            'md': 'markdown', 'markdown': 'markdown'
+        };
+        const detectedLang = langMap[ext] || 'markdown';
+        this.editorLanguage = detectedLang;
+
+        // Create editor toolbar
+        const toolbar = document.createElement('div');
+        toolbar.className = 'editor-toolbar';
+        toolbar.innerHTML = `
+            <button class="editor-btn editor-save" title="Save (Ctrl+S)">💾 Save</button>
+            <button class="editor-btn editor-save-as" title="Save As...">📄 Save As</button>
+            <button class="editor-btn editor-open" title="Open file...">📂 Open</button>
+            <select class="editor-syntax-select" title="Syntax highlighting">
+                <option value="markdown" ${detectedLang === 'markdown' ? 'selected' : ''}>Markdown</option>
+                <option value="yaml" ${detectedLang === 'yaml' ? 'selected' : ''}>YAML</option>
+                <option value="json" ${detectedLang === 'json' ? 'selected' : ''}>JSON</option>
+                <option value="python" ${detectedLang === 'python' ? 'selected' : ''}>Python</option>
+                <option value="javascript" ${detectedLang === 'javascript' ? 'selected' : ''}>JavaScript</option>
+            </select>
+            <button class="editor-btn editor-discard" title="Close editor">✗ Close</button>
+            <span class="editor-status"></span>
+        `;
+        editorContainer.appendChild(toolbar);
+
+        // Create editor element
+        const editorEl = document.createElement('div');
+        editorEl.className = 'codemirror-editor';
+        editorEl.style.cssText = 'flex: 1; overflow: auto;';
+        editorContainer.appendChild(editorEl);
+
+        // Initialize CodeMirror 6
+        this.initCodeMirror(editorEl, content, filename, line, col);
+
+        // Wire up toolbar buttons
+        toolbar.querySelector('.editor-save').addEventListener('click', () => this.saveEditorContent());
+        toolbar.querySelector('.editor-save-as').addEventListener('click', () => this.saveEditorAs());
+        toolbar.querySelector('.editor-open').addEventListener('click', () => this.openFileDialog());
+        toolbar.querySelector('.editor-syntax-select').addEventListener('change', (e) => this.changeSyntax(e.target.value));
+        toolbar.querySelector('.editor-discard').addEventListener('click', () => this.discardEditorChanges());
+
+        // Show the panel
+        this.elements.resizeHandle.classList.remove('hidden');
+        this.elements.previewPanel.classList.remove('hidden');
+    }
+
+    /**
+     * Initialize CodeMirror 6 editor (v1.14.1)
+     */
+    initCodeMirror(element, content, filename, line, col) {
+        // Destroy previous editor if exists
+        if (this.currentEditor) {
+            this.currentEditor.destroy();
+            this.currentEditor = null;
+        }
+
+        // Check if CodeMirror prebuilt is loaded
+        if (typeof cm6 === 'undefined') {
+            // Load appropriate language bundle based on file extension
+            const ext = filename.split('.').pop().toLowerCase();
+            const langMap = {
+                'py': 'python', 'python': 'python',
+                'js': 'javascript', 'mjs': 'javascript', 'cjs': 'javascript',
+                'json': 'json',
+                'yaml': 'yaml', 'yml': 'yaml',
+                'md': 'markdown', 'markdown': 'markdown'
+            };
+            const lang = langMap[ext] || 'markdown';  // Default to markdown
+
+            // Try to load the appropriate bundle
+            const script = document.createElement('script');
+            script.src = `lib/codemirror/${lang}.min.js`;
+            script.onload = () => {
+                this.createCodeMirrorEditor(element, content, line, col);
+            };
+            script.onerror = () => {
+                // Fallback to plain textarea
+                this.createFallbackEditor(element, content, line, col);
+            };
+            document.head.appendChild(script);
+        } else {
+            this.createCodeMirrorEditor(element, content, line, col);
+        }
+    }
+
+    /**
+     * Create CodeMirror 6 editor instance
+     */
+    createCodeMirrorEditor(element, content, line, col) {
+        try {
+            const isDark = this.theme === 'dark';
+
+            // cm6.load() returns an object with newEditor, newState, newView, textarea, fromElement
+            const api = cm6.load();
+
+            // Use newEditor which creates both state and view with language support
+            const view = api.newEditor(element, content, {
+                dark: isDark,
+                lineWrapping: true
+            });
+
+            this.currentEditor = view;
+
+            // Go to line:col
+            if (line > 1 || col > 1) {
+                try {
+                    const lineCount = view.state.doc.lines;
+                    const targetLine = Math.min(line, lineCount);
+                    const lineInfo = view.state.doc.line(targetLine);
+                    const pos = lineInfo.from + Math.min(col - 1, lineInfo.length);
+                    view.dispatch({
+                        selection: { anchor: pos },
+                        scrollIntoView: true
+                    });
+                } catch (e) {
+                    console.warn('Could not navigate to line:', e);
+                }
+            }
+
+            // Focus editor
+            view.focus();
+
+            // Add Ctrl+S handler
+            element.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                    e.preventDefault();
+                    this.saveEditorContent();
+                }
+            });
+
+        } catch (error) {
+            console.error('CodeMirror init error:', error);
+            this.createFallbackEditor(element, content, line, col);
+        }
+    }
+
+    /**
+     * Create fallback textarea editor if CodeMirror fails
+     */
+    createFallbackEditor(element, content, line, col) {
+        const textarea = document.createElement('textarea');
+        textarea.className = 'fallback-editor';
+        textarea.style.cssText = 'width: 100%; height: 100%; resize: none; font-family: monospace; font-size: 13px; padding: 8px; border: none; background: var(--bg-secondary); color: var(--text-primary);';
+        textarea.value = content;
+        element.appendChild(textarea);
+
+        this.currentEditor = {
+            state: { doc: { toString: () => textarea.value } },
+            destroy: () => {}
+        };
+
+        // Go to line (approximate for textarea)
+        const lines = content.split('\n');
+        let pos = 0;
+        for (let i = 0; i < Math.min(line - 1, lines.length); i++) {
+            pos += lines[i].length + 1;
+        }
+        pos += Math.min(col - 1, lines[line - 1]?.length || 0);
+        textarea.setSelectionRange(pos, pos);
+        textarea.focus();
+
+        // Add Ctrl+S handler
+        textarea.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                this.saveEditorContent();
+            }
+        });
+    }
+
+    /**
+     * Save editor content to file (v1.14.1)
+     */
+    async saveEditorContent() {
+        if (!this.currentEditor || !this.editorFilename) {
+            return;
+        }
+
+        const content = this.currentEditor.state.doc.toString();
+        const statusEl = document.querySelector('.editor-status');
+
+        try {
+            if (statusEl) statusEl.textContent = 'Saving...';
+
+            const response = await fetch(`${this.serverUrl}/files/write`, {
+                method: 'POST',
+                headers: this.getSessionHeaders(true),
+                body: JSON.stringify({
+                    path: this.editorFilename,
+                    content: content
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                this.editorOriginalContent = content;
+                this.editorIsNewFile = false;
+
+                // Update header
+                this.elements.previewFilename.textContent = this.editorFilename;
+
+                if (statusEl) {
+                    statusEl.textContent = data.created ? '✓ Created' : '✓ Saved';
+                    setTimeout(() => { statusEl.textContent = ''; }, 2000);
+                }
+
+                this.showSystemMessage(`✓ Saved: ${this.editorFilename}`);
+            } else {
+                const error = await response.json();
+                if (statusEl) statusEl.textContent = '✗ Error';
+                this.showError(`Failed to save: ${error.detail || 'Unknown error'}`);
+            }
+        } catch (error) {
+            if (statusEl) statusEl.textContent = '✗ Error';
+            this.showError(`Failed to save: ${error.message}`);
+        }
+    }
+
+    /**
+     * Save As - save editor content to a different file (v1.14.1)
+     */
+    async saveEditorAs() {
+        const newPath = prompt('Save as (enter file path):', this.editorFilename);
+        if (!newPath || !newPath.trim()) {
+            return;
+        }
+
+        const content = this.currentEditor?.state?.doc?.toString() || '';
+        const statusEl = document.querySelector('.editor-status');
+
+        try {
+            if (statusEl) statusEl.textContent = 'Saving...';
+
+            const response = await fetch(`${this.serverUrl}/files/write`, {
+                method: 'POST',
+                headers: this.getSessionHeaders(true),
+                body: JSON.stringify({
+                    path: newPath.trim(),
+                    content: content
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                // Update current file to new path
+                this.editorFilename = newPath.trim();
+                this.editorOriginalContent = content;
+                this.editorIsNewFile = false;
+
+                // Update header
+                this.elements.previewFilename.textContent = this.editorFilename;
+
+                if (statusEl) {
+                    statusEl.textContent = data.created ? '✓ Created' : '✓ Saved';
+                    setTimeout(() => { statusEl.textContent = ''; }, 2000);
+                }
+
+                this.showSystemMessage(`✓ Saved as: ${this.editorFilename}`);
+            } else {
+                const error = await response.json();
+                if (statusEl) statusEl.textContent = '✗ Error';
+                this.showError(`Failed to save: ${error.detail || 'Unknown error'}`);
+            }
+        } catch (error) {
+            if (statusEl) statusEl.textContent = '✗ Error';
+            this.showError(`Failed to save: ${error.message}`);
+        }
+    }
+
+    /**
+     * Open a different file in the editor (v1.14.1)
+     */
+    async openFileDialog() {
+        const content = this.currentEditor?.state?.doc?.toString() || '';
+        const hasChanges = content !== this.editorOriginalContent;
+
+        if (hasChanges) {
+            if (!confirm('You have unsaved changes. Open a different file?')) {
+                return;
+            }
+        }
+
+        const filepath = prompt('Open file (enter path):');
+        if (!filepath || !filepath.trim()) {
+            return;
+        }
+
+        // Use handleEditCommand to open the new file
+        await this.handleEditCommand(filepath.trim());
+    }
+
+    /**
+     * Change syntax highlighting language (v1.14.1)
+     */
+    async changeSyntax(language) {
+        if (this.editorLanguage === language) {
+            return;
+        }
+
+        // Get current content and cursor position
+        const content = this.currentEditor?.state?.doc?.toString() || '';
+        let cursorPos = 0;
+        try {
+            cursorPos = this.currentEditor?.state?.selection?.main?.head || 0;
+        } catch (e) {}
+
+        // Destroy current editor
+        if (this.currentEditor) {
+            this.currentEditor.destroy();
+            this.currentEditor = null;
+        }
+
+        // Update language
+        this.editorLanguage = language;
+
+        // Get editor container
+        const previewContentEl = this.elements.previewCode.parentElement.parentElement;
+        const editorContainer = previewContentEl.querySelector('.editor-container');
+        const editorEl = editorContainer?.querySelector('.codemirror-editor');
+
+        if (!editorEl) {
+            return;
+        }
+
+        // Clear and reinitialize with new language
+        editorEl.innerHTML = '';
+
+        // Load the new language bundle
+        const script = document.createElement('script');
+        script.src = `lib/codemirror/${language}.min.js`;
+        script.onload = () => {
+            this.createCodeMirrorEditor(editorEl, content, 1, 1);
+            // Restore cursor position
+            try {
+                if (this.currentEditor && cursorPos > 0) {
+                    this.currentEditor.dispatch({
+                        selection: { anchor: Math.min(cursorPos, content.length) }
+                    });
+                }
+            } catch (e) {}
+        };
+        script.onerror = () => {
+            this.showError(`Failed to load syntax: ${language}`);
+            this.createFallbackEditor(editorEl, content, 1, 1);
+        };
+        document.head.appendChild(script);
+    }
+
+    /**
+     * Discard editor changes and close
+     */
+    discardEditorChanges() {
+        const content = this.currentEditor?.state?.doc?.toString() || '';
+        const hasChanges = content !== this.editorOriginalContent;
+
+        if (hasChanges) {
+            if (!confirm('Discard unsaved changes?')) {
+                return;
+            }
+        }
+
+        this.closeEditorPanel();
+    }
+
+    /**
+     * Close editor panel
+     */
+    closeEditorPanel() {
+        // Clean up editor
+        if (this.currentEditor) {
+            this.currentEditor.destroy();
+            this.currentEditor = null;
+        }
+
+        // Hide editor container
+        const previewContentEl = this.elements.previewCode.parentElement.parentElement;
+        const editorContainer = previewContentEl.querySelector('.editor-container');
+        if (editorContainer) {
+            editorContainer.classList.add('hidden');
+        }
+
+        // Reset state
+        this.editorFilename = null;
+        this.editorContent = null;
+        this.editorOriginalContent = null;
+        this.editorIsNewFile = false;
+
+        // Hide preview panel
+        this.elements.previewPanel.classList.add('hidden');
+        this.elements.resizeHandle.classList.add('hidden');
+    }
+
     async handleShowCommand(args) {
         if (!args || !args.trim()) {
             this.showError('Usage: /show <filepath> or /show @<search-query>');
@@ -3009,9 +3537,9 @@ class PpxaiApp {
             const data = await response.json();
 
             if (data.removed_count > 0) {
-                this.addSystemMessage(`Cleared ${data.removed_count} injected context(s) from conversation.`);
+                this.showSystemMessage(`Cleared ${data.removed_count} injected context(s) from conversation.`);
             } else {
-                this.addSystemMessage('No injected contexts to clear.');
+                this.showSystemMessage('No injected contexts to clear.');
             }
 
             // Update the badge

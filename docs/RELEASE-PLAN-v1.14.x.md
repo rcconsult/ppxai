@@ -1,8 +1,8 @@
 # Release Plan: v1.14.x Series
 
 **Created:** January 5, 2026
-**Last Updated:** January 20, 2026
-**Status:** v1.14.0 complete, v1.14.1 in planning
+**Last Updated:** January 21, 2026
+**Status:** v1.14.0 complete, v1.14.1 complete
 **Branch:** `feature/agents-bootstrap-context` (v1.14.0), `feature/editor-command-support` (v1.14.1+)
 
 ---

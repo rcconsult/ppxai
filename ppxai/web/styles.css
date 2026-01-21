@@ -1409,3 +1409,142 @@ body {
         padding: 10px 14px;
     }
 }
+
+/* ================================================
+   CodeMirror Editor Styles (v1.14.1)
+   ================================================ */
+
+.editor-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--bg-secondary);
+}
+
+.editor-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.editor-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.editor-save {
+    background: var(--accent-color);
+    color: white;
+}
+
+.editor-save:hover {
+    background: var(--accent-hover);
+}
+
+.editor-discard {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.editor-discard:hover {
+    background: var(--bg-hover);
+}
+
+.editor-save-as,
+.editor-open {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.editor-save-as:hover,
+.editor-open:hover {
+    background: var(--bg-hover);
+}
+
+.editor-syntax-select {
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    min-width: 100px;
+}
+
+.editor-syntax-select:hover {
+    background: var(--bg-hover);
+}
+
+.editor-syntax-select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.editor-status {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.codemirror-editor {
+    flex: 1;
+    overflow: auto;
+}
+
+/* CodeMirror 6 theme overrides */
+.codemirror-editor .cm-editor {
+    height: 100%;
+    font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+    font-size: 13px;
+}
+
+.codemirror-editor .cm-scroller {
+    overflow: auto;
+}
+
+.codemirror-editor .cm-content {
+    padding: 8px 0;
+}
+
+.codemirror-editor .cm-line {
+    padding: 0 12px;
+}
+
+/* Dark theme for CodeMirror */
+[data-theme="dark"] .codemirror-editor .cm-editor {
+    background: var(--bg-secondary);
+}
+
+[data-theme="dark"] .codemirror-editor .cm-gutters {
+    background: var(--bg-tertiary);
+    border-right: 1px solid var(--border-color);
+}
+
+/* Fallback editor styles */
+.fallback-editor {
+    width: 100%;
+    height: 100%;
+    resize: none;
+    font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 12px;
+    border: none;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    tab-size: 4;
+}
+
+.fallback-editor:focus {
+    outline: none;
+}

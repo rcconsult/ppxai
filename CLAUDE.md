@@ -6,25 +6,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.14.0
+**Current Version:** v1.14.1
+
+**v1.14.1 highlights:**
+- **NEW:** `/edit` command for VSCode - opens files in native editor with line:col support
+- **NEW:** `/edit` command for Web App - Monaco-style editor with syntax highlighting
+- **NEW:** `/context reload` command - refresh AGENTS.md without restarting session
+- **NEW:** `POST /files/write` endpoint - server support for VSCode/Web editors
+- **FIX:** Gemini provider error formatting - added missing `_format_error` method
 
 **v1.14.0 highlights:**
-- **NEW:** AGENTS.md/CLAUDE.md bootstrap context support - project-specific instructions loaded on startup
-- **NEW:** YAML front matter for provider/model-specific hints (dynamic prompt assembly)
-- **NEW:** `local` provider inheritance - ollama, vllm, lmstudio inherit from `local` hints
-- **NEW:** `/context hints` command - shows active provider/model hints for debugging
-- **NEW:** `/status` now displays active hints count with inheritance indicator
-- **NEW:** Debug logging on provider/model switch (logs hint transitions)
-- **NEW:** `/context/hints` HTTP endpoint for VSCode extension
-- **FIX:** VSCode/Web markdown tables now use word-wrap instead of horizontal scrollbars
-- **FIX:** Perplexity "messages must alternate" error when restoring tool-use sessions
-- **FIX:** HTTP server session autosave with alternation validation
-- **FIX:** Error rollback in `chat_with_tools` only on first iteration
+- AGENTS.md/CLAUDE.md bootstrap context support - project-specific instructions loaded on startup
+- YAML front matter for provider/model-specific hints (dynamic prompt assembly)
+- `local` provider inheritance - ollama, vllm, lmstudio inherit from `local` hints
+- `/context hints` command - shows active provider/model hints for debugging
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.14.0
-- VSCode extension (package.json): v1.14.0
-- Git tag: v1.14.0
+- Python package (pyproject.toml): v1.14.1
+- VSCode extension (package.json): v1.14.1
+- Git tag: v1.14.1
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
 
