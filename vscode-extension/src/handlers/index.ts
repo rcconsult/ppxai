@@ -55,6 +55,7 @@ export {
     ConsentContext,
     ConsentDialogs,
     ConsentPickItem,
+    TerminalExecutor,  // v1.14.2
     FILE_CONSENT_OPTIONS,
     SHELL_CONSENT_OPTIONS
 } from './consent';

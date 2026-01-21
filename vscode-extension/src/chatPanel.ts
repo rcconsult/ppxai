@@ -103,13 +103,45 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         return {
             backend: this._backend,
             eventBus: this._eventBus,
+            runInTerminal: this.runCommandInTerminal.bind(this),  // v1.14.2
             dialogs: {
                 showQuickPick: async (items, options) => {
                     const result = await vscode.window.showQuickPick(items, options);
-                    return result as { label: string; detail: string; value: 'y' | 'n' | 'always' | 'never' } | undefined;
+                    return result as { label: string; detail: string; value: 'y' | 'n' | 'always' | 'never' | 'terminal' } | undefined;
                 }
             }
         };
+    }
+
+    /**
+     * Run a command in VSCode integrated terminal (v1.14.2).
+     * Used for interactive commands like kubectl exec -it, python REPL, etc.
+     *
+     * @param command The shell command to execute
+     * @param workingDir Working directory for the command
+     */
+    private runCommandInTerminal(command: string, workingDir: string): void {
+        // Create a unique terminal name based on command
+        const shortCmd = command.length > 30 ? command.substring(0, 30) + '...' : command;
+        const terminalName = `ppxai: ${shortCmd}`;
+
+        // Create terminal with working directory
+        const terminal = vscode.window.createTerminal({
+            name: terminalName,
+            cwd: workingDir !== '.' ? workingDir : undefined,
+            iconPath: new vscode.ThemeIcon('terminal')
+        });
+
+        // Show terminal and send command
+        terminal.show();
+        terminal.sendText(command);
+
+        // Notify webview that command is running in terminal
+        this._view?.webview.postMessage({
+            type: 'terminalExecuted',
+            command: command,
+            workingDir: workingDir
+        });
     }
 
     /**
@@ -816,8 +848,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 ignoreFocusOut: true
             });
 
-            // Map selection to response
-            const response: ConsentResponse = (selected?.value as ConsentResponse) || 'n';
+            // Map selection to response (file consent only supports y/n/always/never)
+            const response = (selected?.value as 'y' | 'n' | 'always' | 'never') || 'n';
 
             // Send consent response to server
             await this._backend.consent(filePath, response);
@@ -842,7 +874,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
          *
          * Shows a keyboard-friendly QuickPick asking user for permission to execute a shell command.
          * Displays command, working directory, and risk level.
-         * Supports: Yes (this command), No, Always (all commands), Never (block all)
+         * Supports: Yes (this command), No, Run in Terminal, Always (all commands), Never (block all)
+         *
+         * v1.14.2: Added "Run in Terminal" option for interactive commands
          */
         try {
             const command = data.command;
@@ -865,7 +899,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 riskMessage = 'SAFE';
             }
 
-            // Show keyboard-friendly QuickPick
+            // Show keyboard-friendly QuickPick (v1.14.2: added terminal option)
             const items = [
                 {
                     label: '$(check) Yes',
@@ -876,6 +910,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     label: '$(x) No',
                     detail: 'Deny this command (n)',
                     value: 'n'
+                },
+                {
+                    label: '$(terminal) Run in Terminal',
+                    detail: 'Open VSCode terminal and run interactively (t)',
+                    value: 'terminal'
                 },
                 {
                     label: '$(check-all) Always',
@@ -896,10 +935,19 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             });
 
             // Map selection to response
-            const response: ConsentResponse = (selected?.value as ConsentResponse) || 'n';
+            const response = (selected?.value as ConsentResponse) || 'n';
+
+            // v1.14.2: Handle "Run in Terminal" option
+            if (response === 'terminal') {
+                this.runCommandInTerminal(command, workingDir);
+                // Tell server to skip execution (we're running it in terminal)
+                await this._backend.shellConsent(command, workingDir, 'n');
+                return;
+            }
 
             // Send shell consent response to server
-            await this._backend.shellConsent(command, workingDir, response);
+            // At this point, 'terminal' has been handled, so response is y/n/always/never
+            await this._backend.shellConsent(command, workingDir, response as 'y' | 'n' | 'always' | 'never');
 
         } catch (error) {
             console.error('Shell consent request error:', error);

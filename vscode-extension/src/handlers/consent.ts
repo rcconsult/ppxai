@@ -30,11 +30,16 @@ export interface ConsentDialogs {
     ): Promise<ConsentPickItem | undefined>;
 }
 
+/** Terminal execution callback for "Run in Terminal" option */
+export type TerminalExecutor = (command: string, workingDir: string) => void;
+
 /** Context for consent handlers */
 export interface ConsentContext {
     backend: HttpClient;
     dialogs: ConsentDialogs;
     eventBus?: ChatEventBus;
+    /** v1.14.2: Optional callback to run commands in VSCode terminal */
+    runInTerminal?: TerminalExecutor;
 }
 
 // ============================================================================
@@ -76,6 +81,11 @@ export const SHELL_CONSENT_OPTIONS: ConsentPickItem[] = [
         label: '$(x) No',
         detail: 'Deny this command (n)',
         value: 'n'
+    },
+    {
+        label: '$(terminal) Run in Terminal',
+        detail: 'Open VSCode terminal and run interactively (t)',
+        value: 'terminal'
     },
     {
         label: '$(check-all) Always',
@@ -124,7 +134,8 @@ export async function handleFileConsent(
         });
 
         // Map selection to response (default: deny)
-        const response: ConsentResponse = selected?.value || 'n';
+        // File consent only supports y/n/always/never (not terminal)
+        const response = (selected?.value || 'n') as 'y' | 'n' | 'always' | 'never';
 
         // Send consent response to server
         await ctx.backend.consent(filePath, response);
@@ -154,7 +165,9 @@ export async function handleFileConsent(
  *
  * Shows a keyboard-friendly QuickPick asking user for permission to execute a shell command.
  * Displays command, working directory, and risk level.
- * Supports: Yes (this command), No, Always (all commands), Never (block all)
+ * Supports: Yes (this command), No, Run in Terminal, Always (all commands), Never (block all)
+ *
+ * v1.14.2: Added "Run in Terminal" option for interactive commands (kubectl exec -it, etc.)
  *
  * @param ctx Consent context with backend and dialogs
  * @param data Shell consent request data
@@ -197,8 +210,28 @@ export async function handleShellConsent(
         // Map selection to response (default: deny)
         const response: ConsentResponse = selected?.value || 'n';
 
+        // v1.14.2: Handle "Run in Terminal" option
+        if (response === 'terminal') {
+            // Run command in VSCode terminal if callback is provided
+            if (ctx.runInTerminal) {
+                ctx.runInTerminal(command, workingDir);
+                // Emit terminal execution event
+                ctx.eventBus?.emit('consent:resolved', {
+                    command,
+                    response: 'terminal',
+                    ranInTerminal: true
+                });
+            } else {
+                console.warn('Terminal executor not provided, falling back to deny');
+            }
+            // Tell server to skip execution (command runs in terminal, not subprocess)
+            await ctx.backend.shellConsent(command, workingDir, 'n');
+            return;
+        }
+
         // Send shell consent response to server
-        await ctx.backend.shellConsent(command, workingDir, response);
+        // At this point, 'terminal' has already been handled and returned
+        await ctx.backend.shellConsent(command, workingDir, response as 'y' | 'n' | 'always' | 'never');
 
         // Emit consent resolved event
         ctx.eventBus?.emit('consent:resolved', {
@@ -228,15 +261,18 @@ export async function handleShellConsent(
  * @param backend HttpClient for API calls
  * @param vscodeWindow VSCode window API
  * @param eventBus Optional EventBus for events
+ * @param runInTerminal Optional callback to run commands in VSCode terminal (v1.14.2)
  */
 export function createVSCodeConsentContext(
     backend: HttpClient,
     vscodeWindow: { showQuickPick: <T extends vscode.QuickPickItem>(items: T[], options?: vscode.QuickPickOptions) => Thenable<T | undefined> },
-    eventBus?: ChatEventBus
+    eventBus?: ChatEventBus,
+    runInTerminal?: TerminalExecutor
 ): ConsentContext {
     return {
         backend,
         eventBus,
+        runInTerminal,
         dialogs: {
             showQuickPick: async (items, options) => {
                 const result = await vscodeWindow.showQuickPick(items, options);

@@ -27,7 +27,8 @@ export interface ShellConsentRequest {
 
 export type ConsentRequest = FileConsentRequest | ShellConsentRequest;
 
-export type ConsentResponse = 'y' | 'n' | 'always' | 'never';
+// v1.14.2: Added 'terminal' option to run command in VSCode terminal
+export type ConsentResponse = 'y' | 'n' | 'always' | 'never' | 'terminal';
 
 // === Stream Event Types ===
 

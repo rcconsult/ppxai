@@ -50,6 +50,8 @@ export interface ConsentResolvedData {
     filepath?: string;
     command?: string;
     response: ConsentResponse;
+    /** v1.14.2: True if command was executed in VSCode terminal */
+    ranInTerminal?: boolean;
 }
 
 // ============================================================================
