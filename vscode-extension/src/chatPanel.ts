@@ -63,6 +63,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     // Phase 4a: Agent state machine (initialized lazily after backend available)
     private _agentStateMachine?: AgentStateMachine;
 
+    // v1.14.2: Track editor panels for "Open in Editor Tab" feature
+    private _editorPanels: Map<string, vscode.WebviewPanel> = new Map();
+
     constructor(
         context: vscode.ExtensionContext,
         backend: HttpClient
@@ -2926,6 +2929,247 @@ Use \`/usage show <session|provider|model|off>\` to change.`;
             });
         } catch (error) {
             // Backend may not be ready
+        }
+    }
+
+    /**
+     * Open chat in an editor tab (v1.14.2)
+     * Creates a new WebviewPanel that can be positioned alongside code editors.
+     * Supports split view and can be dragged to different editor groups.
+     */
+    public openInEditor(): void {
+        // Generate unique ID for this editor panel
+        const panelId = `ppxai-editor-${Date.now()}`;
+
+        // Create webview panel in editor area
+        const panel = vscode.window.createWebviewPanel(
+            'ppxai.editorChat',
+            'ppxai Chat',
+            vscode.ViewColumn.Beside, // Open beside current editor
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true,
+                localResourceRoots: [this._context.extensionUri]
+            }
+        );
+
+        // Track this panel
+        this._editorPanels.set(panelId, panel);
+
+        // Set webview content (reuse same HTML)
+        panel.webview.html = this._getHtmlForWebview(panel.webview);
+
+        // Handle messages from editor panel webview
+        panel.webview.onDidReceiveMessage(async (message) => {
+            console.log('[ppxai:editor] Received message:', message.type);
+            await this._handleWebviewMessage(message, panel.webview);
+        });
+
+        // Wire up EventBus subscriptions for this panel
+        this._wireEditorPanelSubscriptions(panel);
+
+        // Initialize panel with current state
+        this._initializeEditorPanel(panel);
+
+        // Clean up when panel is closed
+        panel.onDidDispose(() => {
+            console.log('[ppxai:editor] Panel disposed:', panelId);
+            this._editorPanels.delete(panelId);
+        });
+
+        // Show success message
+        vscode.window.showInformationMessage('Chat opened in editor tab. Drag to reposition.');
+    }
+
+    /**
+     * Wire EventBus subscriptions for an editor panel (v1.14.2)
+     * Mirrors the sidebar subscriptions but posts to the editor panel webview.
+     */
+    private _wireEditorPanelSubscriptions(panel: vscode.WebviewPanel): void {
+        const postMessage = (msg: unknown) => panel.webview.postMessage(msg);
+
+        // Stream events -> webview messages
+        this._eventBus.on('stream:thinking', (content) => {
+            postMessage({ type: 'thinking', content });
+        });
+
+        this._eventBus.on('stream:started', (content) => {
+            postMessage({ type: 'started', content });
+        });
+
+        this._eventBus.on('stream:chunk', (content) => {
+            postMessage({ type: 'chunk', content });
+        });
+
+        this._eventBus.on('stream:reasoning', (content) => {
+            postMessage({ type: 'reasoning_chunk', content });
+        });
+
+        this._eventBus.on('stream:tool_call', (data) => {
+            postMessage({
+                type: 'toolCall',
+                tool: data.tool,
+                arguments: data.arguments,
+                verbose: this._backend.toolsVerbose
+            });
+        });
+
+        this._eventBus.on('stream:tool_result', (data) => {
+            postMessage({
+                type: 'toolResult',
+                tool: data.tool,
+                result: data.result,
+                verbose: this._backend.toolsVerbose
+            });
+        });
+
+        this._eventBus.on('stream:context_injected', (data) => {
+            postMessage({
+                type: 'contextInjected',
+                source: data.source,
+                language: data.language,
+                size: data.size,
+                truncated: data.truncated
+            });
+        });
+
+        this._eventBus.on('stream:done', (content) => {
+            if (content && content.trim()) {
+                postMessage({ type: 'fullResponse', content });
+            } else {
+                postMessage({ type: 'emptyResponse' });
+            }
+        });
+
+        this._eventBus.on('stream:error', (content) => {
+            postMessage({ type: 'error', content });
+        });
+
+        // Agent events -> webview messages
+        this._eventBus.on('agent:iteration', (n, max) => {
+            postMessage({
+                type: 'systemMessage',
+                content: `━━━ Iteration ${n}/${max} ━━━`
+            });
+        });
+
+        this._eventBus.on('agent:complete', (summary) => {
+            let message = '✅ Task completed!';
+            if (summary) {
+                message += `\n\n${summary}`;
+            }
+            postMessage({ type: 'systemMessage', content: message });
+        });
+
+        this._eventBus.on('agent:interrupted', () => {
+            postMessage({
+                type: 'systemMessage',
+                content: '⚠️ Agent interrupted'
+            });
+        });
+
+        this._eventBus.on('agent:error', (message) => {
+            postMessage({ type: 'error', content: message });
+        });
+
+        this._eventBus.on('agent:max_iterations', (iterations) => {
+            postMessage({
+                type: 'systemMessage',
+                content: `⚠️ Agent stopped: Max iterations (${iterations}) reached`
+            });
+        });
+    }
+
+    /**
+     * Initialize editor panel with current state (v1.14.2)
+     */
+    private async _initializeEditorPanel(panel: vscode.WebviewPanel): Promise<void> {
+        try {
+            // Send server status
+            const running = this._backend.isRunning();
+            panel.webview.postMessage({ type: 'serverStatus', running });
+
+            if (running) {
+                // Get current status and send to panel
+                const status = await this._backend.getStatus();
+                panel.webview.postMessage({
+                    type: 'status',
+                    provider: status.provider,
+                    model: status.model,
+                    tools: status.tools_enabled
+                });
+
+                // Get history and send to panel
+                const history = await this._backend.getHistory();
+                panel.webview.postMessage({ type: 'history', messages: history });
+
+                // Get usage stats
+                const usage = await this._backend.getUsage();
+                panel.webview.postMessage({
+                    type: 'usageUpdate',
+                    prompt_tokens: usage.prompt_tokens,
+                    completion_tokens: usage.completion_tokens,
+                    cost: usage.estimated_cost
+                });
+            }
+        } catch (error) {
+            console.error('[ppxai:editor] Error initializing panel:', error);
+        }
+    }
+
+    /**
+     * Handle webview message from either sidebar or editor panel (v1.14.2)
+     * Shared message handling logic.
+     */
+    private async _handleWebviewMessage(message: any, webview: vscode.Webview): Promise<void> {
+        switch (message.type) {
+            case 'chat':
+                await this.handleChat(message.content);
+                break;
+            case 'clear':
+                await this._backend.clearHistory();
+                webview.postMessage({ type: 'cleared' });
+                break;
+            case 'save':
+                vscode.commands.executeCommand('ppxai.saveSession');
+                break;
+            case 'saveAnswer':
+                await this.handleSaveAnswer(message.content);
+                break;
+            case 'ready':
+                await this.initializeBackend();
+                break;
+            case 'toggleTools':
+                await this.handleToggleTools(message.enable);
+                break;
+            case 'toggleAgent':
+                await this.handleToggleAgent(message.enable);
+                break;
+            case 'toggleServer':
+                await this.handleToggleServer(message.stop);
+                break;
+            case 'toggleDebugLog':
+                await this.handleToggleDebugLog(message.enable);
+                break;
+            case 'undoCheckpoint':
+                await this.handleUndoCheckpoint();
+                break;
+            case 'interrupt':
+                await this.handleInterrupt();
+                break;
+            case 'clearContext':
+                await this.handleClearContext();
+                break;
+            case 'searchFiles':
+                await this.handleSearchFilesForAutocomplete(message.query);
+                break;
+            case 'openLink':
+                if (message.url) {
+                    vscode.env.openExternal(vscode.Uri.parse(message.url));
+                }
+                break;
+            default:
+                console.log('[ppxai:editor] Unknown message type:', message.type);
         }
     }
 
