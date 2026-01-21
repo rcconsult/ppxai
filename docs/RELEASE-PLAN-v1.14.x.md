@@ -795,35 +795,86 @@ https://rcconsult.github.io/ppxai/
 - Minimize new technical debt - use existing abstractions
 - `/edit` is new (CodeMirror 6), `/show` stays unchanged (existing viewers)
 
-**Server:**
-- [ ] Add `POST /files/write` server endpoint with path validation
+**Implementation Order:**
 
-**TUI:**
-- [ ] Add `/edit` command (simple line editor, prompt-based)
+| Stage | Interface | Approach | Rationale |
+|-------|-----------|----------|-----------|
+| **1** | VSCode | Delegate to native editor | Simplest - leverage VSCode's full IDE |
+| **2** | Web App | CodeMirror 6 editor | Full-featured browser editor |
+| **3** | TUI | TBD (research alternatives) | Review options after 1 & 2 complete |
 
-**VSCode Extension:**
+---
+
+#### Stage 1: VSCode Extension (First Priority)
+
+**Goal:** Quick win - delegate to VSCode's native editor
+
 - [ ] Add `/edit` command handler in `handlers/edit.ts`
 - [ ] Delegate to `vscode.window.showTextDocument()` with proper options
 - [ ] Ensure file opens with correct language mode (auto-detected from extension)
 - [ ] Support line number: `/edit file.py:42` jumps to line 42
+- [ ] Add `POST /files/write` server endpoint (shared with Web App)
+- [ ] Add `/context reload` command
+- [ ] Add `POST /context/reload` HTTP endpoint
+- [ ] Tests for VSCode `/edit` command
 
-**Web App (CodeMirror 6):**
+**Deliverable:** `/edit` working in VSCode extension
+
+---
+
+#### Stage 2: Web App (Second Priority)
+
+**Goal:** Full-featured editor with CodeMirror 6
+
 - [ ] Add CodeMirror 6 core modules to `ppxai/web/lib/`
 - [ ] Add priority language modules (markdown, yaml, json, python, javascript)
 - [ ] Add legacy modes for shell, toml, hcl, perl (on-demand loading)
 - [ ] Create `/edit` editor component (separate from `/show`)
   - [ ] Read-write mode with Save/Save As/Discard buttons
   - [ ] Optional markdown preview toggle (reuse existing marked.js)
-- [ ] Keep existing `/show` viewers unchanged (DataTableViewer, DataTreeViewer, image, PDF)
+- [ ] Keep existing `/show` viewers unchanged
+- [ ] Wire up `/context reload` in Web App
+- [ ] Tests for Web App `/edit` command
 
-**Context Reload:**
-- [ ] Add `reload_bootstrap_context()` method to EngineClient
-- [ ] Add `/context reload` command (TUI, VSCode, Web)
+**Deliverable:** `/edit` working in Web App with syntax highlighting
+
+---
+
+#### Stage 3: TUI (Third Priority - Research Phase)
+
+**Goal:** Determine best approach for terminal-based editing
+
+**Options to Evaluate:**
+
+| Option | Pros | Cons |
+|--------|------|------|
+| **Simple line editor** | No dependencies, works everywhere | Limited UX, no syntax highlighting |
+| **Delegate to $EDITOR** | Use vim/nano/emacs | Conflicts with Rich terminal control |
+| **Textual widget** | Rich TUI editing | Heavy dependency, may defer to v1.15.x |
+| **External file + watch** | Open in system editor, watch for changes | Platform-specific, complexity |
+
+**Decision:** Review after Stage 1 & 2 complete. May defer full TUI editor to v1.15.x (ppxaide with Textual).
+
+- [ ] Research TUI editing alternatives
+- [ ] Prototype preferred approach
+- [ ] Implement `/edit` for TUI
+- [ ] Tests for TUI `/edit` command
+
+**Deliverable:** `/edit` working in TUI (or documented deferral to v1.15.x)
+
+---
+
+#### Shared Components (All Stages)
+
+**Server:**
+- [ ] Add `POST /files/write` server endpoint with path validation
 - [ ] Add `POST /context/reload` HTTP endpoint
+
+**Engine:**
+- [ ] Add `reload_bootstrap_context()` method to EngineClient
 - [ ] Implement auto-reload when AGENTS.md saved via `/edit`
 
 **Tests:**
-- [ ] Add tests for `/edit` command (all interfaces)
 - [ ] Add tests for `/context reload`
 - [ ] Add tests for file write path validation (security)
 
