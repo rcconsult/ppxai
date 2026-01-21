@@ -19,20 +19,18 @@ import json
 import os
 import sys
 import time
-import uuid
 from contextlib import asynccontextmanager
-from typing import Optional, AsyncGenerator
-
 from pathlib import Path
+from typing import AsyncGenerator, Optional
 
-from fastapi import FastAPI, HTTPException, Request, Header
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from ..engine import EngineClient, EventType
 from ..common.logger import get_logger
+from ..engine import EngineClient, EventType
 from ..version import __version__
 from .session_manager import SessionManager
 
@@ -1215,6 +1213,34 @@ async def get_active_hints(x_session_id: Optional[str] = Header(None)):
     }
 
 
+@app.post("/context/reload")
+async def reload_bootstrap_context(x_session_id: Optional[str] = Header(None)):
+    """Reload bootstrap context from disk (v1.14.1).
+
+    Reloads the AGENTS.md/CLAUDE.md bootstrap context file from the working
+    directory. Useful after editing the bootstrap file to pick up changes
+    without restarting the server.
+
+    Returns:
+        JSON: {"success", "source", "loaded"}
+
+    v1.14.1: Added for VSCode /context reload command.
+    """
+    session_id, engine, _ = await get_or_create_session(x_session_id)
+
+    logger.info(f"HTTP POST /context/reload - session: {session_id}")
+
+    success = engine.reload_bootstrap_context()
+    status = engine.get_bootstrap_status()
+
+    return {
+        "success": success,
+        "source": status.get("source"),
+        "loaded": status.get("loaded", False),
+        "session_id": session_id
+    }
+
+
 # === Session Management ===
 
 @app.get("/sessions")
@@ -1466,6 +1492,97 @@ async def search_files(
     return {"files": special_refs + results}
 
 
+class FileWriteRequest(BaseModel):
+    """Request to write a file."""
+    path: str
+    content: str
+
+
+@app.post("/files/write")
+async def write_file(
+    request: FileWriteRequest,
+    x_session_id: Optional[str] = Header(None)
+):
+    """Write file contents (v1.14.1 - for /edit command).
+
+    Writes content to a file, creating it if it doesn't exist.
+    Path validation ensures writes only to allowed directories.
+
+    Args:
+        request: FileWriteRequest with path and content
+
+    Returns:
+        JSON: {"path", "success", "created", "size"}
+
+    v1.14.1: Added for VSCode /edit command.
+    """
+    session_id, engine, _ = await get_or_create_session(x_session_id)
+
+    logger.info(f"HTTP POST /files/write - path: {request.path}")
+
+    filepath = request.path.strip()
+
+    # Resolve path - handle tilde expansion
+    if filepath.startswith('~'):
+        filepath = os.path.expanduser(filepath)
+
+    path = Path(filepath)
+    if not path.is_absolute():
+        working_dir = Path(engine.get_working_dir() or os.getcwd())
+        path = working_dir / filepath
+
+    path = path.resolve()
+    logger.debug(f"  Resolved path: {path}")
+
+    # Security: ensure path is within working directory tree or home directory
+    working_dir = Path(engine.get_working_dir() or os.getcwd()).resolve()
+    home_dir = Path.home().resolve()
+
+    def is_path_allowed(target: Path, base: Path) -> bool:
+        """Check if target is within base's tree (parent or child)."""
+        try:
+            target.relative_to(base)
+            return True
+        except ValueError:
+            pass
+        try:
+            base.relative_to(target)
+            return True
+        except ValueError:
+            pass
+        return False
+
+    # Allow files in working directory tree or home directory tree
+    if not (is_path_allowed(path, working_dir) or str(path).startswith(str(home_dir))):
+        logger.warning(f"  Access denied: {path} not in {working_dir} tree or {home_dir}")
+        raise HTTPException(
+            status_code=403, detail="Access denied: path outside allowed directories"
+        )
+
+    # Check if file exists (to report 'created' vs 'updated')
+    created = not path.exists()
+
+    # Ensure parent directory exists
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        path.write_text(request.content, encoding='utf-8')
+        size = path.stat().st_size
+
+        logger.info(f"  File {'created' if created else 'updated'}: {path} ({size} bytes)")
+
+        return {
+            "path": str(path),
+            "success": True,
+            "created": created,
+            "size": size
+        }
+    except PermissionError:
+        raise HTTPException(status_code=403, detail=f"Permission denied: {filepath}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error writing file: {str(e)}")
+
+
 @app.post("/files/read")
 async def read_file(
     request: FileReadRequest,
@@ -1554,7 +1671,9 @@ async def read_file(
     # Allow files in working directory tree (parent or child) or home directory tree
     if not (is_path_allowed(path, working_dir) or str(path).startswith(str(home_dir))):
         logger.warning(f"  Access denied: {path} not in {working_dir} tree or {home_dir}")
-        raise HTTPException(status_code=403, detail="Access denied: path outside allowed directories")
+        raise HTTPException(
+            status_code=403, detail="Access denied: path outside allowed directories"
+        )
 
     if not path.exists():
         logger.warning(f"  File not found: {path}")

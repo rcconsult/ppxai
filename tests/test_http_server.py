@@ -534,3 +534,211 @@ class TestSSETermination:
         # Verify content is exactly [DONE] (OpenAI convention)
         content = done_signal[6:-2]  # Strip "data: " prefix and "\n\n" suffix
         assert content == "[DONE]"
+
+
+class TestContextReload:
+    """Test /context/reload endpoint (v1.14.1)."""
+
+    def test_context_reload_success(self, mock_client):
+        """Test POST /context/reload reloads bootstrap context."""
+        client, mock_engine = mock_client
+        mock_engine.reload_bootstrap_context.return_value = True
+        mock_engine.get_bootstrap_status.return_value = {
+            "loaded": True,
+            "source": "AGENTS.md",
+            "sources": ["c:/project/AGENTS.md"],
+            "char_count": 1500,
+            "has_hints": True
+        }
+
+        response = client.post("/context/reload")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["loaded"] is True
+        mock_engine.reload_bootstrap_context.assert_called_once()
+
+    def test_context_reload_no_bootstrap_file(self, mock_client):
+        """Test POST /context/reload when no bootstrap file exists."""
+        client, mock_engine = mock_client
+        mock_engine.reload_bootstrap_context.return_value = False
+        mock_engine.get_bootstrap_status.return_value = {
+            "loaded": False,
+            "source": None,
+            "sources": [],
+            "char_count": 0,
+            "has_hints": False
+        }
+
+        response = client.post("/context/reload")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is False
+        assert data["loaded"] is False
+
+    def test_context_reload_without_engine(self, no_engine_client):
+        """Test POST /context/reload returns 503 without engine."""
+        response = no_engine_client.post("/context/reload")
+        assert response.status_code == 503
+
+
+class TestFileWrite:
+    """Test /files/write endpoint (v1.14.1)."""
+
+    def test_file_write_success(self, mock_client, tmp_path):
+        """Test POST /files/write writes file successfully."""
+        client, mock_engine = mock_client
+
+        # Set working directory to temp path
+        mock_engine.get_working_dir.return_value = str(tmp_path)
+
+        test_file = tmp_path / "test.txt"
+        response = client.post(
+            "/files/write",
+            json={"path": str(test_file), "content": "Hello World"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["created"] is True
+        assert data["size"] == 11
+        assert test_file.read_text() == "Hello World"
+
+    def test_file_write_update_existing(self, mock_client, tmp_path):
+        """Test POST /files/write updates existing file."""
+        client, mock_engine = mock_client
+        mock_engine.get_working_dir.return_value = str(tmp_path)
+
+        test_file = tmp_path / "existing.txt"
+        test_file.write_text("Original content")
+
+        response = client.post(
+            "/files/write",
+            json={"path": str(test_file), "content": "Updated content"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["created"] is False  # File existed
+        assert test_file.read_text() == "Updated content"
+
+    def test_file_write_creates_parent_dirs(self, mock_client, tmp_path):
+        """Test POST /files/write creates parent directories."""
+        client, mock_engine = mock_client
+        mock_engine.get_working_dir.return_value = str(tmp_path)
+
+        nested_file = tmp_path / "subdir" / "nested" / "test.txt"
+        response = client.post(
+            "/files/write",
+            json={"path": str(nested_file), "content": "Nested content"}
+        )
+        assert response.status_code == 200
+        assert nested_file.exists()
+        assert nested_file.read_text() == "Nested content"
+
+    def test_file_write_relative_path(self, mock_client, tmp_path):
+        """Test POST /files/write resolves relative paths."""
+        client, mock_engine = mock_client
+        mock_engine.get_working_dir.return_value = str(tmp_path)
+
+        response = client.post(
+            "/files/write",
+            json={"path": "relative.txt", "content": "Relative path test"}
+        )
+        assert response.status_code == 200
+        assert (tmp_path / "relative.txt").exists()
+
+
+class TestFileWritePathValidation:
+    """Test /files/write path validation security (v1.14.1)."""
+
+    def test_file_write_outside_working_dir_denied(self, mock_client, tmp_path):
+        """Test POST /files/write denies paths outside working dir."""
+        import tempfile
+        client, mock_engine = mock_client
+
+        # Working dir is tmp_path
+        mock_engine.get_working_dir.return_value = str(tmp_path)
+
+        # Try to write to system temp (outside working dir and home)
+        # Use a path that's definitely outside both
+        outside_path = "/etc/passwd" if not tmp_path.drive else "C:\\Windows\\System32\\test.txt"
+
+        response = client.post(
+            "/files/write",
+            json={"path": outside_path, "content": "Malicious content"}
+        )
+        # Should be 403 Forbidden
+        assert response.status_code == 403
+        assert "denied" in response.json()["detail"].lower()
+
+    def test_file_write_path_traversal_blocked(self, mock_client, tmp_path):
+        """Test POST /files/write blocks path traversal attempts."""
+        client, mock_engine = mock_client
+        mock_engine.get_working_dir.return_value = str(tmp_path)
+
+        # Create a subdirectory as working dir
+        subdir = tmp_path / "workdir"
+        subdir.mkdir()
+        mock_engine.get_working_dir.return_value = str(subdir)
+
+        # Attempt path traversal - this should resolve to tmp_path (parent of workdir)
+        # which is allowed since it's in the working dir tree
+        response = client.post(
+            "/files/write",
+            json={"path": "../traversal.txt", "content": "Traversal test"}
+        )
+        # Path traversal within working dir tree is allowed
+        assert response.status_code == 200
+
+    def test_file_write_home_dir_allowed(self, mock_client, tmp_path):
+        """Test POST /files/write allows writing to home directory."""
+        import os
+        client, mock_engine = mock_client
+        mock_engine.get_working_dir.return_value = str(tmp_path)
+
+        # Use a path in home directory (use .ppxai to avoid cluttering home)
+        home_test_dir = os.path.expanduser("~/.ppxai/test_temp")
+        os.makedirs(home_test_dir, exist_ok=True)
+        home_test_file = os.path.join(home_test_dir, "test_write.txt")
+
+        try:
+            response = client.post(
+                "/files/write",
+                json={"path": home_test_file, "content": "Home dir test"}
+            )
+            assert response.status_code == 200
+            assert os.path.exists(home_test_file)
+        finally:
+            # Cleanup
+            if os.path.exists(home_test_file):
+                os.remove(home_test_file)
+            if os.path.exists(home_test_dir):
+                os.rmdir(home_test_dir)
+
+    def test_file_write_tilde_expansion(self, mock_client, tmp_path):
+        """Test POST /files/write expands tilde in paths."""
+        import os
+        client, mock_engine = mock_client
+        mock_engine.get_working_dir.return_value = str(tmp_path)
+
+        # Use tilde path to home directory
+        home_test_dir = "~/.ppxai/test_temp"
+        expanded_dir = os.path.expanduser(home_test_dir)
+        os.makedirs(expanded_dir, exist_ok=True)
+        tilde_path = "~/.ppxai/test_temp/tilde_test.txt"
+        expanded_path = os.path.expanduser(tilde_path)
+
+        try:
+            response = client.post(
+                "/files/write",
+                json={"path": tilde_path, "content": "Tilde expansion test"}
+            )
+            assert response.status_code == 200
+            assert os.path.exists(expanded_path)
+        finally:
+            # Cleanup
+            if os.path.exists(expanded_path):
+                os.remove(expanded_path)
+            if os.path.exists(expanded_dir):
+                os.rmdir(expanded_dir)

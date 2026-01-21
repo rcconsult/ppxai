@@ -67,3 +67,15 @@ PPXAI_CONFIG_FILE="$HOME/.ppxai/ppxai-config.json" uv run pytest tests/test_cust
 - `CLAUDE.md` - Detailed project instructions for Claude Code
 - `ROADMAP.md` - Feature roadmap and version planning
 - `docs/RELEASE-PLAN-v1.14.x.md` - Current release series plan
+
+### Current Development (v1.14.1)
+
+**Stage 1 Complete:** VSCode `/edit` command and `/context reload`
+
+- `/edit filepath[:line[:col]]` - Opens file in VSCode editor with position
+- `/context reload` - Reloads AGENTS.md from disk without server restart
+- `POST /files/write` - Server endpoint for file writes with path validation
+- `POST /context/reload` - Server endpoint for bootstrap context reload
+- Full test coverage in `tests/test_http_server.py`
+
+**Next:** Stage 2 (Web App CodeMirror 6 editor) or Stage 3 (TUI)

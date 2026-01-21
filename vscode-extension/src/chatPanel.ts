@@ -1137,6 +1137,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     await this.handleShowCommand(args);
                     break;
 
+                case '/edit':
+                    await this.handleEditCommand(args);
+                    break;
+
                 case '/cd':
                     await this.handleCdCommand(args);
                     break;
@@ -1581,6 +1585,26 @@ Review your previous actions and continue. If the task is complete, respond with
                 }
                 // Update status to refresh context badge
                 await this.updateStatus();
+            } else if (subcommand === 'reload') {
+                // Reload bootstrap context from disk (v1.14.1)
+                const result = await this._backend.reloadBootstrapContext();
+                if (result.success && result.loaded) {
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: `✓ Bootstrap context reloaded from: \`${result.source}\``
+                    });
+                } else if (result.success && !result.loaded) {
+                    const workingDir = await this._backend.getWorkingDir();
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: `No bootstrap context found in: \`${workingDir || 'current directory'}\``
+                    });
+                } else {
+                    this._view.webview.postMessage({
+                        type: 'error',
+                        content: 'Failed to reload bootstrap context.'
+                    });
+                }
             } else if (subcommand === 'hints') {
                 // Show active bootstrap hints (v1.14.0)
                 const hints = await this._backend.getActiveHints();
@@ -2563,6 +2587,174 @@ Use \`/usage show <session|provider|model|off>\` to change.`;
             this._view.webview.postMessage({
                 type: 'systemMessage',
                 content: `📂 Opened **${filename}** (${sizeKB} KB) in editor • *${elapsed}s*`
+            });
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Error opening file: ${error}`
+            });
+        }
+    }
+
+    /**
+     * Handle /edit command - open file in VSCode native editor (v1.14.1)
+     *
+     * Supports line and column numbers:
+     * - /edit file.py           - Opens file at line 1
+     * - /edit file.py:42        - Opens file at line 42
+     * - /edit file.py:42:10     - Opens file at line 42, column 10
+     *
+     * Unlike /show which opens beside, /edit opens in the primary editor
+     * as the user likely wants to make edits.
+     */
+    private async handleEditCommand(args: string[]) {
+        if (!this._view) { return; }
+
+        if (args.length === 0) {
+            this._view.webview.postMessage({
+                type: 'systemMessage',
+                content: 'Usage: `/edit <filepath[:line[:col]]>`\n\nExamples:\n- `/edit README.md`\n- `/edit src/app.py:42`\n- `/edit config.ts:10:5`'
+            });
+            return;
+        }
+
+        const startTime = Date.now();
+        let query = args.join(' ');
+
+        // Parse line and column from filepath (e.g., "file.py:42:10")
+        let targetLine = 1;
+        let targetColumn = 1;
+
+        // Match patterns like file.py:42 or file.py:42:10
+        const lineColMatch = query.match(/^(.+?):(\d+)(?::(\d+))?$/);
+        if (lineColMatch) {
+            query = lineColMatch[1];  // File path without line/col
+            targetLine = parseInt(lineColMatch[2], 10);
+            if (lineColMatch[3]) {
+                targetColumn = parseInt(lineColMatch[3], 10);
+            }
+        }
+
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        const fs = require('fs');
+        const pathModule = require('path');
+
+        let fullPath: string | undefined;
+
+        // Check if it's a direct path first
+        if (query.startsWith('/') || query.startsWith('~') || (query.length > 1 && query[1] === ':')) {
+            // Absolute path (Unix, tilde expansion, or Windows drive letter)
+            if (query.startsWith('~')) {
+                const homedir = require('os').homedir();
+                query = pathModule.join(homedir, query.slice(1));
+            }
+            fullPath = query;
+        } else if (workspaceFolders && workspaceFolders.length > 0) {
+            // Relative path - check workspace first
+            const directPath = vscode.Uri.joinPath(workspaceFolders[0].uri, query).fsPath;
+            if (fs.existsSync(directPath)) {
+                fullPath = directPath;
+            }
+        }
+
+        // If not found directly, try working directory
+        if (!fullPath || !fs.existsSync(fullPath)) {
+            const workingDir = await this._backend.getWorkingDir();
+            if (workingDir) {
+                const workingDirPath = pathModule.join(workingDir, query);
+                if (fs.existsSync(workingDirPath)) {
+                    fullPath = workingDirPath;
+                }
+            }
+        }
+
+        // If still not found, search
+        if (!fullPath || !fs.existsSync(fullPath)) {
+            this._view.webview.postMessage({
+                type: 'systemMessage',
+                content: `*Searching for '${query}'...*`
+            });
+
+            const matches = await this.searchFiles(query);
+
+            if (matches.length === 0) {
+                this._view.webview.postMessage({
+                    type: 'error',
+                    content: `File not found: ${query}`
+                });
+                return;
+            }
+
+            if (matches.length === 1) {
+                fullPath = matches[0].fsPath;
+            } else {
+                // Multiple matches - show list
+                const list = matches.slice(0, 10).map((m, i) => {
+                    const relPath = workspaceFolders
+                        ? pathModule.relative(workspaceFolders[0].uri.fsPath, m.fsPath)
+                        : m.path;
+                    return `${i + 1}. \`${relPath}\``;
+                }).join('\n');
+
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: `**Multiple files found (${matches.length}):**\n${list}\n\n*Use exact path: /edit <path>*`
+                });
+                return;
+            }
+        }
+
+        try {
+            if (!fs.existsSync(fullPath)) {
+                this._view.webview.postMessage({
+                    type: 'error',
+                    content: `File not found: ${query}`
+                });
+                return;
+            }
+
+            const stats = fs.statSync(fullPath);
+            if (!stats.isFile()) {
+                this._view.webview.postMessage({
+                    type: 'error',
+                    content: `Not a file: ${query}`
+                });
+                return;
+            }
+
+            // Open file in VSCode editor (primary editor, not beside)
+            const uri = vscode.Uri.file(fullPath);
+            const doc = await vscode.workspace.openTextDocument(uri);
+
+            // Show the document with selection at the target line/column
+            const editor = await vscode.window.showTextDocument(doc, {
+                viewColumn: vscode.ViewColumn.One,
+                preview: false  // Don't use preview mode - user wants to edit
+            });
+
+            // Jump to line/column (VSCode uses 0-based indexing)
+            const position = new vscode.Position(Math.max(0, targetLine - 1), Math.max(0, targetColumn - 1));
+            editor.selection = new vscode.Selection(position, position);
+            editor.revealRange(
+                new vscode.Range(position, position),
+                vscode.TextEditorRevealType.InCenter
+            );
+
+            const filename = pathModule.basename(fullPath);
+            const sizeKB = (stats.size / 1024).toFixed(1);
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+
+            let locationInfo = '';
+            if (targetLine > 1) {
+                locationInfo = ` at line ${targetLine}`;
+                if (targetColumn > 1) {
+                    locationInfo += `:${targetColumn}`;
+                }
+            }
+
+            this._view.webview.postMessage({
+                type: 'systemMessage',
+                content: `✏️ Editing **${filename}**${locationInfo} (${sizeKB} KB) • *${elapsed}s*`
             });
         } catch (error) {
             this._view.webview.postMessage({

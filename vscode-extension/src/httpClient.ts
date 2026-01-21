@@ -542,6 +542,58 @@ export class HttpClient {
     }
 
     /**
+     * Reload bootstrap context from disk (v1.14.1)
+     *
+     * Reloads AGENTS.md/CLAUDE.md bootstrap context file from working directory.
+     */
+    async reloadBootstrapContext(): Promise<{
+        success: boolean;
+        source: string | null;
+        loaded: boolean;
+    }> {
+        const response = await fetch(`${this.baseUrl}/context/reload`, {
+            method: 'POST',
+            headers: this.getHeaders()
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to reload context: ${response.statusText}`);
+        }
+        return response.json() as Promise<{
+            success: boolean;
+            source: string | null;
+            loaded: boolean;
+        }>;
+    }
+
+    /**
+     * Write file contents (v1.14.1)
+     *
+     * Writes content to a file in the working directory.
+     */
+    async writeFile(path: string, content: string): Promise<{
+        path: string;
+        success: boolean;
+        created: boolean;
+        size: number;
+    }> {
+        const response = await fetch(`${this.baseUrl}/files/write`, {
+            method: 'POST',
+            headers: this.getHeaders(true),
+            body: JSON.stringify({ path, content })
+        });
+        if (!response.ok) {
+            const error = await response.json() as { detail?: string };
+            throw new Error(error.detail || `Failed to write file: ${response.statusText}`);
+        }
+        return response.json() as Promise<{
+            path: string;
+            success: boolean;
+            created: boolean;
+            size: number;
+        }>;
+    }
+
+    /**
      * Send chat message with SSE streaming
      */
     async chat(message: string, streamCallback?: StreamCallback): Promise<string> {

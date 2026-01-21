@@ -116,9 +116,9 @@ export const SLASH_COMMANDS: Record<string, CommandDefinition> = {
     },
     '/context': {
         description: 'Show context window usage and injected files',
-        usage: '/context [clear|hints]',
+        usage: '/context [clear|hints|reload]',
         category: CommandCategory.USAGE,
-        subcommands: ['clear', 'hints']
+        subcommands: ['clear', 'hints', 'reload']
     },
 
     // === File Display ===
@@ -130,6 +130,11 @@ export const SLASH_COMMANDS: Record<string, CommandDefinition> = {
     '/cat': {
         description: 'Alias for /show',
         usage: '/cat <filepath>',
+        category: CommandCategory.FILE
+    },
+    '/edit': {
+        description: 'Open file in editor (supports line:col)',
+        usage: '/edit <filepath[:line[:col]]>',
         category: CommandCategory.FILE
     },
     '/cd': {
