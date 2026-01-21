@@ -395,17 +395,19 @@ async function handleEditCommand(filePath: string, line?: number) {
 
 **Web App CodeMirror 6 Editor:**
 
-**Unified Component for `/edit` and `/show`:**
+**Separate Commands - No Migration:**
 
-The same CodeMirror 6 editor component handles both commands:
-- `/edit file.py` → Opens in **read-write mode** with Save/Discard buttons
-- `/show file.py` → Opens in **read-only mode** (replaces current preview implementation)
+- `/show` → **Unchanged** - Keep existing viewers (DataTableViewer, DataTreeViewer, image, PDF)
+- `/edit` → **New** - CodeMirror 6 editor with read-write capability
 
-This consolidates the preview backend and reduces code duplication.
+This approach:
+- Avoids breaking existing `/show` functionality
+- Adds editing capability without disrupting preview workflows
+- Simpler implementation (no refactoring needed)
 
 ```
 ┌────────────────────────────┬─────────────────────────────────┐
-│  Chat messages...          │  AGENTS.md           [Edit] [×] │
+│  Chat messages...          │  AGENTS.md                  [×] │
 │                            │─────────────────────────────────│
 │  You: /edit AGENTS.md      │  ---                            │
 │                            │  provider_hints:                │
@@ -418,36 +420,36 @@ This consolidates the preview backend and reduces code duplication.
 └────────────────────────────┴─────────────────────────────────┘
 ```
 
-**Preview Support (built-in, no extra dependencies):**
+**Markdown Preview (optional, within `/edit`):**
 
-For files with renderable output, show split preview:
-- **Markdown:** Render using existing marked.js (already in web app)
-- **HTML:** Render in sandboxed iframe
-- **CSV/JSON/YAML:** Use existing DataTableViewer/DataTreeViewer
+For markdown files, offer a preview toggle using existing marked.js:
 
 ```
 ┌────────────────────────────┬─────────────────────────────────┐
-│  Chat messages...          │  README.md       [Source] [×]   │
+│  Chat messages...          │  README.md    [Preview] [×]     │
 │                            │─────────────────────────────────│
-│  You: /show README.md      │  ┌─────────────┬───────────────┐│
-│                            │  │ # Title     │ rendered HTML ││
-│  System: Preview opened    │  │ ```code```  │ with styling  ││
-│                            │  │ - list      │               ││
-│                            │  └─────────────┴───────────────┘│
-│  [input field]             │  [Source] toggles to raw editor │
+│  You: /edit README.md      │  # Project Title                │
+│                            │                                 │
+│  System: Opened in editor  │  This is **bold** text.         │
+│                            │                                 │
+│                            │  - List item 1                  │
+│                            │  - List item 2                  │
+│  [input field]             │  [Save] [Save As...] [Discard]  │
 └────────────────────────────┴─────────────────────────────────┘
 ```
 
+When [Preview] is clicked, renders markdown in place (toggle back with [Source]).
+
 **CodeMirror 6 Language Support:**
-- Config files: Markdown, YAML, TOML, JSON, HCL
-- Programming: Python, Go, C/C++, JavaScript, TypeScript
-- Shell: Bash/Zsh/Csh, Perl
 
-**Bundle size:** ~200KB (core + language modules, loaded on demand)
+| Category | Languages | Package |
+|----------|-----------|---------|
+| **Config** | Markdown, YAML, JSON | `@codemirror/lang-markdown`, `lang-yaml`, `lang-json` |
+| **Code** | Python, JavaScript/TypeScript, Go, C/C++ | `lang-python`, `lang-javascript`, `lang-go`, `lang-cpp` |
+| **Shell** | Bash/Shell | `@codemirror/legacy-modes` (shell mode) |
+| **Other** | TOML, HCL, Perl | `@codemirror/legacy-modes` |
 
-**Migration from current `/show`:**
-- Current: Custom viewers (DataTableViewer, DataTreeViewer, image preview)
-- New: CodeMirror 6 as primary, existing viewers for specialized formats (CSV tables, images, PDFs)
+**Bundle size:** ~200KB (core + priority languages, others loaded on demand)
 
 **Server Endpoint:**
 ```python
@@ -791,7 +793,7 @@ https://rcconsult.github.io/ppxai/
 **Architecture Notes:**
 - Follow EventBus/handlers/IoC patterns from v1.13.10 refactoring
 - Minimize new technical debt - use existing abstractions
-- Unify `/edit` and `/show` in Web App (single CodeMirror component)
+- `/edit` is new (CodeMirror 6), `/show` stays unchanged (existing viewers)
 
 **Server:**
 - [ ] Add `POST /files/write` server endpoint with path validation
@@ -807,13 +809,12 @@ https://rcconsult.github.io/ppxai/
 
 **Web App (CodeMirror 6):**
 - [ ] Add CodeMirror 6 core modules to `ppxai/web/lib/`
-- [ ] Add language modules (markdown, yaml, toml, json, hcl)
-- [ ] Add language modules (python, go, c/cpp, js, ts, bash/shell, perl)
-- [ ] Create unified editor component for `/edit` and `/show`
-  - [ ] Read-write mode for `/edit` (Save/Save As/Discard buttons)
-  - [ ] Read-only mode for `/show` (replaces current preview backend)
-- [ ] Add markdown preview split-pane (reuse existing marked.js)
-- [ ] Keep existing viewers for specialized formats (CSV tables, images, PDFs)
+- [ ] Add priority language modules (markdown, yaml, json, python, javascript)
+- [ ] Add legacy modes for shell, toml, hcl, perl (on-demand loading)
+- [ ] Create `/edit` editor component (separate from `/show`)
+  - [ ] Read-write mode with Save/Save As/Discard buttons
+  - [ ] Optional markdown preview toggle (reuse existing marked.js)
+- [ ] Keep existing `/show` viewers unchanged (DataTableViewer, DataTreeViewer, image, PDF)
 
 **Context Reload:**
 - [ ] Add `reload_bootstrap_context()` method to EngineClient
