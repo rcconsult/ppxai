@@ -139,12 +139,17 @@ def handle_status(handler: "CommandHandler", args: str) -> None:
     agent_status = "[green]active[/green]" if (handler.engine_client and handler.engine_client.agent_mode) else "[dim]inactive[/dim]"
     console.print(f"  [cyan]Agent Mode:[/cyan] {agent_status}")
 
-    # Bootstrap context (v1.14.0)
+    # Bootstrap context (v1.14.0, v1.14.2 scopes)
     if handler.engine_client:
         bootstrap_status = handler.engine_client.get_bootstrap_status()
         if bootstrap_status.get("loaded"):
             sources = bootstrap_status.get("sources", [])
-            source_name = Path(sources[0]).name if sources else "unknown"
+            # v1.14.2: sources is now a list of dicts with path, scope, size
+            if sources and isinstance(sources[0], dict):
+                source_name = Path(sources[0]["path"]).name if sources else "unknown"
+            else:
+                # Backwards compat: sources might be list of paths
+                source_name = Path(sources[0]).name if sources else "unknown"
             char_count = bootstrap_status.get("char_count", 0)
 
             # Show active hints for current provider/model
