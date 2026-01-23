@@ -181,13 +181,17 @@ ppxai provides:
 
 ---
 
-## v1.14.x Series - Session Bootstrap & Context
+## v1.14.x Series - Session Bootstrap & Context ✅ Complete
 
 **Theme**: Reproducible starting point for every session
 
 **User value**: Teams share project context. Consistent AI behavior across sessions.
 
+**Status**: v1.14.2 released. Series complete. Future v1.14.x releases will be bug fixes only (stabilization).
+
 **Detailed Plan**: [docs/RELEASE-PLAN-v1.14.x.md](docs/RELEASE-PLAN-v1.14.x.md)
+
+**Rich-based TUI**: Feature complete. The current TUI (`ppxai`) has reached its feature ceiling due to Rich framework limitations (no proper editor workflows, limited keyboard handling). New TUI features will be developed in ppxaide (v1.15.x).
 
 **Prerequisite (v1.13.6):** System prompts are already supported via `ppxai-config.json`:
 - Global: `system_prompt` at root level
@@ -370,13 +374,18 @@ https://rcconsult.github.io/ppxai/
 
 ---
 
-## v1.15.x Series - Alternative TUI (ppxaide)
+## v1.15.x Series - Next Generation TUI (ppxaide)
 
-**Theme**: Modern Textual-based TUI as an alternative interface
+**Theme**: Textual-based TUI replacing Rich-based TUI as the primary terminal interface
 
-**User value**: Visual-focused TUI with mouse support, CSS theming, and widget-based UI
+**User value**: Visual-focused TUI with mouse support, CSS theming, proper editor workflows, and widget-based UI
 
-**Prerequisites**: Complete v1.14.x bootstrap context features
+**Approach**: Incremental development. ppxaide starts minimal and catches up with current TUI and Desktop Web App features over multiple v1.15.x releases.
+
+**Migration path**:
+- v1.15.0: ppxaide launches as separate command (`ppxaide` vs `ppxai`)
+- v1.15.x: Feature parity achieved incrementally
+- v1.16.x: ppxaide becomes `ppxai`, old TUI deprecated
 
 ### v1.15.0 - ppxaide Core TUI
 
@@ -614,4 +623,4 @@ For archived planning documents:
 
 ---
 
-**Last Updated**: January 23, 2026
+**Last Updated**: January 24, 2026
