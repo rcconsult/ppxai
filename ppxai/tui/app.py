@@ -1,0 +1,168 @@
+"""
+PPXAIDEApp - Main Textual application for ppxaide.
+
+This is the core application class that manages:
+- Screen layout and navigation
+- Engine client connection
+- Theme management
+- Keyboard bindings
+"""
+
+from textual.app import App, ComposeResult
+from textual.binding import Binding
+from textual.containers import Container, Horizontal, Vertical
+from textual.widgets import Header, Footer, Static, Input, RichLog
+
+from ppxai.tui.widgets.status_bar import StatusBar
+from ppxai.tui.widgets.chat_view import ChatView
+from ppxai.tui.widgets.input_box import InputBox
+
+
+class PPXAIDEApp(App):
+    """Main ppxaide application."""
+
+    TITLE = "ppxaide"
+    SUB_TITLE = "AI Assistant"
+
+    CSS_PATH = "themes/standard.tcss"
+
+    BINDINGS = [
+        Binding("ctrl+c", "quit", "Quit", show=True),
+        Binding("ctrl+l", "clear", "Clear", show=True),
+        Binding("ctrl+t", "cycle_theme", "Theme", show=True),
+        Binding("escape", "cancel", "Cancel", show=False),
+    ]
+
+    # Available themes
+    THEMES = ["standard", "tron-legacy", "matrix", "nord"]
+
+    def __init__(self):
+        super().__init__()
+        self._current_theme_index = 0
+        self._engine_client = None
+        self._provider = "perplexity"
+        self._model = "sonar"
+        self._tools_enabled = False
+
+    def compose(self) -> ComposeResult:
+        """Compose the application layout."""
+        yield Header()
+        yield StatusBar(
+            provider=self._provider,
+            model=self._model,
+            tools_enabled=self._tools_enabled,
+        )
+        yield ChatView(id="chat-view")
+        yield InputBox(id="input-box")
+        yield Footer()
+
+    def on_mount(self) -> None:
+        """Called when the app is mounted."""
+        self.title = "ppxaide"
+        self.sub_title = f"{self._provider}/{self._model}"
+
+        # Focus the input box
+        input_box = self.query_one("#input-box", InputBox)
+        input_box.focus()
+
+        # Add welcome message
+        chat_view = self.query_one("#chat-view", ChatView)
+        chat_view.add_system_message(
+            "Welcome to ppxaide! Type a message or use /help for commands."
+        )
+
+    async def on_input_box_submitted(self, event: InputBox.Submitted) -> None:
+        """Handle user input submission."""
+        message = event.value.strip()
+        if not message:
+            return
+
+        chat_view = self.query_one("#chat-view", ChatView)
+
+        # Handle commands
+        if message.startswith("/"):
+            await self._handle_command(message)
+            return
+
+        # Add user message to chat
+        chat_view.add_user_message(message)
+
+        # TODO: Send to engine client and stream response
+        # For now, show a placeholder
+        chat_view.add_assistant_message(
+            f"[dim]Engine connection not implemented yet. You said: {message}[/dim]"
+        )
+
+    async def _handle_command(self, command: str) -> None:
+        """Handle slash commands."""
+        chat_view = self.query_one("#chat-view", ChatView)
+        parts = command[1:].split(maxsplit=1)
+        cmd = parts[0].lower()
+        args = parts[1] if len(parts) > 1 else ""
+
+        if cmd == "help":
+            chat_view.add_system_message(self._get_help_text())
+        elif cmd == "quit" or cmd == "q":
+            self.exit()
+        elif cmd == "clear":
+            chat_view.clear()
+        elif cmd == "theme":
+            self.action_cycle_theme()
+            chat_view.add_system_message(
+                f"Theme: {self.THEMES[self._current_theme_index]}"
+            )
+        elif cmd == "provider":
+            chat_view.add_system_message(
+                f"Current provider: {self._provider}\n"
+                "[dim]Provider switching not implemented yet[/dim]"
+            )
+        elif cmd == "model":
+            chat_view.add_system_message(
+                f"Current model: {self._model}\n"
+                "[dim]Model switching not implemented yet[/dim]"
+            )
+        else:
+            chat_view.add_system_message(
+                f"[yellow]Unknown command: /{cmd}[/yellow]\n"
+                "Type /help for available commands."
+            )
+
+    def _get_help_text(self) -> str:
+        """Get help text for available commands."""
+        return """[bold]Available Commands:[/bold]
+
+[cyan]/help[/cyan]      - Show this help message
+[cyan]/quit[/cyan]      - Exit ppxaide
+[cyan]/clear[/cyan]     - Clear chat history
+[cyan]/theme[/cyan]     - Cycle through themes
+[cyan]/provider[/cyan]  - Show/switch provider
+[cyan]/model[/cyan]     - Show/switch model
+
+[bold]Keyboard Shortcuts:[/bold]
+[cyan]Ctrl+C[/cyan]     - Quit
+[cyan]Ctrl+L[/cyan]     - Clear chat
+[cyan]Ctrl+T[/cyan]     - Cycle theme
+[cyan]Enter[/cyan]      - Send message
+[cyan]Shift+Enter[/cyan] - New line (multi-line input)
+"""
+
+    def action_quit(self) -> None:
+        """Quit the application."""
+        self.exit()
+
+    def action_clear(self) -> None:
+        """Clear the chat view."""
+        chat_view = self.query_one("#chat-view", ChatView)
+        chat_view.clear()
+
+    def action_cycle_theme(self) -> None:
+        """Cycle through available themes."""
+        self._current_theme_index = (self._current_theme_index + 1) % len(self.THEMES)
+        theme_name = self.THEMES[self._current_theme_index]
+        # TODO: Actually load the theme CSS
+        self.notify(f"Theme: {theme_name}", title="Theme Changed")
+
+    def action_cancel(self) -> None:
+        """Cancel current operation."""
+        # TODO: Cancel streaming response if in progress
+        pass

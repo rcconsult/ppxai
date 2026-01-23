@@ -1,0 +1,124 @@
+/* ppxaide Standard Theme
+ * Clean, professional look with blue accents
+ * Based on Catppuccin Mocha palette
+ */
+
+/* App-wide styles */
+Screen {
+    background: #1e1e2e;
+}
+
+Header {
+    background: #313244;
+    color: #89b4fa;
+}
+
+Footer {
+    background: #313244;
+    color: #6c7086;
+}
+
+/* Status bar */
+StatusBar {
+    background: #313244;
+    color: #cdd6f4;
+    height: 1;
+    padding: 0 1;
+}
+
+StatusBar Horizontal {
+    height: 1;
+}
+
+/* Chat view */
+ChatView {
+    background: #1e1e2e;
+    padding: 1;
+}
+
+/* Messages */
+MessageBox {
+    padding: 1;
+    margin-bottom: 1;
+    background: #313244;
+    width: 100%;
+}
+
+MessageBox.user {
+    background: #1e3a5f;
+    border-left: thick #89b4fa;
+}
+
+MessageBox.assistant {
+    background: #313244;
+    border-left: thick #a6e3a1;
+}
+
+MessageBox.system {
+    background: #292937;
+    border-left: thick #f9e2af;
+}
+
+MessageBox.tool {
+    background: #232330;
+    border-left: thick #94e2d5;
+}
+
+MessageBox .role-label {
+    color: #6c7086;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+MessageBox .content {
+    color: #cdd6f4;
+}
+
+MessageBox.streaming .content {
+    color: #6c7086;
+}
+
+/* Input box */
+InputBox {
+    background: #313244;
+    border-top: solid #89b4fa;
+    padding: 1;
+    dock: bottom;
+    height: auto;
+    min-height: 3;
+    max-height: 10;
+}
+
+InputBox Horizontal {
+    height: auto;
+}
+
+InputBox Input {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    border: none;
+    width: 1fr;
+}
+
+InputBox Input:focus {
+    border: tall #89b4fa;
+}
+
+InputBox .prompt {
+    width: auto;
+    padding-right: 1;
+    color: #89b4fa;
+}
+
+/* Scrollbars */
+VerticalScroll > ScrollBar {
+    background: #313244;
+}
+
+VerticalScroll > ScrollBar > .scroll-bar--bar {
+    background: #6c7086;
+}
+
+VerticalScroll > ScrollBar > .scroll-bar--bar:hover {
+    background: #89b4fa;
+}

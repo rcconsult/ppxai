@@ -60,6 +60,11 @@ data = [
     "python-hcl2>=4.3",
 ]
 
+# Next-gen TUI with Textual (v1.15.0+)
+tui = [
+    "textual>=0.47.0",
+]
+
 # Development dependencies
 dev = [
     "pytest>=7.0.0",
@@ -76,6 +81,7 @@ build = [
 ppxai = "ppxai.main:main"
 ppxai-server = "ppxai.server.http:run_server"
 ppxai-desktop = "ppxai.server.http:run_desktop"
+ppxaide = "ppxai.tui:main"
 
 [project.urls]
 Homepage = "https://github.com/rcconsult/ppxai"
@@ -108,6 +114,8 @@ dev = [
     "ddgs>=9.0.0",
     # Interactive shell
     "ipython>=8.37.0",
+    # Next-gen TUI (v1.15.0+)
+    "textual>=0.47.0",
 ]
 
 [tool.ruff]
