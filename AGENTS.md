@@ -68,33 +68,20 @@ PPXAI_CONFIG_FILE="$HOME/.ppxai/ppxai-config.json" uv run pytest tests/test_cust
 - `ROADMAP.md` - Feature roadmap and version planning
 - `docs/RELEASE-PLAN-v1.14.x.md` - Current release series plan
 
-### Current Development (v1.14.1)
+### Current Version: v1.14.2
 
-**Stage 1 Complete:** VSCode `/edit` command and `/context reload`
+**v1.14.2 Features:**
+- Hierarchical context scopes (global, project, subdirectory)
+- `@clipboard` and `@url` context providers
+- Include directive for AGENTS.md
+- Hint templates (`~/.ppxai/hint-templates.yaml`)
+- `/context show` command with scope labels
 
-- `/edit filepath[:line[:col]]` - Opens file in VSCode editor with position
-- `/context reload` - Reloads AGENTS.md from disk without server restart
-- `POST /files/write` - Server endpoint for file writes with path validation
-- `POST /context/reload` - Server endpoint for bootstrap context reload
-- Full test coverage in `tests/test_http_server.py`
+**v1.14.1 Features:**
+- `/edit` command for VSCode - Opens file in native editor with line:col support
+- `/edit` command for Web App - CodeMirror 6 editor with syntax highlighting
+- `/context reload` - Reloads AGENTS.md without server restart
 
-**Stage 2 Complete:** Web App `/edit` command with CodeMirror 6
+**TUI `/edit` - Deferred to v1.15.x**
 
-- `/edit filepath[:line[:col]]` - Opens file in CodeMirror 6 editor
-- `/context reload` - Reloads AGENTS.md from disk in web app
-- CodeMirror 6 bundles: `lib/codemirror/{markdown,yaml,json,python,javascript}.min.js`
-- Lazy-loaded by file extension, falls back to textarea if loading fails
-- Editor toolbar with Save (Ctrl+S), Save As, Open, Syntax selector, and Close buttons
-- CSS styles in `styles.css` under "CodeMirror Editor Styles (v1.14.1)"
-
-**Stage 3 Complete:** TUI `/edit` command with simple line editor
-
-- `/edit filepath[:line[:col]]` - Opens file in TUI line editor
-- `/context reload` - Reloads AGENTS.md from disk in TUI
-- Line editor with navigation: up/down arrows, j/k, page up/down, goto line
-- Edit operations: replace line, insert after, delete line
-- Auto-prompts to reload bootstrap context when saving AGENTS.md/CLAUDE.md
-- Implementation in `ppxai/commands/editor.py`
-- Tests in `tests/test_editor.py` (20 tests)
-
-**Next:** Finalize v1.14.1 release (CHANGELOG, release notes, version bump)
+The simple line editor approach had UX issues (Rich-based TUI can't handle proper editor workflows). A better approach is needed - possibly using an external editor or a different TUI framework.

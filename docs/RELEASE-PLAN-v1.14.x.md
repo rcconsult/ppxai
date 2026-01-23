@@ -334,16 +334,15 @@ def test_no_bootstrap_file_is_fine():
 
 **Implementation by Interface:**
 
-| Interface | `/edit` Implementation |
-|-----------|------------------------|
-| **VSCode** | Delegate to `vscode.window.showTextDocument()` with proper language mode |
-| **TUI (Rich)** | Simple line editor (prompt-based, no terminal takeover) |
-| **Web App** | CodeMirror 6 split-pane editor (unified with `/show` preview) |
+| Interface | `/edit` Implementation | Status |
+|-----------|------------------------|--------|
+| **VSCode** | Delegate to `vscode.window.showTextDocument()` with proper language mode | ✅ Done |
+| **Web App** | CodeMirror 6 split-pane editor | ✅ Done |
+| **TUI (Rich)** | Deferred to v1.15.x (ppxaide with Textual) | ⏳ |
 
-**TUI Simple Line Editor:**
+**TUI Simple Line Editor (Original Design - DEFERRED):**
 
-The TUI cannot delegate to external editors (would conflict with Rich's terminal control).
-Instead, we provide a prompt-based line editor:
+The following design was planned but deferred to v1.15.x. The Rich-based TUI cannot properly handle editor workflows with keyboard input and cursor navigation.
 
 ```
 /edit src/main.py:42
@@ -805,98 +804,100 @@ https://rcconsult.github.io/ppxai/
 
 ---
 
-#### Stage 1: VSCode Extension (First Priority)
+#### Stage 1: VSCode Extension (First Priority) ✅ Complete
 
 **Goal:** Quick win - delegate to VSCode's native editor
 
-- [ ] Add `/edit` command handler in `handlers/edit.ts`
-- [ ] Delegate to `vscode.window.showTextDocument()` with proper options
-- [ ] Ensure file opens with correct language mode (auto-detected from extension)
-- [ ] Support line number: `/edit file.py:42` jumps to line 42
-- [ ] Add `POST /files/write` server endpoint (shared with Web App)
-- [ ] Add `/context reload` command
-- [ ] Add `POST /context/reload` HTTP endpoint
-- [ ] Tests for VSCode `/edit` command
+- [x] Add `/edit` command handler in `handlers/edit.ts`
+- [x] Delegate to `vscode.window.showTextDocument()` with proper options
+- [x] Ensure file opens with correct language mode (auto-detected from extension)
+- [x] Support line number: `/edit file.py:42` jumps to line 42
+- [x] Add `POST /files/write` server endpoint (shared with Web App)
+- [x] Add `/context reload` command
+- [x] Add `POST /context/reload` HTTP endpoint
+- [x] Tests for VSCode `/edit` command
 
-**Deliverable:** `/edit` working in VSCode extension
+**Deliverable:** `/edit` working in VSCode extension ✅
 
 ---
 
-#### Stage 2: Web App (Second Priority)
+#### Stage 2: Web App (Second Priority) ✅ Complete
 
 **Goal:** Full-featured editor with CodeMirror 6
 
-- [ ] Add CodeMirror 6 core modules to `ppxai/web/lib/`
-- [ ] Add priority language modules (markdown, yaml, json, python, javascript)
-- [ ] Add legacy modes for shell, toml, hcl, perl (on-demand loading)
-- [ ] Create `/edit` editor component (separate from `/show`)
-  - [ ] Read-write mode with Save/Save As/Discard buttons
-  - [ ] Optional markdown preview toggle (reuse existing marked.js)
-- [ ] Keep existing `/show` viewers unchanged
-- [ ] Wire up `/context reload` in Web App
-- [ ] Tests for Web App `/edit` command
+- [x] Add CodeMirror 6 core modules to `ppxai/web/lib/`
+- [x] Add priority language modules (markdown, yaml, json, python, javascript)
+- [x] Add legacy modes for shell, toml, hcl, perl (on-demand loading)
+- [x] Create `/edit` editor component (separate from `/show`)
+  - [x] Read-write mode with Save/Save As/Discard buttons
+  - [x] Optional markdown preview toggle (reuse existing marked.js)
+- [x] Keep existing `/show` viewers unchanged
+- [x] Wire up `/context reload` in Web App
+- [x] Tests for Web App `/edit` command
 
-**Deliverable:** `/edit` working in Web App with syntax highlighting
+**Deliverable:** `/edit` working in Web App with syntax highlighting ✅
 
 ---
 
-#### Stage 3: TUI (Third Priority - Research Phase)
+#### Stage 3: TUI (Third Priority - Research Phase) ⏳ Deferred to v1.15.x
 
 **Goal:** Determine best approach for terminal-based editing
 
-**Options to Evaluate:**
+**Options Evaluated:**
 
 | Option | Pros | Cons |
 |--------|------|------|
 | **Simple line editor** | No dependencies, works everywhere | Limited UX, no syntax highlighting |
 | **Delegate to $EDITOR** | Use vim/nano/emacs | Conflicts with Rich terminal control |
-| **Textual widget** | Rich TUI editing | Heavy dependency, may defer to v1.15.x |
+| **Textual widget** | Rich TUI editing | Heavy dependency, defer to v1.15.x |
 | **External file + watch** | Open in system editor, watch for changes | Platform-specific, complexity |
 
-**Decision:** Review after Stage 1 & 2 complete. May defer full TUI editor to v1.15.x (ppxaide with Textual).
+**Decision:** Deferred to v1.15.x. The Rich-based TUI cannot handle proper editor workflows with keyboard input and cursor navigation. The v1.15.x ppxaide (Textual-based TUI) will provide a better foundation.
 
-- [ ] Research TUI editing alternatives
-- [ ] Prototype preferred approach
-- [ ] Implement `/edit` for TUI
-- [ ] Tests for TUI `/edit` command
+- [x] Research TUI editing alternatives (Result: Rich limitations identified)
+- [ ] ~~Prototype preferred approach~~ (Deferred)
+- [ ] ~~Implement `/edit` for TUI~~ (Deferred)
+- [ ] ~~Tests for TUI `/edit` command~~ (Deferred)
 
-**Deliverable:** `/edit` working in TUI (or documented deferral to v1.15.x)
+**Deliverable:** Documented deferral to v1.15.x ✅
 
 ---
 
-#### Shared Components (All Stages)
+#### Shared Components (All Stages) ✅ Complete
 
 **Server:**
-- [ ] Add `POST /files/write` server endpoint with path validation
-- [ ] Add `POST /context/reload` HTTP endpoint
+- [x] Add `POST /files/write` server endpoint with path validation
+- [x] Add `POST /context/reload` HTTP endpoint
 
 **Engine:**
-- [ ] Add `reload_bootstrap_context()` method to EngineClient
-- [ ] Implement auto-reload when AGENTS.md saved via `/edit`
+- [x] Add `reload_bootstrap_context()` method to EngineClient
+- [x] Implement auto-reload when AGENTS.md saved via `/edit`
 
 **Tests:**
-- [ ] Add tests for `/context reload`
-- [ ] Add tests for file write path validation (security)
+- [x] Add tests for `/context reload`
+- [x] Add tests for file write path validation (security)
 
-### v1.14.2 - File Precedence & Merge
-- [ ] Add global path search (`~/.ppxai/AGENTS.md`)
-- [ ] Add git root detection for project context
-- [ ] Implement merge strategy (global → project → subdir)
-- [ ] Add source tracking for each file
-- [ ] Extend `/context show` to display hierarchy
-- [ ] Add tests for precedence order
-- [ ] Add tests for missing intermediate files
+### v1.14.2 - File Precedence & Merge ✅ Complete
+- [x] Add global path search (`~/.ppxai/AGENTS.md`)
+- [x] Add git root detection for project context
+- [x] Implement merge strategy (global → project → subdir)
+- [x] Add source tracking for each file
+- [x] Extend `/context show` to display hierarchy
+- [x] Add tests for precedence order
+- [x] Add tests for missing intermediate files
 
-### v1.14.3 - Enhanced Context Providers
-- [ ] Implement `@url` context provider
-- [ ] Implement `@clipboard` context provider
-- [ ] Implement include directive (`<!-- include: path -->`)
-- [ ] Implement hint templates (`hint_templates:` + `templates: [...]`)
-- [ ] Add token counting to `/context` output
-- [ ] Add context size to status bar
-- [ ] Add URL content caching
-- [ ] Add timeout/error handling for URL fetch
-- [ ] Add tests for context providers
+**Note:** v1.14.3 features (context providers) were merged into v1.14.2.
+
+### v1.14.2 - Enhanced Context Providers ✅ Complete (merged from v1.14.3)
+- [x] Implement `@url` context provider
+- [x] Implement `@clipboard` context provider
+- [x] Implement include directive (`<!-- include: path -->`)
+- [x] Implement hint templates (`hint_templates:` + `templates: [...]`)
+- [x] Add token counting to `/context` output
+- [x] Add context size to status bar
+- [x] Add URL content caching
+- [x] Add timeout/error handling for URL fetch
+- [x] Add tests for context providers
 
 ### v1.14.4 - Documentation Site (GitHub Pages)
 - [ ] Create `mkdocs.yml` configuration file

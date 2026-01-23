@@ -294,25 +294,11 @@ ppxai/engine/bootstrap.py (new)
 
 **Implementation by Interface:**
 
-| Interface | `/edit` Implementation |
-|-----------|------------------------|
-| **VSCode** | Delegate to `vscode.window.showTextDocument()` |
-| **TUI (Rich)** | Simple line editor (prompt-based, no terminal takeover) |
-| **Web App** | CodeMirror 6 split-pane editor |
-
-**TUI Simple Line Editor:**
-```
-/edit src/main.py:42
-───────────────────────────────────────────────────────
- Editing: src/main.py (line 42)
-───────────────────────────────────────────────────────
-  40 │ def process_data(items):
-  41 │     """Process a list of items."""
-► 42 │     for item in items:
-───────────────────────────────────────────────────────
- [r]eplace | [i]nsert | [d]elete | [↑↓] navigate | [s]ave | [q]uit
-───────────────────────────────────────────────────────
-```
+| Interface | `/edit` Implementation | Status |
+|-----------|------------------------|--------|
+| **VSCode** | Delegate to `vscode.window.showTextDocument()` | ✅ Done |
+| **Web App** | CodeMirror 6 split-pane editor | ✅ Done |
+| **TUI (Rich)** | Deferred to v1.15.x (ppxaide with Textual) | ⏳ |
 
 **Web App CodeMirror Editor:**
 
@@ -628,4 +614,4 @@ For archived planning documents:
 
 ---
 
-**Last Updated**: January 20, 2026
+**Last Updated**: January 23, 2026
