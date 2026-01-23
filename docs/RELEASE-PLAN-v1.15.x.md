@@ -71,26 +71,44 @@ plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles c
 
 ## Release Schedule
 
-### v1.15.0 - ppxaide Core TUI
+### v1.15.0 - ppxaide Platform Foundation
 
-**Goal:** Minimal viable TUI with core chat functionality
+**Goal:** Build the UI platform with Textual's rich widget ecosystem before adding functional logic
 
 | Feature | Description | Status |
 |---------|-------------|--------|
 | **Textual SDK integration** | Build on current `ppxai/engine/` architecture | [x] Done |
 | **New entry point** | `ppxaide` command (separate from `ppxai`) | [x] Done |
-| **Core chat UI** | Streaming responses with Markdown rendering | [ ] In Progress |
-| **Status bar** | Provider, model, tools, context badges | [x] Done |
-| **Mouse support** | Click-to-scroll, selectable text | [ ] Planned |
 | **Themes** | 17+ built-in (Textual) + 2 custom (tron-legacy, matrix) | [x] Done |
 | **Basic commands** | `/help`, `/quit`, `/clear`, `/theme` | [x] Done |
+| **Status bar** | Provider, model, tools, context badges | [x] Done |
+| **Chat view** | Message display with role indicators | [x] Done |
+| **Input box** | Multi-line input with command history | [x] Done |
+| **Round borders** | Unicode box-drawing corners (╭╮╯╰) | [ ] Planned |
+| **Mouse support** | Click-to-scroll, selectable text, clickable links | [ ] Planned |
+| **Clipboard** | Text copy/paste via pyperclip | [ ] Planned |
+| **Tree widget** | JSON/YAML/TOML hierarchical display | [ ] Planned |
+| **TextArea widget** | Code editor with syntax highlighting | [ ] Planned |
+| **Split panes** | Horizontal/Vertical container layouts | [ ] Planned |
+
+**Textual Framework Capabilities:**
+
+| Capability | Textual Support | Notes |
+|------------|----------------|-------|
+| Rounded corners | ✅ `round` border style | Unicode: ╭╮╯╰ |
+| Clipboard (text) | ✅ Built-in + pyperclip | Cross-platform |
+| Clipboard (images) | ❌ Not supported | Text-only |
+| Inline images | ⚠️ Plugin: `textual-image` | Kitty/iTerm2/Sixel |
+| Tree data viewer | ✅ Built-in `Tree` widget | JSON example in repo |
+| Code editor | ✅ `TextArea` widget | tree-sitter highlighting |
+| Split panes | ✅ Container layouts | Horizontal/Vertical/Grid |
 
 **Implementation Tasks:**
 
+*Core (Done):*
 - [x] Create `ppxai/tui/` module structure
 - [x] Implement `PPXAIDEApp(textual.App)` main application class
 - [x] Create `ChatView` widget for message display
-- [ ] Create `StreamingMessage` widget for live responses
 - [x] Create `StatusBar` widget with provider/model/context badges
 - [x] Create `InputBox` widget with multi-line support
 - [x] Integrate Textual's built-in themes (catppuccin-mocha, nord, dracula, etc.)
@@ -98,9 +116,17 @@ plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles c
 - [x] Add `ppxaide` entry point to `pyproject.toml`
 - [x] Add `[tui]` optional dependency group
 - [x] Create PyInstaller spec and build binary
+
+*Platform Widgets (In Progress):*
+- [ ] Update `layout.tcss` to use `round` borders where appropriate
+- [ ] Add pyperclip integration for clipboard support
+- [ ] Create `TreeViewer` widget wrapping Textual's Tree
+- [ ] Create `CodeEditor` widget wrapping Textual's TextArea
+- [ ] Create `SplitPane` layout for side-by-side views
+- [ ] Add mouse-clickable file links (OSC 8 hyperlinks)
 - [ ] Basic integration tests
 
-**Deliverable:** Working chat UI with streaming responses
+**Deliverable:** Complete UI platform with rich widgets, ready for functional features
 
 ---
 
