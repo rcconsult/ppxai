@@ -1,0 +1,78 @@
+name: Deploy Documentation
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - 'v*'
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g., 1.14.2)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install mkdocs-material mike
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "alias=latest" >> $GITHUB_OUTPUT
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "alias=latest" >> $GITHUB_OUTPUT
+          else
+            echo "version=dev" >> $GITHUB_OUTPUT
+            echo "alias=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy docs
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          ALIAS="${{ steps.version.outputs.alias }}"
+
+          # Fetch gh-pages branch if it exists
+          git fetch origin gh-pages:gh-pages || true
+
+          if [ -n "$ALIAS" ]; then
+            mike deploy --push --update-aliases "$VERSION" "$ALIAS"
+          else
+            mike deploy --push "$VERSION"
+          fi
+
+      - name: Set default version
+        if: steps.version.outputs.alias == 'latest'
+        run: |
+          mike set-default --push latest

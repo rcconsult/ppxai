@@ -1,0 +1,85 @@
+site_name: ppxai Documentation
+site_description: Multi-LLM Interface for Developers - Terminal & VSCode
+site_url: https://rcconsult.github.io/ppxai/
+repo_url: https://github.com/rcconsult/ppxai
+repo_name: rcconsult/ppxai
+edit_uri: edit/master/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: blue
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: blue
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.instant
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: INSTALLATION.md
+    - Provider Setup: PROVIDER_SETUP.md
+  - User Guides:
+    - Agent Mode: AGENT_MODE_GUIDE.md
+    - Bootstrap Context: BOOTSTRAP_CONTEXT_GUIDE.md
+    - Context Injection: CONTEXT-INJECTION.md
+    - Checkpoint & Undo: CHECKPOINT_GUIDE.md
+    - File Editing: FILE_EDITING_GUIDE.md
+    - Shell Consent: SHELL_CONSENT_GUIDE.md
+  - Development:
+    - Custom Tools: CUSTOM_TOOL_DEVELOPMENT_GUIDE.md
+    - Custom Commands: CUSTOM_COMMAND_DEVELOPMENT_GUIDE.md
+    - Architecture: ARCHITECTURE.md
+  - Reference:
+    - Ollama Limitations: ollama-limitations.md
+    - vLLM Tool Calling: vllm-tool-calling-guide.md
+    - Container Tools: CONTAINER_TOOLS_GUIDE.md
+    - Autorouter Config: AUTOROUTER-CONFIG.md
+
+plugins:
+  - search
+  - mike:
+      version_selector: true
+      css_dir: css
+      javascript_dir: js
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - tables
+  - toc:
+      permalink: true
+
+extra:
+  version:
+    provider: mike
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/rcconsult/ppxai
