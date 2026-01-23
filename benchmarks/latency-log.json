@@ -4942,6 +4942,204 @@
           "error": "API Error: Gemini error (ConnectError): [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1032)"
         }
       ]
+    },
+    {
+      "timestamp": "2026-01-23T21:27:14.473510",
+      "version": "1.14.2",
+      "git_commit": "9ce86a9",
+      "git_branch": "feature/context-scopes",
+      "provider": "perplexity",
+      "model": "sonar-pro",
+      "summary": {
+        "total_runs": 6,
+        "successful_runs": 6,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 1614.01,
+          "min": 1253.17,
+          "max": 2531.38,
+          "stdev": 476.87
+        },
+        "total_ms": {
+          "mean": 3206.88,
+          "min": 2606.36,
+          "max": 4136.34,
+          "stdev": 687.19
+        },
+        "tokens_per_sec": {
+          "mean": 49.17,
+          "min": 12.21,
+          "max": 72.97
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 2531.38,
+          "total_ms": 3030.52,
+          "tokens": 37,
+          "tokens_per_sec": 12.21,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1253.17,
+          "total_ms": 2621.31,
+          "tokens": 155,
+          "tokens_per_sec": 59.13,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 1258.71,
+          "total_ms": 2606.36,
+          "tokens": 120,
+          "tokens_per_sec": 46.04,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1419.37,
+          "total_ms": 2845.06,
+          "tokens": 117,
+          "tokens_per_sec": 41.12,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 1587.35,
+          "total_ms": 4001.68,
+          "tokens": 292,
+          "tokens_per_sec": 72.97,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1634.09,
+          "total_ms": 4136.34,
+          "tokens": 263,
+          "tokens_per_sec": 63.58,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 2
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-01-23T21:27:33.707226",
+      "version": "1.14.2",
+      "git_commit": "9ce86a9",
+      "git_branch": "feature/context-scopes",
+      "provider": "gemini",
+      "model": "gemini-2.0-flash",
+      "summary": {
+        "total_runs": 6,
+        "successful_runs": 6,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 1512.9,
+          "min": 759.02,
+          "max": 2213.44,
+          "stdev": 618.89
+        },
+        "total_ms": {
+          "mean": 2244.83,
+          "min": 1949.54,
+          "max": 2684.5,
+          "stdev": 252.35
+        },
+        "tokens_per_sec": {
+          "mean": 44.29,
+          "min": 12.35,
+          "max": 84.19
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 2213.44,
+          "total_ms": 2220.58,
+          "tokens": 29,
+          "tokens_per_sec": 13.06,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 2018.74,
+          "total_ms": 2186.16,
+          "tokens": 27,
+          "tokens_per_sec": 12.35,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 1639.89,
+          "total_ms": 1949.54,
+          "tokens": 82,
+          "tokens_per_sec": 42.06,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1679.31,
+          "total_ms": 2087.68,
+          "tokens": 66,
+          "tokens_per_sec": 31.61,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 759.02,
+          "total_ms": 2340.54,
+          "tokens": 193,
+          "tokens_per_sec": 82.46,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 767.0,
+          "total_ms": 2684.5,
+          "tokens": 226,
+          "tokens_per_sec": 84.19,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 2
+        }
+      ]
     }
   ]
 }
