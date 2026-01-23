@@ -16,6 +16,7 @@ from textual.widgets import Header, Footer, Static, Input, RichLog
 from ppxai.tui.widgets.status_bar import StatusBar
 from ppxai.tui.widgets.chat_view import ChatView
 from ppxai.tui.widgets.input_box import InputBox
+from ppxai.tui.themes.themes import CUSTOM_THEMES, DEFAULT_THEME, CYCLE_THEMES
 
 
 class PPXAIDEApp(App):
@@ -24,7 +25,7 @@ class PPXAIDEApp(App):
     TITLE = "ppxaide"
     SUB_TITLE = "AI Assistant"
 
-    CSS_PATH = "themes/standard.tcss"
+    CSS_PATH = "themes/layout.tcss"
 
     BINDINGS = [
         Binding("ctrl+c", "quit", "Quit", show=True),
@@ -32,9 +33,6 @@ class PPXAIDEApp(App):
         Binding("ctrl+t", "cycle_theme", "Theme", show=True),
         Binding("escape", "cancel", "Cancel", show=False),
     ]
-
-    # Available themes
-    THEMES = ["standard", "tron-legacy", "matrix", "nord"]
 
     def __init__(self):
         super().__init__()
@@ -61,6 +59,13 @@ class PPXAIDEApp(App):
         self.title = "ppxaide"
         self.sub_title = f"{self._provider}/{self._model}"
 
+        # Register custom themes (built-in themes like catppuccin-mocha are already available)
+        for theme in CUSTOM_THEMES.values():
+            self.register_theme(theme)
+
+        # Set initial theme (catppuccin-mocha by default)
+        self.theme = DEFAULT_THEME
+
         # Focus the input box
         input_box = self.query_one("#input-box", InputBox)
         input_box.focus()
@@ -68,7 +73,8 @@ class PPXAIDEApp(App):
         # Add welcome message
         chat_view = self.query_one("#chat-view", ChatView)
         chat_view.add_system_message(
-            "Welcome to ppxaide! Type a message or use /help for commands."
+            "Welcome to ppxaide! Type a message or use /help for commands.\n"
+            "[dim]Use Ctrl+T to cycle themes, or Ctrl+P for all themes.[/dim]"
         )
 
     async def on_input_box_submitted(self, event: InputBox.Submitted) -> None:
@@ -109,7 +115,7 @@ class PPXAIDEApp(App):
         elif cmd == "theme":
             self.action_cycle_theme()
             chat_view.add_system_message(
-                f"Theme: {self.THEMES[self._current_theme_index]}"
+                f"Theme: {CYCLE_THEMES[self._current_theme_index]}"
             )
         elif cmd == "provider":
             chat_view.add_system_message(
@@ -141,9 +147,9 @@ class PPXAIDEApp(App):
 [bold]Keyboard Shortcuts:[/bold]
 [cyan]Ctrl+C[/cyan]     - Quit
 [cyan]Ctrl+L[/cyan]     - Clear chat
-[cyan]Ctrl+T[/cyan]     - Cycle theme
+[cyan]Ctrl+T[/cyan]     - Cycle theme (8 curated themes)
+[cyan]Ctrl+P[/cyan]     - Command palette (all 17+ themes)
 [cyan]Enter[/cyan]      - Send message
-[cyan]Shift+Enter[/cyan] - New line (multi-line input)
 """
 
     def action_quit(self) -> None:
@@ -156,10 +162,10 @@ class PPXAIDEApp(App):
         chat_view.clear()
 
     def action_cycle_theme(self) -> None:
-        """Cycle through available themes."""
-        self._current_theme_index = (self._current_theme_index + 1) % len(self.THEMES)
-        theme_name = self.THEMES[self._current_theme_index]
-        # TODO: Actually load the theme CSS
+        """Cycle through curated themes (Ctrl+T)."""
+        self._current_theme_index = (self._current_theme_index + 1) % len(CYCLE_THEMES)
+        theme_name = CYCLE_THEMES[self._current_theme_index]
+        self.theme = theme_name
         self.notify(f"Theme: {theme_name}", title="Theme Changed")
 
     def action_cancel(self) -> None:

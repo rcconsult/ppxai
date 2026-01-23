@@ -1,11 +1,14 @@
 """
-ppxaide themes - Textual CSS theme files.
+ppxaide themes - Textual theme integration.
 
-Available themes:
-- standard: Default theme with blue accents
-- tron-legacy: Cyan/orange on dark background
-- matrix: Green on black
-- nord: Nord color palette
+Uses Textual's built-in themes (17+) plus custom ppxaide themes:
+- tron-legacy: Cyan/orange on dark (unique to ppxaide)
+- matrix: Green on black (unique to ppxaide)
+
+Built-in themes available via Ctrl+P command palette.
+Curated themes cycle via Ctrl+T.
 """
 
-AVAILABLE_THEMES = ["standard", "tron-legacy", "matrix", "nord"]
+from ppxai.tui.themes.themes import CUSTOM_THEMES, DEFAULT_THEME, CYCLE_THEMES
+
+__all__ = ["CUSTOM_THEMES", "DEFAULT_THEME", "CYCLE_THEMES"]

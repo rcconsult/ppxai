@@ -11,27 +11,7 @@ from textual.widgets import Input, Static
 class InputBox(Static):
     """Input widget with command detection and history."""
 
-    DEFAULT_CSS = """
-    InputBox {
-        dock: bottom;
-        height: auto;
-        min-height: 3;
-        max-height: 10;
-        padding: 1;
-        background: $surface;
-        border-top: solid $primary;
-    }
-
-    InputBox Input {
-        width: 100%;
-    }
-
-    InputBox .prompt {
-        width: auto;
-        padding-right: 1;
-        color: $primary;
-    }
-    """
+    # CSS is in layout.tcss
 
     class Submitted(Message):
         """Message sent when user submits input."""

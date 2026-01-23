@@ -11,47 +11,7 @@ from textual.widgets import Static, Markdown
 class MessageBox(Static):
     """A single chat message with role indicator and content."""
 
-    DEFAULT_CSS = """
-    MessageBox {
-        width: 100%;
-        padding: 1;
-        margin-bottom: 1;
-    }
-
-    MessageBox.user {
-        background: $primary-darken-3;
-        border-left: thick $primary;
-    }
-
-    MessageBox.assistant {
-        background: $surface;
-        border-left: thick $success;
-    }
-
-    MessageBox.system {
-        background: $surface-darken-1;
-        border-left: thick $warning;
-    }
-
-    MessageBox.tool {
-        background: $surface-darken-2;
-        border-left: thick $accent;
-    }
-
-    MessageBox .role-label {
-        color: $text-muted;
-        text-style: bold;
-        margin-bottom: 1;
-    }
-
-    MessageBox .content {
-        color: $text;
-    }
-
-    MessageBox.streaming .content {
-        color: $text-muted;
-    }
-    """
+    # CSS is in layout.tcss
 
     content = reactive("")
     streaming = reactive(False)

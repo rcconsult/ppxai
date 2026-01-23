@@ -11,12 +11,7 @@ from textual.widgets import Static
 class StatusBadge(Static):
     """A single status badge with label and value."""
 
-    DEFAULT_CSS = """
-    StatusBadge {
-        padding: 0 1;
-        margin: 0 1;
-    }
-    """
+    # CSS is in layout.tcss
 
     def __init__(self, label: str, value: str, variant: str = "default"):
         super().__init__()
@@ -36,35 +31,7 @@ class StatusBadge(Static):
 class StatusBar(Static):
     """Status bar showing current session state."""
 
-    DEFAULT_CSS = """
-    StatusBar {
-        dock: top;
-        height: 1;
-        background: $surface;
-        color: $text;
-        padding: 0 1;
-    }
-
-    StatusBar Horizontal {
-        height: 1;
-    }
-
-    StatusBar .provider-badge {
-        color: $success;
-    }
-
-    StatusBar .model-badge {
-        color: $primary;
-    }
-
-    StatusBar .tools-badge {
-        color: $warning;
-    }
-
-    StatusBar .context-badge {
-        color: $accent;
-    }
-    """
+    # CSS is in layout.tcss
 
     provider = reactive("perplexity")
     model = reactive("sonar")

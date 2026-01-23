@@ -2,8 +2,8 @@
 
 **Created:** January 24, 2026
 **Last Updated:** January 24, 2026
-**Status:** Planning
-**Branch:** TBD (feature/ppxaide-core)
+**Status:** In Progress
+**Branch:** feature/new-tui-command
 
 ---
 
@@ -35,21 +35,18 @@ ppxai/tui/                     # New module (Textual-based)
 ├── widgets/                   # Custom widgets
 │   ├── chat_view.py           # Chat message container
 │   ├── message_box.py         # Individual message display
-│   ├── streaming.py           # Streaming response widget
-│   ├── tool_call.py           # Collapsible tool call display
+│   ├── streaming.py           # Streaming response widget (TODO)
 │   ├── status_bar.py          # Status badges (provider, model, context)
-│   ├── input_box.py           # Multi-line input with history
-│   └── command_palette.py     # Slash command autocomplete
-├── screens/                   # Application screens
-│   ├── chat.py                # Main chat screen
-│   ├── settings.py            # Settings/config screen
-│   └── help.py                # Help/command reference
-└── themes/                    # CSS theme files
-    ├── standard.tcss
-    ├── tron-legacy.tcss
-    ├── matrix.tcss
-    └── nord.tcss
+│   └── input_box.py           # Multi-line input with history
+├── screens/                   # Application screens (TODO)
+└── themes/                    # Theme system
+    ├── __init__.py            # Theme exports
+    ├── themes.py              # Custom theme definitions (tron-legacy, matrix)
+    └── layout.tcss            # Layout CSS using Textual design tokens
 ```
+
+**Note:** Uses Textual's 17+ built-in themes (catppuccin-mocha, nord, dracula, etc.)
+plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles curated list.
 
 **Key Design Decisions:**
 - **Separate command** - `ppxaide` coexists with `ppxai` during transition
@@ -80,25 +77,27 @@ ppxai/tui/                     # New module (Textual-based)
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **Textual SDK integration** | Build on current `ppxai/engine/` architecture | [ ] Planned |
-| **New entry point** | `ppxaide` command (separate from `ppxai`) | [ ] Planned |
-| **Core chat UI** | Streaming responses with Markdown rendering | [ ] Planned |
-| **Status bar** | Provider, model, tools, context badges | [ ] Planned |
+| **Textual SDK integration** | Build on current `ppxai/engine/` architecture | [x] Done |
+| **New entry point** | `ppxaide` command (separate from `ppxai`) | [x] Done |
+| **Core chat UI** | Streaming responses with Markdown rendering | [ ] In Progress |
+| **Status bar** | Provider, model, tools, context badges | [x] Done |
 | **Mouse support** | Click-to-scroll, selectable text | [ ] Planned |
-| **CSS themes** | 4 themes: standard, tron-legacy, matrix, nord | [ ] Planned |
-| **Basic commands** | `/help`, `/quit`, `/clear` | [ ] Planned |
+| **Themes** | 17+ built-in (Textual) + 2 custom (tron-legacy, matrix) | [x] Done |
+| **Basic commands** | `/help`, `/quit`, `/clear`, `/theme` | [x] Done |
 
 **Implementation Tasks:**
 
-- [ ] Create `ppxai/tui/` module structure
-- [ ] Implement `PPXAIDEApp(textual.App)` main application class
-- [ ] Create `ChatView` widget for message display
+- [x] Create `ppxai/tui/` module structure
+- [x] Implement `PPXAIDEApp(textual.App)` main application class
+- [x] Create `ChatView` widget for message display
 - [ ] Create `StreamingMessage` widget for live responses
-- [ ] Create `StatusBar` widget with provider/model/context badges
-- [ ] Create `InputBox` widget with multi-line support
-- [ ] Port 4 themes to Textual CSS format
-- [ ] Add `ppxaide` entry point to `pyproject.toml`
-- [ ] Add `[tui]` optional dependency group
+- [x] Create `StatusBar` widget with provider/model/context badges
+- [x] Create `InputBox` widget with multi-line support
+- [x] Integrate Textual's built-in themes (catppuccin-mocha, nord, dracula, etc.)
+- [x] Create custom themes: tron-legacy, matrix
+- [x] Add `ppxaide` entry point to `pyproject.toml`
+- [x] Add `[tui]` optional dependency group
+- [x] Create PyInstaller spec and build binary
 - [ ] Basic integration tests
 
 **Deliverable:** Working chat UI with streaming responses

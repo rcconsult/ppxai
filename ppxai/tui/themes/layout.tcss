@@ -1,0 +1,148 @@
+/* ppxaide Layout CSS
+ * This file defines layout and structure only.
+ * Colors come from Textual's theme system ($primary, $surface, etc.)
+ */
+
+/* App-wide styles */
+Screen {
+    background: $background;
+}
+
+Header {
+    background: $surface;
+    color: $primary;
+}
+
+Footer {
+    background: $surface;
+    color: $text-muted;
+}
+
+/* Status bar */
+StatusBar {
+    background: $surface;
+    color: $text;
+    height: 1;
+    padding: 0 1;
+    dock: top;
+}
+
+StatusBar Horizontal {
+    height: 1;
+}
+
+StatusBar .provider-badge {
+    color: $success;
+}
+
+StatusBar .model-badge {
+    color: $primary;
+}
+
+StatusBar .tools-badge {
+    color: $warning;
+}
+
+StatusBar .context-badge {
+    color: $accent;
+}
+
+/* Chat view */
+ChatView {
+    background: $background;
+    padding: 1;
+    height: 1fr;
+}
+
+/* Messages */
+MessageBox {
+    padding: 1;
+    margin-bottom: 1;
+    background: $surface;
+    width: 100%;
+}
+
+MessageBox.user {
+    background: $primary-darken-3;
+    border-left: thick $primary;
+}
+
+MessageBox.assistant {
+    background: $surface;
+    border-left: thick $success;
+}
+
+MessageBox.system {
+    background: $surface-darken-1;
+    border-left: thick $warning;
+}
+
+MessageBox.tool {
+    background: $surface-darken-2;
+    border-left: thick $accent;
+}
+
+MessageBox .role-label {
+    color: $text-muted;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+MessageBox .content {
+    color: $text;
+}
+
+MessageBox.streaming .content {
+    color: $text-muted;
+}
+
+/* Input box */
+InputBox {
+    background: $surface;
+    border-top: solid $primary;
+    padding: 1;
+    dock: bottom;
+    height: auto;
+    min-height: 3;
+    max-height: 10;
+}
+
+InputBox Horizontal {
+    height: auto;
+}
+
+InputBox Input {
+    background: $background;
+    color: $text;
+    border: none;
+    width: 1fr;
+}
+
+InputBox Input:focus {
+    border: tall $primary;
+}
+
+InputBox .prompt {
+    width: auto;
+    padding-right: 1;
+    color: $primary;
+}
+
+/* Scrollbars */
+VerticalScroll > ScrollBar {
+    background: $surface;
+}
+
+VerticalScroll > ScrollBar > .scroll-bar--bar {
+    background: $panel;
+}
+
+VerticalScroll > ScrollBar > .scroll-bar--bar:hover {
+    background: $primary;
+}
+
+/* Status badge */
+StatusBadge {
+    padding: 0 1;
+    margin: 0 1;
+}

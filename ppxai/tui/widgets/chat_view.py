@@ -12,17 +12,7 @@ from ppxai.tui.widgets.message_box import MessageBox
 class ChatView(VerticalScroll):
     """Scrollable container for chat messages."""
 
-    DEFAULT_CSS = """
-    ChatView {
-        height: 1fr;
-        padding: 1;
-        background: $background;
-    }
-
-    ChatView MessageBox {
-        margin-bottom: 1;
-    }
-    """
+    # CSS is in layout.tcss
 
     def __init__(self, id: str = None):
         super().__init__(id=id)
