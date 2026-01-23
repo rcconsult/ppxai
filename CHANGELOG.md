@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Gemini default model** - Changed from `gemini-2.0-flash` to `gemini-2.5-flash` (2.0 deprecated March 2026)
 - **Provider/model hints merging** - Hints from all scopes are combined (not replaced)
 - **`/context reload`** - Now reloads from all scope levels with improved feedback
 - **Bootstrap status API** - Returns `sources` array with path, scope, and size for each file

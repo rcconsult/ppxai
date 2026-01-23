@@ -93,6 +93,7 @@ Hints Defined:
 
 ## Changes
 
+- **Gemini default model** - Changed from `gemini-2.0-flash` to `gemini-2.5-flash` (Google deprecated 2.0 March 2026)
 - Provider/model hints from all scopes are combined (not replaced)
 - `/context reload` now reloads from all scopes with improved feedback
 - Bootstrap status API returns full scope information

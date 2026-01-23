@@ -204,9 +204,9 @@ async def web_search_gemini(query: str, num_results: int = 5) -> Tuple[str, List
     if not api_key:
         raise ValueError("GEMINI_API_KEY not set")
 
-    # Get model from config, default to gemini-2.0-flash
+    # Get model from config, default to gemini-2.5-flash (2.0 deprecated March 2026)
     tool_config = get_tool_config("web_search")
-    gemini_model = tool_config.get("gemini_model", "gemini-2.0-flash")
+    gemini_model = tool_config.get("gemini_model", "gemini-2.5-flash")
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent"
 

@@ -102,8 +102,8 @@ MODEL_PROVIDER=gemini
       "name": "Google Gemini",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
       "api_key_env": "GEMINI_API_KEY",
-      "default_model": "gemini-2.0-flash",
-      "coding_model": "gemini-2.0-flash",
+      "default_model": "gemini-2.5-flash",
+      "coding_model": "gemini-2.5-flash",
       "options": {
         "enable_grounding": true
       },
@@ -446,10 +446,10 @@ MODEL_PROVIDER=perplexity
       "name": "Google Gemini",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
       "api_key_env": "GEMINI_API_KEY",
-      "default_model": "gemini-2.0-flash",
-      "coding_model": "gemini-2.0-flash",
+      "default_model": "gemini-2.5-flash",
+      "coding_model": "gemini-2.5-flash",
       "models": {
-        "gemini-2.0-flash": {"name": "Gemini 2.0 Flash", "description": "Fast multimodal"},
+        "gemini-2.5-flash": {"name": "Gemini 2.5 Flash", "description": "Fast multimodal"},
         "gemini-1.5-pro": {"name": "Gemini 1.5 Pro", "description": "2M context"}
       },
       "capabilities": {"web_search": true, "realtime_info": true}
