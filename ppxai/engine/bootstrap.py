@@ -39,7 +39,7 @@ import re
 import subprocess
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional, Dict, List, Tuple
+from typing import Any, Optional, Dict, List, Tuple, Set
 from dataclasses import dataclass, field
 
 
@@ -55,6 +55,108 @@ LOCAL_PROVIDERS = {"ollama", "vllm", "lmstudio"}
 
 # Default bootstrap file aliases (checked in order)
 DEFAULT_BOOTSTRAP_FILES = ["AGENTS.md", "CLAUDE.md"]
+
+# Hint templates file location (v1.14.2)
+HINT_TEMPLATES_FILE = Path.home() / ".ppxai" / "hint-templates.yaml"
+
+# Cache for loaded templates
+_hint_templates_cache: Optional[Dict[str, List[str]]] = None
+
+
+def load_hint_templates() -> Dict[str, List[str]]:
+    """Load hint templates from ~/.ppxai/hint-templates.yaml (v1.14.2).
+
+    Templates allow defining reusable hint collections:
+
+    ```yaml
+    templates:
+      tool-heavy:
+        - "Use tools proactively."
+        - "Don't stop after tool calls."
+      reasoning:
+        - "Show step-by-step reasoning."
+    ```
+
+    Returns:
+        Dict mapping template name to list of hints
+    """
+    global _hint_templates_cache
+
+    if _hint_templates_cache is not None:
+        return _hint_templates_cache
+
+    _hint_templates_cache = {}
+
+    if not HINT_TEMPLATES_FILE.exists():
+        return _hint_templates_cache
+
+    try:
+        import yaml
+        content = HINT_TEMPLATES_FILE.read_text(encoding="utf-8")
+        data = yaml.safe_load(content)
+
+        if isinstance(data, dict) and "templates" in data:
+            templates = data["templates"]
+            if isinstance(templates, dict):
+                for name, hints in templates.items():
+                    if isinstance(hints, list):
+                        _hint_templates_cache[name] = [str(h) for h in hints]
+    except ImportError:
+        # YAML not available, try simple parsing
+        _hint_templates_cache = _parse_templates_simple(HINT_TEMPLATES_FILE)
+    except Exception:
+        # Failed to load, return empty
+        pass
+
+    return _hint_templates_cache
+
+
+def _parse_templates_simple(file_path: Path) -> Dict[str, List[str]]:
+    """Parse hint templates without YAML library.
+
+    Simple regex-based parsing for the specific format we need.
+    """
+    result: Dict[str, List[str]] = {}
+    content = file_path.read_text(encoding="utf-8")
+
+    # Find templates: section
+    templates_match = re.search(r'^templates:\s*\n((?:[ \t]+.*\n?)*)', content, re.MULTILINE)
+    if not templates_match:
+        return result
+
+    section = templates_match.group(1)
+    current_name = None
+    current_hints: List[str] = []
+
+    for line in section.split('\n'):
+        stripped = line.strip()
+        if not stripped or stripped.startswith('#'):
+            continue
+
+        # Check for template name (e.g., "  tool-heavy:")
+        name_match = re.match(r'^[ \t]+([a-zA-Z0-9_-]+):\s*$', line)
+        if name_match:
+            if current_name is not None:
+                result[current_name] = current_hints
+            current_name = name_match.group(1)
+            current_hints = []
+            continue
+
+        # Check for hint item
+        hint_match = re.match(r'^\s+-\s*["\']?(.+?)["\']?\s*$', line)
+        if hint_match and current_name is not None:
+            current_hints.append(hint_match.group(1))
+
+    if current_name is not None:
+        result[current_name] = current_hints
+
+    return result
+
+
+def clear_templates_cache() -> None:
+    """Clear the templates cache (for testing/reload)."""
+    global _hint_templates_cache
+    _hint_templates_cache = None
 
 
 @dataclass
@@ -74,9 +176,16 @@ class BootstrapContext:
     model_hints: Dict[str, List[str]] = field(default_factory=dict)
     raw_content: str = ""
 
+    # Include directive settings (v1.14.2)
+    MAX_INCLUDE_DEPTH = 5
+    INCLUDE_PATTERN = re.compile(r'<!--\s*include:\s*([^\s>]+)\s*-->', re.IGNORECASE)
+
     @classmethod
     def from_file(cls, file_path: Path) -> "BootstrapContext":
         """Parse a bootstrap file and return BootstrapContext.
+
+        Processes include directives (v1.14.2):
+        <!-- include: ./path/to/file.md -->
 
         Args:
             file_path: Path to AGENTS.md or similar file
@@ -85,7 +194,69 @@ class BootstrapContext:
             Parsed BootstrapContext instance
         """
         content = file_path.read_text(encoding="utf-8", errors="replace")
+        # Process include directives (v1.14.2)
+        content = cls._process_includes(content, file_path.parent, set(), 0)
         return cls.from_content(content, str(file_path))
+
+    @classmethod
+    def _process_includes(
+        cls,
+        content: str,
+        base_dir: Path,
+        visited: Set[Path],
+        depth: int
+    ) -> str:
+        """Process include directives in content (v1.14.2).
+
+        Replaces <!-- include: path --> with file contents.
+
+        Args:
+            content: Content to process
+            base_dir: Base directory for resolving relative paths
+            visited: Set of already-visited paths (cycle detection)
+            depth: Current include depth
+
+        Returns:
+            Content with includes expanded
+        """
+        if depth >= cls.MAX_INCLUDE_DEPTH:
+            return content
+
+        def replace_include(match: re.Match) -> str:
+            include_path_str = match.group(1)
+
+            # Resolve path relative to base_dir
+            include_path = (base_dir / include_path_str).resolve()
+
+            # Security: prevent path traversal outside base_dir ancestors
+            # Allow includes from anywhere under home or working directory
+            try:
+                # Just ensure it's a real file, not a symlink attack
+                if not include_path.is_file():
+                    return f"<!-- include error: {include_path_str} not found -->"
+            except (OSError, ValueError):
+                return f"<!-- include error: invalid path {include_path_str} -->"
+
+            # Cycle detection
+            if include_path in visited:
+                return f"<!-- include error: circular include {include_path_str} -->"
+
+            # Read and recursively process
+            try:
+                included_content = include_path.read_text(encoding="utf-8", errors="replace")
+                new_visited = visited | {include_path}
+                included_content = cls._process_includes(
+                    included_content,
+                    include_path.parent,
+                    new_visited,
+                    depth + 1
+                )
+                # Add source marker for debugging
+                return f"\n<!-- begin: {include_path_str} -->\n{included_content}\n<!-- end: {include_path_str} -->\n"
+            except Exception as e:
+                return f"<!-- include error: {include_path_str}: {e} -->"
+
+        return cls.INCLUDE_PATTERN.sub(replace_include, content)
 
     @classmethod
     def from_content(cls, content: str, source: str = "") -> "BootstrapContext":
@@ -156,10 +327,16 @@ class BootstrapContext:
           key:
             - "hint 1"
             - "hint 2"
+            - template: template-name  # v1.14.2: expands to template hints
+
+        Template references are expanded using ~/.ppxai/hint-templates.yaml
         """
         result: Dict[str, List[str]] = {}
         current_key = None
         current_hints: List[str] = []
+
+        # Load templates for expansion (v1.14.2)
+        templates = load_hint_templates()
 
         for line in section.split('\n'):
             # Skip empty lines and comments
@@ -175,6 +352,15 @@ class BootstrapContext:
                     result[current_key] = current_hints
                 current_key = key_match.group(1)
                 current_hints = []
+                continue
+
+            # Check for template reference (v1.14.2): - template: name
+            template_match = re.match(r'^\s*-\s*template:\s*([a-zA-Z0-9_-]+)\s*$', line)
+            if template_match and current_key is not None:
+                template_name = template_match.group(1)
+                if template_name in templates:
+                    current_hints.extend(templates[template_name])
+                # Silently skip unknown templates
                 continue
 
             # Check for hint item (e.g., '- "hint text"')

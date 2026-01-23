@@ -28,6 +28,7 @@ dependencies = [
     "prompt-toolkit>=3.0.0",
     "python-dotenv>=1.0.0",
     "tzdata>=2024.1",
+    "pyperclip>=1.8.0",  # v1.14.2: @clipboard context injection
 ]
 
 [project.optional-dependencies]

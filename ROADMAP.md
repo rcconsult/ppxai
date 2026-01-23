@@ -339,29 +339,23 @@ Split-pane design with syntax highlighting:
 
 **Bundle size:** ~200KB (core + languages, loaded on demand)
 
-### v1.14.2 - File Precedence & Merge
+### v1.14.2 - Hierarchical Scopes & Enhanced Context ✅
+
+**Note:** v1.14.3 features merged into v1.14.2.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **Global context** | Load from `~/.ppxai/AGENTS.md` | Planned |
-| **Project context** | Load from project root AGENTS.md | Planned |
-| **Subdirectory context** | Load from current working directory | Planned |
-| **Merge strategy** | Global → Project → Subdir (concatenate) | Planned |
-| **`/context show`** | Display AGENTS.md sources with hierarchy | Planned |
+| **Global context** | Load from `~/.ppxai/AGENTS.md` | ✅ Done |
+| **Project context** | Load from project root AGENTS.md | ✅ Done |
+| **Subdirectory context** | Load from current working directory | ✅ Done |
+| **Merge strategy** | Global → Project → Subdir (concatenate) | ✅ Done |
+| **`/context show`** | Display AGENTS.md sources with hierarchy | ✅ Done |
+| **`@url` provider** | Fetch and inject web content | ✅ Done |
+| **`@clipboard`** | Inject clipboard contents | ✅ Done |
+| **Include directive** | `<!-- include: ./docs/style.md -->` in AGENTS.md | ✅ Done |
+| **Hint templates** | Reusable hint sets in `~/.ppxai/hint-templates.yaml` | ✅ Done |
 
-### v1.14.3 - Enhanced Context Providers
-
-**Note:** v1.13.9 implemented `/context` and `/context clear` for **injected context** (@file/@git/@tree).
-v1.14.3 extends context providers with additional sources.
-
-| Feature | Description | Status |
-|---------|-------------|--------|
-| **`@url` provider** | Fetch and inject web content | Planned |
-| **`@clipboard`** | Inject clipboard contents | Planned |
-| **Include directive** | `<!-- include: ./docs/style.md -->` in AGENTS.md | Planned |
-| **Hint templates** | Reusable hint sets: `hints: [tool-heavy, reasoning]` | Planned |
-
-### v1.14.4 - Documentation Site (GitHub Pages)
+### v1.14.3 - Documentation Site (GitHub Pages)
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -381,7 +375,7 @@ v1.14.3 extends context providers with additional sources.
 ```
 https://rcconsult.github.io/ppxai/
 ├── /                      # Latest version (alias)
-├── /1.14.4/              # Specific version
+├── /1.14.3/              # Specific version
 ├── /1.13.10/             # Previous version
 └── /getting-started/     # Navigation sections
 ```

@@ -94,6 +94,8 @@ class ContextInjector:
     # Patterns for special context providers
     GIT_PATTERN = r'@git\b'
     TREE_PATTERN = r'@tree\b'
+    CLIPBOARD_PATTERN = r'@clipboard\b'  # v1.14.2: clipboard content injection
+    URL_PATTERN = r'@(https?://[^\s<>\"\']+)'  # v1.14.2: URL content injection
 
     # Keywords that suggest user wants file content
     FILE_KEYWORDS = [
@@ -623,6 +625,182 @@ class ContextInjector:
             size=len(content)
         )
 
+    def inject_clipboard_context(self) -> Optional[InjectedContext]:
+        """Inject clipboard text content (v1.14.2).
+
+        Returns:
+            InjectedContext with clipboard content or None if empty/unavailable
+        """
+        try:
+            import pyperclip
+            content = pyperclip.paste()
+        except ImportError:
+            # pyperclip not installed
+            return None
+        except Exception:
+            # Clipboard access failed (no display, etc.)
+            return None
+
+        if not content or not content.strip():
+            return None
+
+        # Truncate if too large
+        truncated = False
+        original_size = len(content)
+        if len(content) > self.MAX_FILE_SIZE:
+            content = content[:self.MAX_FILE_SIZE] + "\n\n... (clipboard content truncated)"
+            truncated = True
+
+        # Try to detect language from content
+        language = self._detect_clipboard_language(content)
+
+        return InjectedContext(
+            source="@clipboard",
+            content=content,
+            language=language,
+            truncated=truncated,
+            size=original_size
+        )
+
+    def _detect_clipboard_language(self, content: str) -> str:
+        """Detect programming language from clipboard content.
+
+        Uses simple heuristics to guess the language.
+
+        Args:
+            content: Clipboard text content
+
+        Returns:
+            Language identifier or empty string
+        """
+        content_lower = content.strip().lower()
+        first_line = content.strip().split('\n')[0] if content.strip() else ""
+
+        # Check for common patterns
+        if first_line.startswith('#!/usr/bin/env python') or first_line.startswith('#!/usr/bin/python'):
+            return 'python'
+        if first_line.startswith('#!/bin/bash') or first_line.startswith('#!/bin/sh'):
+            return 'bash'
+        if 'def ' in content and ':' in content:
+            return 'python'
+        if 'function ' in content and ('{' in content or '=>' in content):
+            return 'javascript'
+        if content_lower.startswith('{') and content_lower.rstrip().endswith('}'):
+            return 'json'
+        if content_lower.startswith('<?xml') or content_lower.startswith('<html'):
+            return 'xml' if '<?xml' in content_lower else 'html'
+
+        return 'text'
+
+    def inject_url_context(self, url: str) -> Optional[InjectedContext]:
+        """Fetch and inject URL content (v1.14.2).
+
+        Args:
+            url: URL to fetch
+
+        Returns:
+            InjectedContext with page content or None on error
+        """
+        import httpx
+
+        try:
+            # Fetch with reasonable timeout and headers
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (compatible; ppxai/1.14.2; +https://github.com/rcconsult/ppxai)'
+            }
+            with httpx.Client(timeout=30.0, follow_redirects=True) as client:
+                response = client.get(url, headers=headers)
+                response.raise_for_status()
+                content = response.text
+        except Exception as e:
+            # Return error context so user knows fetch failed
+            return InjectedContext(
+                source=url,
+                content=f"Error fetching URL: {e}",
+                language="text",
+                truncated=False,
+                size=0
+            )
+
+        # Convert HTML to plain text if needed
+        content_type = response.headers.get('content-type', '').lower()
+        if 'text/html' in content_type:
+            content = self._html_to_text(content)
+            language = 'text'
+        elif 'application/json' in content_type:
+            language = 'json'
+        elif 'text/markdown' in content_type:
+            language = 'markdown'
+        else:
+            # Detect from URL extension
+            language = self._detect_language(Path(url.split('?')[0]).suffix)
+
+        # Truncate if too large
+        truncated = False
+        original_size = len(content)
+        if len(content) > self.MAX_FILE_SIZE:
+            content = content[:self.MAX_FILE_SIZE] + "\n\n... (content truncated)"
+            truncated = True
+
+        return InjectedContext(
+            source=url,
+            content=content,
+            language=language or 'text',
+            truncated=truncated,
+            size=original_size
+        )
+
+    def _html_to_text(self, html: str) -> str:
+        """Convert HTML to readable plain text.
+
+        Simple extraction - removes tags, scripts, styles.
+        For better extraction, install trafilatura.
+
+        Args:
+            html: HTML content
+
+        Returns:
+            Plain text content
+        """
+        import re
+
+        # Try trafilatura if available (better extraction)
+        try:
+            import trafilatura
+            text = trafilatura.extract(html)
+            if text:
+                return text
+        except ImportError:
+            pass
+
+        # Fallback: simple regex-based extraction
+        # Remove script and style elements
+        text = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL | re.IGNORECASE)
+        text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL | re.IGNORECASE)
+
+        # Remove HTML comments
+        text = re.sub(r'<!--.*?-->', '', text, flags=re.DOTALL)
+
+        # Replace common block elements with newlines
+        text = re.sub(r'<(br|p|div|h[1-6]|li|tr)[^>]*>', '\n', text, flags=re.IGNORECASE)
+
+        # Remove all remaining tags
+        text = re.sub(r'<[^>]+>', '', text)
+
+        # Decode common HTML entities
+        text = text.replace('&nbsp;', ' ')
+        text = text.replace('&amp;', '&')
+        text = text.replace('&lt;', '<')
+        text = text.replace('&gt;', '>')
+        text = text.replace('&quot;', '"')
+        text = text.replace('&#39;', "'")
+
+        # Clean up whitespace
+        text = re.sub(r'\n\s*\n', '\n\n', text)
+        text = re.sub(r'[ \t]+', ' ', text)
+
+        return text.strip()
+
     def inject_context(
         self,
         message: str,
@@ -665,6 +843,30 @@ class ContextInjector:
                     total_size += len(tree_ctx.content)
                 # Remove @tree from message even if skipped
                 cleaned_message = re.sub(self.TREE_PATTERN, '`project tree`', cleaned_message)
+
+        # Check for @clipboard pattern (v1.14.2)
+        if re.search(self.CLIPBOARD_PATTERN, message):
+            clip_ctx = self.inject_clipboard_context()
+            if clip_ctx:
+                clip_ctx.hash = compute_content_hash(clip_ctx.content)
+                if clip_ctx.hash not in skip_hashes:
+                    injected.append(clip_ctx)
+                    total_size += len(clip_ctx.content)
+                cleaned_message = re.sub(self.CLIPBOARD_PATTERN, '`clipboard`', cleaned_message)
+
+        # Check for @url patterns (v1.14.2)
+        url_matches = re.findall(self.URL_PATTERN, message)
+        for url in url_matches:
+            if total_size >= self.MAX_TOTAL_CONTEXT:
+                break
+            url_ctx = self.inject_url_context(url)
+            if url_ctx:
+                url_ctx.hash = compute_content_hash(url_ctx.content)
+                if url_ctx.hash not in skip_hashes:
+                    injected.append(url_ctx)
+                    total_size += len(url_ctx.content)
+                # Replace @url with markdown link
+                cleaned_message = cleaned_message.replace(f'@{url}', f'[{url}]({url})')
 
         # Check for file references
         files = self.detect_file_references(message)

@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`/context show` command** - Display bootstrap context hierarchy with scope labels
 - **`GET /context/bootstrap` endpoint** - HTTP API for scoped bootstrap status
 
+### Added - Enhanced Context Providers (merged from v1.14.3)
+
+- **`@clipboard` provider** - Inject clipboard text content with `@clipboard` in messages
+- **`@url` provider** - Fetch and inject web content with `@https://example.com/file.md`
+- **Include directive** - Compose AGENTS.md from multiple files: `<!-- include: ./docs/style.md -->`
+- **Hint templates** - Define reusable hint sets in `~/.ppxai/hint-templates.yaml`, reference with `- template: name`
+
 ### Changed
 
 - **Provider/model hints merging** - Hints from all scopes are combined (not replaced)
@@ -31,6 +38,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`find_bootstrap_files_by_scope()`** - Hierarchical scope discovery
 - **`ScopedBootstrapSource` dataclass** - Bootstrap file metadata with scope info
 - **`load_bootstrap_context_merged()`** - Scope-aware context loading with merge
+- **`inject_clipboard_context()`** - Clipboard content injection
+- **`inject_url_context()`** - URL content fetching with HTML-to-text conversion
+- **`_process_includes()`** - Recursive include directive processing with cycle detection
+- **`load_hint_templates()`** - Template loading from ~/.ppxai/hint-templates.yaml
+
+### Dependencies
+
+- **pyperclip>=1.8.0** - Cross-platform clipboard access for `@clipboard` provider
 
 ## [1.14.1] - 2026-01-21
 
