@@ -11,7 +11,10 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 **v1.14.2 highlights:**
 - **NEW:** Hierarchical context scopes - global (`~/.ppxai/`), project (git root), subdir (cwd)
 - **NEW:** `/context show` command - displays bootstrap sources with scope labels
-- **NEW:** `GET /context/bootstrap` endpoint - scoped bootstrap status API
+- **NEW:** `@clipboard` and `@url` context providers - inject clipboard text or web content
+- **NEW:** Include directive - `<!-- include: ./file.md -->` for modular AGENTS.md
+- **NEW:** Hint templates - reusable hints in `~/.ppxai/hint-templates.yaml`
+- **CHANGE:** Gemini default model updated to `gemini-2.5-flash` (2.0 deprecated March 2026)
 - **CHANGE:** Provider/model hints from all scopes merge additively
 
 **v1.14.1 highlights:**

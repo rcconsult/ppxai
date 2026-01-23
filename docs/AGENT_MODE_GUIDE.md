@@ -1,6 +1,6 @@
 # Agent Mode User Guide
 
-**Version**: v1.14.0+
+**Version**: v1.14.2+
 **Status**: Production Ready
 
 This guide explains how to use ppxai's autonomous agent mode for multi-step task execution.
@@ -139,10 +139,18 @@ Agent mode works seamlessly with context providers:
 | `@file` | Include file contents | `/agent Refactor @auth.py` |
 | `@git` | Include git diff | `/agent Review @git and fix issues` |
 | `@tree` | Include project structure | `/agent Suggest improvements for @tree` |
+| `@clipboard` | Include clipboard text (v1.14.2+) | `/agent Debug this error @clipboard` |
+| `@url` | Fetch web content (v1.14.2+) | `/agent Summarize @https://docs.example.com` |
 
 **Combined usage:**
 ```bash
 /agent Review my changes @git in the context of @tree and fix any bugs
+
+# Debug an error from clipboard
+/agent Analyze this stack trace @clipboard and suggest fixes
+
+# Implement based on documentation
+/agent Implement the API from @https://api.example.com/spec.json
 ```
 
 ---

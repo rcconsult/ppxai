@@ -7,7 +7,7 @@ Multi-provider AI chat interface for VS Code, powered by ppxai.
 - **Chat Panel**: Interactive AI chat in the sidebar with markdown rendering
 - **Message Timestamps**: Each message shows time and date (HH:MM:SS Mon DD)
 - **Time Dividers**: Visual separators between conversations (after 5min gap or date change)
-- **@file References**: Type `@filename` to include file content in your messages
+- **@file References**: Type `@filename` to include file content, `@clipboard` for clipboard text, `@url` for web content
 - **Autocomplete**:
   - `/` commands with descriptions
   - `@` file references with fuzzy search
@@ -184,7 +184,9 @@ Type these directly in the chat input:
 | `/help` | Show all available commands |
 | `/status` | Show current provider/model |
 | `/context` | Show context window usage and injected files |
+| `/context show` | Display bootstrap hierarchy with scope labels |
 | `/context clear` | Remove all injected context |
+| `/edit <file[:line]>` | Open file in VSCode editor (v1.14.1+) |
 | `/provider [id]` | Switch or list providers |
 | `/model [id]` | Switch or list models |
 | `/tools [enable\|disable]` | Manage AI tools |

@@ -1,13 +1,13 @@
 # Context Injection Guide
 
-**Version:** v1.14.0+
-**Last Updated:** 2026-01-19
+**Version:** v1.14.2+
+**Last Updated:** 2026-01-23
 
 ## Overview
 
 ppxai supports two types of context injection:
 
-1. **Runtime injection** (`@file`, `@git`, `@tree`) - Include content in specific messages
+1. **Runtime injection** (`@file`, `@git`, `@tree`, `@clipboard`, `@url`) - Include content in specific messages
 2. **Bootstrap context** (`AGENTS.md`) - Project instructions loaded at session start
 
 This guide covers runtime injection. For bootstrap context, see [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md).
@@ -148,6 +148,78 @@ ppxai/
 # Adjust max depth programmatically
 injector.inject_tree_context(max_depth=5)
 ```
+
+### 4. Clipboard Content (`@clipboard`) (v1.14.2+)
+
+Include text from your system clipboard in your message.
+
+**Syntax:**
+```
+@clipboard
+```
+
+**Examples:**
+```
+Explain this error @clipboard
+
+Debug the stack trace in @clipboard
+
+Convert this JSON @clipboard to YAML
+```
+
+**What's Included:**
+- Text content from system clipboard
+- Auto-detects language (Python, JSON, SQL, etc.)
+- Shows as code block with appropriate syntax highlighting
+
+**Limits:**
+- Maximum 50KB of clipboard content (truncated if larger)
+- Text only - binary clipboard data not supported
+- UI shows "(truncated)" indicator when content was cut
+
+**Requirements:**
+- `pyperclip` package (included in v1.14.2+)
+- On Linux: requires `xclip` or `xsel` installed
+
+### 5. URL Content (`@url`) (v1.14.2+)
+
+Fetch and include content from a web URL.
+
+**Syntax:**
+```
+@https://example.com/page.html
+@http://docs.example.com/api.md
+```
+
+**Examples:**
+```
+Summarize @https://docs.python.org/3/library/asyncio.html
+
+Compare this implementation to @https://github.com/user/repo/blob/main/example.py
+
+Explain the API in @https://api.example.com/docs/endpoints.md
+```
+
+**What's Included:**
+- Fetched web content (HTML converted to text, Markdown kept as-is)
+- Auto-detects content type from URL and headers
+- Handles redirects automatically
+
+**Supported Content Types:**
+- HTML pages (converted to plain text)
+- Markdown files
+- Plain text
+- JSON/YAML (syntax highlighted)
+
+**Limits:**
+- Maximum 100KB of fetched content (truncated if larger)
+- 30 second timeout for slow responses
+- Requires network access
+
+**Error Handling:**
+- 404 errors: Shows "URL not found" message
+- Timeout: Shows "Request timed out" message
+- SSL errors: Shows certificate error details
 
 ## Combined Usage
 
@@ -396,6 +468,7 @@ class InjectedContext:
 
 ## Version History
 
+- **v1.14.2** (2026-01-23): Added `@clipboard` and `@url` context providers
 - **v1.14.0** (2026-01-19): Added bootstrap context (AGENTS.md) - see [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md)
 - **v1.11.4** (2025-12-24): Added `@git` and `@tree` context providers
 - **v1.8.0** (2025-01-XX): Initial `@file` context injection

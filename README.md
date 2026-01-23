@@ -1,6 +1,6 @@
 # ppxai - Multi-LLM Interface for Developers
 
-![Version](https://img.shields.io/badge/version-1.14.1-blue) ![Tests](https://img.shields.io/badge/tests-752%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen)
+![Version](https://img.shields.io/badge/version-1.14.2-blue) ![Tests](https://img.shields.io/badge/tests-766%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen)
 
 **Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
 
@@ -51,7 +51,7 @@ ppxai-desktop
 - Full macOS setup: `curl -sSL ... | bash -s -- --with-macos-app --with-config --with-launchagent`
 - Uninstall: `curl -sSL ... | bash -s -- --uninstall`
 
-**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.14.1` (specific version), `-Uninstall`
+**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.14.2` (specific version), `-Uninstall`
 
 See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed installation options including Windows.
 
@@ -100,8 +100,8 @@ Switch providers anytime: `/provider gemini` or `/model gpt-4o`
 ### UX Highlights
 - **Full Markdown Rendering** - Tables, code blocks with syntax highlighting, clickable links (OSC 8), citations with URLs
 - **Context Preservation** - Switch providers/models mid-conversation without losing history. Start with cheap model, switch to powerful one when needed
-- **Smart Context Injection** - `@file` for code, `@git` for uncommitted changes, `@tree` for project structure. Hash-based deduplication prevents duplicate injections.
-- **Context Management** - `/context` shows usage vs model limit, `/context clear` removes injected files. Context badge shows percentage in TUI status line and VSCode header.
+- **Smart Context Injection** - `@file` for code, `@git` for uncommitted changes, `@tree` for project structure, `@clipboard` for clipboard text, `@url` for web content. Hash-based deduplication prevents duplicate injections.
+- **Context Management** - `/context` shows usage vs model limit, `/context show` displays bootstrap hierarchy, `/context clear` removes injected files. Context badge shows percentage in TUI status line and VSCode header.
 - **Cost Control** - Use Perplexity for research, Gemini for long context, local models for sensitive code—all in one session
 - **Real-time Usage Tracking** - Token counts and cost estimates in status line (`1.2K↓/0.5K↑ $0.0045`)
 - **Themed TUI Panels** - 4 themes: Standard, Tron Legacy, Matrix, Nord (`/theme` to switch)
@@ -117,11 +117,13 @@ See [docs/AGENT_MODE_GUIDE.md](docs/AGENT_MODE_GUIDE.md) for details.
 
 ### Bootstrap Context (v1.14.0+)
 Load project-specific instructions from `AGENTS.md` or `CLAUDE.md`:
-- **Auto-discovery** - Looks for `AGENTS.md`, then `CLAUDE.md` in project root
+- **Hierarchical scopes** (v1.14.2) - Global (`~/.ppxai/AGENTS.md`), project (git root), subdirectory (cwd)
+- **Auto-discovery** - Looks for `AGENTS.md`, then `CLAUDE.md` in each scope
 - **Provider hints** - Different instructions for Ollama vs Gemini vs OpenAI
 - **Model hints** - Pattern-matched guidance (e.g., `deepseek-r1*` gets reasoning prompts)
 - **`local` inheritance** - Ollama, vLLM, LMStudio inherit from `local` hints
-- **Dynamic assembly** - Hints change instantly when you switch provider/model
+- **Include directive** (v1.14.2) - `<!-- include: ./docs/style.md -->` for modular configs
+- **Hint templates** (v1.14.2) - Reusable hints in `~/.ppxai/hint-templates.yaml`
 
 Example `AGENTS.md`:
 ```markdown
@@ -140,7 +142,7 @@ model_hints:
 Python 3.11+, type hints required, pytest for testing.
 ```
 
-Use `/context hints` to see which hints are active for current provider/model.
+Use `/context hints` to see active hints, `/context show` to see bootstrap hierarchy.
 
 ### Checkpoint & Undo (v1.12.0+)
 Atomic rollback for multi-file agent operations:
@@ -248,7 +250,7 @@ ppxai/
 ├── vscode-extension/         # VSCode extension (TypeScript)
 ├── scripts/                  # Build, release, install scripts
 ├── resources/                # Icons (PNG, ICO, ICNS) and desktop files
-├── tests/                    # 707 tests
+├── tests/                    # 766 tests
 └── docs/                     # Documentation
 ```
 

@@ -1,16 +1,19 @@
 # Bootstrap Context Guide
 
-**Version:** v1.14.0+
-**Last Updated:** January 19, 2026
+**Version:** v1.14.2+
+**Last Updated:** January 23, 2026
 
 ## Overview
 
 Bootstrap context allows you to define project-specific instructions that are automatically loaded when starting a ppxai session. These instructions become part of the system prompt, guiding AI behavior for your specific project.
 
 **Key Features:**
+- **Hierarchical scopes** (v1.14.2) - Global, project, and subdirectory contexts that merge automatically
 - Auto-discovery of `AGENTS.md` or `CLAUDE.md` files
 - Provider-specific hints (different instructions for Ollama vs Gemini)
 - Model-specific hints with pattern matching
+- **Include directive** (v1.14.2) - Compose AGENTS.md from multiple files
+- **Hint templates** (v1.14.2) - Define reusable hint sets
 - Dynamic prompt assembly when switching provider/model
 - Debugging commands to see active hints
 
@@ -60,11 +63,19 @@ Your project instructions here...
 
 ### File Discovery
 
-ppxai searches for bootstrap files in this order:
+ppxai searches for bootstrap files in **hierarchical order** (v1.14.2+):
+
+1. **Global scope** - `~/.ppxai/AGENTS.md` (user-wide defaults)
+2. **Project scope** - `{git_root}/AGENTS.md` (repository-specific)
+3. **Subdirectory scope** - `{cwd}/AGENTS.md` (directory-specific overrides)
+
+Within each scope, it looks for these files in order:
 1. `AGENTS.md` (default, compatible with Claude Code)
 2. `CLAUDE.md` (fallback)
 
-You can customize this via configuration:
+Files from all scopes are **merged** - hints are additive, base instructions concatenate with source markers.
+
+You can customize the file list via configuration:
 
 ```json
 {
@@ -72,6 +83,28 @@ You can customize this via configuration:
     "files": ["AGENTS.md", "CLAUDE.md", "INSTRUCTIONS.md"]
   }
 }
+```
+
+### Viewing Active Context
+
+Use `/context show` to see which bootstrap files are loaded:
+
+```
+/context show
+
+Bootstrap Context
+
+Sources: (2 files)
+1. /Users/you/.ppxai/AGENTS.md
+   [🌐 global] 1.4 KB
+2. /Users/you/project/AGENTS.md
+   [📁 project] 3.9 KB
+
+Total: 5.3 KB (~1,325 tokens)
+
+Hints Defined:
+  Provider: local, ollama, perplexity
+  Model: deepseek*, qwen*
 ```
 
 ## Provider Hints
@@ -289,6 +322,71 @@ Files are checked in order; first match wins.
 ```
 
 An empty list disables bootstrap context (equivalent to `enabled: false`).
+
+## Include Directive (v1.14.2+)
+
+Compose your AGENTS.md from multiple files using include directives:
+
+```markdown
+---
+provider_hints:
+  local:
+    - "Follow project conventions."
+---
+
+# Project Instructions
+
+<!-- include: ./docs/coding-standards.md -->
+<!-- include: ./docs/api-conventions.md -->
+```
+
+**Features:**
+- Paths are relative to the AGENTS.md file location
+- Max include depth: 5 levels (prevents infinite loops)
+- Cycle detection: circular includes are detected and reported
+- Missing files: shown as `<!-- include failed: path/to/file.md (not found) -->`
+
+**Use Cases:**
+- Share coding standards across multiple projects
+- Keep domain-specific instructions in separate files
+- Include generated documentation
+
+## Hint Templates (v1.14.2+)
+
+Define reusable hint sets in `~/.ppxai/hint-templates.yaml`:
+
+```yaml
+templates:
+  tool-heavy:
+    - "Use tools proactively without asking."
+    - "Execute multiple tool calls in sequence."
+    - "Don't stop on empty responses - continue working."
+
+  concise:
+    - "Keep responses brief and focused."
+    - "Use bullet points for lists."
+
+  reasoning:
+    - "Show your reasoning process before taking actions."
+    - "Explain trade-offs when making decisions."
+```
+
+Reference templates in AGENTS.md:
+
+```yaml
+provider_hints:
+  ollama:
+    - template: tool-heavy
+    - template: concise
+    - "Custom project-specific hint"
+  gemini:
+    - template: reasoning
+```
+
+**Benefits:**
+- Consistent hints across projects
+- Easy to update hints in one place
+- Mix templates with custom hints
 
 ## Best Practices
 

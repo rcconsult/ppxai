@@ -13,10 +13,10 @@
 
 | Document | Description |
 |----------|-------------|
-| [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md) | Project-specific instructions via AGENTS.md (v1.14.0+) |
+| [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md) | Project-specific instructions via AGENTS.md (v1.14.0+, hierarchical scopes v1.14.2+) |
 | [File Editing Guide](FILE_EDITING_GUIDE.md) | AI-powered file editing with user consent |
 | [Shell Consent Guide](SHELL_CONSENT_GUIDE.md) | Shell command security with consent system |
-| [Context Injection Guide](CONTEXT-INJECTION.md) | `@file`, `@git`, `@tree` context providers |
+| [Context Injection Guide](CONTEXT-INJECTION.md) | `@file`, `@git`, `@tree`, `@clipboard`, `@url` context providers |
 | [Provider Setup Guide](PROVIDER_SETUP.md) | Configure AI providers (OpenAI, Gemini, Perplexity) |
 | [Autorouter Config](AUTOROUTER-CONFIG.md) | Automatic model routing for coding tasks |
 | [Custom Tool Development](CUSTOM_TOOL_DEVELOPMENT_GUIDE.md) | Create your own tools for ppxai |
@@ -134,7 +134,7 @@ engine = EngineClient()
 
 # Configure
 engine.set_provider("gemini")
-engine.set_model("gemini-2.0-flash")
+engine.set_model("gemini-2.5-flash")
 
 # Enable tools
 engine.enable_tools()
@@ -200,5 +200,5 @@ A: Type `@filename`, `@git`, or `@tree` in your messages. See [Context Injection
 
 ---
 
-**Current Version**: v1.14.0
-**Last Updated**: 2026-01-19
+**Current Version**: v1.14.2
+**Last Updated**: 2026-01-23
