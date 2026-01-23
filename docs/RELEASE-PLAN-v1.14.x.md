@@ -899,16 +899,15 @@ https://rcconsult.github.io/ppxai/
 - [x] Add timeout/error handling for URL fetch
 - [x] Add tests for context providers
 
-### v1.14.4 - Documentation Site (GitHub Pages)
-- [ ] Create `mkdocs.yml` configuration file
-- [ ] Create `docs/index.md` landing page
-- [ ] Create `.github/workflows/docs.yml` workflow
-- [ ] Enable GitHub Pages in repository settings
-- [ ] Test local preview with `mkdocs serve`
-- [ ] Deploy initial version with `mike`
-- [ ] Verify versioned docs work correctly
-- [ ] Add docs deployment step to release script
-- [ ] Update README with docs site link
+### v1.14.4 - Documentation Site (GitHub Pages) ✅ Complete
+- [x] Create `mkdocs.yml` configuration file
+- [x] Create `docs/index.md` landing page
+- [x] Create `.github/workflows/docs.yml` workflow
+- [x] Enable GitHub Pages in repository settings
+- [x] Deploy initial version with `mike`
+- [x] Verify versioned docs work correctly
+- [ ] Add docs deployment step to release script (optional - workflow auto-deploys on tags)
+- [x] Update README with docs site link
 
 ---
 
