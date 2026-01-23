@@ -1714,6 +1714,70 @@ Review your previous actions and continue. If the task is complete, respond with
                     type: 'systemMessage',
                     content: msg
                 });
+            } else if (subcommand === 'show') {
+                // Show bootstrap context hierarchy (v1.14.2)
+                const status = await this._backend.getBootstrapStatus();
+
+                if (!status.loaded) {
+                    const workingDir = await this._backend.getWorkingDir();
+                    let msg = '**No bootstrap context loaded.**\n';
+                    msg += `Working directory: \`${workingDir || 'unknown'}\`\n\n`;
+                    msg += '*Scope search order:*\n';
+                    msg += '1. `~/.ppxai/AGENTS.md` (global)\n';
+                    msg += '2. `{git_root}/AGENTS.md` (project)\n';
+                    msg += '3. `{cwd}/AGENTS.md` (subdir)\n\n';
+                    msg += '*Create AGENTS.md or CLAUDE.md in any of these locations.*';
+                    this._view.webview.postMessage({
+                        type: 'systemMessage',
+                        content: msg
+                    });
+                    return;
+                }
+
+                const sources = status.sources || [];
+                const totalSize = status.total_size || 0;
+                const charCount = status.char_count || 0;
+                const estimatedTokens = Math.floor(charCount / 4);
+
+                let msg = '**Bootstrap Context**\n\n';
+                msg += `**Sources:** (${sources.length} file${sources.length !== 1 ? 's' : ''})\n`;
+
+                const scopeBadges: Record<string, string> = {
+                    'global': '🌐 global',
+                    'project': '📁 project',
+                    'subdir': '📂 subdir'
+                };
+
+                for (let i = 0; i < sources.length; i++) {
+                    const src = sources[i];
+                    const sizeKb = (src.size / 1024).toFixed(1);
+                    const badge = scopeBadges[src.scope] || src.scope;
+                    msg += `${i + 1}. \`${src.path}\`\n`;
+                    msg += `   [${badge}] ${sizeKb} KB\n`;
+                }
+
+                const totalKb = (totalSize / 1024).toFixed(1);
+                msg += `\n**Total:** ${totalKb} KB (~${estimatedTokens.toLocaleString()} tokens)\n`;
+
+                // Hints summary
+                if (status.has_hints) {
+                    msg += '\n**Hints Defined:**\n';
+                    if (status.provider_hints && status.provider_hints.length > 0) {
+                        msg += `  Provider: ${status.provider_hints.join(', ')}\n`;
+                    }
+                    if (status.model_hints && status.model_hints.length > 0) {
+                        msg += `  Model: ${status.model_hints.join(', ')}\n`;
+                    }
+                } else {
+                    msg += '\n**Hints:** *none defined*\n';
+                }
+
+                msg += '\n*Tip: `/context hints` shows active hints for current provider/model*';
+
+                this._view.webview.postMessage({
+                    type: 'systemMessage',
+                    content: msg
+                });
             } else {
                 // Show context usage info
                 const info = await this._backend.getContextInfo();

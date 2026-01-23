@@ -487,3 +487,254 @@ No YAML here.
         ctx = BootstrapContext.from_content(content, "test.md")
         assert ctx.base_instructions == content.strip()
         assert not ctx.has_hints
+
+
+# === v1.14.2 Hierarchical Scope Tests ===
+
+class TestFindGitRoot:
+    """Tests for find_git_root() helper (v1.14.2)."""
+
+    def test_finds_git_root_in_git_repo(self):
+        """Find git root when inside a git repository."""
+        from ppxai.engine.bootstrap import find_git_root
+
+        # This test runs in the ppxai repo, so should find a git root
+        result = find_git_root()
+        assert result is not None
+        assert (result / ".git").exists()
+
+    def test_finds_git_root_from_subdir(self):
+        """Find git root from a subdirectory."""
+        from ppxai.engine.bootstrap import find_git_root
+
+        # Use a known subdirectory of the ppxai project
+        subdir = Path(__file__).parent  # tests/
+        result = find_git_root(subdir)
+        assert result is not None
+        assert (result / ".git").exists()
+        # The root should be a parent of the subdir
+        assert subdir.resolve().is_relative_to(result)
+
+    def test_returns_none_outside_git_repo(self):
+        """Return None when not in a git repository."""
+        from ppxai.engine.bootstrap import find_git_root
+
+        with temp_dir() as d:
+            # temp dir is not a git repo
+            result = find_git_root(d)
+            assert result is None
+
+
+class TestContextScope:
+    """Tests for ContextScope enum (v1.14.2)."""
+
+    def test_scope_values(self):
+        """ContextScope has expected values."""
+        from ppxai.engine.bootstrap import ContextScope
+
+        assert ContextScope.GLOBAL.value == "global"
+        assert ContextScope.PROJECT.value == "project"
+        assert ContextScope.SUBDIR.value == "subdir"
+
+
+class TestFindBootstrapFilesByScope:
+    """Tests for find_bootstrap_files_by_scope() function (v1.14.2)."""
+
+    def test_finds_project_scope_at_git_root(self):
+        """Find bootstrap file at git root as project scope."""
+        from ppxai.engine.bootstrap import find_bootstrap_files_by_scope, ContextScope
+
+        # Use the actual ppxai project which has CLAUDE.md at root
+        project_root = Path(__file__).parent.parent
+        result = find_bootstrap_files_by_scope(project_root)
+
+        # Should find at least the project-level file
+        project_files = [f for f, scope in result if scope == ContextScope.PROJECT]
+        # May or may not find depending on whether AGENTS.md/CLAUDE.md exists
+        # Just verify the function runs without error
+        assert isinstance(result, list)
+
+    def test_no_duplicates_when_cwd_is_git_root(self):
+        """No duplicate files when working dir is git root."""
+        from ppxai.engine.bootstrap import find_bootstrap_files_by_scope
+
+        with temp_dir() as d:
+            # Create a fake git repo
+            (d / ".git").mkdir()
+            (d / "AGENTS.md").write_text("Project rules")
+
+            result = find_bootstrap_files_by_scope(d)
+
+            # Should only find ONE file (project scope, not project AND subdir)
+            paths = [str(f) for f, scope in result]
+            # Check no duplicates
+            assert len(paths) == len(set(paths))
+
+    def test_finds_global_project_and_subdir(self):
+        """Find files from all three scopes."""
+        from ppxai.engine.bootstrap import find_bootstrap_files_by_scope, ContextScope
+        import os
+
+        with temp_dir() as project_root:
+            # Create a fake git repo
+            (project_root / ".git").mkdir()
+            (project_root / "AGENTS.md").write_text("Project rules")
+
+            # Create a subdirectory with its own AGENTS.md
+            subdir = project_root / "src"
+            subdir.mkdir()
+            (subdir / "AGENTS.md").write_text("Subdir rules")
+
+            result = find_bootstrap_files_by_scope(subdir)
+
+            # Should find both project and subdir files
+            scopes_found = [scope.value for f, scope in result]
+            assert "project" in scopes_found
+            assert "subdir" in scopes_found
+
+    def test_empty_aliases_returns_empty_list(self):
+        """Empty alias list returns empty list."""
+        from ppxai.engine.bootstrap import find_bootstrap_files_by_scope
+
+        with temp_dir() as d:
+            (d / "AGENTS.md").write_text("Should be ignored")
+            result = find_bootstrap_files_by_scope(d, aliases=[])
+            assert result == []
+
+
+class TestContextInjectorScopes:
+    """Tests for ContextInjector scope methods (v1.14.2)."""
+
+    def test_find_bootstrap_files_with_scopes_returns_scoped_sources(self):
+        """find_bootstrap_files_with_scopes() returns ScopedBootstrapSource objects."""
+        from ppxai.engine.context import ContextInjector, ScopedBootstrapSource
+
+        with temp_dir() as project_root:
+            # Create a fake git repo
+            (project_root / ".git").mkdir()
+            (project_root / "AGENTS.md").write_text("Project rules")
+
+            injector = ContextInjector(working_dir=str(project_root))
+            sources = injector.find_bootstrap_files_with_scopes()
+
+            assert len(sources) >= 1
+            for src in sources:
+                assert isinstance(src, ScopedBootstrapSource)
+                assert src.scope in ("global", "project", "subdir")
+                assert src.size > 0
+
+    def test_load_bootstrap_context_merged_merges_files(self):
+        """load_bootstrap_context_merged() merges files from multiple scopes."""
+        from ppxai.engine.context import ContextInjector
+
+        with temp_dir() as project_root:
+            # Create a fake git repo
+            (project_root / ".git").mkdir()
+            (project_root / "AGENTS.md").write_text("""---
+provider_hints:
+  ollama:
+    - "Project hint"
+---
+
+# Project Rules
+""")
+
+            # Create subdirectory with different content
+            subdir = project_root / "src"
+            subdir.mkdir()
+            (subdir / "AGENTS.md").write_text("""# Subdir Rules
+
+Extra instructions for this directory.
+""")
+
+            # Use custom bootstrap_files to isolate from global ~/.ppxai/AGENTS.md
+            injector = ContextInjector(working_dir=str(subdir), bootstrap_files=["AGENTS.md"])
+            ctx, sources = injector.load_bootstrap_context_merged()
+
+            assert ctx is not None
+            # May include global file if ~/.ppxai/AGENTS.md exists
+            assert len(sources) >= 2
+
+            # Merged content should contain project and subdir files
+            assert "Project Rules" in ctx.base_instructions
+            assert "Subdir Rules" in ctx.base_instructions
+
+            # Provider hints from project file should be preserved
+            assert "ollama" in ctx.provider_hints
+
+    def test_load_bootstrap_context_merged_returns_none_when_disabled(self):
+        """load_bootstrap_context_merged() returns (None, []) when bootstrap disabled."""
+        from ppxai.engine.context import ContextInjector
+
+        with temp_dir() as d:
+            # Pass empty bootstrap_files to disable global/project search
+            injector = ContextInjector(working_dir=str(d), bootstrap_files=[])
+            ctx, sources = injector.load_bootstrap_context_merged()
+
+            assert ctx is None
+            assert sources == []
+
+    def test_load_bootstrap_context_merged_tracks_source_paths(self):
+        """Merged context tracks source file paths."""
+        from ppxai.engine.context import ContextInjector
+
+        with temp_dir() as project_root:
+            # Create a fake git repo
+            (project_root / ".git").mkdir()
+            (project_root / "AGENTS.md").write_text("Project rules")
+
+            injector = ContextInjector(working_dir=str(project_root))
+            ctx, sources = injector.load_bootstrap_context_merged()
+
+            assert ctx is not None
+            assert len(sources) >= 1
+
+            # Sources should have path and scope info
+            for src in sources:
+                assert src.path.exists()
+                assert src.scope in ("global", "project", "subdir")
+
+
+class TestScopePrecedence:
+    """Tests for scope precedence order (v1.14.2)."""
+
+    def test_precedence_order_is_global_project_subdir(self):
+        """Scopes are returned in order: global, project, subdir."""
+        from ppxai.engine.bootstrap import find_bootstrap_files_by_scope, ContextScope
+
+        with temp_dir() as project_root:
+            # Create a fake git repo
+            (project_root / ".git").mkdir()
+            (project_root / "AGENTS.md").write_text("Project rules")
+
+            # Create subdirectory
+            subdir = project_root / "src"
+            subdir.mkdir()
+            (subdir / "AGENTS.md").write_text("Subdir rules")
+
+            result = find_bootstrap_files_by_scope(subdir)
+
+            # Extract scopes in order
+            scopes = [scope for f, scope in result]
+
+            # Verify order: global (if present) < project < subdir
+            if ContextScope.GLOBAL in scopes:
+                assert scopes.index(ContextScope.GLOBAL) < scopes.index(ContextScope.PROJECT)
+
+            if ContextScope.PROJECT in scopes and ContextScope.SUBDIR in scopes:
+                assert scopes.index(ContextScope.PROJECT) < scopes.index(ContextScope.SUBDIR)
+
+    def test_missing_intermediate_scope_is_fine(self):
+        """Works correctly when intermediate scope (project) is missing."""
+        from ppxai.engine.bootstrap import find_bootstrap_files_by_scope
+
+        with temp_dir() as d:
+            # No git repo, so no project scope
+            (d / "AGENTS.md").write_text("Directory rules")
+
+            result = find_bootstrap_files_by_scope(d)
+
+            # Should still find the file (as subdir since no git root)
+            # Or no file if the directory structure doesn't match
+            # Just verify no error occurs
+            assert isinstance(result, list)

@@ -2,10 +2,13 @@
 Bootstrap context loading from AGENTS.md / CLAUDE.md files.
 
 v1.14.0: Initial implementation with configurable file aliases and YAML front matter.
+v1.14.2: Hierarchical context scopes (global, project, subdir) with merge support.
 
 This module provides:
 - BootstrapContext: Parses AGENTS.md with optional YAML front matter for provider/model hints
 - find_bootstrap_file(): Discovers bootstrap files using configurable alias list
+- find_git_root(): Finds git repository root for project scope
+- ContextScope: Enum for scope labels (global, project, subdir)
 - Prompt assembly with dynamic provider/model-aware hints
 
 File Format:
@@ -24,12 +27,27 @@ model_hints:
 # Project Instructions
 Your content here...
 ```
+
+Scope Precedence (v1.14.2):
+1. ~/.ppxai/AGENTS.md (global defaults)
+2. {git_root}/AGENTS.md (project-specific)
+3. {cwd}/AGENTS.md (subdirectory overrides)
 """
 
+import os
 import re
+import subprocess
+from enum import Enum
 from pathlib import Path
-from typing import Any, Optional, Dict, List
+from typing import Any, Optional, Dict, List, Tuple
 from dataclasses import dataclass, field
+
+
+class ContextScope(Enum):
+    """Scope levels for bootstrap context files (v1.14.2)."""
+    GLOBAL = "global"      # ~/.ppxai/AGENTS.md
+    PROJECT = "project"    # {git_root}/AGENTS.md
+    SUBDIR = "subdir"      # {cwd}/AGENTS.md
 
 
 # Local providers that inherit from 'local' hints
@@ -359,3 +377,121 @@ def is_bootstrap_enabled() -> bool:
         return config.get("enabled", True)
     except ImportError:
         return True
+
+
+def find_git_root(start_path: Optional[Path] = None) -> Optional[Path]:
+    """Find the git repository root starting from a given path.
+
+    Walks up the directory tree looking for a .git directory.
+    Falls back to `git rev-parse --show-toplevel` if needed.
+
+    Args:
+        start_path: Starting directory (default: current working directory)
+
+    Returns:
+        Path to git root, or None if not in a git repository
+    """
+    if start_path is None:
+        start_path = Path.cwd()
+
+    start_path = Path(start_path).resolve()
+
+    # Method 1: Walk up looking for .git directory (fast, no subprocess)
+    current = start_path
+    while current != current.parent:
+        git_dir = current / ".git"
+        if git_dir.exists():
+            return current
+        current = current.parent
+
+    # Check root as well
+    if (current / ".git").exists():
+        return current
+
+    # Method 2: Fall back to git command (handles worktrees, submodules)
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=str(start_path),
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return Path(result.stdout.strip())
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        pass
+
+    return None
+
+
+def get_global_config_dir() -> Path:
+    """Get the global ppxai config directory.
+
+    Returns:
+        Path to ~/.ppxai/
+    """
+    return Path.home() / ".ppxai"
+
+
+def find_bootstrap_files_by_scope(
+    working_dir: Path,
+    aliases: Optional[List[str]] = None
+) -> List[Tuple[Path, ContextScope]]:
+    """Find bootstrap files across all scopes (v1.14.2).
+
+    Searches in precedence order:
+    1. Global: ~/.ppxai/AGENTS.md
+    2. Project: {git_root}/AGENTS.md
+    3. Subdir: {cwd}/AGENTS.md (if different from git root)
+
+    Args:
+        working_dir: Current working directory
+        aliases: List of filenames to check (default: DEFAULT_BOOTSTRAP_FILES)
+
+    Returns:
+        List of (path, scope) tuples in precedence order (global first).
+        Only includes files that exist. Each scope returns at most one file.
+    """
+    if aliases is None:
+        aliases = get_bootstrap_files_config()
+
+    if not aliases:
+        return []  # Bootstrap disabled
+
+    results: List[Tuple[Path, ContextScope]] = []
+    seen_paths: set[Path] = set()  # Avoid duplicates
+
+    working_dir = Path(working_dir).resolve()
+
+    # 1. Global scope: ~/.ppxai/
+    global_dir = get_global_config_dir()
+    if global_dir.exists() and global_dir.is_dir():
+        global_file = find_bootstrap_file(global_dir, aliases)
+        if global_file:
+            resolved = global_file.resolve()
+            results.append((resolved, ContextScope.GLOBAL))
+            seen_paths.add(resolved)
+
+    # 2. Project scope: git root
+    git_root = find_git_root(working_dir)
+    if git_root:
+        project_file = find_bootstrap_file(git_root, aliases)
+        if project_file:
+            resolved = project_file.resolve()
+            if resolved not in seen_paths:
+                results.append((resolved, ContextScope.PROJECT))
+                seen_paths.add(resolved)
+
+    # 3. Subdir scope: working directory (if different from git root)
+    # Only add if cwd is different from git root
+    if working_dir != git_root:
+        subdir_file = find_bootstrap_file(working_dir, aliases)
+        if subdir_file:
+            resolved = subdir_file.resolve()
+            if resolved not in seen_paths:
+                results.append((resolved, ContextScope.SUBDIR))
+                seen_paths.add(resolved)
+
+    return results

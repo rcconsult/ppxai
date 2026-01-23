@@ -1213,18 +1213,44 @@ async def get_active_hints(x_session_id: Optional[str] = Header(None)):
     }
 
 
-@app.post("/context/reload")
-async def reload_bootstrap_context(x_session_id: Optional[str] = Header(None)):
-    """Reload bootstrap context from disk (v1.14.1).
+@app.get("/context/bootstrap")
+async def get_bootstrap_status(x_session_id: Optional[str] = Header(None)):
+    """Get bootstrap context hierarchy with scope information (v1.14.2).
 
-    Reloads the AGENTS.md/CLAUDE.md bootstrap context file from the working
-    directory. Useful after editing the bootstrap file to pick up changes
-    without restarting the server.
+    Returns detailed information about loaded bootstrap files including
+    their scopes (global, project, subdir).
 
     Returns:
-        JSON: {"success", "source", "loaded"}
+        - loaded: bool - whether bootstrap context is loaded
+        - sources: List[Dict] - scoped sources with path, scope, size
+        - source_paths: List[str] - simple list of paths (backwards compat)
+        - char_count: int - total characters
+        - has_hints: bool - whether hints are defined
+        - provider_hints: List[str] - providers with hints
+        - model_hints: List[str] - model patterns with hints
+        - total_size: int - total size in bytes
+    """
+    session_id, engine, _ = await get_or_create_session(x_session_id)
+
+    status = engine.get_bootstrap_status()
+    return {
+        **status,
+        "session_id": session_id
+    }
+
+
+@app.post("/context/reload")
+async def reload_bootstrap_context(x_session_id: Optional[str] = Header(None)):
+    """Reload bootstrap context from disk (v1.14.1, v1.14.2 scopes).
+
+    Reloads bootstrap context files from all scopes (global, project, subdir).
+    Useful after editing bootstrap files to pick up changes without restarting.
+
+    Returns:
+        JSON: {"success", "loaded", "sources": [...], "char_count", ...}
 
     v1.14.1: Added for VSCode /context reload command.
+    v1.14.2: Returns full scoped source info.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
@@ -1235,8 +1261,7 @@ async def reload_bootstrap_context(x_session_id: Optional[str] = Header(None)):
 
     return {
         "success": success,
-        "source": status.get("source"),
-        "loaded": status.get("loaded", False),
+        **status,
         "session_id": session_id
     }
 

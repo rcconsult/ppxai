@@ -7,18 +7,19 @@ eliminating the need for tool calls for simple file reading operations.
 v1.13.9: Configurable max_injection_size via ppxai-config.json
 v1.13.10: Content hash deduplication to prevent duplicate injections
 v1.14.0: Bootstrap context loading from AGENTS.md/CLAUDE.md
+v1.14.2: Hierarchical context scopes (global, project, subdir)
 """
 
 import hashlib
 import re
 import os
 from pathlib import Path
-from typing import List, Tuple, Optional, Set, TYPE_CHECKING
+from typing import List, Tuple, Optional, Set, Dict, TYPE_CHECKING
 
 from dataclasses import dataclass
 
 if TYPE_CHECKING:
-    from .bootstrap import BootstrapContext
+    from .bootstrap import BootstrapContext, ContextScope
 
 
 @dataclass
@@ -30,6 +31,15 @@ class InjectedContext:
     truncated: bool      # whether content was truncated
     size: int            # original size in bytes
     hash: str = ""       # content hash for deduplication
+
+
+@dataclass
+class ScopedBootstrapSource:
+    """Bootstrap file with scope information (v1.14.2)."""
+    path: Path           # Full path to bootstrap file
+    scope: str           # "global", "project", or "subdir"
+    size: int            # File size in bytes
+    content: str = ""    # File content (loaded on demand)
 
 
 def compute_content_hash(content: str) -> str:
@@ -180,6 +190,9 @@ class ContextInjector:
         Searches for files in the configured alias list, returning the first match.
         Only one file is returned per directory (first match wins).
 
+        NOTE: This is the legacy method for backwards compatibility.
+        For hierarchical scopes, use find_bootstrap_files_with_scopes() instead.
+
         Returns:
             List containing the first matching bootstrap file, or empty list
         """
@@ -207,6 +220,47 @@ class ContextInjector:
 
         return []
 
+    def find_bootstrap_files_with_scopes(self) -> List[ScopedBootstrapSource]:
+        """Find bootstrap files across all scopes (v1.14.2).
+
+        Searches in precedence order:
+        1. Global: ~/.ppxai/AGENTS.md
+        2. Project: {git_root}/AGENTS.md
+        3. Subdir: {cwd}/AGENTS.md (if different from git root)
+
+        Returns:
+            List of ScopedBootstrapSource in precedence order (global first)
+        """
+        # Check if bootstrap is enabled
+        try:
+            from ..config import is_bootstrap_enabled
+            if not is_bootstrap_enabled():
+                return []
+        except ImportError:
+            pass
+
+        from .bootstrap import find_bootstrap_files_by_scope
+
+        work_dir = Path(self.working_dir)
+        if not work_dir.exists() or not work_dir.is_dir():
+            return []
+
+        scoped_files = find_bootstrap_files_by_scope(work_dir, self.bootstrap_files)
+
+        results: List[ScopedBootstrapSource] = []
+        for path, scope in scoped_files:
+            try:
+                size = path.stat().st_size
+                results.append(ScopedBootstrapSource(
+                    path=path,
+                    scope=scope.value,
+                    size=size
+                ))
+            except OSError:
+                continue
+
+        return results
+
     def load_bootstrap_context(self) -> Optional["BootstrapContext"]:
         """Load and parse bootstrap context from working directory.
 
@@ -223,6 +277,74 @@ class ContextInjector:
             return BootstrapContext.from_file(files[0])
         except Exception:
             return None
+
+    def load_bootstrap_context_merged(self) -> Tuple[Optional["BootstrapContext"], List[ScopedBootstrapSource]]:
+        """Load and merge bootstrap context from all scopes (v1.14.2).
+
+        Merges files from global → project → subdir:
+        - Provider/model hints are combined (additive)
+        - Base instructions are concatenated with source markers
+
+        Returns:
+            Tuple of (merged BootstrapContext, list of ScopedBootstrapSource)
+        """
+        from .bootstrap import BootstrapContext
+
+        sources = self.find_bootstrap_files_with_scopes()
+        if not sources:
+            return None, []
+
+        # Parse each file individually to preserve YAML front matter parsing
+        parsed_contexts: List[Tuple[BootstrapContext, ScopedBootstrapSource]] = []
+        for source in sources:
+            try:
+                source.content = source.path.read_text(encoding="utf-8", errors="replace")
+                ctx = BootstrapContext.from_content(source.content, str(source.path))
+                parsed_contexts.append((ctx, source))
+            except OSError:
+                continue
+
+        if not parsed_contexts:
+            return None, []
+
+        # Merge provider_hints and model_hints (additive)
+        merged_provider_hints: Dict[str, List[str]] = {}
+        merged_model_hints: Dict[str, List[str]] = {}
+
+        # Combine base instructions with source markers
+        instruction_parts: List[str] = []
+
+        for ctx, source in parsed_contexts:
+            # Add provider hints (merge lists, don't overwrite)
+            for provider, hints in ctx.provider_hints.items():
+                if provider not in merged_provider_hints:
+                    merged_provider_hints[provider] = []
+                merged_provider_hints[provider].extend(hints)
+
+            # Add model hints (merge lists, don't overwrite)
+            for pattern, hints in ctx.model_hints.items():
+                if pattern not in merged_model_hints:
+                    merged_model_hints[pattern] = []
+                merged_model_hints[pattern].extend(hints)
+
+            # Add base instructions with source marker
+            if ctx.base_instructions:
+                marker = f"<!-- Source: {source.path} [{source.scope}] -->"
+                instruction_parts.append(f"{marker}\n{ctx.base_instructions}")
+
+        # Build merged context
+        merged_instructions = "\n\n---\n\n".join(instruction_parts) if instruction_parts else ""
+
+        # Create final merged context
+        merged_ctx = BootstrapContext(
+            source_file=f"merged ({len(parsed_contexts)} files)",
+            base_instructions=merged_instructions,
+            provider_hints=merged_provider_hints,
+            model_hints=merged_model_hints,
+            raw_content=merged_instructions,
+        )
+
+        return merged_ctx, sources
 
     def detect_file_references(self, message: str) -> List[str]:
         """Detect file paths mentioned in the message.

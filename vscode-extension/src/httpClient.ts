@@ -567,6 +567,40 @@ export class HttpClient {
     }
 
     /**
+     * Get bootstrap context status with scoped sources (v1.14.2)
+     *
+     * Returns detailed information about loaded bootstrap files including
+     * their scopes (global, project, subdir).
+     */
+    async getBootstrapStatus(): Promise<{
+        loaded: boolean;
+        sources: Array<{ path: string; scope: string; size: number }>;
+        source_paths: string[];
+        char_count: number;
+        has_hints: boolean;
+        provider_hints: string[];
+        model_hints: string[];
+        total_size: number;
+    }> {
+        const response = await fetch(`${this.baseUrl}/context/bootstrap`, {
+            headers: this.getHeaders()
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to get bootstrap status: ${response.statusText}`);
+        }
+        return response.json() as Promise<{
+            loaded: boolean;
+            sources: Array<{ path: string; scope: string; size: number }>;
+            source_paths: string[];
+            char_count: number;
+            has_hints: boolean;
+            provider_hints: string[];
+            model_hints: string[];
+            total_size: number;
+        }>;
+    }
+
+    /**
      * Write file contents (v1.14.1)
      *
      * Writes content to a file in the working directory.

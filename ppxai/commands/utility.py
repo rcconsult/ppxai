@@ -243,12 +243,76 @@ def _show_active_hints(handler: "CommandHandler", console) -> None:
     console.print("[dim]Use /context to see full context usage[/dim]\n")
 
 
+def _show_bootstrap_hierarchy(handler: "CommandHandler", console) -> None:
+    """Display bootstrap context hierarchy with scope information (v1.14.2)."""
+    from pathlib import Path
+
+    status = handler.engine_client.get_bootstrap_status()
+
+    if not status["loaded"]:
+        console.print("\n[yellow]No bootstrap context loaded.[/yellow]")
+        cwd = handler.engine_client.get_working_dir() or "unknown"
+        console.print(f"[dim]Working directory: {cwd}[/dim]")
+        console.print("\n[dim]Scope search order:[/dim]")
+        console.print("  [dim]1. ~/.ppxai/AGENTS.md (global)[/dim]")
+        console.print("  [dim]2. {git_root}/AGENTS.md (project)[/dim]")
+        console.print("  [dim]3. {cwd}/AGENTS.md (subdir)[/dim]")
+        console.print("\n[dim]Create AGENTS.md or CLAUDE.md in any of these locations.[/dim]\n")
+        return
+
+    console.print("\n[bold cyan]━━━ Bootstrap Context ━━━[/bold cyan]")
+
+    # Show sources with scope labels
+    sources = status.get("sources", [])
+    total_size = status.get("total_size", 0)
+
+    console.print(f"\n[cyan]Sources:[/cyan] ({len(sources)} file{'s' if len(sources) != 1 else ''})")
+
+    for i, src in enumerate(sources, 1):
+        path = src["path"]
+        scope = src["scope"]
+        size_kb = src["size"] / 1024
+
+        # Color-code by scope
+        scope_color = {
+            "global": "blue",
+            "project": "green",
+            "subdir": "yellow",
+        }.get(scope, "white")
+
+        console.print(f"  {i}. {path}")
+        console.print(f"     [{scope_color}][{scope}][/{scope_color}] {size_kb:.1f} KB")
+
+    # Total size
+    total_kb = total_size / 1024
+    estimated_tokens = status.get("char_count", 0) // 4  # Rough estimate
+    console.print(f"\n[cyan]Total:[/cyan] {total_kb:.1f} KB (~{estimated_tokens:,} tokens)")
+
+    # Show hints summary
+    if status.get("has_hints"):
+        provider_hints = status.get("provider_hints", [])
+        model_hints = status.get("model_hints", [])
+        console.print(f"\n[cyan]Hints Defined:[/cyan]")
+        if provider_hints:
+            console.print(f"  Provider: {', '.join(provider_hints)}")
+        if model_hints:
+            console.print(f"  Model: {', '.join(model_hints)}")
+    else:
+        console.print(f"\n[cyan]Hints:[/cyan] [dim]none defined[/dim]")
+
+    # Tips
+    console.print("\n[dim]Tips:[/dim]")
+    console.print("  [dim]- /context hints - See active hints for current provider/model[/dim]")
+    console.print("  [dim]- /context reload - Refresh from disk[/dim]\n")
+
+
 def handle_context(handler: "CommandHandler", args: str) -> None:
     """Handle /context command - context usage information.
 
     Args:
         handler: CommandHandler instance providing context
-        args: "clear" to remove injected content, "hints" to show active hints
+        args: "clear" to remove injected content, "hints" to show active hints,
+              "show" to display bootstrap context hierarchy (v1.14.2)
     """
     from ..ui import console
 
@@ -275,18 +339,27 @@ def handle_context(handler: "CommandHandler", args: str) -> None:
         _show_active_hints(handler, console)
         return
 
+    if parts and parts[0].lower() == "show":
+        # Show bootstrap context hierarchy (v1.14.2)
+        _show_bootstrap_hierarchy(handler, console)
+        return
+
     if parts and parts[0].lower() == "reload":
         # Reload bootstrap context from disk (v1.14.1)
         if handler.engine_client.reload_bootstrap_context():
             status = handler.engine_client.get_bootstrap_status()
-            source = status.get('source', 'unknown')
+            sources = status.get('sources', [])
             char_count = status.get('char_count', 0)
             console.print(f"\n[green]✓ Bootstrap context reloaded[/green]")
-            console.print(f"  [dim]Source: {source}[/dim]")
-            console.print(f"  [dim]Size: {char_count:,} chars[/dim]\n")
+            if len(sources) > 1:
+                console.print(f"  [dim]Merged {len(sources)} files[/dim]")
+            for src in sources:
+                console.print(f"  [dim]{src['path']} [{src['scope']}][/dim]")
+            console.print(f"  [dim]Total: {char_count:,} chars[/dim]\n")
         else:
-            console.print("\n[yellow]No bootstrap context file found in working directory[/yellow]")
-            console.print("  [dim]Looking for: AGENTS.md, CLAUDE.md[/dim]\n")
+            console.print("\n[yellow]No bootstrap context file found[/yellow]")
+            console.print("  [dim]Looking for: AGENTS.md, CLAUDE.md[/dim]")
+            console.print("  [dim]Searched: ~/.ppxai/, git root, working dir[/dim]\n")
         return
 
     # Show context usage info
@@ -369,5 +442,5 @@ CommandFactory.register(CommandSpec(
     description="Show context usage, hints, and manage injected files",
     handler=handle_context,
     category="utility",
-    usage="/context [clear|hints|reload]"
+    usage="/context [clear|hints|show|reload]"
 ))

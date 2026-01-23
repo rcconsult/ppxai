@@ -110,7 +110,7 @@ class PpxaiApp {
                 '/show': { description: 'Display file contents', usage: '/show <filepath>' },
                 '/cat': { description: 'Alias for /show', usage: '/cat <filepath>' },
                 '/edit': { description: 'Edit file in CodeMirror editor', usage: '/edit <filepath[:line[:col]]>' },
-                '/context': { description: 'Manage context', usage: '/context [clear|hints|reload]' },
+                '/context': { description: 'Manage context', usage: '/context [clear|hints|show|reload]' },
                 '/cd': { description: 'Change working directory', usage: '/cd <path>' },
                 '/pwd': { description: 'Print working directory', usage: '/pwd' },
                 '/generate': { description: 'Generate code from description', usage: '/generate <description>' },
@@ -1641,6 +1641,72 @@ class PpxaiApp {
                     msg += '\n';
                 }
 
+                this.addMessage('system', msg);
+            } else if (subCmd === 'show') {
+                // Show bootstrap context hierarchy (v1.14.2)
+                const response = await fetch(`${this.serverUrl}/context/bootstrap`, {
+                    headers: this.getSessionHeaders()
+                });
+                const status = await response.json();
+
+                if (!status.loaded) {
+                    let workingDir = 'unknown';
+                    try {
+                        const wdResp = await fetch(`${this.serverUrl}/context/working_dir`, {
+                            headers: this.getSessionHeaders()
+                        });
+                        const wdData = await wdResp.json();
+                        workingDir = wdData.path || 'unknown';
+                    } catch (e) { /* ignore */ }
+
+                    let msg = '**No bootstrap context loaded.**\n';
+                    msg += `Working directory: \`${workingDir}\`\n\n`;
+                    msg += '*Scope search order:*\n';
+                    msg += '1. `~/.ppxai/AGENTS.md` (global)\n';
+                    msg += '2. `{git_root}/AGENTS.md` (project)\n';
+                    msg += '3. `{cwd}/AGENTS.md` (subdir)\n\n';
+                    msg += '*Create AGENTS.md or CLAUDE.md in any of these locations.*';
+                    this.addMessage('system', msg);
+                    return;
+                }
+
+                const sources = status.sources || [];
+                const totalSize = status.total_size || 0;
+                const charCount = status.char_count || 0;
+                const estimatedTokens = Math.floor(charCount / 4);
+
+                let msg = '**Bootstrap Context**\n\n';
+                msg += `**Sources:** (${sources.length} file${sources.length !== 1 ? 's' : ''})\n`;
+
+                for (let i = 0; i < sources.length; i++) {
+                    const src = sources[i];
+                    const sizeKb = (src.size / 1024).toFixed(1);
+                    const scopeBadge = {
+                        'global': '🌐 global',
+                        'project': '📁 project',
+                        'subdir': '📂 subdir'
+                    }[src.scope] || src.scope;
+                    msg += `${i + 1}. \`${src.path}\`\n`;
+                    msg += `   [${scopeBadge}] ${sizeKb} KB\n`;
+                }
+
+                const totalKb = (totalSize / 1024).toFixed(1);
+                msg += `\n**Total:** ${totalKb} KB (~${estimatedTokens.toLocaleString()} tokens)\n`;
+
+                // Hints summary
+                if (status.has_hints) {
+                    msg += '\n**Hints Defined:**\n';
+                    if (status.provider_hints && status.provider_hints.length > 0) {
+                        msg += `  Provider: ${status.provider_hints.join(', ')}\n`;
+                    }
+                    if (status.model_hints && status.model_hints.length > 0) {
+                        msg += `  Model: ${status.model_hints.join(', ')}\n`;
+                    }
+                } else {
+                    msg += '\n**Hints:** *none defined*\n';
+                }
+
+                msg += '\n*Tip: `/context hints` shows active hints for current provider/model*';
                 this.addMessage('system', msg);
             } else {
                 // Show context usage info

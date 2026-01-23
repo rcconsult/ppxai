@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.14.2] - 2026-01-23
+
+### Added - Hierarchical Context Scopes
+
+- **Global context** - Load defaults from `~/.ppxai/AGENTS.md` across all projects
+- **Project context** - Load from `{git_root}/AGENTS.md` for project-specific instructions
+- **Subdirectory context** - Load from `{cwd}/AGENTS.md` for directory-specific overrides
+- **Scope merge strategy** - Files from all scopes merge additively (global → project → subdir)
+- **`/context show` command** - Display bootstrap context hierarchy with scope labels
+- **`GET /context/bootstrap` endpoint** - HTTP API for scoped bootstrap status
+
+### Changed
+
+- **Provider/model hints merging** - Hints from all scopes are combined (not replaced)
+- **`/context reload`** - Now reloads from all scope levels with improved feedback
+- **Bootstrap status API** - Returns `sources` array with path, scope, and size for each file
+
+### Architecture
+
+- **`find_git_root()`** - New helper to detect git repository root for project scope
+- **`ContextScope` enum** - Scope labels (global, project, subdir)
+- **`find_bootstrap_files_by_scope()`** - Hierarchical scope discovery
+- **`ScopedBootstrapSource` dataclass** - Bootstrap file metadata with scope info
+- **`load_bootstrap_context_merged()`** - Scope-aware context loading with merge
+
 ## [1.14.1] - 2026-01-21
 
 ### Added - Editor Command Support

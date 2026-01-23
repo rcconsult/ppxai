@@ -26,7 +26,7 @@ from .tools.builtin import register_all_builtin_tools
 from .tools.parser import parse_tool_call
 from .chat import chat_simple, chat_with_tools
 from .session import SessionManager
-from .context import ContextInjector
+from .context import ContextInjector, ScopedBootstrapSource
 from .bootstrap import BootstrapContext
 from ..checkpoint import CheckpointManager, FileCheckpointBackend
 from ..config import (
@@ -92,9 +92,9 @@ class EngineClient:
         # Track injected contexts for /context command
         self._injected_contexts: List[Dict[str, Any]] = []
 
-        # Bootstrap context from AGENTS.md/CLAUDE.md (v1.14.0)
+        # Bootstrap context from AGENTS.md/CLAUDE.md (v1.14.0, v1.14.2 scopes)
         self._bootstrap_context: Optional[BootstrapContext] = None
-        self._bootstrap_sources: List[str] = []
+        self._bootstrap_sources: List[ScopedBootstrapSource] = []
 
         # Interrupt handling for graceful stream cancellation
         self._interrupted: bool = False
@@ -230,18 +230,23 @@ class EngineClient:
     # === Bootstrap Context (v1.14.0) ===
 
     def load_bootstrap_context(self) -> bool:
-        """Load bootstrap context from AGENTS.md/CLAUDE.md in working directory.
+        """Load bootstrap context from AGENTS.md/CLAUDE.md across all scopes.
 
-        Searches for bootstrap files using the configured alias list and parses
-        YAML front matter for provider/model-specific hints.
+        v1.14.2: Searches hierarchical scopes (global, project, subdir) and merges
+        files in precedence order with source tracking.
+
+        Scopes searched:
+        1. ~/.ppxai/AGENTS.md (global defaults)
+        2. {git_root}/AGENTS.md (project-specific)
+        3. {cwd}/AGENTS.md (subdirectory overrides)
 
         Returns:
             True if bootstrap context was loaded, False if no file found
         """
-        ctx = self.context_injector.load_bootstrap_context()
+        ctx, sources = self.context_injector.load_bootstrap_context_merged()
         if ctx:
             self._bootstrap_context = ctx
-            self._bootstrap_sources = [ctx.source_file]
+            self._bootstrap_sources = sources
             return True
         else:
             self._bootstrap_context = None
@@ -262,29 +267,46 @@ class EngineClient:
         Returns:
             Dict with:
             - loaded: bool - whether bootstrap context is loaded
-            - sources: List[str] - paths to loaded bootstrap files
+            - sources: List[Dict] - scoped source info (v1.14.2)
+            - source_paths: List[str] - simple list of paths (backwards compat)
             - char_count: int - total characters in base instructions
             - has_hints: bool - whether provider/model hints are defined
             - provider_hints: List[str] - list of providers with hints
             - model_hints: List[str] - list of model patterns with hints
+            - total_size: int - total size of all sources in bytes
         """
         if not self._bootstrap_context:
             return {
                 "loaded": False,
                 "sources": [],
+                "source_paths": [],
                 "char_count": 0,
                 "has_hints": False,
                 "provider_hints": [],
                 "model_hints": [],
+                "total_size": 0,
             }
+
+        # Build scoped source info (v1.14.2)
+        sources_info = []
+        total_size = 0
+        for src in self._bootstrap_sources:
+            sources_info.append({
+                "path": str(src.path),
+                "scope": src.scope,
+                "size": src.size,
+            })
+            total_size += src.size
 
         return {
             "loaded": True,
-            "sources": self._bootstrap_sources,
+            "sources": sources_info,
+            "source_paths": [str(src.path) for src in self._bootstrap_sources],
             "char_count": self._bootstrap_context.char_count,
             "has_hints": self._bootstrap_context.has_hints,
             "provider_hints": list(self._bootstrap_context.provider_hints.keys()),
             "model_hints": list(self._bootstrap_context.model_hints.keys()),
+            "total_size": total_size,
         }
 
     def get_bootstrap_prompt(self) -> str:
@@ -303,7 +325,8 @@ class EngineClient:
         Returns:
             Dict with:
             - loaded: bool - whether bootstrap context is loaded
-            - source: str - path to bootstrap file
+            - source: str - source description (v1.14.2: "merged (N files)" for multi-scope)
+            - sources: List[Dict] - scoped source info (v1.14.2)
             - provider: str - current provider
             - model: str - current model
             - provider_hints: List of (source, hint) tuples
@@ -317,6 +340,7 @@ class EngineClient:
             return {
                 "loaded": False,
                 "source": "",
+                "sources": [],
                 "provider": self.provider_name,
                 "model": self.model,
                 "provider_hints": [],
@@ -331,9 +355,16 @@ class EngineClient:
             self.provider_name, self.model
         )
 
+        # Build scoped source info (v1.14.2)
+        sources_info = [
+            {"path": str(src.path), "scope": src.scope, "size": src.size}
+            for src in self._bootstrap_sources
+        ]
+
         return {
             "loaded": True,
             "source": self._bootstrap_context.source_file,
+            "sources": sources_info,
             "provider": self.provider_name,
             "model": self.model,
             "provider_hints": active["provider_hints"],
