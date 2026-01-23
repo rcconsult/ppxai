@@ -102,19 +102,6 @@
         "title": "Clear Injected Files from Context",
         "category": "ppxai",
         "icon": "$(trash)"
-      },
-      {
-        "command": "ppxai.openInEditor",
-        "title": "Open Chat in Editor Tab",
-        "category": "ppxai",
-        "icon": "$(split-horizontal)"
-      }
-    ],
-    "keybindings": [
-      {
-        "command": "ppxai.openInEditor",
-        "key": "ctrl+shift+alt+p",
-        "mac": "cmd+shift+alt+p"
       }
     ],
     "menus": {

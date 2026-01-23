@@ -604,13 +604,6 @@ export async function activate(context: vscode.ExtensionContext) {
         })
     );
 
-    // Open chat in editor tab command (v1.14.2)
-    context.subscriptions.push(
-        vscode.commands.registerCommand('ppxai.openInEditor', () => {
-            chatViewProvider.openInEditor();
-        })
-    );
-
     // Handle terminal close events to track server state
     context.subscriptions.push(
         vscode.window.onDidCloseTerminal((terminal) => {
