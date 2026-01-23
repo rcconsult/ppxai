@@ -14,8 +14,9 @@ This script handles the complete release process:
 9. Push to GitHub and trigger CI
 10. Wait for CI to complete
 11. Publish release notes to GitHub
-12. Build Intel Mac assets (auto-detects platform)
-13. Verify release assets
+12. Deploy documentation site (GitHub Pages)
+13. Build Intel Mac assets (auto-detects platform)
+14. Verify release assets
 
 Usage:
     python scripts/release.py v1.11.8
@@ -684,6 +685,31 @@ def publish_release_notes(version: str, max_retries: int = 12):
             return
 
 
+def deploy_docs(version: str) -> bool:
+    """Trigger docs deployment for the release version.
+
+    Uses workflow_dispatch to trigger the docs workflow with the version.
+    This is needed because the docs workflow has a paths filter that may
+    prevent it from running on tag pushes without doc changes.
+    """
+    print(f"  Triggering docs deployment for v{version}...")
+
+    result = run_gh_command(
+        f'workflow run docs.yml -f version={version}',
+        check=False
+    )
+
+    if result.returncode != 0:
+        print(f"  ⚠️  Failed to trigger docs deployment: {result.stderr}")
+        print(f"     You can manually trigger with:")
+        print(f"     gh workflow run docs.yml -f version={version}")
+        return False
+
+    print(f"  ✅ Docs deployment triggered")
+    print(f"     View at: https://rcconsult.github.io/ppxai/{version}/")
+    return True
+
+
 def is_macos_intel() -> bool:
     """Check if running on macOS Intel (x86_64)."""
     import platform
@@ -809,8 +835,8 @@ def main():
     is_master_early, current_branch_early = check_branch()
 
     # Calculate total steps based on flags
-    # Base steps: Git check, Branch check, Update versions, Validate, Release notes, TS Lint, Tests, Commit, Push, CI wait, Publish notes, Intel build, Verify = 13
-    total_steps = 13
+    # Base steps: Git check, Branch check, Update versions, Validate, Release notes, TS Lint, Tests, Commit, Push, CI wait, Publish notes, Deploy docs, Intel build, Verify = 14
+    total_steps = 14
     if args.redo:
         total_steps += 1  # Add "Delete existing release" step
     if args.skip_tests:
@@ -1063,14 +1089,21 @@ def main():
     publish_release_notes(version)
     record_step("Publish Notes")
 
-    # Step 12: Build Intel Mac assets (auto-detects platform)
+    # Step 12: Deploy documentation site
+    step += 1
+    print_step(step, total_steps, "Deploying Documentation")
+    if not deploy_docs(version):
+        print(f"\n⚠️  Docs deployment failed, but release continues")
+    record_step("Deploy Docs")
+
+    # Step 13: Build Intel Mac assets (auto-detects platform)
     step += 1
     print_step(step, total_steps, "Building Intel Mac Assets")
     if not build_intel_assets(version):
         print(f"\n⚠️  Intel build failed, but release continues")
     record_step("Intel Build")
 
-    # Step 13: Verify release
+    # Step 14: Verify release
     step += 1
     print_step(step, total_steps, "Verifying Release")
     verify_release(version)

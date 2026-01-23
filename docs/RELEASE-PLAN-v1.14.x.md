@@ -906,7 +906,7 @@ https://rcconsult.github.io/ppxai/
 - [x] Enable GitHub Pages in repository settings
 - [x] Deploy initial version with `mike`
 - [x] Verify versioned docs work correctly
-- [ ] Add docs deployment step to release script (optional - workflow auto-deploys on tags)
+- [x] Add docs deployment step to release script
 - [x] Update README with docs site link
 
 ---
