@@ -189,6 +189,7 @@ class TestWidgetExports:
     def test_all_widgets_exported(self):
         """All widgets should be exported from __init__."""
         from ppxai.tui.widgets import (
+            SafeQueryMixin,
             StatusBar,
             ChatView,
             InputBox,
@@ -207,6 +208,7 @@ class TestWidgetExports:
         from ppxai.tui import widgets
 
         expected = [
+            "SafeQueryMixin",
             "StatusBar",
             "ChatView",
             "InputBox",
@@ -221,6 +223,21 @@ class TestWidgetExports:
         ]
         for name in expected:
             assert name in widgets.__all__
+
+
+class TestSafeQueryMixin:
+    """Tests for SafeQueryMixin base class."""
+
+    def test_safe_query_mixin_imports(self):
+        """SafeQueryMixin should be importable."""
+        from ppxai.tui.widgets.base import SafeQueryMixin
+        assert SafeQueryMixin is not None
+
+    def test_safe_query_mixin_has_method(self):
+        """SafeQueryMixin should have safe_query_one method."""
+        from ppxai.tui.widgets.base import SafeQueryMixin
+        assert hasattr(SafeQueryMixin, 'safe_query_one')
+        assert callable(getattr(SafeQueryMixin, 'safe_query_one'))
 
 
 class TestSidePanel:
