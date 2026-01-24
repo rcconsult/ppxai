@@ -22,58 +22,9 @@ from .code_editor import CodeEditor, EXTENSION_TO_LANGUAGE, SUPPORTED_LANGUAGES
 
 
 class SidePanel(Widget):
-    """Side panel for displaying files in split view."""
+    """Side panel for displaying files in split view.
 
-    DEFAULT_CSS = """
-    SidePanel {
-        width: 50%;
-        height: 100%;
-        display: none;
-    }
-
-    SidePanel.visible {
-        display: block;
-    }
-
-    SidePanel #panel-header-bar {
-        height: 1;
-        background: $panel;
-        color: $text;
-        padding: 0 1;
-        dock: top;
-    }
-
-    SidePanel #panel-filename {
-        width: 1fr;
-    }
-
-    SidePanel #lang-badge {
-        width: auto;
-        color: $accent;
-        padding: 0 1;
-    }
-
-    SidePanel #panel-content {
-        height: 1fr;
-    }
-
-    SidePanel CodeEditor {
-        height: 1fr;
-        border: none;
-    }
-
-    SidePanel TreeViewer {
-        height: 1fr;
-        border: none;
-    }
-
-    SidePanel VerticalScroll {
-        height: 1fr;
-    }
-
-    SidePanel Markdown {
-        padding: 1 2;
-    }
+    CSS is defined in themes/layout.tcss under "Side panel" section.
     """
 
     BINDINGS = [
