@@ -1,7 +1,8 @@
 """
-ppxaide screens - Application screens.
+ppxaide screens - Full-screen modes for file viewing and editing.
 """
 
-# Screens will be added as needed
-# from ppxai.tui.screens.chat import ChatScreen
-# from ppxai.tui.screens.settings import SettingsScreen
+from .viewer import ViewerScreen
+from .editor import EditorScreen
+
+__all__ = ["ViewerScreen", "EditorScreen"]

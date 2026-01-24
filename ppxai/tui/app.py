@@ -8,6 +8,8 @@ This is the core application class that manages:
 - Keyboard bindings
 """
 
+import os
+
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
@@ -18,6 +20,7 @@ from ppxai.tui.widgets.chat_view import ChatView
 from ppxai.tui.widgets.input_box import InputBox
 from ppxai.tui.themes.themes import CUSTOM_THEMES, DEFAULT_THEME, CYCLE_THEMES
 from ppxai.tui.clipboard import copy_to_clipboard, paste_from_clipboard, is_clipboard_available
+from ppxai.tui import commands as local_commands
 
 
 class PPXAIDEApp(App):
@@ -42,6 +45,7 @@ class PPXAIDEApp(App):
         self._provider = "perplexity"
         self._model = "sonar"
         self._tools_enabled = False
+        self._working_dir = os.getcwd()
 
     def compose(self) -> ComposeResult:
         """Compose the application layout."""
@@ -153,6 +157,19 @@ class PPXAIDEApp(App):
                 chat_view.add_system_message(
                     "[dim]Clipboard is empty or unavailable[/dim]"
                 )
+        # File commands
+        elif cmd == "show":
+            await local_commands.cmd_show(self, args)
+        elif cmd == "edit":
+            await local_commands.cmd_edit(self, args)
+        # Navigation commands
+        elif cmd == "cd":
+            await local_commands.cmd_cd(self, args)
+        elif cmd == "pwd":
+            await local_commands.cmd_pwd(self, args)
+        # Status command
+        elif cmd == "status":
+            await local_commands.cmd_status(self, args)
         else:
             chat_view.add_system_message(
                 f"[yellow]Unknown command: /{cmd}[/yellow]\n"
@@ -163,14 +180,28 @@ class PPXAIDEApp(App):
         """Get help text for available commands."""
         return """[bold]Available Commands:[/bold]
 
+[bold dim]System:[/bold dim]
 [cyan]/help[/cyan]      - Show this help message
 [cyan]/quit[/cyan]      - Exit ppxaide
 [cyan]/clear[/cyan]     - Clear chat history
 [cyan]/theme[/cyan]     - Cycle through themes
-[cyan]/provider[/cyan]  - Show/switch provider
-[cyan]/model[/cyan]     - Show/switch model
+[cyan]/status[/cyan]    - Show status information
+
+[bold dim]Files:[/bold dim]
+[cyan]/show[/cyan]      - Display file (syntax/tree view)
+[cyan]/edit[/cyan]      - Edit file with syntax highlighting
+
+[bold dim]Navigation:[/bold dim]
+[cyan]/cd[/cyan]        - Change working directory
+[cyan]/pwd[/cyan]       - Show working directory
+
+[bold dim]Clipboard:[/bold dim]
 [cyan]/copy[/cyan]      - Copy last response to clipboard
 [cyan]/paste[/cyan]     - Paste from clipboard to input
+
+[bold dim]AI (coming soon):[/bold dim]
+[cyan]/provider[/cyan]  - Show/switch provider
+[cyan]/model[/cyan]     - Show/switch model
 
 [bold]Keyboard Shortcuts:[/bold]
 [cyan]Ctrl+C[/cyan]     - Quit

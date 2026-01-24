@@ -215,3 +215,50 @@ SplitPane .pane {
 SplitPane .pane:focus-within {
     border: round $primary;
 }
+
+/* ViewerScreen and EditorScreen */
+ViewerScreen, EditorScreen {
+    background: $background;
+}
+
+#viewer-header, #editor-title {
+    background: $panel;
+    color: $text;
+    height: 1;
+    padding: 0 1;
+    dock: top;
+}
+
+#viewer-content, #editor-area {
+    height: 1fr;
+    border: none;
+}
+
+/* Full-screen TreeViewer in ViewerScreen */
+ViewerScreen TreeViewer {
+    height: 1fr;
+    max-height: none;
+    border: none;
+}
+
+/* Full-screen CodeEditor */
+ViewerScreen CodeEditor, EditorScreen CodeEditor {
+    height: 1fr;
+    min-height: auto;
+    border: none;
+}
+
+/* Confirmation dialog */
+#confirm-dialog {
+    width: 50%;
+    height: auto;
+    background: $surface;
+    border: round $warning;
+    padding: 2;
+    margin: auto;
+}
+
+ConfirmCloseScreen {
+    align: center middle;
+    background: $background 80%;
+}
