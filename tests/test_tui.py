@@ -356,3 +356,84 @@ class TestImageSupport:
         assert is_image_file(Path("test.JPEG"))  # Case insensitive
         assert not is_image_file(Path("test.py"))
         assert not is_image_file(Path("test.txt"))
+
+
+class TestContentFactory:
+    """Tests for content display mode detection."""
+
+    def test_content_factory_imports(self):
+        """Content factory should import without error."""
+        from ppxai.tui.widgets.content_factory import (
+            detect_display_mode,
+            get_data_format,
+            is_data_file,
+            is_markdown_file,
+            DATA_FORMATS,
+            MARKDOWN_FORMATS,
+        )
+
+    def test_detect_display_mode_code(self):
+        """detect_display_mode should return 'code' for code files."""
+        from ppxai.tui.widgets.content_factory import detect_display_mode
+        from pathlib import Path
+
+        assert detect_display_mode(Path("test.py")) == "code"
+        assert detect_display_mode(Path("test.js")) == "code"
+        assert detect_display_mode(Path("test.rs")) == "code"
+        assert detect_display_mode(Path("test.txt")) == "code"
+
+    def test_detect_display_mode_data(self):
+        """detect_display_mode should return 'data' for data files."""
+        from ppxai.tui.widgets.content_factory import detect_display_mode
+        from pathlib import Path
+
+        assert detect_display_mode(Path("test.json")) == "data"
+        assert detect_display_mode(Path("test.yaml")) == "data"
+        assert detect_display_mode(Path("test.yml")) == "data"
+        assert detect_display_mode(Path("test.toml")) == "data"
+
+    def test_detect_display_mode_markdown(self):
+        """detect_display_mode should return 'markdown' for markdown files."""
+        from ppxai.tui.widgets.content_factory import detect_display_mode
+        from pathlib import Path
+
+        assert detect_display_mode(Path("README.md")) == "markdown"
+        assert detect_display_mode(Path("doc.markdown")) == "markdown"
+
+    def test_detect_display_mode_image(self):
+        """detect_display_mode should return 'image' for image files."""
+        from ppxai.tui.widgets.content_factory import detect_display_mode
+        from pathlib import Path
+
+        assert detect_display_mode(Path("test.png")) == "image"
+        assert detect_display_mode(Path("test.jpg")) == "image"
+        assert detect_display_mode(Path("test.gif")) == "image"
+
+    def test_get_data_format(self):
+        """get_data_format should return specific format."""
+        from ppxai.tui.widgets.content_factory import get_data_format
+        from pathlib import Path
+
+        assert get_data_format(Path("test.json")) == "json"
+        assert get_data_format(Path("test.yaml")) == "yaml"
+        assert get_data_format(Path("test.yml")) == "yaml"
+        assert get_data_format(Path("test.toml")) == "toml"
+        assert get_data_format(Path("test.py")) is None
+
+    def test_is_data_file(self):
+        """is_data_file should detect data file extensions."""
+        from ppxai.tui.widgets.content_factory import is_data_file
+        from pathlib import Path
+
+        assert is_data_file(Path("test.json"))
+        assert is_data_file(Path("test.yaml"))
+        assert not is_data_file(Path("test.py"))
+
+    def test_is_markdown_file(self):
+        """is_markdown_file should detect markdown extensions."""
+        from ppxai.tui.widgets.content_factory import is_markdown_file
+        from pathlib import Path
+
+        assert is_markdown_file(Path("README.md"))
+        assert is_markdown_file(Path("doc.markdown"))
+        assert not is_markdown_file(Path("test.txt"))
