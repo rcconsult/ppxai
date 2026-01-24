@@ -1,6 +1,6 @@
 # TUI Side Panel Refactor - Design Document
 
-**Version:** 1.5
+**Version:** 1.6
 **Date:** 2026-01-25
 **Status:** In Progress
 
@@ -780,6 +780,7 @@ def validate_file_size(path: Path, max_size: int = MAX_FILE_SIZE) -> bool:
 - v1.3 (2026-01-24): Added architectural isolation constraint (Rich TUI ↔ Textual TUI separation)
 - v1.4 (2026-01-24): Added Phase 0.0 Rich TUI isolation refactor as defensive prerequisite
 - v1.5 (2026-01-25): Phase 0.0 complete, Phase 0.1.1 complete
+- v1.6 (2026-01-25): Phase 0.1.2 complete (CSS consolidation)
 
 **Next Steps:**
 1. ~~Review this document~~ ✅
@@ -788,9 +789,10 @@ def validate_file_size(path: Path, max_size: int = MAX_FILE_SIZE) -> bool:
 4. ~~Phase 0.0: Rich TUI isolation refactor~~ ✅
 5. ~~User verification: Rich TUI works identically~~ ✅
 6. ~~Phase 0.1.1: Error handling cleanup~~ ✅
-7. **Phase 0.1.2: CSS consolidation** ← NEXT
-8. Phase 0.1.3-0.1.5: Safe query helper, content factory, validation
-9. Phase 1+: New widget implementations
+7. ~~Phase 0.1.2: CSS consolidation~~ ✅
+8. **Phase 0.1.3: Safe query helper** ← NEXT
+9. Phase 0.1.4-0.1.5: Content factory, validation
+10. Phase 1+: New widget implementations
 
 **Sources:**
 - [textual-imageview](https://github.com/adamviola/textual-imageview) - Terminal image viewer with zoom/pan
