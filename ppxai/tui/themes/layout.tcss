@@ -237,14 +237,12 @@ ViewerScreen, EditorScreen {
 /* Full-screen TreeViewer in ViewerScreen */
 ViewerScreen TreeViewer {
     height: 1fr;
-    max-height: none;
     border: none;
 }
 
 /* Full-screen CodeEditor */
 ViewerScreen CodeEditor, EditorScreen CodeEditor {
     height: 1fr;
-    min-height: auto;
     border: none;
 }
 
@@ -255,7 +253,6 @@ ViewerScreen CodeEditor, EditorScreen CodeEditor {
     background: $surface;
     border: round $warning;
     padding: 2;
-    margin: auto;
 }
 
 ConfirmCloseScreen {
