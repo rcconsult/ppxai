@@ -101,3 +101,14 @@ class InputBox(Static):
         """Set command history from persistence."""
         self._history = history.copy()
         self._history_index = -1
+
+    def insert_text(self, text: str) -> None:
+        """Insert text at current cursor position.
+
+        Args:
+            text: Text to insert
+        """
+        input_widget = self.query_one(Input)
+        # Append to current value (simple implementation)
+        input_widget.value = input_widget.value + text
+        input_widget.cursor_position = len(input_widget.value)

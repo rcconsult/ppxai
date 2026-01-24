@@ -84,12 +84,12 @@ plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles c
 | **Status bar** | Provider, model, tools, context badges | [x] Done |
 | **Chat view** | Message display with role indicators | [x] Done |
 | **Input box** | Multi-line input with command history | [x] Done |
-| **Round borders** | Unicode box-drawing corners (╭╮╯╰) | [ ] Planned |
+| **Round borders** | Unicode box-drawing corners (╭╮╯╰) | [x] Done |
 | **Mouse support** | Click-to-scroll, selectable text, clickable links | [ ] Planned |
-| **Clipboard** | Text copy/paste via pyperclip | [ ] Planned |
-| **Tree widget** | JSON/YAML/TOML hierarchical display | [ ] Planned |
-| **TextArea widget** | Code editor with syntax highlighting | [ ] Planned |
-| **Split panes** | Horizontal/Vertical container layouts | [ ] Planned |
+| **Clipboard** | Text copy/paste via pyperclip | [x] Done |
+| **Tree widget** | JSON/YAML/TOML hierarchical display | [x] Done |
+| **TextArea widget** | Code editor with syntax highlighting | [x] Done |
+| **Split panes** | Horizontal/Vertical container layouts | [x] Done |
 
 **Textual Framework Capabilities:**
 
@@ -118,11 +118,11 @@ plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles c
 - [x] Create PyInstaller spec and build binary
 
 *Platform Widgets (In Progress):*
-- [ ] Update `layout.tcss` to use `round` borders where appropriate
-- [ ] Add pyperclip integration for clipboard support
-- [ ] Create `TreeViewer` widget wrapping Textual's Tree
-- [ ] Create `CodeEditor` widget wrapping Textual's TextArea
-- [ ] Create `SplitPane` layout for side-by-side views
+- [x] Update `layout.tcss` to use `round` borders where appropriate
+- [x] Add pyperclip integration for clipboard support (`/copy`, `/paste` commands)
+- [x] Create `TreeViewer` widget wrapping Textual's Tree
+- [x] Create `CodeEditor` widget wrapping Textual's TextArea
+- [x] Create `SplitPane` layout for side-by-side views
 - [ ] Add mouse-clickable file links (OSC 8 hyperlinks)
 - [ ] Basic integration tests
 

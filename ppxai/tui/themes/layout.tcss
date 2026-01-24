@@ -54,32 +54,33 @@ ChatView {
     height: 1fr;
 }
 
-/* Messages */
+/* Messages - using round borders for modern look */
 MessageBox {
     padding: 1;
     margin-bottom: 1;
     background: $surface;
     width: 100%;
+    border: round $surface-lighten-1;
 }
 
 MessageBox.user {
     background: $primary-darken-3;
-    border-left: thick $primary;
+    border: round $primary;
 }
 
 MessageBox.assistant {
     background: $surface;
-    border-left: thick $success;
+    border: round $success;
 }
 
 MessageBox.system {
     background: $surface-darken-1;
-    border-left: thick $warning;
+    border: round $warning;
 }
 
 MessageBox.tool {
     background: $surface-darken-2;
-    border-left: thick $accent;
+    border: round $accent;
 }
 
 MessageBox .role-label {
@@ -99,12 +100,13 @@ MessageBox.streaming .content {
 /* Input box */
 InputBox {
     background: $surface;
-    border-top: solid $primary;
+    border: round $primary;
     padding: 1;
     dock: bottom;
     height: auto;
     min-height: 3;
     max-height: 10;
+    margin: 0 1 1 1;
 }
 
 InputBox Horizontal {
@@ -119,7 +121,7 @@ InputBox Input {
 }
 
 InputBox Input:focus {
-    border: tall $primary;
+    border: round $primary;
 }
 
 InputBox .prompt {
@@ -145,4 +147,71 @@ VerticalScroll > ScrollBar > .scroll-bar--bar:hover {
 StatusBadge {
     padding: 0 1;
     margin: 0 1;
+}
+
+/* TreeViewer widget for JSON/YAML/TOML */
+TreeViewer {
+    background: $surface;
+    border: round $accent;
+    padding: 1;
+    height: auto;
+    min-height: 5;
+    max-height: 20;
+}
+
+TreeViewer Tree {
+    background: $surface;
+    scrollbar-background: $surface;
+    scrollbar-color: $panel;
+    scrollbar-color-hover: $primary;
+}
+
+/* CodeEditor widget wrapping TextArea */
+CodeEditor {
+    background: $surface;
+    border: round $primary;
+    padding: 0;
+    height: auto;
+    min-height: 10;
+}
+
+CodeEditor TextArea {
+    background: $background;
+}
+
+CodeEditor .editor-header {
+    background: $panel;
+    color: $text;
+    height: 1;
+    padding: 0 1;
+}
+
+CodeEditor .editor-footer {
+    background: $panel;
+    color: $text-muted;
+    height: 1;
+    padding: 0 1;
+}
+
+/* SplitPane layouts */
+SplitPane {
+    background: $background;
+}
+
+SplitPane.-horizontal {
+    layout: horizontal;
+}
+
+SplitPane.-vertical {
+    layout: vertical;
+}
+
+SplitPane .pane {
+    border: round $surface-lighten-1;
+    background: $surface;
+    padding: 1;
+}
+
+SplitPane .pane:focus-within {
+    border: round $primary;
 }

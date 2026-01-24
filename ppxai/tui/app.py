@@ -17,6 +17,7 @@ from ppxai.tui.widgets.status_bar import StatusBar
 from ppxai.tui.widgets.chat_view import ChatView
 from ppxai.tui.widgets.input_box import InputBox
 from ppxai.tui.themes.themes import CUSTOM_THEMES, DEFAULT_THEME, CYCLE_THEMES
+from ppxai.tui.clipboard import copy_to_clipboard, paste_from_clipboard, is_clipboard_available
 
 
 class PPXAIDEApp(App):
@@ -127,6 +128,31 @@ class PPXAIDEApp(App):
                 f"Current model: {self._model}\n"
                 "[dim]Model switching not implemented yet[/dim]"
             )
+        elif cmd == "copy":
+            # Copy last assistant message to clipboard
+            messages = chat_view.get_messages()
+            assistant_msgs = [m for m in messages if m["role"] == "assistant"]
+            if assistant_msgs:
+                if copy_to_clipboard(assistant_msgs[-1]["content"]):
+                    self.notify("Copied to clipboard", title="Copy")
+                else:
+                    chat_view.add_system_message(
+                        "[yellow]Clipboard not available[/yellow]"
+                    )
+            else:
+                chat_view.add_system_message(
+                    "[dim]No assistant messages to copy[/dim]"
+                )
+        elif cmd == "paste":
+            # Paste from clipboard into input
+            text = paste_from_clipboard()
+            if text:
+                input_box = self.query_one("#input-box", InputBox)
+                input_box.insert_text(text)
+            else:
+                chat_view.add_system_message(
+                    "[dim]Clipboard is empty or unavailable[/dim]"
+                )
         else:
             chat_view.add_system_message(
                 f"[yellow]Unknown command: /{cmd}[/yellow]\n"
@@ -143,6 +169,8 @@ class PPXAIDEApp(App):
 [cyan]/theme[/cyan]     - Cycle through themes
 [cyan]/provider[/cyan]  - Show/switch provider
 [cyan]/model[/cyan]     - Show/switch model
+[cyan]/copy[/cyan]      - Copy last response to clipboard
+[cyan]/paste[/cyan]     - Paste from clipboard to input
 
 [bold]Keyboard Shortcuts:[/bold]
 [cyan]Ctrl+C[/cyan]     - Quit
