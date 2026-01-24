@@ -85,7 +85,7 @@ plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles c
 | **Chat view** | Message display with role indicators | [x] Done |
 | **Input box** | Multi-line input with command history | [x] Done |
 | **Round borders** | Unicode box-drawing corners (╭╮╯╰) | [x] Done |
-| **Mouse support** | Click-to-scroll, selectable text, clickable links | [ ] Planned |
+| **Mouse support** | Click-to-scroll, selectable text, clickable links | [x] Done |
 | **Clipboard** | Text copy/paste via pyperclip | [x] Done |
 | **Tree widget** | JSON/YAML/TOML hierarchical display | [x] Done |
 | **TextArea widget** | Code editor with syntax highlighting | [x] Done |
@@ -117,14 +117,14 @@ plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles c
 - [x] Add `[tui]` optional dependency group
 - [x] Create PyInstaller spec and build binary
 
-*Platform Widgets (In Progress):*
+*Platform Widgets (Done):*
 - [x] Update `layout.tcss` to use `round` borders where appropriate
 - [x] Add pyperclip integration for clipboard support (`/copy`, `/paste` commands)
 - [x] Create `TreeViewer` widget wrapping Textual's Tree
 - [x] Create `CodeEditor` widget wrapping Textual's TextArea
 - [x] Create `SplitPane` layout for side-by-side views
-- [ ] Add mouse-clickable file links (OSC 8 hyperlinks)
-- [ ] Basic integration tests
+- [x] Add mouse-clickable file links (OSC 8 hyperlinks)
+- [x] Basic integration tests (22 tests in `tests/test_tui.py`)
 
 **Deliverable:** Complete UI platform with rich widgets, ready for functional features
 
