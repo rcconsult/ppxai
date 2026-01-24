@@ -23,7 +23,7 @@ def handle_cd(handler: "CommandHandler", args: str) -> None:
         handler: CommandHandler instance providing context
         args: Directory path to change to (empty shows current)
     """
-    from ..ui import console
+    from ..rich.ui import console
 
     if not handler.engine_client:
         console.print("[red]Error: Engine client not available[/red]\n")
@@ -59,7 +59,7 @@ def handle_pwd(handler: "CommandHandler", args: str) -> None:
         handler: CommandHandler instance providing context
         args: Command arguments (unused)
     """
-    from ..ui import console
+    from ..rich.ui import console
 
     if not handler.engine_client:
         console.print("[red]Error: Engine client not available[/red]\n")
@@ -80,7 +80,7 @@ def handle_config(handler: "CommandHandler", args: str) -> None:
         args: "reload" to reload, "path" to show path
     """
     from ..config import find_config_file, reload_config
-    from ..ui import console
+    from ..rich.ui import console
 
     parts = args.strip().split() if args else []
 
@@ -122,7 +122,7 @@ def handle_debug_log(handler: "CommandHandler", args: str) -> None:
     from pathlib import Path
 
     from ..common.logger import get_logger
-    from ..ui import console
+    from ..rich.ui import console
 
     logger = get_logger("tui")
 
@@ -314,7 +314,7 @@ def handle_context(handler: "CommandHandler", args: str) -> None:
         args: "clear" to remove injected content, "hints" to show active hints,
               "show" to display bootstrap context hierarchy (v1.14.2)
     """
-    from ..ui import console
+    from ..rich.ui import console
 
     if not handler.engine_client:
         console.print("[red]Error: Engine client not available[/red]\n")

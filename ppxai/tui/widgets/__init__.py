@@ -9,6 +9,7 @@ from ppxai.tui.widgets.message_box import MessageBox
 from ppxai.tui.widgets.tree_viewer import TreeViewer
 from ppxai.tui.widgets.code_editor import CodeEditor
 from ppxai.tui.widgets.split_pane import SplitPane, Pane, HorizontalSplit, VerticalSplit
+from ppxai.tui.widgets.side_panel import SidePanel
 
 __all__ = [
     "StatusBar",
@@ -21,4 +22,5 @@ __all__ = [
     "Pane",
     "HorizontalSplit",
     "VerticalSplit",
+    "SidePanel",
 ]

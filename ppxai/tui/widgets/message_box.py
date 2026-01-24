@@ -4,6 +4,7 @@ MessageBox widget - Individual chat message display.
 
 from textual.app import ComposeResult
 from textual.containers import Vertical
+from textual.css.query import NoMatches
 from textual.reactive import reactive
 from textual.widgets import Static, Markdown
 
@@ -57,8 +58,8 @@ class MessageBox(Static):
         try:
             content_widget = self.query_one(".content", Static)
             content_widget.update(content)
-        except Exception:
-            pass
+        except NoMatches:
+            pass  # Widget not yet composed
 
     def watch_streaming(self, streaming: bool) -> None:
         """Update streaming state."""

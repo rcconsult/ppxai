@@ -22,7 +22,7 @@ def handle_model(handler: "CommandHandler", args: str) -> None:
         args: "list" to list models, model ID to switch, or empty for interactive
     """
     from ..config import get_provider_config
-    from ..ui import console, select_model
+    from ..rich.ui import console, select_model
 
     args = args.strip().lower()
 
@@ -73,7 +73,7 @@ def handle_provider(handler: "CommandHandler", args: str) -> None:
         args: "list" to list providers, provider ID to switch, or empty for interactive
     """
     from ..config import PROVIDERS, get_api_key, get_base_url, get_provider_config
-    from ..ui import console, select_model, select_provider
+    from ..rich.ui import console, select_model, select_provider
 
     args = args.strip().lower()
 
@@ -154,7 +154,7 @@ def handle_autoroute(handler: "CommandHandler", args: str) -> None:
         args: "on" to enable, "off" to disable, or empty for status
     """
     from ..config import get_coding_model
-    from ..ui import console
+    from ..rich.ui import console
 
     coding_model = get_coding_model(handler.provider)
 

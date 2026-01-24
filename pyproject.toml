@@ -28,7 +28,17 @@ dependencies = [
     "prompt-toolkit>=3.0.0",
     "python-dotenv>=1.0.0",
     "tzdata>=2024.1",
-    "pyperclip>=1.8.0",  # v1.14.2: @clipboard context injection
+    "pyperclip>=1.8.0",
+    "tree-sitter-python>=0.25.0",
+    "tree-sitter-javascript>=0.25.0",
+    "tree-sitter-json>=0.24.8",
+    "tree-sitter-yaml>=0.7.2",
+    "tree-sitter-toml>=0.7.0",
+    "tree-sitter-html>=0.23.2",
+    "tree-sitter-css>=0.25.0",
+    "tree-sitter-markdown>=0.5.1",
+    "tree-sitter-bash>=0.25.1",
+    "tree-sitter>=0.23",
 ]
 
 [project.optional-dependencies]
@@ -78,7 +88,7 @@ build = [
 ]
 
 [project.scripts]
-ppxai = "ppxai.main:main"
+ppxai = "ppxai.rich.main:main"
 ppxai-server = "ppxai.server.http:run_server"
 ppxai-desktop = "ppxai.server.http:run_desktop"
 ppxaide = "ppxai.tui:main"

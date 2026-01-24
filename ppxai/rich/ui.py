@@ -11,8 +11,8 @@ from rich.markdown import Markdown
 from rich.prompt import Prompt
 from rich.table import Table
 
-from .config import MODELS, USAGE_FILE, PROVIDERS, get_provider_config
-from .prompts import SPEC_GUIDELINES, SPEC_TEMPLATES
+from ..config import MODELS, USAGE_FILE, PROVIDERS, get_provider_config
+from ..prompts import SPEC_GUIDELINES, SPEC_TEMPLATES
 
 # Initialize Rich console
 console = Console()

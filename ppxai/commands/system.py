@@ -23,7 +23,7 @@ def handle_help(handler: "CommandHandler", args: str) -> None:
         handler: CommandHandler instance providing context
         args: Command arguments (unused)
     """
-    from ..ui import display_welcome
+    from ..rich.ui import display_welcome
 
     display_welcome()
 
@@ -35,9 +35,9 @@ def handle_theme(handler: "CommandHandler", args: str) -> None:
         handler: CommandHandler instance providing context
         args: "list" to list, theme name to switch, "emoji on/off" for emoji mode
     """
-    from ..themes import get_theme
-    from ..ui import console
-    from ..ui_components import render_theme_list
+    from ..rich.themes import get_theme
+    from ..rich.ui import console
+    from ..rich.ui_components import render_theme_list
 
     args = args.strip().lower() if args else ""
 
@@ -91,7 +91,7 @@ def handle_status(handler: "CommandHandler", args: str) -> None:
         args: "version", "cwd", or "datetime" to toggle display settings
     """
     from ..config import get_provider_config, get_tui_config, set_tui_config
-    from ..ui import console
+    from ..rich.ui import console
     from ..version import __version__
 
     parts = args.strip().split() if args else []
@@ -213,7 +213,7 @@ def handle_spec(handler: "CommandHandler", args: str) -> None:
         handler: CommandHandler instance providing context
         args: Spec type (api, cli, lib, algo, ui) or empty for list
     """
-    from ..ui import display_spec_help
+    from ..rich.ui import display_spec_help
 
     spec_type = args.strip().lower() if args else None
     display_spec_help(spec_type)

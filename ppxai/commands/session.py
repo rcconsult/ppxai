@@ -22,7 +22,7 @@ def handle_save(handler: "CommandHandler", args: str) -> None:
         handler: CommandHandler instance providing context
         args: Command arguments (unused)
     """
-    from ..ui import console
+    from ..rich.ui import console
 
     try:
         session_name = handler.engine_client.session.save()
@@ -39,7 +39,7 @@ def handle_load(handler: "CommandHandler", args: str) -> None:
         handler: CommandHandler instance providing context
         args: Session name to load (optional - shows list if empty)
     """
-    from ..ui import console, display_sessions
+    from ..rich.ui import console, display_sessions
 
     if not args:
         console.print("[red]Please specify a session name: /load <session_name>[/red]\n")
@@ -84,7 +84,7 @@ def handle_sessions(handler: "CommandHandler", args: str) -> None:
         handler: CommandHandler instance providing context
         args: Command arguments (unused)
     """
-    from ..ui import display_sessions
+    from ..rich.ui import display_sessions
 
     sessions = handler.engine_client.session.list_sessions()
     session_dicts = [
@@ -108,7 +108,7 @@ def handle_clear(handler: "CommandHandler", args: str) -> None:
         handler: CommandHandler instance providing context
         args: Command arguments (unused)
     """
-    from ..ui import console
+    from ..rich.ui import console
 
     handler.engine_client.session.clear()
     console.print("\n[green]Conversation history cleared.[/green]\n")
@@ -121,7 +121,7 @@ def handle_export(handler: "CommandHandler", args: str) -> None:
         handler: CommandHandler instance providing context
         args: Optional filename for the export
     """
-    from ..ui import console
+    from ..rich.ui import console
 
     try:
         last_assistant_msg = None

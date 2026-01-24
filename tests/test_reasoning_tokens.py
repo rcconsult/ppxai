@@ -42,7 +42,7 @@ class TestEventHandlerReasoningCallback:
 
     def test_event_handler_has_reasoning_callback(self):
         """Verify EventHandler accepts on_reasoning_chunk callback."""
-        from ppxai.common.event_handler import EventHandler
+        from ppxai.rich.event_handler import EventHandler
 
         callback_called = []
 
@@ -54,7 +54,7 @@ class TestEventHandlerReasoningCallback:
 
     def test_event_handler_default_reasoning_callback(self):
         """Verify EventHandler has default no-op for reasoning callback."""
-        from ppxai.common.event_handler import EventHandler
+        from ppxai.rich.event_handler import EventHandler
 
         handler = EventHandler()
         # Should not raise
@@ -63,7 +63,7 @@ class TestEventHandlerReasoningCallback:
     @pytest.mark.asyncio
     async def test_event_handler_processes_reasoning_chunk(self):
         """Test EventHandler processes REASONING_CHUNK events."""
-        from ppxai.common.event_handler import EventHandler
+        from ppxai.rich.event_handler import EventHandler
 
         reasoning_chunks = []
 
@@ -83,7 +83,7 @@ class TestEventHandlerReasoningCallback:
     @pytest.mark.asyncio
     async def test_event_handler_accumulates_reasoning(self):
         """Test EventHandler accumulates reasoning in _reasoning_response."""
-        from ppxai.common.event_handler import EventHandler
+        from ppxai.rich.event_handler import EventHandler
 
         handler = EventHandler()
 
@@ -100,7 +100,7 @@ class TestEventHandlerReasoningCallback:
     @pytest.mark.asyncio
     async def test_event_handler_resets_reasoning_on_start(self):
         """Test that STREAM_START resets reasoning accumulator."""
-        from ppxai.common.event_handler import EventHandler
+        from ppxai.rich.event_handler import EventHandler
 
         handler = EventHandler()
 
@@ -118,7 +118,7 @@ class TestTUIEventHandlerReasoning:
 
     def test_tui_handler_has_reasoning_tracking(self):
         """Verify TUIEventHandler tracks reasoning state."""
-        from ppxai.common.event_handler import TUIEventHandler
+        from ppxai.rich.event_handler import TUIEventHandler
 
         console = MagicMock()
         logger = MagicMock()
@@ -129,7 +129,7 @@ class TestTUIEventHandlerReasoning:
 
     def test_tui_handler_reasoning_chunk_shows_header(self):
         """Test TUIEventHandler shows 'Thinking...' header on first reasoning chunk."""
-        from ppxai.common.event_handler import TUIEventHandler
+        from ppxai.rich.event_handler import TUIEventHandler
 
         console = MagicMock()
         logger = MagicMock()
@@ -145,7 +145,7 @@ class TestTUIEventHandlerReasoning:
 
     def test_tui_handler_reasoning_chunk_streams_content(self):
         """Test TUIEventHandler streams reasoning in dim italic style."""
-        from ppxai.common.event_handler import TUIEventHandler
+        from ppxai.rich.event_handler import TUIEventHandler
 
         console = MagicMock()
         logger = MagicMock()
@@ -161,7 +161,7 @@ class TestTUIEventHandlerReasoning:
 
     def test_tui_handler_stream_start_resets_reasoning_state(self):
         """Test TUIEventHandler resets reasoning state on stream start."""
-        from ppxai.common.event_handler import TUIEventHandler
+        from ppxai.rich.event_handler import TUIEventHandler
 
         console = MagicMock()
         logger = MagicMock()
@@ -197,7 +197,7 @@ class TestIntegrationReasoningFlow:
     @pytest.mark.asyncio
     async def test_reasoning_then_content_flow(self):
         """Test typical flow: reasoning chunks followed by content chunks."""
-        from ppxai.common.event_handler import EventHandler
+        from ppxai.rich.event_handler import EventHandler
 
         chunks = []
         reasoning = []
@@ -235,7 +235,7 @@ class TestIntegrationReasoningFlow:
     @pytest.mark.asyncio
     async def test_no_reasoning_flow(self):
         """Test flow without reasoning (normal models)."""
-        from ppxai.common.event_handler import EventHandler
+        from ppxai.rich.event_handler import EventHandler
 
         reasoning_called = []
 

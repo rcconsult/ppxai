@@ -1,10 +1,10 @@
-"""Unit tests for ppxai.utils module."""
+"""Unit tests for ppxai.rich.utils module."""
 import pytest
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from ppxai.utils import read_file_content
+from ppxai.rich.utils import read_file_content
 
 
 class TestReadFileContent:

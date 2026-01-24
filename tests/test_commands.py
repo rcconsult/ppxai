@@ -165,7 +165,7 @@ class TestCommandHandlerBothProviders:
 
     # ==================== /model Command ====================
 
-    @patch('ppxai.ui.select_model')
+    @patch('ppxai.rich.ui.select_model')
     def test_model_command_perplexity(self, mock_select, handler_perplexity, mock_engine_client):
         """Test /model command with Perplexity provider."""
         mock_select.return_value = "sonar-reasoning"
@@ -176,7 +176,7 @@ class TestCommandHandlerBothProviders:
         mock_engine_client.set_model.assert_called_once_with("sonar-reasoning")
         mock_select.assert_called_once_with("perplexity")
 
-    @patch('ppxai.ui.select_model')
+    @patch('ppxai.rich.ui.select_model')
     def test_model_command_custom(self, mock_select, handler_custom, mock_engine_client):
         """Test /model command with custom provider."""
         mock_select.return_value = "gpt-oss-120b"
@@ -231,7 +231,7 @@ class TestCommandHandlerBothProviders:
 
     # ==================== /sessions Command ====================
 
-    @patch('ppxai.ui.display_sessions')
+    @patch('ppxai.rich.ui.display_sessions')
     def test_sessions_command_perplexity(self, mock_display, handler_perplexity, mock_engine_client):
         """Test /sessions command with Perplexity provider."""
         # Create mock SessionInfo objects with expected attributes
@@ -255,7 +255,7 @@ class TestCommandHandlerBothProviders:
         mock_engine_client.session.list_sessions.assert_called_once()
         mock_display.assert_called_once()
 
-    @patch('ppxai.ui.display_sessions')
+    @patch('ppxai.rich.ui.display_sessions')
     def test_sessions_command_custom(self, mock_display, handler_custom, mock_engine_client):
         """Test /sessions command with custom provider."""
         # Create mock SessionInfo objects with expected attributes
@@ -325,8 +325,8 @@ class TestCommandHandlerBothProviders:
 
     # ==================== /provider Command ====================
 
-    @patch('ppxai.ui.select_provider')
-    @patch('ppxai.ui.select_model')
+    @patch('ppxai.rich.ui.select_provider')
+    @patch('ppxai.rich.ui.select_model')
     @patch('ppxai.config.get_api_key')
     @patch('ppxai.config.get_base_url')
     @patch('ppxai.config.get_provider_config')
@@ -358,8 +358,8 @@ class TestCommandHandlerBothProviders:
         assert handler_perplexity.base_url == "https://custom.example.com/v1"
         assert handler_perplexity.current_model == "gpt-oss-120b"
 
-    @patch('ppxai.ui.select_provider')
-    @patch('ppxai.ui.select_model')
+    @patch('ppxai.rich.ui.select_provider')
+    @patch('ppxai.rich.ui.select_model')
     @patch('ppxai.config.get_api_key')
     @patch('ppxai.config.get_base_url')
     @patch('ppxai.config.get_provider_config')
@@ -391,7 +391,7 @@ class TestCommandHandlerBothProviders:
         assert handler_custom.base_url == "https://api.perplexity.ai"
         assert handler_custom.current_model == "sonar-pro"
 
-    @patch('ppxai.ui.select_provider')
+    @patch('ppxai.rich.ui.select_provider')
     def test_provider_same_selection_perplexity(self, mock_select, handler_perplexity):
         """Test selecting same provider (Perplexity)."""
         mock_select.return_value = "perplexity"
@@ -400,7 +400,7 @@ class TestCommandHandlerBothProviders:
         # Should stay the same
         assert handler_perplexity.provider == original_provider
 
-    @patch('ppxai.ui.select_provider')
+    @patch('ppxai.rich.ui.select_provider')
     def test_provider_same_selection_custom(self, mock_select, handler_custom):
         """Test selecting same provider (custom)."""
         mock_select.return_value = "custom"
@@ -408,7 +408,7 @@ class TestCommandHandlerBothProviders:
         handler_custom.handle_command("/provider")
         assert handler_custom.provider == original_provider
 
-    @patch('ppxai.ui.select_provider')
+    @patch('ppxai.rich.ui.select_provider')
     @patch('ppxai.config.get_api_key')
     @patch('ppxai.config.get_provider_config')
     def test_provider_switch_missing_api_key_perplexity(
@@ -429,7 +429,7 @@ class TestCommandHandlerBothProviders:
         # Should stay on original provider
         assert handler_perplexity.provider == original_provider
 
-    @patch('ppxai.ui.select_provider')
+    @patch('ppxai.rich.ui.select_provider')
     @patch('ppxai.config.get_api_key')
     @patch('ppxai.config.get_provider_config')
     def test_provider_switch_missing_api_key_custom(
@@ -673,13 +673,13 @@ class TestToolsCommands:
         """Test /tools with invalid subcommand for custom provider."""
         handler_custom.handle_command("/tools invalid")
 
-    @patch('ppxai.ui.display_file_editing_help')
+    @patch('ppxai.rich.ui.display_file_editing_help')
     def test_tools_help_editing_perplexity(self, mock_help, handler_perplexity):
         """Test /tools help editing for Perplexity."""
         handler_perplexity.handle_command("/tools help editing")
         mock_help.assert_called_once()
 
-    @patch('ppxai.ui.display_file_editing_help')
+    @patch('ppxai.rich.ui.display_file_editing_help')
     def test_tools_help_editing_custom(self, mock_help, handler_custom):
         """Test /tools help editing for custom provider."""
         handler_custom.handle_command("/tools help editing")
@@ -948,14 +948,14 @@ class TestCommandHandlerIntegration:
         result = handler_custom.handle_command("/exit")
         assert result is True
 
-    @patch('ppxai.ui.display_welcome')
+    @patch('ppxai.rich.ui.display_welcome')
     def test_handle_help_command_perplexity(self, mock_welcome, handler_perplexity):
         """Test /help command for Perplexity."""
         result = handler_perplexity.handle_command("/help")
         assert result is False  # Should not exit
         mock_welcome.assert_called()
 
-    @patch('ppxai.ui.display_welcome')
+    @patch('ppxai.rich.ui.display_welcome')
     def test_handle_help_command_custom(self, mock_welcome, handler_custom):
         """Test /help command for custom provider."""
         result = handler_custom.handle_command("/help")

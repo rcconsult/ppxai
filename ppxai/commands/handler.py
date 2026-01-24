@@ -31,8 +31,8 @@ from ..config import (
 from ..engine import EngineClient
 from ..engine.tools.builtin import web_premium
 from ..prompts import CODING_PROMPTS
-from ..utils import read_file_content
-from ..ui import (
+from ..rich.utils import read_file_content
+from ..rich.ui import (
     console,
     display_welcome,
     display_spec_help,
@@ -45,8 +45,8 @@ from ..ui import (
     display_global_usage,
     display_tools_table,
 )
-from ..themes import get_theme, list_themes, Theme, DEFAULT_THEME
-from ..ui_components import render_theme_list
+from ..rich.themes import get_theme, list_themes, Theme, DEFAULT_THEME
+from ..rich.ui_components import render_theme_list
 from ..common.logger import get_logger
 from ..version import __version__
 from ..constants import ConsentResponse, ConsentDecision, ShellRiskLevel
@@ -222,7 +222,7 @@ def send_coding_task(handler: 'CommandHandler', task_type: str, user_message: st
     # Use engine client for coding tasks
     import asyncio
     from ..engine.types import EventType
-    from ..markdown_tables import render_markdown_with_tables
+    from ..rich.markdown_tables import render_markdown_with_tables
 
     async def run_coding_task():
         content = ""

@@ -4,6 +4,7 @@ StatusBar widget - Shows provider, model, tools status, and context info.
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal
+from textual.css.query import NoMatches
 from textual.reactive import reactive
 from textual.widgets import Static
 
@@ -70,21 +71,21 @@ class StatusBar(Static):
         try:
             badge = self.query_one(".provider-badge", StatusBadge)
             badge.update_value(provider)
-        except Exception:
-            pass
+        except NoMatches:
+            pass  # Widget not yet composed
 
     def watch_model(self, model: str) -> None:
         """React to model changes."""
         try:
             badge = self.query_one(".model-badge", StatusBadge)
             badge.update_value(model)
-        except Exception:
-            pass
+        except NoMatches:
+            pass  # Widget not yet composed
 
     def watch_tools_enabled(self, enabled: bool) -> None:
         """React to tools toggle."""
         try:
             badge = self.query_one(".tools-badge", StatusBadge)
             badge.update_value("ON" if enabled else "OFF")
-        except Exception:
-            pass
+        except NoMatches:
+            pass  # Widget not yet composed

@@ -37,7 +37,7 @@ from .config import (
     validate_config,
 )
 from .prompts import CODING_PROMPTS, SPEC_GUIDELINES, SPEC_TEMPLATES
-from .utils import read_file_content
+from .rich.utils import read_file_content
 from .version import __version__
 
 # Export EngineClient as the primary client interface
@@ -100,23 +100,23 @@ __all__ = [
 # Lazy loading for TUI-specific modules
 # These require prompt_toolkit which is not available in server builds
 _lazy_imports = {
-    # UI module exports
-    "console": ".ui",
-    "display_welcome": ".ui",
-    "display_spec_help": ".ui",
-    "display_models": ".ui",
-    "select_model": ".ui",
-    "select_provider": ".ui",
-    "display_sessions": ".ui",
-    "display_usage": ".ui",
-    "display_global_usage": ".ui",
-    "display_tools_table": ".ui",
-    "display_tool_help": ".ui",
-    # Commands module exports
+    # UI module exports (Rich TUI)
+    "console": ".rich.ui",
+    "display_welcome": ".rich.ui",
+    "display_spec_help": ".rich.ui",
+    "display_models": ".rich.ui",
+    "select_model": ".rich.ui",
+    "select_provider": ".rich.ui",
+    "display_sessions": ".rich.ui",
+    "display_usage": ".rich.ui",
+    "display_global_usage": ".rich.ui",
+    "display_tools_table": ".rich.ui",
+    "display_tool_help": ".rich.ui",
+    # Commands module exports (shared)
     "CommandHandler": ".commands",
     "send_coding_task": ".commands",
-    # Main module exports
-    "main": ".main",
+    # Main module exports (Rich TUI)
+    "main": ".rich.main",
 }
 
 

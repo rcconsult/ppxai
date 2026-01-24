@@ -9,15 +9,15 @@ import asyncio
 import time
 from pathlib import Path
 
-from .version import __version__
+from ..version import __version__
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 
-from .commands import CommandHandler
-from .config import (
+from ..commands import CommandHandler
+from ..config import (
     PROVIDERS,
     get_default_provider,
     get_default_model,
@@ -31,12 +31,12 @@ from .config import (
 )
 from .ui import console, display_welcome, select_model, select_provider
 from .ui_components import format_usage_string, render_status_line, render_status_panel
-from .engine.session import SessionManager
-from .engine.types import EventType
+from ..engine.session import SessionManager
+from ..engine.types import EventType
 from .markdown_tables import render_markdown_with_tables
 from .themes import get_theme
-from .common.logger import get_logger
-from .common.event_handler import TUIEventHandler
+from ..common.logger import get_logger
+from .event_handler import TUIEventHandler
 
 logger = get_logger("tui")
 
@@ -620,7 +620,7 @@ def main():
     parser.parse_args()
 
     # Initialize configuration system (v1.13.10: explicit initialization)
-    from .config import initialize
+    from ..config import initialize
     initialize()
 
     # Check if provider selection is needed or use environment default

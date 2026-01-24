@@ -315,7 +315,7 @@ def render_markdown_with_tables(
 
     # Normalize emoji widths to prevent panel misalignment
     if normalize_emojis:
-        from ppxai.ui_components import sanitize_for_panel
+        from ppxai.rich.ui_components import sanitize_for_panel
         content = sanitize_for_panel(content)
 
     blocks = split_markdown_content(content)

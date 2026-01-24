@@ -6,15 +6,15 @@ Tests UI display functions including help displays and markdown rendering.
 
 import pytest
 from unittest.mock import patch, MagicMock
-from ppxai.ui import display_file_editing_help
+from ppxai.rich.ui import display_file_editing_help
 
 
 class TestFileEditingHelp:
     """Test display_file_editing_help function."""
 
-    @patch('ppxai.ui.console')
-    @patch('ppxai.ui.Panel')
-    @patch('ppxai.ui.Markdown')
+    @patch('ppxai.rich.ui.console')
+    @patch('ppxai.rich.ui.Panel')
+    @patch('ppxai.rich.ui.Markdown')
     def test_display_file_editing_help_called(self, mock_markdown, mock_panel, mock_console):
         """Test that display_file_editing_help renders help content."""
         display_file_editing_help()
@@ -28,9 +28,9 @@ class TestFileEditingHelp:
         # Should print the panel
         assert mock_console.print.call_count == 1
 
-    @patch('ppxai.ui.console')
-    @patch('ppxai.ui.Panel')
-    @patch('ppxai.ui.Markdown')
+    @patch('ppxai.rich.ui.console')
+    @patch('ppxai.rich.ui.Panel')
+    @patch('ppxai.rich.ui.Markdown')
     def test_display_file_editing_help_content(self, mock_markdown, mock_panel, mock_console):
         """Test that help content includes key sections."""
         display_file_editing_help()
@@ -53,9 +53,9 @@ class TestFileEditingHelp:
         assert "Troubleshooting" in help_content
         assert "Commands" in help_content  # Section header is "Commands" not "Commands Reference"
 
-    @patch('ppxai.ui.console')
-    @patch('ppxai.ui.Panel')
-    @patch('ppxai.ui.Markdown')
+    @patch('ppxai.rich.ui.console')
+    @patch('ppxai.rich.ui.Panel')
+    @patch('ppxai.rich.ui.Markdown')
     def test_display_file_editing_help_consent_options(self, mock_markdown, mock_panel, mock_console):
         """Test that help includes all consent options."""
         display_file_editing_help()
@@ -69,9 +69,9 @@ class TestFileEditingHelp:
         assert "always" in help_content
         assert "never" in help_content
 
-    @patch('ppxai.ui.console')
-    @patch('ppxai.ui.Panel')
-    @patch('ppxai.ui.Markdown')
+    @patch('ppxai.rich.ui.console')
+    @patch('ppxai.rich.ui.Panel')
+    @patch('ppxai.rich.ui.Markdown')
     def test_display_file_editing_help_panel_styling(self, mock_markdown, mock_panel, mock_console):
         """Test that Panel is created with correct styling."""
         display_file_editing_help()
@@ -87,9 +87,9 @@ class TestFileEditingHelp:
         assert kwargs.get('border_style') == 'green'
         assert kwargs.get('padding') == (1, 2)
 
-    @patch('ppxai.ui.console')
-    @patch('ppxai.ui.Panel')
-    @patch('ppxai.ui.Markdown')
+    @patch('ppxai.rich.ui.console')
+    @patch('ppxai.rich.ui.Panel')
+    @patch('ppxai.rich.ui.Markdown')
     def test_display_file_editing_help_examples(self, mock_markdown, mock_panel, mock_console):
         """Test that help includes practical examples."""
         display_file_editing_help()
@@ -107,12 +107,12 @@ class TestFileEditingHelp:
 class TestToolHelp:
     """Test display_tool_help function."""
 
-    @patch('ppxai.ui.console')
-    @patch('ppxai.ui.Panel')
-    @patch('ppxai.ui.Markdown')
+    @patch('ppxai.rich.ui.console')
+    @patch('ppxai.rich.ui.Panel')
+    @patch('ppxai.rich.ui.Markdown')
     def test_display_tool_help_basic(self, mock_markdown, mock_panel, mock_console):
         """Test that display_tool_help renders tool information."""
-        from ppxai.ui import display_tool_help
+        from ppxai.rich.ui import display_tool_help
 
         tool_info = {
             "description": "A test tool description",
@@ -136,12 +136,12 @@ class TestToolHelp:
         # Should print the panel
         assert mock_console.print.call_count == 1
 
-    @patch('ppxai.ui.console')
-    @patch('ppxai.ui.Panel')
-    @patch('ppxai.ui.Markdown')
+    @patch('ppxai.rich.ui.console')
+    @patch('ppxai.rich.ui.Panel')
+    @patch('ppxai.rich.ui.Markdown')
     def test_display_tool_help_content(self, mock_markdown, mock_panel, mock_console):
         """Test that help content includes tool name and description."""
-        from ppxai.ui import display_tool_help
+        from ppxai.rich.ui import display_tool_help
 
         tool_info = {
             "description": "Calculates mathematical expressions safely",
@@ -168,12 +168,12 @@ class TestToolHelp:
         assert "expression" in help_content
         assert "required" in help_content.lower()
 
-    @patch('ppxai.ui.console')
-    @patch('ppxai.ui.Panel')
-    @patch('ppxai.ui.Markdown')
+    @patch('ppxai.rich.ui.console')
+    @patch('ppxai.rich.ui.Panel')
+    @patch('ppxai.rich.ui.Markdown')
     def test_display_tool_help_optional_params(self, mock_markdown, mock_panel, mock_console):
         """Test that help shows optional parameters correctly."""
-        from ppxai.ui import display_tool_help
+        from ppxai.rich.ui import display_tool_help
 
         tool_info = {
             "description": "Read a file",
@@ -199,12 +199,12 @@ class TestToolHelp:
         assert "max_lines" in help_content
         assert "optional" in help_content.lower()
 
-    @patch('ppxai.ui.console')
-    @patch('ppxai.ui.Panel')
-    @patch('ppxai.ui.Markdown')
+    @patch('ppxai.rich.ui.console')
+    @patch('ppxai.rich.ui.Panel')
+    @patch('ppxai.rich.ui.Markdown')
     def test_display_tool_help_enum_params(self, mock_markdown, mock_panel, mock_console):
         """Test that help shows enum parameter choices."""
-        from ppxai.ui import display_tool_help
+        from ppxai.rich.ui import display_tool_help
 
         tool_info = {
             "description": "Get weather",
@@ -230,12 +230,12 @@ class TestToolHelp:
         assert "celsius" in help_content
         assert "fahrenheit" in help_content
 
-    @patch('ppxai.ui.console')
-    @patch('ppxai.ui.Panel')
-    @patch('ppxai.ui.Markdown')
+    @patch('ppxai.rich.ui.console')
+    @patch('ppxai.rich.ui.Panel')
+    @patch('ppxai.rich.ui.Markdown')
     def test_display_tool_help_no_params(self, mock_markdown, mock_panel, mock_console):
         """Test that help handles tools with no parameters."""
-        from ppxai.ui import display_tool_help
+        from ppxai.rich.ui import display_tool_help
 
         tool_info = {
             "description": "Get current date and time",
@@ -253,12 +253,12 @@ class TestToolHelp:
         # Should mention no parameters
         assert "No parameters required" in help_content or "get_datetime" in help_content
 
-    @patch('ppxai.ui.console')
-    @patch('ppxai.ui.Panel')
-    @patch('ppxai.ui.Markdown')
+    @patch('ppxai.rich.ui.console')
+    @patch('ppxai.rich.ui.Panel')
+    @patch('ppxai.rich.ui.Markdown')
     def test_display_tool_help_panel_styling(self, mock_markdown, mock_panel, mock_console):
         """Test that panel has correct styling."""
-        from ppxai.ui import display_tool_help
+        from ppxai.rich.ui import display_tool_help
 
         tool_info = {
             "description": "Test tool",
@@ -275,12 +275,12 @@ class TestToolHelp:
         assert kwargs.get('border_style') == 'cyan'
         assert kwargs.get('padding') == (1, 2)
 
-    @patch('ppxai.ui.console')
-    @patch('ppxai.ui.Panel')
-    @patch('ppxai.ui.Markdown')
+    @patch('ppxai.rich.ui.console')
+    @patch('ppxai.rich.ui.Panel')
+    @patch('ppxai.rich.ui.Markdown')
     def test_display_tool_help_example_usage(self, mock_markdown, mock_panel, mock_console):
         """Test that help includes example usage section."""
-        from ppxai.ui import display_tool_help
+        from ppxai.rich.ui import display_tool_help
 
         tool_info = {
             "description": "Search the web",

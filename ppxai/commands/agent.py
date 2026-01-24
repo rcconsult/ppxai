@@ -23,7 +23,7 @@ def handle_undo(handler: "CommandHandler", args: str) -> None:
         args: Command arguments (unused)
     """
     from ..common.logger import get_logger
-    from ..ui import console
+    from ..rich.ui import console
 
     logger = get_logger("tui")
 
@@ -128,7 +128,7 @@ def handle_checkpoint(handler: "CommandHandler", args: str) -> None:
         handler: CommandHandler instance providing context
         args: Subcommand and arguments
     """
-    from ..ui import console
+    from ..rich.ui import console
 
     if not handler.engine_client:
         console.print("[red]Checkpoint command requires engine client[/red]")
@@ -158,7 +158,7 @@ def handle_checkpoint(handler: "CommandHandler", args: str) -> None:
 
 def _checkpoint_status(handler: "CommandHandler") -> None:
     """Show current checkpoint status."""
-    from ..ui import console
+    from ..rich.ui import console
 
     status = handler.engine_client.get_checkpoint_status()
 
@@ -196,7 +196,7 @@ def _checkpoint_status(handler: "CommandHandler") -> None:
 
 def _checkpoint_list(handler: "CommandHandler") -> None:
     """List recent checkpoints."""
-    from ..ui import console
+    from ..rich.ui import console
 
     checkpoints = handler.engine_client.list_checkpoints(limit=10)
 
@@ -218,7 +218,7 @@ def _checkpoint_list(handler: "CommandHandler") -> None:
 
 def _checkpoint_backend(handler: "CommandHandler", backend: Optional[str]) -> None:
     """Set or show the checkpoint backend."""
-    from ..ui import console
+    from ..rich.ui import console
 
     if not backend:
         # Show current backend
@@ -254,7 +254,7 @@ def _checkpoint_clear(handler: "CommandHandler") -> None:
     """Clear old file-based checkpoint snapshots."""
     from prompt_toolkit import prompt as pt_prompt
 
-    from ..ui import console
+    from ..rich.ui import console
 
     status = handler.engine_client.get_checkpoint_status()
     backend = status.get("backend", "none")
@@ -280,7 +280,7 @@ def _checkpoint_clear(handler: "CommandHandler") -> None:
 
 def _checkpoint_info(handler: "CommandHandler", checkpoint_id: Optional[str]) -> None:
     """Show details about a specific checkpoint."""
-    from ..ui import console
+    from ..rich.ui import console
 
     if not checkpoint_id:
         console.print("[red]Usage: /checkpoint info <checkpoint_id>[/red]")
@@ -330,7 +330,7 @@ def _handle_agent_interrupt(
     """
     from prompt_toolkit import prompt as pt_prompt
 
-    from ..ui import console
+    from ..rich.ui import console
 
     console.print("[yellow]Agent task incomplete due to interrupt.[/yellow]\n")
 
@@ -436,7 +436,7 @@ def handle_agent(handler: "CommandHandler", args: str) -> None:
     """
     import asyncio
 
-    from ..ui import console
+    from ..rich.ui import console
 
     if not args.strip():
         console.print("[red]Usage: /agent <task description>[/red]")
@@ -514,7 +514,7 @@ def handle_agent(handler: "CommandHandler", args: str) -> None:
             console.print("[dim]Changes cannot be undone with /undo[/dim]\n")
 
     async def run_agent_loop():
-        from ..common.event_handler import TUIEventHandler
+        from ..rich.event_handler import TUIEventHandler
 
         iteration = 0
         task_complete = False

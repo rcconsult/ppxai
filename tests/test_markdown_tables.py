@@ -7,7 +7,7 @@ Ensures tables are properly rendered in the TUI without regression.
 import pytest
 from io import StringIO
 from rich.console import Console
-from ppxai.markdown_tables import (
+from ppxai.rich.markdown_tables import (
     parse_table_alignment,
     parse_markdown_table,
     is_table_block,
@@ -380,7 +380,7 @@ class TestLinkConversion:
 
     def test_convert_single_link(self):
         """Test converting a single markdown link."""
-        from ppxai.markdown_tables import convert_markdown_links_to_rich
+        from ppxai.rich.markdown_tables import convert_markdown_links_to_rich
 
         text = "See [1](https://docs.python.org) for details."
         result = convert_markdown_links_to_rich(text)
@@ -391,7 +391,7 @@ class TestLinkConversion:
 
     def test_convert_multiple_links(self):
         """Test converting multiple markdown links."""
-        from ppxai.markdown_tables import convert_markdown_links_to_rich
+        from ppxai.rich.markdown_tables import convert_markdown_links_to_rich
 
         text = "Check [Google](https://google.com) and [Python](https://python.org)."
         result = convert_markdown_links_to_rich(text)
@@ -403,7 +403,7 @@ class TestLinkConversion:
 
     def test_no_links_unchanged(self):
         """Test that text without links is unchanged."""
-        from ppxai.markdown_tables import convert_markdown_links_to_rich
+        from ppxai.rich.markdown_tables import convert_markdown_links_to_rich
 
         text = "This is plain text without any links."
         result = convert_markdown_links_to_rich(text)
@@ -412,7 +412,7 @@ class TestLinkConversion:
 
     def test_http_and_https_links(self):
         """Test both HTTP and HTTPS links are converted."""
-        from ppxai.markdown_tables import convert_markdown_links_to_rich
+        from ppxai.rich.markdown_tables import convert_markdown_links_to_rich
 
         text = "[Secure](https://example.com) and [Insecure](http://example.org)"
         result = convert_markdown_links_to_rich(text)
@@ -422,7 +422,7 @@ class TestLinkConversion:
 
     def test_links_with_special_chars(self):
         """Test links with special characters in URL."""
-        from ppxai.markdown_tables import convert_markdown_links_to_rich
+        from ppxai.rich.markdown_tables import convert_markdown_links_to_rich
 
         text = "[Search](https://google.com/search?q=python&lang=en)"
         result = convert_markdown_links_to_rich(text)
@@ -431,7 +431,7 @@ class TestLinkConversion:
 
     def test_citation_style_links(self):
         """Test citation-style links like [1], [2], etc."""
-        from ppxai.markdown_tables import convert_markdown_links_to_rich
+        from ppxai.rich.markdown_tables import convert_markdown_links_to_rich
 
         text = "This is explained in [1](https://source1.com), [2](https://source2.com), and [3](https://source3.com)."
         result = convert_markdown_links_to_rich(text)
@@ -487,27 +487,27 @@ class TestEmojiConversion:
 
     def test_warning_emoji_converted(self):
         """Test warning emoji is converted to '!'."""
-        from ppxai.ui_components import emojis_to_text_symbols
+        from ppxai.rich.ui_components import emojis_to_text_symbols
 
         assert emojis_to_text_symbols("⚠️ Warning") == "! Warning"
         assert emojis_to_text_symbols("⚠ Note") == "! Note"
 
     def test_success_emoji_converted(self):
         """Test checkmark emoji is converted to '*'."""
-        from ppxai.ui_components import emojis_to_text_symbols
+        from ppxai.rich.ui_components import emojis_to_text_symbols
 
         assert emojis_to_text_symbols("✅ Done") == "* Done"
         assert emojis_to_text_symbols("✓ OK") == "* OK"
 
     def test_error_emoji_converted(self):
         """Test error emoji is converted to 'X'."""
-        from ppxai.ui_components import emojis_to_text_symbols
+        from ppxai.rich.ui_components import emojis_to_text_symbols
 
         assert emojis_to_text_symbols("❌ Failed") == "X Failed"
 
     def test_multiple_emojis_converted(self):
         """Test multiple emojis in one string."""
-        from ppxai.ui_components import emojis_to_text_symbols
+        from ppxai.rich.ui_components import emojis_to_text_symbols
 
         text = "✅ Step 1\n⚠️ Step 2\n❌ Step 3"
         result = emojis_to_text_symbols(text)
@@ -515,14 +515,14 @@ class TestEmojiConversion:
 
     def test_no_emojis_unchanged(self):
         """Test text without emojis is unchanged."""
-        from ppxai.ui_components import emojis_to_text_symbols
+        from ppxai.rich.ui_components import emojis_to_text_symbols
 
         text = "Plain text without emojis"
         assert emojis_to_text_symbols(text) == text
 
     def test_sanitize_for_panel_uses_text_symbols(self):
         """Test sanitize_for_panel converts emojis by default."""
-        from ppxai.ui_components import sanitize_for_panel
+        from ppxai.rich.ui_components import sanitize_for_panel
 
         text = "⚠️ Warning: ✅ check, ❌ fail"
         result = sanitize_for_panel(text)

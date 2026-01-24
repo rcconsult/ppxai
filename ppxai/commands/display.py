@@ -33,7 +33,7 @@ def handle_show(handler: "CommandHandler", args: str) -> None:
         args: Filepath and optional flags
     """
     from rich.syntax import Syntax
-    from ..ui import console
+    from ..rich.ui import console
     from ..common.logger import get_logger
 
     logger = get_logger("tui")
@@ -177,7 +177,7 @@ def handle_show(handler: "CommandHandler", args: str) -> None:
 
         elif path.suffix.lower() in ['.md', '.markdown']:
             # For markdown files, render them (including tables) instead of syntax highlighting
-            from ..markdown_tables import render_markdown_with_tables
+            from ..rich.markdown_tables import render_markdown_with_tables
             # Pass the file's parent directory for resolving relative links
             render_markdown_with_tables(content, console, working_dir=str(path.parent))
         else:

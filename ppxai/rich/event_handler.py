@@ -212,8 +212,8 @@ class TUIEventHandler(EventHandler):
             theme_name: Theme name for styled rendering (optional, uses config default)
             emoji_mode: Whether to show original emojis (True) or convert to text symbols (False)
         """
-        from ppxai.markdown_tables import render_markdown_with_tables
-        from ppxai.themes import get_theme, DEFAULT_THEME
+        from ppxai.rich.markdown_tables import render_markdown_with_tables
+        from ppxai.rich.themes import get_theme, DEFAULT_THEME
         from ppxai.config import get_tui_theme
 
         self.console = console
@@ -334,7 +334,7 @@ class TUIEventHandler(EventHandler):
     def _on_stream_end(self, response: str):
         """Handle stream end for TUI with themed panel."""
         from datetime import datetime
-        from ppxai.ui_components import render_message
+        from ppxai.rich.ui_components import render_message
 
         self.logger.log_assistant_message(response)
         if response.strip():

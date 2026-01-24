@@ -159,7 +159,8 @@ class TestCodeEditor:
 
         assert EXTENSION_TO_LANGUAGE[".py"] == "python"
         assert EXTENSION_TO_LANGUAGE[".js"] == "javascript"
-        assert EXTENSION_TO_LANGUAGE[".ts"] == "typescript"
+        # TypeScript uses JS highlighting (Textual doesn't have native TS support)
+        assert EXTENSION_TO_LANGUAGE[".ts"] == "javascript"
         assert EXTENSION_TO_LANGUAGE[".json"] == "json"
         assert EXTENSION_TO_LANGUAGE[".yaml"] == "yaml"
         assert EXTENSION_TO_LANGUAGE[".md"] == "markdown"
@@ -198,6 +199,7 @@ class TestWidgetExports:
             Pane,
             HorizontalSplit,
             VerticalSplit,
+            SidePanel,
         )
 
     def test_all_exports_list(self):
@@ -215,9 +217,32 @@ class TestWidgetExports:
             "Pane",
             "HorizontalSplit",
             "VerticalSplit",
+            "SidePanel",
         ]
         for name in expected:
             assert name in widgets.__all__
+
+
+class TestSidePanel:
+    """Tests for SidePanel widget."""
+
+    def test_side_panel_imports(self):
+        """SidePanel should import without error."""
+        from ppxai.tui.widgets import SidePanel
+
+    def test_side_panel_default_state(self):
+        """SidePanel should start closed."""
+        from ppxai.tui.widgets.side_panel import SidePanel
+
+        panel = SidePanel()
+        assert panel.is_open is False
+
+    def test_side_panel_has_messages(self):
+        """SidePanel should have Opened and Closed message classes."""
+        from ppxai.tui.widgets.side_panel import SidePanel
+
+        assert hasattr(SidePanel, "Opened")
+        assert hasattr(SidePanel, "Closed")
 
 
 class TestAppImports:
@@ -237,3 +262,80 @@ class TestAppImports:
         assert "ctrl+c" in binding_keys
         assert "ctrl+l" in binding_keys
         assert "ctrl+t" in binding_keys
+
+
+class TestTerminalCapabilities:
+    """Tests for terminal capability detection."""
+
+    def test_terminal_imports(self):
+        """Terminal module should import without error."""
+        from ppxai.tui.terminal import (
+            ImageProtocol,
+            TerminalCapabilities,
+            detect_terminal,
+            detect_true_color,
+            detect_image_protocol,
+            can_display_images,
+            get_capabilities,
+            format_capabilities,
+        )
+
+    def test_image_protocol_enum(self):
+        """ImageProtocol enum should have expected values."""
+        from ppxai.tui.terminal import ImageProtocol
+
+        assert ImageProtocol.NONE
+        assert ImageProtocol.ITERM2
+        assert ImageProtocol.KITTY
+        assert ImageProtocol.SIXEL
+
+    def test_detect_capabilities_returns_dataclass(self):
+        """detect_capabilities should return TerminalCapabilities."""
+        from ppxai.tui.terminal import get_capabilities, TerminalCapabilities
+
+        caps = get_capabilities()
+        assert isinstance(caps, TerminalCapabilities)
+        assert hasattr(caps, "name")
+        assert hasattr(caps, "true_color")
+        assert hasattr(caps, "image_protocol")
+
+    def test_format_capabilities_returns_string(self):
+        """format_capabilities should return a formatted string."""
+        from ppxai.tui.terminal import format_capabilities
+
+        result = format_capabilities()
+        assert isinstance(result, str)
+        assert "Terminal:" in result
+
+
+class TestImageSupport:
+    """Tests for image display support."""
+
+    def test_images_imports(self):
+        """Images module should import without error."""
+        from ppxai.tui.images import (
+            IMAGE_EXTENSIONS,
+            is_image_file,
+            display_image,
+        )
+        from ppxai.tui.terminal import can_display_images
+
+    def test_image_extensions(self):
+        """IMAGE_EXTENSIONS should contain common formats."""
+        from ppxai.tui.images import IMAGE_EXTENSIONS
+
+        assert ".png" in IMAGE_EXTENSIONS
+        assert ".jpg" in IMAGE_EXTENSIONS
+        assert ".jpeg" in IMAGE_EXTENSIONS
+        assert ".gif" in IMAGE_EXTENSIONS
+
+    def test_is_image_file(self):
+        """is_image_file should detect image extensions."""
+        from ppxai.tui.images import is_image_file
+        from pathlib import Path
+
+        assert is_image_file(Path("test.png"))
+        assert is_image_file(Path("test.jpg"))
+        assert is_image_file(Path("test.JPEG"))  # Case insensitive
+        assert not is_image_file(Path("test.py"))
+        assert not is_image_file(Path("test.txt"))

@@ -23,7 +23,7 @@ def handle_generate(handler: "CommandHandler", args: str) -> None:
         handler: CommandHandler instance providing context
         args: Description of code to generate
     """
-    from ..ui import console
+    from ..rich.ui import console
     from .handler import send_coding_task
 
     if not args:
@@ -42,8 +42,8 @@ def handle_test(handler: "CommandHandler", args: str) -> None:
         handler: CommandHandler instance providing context
         args: File path to generate tests for
     """
-    from ..ui import console
-    from ..utils import read_file_content
+    from ..rich.ui import console
+    from ..rich.utils import read_file_content
     from .handler import send_coding_task
 
     if not args:
@@ -65,8 +65,8 @@ def handle_docs(handler: "CommandHandler", args: str) -> None:
         handler: CommandHandler instance providing context
         args: File path to generate documentation for
     """
-    from ..ui import console
-    from ..utils import read_file_content
+    from ..rich.ui import console
+    from ..rich.utils import read_file_content
     from .handler import send_coding_task
 
     if not args:
@@ -88,7 +88,7 @@ def handle_implement(handler: "CommandHandler", args: str) -> None:
         handler: CommandHandler instance providing context
         args: Feature specification to implement
     """
-    from ..ui import console
+    from ..rich.ui import console
     from .handler import send_coding_task
 
     if not args:
@@ -108,7 +108,7 @@ def handle_debug(handler: "CommandHandler", args: str) -> None:
         handler: CommandHandler instance providing context
         args: Error message or stack trace to debug
     """
-    from ..ui import console
+    from ..rich.ui import console
     from .handler import send_coding_task
 
     if not args:
@@ -127,8 +127,8 @@ def handle_explain(handler: "CommandHandler", args: str) -> None:
         handler: CommandHandler instance providing context
         args: File path to explain
     """
-    from ..ui import console
-    from ..utils import read_file_content
+    from ..rich.ui import console
+    from ..rich.utils import read_file_content
     from .handler import send_coding_task
 
     if not args:
@@ -150,8 +150,8 @@ def handle_convert(handler: "CommandHandler", args: str) -> None:
         handler: CommandHandler instance providing context
         args: Format: <source-lang> <target-lang> <file-or-code>
     """
-    from ..ui import console
-    from ..utils import read_file_content
+    from ..rich.ui import console
+    from ..rich.utils import read_file_content
     from .handler import send_coding_task
 
     if not args:

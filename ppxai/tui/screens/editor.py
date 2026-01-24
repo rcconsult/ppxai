@@ -13,6 +13,7 @@ from typing import Optional
 
 from textual.app import ComposeResult
 from textual.binding import Binding
+from textual.css.query import NoMatches
 from textual.screen import Screen
 from textual.widgets import Footer, Static
 
@@ -72,15 +73,15 @@ class EditorScreen(Screen):
             try:
                 editor = self.query_one("#editor-area", CodeEditor)
                 editor.goto_line(self._line, self._col or 0)
-            except Exception:
-                pass
+            except NoMatches:
+                pass  # Editor not composed yet
 
         # Focus the editor
         try:
             editor = self.query_one("#editor-area", CodeEditor)
             editor.focus()
-        except Exception:
-            pass
+        except NoMatches:
+            pass  # Editor not composed yet
 
     def on_text_area_changed(self, event) -> None:
         """Track unsaved changes."""
@@ -93,8 +94,8 @@ class EditorScreen(Screen):
             title = self.query_one("#editor-title", Static)
             modified = "" if self._saved else " [yellow]●[/yellow]"
             title.update(f" [bold]{self._path.name}[/bold]{modified}")
-        except Exception:
-            pass
+        except NoMatches:
+            pass  # Title widget not found
 
     def action_save(self) -> None:
         """Save the file."""

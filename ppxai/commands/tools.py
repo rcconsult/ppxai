@@ -32,7 +32,7 @@ def handle_tools(handler: "CommandHandler", args: str) -> None:
         args: Subcommand and arguments
     """
     from ..engine.tools.builtin import web_premium
-    from ..ui import console, display_file_editing_help, display_tool_help, display_tools_table
+    from ..rich.ui import console, display_file_editing_help, display_tool_help, display_tools_table
     from ..common.logger import get_logger
 
     logger = get_logger("tui")
@@ -79,7 +79,7 @@ def handle_tools(handler: "CommandHandler", args: str) -> None:
 
 def _enable_tools(handler: "CommandHandler") -> None:
     """Enable AI tools (including file editing tools with consent)."""
-    from ..ui import console
+    from ..rich.ui import console
 
     if not handler.engine_client:
         console.print("[red]Error: Engine client not available[/red]\n")
@@ -109,7 +109,7 @@ def _enable_tools(handler: "CommandHandler") -> None:
 
 def _disable_tools(handler: "CommandHandler") -> None:
     """Disable AI tools."""
-    from ..ui import console
+    from ..rich.ui import console
 
     if not handler.engine_client:
         console.print("[red]Error: Engine client not available[/red]\n")
@@ -125,7 +125,7 @@ def _disable_tools(handler: "CommandHandler") -> None:
 
 def _list_tools(handler: "CommandHandler") -> None:
     """List available tools."""
-    from ..ui import console, display_tools_table
+    from ..rich.ui import console, display_tools_table
 
     if not handler.engine_client or not handler.engine_client.tools_enabled:
         console.print("[yellow]Tools not enabled. Use '/tools enable' first[/yellow]\n")
@@ -142,7 +142,7 @@ def _list_tools(handler: "CommandHandler") -> None:
 def _tools_status(handler: "CommandHandler") -> None:
     """Show tools status."""
     from ..engine.tools.builtin import web_premium
-    from ..ui import console
+    from ..rich.ui import console
     from ..common.logger import get_logger
 
     logger = get_logger("tui")
@@ -186,7 +186,7 @@ def _tools_status(handler: "CommandHandler") -> None:
 
 def _tools_config(handler: "CommandHandler", args: List[str]) -> None:
     """Configure tool settings."""
-    from ..ui import console
+    from ..rich.ui import console
 
     if not handler.engine_client or not handler.engine_client.tools_enabled:
         console.print("[yellow]Tools not enabled. Use '/tools enable' first[/yellow]\n")
@@ -242,7 +242,7 @@ def _tools_config(handler: "CommandHandler", args: List[str]) -> None:
 
 def _tools_set(handler: "CommandHandler", args: List[str]) -> None:
     """Set tool settings (verbose mode)."""
-    from ..ui import console
+    from ..rich.ui import console
 
     if not args:
         # Show current settings
@@ -280,7 +280,7 @@ def _tools_set(handler: "CommandHandler", args: List[str]) -> None:
 
 def _tools_agent(handler: "CommandHandler", args: List[str]) -> None:
     """Control agent mode for autonomous task execution."""
-    from ..ui import console
+    from ..rich.ui import console
 
     if not handler.engine_client:
         console.print("[red]Error: Engine client not available[/red]\n")
@@ -309,7 +309,7 @@ def _tools_agent(handler: "CommandHandler", args: List[str]) -> None:
 
 def _show_tool_help(handler: "CommandHandler", tool_name: str) -> None:
     """Show detailed help for a specific tool."""
-    from ..ui import console, display_tool_help
+    from ..rich.ui import console, display_tool_help
 
     if not handler.engine_client or not handler.engine_client.tools_enabled:
         console.print("[yellow]Tools not enabled. Use '/tools enable' first[/yellow]\n")
@@ -358,7 +358,7 @@ def handle_usage(handler: "CommandHandler", args: str) -> None:
         handler: CommandHandler instance providing context
         args: Subcommand and arguments
     """
-    from ..ui import console
+    from ..rich.ui import console
 
     args = args.strip().lower()
 
@@ -412,7 +412,7 @@ def handle_usage(handler: "CommandHandler", args: str) -> None:
 def _display_usage_report(handler: "CommandHandler") -> None:
     """Display detailed usage report with per-model breakdown."""
     from rich.table import Table
-    from ..ui import console
+    from ..rich.ui import console
 
     usage = handler.engine_client.session.get_usage()
 
@@ -503,7 +503,7 @@ def _display_global_usage_report(handler: "CommandHandler", period: str) -> None
     """
     from rich.table import Table
     from ..usage import get_usage_report
-    from ..ui import console
+    from ..rich.ui import console
 
     report = get_usage_report(period)
 
