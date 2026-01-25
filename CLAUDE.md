@@ -260,6 +260,94 @@ GH_TOKEN=$(cat .github/gh-token.env) gh release list
 4. **OpenAI SDK for all providers** - OpenAI-compatible API format
 5. **Hybrid config** - Secrets (`.env`) separate from settings (`ppxai-config.json`)
 6. **Built-in providers** - Perplexity and Gemini always available without config
+7. **Transactional State Management** - Checkpoint/commit/rollback for atomic multi-step operations (v1.15.0)
+
+## Critical Architecture Pattern: Transactional State Management
+
+**Added:** v1.15.0
+**Status:** **CRITICAL - Apply to all multi-step state operations**
+**Reference:** `docs/ARCHITECTURE.md` (full documentation)
+
+### Problem
+
+AI agents perform multi-step operations that must succeed atomically or fail completely. Partial state updates create inconsistent UI, broken sessions, and user confusion.
+
+### Solution: GitOps-Style Transactions
+
+```python
+with status_bar.transaction() as txn:
+    txn.add("tokens", "Tokens", "1234")
+    txn.update("provider", "ollama")
+    txn.remove("cost")
+    success, error = txn.commit()
+    if not success:
+        # All changes rolled back automatically
+        notify_user(f"Update failed: {error}")
+```
+
+### Pattern Components
+
+1. **Checkpoint** - Automatic backup of current state on transaction enter
+2. **Stage Operations** - Chainable operations queued for validation
+3. **Validate** - All operations checked before any are applied
+4. **Commit** - Atomic application (all succeed or none do)
+5. **Rollback** - Restore checkpoint on failure or exception
+
+### Where to Apply
+
+**REQUIRED for:**
+- Provider/model switching with related config updates
+- Context injection with multiple files
+- Session state updates (messages + tokens + cost)
+- Multi-step tool execution
+- UI state synchronization across multiple widgets
+
+**Example - Provider Switch:**
+```python
+async def switch_provider(new_provider: str, new_model: str):
+    with status_bar.transaction() as txn:
+        txn.update("provider", new_provider)
+        txn.update("model", new_model)
+        # Provider-specific badges
+        if new_provider == "perplexity":
+            txn.add("web", "Web", "ON")
+            txn.remove("thinking")  # If exists
+        success, error = txn.commit()
+        if not success:
+            notify(f"UI update failed: {error}")
+            return False
+
+    # Only update engine if UI transaction succeeded
+    try:
+        await engine_client.set_provider(new_provider)
+        await engine_client.set_model(new_model)
+        return True
+    except Exception as e:
+        # Rollback UI if engine update failed
+        with status_bar.transaction() as txn:
+            txn.update("provider", old_provider)
+            txn.update("model", old_model)
+            txn.commit()
+        notify(f"Engine error: {e}")
+        return False
+```
+
+### Benefits
+
+- **State Consistency** - No partial updates, system always in valid state
+- **Error Recovery** - Automatic rollback with clear error messages
+- **User Trust** - Predictable all-or-nothing behavior
+- **Debugging** - Clear transaction boundaries identify failures
+- **Composability** - Complex workflows from simple atomic units
+
+### Implementation Status
+
+- ✅ StatusBar badge management (`ppxai/tui/widgets/status_bar.py`)
+- ⏳ Provider/model switching (planned for Phase 6)
+- ⏳ Context injection (planned)
+- ⏳ Session state management (planned)
+
+**Rule:** Any operation that modifies multiple related pieces of state MUST use this pattern.
 
 ## VSCode Extension
 
