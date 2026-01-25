@@ -15,20 +15,16 @@ class StatusBadge(Static):
     # CSS is in layout.tcss
 
     def __init__(self, label: str, value: str, variant: str = "default"):
-        super().__init__()
+        super().__init__(f"[bold]{label}:[/bold] {value}")
         self._label = label
         self._value = value
-        self._variant = variant
         if variant != "default":
             self.add_class(variant)
-
-    def compose(self) -> ComposeResult:
-        yield Static(f"[bold]{self._label}:[/bold] {self._value}")
 
     def update_value(self, value: str) -> None:
         """Update the badge value."""
         self._value = value
-        self.query_one(Static).update(f"[bold]{self._label}:[/bold] {self._value}")
+        self.update(f"[bold]{self._label}:[/bold] {self._value}")
 
 
 class StatusBar(Static):
