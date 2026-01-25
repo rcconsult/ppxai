@@ -64,18 +64,26 @@ class StatusBar(Static):
         """Compose the status bar with initial badges."""
         with Horizontal() as container:
             self._container = container
-            # Add initial badges
-            self.add_badge("provider", "Provider", self.provider, "provider-badge")
-            self.add_badge("model", "Model", self.model, "model-badge")
-            self.add_badge(
-                "tools",
-                "Tools",
-                "ON" if self.tools_enabled else "OFF",
-                "tools-badge",
+            # Create and yield initial badges (can't use add_badge during compose)
+            provider_badge = StatusBadge("Provider", self.provider, "provider-badge")
+            self._badges["provider"] = provider_badge
+            yield provider_badge
+
+            model_badge = StatusBadge("Model", self.model, "model-badge")
+            self._badges["model"] = model_badge
+            yield model_badge
+
+            tools_badge = StatusBadge(
+                "Tools", "ON" if self.tools_enabled else "OFF", "tools-badge"
             )
+            self._badges["tools"] = tools_badge
+            yield tools_badge
+
             if self.context_tokens > 0:
                 pct = int(self.context_tokens / self.context_limit * 100)
-                self.add_badge("context", "Context", f"{pct}%", "context-badge")
+                context_badge = StatusBadge("Context", f"{pct}%", "context-badge")
+                self._badges["context"] = context_badge
+                yield context_badge
 
     def add_badge(
         self, badge_id: str, label: str, value: str, variant: str = "default"
