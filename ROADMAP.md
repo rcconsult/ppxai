@@ -345,7 +345,9 @@ Split-pane design with syntax highlighting:
 | **Include directive** | `<!-- include: ./docs/style.md -->` in AGENTS.md | ✅ Done |
 | **Hint templates** | Reusable hint sets in `~/.ppxai/hint-templates.yaml` | ✅ Done |
 
-### v1.14.3 - Documentation Site (GitHub Pages) ✅
+### Documentation Site (Post v1.14.2 - Master) ✅
+
+**Note:** Added to master after v1.14.2 release. Not a versioned release.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
