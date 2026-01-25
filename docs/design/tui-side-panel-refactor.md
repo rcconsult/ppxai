@@ -155,7 +155,7 @@ A widget that uses `textual-image` when available, with factory pattern for grac
 - `W`/`A`/`S`/`D` or drag: Pan
 - `0` or `Home`: Reset to fit-to-view
 
-**Fallback (no textual-imageview):**
+**Fallback (no textual-image):**
 ```
 ┌─────────────────────────────────────┐
 │ diagram.png (image)                 │
@@ -166,8 +166,8 @@ A widget that uses `textual-image` when available, with factory pattern for grac
 │     Size: 885.6 KB                  │
 │     Dimensions: 3500x2274           │
 │                                     │
-│     [textual-imageview not installed]│
-│     pip install textual-imageview   │
+│     [textual-image not installed]│
+│     pip install textual-image   │
 │                                     │
 └─────────────────────────────────────┘
 ```
@@ -186,7 +186,7 @@ A widget that uses `textual-image` when available, with factory pattern for grac
 | `ppxai/tui/widgets/content_factory.py` | File display mode detection and constants |
 | `ppxai/tui/validation.py` | Path traversal and file size validation |
 | `ppxai/tui/widgets/data_viewer.py` | DataViewer widget (tree/source toggle) |
-| `ppxai/tui/widgets/image_viewer.py` | ImageViewer widget (textual-imageview + fallback) |
+| `ppxai/tui/widgets/image_viewer.py` | ImageViewer widget (textual-image + fallback) |
 
 ### Modified Files
 
@@ -260,7 +260,7 @@ class DataViewer(Widget):
 
 ```python
 class ImageViewer(Widget):
-    """Image viewer with textual-imageview support and graceful fallback."""
+    """Image viewer with textual-image support and graceful fallback."""
 
     BINDINGS = [
         Binding("plus", "zoom_in", "Zoom In", show=False),
@@ -284,7 +284,7 @@ class ImageViewer(Widget):
 
     @staticmethod
     def is_supported() -> bool:
-        """Check if textual-imageview is available."""
+        """Check if textual-image is available."""
         try:
             from textual_imageview import ImageViewer as TIVImageViewer
             return True
@@ -299,7 +299,7 @@ class ImageViewer(Widget):
 
 **Behavior:**
 1. Check file size - if > 20MB, emit confirmation message before loading
-2. Check if `textual-imageview` is installed
+2. Check if `textual-image` is installed
 3. If yes: wrap `textual_imageview.ImageViewer` with zoom/pan controls
 4. If no: show info panel with install instructions
 
@@ -416,15 +416,15 @@ ImageViewer #image-fallback {
 - `pillow` (for image dimension detection)
 
 ### Optional (new)
-- `textual-imageview` >= 0.2.0 (for image rendering with zoom/pan)
+- `textual-image` >= 0.2.0 (for image rendering with zoom/pan)
 
 **pyproject.toml addition:**
 ```toml
 [project.optional-dependencies]
-images = ["textual-imageview>=0.2.0"]
+images = ["textual-image>=0.2.0"]
 ```
 
-**Note:** `textual-imageview` internally uses `pillow` for image processing.
+**Note:** `textual-image` internally uses `pillow` for image processing.
 
 ## Release Strategy
 
@@ -814,12 +814,12 @@ def validate_file_size(path: Path, max_size: int = MAX_FILE_SIZE) -> bool:
 #### 3.1 ImageViewer (Fallback)
 
 1. Create `ppxai/tui/widgets/image_viewer.py`
-2. Display file info when `textual-imageview` not installed
+2. Display file info when `textual-image` not installed
 3. Show: filename, dimensions, file size, install instructions
 
 #### 3.2 ImageViewer (Full)
 
-1. Detect and wrap `textual-imageview` library
+1. Detect and wrap `textual-image` library
 2. Fit-to-view on initial display
 3. Info bar showing dimensions and zoom level
 
@@ -985,9 +985,9 @@ def validate_file_size(path: Path, max_size: int = MAX_FILE_SIZE) -> bool:
 - [ ] Source → tree: tree expands to show node at cursor
 
 ### ImageViewer
-- [ ] PNG displays with textual-imageview (if installed)
-- [ ] JPG displays with textual-imageview (if installed)
-- [ ] Fallback shows info when textual-imageview missing
+- [ ] PNG displays with textual-image (if installed)
+- [ ] JPG displays with textual-image (if installed)
+- [ ] Fallback shows info when textual-image missing
 - [ ] Image dimensions displayed correctly
 - [ ] File size displayed correctly
 - [ ] Zoom in/out with +/- keys works
@@ -1018,7 +1018,7 @@ def validate_file_size(path: Path, max_size: int = MAX_FILE_SIZE) -> bool:
    - Zoom: `+`/`-` keys or mouse scroll
    - Pan: `W`/`A`/`S`/`D` keys or mouse drag
    - Reset: `0` key returns to fit-to-view
-   - Using `textual-imageview` library for implementation
+   - Using `textual-image` library for implementation
 
 3. **Large files**: ✅ **20MB threshold with confirmation**
    - Files ≤ 20MB: Load immediately without warning

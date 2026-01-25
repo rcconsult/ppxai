@@ -18,7 +18,7 @@ The ImageViewer widget uses a **factory/delegation pattern** to dispatch to the 
 ImageHandlerFactory
     ↓ (creates based on capabilities)
 ImageHandler (Protocol)
-    ├── FullImageHandler (textual-imageview available + terminal supports images)
+    ├── FullImageHandler (textual-image available + terminal supports images)
     └── FallbackHandler (library missing OR terminal doesn't support images)
         ↓
 ImageViewer (delegates all operations to handler)
@@ -87,7 +87,7 @@ class ImageHandler(Protocol):
 
 ### 2. FullImageHandler
 
-**Purpose:** Uses `textual-imageview` library for full image rendering with iTerm2, Kitty, or Sixel protocols.
+**Purpose:** Uses `textual-image` library for full image rendering with iTerm2, Kitty, or Sixel protocols.
 
 **Key Features:**
 - Delegates all operations to underlying `TextualImageViewer` widget
@@ -97,7 +97,7 @@ class ImageHandler(Protocol):
 **Implementation:**
 ```python
 class FullImageHandler:
-    """Handler for full image viewing using textual-imageview."""
+    """Handler for full image viewing using textual-image."""
 
     def __init__(self, path: Path, parent: Widget):
         try:
@@ -123,7 +123,7 @@ class FullImageHandler:
 - Always available (graceful degradation)
 
 **Reasons:**
-- `library` - textual-imageview not installed
+- `library` - textual-image not installed
 - `terminal` - Terminal doesn't support image protocols
 - `error` - Failed to create full viewer
 
@@ -160,7 +160,7 @@ def create(path: Optional[Path], parent: Widget) -> ImageHandler:
     """Create appropriate image handler.
 
     Decision tree:
-    1. If textual-imageview not installed → FallbackHandler(reason='library')
+    1. If textual-image not installed → FallbackHandler(reason='library')
     2. If terminal doesn't support images → FallbackHandler(reason='terminal')
     3. If both available → FullImageHandler
     4. If FullImageHandler creation fails → FallbackHandler(reason='error')
@@ -320,7 +320,7 @@ viewer.action_pan_up()    # Works in full mode, no-op in fallback
 
 ### Dependencies
 - **Required:** `ppxai.tui.terminal` for capability detection
-- **Optional:** `textual-imageview>=0.1.0` for full image rendering
+- **Optional:** `textual-image>=0.1.0` for full image rendering
 
 ### Install
 ```bash

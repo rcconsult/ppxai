@@ -345,15 +345,15 @@ Split-pane design with syntax highlighting:
 | **Include directive** | `<!-- include: ./docs/style.md -->` in AGENTS.md | ✅ Done |
 | **Hint templates** | Reusable hint sets in `~/.ppxai/hint-templates.yaml` | ✅ Done |
 
-### v1.14.3 - Documentation Site (GitHub Pages)
+### v1.14.3 - Documentation Site (GitHub Pages) ✅
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **MkDocs setup** | `mkdocs.yml` with Material theme | Planned |
-| **Auto-deploy workflow** | GitHub Actions deploys on release tag | Planned |
-| **Versioned docs** | `mike` plugin for version selector | Planned |
-| **Search** | Built-in full-text search | Planned |
-| **Release integration** | Docs deploy as part of release process | Planned |
+| **MkDocs setup** | `mkdocs.yml` with Material theme | ✅ Done |
+| **Auto-deploy workflow** | GitHub Actions deploys on release tag | ✅ Done |
+| **Versioned docs** | `mike` plugin for version selector | ✅ Done |
+| **Search** | Built-in full-text search | ✅ Done |
+| **Release integration** | Docs deploy as part of release process | ✅ Done |
 
 **Technology Stack:**
 - **MkDocs** - Static site generator from markdown
@@ -364,13 +364,16 @@ Split-pane design with syntax highlighting:
 **URL Structure:**
 ```
 https://rcconsult.github.io/ppxai/
-├── /                      # Latest version (alias)
-├── /1.14.3/              # Specific version
-├── /1.13.10/             # Previous version
+├── /dev/                  # Dev version (master branch)
+├── /latest/              # Latest release (alias)
+├── /1.14.2/              # Specific version
 └── /getting-started/     # Navigation sections
 ```
 
-**Automation:** On release tag push, GitHub Actions builds and deploys docs automatically.
+**Automation:**
+- Push to master → Deploys as `/dev/`
+- Release tag (`v*`) → Deploys as versioned `/X.Y.Z/` + `latest` alias
+- Manual trigger supported via workflow_dispatch
 
 ---
 
