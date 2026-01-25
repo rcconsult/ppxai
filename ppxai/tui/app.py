@@ -211,11 +211,115 @@ class PPXAIDEApp(App):
             await local_commands.cmd_status(self, args)
         elif cmd == "debug":
             await local_commands.cmd_debug(self, args)
+        elif cmd == "badge":
+            # Test badge API: /badge add test "Test" "value"
+            # /badge update test "new_value"
+            # /badge remove test
+            # /badge hide test
+            # /badge show test
+            await self._handle_badge_command(args)
         else:
             chat_view.add_system_message(
                 f"[yellow]Unknown command: /{cmd}[/yellow]\n"
                 "Type /help for available commands."
             )
+
+    async def _handle_badge_command(self, args: str) -> None:
+        """Handle badge testing commands.
+
+        Usage:
+            /badge add <id> <label> <value> [variant]
+            /badge update <id> <value>
+            /badge remove <id>
+            /badge hide <id>
+            /badge show <id>
+            /badge list
+        """
+        chat_view = self.query_one("#chat-view", ChatView)
+        status_bar = self.query_one(StatusBar)
+
+        parts = args.split(maxsplit=1)
+        if not parts:
+            chat_view.add_system_message(
+                "[yellow]Usage:[/yellow]\n"
+                "/badge add <id> <label> <value> [variant]\n"
+                "/badge update <id> <value>\n"
+                "/badge remove <id>\n"
+                "/badge hide <id>\n"
+                "/badge show <id>\n"
+                "/badge list"
+            )
+            return
+
+        action = parts[0].lower()
+        remaining = parts[1] if len(parts) > 1 else ""
+
+        if action == "add":
+            # Parse: id label value [variant]
+            tokens = remaining.split(maxsplit=3)
+            if len(tokens) < 3:
+                chat_view.add_system_message(
+                    "[yellow]Usage:[/yellow] /badge add <id> <label> <value> [variant]"
+                )
+                return
+            badge_id = tokens[0]
+            label = tokens[1]
+            value = tokens[2]
+            variant = tokens[3] if len(tokens) > 3 else "default"
+            status_bar.add_badge(badge_id, label, value, variant)
+            chat_view.add_system_message(f"Added badge: {badge_id}")
+
+        elif action == "update":
+            # Parse: id value
+            tokens = remaining.split(maxsplit=1)
+            if len(tokens) < 2:
+                chat_view.add_system_message(
+                    "[yellow]Usage:[/yellow] /badge update <id> <value>"
+                )
+                return
+            badge_id = tokens[0]
+            value = tokens[1]
+            status_bar.update_badge(badge_id, value)
+            chat_view.add_system_message(f"Updated badge: {badge_id}")
+
+        elif action == "remove":
+            badge_id = remaining.strip()
+            if not badge_id:
+                chat_view.add_system_message(
+                    "[yellow]Usage:[/yellow] /badge remove <id>"
+                )
+                return
+            status_bar.remove_badge(badge_id)
+            chat_view.add_system_message(f"Removed badge: {badge_id}")
+
+        elif action == "hide":
+            badge_id = remaining.strip()
+            if not badge_id:
+                chat_view.add_system_message(
+                    "[yellow]Usage:[/yellow] /badge hide <id>"
+                )
+                return
+            status_bar.hide_badge(badge_id)
+            chat_view.add_system_message(f"Hidden badge: {badge_id}")
+
+        elif action == "show":
+            badge_id = remaining.strip()
+            if not badge_id:
+                chat_view.add_system_message(
+                    "[yellow]Usage:[/yellow] /badge show <id>"
+                )
+                return
+            status_bar.show_badge(badge_id)
+            chat_view.add_system_message(f"Shown badge: {badge_id}")
+
+        elif action == "list":
+            badges = list(status_bar._badges.keys())
+            if badges:
+                chat_view.add_system_message(f"Badges: {', '.join(badges)}")
+            else:
+                chat_view.add_system_message("No badges")
+        else:
+            chat_view.add_system_message(f"[yellow]Unknown badge action:[/yellow] {action}")
 
     def _get_help_text(self) -> str:
         """Get help text for available commands."""
