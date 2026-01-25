@@ -354,6 +354,11 @@ pip install ppxai
 - Separated handler creation from ImageViewer
 - Added terminal capability detection to handler selection
 - Created comprehensive test suite (21 tests)
+- **Image display fixes (commit f777028):**
+  - Fixed CSS selector: `AutoImage` → `Image` (textual-image widget class)
+  - Fixed aspect ratio: `height: 1fr` → `height: auto` (preserve proportions)
+  - Added vertical centering: Wrapped `Image` in `Center` container
+  - Images now display correctly without overflow or distortion
 - Updated documentation
 
 ---

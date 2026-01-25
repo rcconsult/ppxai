@@ -1,9 +1,10 @@
 # TUI Side Panel Refactor - Design Document
 
-**Version:** 2.1
+**Version:** 2.2
 **Date:** 2026-01-25
-**Status:** In Progress
+**Status:** Phase 5 Complete - Ready for Engine Integration
 **Target Release:** v1.15.0 (comprehensive release, ships when ready)
+**Latest:** Image display fixes applied (commit f777028)
 
 ## Architectural Constraint: TUI Isolation
 
@@ -125,12 +126,14 @@ A composite widget for JSON/YAML/TOML with tree/source toggle.
 
 ### New Widget: `ImageViewer`
 
-A widget that uses `textual-imageview` when available, with zoom/pan support.
+A widget that uses `textual-image` when available, with factory pattern for graceful degradation.
 
-**Library:** [textual-imageview](https://github.com/adamviola/textual-imageview) provides:
-- Zoom: `+`/`-` keys or scroll wheel
-- Pan: `W`/`S`/`A`/`D` keys or mouse drag
-- Fit-to-view on load with aspect ratio preserved
+**Library:** [textual-image](https://pypi.org/project/textual-image/) provides:
+- Terminal image display via iTerm2, Kitty, or Sixel protocols
+- Auto-scaling to container width
+- Aspect ratio preservation
+
+**Note:** Uses `Image` widget class (not `AutoImage`)
 
 ```
 ┌─────────────────────────────────────┐
@@ -1047,27 +1050,35 @@ def validate_file_size(path: Path, max_size: int = MAX_FILE_SIZE) -> bool:
 - v1.8 (2026-01-25): Phase 0.1.4 complete (content factory)
 - v2.0 (2026-01-25): Major restructure - consolidated all work into v1.15.0, added Phases 1-7
 - v2.1 (2026-01-25): Phase 0.1.5 complete (input validation)
+- v2.2 (2026-01-25): Phase 5 complete + Image display fixes (CSS, aspect ratio, centering)
 
 **Release Strategy:**
 - **v1.15.0**: Comprehensive release including all phases (0-7). Ships when ready.
 - **v1.15.1+**: Bug fix releases only.
 
-**Next Steps:**
+**Completed Phases:**
 1. ~~Phase 0.0: Rich TUI isolation refactor~~ ✅
 2. ~~Phase 0.1.1: Error handling cleanup~~ ✅
 3. ~~Phase 0.1.2: CSS consolidation~~ ✅
 4. ~~Phase 0.1.3: Safe query helper~~ ✅
 5. ~~Phase 0.1.4: Content factory~~ ✅
 6. ~~Phase 0.1.5: Input validation~~ ✅
-7. **Phase 1: Core Visual Validation** ← NEXT (StatusBar, ChatView, InputBox, themes, keybindings)
-8. Phase 2: DataViewer widget (tree/source toggle)
-9. Phase 3: ImageViewer widget (with textual-imageview support)
-10. Phase 4: Side Panel Integration (/show, /edit, split pane UX)
-11. Phase 5: End-to-End Validation (comprehensive test suite)
-12. Phase 6: Engine Integration (EngineClient, streaming, commands)
-13. Phase 7: Polish & Release (performance, accessibility, docs, binaries)
+7. ~~Phase 1: Core Visual Validation~~ ✅
+8. ~~Phase 2: DataViewer widget (tree/source toggle)~~ ✅
+9. ~~Phase 3: ImageViewer widget (with textual-image support)~~ ✅
+10. ~~Phase 4: Side Panel Integration (/show, /edit, split pane UX)~~ ✅
+11. ~~Phase 4.5: TableViewer widget (CSV/TSV)~~ ✅
+12. ~~Phase 5: End-to-End Validation (comprehensive test suite)~~ ✅
+13. **Phase 6: Engine Integration (EngineClient, streaming, commands)** ← NEXT
+14. Phase 7: Polish & Release (performance, accessibility, docs, binaries)
+
+**Latest Accomplishment (Jan 25, 2026):**
+- Image display fixes: CSS selector (`AutoImage` → `Image`), aspect ratio (`height: auto`), vertical centering (`Center` container)
+- Commit f777028 pushed to feature/new-tui-command branch
+- 275 tests passing (254 platform + 21 image handlers)
+- Ready for Phase 6: Engine Integration
 
 **Sources:**
-- [textual-imageview](https://github.com/adamviola/textual-imageview) - Terminal image viewer with zoom/pan
-- [textual-image](https://pypi.org/project/textual-image/) - Alternative image widget
+- [textual-image](https://pypi.org/project/textual-image/) - Terminal image widget (used in implementation)
+- [Image Handler Architecture](image-handler-architecture.md) - Factory/delegation pattern design doc
 - [Textual Images Discussion](https://github.com/Textualize/textual/discussions/4345) - Community discussion on image support

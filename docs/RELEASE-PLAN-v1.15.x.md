@@ -1,9 +1,10 @@
 # Release Plan: v1.15.x Series
 
 **Created:** January 24, 2026
-**Last Updated:** January 25, 2026 (Phase 5 Complete, 254 tests)
+**Last Updated:** January 25, 2026 (Phase 5 Complete + Image Viewer Fixes)
 **Status:** In Progress - Phase 6 (Engine Integration) Next
 **Branch:** feature/new-tui-command
+**Latest Commit:** f777028 (Image viewer display fixes)
 
 ---
 
@@ -171,12 +172,19 @@ All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tu
 | Feature | Description | Status |
 |---------|-------------|--------|
 | Fallback mode | File info when library not installed | ✅ Done |
-| Full mode | textual-imageview integration | ✅ Done |
+| Full mode | textual-image integration (factory pattern) | ✅ Done |
 | Controls | +/- zoom, WASD pan, 0 reset | ✅ Done |
 | Properties | path, dimensions, file_size, format, is_loaded | ✅ Done |
 | Large files | check_file_size() validation | ✅ Done |
+| **Image display fixes** | **CSS selector, aspect ratio, centering** | **✅ Done (commit f777028)** |
 
-**Deliverable:** ImageViewer widget with 15 tests in `tests/test_tui.py`
+**Deliverable:** ImageViewer widget with 15 tests + 21 handler tests in `tests/test_image_handlers.py`
+
+**Critical fixes applied (Jan 25, 2026):**
+- Fixed CSS selector: `AutoImage` → `Image` (textual-image uses `Image` class)
+- Fixed aspect ratio: `height: 1fr` → `height: auto` (preserve proportions)
+- Added vertical centering: Wrapped image in `Center` container
+- Images now display correctly without overflow or distortion
 
 ---
 
@@ -227,27 +235,40 @@ All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tu
 | 5.4 | Edge cases (empty states, Unicode, large files) | 19 | ✅ Done |
 | 5.5 | App integration (commands, multi-widget) | 18 | ✅ Done |
 
-**Deliverable:** 86 comprehensive tests proving UI reliability (Total: 254 tests)
+**Deliverable:** 86 comprehensive tests proving UI reliability (Total: 275 tests including image handlers)
+
+**Test Coverage:**
+- Platform widgets: 254 tests
+- Image handlers: 21 tests (factory pattern, delegation, fallback modes)
+- **Total: 275 tests passing**
 
 ---
 
-### Phase 6: Engine Integration
+### Phase 6: Engine Integration (Next)
 
 **Goal:** Connect validated UI to proven backend
 
 **Rationale:** Engine is already battle-tested. Integration is mechanical once UI is stable.
 
-| Feature | Description |
-|---------|-------------|
-| Factory pattern | `PPXAIDEApp.initialize()` |
-| Config loading | `get_default_provider()`, etc. |
-| EngineClient | Composition, event subscription |
-| Streaming | Progressive rendering |
-| Provider/model switching | Reactive StatusBar updates |
-| Command handlers | Full parity with Rich TUI |
-| Feature parity | Token usage, cost, context injection |
+**Status:** Ready to start - all prerequisites complete
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Factory pattern | `PPXAIDEApp.initialize()` | ⏳ Pending |
+| Config loading | `get_default_provider()`, etc. | ⏳ Pending |
+| EngineClient | Composition, event subscription | ⏳ Pending |
+| Streaming | Progressive rendering | ⏳ Pending |
+| Provider/model switching | Reactive StatusBar updates | ⏳ Pending |
+| Command handlers | Full parity with Rich TUI | ⏳ Pending |
+| Feature parity | Token usage, cost, context injection | ⏳ Pending |
 
 **Deliverable:** Fully functional AI assistant
+
+**Key Files to Modify:**
+- `ppxai/tui/app.py` - Add `initialize()`, EngineClient composition
+- `ppxai/tui/commands.py` - Wire up slash commands to engine
+- `ppxai/tui/widgets/chat_view.py` - Stream event handlers
+- `ppxai/tui/widgets/status_bar.py` - Reactive provider/model updates
 
 ---
 
@@ -330,18 +351,28 @@ All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tu
 
 ## Success Metrics
 
-### Phase 0-5 (UI Validation) - COMPLETE
-- [x] All widgets mount/unmount cleanly (254 tests passing)
+### Phase 0-5 (UI Validation) - COMPLETE ✅
+- [x] All widgets mount/unmount cleanly (275 tests passing)
 - [x] Widget lifecycle tested (mount, unmount, focus, events, state)
 - [x] Theme consistency validated (all 17+ themes work)
 - [x] Keyboard navigation tested (Tab, Escape, arrows, no dead-ends)
 - [x] Edge cases covered (Unicode, large files, empty states, errors)
 - [x] App integration verified (commands, multi-widget, state preservation)
 - [x] DataViewer tree/source toggle works
-- [x] ImageViewer displays with/without library
+- [x] ImageViewer displays correctly (aspect ratio, centering, no overflow)
+- [x] ImageViewer fallback modes work (library/terminal/error reasons)
 - [x] TableViewer table/source toggle works
 - [x] Side panel `/show` and `/edit` work
 - [x] Performance acceptable with 1000+ messages (stress tests)
+- [x] Handler factory pattern validated (21 tests)
+- [x] Terminal capability detection works (iTerm2, Kitty, Sixel)
+
+**Image Display Validation (Jan 25, 2026):**
+- [x] textual-image widget integration (uses `Image` class, not `AutoImage`)
+- [x] CSS width constraints applied (`width: 100%`, `max-width: 100%`)
+- [x] Aspect ratio preserved (`height: auto` instead of `height: 1fr`)
+- [x] Vertical centering works (`Center` container with `align: center middle`)
+- [x] No horizontal overflow in side panel
 
 ### Phase 6-7 (Engine Integration)
 - [ ] ppxaide connects to EngineClient
