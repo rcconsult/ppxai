@@ -49,13 +49,16 @@ class StatusBar(Static):
         context_limit: int = 128000,
     ):
         super().__init__()
+        # Initialize state BEFORE setting reactive properties
+        # (reactive properties trigger watch_* methods immediately)
+        self._badges: dict[str, StatusBadge] = {}
+        self._container: Optional[Horizontal] = None
+        # Now set reactive properties
         self.provider = provider
         self.model = model
         self.tools_enabled = tools_enabled
         self.context_tokens = context_tokens
         self.context_limit = context_limit
-        self._badges: dict[str, StatusBadge] = {}
-        self._container: Optional[Horizontal] = None
 
     def compose(self) -> ComposeResult:
         """Compose the status bar with initial badges."""
