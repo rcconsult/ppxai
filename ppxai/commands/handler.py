@@ -505,7 +505,38 @@ class CommandHandler:
         # All commands are now handled by CommandFactory
         if CommandFactory.get(cmd_name):
             try:
-                CommandFactory.dispatch(cmd_name, self, args)
+                # v1.15.0: Support both old and new command signatures
+                import inspect
+                from .protocol import CommandContext
+
+                spec = CommandFactory.get(cmd_name)
+                sig = inspect.signature(spec.handler)
+                first_param = list(sig.parameters.values())[0]
+
+                # Check if handler expects CommandContext (new style)
+                is_new_style = (
+                    first_param.annotation != inspect.Parameter.empty and
+                    (first_param.annotation.__name__ == 'CommandContext' if hasattr(first_param.annotation, '__name__') else str(first_param.annotation).endswith('CommandContext'))
+                )
+
+                if is_new_style:
+                    # New-style command: wrap handler in context adapter
+                    from .context import RichCommandContext
+                    context = RichCommandContext(self)
+                    result = spec.handler(context, args)
+                else:
+                    # Old-style command: pass handler directly
+                    result = spec.handler(self, args)
+
+                # v1.15.0: Handle typed results with RichRenderer
+                if result is not None:
+                    from .results import CommandResult
+                    from ..rendering.rich_renderer import RichRenderer
+
+                    if isinstance(result, CommandResult):
+                        # New-style command returning typed result
+                        RichRenderer.render(result)
+
                 return False
             except Exception as e:
                 console.print(f"[red]Error executing /{cmd_name}: {e}[/red]\n")

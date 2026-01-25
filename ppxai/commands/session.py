@@ -4,135 +4,199 @@ Session management commands.
 Commands for saving, loading, listing, clearing, and exporting sessions.
 
 v1.13.10: Migrated to Command Factory pattern
+v1.15.0: Migrated to type-based renderer dispatch
 """
 
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 from .factory import CommandFactory, CommandSpec
+from .protocol import CommandContext
+from .results import (
+    ResultStatus,
+    CommandResult,
+    ConfirmationResult,
+    TableResult,
+    ErrorResult,
+    NotificationResult,
+)
 
 if TYPE_CHECKING:
     from ..commands import CommandHandler
 
 
-def handle_save(handler: "CommandHandler", args: str) -> None:
+def handle_save(context: CommandContext, args: str) -> CommandResult:
     """Handle /save command - saves session to JSON.
 
     Args:
-        handler: CommandHandler instance providing context
+        context: Command context providing access to engine client
         args: Command arguments (unused)
+
+    Returns:
+        ConfirmationResult on success, ErrorResult on failure
     """
-    from ..rich.ui import console
-
     try:
-        session_name = handler.engine_client.session.save()
-        filepath = handler.engine_client.session.sessions_dir / f"{session_name}.json"
-        console.print(f"\n[green]Session saved to:[/green] {filepath}\n")
+        session_name = context.engine_client.session.save()
+        filepath = context.engine_client.session.sessions_dir / f"{session_name}.json"
+        return ConfirmationResult(
+            status=ResultStatus.SUCCESS,
+            message=f"Session saved to: {filepath}",
+            details={
+                "session_name": session_name,
+                "filepath": str(filepath)
+            }
+        )
     except Exception as e:
-        console.print(f"[red]Error saving session: {e}[/red]\n")
+        return ErrorResult(
+            message=f"Error saving session: {e}",
+            error_details=str(e)
+        )
 
 
-def handle_load(handler: "CommandHandler", args: str) -> None:
+def handle_load(context: CommandContext, args: str) -> CommandResult:
     """Handle /load command - loads a saved session.
 
     Args:
-        handler: CommandHandler instance providing context
+        context: Command context providing access to engine client
         args: Session name to load (optional - shows list if empty)
-    """
-    from ..rich.ui import console, display_sessions
 
+    Returns:
+        ConfirmationResult on success, TableResult if showing list, ErrorResult on failure
+    """
     if not args:
-        console.print("[red]Please specify a session name: /load <session_name>[/red]\n")
-        sessions = handler.engine_client.session.list_sessions()
-        session_dicts = [
-            {
-                "name": s.name,
-                "created_at": s.created_at,
-                "saved_at": s.saved_at,
-                "provider": s.provider,
-                "model": s.model,
-                "message_count": s.message_count
-            }
-            for s in sessions
-        ]
-        display_sessions(session_dicts)
-        return
+        # Show available sessions
+        sessions = context.engine_client.session.list_sessions()
+
+        if not sessions:
+            return NotificationResult(
+                status=ResultStatus.INFO,
+                message="No saved sessions found"
+            )
+
+        return TableResult(
+            status=ResultStatus.INFO,
+            message="Available sessions (use /load <name> to load)",
+            columns=["Name", "Created", "Saved", "Provider", "Model", "Messages"],
+            rows=[
+                [
+                    s.name,
+                    s.created_at.strftime("%Y-%m-%d %H:%M") if hasattr(s.created_at, 'strftime') else str(s.created_at),
+                    s.saved_at.strftime("%Y-%m-%d %H:%M") if s.saved_at and hasattr(s.saved_at, 'strftime') else str(s.saved_at or ""),
+                    s.provider,
+                    s.model,
+                    str(s.message_count)
+                ]
+                for s in sessions
+            ]
+        )
 
     try:
-        if handler.engine_client.session.load(args.strip()):
-            handler.current_model = handler.engine_client.session.metadata.get(
-                "model", handler.current_model
-            )
-            # Update engine client model
-            handler.engine_client.set_model(handler.current_model)
-            console.print(
-                f"\n[green]Session loaded:[/green] {handler.engine_client.session.session_name}"
-            )
-            console.print(
-                f"[dim]Messages: {len(handler.engine_client.session.messages)}[/dim]\n"
+        if context.engine_client.session.load(args.strip()):
+            # Update model from session metadata
+            loaded_model = context.engine_client.session.metadata.get("model")
+            if loaded_model:
+                context.set_model(loaded_model)
+                context.engine_client.set_model(loaded_model)
+
+            return ConfirmationResult(
+            status=ResultStatus.SUCCESS,
+                message=f"Session loaded: {context.engine_client.session.session_name}",
+                details={
+                    "session_name": context.engine_client.session.session_name,
+                    "message_count": len(context.engine_client.session.messages)
+                }
             )
         else:
-            console.print(f"[red]Session not found: {args.strip()}[/red]\n")
+            return ErrorResult(
+                message=f"Session not found: {args.strip()}",
+                suggestions=["Use /sessions to see available sessions"]
+            )
     except Exception as e:
-        console.print(f"[red]Error loading session: {e}[/red]\n")
+        return ErrorResult(
+            message=f"Error loading session: {e}",
+            error_details=str(e)
+        )
 
 
-def handle_sessions(handler: "CommandHandler", args: str) -> None:
+def handle_sessions(context: CommandContext, args: str) -> CommandResult:
     """Handle /sessions command - lists saved sessions.
 
     Args:
-        handler: CommandHandler instance providing context
+        context: Command context providing access to engine client
         args: Command arguments (unused)
+
+    Returns:
+        TableResult with session list, or NotificationResult if no sessions
     """
-    from ..rich.ui import display_sessions
+    sessions = context.engine_client.session.list_sessions()
 
-    sessions = handler.engine_client.session.list_sessions()
-    session_dicts = [
-        {
-            "name": s.name,
-            "created_at": s.created_at,
-            "saved_at": s.saved_at,
-            "provider": s.provider,
-            "model": s.model,
-            "message_count": s.message_count
-        }
-        for s in sessions
-    ]
-    display_sessions(session_dicts)
+    if not sessions:
+        return NotificationResult(
+            status=ResultStatus.INFO,
+            message="No saved sessions found"
+        )
+
+    return TableResult(
+        status=ResultStatus.SUCCESS,
+        message=f"{len(sessions)} saved session(s)",
+        columns=["Name", "Created", "Saved", "Provider", "Model", "Messages"],
+        rows=[
+            [
+                s.name,
+                s.created_at.strftime("%Y-%m-%d %H:%M") if hasattr(s.created_at, 'strftime') else str(s.created_at),
+                s.saved_at.strftime("%Y-%m-%d %H:%M") if s.saved_at and hasattr(s.saved_at, 'strftime') else str(s.saved_at or ""),
+                s.provider,
+                s.model,
+                str(s.message_count)
+            ]
+            for s in sessions
+        ]
+    )
 
 
-def handle_clear(handler: "CommandHandler", args: str) -> None:
+def handle_clear(context: CommandContext, args: str) -> CommandResult:
     """Handle /clear command - clears conversation history.
 
     Args:
-        handler: CommandHandler instance providing context
+        context: Command context providing access to engine client
         args: Command arguments (unused)
+
+    Returns:
+        ConfirmationResult
     """
-    from ..rich.ui import console
+    message_count = len(context.engine_client.session.messages)
+    context.engine_client.session.clear()
 
-    handler.engine_client.session.clear()
-    console.print("\n[green]Conversation history cleared.[/green]\n")
+    return ConfirmationResult(
+            status=ResultStatus.SUCCESS,
+        message="Conversation history cleared",
+        details={"messages_cleared": message_count}
+    )
 
 
-def handle_export(handler: "CommandHandler", args: str) -> None:
+def handle_export(context: CommandContext, args: str) -> CommandResult:
     """Handle /export command - exports last answer to markdown.
 
     Args:
-        handler: CommandHandler instance providing context
+        context: Command context providing access to engine client
         args: Optional filename for the export
-    """
-    from ..rich.ui import console
 
+    Returns:
+        ConfirmationResult on success, ErrorResult/NotificationResult on failure
+    """
     try:
+        # Find last assistant message
         last_assistant_msg = None
-        for msg in reversed(handler.engine_client.session.messages):
+        for msg in reversed(context.engine_client.session.messages):
             if msg.role == 'assistant':
                 last_assistant_msg = msg.content
                 break
 
         if not last_assistant_msg:
-            console.print("[yellow]No assistant response to export yet.[/yellow]\n")
-            return
+            return NotificationResult(
+                status=ResultStatus.WARNING,
+                message="No assistant response to export yet"
+            )
 
         # Generate filename with timestamp
         filename = args.strip() if args else None
@@ -143,15 +207,25 @@ def handle_export(handler: "CommandHandler", args: str) -> None:
         if not filename.endswith('.md'):
             filename += '.md'
 
-        filepath = handler.engine_client.session.exports_dir / filename
+        filepath = context.engine_client.session.exports_dir / filename
 
         # Write content
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(last_assistant_msg)
 
-        console.print(f"\n[green]Answer exported to:[/green] {filepath}\n")
+        return ConfirmationResult(
+            status=ResultStatus.SUCCESS,
+            message=f"Answer exported to: {filepath}",
+            details={
+                "filepath": str(filepath),
+                "size_bytes": len(last_assistant_msg)
+            }
+        )
     except Exception as e:
-        console.print(f"[red]Error exporting answer: {e}[/red]\n")
+        return ErrorResult(
+            message=f"Error exporting answer: {e}",
+            error_details=str(e)
+        )
 
 
 # =============================================================================

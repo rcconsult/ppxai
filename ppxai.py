@@ -6,7 +6,7 @@ A terminal-based interface for interacting with Perplexity AI models.
 This file serves as the entry point and imports from the ppxai package.
 """
 
-from ppxai.main import main
+from ppxai.rich.main import main
 
 if __name__ == "__main__":
     main()

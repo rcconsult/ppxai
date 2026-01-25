@@ -5,181 +5,26 @@ Commands for directory navigation, configuration management, debug logging,
 and context window management.
 
 v1.13.10: Migrated to Command Factory pattern
+v1.15.0: Migrated to type-based renderer dispatch
 """
 
 import os
 from typing import TYPE_CHECKING
 
 from .factory import CommandFactory, CommandSpec
+from .protocol import CommandContext
+from .results import (
+    ResultStatus,
+    CommandResult,
+    ConfirmationResult,
+    KeyValueResult,
+    ErrorResult,
+    TreeResult,
+    TextResult,
+)
 
 if TYPE_CHECKING:
     from .handler import CommandHandler
-
-
-def handle_cd(handler: "CommandHandler", args: str) -> None:
-    """Handle /cd command - change working directory.
-
-    Args:
-        handler: CommandHandler instance providing context
-        args: Directory path to change to (empty shows current)
-    """
-    from ..rich.ui import console
-
-    if not handler.engine_client:
-        console.print("[red]Error: Engine client not available[/red]\n")
-        return
-
-    if not args.strip():
-        # No args - show current directory
-        handle_pwd(handler, "")
-        return
-
-    target_path = args.strip()
-
-    try:
-        # Expand ~ and resolve path
-        expanded = os.path.expanduser(target_path)
-        resolved = os.path.abspath(expanded)
-
-        if not os.path.isdir(resolved):
-            console.print(f"[red]Not a valid directory: {target_path}[/red]\n")
-            return
-
-        handler.engine_client.set_working_dir(resolved)
-        console.print(f"\n[green]Working directory changed to:[/green] {resolved}\n")
-
-    except Exception as e:
-        console.print(f"[red]Error changing directory: {e}[/red]\n")
-
-
-def handle_pwd(handler: "CommandHandler", args: str) -> None:
-    """Handle /pwd command - show current working directory.
-
-    Args:
-        handler: CommandHandler instance providing context
-        args: Command arguments (unused)
-    """
-    from ..rich.ui import console
-
-    if not handler.engine_client:
-        console.print("[red]Error: Engine client not available[/red]\n")
-        return
-
-    cwd = handler.engine_client.get_working_dir()
-    if cwd:
-        console.print(f"\n[cyan]Current working directory:[/cyan] {cwd}\n")
-    else:
-        console.print("\n[yellow]Working directory not set.[/yellow]\n")
-
-
-def handle_config(handler: "CommandHandler", args: str) -> None:
-    """Handle /config command - configuration management.
-
-    Args:
-        handler: CommandHandler instance providing context
-        args: "reload" to reload, "path" to show path
-    """
-    from ..config import find_config_file, reload_config
-    from ..rich.ui import console
-
-    parts = args.strip().split() if args else []
-
-    if not parts:
-        console.print("\n[cyan]Config Commands:[/cyan]")
-        console.print("  /config reload  - Reload config from file")
-        console.print("  /config path    - Show config file path\n")
-        return
-
-    subcommand = parts[0].lower()
-
-    if subcommand == "reload":
-        try:
-            reload_config()
-            console.print("\n[green]Configuration reloaded successfully.[/green]")
-            console.print("[dim]Provider prompts and settings updated from config file.[/dim]\n")
-        except Exception as e:
-            console.print(f"\n[red]Failed to reload config: {e}[/red]\n")
-
-    elif subcommand == "path":
-        config_path = find_config_file()
-        if config_path:
-            console.print(f"\n[cyan]Config file:[/cyan] {config_path}\n")
-        else:
-            console.print("\n[dim]No config file found. Using defaults.[/dim]\n")
-
-    else:
-        console.print(f"[red]Unknown subcommand: {subcommand}[/red]")
-        console.print("[dim]Available: reload, path[/dim]\n")
-
-
-def handle_debug_log(handler: "CommandHandler", args: str) -> None:
-    """Handle /debug-log command - enable/disable debug logging.
-
-    Args:
-        handler: CommandHandler instance providing context
-        args: "on" to enable, "off" to disable, "show" to view, "clear" to reset
-    """
-    from pathlib import Path
-
-    from ..common.logger import get_logger
-    from ..rich.ui import console
-
-    logger = get_logger("tui")
-
-    if not args:
-        # Show status
-        status = "enabled" if logger.enabled else "disabled"
-        log_file = Path.home() / '.ppxai' / 'logs' / 'tui-debug.log'
-        console.print(f"\n[bold]Debug Logging Status:[/bold] {status}")
-        if logger.enabled:
-            console.print(f"[dim]Log file: {log_file}[/dim]")
-            console.print("[dim]Use '/debug-log off' to disable[/dim]\n")
-        else:
-            console.print(f"[dim]Log file: {log_file}[/dim]")
-            console.print("[dim]Use '/debug-log on' to enable[/dim]")
-            console.print("[dim]Or set PPXAI_DEBUG=1 environment variable[/dim]\n")
-        return
-
-    cmd = args.strip().lower()
-
-    if cmd in ["on", "enable", "1", "true", "yes"]:
-        logger.enable()
-        log_file = Path.home() / '.ppxai' / 'logs' / 'tui-debug.log'
-        console.print("[green]Debug logging enabled[/green]")
-        console.print(f"[dim]Logs will be written to: {log_file}[/dim]")
-        console.print("[dim]All message flow, API requests, and tool executions will be logged[/dim]\n")
-    elif cmd in ["off", "disable", "0", "false", "no"]:
-        logger.disable()
-        console.print("[yellow]Debug logging disabled[/yellow]\n")
-    elif cmd in ["show", "view", "cat"]:
-        # Show recent log entries
-        log_file = Path.home() / '.ppxai' / 'logs' / 'tui-debug.log'
-        if not log_file.exists():
-            console.print("[yellow]No log file found[/yellow]\n")
-            return
-
-        try:
-            with open(log_file, 'r') as f:
-                lines = f.readlines()
-                # Show last 50 lines
-                recent_lines = lines[-50:]
-                console.print(f"\n[bold]Recent debug log entries:[/bold] (last 50 lines)\n")
-                for line in recent_lines:
-                    console.print(line.rstrip())
-                console.print()
-        except Exception as e:
-            console.print(f"[red]Error reading log file: {e}[/red]\n")
-    elif cmd in ["clear", "clean", "reset"]:
-        # Clear log file
-        log_file = Path.home() / '.ppxai' / 'logs' / 'tui-debug.log'
-        if log_file.exists():
-            log_file.unlink()
-            console.print("[green]Debug log cleared[/green]\n")
-        else:
-            console.print("[yellow]No log file to clear[/yellow]\n")
-    else:
-        console.print(f"[red]Unknown command: {cmd}[/red]")
-        console.print("[yellow]Usage: /debug-log [on|off|show|clear][/yellow]\n")
 
 
 def _show_active_hints(handler: "CommandHandler", console) -> None:
@@ -306,99 +151,405 @@ def _show_bootstrap_hierarchy(handler: "CommandHandler", console) -> None:
     console.print("  [dim]- /context reload - Refresh from disk[/dim]\n")
 
 
-def handle_context(handler: "CommandHandler", args: str) -> None:
+def handle_cd(context: CommandContext, args: str) -> CommandResult:
+    """Handle /cd command - change working directory.
+
+    Args:
+        context: Command context providing access to engine client
+        args: Directory path to change to (empty shows current)
+
+    Returns:
+        ConfirmationResult on success, KeyValueResult if no args, ErrorResult on failure
+    """
+    if not context.engine_client:
+        return ErrorResult(message="Engine client not available")
+
+    if not args.strip():
+        # No args - show current directory (delegate to pwd)
+        return handle_pwd(context, "")
+
+    target_path = args.strip()
+
+    try:
+        # Expand ~ and resolve path
+        expanded = os.path.expanduser(target_path)
+        resolved = os.path.abspath(expanded)
+
+        if not os.path.isdir(resolved):
+            return ErrorResult(
+                message=f"Not a valid directory: {target_path}",
+                suggestions=["Check the path and try again"]
+            )
+
+        context.engine_client.set_working_dir(resolved)
+        return ConfirmationResult(
+            status=ResultStatus.SUCCESS,
+            message=f"Working directory changed to: {resolved}",
+            details={"working_dir": resolved}
+        )
+
+    except Exception as e:
+        return ErrorResult(
+            message=f"Error changing directory: {e}",
+            error_details=str(e)
+        )
+
+
+def handle_pwd(context: CommandContext, args: str) -> CommandResult:
+    """Handle /pwd command - show current working directory.
+
+    Args:
+        context: Command context providing access to engine client
+        args: Command arguments (unused)
+
+    Returns:
+        KeyValueResult with current working directory, or ErrorResult
+    """
+    if not context.engine_client:
+        return ErrorResult(message="Engine client not available")
+
+    cwd = context.engine_client.get_working_dir()
+    if cwd:
+        return KeyValueResult(
+            status=ResultStatus.SUCCESS,
+            message="Current working directory",
+            pairs={"Working Directory": cwd}
+        )
+    else:
+        return KeyValueResult(
+            status=ResultStatus.WARNING,
+            message="Working directory not set",
+            pairs={"Status": "Not set"}
+        )
+
+
+def handle_config(context: CommandContext, args: str) -> CommandResult:
+    """Handle /config command - configuration management.
+
+    Args:
+        context: Command context providing access to engine client
+        args: "reload" to reload, "path" to show path
+
+    Returns:
+        KeyValueResult for path/help, ConfirmationResult for reload, ErrorResult on failure
+    """
+    from ..config import find_config_file, reload_config
+
+    parts = args.strip().split() if args else []
+
+    if not parts:
+        return KeyValueResult(
+            status=ResultStatus.INFO,
+            message="Config Commands",
+            pairs={
+                "/config reload": "Reload config from file",
+                "/config path": "Show config file path"
+            }
+        )
+
+    subcommand = parts[0].lower()
+
+    if subcommand == "reload":
+        try:
+            reload_config()
+            return ConfirmationResult(
+                status=ResultStatus.SUCCESS,
+                message="Configuration reloaded successfully. Provider prompts and settings updated from config file.",
+                details={"config_reloaded": True}
+            )
+        except Exception as e:
+            return ErrorResult(
+                message=f"Failed to reload config: {e}",
+                error_details=str(e)
+            )
+
+    elif subcommand == "path":
+        config_path = find_config_file()
+        if config_path:
+            return KeyValueResult(
+                status=ResultStatus.SUCCESS,
+                message="Config file location",
+                pairs={"Config file": str(config_path)}
+            )
+        else:
+            return KeyValueResult(
+                status=ResultStatus.INFO,
+                message="No config file found",
+                pairs={"Status": "Using defaults"}
+            )
+
+    else:
+        return ErrorResult(
+            message=f"Unknown subcommand: {subcommand}",
+            suggestions=["Available: reload, path"]
+        )
+
+
+def handle_debug_log(context: CommandContext, args: str) -> CommandResult:
+    """Handle /debug-log command - enable/disable debug logging.
+
+    Args:
+        context: Command context providing access to engine client
+        args: "on" to enable, "off" to disable, "show" to view, "clear" to reset
+
+    Returns:
+        Appropriate CommandResult based on subcommand
+    """
+    from pathlib import Path
+    from ..common.logger import get_logger
+
+    logger = get_logger("tui")
+    log_file = Path.home() / '.ppxai' / 'logs' / 'tui-debug.log'
+
+    if not args:
+        # Show status
+        status = "enabled" if logger.enabled else "disabled"
+        pairs = {
+            "Status": status,
+            "Log file": str(log_file)
+        }
+        if logger.enabled:
+            pairs["To disable"] = "/debug-log off"
+        else:
+            pairs["To enable"] = "/debug-log on"
+            pairs["Alternative"] = "Set PPXAI_DEBUG=1 environment variable"
+
+        return KeyValueResult(
+            status=ResultStatus.INFO if logger.enabled else ResultStatus.WARNING,
+            message="Debug Logging Status",
+            pairs=pairs
+        )
+
+    cmd = args.strip().lower()
+
+    if cmd in ["on", "enable", "1", "true", "yes"]:
+        logger.enable()
+        return ConfirmationResult(
+            status=ResultStatus.SUCCESS,
+            message=f"Debug logging enabled. Logs will be written to: {log_file}. All message flow, API requests, and tool executions will be logged.",
+            details={"log_file": str(log_file), "enabled": True}
+        )
+    elif cmd in ["off", "disable", "0", "false", "no"]:
+        logger.disable()
+        return ConfirmationResult(
+            status=ResultStatus.SUCCESS,
+            message="Debug logging disabled",
+            details={"enabled": False}
+        )
+    elif cmd in ["show", "view", "cat"]:
+        # Show recent log entries
+        if not log_file.exists():
+            return ErrorResult(message="No log file found")
+
+        try:
+            with open(log_file, 'r') as f:
+                lines = f.readlines()
+                # Show last 50 lines
+                recent_lines = lines[-50:]
+                content = ''.join(recent_lines)
+
+                return TextResult(
+                    status=ResultStatus.INFO,
+                    message=f"Recent debug log entries (last 50 lines from {log_file})",
+                    content=content
+                )
+        except Exception as e:
+            return ErrorResult(
+                message=f"Error reading log file: {e}",
+                error_details=str(e)
+            )
+    elif cmd in ["clear", "clean", "reset"]:
+        # Clear log file
+        if log_file.exists():
+            log_file.unlink()
+            return ConfirmationResult(
+                status=ResultStatus.SUCCESS,
+                message="Debug log cleared",
+                details={"log_file": str(log_file)}
+            )
+        else:
+            return ErrorResult(message="No log file to clear")
+    else:
+        return ErrorResult(
+            message=f"Unknown command: {cmd}",
+            suggestions=["Usage: /debug-log [on|off|show|clear]"]
+        )
+
+
+def handle_context(context: CommandContext, args: str) -> CommandResult:
     """Handle /context command - context usage information.
 
     Args:
-        handler: CommandHandler instance providing context
-        args: "clear" to remove injected content, "hints" to show active hints,
-              "show" to display bootstrap context hierarchy (v1.14.2)
-    """
-    from ..rich.ui import console
+        context: Command context providing access to engine client
+        args: "clear", "hints", "show", or "reload"
 
-    if not handler.engine_client:
-        console.print("[red]Error: Engine client not available[/red]\n")
-        return
+    Returns:
+        Appropriate CommandResult based on subcommand
+    """
+    from pathlib import Path
+
+    if not context.engine_client:
+        return ErrorResult(message="Engine client not available")
 
     parts = args.strip().split() if args else []
 
     if parts and parts[0].lower() == "clear":
         # Clear injected contexts
-        removed = handler.engine_client.clear_injected_contexts()
+        removed = context.engine_client.clear_injected_contexts()
         if removed > 0:
-            console.print(f"\n[green]Cleared {removed} injected context(s) from history.[/green]")
-            # Show updated usage
-            info = handler.engine_client.get_context_info()
-            console.print(f"[dim]New estimated usage: ~{info['estimated_tokens']:,} tokens ({info['usage_percent']:.0f}%)[/dim]\n")
+            info = context.engine_client.get_context_info()
+            return ConfirmationResult(
+                status=ResultStatus.SUCCESS,
+                message=f"Cleared {removed} injected context(s) from history. New estimated usage: ~{info['estimated_tokens']:,} tokens ({info['usage_percent']:.0f}%)",
+                details={
+                    "removed": removed,
+                    "estimated_tokens": info['estimated_tokens'],
+                    "usage_percent": info['usage_percent']
+                }
+            )
         else:
-            console.print("\n[yellow]No injected contexts to clear.[/yellow]\n")
-        return
+            return ErrorResult(message="No injected contexts to clear")
 
     if parts and parts[0].lower() == "hints":
         # Show active bootstrap hints (v1.14.0)
-        _show_active_hints(handler, console)
-        return
+        hints_info = context.engine_client.get_active_hints()
+
+        if not hints_info["loaded"]:
+            cwd = context.engine_client.get_working_dir() or "unknown"
+            return KeyValueResult(
+                status=ResultStatus.WARNING,
+                message="No bootstrap context loaded",
+                pairs={
+                    "Working directory": cwd,
+                    "Hint": "Create AGENTS.md or CLAUDE.md in your project directory"
+                }
+            )
+
+        # Build pairs for display
+        pairs = {
+            "Source": hints_info["source"],
+            "Provider": hints_info["provider"],
+            "Model": hints_info["model"]
+        }
+
+        provider_hints = hints_info["provider_hints"]
+        model_hints = hints_info["model_hints"]
+
+        if provider_hints:
+            pairs["Provider Hints"] = f"{len(provider_hints)} active"
+            if hints_info["inherited_local"]:
+                pairs["Inherited"] = "includes 'local' hints"
+        else:
+            pairs["Provider Hints"] = "none active"
+
+        if model_hints:
+            pairs["Model Hints"] = f"{len(model_hints)} active"
+        else:
+            pairs["Model Hints"] = "none active"
+
+        total_hints = len(provider_hints) + len(model_hints)
+        pairs["Total Active"] = str(total_hints)
+
+        return KeyValueResult(
+            status=ResultStatus.SUCCESS,
+            message="Active Bootstrap Hints",
+            pairs=pairs
+        )
 
     if parts and parts[0].lower() == "show":
         # Show bootstrap context hierarchy (v1.14.2)
-        _show_bootstrap_hierarchy(handler, console)
-        return
+        status = context.engine_client.get_bootstrap_status()
+
+        if not status["loaded"]:
+            cwd = context.engine_client.get_working_dir() or "unknown"
+            return KeyValueResult(
+                status=ResultStatus.WARNING,
+                message="No bootstrap context loaded",
+                pairs={
+                    "Working directory": cwd,
+                    "Search order": "~/.ppxai/AGENTS.md (global), {git_root}/AGENTS.md (project), {cwd}/AGENTS.md (subdir)",
+                    "Hint": "Create AGENTS.md or CLAUDE.md in any of these locations"
+                }
+            )
+
+        # Build tree structure for sources
+        sources = status.get("sources", [])
+        total_size = status.get("total_size", 0)
+
+        # Create tree result
+        children = []
+        for src in sources:
+            path = src["path"]
+            scope = src["scope"]
+            size_kb = src["size"] / 1024
+            children.append({
+                "label": f"{path} [{scope}] {size_kb:.1f} KB",
+                "children": []
+            })
+
+        root = {
+            "label": f"Bootstrap Context ({len(sources)} files, {total_size/1024:.1f} KB)",
+            "children": children
+        }
+
+        return TreeResult(
+            status=ResultStatus.SUCCESS,
+            message="Bootstrap Context Hierarchy",
+            root=root
+        )
 
     if parts and parts[0].lower() == "reload":
         # Reload bootstrap context from disk (v1.14.1)
-        if handler.engine_client.reload_bootstrap_context():
-            status = handler.engine_client.get_bootstrap_status()
+        if context.engine_client.reload_bootstrap_context():
+            status = context.engine_client.get_bootstrap_status()
             sources = status.get('sources', [])
             char_count = status.get('char_count', 0)
-            console.print(f"\n[green]✓ Bootstrap context reloaded[/green]")
+
+            details = {
+                "sources": [src['path'] for src in sources],
+                "char_count": char_count
+            }
+
+            message = "Bootstrap context reloaded"
             if len(sources) > 1:
-                console.print(f"  [dim]Merged {len(sources)} files[/dim]")
-            for src in sources:
-                console.print(f"  [dim]{src['path']} [{src['scope']}][/dim]")
-            console.print(f"  [dim]Total: {char_count:,} chars[/dim]\n")
+                message += f" (merged {len(sources)} files)"
+
+            return ConfirmationResult(
+                status=ResultStatus.SUCCESS,
+                message=message,
+                details=details
+            )
         else:
-            console.print("\n[yellow]No bootstrap context file found[/yellow]")
-            console.print("  [dim]Looking for: AGENTS.md, CLAUDE.md[/dim]")
-            console.print("  [dim]Searched: ~/.ppxai/, git root, working dir[/dim]\n")
-        return
+            return ErrorResult(
+                message="No bootstrap context file found",
+                error_details="Looking for: AGENTS.md, CLAUDE.md in ~/.ppxai/, git root, working dir"
+            )
 
-    # Show context usage info
-    info = handler.engine_client.get_context_info()
+    # Show context usage info (default)
+    info = context.engine_client.get_context_info()
 
-    console.print("\n[cyan]Context Usage:[/cyan]")
-    console.print(f"  Estimated: ~{info['estimated_tokens']:,} / {info['context_limit']:,} tokens ({info['usage_percent']:.1f}%)")
-    console.print(f"  Model: {info['model']} ({info['provider']})")
-    console.print(f"  Messages: {info['message_count']}")
-
-    # Show progress bar
-    pct = min(info['usage_percent'], 100)
-    bar_width = 30
-    filled = int(bar_width * pct / 100)
-    bar = "[green]" + "#" * filled + "[/green]" + "[dim]-[/dim]" * (bar_width - filled)
-    if pct >= 80:
-        bar = "[yellow]" + "#" * filled + "[/yellow]" + "[dim]-[/dim]" * (bar_width - filled)
-    if pct >= 95:
-        bar = "[red]" + "#" * filled + "[/red]" + "[dim]-[/dim]" * (bar_width - filled)
-    console.print(f"  [{bar}] {pct:.0f}%")
+    pairs = {
+        "Estimated": f"~{info['estimated_tokens']:,} / {info['context_limit']:,} tokens ({info['usage_percent']:.1f}%)",
+        "Model": f"{info['model']} ({info['provider']})",
+        "Messages": str(info['message_count'])
+    }
 
     # Show injected contexts
     injected = info.get('injected_contexts', [])
     if injected:
-        console.print(f"\n[cyan]Injected Contexts:[/cyan] ({info['injected_tokens']:,} tokens)")
-        for ctx in injected:
-            size_kb = ctx['size'] / 1024
-            truncated = " [yellow](truncated)[/yellow]" if ctx.get('truncated') else ""
-            console.print(f"  {ctx['source']}: {size_kb:.1f} KB{truncated}")
+        pairs["Injected Contexts"] = f"{info['injected_tokens']:,} tokens"
 
-    # Show tips
-    console.print("\n[dim]Tips:[/dim]")
+    # Add tips based on usage
     if injected:
-        console.print("  [dim]- /context clear - Remove injected files, keep chat[/dim]")
-    console.print("  [dim]- /new - Start fresh session[/dim]")
-    console.print("  [dim]- /save - Save session before clearing[/dim]")
+        pairs["Tip"] = "/context clear to remove injected files"
     if info['usage_percent'] >= 80:
-        console.print("  [dim]- Consider switching to a model with larger context[/dim]")
-    console.print()
+        pairs["Warning"] = "Consider switching to a model with larger context"
+
+    return KeyValueResult(
+        status=ResultStatus.SUCCESS if info['usage_percent'] < 80 else ResultStatus.WARNING,
+        message="Context Usage",
+        pairs=pairs
+    )
 
 
 # =============================================================================

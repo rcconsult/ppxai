@@ -5,165 +5,327 @@ Commands for AI-assisted coding tasks including generation, testing,
 documentation, debugging, explanation, and language conversion.
 
 v1.13.10: Migrated to Command Factory pattern
+v1.15.0: Migrated to type-based renderer dispatch
 """
 
 import os
 from typing import TYPE_CHECKING
 
 from .factory import CommandFactory, CommandSpec
+from .protocol import CommandContext
+from .results import (
+    ResultStatus,
+    CommandResult,
+    ErrorResult,
+    AIResponseResult,
+)
 
 if TYPE_CHECKING:
     from .handler import CommandHandler
 
 
-def handle_generate(handler: "CommandHandler", args: str) -> None:
+# =============================================================================
+# Type-Based Result Handlers (v1.15.0)
+# =============================================================================
+
+def _execute_ai_task(context: CommandContext, task_type: str, user_message: str, initial_message: str) -> CommandResult:
+    """Execute AI coding task with streaming and return AIResponseResult.
+
+    Helper function for all AI coding commands. Streams response in real-time
+    (preserving UX) while accumulating content for final result.
+
+    Args:
+        context: Command context providing access to engine client
+        task_type: Type of coding task (generate, test, docs, etc.)
+        user_message: The prepared message to send to LLM
+        initial_message: Message to display before streaming
+
+    Returns:
+        AIResponseResult with complete content and extracted code blocks
+    """
+    from ..rich.ui import console
+    from ..config import get_coding_model
+    import asyncio
+    from ..engine.types import EventType
+    import re
+
+    if not context.engine_client:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="Engine client not available"
+        )
+
+    # Get coding prompts
+    from .handler import CODING_PROMPTS
+
+    if task_type not in CODING_PROMPTS:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=f"Unknown task type: {task_type}"
+        )
+
+    # Auto-route to coding model if enabled
+    provider = context.get_provider()
+    model = context.get_model()
+    coding_model = get_coding_model(provider)
+
+    if context.get_auto_route() and model != coding_model:
+        model = coding_model
+        console.print(f"[dim]Auto-routed to {coding_model} for coding task (disable with /autoroute off)[/dim]")
+
+    # Prepare system prompt + user message
+    system_prompt = CODING_PROMPTS[task_type]
+    full_message = f"{system_prompt}\n\n{user_message}"
+
+    # Show initial message
+    console.print(initial_message)
+
+    async def run_task():
+        """Stream response and accumulate content."""
+        content = ""
+        original_model = context.engine_client.model
+
+        # Temporarily switch model if auto-routed
+        if model != original_model:
+            context.engine_client.set_model(model)
+
+        try:
+            async for event in context.engine_client.chat(full_message, stream=True):
+                if event.type == EventType.STREAM_CHUNK:
+                    chunk = event.data
+                    console.print(chunk, end="")  # Stream for UX
+                    content += chunk
+                elif event.type == EventType.ERROR:
+                    console.print(f"\n[red]Error: {event.data}[/red]")
+                    return None, str(event.data)
+        finally:
+            # Restore original model
+            if model != original_model:
+                context.engine_client.set_model(original_model)
+
+        console.print()  # New line after streaming
+        return content, None
+
+    # Execute async task
+    content, error = asyncio.run(run_task())
+
+    if error:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="AI task failed",
+            error_details=error
+        )
+
+    if not content:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="No response received from AI"
+        )
+
+    # Extract code blocks from markdown content
+    code_blocks = []
+    code_block_pattern = r'```(\w+)?\n(.*?)```'
+    for match in re.finditer(code_block_pattern, content, re.DOTALL):
+        language = match.group(1) or "text"
+        code = match.group(2).strip()
+        code_blocks.append({"language": language, "code": code})
+
+    return AIResponseResult(
+        status=ResultStatus.SUCCESS,
+        message=f"Completed {task_type} task",
+        content=content,
+        code_blocks=code_blocks
+    )
+
+
+def handle_generate(context: CommandContext, args: str) -> CommandResult:
     """Handle /generate command - generate code from description.
 
     Args:
-        handler: CommandHandler instance providing context
+        context: Command context providing access to engine client
         args: Description of code to generate
+
+    Returns:
+        AIResponseResult with generated code
     """
-    from ..rich.ui import console
-    from .handler import send_coding_task
-
     if not args:
-        console.print("[red]Please provide a description: /generate <description>[/red]")
-        console.print("[yellow]Example: /generate a function to validate email addresses in Python[/yellow]\n")
-        return
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="Please provide a description: /generate <description>",
+            suggestions=["Example: /generate a function to validate email addresses in Python"]
+        )
 
-    console.print(f"\n[cyan]Generating code for:[/cyan] {args}\n")
-    send_coding_task(handler, "generate", args, handler.current_model, handler.provider)
+    initial_msg = f"\n[cyan]Generating code for:[/cyan] {args}\n"
+    return _execute_ai_task(context, "generate", args, initial_msg)
 
 
-def handle_test(handler: "CommandHandler", args: str) -> None:
+def handle_test(context: CommandContext, args: str) -> CommandResult:
     """Handle /test command - generate unit tests for code.
 
     Args:
-        handler: CommandHandler instance providing context
+        context: Command context providing access to engine client
         args: File path to generate tests for
+
+    Returns:
+        AIResponseResult with generated tests
     """
-    from ..rich.ui import console
     from ..rich.utils import read_file_content
-    from .handler import send_coding_task
 
     if not args:
-        console.print("[red]Please provide a file path: /test <file>[/red]")
-        console.print("[yellow]Example: /test ./src/utils.py[/yellow]\n")
-        return
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="Please provide a file path: /test <file>",
+            suggestions=["Example: /test ./src/utils.py"]
+        )
 
     file_content = read_file_content(args.strip())
-    if file_content:
-        console.print(f"\n[cyan]Generating tests for:[/cyan] {args}\n")
-        task_message = f"Generate comprehensive unit tests for the following code:\n\n```\n{file_content}\n```"
-        send_coding_task(handler, "test", task_message, handler.current_model, handler.provider)
+    if not file_content:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=f"Could not read file: {args}"
+        )
+
+    task_message = f"Generate comprehensive unit tests for the following code:\n\n```\n{file_content}\n```"
+    initial_msg = f"\n[cyan]Generating tests for:[/cyan] {args}\n"
+    return _execute_ai_task(context, "test", task_message, initial_msg)
 
 
-def handle_docs(handler: "CommandHandler", args: str) -> None:
+def handle_docs(context: CommandContext, args: str) -> CommandResult:
     """Handle /docs command - generate documentation for code.
 
     Args:
-        handler: CommandHandler instance providing context
+        context: Command context providing access to engine client
         args: File path to generate documentation for
+
+    Returns:
+        AIResponseResult with generated documentation
     """
-    from ..rich.ui import console
     from ..rich.utils import read_file_content
-    from .handler import send_coding_task
 
     if not args:
-        console.print("[red]Please provide a file path: /docs <file>[/red]")
-        console.print("[yellow]Example: /docs ./src/api.py[/yellow]\n")
-        return
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="Please provide a file path: /docs <file>",
+            suggestions=["Example: /docs ./src/api.py"]
+        )
 
     file_content = read_file_content(args.strip())
-    if file_content:
-        console.print(f"\n[cyan]Generating documentation for:[/cyan] {args}\n")
-        task_message = f"Generate comprehensive documentation for the following code:\n\n```\n{file_content}\n```"
-        send_coding_task(handler, "docs", task_message, handler.current_model, handler.provider)
+    if not file_content:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=f"Could not read file: {args}"
+        )
+
+    task_message = f"Generate comprehensive documentation for the following code:\n\n```\n{file_content}\n```"
+    initial_msg = f"\n[cyan]Generating documentation for:[/cyan] {args}\n"
+    return _execute_ai_task(context, "docs", task_message, initial_msg)
 
 
-def handle_implement(handler: "CommandHandler", args: str) -> None:
+def handle_implement(context: CommandContext, args: str) -> CommandResult:
     """Handle /implement command - implement feature from specification.
 
     Args:
-        handler: CommandHandler instance providing context
+        context: Command context providing access to engine client
         args: Feature specification to implement
+
+    Returns:
+        AIResponseResult with implementation
     """
-    from ..rich.ui import console
-    from .handler import send_coding_task
-
     if not args:
-        console.print("[red]Please provide a feature specification: /implement <specification>[/red]")
-        console.print("[yellow]Example: /implement a REST API endpoint for user authentication[/yellow]")
-        console.print("[cyan]Tip: Use /spec to see specification guidelines and templates[/cyan]\n")
-        return
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="Please provide a feature specification: /implement <specification>",
+            suggestions=[
+                "Example: /implement a REST API endpoint for user authentication",
+                "Tip: Use /spec to see specification guidelines and templates"
+            ]
+        )
 
-    console.print(f"\n[cyan]Implementing feature:[/cyan] {args}\n")
-    send_coding_task(handler, "implement", args, handler.current_model, handler.provider)
+    initial_msg = f"\n[cyan]Implementing feature:[/cyan] {args}\n"
+    return _execute_ai_task(context, "implement", args, initial_msg)
 
 
-def handle_debug(handler: "CommandHandler", args: str) -> None:
+def handle_debug(context: CommandContext, args: str) -> CommandResult:
     """Handle /debug command - analyze and debug error.
 
     Args:
-        handler: CommandHandler instance providing context
+        context: Command context providing access to engine client
         args: Error message or stack trace to debug
+
+    Returns:
+        AIResponseResult with debugging analysis
     """
-    from ..rich.ui import console
-    from .handler import send_coding_task
-
     if not args:
-        console.print("[red]Please provide error details or paste your error message/stack trace[/red]")
-        console.print("[yellow]Example: /debug TypeError: 'NoneType' object is not subscriptable at line 42[/yellow]\n")
-        return
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="Please provide error details or paste your error message/stack trace",
+            suggestions=["Example: /debug TypeError: 'NoneType' object is not subscriptable at line 42"]
+        )
 
-    console.print(f"\n[cyan]Analyzing error:[/cyan] {args[:100]}...\n")
-    send_coding_task(handler, "debug", args, handler.current_model, handler.provider)
+    preview = args[:100] + "..." if len(args) > 100 else args
+    initial_msg = f"\n[cyan]Analyzing error:[/cyan] {preview}\n"
+    return _execute_ai_task(context, "debug", args, initial_msg)
 
 
-def handle_explain(handler: "CommandHandler", args: str) -> None:
+def handle_explain(context: CommandContext, args: str) -> CommandResult:
     """Handle /explain command - explain code in detail.
 
     Args:
-        handler: CommandHandler instance providing context
+        context: Command context providing access to engine client
         args: File path to explain
+
+    Returns:
+        AIResponseResult with code explanation
     """
-    from ..rich.ui import console
     from ..rich.utils import read_file_content
-    from .handler import send_coding_task
 
     if not args:
-        console.print("[red]Please provide a file path: /explain <file>[/red]")
-        console.print("[yellow]Example: /explain ./src/algorithm.py[/yellow]\n")
-        return
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="Please provide a file path: /explain <file>",
+            suggestions=["Example: /explain ./src/algorithm.py"]
+        )
 
     file_content = read_file_content(args.strip())
-    if file_content:
-        console.print(f"\n[cyan]Explaining code:[/cyan] {args}\n")
-        task_message = f"Explain the following code in detail, including logic, design decisions, and how it works:\n\n```\n{file_content}\n```"
-        send_coding_task(handler, "explain", task_message, handler.current_model, handler.provider)
+    if not file_content:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=f"Could not read file: {args}"
+        )
+
+    task_message = f"Explain the following code in detail, including logic, design decisions, and how it works:\n\n```\n{file_content}\n```"
+    initial_msg = f"\n[cyan]Explaining code:[/cyan] {args}\n"
+    return _execute_ai_task(context, "explain", task_message, initial_msg)
 
 
-def handle_convert(handler: "CommandHandler", args: str) -> None:
+def handle_convert(context: CommandContext, args: str) -> CommandResult:
     """Handle /convert command - convert code between languages.
 
     Args:
-        handler: CommandHandler instance providing context
+        context: Command context providing access to engine client
         args: Format: <source-lang> <target-lang> <file-or-code>
+
+    Returns:
+        AIResponseResult with converted code
     """
-    from ..rich.ui import console
     from ..rich.utils import read_file_content
-    from .handler import send_coding_task
 
     if not args:
-        console.print("[red]Please provide: /convert <source-lang> <target-lang> <file-or-code>[/red]")
-        console.print("[yellow]Example: /convert python javascript ./utils.py[/yellow]")
-        console.print("[yellow]Example: /convert go rust 'func hello() { fmt.Println(\"Hi\") }'[/yellow]\n")
-        return
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="Please provide: /convert <source-lang> <target-lang> <file-or-code>",
+            suggestions=[
+                "Example: /convert python javascript ./utils.py",
+                "Example: /convert go rust 'func hello() { fmt.Println(\"Hi\") }'"
+            ]
+        )
 
     parts = args.split(maxsplit=2)
     if len(parts) < 3:
-        console.print("[red]Invalid format. Use: /convert <source-lang> <target-lang> <file-or-code>[/red]\n")
-        return
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="Invalid format. Use: /convert <source-lang> <target-lang> <file-or-code>"
+        )
 
     source_lang, target_lang, code_or_file = parts
 
@@ -171,14 +333,17 @@ def handle_convert(handler: "CommandHandler", args: str) -> None:
     if os.path.exists(code_or_file.strip('\'"')):
         file_content = read_file_content(code_or_file.strip('\'"'))
         if not file_content:
-            return
+            return ErrorResult(
+                status=ResultStatus.ERROR,
+                message=f"Could not read file: {code_or_file}"
+            )
         code_to_convert = file_content
     else:
         code_to_convert = code_or_file.strip('\'"')
 
-    console.print(f"\n[cyan]Converting from {source_lang} to {target_lang}[/cyan]\n")
     task_message = f"Convert the following {source_lang} code to {target_lang}:\n\n```{source_lang}\n{code_to_convert}\n```"
-    send_coding_task(handler, "convert", task_message, handler.current_model, handler.provider)
+    initial_msg = f"\n[cyan]Converting from {source_lang} to {target_lang}[/cyan]\n"
+    return _execute_ai_task(context, "convert", task_message, initial_msg)
 
 
 # =============================================================================

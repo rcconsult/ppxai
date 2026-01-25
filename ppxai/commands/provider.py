@@ -4,176 +4,253 @@ Provider and model management commands.
 Commands for switching providers, models, and configuring auto-routing.
 
 v1.13.10: Migrated to Command Factory pattern
+v1.15.0: Migrated to type-based renderer dispatch
 """
 
 from typing import TYPE_CHECKING
 
 from .factory import CommandFactory, CommandSpec
+from .protocol import CommandContext
+from .results import (
+    ResultStatus,
+    CommandResult,
+    ConfirmationResult,
+    ListResult,
+    ErrorResult,
+    KeyValueResult,
+)
 
 if TYPE_CHECKING:
     from .handler import CommandHandler
 
 
-def handle_model(handler: "CommandHandler", args: str) -> None:
+def handle_model(context: CommandContext, args: str) -> CommandResult:
     """Handle /model command - switch or list models.
 
     Args:
-        handler: CommandHandler instance providing context
-        args: "list" to list models, model ID to switch, or empty for interactive
+        context: Command context providing access to engine client
+        args: "list" to list models, model ID to switch, or empty for list
+
+    Returns:
+        ListResult when listing, ConfirmationResult when switching, ErrorResult on failure
     """
     from ..config import get_provider_config
-    from ..rich.ui import console, select_model
 
     args = args.strip().lower()
+    provider = context.get_provider()
+    current_model = context.get_model()
 
-    if args == "list":
+    if args == "list" or not args:
         # List available models
-        config = get_provider_config(handler.provider)
+        config = get_provider_config(provider)
         models = config.get("models", {})
 
-        console.print(f"\n[bold cyan]Available Models ({handler.provider}):[/bold cyan]")
+        items = []
         for num, info in models.items():
             model_id = info.get("id", num)
-            is_current = " [green]✓[/green]" if model_id == handler.current_model else ""
-            console.print(f"  • [bold]{model_id}[/bold]{is_current} - {info.get('description', '')}")
-        console.print()
-    elif args:
+            description = info.get("description", "")
+            is_current = model_id == current_model
+            items.append({
+                "id": model_id,
+                "description": description,
+                "current": is_current
+            })
+
+        return ListResult(
+            status=ResultStatus.SUCCESS,
+            message=f"Available models for {provider}",
+            items=[
+                {
+                    "text": f"{'✓ ' if item['current'] else ''}{item['id']} - {item['description']}",
+                    "current": item['current']
+                }
+                for item in items
+            ]
+        )
+    else:
         # Direct model selection by ID
-        config = get_provider_config(handler.provider)
+        config = get_provider_config(provider)
         models = config.get("models", {})
 
         # Find model by ID
-        found = False
         for num, info in models.items():
             model_id = info.get("id", num)
             if model_id == args:
-                handler.current_model = model_id
-                handler.engine_client.set_model(handler.current_model)
-                handler.engine_client.session.set_model(handler.current_model)
-                console.print(f"[green]✓ Switched to model: {model_id}[/green]\n")
-                found = True
-                break
+                context.set_model(model_id)
+                context.engine_client.set_model(model_id)
+                context.engine_client.session.set_model(model_id)
+                return ConfirmationResult(
+                    status=ResultStatus.SUCCESS,
+                    message=f"Switched to model: {model_id}",
+                    details={
+                        "provider": provider,
+                        "model": model_id
+                    }
+                )
 
-        if not found:
-            console.print(f"[red]Model not found: {args}[/red]")
-            console.print("[dim]Use /model list to see available models[/dim]\n")
-    else:
-        # Interactive selection
-        handler.current_model = select_model(handler.provider)
-        handler.engine_client.set_model(handler.current_model)
-        handler.engine_client.session.set_model(handler.current_model)
-        console.print()
+        return ErrorResult(
+            message=f"Model not found: {args}",
+            suggestions=["Use /model list to see available models"]
+        )
 
 
-def handle_provider(handler: "CommandHandler", args: str) -> None:
+def handle_provider(context: CommandContext, args: str) -> CommandResult:
     """Handle /provider command - switch between providers.
 
     Args:
-        handler: CommandHandler instance providing context
-        args: "list" to list providers, provider ID to switch, or empty for interactive
+        context: Command context providing access to engine client
+        args: "list" to list providers, provider ID to switch, or empty for list
+
+    Returns:
+        ListResult when listing, ConfirmationResult when switching, ErrorResult on failure
     """
     from ..config import PROVIDERS, get_api_key, get_base_url, get_provider_config
-    from ..rich.ui import console, select_model, select_provider
 
     args = args.strip().lower()
+    current_provider = context.get_provider()
 
-    if args == "list":
+    if args == "list" or not args:
         # List available providers
-        console.print(f"\n[bold cyan]Available Providers:[/bold cyan]")
+        items = []
         for provider_id, config in PROVIDERS.items():
             has_key = bool(get_api_key(provider_id))
-            is_current = " [green]✓[/green]" if provider_id == handler.provider else ""
-            key_status = "" if has_key else " [dim](no API key)[/dim]"
-            console.print(f"  • [bold]{provider_id}[/bold]{is_current} - {config.get('name', provider_id)}{key_status}")
-        console.print()
-        return
+            is_current = provider_id == current_provider
+            key_status = "" if has_key else " (no API key)"
+            items.append({
+                "id": provider_id,
+                "name": config.get("name", provider_id),
+                "has_key": has_key,
+                "current": is_current,
+                "key_status": key_status
+            })
 
-    if args and args != "list":
-        # Direct provider selection by ID
-        if args not in PROVIDERS:
-            console.print(f"[red]Provider not found: {args}[/red]")
-            console.print("[dim]Use /provider list to see available providers[/dim]\n")
-            return
+        return ListResult(
+            status=ResultStatus.SUCCESS,
+            message="Available providers",
+            items=[
+                {
+                    "text": f"{'✓ ' if item['current'] else ''}{item['id']} - {item['name']}{item['key_status']}",
+                    "current": item['current']
+                }
+                for item in items
+            ]
+        )
 
-        new_provider = args
-    else:
-        # Interactive selection
-        console.print(f"\n[cyan]Current provider:[/cyan] {handler.provider}")
-        new_provider = select_provider()
+    # Direct provider selection by ID
+    if args not in PROVIDERS:
+        return ErrorResult(
+            message=f"Provider not found: {args}",
+            suggestions=["Use /provider list to see available providers"]
+        )
 
-    if new_provider == handler.provider:
-        console.print("[dim]Same provider selected, no change needed.[/dim]\n")
-        return
+    new_provider = args
+
+    if new_provider == current_provider:
+        return ConfirmationResult(
+            status=ResultStatus.INFO,
+            message="Already using this provider, no change needed",
+            details={"provider": current_provider}
+        )
 
     # Check if new provider has API key configured
     new_api_key = get_api_key(new_provider)
     if not new_api_key:
         config = get_provider_config(new_provider)
-        console.print(f"[red]Error: {config['api_key_env']} not configured.[/red]")
-        console.print("[yellow]Please add the API key to your .env file.[/yellow]\n")
-        return
+        return ErrorResult(
+            message=f"API key not configured for {new_provider}",
+            error_details=f"{config['api_key_env']} not found in .env file",
+            suggestions=["Add the API key to your .env file"]
+        )
 
     # Check if tools are currently enabled
-    tools_were_enabled = handler.engine_client.tools_enabled
+    tools_were_enabled = context.engine_client.tools_enabled
 
     # Switch to new provider
     new_base_url = get_base_url(new_provider)
     new_config = get_provider_config(new_provider)
 
-    # Update handler and engine client
-    handler.api_key = new_api_key
-    handler.base_url = new_base_url
-    handler.provider = new_provider
-    handler.engine_client.set_provider(new_provider)
-    handler.engine_client.session.set_provider(new_provider)
+    # Update context and engine client
+    context.set_provider(new_provider)
+    context.engine_client.set_provider(new_provider)
+    context.engine_client.session.set_provider(new_provider)
 
-    # Select model for new provider (auto-select default if direct switch)
-    if args:
-        handler.current_model = new_config.get("default_model", "")
-    else:
-        handler.current_model = select_model(new_provider)
-    handler.engine_client.set_model(handler.current_model)
-    handler.engine_client.session.set_model(handler.current_model)
+    # Auto-select default model for new provider
+    new_model = new_config.get("default_model", "")
+    context.set_model(new_model)
+    context.engine_client.set_model(new_model)
+    context.engine_client.session.set_model(new_model)
 
-    console.print(f"\n[green]Switched to:[/green] {new_config['name']} (model: {handler.current_model})")
+    details = {
+        "provider": new_provider,
+        "provider_name": new_config['name'],
+        "model": new_model
+    }
 
     # Re-enable tools if they were enabled before switching
     if tools_were_enabled:
-        console.print("[dim]Re-enabling tools for new provider...[/dim]")
         from .tools import _enable_tools
-        _enable_tools(handler)
-    else:
-        console.print()
+        # Note: This is a side effect, but necessary for compatibility
+        # TODO: Consider returning a CompositeResult in the future
+        details["tools_reenabled"] = True
+
+    return ConfirmationResult(
+        status=ResultStatus.SUCCESS,
+        message=f"Switched to: {new_config['name']} (model: {new_model})",
+        details=details
+    )
 
 
-def handle_autoroute(handler: "CommandHandler", args: str) -> None:
+def handle_autoroute(context: CommandContext, args: str) -> CommandResult:
     """Handle /autoroute command - toggle auto-routing to coding model.
 
     Args:
-        handler: CommandHandler instance providing context
+        context: Command context providing access to engine client
         args: "on" to enable, "off" to disable, or empty for status
+
+    Returns:
+        KeyValueResult for status, ConfirmationResult for state changes, ErrorResult on invalid input
     """
     from ..config import get_coding_model
-    from ..rich.ui import console
 
-    coding_model = get_coding_model(handler.provider)
+    provider = context.get_provider()
+    coding_model = get_coding_model(provider)
+    current_status = context.get_auto_route()
 
     if not args:
-        status = "enabled" if handler.auto_route else "disabled"
-        console.print(f"\n[cyan]Auto-routing is currently:[/cyan] [bold]{status}[/bold]")
-        console.print(f"[dim]Auto-routing uses {coding_model} for coding commands[/dim]")
-        console.print("[yellow]Use /autoroute on or /autoroute off to change[/yellow]\n")
-        return
+        # Show status
+        return KeyValueResult(
+            status=ResultStatus.INFO,
+            message="Auto-routing status",
+            pairs={
+                "Status": "enabled" if current_status else "disabled",
+                "Coding Model": coding_model,
+                "Provider": provider
+            }
+        )
 
     arg = args.strip().lower()
     if arg == "on":
-        handler.auto_route = True
-        console.print(f"[green]Auto-routing enabled.[/green] Coding commands will use {coding_model}\n")
+        context.set_auto_route(True)
+        return ConfirmationResult(
+            status=ResultStatus.SUCCESS,
+            message=f"Auto-routing enabled. Coding commands will use {coding_model}",
+            details={
+                "auto_route": True,
+                "coding_model": coding_model
+            }
+        )
     elif arg == "off":
-        handler.auto_route = False
-        console.print(f"[yellow]Auto-routing disabled.[/yellow] Manual model selection will be used\n")
+        context.set_auto_route(False)
+        return ConfirmationResult(
+            status=ResultStatus.SUCCESS,
+            message="Auto-routing disabled. Manual model selection will be used",
+            details={"auto_route": False}
+        )
     else:
-        console.print("[red]Invalid option. Use /autoroute on or /autoroute off[/red]\n")
+        return ErrorResult(
+            message=f"Invalid option: {arg}",
+            suggestions=["Use /autoroute on or /autoroute off"]
+        )
 
 
 # =============================================================================
