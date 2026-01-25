@@ -19,6 +19,8 @@ class StatusBadge(Static):
         self._label = label
         self._value = value
         self._variant = variant
+        if variant != "default":
+            self.add_class(variant)
 
     def compose(self) -> ComposeResult:
         yield Static(f"[bold]{self._label}:[/bold] {self._value}")
