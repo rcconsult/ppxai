@@ -561,12 +561,12 @@ def test_missing_intermediate_is_fine():
 
 ---
 
-### v1.14.3 - Enhanced Context Providers
+### v1.14.3 - Enhanced Context Providers (MERGED INTO v1.14.2)
 
 **Goal:** Advanced context features and external source injection
 
-**Note:** v1.13.9 implemented `/context` and `/context clear` for **injected context** (@file/@git/@tree).
-v1.14.3 extends context providers with additional sources.
+**Note:** These features were originally planned for v1.14.3 but were merged into v1.14.2.
+v1.13.9 implemented `/context` and `/context clear` for **injected context** (@file/@git/@tree).
 
 | Feature | Description |
 |---------|-------------|
@@ -612,7 +612,9 @@ provider_hints:
 
 ---
 
-### v1.14.4 - Documentation Site (GitHub Pages)
+### Documentation Site (Post v1.14.2 - Master)
+
+**Note:** Added to master after v1.14.2 release. Not a versioned release.
 
 **Goal:** Professional documentation site with versioning and search
 
@@ -899,7 +901,7 @@ https://rcconsult.github.io/ppxai/
 - [x] Add timeout/error handling for URL fetch
 - [x] Add tests for context providers
 
-### v1.14.4 - Documentation Site (GitHub Pages) ✅ Complete
+### Documentation Site (Post v1.14.2 - Master) ✅ Complete
 - [x] Create `mkdocs.yml` configuration file
 - [x] Create `docs/index.md` landing page
 - [x] Create `.github/workflows/docs.yml` workflow
