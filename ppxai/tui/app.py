@@ -247,7 +247,8 @@ class PPXAIDEApp(App):
                 "/badge remove <id>\n"
                 "/badge hide <id>\n"
                 "/badge show <id>\n"
-                "/badge list"
+                "/badge list\n"
+                "/badge txn - Test transactional API (demo)"
             )
             return
 
@@ -318,6 +319,42 @@ class PPXAIDEApp(App):
                 chat_view.add_system_message(f"Badges: {', '.join(badges)}")
             else:
                 chat_view.add_system_message("No badges")
+
+        elif action == "txn":
+            # Demo: Transactional API with rollback on error
+            chat_view.add_system_message("[cyan]Testing transactional API...[/cyan]")
+
+            # Test 1: Successful transaction
+            with status_bar.transaction() as txn:
+                txn.add("test1", "Test1", "value1")
+                txn.add("test2", "Test2", "value2")
+                success, error = txn.commit()
+                if success:
+                    chat_view.add_system_message("[green]✓ Transaction 1 succeeded[/green]")
+                else:
+                    chat_view.add_system_message(f"[red]✗ Transaction 1 failed:[/red] {error}")
+
+            # Test 2: Failed transaction (duplicate badge) - should rollback
+            with status_bar.transaction() as txn:
+                txn.update("test1", "updated")
+                txn.add("test1", "Duplicate", "should_fail")  # This will fail
+                success, error = txn.commit()
+                if success:
+                    chat_view.add_system_message("[green]✓ Transaction 2 succeeded[/green]")
+                else:
+                    chat_view.add_system_message(f"[yellow]✓ Transaction 2 failed as expected:[/yellow] {error}")
+                    chat_view.add_system_message("[dim]test1 badge should still have 'value1' (rollback worked)[/dim]")
+
+            # Test 3: Cleanup
+            with status_bar.transaction() as txn:
+                txn.remove("test1")
+                txn.remove("test2")
+                success, error = txn.commit()
+                if success:
+                    chat_view.add_system_message("[green]✓ Cleanup succeeded[/green]")
+                else:
+                    chat_view.add_system_message(f"[red]✗ Cleanup failed:[/red] {error}")
+
         else:
             chat_view.add_system_message(f"[yellow]Unknown badge action:[/yellow] {action}")
 
