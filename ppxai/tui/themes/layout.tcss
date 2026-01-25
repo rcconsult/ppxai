@@ -31,6 +31,7 @@ StatusBar Horizontal {
     width: 1fr;
     height: 1;
     layout: horizontal;
+    align: left top;
 }
 
 StatusBar .provider-badge {
@@ -187,9 +188,7 @@ VerticalScroll > ScrollBar > .scroll-bar--bar:hover {
 StatusBadge {
     width: auto;
     height: 1;
-    padding: 0 1;
-    margin: 0 1;
-    content-align: center middle;
+    margin-right: 2;
 }
 
 /* TreeViewer widget for JSON/YAML/TOML */
