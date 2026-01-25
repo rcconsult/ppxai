@@ -295,6 +295,96 @@ code --install-extension ppxai-X.Y.Z.vsix
 
 **Resolved:** TUI Markdown Tables (v1.10.4), Ctrl-C Message Alternation (v1.10.5)
 
+## ppxaide TUI Implementation (CRITICAL)
+
+The `ppxaide` command launches a Textual-based TUI with syntax-highlighted code editing. This section documents key implementation details that MUST be preserved.
+
+### Syntax Highlighting Requirements
+
+**Dependencies (pyproject.toml):** Syntax highlighting requires tree-sitter packages:
+```
+tree-sitter>=0.23
+tree-sitter-python>=0.25.0
+tree-sitter-javascript>=0.25.0
+tree-sitter-json>=0.24.8
+tree-sitter-yaml>=0.7.2
+tree-sitter-toml>=0.7.0
+tree-sitter-html>=0.23.2
+tree-sitter-css>=0.25.0
+tree-sitter-markdown>=0.5.1
+tree-sitter-bash>=0.25.1
+```
+
+Without these packages, TextArea shows plain text with no syntax colors.
+
+### Two Theme Systems
+
+The TUI has **two separate theme systems** that must stay synchronized:
+
+| System | Purpose | Available Options |
+|--------|---------|-------------------|
+| **App Theme** | Overall UI colors (Textual CSS) | 17+ themes (catppuccin-mocha, dracula, etc.) |
+| **Syntax Theme** | Code highlighting (TextArea) | 5 themes only: dracula, github_light, monokai, vscode_dark, css |
+
+### Theme Synchronization
+
+**Key files:**
+- `ppxai/tui/widgets/code_editor.py` - Contains `APP_THEME_TO_SYNTAX` mapping and `get_syntax_theme_for_app_theme()`
+- `ppxai/tui/app.py` - Contains `watch_theme()` method that updates all CodeEditor widgets
+
+**How it works:**
+1. `CodeEditor.compose()` gets current app theme and selects matching syntax theme
+2. `PPXAIDEApp.watch_theme()` is called automatically when theme changes (Ctrl+T or Ctrl+P)
+3. All mounted CodeEditor widgets have their `syntax_theme` property updated
+
+**Theme mapping logic:**
+```python
+# Dark app themes → dark syntax themes
+"catppuccin-mocha": "dracula"
+"dracula": "dracula"
+"tokyo-night": "dracula"
+"tron-legacy": "vscode_dark"
+"matrix": "vscode_dark"
+# Light app themes → light syntax theme
+"textual-light": "github_light"
+"solarized-light": "github_light"
+```
+
+**Framework limitation:** Custom app themes (tron-legacy, matrix) cannot have matching custom syntax themes. Textual's TextArea only supports 5 built-in syntax themes. The best we can do is map to the closest built-in theme (vscode_dark for cyan/green themes).
+
+### Why Markdown Renders Nicely But Code Needs Manual Sync
+
+Textual uses two different rendering approaches:
+
+| Content | Widget | Theme Source | Behavior |
+|---------|--------|--------------|----------|
+| **Markdown** | `Markdown` widget | CSS variables (`$primary`, `$secondary`, etc.) | Auto-syncs with app theme |
+| **Code** | `TextArea` widget | Internal syntax themes (dracula, etc.) | Needs manual `watch_theme()` sync |
+
+The `Markdown` widget styles headers, links, and code blocks using CSS rules like:
+```css
+Markdown H1 { color: $primary; }
+Markdown H2 { color: $secondary; }
+```
+
+These CSS variables are redefined by each app theme, so Markdown automatically updates when themes change.
+
+The `TextArea` widget has its own internal rendering engine with hardcoded color palettes that don't use CSS variables. That's why we need the `watch_theme()` → `syntax_theme` chain to manually switch between the 5 available syntax themes.
+
+### Key Bindings
+
+- `Ctrl+T` - Cycle through 8 curated themes
+- `Ctrl+P` - Command palette (all 17+ themes)
+- `Ctrl+[` / `Ctrl+]` - Resize split panes (macOS compatible)
+- `Ctrl+W` - Close side panel
+- `F6` / `Ctrl+Tab` - Toggle focus between panes
+
+### DO NOT BREAK
+
+1. **Theme sync chain:** `watch_theme()` → `get_syntax_theme_for_app_theme()` → `CodeEditor.syntax_theme`
+2. **Tree-sitter dependencies** in pyproject.toml
+3. **Language detection** via `EXTENSION_TO_LANGUAGE` mapping in code_editor.py
+
 ## vLLM/GPT-OSS Tool Calling Reference
 
 **Problem:** vLLM with GPT-OSS models can hit `HarmonyError: unexpected tokens remaining in message header` when using native tool calling (`--enable-auto-tool-choice --tool-call-parser openai`). This is a known vLLM/Harmony library issue ([vLLM #23567](https://github.com/vllm-project/vllm/issues/23567)).

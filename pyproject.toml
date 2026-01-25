@@ -73,6 +73,7 @@ data = [
 # Next-gen TUI with Textual (v1.15.0+)
 tui = [
     "textual>=0.47.0",
+    "textual-image>=0.8.0",
 ]
 
 # Development dependencies

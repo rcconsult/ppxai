@@ -10,7 +10,7 @@ from typing import Optional
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical, VerticalScroll, Center
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.css.query import NoMatches
 from textual.message import Message
 from textual.reactive import reactive
@@ -19,6 +19,9 @@ from textual.widgets import Static, Markdown
 
 from .tree_viewer import TreeViewer
 from .code_editor import CodeEditor, EXTENSION_TO_LANGUAGE, SUPPORTED_LANGUAGES
+from .data_viewer import DataViewer
+from .image_viewer import ImageViewer
+from .table_viewer import TableViewer
 
 
 class SidePanel(Widget):
@@ -115,7 +118,8 @@ class SidePanel(Widget):
 
         # Add appropriate viewer/editor based on mode
         if mode == "tree":
-            viewer = TreeViewer(id="panel-viewer")
+            # Use DataViewer for structured data (has tree/source toggle with Ctrl+V)
+            viewer = DataViewer(id="panel-viewer")
             await content_container.mount(viewer)
             ext = path.suffix.lower()
             if ext == ".json":
@@ -126,45 +130,30 @@ class SidePanel(Widget):
                 viewer.load_toml(content, path.name)
             else:
                 viewer.load_json(content, path.name)
+            # Focus the viewer's current view (tree by default)
+            self.call_after_refresh(lambda: viewer._focus_current_view())
 
         elif mode == "markdown":
             scroll = VerticalScroll(id="panel-scroll")
             await content_container.mount(scroll)
             await scroll.mount(Markdown(content, id="panel-markdown"))
+            # Focus the scroll container
+            self.call_after_refresh(lambda: scroll.focus())
 
         elif mode == "image":
-            # Note: Terminal image protocols (iTerm2/Kitty/Sixel) don't work
-            # inside Textual widgets because Textual manages terminal rendering.
-            # Show image info instead.
-            from ..images import get_image_size
-            from ..terminal import get_image_protocol_name
+            # Use ImageViewer widget (has zoom/pan controls and graceful degradation)
+            viewer = ImageViewer(path=path, id="panel-image-viewer")
+            await content_container.mount(viewer)
+            # Focus the image viewer
+            self.call_after_refresh(lambda: viewer.focus())
 
-            # Get image dimensions if possible
-            try:
-                data = path.read_bytes()
-                size = get_image_size(data)
-                size_str = f"{size[0]}x{size[1]}" if size else "unknown"
-            except (OSError, ValueError):
-                size_str = "unknown"  # File read or parse error
-
-            size_kb = path.stat().st_size / 1024
-            proto = get_image_protocol_name()
-
-            info_text = f"""[bold cyan]{path.name}[/bold cyan]
-
-[dim]Size:[/dim] {size_kb:.1f} KB
-[dim]Dimensions:[/dim] {size_str}
-[dim]Protocol:[/dim] {proto}
-
-[yellow]Note:[/yellow] Images cannot be displayed inline
-in the side panel. The image was sent to
-your terminal via {proto} protocol.
-
-[dim]Use an external viewer for full display.[/dim]"""
-
-            center = Center(id="panel-image-center")
-            await content_container.mount(center)
-            await center.mount(Static(info_text, id="panel-image-info"))
+        elif mode == "table":
+            # Use TableViewer for CSV/TSV files (has table/source toggle with Ctrl+V)
+            viewer = TableViewer(id="panel-table-viewer")
+            await content_container.mount(viewer)
+            viewer.load_auto(content, path.name)
+            # Focus the table viewer's current view (table by default)
+            self.call_after_refresh(lambda: viewer._focus_current_view())
 
         else:
             # Code view (header hidden as SidePanel has its own)
@@ -178,9 +167,18 @@ your terminal via {proto} protocol.
             )
             await content_container.mount(editor)
 
-            # Jump to line if specified
+            # Jump to line if specified, then focus
             if line:
                 self.call_after_refresh(lambda: self._goto_line(line, col))
+            else:
+                # Focus the TextArea inside CodeEditor, not the container
+                def focus_editor():
+                    try:
+                        text_area = editor.query_one("#code-text-area")
+                        text_area.focus()
+                    except NoMatches:
+                        editor.focus()
+                self.call_after_refresh(focus_editor)
 
         # Show the panel
         self.add_class("visible")
@@ -192,6 +190,12 @@ your terminal via {proto} protocol.
         try:
             editor = self.query_one("#panel-editor", CodeEditor)
             editor.goto_line(line, col or 0)
+            # Focus the TextArea inside CodeEditor, not the container
+            try:
+                text_area = editor.query_one("#code-text-area")
+                text_area.focus()
+            except NoMatches:
+                editor.focus()
         except NoMatches:
             pass  # Editor not mounted yet
 

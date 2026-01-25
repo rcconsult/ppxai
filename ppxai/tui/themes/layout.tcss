@@ -47,6 +47,23 @@ StatusBar .context-badge {
     color: $accent;
 }
 
+/* Main content - horizontal split */
+#main-content {
+    height: 1fr;
+    width: 100%;
+}
+
+/* Chat pane (left side) */
+#chat-pane {
+    width: 100%;
+    height: 100%;
+}
+
+/* When side panel is visible, chat pane shrinks */
+#chat-pane.split-active {
+    width: 50%;
+}
+
 /* Chat view */
 ChatView {
     background: $background;
@@ -76,6 +93,22 @@ MessageBox.assistant {
 MessageBox.system {
     background: $surface-darken-1;
     border: round $warning;
+    height: auto;
+    padding: 0 1;
+}
+
+/* Ensure system message internal containers auto-size */
+MessageBox.system Vertical {
+    height: auto;
+}
+
+MessageBox.system .role-label {
+    height: 1;
+    margin-bottom: 0;
+}
+
+MessageBox.system .content {
+    height: auto;
 }
 
 MessageBox.tool {
@@ -107,6 +140,11 @@ InputBox {
     min-height: 3;
     max-height: 10;
     margin: 0 1 1 1;
+}
+
+/* Taller input when split view is active */
+InputBox.split-mode {
+    min-height: 5;
 }
 
 InputBox Horizontal {
@@ -173,10 +211,12 @@ CodeEditor {
     padding: 0;
     height: auto;
     min-height: 10;
+    layout: vertical;
 }
 
 CodeEditor TextArea {
-    background: $background;
+    height: 1fr;
+    /* Don't override background - let TextArea's syntax theme handle colors */
 }
 
 CodeEditor .editor-header {
@@ -184,6 +224,7 @@ CodeEditor .editor-header {
     color: $text;
     height: 1;
     padding: 0 1;
+    dock: top;
 }
 
 CodeEditor .editor-footer {
@@ -191,6 +232,7 @@ CodeEditor .editor-footer {
     color: $text-muted;
     height: 1;
     padding: 0 1;
+    dock: bottom;
 }
 
 /* SplitPane layouts */
@@ -242,6 +284,248 @@ ViewerScreen TreeViewer {
 
 /* Full-screen CodeEditor */
 ViewerScreen CodeEditor, EditorScreen CodeEditor {
+    height: 1fr;
+    border: none;
+}
+
+/* Markdown viewer */
+ViewerScreen VerticalScroll {
+    height: 1fr;
+    background: $background;
+}
+
+ViewerScreen Markdown {
+    padding: 1 2;
+    background: $background;
+}
+
+/* Markdown element styling */
+ViewerScreen Markdown H1 {
+    color: $primary;
+    text-style: bold;
+}
+
+ViewerScreen Markdown H2 {
+    color: $secondary;
+    text-style: bold;
+}
+
+ViewerScreen Markdown H3, ViewerScreen Markdown H4 {
+    color: $accent;
+    text-style: bold;
+}
+
+ViewerScreen Markdown MarkdownFence {
+    background: $surface;
+    border: round $primary;
+    margin: 1 0;
+}
+
+/* Side panel (right split) */
+SidePanel {
+    width: 50%;
+    height: 100%;
+    display: none;
+    border-left: solid $surface-lighten-1;
+}
+
+SidePanel.visible {
+    display: block;
+}
+
+SidePanel #panel-header-bar {
+    height: 1;
+    background: $panel;
+    color: $text;
+    padding: 0 1;
+    dock: top;
+}
+
+SidePanel #panel-filename {
+    width: 1fr;
+}
+
+SidePanel #lang-badge {
+    width: auto;
+    color: $accent;
+    padding: 0 1;
+}
+
+SidePanel #panel-content {
+    height: 1fr;
+    background: $background;
+}
+
+SidePanel CodeEditor {
+    height: 1fr;
+    border: none;
+}
+
+SidePanel TreeViewer {
+    height: 1fr;
+    border: none;
+}
+
+SidePanel VerticalScroll {
+    height: 1fr;
+    background: $background;
+}
+
+SidePanel Markdown {
+    padding: 1 2;
+    background: $background;
+}
+
+/* Image info panel */
+SidePanel #panel-image-center {
+    height: 1fr;
+    align: center middle;
+}
+
+SidePanel #panel-image-info {
+    padding: 2;
+    text-align: center;
+}
+
+/* DataViewer widget for structured data */
+DataViewer {
+    background: $surface;
+    height: 1fr;
+    layout: vertical;
+}
+
+DataViewer .data-viewer-header {
+    background: $panel;
+    color: $text;
+    height: 1;
+    padding: 0 1;
+    dock: top;
+}
+
+DataViewer #data-content-switcher {
+    height: 1fr;
+}
+
+DataViewer #tree-view {
+    height: 1fr;
+}
+
+DataViewer #source-view {
+    height: 1fr;
+}
+
+DataViewer TreeViewer {
+    height: 1fr;
+    border: none;
+}
+
+DataViewer CodeEditor {
+    height: 1fr;
+    border: none;
+}
+
+/* DataViewer in SidePanel */
+SidePanel DataViewer {
+    height: 1fr;
+    border: none;
+}
+
+/* ImageViewer widget for image display */
+ImageViewer {
+    background: $surface;
+    height: 1fr;
+    layout: vertical;
+}
+
+ImageViewer .image-viewer-header {
+    background: $panel;
+    color: $text;
+    height: 1;
+    padding: 0 1;
+    dock: top;
+}
+
+ImageViewer .image-viewer-footer {
+    background: $panel;
+    color: $text-muted;
+    height: 1;
+    padding: 0 1;
+    dock: bottom;
+}
+
+ImageViewer #image-center {
+    height: 1fr;
+    align: center middle;
+}
+
+ImageViewer #image-info-container {
+    width: auto;
+    height: auto;
+    padding: 2;
+}
+
+ImageViewer #image-info {
+    text-align: center;
+}
+
+/* textual-image Image widget inside ImageViewer */
+ImageViewer Image {
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+}
+
+/* ImageViewer in SidePanel */
+SidePanel ImageViewer {
+    height: 1fr;
+    border: none;
+}
+
+SidePanel ImageViewer Image {
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+}
+
+/* TableViewer widget for tabular data (CSV/TSV) */
+TableViewer {
+    background: $surface;
+    height: 1fr;
+    layout: vertical;
+}
+
+TableViewer .table-viewer-header {
+    background: $panel;
+    color: $text;
+    height: 1;
+    padding: 0 1;
+    dock: top;
+}
+
+TableViewer #table-content-switcher {
+    height: 1fr;
+}
+
+TableViewer #table-view {
+    height: 1fr;
+}
+
+TableViewer #source-view {
+    height: 1fr;
+}
+
+TableViewer DataTable {
+    height: 1fr;
+    border: none;
+}
+
+TableViewer CodeEditor {
+    height: 1fr;
+    border: none;
+}
+
+/* TableViewer in SidePanel */
+SidePanel TableViewer {
     height: 1fr;
     border: none;
 }

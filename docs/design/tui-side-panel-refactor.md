@@ -1,8 +1,9 @@
 # TUI Side Panel Refactor - Design Document
 
-**Version:** 1.8
+**Version:** 2.1
 **Date:** 2026-01-25
 **Status:** In Progress
+**Target Release:** v1.15.0 (comprehensive release, ships when ready)
 
 ## Architectural Constraint: TUI Isolation
 
@@ -422,6 +423,23 @@ images = ["textual-imageview>=0.2.0"]
 
 **Note:** `textual-imageview` internally uses `pillow` for image processing.
 
+## Release Strategy
+
+**v1.15.0** is a comprehensive release that ships when ready. It includes all phases below.
+**v1.15.1+** will be bug fix releases only.
+
+**Philosophy:** Validate the Textual UI framework thoroughly before connecting to the proven engine layer.
+The engine (EngineClient, streaming, providers) is already battle-tested in Rich TUI, Web App, and VSCode.
+What's new and unproven is the Textual UI - so we validate that first.
+
+```
+Order of work:
+  Foundation (Phase 0) → Visual Validation (Phase 1) → Data Widgets (Phase 2-3)
+  → Side Panel (Phase 4) → E2E Validation (Phase 5) → Engine Integration (Phase 6)
+```
+
+---
+
 ## Implementation Order
 
 ### Phase 0.0: Rich TUI Isolation Refactor (FIRST - Defensive Measure)
@@ -683,26 +701,270 @@ def validate_file_size(path: Path, max_size: int = MAX_FILE_SIZE) -> bool:
 - [ ] Update existing widgets to use new helpers
 - [ ] Run tests to verify no regressions
 
-### Phase 1: DataViewer Widget
+---
+
+### Phase 1: Core Visual Validation
+
+**Goal:** Prove Textual's core widgets work reliably for our use cases before adding complexity.
+
+#### 1.1 StatusBar Stress Test
+
+**Validates:** Reactive updates, badge rendering, theme integration
+
+| Test | Description |
+|------|-------------|
+| Rapid updates | Update provider/model 100x in quick succession |
+| Long text | Provider/model names that exceed expected width |
+| Theme switching | All 17+ themes render badges correctly |
+| Edge cases | Empty values, None values, special characters |
+
+#### 1.2 ChatView Scrolling
+
+**Validates:** Large message lists, auto-scroll behavior
+
+| Test | Description |
+|------|-------------|
+| 1000+ messages | Performance with large conversation history |
+| Auto-scroll | New messages scroll into view |
+| Manual scroll | User scroll position preserved when reviewing history |
+| Long messages | Single message with 1000+ lines |
+
+#### 1.3 InputBox Edge Cases
+
+**Validates:** Multi-line input, paste handling, history
+
+| Test | Description |
+|------|-------------|
+| Multi-line paste | Paste 100+ lines of text |
+| History navigation | Up/down arrow through 50+ history items |
+| Unicode | Emoji, CJK characters, RTL text |
+| Large input | Type/paste 10KB of text |
+
+#### 1.4 Theme Switching
+
+**Validates:** All themes render all widgets correctly
+
+| Test | Description |
+|------|-------------|
+| All built-in themes | 17+ Textual themes tested |
+| Custom themes | tron-legacy, matrix themes |
+| Dynamic switching | Ctrl+T cycles without visual glitches |
+| Widget consistency | All widgets use theme colors correctly |
+
+#### 1.5 Keybinding Conflicts
+
+**Validates:** No keybinding collisions between widgets
+
+| Test | Description |
+|------|-------------|
+| Global bindings | Ctrl+C, Ctrl+L, Ctrl+T work everywhere |
+| Focus-specific | Escape, Enter behave correctly per context |
+| No dead-ends | Can always navigate away from any widget |
+
+**Phase 1 Deliverable:** Confidence that core shell is production-ready.
+
+---
+
+### Phase 2: DataViewer Widget
+
+**Goal:** Complex widget for structured data with tree/source toggle.
+
+#### 2.1 DataViewer (Tree Mode)
+
 1. Create `ppxai/tui/widgets/data_viewer.py`
-2. Implement tree/source toggle with `ContentSwitcher`
-3. Add CSS to `layout.tcss`
-4. Update `side_panel.py` to use DataViewer for tree mode
-5. Test with JSON, YAML, TOML files
+2. Wrap `TreeViewer` for JSON/YAML/TOML display
+3. Header shows filename and "(tree)" mode indicator
+4. Add CSS to `layout.tcss`
 
-### Phase 2: ImageViewer Widget
+#### 2.2 DataViewer (Source Mode)
+
+1. Add `CodeEditor` (read-only) as alternate view
+2. Syntax highlighting for json/yaml/toml
+3. Header shows "(source)" mode indicator
+
+#### 2.3 Tree ↔ Source Toggle
+
+1. Implement `Ctrl+V` to toggle views
+2. Use `ContentSwitcher` for smooth transitions
+3. Header hint: `[Ctrl+V: source]` or `[Ctrl+V: tree]`
+
+#### 2.4 State Preservation
+
+1. Tree expand/collapse state preserved on toggle
+2. Tree → source: cursor jumps to line of selected node
+3. Source → tree: tree expands to show node at cursor line
+
+#### 2.5 Large File Handling
+
+1. Test with 10K+ node JSON files
+2. Lazy loading for deep trees
+3. Performance benchmarks
+
+**Phase 2 Deliverable:** DataViewer widget matching Web App functionality.
+
+---
+
+### Phase 3: ImageViewer Widget
+
+**Goal:** Terminal image support with graceful degradation.
+
+#### 3.1 ImageViewer (Fallback)
+
 1. Create `ppxai/tui/widgets/image_viewer.py`
-2. Implement `textual-imageview` detection and fallback
-3. Add CSS to `layout.tcss`
-4. Update `side_panel.py` to use ImageViewer for image mode
-5. Test with/without `textual-imageview` installed
+2. Display file info when `textual-imageview` not installed
+3. Show: filename, dimensions, file size, install instructions
 
-### Phase 3: Cleanup & Polish
-1. Update `widgets/__init__.py` exports
-2. Update header display logic in SidePanel
-3. Update `/help` command with new keybindings
-4. Add `images` optional dependency to pyproject.toml
-5. Test all file types end-to-end
+#### 3.2 ImageViewer (Full)
+
+1. Detect and wrap `textual-imageview` library
+2. Fit-to-view on initial display
+3. Info bar showing dimensions and zoom level
+
+#### 3.3 Zoom/Pan Controls
+
+1. `+`/`-` keys for zoom in/out
+2. `W`/`A`/`S`/`D` keys for pan
+3. `0` key to reset to fit-to-view
+4. Mouse scroll for zoom
+5. Mouse drag for pan
+
+#### 3.4 Large Image Handling
+
+1. Files > 20MB show confirmation dialog
+2. Loading indicator during decode
+3. Memory-efficient display
+
+**Phase 3 Deliverable:** ImageViewer with optional library support.
+
+---
+
+### Phase 4: Side Panel Integration
+
+**Goal:** Unified file viewing experience with all viewers.
+
+#### 4.1 `/show` Command Polish
+
+1. Use content factory for file type detection
+2. Route to appropriate viewer (CodeEditor, DataViewer, ImageViewer, Markdown)
+3. Consistent header format across all modes
+
+#### 4.2 `/edit` Command
+
+1. CodeEditor in edit mode (read_only=False)
+2. Modified indicator in header
+3. Ctrl+S to save
+4. Unsaved changes warning on close
+
+#### 4.3 Split Pane UX
+
+1. Ctrl+[ / Ctrl+] to resize split
+2. F6 / Ctrl+Tab to switch focus
+3. Smooth transitions
+
+#### 4.4 Panel State Management
+
+1. Track open/close state
+2. Remember last file shown
+3. Clean state on close
+
+**Phase 4 Deliverable:** Complete file viewing/editing in split view.
+
+---
+
+### Phase 5: End-to-End Validation
+
+**Goal:** Prove the UI shell works perfectly WITHOUT engine connection.
+
+#### Test Categories
+
+| Category | Coverage |
+|----------|----------|
+| Widget lifecycle | Mount/unmount, focus, events |
+| Theme consistency | All 17+ themes, all widgets |
+| Keyboard navigation | No dead-ends, expected behavior |
+| Mouse interaction | Click, scroll, drag where applicable |
+| Edge cases | Empty states, error states, long content |
+| Performance | 1000+ messages, large files, rapid theme switching |
+
+#### Validation Criteria
+
+- [ ] All widgets mount/unmount cleanly
+- [ ] No memory leaks on long sessions
+- [ ] Theme switching works for all widgets
+- [ ] All keybindings documented and working
+- [ ] Performance acceptable on reference hardware
+- [ ] Test suite covers all critical paths
+
+**Phase 5 Deliverable:** Comprehensive test suite proving UI reliability.
+
+---
+
+### Phase 6: Engine Integration
+
+**Goal:** Connect validated UI to proven backend.
+
+**Rationale for placing this last:**
+- Engine layer is already proven (Rich TUI, Web App, VSCode)
+- Integration is mechanical once UI is stable
+- Don't want engine bugs masking UI bugs (or vice versa)
+
+#### 6.1 Factory Pattern
+
+1. Add `PPXAIDEApp.initialize()` class method
+2. Load config: `get_default_provider()`, `get_default_model()`
+3. Return configured app instance
+
+#### 6.2 EngineClient Composition
+
+1. Create `EngineClient` in `initialize()`
+2. Store as `self._engine_client`
+3. Subscribe to engine events
+
+#### 6.3 Streaming Responses
+
+1. Handle `EventType.STREAMING_*` events
+2. Progressive rendering in ChatView
+3. Loading indicators during response
+
+#### 6.4 Provider/Model Switching
+
+1. Connect `/provider` and `/model` commands
+2. Reactive StatusBar updates
+3. Re-initialize engine client on switch
+
+#### 6.5 Command Handlers
+
+1. Port all slash commands from Rich TUI
+2. `/agent`, `/tools`, `/consent` support
+3. `/session`, `/save`, `/load`, `/export`
+4. `/checkpoint`, `/undo`
+5. `/context`, `/usage`, `/config`
+
+#### 6.6 Full Feature Parity
+
+1. Token usage display
+2. Cost estimation
+3. Context injection (@file, @git, @tree)
+4. Tool execution display
+
+**Phase 6 Deliverable:** Fully functional AI assistant matching Rich TUI capabilities.
+
+---
+
+### Phase 7: Polish & Release
+
+**Goal:** Production-ready v1.15.0 release.
+
+#### Tasks
+
+1. Performance optimization
+2. Accessibility review
+3. Documentation update
+4. Cross-platform testing (Linux, macOS, Windows)
+5. Binary builds (PyInstaller)
+6. Release notes
+
+**Phase 7 Deliverable:** v1.15.0 release.
 
 ## Testing Checklist
 
@@ -783,19 +1045,27 @@ def validate_file_size(path: Path, max_size: int = MAX_FILE_SIZE) -> bool:
 - v1.6 (2026-01-25): Phase 0.1.2 complete (CSS consolidation)
 - v1.7 (2026-01-25): Phase 0.1.3 complete (SafeQueryMixin)
 - v1.8 (2026-01-25): Phase 0.1.4 complete (content factory)
+- v2.0 (2026-01-25): Major restructure - consolidated all work into v1.15.0, added Phases 1-7
+- v2.1 (2026-01-25): Phase 0.1.5 complete (input validation)
+
+**Release Strategy:**
+- **v1.15.0**: Comprehensive release including all phases (0-7). Ships when ready.
+- **v1.15.1+**: Bug fix releases only.
 
 **Next Steps:**
-1. ~~Review this document~~ ✅
-2. ~~Address design decisions~~ ✅
-3. ~~Technical debt analysis~~ ✅
-4. ~~Phase 0.0: Rich TUI isolation refactor~~ ✅
-5. ~~User verification: Rich TUI works identically~~ ✅
-6. ~~Phase 0.1.1: Error handling cleanup~~ ✅
-7. ~~Phase 0.1.2: CSS consolidation~~ ✅
-8. ~~Phase 0.1.3: Safe query helper~~ ✅
-9. ~~Phase 0.1.4: Content factory~~ ✅
-10. **Phase 0.1.5: Input validation** ← NEXT
-11. Phase 1+: New widget implementations
+1. ~~Phase 0.0: Rich TUI isolation refactor~~ ✅
+2. ~~Phase 0.1.1: Error handling cleanup~~ ✅
+3. ~~Phase 0.1.2: CSS consolidation~~ ✅
+4. ~~Phase 0.1.3: Safe query helper~~ ✅
+5. ~~Phase 0.1.4: Content factory~~ ✅
+6. ~~Phase 0.1.5: Input validation~~ ✅
+7. **Phase 1: Core Visual Validation** ← NEXT (StatusBar, ChatView, InputBox, themes, keybindings)
+8. Phase 2: DataViewer widget (tree/source toggle)
+9. Phase 3: ImageViewer widget (with textual-imageview support)
+10. Phase 4: Side Panel Integration (/show, /edit, split pane UX)
+11. Phase 5: End-to-End Validation (comprehensive test suite)
+12. Phase 6: Engine Integration (EngineClient, streaming, commands)
+13. Phase 7: Polish & Release (performance, accessibility, docs, binaries)
 
 **Sources:**
 - [textual-imageview](https://github.com/adamviola/textual-imageview) - Terminal image viewer with zoom/pan

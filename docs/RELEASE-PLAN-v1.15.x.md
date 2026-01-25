@@ -1,8 +1,8 @@
 # Release Plan: v1.15.x Series
 
 **Created:** January 24, 2026
-**Last Updated:** January 24, 2026
-**Status:** In Progress
+**Last Updated:** January 25, 2026 (Phase 5 Complete, 254 tests)
+**Status:** In Progress - Phase 6 (Engine Integration) Next
 **Branch:** feature/new-tui-command
 
 ---
@@ -21,9 +21,27 @@ The v1.15.x series introduces `ppxaide` - a new terminal UI built on the Textual
 - Limited widget-based composition
 - CSS theming not possible with Rich
 
+## Release Strategy
+
+**v1.15.0** is a comprehensive release that ships when ready. It includes:
+- All UI platform work (widgets, themes, layouts)
+- Visual validation (stress tests, edge cases)
+- Data visualization widgets (DataViewer, ImageViewer, TableViewer)
+- Engine integration (EngineClient, streaming, commands)
+- Full feature parity with Rich TUI
+- Polish and performance optimization
+
+**v1.15.1** - Bug fixes and cross-platform validation
+
+**v1.15.2** - Additional features after stabilization:
+- PDFViewer widget (PyMuPDF integration, cross-platform tested)
+- Cursor position preservation across view toggles (DataViewer, TableViewer) - *if requested by users*
+
+**Philosophy:** Validate the new Textual framework thoroughly before connecting to the proven engine layer.
+The engine is already battle-tested in Rich TUI, Web App, and VSCode. What's new is the UI.
+
 **Migration Path:**
 - v1.15.0: ppxaide launches as separate command (`ppxaide` vs `ppxai`)
-- v1.15.x: Feature parity achieved incrementally
 - v1.16.x: ppxaide becomes `ppxai`, old TUI deprecated
 
 ## Architecture
@@ -69,148 +87,184 @@ plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles c
 
 ---
 
-## Release Schedule
+## v1.15.0 Implementation Phases
 
-### v1.15.0 - ppxaide Platform Foundation
-
-**Goal:** Build the UI platform with Textual's rich widget ecosystem before adding functional logic
-
-| Feature | Description | Status |
-|---------|-------------|--------|
-| **Textual SDK integration** | Build on current `ppxai/engine/` architecture | [x] Done |
-| **New entry point** | `ppxaide` command (separate from `ppxai`) | [x] Done |
-| **Themes** | 17+ built-in (Textual) + 2 custom (tron-legacy, matrix) | [x] Done |
-| **Basic commands** | `/help`, `/quit`, `/clear`, `/theme` | [x] Done |
-| **Status bar** | Provider, model, tools, context badges | [x] Done |
-| **Chat view** | Message display with role indicators | [x] Done |
-| **Input box** | Multi-line input with command history | [x] Done |
-| **Round borders** | Unicode box-drawing corners (╭╮╯╰) | [x] Done |
-| **Mouse support** | Click-to-scroll, selectable text, clickable links | [x] Done |
-| **Clipboard** | Text copy/paste via pyperclip | [x] Done |
-| **Tree widget** | JSON/YAML/TOML hierarchical display | [x] Done |
-| **TextArea widget** | Code editor with syntax highlighting | [x] Done |
-| **Split panes** | Horizontal/Vertical container layouts | [x] Done |
-
-**Textual Framework Capabilities:**
-
-| Capability | Textual Support | Notes |
-|------------|----------------|-------|
-| Rounded corners | ✅ `round` border style | Unicode: ╭╮╯╰ |
-| Clipboard (text) | ✅ Built-in + pyperclip | Cross-platform |
-| Clipboard (images) | ❌ Not supported | Text-only |
-| Inline images | ⚠️ Plugin: `textual-image` | Kitty/iTerm2/Sixel |
-| Tree data viewer | ✅ Built-in `Tree` widget | JSON example in repo |
-| Code editor | ✅ `TextArea` widget | tree-sitter highlighting |
-| Split panes | ✅ Container layouts | Horizontal/Vertical/Grid |
-
-**Implementation Tasks:**
-
-*Core (Done):*
-- [x] Create `ppxai/tui/` module structure
-- [x] Implement `PPXAIDEApp(textual.App)` main application class
-- [x] Create `ChatView` widget for message display
-- [x] Create `StatusBar` widget with provider/model/context badges
-- [x] Create `InputBox` widget with multi-line support
-- [x] Integrate Textual's built-in themes (catppuccin-mocha, nord, dracula, etc.)
-- [x] Create custom themes: tron-legacy, matrix
-- [x] Add `ppxaide` entry point to `pyproject.toml`
-- [x] Add `[tui]` optional dependency group
-- [x] Create PyInstaller spec and build binary
-
-*Platform Widgets (Done):*
-- [x] Update `layout.tcss` to use `round` borders where appropriate
-- [x] Add pyperclip integration for clipboard support (`/copy`, `/paste` commands)
-- [x] Create `TreeViewer` widget wrapping Textual's Tree
-- [x] Create `CodeEditor` widget wrapping Textual's TextArea
-- [x] Create `SplitPane` layout for side-by-side views
-- [x] Add mouse-clickable file links (OSC 8 hyperlinks)
-- [x] Basic integration tests (22 tests in `tests/test_tui.py`)
-
-**Deliverable:** Complete UI platform with rich widgets, ready for functional features
+All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tui-side-panel-refactor.md) for detailed specifications.
 
 ---
 
-### v1.15.1 - Commands & Sessions
+### Phase 0: Foundation (Complete + In Progress)
 
-**Goal:** Full command parity with current TUI
+**Goal:** Clean codebase with zero technical debt
 
-| Feature | Description | Status |
-|---------|-------------|--------|
-| **Provider commands** | `/provider`, `/model`, `/tools` | [ ] Planned |
-| **Agent commands** | `/agent`, `/consent` | [ ] Planned |
-| **Session commands** | `/session`, `/save`, `/load`, `/export` | [ ] Planned |
-| **Checkpoint commands** | `/checkpoint`, `/undo` | [ ] Planned |
-| **Context commands** | `/context`, `/context hints`, `/context clear`, `/context show` | [ ] Planned |
-| **Command history** | Arrow key navigation, persistent history | [ ] Planned |
-| **Tab completion** | Autocomplete for commands and arguments | [ ] Planned |
-
-**Implementation Tasks:**
-
-- [ ] Create `CommandPalette` widget with autocomplete
-- [ ] Port all slash command handlers from `ppxai/commands/`
-- [ ] Implement command history with persistence
-- [ ] Add keyboard shortcuts (Ctrl+C, Ctrl+D, etc.)
-- [ ] Create modal dialogs for consent prompts
-- [ ] Add `/config` command for settings
-- [ ] Integration tests for all commands
-
-**Deliverable:** Full command support matching current TUI
+| Phase | Focus | Status |
+|-------|-------|--------|
+| 0.0 | Rich TUI isolation (move to `ppxai/rich/`) | ✅ Done |
+| 0.1.1 | Error handling cleanup | ✅ Done |
+| 0.1.2 | CSS consolidation | ✅ Done |
+| 0.1.3 | SafeQueryMixin helper | ✅ Done |
+| 0.1.4 | Content factory | ✅ Done |
+| 0.1.5 | Input validation | ✅ Done |
 
 ---
 
-### v1.15.2 - Visual Enhancements
+### Phase 0 (Complete): Platform Widgets
 
-**Goal:** Rich visual features leveraging Textual capabilities
+**Previously done work:**
 
-| Feature | Description | Status |
-|---------|-------------|--------|
-| **Data viewers** | CSV/JSON/YAML tree views (port from Web App) | [ ] Planned |
-| **`/show` command** | File preview with syntax highlighting | [ ] Planned |
-| **`/edit` command** | Textual TextArea widget for file editing | [ ] Planned |
-| **Image preview** | Inline image display (if terminal supports) | [ ] Planned |
-| **Split panes** | Code preview alongside chat | [ ] Planned |
-| **Tool call accordion** | Expandable tool execution history | [ ] Planned |
-| **Markdown tables** | Proper table rendering in responses | [ ] Planned |
-
-**Implementation Tasks:**
-
-- [ ] Create `DataTableViewer` widget for CSV/TSV
-- [ ] Create `TreeViewer` widget for JSON/YAML/TOML
-- [ ] Implement `/show` command with syntax highlighting
-- [ ] Implement `/edit` command using Textual's TextArea
-- [ ] Create `ToolCallAccordion` widget
-- [ ] Add split pane layout for file preview
-- [ ] Image support via Kitty/iTerm2 protocols (optional)
-- [ ] Integration tests for visual components
-
-**Deliverable:** Visual parity with Desktop Web App
+| Feature | Status |
+|---------|--------|
+| Textual SDK integration | ✅ Done |
+| `ppxaide` entry point | ✅ Done |
+| 17+ built-in themes + 2 custom | ✅ Done |
+| Basic commands (`/help`, `/quit`, `/clear`, `/theme`) | ✅ Done |
+| StatusBar with badges | ✅ Done |
+| ChatView message display | ✅ Done |
+| InputBox multi-line input | ✅ Done |
+| TreeViewer widget | ✅ Done |
+| CodeEditor widget | ✅ Done |
+| SplitPane layouts | ✅ Done |
+| Mouse support, clipboard | ✅ Done |
+| Basic tests (22 in `tests/test_tui.py`) | ✅ Done |
 
 ---
 
-### v1.15.3 - Polish & Performance
+### Phase 1: Core Visual Validation (Complete)
 
-**Goal:** Production-ready release
+**Goal:** Prove core widgets work reliably before adding complexity
+
+| Test Area | Coverage | Status |
+|-----------|----------|--------|
+| StatusBar stress test | Rapid updates, long text, Unicode, themes | ✅ Done |
+| ChatView scrolling | 1000+ messages, long content, Unicode | ✅ Done |
+| InputBox edge cases | History storage, Unicode, multi-line | ✅ Done |
+| Theme switching | All themes, syntax highlighting mapping | ✅ Done |
+| Keybinding conflicts | No collisions, all actions have methods | ✅ Done |
+| MessageBox | Content storage, streaming support | ✅ Done |
+
+**Deliverable:** Core widget tests (96 → 113 with DataViewer tests) proving core widgets work reliably
+
+---
+
+### Phase 2: DataViewer Widget (Complete)
+
+**Goal:** Complex widget for structured data
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **Performance optimization** | Efficient rendering for long conversations | [ ] Planned |
-| **Accessibility** | Screen reader support, high contrast themes | [ ] Planned |
-| **Error handling** | Graceful degradation, clear error messages | [ ] Planned |
-| **Configuration** | TUI-specific settings in ppxai-config.json | [ ] Planned |
-| **Documentation** | User guide, keyboard shortcuts reference | [ ] Planned |
+| Tree mode | JSON/YAML/TOML hierarchical display | ✅ Done |
+| Source mode | CodeEditor with syntax highlighting | ✅ Done |
+| Toggle | Ctrl+V switches between tree/source | ✅ Done |
+| State preservation | View mode state preserved | ✅ Done |
+| Large files | Performance with 10K+ nodes tested | ✅ Done |
+| Format detection | Auto-detect from file extension | ✅ Done |
+| Unicode support | Full Unicode data handling | ✅ Done |
 
-**Implementation Tasks:**
+**Deliverable:** DataViewer widget with 17 tests in `tests/test_tui.py`
 
-- [ ] Profile and optimize rendering performance
-- [ ] Add virtual scrolling for long conversations
-- [ ] Implement high contrast theme variant
-- [ ] Add `tui` section to config schema
-- [ ] Create keyboard shortcuts quick reference
-- [ ] Update installation docs for `pip install ppxai[tui]`
-- [ ] End-to-end testing on Linux, macOS, Windows
-- [ ] Performance benchmarks vs current TUI
+---
 
-**Deliverable:** Production-ready ppxaide
+### Phase 3: ImageViewer Widget (Complete)
+
+**Goal:** Terminal image support with graceful degradation
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Fallback mode | File info when library not installed | ✅ Done |
+| Full mode | textual-imageview integration | ✅ Done |
+| Controls | +/- zoom, WASD pan, 0 reset | ✅ Done |
+| Properties | path, dimensions, file_size, format, is_loaded | ✅ Done |
+| Large files | check_file_size() validation | ✅ Done |
+
+**Deliverable:** ImageViewer widget with 15 tests in `tests/test_tui.py`
+
+---
+
+### Phase 4: Side Panel Integration (Complete)
+
+**Goal:** Unified file viewing experience
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| DataViewer integration | Tree/source toggle for JSON/YAML/TOML | ✅ Done |
+| ImageViewer integration | Zoom/pan controls for images | ✅ Done |
+| `/show` polish | All file types via content factory | ✅ Done |
+| `/edit` command | CodeEditor in edit mode | ✅ Done |
+| Split pane UX | Resize (Ctrl+[/]), focus switching (F6) | ✅ Done |
+| State management | Open/close, content tracking | ✅ Done |
+
+**Deliverable:** 16 integration tests in `tests/test_tui.py` (Total: 144 tests)
+
+---
+
+### Phase 4.5: TableViewer Widget (Complete)
+
+**Goal:** Tabular data display for CSV/TSV files (parity with Desktop Web App)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| DataTable core | Textual's DataTable for grid display | ✅ Done |
+| Format support | CSV, TSV, PSV (delimiter detection) | ✅ Done |
+| Header detection | Auto-detect heuristics | ✅ Done |
+| Table/source toggle | Ctrl+V switches views (like DataViewer) | ✅ Done |
+| Column sizing | Auto-width with max 50 chars | ✅ Done |
+| Large files | Row limit (1000 initial rows) | ✅ Done |
+| SidePanel integration | `/show data.csv` displays table | ✅ Done |
+
+**Deliverable:** 24 TableViewer tests in `tests/test_tui.py` (Total: 168 tests)
+
+---
+
+### Phase 5: End-to-End Validation (Complete)
+
+**Goal:** Prove UI shell works WITHOUT engine
+
+| Phase | Focus | Tests | Status |
+|-------|-------|-------|--------|
+| 5.1 | Widget lifecycle (mount/unmount, focus, events) | 20 | ✅ Done |
+| 5.2 | Theme consistency (all themes, all widgets) | 13 | ✅ Done |
+| 5.3 | Keyboard navigation (no dead-ends, focus mgmt) | 16 | ✅ Done |
+| 5.4 | Edge cases (empty states, Unicode, large files) | 19 | ✅ Done |
+| 5.5 | App integration (commands, multi-widget) | 18 | ✅ Done |
+
+**Deliverable:** 86 comprehensive tests proving UI reliability (Total: 254 tests)
+
+---
+
+### Phase 6: Engine Integration
+
+**Goal:** Connect validated UI to proven backend
+
+**Rationale:** Engine is already battle-tested. Integration is mechanical once UI is stable.
+
+| Feature | Description |
+|---------|-------------|
+| Factory pattern | `PPXAIDEApp.initialize()` |
+| Config loading | `get_default_provider()`, etc. |
+| EngineClient | Composition, event subscription |
+| Streaming | Progressive rendering |
+| Provider/model switching | Reactive StatusBar updates |
+| Command handlers | Full parity with Rich TUI |
+| Feature parity | Token usage, cost, context injection |
+
+**Deliverable:** Fully functional AI assistant
+
+---
+
+### Phase 7: Polish & Release
+
+**Goal:** Production-ready v1.15.0
+
+| Task | Description |
+|------|-------------|
+| Performance | Optimize rendering |
+| Accessibility | Screen reader, high contrast |
+| Documentation | User guide, shortcuts |
+| Cross-platform | Linux, macOS, Windows testing |
+| Binaries | PyInstaller builds |
+| Release notes | Changelog, migration guide |
+
+**Deliverable:** v1.15.0 release
 
 ---
 
@@ -256,10 +310,11 @@ plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles c
 - [ ] Tool call display
 
 ### Desktop Web App features to port
-- [ ] Data viewers (CSV, JSON, YAML, TOML)
-- [ ] File editor with syntax highlighting
-- [ ] Image preview
-- [ ] PDF preview (if terminal supports)
+- [x] Data viewers (JSON, YAML, TOML) - DataViewer widget
+- [x] Data viewers (CSV, TSV) - TableViewer widget
+- [x] File editor with syntax highlighting - CodeEditor widget
+- [x] Image preview - ImageViewer widget
+- [ ] PDF preview - **Deferred to v1.15.2** (requires PyMuPDF, cross-platform testing)
 
 ---
 
@@ -275,11 +330,25 @@ plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles c
 
 ## Success Metrics
 
-- [ ] ppxaide launches and connects to ppxai-server
-- [ ] All slash commands work as expected
+### Phase 0-5 (UI Validation) - COMPLETE
+- [x] All widgets mount/unmount cleanly (254 tests passing)
+- [x] Widget lifecycle tested (mount, unmount, focus, events, state)
+- [x] Theme consistency validated (all 17+ themes work)
+- [x] Keyboard navigation tested (Tab, Escape, arrows, no dead-ends)
+- [x] Edge cases covered (Unicode, large files, empty states, errors)
+- [x] App integration verified (commands, multi-widget, state preservation)
+- [x] DataViewer tree/source toggle works
+- [x] ImageViewer displays with/without library
+- [x] TableViewer table/source toggle works
+- [x] Side panel `/show` and `/edit` work
+- [x] Performance acceptable with 1000+ messages (stress tests)
+
+### Phase 6-7 (Engine Integration)
+- [ ] ppxaide connects to EngineClient
 - [ ] Streaming responses render correctly
-- [ ] Theme switching works
-- [ ] No performance regression vs current TUI
+- [ ] All slash commands work as expected
+- [ ] Provider/model switching works
+- [ ] Full feature parity with Rich TUI
 - [ ] Works on Linux, macOS, Windows
 
 ---
@@ -288,5 +357,6 @@ plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles c
 
 - [Textual Documentation](https://textual.textualize.io/)
 - [Textual CSS Reference](https://textual.textualize.io/guide/CSS/)
+- [TUI Side Panel Refactor Design Doc](design/tui-side-panel-refactor.md) (detailed specs)
 - [ROADMAP.md v1.15.x section](../ROADMAP.md)
 - [v1.14.x Release Plan](RELEASE-PLAN-v1.14.x.md) (completed series)
