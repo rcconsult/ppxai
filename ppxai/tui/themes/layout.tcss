@@ -80,7 +80,13 @@ MessageBox {
     margin-bottom: 1;
     background: $surface;
     width: 100%;
+    height: auto;
     border: round $surface-lighten-1;
+}
+
+/* Ensure all MessageBox internal containers auto-size */
+MessageBox Vertical {
+    height: auto;
 }
 
 MessageBox.user {
@@ -96,22 +102,7 @@ MessageBox.assistant {
 MessageBox.system {
     background: $surface-darken-1;
     border: round $warning;
-    height: auto;
     padding: 0 1;
-}
-
-/* Ensure system message internal containers auto-size */
-MessageBox.system Vertical {
-    height: auto;
-}
-
-MessageBox.system .role-label {
-    height: 1;
-    margin-bottom: 0;
-}
-
-MessageBox.system .content {
-    height: auto;
 }
 
 MessageBox.tool {
@@ -122,11 +113,13 @@ MessageBox.tool {
 MessageBox .role-label {
     color: $text-muted;
     text-style: bold;
+    height: 1;
     margin-bottom: 1;
 }
 
 MessageBox .content {
     color: $text;
+    height: auto;
 }
 
 MessageBox.streaming .content {
