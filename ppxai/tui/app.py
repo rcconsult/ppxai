@@ -144,6 +144,9 @@ class PPXAIDEApp(App):
                     status_bar.add_badge("context", "Context", scope_text)
                     self.log.info(f"Bootstrap context loaded: {scope_text}")
 
+        # Check for session restoration (Phase 7)
+        self._check_session_restoration()
+
         # Focus the input box
         input_box = self.query_one("#input-box", InputBox)
         input_box.focus()
@@ -218,6 +221,111 @@ class PPXAIDEApp(App):
             self.log.info(f"Engine initialized: {self._provider}/{self._model}")
         else:
             self.log.warning("Engine not fully initialized - use /provider and /model commands")
+
+    def _check_session_restoration(self) -> None:
+        """Check for last session and offer to restore (Phase 7).
+
+        Displays a system message if a previous session is available.
+        Auto-restores if config says 'always'.
+        """
+        if not self._engine_client:
+            return
+
+        from ppxai.config import get_auto_restore_mode
+        from ppxai.engine.session import SessionManager
+
+        # Get last session state
+        last_state = SessionManager.get_last_session_state()
+        if not last_state:
+            return
+
+        session_name = last_state.get("name")
+        message_count = last_state.get("message_count", 0)
+
+        # Skip if no messages
+        if message_count == 0:
+            return
+
+        auto_restore = get_auto_restore_mode()
+        chat_view = self.query_one("#chat-view", ChatView)
+
+        # Auto-restore if configured
+        if auto_restore == "always":
+            if self._restore_session(session_name, last_state):
+                chat_view.add_system_message(
+                    f"[green]✓ Session restored:[/green] {session_name} ({message_count} messages)\n"
+                    f"[dim]Provider: {last_state.get('provider', 'unknown')}, Tools: {'ON' if last_state.get('tools_enabled') else 'OFF'}[/dim]"
+                )
+                self.log.info(f"Auto-restored session: {session_name}")
+            return
+
+        # Show notification about available session (prompt mode or default)
+        if auto_restore != "never":
+            provider_info = last_state.get("provider", "unknown")
+            tools_info = "ON" if last_state.get("tools_enabled") else "OFF"
+            chat_view.add_system_message(
+                f"[cyan]↻ Last session available:[/cyan] {session_name}\n"
+                f"[dim]  {message_count} messages, Provider: {provider_info}, Tools: {tools_info}[/dim]\n"
+                f"[dim]  Use [bold]/load {session_name}[/bold] to restore[/dim]"
+            )
+
+    def _restore_session(self, session_name: str, session_state: dict) -> bool:
+        """Restore a session with provider, model, and tools state.
+
+        Args:
+            session_name: Name of session to load
+            session_state: Session state from state file
+
+        Returns:
+            True if restored successfully
+        """
+        if not self._engine_client:
+            return False
+
+        # Load the session
+        if not self._engine_client.session.load(session_name):
+            return False
+
+        # Restore provider if available
+        stored_provider = session_state.get("provider")
+        if stored_provider:
+            from ppxai.config import PROVIDERS
+            if stored_provider in PROVIDERS:
+                try:
+                    if self._engine_client.set_provider(stored_provider):
+                        self._provider = stored_provider
+                        status_bar = self.query_one(StatusBar)
+                        status_bar.update_badge("provider", stored_provider)
+                except Exception as e:
+                    self.log.debug(f"Failed to restore provider '{stored_provider}': {e}")
+
+        # Restore model if available
+        stored_model = session_state.get("model")
+        if stored_model:
+            if self._engine_client.set_model(stored_model):
+                self._model = stored_model
+                status_bar = self.query_one(StatusBar)
+                status_bar.update_badge("model", stored_model)
+
+        # Restore tools state
+        tools_enabled = session_state.get("tools_enabled", False)
+        if tools_enabled:
+            self._engine_client.enable_tools()
+            self._tools_enabled = True
+            status_bar = self.query_one(StatusBar)
+            status_bar.update_badge("tools", "ON")
+
+        # Restore working directory
+        working_dir = session_state.get("working_dir")
+        if working_dir and os.path.isdir(working_dir):
+            try:
+                os.chdir(working_dir)
+                self._engine_client.set_working_dir(working_dir)
+                self._working_dir = working_dir
+            except Exception:
+                pass
+
+        return True
 
     # ========================================================================
     # CommandContext Protocol Implementation (Phase 6.1.1)
