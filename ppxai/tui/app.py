@@ -393,8 +393,9 @@ class PPXAIDEApp(App):
             self._current_message_content += event.data
 
         elif event.type == EventType.STREAM_END:
-            # Finalize and display
-            chat_view.add_assistant_message(self._current_message_content)
+            # Finalize and display (only if there's content)
+            if self._current_message_content.strip():
+                chat_view.add_assistant_message(self._current_message_content)
             self._current_message_content = ""
 
             # Update usage stats in status bar (Phase 6.4)
