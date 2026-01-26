@@ -6,6 +6,7 @@
 
 ## Completed This Session
 
+**Phase 1 - Type-based rendering:**
 - [x] Type-based file display migration for /show command
 - [x] TreeResult uses DataViewer with Ctrl+V toggle (tree ↔ source)
 - [x] TableResult uses TableViewer with Ctrl+V toggle (table ↔ source)
@@ -15,6 +16,13 @@
 - [x] python-magic dependency for file type detection
 - [x] All 1105 tests passing
 - [x] FEATURE-PARITY-ANALYSIS.md created
+
+**Phase 2 - Consistency fixes:**
+- [x] Auto-save interval (commit 00b0348)
+- [x] Crash recovery with dirty flag (commit 00b0348)
+- [x] Debug log display fix (commit 4e876f0)
+- [x] Session restore config fix (commit a059c42)
+- [x] Session restoration permissive mode (commit f1547bd)
 
 ---
 
@@ -108,6 +116,26 @@
 - Command already existed and worked
 - KeyValueResult renderer displays tool configuration
 - No changes needed
+
+### 2.5 Session Restoration Fix ✅
+- [x] Match Rich TUI's permissive restoration behavior
+- [x] Don't fail restoration when API key missing
+- [x] Always render messages regardless of provider/model status
+- [x] Use strict=True for model validation
+- [x] Fall back to default model if stored model unavailable
+
+**Implementation:**
+- Don't check return value of `set_provider()` - just call it (Rich TUI line 579)
+- Use `strict=True` for `set_model()` validation (Rich TUI line 586)
+- Fall back to provider's default model if unavailable (Rich TUI lines 589-594)
+- Always continue restoration even if provider/model can't be activated
+- **Commit:** f1547bd
+
+**Bug Fixed:**
+- Session with 70 messages + provider=gemini showed empty chat with provider=perplexity
+- Root cause: Textual TUI was too strict - checked `set_provider()` return value
+- When GEMINI_API_KEY missing, restoration failed and stopped
+- Now matches Rich TUI: permissive restoration, always shows messages
 
 ---
 
