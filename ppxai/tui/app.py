@@ -896,28 +896,51 @@ class PPXAIDEApp(App):
                             status_bar.remove_badge("datetime")
 
             except RuntimeError as e:
+                import os
+                import traceback
+
+                # Always log full traceback
+                self.log.error(f"RuntimeError in command '{cmd}': {e}", exc_info=True)
+
                 if "asyncio.run() cannot be called" in str(e) and "running event loop" in str(e):
-                    # Special handling for asyncio.run() errors (v1.15.0 Phase 2.6)
-                    self.log.error(f"Command '{cmd}' tried to use asyncio.run() from async context", exc_info=True)
-                    chat_view.add_system_message(
+                    # Special handling for asyncio.run() errors
+                    error_msg = (
                         f"[red]Command failed: {cmd}[/red]\n"
-                        f"[yellow]This command is not compatible with the Textual TUI yet.[/yellow]\n"
-                        f"[dim]It tries to create a new event loop while one is already running.[/dim]\n"
-                        f"[dim]Try using the Rich TUI instead: [bold]uv run ppxai[/bold][/dim]"
+                        f"[yellow]asyncio.run() called from running event loop[/yellow]\n"
                     )
+
+                    # Add full traceback if --trace enabled
+                    if os.getenv('PPXAIDE_TRACE'):
+                        tb = traceback.format_exc()
+                        error_msg += f"\n[dim]Full traceback:\n{tb}[/dim]"
+                    else:
+                        error_msg += f"[dim]Use --trace flag for full traceback[/dim]"
+
+                    chat_view.add_system_message(error_msg)
                 else:
                     # Other RuntimeErrors
-                    self.log.error(f"Command error: {cmd} - {e}", exc_info=True)
-                    chat_view.add_system_message(
-                        f"[red]Command failed: {cmd}[/red]\n"
-                        f"[dim]{str(e)}[/dim]"
-                    )
+                    error_msg = f"[red]Command failed: {cmd}[/red]\n[dim]{str(e)}[/dim]"
+
+                    if os.getenv('PPXAIDE_TRACE'):
+                        tb = traceback.format_exc()
+                        error_msg += f"\n\n[dim]Traceback:\n{tb}[/dim]"
+
+                    chat_view.add_system_message(error_msg)
             except Exception as e:
-                self.log.error(f"Command error: {cmd} - {e}", exc_info=True)
-                chat_view.add_system_message(
-                    f"[red]Command failed: {cmd}[/red]\n"
-                    f"[dim]{str(e)}[/dim]"
-                )
+                import os
+                import traceback
+
+                # Always log full traceback
+                self.log.error(f"Exception in command '{cmd}': {e}", exc_info=True)
+
+                error_msg = f"[red]Command failed: {cmd}[/red]\n[dim]{str(e)}[/dim]"
+
+                # Add full traceback if --trace enabled
+                if os.getenv('PPXAIDE_TRACE'):
+                    tb = traceback.format_exc()
+                    error_msg += f"\n\n[dim]Traceback:\n{tb}[/dim]"
+
+                chat_view.add_system_message(error_msg)
             return
 
         # TUI-specific commands (fallback for commands not in factory)

@@ -190,10 +190,15 @@ class Logger:
         if self._logger:
             self._logger.warning(msg)
 
-    def error(self, msg: str):
-        """Log error message."""
+    def error(self, msg: str, exc_info: bool = False):
+        """Log error message.
+
+        Args:
+            msg: Error message
+            exc_info: If True, include exception traceback
+        """
         if self._logger:
-            self._logger.error(msg)
+            self._logger.error(msg, exc_info=exc_info)
 
     def log_user_message(self, message: str):
         """Log user input."""
