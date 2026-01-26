@@ -64,22 +64,50 @@
 
 ---
 
-## TODO: Phase 2 - Consistency Fixes
+## Phase 2 - Consistency Fixes ✅ COMPLETED
 
-### 2.1 Debug Log Display
-- [ ] Show debug log output in TUI (side panel or chat)
-- [ ] `/debug-log [on|off]` command integration
+### 2.1 Auto-save Interval ✅
+- [x] Implement configurable auto-save interval
+- [x] Match Rich TUI behavior
+- [x] Auto-save after each message pair
 
-### 2.2 Tools Config
-- [ ] Verify `/tools config` works correctly in Textual TUI
+**Implementation:**
+- Auto-save in `_handle_event()` after STREAM_END
+- Uses `session.save_dirty()` to mark session as dirty
+- Configurable via `session.auto_save_interval` (default: 1)
+- **Commit:** 00b0348
 
-### 2.3 Auto-save Interval
-- [ ] Implement configurable auto-save interval
-- [ ] Match Rich TUI behavior
+### 2.2 Crash Recovery ✅
+- [x] Dirty session detection
+- [x] Crash recovery prompt on startup
+- [x] Mark session clean on graceful exit
 
-### 2.4 Crash Recovery
-- [ ] Dirty session detection
-- [ ] Crash recovery prompt on startup
+**Implementation:**
+- Check `dirty` flag in `_check_session_restoration()`
+- Show "⚠ Session Recovery" modal (higher priority than auto_restore)
+- Clear dirty flag if user declines
+- Call `session.mark_clean()` in `action_quit()`
+- **Commit:** 00b0348
+
+### 2.3 Debug Log Display ✅
+- [x] Show debug log output in TUI (side panel)
+- [x] `/debug-log [on|off|show|clear]` command integration
+- [x] Use FileViewResult for proper display
+
+**Implementation:**
+- Fixed `/debug-log show` to return FileViewResult instead of TextResult
+- Displays last 50 lines in CodeEditor side panel
+- Read-only view with syntax highlighting
+- **Commit:** (pending)
+
+### 2.4 Tools Config ✅
+- [x] `/tools config` works correctly in Textual TUI
+- [x] Uses KeyValueResult renderer (already implemented)
+
+**Implementation:**
+- Command already existed and worked
+- KeyValueResult renderer displays tool configuration
+- No changes needed
 
 ---
 

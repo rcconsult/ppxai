@@ -21,6 +21,7 @@ from .results import (
     ErrorResult,
     TreeResult,
     TextResult,
+    FileViewResult,
 )
 
 if TYPE_CHECKING:
@@ -361,10 +362,14 @@ def handle_debug_log(context: CommandContext, args: str) -> CommandResult:
                 recent_lines = lines[-50:]
                 content = ''.join(recent_lines)
 
-                return TextResult(
+                # Use FileViewResult for proper log display (Phase 2.3)
+                return FileViewResult(
                     status=ResultStatus.INFO,
-                    message=f"Recent debug log entries (last 50 lines from {log_file})",
-                    content=content
+                    message=f"Debug log (last 50 lines)",
+                    filepath=str(log_file),
+                    content=content,
+                    language="log",
+                    read_only=True
                 )
         except Exception as e:
             return ErrorResult(
