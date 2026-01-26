@@ -810,6 +810,11 @@ class PPXAIDEApp(App):
                 # Call command handler with context
                 result = spec.handler(self, args)
 
+                # Check if result is a coroutine (async handler)
+                import inspect
+                if inspect.iscoroutine(result):
+                    result = await result
+
                 # Render result if it's a CommandResult type
                 if result is not None:
                     renderer = TextualRenderer(self)
@@ -887,6 +892,23 @@ class PPXAIDEApp(App):
                         else:
                             status_bar.remove_badge("datetime")
 
+            except RuntimeError as e:
+                if "asyncio.run() cannot be called" in str(e) and "running event loop" in str(e):
+                    # Special handling for asyncio.run() errors (v1.15.0 Phase 2.6)
+                    self.log.error(f"Command '{cmd}' tried to use asyncio.run() from async context", exc_info=True)
+                    chat_view.add_system_message(
+                        f"[red]Command failed: {cmd}[/red]\n"
+                        f"[yellow]This command is not compatible with the Textual TUI yet.[/yellow]\n"
+                        f"[dim]It tries to create a new event loop while one is already running.[/dim]\n"
+                        f"[dim]Try using the Rich TUI instead: [bold]uv run ppxai[/bold][/dim]"
+                    )
+                else:
+                    # Other RuntimeErrors
+                    self.log.error(f"Command error: {cmd} - {e}", exc_info=True)
+                    chat_view.add_system_message(
+                        f"[red]Command failed: {cmd}[/red]\n"
+                        f"[dim]{str(e)}[/dim]"
+                    )
             except Exception as e:
                 self.log.error(f"Command error: {cmd} - {e}", exc_info=True)
                 chat_view.add_system_message(
