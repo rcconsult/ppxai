@@ -327,9 +327,11 @@ class PPXAIDEApp(App):
             # Auto-restore if configured
             if auto_restore == "always":
                 if self._restore_session(session_name, last_state):
+                    provider_info = last_state.get("provider", "unknown")
+                    tools_info = "ON" if last_state.get("tools_enabled") else "OFF"
                     chat_view.add_system_message(
-                        f"[green]✓ Session restored:[/green] {session_name} ({message_count} messages)\n"
-                        f"[dim]Provider: {last_state.get('provider', 'unknown')}, Tools: {'ON' if last_state.get('tools_enabled') else 'OFF'}[/dim]"
+                        f"✓ [green]Session restored:[/green] {session_name} ({message_count} messages)\n"
+                        f"[dim]Provider: {provider_info}, Tools: {tools_info}[/dim]"
                     )
                     self.log.info(f"Auto-restored session: {session_name}")
                 return
@@ -353,8 +355,11 @@ class PPXAIDEApp(App):
 
                 if response == "yes":
                     if self._restore_session(session_name, last_state):
+                        provider_info = last_state.get("provider", "unknown")
+                        tools_info = "ON" if last_state.get("tools_enabled") else "OFF"
                         chat_view.add_system_message(
-                            f"[green]✓ Session restored:[/green] {session_name} ({message_count} messages)"
+                            f"✓ [green]Session restored:[/green] {session_name} ({message_count} messages)\n"
+                            f"[dim]Provider: {provider_info}, Tools: {tools_info}[/dim]"
                         )
                         self.log.info(f"User chose to restore session: {session_name}")
                 else:
@@ -408,6 +413,12 @@ class PPXAIDEApp(App):
             self._tools_enabled = True
             status_bar = self.query_one(StatusBar)
             status_bar.update_badge("tools", "ON")
+        else:
+            # Ensure tools are disabled if they were disabled in session
+            self._engine_client.tools_enabled = False
+            self._tools_enabled = False
+            status_bar = self.query_one(StatusBar)
+            status_bar.update_badge("tools", "OFF")
 
         # Restore working directory
         working_dir = session_state.get("working_dir")
@@ -418,6 +429,24 @@ class PPXAIDEApp(App):
                 self._working_dir = working_dir
             except Exception:
                 pass
+
+        # Render loaded messages into ChatView (like /load command does)
+        chat_view = self.query_one("#chat-view", ChatView)
+        chat_view.clear()
+
+        messages = self._engine_client.session.messages
+        for msg in messages:
+            role = msg.role
+            content = msg.content
+
+            if role == "user":
+                chat_view.add_user_message(content)
+            elif role == "assistant":
+                chat_view.add_assistant_message(content)
+            elif role == "system":
+                chat_view.add_system_message(content)
+            elif role == "tool":
+                chat_view.add_message(content, role="tool")
 
         return True
 
