@@ -27,6 +27,11 @@ from ppxai.tui.themes.themes import CUSTOM_THEMES, DEFAULT_THEME, CYCLE_THEMES
 from ppxai.tui.clipboard import copy_to_clipboard, paste_from_clipboard, is_clipboard_available
 from ppxai.tui import commands as local_commands
 
+# Engine integration (Phase 6.1)
+from ppxai.engine import EngineClient
+from ppxai.engine.types import Event, EventType
+from ppxai.config import get_default_provider, get_default_model, get_api_key
+
 
 class PPXAIDEApp(App):
     """Main ppxaide application."""
@@ -57,12 +62,16 @@ class PPXAIDEApp(App):
     def __init__(self):
         super().__init__()
         self._current_theme_index = 0
-        self._engine_client = None
+        self._engine_client: Optional[EngineClient] = None
         self._provider = "perplexity"
         self._model = "sonar"
         self._tools_enabled = False
         self._working_dir = os.getcwd()
         self._split_index = self.DEFAULT_SPLIT_INDEX  # Current split ratio index
+
+        # Streaming state (Phase 6.1)
+        self._current_message_content = ""
+        self._is_streaming = False
 
     def compose(self) -> ComposeResult:
         """Compose the application layout with split view support."""
@@ -84,6 +93,9 @@ class PPXAIDEApp(App):
 
     def on_mount(self) -> None:
         """Called when the app is mounted."""
+        # Initialize engine client (Phase 6.1)
+        self._initialize_engine()
+
         self.title = "ppxaide"
         self.sub_title = f"{self._provider}/{self._model}"
 
@@ -94,6 +106,11 @@ class PPXAIDEApp(App):
         # Set initial theme (catppuccin-mocha by default)
         self.theme = DEFAULT_THEME
 
+        # Update status bar with engine state (Phase 6.1)
+        status_bar = self.query_one(StatusBar)
+        status_bar.update_badge("provider", self._provider)
+        status_bar.update_badge("model", self._model)
+
         # Focus the input box
         input_box = self.query_one("#input-box", InputBox)
         input_box.focus()
@@ -101,9 +118,40 @@ class PPXAIDEApp(App):
         # Add welcome message
         chat_view = self.query_one("#chat-view", ChatView)
         chat_view.add_system_message(
-            "Welcome to ppxaide! Type a message or use /help for commands.\n"
+            f"Welcome to ppxaide! Connected to {self._provider}/{self._model}\n"
+            "Type a message or use /help for commands.\n"
             "[dim]Use Ctrl+T to cycle themes, or Ctrl+P for all themes.[/dim]"
         )
+
+    def _initialize_engine(self) -> None:
+        """Initialize the engine client (Phase 6.1).
+
+        Sets up:
+        - Provider and model from config
+        - Engine client instance
+        - Working directory
+        """
+        # Load config
+        self._provider = get_default_provider()
+        self._model = get_default_model(self._provider)
+
+        # Create engine client
+        self._engine_client = EngineClient()
+
+        # Set provider and model
+        try:
+            self._engine_client.set_provider(self._provider)
+            self._engine_client.set_model(self._model)
+        except Exception as e:
+            self.log.error(f"Failed to initialize engine: {e}")
+            # Fall back to defaults
+            self._provider = "perplexity"
+            self._model = "sonar"
+
+        # Set working directory
+        self._engine_client.set_working_dir(self._working_dir)
+
+        self.log.info(f"Engine initialized: {self._provider}/{self._model}")
 
     def watch_theme(self, old_theme: str, new_theme: str) -> None:
         """Called when the app theme changes - sync syntax highlighting themes.
@@ -122,7 +170,7 @@ class PPXAIDEApp(App):
         self.log.info(f"Theme changed: {old_theme} → {new_theme}, syntax: {syntax_theme}")
 
     async def on_input_box_submitted(self, event: InputBox.Submitted) -> None:
-        """Handle user input submission."""
+        """Handle user input submission (Phase 6.1 - Engine integration)."""
         message = event.value.strip()
         if not message:
             return
@@ -137,11 +185,85 @@ class PPXAIDEApp(App):
         # Add user message to chat
         chat_view.add_user_message(message)
 
-        # TODO: Send to engine client and stream response
-        # For now, show a placeholder
-        chat_view.add_assistant_message(
-            f"[dim]Engine connection not implemented yet. You said: {message}[/dim]"
-        )
+        # Stream response from engine
+        if self._engine_client:
+            await self._stream_response(message)
+        else:
+            chat_view.add_system_message(
+                "[yellow]Engine not initialized[/yellow]"
+            )
+
+    async def _stream_response(self, user_input: str) -> None:
+        """Stream AI response from engine (Phase 6.1).
+
+        Args:
+            user_input: User's message
+        """
+        chat_view = self.query_one("#chat-view", ChatView)
+
+        # Reset streaming state
+        self._current_message_content = ""
+        self._is_streaming = True
+
+        try:
+            # Stream events from engine
+            async for event in self._engine_client.chat(user_input, stream=True):
+                await self._handle_event(event)
+
+        except Exception as e:
+            self.log.error(f"Stream error: {e}")
+            chat_view.add_system_message(f"[red]Error:[/red] {e}")
+        finally:
+            self._is_streaming = False
+
+    async def _handle_event(self, event: Event) -> None:
+        """Handle engine events during streaming (Phase 6.1).
+
+        Args:
+            event: Engine event
+        """
+        chat_view = self.query_one("#chat-view", ChatView)
+
+        if event.type == EventType.STREAM_START:
+            # Start accumulating response
+            self._current_message_content = ""
+
+        elif event.type == EventType.STREAM_CHUNK:
+            # Accumulate chunk
+            self._current_message_content += event.data
+
+        elif event.type == EventType.STREAM_END:
+            # Finalize and display
+            chat_view.add_assistant_message(self._current_message_content)
+            self._current_message_content = ""
+
+        elif event.type == EventType.TOOL_CALL:
+            # Show tool being called
+            tool_data = event.data
+            tool_name = tool_data.get("tool", "unknown")
+            chat_view.add_system_message(
+                f"[cyan]→ Calling tool:[/cyan] {tool_name}"
+            )
+
+        elif event.type == EventType.TOOL_RESULT:
+            # Tool completed (could show result if verbose)
+            pass
+
+        elif event.type == EventType.TOOL_ERROR:
+            # Tool error
+            chat_view.add_system_message(
+                f"[red]Tool error:[/red] {event.data}"
+            )
+
+        elif event.type == EventType.ERROR:
+            # General error
+            chat_view.add_system_message(
+                f"[red]Error:[/red] {event.data}"
+            )
+
+        elif event.type == EventType.INFO:
+            # Info message
+            chat_view.add_system_message(f"[dim]{event.data}[/dim]")
 
     async def _handle_command(self, command: str) -> None:
         """Handle slash commands."""
