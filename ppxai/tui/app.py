@@ -494,13 +494,13 @@ class PPXAIDEApp(App):
             else:
                 tokens_text = f"{total_tokens}"
 
-            status_bar.update_badge("tokens", "Tokens", tokens_text)
+            status_bar.update_badge("tokens", tokens_text)
 
         # Format cost badge
         total_cost = usage_display.get("estimated_cost", 0.0)
         if total_cost > 0:
             cost_text = f"${total_cost:.4f}"
-            status_bar.update_badge("cost", "Cost", cost_text)
+            status_bar.update_badge("cost", cost_text)
 
     async def _handle_command(self, command: str) -> None:
         """Handle slash commands using Command Factory pattern."""
