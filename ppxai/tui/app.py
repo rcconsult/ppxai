@@ -400,7 +400,15 @@ class PPXAIDEApp(App):
             return
 
         # TUI-specific commands (fallback)
-        if cmd == "copy":
+        # File operations (side panel with multiple rendering modes)
+        if cmd == "show":
+            # Display file with advanced rendering (tree, table, image, markdown, code)
+            await local_commands.cmd_show(self, args)
+        elif cmd == "edit":
+            # Edit file in side panel with syntax highlighting
+            await local_commands.cmd_edit(self, args)
+        # Clipboard operations
+        elif cmd == "copy":
             # Copy last assistant message to clipboard
             messages = chat_view.get_messages()
             assistant_msgs = [m for m in messages if m["role"] == "assistant"]
@@ -425,9 +433,7 @@ class PPXAIDEApp(App):
                 chat_view.add_system_message(
                     "[dim]Clipboard is empty or unavailable[/dim]"
                 )
-        elif cmd == "edit":
-            # TUI-specific edit command (side panel editor)
-            await local_commands.cmd_edit(self, args)
+        # Dev/test commands
         elif cmd == "badge":
             # TUI test command for badge API
             await self._handle_badge_command(args)
