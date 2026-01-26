@@ -189,13 +189,6 @@ def handle_provider(context: CommandContext, args: str) -> CommandResult:
         "model": new_model
     }
 
-    # Re-enable tools if they were enabled before switching
-    if tools_were_enabled:
-        from .tools import _enable_tools
-        # Note: This is a side effect, but necessary for compatibility
-        # TODO: Consider returning a CompositeResult in the future
-        details["tools_reenabled"] = True
-
     return ConfirmationResult(
         status=ResultStatus.SUCCESS,
         message=f"Switched to: {new_config['name']} (model: {new_model})",
