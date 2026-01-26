@@ -444,10 +444,12 @@ def test_agent_command_status(mock_context):
     spec = CommandFactory.get("agent")
     assert spec is not None
 
+    from ppxai.commands.results import AIResponseResult
+
     result = spec.handler(mock_context, "")
 
-    # Should return status or error
-    assert isinstance(result, (TextResult, ErrorResult))
+    # Can return ErrorResult (no args), ConfirmationResult (toggle), or AIResponseResult (task)
+    assert isinstance(result, (TextResult, ErrorResult, ConfirmationResult, AIResponseResult))
 
 
 def test_undo_command(mock_context):
