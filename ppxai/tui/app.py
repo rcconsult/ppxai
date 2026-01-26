@@ -286,7 +286,8 @@ class PPXAIDEApp(App):
 
     def get_tools_available(self) -> bool:
         """Check if tool support is available (CommandContext protocol)."""
-        return self._tools_enabled
+        # Tools are always available in ppxai (dependencies are built-in)
+        return True
 
     def get_tools_verbose(self) -> bool:
         """Get tool verbose logging status (CommandContext protocol)."""
@@ -525,6 +526,14 @@ class PPXAIDEApp(App):
                 if result is not None:
                     renderer = TextualRenderer(self)
                     await renderer.render(result)
+
+                # Sync TUI state with engine client after command execution
+                if cmd in ("tools", "agent"):
+                    # Update tools enabled state
+                    if self._engine_client:
+                        self._tools_enabled = self._engine_client.tools_enabled
+                        status_bar = self.query_one(StatusBar)
+                        status_bar.update_badge("tools", "ON" if self._tools_enabled else "OFF")
 
             except Exception as e:
                 self.log.error(f"Command error: {cmd} - {e}", exc_info=True)
