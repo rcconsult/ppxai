@@ -2,7 +2,7 @@
 
 **Last Updated:** January 26, 2026
 **Branch:** feature/new-tui-command
-**Status:** Phase 6.2 Complete → Ready for Phase 6.3
+**Status:** Phase 6.3 Complete → Ready for Phase 6.4
 
 ---
 
@@ -82,51 +82,86 @@
 
 ---
 
+### ✅ Phase 6.3: Bootstrap Context Loading (COMPLETE)
+
+**Goal:** Load AGENTS.md/CLAUDE.md on TUI startup
+
+**Validation Results:**
+```
+5/5 Checks Passed:
+✅ Bootstrap Discovery - 2 files found (global + project)
+✅ Engine Loading - 2,439 chars loaded successfully
+✅ Context Commands - All /context commands working
+✅ Bootstrap Reload - Reload functionality verified
+✅ Context Badge - Badge data available for display
+```
+
+**Completed:**
+- ✅ Bootstrap context auto-loads on engine initialization
+- ✅ Display bootstrap status in welcome message
+- ✅ Add context badge to status bar (scope: global/project/subdir)
+- ✅ Full support for hierarchical context scopes
+- ✅ `/context` command working with all subcommands
+
+**Commands Validated:**
+- `/context` - show context usage info (KeyValueResult)
+- `/context show` - display bootstrap hierarchy (TreeResult)
+- `/context hints` - show active provider/model hints (KeyValueResult)
+- `/context reload` - reload bootstrap from disk (ConfirmationResult)
+
+**Example Bootstrap Loading:**
+- Global: `~/.ppxai/AGENTS.md` (1.4 KB)
+- Project: `/path/to/project/AGENTS.md` (3.2 KB)
+- Provider hints: local, ollama, perplexity, gemini, custom
+- Model hints: deepseek*, qwen*, gpt-oss*, sonar*, claude*
+- Total: 2,439 chars loaded
+
+**Deliverables:**
+- ✅ Validation script: `scripts/validate_tui_bootstrap.py`
+- ✅ Bootstrap status in welcome message
+- ✅ Context badge in status bar
+- ✅ All `/context` commands functional
+
+**Commit:**
+- `7da87bd` - feat(tui): Phase 6.3 - Bootstrap Context Loading
+
+---
+
 ## Current Status
 
-**Phase 6.2 Complete** ✅
+**Phase 6.3 Complete** ✅
 
-All command handlers validated and working. Factory pattern fully integrated with zero critical issues.
+Bootstrap context fully integrated with automatic loading, status display, and command support. All validation checks passing.
 
-**Next Phase:** Phase 6.3 - Bootstrap Context Loading
+**Next Phase:** Phase 6.4 - Token/Cost Tracking
 
 ---
 
 ## Upcoming Phases
-
-### Phase 6.3: Bootstrap Context Loading
-
-**Goal:** Load AGENTS.md/CLAUDE.md on TUI startup
-
-**Tasks:**
-- [ ] Load bootstrap context in `PPXAIDEApp.initialize()`
-- [ ] Display bootstrap status in status bar
-- [ ] Handle `/context reload` command
-- [ ] Show context sources with `/context show`
-
-**Estimated Complexity:** Medium
-
-**Dependencies:**
-- ✅ Engine connection (Phase 6.1)
-- ✅ Command factory (Phase 6.1.1, 6.2)
-
----
 
 ### Phase 6.4: Token/Cost Tracking
 
 **Goal:** Display token usage and cost in real-time
 
 **Tasks:**
-- [ ] Subscribe to token usage events
+- [ ] Subscribe to token usage events from engine
 - [ ] Update status bar with token/cost badges
 - [ ] Implement `/usage` command display
 - [ ] Test cost calculation accuracy
+- [ ] Show usage summary in status bar
 
 **Estimated Complexity:** Low
 
 **Dependencies:**
 - ✅ Engine connection (Phase 6.1)
-- ⏳ Status bar updates (Phase 6.3)
+- ✅ Command factory (Phase 6.2)
+- ✅ Status bar infrastructure (Phase 6.3)
+
+**Expected Results:**
+- Real-time token count in status bar
+- Cost calculation display
+- `/usage` command showing detailed statistics
+- Historical usage tracking
 
 ---
 
@@ -145,6 +180,7 @@ All command handlers validated and working. Factory pattern fully integrated wit
 **Dependencies:**
 - ✅ Engine connection (Phase 6.1)
 - ✅ Streaming handlers (Phase 6.1)
+- ✅ Command factory (Phase 6.2)
 
 ---
 
@@ -174,6 +210,7 @@ All command handlers validated and working. Factory pattern fully integrated wit
 
 **Phase 6 Tests Added:**
 - Command factory validation: 28 tests
+- Bootstrap context validation: 5 checks
 - Engine integration: TBD (Phase 6.6)
 
 ---
@@ -187,8 +224,7 @@ All command handlers validated and working. Factory pattern fully integrated wit
 - ✅ Rendering (1,096 lines) - Type-based dispatch ready
 
 **Active Development:**
-- 🔧 TUI (5,829 lines) - Engine integration in progress
-- 🔧 Integration layer - Phase 6 focus
+- 🔧 TUI (5,829 lines) - Engine integration in progress (Phase 6.4)
 
 ---
 
@@ -210,7 +246,7 @@ All command handlers validated and working. Factory pattern fully integrated wit
 - ✅ Phase 6.1: Engine Connection (Complete)
 - ✅ Phase 6.1.1: Command Factory (Complete)
 - ✅ Phase 6.2: Command Validation (Complete)
-- ⏳ Phase 6.3: Bootstrap Context
+- ✅ Phase 6.3: Bootstrap Context (Complete)
 - ⏳ Phase 6.4: Token/Cost Tracking
 - ⏳ Phase 6.5: Tool Execution
 - ⏳ Phase 6.6: Testing
@@ -224,7 +260,10 @@ All command handlers validated and working. Factory pattern fully integrated wit
 
 - **Architecture:** `docs/ARCHITECTURE.md`
 - **Work Review:** `docs/WORK-REVIEW-JAN-26-2026.md`
-- **Validation Script:** `scripts/validate_tui_commands.py`
+- **Validation Scripts:**
+  - Command Factory: `scripts/validate_tui_commands.py`
+  - Bootstrap Context: `scripts/validate_tui_bootstrap.py`
 - **Test Suite:** `tests/test_tui_command_factory.py`
 - **Factory Pattern:** `ppxai/commands/factory.py`
 - **Command Handlers:** `ppxai/commands/*.py`
+- **Bootstrap System:** `ppxai/engine/bootstrap.py`
