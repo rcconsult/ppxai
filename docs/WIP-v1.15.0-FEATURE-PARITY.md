@@ -26,6 +26,7 @@
 - [x] Bootstrap sequence fix (commit 8620dd6)
 - [x] Async event loop error handling (commit b09169e)
 - [x] Async session restoration (commit 5785506)
+- [x] Debug and trace CLI flags (commit 30fc1d9)
 
 ---
 
@@ -189,6 +190,31 @@ This command is not compatible with the Textual TUI yet.
 It tries to create a new event loop while one is already running.
 Try using the Rich TUI instead: uv run ppxai
 ```
+
+### 2.8 Debug and Trace CLI Flags ✅
+- [x] Add --debug flag for stderr logging
+- [x] Add --trace flag for full exception tracebacks
+- [x] Update Logger.error() to support exc_info parameter
+- [x] Enhanced exception handling with traceback display
+
+**Implementation:**
+- `--debug`: Enables logging to both stderr and file (~/.ppxai/logs/tui-debug.log)
+- `--trace`: Shows full stack traces in chat view (implies --debug)
+- Sets PPXAIDE_TRACE env var for exception handlers
+- All exceptions logged with full traceback when --trace enabled
+- **Commit:** 30fc1d9
+
+**Usage:**
+```bash
+uv run ppxaide --debug           # Debug logging to stderr + file
+uv run ppxaide --trace           # Full tracebacks in chat + debug logging
+```
+
+**Benefits:**
+- Systematic debugging instead of random code changes
+- Immediate visibility of errors during development
+- Full stack traces show exact location of issues
+- Works with async event loop errors
 
 ---
 
