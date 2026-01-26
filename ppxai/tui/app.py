@@ -106,7 +106,12 @@ class PPXAIDEApp(App):
         self._initialize_engine()
 
         self.title = "ppxaide"
-        self.sub_title = f"{self._provider}/{self._model}"
+
+        # Set subtitle based on engine state
+        if self._provider and self._model:
+            self.sub_title = f"{self._provider}/{self._model}"
+        else:
+            self.sub_title = "Not configured - use /provider"
 
         # Register custom themes (built-in themes like catppuccin-mocha are already available)
         for theme in CUSTOM_THEMES.values():
@@ -117,8 +122,15 @@ class PPXAIDEApp(App):
 
         # Update status bar with engine state (Phase 6.1)
         status_bar = self.query_one(StatusBar)
-        status_bar.update_badge("provider", self._provider)
-        status_bar.update_badge("model", self._model)
+        if self._provider:
+            status_bar.update_badge("provider", self._provider)
+        else:
+            status_bar.update_badge("provider", "none", style="bold red")
+
+        if self._model:
+            status_bar.update_badge("model", self._model)
+        else:
+            status_bar.update_badge("model", "none", style="bold red")
 
         # Show bootstrap context status (Phase 6.3)
         if self._engine_client:
@@ -138,10 +150,16 @@ class PPXAIDEApp(App):
 
         # Add welcome message with bootstrap status (Phase 6.3)
         chat_view = self.query_one("#chat-view", ChatView)
-        welcome_msg = f"Welcome to ppxaide! Connected to {self._provider}/{self._model}\n"
+
+        if self._provider and self._model:
+            welcome_msg = f"Welcome to ppxaide! Connected to {self._provider}/{self._model}\n"
+        else:
+            welcome_msg = "[bold yellow]Welcome to ppxaide![/bold yellow]\n"
+            welcome_msg += "[red]⚠️  Engine not configured - check your .env file for API keys[/red]\n"
+            welcome_msg += "[dim]Use /provider list to see available providers[/dim]\n\n"
 
         # Add bootstrap context info if loaded
-        if self._engine_client:
+        if self._engine_client and self._provider:
             bootstrap_status = self._engine_client.get_bootstrap_status()
             if bootstrap_status["loaded"]:
                 sources = bootstrap_status.get("sources", [])
@@ -172,18 +190,31 @@ class PPXAIDEApp(App):
 
         # Set provider and model
         try:
-            self._engine_client.set_provider(self._provider)
-            self._engine_client.set_model(self._model)
+            provider_ok = self._engine_client.set_provider(self._provider)
+            model_ok = self._engine_client.set_model(self._model)
+
+            if not provider_ok:
+                self.log.error(f"Failed to set provider: {self._provider} (check API key in .env)")
+                self._provider = None
+            if not model_ok:
+                self.log.error(f"Failed to set model: {self._model}")
+                self._model = None
+
+            if not provider_ok or not model_ok:
+                self.log.warning("Engine initialization incomplete - check configuration")
+
         except Exception as e:
             self.log.error(f"Failed to initialize engine: {e}")
-            # Fall back to defaults
-            self._provider = "perplexity"
-            self._model = "sonar"
+            self._provider = None
+            self._model = None
 
         # Set working directory
         self._engine_client.set_working_dir(self._working_dir)
 
-        self.log.info(f"Engine initialized: {self._provider}/{self._model}")
+        if self._provider and self._model:
+            self.log.info(f"Engine initialized: {self._provider}/{self._model}")
+        else:
+            self.log.warning("Engine not fully initialized - use /provider and /model commands")
 
     # ========================================================================
     # CommandContext Protocol Implementation (Phase 6.1.1)
