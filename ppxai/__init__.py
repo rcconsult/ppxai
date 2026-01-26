@@ -37,7 +37,6 @@ from .config import (
     validate_config,
 )
 from .prompts import CODING_PROMPTS, SPEC_GUIDELINES, SPEC_TEMPLATES
-from .rich.utils import read_file_content
 from .version import __version__
 
 # Export EngineClient as the primary client interface
@@ -112,6 +111,8 @@ _lazy_imports = {
     "display_global_usage": ".rich.ui",
     "display_tools_table": ".rich.ui",
     "display_tool_help": ".rich.ui",
+    # Utils module exports (Rich TUI)
+    "read_file_content": ".rich.utils",
     # Commands module exports (shared)
     "CommandHandler": ".commands",
     "send_coding_task": ".commands",
