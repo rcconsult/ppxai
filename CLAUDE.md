@@ -483,6 +483,11 @@ The `TextArea` widget has its own internal rendering engine with hardcoded color
 
 ## vLLM/GPT-OSS Tool Calling Reference
 
+**Critical Finding:** Harmony format is **mandatory** for GPT-OSS. From official documentation:
+> "GPT-OSS should not be used without using the Harmony format as it will not work correctly."
+
+The model was trained specifically on Harmony's response format with control tokens (`<|recipient|>`, `<|thinking|>`, `<|call|>`, etc.). These tokens are always output—they're not optional. If vLLM doesn't parse them, they leak into responses causing `HarmonyError`.
+
 **Problem:** vLLM with GPT-OSS models can hit `HarmonyError: unexpected tokens remaining in message header` when using native tool calling (`--enable-auto-tool-choice --tool-call-parser openai`). This is a known vLLM/Harmony library issue ([vLLM #23567](https://github.com/vllm-project/vllm/issues/23567)).
 
 **ppxai supports two tool calling modes:**
@@ -490,9 +495,9 @@ The `TextArea` widget has its own internal rendering engine with hardcoded color
 | Mode | Config | vLLM Flags | Reliability |
 |------|--------|------------|-------------|
 | **Native** | `native_tool_calling: true` | `--enable-auto-tool-choice --tool-call-parser openai` | ⚠️ HarmonyError risk |
-| **Prompt-Based** | `native_tool_calling: false` | None required | ✅ Stable |
+| **Prompt-Based** | `native_tool_calling: false` | None required | ✅ Stable (recommended) |
 
-**Key insight:** vLLM only triggers Harmony parsing when `request.tools` is provided. With `native_tool_calling: false`, ppxai doesn't send `tools` parameter, so vLLM returns plain text that ppxai parses client-side.
+**Key insight:** vLLM only triggers Harmony parsing when `request.tools` is provided. With `native_tool_calling: false`, ppxai doesn't send `tools` parameter, so vLLM returns plain text that ppxai parses client-side. This bypasses the unstable Harmony parser.
 
 **Implementation details:**
 - Tool prompt injection: `ppxai/engine/tools/manager.py:get_tools_prompt()`

@@ -4,6 +4,40 @@ This guide explains how ppxai implements tool calling for vLLM backends (includi
 
 **Quick Start:** See [examples/prompt_based_tools.py](../examples/prompt_based_tools.py) for a complete standalone example.
 
+## Critical Finding: Harmony Format is Mandatory
+
+> **"GPT-OSS should not be used without using the Harmony format as it will not work correctly."**
+> — [OpenAI Harmony Documentation](https://github.com/openai/openai-harmony)
+
+GPT-OSS was trained specifically on the Harmony response format. This is not an optional feature—it's the only correct way to use the model.
+
+### Harmony Format Architecture
+
+| Component | Purpose |
+|-----------|---------|
+| `<\|start\|>...<\|end\|>` | Message boundaries |
+| `analysis` channel | Chain-of-thought reasoning (not shown to users) |
+| `final` channel | User-facing responses |
+| `commentary` channel | Tool/function calls |
+| `<\|recipient\|>` token | Routes output to specific tools |
+| `<\|thinking\|>` token | Internal reasoning |
+
+### Why Tool Parsing Can't Be Disabled
+
+The Harmony format uses special control tokens (`<|recipient|>`, `<|thinking|>`, `<|call|>`, etc.) that the model **always outputs** as part of its response structure. If vLLM doesn't parse these tokens, they leak into the response as raw text—which causes the `HarmonyError`.
+
+From [vLLM Issue #22337](https://github.com/vllm-project/vllm/issues/22337):
+> "Without proper Harmony parsing, tool call data appeared in the content field as JSON text instead of being parsed into the proper structure."
+
+### Sources
+
+- [OpenAI Harmony GitHub](https://github.com/openai/openai-harmony) - Official renderer library
+- [OpenAI Cookbook - Harmony Format](https://cookbook.openai.com/) - Format specification
+- [vLLM Blog - GPT-OSS Support](https://blog.vllm.ai/) - vLLM integration details
+- [vLLM Issue #22337](https://github.com/vllm-project/vllm/issues/22337) - Tool calling implementation issues
+
+---
+
 ## The Problem
 
 When using vLLM with `--enable-auto-tool-choice` and GPT-OSS models, you may encounter:
@@ -12,7 +46,7 @@ When using vLLM with `--enable-auto-tool-choice` and GPT-OSS models, you may enc
 openai_harmony.HarmonyError: unexpected tokens remaining in message header
 ```
 
-This error occurs because GPT-OSS model outputs don't consistently follow the Harmony response format that vLLM attempts to parse. See [vLLM issue #23567](https://github.com/vllm-project/vllm/issues/23567).
+This error occurs when Harmony control tokens aren't properly parsed. Since GPT-OSS was trained on Harmony format, the model always outputs these tokens. See [vLLM issue #23567](https://github.com/vllm-project/vllm/issues/23567).
 
 ## ppxai's Solution: Two Tool Calling Modes
 
@@ -404,3 +438,68 @@ assert 'filepath' in result['arguments']  # Normalized from 'file'
 5. **Normalize parameters** to match your tool schemas
 
 This approach is model-agnostic and works reliably with GPT-OSS, Llama, Qwen, and other models served via vLLM or Ollama.
+
+---
+
+## Implications for ppxai
+
+Given that Harmony format is mandatory for GPT-OSS, here are the implications:
+
+### Current State (v1.14.x)
+
+| Approach | Status | Notes |
+|----------|--------|-------|
+| **Native** (`native_tool_calling: true`) | ✅ Works | Requires vLLM with Harmony fix (PR #30205) |
+| **Prompt-based** (`native_tool_calling: false`) | ✅ Works | Fallback for older vLLM versions |
+
+### vLLM Harmony Fix
+
+The Harmony parsing issue has been fixed in vLLM (PR #30205). Check your vLLM version to determine which mode to use.
+
+### Recommended Configuration
+
+**With fixed vLLM (PR #30205+):** Use native tool calling for best performance:
+
+```json
+{
+  "providers": {
+    "vllm-gpt-oss": {
+      "base_url": "http://your-vllm:8000/v1",
+      "default_model": "openai/gpt-oss-120b",
+      "capabilities": {
+        "native_tool_calling": true
+      }
+    }
+  }
+}
+```
+
+**With older vLLM (pre-fix):** Use prompt-based mode to avoid HarmonyError:
+
+```json
+{
+  "providers": {
+    "vllm-gpt-oss": {
+      "base_url": "http://your-vllm:8000/v1",
+      "default_model": "openai/gpt-oss-120b",
+      "capabilities": {
+        "native_tool_calling": false
+      }
+    }
+  }
+}
+```
+
+### Future Considerations
+
+1. **Reasoning channel extraction** - The `analysis` channel contains chain-of-thought that could be displayed as "thinking" tokens (like DeepSeek R1)
+2. **Token filtering** - Strip any leaked control tokens from responses (edge cases)
+
+### Architecture Decision
+
+ppxai's prompt-based tool calling is the correct approach for GPT-OSS because:
+
+1. **Reliability** - Bypasses vLLM's unstable Harmony parser
+2. **Portability** - Same code works with Ollama, LM Studio, other backends
+3. **Control** - ppxai parses tool calls, not the inference server
+4. **Flexibility** - Can adapt to model quirks without vLLM changes
