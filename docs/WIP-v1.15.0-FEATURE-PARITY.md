@@ -26,7 +26,12 @@
 - [x] Bootstrap sequence fix (commit 8620dd6)
 - [x] Async event loop error handling (commit b09169e)
 - [x] Async session restoration (commit 5785506)
-- [x] Debug and trace CLI flags (commit 30fc1d9)
+- [x] Debug and trace CLI flags (commit 30fc1d9, 89d5be9)
+- [x] Coding commands async compatibility (commit pending)
+- [x] Logger enhancement with exc_info (commit pending)
+- [x] Textual logger override (commit pending)
+- [x] Session restoration worker fix (commit pending)
+- [x] Autocomplete disabled and deferred (commit 87785e9)
 
 ---
 
@@ -45,7 +50,7 @@
 - `ppxai/tui/widgets/completion_popup.py` - Visual popup widget with arrow key navigation
 - Press Tab to show completions, arrow keys to navigate, Enter/Tab to select
 - File cache with 5-second TTL for performance
-- **Commit:** 4400480 (initial), disabled in (pending) - see Phase 4/5 for refactoring requirements
+- **Commit:** 4400480 (initial), disabled in 87785e9 - see Phase 4/5 for refactoring requirements
 
 ### 1.2 Status Bar Toggles ✅
 - [x] `/status version` - toggle version display (v1.15.0)
@@ -230,7 +235,7 @@ uv run ppxaide --trace           # Full tracebacks in chat + debug logging
 ## TODO: Phase 4/5 - Deferred Features (Needs Refactoring)
 
 ### 4.1 Autocomplete Enhancement ❌ DISABLED
-**Status:** Disabled in commit (pending) - inadequate implementation
+**Status:** Disabled in commit 87785e9 - inadequate implementation
 
 **Current Issues:**
 - Fixed offset positioning (`offset-y: 90%`) instead of cursor-based
