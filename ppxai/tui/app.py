@@ -26,6 +26,7 @@ from ppxai.tui.widgets.code_editor import CodeEditor, get_syntax_theme_for_app_t
 from ppxai.tui.themes.themes import CUSTOM_THEMES, DEFAULT_THEME, CYCLE_THEMES
 from ppxai.tui.clipboard import copy_to_clipboard, paste_from_clipboard, is_clipboard_available
 from ppxai.tui import commands as local_commands
+from ppxai.tui.completer import TextualCompleter
 
 # Engine integration (Phase 6.1)
 from ppxai.engine import EngineClient
@@ -144,8 +145,16 @@ class PPXAIDEApp(App):
                     status_bar.add_badge("context", "Context", scope_text)
                     self.log.info(f"Bootstrap context loaded: {scope_text}")
 
-        # Focus the input box
+        # Focus the input box and set up autocomplete
         input_box = self.query_one("#input-box", InputBox)
+
+        # Initialize autocomplete completer (Phase 1.1)
+        completer = TextualCompleter(
+            working_dir=Path(self._working_dir),
+            engine_client=self._engine_client
+        )
+        input_box.set_completer(completer)
+
         input_box.focus()
 
         # Add welcome message with bootstrap status (Phase 6.3)

@@ -7,6 +7,8 @@ from textual.containers import Horizontal
 from textual.message import Message
 from textual.widgets import Input, Static
 
+from .completion_popup import CompletionPopup
+
 
 class InputBox(Static):
     """Input widget with command detection and history."""
@@ -20,10 +22,12 @@ class InputBox(Static):
             super().__init__()
             self.value = value
 
-    def __init__(self, id: str = None):
+    def __init__(self, id: str = None, completer=None):
         super().__init__(id=id)
         self._history: list[str] = []
         self._history_index = -1
+        self._completer = completer
+        self._completion_popup = None
 
     def compose(self) -> ComposeResult:
         with Horizontal():
@@ -54,12 +58,15 @@ class InputBox(Static):
             self.post_message(self.Submitted(value))
 
     def on_key(self, event) -> None:
-        """Handle key events for history navigation."""
+        """Handle key events for history navigation and completion."""
         if event.key == "up":
             self._navigate_history(-1)
             event.prevent_default()
         elif event.key == "down":
             self._navigate_history(1)
+            event.prevent_default()
+        elif event.key == "tab":
+            self._show_completions()
             event.prevent_default()
 
     def _navigate_history(self, direction: int) -> None:
@@ -112,3 +119,86 @@ class InputBox(Static):
         # Append to current value (simple implementation)
         input_widget.value = input_widget.value + text
         input_widget.cursor_position = len(input_widget.value)
+
+    def set_completer(self, completer) -> None:
+        """Set the completer for autocomplete.
+
+        Args:
+            completer: TextualCompleter instance
+        """
+        self._completer = completer
+
+    def _show_completions(self) -> None:
+        """Show completion popup for current input."""
+        if not self._completer:
+            return
+
+        # Close existing popup if any
+        if self._completion_popup:
+            self._completion_popup.remove()
+            self._completion_popup = None
+
+        # Get current input text
+        input_widget = self.query_one(Input)
+        text = input_widget.value
+
+        # Get completions
+        completions = self._completer.get_completions(text)
+
+        if not completions:
+            return
+
+        # Show completion popup
+        self._completion_popup = CompletionPopup(completions)
+
+        # Mount the popup - it will be positioned relative to input
+        self.app.mount(self._completion_popup)
+
+        # Focus the popup so it can handle keys
+        self._completion_popup.focus()
+
+    def on_completion_popup_selected(self, event: CompletionPopup.Selected) -> None:
+        """Handle completion selection."""
+        input_widget = self.query_one(Input)
+        text = input_widget.value
+
+        # Insert the completion
+        # For slash commands, replace the entire command
+        if text.startswith('/'):
+            # Find space after command
+            space_pos = text.find(' ')
+            if space_pos == -1:
+                # No space, replace entire text
+                input_widget.value = event.completion + ' '
+            else:
+                # Has space, replace just the command part
+                parts = text.split(None, 1)
+                if len(parts) == 2:
+                    # Keep the arguments
+                    input_widget.value = event.completion + ' ' + parts[1]
+                else:
+                    input_widget.value = event.completion + ' '
+        # For @context providers, replace from @ to cursor
+        elif '@' in text:
+            at_pos = text.rfind('@')
+            input_widget.value = text[:at_pos] + event.completion + ' '
+        else:
+            input_widget.value = event.completion + ' '
+
+        # Set cursor to end
+        input_widget.cursor_position = len(input_widget.value)
+
+        # Focus back to input
+        input_widget.focus()
+
+        # Clear popup reference
+        self._completion_popup = None
+
+    def on_completion_popup_cancelled(self, event: CompletionPopup.Cancelled) -> None:
+        """Handle completion cancellation."""
+        # Focus back to input
+        input_widget = self.query_one(Input)
+        input_widget.focus()
+
+        # Clear popup reference
+        self._completion_popup = None
