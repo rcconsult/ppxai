@@ -124,6 +124,15 @@ MessageBox .content {
     height: auto;
 }
 
+/* Scrollable container for tool output */
+MessageBox.tool .content-scroll {
+    height: auto;
+    max-height: 20;
+    overflow-y: auto;
+    border: none;
+    padding: 0;
+}
+
 MessageBox.streaming .content {
     color: $text-muted;
 }

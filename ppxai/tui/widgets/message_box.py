@@ -3,7 +3,7 @@ MessageBox widget - Individual chat message display.
 """
 
 from textual.app import ComposeResult
-from textual.containers import Vertical
+from textual.containers import Vertical, VerticalScroll
 from textual.css.query import NoMatches
 from textual.reactive import reactive
 from textual.widgets import Static, Markdown
@@ -51,7 +51,13 @@ class MessageBox(Static):
 
         with Vertical():
             yield Static(f"{icon} [bold]{label}[/bold]", classes="role-label")
-            yield Static(self.content, classes="content", markup=True)
+
+            # Tool messages get scrollable content for long outputs
+            if self.role == "tool":
+                with VerticalScroll(classes="content-scroll"):
+                    yield Static(self.content, classes="content", markup=True)
+            else:
+                yield Static(self.content, classes="content", markup=True)
 
     def watch_content(self, content: str) -> None:
         """Update content when it changes (for streaming)."""
