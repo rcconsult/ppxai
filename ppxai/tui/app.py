@@ -120,17 +120,39 @@ class PPXAIDEApp(App):
         status_bar.update_badge("provider", self._provider)
         status_bar.update_badge("model", self._model)
 
+        # Show bootstrap context status (Phase 6.3)
+        if self._engine_client:
+            bootstrap_status = self._engine_client.get_bootstrap_status()
+            if bootstrap_status["loaded"]:
+                sources = bootstrap_status.get("sources", [])
+                if sources:
+                    # Add context badge to status bar
+                    scopes = [src["scope"] for src in sources]
+                    scope_text = "/".join(scopes)  # e.g., "global/project" or "project"
+                    status_bar.add_badge("context", "Context", scope_text)
+                    self.log.info(f"Bootstrap context loaded: {scope_text}")
+
         # Focus the input box
         input_box = self.query_one("#input-box", InputBox)
         input_box.focus()
 
-        # Add welcome message
+        # Add welcome message with bootstrap status (Phase 6.3)
         chat_view = self.query_one("#chat-view", ChatView)
-        chat_view.add_system_message(
-            f"Welcome to ppxaide! Connected to {self._provider}/{self._model}\n"
+        welcome_msg = f"Welcome to ppxaide! Connected to {self._provider}/{self._model}\n"
+
+        # Add bootstrap context info if loaded
+        if self._engine_client:
+            bootstrap_status = self._engine_client.get_bootstrap_status()
+            if bootstrap_status["loaded"]:
+                sources = bootstrap_status.get("sources", [])
+                char_count = bootstrap_status.get("char_count", 0)
+                welcome_msg += f"[dim]Bootstrap context: {len(sources)} file(s), ~{char_count} chars[/dim]\n"
+
+        welcome_msg += (
             "Type a message or use /help for commands.\n"
             "[dim]Use Ctrl+T to cycle themes, or Ctrl+P for all themes.[/dim]"
         )
+        chat_view.add_system_message(welcome_msg)
 
     def _initialize_engine(self) -> None:
         """Initialize the engine client (Phase 6.1).
@@ -139,12 +161,13 @@ class PPXAIDEApp(App):
         - Provider and model from config
         - Engine client instance
         - Working directory
+        - Bootstrap context (Phase 6.3)
         """
         # Load config
         self._provider = get_default_provider()
         self._model = get_default_model(self._provider)
 
-        # Create engine client
+        # Create engine client (automatically loads bootstrap context)
         self._engine_client = EngineClient()
 
         # Set provider and model
