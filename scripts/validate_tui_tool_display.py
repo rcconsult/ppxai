@@ -246,6 +246,9 @@ async def validate_tools_command():
         def get_model(self):
             return "gpt-4"
 
+        def get_tools_available(self):
+            return True
+
     ctx = MockContext()
 
     # Test /tools commands
