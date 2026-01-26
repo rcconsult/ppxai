@@ -999,6 +999,16 @@ class PPXAIDEApp(App):
         side_panel = self.query_one("#side-panel", SidePanel)
         await side_panel.show_file(path, content, mode, line, col, read_only)
 
+    async def show_widget_in_panel(self, widget, title: str = "") -> None:
+        """Show an arbitrary widget in the side panel.
+
+        Args:
+            widget: The widget to display (DataTable, Tree, etc.)
+            title: Title to show in panel header
+        """
+        side_panel = self.query_one("#side-panel", SidePanel)
+        await side_panel.show_widget(widget, title)
+
     def close_side_panel(self) -> None:
         """Close the side panel."""
         side_panel = self.query_one("#side-panel", SidePanel)

@@ -185,6 +185,40 @@ class SidePanel(Widget):
         self.is_open = True
         self.post_message(self.Opened())
 
+    async def show_widget(self, widget: Widget, title: str = "") -> None:
+        """Show an arbitrary widget in the panel.
+
+        Args:
+            widget: The widget to display (DataTable, Tree, etc.)
+            title: Title to show in header
+        """
+        self._path = None
+        self._content = ""
+        self._mode = "widget"
+        self._read_only = True
+        self._modified = False
+
+        # Update header
+        filename_static = self.query_one("#panel-filename", Static)
+        filename_static.update(f" [bold]{title}[/bold]")
+
+        # Clear language badge
+        lang_badge = self.query_one("#lang-badge", Static)
+        lang_badge.update("")
+
+        # Clear and mount widget
+        content_container = self.query_one("#panel-content", Vertical)
+        await content_container.remove_children()
+        await content_container.mount(widget)
+
+        # Focus the widget
+        self.call_after_refresh(lambda: widget.focus())
+
+        # Show the panel
+        self.add_class("visible")
+        self.is_open = True
+        self.post_message(self.Opened())
+
     def _goto_line(self, line: int, col: Optional[int] = None) -> None:
         """Jump to a specific line after content is mounted."""
         try:
