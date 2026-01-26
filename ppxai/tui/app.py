@@ -238,11 +238,10 @@ class PPXAIDEApp(App):
         - Engine client instance
         - Working directory
         - Bootstrap context (Phase 6.3)
-        """
-        # Initialize config and load .env files
-        initialize()
 
-        # Load config
+        Note: initialize() is called in main() before event loop starts (matches Rich TUI)
+        """
+        # Load config (initialize() already called in main())
         self._provider = get_default_provider()
         self._model = get_default_model(self._provider)
 

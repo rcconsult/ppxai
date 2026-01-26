@@ -17,5 +17,9 @@ __all__ = ["PPXAIDEApp", "main"]
 
 def main():
     """Entry point for ppxaide command."""
+    # Initialize config and load .env BEFORE starting event loop (matches Rich TUI)
+    from ppxai.config import initialize
+    initialize()
+
     app = PPXAIDEApp()
     app.run()
