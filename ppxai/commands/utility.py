@@ -173,7 +173,13 @@ def handle_cd(context: CommandContext, args: str) -> CommandResult:
     try:
         # Expand ~ and resolve path
         expanded = os.path.expanduser(target_path)
-        resolved = os.path.abspath(expanded)
+
+        # Resolve relative paths against engine client's working directory, not OS cwd
+        if os.path.isabs(expanded):
+            resolved = expanded
+        else:
+            current_wd = context.engine_client.get_working_dir() or os.getcwd()
+            resolved = os.path.normpath(os.path.join(current_wd, expanded))
 
         if not os.path.isdir(resolved):
             return ErrorResult(

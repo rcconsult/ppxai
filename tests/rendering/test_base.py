@@ -155,6 +155,7 @@ class TestRendererDispatch:
         """Test fallback to TextResult for unregistered types."""
         # TableResult is not registered in TestSyncRenderer
         table = TableResult(
+            status=ResultStatus.SUCCESS,
             message="Test table",
             columns=["A", "B"],
             rows=[["1", "2"]]
@@ -184,7 +185,7 @@ class TestRendererDispatch:
         # This should raise KeyError (no TableResult, no TextResult fallback)
         with pytest.raises(KeyError) as exc_info:
             NoFallbackRenderer.render(
-                TableResult(message="Table", columns=[], rows=[])
+                TableResult(status=ResultStatus.SUCCESS, message="Table", columns=[], rows=[])
             )
 
         assert "No renderer registered for TableResult" in str(exc_info.value)
@@ -239,6 +240,7 @@ class TestAsyncRendererDispatch:
             message="Success"
         )
         table = TableResult(
+            status=ResultStatus.SUCCESS,
             message="Table",
             columns=["A"],
             rows=[["1"]]

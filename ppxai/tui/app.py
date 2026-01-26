@@ -667,6 +667,13 @@ class PPXAIDEApp(App):
                         status_bar = self.query_one(StatusBar)
                         status_bar.update_badge("tools", "ON" if self._tools_enabled else "OFF")
 
+                # Sync working directory after /cd command
+                if cmd == "cd" and self._engine_client:
+                    engine_working_dir = self._engine_client.get_working_dir()
+                    if engine_working_dir != self._working_dir:
+                        self._working_dir = engine_working_dir
+                        self.log.info(f"Working directory synced: {engine_working_dir}")
+
             except Exception as e:
                 self.log.error(f"Command error: {cmd} - {e}", exc_info=True)
                 chat_view.add_system_message(

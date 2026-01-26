@@ -63,7 +63,9 @@ class Renderer:
         def decorator(func: Callable) -> Callable:
             # Store in the specific subclass's registry, not the base class
             if cls not in [Renderer, AsyncRenderer]:
-                if not hasattr(cls, '_registry'):
+                # Check if this class has its OWN registry (not inherited)
+                # Using __dict__ to avoid looking up inherited attributes
+                if '_registry' not in cls.__dict__:
                     cls._registry = {}
                 cls._registry[result_type] = func
             return func
@@ -86,18 +88,21 @@ class Renderer:
         """
         result_type = type(result)
 
+        # Get the class's own registry (not inherited)
+        own_registry = cls.__dict__.get('_registry', {})
+
         # Get renderer function for this type
-        if result_type not in cls._registry:
+        if result_type not in own_registry:
             # Fallback to TextResult renderer if available
-            if TextResult in cls._registry:
+            if TextResult in own_registry:
                 result_type = TextResult
             else:
                 raise KeyError(
                     f"No renderer registered for {result_type.__name__} "
-                    f"in {cls.__name__}. Available types: {list(cls._registry.keys())}"
+                    f"in {cls.__name__}. Available types: {list(own_registry.keys())}"
                 )
 
-        renderer_func = cls._registry.get(result_type)
+        renderer_func = own_registry.get(result_type)
         if not renderer_func:
             raise KeyError(
                 f"No renderer function found for {result_type.__name__}"
@@ -115,7 +120,9 @@ class Renderer:
         Returns:
             True if renderer registered, False otherwise
         """
-        return result_type in cls._registry
+        # Only check the class's own registry, not inherited
+        own_registry = cls.__dict__.get('_registry', {})
+        return result_type in own_registry
 
     @classmethod
     def list_registered_types(cls) -> list[Type[CommandResult]]:
@@ -124,7 +131,9 @@ class Renderer:
         Returns:
             List of registered result type classes
         """
-        return list(cls._registry.keys())
+        # Only return types from the class's own registry
+        own_registry = cls.__dict__.get('_registry', {})
+        return list(own_registry.keys())
 
 
 class AsyncRenderer(Renderer):
@@ -168,18 +177,21 @@ class AsyncRenderer(Renderer):
         """
         result_type = type(result)
 
+        # Get the class's own registry (not inherited)
+        own_registry = cls.__dict__.get('_registry', {})
+
         # Get renderer function for this type
-        if result_type not in cls._registry:
+        if result_type not in own_registry:
             # Fallback to TextResult renderer if available
-            if TextResult in cls._registry:
+            if TextResult in own_registry:
                 result_type = TextResult
             else:
                 raise KeyError(
                     f"No renderer registered for {result_type.__name__} "
-                    f"in {cls.__name__}. Available types: {list(cls._registry.keys())}"
+                    f"in {cls.__name__}. Available types: {list(own_registry.keys())}"
                 )
 
-        renderer_func = cls._registry.get(result_type)
+        renderer_func = own_registry.get(result_type)
         if not renderer_func:
             raise KeyError(
                 f"No renderer function found for {result_type.__name__}"
