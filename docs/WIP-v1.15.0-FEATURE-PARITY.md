@@ -163,6 +163,26 @@ Textual TUI (old): main() → app.run() → [loop] → initialize() ❌
 Textual TUI (new): main() → initialize() → app.run() → [loop] ✅
 ```
 
+### 2.7 Async Event Loop Error Handling ✅
+- [x] Support async command handlers
+- [x] Catch asyncio.run() errors with helpful messages
+- [x] Add async_compat module for event loop detection
+
+**Implementation:**
+- Check if command handler returns coroutine and await it
+- Catch RuntimeError from asyncio.run() attempts
+- Show clear error message suggesting Rich TUI for incompatible commands
+- Add `ppxai/common/async_compat.py` with event loop helpers
+- **Commit:** b09169e
+
+**Error Message:**
+```
+Command failed: <command>
+This command is not compatible with the Textual TUI yet.
+It tries to create a new event loop while one is already running.
+Try using the Rich TUI instead: uv run ppxai
+```
+
 ---
 
 ## TODO: Phase 3 - Rich-Only Features (Consider Adding)
