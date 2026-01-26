@@ -434,14 +434,8 @@ class PPXAIDEApp(App):
             tool_name = tool_data.get("tool", "unknown")
             result = tool_data.get("result", "")
 
-            # Format result for display
-            if len(result) > 500:
-                # Truncate long results
-                formatted_result = f"{result[:500]}...\n[dim](Result truncated, {len(result)} chars total)[/dim]"
-            else:
-                formatted_result = result
-
-            chat_view.add_tool_message(f"{tool_name} result", formatted_result)
+            # Show full result (scrollable bubble will handle long content)
+            chat_view.add_tool_message(f"{tool_name} result", result)
 
         elif event.type == EventType.TOOL_ERROR:
             # Tool error (Phase 6.5)

@@ -126,11 +126,10 @@ MessageBox .content {
 
 /* Scrollable container for tool output */
 MessageBox.tool .content-scroll {
-    height: auto;
-    max-height: 20;
-    overflow-y: auto;
+    height: 20;
     border: none;
     padding: 0;
+    scrollbar-gutter: stable;
 }
 
 MessageBox.streaming .content {
