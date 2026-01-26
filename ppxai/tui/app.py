@@ -144,9 +144,6 @@ class PPXAIDEApp(App):
                     status_bar.add_badge("context", "Context", scope_text)
                     self.log.info(f"Bootstrap context loaded: {scope_text}")
 
-        # Check for session restoration (Phase 7)
-        self._check_session_restoration()
-
         # Focus the input box
         input_box = self.query_one("#input-box", InputBox)
         input_box.focus()
@@ -174,6 +171,9 @@ class PPXAIDEApp(App):
             "[dim]Use Ctrl+T to cycle themes, or Ctrl+P for all themes.[/dim]"
         )
         chat_view.add_system_message(welcome_msg)
+
+        # Check for session restoration (Phase 7) - after welcome message
+        self._check_session_restoration()
 
     def _initialize_engine(self) -> None:
         """Initialize the engine client (Phase 6.1).
@@ -228,46 +228,57 @@ class PPXAIDEApp(App):
         Displays a system message if a previous session is available.
         Auto-restores if config says 'always'.
         """
-        if not self._engine_client:
-            return
+        try:
+            if not self._engine_client:
+                self.log.debug("No engine client, skipping session restoration")
+                return
 
-        from ppxai.config import get_auto_restore_mode
-        from ppxai.engine.session import SessionManager
+            from ppxai.config import get_auto_restore_mode
+            from ppxai.engine.session import SessionManager
 
-        # Get last session state
-        last_state = SessionManager.get_last_session_state()
-        if not last_state:
-            return
+            # Get last session state
+            last_state = SessionManager.get_last_session_state()
+            if not last_state:
+                self.log.debug("No last session state found")
+                return
 
-        session_name = last_state.get("name")
-        message_count = last_state.get("message_count", 0)
+            session_name = last_state.get("name")
+            message_count = last_state.get("message_count", 0)
 
-        # Skip if no messages
-        if message_count == 0:
-            return
+            self.log.info(f"Found last session: {session_name} with {message_count} messages")
 
-        auto_restore = get_auto_restore_mode()
-        chat_view = self.query_one("#chat-view", ChatView)
+            # Skip if no messages
+            if message_count == 0:
+                self.log.debug("Skipping session with 0 messages")
+                return
 
-        # Auto-restore if configured
-        if auto_restore == "always":
-            if self._restore_session(session_name, last_state):
+            auto_restore = get_auto_restore_mode()
+            self.log.info(f"Auto-restore mode: {auto_restore}")
+
+            chat_view = self.query_one("#chat-view", ChatView)
+
+            # Auto-restore if configured
+            if auto_restore == "always":
+                if self._restore_session(session_name, last_state):
+                    chat_view.add_system_message(
+                        f"[green]✓ Session restored:[/green] {session_name} ({message_count} messages)\n"
+                        f"[dim]Provider: {last_state.get('provider', 'unknown')}, Tools: {'ON' if last_state.get('tools_enabled') else 'OFF'}[/dim]"
+                    )
+                    self.log.info(f"Auto-restored session: {session_name}")
+                return
+
+            # Show notification about available session (prompt mode or default)
+            if auto_restore != "never":
+                provider_info = last_state.get("provider", "unknown")
+                tools_info = "ON" if last_state.get("tools_enabled") else "OFF"
+                self.log.info(f"Showing session restoration prompt for {session_name}")
                 chat_view.add_system_message(
-                    f"[green]✓ Session restored:[/green] {session_name} ({message_count} messages)\n"
-                    f"[dim]Provider: {last_state.get('provider', 'unknown')}, Tools: {'ON' if last_state.get('tools_enabled') else 'OFF'}[/dim]"
+                    f"[cyan]↻ Last session available:[/cyan] {session_name}\n"
+                    f"[dim]  {message_count} messages, Provider: {provider_info}, Tools: {tools_info}[/dim]\n"
+                    f"[dim]  Use [bold]/load {session_name}[/bold] to restore[/dim]"
                 )
-                self.log.info(f"Auto-restored session: {session_name}")
-            return
-
-        # Show notification about available session (prompt mode or default)
-        if auto_restore != "never":
-            provider_info = last_state.get("provider", "unknown")
-            tools_info = "ON" if last_state.get("tools_enabled") else "OFF"
-            chat_view.add_system_message(
-                f"[cyan]↻ Last session available:[/cyan] {session_name}\n"
-                f"[dim]  {message_count} messages, Provider: {provider_info}, Tools: {tools_info}[/dim]\n"
-                f"[dim]  Use [bold]/load {session_name}[/bold] to restore[/dim]"
-            )
+        except Exception as e:
+            self.log.error(f"Error checking session restoration: {e}", exc_info=True)
 
     def _restore_session(self, session_name: str, session_state: dict) -> bool:
         """Restore a session with provider, model, and tools state.
