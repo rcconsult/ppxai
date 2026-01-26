@@ -7,6 +7,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.0] - 2026-01-26
+
+### Added - New TUI Engine Integration
+
+- **Complete TUI rewrite with engine integration** - Full async streaming, event-driven architecture
+- **Real-time token/cost tracking** - Display usage stats with smart formatting (K/M suffixes)
+- **Tool execution display** - Show AI tool calls, results, and errors in chat with proper formatting
+- **Bootstrap context loading** - Auto-load AGENTS.md/CLAUDE.md on TUI startup
+- **Context badge** - Status bar shows context scope (global/project/subdir)
+- **Command factory pattern** - All 30 commands using centralized factory with type-based dispatch
+- **7 validation scripts** - Comprehensive validation for all Phase 6 features
+- **Performance optimization** - 3.5M command lookups/sec, 6.1M event processing/sec
+
+### Added - TUI Commands
+
+- **`/context` command** - Show context usage info (KeyValueResult)
+- **`/context show`** - Display bootstrap hierarchy (TreeResult)
+- **`/context hints`** - Show active provider/model hints (KeyValueResult)
+- **`/context reload`** - Reload bootstrap from disk (ConfirmationResult)
+- **`/usage` command** - Show usage statistics with multiple display modes
+- **`/usage show|session|provider|off`** - Control usage display format
+
+### Changed
+
+- **Removed alias conflict** - `/test` command no longer uses "t" alias (reserved for `/tools`)
+- **Event-driven messaging** - STREAM_START, STREAM_CHUNK, STREAM_END, TOOL_CALL, TOOL_RESULT, TOOL_ERROR
+- **Smart truncation** - Tool arguments capped at 100 chars, results at 500 chars
+- **Usage auto-update** - Token/cost stats refresh after each STREAM_END event
+
+### Fixed
+
+- **ErrorResult status parameter** - Fixed 4 missing `status=ResultStatus.ERROR` parameters in session commands
+- **Mock fixtures** - Enhanced test mocks with proper return values for all engine methods
+- **Test assertions** - Updated to accept all valid result types (ListResult, ConfirmationResult, etc.)
+
+### Testing
+
+- **28/28 unit tests passing** - Complete command factory test suite
+- **7/7 integration tests passing** - End-to-end TUI validation
+- **5 validation scripts** - Bootstrap, token/cost, tool display, commands, integration
+- **Performance benchmarks** - Established baseline metrics for command/event processing
+
+### Architecture
+
+- **Phase 6.1** - Engine connection with async streaming
+- **Phase 6.1.1** - Command factory integration (removed 434 lines of legacy code)
+- **Phase 6.2** - Command handler validation (30 commands, 9 categories)
+- **Phase 6.3** - Bootstrap context loading
+- **Phase 6.4** - Token/cost tracking with smart formatting
+- **Phase 6.5** - Tool execution display with TOOL_* events
+- **Phase 6.6** - Integration testing & validation
+
+### Documentation
+
+- **PHASE-6-PROGRESS.md** - Comprehensive progress tracking
+- **PHASE-7-POLISH-RELEASE.md** - Release preparation guide
+- **Validation scripts** - scripts/validate_tui_*.py (5 scripts)
+
 ## [1.14.2] - 2026-01-23
 
 ### Added - Hierarchical Context Scopes

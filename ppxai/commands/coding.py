@@ -364,7 +364,7 @@ CommandFactory.register(CommandSpec(
     description="Generate unit tests for code",
     handler=handle_test,
     category="coding",
-    aliases=["t"],
+    aliases=[],  # Removed "t" alias - conflicts with /tools
     usage="/test <file>"
 ))
 
