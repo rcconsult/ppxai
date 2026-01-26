@@ -9,8 +9,8 @@ v1.12.0+: Use EngineClient for programmatic access:
     engine.set_provider("perplexity")
     engine.set_model("sonar-pro")
 
-Note: TUI-specific imports (commands, main, ui) are lazy-loaded to allow
-the server to import ppxai submodules without requiring prompt_toolkit.
+Note: TUI-specific imports are properly isolated - server builds exclude
+prompt_toolkit via PyInstaller spec, so no lazy loading is needed.
 """
 
 # Core imports - these are safe for both server and TUI
@@ -73,59 +73,6 @@ __all__ = [
     "CODING_PROMPTS",
     "SPEC_GUIDELINES",
     "SPEC_TEMPLATES",
-    # Utils
-    "read_file_content",
     # Version
     "__version__",
-    # UI (lazy-loaded)
-    "console",
-    "display_welcome",
-    "display_spec_help",
-    "display_models",
-    "select_model",
-    "select_provider",
-    "display_sessions",
-    "display_usage",
-    "display_global_usage",
-    "display_tools_table",
-    "display_tool_help",
-    # Commands (lazy-loaded)
-    "CommandHandler",
-    "send_coding_task",
-    # Main (lazy-loaded)
-    "main",
 ]
-
-# Lazy loading for TUI-specific modules
-# These require prompt_toolkit which is not available in server builds
-_lazy_imports = {
-    # UI module exports (Rich TUI)
-    "console": ".rich.ui",
-    "display_welcome": ".rich.ui",
-    "display_spec_help": ".rich.ui",
-    "display_models": ".rich.ui",
-    "select_model": ".rich.ui",
-    "select_provider": ".rich.ui",
-    "display_sessions": ".rich.ui",
-    "display_usage": ".rich.ui",
-    "display_global_usage": ".rich.ui",
-    "display_tools_table": ".rich.ui",
-    "display_tool_help": ".rich.ui",
-    # Utils module exports (Rich TUI)
-    "read_file_content": ".rich.utils",
-    # Commands module exports (shared)
-    "CommandHandler": ".commands",
-    "send_coding_task": ".commands",
-    # Main module exports (Rich TUI)
-    "main": ".rich.main",
-}
-
-
-def __getattr__(name: str):
-    """Lazy load TUI-specific modules on first access."""
-    if name in _lazy_imports:
-        module_name = _lazy_imports[name]
-        import importlib
-        module = importlib.import_module(module_name, package="ppxai")
-        return getattr(module, name)
-    raise AttributeError(f"module 'ppxai' has no attribute {name!r}")
