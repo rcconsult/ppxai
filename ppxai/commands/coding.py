@@ -34,6 +34,9 @@ def _execute_ai_task(context: CommandContext, task_type: str, user_message: str,
     Helper function for all AI coding commands. Streams response in real-time
     (preserving UX) while accumulating content for final result.
 
+    This function works in both sync (Rich TUI) and async (Textual TUI) contexts
+    by detecting the event loop state and adapting accordingly.
+
     Args:
         context: Command context providing access to engine client
         task_type: Type of coding task (generate, test, docs, etc.)
@@ -48,6 +51,7 @@ def _execute_ai_task(context: CommandContext, task_type: str, user_message: str,
     import asyncio
     from ..engine.types import EventType
     import re
+    from ..common.async_compat import is_event_loop_running
 
     if not context.engine_client:
         return ErrorResult(
@@ -106,8 +110,18 @@ def _execute_ai_task(context: CommandContext, task_type: str, user_message: str,
         console.print()  # New line after streaming
         return content, None
 
-    # Execute async task
-    content, error = asyncio.run(run_task())
+    # Execute async task - handle both sync and async contexts
+    if is_event_loop_running():
+        # Textual TUI context - event loop already running
+        # Run async code in separate thread with its own event loop
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(lambda: asyncio.run(run_task()))
+            content, error = future.result()
+    else:
+        # Rich TUI context - no event loop running
+        # Use asyncio.run() directly
+        content, error = asyncio.run(run_task())
 
     if error:
         return ErrorResult(

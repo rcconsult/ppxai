@@ -30,17 +30,17 @@ class CompletionPopup(Container):
     CompletionPopup {
         width: 60;
         height: auto;
-        max-height: 10;
+        max-height: 20;
         background: $surface;
         border: solid $primary;
         padding: 0 1;
         layer: overlay;
-        offset: 2 0;
+        offset-y: 90%;
     }
 
     CompletionPopup VerticalScroll {
         height: auto;
-        max-height: 10;
+        max-height: 20;
         border: none;
         padding: 0;
     }

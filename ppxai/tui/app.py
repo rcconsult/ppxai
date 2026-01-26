@@ -71,6 +71,10 @@ class PPXAIDEApp(App):
 
     def __init__(self):
         super().__init__()
+        # Use ppxai's logger instead of Textual's self.log (which doesn't write to our log file)
+        from ppxai.common.logger import get_logger
+        self._log = get_logger("tui")
+
         self._current_theme_index = 0
         self._engine_client: Optional[EngineClient] = None
         self._provider = "perplexity"
@@ -101,10 +105,12 @@ class PPXAIDEApp(App):
             yield SidePanel(id="side-panel")
         yield Footer()
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
         """Called when the app is mounted."""
+        self._log.info("=== on_mount() START ===")
         # Initialize engine client (Phase 6.1)
         self._initialize_engine()
+        self._log.info("=== After _initialize_engine() ===")
 
         self.title = "ppxaide"
 
@@ -143,7 +149,7 @@ class PPXAIDEApp(App):
                     scopes = [src["scope"] for src in sources]
                     scope_text = "/".join(scopes)  # e.g., "global/project" or "project"
                     status_bar.add_badge("context", "Context", scope_text)
-                    self.log.info(f"Bootstrap context loaded: {scope_text}")
+                    self._log.info(f"Bootstrap context loaded: {scope_text}")
 
         # Add optional status bar badges based on config (Phase 1.2)
         from ppxai.config import get_tui_config
@@ -224,11 +230,14 @@ class PPXAIDEApp(App):
             "Type a message or use /help for commands.\n"
             "[dim]Use Ctrl+T to cycle themes, or Ctrl+P for all themes.[/dim]"
         )
+        self._log.info("=== Before add_system_message ===")
         chat_view.add_system_message(welcome_msg)
+        self._log.info("=== After add_system_message ===")
 
         # Check for session restoration (Phase 7) - after welcome message
-        # Schedule as async task since we may show modal dialog
-        self.call_later(self._check_session_restoration)
+        # Must run in worker to allow push_screen_wait() for modal dialog
+        self._log.info("=== About to call _check_session_restoration() ===")
+        self.run_worker(self._check_session_restoration(), exclusive=True)
 
     def _initialize_engine(self) -> None:
         """Initialize the engine client (Phase 6.1).
@@ -254,17 +263,17 @@ class PPXAIDEApp(App):
             model_ok = self._engine_client.set_model(self._model)
 
             if not provider_ok:
-                self.log.error(f"Failed to set provider: {self._provider} (check API key in .env)")
+                self._log.error(f"Failed to set provider: {self._provider} (check API key in .env)")
                 self._provider = None
             if not model_ok:
-                self.log.error(f"Failed to set model: {self._model}")
+                self._log.error(f"Failed to set model: {self._model}")
                 self._model = None
 
             if not provider_ok or not model_ok:
-                self.log.warning("Engine initialization incomplete - check configuration")
+                self._log.warning("Engine initialization incomplete - check configuration")
 
         except Exception as e:
-            self.log.error(f"Failed to initialize engine: {e}")
+            self._log.error(f"Failed to initialize engine: {e}")
             self._provider = None
             self._model = None
 
@@ -272,9 +281,9 @@ class PPXAIDEApp(App):
         self._engine_client.set_working_dir(self._working_dir)
 
         if self._provider and self._model:
-            self.log.info(f"Engine initialized: {self._provider}/{self._model}")
+            self._log.info(f"Engine initialized: {self._provider}/{self._model}")
         else:
-            self.log.warning("Engine not fully initialized - use /provider and /model commands")
+            self._log.warning("Engine not fully initialized - use /provider and /model commands")
 
     def _update_datetime(self) -> None:
         """Update datetime badge every minute (Phase 1.2)."""
@@ -293,9 +302,10 @@ class PPXAIDEApp(App):
         Shows interactive modal dialog if auto_restore is "prompt".
         Auto-restores if config says 'always'.
         """
+        self._log.info("_check_session_restoration() called")
         try:
             if not self._engine_client:
-                self.log.debug("No engine client, skipping session restoration")
+                self._log.debug("No engine client, skipping session restoration")
                 return
 
             from ppxai.config import get_auto_restore_mode
@@ -305,17 +315,17 @@ class PPXAIDEApp(App):
             # Get last session state
             last_state = SessionManager.get_last_session_state()
             if not last_state:
-                self.log.debug("No last session state found")
+                self._log.debug("No last session state found")
                 return
 
             session_name = last_state.get("name")
             message_count = last_state.get("message_count", 0)
 
-            self.log.info(f"Found last session: {session_name} with {message_count} messages")
+            self._log.info(f"Found last session: {session_name} with {message_count} messages")
 
             # Skip if no messages
             if message_count == 0:
-                self.log.debug("Skipping session with 0 messages")
+                self._log.debug("Skipping session with 0 messages")
                 return
 
             chat_view = self.query_one("#chat-view", ChatView)
@@ -325,7 +335,7 @@ class PPXAIDEApp(App):
             # Check if session was dirty (crash recovery) - Phase 2.2
             is_dirty = last_state.get("dirty", False)
             if is_dirty:
-                self.log.info(f"Detected dirty session (crash): {session_name}")
+                self._log.info(f"Detected dirty session (crash): {session_name}")
 
                 # Always show crash recovery prompt (higher priority than auto_restore)
                 response = await self.push_screen_wait(
@@ -343,18 +353,18 @@ class PPXAIDEApp(App):
                             f"⚠ [yellow]Session recovered:[/yellow] {session_name} ({message_count} messages)\n"
                             f"[dim]Provider: {provider_info}, Tools: {tools_info}[/dim]"
                         )
-                        self.log.info(f"User chose to recover crash session: {session_name}")
+                        self._log.info(f"User chose to recover crash session: {session_name}")
                     return
                 else:
                     # Clear dirty flag if user declines recovery
                     from ppxai.engine.session import SessionManager
                     SessionManager.clear_state_file()
-                    self.log.info("User declined crash recovery, cleared state file")
+                    self._log.info("User declined crash recovery, cleared state file")
                     return
 
             # Normal auto-restore logic (not a crash)
             auto_restore = get_auto_restore_mode()
-            self.log.info(f"Auto-restore mode: {auto_restore}")
+            self._log.info(f"Auto-restore mode: {auto_restore}")
 
             # Auto-restore if configured
             if auto_restore == "always":
@@ -363,12 +373,12 @@ class PPXAIDEApp(App):
                         f"✓ [green]Session restored:[/green] {session_name} ({message_count} messages)\n"
                         f"[dim]Provider: {provider_info}, Tools: {tools_info}[/dim]"
                     )
-                    self.log.info(f"Auto-restored session: {session_name}")
+                    self._log.info(f"Auto-restored session: {session_name}")
                 return
 
             # Show interactive prompt for "prompt" mode
             if auto_restore != "never":
-                self.log.info(f"Showing session restoration prompt for {session_name}")
+                self._log.info(f"Showing session restoration prompt for {session_name}")
 
                 # Show modal dialog
                 response = await self.push_screen_wait(
@@ -380,18 +390,18 @@ class PPXAIDEApp(App):
                     )
                 )
 
-                if response == "yes":
+                if response.lower() == "yes":
                     if await self._restore_session(session_name, last_state):
                         chat_view.add_system_message(
                             f"✓ [green]Session restored:[/green] {session_name} ({message_count} messages)\n"
                             f"[dim]Provider: {provider_info}, Tools: {tools_info}[/dim]"
                         )
-                        self.log.info(f"User chose to restore session: {session_name}")
+                        self._log.info(f"User chose to restore session: {session_name}")
                 else:
-                    self.log.info("User declined session restoration")
+                    self._log.info("User declined session restoration")
 
         except Exception as e:
-            self.log.error(f"Error checking session restoration: {e}", exc_info=True)
+            self._log.error(f"Error checking session restoration: {e}", exc_info=True)
 
     async def _restore_session(self, session_name: str, session_state: dict) -> bool:
         """Restore a session with provider, model, and tools state (async for Textual).
@@ -404,16 +414,16 @@ class PPXAIDEApp(App):
             True if restored successfully
         """
         if not self._engine_client:
-            self.log.error("Restoration failed: No engine client")
+            self._log.error("Restoration failed: No engine client")
             return False
 
         # Load the session
-        self.log.info(f"Loading session: {session_name}")
+        self._log.info(f"Loading session: {session_name}")
         if not self._engine_client.session.load(session_name):
-            self.log.error(f"Restoration failed: session.load() returned False for {session_name}")
+            self._log.error(f"Restoration failed: session.load() returned False for {session_name}")
             return False
 
-        self.log.info(f"Session loaded successfully: {len(self._engine_client.session.messages)} messages")
+        self._log.info(f"Session loaded successfully: {len(self._engine_client.session.messages)} messages")
 
         # Restore provider/model - matches Rich TUI behavior (lines 573-594 of rich/main.py)
         # session.load() already set session.metadata from the session file
@@ -429,16 +439,16 @@ class PPXAIDEApp(App):
                     self._engine_client.set_provider(stored_provider)
                     self._provider = stored_provider
                     status_bar.update_badge("provider", stored_provider)
-                    self.log.info(f"Restored provider: {stored_provider}")
+                    self._log.info(f"Restored provider: {stored_provider}")
                 except Exception as e:
-                    self.log.debug(f"Failed to restore provider '{stored_provider}': {e}")
+                    self._log.debug(f"Failed to restore provider '{stored_provider}': {e}")
 
         if stored_model:
             # Use strict mode to validate model exists (Rich TUI line 586)
             if self._engine_client.set_model(stored_model, strict=True):
                 self._model = stored_model
                 status_bar.update_badge("model", stored_model)
-                self.log.info(f"Restored model: {stored_model}")
+                self._log.info(f"Restored model: {stored_model}")
             else:
                 # Model not available - use provider's default (Rich TUI lines 589-594)
                 from ppxai.config import get_default_model
@@ -446,7 +456,7 @@ class PPXAIDEApp(App):
                 if default_model:
                     self._engine_client.set_model(default_model)
                     self._model = default_model
-                    self.log.warning(f"Model '{stored_model}' not available, using default: {default_model}")
+                    self._log.warning(f"Model '{stored_model}' not available, using default: {default_model}")
 
         # Restore tools state from loaded session (not session_state parameter)
         # session.load() already set session.tools_enabled from the session file
@@ -479,7 +489,7 @@ class PPXAIDEApp(App):
         chat_view.clear()
 
         messages = self._engine_client.session.messages
-        self.log.info(f"Rendering {len(messages)} messages to chat view")
+        self._log.info(f"Rendering {len(messages)} messages to chat view")
         for msg in messages:
             role = msg.role
             content = msg.content
@@ -496,9 +506,9 @@ class PPXAIDEApp(App):
         # Update subtitle to match restored provider/model
         if self._provider and self._model:
             self.sub_title = f"{self._provider}/{self._model}"
-            self.log.info(f"Updated subtitle: {self.sub_title}")
+            self._log.info(f"Updated subtitle: {self.sub_title}")
 
-        self.log.info(f"Session restoration complete: provider={self._provider}, model={self._model}, tools={self._tools_enabled}")
+        self._log.info(f"Session restoration complete: provider={self._provider}, model={self._model}, tools={self._tools_enabled}")
         return True
 
     # ========================================================================
@@ -609,7 +619,7 @@ class PPXAIDEApp(App):
         for editor in self.query(CodeEditor):
             editor.syntax_theme = syntax_theme
 
-        self.log.info(f"Theme changed: {old_theme} → {new_theme}, syntax: {syntax_theme}")
+        self._log.info(f"Theme changed: {old_theme} → {new_theme}, syntax: {syntax_theme}")
 
     async def on_input_box_submitted(self, event: InputBox.Submitted) -> None:
         """Handle user input submission (Phase 6.1 - Engine integration)."""
@@ -653,7 +663,7 @@ class PPXAIDEApp(App):
                 await self._handle_event(event)
 
         except Exception as e:
-            self.log.error(f"Stream error: {e}")
+            self._log.error(f"Stream error: {e}")
             chat_view.add_system_message(f"[red]Error:[/red] {e}")
         finally:
             self._is_streaming = False
@@ -690,9 +700,9 @@ class PPXAIDEApp(App):
             if message_count > 0 and (save_interval == 0 or message_count % max(1, save_interval) == 0):
                 try:
                     self._engine_client.session.save_dirty()
-                    self.log.debug(f"Auto-saved session at {message_count} messages (interval={save_interval})")
+                    self._log.debug(f"Auto-saved session at {message_count} messages (interval={save_interval})")
                 except Exception as e:
-                    self.log.warning(f"Auto-save failed: {e}")
+                    self._log.warning(f"Auto-save failed: {e}")
 
         elif event.type == EventType.TOOL_CALL:
             # Show tool being called (Phase 6.5)
@@ -808,14 +818,14 @@ class PPXAIDEApp(App):
         if spec:
             try:
                 # Call command handler with context
-                self.log.debug(f"Calling handler for command: {cmd} with args: {args}")
+                self._log.debug(f"Calling handler for command: {cmd} with args: {args}")
                 result = spec.handler(self, args)
-                self.log.debug(f"Handler returned: {type(result).__name__}")
+                self._log.debug(f"Handler returned: {type(result).__name__}")
 
                 # Check if result is a coroutine (async handler)
                 import inspect
                 if inspect.iscoroutine(result):
-                    self.log.debug(f"Handler returned coroutine, awaiting it")
+                    self._log.debug(f"Handler returned coroutine, awaiting it")
                     result = await result
 
                 # Render result if it's a CommandResult type
@@ -857,7 +867,7 @@ class PPXAIDEApp(App):
                     engine_working_dir = self._engine_client.get_working_dir()
                     if engine_working_dir != self._working_dir:
                         self._working_dir = engine_working_dir
-                        self.log.info(f"Working directory synced: {engine_working_dir}")
+                        self._log.info(f"Working directory synced: {engine_working_dir}")
 
                 # Handle status bar toggle commands (Phase 1.2)
                 if cmd == "status" and args and args.split()[0] in ("version", "cwd", "datetime"):
@@ -900,7 +910,7 @@ class PPXAIDEApp(App):
                 import traceback
 
                 # Always log full traceback
-                self.log.error(f"RuntimeError in command '{cmd}': {e}", exc_info=True)
+                self._log.error(f"RuntimeError in command '{cmd}': {e}", exc_info=True)
 
                 if "asyncio.run() cannot be called" in str(e) and "running event loop" in str(e):
                     # Special handling for asyncio.run() errors
@@ -931,7 +941,7 @@ class PPXAIDEApp(App):
                 import traceback
 
                 # Always log full traceback
-                self.log.error(f"Exception in command '{cmd}': {e}", exc_info=True)
+                self._log.error(f"Exception in command '{cmd}': {e}", exc_info=True)
 
                 error_msg = f"[red]Command failed: {cmd}[/red]\n[dim]{str(e)}[/dim]"
 
@@ -1123,9 +1133,9 @@ class PPXAIDEApp(App):
         if self._engine_client:
             try:
                 self._engine_client.session.mark_clean()
-                self.log.debug("Marked session as clean on exit")
+                self._log.debug("Marked session as clean on exit")
             except Exception as e:
-                self.log.warning(f"Failed to mark session clean: {e}")
+                self._log.warning(f"Failed to mark session clean: {e}")
         self.exit()
 
     def action_clear(self) -> None:

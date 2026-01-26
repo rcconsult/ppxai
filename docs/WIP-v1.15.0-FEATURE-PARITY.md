@@ -30,21 +30,22 @@
 
 ---
 
-## Phase 1 - Critical Missing Features (User-Visible) ✅ COMPLETED
+## Phase 1 - Critical Missing Features (User-Visible)
 
-### 1.1 Tab Autocomplete ✅
+### 1.1 Tab Autocomplete ⚠️ DEFERRED TO PHASE 4/5
 - [x] Command completion (slash commands) - All 30+ commands from CommandFactory
 - [x] @file/@clipboard/@url context providers - With descriptions
 - [x] File path completion with ignore patterns (.git, node_modules, __pycache__, .venv)
 - [x] Model/provider name completion - Dynamic from config
 - [x] Subcommand completion (tools, usage, checkpoint, status, theme)
+- [ ] **DISABLED:** Inadequate implementation, needs complete refactoring
 
 **Implementation:**
 - `ppxai/tui/completer.py` - TextualCompleter with 440 lines of completion logic
 - `ppxai/tui/widgets/completion_popup.py` - Visual popup widget with arrow key navigation
 - Press Tab to show completions, arrow keys to navigate, Enter/Tab to select
 - File cache with 5-second TTL for performance
-- **Commit:** 4400480
+- **Commit:** 4400480 (initial), disabled in (pending) - see Phase 4/5 for refactoring requirements
 
 ### 1.2 Status Bar Toggles ✅
 - [x] `/status version` - toggle version display (v1.15.0)
@@ -223,6 +224,44 @@ uv run ppxaide --trace           # Full tracebacks in chat + debug logging
 ### 3.1 Emoji Mode (Optional)
 - [ ] Text symbol fallback for terminal alignment
 - [ ] `/theme emoji on|off` command
+
+---
+
+## TODO: Phase 4/5 - Deferred Features (Needs Refactoring)
+
+### 4.1 Autocomplete Enhancement ❌ DISABLED
+**Status:** Disabled in commit (pending) - inadequate implementation
+
+**Current Issues:**
+- Fixed offset positioning (`offset-y: 90%`) instead of cursor-based
+- Single column layout instead of multi-column like Rich TUI
+- No alphabetical sorting of file list
+- No lazy loading/virtual scrolling for large file lists
+- Fixed 100 file limit with no dynamic pagination
+- Files shown in random order, priority files hack
+
+**What Rich TUI Has:**
+- Cursor-based positioning (popup appears exactly at '@' character)
+- Multi-column scrollable layout
+- Alphabetical sorting of all files
+- Dynamic lazy loading as user scrolls
+- No file limit - entire project tree available
+
+**Implementation Requirements:**
+1. **Cursor positioning**: Get actual cursor coordinates in terminal, position popup relative to cursor
+2. **Multi-column layout**: Use Textual Grid or Horizontal containers for columns
+3. **Alphabetical sorting**: Sort files before display
+4. **Virtual scrolling**: Implement lazy loading with scroll events
+5. **Integration**: Study prompt_toolkit approach in Rich TUI (`ppxai/rich/completer.py`)
+
+**Files to modify:**
+- `ppxai/tui/widgets/input_box.py` - Re-enable tab handler (line 94-96)
+- `ppxai/tui/widgets/completion_popup.py` - Complete refactoring needed
+- `ppxai/tui/completer.py` - Sorting and pagination logic
+
+**User feedback:** "showing fixed list... is not presentable to any user, it is a bug"
+
+**Decision:** Focus on Phase 3 feature parity first, tackle this properly in Phase 4/5.
 
 ---
 

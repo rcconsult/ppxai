@@ -78,9 +78,22 @@ class InputBox(Static):
         elif event.key == "down":
             self._navigate_history(1)
             event.prevent_default()
-        elif event.key == "tab":
-            self._show_completions()
-            event.prevent_default()
+        # TODO: Autocomplete disabled - Phase 4/5 refactoring needed
+        # Current implementation issues:
+        # - Fixed offset positioning (offset-y: 90%) instead of cursor-based
+        # - Single column layout instead of multi-column like Rich TUI
+        # - No alphabetical sorting of file list
+        # - No lazy loading/virtual scrolling for large file lists
+        # - Fixed 100 file limit with no dynamic pagination
+        # Rich TUI uses prompt_toolkit with:
+        # - Cursor-based positioning (popup appears at '@' character)
+        # - Multi-column scrollable layout
+        # - Alphabetical sorting
+        # - Dynamic lazy loading as user scrolls
+        # See: ppxai/rich/completer.py for reference implementation
+        # elif event.key == "tab":
+        #     self._show_completions()
+        #     event.prevent_default()
 
     def _navigate_history(self, direction: int) -> None:
         """Navigate through command history."""

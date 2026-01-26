@@ -352,7 +352,7 @@ class TextualCompleter:
             max_files: Maximum number of files to return
 
         Returns:
-            List of (filename, relative_path) tuples
+            List of (filename, relative_path) tuples, with priority files first
         """
         now = time.time()
 
@@ -362,11 +362,14 @@ class TextualCompleter:
             self._cache_dir == self.working_dir):
             return list(self._file_cache.items())[:max_files]
 
-        files = {}
+        # Priority files - always include these first
+        priority_files = ['AGENTS.md', 'CLAUDE.md', 'README.md', '.env', 'pyproject.toml', 'package.json']
+        priority_dict = {}
+        regular_files = {}
 
         try:
             for path in self.working_dir.rglob('*'):
-                if len(files) >= max_files * 2:
+                if len(regular_files) >= max_files * 2:
                     break
                 if path.is_file():
                     # Skip files in ignored directories
@@ -374,11 +377,18 @@ class TextualCompleter:
                         continue
                     try:
                         rel_path = str(path.relative_to(self.working_dir))
-                        files[path.name] = rel_path
+                        # Prioritize important files
+                        if path.name in priority_files:
+                            priority_dict[path.name] = rel_path
+                        else:
+                            regular_files[path.name] = rel_path
                     except ValueError:
                         pass
         except PermissionError:
             pass
+
+        # Combine: priority files first, then regular files
+        files = {**priority_dict, **regular_files}
 
         self._file_cache = files
         self._cache_time = now
