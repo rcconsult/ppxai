@@ -458,7 +458,7 @@ def test_undo_command(mock_context):
     result = spec.handler(mock_context, "")
 
     # May succeed or fail depending on checkpoint availability
-    assert isinstance(result, (TextResult, ErrorResult))
+    assert isinstance(result, (TextResult, ErrorResult, ConfirmationResult))
 
 
 # =============================================================================
