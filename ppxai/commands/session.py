@@ -99,12 +99,15 @@ def handle_load(context: CommandContext, args: str) -> CommandResult:
                 context.set_model(loaded_model)
                 context.engine_client.set_model(loaded_model)
 
+            # Return special result with loaded messages
             return ConfirmationResult(
-            status=ResultStatus.SUCCESS,
+                status=ResultStatus.SUCCESS,
                 message=f"Session loaded: {context.engine_client.session.session_name}",
                 details={
                     "session_name": context.engine_client.session.session_name,
-                    "message_count": len(context.engine_client.session.messages)
+                    "message_count": len(context.engine_client.session.messages),
+                    "messages": context.engine_client.session.messages,  # Pass messages for TUI rendering
+                    "action": "load_session"  # Signal to TUI to render messages
                 }
             )
         else:
@@ -171,9 +174,12 @@ def handle_clear(context: CommandContext, args: str) -> CommandResult:
     context.engine_client.session.clear()
 
     return ConfirmationResult(
-            status=ResultStatus.SUCCESS,
+        status=ResultStatus.SUCCESS,
         message="Conversation history cleared",
-        details={"messages_cleared": message_count}
+        details={
+            "messages_cleared": message_count,
+            "action": "clear_session"  # Signal to TUI to clear chat view
+        }
     )
 
 

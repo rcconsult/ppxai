@@ -124,13 +124,55 @@ async def render_confirmation(renderer: TextualRenderer, result: ConfirmationRes
     """Render action confirmation."""
     chat_view = renderer._get_chat_view()
 
-    msg = f"✓ [green]{result.message}[/green]"
+    # Special handling for session load - render all messages
+    if result.details and result.details.get("action") == "load_session":
+        # Clear chat view before loading session messages
+        chat_view.clear()
 
-    if result.details:
-        details_str = ", ".join(f"{k}={v}" for k, v in result.details.items())
-        msg += f"\n[dim]  ({details_str})[/dim]"
+        # Render each loaded message
+        messages = result.details.get("messages", [])
+        for msg in messages:
+            role = msg.role
+            content = msg.content
 
-    chat_view.add_system_message(msg)
+            if role == "user":
+                chat_view.add_user_message(content)
+            elif role == "assistant":
+                chat_view.add_assistant_message(content)
+            elif role == "system":
+                chat_view.add_system_message(content)
+            elif role == "tool":
+                # Tool messages might have special formatting
+                chat_view.add_message(content, role="tool")
+
+        # Show confirmation at the end
+        session_name = result.details.get("session_name", "unknown")
+        message_count = result.details.get("message_count", 0)
+        chat_view.add_system_message(
+            f"✓ [green]Session restored:[/green] {session_name} ({message_count} messages)"
+        )
+    elif result.details and result.details.get("action") == "clear_session":
+        # Clear chat view for /clear command
+        chat_view.clear()
+
+        # Show confirmation
+        messages_cleared = result.details.get("messages_cleared", 0)
+        chat_view.add_system_message(
+            f"✓ [green]{result.message}[/green] ({messages_cleared} messages cleared)"
+        )
+    else:
+        # Standard confirmation rendering
+        msg = f"✓ [green]{result.message}[/green]"
+
+        if result.details:
+            # Filter out internal keys used for special actions
+            display_details = {k: v for k, v in result.details.items()
+                             if k not in ("messages", "action")}
+            if display_details:
+                details_str = ", ".join(f"{k}={v}" for k, v in display_details.items())
+                msg += f"\n[dim]  ({details_str})[/dim]"
+
+        chat_view.add_system_message(msg)
 
 
 @TextualRenderer.register(AIResponseResult)

@@ -93,6 +93,7 @@ class TestErrorResult:
     def test_error_with_details(self):
         """Test error with details and suggestions."""
         result = ErrorResult(
+            status=ResultStatus.ERROR,
             message="File not found",
             error_details="Path: /nonexistent/file.txt",
             suggestions=[
@@ -150,6 +151,8 @@ class TestAIResponseResult:
     def test_ai_response_without_message(self):
         """Test AI response with content only."""
         result = AIResponseResult(
+            status=ResultStatus.SUCCESS,
+            message="",
             content="Here is the answer to your question."
         )
         assert result.content == "Here is the answer to your question."
@@ -285,6 +288,8 @@ class TestFileViewResult:
     def test_file_view_with_line_highlight(self):
         """Test file view with line highlighting."""
         result = FileViewResult(
+            status=ResultStatus.INFO,
+            message="file.py",
             filepath="/path/to/file.py",
             content="line1\nline2\nline3",
             line_highlight=2
@@ -312,6 +317,8 @@ class TestImageResult:
     def test_image_without_metadata(self):
         """Test image without metadata."""
         result = ImageResult(
+            status=ResultStatus.INFO,
+            message="image.jpg",
             filepath="/path/to/image.jpg",
             format="jpg"
         )
@@ -409,11 +416,11 @@ class TestPromptResult:
             message="Input Required",
             prompt="Enter session name:",
             placeholder="my-session",
-            default_value=""
+            default=""
         )
         assert result.prompt == "Enter session name:"
         assert result.placeholder == "my-session"
-        assert result.default_value == ""
+        assert result.default == ""
 
 
 # ============================================================================
@@ -435,11 +442,13 @@ class TestCompositeResult:
                 ),
                 TableResult(
                     status=ResultStatus.INFO,
-            message="Results",
+                    message="Results",
                     columns=["A", "B"],
                     rows=[["1", "2"]]
                 ),
                 ImageResult(
+                    status=ResultStatus.INFO,
+                    message="chart.png",
                     filepath="/path/to/chart.png",
                     format="png"
                 )
@@ -475,12 +484,14 @@ class TestToolExecutionResult:
             exit_code=0,
             artifacts=[
                 ImageResult(
+                    status=ResultStatus.INFO,
+                    message="plot.png",
                     filepath="/tmp/plot.png",
                     format="png"
                 ),
                 TableResult(
                     status=ResultStatus.INFO,
-            message="Data",
+                    message="Data",
                     columns=["X", "Y"],
                     rows=[["1", "2"]]
                 )
@@ -495,7 +506,7 @@ class TestToolExecutionResult:
     def test_failed_tool_execution(self):
         """Test failed tool execution."""
         result = ToolExecutionResult(
-            status=ResultStatus.SUCCESS,
+            status=ResultStatus.ERROR,
             message="Script failed",
             tool_name="run_python",
             duration=0.5,
@@ -553,7 +564,10 @@ class TestResultStatusProperties:
 
     def test_failed_property(self):
         """Test failed property."""
-        success_result = ConfirmationResult(message="OK")
+        success_result = ConfirmationResult(
+            status=ResultStatus.SUCCESS,
+            message="OK"
+        )
         error_result = ErrorResult(status=ResultStatus.ERROR, message="Error")
 
         assert success_result.failed is False
@@ -579,6 +593,7 @@ class TestNestedCompositeResults:
             message="Nested analysis",
             results=[
                 CompositeResult(
+                    status=ResultStatus.INFO,
                     message="Inner composite",
                     results=[
                         NotificationResult(
@@ -589,7 +604,7 @@ class TestNestedCompositeResults:
                 ),
                 TableResult(
                     status=ResultStatus.INFO,
-            message="Data",
+                    message="Data",
                     columns=["A"],
                     rows=[["1"]]
                 )
