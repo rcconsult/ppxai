@@ -90,17 +90,19 @@ MessageBox Vertical {
 }
 
 MessageBox.user {
-    background: $primary-darken-3;
+    background: $background;
     border: round $primary;
+    padding: 0 1;
 }
 
 MessageBox.assistant {
     background: $surface;
     border: round $success;
+    padding: 0 1;
 }
 
 MessageBox.system {
-    background: $surface-darken-1;
+    background: $background;
     border: round $warning;
     padding: 0 1;
 }
