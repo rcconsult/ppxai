@@ -404,11 +404,16 @@ class PPXAIDEApp(App):
             True if restored successfully
         """
         if not self._engine_client:
+            self.log.error("Restoration failed: No engine client")
             return False
 
         # Load the session
+        self.log.info(f"Loading session: {session_name}")
         if not self._engine_client.session.load(session_name):
+            self.log.error(f"Restoration failed: session.load() returned False for {session_name}")
             return False
+
+        self.log.info(f"Session loaded successfully: {len(self._engine_client.session.messages)} messages")
 
         # Restore provider/model - matches Rich TUI behavior (lines 573-594 of rich/main.py)
         # session.load() already set session.metadata from the session file
@@ -474,6 +479,7 @@ class PPXAIDEApp(App):
         chat_view.clear()
 
         messages = self._engine_client.session.messages
+        self.log.info(f"Rendering {len(messages)} messages to chat view")
         for msg in messages:
             role = msg.role
             content = msg.content
@@ -487,6 +493,12 @@ class PPXAIDEApp(App):
             elif role == "tool":
                 chat_view.add_message(content, role="tool")
 
+        # Update subtitle to match restored provider/model
+        if self._provider and self._model:
+            self.sub_title = f"{self._provider}/{self._model}"
+            self.log.info(f"Updated subtitle: {self.sub_title}")
+
+        self.log.info(f"Session restoration complete: provider={self._provider}, model={self._model}, tools={self._tools_enabled}")
         return True
 
     # ========================================================================
