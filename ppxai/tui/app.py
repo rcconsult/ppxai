@@ -125,12 +125,12 @@ class PPXAIDEApp(App):
         if self._provider:
             status_bar.update_badge("provider", self._provider)
         else:
-            status_bar.update_badge("provider", "none", style="bold red")
+            status_bar.update_badge("provider", "[bold red]none[/bold red]")
 
         if self._model:
             status_bar.update_badge("model", self._model)
         else:
-            status_bar.update_badge("model", "none", style="bold red")
+            status_bar.update_badge("model", "[bold red]none[/bold red]")
 
         # Show bootstrap context status (Phase 6.3)
         if self._engine_client:
