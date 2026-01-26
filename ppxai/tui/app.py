@@ -319,16 +319,47 @@ class PPXAIDEApp(App):
                 self.log.debug("Skipping session with 0 messages")
                 return
 
+            chat_view = self.query_one("#chat-view", ChatView)
+            provider_info = last_state.get("provider", "unknown")
+            tools_info = "ON" if last_state.get("tools_enabled") else "OFF"
+
+            # Check if session was dirty (crash recovery) - Phase 2.2
+            is_dirty = last_state.get("dirty", False)
+            if is_dirty:
+                self.log.info(f"Detected dirty session (crash): {session_name}")
+
+                # Always show crash recovery prompt (higher priority than auto_restore)
+                response = await self.push_screen_wait(
+                    ConsentDialog(
+                        title="⚠ Session Recovery",
+                        message=f"ppxaide was interrupted during last session",
+                        question=f"Recover session '{session_name}'?\n{message_count} messages, Provider: {provider_info}, Tools: {tools_info}",
+                        options=["Yes", "No"]
+                    )
+                )
+
+                if response == "yes":
+                    if self._restore_session(session_name, last_state):
+                        chat_view.add_system_message(
+                            f"⚠ [yellow]Session recovered:[/yellow] {session_name} ({message_count} messages)\n"
+                            f"[dim]Provider: {provider_info}, Tools: {tools_info}[/dim]"
+                        )
+                        self.log.info(f"User chose to recover crash session: {session_name}")
+                    return
+                else:
+                    # Clear dirty flag if user declines recovery
+                    from ppxai.engine.session import SessionManager
+                    SessionManager.clear_state_file()
+                    self.log.info("User declined crash recovery, cleared state file")
+                    return
+
+            # Normal auto-restore logic (not a crash)
             auto_restore = get_auto_restore_mode()
             self.log.info(f"Auto-restore mode: {auto_restore}")
-
-            chat_view = self.query_one("#chat-view", ChatView)
 
             # Auto-restore if configured
             if auto_restore == "always":
                 if self._restore_session(session_name, last_state):
-                    provider_info = last_state.get("provider", "unknown")
-                    tools_info = "ON" if last_state.get("tools_enabled") else "OFF"
                     chat_view.add_system_message(
                         f"✓ [green]Session restored:[/green] {session_name} ({message_count} messages)\n"
                         f"[dim]Provider: {provider_info}, Tools: {tools_info}[/dim]"
@@ -338,9 +369,6 @@ class PPXAIDEApp(App):
 
             # Show interactive prompt for "prompt" mode
             if auto_restore != "never":
-                provider_info = last_state.get("provider", "unknown")
-                tools_info = "ON" if last_state.get("tools_enabled") else "OFF"
-
                 self.log.info(f"Showing session restoration prompt for {session_name}")
 
                 # Show modal dialog
@@ -355,8 +383,6 @@ class PPXAIDEApp(App):
 
                 if response == "yes":
                     if self._restore_session(session_name, last_state):
-                        provider_info = last_state.get("provider", "unknown")
-                        tools_info = "ON" if last_state.get("tools_enabled") else "OFF"
                         chat_view.add_system_message(
                             f"✓ [green]Session restored:[/green] {session_name} ({message_count} messages)\n"
                             f"[dim]Provider: {provider_info}, Tools: {tools_info}[/dim]"
@@ -634,6 +660,17 @@ class PPXAIDEApp(App):
 
             # Update usage stats in status bar (Phase 6.4)
             self._update_usage_display()
+
+            # Auto-save session after each message pair (Phase 2.1)
+            from ppxai.config import get_auto_save_interval
+            save_interval = get_auto_save_interval()
+            message_count = len(self._engine_client.session.messages)
+            if message_count > 0 and (save_interval == 0 or message_count % max(1, save_interval) == 0):
+                try:
+                    self._engine_client.session.save_dirty()
+                    self.log.debug(f"Auto-saved session at {message_count} messages (interval={save_interval})")
+                except Exception as e:
+                    self.log.warning(f"Auto-save failed: {e}")
 
         elif event.type == EventType.TOOL_CALL:
             # Show tool being called (Phase 6.5)
@@ -1012,6 +1049,13 @@ class PPXAIDEApp(App):
 
     def action_quit(self) -> None:
         """Quit the application."""
+        # Mark session clean on graceful exit (Phase 2.2)
+        if self._engine_client:
+            try:
+                self._engine_client.session.mark_clean()
+                self.log.debug("Marked session as clean on exit")
+            except Exception as e:
+                self.log.warning(f"Failed to mark session clean: {e}")
         self.exit()
 
     def action_clear(self) -> None:
