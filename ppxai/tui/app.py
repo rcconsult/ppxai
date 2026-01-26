@@ -32,9 +32,18 @@ from ppxai.engine import EngineClient
 from ppxai.engine.types import Event, EventType
 from ppxai.config import get_default_provider, get_default_model, get_api_key
 
+# Command Factory integration (Phase 6.1.1 - Technical debt cleanup)
+from ppxai.commands import CommandFactory
+from ppxai.commands.protocol import CommandContext
+from ppxai.commands.results import CommandResult
+from ppxai.rendering.textual_renderer import TextualRenderer
+
 
 class PPXAIDEApp(App):
-    """Main ppxaide application."""
+    """Main ppxaide application.
+
+    Implements CommandContext protocol for command factory integration.
+    """
 
     TITLE = "ppxaide"
     SUB_TITLE = "AI Assistant"
@@ -153,6 +162,99 @@ class PPXAIDEApp(App):
 
         self.log.info(f"Engine initialized: {self._provider}/{self._model}")
 
+    # ========================================================================
+    # CommandContext Protocol Implementation (Phase 6.1.1)
+    # ========================================================================
+
+    @property
+    def engine_client(self) -> EngineClient:
+        """Access to engine client (CommandContext protocol)."""
+        return self._engine_client
+
+    @property
+    def session(self):
+        """Access to current session (CommandContext protocol)."""
+        return self._engine_client.session if self._engine_client else None
+
+    @property
+    def working_dir(self) -> str:
+        """Current working directory (CommandContext protocol)."""
+        return self._working_dir
+
+    @property
+    def current_model(self) -> str:
+        """Currently selected model (CommandContext protocol)."""
+        return self._model
+
+    @property
+    def provider(self) -> str:
+        """Currently selected provider (CommandContext protocol)."""
+        return self._provider
+
+    def set_model(self, model: str) -> None:
+        """Switch to specified model (CommandContext protocol)."""
+        if self._engine_client:
+            self._engine_client.set_model(model)
+            self._model = model
+            # Update status bar
+            status_bar = self.query_one(StatusBar)
+            status_bar.update_badge("model", model)
+
+    def set_provider(self, provider: str) -> None:
+        """Switch to specified provider (CommandContext protocol)."""
+        if self._engine_client:
+            self._engine_client.set_provider(provider)
+            self._provider = provider
+            # Update status bar
+            status_bar = self.query_one(StatusBar)
+            status_bar.update_badge("provider", provider)
+
+    def get_provider(self) -> str:
+        """Get current provider (CommandContext protocol)."""
+        return self._provider
+
+    def get_model(self) -> str:
+        """Get current model (CommandContext protocol)."""
+        return self._model
+
+    def get_auto_route(self) -> bool:
+        """Get auto-routing status (CommandContext protocol)."""
+        # TUI doesn't support auto-routing yet
+        return False
+
+    def set_auto_route(self, enabled: bool) -> None:
+        """Set auto-routing status (CommandContext protocol)."""
+        # TUI doesn't support auto-routing yet
+        pass
+
+    def get_tools_available(self) -> bool:
+        """Check if tool support is available (CommandContext protocol)."""
+        return self._tools_enabled
+
+    def get_tools_verbose(self) -> bool:
+        """Get tool verbose logging status (CommandContext protocol)."""
+        # TUI doesn't have verbose tool logging yet
+        return False
+
+    def set_tools_verbose(self, verbose: bool) -> None:
+        """Set tool verbose logging status (CommandContext protocol)."""
+        # TUI doesn't have verbose tool logging yet
+        pass
+
+    @property
+    def tools_enabled(self) -> bool:
+        """Check if tools are enabled (CommandContext protocol)."""
+        return self._tools_enabled
+
+    @property
+    def autoroute_enabled(self) -> bool:
+        """Check if auto-routing is enabled (CommandContext protocol)."""
+        return False
+
+    # ========================================================================
+    # Theme Management
+    # ========================================================================
+
     def watch_theme(self, old_theme: str, new_theme: str) -> None:
         """Called when the app theme changes - sync syntax highlighting themes.
 
@@ -266,34 +368,39 @@ class PPXAIDEApp(App):
             chat_view.add_system_message(f"[dim]{event.data}[/dim]")
 
     async def _handle_command(self, command: str) -> None:
-        """Handle slash commands."""
+        """Handle slash commands using Command Factory pattern."""
         chat_view = self.query_one("#chat-view", ChatView)
         parts = command[1:].split(maxsplit=1)
         cmd = parts[0].lower()
         args = parts[1] if len(parts) > 1 else ""
 
-        if cmd == "help":
-            chat_view.add_system_message(self._get_help_text())
-        elif cmd in ("quit", "q", "exit"):
+        # Special case: quit/exit (direct action)
+        if cmd in ("quit", "q", "exit"):
             self.exit()
-        elif cmd == "clear":
-            chat_view.clear()
-        elif cmd == "theme":
-            self.action_cycle_theme()
-            chat_view.add_system_message(
-                f"Theme: {CYCLE_THEMES[self._current_theme_index]}"
-            )
-        elif cmd == "provider":
-            chat_view.add_system_message(
-                f"Current provider: {self._provider}\n"
-                "[dim]Provider switching not implemented yet[/dim]"
-            )
-        elif cmd == "model":
-            chat_view.add_system_message(
-                f"Current model: {self._model}\n"
-                "[dim]Model switching not implemented yet[/dim]"
-            )
-        elif cmd == "copy":
+            return
+
+        # Try Command Factory first
+        spec = CommandFactory.get(cmd)
+        if spec:
+            try:
+                # Call command handler with context
+                result = spec.handler(self, args)
+
+                # Render result if it's a CommandResult type
+                if result is not None:
+                    renderer = TextualRenderer(self)
+                    await renderer.render(result)
+
+            except Exception as e:
+                self.log.error(f"Command error: {cmd} - {e}", exc_info=True)
+                chat_view.add_system_message(
+                    f"[red]Command failed: {cmd}[/red]\n"
+                    f"[dim]{str(e)}[/dim]"
+                )
+            return
+
+        # TUI-specific commands (fallback)
+        if cmd == "copy":
             # Copy last assistant message to clipboard
             messages = chat_view.get_messages()
             assistant_msgs = [m for m in messages if m["role"] == "assistant"]
@@ -318,27 +425,11 @@ class PPXAIDEApp(App):
                 chat_view.add_system_message(
                     "[dim]Clipboard is empty or unavailable[/dim]"
                 )
-        # File commands
-        elif cmd == "show":
-            await local_commands.cmd_show(self, args)
         elif cmd == "edit":
+            # TUI-specific edit command (side panel editor)
             await local_commands.cmd_edit(self, args)
-        # Navigation commands
-        elif cmd == "cd":
-            await local_commands.cmd_cd(self, args)
-        elif cmd == "pwd":
-            await local_commands.cmd_pwd(self, args)
-        # Status and debug commands
-        elif cmd == "status":
-            await local_commands.cmd_status(self, args)
-        elif cmd == "debug":
-            await local_commands.cmd_debug(self, args)
         elif cmd == "badge":
-            # Test badge API: /badge add test "Test" "value"
-            # /badge update test "new_value"
-            # /badge remove test
-            # /badge hide test
-            # /badge show test
+            # TUI test command for badge API
             await self._handle_badge_command(args)
         else:
             chat_view.add_system_message(
@@ -479,45 +570,6 @@ class PPXAIDEApp(App):
 
         else:
             chat_view.add_system_message(f"[yellow]Unknown badge action:[/yellow] {action}")
-
-    def _get_help_text(self) -> str:
-        """Get help text for available commands."""
-        # Use raw string to avoid escape sequence warnings
-        help_text = (
-            "[bold]Available Commands:[/bold]\n\n"
-            "[bold dim]System:[/bold dim]\n"
-            "[cyan]/help[/cyan]      - Show this help message\n"
-            "[cyan]/quit[/cyan]      - Exit ppxaide (aliases: /q, /exit)\n"
-            "[cyan]/clear[/cyan]     - Clear chat history\n"
-            "[cyan]/theme[/cyan]     - Cycle through themes\n"
-            "[cyan]/status[/cyan]    - Show status information\n"
-            "[cyan]/debug[/cyan]     - Show image viewer debug info\n\n"
-            "[bold dim]Files:[/bold dim]\n"
-            "[cyan]/show[/cyan]      - Display file (syntax/tree view)\n"
-            "[cyan]/edit[/cyan]      - Edit file with syntax highlighting\n\n"
-            "[bold dim]Navigation:[/bold dim]\n"
-            "[cyan]/cd[/cyan]        - Change working directory\n"
-            "[cyan]/pwd[/cyan]       - Show working directory\n\n"
-            "[bold dim]Clipboard:[/bold dim]\n"
-            "[cyan]/copy[/cyan]      - Copy last response to clipboard\n"
-            "[cyan]/paste[/cyan]     - Paste from clipboard to input\n\n"
-            "[bold dim]AI (coming soon):[/bold dim]\n"
-            "[cyan]/provider[/cyan]  - Show/switch provider\n"
-            "[cyan]/model[/cyan]     - Show/switch model\n\n"
-            "[bold]Keyboard Shortcuts:[/bold]\n"
-            "[cyan]Ctrl+C[/cyan]     - Quit\n"
-            "[cyan]Ctrl+L[/cyan]     - Clear chat\n"
-            "[cyan]Ctrl+T[/cyan]     - Cycle theme (8 curated themes)\n"
-            "[cyan]Ctrl+P[/cyan]     - Command palette (all 17+ themes)\n"
-            "[cyan]Ctrl+W[/cyan]     - Close side panel\n"
-            "[cyan]Ctrl+S[/cyan]     - Save (in edit mode)\n"
-            "[cyan]F6[/cyan]         - Switch focus between panes\n"
-            "[cyan]Ctrl+Tab[/cyan]   - Switch focus between panes\n"
-            "[cyan]Ctrl+Bracket[/cyan] - Resize split panes\n"
-            "[cyan]Escape[/cyan]     - Close panel / Cancel\n"
-            "[cyan]Enter[/cyan]      - Send message\n"
-        )
-        return help_text
 
     def action_quit(self) -> None:
         """Quit the application."""

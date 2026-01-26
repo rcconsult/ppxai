@@ -43,9 +43,9 @@ def handle_help(context: CommandContext, args: str) -> CommandResult:
     """
     from ..version import __version__
 
-    help_text = f"""ppxai v{__version__} - AI Chat Assistant
+    help_text = f"""[bold]ppxai v{__version__} - AI Chat Assistant[/bold]
 
-Available Commands:
+[cyan]Available Commands:[/cyan]
   /help, /h, /?           Show this help message
   /model, /m              Switch or list AI models
   /provider, /p           Switch AI provider
@@ -58,12 +58,11 @@ Available Commands:
   /clear, /c              Clear conversation
   /exit, /quit            Exit application
 
-For detailed command usage, see the full documentation.
+[dim]For detailed command usage, see the full documentation.[/dim]
 """
     return TextResult(
         status=ResultStatus.INFO,
-        message="ppxai Help - Available Commands",
-        content=help_text
+        message=help_text
     )
 
 
