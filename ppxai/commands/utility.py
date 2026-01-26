@@ -177,6 +177,7 @@ def handle_cd(context: CommandContext, args: str) -> CommandResult:
 
         if not os.path.isdir(resolved):
             return ErrorResult(
+                status=ResultStatus.ERROR,
                 message=f"Not a valid directory: {target_path}",
                 suggestions=["Check the path and try again"]
             )
@@ -263,6 +264,7 @@ def handle_config(context: CommandContext, args: str) -> CommandResult:
             )
         except Exception as e:
             return ErrorResult(
+                status=ResultStatus.ERROR,
                 message=f"Failed to reload config: {e}",
                 error_details=str(e)
             )
@@ -284,6 +286,7 @@ def handle_config(context: CommandContext, args: str) -> CommandResult:
 
     else:
         return ErrorResult(
+            status=ResultStatus.ERROR,
             message=f"Unknown subcommand: {subcommand}",
             suggestions=["Available: reload, path"]
         )
@@ -359,6 +362,7 @@ def handle_debug_log(context: CommandContext, args: str) -> CommandResult:
                 )
         except Exception as e:
             return ErrorResult(
+                status=ResultStatus.ERROR,
                 message=f"Error reading log file: {e}",
                 error_details=str(e)
             )
@@ -526,6 +530,7 @@ def handle_context(context: CommandContext, args: str) -> CommandResult:
             )
         else:
             return ErrorResult(
+                status=ResultStatus.ERROR,
                 message="No bootstrap context file found",
                 error_details="Looking for: AGENTS.md, CLAUDE.md in ~/.ppxai/, git root, working dir"
             )

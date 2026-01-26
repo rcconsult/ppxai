@@ -89,6 +89,7 @@ def handle_model(context: CommandContext, args: str) -> CommandResult:
                 )
 
         return ErrorResult(
+            status=ResultStatus.ERROR,
             message=f"Model not found: {args}",
             suggestions=["Use /model list to see available models"]
         )
@@ -139,6 +140,7 @@ def handle_provider(context: CommandContext, args: str) -> CommandResult:
     # Direct provider selection by ID
     if args not in PROVIDERS:
         return ErrorResult(
+            status=ResultStatus.ERROR,
             message=f"Provider not found: {args}",
             suggestions=["Use /provider list to see available providers"]
         )
@@ -157,6 +159,7 @@ def handle_provider(context: CommandContext, args: str) -> CommandResult:
     if not new_api_key:
         config = get_provider_config(new_provider)
         return ErrorResult(
+            status=ResultStatus.ERROR,
             message=f"API key not configured for {new_provider}",
             error_details=f"{config['api_key_env']} not found in .env file",
             suggestions=["Add the API key to your .env file"]
@@ -248,6 +251,7 @@ def handle_autoroute(context: CommandContext, args: str) -> CommandResult:
         )
     else:
         return ErrorResult(
+            status=ResultStatus.ERROR,
             message=f"Invalid option: {arg}",
             suggestions=["Use /autoroute on or /autoroute off"]
         )
