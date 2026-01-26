@@ -80,13 +80,14 @@ class TestErrorResult:
     def test_basic_error(self):
         """Test basic error without details."""
         result = ErrorResult(
+            status=ResultStatus.ERROR,
             message="Something went wrong"
         )
         assert result.status == ResultStatus.ERROR
         assert result.message == "Something went wrong"
         assert result.failed is True
         assert result.success is False
-        assert result.error_details == ""
+        assert result.error_details is None
         assert result.suggestions == []
 
     def test_error_with_details(self):
@@ -110,6 +111,7 @@ class TestConfirmationResult:
     def test_basic_confirmation(self):
         """Test basic confirmation."""
         result = ConfirmationResult(
+            status=ResultStatus.SUCCESS,
             message="Session saved successfully"
         )
         assert result.status == ResultStatus.SUCCESS
@@ -119,6 +121,7 @@ class TestConfirmationResult:
     def test_confirmation_with_details(self):
         """Test confirmation with details."""
         result = ConfirmationResult(
+            status=ResultStatus.SUCCESS,
             message="Model switched",
             details={
                 "from": "gpt-4",
@@ -136,6 +139,7 @@ class TestAIResponseResult:
     def test_ai_response_with_content(self):
         """Test AI response with markdown content."""
         result = AIResponseResult(
+            status=ResultStatus.SUCCESS,
             message="Analysis complete",
             content="# Code Review\n\n- Good structure\n- Needs tests"
         )
@@ -162,6 +166,7 @@ class TestTableResult:
     def test_basic_table(self):
         """Test table with columns and rows."""
         result = TableResult(
+            status=ResultStatus.INFO,
             message="Session List",
             columns=["ID", "Name", "Created"],
             rows=[
@@ -176,6 +181,7 @@ class TestTableResult:
     def test_empty_table(self):
         """Test empty table."""
         result = TableResult(
+            status=ResultStatus.INFO,
             message="No data",
             columns=[],
             rows=[]
@@ -190,6 +196,7 @@ class TestTreeResult:
     def test_tree_structure(self):
         """Test tree with nested children."""
         result = TreeResult(
+            status=ResultStatus.INFO,
             message="File Tree",
             root={
                 "label": "project",
@@ -213,6 +220,7 @@ class TestListResult:
     def test_list_with_items(self):
         """Test list with icons and badges."""
         result = ListResult(
+            status=ResultStatus.INFO,
             message="Available Models",
             items=[
                 {"icon": "🤖", "text": "GPT-4", "badge": "default"},
@@ -227,6 +235,7 @@ class TestListResult:
     def test_empty_list(self):
         """Test empty list."""
         result = ListResult(
+            status=ResultStatus.INFO,
             message="No items",
             items=[]
         )
@@ -239,6 +248,7 @@ class TestKeyValueResult:
     def test_key_value_pairs(self):
         """Test key-value pairs."""
         result = KeyValueResult(
+            status=ResultStatus.INFO,
             message="Configuration",
             pairs={
                 "provider": "perplexity",
@@ -261,6 +271,7 @@ class TestFileViewResult:
     def test_file_view_with_content(self):
         """Test file view with content."""
         result = FileViewResult(
+            status=ResultStatus.INFO,
             message="main.py",
             filepath="/path/to/main.py",
             content="def hello():\n    print('Hello')",
@@ -287,6 +298,7 @@ class TestImageResult:
     def test_image_result(self):
         """Test image result with metadata."""
         result = ImageResult(
+            status=ResultStatus.INFO,
             message="Matplotlib plot",
             filepath="/path/to/plot.png",
             format="png",
@@ -316,6 +328,7 @@ class TestProgressResult:
     def test_progress_with_percentage(self):
         """Test progress with total."""
         result = ProgressResult(
+            status=ResultStatus.INFO,
             message="Processing files",
             current=50,
             total=100,
@@ -328,6 +341,7 @@ class TestProgressResult:
     def test_progress_without_total(self):
         """Test progress without total."""
         result = ProgressResult(
+            status=ResultStatus.INFO,
             message="Processing",
             current=42,
             total=0
@@ -342,6 +356,7 @@ class TestDiffResult:
     def test_diff_result(self):
         """Test diff with file changes."""
         result = DiffResult(
+            status=ResultStatus.INFO,
             message="Changes to apply",
             summary="2 files changed",
             files=[
@@ -372,6 +387,7 @@ class TestConsentResult:
     def test_consent_request(self):
         """Test consent request."""
         result = ConsentResult(
+            status=ResultStatus.INFO,
             message="Permission Required",
             question="Allow file write?",
             options=["allow", "deny", "allow-session"],
@@ -389,6 +405,7 @@ class TestPromptResult:
     def test_prompt_request(self):
         """Test text input prompt."""
         result = PromptResult(
+            status=ResultStatus.INFO,
             message="Input Required",
             prompt="Enter session name:",
             placeholder="my-session",
@@ -409,6 +426,7 @@ class TestCompositeResult:
     def test_composite_with_multiple_results(self):
         """Test composite result with nested results."""
         result = CompositeResult(
+            status=ResultStatus.INFO,
             message="Analysis Complete",
             results=[
                 NotificationResult(
@@ -416,7 +434,8 @@ class TestCompositeResult:
                     message="Step 1 complete"
                 ),
                 TableResult(
-                    message="Results",
+                    status=ResultStatus.INFO,
+            message="Results",
                     columns=["A", "B"],
                     rows=[["1", "2"]]
                 ),
@@ -434,6 +453,7 @@ class TestCompositeResult:
     def test_empty_composite(self):
         """Test empty composite."""
         result = CompositeResult(
+            status=ResultStatus.INFO,
             message="No results",
             results=[]
         )
@@ -446,6 +466,7 @@ class TestToolExecutionResult:
     def test_successful_tool_execution(self):
         """Test successful tool execution with artifacts."""
         result = ToolExecutionResult(
+            status=ResultStatus.SUCCESS,
             message="Script executed successfully",
             tool_name="run_python",
             duration=1.23,
@@ -458,7 +479,8 @@ class TestToolExecutionResult:
                     format="png"
                 ),
                 TableResult(
-                    message="Data",
+                    status=ResultStatus.INFO,
+            message="Data",
                     columns=["X", "Y"],
                     rows=[["1", "2"]]
                 )
@@ -473,6 +495,7 @@ class TestToolExecutionResult:
     def test_failed_tool_execution(self):
         """Test failed tool execution."""
         result = ToolExecutionResult(
+            status=ResultStatus.SUCCESS,
             message="Script failed",
             tool_name="run_python",
             duration=0.5,
@@ -523,7 +546,7 @@ class TestResultStatusProperties:
             status=ResultStatus.SUCCESS,
             message="OK"
         )
-        error_result = ErrorResult(message="Error")
+        error_result = ErrorResult(status=ResultStatus.ERROR, message="Error")
 
         assert success_result.success is True
         assert error_result.success is False
@@ -531,7 +554,7 @@ class TestResultStatusProperties:
     def test_failed_property(self):
         """Test failed property."""
         success_result = ConfirmationResult(message="OK")
-        error_result = ErrorResult(message="Error")
+        error_result = ErrorResult(status=ResultStatus.ERROR, message="Error")
 
         assert success_result.failed is False
         assert error_result.failed is True
@@ -552,6 +575,7 @@ class TestNestedCompositeResults:
     def test_deeply_nested_composite(self):
         """Test composite containing another composite."""
         nested = CompositeResult(
+            status=ResultStatus.INFO,
             message="Nested analysis",
             results=[
                 CompositeResult(
@@ -564,7 +588,8 @@ class TestNestedCompositeResults:
                     ]
                 ),
                 TableResult(
-                    message="Data",
+                    status=ResultStatus.INFO,
+            message="Data",
                     columns=["A"],
                     rows=[["1"]]
                 )
@@ -592,6 +617,7 @@ class TestMetadataField:
     def test_custom_metadata(self):
         """Test custom metadata."""
         result = TableResult(
+            status=ResultStatus.INFO,
             message="Table",
             columns=["A"],
             rows=[["1"]],

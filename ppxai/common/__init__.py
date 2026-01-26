@@ -10,20 +10,17 @@ Architecture:
 
 Modules:
 - logger: Shared logging system for debugging and observability
-- commands: Command execution (slash commands like /tools, /model, etc.)
 - consent: File editing consent management
 
 Note: EventHandler moved to ppxai.rich.event_handler (Rich TUI specific)
+Note: Command handling moved to ppxai.commands (Command Factory pattern, v1.13.10+)
 """
 
 from ppxai.common.logger import get_logger, Logger
-from ppxai.common.commands import CommandHandler, CommandResult
 from ppxai.common.consent import ConsentManager
 
 __all__ = [
     "get_logger",
     "Logger",
-    "CommandHandler",
-    "CommandResult",
     "ConsentManager",
 ]

@@ -5,8 +5,9 @@ This package contains the original Rich-based TUI implementation.
 Entry point: ppxai.rich.main:main
 
 ISOLATION: This package must NOT import from ppxai.tui.*
+
+Note: main is not imported here to avoid circular dependency with ppxai.commands
+Import directly from ppxai.rich.main when needed.
 """
 
-from .main import main
-
-__all__ = ["main"]
+__all__ = []

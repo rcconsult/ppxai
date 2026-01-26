@@ -16,7 +16,7 @@ from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 
-from ..commands import CommandHandler
+from ..commands.handler import CommandHandler
 from ..config import (
     PROVIDERS,
     get_default_provider,
