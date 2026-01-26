@@ -145,6 +145,51 @@ class PPXAIDEApp(App):
                     status_bar.add_badge("context", "Context", scope_text)
                     self.log.info(f"Bootstrap context loaded: {scope_text}")
 
+        # Add optional status bar badges based on config (Phase 1.2)
+        from ppxai.config import get_tui_config
+        from ppxai.version import __version__
+        from datetime import datetime
+
+        tui_config = get_tui_config()
+
+        # Version badge
+        if tui_config.get("show_version", True):
+            status_bar.add_badge("version", "Version", f"v{__version__}", variant="info")
+
+        # Working directory badge
+        if tui_config.get("show_cwd", True) and self._engine_client:
+            cwd = self._engine_client.get_working_dir()
+            if cwd:
+                # Show abbreviated path (last 2 components)
+                cwd_parts = Path(cwd).parts
+                cwd_display = "/".join(cwd_parts[-2:]) if len(cwd_parts) >= 2 else cwd
+                status_bar.add_badge("cwd", "Dir", cwd_display, variant="info")
+
+        # DateTime badge
+        if tui_config.get("show_datetime", False):
+            now = datetime.now().strftime("%Y-%m-%d %H:%M")
+            status_bar.add_badge("datetime", "Time", now, variant="info")
+
+            # Start timer to update datetime every minute
+            self.set_interval(60, self._update_datetime)
+
+        # Agent mode badge (Phase 1.3)
+        if self._engine_client and self._engine_client.agent_mode:
+            status_bar.add_badge("agent", "Agent", "ACTIVE", variant="success")
+
+            # Checkpoint status badge (Phase 1.3)
+            checkpoint_status = self._engine_client.get_checkpoint_status()
+            if checkpoint_status.get("enabled"):
+                last_checkpoint = checkpoint_status.get("last_checkpoint")
+                is_valid = checkpoint_status.get("is_valid", True)
+                if last_checkpoint:
+                    if not is_valid:
+                        # Stale checkpoint - undo may not work correctly
+                        status_bar.add_badge("checkpoint", "Undo", "↶!", variant="warning")
+                    else:
+                        # Valid checkpoint - undo available
+                        status_bar.add_badge("checkpoint", "Undo", "↶", variant="success")
+
         # Focus the input box and set up autocomplete
         input_box = self.query_one("#input-box", InputBox)
 
@@ -231,6 +276,17 @@ class PPXAIDEApp(App):
             self.log.info(f"Engine initialized: {self._provider}/{self._model}")
         else:
             self.log.warning("Engine not fully initialized - use /provider and /model commands")
+
+    def _update_datetime(self) -> None:
+        """Update datetime badge every minute (Phase 1.2)."""
+        from datetime import datetime
+        from ppxai.config import get_tui_config
+
+        tui_config = get_tui_config()
+        if tui_config.get("show_datetime", False):
+            status_bar = self.query_one(StatusBar)
+            now = datetime.now().strftime("%Y-%m-%d %H:%M")
+            status_bar.update_badge("datetime", now)
 
     async def _check_session_restoration(self) -> None:
         """Check for last session and offer to restore (Phase 7).
@@ -676,12 +732,69 @@ class PPXAIDEApp(App):
                         status_bar = self.query_one(StatusBar)
                         status_bar.update_badge("tools", "ON" if self._tools_enabled else "OFF")
 
+                    # Update agent mode badge (Phase 1.3)
+                    if cmd == "agent" and self._engine_client:
+                        agent_mode = self._engine_client.agent_mode
+                        if agent_mode:
+                            status_bar.add_badge("agent", "Agent", "ACTIVE", variant="success")
+
+                            # Check checkpoint status
+                            checkpoint_status = self._engine_client.get_checkpoint_status()
+                            if checkpoint_status.get("enabled"):
+                                last_checkpoint = checkpoint_status.get("last_checkpoint")
+                                is_valid = checkpoint_status.get("is_valid", True)
+                                if last_checkpoint:
+                                    if not is_valid:
+                                        status_bar.add_badge("checkpoint", "Undo", "↶!", variant="warning")
+                                    else:
+                                        status_bar.add_badge("checkpoint", "Undo", "↶", variant="success")
+                        else:
+                            # Agent mode disabled - remove badges
+                            status_bar.remove_badge("agent")
+                            status_bar.remove_badge("checkpoint")
+
                 # Sync working directory after /cd command
                 if cmd == "cd" and self._engine_client:
                     engine_working_dir = self._engine_client.get_working_dir()
                     if engine_working_dir != self._working_dir:
                         self._working_dir = engine_working_dir
                         self.log.info(f"Working directory synced: {engine_working_dir}")
+
+                # Handle status bar toggle commands (Phase 1.2)
+                if cmd == "status" and args and args.split()[0] in ("version", "cwd", "datetime"):
+                    from ppxai.config import get_tui_config
+                    from ppxai.version import __version__
+                    from datetime import datetime
+
+                    subcommand = args.split()[0]
+                    tui_config = get_tui_config()
+                    status_bar = self.query_one(StatusBar)
+
+                    # Update badge based on new config value
+                    if subcommand == "version":
+                        if tui_config.get("show_version", True):
+                            status_bar.add_badge("version", "Version", f"v{__version__}", variant="info")
+                        else:
+                            status_bar.remove_badge("version")
+
+                    elif subcommand == "cwd":
+                        if tui_config.get("show_cwd", True) and self._engine_client:
+                            cwd = self._engine_client.get_working_dir()
+                            if cwd:
+                                cwd_parts = Path(cwd).parts
+                                cwd_display = "/".join(cwd_parts[-2:]) if len(cwd_parts) >= 2 else cwd
+                                status_bar.add_badge("cwd", "Dir", cwd_display, variant="info")
+                        else:
+                            status_bar.remove_badge("cwd")
+
+                    elif subcommand == "datetime":
+                        if tui_config.get("show_datetime", False):
+                            now = datetime.now().strftime("%Y-%m-%d %H:%M")
+                            status_bar.add_badge("datetime", "Time", now, variant="info")
+                            # Start timer if not already running
+                            self.set_interval(60, self._update_datetime)
+                        else:
+                            status_bar.remove_badge("datetime")
 
             except Exception as e:
                 self.log.error(f"Command error: {cmd} - {e}", exc_info=True)
