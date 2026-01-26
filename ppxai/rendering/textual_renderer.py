@@ -29,6 +29,7 @@ from ..commands.results import (
     ListResult,
     KeyValueResult,
     FileViewResult,
+    MarkdownResult,
     ImageResult,
     ProgressResult,
     DiffResult,
@@ -194,48 +195,77 @@ async def render_ai_response(renderer: TextualRenderer, result: AIResponseResult
 
 @TextualRenderer.register(TableResult)
 async def render_table(renderer: TextualRenderer, result: TableResult) -> None:
-    """Render table with DataTable widget in side panel."""
+    """Render table with TableViewer widget in side panel (supports Ctrl+V toggle)."""
+    from pathlib import Path
+
     chat_view = renderer._get_chat_view()
 
     if not result.columns:
         chat_view.add_system_message("[dim]No data to display[/dim]")
         return
 
-    # Create DataTable widget
-    table = DataTable()
-    table.add_columns(*result.columns)
+    # Use metadata for file path and content (enables source toggle)
+    filepath = result.metadata.get("filepath", "data.csv") if result.metadata else "data.csv"
+    content = result.metadata.get("content", "") if result.metadata else ""
 
-    for row in result.rows:
-        table.add_row(*[str(cell) for cell in row])
+    # If we have filepath and content, use show_file_in_panel which uses TableViewer
+    # TableViewer has Ctrl+V toggle between table and source view
+    if content:
+        await renderer.app.show_file_in_panel(
+            Path(filepath),
+            content,
+            mode="table",
+            read_only=True
+        )
+    else:
+        # Fallback: create raw DataTable widget (no source toggle)
+        table = DataTable()
+        table.add_columns(*result.columns)
+        for row in result.rows:
+            table.add_row(*[str(cell) for cell in row])
+        await renderer.app.show_widget_in_panel(table, title=result.message)
 
-    # Show in side panel
-    await renderer.app.show_widget_in_panel(table, title=result.message)
-    chat_view.add_system_message(f"[dim]{result.message} (opened in side panel)[/dim]")
+    chat_view.add_system_message(f"[dim]{result.message} (opened in side panel, Ctrl+V for source)[/dim]")
 
 
 @TextualRenderer.register(TreeResult)
 async def render_tree(renderer: TextualRenderer, result: TreeResult) -> None:
-    """Render tree in side panel."""
+    """Render tree with DataViewer widget in side panel (supports Ctrl+V toggle)."""
+    from pathlib import Path
+
     chat_view = renderer._get_chat_view()
 
     if not result.root:
         chat_view.add_system_message("[dim]No tree data[/dim]")
         return
 
-    # Create Tree widget
-    tree = Tree(result.root.get("label", "Root"))
+    # Use metadata for file path and content (enables source toggle)
+    filepath = result.metadata.get("filepath", "data.json") if result.metadata else "data.json"
+    content = result.metadata.get("content", "") if result.metadata else ""
 
-    def add_children(node, data):
-        for child in data.get("children", []):
-            child_node = node.add(child.get("label", ""))
-            if "children" in child:
-                add_children(child_node, child)
+    # If we have filepath and content, use show_file_in_panel which uses DataViewer
+    # DataViewer has Ctrl+V toggle between tree and source view
+    if content:
+        await renderer.app.show_file_in_panel(
+            Path(filepath),
+            content,
+            mode="tree",
+            read_only=True
+        )
+    else:
+        # Fallback: create raw Tree widget (no source toggle)
+        tree = Tree(result.root.get("label", "Root"))
 
-    add_children(tree, result.root)
+        def add_children(node, data):
+            for child in data.get("children", []):
+                child_node = node.add(child.get("label", ""))
+                if "children" in child:
+                    add_children(child_node, child)
 
-    # Show in side panel
-    await renderer.app.show_widget_in_panel(tree, title=result.message)
-    chat_view.add_system_message(f"[dim]{result.message} (opened in side panel)[/dim]")
+        add_children(tree.root, result.root)
+        await renderer.app.show_widget_in_panel(tree, title=result.message)
+
+    chat_view.add_system_message(f"[dim]{result.message} (opened in side panel, Ctrl+V for source)[/dim]")
 
 
 @TextualRenderer.register(ListResult)
@@ -310,6 +340,28 @@ async def render_file_view(renderer: TextualRenderer, result: FileViewResult) ->
     )
 
     chat_view.add_system_message(f"[dim]{result.message}[/dim]")
+
+
+@TextualRenderer.register(MarkdownResult)
+async def render_markdown(renderer: TextualRenderer, result: MarkdownResult) -> None:
+    """Render markdown in Markdown widget in side panel."""
+    from pathlib import Path
+
+    chat_view = renderer._get_chat_view()
+
+    if not result.content:
+        chat_view.add_system_message(f"[dim]File: {result.filepath}[/dim]")
+        return
+
+    # Show in side panel using show_file_in_panel with markdown mode
+    await renderer.app.show_file_in_panel(
+        Path(result.filepath),
+        result.content,
+        mode="markdown",
+        read_only=True
+    )
+
+    chat_view.add_system_message(f"[dim]{result.message} (opened in side panel)[/dim]")
 
 
 @TextualRenderer.register(ImageResult)

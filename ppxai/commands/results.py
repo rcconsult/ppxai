@@ -289,6 +289,28 @@ class FileViewResult(CommandResult):
 
 
 @dataclass
+class MarkdownResult(CommandResult):
+    """Markdown content for rich rendering.
+
+    Used for: README files, documentation, release notes, AGENTS.md
+
+    Rendering:
+    - Rich: Rich Markdown widget
+    - Textual: Markdown widget in side panel with proper formatting
+
+    Example:
+        MarkdownResult(
+            status=ResultStatus.SUCCESS,
+            message="Displaying README.md",
+            filepath="/path/to/README.md",
+            content="# Title\\n\\nSome **bold** text..."
+        )
+    """
+    filepath: str = ""
+    content: str = ""
+
+
+@dataclass
 class ImageResult(CommandResult):
     """Image display result for plots, charts, generated images.
 
@@ -529,6 +551,7 @@ __all__ = [
     "KeyValueResult",
     # File & Media
     "FileViewResult",
+    "MarkdownResult",
     "ImageResult",
     # Operations
     "ProgressResult",

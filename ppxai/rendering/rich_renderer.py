@@ -31,6 +31,7 @@ from ..commands.results import (
     ListResult,
     KeyValueResult,
     FileViewResult,
+    MarkdownResult,
     ImageResult,
     ProgressResult,
     DiffResult,
@@ -224,6 +225,19 @@ def render_file_view(result: FileViewResult) -> None:
         highlight_lines={result.line_highlight} if result.line_highlight else set()
     )
     console.print(syntax)
+
+
+@RichRenderer.register(MarkdownResult)
+def render_markdown(result: MarkdownResult) -> None:
+    """Render markdown with rich formatting."""
+    if result.message:
+        console.print(f"[bold]{result.message}[/bold]\n")
+
+    if result.content:
+        md = Markdown(result.content)
+        console.print(md)
+    else:
+        console.print(f"[dim]File: {result.filepath}[/dim]")
 
 
 @RichRenderer.register(ImageResult)

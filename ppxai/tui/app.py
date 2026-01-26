@@ -682,12 +682,8 @@ class PPXAIDEApp(App):
                 )
             return
 
-        # TUI-specific commands (fallback)
-        # File operations (side panel with multiple rendering modes)
-        if cmd == "show":
-            # Display file with advanced rendering (tree, table, image, markdown, code)
-            await local_commands.cmd_show(self, args)
-        elif cmd == "edit":
+        # TUI-specific commands (fallback for commands not in factory)
+        if cmd == "edit":
             # Edit file in side panel with syntax highlighting
             await local_commands.cmd_edit(self, args)
         # Clipboard operations

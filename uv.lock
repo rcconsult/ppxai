@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -1314,6 +1314,7 @@ dependencies = [
     { name = "prompt-toolkit" },
     { name = "pyperclip" },
     { name = "python-dotenv" },
+    { name = "python-magic" },
     { name = "rich" },
     { name = "tree-sitter" },
     { name = "tree-sitter-bash" },
@@ -1391,6 +1392,7 @@ requires-dist = [
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.21.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "python-hcl2", marker = "extra == 'data'", specifier = ">=4.3" },
+    { name = "python-magic", specifier = ">=0.4.27" },
     { name = "pyyaml", marker = "extra == 'data'", specifier = ">=6.0" },
     { name = "rich", specifier = ">=13.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
@@ -1775,6 +1777,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/50/8e/f82ed407a10c2dd4228ff0fceec8a16dd6a9191a2ed119233c04dccf2ca4/python_hcl2-7.3.1.tar.gz", hash = "sha256:f8f55583703daf7bbcb595a33c68de891064d565974ea39998b81d15a4c4657b", size = 35352, upload-time = "2025-07-24T12:33:49.883Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/99/56/8f6418645fee59dd7a85a6e155d13ebf07608edc98965b211b0ed86ef35a/python_hcl2-7.3.1-py3-none-any.whl", hash = "sha256:6bf6036d3dffac04e05e6aa58ff6e9a3710bba2171325584dfd7b3f8c99c6d4d", size = 22426, upload-time = "2025-07-24T12:33:49.015Z" },
+]
+
+[[package]]
+name = "python-magic"
+version = "0.4.27"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/da/db/0b3e28ac047452d079d375ec6798bf76a036a08182dbb39ed38116a49130/python-magic-0.4.27.tar.gz", hash = "sha256:c1ba14b08e4a5f5c31a302b7721239695b2f0f058d125bd5ce1ee36b9d9d3c3b", size = 14677, upload-time = "2022-06-07T20:16:59.508Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6c/73/9f872cb81fc5c3bb48f7227872c28975f998f3e7c2b1c16e95e6432bbb90/python_magic-0.4.27-py2.py3-none-any.whl", hash = "sha256:c212960ad306f700aa0d01e5d7a325d20548ff97eb9920dcd29513174f0294d3", size = 13840, upload-time = "2022-06-07T20:16:57.763Z" },
 ]
 
 [[package]]

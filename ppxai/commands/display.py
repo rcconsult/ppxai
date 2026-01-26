@@ -4,13 +4,16 @@ Display commands - file viewing and content display.
 Commands for displaying file contents with syntax highlighting and data rendering.
 
 v1.13.10: Migrated to Command Factory pattern
-v1.15.0: Migrated to type-based renderer dispatch
+v1.15.0: Migrated to type-based renderer dispatch with file type detection
 """
 
+import csv
+import io
+import json
 import re
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
@@ -19,7 +22,17 @@ from .results import (
     CommandResult,
     ErrorResult,
     FileViewResult,
+    ImageResult,
+    MarkdownResult,
+    TableResult,
     TextResult,
+    TreeResult,
+)
+from ppxai.common.file_type import (
+    FileType,
+    detect_file_type,
+    get_view_mode,
+    get_language_for_extension,
 )
 
 if TYPE_CHECKING:
@@ -110,14 +123,21 @@ def _search_files(handler: "CommandHandler", query: str, max_results: int = 10) 
 # =============================================================================
 
 def handle_show(context: CommandContext, args: str) -> CommandResult:
-    """Handle /show command - display file contents.
+    """Handle /show command - display file contents with appropriate viewer.
+
+    Returns the correct typed result based on file type detection:
+    - JSON/YAML/TOML/HCL -> TreeResult (tree viewer)
+    - CSV/TSV -> TableResult (table viewer)
+    - Markdown -> MarkdownResult (markdown viewer)
+    - Images -> ImageResult (image viewer)
+    - Code/Text -> FileViewResult (code editor)
 
     Args:
         context: Command context providing access to engine client
-        args: Filepath and optional flags
+        args: Filepath and optional flags (--source to force code view)
 
     Returns:
-        FileViewResult for file contents, ErrorResult on failure
+        Appropriate typed result for the file type, ErrorResult on failure
     """
     if not context.engine_client:
         return ErrorResult(
@@ -128,24 +148,22 @@ def handle_show(context: CommandContext, args: str) -> CommandResult:
     if not args.strip():
         return ErrorResult(
             status=ResultStatus.ERROR,
-            message="Usage: /show <filepath> [--source|--rendered]",
+            message="Usage: /show <filepath> [--source]",
             suggestions=[
-                "/show README.md",
-                "/show data.csv              # Rendered as table",
-                "/show data.csv --source     # Raw CSV syntax",
-                "/show config.json           # Rendered as tree",
-                "/show @architecture         # Search for files"
+                "/show README.md           # Rendered markdown",
+                "/show config.json         # Tree viewer",
+                "/show data.csv            # Table viewer",
+                "/show data.csv --source   # Raw source code view",
+                "/show main.py             # Syntax highlighted code"
             ]
         )
 
     # Parse flags
     show_source = '--source' in args or '--raw' in args
-    show_rendered = '--rendered' in args
-    interactive = '--interactive' in args or '-i' in args
 
     # Remove flags from args
     query = args
-    for flag in ['--source', '--raw', '--rendered', '--interactive', '-i']:
+    for flag in ['--source', '--raw']:
         query = query.replace(flag, '')
     query = query.strip()
 
@@ -157,21 +175,19 @@ def handle_show(context: CommandContext, args: str) -> CommandResult:
     # Get working directory
     working_dir = Path(context.engine_client.get_working_dir())
 
-    # Check if it's a direct path first
+    # Resolve path
     direct_path = Path(query).expanduser()
     if not direct_path.is_absolute():
         direct_path = working_dir / query
 
-    if direct_path.exists() and direct_path.is_file():
-        path = direct_path.resolve()
-    else:
-        # Note: For simplicity in v2, we don't implement file search
-        # The renderer can delegate to the old handler if needed
+    if not direct_path.exists():
         return ErrorResult(
             status=ResultStatus.ERROR,
             message=f"File not found: {query}",
             suggestions=["Use exact path to file"]
         )
+
+    path = direct_path.resolve()
 
     if not path.is_file():
         return ErrorResult(
@@ -179,43 +195,34 @@ def handle_show(context: CommandContext, args: str) -> CommandResult:
             message=f"Not a file: {query}"
         )
 
-    try:
-        content = path.read_text(encoding='utf-8')
+    # Detect file type using magic + extension fallback
+    file_type = detect_file_type(path)
+    size_kb = path.stat().st_size / 1024
 
-        # Detect language from extension
-        ext_to_lang = {
-            '.py': 'python', '.js': 'javascript', '.ts': 'typescript',
-            '.json': 'json', '.yaml': 'yaml', '.yml': 'yaml',
-            '.md': 'markdown', '.html': 'html', '.css': 'css',
-            '.sh': 'bash', '.bash': 'bash', '.zsh': 'bash',
-            '.rs': 'rust', '.go': 'go', '.java': 'java',
-            '.c': 'c', '.cpp': 'cpp', '.h': 'c', '.hpp': 'cpp',
-            '.rb': 'ruby', '.php': 'php', '.sql': 'sql',
-            '.xml': 'xml', '.toml': 'toml', '.ini': 'ini',
-            '.csv': 'text', '.tsv': 'text', '.hcl': 'hcl', '.tf': 'hcl',
-        }
-        lang = ext_to_lang.get(path.suffix.lower(), 'text')
-
-        # Return FileViewResult - renderer will handle syntax highlighting
-        return FileViewResult(
+    # Handle images (binary) - return ImageResult
+    if file_type == FileType.IMAGE:
+        return ImageResult(
             status=ResultStatus.SUCCESS,
-            message=f"Displaying {path.name}",
+            message=f"Displaying {path.name} ({size_kb:.1f} KB)",
             filepath=str(path),
-            content=content,
-            language=lang,
-            metadata={
-                "size_kb": path.stat().st_size / 1024,
-                "lines": len(content.split('\n')),
-                "show_source": show_source,
-                "show_rendered": show_rendered,
-                "interactive": interactive
-            }
+            format=path.suffix.lower().lstrip('.'),
+            metadata={"size_kb": size_kb}
         )
 
+    # Handle binary files
+    if file_type == FileType.BINARY:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=f"Cannot display binary file: {path.name}"
+        )
+
+    # Read text content
+    try:
+        content = path.read_text(encoding='utf-8')
     except UnicodeDecodeError:
         return ErrorResult(
             status=ResultStatus.ERROR,
-            message=f"Cannot display binary file: {query}"
+            message=f"Cannot read file as text: {path.name}"
         )
     except Exception as e:
         return ErrorResult(
@@ -223,6 +230,202 @@ def handle_show(context: CommandContext, args: str) -> CommandResult:
             message=f"Error reading file: {e}",
             error_details=str(e)
         )
+
+    lines = len(content.split('\n'))
+    lang = get_language_for_extension(path.suffix) or 'text'
+
+    # If --source flag, force code view regardless of file type
+    if show_source:
+        return FileViewResult(
+            status=ResultStatus.SUCCESS,
+            message=f"Displaying {path.name} ({size_kb:.1f} KB, {lines} lines) [source]",
+            filepath=str(path),
+            content=content,
+            language=lang,
+            read_only=True,
+            metadata={"size_kb": size_kb, "lines": lines}
+        )
+
+    # Return typed result based on detected file type
+    if file_type == FileType.MARKDOWN:
+        return MarkdownResult(
+            status=ResultStatus.SUCCESS,
+            message=f"Displaying {path.name} ({size_kb:.1f} KB, {lines} lines)",
+            filepath=str(path),
+            content=content,
+            metadata={"size_kb": size_kb, "lines": lines}
+        )
+
+    elif file_type in (FileType.JSON, FileType.YAML, FileType.TOML, FileType.HCL):
+        # Parse structured data and return TreeResult
+        parsed = _parse_structured_data(content, file_type)
+        if parsed is not None:
+            return TreeResult(
+                status=ResultStatus.SUCCESS,
+                message=f"Displaying {path.name} ({size_kb:.1f} KB)",
+                root=_dict_to_tree(parsed, path.name),
+                metadata={
+                    "size_kb": size_kb,
+                    "filepath": str(path),
+                    "content": content,  # Keep original for source toggle
+                    "language": lang
+                }
+            )
+        else:
+            # Parse failed, fall back to code view
+            return FileViewResult(
+                status=ResultStatus.WARNING,
+                message=f"Displaying {path.name} (parse error, showing source)",
+                filepath=str(path),
+                content=content,
+                language=lang,
+                read_only=True,
+                metadata={"size_kb": size_kb, "lines": lines}
+            )
+
+    elif file_type in (FileType.CSV, FileType.TSV):
+        # Parse tabular data and return TableResult
+        columns, rows = _parse_tabular_data(content, file_type)
+        if columns and rows:
+            return TableResult(
+                status=ResultStatus.SUCCESS,
+                message=f"Displaying {path.name} ({len(rows)} rows, {len(columns)} columns)",
+                columns=columns,
+                rows=rows,
+                metadata={
+                    "size_kb": size_kb,
+                    "filepath": str(path),
+                    "content": content,  # Keep original for source toggle
+                }
+            )
+        else:
+            # Parse failed, fall back to code view
+            return FileViewResult(
+                status=ResultStatus.WARNING,
+                message=f"Displaying {path.name} (parse error, showing source)",
+                filepath=str(path),
+                content=content,
+                language='text',
+                read_only=True,
+                metadata={"size_kb": size_kb, "lines": lines}
+            )
+
+    else:
+        # Code/Text - return FileViewResult
+        return FileViewResult(
+            status=ResultStatus.SUCCESS,
+            message=f"Displaying {path.name} ({size_kb:.1f} KB, {lines} lines)",
+            filepath=str(path),
+            content=content,
+            language=lang,
+            read_only=True,
+            metadata={"size_kb": size_kb, "lines": lines}
+        )
+
+
+def _parse_structured_data(content: str, file_type: FileType) -> Optional[Dict[str, Any]]:
+    """Parse structured data content into a dictionary.
+
+    Args:
+        content: File content
+        file_type: Detected file type
+
+    Returns:
+        Parsed dictionary or None if parsing fails
+    """
+    try:
+        if file_type == FileType.JSON:
+            return json.loads(content)
+
+        elif file_type == FileType.YAML:
+            try:
+                import yaml
+                return yaml.safe_load(content)
+            except ImportError:
+                return None
+
+        elif file_type == FileType.TOML:
+            try:
+                import tomllib
+            except ImportError:
+                try:
+                    import tomli as tomllib
+                except ImportError:
+                    return None
+            return tomllib.loads(content)
+
+        elif file_type == FileType.HCL:
+            try:
+                import hcl2
+                return hcl2.loads(content)
+            except ImportError:
+                return None
+
+    except Exception:
+        return None
+
+    return None
+
+
+def _dict_to_tree(data: Any, label: str = "root") -> Dict[str, Any]:
+    """Convert a dictionary/list to tree structure for TreeResult.
+
+    Args:
+        data: Data to convert (dict, list, or scalar)
+        label: Label for this node
+
+    Returns:
+        Tree node dictionary with 'label' and 'children' keys
+    """
+    if isinstance(data, dict):
+        children = []
+        for key, value in data.items():
+            children.append(_dict_to_tree(value, str(key)))
+        return {"label": label, "children": children}
+
+    elif isinstance(data, list):
+        children = []
+        for i, item in enumerate(data):
+            children.append(_dict_to_tree(item, f"[{i}]"))
+        return {"label": f"{label} ({len(data)} items)", "children": children}
+
+    else:
+        # Scalar value
+        value_str = str(data)
+        if len(value_str) > 50:
+            value_str = value_str[:47] + "..."
+        return {"label": f"{label}: {value_str}", "children": []}
+
+
+def _parse_tabular_data(content: str, file_type: FileType) -> tuple:
+    """Parse tabular data content into columns and rows.
+
+    Args:
+        content: File content
+        file_type: CSV or TSV
+
+    Returns:
+        Tuple of (columns, rows) or ([], []) if parsing fails
+    """
+    try:
+        delimiter = '\t' if file_type == FileType.TSV else ','
+        reader = csv.reader(io.StringIO(content), delimiter=delimiter)
+        rows_list = list(reader)
+
+        if not rows_list:
+            return [], []
+
+        # First row is headers
+        columns = rows_list[0]
+        rows = rows_list[1:]
+
+        # Convert all values to strings
+        rows = [[str(cell) for cell in row] for row in rows]
+
+        return columns, rows
+
+    except Exception:
+        return [], []
 
 
 # =============================================================================

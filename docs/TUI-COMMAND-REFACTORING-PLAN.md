@@ -1603,6 +1603,40 @@ async def test_textual_save_command():
 
 ---
 
+## Known Issues / Future Improvements
+
+### 1. Word Wrap for Narrow Terminal Views
+**Status:** TODO
+**Priority:** Medium
+**Context:** When running TUI in narrow terminal windows (e.g., VSCode sidebar terminal), table columns and long text get truncated instead of wrapping.
+
+**Affected areas:**
+- Tool list table in side panel (descriptions cut off)
+- Help text tables
+- Status bar badges
+- Any DataTable-based rendering
+
+**Potential solutions:**
+- Detect terminal width and adjust column widths dynamically
+- Enable word wrap in DataTable cells for narrow views
+- Consider responsive breakpoints (full view vs compact view)
+- Truncate with ellipsis + tooltip on hover (if supported)
+
+### 2. N:1 Renderer Dispatch for File Types
+**Status:** Design decision needed
+**Priority:** High
+**Context:** `/show` and `/edit` commands need different widgets based on file type (markdown→Markdown widget, json→TreeViewer, csv→TableViewer, code→CodeEditor), but the current architecture uses 1:1 type-based dispatch (`FileViewResult` → single renderer).
+
+**Options under consideration:**
+1. **Multiple typed results** - `MarkdownViewResult`, `TreeViewResult`, `TableViewResult`, `CodeViewResult`
+2. **Render hint field** - Add `render_mode: str` to `FileViewResult`
+3. **Keep as TUI-specific** - Don't route `/show`/`/edit` through command factory for TUI
+4. **Composite results** - `FileViewResult` wraps content-specific inner types
+
+**Current workaround:** TUI-specific handlers in `tui/commands.py` bypass command factory for proper widget selection.
+
+---
+
 ## Questions for Approval
 
 1. **CommandResult structure:** Is the proposed structure sufficient, or do you need additional fields?

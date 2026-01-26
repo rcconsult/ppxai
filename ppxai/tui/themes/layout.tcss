@@ -383,6 +383,28 @@ SidePanel Markdown {
     background: $background;
 }
 
+/* Markdown element styling for SidePanel */
+SidePanel Markdown H1 {
+    color: $primary;
+    text-style: bold;
+}
+
+SidePanel Markdown H2 {
+    color: $secondary;
+    text-style: bold;
+}
+
+SidePanel Markdown H3, SidePanel Markdown H4 {
+    color: $accent;
+    text-style: bold;
+}
+
+SidePanel Markdown MarkdownFence {
+    background: $surface;
+    border: round $primary;
+    margin: 1 0;
+}
+
 /* Image info panel */
 SidePanel #panel-image-center {
     height: 1fr;
