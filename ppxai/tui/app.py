@@ -338,7 +338,7 @@ class PPXAIDEApp(App):
                 )
 
                 if response == "yes":
-                    if self._restore_session(session_name, last_state):
+                    if await self._restore_session(session_name, last_state):
                         chat_view.add_system_message(
                             f"⚠ [yellow]Session recovered:[/yellow] {session_name} ({message_count} messages)\n"
                             f"[dim]Provider: {provider_info}, Tools: {tools_info}[/dim]"
@@ -358,7 +358,7 @@ class PPXAIDEApp(App):
 
             # Auto-restore if configured
             if auto_restore == "always":
-                if self._restore_session(session_name, last_state):
+                if await self._restore_session(session_name, last_state):
                     chat_view.add_system_message(
                         f"✓ [green]Session restored:[/green] {session_name} ({message_count} messages)\n"
                         f"[dim]Provider: {provider_info}, Tools: {tools_info}[/dim]"
@@ -381,7 +381,7 @@ class PPXAIDEApp(App):
                 )
 
                 if response == "yes":
-                    if self._restore_session(session_name, last_state):
+                    if await self._restore_session(session_name, last_state):
                         chat_view.add_system_message(
                             f"✓ [green]Session restored:[/green] {session_name} ({message_count} messages)\n"
                             f"[dim]Provider: {provider_info}, Tools: {tools_info}[/dim]"
@@ -393,8 +393,8 @@ class PPXAIDEApp(App):
         except Exception as e:
             self.log.error(f"Error checking session restoration: {e}", exc_info=True)
 
-    def _restore_session(self, session_name: str, session_state: dict) -> bool:
-        """Restore a session with provider, model, and tools state.
+    async def _restore_session(self, session_name: str, session_state: dict) -> bool:
+        """Restore a session with provider, model, and tools state (async for Textual).
 
         Args:
             session_name: Name of session to load
@@ -808,11 +808,14 @@ class PPXAIDEApp(App):
         if spec:
             try:
                 # Call command handler with context
+                self.log.debug(f"Calling handler for command: {cmd} with args: {args}")
                 result = spec.handler(self, args)
+                self.log.debug(f"Handler returned: {type(result).__name__}")
 
                 # Check if result is a coroutine (async handler)
                 import inspect
                 if inspect.iscoroutine(result):
+                    self.log.debug(f"Handler returned coroutine, awaiting it")
                     result = await result
 
                 # Render result if it's a CommandResult type
