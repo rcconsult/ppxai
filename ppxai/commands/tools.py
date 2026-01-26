@@ -488,6 +488,7 @@ def handle_tools(context: CommandContext, args: str) -> CommandResult:
     """
     if not context.get_tools_available():
         return ErrorResult(
+            status=ResultStatus.ERROR,
             message="Tool support not available",
             error_details="Missing dependencies",
             suggestions=["Check docs/TOOL_CREATION_GUIDE.md"]
@@ -513,6 +514,7 @@ def handle_tools(context: CommandContext, args: str) -> CommandResult:
         return _tools_agent_v2(context, subargs)
     else:
         return ErrorResult(
+            status=ResultStatus.ERROR,
             message=f"Unknown subcommand: {subcommand}",
             suggestions=[
                 "Available subcommands: on, off, list, status, config, set, agent"
@@ -692,6 +694,7 @@ def _tools_config_v2(context: CommandContext, args: List[str]) -> CommandResult:
 
     if len(args) < 2:
         return ErrorResult(
+            status=ResultStatus.ERROR,
             message="Usage: /tools config <setting> <value>",
             suggestions=["Available settings: max_iterations, auto_retry_empty"]
         )
@@ -704,6 +707,7 @@ def _tools_config_v2(context: CommandContext, args: List[str]) -> CommandResult:
             num = int(value)
             if num < 1 or num > 50:
                 return ErrorResult(
+                    status=ResultStatus.ERROR,
                     message="max_iterations must be between 1 and 50"
                 )
             context.engine_client.set_tool_config("max_iterations", num)
@@ -719,6 +723,7 @@ def _tools_config_v2(context: CommandContext, args: List[str]) -> CommandResult:
             num = int(value)
             if num < 0 or num > 5:
                 return ErrorResult(
+                    status=ResultStatus.ERROR,
                     message="auto_retry_empty must be between 0 and 5"
                 )
             context.engine_client.set_tool_config("auto_retry_empty", num)
@@ -732,6 +737,7 @@ def _tools_config_v2(context: CommandContext, args: List[str]) -> CommandResult:
             return ErrorResult(status=ResultStatus.ERROR, message=f"Invalid number: {value}")
     else:
         return ErrorResult(
+            status=ResultStatus.ERROR,
             message=f"Unknown setting: {setting}",
             suggestions=["Available settings: max_iterations, auto_retry_empty"]
         )
@@ -753,6 +759,7 @@ def _tools_set_v2(context: CommandContext, args: List[str]) -> CommandResult:
 
     if len(args) < 2:
         return ErrorResult(
+            status=ResultStatus.ERROR,
             message="Usage: /tools set <setting> <value>",
             suggestions=["Available setting: verbose"]
         )
@@ -777,11 +784,13 @@ def _tools_set_v2(context: CommandContext, args: List[str]) -> CommandResult:
             )
         else:
             return ErrorResult(
+                status=ResultStatus.ERROR,
                 message=f"Invalid value: {value}",
                 suggestions=["Use: on, off, true, false, 1, 0, yes, or no"]
             )
     else:
         return ErrorResult(
+            status=ResultStatus.ERROR,
             message=f"Unknown setting: {setting}",
             suggestions=["Available setting: verbose"]
         )
@@ -821,6 +830,7 @@ def _tools_agent_v2(context: CommandContext, args: List[str]) -> CommandResult:
         )
     else:
         return ErrorResult(
+            status=ResultStatus.ERROR,
             message=f"Unknown action: {action}",
             suggestions=["Usage: /tools agent on|off"]
         )
@@ -879,6 +889,7 @@ def handle_usage(context: CommandContext, args: str) -> CommandResult:
         valid_modes = {"session", "provider", "model", "off"}
         if mode not in valid_modes:
             return ErrorResult(
+                status=ResultStatus.ERROR,
                 message=f"Invalid mode: {mode}",
                 suggestions=[f"Valid modes: {', '.join(valid_modes)}"]
             )
@@ -908,6 +919,7 @@ def handle_usage(context: CommandContext, args: str) -> CommandResult:
 
     else:
         return ErrorResult(
+            status=ResultStatus.ERROR,
             message=f"Unknown sub-command: {sub_command}",
             suggestions=["Available: 24h, week, month, year, all, show, reset"]
         )
