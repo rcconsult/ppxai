@@ -14,6 +14,7 @@ from ppxai.tui.widgets.image_viewer import ImageViewer
 from ppxai.tui.widgets.table_viewer import TableViewer
 from ppxai.tui.widgets.split_pane import SplitPane, Pane, HorizontalSplit, VerticalSplit
 from ppxai.tui.widgets.side_panel import SidePanel
+from ppxai.tui.widgets.dialog import ConsentDialog, PromptDialog, MessageDialog
 
 __all__ = [
     # Base classes
@@ -33,4 +34,8 @@ __all__ = [
     "HorizontalSplit",
     "VerticalSplit",
     "SidePanel",
+    # Dialogs
+    "ConsentDialog",
+    "PromptDialog",
+    "MessageDialog",
 ]

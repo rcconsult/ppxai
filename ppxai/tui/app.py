@@ -48,7 +48,7 @@ class PPXAIDEApp(App):
     TITLE = "ppxaide"
     SUB_TITLE = "AI Assistant"
 
-    CSS_PATH = "themes/layout.tcss"
+    CSS_PATH = ["themes/layout.tcss", "themes/dialog.tcss"]
 
     BINDINGS = [
         Binding("ctrl+c", "quit", "Quit", show=True),
@@ -173,7 +173,8 @@ class PPXAIDEApp(App):
         chat_view.add_system_message(welcome_msg)
 
         # Check for session restoration (Phase 7) - after welcome message
-        self._check_session_restoration()
+        # Schedule as async task since we may show modal dialog
+        self.call_later(self._check_session_restoration)
 
     def _initialize_engine(self) -> None:
         """Initialize the engine client (Phase 6.1).
@@ -222,10 +223,10 @@ class PPXAIDEApp(App):
         else:
             self.log.warning("Engine not fully initialized - use /provider and /model commands")
 
-    def _check_session_restoration(self) -> None:
+    async def _check_session_restoration(self) -> None:
         """Check for last session and offer to restore (Phase 7).
 
-        Displays a system message if a previous session is available.
+        Shows interactive modal dialog if auto_restore is "prompt".
         Auto-restores if config says 'always'.
         """
         try:
@@ -235,6 +236,7 @@ class PPXAIDEApp(App):
 
             from ppxai.config import get_auto_restore_mode
             from ppxai.engine.session import SessionManager
+            from ppxai.tui.widgets.dialog import ConsentDialog
 
             # Get last session state
             last_state = SessionManager.get_last_session_state()
@@ -267,16 +269,32 @@ class PPXAIDEApp(App):
                     self.log.info(f"Auto-restored session: {session_name}")
                 return
 
-            # Show notification about available session (prompt mode or default)
+            # Show interactive prompt for "prompt" mode
             if auto_restore != "never":
                 provider_info = last_state.get("provider", "unknown")
                 tools_info = "ON" if last_state.get("tools_enabled") else "OFF"
+
                 self.log.info(f"Showing session restoration prompt for {session_name}")
-                chat_view.add_system_message(
-                    f"[cyan]↻ Last session available:[/cyan] {session_name}\n"
-                    f"[dim]  {message_count} messages, Provider: {provider_info}, Tools: {tools_info}[/dim]\n"
-                    f"[dim]  Use [bold]/load {session_name}[/bold] to restore[/dim]"
+
+                # Show modal dialog
+                response = await self.push_screen_wait(
+                    ConsentDialog(
+                        title="Session Restoration",
+                        message=f"Last session: {session_name}",
+                        question=f"{message_count} messages, Provider: {provider_info}, Tools: {tools_info}\n\nRestore this session?",
+                        options=["Yes", "No"]
+                    )
                 )
+
+                if response == "yes":
+                    if self._restore_session(session_name, last_state):
+                        chat_view.add_system_message(
+                            f"[green]✓ Session restored:[/green] {session_name} ({message_count} messages)"
+                        )
+                        self.log.info(f"User chose to restore session: {session_name}")
+                else:
+                    self.log.info("User declined session restoration")
+
         except Exception as e:
             self.log.error(f"Error checking session restoration: {e}", exc_info=True)
 

@@ -1,0 +1,61 @@
+/* Modal Dialog Styles */
+
+/* Dialog container - centered modal */
+#dialog-container {
+    width: 60;
+    height: auto;
+    min-height: 15;
+    max-height: 30;
+    background: $surface;
+    border: thick $primary;
+    padding: 1 2;
+    margin: 1;
+}
+
+/* Dialog title */
+#dialog-title {
+    color: $primary;
+    text-style: bold;
+    height: 1;
+    margin-bottom: 1;
+    text-align: center;
+}
+
+/* Dialog message */
+#dialog-message {
+    color: $text;
+    height: auto;
+    margin-bottom: 1;
+}
+
+/* Dialog question */
+#dialog-question {
+    color: $text;
+    text-style: bold;
+    height: auto;
+    margin-bottom: 1;
+}
+
+/* Input field in dialogs */
+#prompt-input {
+    width: 100%;
+    height: 3;
+    margin-bottom: 1;
+}
+
+/* Button container */
+#dialog-buttons {
+    height: 3;
+    width: 100%;
+    align: center middle;
+}
+
+#dialog-buttons Button {
+    min-width: 12;
+    margin: 0 1;
+}
+
+/* Backdrop for modal */
+ConsentDialog, PromptDialog, MessageDialog {
+    align: center middle;
+}

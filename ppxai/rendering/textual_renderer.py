@@ -356,33 +356,41 @@ async def render_diff(renderer: TextualRenderer, result: DiffResult) -> None:
 
 @TextualRenderer.register(ConsentResult)
 async def render_consent(renderer: TextualRenderer, result: ConsentResult) -> None:
-    """Render consent request (future: modal dialog)."""
-    chat_view = renderer._get_chat_view()
+    """Render consent request with modal dialog."""
+    from ..tui.widgets.dialog import ConsentDialog
 
-    # TODO: Implement modal dialog with buttons
-    # For Phase 1, just show in chat
-    msg = f"[bold yellow]{result.message}[/bold yellow]\n"
-    msg += f"{result.question}\n"
-    msg += f"Options: {', '.join(result.options)}\n"
-    msg += "[dim](Interactive consent not yet implemented in Phase 1)[/dim]"
+    # Push modal dialog and wait for response
+    response = await renderer.app.push_screen_wait(
+        ConsentDialog(
+            title="Consent Required",
+            message=result.message,
+            question=result.question,
+            options=result.options
+        )
+    )
 
-    chat_view.add_system_message(msg)
+    # Store response in result object for caller
+    result.user_response = response
 
 
 @TextualRenderer.register(PromptResult)
 async def render_prompt(renderer: TextualRenderer, result: PromptResult) -> None:
-    """Render text input prompt (future: input modal)."""
-    chat_view = renderer._get_chat_view()
+    """Render text input prompt with modal dialog."""
+    from ..tui.widgets.dialog import PromptDialog
 
-    # TODO: Implement input modal
-    # For Phase 1, just show in chat
-    msg = f"[bold]{result.message}[/bold]\n"
-    msg += f"{result.prompt}\n"
-    if result.placeholder:
-        msg += f"[dim]Example: {result.placeholder}[/dim]\n"
-    msg += "[dim](Interactive prompt not yet implemented in Phase 1)[/dim]"
+    # Push modal dialog and wait for response
+    value = await renderer.app.push_screen_wait(
+        PromptDialog(
+            title="Input Required",
+            message=result.message,
+            prompt=result.prompt,
+            placeholder=result.placeholder or "",
+            default=result.default or ""
+        )
+    )
 
-    chat_view.add_system_message(msg)
+    # Store response in result object for caller
+    result.user_input = value
 
 
 # ============================================================================
