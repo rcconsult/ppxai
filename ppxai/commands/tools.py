@@ -523,7 +523,7 @@ def handle_tools(context: CommandContext, args: str) -> CommandResult:
 def _enable_tools_v2(context: CommandContext) -> CommandResult:
     """Enable AI tools."""
     if not context.engine_client:
-        return ErrorResult(message="Engine client not available")
+        return ErrorResult(status=ResultStatus.ERROR, message="Engine client not available")
 
     if context.engine_client.tools_enabled:
         return NotificationResult(
@@ -562,7 +562,7 @@ def _enable_tools_v2(context: CommandContext) -> CommandResult:
 def _disable_tools_v2(context: CommandContext) -> CommandResult:
     """Disable AI tools."""
     if not context.engine_client:
-        return ErrorResult(message="Engine client not available")
+        return ErrorResult(status=ResultStatus.ERROR, message="Engine client not available")
 
     if not context.engine_client.tools_enabled:
         return NotificationResult(
@@ -713,7 +713,7 @@ def _tools_config_v2(context: CommandContext, args: List[str]) -> CommandResult:
                 details={"max_iterations": num}
             )
         except ValueError:
-            return ErrorResult(message=f"Invalid number: {value}")
+            return ErrorResult(status=ResultStatus.ERROR, message=f"Invalid number: {value}")
     elif setting == "auto_retry_empty":
         try:
             num = int(value)
@@ -729,7 +729,7 @@ def _tools_config_v2(context: CommandContext, args: List[str]) -> CommandResult:
                 details={"auto_retry_empty": num}
             )
         except ValueError:
-            return ErrorResult(message=f"Invalid number: {value}")
+            return ErrorResult(status=ResultStatus.ERROR, message=f"Invalid number: {value}")
     else:
         return ErrorResult(
             message=f"Unknown setting: {setting}",
@@ -790,7 +790,7 @@ def _tools_set_v2(context: CommandContext, args: List[str]) -> CommandResult:
 def _tools_agent_v2(context: CommandContext, args: List[str]) -> CommandResult:
     """Control agent mode for autonomous task execution."""
     if not context.engine_client:
-        return ErrorResult(message="Engine client not available")
+        return ErrorResult(status=ResultStatus.ERROR, message="Engine client not available")
 
     if not args:
         # Show current agent mode status
@@ -896,7 +896,7 @@ def handle_usage(context: CommandContext, args: str) -> CommandResult:
                 details={"display_mode": mode}
             )
         else:
-            return ErrorResult(message="Failed to set display mode")
+            return ErrorResult(status=ResultStatus.ERROR, message="Failed to set display mode")
 
     elif sub_command == "reset":
         context.engine_client.session.reset_usage()

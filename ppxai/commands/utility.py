@@ -162,7 +162,7 @@ def handle_cd(context: CommandContext, args: str) -> CommandResult:
         ConfirmationResult on success, KeyValueResult if no args, ErrorResult on failure
     """
     if not context.engine_client:
-        return ErrorResult(message="Engine client not available")
+        return ErrorResult(status=ResultStatus.ERROR, message="Engine client not available")
 
     if not args.strip():
         # No args - show current directory (delegate to pwd)
@@ -343,7 +343,7 @@ def handle_debug_log(context: CommandContext, args: str) -> CommandResult:
     elif cmd in ["show", "view", "cat"]:
         # Show recent log entries
         if not log_file.exists():
-            return ErrorResult(message="No log file found")
+            return ErrorResult(status=ResultStatus.ERROR, message="No log file found")
 
         try:
             with open(log_file, 'r') as f:
@@ -372,9 +372,10 @@ def handle_debug_log(context: CommandContext, args: str) -> CommandResult:
                 details={"log_file": str(log_file)}
             )
         else:
-            return ErrorResult(message="No log file to clear")
+            return ErrorResult(status=ResultStatus.ERROR, message="No log file to clear")
     else:
         return ErrorResult(
+            status=ResultStatus.ERROR,
             message=f"Unknown command: {cmd}",
             suggestions=["Usage: /debug-log [on|off|show|clear]"]
         )
@@ -393,7 +394,7 @@ def handle_context(context: CommandContext, args: str) -> CommandResult:
     from pathlib import Path
 
     if not context.engine_client:
-        return ErrorResult(message="Engine client not available")
+        return ErrorResult(status=ResultStatus.ERROR, message="Engine client not available")
 
     parts = args.strip().split() if args else []
 
@@ -412,7 +413,7 @@ def handle_context(context: CommandContext, args: str) -> CommandResult:
                 }
             )
         else:
-            return ErrorResult(message="No injected contexts to clear")
+            return ErrorResult(status=ResultStatus.ERROR, message="No injected contexts to clear")
 
     if parts and parts[0].lower() == "hints":
         # Show active bootstrap hints (v1.14.0)

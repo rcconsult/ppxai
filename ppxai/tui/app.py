@@ -30,7 +30,7 @@ from ppxai.tui import commands as local_commands
 # Engine integration (Phase 6.1)
 from ppxai.engine import EngineClient
 from ppxai.engine.types import Event, EventType
-from ppxai.config import get_default_provider, get_default_model, get_api_key
+from ppxai.config import get_default_provider, get_default_model, get_api_key, initialize
 
 # Command Factory integration (Phase 6.1.1 - Technical debt cleanup)
 from ppxai.commands import CommandFactory
@@ -181,6 +181,9 @@ class PPXAIDEApp(App):
         - Working directory
         - Bootstrap context (Phase 6.3)
         """
+        # Initialize config and load .env files
+        initialize()
+
         # Load config
         self._provider = get_default_provider()
         self._model = get_default_model(self._provider)

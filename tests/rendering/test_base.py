@@ -142,7 +142,7 @@ class TestRendererDispatch:
             status=ResultStatus.SUCCESS,
             message="Success"
         )
-        error = ErrorResult(message="Error")
+        error = ErrorResult(status=ResultStatus.ERROR, message="Error")
 
         TestSyncRenderer.render(notification)
         TestSyncRenderer.render(error)
@@ -255,7 +255,7 @@ class TestAsyncRendererDispatch:
     async def test_async_fallback_to_text(self):
         """Test async fallback to TextResult."""
         # ErrorResult is not registered in TestAsyncRenderer
-        error = ErrorResult(message="Error message")
+        error = ErrorResult(status=ResultStatus.ERROR, message="Error message")
 
         output = await TestAsyncRenderer.render(error)
 
