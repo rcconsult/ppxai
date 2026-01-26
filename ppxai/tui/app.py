@@ -366,22 +366,54 @@ class PPXAIDEApp(App):
             self._update_usage_display()
 
         elif event.type == EventType.TOOL_CALL:
-            # Show tool being called
+            # Show tool being called (Phase 6.5)
             tool_data = event.data
             tool_name = tool_data.get("tool", "unknown")
-            chat_view.add_system_message(
-                f"[cyan]→ Calling tool:[/cyan] {tool_name}"
-            )
+            tool_args = tool_data.get("arguments", {})
+
+            # Format arguments for display
+            if tool_args:
+                # Format as compact JSON-like string
+                args_parts = []
+                for key, value in tool_args.items():
+                    if isinstance(value, str):
+                        # Truncate long strings
+                        if len(value) > 100:
+                            value_str = f'"{value[:100]}..."'
+                        else:
+                            value_str = f'"{value}"'
+                    else:
+                        value_str = str(value)
+                    args_parts.append(f"{key}={value_str}")
+                args_str = ", ".join(args_parts)
+                content = f"[dim]Calling with:[/dim] {args_str}"
+            else:
+                content = "[dim]Called with no arguments[/dim]"
+
+            chat_view.add_tool_message(tool_name, content)
 
         elif event.type == EventType.TOOL_RESULT:
-            # Tool completed (could show result if verbose)
-            pass
+            # Show tool result (Phase 6.5)
+            tool_data = event.data
+            tool_name = tool_data.get("tool", "unknown")
+            result = tool_data.get("result", "")
+
+            # Format result for display
+            if len(result) > 500:
+                # Truncate long results
+                formatted_result = f"{result[:500]}...\n[dim](Result truncated, {len(result)} chars total)[/dim]"
+            else:
+                formatted_result = result
+
+            chat_view.add_tool_message(f"{tool_name} result", formatted_result)
 
         elif event.type == EventType.TOOL_ERROR:
-            # Tool error
-            chat_view.add_system_message(
-                f"[red]Tool error:[/red] {event.data}"
-            )
+            # Tool error (Phase 6.5)
+            tool_data = event.data
+            tool_name = tool_data.get("tool", "unknown") if isinstance(event.data, dict) else "unknown"
+            error_msg = tool_data.get("error", str(event.data)) if isinstance(event.data, dict) else str(event.data)
+
+            chat_view.add_tool_message(f"{tool_name} [red]ERROR[/red]", f"[red]{error_msg}[/red]")
 
         elif event.type == EventType.ERROR:
             # General error
