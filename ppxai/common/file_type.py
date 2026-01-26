@@ -105,8 +105,8 @@ MIME_TO_FILETYPE = {
     "text/css": FileType.CODE,
     "application/sql": FileType.CODE,
 
-    # Plain text
-    "text/plain": FileType.TEXT,
+    # Note: text/plain is intentionally NOT mapped here to allow
+    # extension-based detection (e.g., .md files are often detected as text/plain)
 
     # Binary
     "application/octet-stream": FileType.BINARY,

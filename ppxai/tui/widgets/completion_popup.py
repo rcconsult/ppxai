@@ -28,13 +28,14 @@ class CompletionPopup(Container):
 
     DEFAULT_CSS = """
     CompletionPopup {
-        width: 50;
+        width: 60;
         height: auto;
         max-height: 10;
         background: $surface;
         border: solid $primary;
         padding: 0 1;
-        layer: completion;
+        layer: overlay;
+        offset: 2 0;
     }
 
     CompletionPopup VerticalScroll {

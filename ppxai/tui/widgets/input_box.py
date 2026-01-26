@@ -42,8 +42,21 @@ class InputBox(Static):
         """Focus the input widget."""
         self.query_one(Input).focus()
 
+    def on_input_changed(self, event: Input.Changed) -> None:
+        """Handle input text changes - dismiss popup when typing."""
+        # If popup is visible and user is typing, dismiss it
+        if self._completion_popup and not event.input.value.startswith('/') and '@' not in event.input.value:
+            # User cleared the text or is typing normal text
+            self._completion_popup.remove()
+            self._completion_popup = None
+
     def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle input submission."""
+        # Close popup if open
+        if self._completion_popup:
+            self._completion_popup.remove()
+            self._completion_popup = None
+
         value = event.value.strip()
         if value:
             # Add to history
