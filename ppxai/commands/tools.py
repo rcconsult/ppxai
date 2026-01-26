@@ -1027,6 +1027,7 @@ CommandFactory.register(CommandSpec(
     description="Manage AI tools and tool settings",
     handler=handle_tools,
     category="tools",
+    aliases=["t"],
     usage="/tools [on|off|list|status|config|set|help|agent]"
 ))
 

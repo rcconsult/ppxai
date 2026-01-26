@@ -190,6 +190,7 @@ def handle_cd(context: CommandContext, args: str) -> CommandResult:
 
     except Exception as e:
         return ErrorResult(
+            status=ResultStatus.ERROR,
             message=f"Error changing directory: {e}",
             error_details=str(e)
         )
@@ -206,7 +207,10 @@ def handle_pwd(context: CommandContext, args: str) -> CommandResult:
         KeyValueResult with current working directory, or ErrorResult
     """
     if not context.engine_client:
-        return ErrorResult(message="Engine client not available")
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="Engine client not available"
+        )
 
     cwd = context.engine_client.get_working_dir()
     if cwd:
