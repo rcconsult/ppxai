@@ -385,8 +385,9 @@ class PPXAIDEApp(App):
         if not self._engine_client.session.load(session_name):
             return False
 
-        # Restore provider if available
-        stored_provider = session_state.get("provider")
+        # Restore provider if available from loaded session
+        # session.load() already set session.metadata from the session file
+        stored_provider = self._engine_client.session.metadata.get("provider")
         if stored_provider:
             from ppxai.config import PROVIDERS
             if stored_provider in PROVIDERS:
@@ -398,16 +399,17 @@ class PPXAIDEApp(App):
                 except Exception as e:
                     self.log.debug(f"Failed to restore provider '{stored_provider}': {e}")
 
-        # Restore model if available
-        stored_model = session_state.get("model")
+        # Restore model if available from loaded session
+        stored_model = self._engine_client.session.metadata.get("model")
         if stored_model:
             if self._engine_client.set_model(stored_model):
                 self._model = stored_model
                 status_bar = self.query_one(StatusBar)
                 status_bar.update_badge("model", stored_model)
 
-        # Restore tools state
-        tools_enabled = session_state.get("tools_enabled", False)
+        # Restore tools state from loaded session (not session_state parameter)
+        # session.load() already set session.tools_enabled from the session file
+        tools_enabled = self._engine_client.session.tools_enabled
         if tools_enabled:
             self._engine_client.enable_tools()
             self._tools_enabled = True
@@ -420,8 +422,9 @@ class PPXAIDEApp(App):
             status_bar = self.query_one(StatusBar)
             status_bar.update_badge("tools", "OFF")
 
-        # Restore working directory
-        working_dir = session_state.get("working_dir")
+        # Restore working directory from loaded session
+        # session.load() already set session.working_dir from the session file
+        working_dir = self._engine_client.session.working_dir
         if working_dir and os.path.isdir(working_dir):
             try:
                 os.chdir(working_dir)
