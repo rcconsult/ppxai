@@ -24,6 +24,8 @@
 - [x] Session restore config fix (commit a059c42)
 - [x] Session restoration permissive mode (commit f1547bd)
 - [x] Bootstrap sequence fix (commit 8620dd6)
+- [x] Async event loop error handling (commit b09169e)
+- [x] Async session restoration (commit 5785506)
 
 ---
 
@@ -137,6 +139,11 @@
 - Root cause: Textual TUI was too strict - checked `set_provider()` return value
 - When GEMINI_API_KEY missing, restoration failed and stopped
 - Now matches Rich TUI: permissive restoration, always shows messages
+
+**Additional Fix (commit 5785506):**
+- Made `_restore_session()` async to properly integrate with Textual's event loop
+- All callers now use `await` when calling the method
+- Fixes asyncio.run() errors during session restoration
 
 ### 2.6 Bootstrap Sequence Fix ✅
 - [x] Initialize config before event loop starts
