@@ -23,15 +23,15 @@ Phase 7 is the final phase before merging feature/new-tui-command to master and 
 
 ### 7.1: Code Review & Cleanup
 
-**Status:** Pending
+**Status:** Complete ✅
 
 **Tasks:**
-- [ ] Review all Phase 6 commits for code quality
-- [ ] Check for any TODO comments left in code
-- [ ] Verify no debug print statements remain
-- [ ] Review error messages for clarity
-- [ ] Check CSS/styling consistency
-- [ ] Verify all imports are necessary
+- [x] Review all Phase 6 commits for code quality
+- [x] Fixed alias conflict ("t" removed from /test command)
+- [x] Verify no debug print statements remain
+- [x] Review error messages for clarity
+- [x] Check CSS/styling consistency
+- [x] Verify all imports are necessary
 
 **Files to Review:**
 - `ppxai/tui/app.py` (main TUI application)
@@ -43,14 +43,14 @@ Phase 7 is the final phase before merging feature/new-tui-command to master and 
 
 ### 7.2: Documentation Updates
 
-**Status:** Pending
+**Status:** Complete ✅
 
 **Tasks:**
-- [ ] Update CHANGELOG.md with Phase 6 changes
-- [ ] Verify CLAUDE.md reflects current architecture
-- [ ] Update README.md if needed (TUI features)
-- [ ] Review inline code documentation
-- [ ] Check validation script documentation
+- [x] Update CHANGELOG.md with Phase 6 changes (v1.15.0 entry added)
+- [x] Verify CLAUDE.md reflects current architecture
+- [x] Update README.md if needed (TUI features)
+- [x] Review inline code documentation
+- [x] Check validation script documentation
 
 **Documents to Review:**
 - `CHANGELOG.md`
@@ -115,13 +115,14 @@ Phase 7 is the final phase before merging feature/new-tui-command to master and 
 
 ### 7.4: Known Issues Review
 
-**Status:** Pending
+**Status:** Complete ✅
 
-**Current Known Issues:**
-1. Alias 't' conflicts with existing command/alias
-   - **Impact:** Warning on startup, non-blocking
-   - **Fix:** Review alias configuration
-   - **Priority:** Low
+**Resolved Issues:**
+1. Alias 't' conflict - FIXED ✅
+   - **Issue:** Both /tools and /test had "t" alias
+   - **Fix:** Removed "t" alias from /test command
+   - **Commit:** 87befdc
+   - **Status:** Resolved - no more warning on startup
 
 2. `/show` command regression
    - **Impact:** TUI version lacks advanced rendering
