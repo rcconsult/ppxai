@@ -411,27 +411,38 @@ class PPXAIDEApp(App):
         if not self._engine_client.session.load(session_name):
             return False
 
-        # Restore provider if available from loaded session
+        # Restore provider/model - matches Rich TUI behavior (lines 573-594 of rich/main.py)
         # session.load() already set session.metadata from the session file
+        status_bar = self.query_one(StatusBar)
         stored_provider = self._engine_client.session.metadata.get("provider")
+        stored_model = self._engine_client.session.metadata.get("model")
+
         if stored_provider:
             from ppxai.config import PROVIDERS
             if stored_provider in PROVIDERS:
                 try:
-                    if self._engine_client.set_provider(stored_provider):
-                        self._provider = stored_provider
-                        status_bar = self.query_one(StatusBar)
-                        status_bar.update_badge("provider", stored_provider)
+                    # Don't check return value - just try to set it (Rich TUI line 579)
+                    self._engine_client.set_provider(stored_provider)
+                    self._provider = stored_provider
+                    status_bar.update_badge("provider", stored_provider)
+                    self.log.info(f"Restored provider: {stored_provider}")
                 except Exception as e:
                     self.log.debug(f"Failed to restore provider '{stored_provider}': {e}")
 
-        # Restore model if available from loaded session
-        stored_model = self._engine_client.session.metadata.get("model")
         if stored_model:
-            if self._engine_client.set_model(stored_model):
+            # Use strict mode to validate model exists (Rich TUI line 586)
+            if self._engine_client.set_model(stored_model, strict=True):
                 self._model = stored_model
-                status_bar = self.query_one(StatusBar)
                 status_bar.update_badge("model", stored_model)
+                self.log.info(f"Restored model: {stored_model}")
+            else:
+                # Model not available - use provider's default (Rich TUI lines 589-594)
+                from ppxai.config import get_default_model
+                default_model = get_default_model(self._engine_client.provider_name) if self._engine_client.provider else None
+                if default_model:
+                    self._engine_client.set_model(default_model)
+                    self._model = default_model
+                    self.log.warning(f"Model '{stored_model}' not available, using default: {default_model}")
 
         # Restore tools state from loaded session (not session_state parameter)
         # session.load() already set session.tools_enabled from the session file
