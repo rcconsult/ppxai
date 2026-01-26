@@ -23,6 +23,7 @@
 - [x] Debug log display fix (commit 4e876f0)
 - [x] Session restore config fix (commit a059c42)
 - [x] Session restoration permissive mode (commit f1547bd)
+- [x] Bootstrap sequence fix (commit 8620dd6)
 
 ---
 
@@ -136,6 +137,31 @@
 - Root cause: Textual TUI was too strict - checked `set_provider()` return value
 - When GEMINI_API_KEY missing, restoration failed and stopped
 - Now matches Rich TUI: permissive restoration, always shows messages
+
+### 2.6 Bootstrap Sequence Fix ✅
+- [x] Initialize config before event loop starts
+- [x] Match Rich TUI's bootstrap sequence exactly
+- [x] Prevent asyncio.run() conflicts
+- [x] Ensure .env files loaded before event loop
+
+**Implementation:**
+- Move `initialize()` call from `_initialize_engine()` to `main()` in `tui/__init__.py`
+- Call `initialize()` BEFORE `app.run()` starts Textual's event loop
+- Remove duplicate `initialize()` call from `_initialize_engine()`
+- **Commit:** 8620dd6
+
+**Bug Fixed:**
+- "asyncio.run() cannot be called from a running event loop" error on startup
+- Root cause: Textual TUI called initialize() inside on_mount() (after event loop started)
+- Rich TUI calls initialize() in main() (before event loop starts)
+- Now matches Rich TUI: initialize → load .env → start event loop
+
+**Bootstrap Sequence:**
+```
+Rich TUI:  main() → initialize() → load .env → create objects → start loop
+Textual TUI (old): main() → app.run() → [loop] → initialize() ❌
+Textual TUI (new): main() → initialize() → app.run() → [loop] ✅
+```
 
 ---
 
