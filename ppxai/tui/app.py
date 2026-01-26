@@ -362,6 +362,9 @@ class PPXAIDEApp(App):
             chat_view.add_assistant_message(self._current_message_content)
             self._current_message_content = ""
 
+            # Update usage stats in status bar (Phase 6.4)
+            self._update_usage_display()
+
         elif event.type == EventType.TOOL_CALL:
             # Show tool being called
             tool_data = event.data
@@ -389,6 +392,49 @@ class PPXAIDEApp(App):
         elif event.type == EventType.INFO:
             # Info message
             chat_view.add_system_message(f"[dim]{event.data}[/dim]")
+
+    def _update_usage_display(self) -> None:
+        """Update usage stats in status bar (Phase 6.4).
+
+        Gets current usage stats from session and updates status bar badges.
+        Respects the display_mode setting (session/provider/model/off).
+        """
+        if not self._engine_client or not self._engine_client.session:
+            return
+
+        # Get usage stats for display (respects display_mode)
+        usage_display = self._engine_client.session.get_usage_for_display(
+            self._provider,
+            self._model
+        )
+
+        if not usage_display:
+            # Display mode is "off" - remove badges if they exist
+            status_bar = self.query_one(StatusBar)
+            status_bar.remove_badge("tokens")
+            status_bar.remove_badge("cost")
+            return
+
+        # Update status bar with usage stats
+        status_bar = self.query_one(StatusBar)
+
+        # Format tokens badge
+        total_tokens = usage_display.get("total_tokens", 0)
+        if total_tokens > 0:
+            if total_tokens >= 1_000_000:
+                tokens_text = f"{total_tokens / 1_000_000:.1f}M"
+            elif total_tokens >= 1_000:
+                tokens_text = f"{total_tokens / 1_000:.1f}K"
+            else:
+                tokens_text = f"{total_tokens}"
+
+            status_bar.update_badge("tokens", "Tokens", tokens_text)
+
+        # Format cost badge
+        total_cost = usage_display.get("estimated_cost", 0.0)
+        if total_cost > 0:
+            cost_text = f"${total_cost:.4f}"
+            status_bar.update_badge("cost", "Cost", cost_text)
 
     async def _handle_command(self, command: str) -> None:
         """Handle slash commands using Command Factory pattern."""
