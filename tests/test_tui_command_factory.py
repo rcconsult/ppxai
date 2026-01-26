@@ -51,12 +51,58 @@ def mock_engine_client():
     client.export_to_markdown = Mock(return_value="# Exported Chat\n\nContent here")
     client.get_bootstrap_status = Mock(return_value={
         "loaded": True,
-        "sources": [{"path": str(Path.cwd() / "AGENTS.md"), "scope": "project"}]
+        "sources": [{"path": str(Path.cwd() / "AGENTS.md"), "scope": "project"}],
+        "char_count": 1234
+    })
+    client.get_active_hints = Mock(return_value={
+        "provider_hints": ["openai", "perplexity"],
+        "model_hints": ["gpt-4", "sonar"]
     })
     client.get_usage_stats = Mock(return_value={
         "total_tokens": 1000,
         "total_cost": 0.05
     })
+    # Mock session with proper attributes
+    mock_session = Mock()
+    mock_session.get_usage_for_display = Mock(return_value={
+        "total_tokens": 1000,
+        "estimated_cost": 0.05
+    })
+    mock_session.get_usage = Mock(return_value={
+        "prompt_tokens": 600,
+        "completion_tokens": 400,
+        "total_tokens": 1000,
+        "estimated_cost": 0.05
+    })
+    mock_session.get_messages = Mock(return_value=[
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there!"}
+    ])
+    mock_session.messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi there!"}
+    ]
+    mock_session.sessions_dir = Path.home() / ".ppxai" / "sessions"
+    client.session = mock_session
+
+    # Mock list_sessions to return list of session info
+    from ppxai.engine.types import SessionInfo
+    client.list_sessions = Mock(return_value=[
+        SessionInfo(
+            name="session_1",
+            created_at="2024-01-01",
+            provider="openai",
+            model="gpt-4",
+            message_count=5
+        ),
+        SessionInfo(
+            name="session_2",
+            created_at="2024-01-02",
+            provider="perplexity",
+            model="sonar",
+            message_count=3
+        )
+    ])
     return client
 
 
@@ -68,7 +114,7 @@ def mock_context(mock_engine_client):
     context.add_system_message = Mock()
     context.add_assistant_message = Mock()
     context.update_status_bar = Mock()
-    context.show_file_in_panel = Mock()
+    context.show_file_in_panel = AsyncMock()
     context.close_panel = Mock()
     context.get_theme = Mock(return_value="catppuccin-mocha")
     context.set_theme = Mock()
@@ -76,6 +122,9 @@ def mock_context(mock_engine_client):
     context.get_model = Mock(return_value="gpt-4")
     context.set_provider = AsyncMock()
     context.set_model = AsyncMock()
+    context.working_dir = str(Path.cwd())
+    context.get_tools_available = Mock(return_value=True)
+    context.tools_enabled = True
     return context
 
 
@@ -154,9 +203,10 @@ def test_theme_command_list(mock_context):
     spec = CommandFactory.get("theme")
     assert spec is not None
 
+    from ppxai.commands.results import ListResult
     result = spec.handler(mock_context, "list")
 
-    assert isinstance(result, (TextResult, TableResult, KeyValueResult))
+    assert isinstance(result, (TextResult, TableResult, KeyValueResult, ListResult))
     assert result.status in (ResultStatus.SUCCESS, ResultStatus.INFO)
 
 
@@ -194,7 +244,8 @@ def test_cd_command_valid_path(mock_context, tmp_path):
     result = spec.handler(mock_context, str(test_dir))
 
     # Should succeed or return appropriate result
-    assert isinstance(result, (TextResult, ErrorResult))
+    assert isinstance(result, (TextResult, ErrorResult, ConfirmationResult))
+    assert result.status in (ResultStatus.SUCCESS, ResultStatus.ERROR)
 
 
 def test_cd_command_invalid_path(mock_context):
@@ -217,9 +268,10 @@ def test_provider_list(mock_context):
     spec = CommandFactory.get("provider")
     assert spec is not None
 
+    from ppxai.commands.results import ListResult
     result = spec.handler(mock_context, "list")
 
-    assert isinstance(result, (TextResult, TableResult))
+    assert isinstance(result, (TextResult, TableResult, ListResult))
     assert result.status == ResultStatus.SUCCESS
 
 
@@ -228,9 +280,10 @@ def test_model_list(mock_context):
     spec = CommandFactory.get("model")
     assert spec is not None
 
+    from ppxai.commands.results import ListResult
     result = spec.handler(mock_context, "list")
 
-    assert isinstance(result, (TextResult, TableResult))
+    assert isinstance(result, (TextResult, TableResult, ListResult))
     assert result.status == ResultStatus.SUCCESS
 
 

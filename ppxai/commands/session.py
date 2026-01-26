@@ -48,6 +48,7 @@ def handle_save(context: CommandContext, args: str) -> CommandResult:
         )
     except Exception as e:
         return ErrorResult(
+            status=ResultStatus.ERROR,
             message=f"Error saving session: {e}",
             error_details=str(e)
         )
@@ -108,11 +109,13 @@ def handle_load(context: CommandContext, args: str) -> CommandResult:
             )
         else:
             return ErrorResult(
+                status=ResultStatus.ERROR,
                 message=f"Session not found: {args.strip()}",
                 suggestions=["Use /sessions to see available sessions"]
             )
     except Exception as e:
         return ErrorResult(
+            status=ResultStatus.ERROR,
             message=f"Error loading session: {e}",
             error_details=str(e)
         )
@@ -223,6 +226,7 @@ def handle_export(context: CommandContext, args: str) -> CommandResult:
         )
     except Exception as e:
         return ErrorResult(
+            status=ResultStatus.ERROR,
             message=f"Error exporting answer: {e}",
             error_details=str(e)
         )
