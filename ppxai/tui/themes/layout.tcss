@@ -70,14 +70,14 @@ StatusBar .context-badge {
 /* Chat view */
 ChatView {
     background: $background;
-    padding: 1;
+    padding: 0 1;
     height: 1fr;
 }
 
 /* Messages - using round borders for modern look */
 MessageBox {
-    padding: 1;
-    margin-bottom: 1;
+    padding: 0;
+    margin-bottom: 0;
     background: $surface;
     width: 100%;
     height: auto;
@@ -116,7 +116,7 @@ MessageBox .role-label {
     color: $text-muted;
     text-style: bold;
     height: 1;
-    margin-bottom: 1;
+    margin-bottom: 0;
 }
 
 MessageBox .content {
@@ -132,12 +132,12 @@ MessageBox.streaming .content {
 InputBox {
     background: $surface;
     border: round $primary;
-    padding: 1;
+    padding: 0 1;
     dock: bottom;
     height: auto;
     min-height: 3;
     max-height: 10;
-    margin: 0 1 1 1;
+    margin: 0 1 0 1;
 }
 
 /* Taller input when split view is active */
