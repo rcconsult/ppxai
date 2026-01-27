@@ -276,17 +276,25 @@ No telemetry. No tracking. Data only goes to the LLM provider you choose.
 | [Shell Consent](docs/SHELL_CONSENT_GUIDE.md) | Command safety system |
 | [File Editing](docs/FILE_EDITING_GUIDE.md) | Consent-based file operations |
 | [Specifications](SPECIFICATIONS.md) | Code generation templates |
-
-> **Note:** Legacy documentation from the project's origins is available in `docs/archive/`. This folder will be removed in v1.14.x. To browse the archive after removal, use [tag v1.13.3](https://github.com/rcconsult/ppxai/tree/v1.13.3/docs/archive).
+| [Architecture](docs/ARCHITECTURE.md) | Type-based renderer design (v1.15.0) |
+| [Release Notes v1.15.0](docs/RELEASE-NOTES-v1.15.0.md) | Latest development features |
 
 ## Project Structure
 
 ```
 ppxai/
 ├── ppxai/                    # Core package
-│   ├── rich/main.py          # Rich TUI entry point
+│   ├── rich/main.py          # Rich TUI entry point (legacy)
 │   ├── tui/                  # Textual TUI (ppxaide - v1.15.0+)
+│   │   ├── app.py            # Main Textual application
+│   │   ├── widgets/          # UI components (chat_view, code_editor, etc.)
+│   │   └── renderer.py       # TextualRenderer - type-based dispatch
 │   ├── engine/               # EngineClient, providers, tools
+│   ├── commands/             # 32 UI-agnostic command implementations
+│   │   └── types.py          # 17 CommandResult types
+│   ├── renderers/            # Renderer implementations
+│   │   ├── rich_renderer.py  # RichRenderer for legacy TUI
+│   │   └── base.py           # BaseRenderer interface
 │   ├── server/               # HTTP + JSON-RPC servers
 │   ├── web/                  # Desktop Web App static files
 │   └── common/               # Shared utilities (logger, event handler)
