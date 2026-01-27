@@ -53,7 +53,7 @@ class InputBox(Static):
             # Extract text from TargetState and pass to our callback
             completions = list(self._completion_callback(target_state.text))
             # Debug: Log completion requests (remove after testing)
-            # print(f"[DEBUG] Completions for '{target_state.text}': {len(completions)}")
+            print(f"[DEBUG] Completions for '{target_state.text}': {len(completions)}")
             return completions
         return []
 
