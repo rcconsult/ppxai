@@ -281,7 +281,9 @@ class PPXAIDEApp(App):
         self._event_bus.on(Events.ENGINE_STREAM_END, self._on_stream_end)
         self._event_bus.on(Events.ENGINE_TOOL_CALL, self._on_tool_call)
         self._event_bus.on(Events.ENGINE_TOOL_RESULT, self._on_tool_result)
+        self._event_bus.on(Events.ENGINE_TOOL_ERROR, self._on_tool_error)
         self._event_bus.on(Events.ENGINE_ERROR, self._on_engine_error)
+        self._event_bus.on(Events.ENGINE_INFO, self._on_engine_info)
         self._log.info("[EventBus] Subscribed to all engine events")
 
         # Set provider and model
@@ -904,7 +906,9 @@ class PPXAIDEApp(App):
             EventType.STREAM_END: Events.ENGINE_STREAM_END,
             EventType.TOOL_CALL: Events.ENGINE_TOOL_CALL,
             EventType.TOOL_RESULT: Events.ENGINE_TOOL_RESULT,
+            EventType.TOOL_ERROR: Events.ENGINE_TOOL_ERROR,
             EventType.ERROR: Events.ENGINE_ERROR,
+            EventType.INFO: Events.ENGINE_INFO,
         }
 
         # Emit event via bus with data
@@ -1016,12 +1020,29 @@ class PPXAIDEApp(App):
         # Show full result (scrollable bubble will handle long content)
         chat_view.add_tool_message(f"{tool_name} result", result)
 
+    async def _on_tool_error(self, sender, data, **kwargs) -> None:
+        """Handle TOOL_ERROR event."""
+        chat_view = self.query_one("#chat-view", ChatView)
+
+        tool_name = data.get("tool", "unknown") if isinstance(data, dict) else "unknown"
+        error_msg = data.get("error", str(data)) if isinstance(data, dict) else str(data)
+        self._log.error(f"[Event] Tool error from {tool_name}: {error_msg}")
+
+        chat_view.add_tool_message(f"{tool_name} [red]ERROR[/red]", f"[red]{error_msg}[/red]")
+
     async def _on_engine_error(self, sender, data, **kwargs) -> None:
         """Handle ENGINE_ERROR event."""
         chat_view = self.query_one("#chat-view", ChatView)
         self._log.error(f"[Event] Engine error: {data}")
 
         chat_view.add_system_message(f"[red]Error:[/red] {data}")
+
+    async def _on_engine_info(self, sender, data, **kwargs) -> None:
+        """Handle ENGINE_INFO event."""
+        chat_view = self.query_one("#chat-view", ChatView)
+        self._log.debug(f"[Event] Engine info: {data}")
+
+        chat_view.add_system_message(f"[dim]{data}[/dim]")
 
     def _update_usage_display(self) -> None:
         """Update usage stats in status bar (Phase 6.4).
