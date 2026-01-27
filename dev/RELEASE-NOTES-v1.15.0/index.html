@@ -996,10 +996,71 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-complete-tui-engine-integration" class="md-nav__link">
+  <a href="#1-type-based-renderer-dispatch-new" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Complete TUI Engine Integration
+        1. Type-Based Renderer Dispatch ⭐ NEW
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Type-Based Renderer Dispatch ⭐ NEW">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#commandresult-type-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CommandResult Type Hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#renderer-implementations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Renderer Implementations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mechanical-dispatch-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mechanical Dispatch Pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#benefits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benefits
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-complete-tui-engine-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Complete TUI Engine Integration
       
     </span>
   </a>
@@ -1454,22 +1515,154 @@
 
 
 <h1 id="release-notes-v1150">Release Notes: v1.15.0<a class="headerlink" href="#release-notes-v1150" title="Permanent link">&para;</a></h1>
-<p><strong>Release Date:</strong> January 26, 2026
+<p><strong>Release Date:</strong> TBD (In Development)
 <strong>Branch:</strong> feature/new-tui-command → master
-<strong>Focus:</strong> Complete TUI engine integration with async streaming and real-time features</p>
+<strong>Focus:</strong> Type-based renderer architecture with UI-agnostic command handling</p>
 <hr />
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>Version 1.15.0 represents a complete rewrite of the ppxai TUI with full engine integration. This release delivers a modern, event-driven architecture with real-time streaming, token/cost tracking, tool execution display, and bootstrap context loading.</p>
-<p><strong>Key Metrics:</strong>
-- <strong>28/28 unit tests passing</strong> (100%)
-- <strong>7/7 integration tests passing</strong> (100%)
-- <strong>30 commands</strong> in 9 categories
-- <strong>3.5M command lookups/second</strong>
-- <strong>6.1M event processing/second</strong>
-- <strong>5 validation scripts</strong> for comprehensive testing</p>
+<p>Version 1.15.0 introduces a revolutionary type-based renderer dispatch system that completely decouples command logic from UI rendering. All 32 commands now return typed result objects (17 types), enabling mechanical dispatch to Rich TUI or Textual TUI renderers without conditional logic.</p>
+<p><strong>Key Highlights:</strong>
+- <strong>17 CommandResult types</strong> - Structured data types for all command outputs
+- <strong>2 renderer implementations</strong> - RichRenderer (legacy) + TextualRenderer (new TUI)
+- <strong>32 commands migrated</strong> - All commands return typed results
+- <strong>~1,698 lines removed</strong> - Eliminated v2 naming artifacts and duplicate code
+- <strong>100% test coverage</strong> - All commands validated in both rendering modes</p>
+<p><strong>Architecture Benefits:</strong>
+- <strong>UI-agnostic</strong> - Commands don't know about rendering
+- <strong>Type-safe</strong> - Mechanical dispatch via isinstance() checks
+- <strong>Extensible</strong> - New UIs just implement renderer interface
+- <strong>Testable</strong> - Commands tested without UI framework dependencies</p>
 <hr />
 <h2 id="whats-new">What's New<a class="headerlink" href="#whats-new" title="Permanent link">&para;</a></h2>
-<h3 id="1-complete-tui-engine-integration">1. Complete TUI Engine Integration<a class="headerlink" href="#1-complete-tui-engine-integration" title="Permanent link">&para;</a></h3>
+<h3 id="1-type-based-renderer-dispatch-new">1. Type-Based Renderer Dispatch ⭐ NEW<a class="headerlink" href="#1-type-based-renderer-dispatch-new" title="Permanent link">&para;</a></h3>
+<p>The core architectural innovation in v1.15.0 is the type-based renderer system that separates command logic from UI presentation:</p>
+<h4 id="commandresult-type-hierarchy">CommandResult Type Hierarchy<a class="headerlink" href="#commandresult-type-hierarchy" title="Permanent link">&para;</a></h4>
+<p><strong>17 specialized result types</strong> for all command outputs:</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Purpose</th>
+<th>Example Commands</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MessageResult</code></td>
+<td>AI responses</td>
+<td>Chat messages</td>
+</tr>
+<tr>
+<td><code>StatusResult</code></td>
+<td>Status updates</td>
+<td><code>/status</code>, <code>/checkpoint status</code></td>
+</tr>
+<tr>
+<td><code>TableResult</code></td>
+<td>Tabular data</td>
+<td><code>/sessions</code>, <code>/tools list</code></td>
+</tr>
+<tr>
+<td><code>TreeResult</code></td>
+<td>Hierarchical data</td>
+<td><code>/context show</code></td>
+</tr>
+<tr>
+<td><code>ErrorResult</code></td>
+<td>Error messages</td>
+<td>Invalid commands</td>
+</tr>
+<tr>
+<td><code>CodeResult</code></td>
+<td>Syntax-highlighted code</td>
+<td><code>/show</code> (code files)</td>
+</tr>
+<tr>
+<td><code>DataResult</code></td>
+<td>Structured data (JSON/YAML/TOML)</td>
+<td><code>/show</code> (config files)</td>
+</tr>
+<tr>
+<td><code>ImageResult</code></td>
+<td>Image display</td>
+<td><code>/show</code> (PNG/JPG)</td>
+</tr>
+<tr>
+<td><code>DiffResult</code></td>
+<td>File diffs</td>
+<td>Agent edits</td>
+</tr>
+<tr>
+<td><code>ConfirmResult</code></td>
+<td>Yes/no prompts</td>
+<td>Shell consent</td>
+</tr>
+<tr>
+<td><code>SelectResult</code></td>
+<td>Selection menus</td>
+<td>Model selection</td>
+</tr>
+<tr>
+<td><code>ProgressResult</code></td>
+<td>Progress bars</td>
+<td>Agent tasks</td>
+</tr>
+<tr>
+<td><code>InfoResult</code></td>
+<td>Informational messages</td>
+<td><code>/help</code></td>
+</tr>
+<tr>
+<td><code>SuccessResult</code></td>
+<td>Success messages</td>
+<td><code>/save</code>, <code>/export</code></td>
+</tr>
+<tr>
+<td><code>ThemeResult</code></td>
+<td>Theme display</td>
+<td><code>/theme list</code></td>
+</tr>
+<tr>
+<td><code>UsageResult</code></td>
+<td>Usage statistics</td>
+<td><code>/usage show</code></td>
+</tr>
+<tr>
+<td><code>EmptyResult</code></td>
+<td>No output</td>
+<td><code>/clear</code></td>
+</tr>
+</tbody>
+</table>
+<h4 id="renderer-implementations">Renderer Implementations<a class="headerlink" href="#renderer-implementations" title="Permanent link">&para;</a></h4>
+<p><strong>RichRenderer</strong> (legacy TUI):
+- Renders to Rich Console for immediate display
+- Used by <code>ppxai</code> classic TUI
+- 500+ lines of rendering logic</p>
+<p><strong>TextualRenderer</strong> (new TUI):
+- Renders to Textual widgets for ppxaide
+- Returns Markdown/renderable widgets
+- 400+ lines of rendering logic</p>
+<h4 id="mechanical-dispatch-pattern">Mechanical Dispatch Pattern<a class="headerlink" href="#mechanical-dispatch-pattern" title="Permanent link">&para;</a></h4>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result</span><span class="p">:</span> <span class="n">CommandResult</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Type-based dispatch - no conditionals needed!&quot;&quot;&quot;</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">MessageResult</span><span class="p">):</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_render_message</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">TableResult</span><span class="p">):</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_render_table</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">CodeResult</span><span class="p">):</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_render_code</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="c1"># ... 14 more types</span>
+</span></code></pre></div>
+<h4 id="benefits">Benefits<a class="headerlink" href="#benefits" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>No UI coupling</strong> - Commands never import Rich or Textual</li>
+<li><strong>Single source of truth</strong> - One command, multiple UIs</li>
+<li><strong>Type safety</strong> - mypy validates all result types</li>
+<li><strong>Easy testing</strong> - Mock renderers for unit tests</li>
+<li><strong>Future-proof</strong> - Web UI just needs new renderer</li>
+</ul>
+<h3 id="2-complete-tui-engine-integration">2. Complete TUI Engine Integration<a class="headerlink" href="#2-complete-tui-engine-integration" title="Permanent link">&para;</a></h3>
 <p>The TUI now uses the same engine architecture as the HTTP server and VSCode extension, providing:</p>
 <ul>
 <li><strong>Async streaming responses</strong> - Real-time message display as AI generates content</li>
@@ -1795,19 +1988,19 @@
 <hr />
 <h2 id="performance-benchmarks">Performance Benchmarks<a class="headerlink" href="#performance-benchmarks" title="Permanent link">&para;</a></h2>
 <h3 id="command-execution">Command Execution<a class="headerlink" href="#command-execution" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Command lookup:    3,539,698 lookups/second
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>Event processing:  6,118,906 events/second
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>Stream latency:    &lt; 0.16ms per event
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Command lookup:    3,539,698 lookups/second
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Event processing:  6,118,906 events/second
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Stream latency:    &lt; 0.16ms per event
 </span></code></pre></div>
 <h3 id="memory-usage">Memory Usage<a class="headerlink" href="#memory-usage" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>TUI startup:       ~40MB
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Active session:    ~60MB
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Long conversation: ~100MB (stable, no leaks)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>TUI startup:       ~40MB
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>Active session:    ~60MB
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>Long conversation: ~100MB (stable, no leaks)
 </span></code></pre></div>
 <h3 id="binary-size">Binary Size<a class="headerlink" href="#binary-size" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>ppxaide:          42MB
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>ppxai (TUI):      40MB
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>ppxai-server:     38MB
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>ppxaide:          42MB
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>ppxai (TUI):      40MB
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>ppxai-server:     38MB
 </span></code></pre></div>
 <hr />
 <h2 id="credits">Credits<a class="headerlink" href="#credits" title="Permanent link">&para;</a></h2>

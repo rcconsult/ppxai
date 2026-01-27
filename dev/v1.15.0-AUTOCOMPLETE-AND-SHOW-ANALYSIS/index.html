@@ -1416,12 +1416,17 @@
 <h1 id="v1150-autocomplete-and-show-implementation-analysis">v1.15.0 Autocomplete and /show Implementation Analysis<a class="headerlink" href="#v1150-autocomplete-and-show-implementation-analysis" title="Permanent link">&para;</a></h1>
 <p><strong>Date:</strong> 2026-01-27
 <strong>Purpose:</strong> Analysis of Textual TUI autocomplete feature and /show command with python-magic integration
-<strong>Status:</strong> Pre-release technical review</p>
+<strong>Status:</strong> ✅ <strong>AUTOCOMPLETE IMPLEMENTED</strong> (updated v1.15.0)</p>
+<blockquote>
+<p><strong>UPDATE (v1.15.0):</strong> The autocomplete issues documented below have been resolved by replacing the custom
+CompletionPopup with the <code>textual-autocomplete</code> library. See <a href="../TEXTUAL-WIDGETS-RESEARCH/">TEXTUAL-WIDGETS-RESEARCH.md</a>
+and <a href="../IMPLEMENTATION-PLAN-AUTOCOMPLETE-v1.16.0/">IMPLEMENTATION-PLAN-AUTOCOMPLETE-v1.16.0.md</a> for details.</p>
+</blockquote>
 <hr />
 <h2 id="executive-summary">Executive Summary<a class="headerlink" href="#executive-summary" title="Permanent link">&para;</a></h2>
 <p>This document analyzes two key features of the ppxaide (Textual TUI) implementation:</p>
 <ol>
-<li><strong>Autocomplete System</strong>: Fully implemented but <strong>DISABLED</strong> due to UI/UX issues that need Phase 4/5 refactoring</li>
+<li><strong>Autocomplete System</strong>: ~~Fully implemented but <strong>DISABLED</strong> due to UI/UX issues~~ → ✅ <strong>NOW ENABLED</strong> using textual-autocomplete library</li>
 <li><strong>File Type Detection</strong>: Working correctly with python-magic + extension fallback for intelligent /show command dispatching</li>
 </ol>
 <p><strong>Key Findings:</strong>
