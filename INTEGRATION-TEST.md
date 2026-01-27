@@ -101,18 +101,45 @@ uv run ppxaide
 - ✅ History navigation (up/down) unchanged
 - ✅ No changes to app.py initialization
 
+## Bug Fix: Input Not Accepting Typing
+
+**Issue:** After initial integration, input box was not accepting user typing.
+
+**Root cause:** AutoComplete was mounted separately with selector `target="#chat-input"`, which doesn't work. The textual-autocomplete library requires the Input widget to be passed directly to the AutoComplete constructor.
+
+**Fix applied:**
+```python
+# WRONG - doesn't work:
+yield Input(id="chat-input")
+# Later in on_mount():
+autocomplete = AutoComplete(target="#chat-input", candidates=...)
+self.mount(autocomplete)
+
+# CORRECT - works:
+input_widget = Input(id="chat-input")
+yield AutoComplete(input_widget, candidates=self._get_completions)
+```
+
+**Key insight:** textual-autocomplete wraps the Input widget, it doesn't attach to it via selector.
+
 ## Conclusion
 
-**Status:** ✅ **FULLY INTEGRATED**
+**Status:** ✅ **FULLY INTEGRATED AND TESTED**
 
 The autocomplete is integrated into ppxaide through the InputBox widget. The lazy callback
 system ensures compatibility with the existing app.py initialization flow where the completer
 is set AFTER compose().
 
+**Integration pattern:**
+1. InputBox creates Input widget in compose()
+2. Wraps it with AutoComplete using lazy callback
+3. Completer is set later via set_completer()
+4. Lazy callback returns [] if completer not set, calls completer when available
+
 **Next steps:**
 1. Manual testing in ppxaide (run `uv run ppxaide`)
 2. Test all completion types (slash commands, @file, @clipboard, @url, subcommands)
-3. Merge to feature/new-tui-command branch
+3. Merge to feature/new-tui-command branch (when user approves)
 4. Include in v1.15.0 release
 
 **No code changes required in app.py or other files.**
