@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - feature/new-tui-command  # Temporary: auto-build dev docs
     tags:
       - 'v*'
     paths:
