@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Autocomplete System (v1.15.0)
+
+- **Smart autocomplete** - Enabled autocomplete using `textual-autocomplete` library (v4.0.6)
+  - Cursor-based positioning (no more fixed offset positioning)
+  - Fuzzy matching for typo tolerance
+  - Alphabetically sorted results
+  - Removed 100 file limit for file completions
+  - Multi-column layout handled by library
+  - Better keyboard navigation (Tab, Enter, Escape, Arrow keys)
+- **All completion types supported**:
+  - Slash commands (`/show`, `/edit`, `/model`, etc.)
+  - @file completions with smart file search
+  - @clipboard and @url context providers
+  - Command subcommands (`/tools list`, `/usage show`, etc.)
+  - Provider and model name completions
+
+### Changed
+
+- **Dependencies**: Added `textual-autocomplete>=4.0.6` to TUI dependencies
+- **InputBox widget**: Now uses AutoComplete wrapper with lazy callback system
+- **CompletionAdapter**: New adapter layer converts TextualCompleter output to DropdownItem format
+
+### Removed
+
+- **Custom CompletionPopup widget**: Replaced with textual-autocomplete library (150 lines of UI code removed)
+
+### Fixed
+
+- All 5 autocomplete UI/UX issues from v1.15.0:
+  - ❌ Fixed offset positioning → ✅ Cursor-based
+  - ❌ Single column layout → ✅ Multi-column (library)
+  - ❌ No sorting → ✅ Alphabetical
+  - ❌ 100 file limit → ✅ No limit
+  - ❌ No lazy loading → ✅ Dynamic (library)
+
+### Technical
+
+- Backward compatible: `set_completer()` method still works via lazy callback
+- 90% code reuse: Existing TextualCompleter logic preserved
+- No changes to app.py initialization required
+
+---
+
 ## [1.15.0] - 2026-01-26
 
 ### Added - New TUI Engine Integration
