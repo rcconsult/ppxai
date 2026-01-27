@@ -29,6 +29,7 @@ from ppxai.tui.themes.themes import CUSTOM_THEMES, DEFAULT_THEME, CYCLE_THEMES
 from ppxai.tui.clipboard import copy_to_clipboard, paste_from_clipboard, is_clipboard_available
 from ppxai.tui import commands as local_commands
 from ppxai.tui.completer import TextualCompleter
+from ppxai.tui.event_bus import EventBus, Events
 
 # Engine integration (Phase 6.1)
 from ppxai.engine import EngineClient
@@ -81,6 +82,9 @@ class PPXAIDEApp(App):
         # Use ppxai's logger instead of Textual's self.log (which doesn't write to our log file)
         from ppxai.common.logger import get_logger
         self._log = get_logger("tui")
+
+        # Event bus for decoupled component communication (v1.15.0 blinker integration)
+        self._event_bus = EventBus(log_events=True)
 
         self._current_theme_index = 0
         self._engine_client: Optional[EngineClient] = None
@@ -270,6 +274,15 @@ class PPXAIDEApp(App):
             consent_callback=self._file_edit_consent_handler,
             shell_consent_callback=self._shell_consent_handler
         )
+
+        # Subscribe to engine events via event bus (v1.15.0 blinker integration)
+        self._event_bus.on(Events.ENGINE_STREAM_START, self._on_stream_start)
+        self._event_bus.on(Events.ENGINE_STREAM_CHUNK, self._on_stream_chunk)
+        self._event_bus.on(Events.ENGINE_STREAM_END, self._on_stream_end)
+        self._event_bus.on(Events.ENGINE_TOOL_CALL, self._on_tool_call)
+        self._event_bus.on(Events.ENGINE_TOOL_RESULT, self._on_tool_result)
+        self._event_bus.on(Events.ENGINE_ERROR, self._on_engine_error)
+        self._log.info("[EventBus] Subscribed to all engine events")
 
         # Set provider and model
         try:
@@ -875,122 +888,140 @@ class PPXAIDEApp(App):
             self._log.info("=== _stream_response END ===")
 
     async def _handle_event(self, event: Event) -> None:
-        """Handle engine events during streaming (Phase 6.1).
+        """Handle engine events during streaming - bridge to event bus.
+
+        This method now acts as a bridge between EngineClient events
+        and the EventBus. The actual event handling is done by dedicated
+        handlers subscribed to the bus.
 
         Args:
-            event: Engine event
+            event: Engine event from EngineClient
         """
+        # Map engine event types to event bus events
+        event_map = {
+            EventType.STREAM_START: Events.ENGINE_STREAM_START,
+            EventType.STREAM_CHUNK: Events.ENGINE_STREAM_CHUNK,
+            EventType.STREAM_END: Events.ENGINE_STREAM_END,
+            EventType.TOOL_CALL: Events.ENGINE_TOOL_CALL,
+            EventType.TOOL_RESULT: Events.ENGINE_TOOL_RESULT,
+            EventType.ERROR: Events.ENGINE_ERROR,
+        }
+
+        # Emit event via bus with data
+        if event.type in event_map:
+            bus_event = event_map[event.type]
+            self._event_bus.emit(bus_event, data=event.data, event_type=event.type)
+        else:
+            self._log.warning(f"Unknown event type: {event.type}")
+
+    # Event handlers - subscribed to event bus
+
+    async def _on_stream_start(self, sender, **kwargs) -> None:
+        """Handle STREAM_START event."""
+        self._current_message_content = ""
+        self._log.debug("[Event] Stream started")
+
+    async def _on_stream_chunk(self, sender, data, **kwargs) -> None:
+        """Handle STREAM_CHUNK event."""
+        self._current_message_content += data
+        self._log.debug(f"[Event] Chunk: {len(data)} chars")
+
+    async def _on_stream_end(self, sender, data, **kwargs) -> None:
+        """Handle STREAM_END event."""
         chat_view = self.query_one("#chat-view", ChatView)
 
-        if event.type == EventType.STREAM_START:
-            # Start accumulating response
-            self._current_message_content = ""
+        # Debug: Log what we actually received
+        self._log.info(f"STREAM_END: data type={type(data).__name__}")
+        self._log.info(f"STREAM_END: data={repr(data)[:200]}")
+        self._log.info(f"STREAM_END: accumulated={len(self._current_message_content)} chars")
 
-        elif event.type == EventType.STREAM_CHUNK:
-            # Accumulate chunk
-            self._current_message_content += event.data
+        # Get final response - use accumulated chunks OR data directly
+        # (some providers don't stream, they send full response in STREAM_END)
+        final_response = self._current_message_content
 
-        elif event.type == EventType.STREAM_END:
-            # Debug: Log what we actually received
-            self._log.info(f"STREAM_END: event.data type={type(event.data).__name__}")
-            self._log.info(f"STREAM_END: event.data={repr(event.data)[:200]}")
-            self._log.info(f"STREAM_END: accumulated={len(self._current_message_content)} chars")
-
-            # Get final response - use accumulated chunks OR event.data directly
-            # (some providers don't stream, they send full response in STREAM_END)
-            final_response = self._current_message_content
-
-            # If no chunks accumulated, try to extract from event.data
-            if not final_response:
-                if isinstance(event.data, str):
-                    final_response = event.data
-                elif isinstance(event.data, dict):
-                    # Some providers return {"content": "text"} or {"message": "text"}
-                    final_response = event.data.get("content") or event.data.get("message") or event.data.get("text") or ""
-                    self._log.info(f"STREAM_END: extracted from dict: {len(final_response)} chars")
-                else:
-                    final_response = str(event.data) if event.data else ""
-
-            self._log.info(f"STREAM_END: final_response={len(final_response)} chars")
-
-            # Display if there's content
-            if final_response.strip():
-                chat_view.add_assistant_message(final_response)
-                self._log.info(f"Added assistant message: {len(final_response)} chars")
+        # If no chunks accumulated, try to extract from data
+        if not final_response:
+            if isinstance(data, str):
+                final_response = data
+            elif isinstance(data, dict):
+                # Some providers return {"content": "text"} or {"message": "text"}
+                final_response = data.get("content") or data.get("message") or data.get("text") or ""
+                self._log.info(f"STREAM_END: extracted from dict: {len(final_response)} chars")
             else:
-                self._log.warning("STREAM_END with no content to display")
+                final_response = str(data) if data else ""
 
-            self._current_message_content = ""
+        self._log.info(f"STREAM_END: final_response={len(final_response)} chars")
 
-            # Update usage stats in status bar (Phase 6.4)
-            self._update_usage_display()
+        # Display if there's content
+        if final_response.strip():
+            chat_view.add_assistant_message(final_response)
+            self._log.info(f"Added assistant message: {len(final_response)} chars")
+        else:
+            self._log.warning("STREAM_END with no content to display")
 
-            # Auto-save session after each message pair (Phase 2.1)
-            from ppxai.config import get_auto_save_interval
-            save_interval = get_auto_save_interval()
-            message_count = len(self._engine_client.session.messages)
-            if message_count > 0 and (save_interval == 0 or message_count % max(1, save_interval) == 0):
-                try:
-                    self._engine_client.session.save_dirty()
-                    self._log.debug(f"Auto-saved session at {message_count} messages (interval={save_interval})")
-                except Exception as e:
-                    self._log.warning(f"Auto-save failed: {e}")
+        self._current_message_content = ""
 
-        elif event.type == EventType.TOOL_CALL:
-            # Show tool being called (Phase 6.5)
-            tool_data = event.data
-            tool_name = tool_data.get("tool", "unknown")
-            tool_args = tool_data.get("arguments", {})
-            self._log.info(f"TOOL_CALL: {tool_name} with {len(tool_args)} args")
+        # Update usage stats in status bar (Phase 6.4)
+        self._update_usage_display()
 
-            # Format arguments for display
-            if tool_args:
-                # Format as compact JSON-like string
-                args_parts = []
-                for key, value in tool_args.items():
-                    if isinstance(value, str):
-                        # Truncate long strings
-                        if len(value) > 100:
-                            value_str = f'"{value[:100]}..."'
-                        else:
-                            value_str = f'"{value}"'
+        # Auto-save session after each message pair (Phase 2.1)
+        from ppxai.config import get_auto_save_interval
+        save_interval = get_auto_save_interval()
+        message_count = len(self._engine_client.session.messages)
+        if message_count > 0 and (save_interval == 0 or message_count % max(1, save_interval) == 0):
+            try:
+                self._engine_client.session.save_dirty()
+                self._log.debug(f"Auto-saved session at {message_count} messages (interval={save_interval})")
+            except Exception as e:
+                self._log.warning(f"Auto-save failed: {e}")
+
+    async def _on_tool_call(self, sender, data, **kwargs) -> None:
+        """Handle TOOL_CALL event."""
+        chat_view = self.query_one("#chat-view", ChatView)
+
+        tool_name = data.get("tool", "unknown")
+        tool_args = data.get("arguments", {})
+        self._log.info(f"[Event] Tool call: {tool_name} with {len(tool_args)} args")
+
+        # Format arguments for display
+        if tool_args:
+            # Format as compact JSON-like string
+            args_parts = []
+            for key, value in tool_args.items():
+                if isinstance(value, str):
+                    # Truncate long strings
+                    if len(value) > 100:
+                        value_str = f'"{value[:100]}..."'
                     else:
-                        value_str = str(value)
-                    args_parts.append(f"{key}={value_str}")
-                args_str = ", ".join(args_parts)
-                content = f"[dim]Calling with:[/dim] {args_str}"
-            else:
-                content = "[dim]Called with no arguments[/dim]"
+                        value_str = f'"{value}"'
+                else:
+                    value_str = str(value)
+                args_parts.append(f"{key}={value_str}")
+            args_str = ", ".join(args_parts)
+            content = f"[dim]Calling with:[/dim] {args_str}"
+        else:
+            content = "[dim]Called with no arguments[/dim]"
 
-            chat_view.add_tool_message(tool_name, content)
-            self._log.info(f"Added tool call message for: {tool_name}")
+        chat_view.add_tool_message(tool_name, content)
+        self._log.debug(f"[Event] Added tool call message for: {tool_name}")
 
-        elif event.type == EventType.TOOL_RESULT:
-            # Show tool result (Phase 6.5)
-            tool_data = event.data
-            tool_name = tool_data.get("tool", "unknown")
-            result = tool_data.get("result", "")
+    async def _on_tool_result(self, sender, data, **kwargs) -> None:
+        """Handle TOOL_RESULT event."""
+        chat_view = self.query_one("#chat-view", ChatView)
 
-            # Show full result (scrollable bubble will handle long content)
-            chat_view.add_tool_message(f"{tool_name} result", result)
+        tool_name = data.get("tool", "unknown")
+        result = data.get("result", "")
+        self._log.debug(f"[Event] Tool result from {tool_name}: {len(str(result))} chars")
 
-        elif event.type == EventType.TOOL_ERROR:
-            # Tool error (Phase 6.5)
-            tool_data = event.data
-            tool_name = tool_data.get("tool", "unknown") if isinstance(event.data, dict) else "unknown"
-            error_msg = tool_data.get("error", str(event.data)) if isinstance(event.data, dict) else str(event.data)
+        # Show full result (scrollable bubble will handle long content)
+        chat_view.add_tool_message(f"{tool_name} result", result)
 
-            chat_view.add_tool_message(f"{tool_name} [red]ERROR[/red]", f"[red]{error_msg}[/red]")
+    async def _on_engine_error(self, sender, data, **kwargs) -> None:
+        """Handle ENGINE_ERROR event."""
+        chat_view = self.query_one("#chat-view", ChatView)
+        self._log.error(f"[Event] Engine error: {data}")
 
-        elif event.type == EventType.ERROR:
-            # General error
-            chat_view.add_system_message(
-                f"[red]Error:[/red] {event.data}"
-            )
-
-        elif event.type == EventType.INFO:
-            # Info message
-            chat_view.add_system_message(f"[dim]{event.data}[/dim]")
+        chat_view.add_system_message(f"[red]Error:[/red] {data}")
 
     def _update_usage_display(self) -> None:
         """Update usage stats in status bar (Phase 6.4).

@@ -30,6 +30,8 @@ dependencies = [
     "tzdata>=2024.1",
     "pyperclip>=1.8.0",
     "filetype>=1.2.0",  # Pure Python file type detection (replaces python-magic)
+    "tree-sitter>=0.23",
+    # Tree-sitter language packages for syntax highlighting (all 15 supported languages)
     "tree-sitter-python>=0.25.0",
     "tree-sitter-javascript>=0.25.0",
     "tree-sitter-json>=0.24.8",
@@ -39,7 +41,12 @@ dependencies = [
     "tree-sitter-css>=0.25.0",
     "tree-sitter-markdown>=0.5.1",
     "tree-sitter-bash>=0.25.1",
-    "tree-sitter>=0.23",
+    "tree-sitter-go>=0.23.0",
+    "tree-sitter-rust>=0.23.0",
+    "tree-sitter-java>=0.23.0",
+    "tree-sitter-sql>=0.3.0",
+    "tree-sitter-xml>=0.7.0",
+    "tree-sitter-regex>=0.25.0",
 ]
 
 [project.optional-dependencies]
@@ -75,6 +82,7 @@ data = [
 tui = [
     "textual>=0.47.0",
     "textual-image>=0.8.0",
+    "blinker>=1.7.0",  # Event bus for decoupled component communication
 ]
 
 # Development dependencies
