@@ -1,6 +1,8 @@
 # ppxai - Multi-LLM Interface for Developers
 
-![Version](https://img.shields.io/badge/version-1.15.0-blue) ![Tests](https://img.shields.io/badge/tests-1105%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
+![Version](https://img.shields.io/badge/version-1.15.0--dev-blue) ![Tests](https://img.shields.io/badge/tests-1105%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
+
+> **Development Branch:** This is the `feature/new-tui-command` branch with the new type-based renderer architecture. See the [v1.15.0 release notes](docs/RELEASE-NOTES-v1.15.0.md) for details on the 17 CommandResult types and mechanical UI dispatch.
 
 **Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
 
@@ -80,6 +82,31 @@ uv run ppxaide                      # Or start Textual TUI
 
 ## Features
 
+### v1.15.0 Architecture: Type-Based Renderer Dispatch
+
+The core innovation in v1.15.0 is a revolutionary renderer architecture that **completely decouples command logic from UI presentation**:
+
+- **17 CommandResult types** - Structured data for all command outputs (MessageResult, TableResult, CodeResult, ErrorResult, etc.)
+- **Mechanical dispatch** - `isinstance()` checks route results to renderers, zero conditionals
+- **2 renderer implementations** - RichRenderer (legacy TUI) + TextualRenderer (ppxaide)
+- **UI-agnostic commands** - Same command code works in TUI, VSCode, Web, future GUIs
+- **100% testable** - Commands tested without UI framework dependencies
+
+**Example:**
+```python
+# Command returns typed result
+result = show_command.execute("file.py")
+# → Returns CodeResult(content="...", language="python")
+
+# Renderer mechanically dispatches
+if isinstance(result, CodeResult):
+    renderer.render_code(result)  # TUI uses Rich syntax highlighting
+```
+
+This enables **single-source command logic** that renders correctly in any UI—terminal, VSCode webview, or browser—just by swapping the renderer implementation.
+
+See [Architecture Docs](docs/ARCHITECTURE.md) and [v1.15.0 Release Notes](docs/RELEASE-NOTES-v1.15.0.md) for details.
+
 ### Multi-Provider Support
 - **Perplexity AI** - Real-time search with citations
 - **Google Gemini** - 2.5 Flash/Pro with 1M context, Google Search Grounding
@@ -101,13 +128,14 @@ Switch providers anytime: `/provider gemini` or `/model gpt-4o`
 | Status bar with provider/model | SSE streaming | SSE streaming |
 
 **ppxaide features (v1.15.0+):**
-- Modern async architecture with real-time streaming
-- 17+ themes (vs 6 in Rich TUI) - cycle with Ctrl+T
-- Advanced file viewers with tree/table/image support
-- Real-time token/cost tracking in status bar
-- Tool execution display with formatted arguments/results
-- Bootstrap context auto-loading from AGENTS.md
-- Type-based command result rendering
+- **Type-based renderer architecture** - All 32 commands return structured result objects (17 types), enabling mechanical UI dispatch without conditionals
+- **Modern async architecture** with real-time streaming
+- **17+ themes** (vs 6 in Rich TUI) - cycle with Ctrl+T or Ctrl+P for palette
+- **Advanced file viewers** with tree/table/image support via typed results
+- **Real-time token/cost tracking** in status bar with smart formatting
+- **Tool execution display** with formatted arguments/results
+- **Bootstrap context auto-loading** from AGENTS.md
+- **UI-agnostic commands** - Same command logic works in TUI, VSCode, and Web
 
 **Desktop Web App (v1.13.1+):** Run `ppxai-desktop` to launch a browser-based chat interface. macOS users can download the `.dmg` installer for a native app experience.
 
