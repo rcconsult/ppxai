@@ -21,7 +21,8 @@
 #   --help              Show this help message
 #
 # What gets installed:
-#   ~/.local/bin/ppxai              - Terminal UI application
+#   ~/.local/bin/ppxai              - Rich TUI (original)
+#   ~/.local/bin/ppxaide            - Textual TUI (v1.15.0+ - modern async)
 #   ~/.local/bin/ppxai-server       - HTTP server for VSCode extension
 #   ~/.local/bin/ppxai-desktop      - Desktop web app launcher
 #   ~/.local/bin/ppxai-VERSION.vsix - VSCode extension (with --with-extension)
@@ -117,7 +118,8 @@ AFTER INSTALLATION:
        echo 'PERPLEXITY_API_KEY=your-key-here' > ~/.ppxai/.env
 
     3. Run ppxai:
-       ppxai              # Terminal UI
+       ppxai              # Rich TUI (original)
+       ppxaide            # Textual TUI (v1.15.0+ - modern async)
        ppxai-desktop      # Desktop Web App
        ppxai-server       # HTTP server for VSCode
 
@@ -746,7 +748,7 @@ remove_quarantine() {
 
     info "Removing quarantine attribute from binaries..."
 
-    for binary in ppxai ppxai-server ppxai-desktop; do
+    for binary in ppxai ppxaide ppxai-server ppxai-desktop; do
         local path="${INSTALL_DIR}/${binary}"
         if [[ -f "$path" ]]; then
             xattr -cr "$path" 2>/dev/null || true
@@ -767,7 +769,7 @@ uninstall_ppxai() {
     local removed_something=false
 
     # Remove binaries
-    for binary in ppxai ppxai-server ppxai-desktop; do
+    for binary in ppxai ppxaide ppxai-server ppxai-desktop; do
         local path="${INSTALL_DIR}/${binary}"
         if [[ -f "$path" ]]; then
             rm -f "$path"
@@ -881,6 +883,10 @@ main() {
         if ! download_binary "ppxai" "$PLATFORM" "$VERSION"; then
             failed=true
         fi
+        # Also download ppxaide (Textual TUI - v1.15.0+)
+        if ! download_binary "ppxaide" "$PLATFORM" "$VERSION"; then
+            warn "ppxaide download failed - only Rich TUI (ppxai) will be available"
+        fi
     fi
 
     if [[ "$INSTALL_SERVER" == true ]]; then
@@ -987,6 +993,7 @@ main() {
         echo "    Run 'ppxai' to start the terminal UI"
     fi
     if [[ "$INSTALL_SERVER" == true ]]; then
+        echo "    Run 'ppxai' for Rich TUI (original) or 'ppxaide' for Textual TUI (v1.15.0+ modern)"
         echo "    Run 'ppxai-server' to start the HTTP server (for VSCode)"
     fi
     if [[ "$INSTALL_DESKTOP_BIN" == true ]]; then

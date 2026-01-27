@@ -37,6 +37,7 @@ $CHECKPOINTS_DIR = Join-Path $INSTALL_DIR "checkpoints"
 # Binary names
 $BINARIES = @(
     "ppxai-windows.exe",
+    "ppxaide-windows.exe",
     "ppxai-server-windows.exe",
     "ppxai-desktop-windows.exe"
 )
@@ -144,6 +145,7 @@ function Install-Binaries {
     # Create convenient aliases (without -windows suffix)
     $aliases = @{
         "ppxai.exe" = "ppxai-windows.exe"
+        "ppxaide.exe" = "ppxaide-windows.exe"
         "ppxai-server.exe" = "ppxai-server-windows.exe"
         "ppxai-desktop.exe" = "ppxai-desktop-windows.exe"
     }
@@ -507,6 +509,8 @@ function Show-PostInstall {
     Write-Host ""
     Write-Host "  2. Run ppxai:"
     Write-Host "     ppxai                  # Terminal UI" -ForegroundColor Yellow
+    Write-Host "     ppxai                  # Rich TUI (original)" -ForegroundColor Yellow
+    Write-Host "     ppxaide                # Textual TUI (v1.15.0+ modern)" -ForegroundColor Yellow
     Write-Host "     ppxai-server           # HTTP server for VSCode" -ForegroundColor Yellow
     Write-Host "     ppxai-desktop          # Desktop web app" -ForegroundColor Yellow
     Write-Host ""

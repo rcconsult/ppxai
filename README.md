@@ -1,6 +1,6 @@
 # ppxai - Multi-LLM Interface for Developers
 
-![Version](https://img.shields.io/badge/version-1.14.2-blue) ![Tests](https://img.shields.io/badge/tests-766%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
+![Version](https://img.shields.io/badge/version-1.15.0-blue) ![Tests](https://img.shields.io/badge/tests-1105%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
 
 **Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
 
@@ -27,7 +27,7 @@ curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | 
 irm https://raw.githubusercontent.com/rcconsult/ppxai/master/scripts/install.ps1 | iex
 ```
 
-This installs `ppxai`, `ppxai-server`, and `ppxai-desktop`. Then:
+This installs `ppxai` (Rich TUI), `ppxaide` (Textual TUI), `ppxai-server`, and `ppxai-desktop`. Then:
 
 ```bash
 # Add to PATH (if not already)
@@ -36,8 +36,11 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
 # Set up API key
 echo 'PERPLEXITY_API_KEY=pplx-xxxxx' > ~/.ppxai/.env
 
-# Run TUI
+# Run Rich TUI (original)
 ppxai
+
+# Or run Textual TUI (new in v1.15.0)
+ppxaide
 
 # Or run Desktop Web App (browser-based UI)
 ppxai-desktop
@@ -51,17 +54,18 @@ ppxai-desktop
 - Full macOS setup: `curl -sSL ... | bash -s -- --with-macos-app --with-config --with-launchagent`
 - Uninstall: `curl -sSL ... | bash -s -- --uninstall`
 
-**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.14.2` (specific version), `-Uninstall`
+**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.15.0` (specific version), `-Uninstall`
 
 See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed installation options including Windows.
 
 ### Option 2: Download Binaries
 
 Download from [Releases](../../releases):
-- `ppxai-{platform}` - Terminal UI
+- `ppxai-{platform}` - Rich TUI (original)
+- `ppxaide-{platform}` - Textual TUI (new in v1.15.0)
 - `ppxai-server-{platform}` - HTTP server for VSCode
 - `ppxai-desktop-{platform}` - Desktop Web App
-- `ppxai-1.14.2.vsix` - VSCode extension
+- `ppxai-1.15.0.vsix` - VSCode extension
 - `ppxai-*-macos-arm64.dmg` - macOS app bundle installer
 
 ### Option 3: From Source
@@ -70,7 +74,8 @@ Download from [Releases](../../releases):
 git clone https://github.com/rcconsult/ppxai.git && cd ppxai
 python scripts/bootstrap.py --all   # Auto-downloads uv, installs deps
 cp .env.example .env                # Add your API keys
-uv run ppxai                        # Start TUI
+uv run ppxai                        # Start Rich TUI
+uv run ppxaide                      # Or start Textual TUI
 ```
 
 ## Features
@@ -89,11 +94,20 @@ Switch providers anytime: `/provider gemini` or `/model gpt-4o`
 ### Triple Interface
 | TUI (Terminal) | Desktop Web App | VSCode Extension |
 |----------------|-----------------|------------------|
-| Rich markdown rendering | Browser-based UI | Webview chat panel |
-| Tab autocomplete for `/` commands | Full slash commands | Right-click: Explain, Test, Docs |
-| `@file`, `@git`, `@tree` context | Same context injection | Same context injection |
-| Status bar with provider/model | Provider/model badges | Provider/model switcher |
-| Streaming responses | SSE streaming | SSE streaming |
+| **ppxai** - Rich TUI (original) | Browser-based UI | Webview chat panel |
+| **ppxaide** - Textual TUI (v1.15.0+) | Full slash commands | Right-click: Explain, Test, Docs |
+| Tab autocomplete for `/` commands | Same context injection | Same context injection |
+| `@file`, `@git`, `@tree` context | Provider/model badges | Provider/model switcher |
+| Status bar with provider/model | SSE streaming | SSE streaming |
+
+**ppxaide features (v1.15.0+):**
+- Modern async architecture with real-time streaming
+- 17+ themes (vs 6 in Rich TUI) - cycle with Ctrl+T
+- Advanced file viewers with tree/table/image support
+- Real-time token/cost tracking in status bar
+- Tool execution display with formatted arguments/results
+- Bootstrap context auto-loading from AGENTS.md
+- Type-based command result rendering
 
 **Desktop Web App (v1.13.1+):** Run `ppxai-desktop` to launch a browser-based chat interface. macOS users can download the `.dmg` installer for a native app experience.
 
@@ -104,7 +118,7 @@ Switch providers anytime: `/provider gemini` or `/model gpt-4o`
 - **Context Management** - `/context` shows usage vs model limit, `/context show` displays bootstrap hierarchy, `/context clear` removes injected files. Context badge shows percentage in TUI status line and VSCode header.
 - **Cost Control** - Use Perplexity for research, Gemini for long context, local models for sensitive code—all in one session
 - **Real-time Usage Tracking** - Token counts and cost estimates in status line (`1.2K↓/0.5K↑ $0.0045`)
-- **Themed TUI Panels** - 4 themes: Standard, Tron Legacy, Matrix, Nord (`/theme` to switch)
+- **Themed TUI Panels** - Rich TUI: 6 themes; Textual TUI (ppxaide): 17+ themes (`/theme` to cycle or Ctrl+T)
 
 ### Agent Mode
 Enable with `/agent on` or click the Agent button in VSCode:
@@ -242,7 +256,8 @@ No telemetry. No tracking. Data only goes to the LLM provider you choose.
 ```
 ppxai/
 ├── ppxai/                    # Core package
-│   ├── main.py               # TUI entry point
+│   ├── rich/main.py          # Rich TUI entry point
+│   ├── tui/                  # Textual TUI (ppxaide - v1.15.0+)
 │   ├── engine/               # EngineClient, providers, tools
 │   ├── server/               # HTTP + JSON-RPC servers
 │   ├── web/                  # Desktop Web App static files
@@ -250,7 +265,7 @@ ppxai/
 ├── vscode-extension/         # VSCode extension (TypeScript)
 ├── scripts/                  # Build, release, install scripts
 ├── resources/                # Icons (PNG, ICO, ICNS) and desktop files
-├── tests/                    # 766 tests
+├── tests/                    # 1105 tests
 └── docs/                     # Documentation
 ```
 
@@ -260,6 +275,8 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ```bash
 uv run pytest tests/ -v       # Run tests
+uv run ppxai                  # Rich TUI
+uv run ppxaide                # Textual TUI (v1.15.0+)
 uv run ppxai-server           # Start server for VSCode dev
 ```
 

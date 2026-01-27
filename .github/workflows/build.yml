@@ -157,6 +157,58 @@ jobs:
         name: ${{ matrix.asset_name }}
         path: dist/${{ matrix.artifact_name }}
 
+  build-tui-textual:
+    needs: test
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: ppxaide
+            asset_name: ppxaide-linux-amd64
+          - os: macos-latest
+            artifact_name: ppxaide
+            asset_name: ppxaide-macos-arm64
+          - os: windows-latest
+            artifact_name: ppxaide.exe
+            asset_name: ppxaide-windows.exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+
+    - name: Set up Python
+      run: uv python install 3.11
+
+    - name: Install dependencies
+      run: uv sync --frozen --extra build --extra tui
+
+    - name: Build with PyInstaller
+      run: uv run pyinstaller ppxaide.spec
+
+    - name: Verify build (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        ls -lh dist/
+        file dist/${{ matrix.artifact_name }}
+
+    - name: Verify build (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        dir dist\
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.asset_name }}
+        path: dist/${{ matrix.artifact_name }}
+
   build-desktop:
     needs: test
     strategy:
@@ -274,7 +326,7 @@ jobs:
         path: vscode-extension/*.vsix
 
   build-dmg:
-    needs: [build-tui, build-desktop, build-server]
+    needs: [build-tui, build-tui-textual, build-desktop, build-server]
     runs-on: macos-latest
     if: startsWith(github.ref, 'refs/tags/v')
 
@@ -282,10 +334,16 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Download TUI artifact
+    - name: Download Rich TUI artifact
       uses: actions/download-artifact@v4
       with:
         name: ppxai-macos-arm64
+        path: dist/
+
+    - name: Download Textual TUI artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ppxaide-macos-arm64
         path: dist/
 
     - name: Download desktop artifact
@@ -370,6 +428,7 @@ jobs:
 
         # Copy CLI binaries for terminal users
         cp dist/ppxai "$DMG_CONTENTS/CLI Tools/ppxai"
+        cp dist/ppxaide "$DMG_CONTENTS/CLI Tools/ppxaide"
         cp dist/ppxai-server-bin "$DMG_CONTENTS/CLI Tools/ppxai-server"
         chmod +x "$DMG_CONTENTS/CLI Tools/"*
 
@@ -383,7 +442,7 @@ jobs:
         1. Copy binaries to ~/.local/bin (recommended):
 
            mkdir -p ~/.local/bin
-           cp ppxai ppxai-server ~/.local/bin/
+           cp ppxai ppxaide ppxai-server ~/.local/bin/
 
         2. Add ~/.local/bin to PATH (if not already):
 
@@ -397,7 +456,8 @@ jobs:
 
         3. Run:
 
-           ppxai         - Interactive TUI
+           ppxai         - Rich TUI (original)
+           ppxaide       - Textual TUI (v1.15.0+ - modern async)
            ppxai-server  - HTTP server for VSCode extension
 
         Alternative: Use the automated installer:
@@ -422,7 +482,7 @@ jobs:
         path: dist/ppxai-${{ steps.version.outputs.version }}-macos-arm64.dmg
 
   release:
-    needs: [build-tui, build-server, build-desktop, build-web-ui, build-vscode, build-dmg]
+    needs: [build-tui, build-tui-textual, build-server, build-desktop, build-web-ui, build-vscode, build-dmg]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
 
@@ -437,10 +497,14 @@ jobs:
 
     - name: Rename artifacts for release
       run: |
-        # TUI binaries
+        # Rich TUI binaries
         mv artifacts/ppxai-linux-amd64/ppxai artifacts/ppxai-linux-amd64/ppxai-linux-amd64
         mv artifacts/ppxai-macos-arm64/ppxai artifacts/ppxai-macos-arm64/ppxai-macos-arm64
         mv artifacts/ppxai-windows.exe/ppxai.exe artifacts/ppxai-windows.exe/ppxai-windows.exe
+        # Textual TUI binaries
+        mv artifacts/ppxaide-linux-amd64/ppxaide artifacts/ppxaide-linux-amd64/ppxaide-linux-amd64
+        mv artifacts/ppxaide-macos-arm64/ppxaide artifacts/ppxaide-macos-arm64/ppxaide-macos-arm64
+        mv artifacts/ppxaide-windows.exe/ppxaide.exe artifacts/ppxaide-windows.exe/ppxaide-windows.exe
         # Server binaries
         mv artifacts/ppxai-server-linux-amd64/ppxai-server artifacts/ppxai-server-linux-amd64/ppxai-server-linux-amd64
         mv artifacts/ppxai-server-macos-arm64/ppxai-server artifacts/ppxai-server-macos-arm64/ppxai-server-macos-arm64
@@ -477,6 +541,9 @@ jobs:
           artifacts/ppxai-linux-amd64/ppxai-linux-amd64
           artifacts/ppxai-macos-arm64/ppxai-macos-arm64
           artifacts/ppxai-windows.exe/ppxai-windows.exe
+          artifacts/ppxaide-linux-amd64/ppxaide-linux-amd64
+          artifacts/ppxaide-macos-arm64/ppxaide-macos-arm64
+          artifacts/ppxaide-windows.exe/ppxaide-windows.exe
           artifacts/ppxai-server-linux-amd64/ppxai-server-linux-amd64
           artifacts/ppxai-server-macos-arm64/ppxai-server-macos-arm64
           artifacts/ppxai-server-windows.exe/ppxai-server-windows.exe

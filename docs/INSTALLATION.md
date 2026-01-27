@@ -20,7 +20,7 @@ This guide covers installing ppxai for terminal (TUI), Desktop Web App, and VSCo
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash
 ```
 
-This installs `ppxai` (TUI), `ppxai-server`, and `ppxai-desktop` (Desktop Web App) to `~/.local/bin`.
+This installs `ppxai` (Rich TUI), `ppxaide` (Textual TUI - v1.15.0+), `ppxai-server`, and `ppxai-desktop` (Desktop Web App) to `~/.local/bin`.
 
 #### Installation Options
 
@@ -32,7 +32,7 @@ curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | 
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-config
 
 # Install specific version
-curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --version v1.13.8
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --version v1.15.0
 
 # Install with VSCode extension
 curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-extension
@@ -78,7 +78,7 @@ Invoke-WebRequest -Uri "https://raw.githubusercontent.com/rcconsult/ppxai/master
 .\install.ps1
 
 # Install specific version
-.\install.ps1 -Version v1.13.8
+.\install.ps1 -Version v1.15.0
 
 # Force overwrite existing installation
 .\install.ps1 -Force
@@ -146,8 +146,11 @@ Get your API key at: https://www.perplexity.ai/settings/api
 ### 3. Verify Installation
 
 ```bash
-# Check TUI
+# Check Rich TUI
 ppxai --version
+
+# Check Textual TUI (v1.15.0+)
+ppxaide --version
 
 # Check server
 ppxai-server --version
@@ -161,8 +164,20 @@ ppxai-desktop --version
 Start the terminal chat interface:
 
 ```bash
+# Rich TUI (original)
 ppxai
+
+# Or Textual TUI (v1.15.0+ - modern async architecture)
+ppxaide
 ```
+
+**ppxaide features:**
+- Real-time streaming with async event loop
+- 17+ themes (vs 6 in Rich TUI) - cycle with Ctrl+T or `/theme`
+- Advanced file viewers (tree/table toggle, image support, syntax highlighting)
+- Real-time token/cost tracking in status bar
+- Tool execution display with formatted arguments/results
+- Bootstrap context auto-loading from AGENTS.md
 
 ### Basic Commands
 
@@ -257,7 +272,7 @@ This installs:
 
 ```bash
 # Install the extension
-code --install-extension ~/.local/bin/ppxai-1.13.2.vsix
+code --install-extension ~/.local/bin/ppxai-1.15.0.vsix
 
 # Or drag and drop the .vsix file into VSCode
 ```
@@ -276,7 +291,7 @@ The VSCode extension requires `ppxai-server` to be running. There are two ways t
 
 The extension auto-starts `ppxai-server` when you open the chat panel. Just open the ppxai chat and wait a few seconds.
 
-**Option 2: Click the Server Badge (v1.13.1+)**
+**Option 2: Click the Server Badge**
 
 In the ppxai chat panel, click the "Disconnected" badge to start the server.
 
@@ -291,10 +306,12 @@ The server runs on `http://127.0.0.1:54320` by default.
 ### Extension Features
 
 - **Chat Panel** - Full AI chat interface in the sidebar
-- **Server Control** - Auto-start server from the UI (v1.13.8+)
+- **Server Control** - Auto-start server from the UI
 - **Tools** - Enable AI tools (file reading, shell commands, etc.)
 - **Agent Mode** - Autonomous task execution with checkpoints
 - **Code Actions** - Explain, generate tests, generate docs from context menu
+- **Session Management** - Save, load, and restore conversations
+- **Real-time Streaming** - SSE-based streaming with instant responses
 
 ## Alternative: Install with pip/uv
 
@@ -318,25 +335,28 @@ ppxai-server
 
 Pre-built binaries are available for all platforms:
 
-| Platform | TUI | Server | Desktop |
-|----------|-----|--------|---------|
-| macOS ARM (M1/M2) | `ppxai-macos-arm64` | `ppxai-server-macos-arm64` | `ppxai-desktop-macos-arm64` |
-| macOS Intel | `ppxai-macos-intel` | `ppxai-server-macos-intel` | `ppxai-desktop-macos-intel` |
-| Linux x64 | `ppxai-linux-amd64` | `ppxai-server-linux-amd64` | `ppxai-desktop-linux-amd64` |
-| Windows | `ppxai-windows.exe` | `ppxai-server-windows.exe` | `ppxai-desktop-windows.exe` |
+| Platform | Rich TUI | Textual TUI | Server | Desktop |
+|----------|---------|-------------|--------|---------|
+| macOS ARM (M1/M2) | `ppxai-macos-arm64` | `ppxaide-macos-arm64` | `ppxai-server-macos-arm64` | `ppxai-desktop-macos-arm64` |
+| macOS Intel | `ppxai-macos-intel` | `ppxaide-macos-intel` | `ppxai-server-macos-intel` | `ppxai-desktop-macos-intel` |
+| Linux x64 | `ppxai-linux-amd64` | `ppxaide-linux-amd64` | `ppxai-server-linux-amd64` | `ppxai-desktop-linux-amd64` |
+| Windows | `ppxai-windows.exe` | `ppxaide-windows.exe` | `ppxai-server-windows.exe` | `ppxai-desktop-windows.exe` |
 
 **Additional downloads:**
 - `ppxai-VERSION.vsix` - VSCode extension
 - `ppxai-VERSION-macos-arm64.dmg` - macOS app bundle installer
 - `ppxai-web-ui-VERSION.zip` - Web UI files (for self-hosting)
 
+**Note:** ppxaide (Textual TUI) is new in v1.15.0 and offers a modern async architecture with advanced features.
+
 Download from [GitHub Releases](https://github.com/rcconsult/ppxai/releases).
 
 ### Linux/macOS
 
 ```bash
-chmod +x ppxai-linux-amd64
+chmod +x ppxai-linux-amd64 ppxaide-linux-amd64
 mv ppxai-linux-amd64 ~/.local/bin/ppxai
+mv ppxaide-linux-amd64 ~/.local/bin/ppxaide
 ```
 
 ### Windows
@@ -344,6 +364,7 @@ mv ppxai-linux-amd64 ~/.local/bin/ppxai
 ```powershell
 # Move to installation directory
 Move-Item ppxai-windows.exe $env:USERPROFILE\.ppxai\bin\ppxai.exe
+Move-Item ppxaide-windows.exe $env:USERPROFILE\.ppxai\bin\ppxaide.exe
 ```
 
 ## Configuration
@@ -498,6 +519,7 @@ curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | 
 ```bash
 # Remove binaries
 rm ~/.local/bin/ppxai
+rm ~/.local/bin/ppxaide
 rm ~/.local/bin/ppxai-server
 rm ~/.local/bin/ppxai-desktop
 rm ~/.local/bin/ppxai-*.vsix
