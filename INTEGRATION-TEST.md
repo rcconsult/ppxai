@@ -101,7 +101,9 @@ uv run ppxaide
 - ✅ History navigation (up/down) unchanged
 - ✅ No changes to app.py initialization
 
-## Bug Fix: Input Not Accepting Typing
+## Bug Fixes
+
+### Bug #1: Input Not Accepting Typing (AutoComplete Integration)
 
 **Issue:** After initial integration, input box was not accepting user typing.
 
@@ -121,6 +123,23 @@ yield AutoComplete(input_widget, candidates=self._get_completions)
 ```
 
 **Key insight:** textual-autocomplete wraps the Input widget, it doesn't attach to it via selector.
+
+### Bug #2: Input Blocked After Session Restoration
+
+**Issue:** After ppxaide restores a session on startup, the input box doesn't accept typing.
+
+**Root cause:** Session restoration renders messages to ChatView, which takes focus. The input box was never refocused after restoration completed.
+
+**Fix applied:**
+```python
+# In app.py _restore_session() method, after rendering messages:
+# Refocus input box after session restoration
+input_box = self.query_one("#input-box", InputBox)
+input_box.focus()
+```
+
+**Files modified:**
+- [ppxai/tui/app.py](ppxai/tui/app.py:512) - Added focus() call after session restoration
 
 ## Conclusion
 

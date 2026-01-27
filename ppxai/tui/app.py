@@ -508,6 +508,10 @@ class PPXAIDEApp(App):
             self.sub_title = f"{self._provider}/{self._model}"
             self._log.info(f"Updated subtitle: {self.sub_title}")
 
+        # Refocus input box after session restoration (critical for autocomplete integration)
+        input_box = self.query_one("#input-box", InputBox)
+        input_box.focus()
+
         self._log.info(f"Session restoration complete: provider={self._provider}, model={self._model}, tools={self._tools_enabled}")
         return True
 
