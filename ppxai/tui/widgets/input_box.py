@@ -66,21 +66,18 @@ class InputBox(Static):
                 id="chat-input"
             )
 
+        # Yield AutoComplete as a sibling to Horizontal (not inside it)
+        # AutoComplete will attach to the Input via ID
+        yield AutoComplete(
+            target="#chat-input",  # Use ID selector
+            candidates=self._get_completions,  # Lazy callback
+            prevent_default_enter=False,  # Don't block Enter - allow submit
+            # prevent_default_tab=True by default - Tab selects from dropdown
+        )
+
     def on_mount(self) -> None:
-        """Set up autocomplete and focus the input on mount."""
-        # Mount AutoComplete widget to attach to the input
+        """Focus the input on mount."""
         input_widget = self.query_one(Input)
-
-        if self._completer or True:  # Always mount, uses lazy callback
-            autocomplete = AutoComplete(
-                input_widget,  # Pass widget instance
-                candidates=self._get_completions,  # Lazy callback
-                prevent_default_enter=False,  # Don't block Enter - allow submit
-                # prevent_default_tab=True by default - Tab selects from dropdown
-            )
-            self.mount(autocomplete)
-
-        # Focus the input
         input_widget.focus()
 
     def focus(self) -> None:
