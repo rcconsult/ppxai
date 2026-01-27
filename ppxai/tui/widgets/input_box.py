@@ -1,17 +1,22 @@
 """
-InputBox widget - Multi-line input with history and command detection.
+InputBox widget - Multi-line input with history and autocomplete.
+
+Updated for v1.16.0: Now uses textual-autocomplete library for better UX.
 """
+
+from typing import Iterable
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.message import Message
 from textual.widgets import Input, Static
+from textual_autocomplete import AutoComplete, DropdownItem
 
-from .completion_popup import CompletionPopup
+from ..autocomplete_adapter import create_completion_callback
 
 
 class InputBox(Static):
-    """Input widget with command detection and history."""
+    """Input widget with command detection, history, and autocomplete."""
 
     # CSS is in layout.tcss
 
@@ -27,36 +32,57 @@ class InputBox(Static):
         self._history: list[str] = []
         self._history_index = -1
         self._completer = completer
-        self._completion_popup = None
+        self._completion_callback = None
+
+    def _get_completions(self, current_text: str) -> Iterable[DropdownItem]:
+        """
+        Lazy completion callback that checks if completer is set.
+
+        This allows the completer to be set after compose() via set_completer().
+        """
+        if self._completer:
+            if not self._completion_callback:
+                # Create callback on first use
+                self._completion_callback = create_completion_callback(self._completer)
+            return self._completion_callback(current_text)
+        return []
 
     def compose(self) -> ComposeResult:
+        """Compose the input box with autocomplete support."""
         with Horizontal():
             yield Static("[bold cyan]>[/bold cyan]", classes="prompt")
-            yield Input(placeholder="Type a message or /help for commands...")
+
+            # Create the input widget
+            input_widget = Input(
+                placeholder="Type a message or /help for commands...",
+                id="chat-input"
+            )
+
+            # Always wrap with AutoComplete (uses lazy callback)
+            yield AutoComplete(
+                input_widget,
+                candidates=self._get_completions,  # Lazy callback function
+            )
 
     def on_mount(self) -> None:
         """Focus the input on mount."""
-        self.query_one(Input).focus()
+        # Input is now wrapped in AutoComplete, so we need to find it
+        try:
+            input_widget = self.query_one(Input)
+            input_widget.focus()
+        except:
+            pass
 
     def focus(self) -> None:
         """Focus the input widget."""
-        self.query_one(Input).focus()
-
-    def on_input_changed(self, event: Input.Changed) -> None:
-        """Handle input text changes - dismiss popup when typing."""
-        # If popup is visible and user is typing, dismiss it
-        if self._completion_popup and not event.input.value.startswith('/') and '@' not in event.input.value:
-            # User cleared the text or is typing normal text
-            self._completion_popup.remove()
-            self._completion_popup = None
+        try:
+            input_widget = self.query_one(Input)
+            input_widget.focus()
+        except:
+            pass
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle input submission."""
-        # Close popup if open
-        if self._completion_popup:
-            self._completion_popup.remove()
-            self._completion_popup = None
-
         value = event.value.strip()
         if value:
             # Add to history
@@ -71,29 +97,14 @@ class InputBox(Static):
             self.post_message(self.Submitted(value))
 
     def on_key(self, event) -> None:
-        """Handle key events for history navigation and completion."""
+        """Handle key events for history navigation."""
         if event.key == "up":
             self._navigate_history(-1)
             event.prevent_default()
         elif event.key == "down":
             self._navigate_history(1)
             event.prevent_default()
-        # TODO: Autocomplete disabled - Phase 4/5 refactoring needed
-        # Current implementation issues:
-        # - Fixed offset positioning (offset-y: 90%) instead of cursor-based
-        # - Single column layout instead of multi-column like Rich TUI
-        # - No alphabetical sorting of file list
-        # - No lazy loading/virtual scrolling for large file lists
-        # - Fixed 100 file limit with no dynamic pagination
-        # Rich TUI uses prompt_toolkit with:
-        # - Cursor-based positioning (popup appears at '@' character)
-        # - Multi-column scrollable layout
-        # - Alphabetical sorting
-        # - Dynamic lazy loading as user scrolls
-        # See: ppxai/rich/completer.py for reference implementation
-        # elif event.key == "tab":
-        #     self._show_completions()
-        #     event.prevent_default()
+        # Note: Tab key is now handled by textual-autocomplete library
 
     def _navigate_history(self, direction: int) -> None:
         """Navigate through command history."""
@@ -153,78 +164,5 @@ class InputBox(Static):
             completer: TextualCompleter instance
         """
         self._completer = completer
-
-    def _show_completions(self) -> None:
-        """Show completion popup for current input."""
-        if not self._completer:
-            return
-
-        # Close existing popup if any
-        if self._completion_popup:
-            self._completion_popup.remove()
-            self._completion_popup = None
-
-        # Get current input text
-        input_widget = self.query_one(Input)
-        text = input_widget.value
-
-        # Get completions
-        completions = self._completer.get_completions(text)
-
-        if not completions:
-            return
-
-        # Show completion popup
-        self._completion_popup = CompletionPopup(completions)
-
-        # Mount the popup - it will be positioned relative to input
-        self.app.mount(self._completion_popup)
-
-        # Focus the popup so it can handle keys
-        self._completion_popup.focus()
-
-    def on_completion_popup_selected(self, event: CompletionPopup.Selected) -> None:
-        """Handle completion selection."""
-        input_widget = self.query_one(Input)
-        text = input_widget.value
-
-        # Insert the completion
-        # For slash commands, replace the entire command
-        if text.startswith('/'):
-            # Find space after command
-            space_pos = text.find(' ')
-            if space_pos == -1:
-                # No space, replace entire text
-                input_widget.value = event.completion + ' '
-            else:
-                # Has space, replace just the command part
-                parts = text.split(None, 1)
-                if len(parts) == 2:
-                    # Keep the arguments
-                    input_widget.value = event.completion + ' ' + parts[1]
-                else:
-                    input_widget.value = event.completion + ' '
-        # For @context providers, replace from @ to cursor
-        elif '@' in text:
-            at_pos = text.rfind('@')
-            input_widget.value = text[:at_pos] + event.completion + ' '
-        else:
-            input_widget.value = event.completion + ' '
-
-        # Set cursor to end
-        input_widget.cursor_position = len(input_widget.value)
-
-        # Focus back to input
-        input_widget.focus()
-
-        # Clear popup reference
-        self._completion_popup = None
-
-    def on_completion_popup_cancelled(self, event: CompletionPopup.Cancelled) -> None:
-        """Handle completion cancellation."""
-        # Focus back to input
-        input_widget = self.query_one(Input)
-        input_widget.focus()
-
-        # Clear popup reference
-        self._completion_popup = None
+        # Reset callback so it gets recreated with new completer
+        self._completion_callback = None
