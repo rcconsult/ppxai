@@ -103,26 +103,30 @@ uv run ppxaide
 
 ## Bug Fixes
 
-### Bug #1: Input Not Accepting Typing (AutoComplete Integration)
+### Bug #1: Input Widget Invisible/Blocked (AutoComplete Wrapping)
 
-**Issue:** After initial integration, input box was not accepting user typing.
+**Issue:** Input box was invisible or not accepting typing after AutoComplete integration.
 
-**Root cause:** AutoComplete was mounted separately with selector `target="#chat-input"`, which doesn't work. The textual-autocomplete library requires the Input widget to be passed directly to the AutoComplete constructor.
+**Root cause:** When you `yield AutoComplete(input_widget, ...)` in compose(), the Input widget is NOT added to the DOM tree. AutoComplete's compose() method only yields an OptionList dropdown - it doesn't yield the target Input widget.
 
 **Fix applied:**
 ```python
-# WRONG - doesn't work:
-yield Input(id="chat-input")
-# Later in on_mount():
-autocomplete = AutoComplete(target="#chat-input", candidates=...)
-self.mount(autocomplete)
+# WRONG - Input disappears:
+def compose():
+    input_widget = Input(...)
+    yield AutoComplete(input_widget, ...)  # Input NOT in DOM!
 
-# CORRECT - works:
-input_widget = Input(id="chat-input")
-yield AutoComplete(input_widget, candidates=self._get_completions)
+# CORRECT - Input visible and functional:
+def compose():
+    yield Input(id="chat-input")  # Input in DOM
+
+def on_mount():
+    input_widget = self.query_one(Input)
+    autocomplete = AutoComplete(input_widget, ...)
+    self.mount(autocomplete)  # Attaches to Input
 ```
 
-**Key insight:** textual-autocomplete wraps the Input widget, it doesn't attach to it via selector.
+**Key insight:** AutoComplete is an **overlay/dropdown** that attaches to an existing Input widget, NOT a wrapper. The Input must be yielded separately in compose().
 
 ### Bug #2: Input Blocked After Session Restoration
 
