@@ -58,26 +58,27 @@ class InputBox(Static):
         """Compose the input box with autocomplete support."""
         with Horizontal():
             yield Static("[bold cyan]>[/bold cyan]", classes="prompt")
-
-            # Create input widget and wrap it with AutoComplete
-            # The lazy callback handles cases where completer is not yet set
-            input_widget = Input(
+            yield Input(
                 placeholder="Type a message or /help for commands...",
                 id="chat-input"
             )
-            yield AutoComplete(
-                input_widget,  # Pass widget directly, not selector
-                candidates=self._get_completions,  # Lazy callback
-            )
 
     def on_mount(self) -> None:
-        """Focus the input on mount."""
+        """Set up autocomplete and focus the input on mount."""
+        # Mount AutoComplete widget to attach to the input
+        input_widget = self.query_one(Input)
+
+        if self._completer or True:  # Always mount, uses lazy callback
+            autocomplete = AutoComplete(
+                input_widget,  # Pass widget instance
+                candidates=self._get_completions,  # Lazy callback
+                prevent_default_enter=False,  # Don't block Enter key
+                prevent_default_tab=False,  # Don't block Tab key
+            )
+            self.mount(autocomplete)
+
         # Focus the input
-        try:
-            input_widget = self.query_one(Input)
-            input_widget.focus()
-        except:
-            pass
+        input_widget.focus()
 
     def focus(self) -> None:
         """Focus the input widget."""
