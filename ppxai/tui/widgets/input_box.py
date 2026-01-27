@@ -72,8 +72,8 @@ class InputBox(Static):
             autocomplete = AutoComplete(
                 input_widget,  # Pass widget instance
                 candidates=self._get_completions,  # Lazy callback
-                prevent_default_enter=False,  # Don't block Enter key
-                prevent_default_tab=False,  # Don't block Tab key
+                prevent_default_enter=False,  # Don't block Enter - allow submit
+                # prevent_default_tab=True by default - Tab selects from dropdown
             )
             self.mount(autocomplete)
 
