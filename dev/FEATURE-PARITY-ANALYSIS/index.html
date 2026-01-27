@@ -973,6 +973,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#critical-note" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚠️ CRITICAL NOTE
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#legend" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1144,10 +1155,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#completed-in-this-session" class="md-nav__link">
+  <a href="#completed-in-this-session-2026-01-26" class="md-nav__link">
     <span class="md-ellipsis">
       
-        COMPLETED IN THIS SESSION
+        COMPLETED IN THIS SESSION (2026-01-26)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fixes-attempted-2026-01-27" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FIXES ATTEMPTED (2026-01-27)
       
     </span>
   </a>
@@ -1176,8 +1198,12 @@
 
 <h1 id="ppxai-rich-tui-vs-ppxaide-textual-tui-feature-parity-analysis">ppxai (Rich TUI) vs ppxaide (Textual TUI) Feature Parity Analysis<a class="headerlink" href="#ppxai-rich-tui-vs-ppxaide-textual-tui-feature-parity-analysis" title="Permanent link">&para;</a></h1>
 <p><strong>Generated:</strong> 2026-01-26
+<strong>Last Updated:</strong> 2026-01-27 (verification pass)
 <strong>Target Release:</strong> v1.15.0
 <strong>Branch:</strong> feature/new-tui-command</p>
+<h2 id="critical-note">⚠️ CRITICAL NOTE<a class="headerlink" href="#critical-note" title="Permanent link">&para;</a></h2>
+<p>This document was found to have INCORRECT status markers during testing on 2026-01-27.
+Several features marked as ✅ were actually broken or not implemented. This has been corrected.</p>
 <h2 id="legend">Legend<a class="headerlink" href="#legend" title="Permanent link">&para;</a></h2>
 <ul>
 <li>✅ = Fully implemented and working</li>
@@ -1185,6 +1211,7 @@
 <li>❌ = Not implemented</li>
 <li>🔷 = Textual-specific (no Rich equivalent)</li>
 <li>🔶 = Rich-specific (no Textual equivalent)</li>
+<li>🔴 = Previously marked ✅ but found BROKEN during testing</li>
 </ul>
 <hr />
 <h2 id="1-commands-32-total">1. COMMANDS (32 Total)<a class="headerlink" href="#1-commands-32-total" title="Permanent link">&para;</a></h2>
@@ -1733,8 +1760,8 @@
 <tr>
 <td>Assistant messages</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
-<td></td>
+<td style="text-align: center;">🔴 BROKEN</td>
+<td>STREAM_END.data not used when no chunks</td>
 </tr>
 <tr>
 <td>System messages</td>
@@ -1745,20 +1772,20 @@
 <tr>
 <td>Tool messages</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
-<td></td>
+<td style="text-align: center;">⚠️</td>
+<td>Shows in chat but needs verification</td>
 </tr>
 <tr>
 <td>Streaming display</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
-<td></td>
+<td style="text-align: center;">🔴 BROKEN</td>
+<td>Non-streaming responses not displayed</td>
 </tr>
 <tr>
 <td>Reasoning tokens</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">⚠️</td>
-<td>Needs DeepSeek R1/GPT-OSS support</td>
+<td style="text-align: center;">❌</td>
+<td>Not implemented</td>
 </tr>
 <tr>
 <td><strong>Consent/Prompt Dialogs</strong></td>
@@ -1769,26 +1796,26 @@
 <tr>
 <td>Consent prompts</td>
 <td style="text-align: center;">✅ (inline)</td>
-<td style="text-align: center;">✅ (modal)</td>
-<td></td>
+<td style="text-align: center;">🔴 BROKEN</td>
+<td>Callbacks not wired to EngineClient</td>
 </tr>
 <tr>
 <td>Text input prompts</td>
 <td style="text-align: center;">✅ (inline)</td>
-<td style="text-align: center;">✅ (modal)</td>
-<td></td>
+<td style="text-align: center;">⚠️ (modal)</td>
+<td>Needs testing</td>
 </tr>
 <tr>
 <td>File edit consent</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
-<td></td>
+<td style="text-align: center;">🔴 BROKEN</td>
+<td>No consent callback = auto-deny</td>
 </tr>
 <tr>
 <td>Shell command consent</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
-<td></td>
+<td style="text-align: center;">🔴 BROKEN</td>
+<td>No consent callback = auto-deny</td>
 </tr>
 </tbody>
 </table>
@@ -2333,15 +2360,33 @@
 <td style="text-align: center;">90%</td>
 <td style="text-align: center;">⚠️</td>
 </tr>
+<tr>
+<td><strong>AI Chat (CORE)</strong></td>
+<td style="text-align: center;">Full</td>
+<td style="text-align: center;">🔴 BROKEN</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td><strong>Tool Consent</strong></td>
+<td style="text-align: center;">Full</td>
+<td style="text-align: center;">🔴 BROKEN</td>
+<td style="text-align: center;">❌</td>
+</tr>
 </tbody>
 </table>
-<p><strong>Bottom Line</strong>: Core command functionality has parity. Main gaps are:
-1. <strong>Tab autocomplete</strong> (most impactful)
-2. <strong>Status bar toggles</strong> (version/cwd/datetime)
-3. <strong>Agent/checkpoint badges</strong>
-4. <strong>Reasoning token display</strong></p>
+<p><strong>Bottom Line</strong>: 🔴 <strong>CRITICAL ISSUES FOUND</strong> (2026-01-27)</p>
+<p>The Textual TUI has fundamental issues that prevent basic functionality:</p>
+<ol>
+<li><strong>AI responses not displayed</strong> - STREAM_END.data ignored when no chunks</li>
+<li><strong>Tool consent broken</strong> - No callbacks wired = all tools auto-denied</li>
+<li><strong>Tab autocomplete</strong> - Not implemented</li>
+<li><strong>Status bar toggles</strong> - (version/cwd/datetime)</li>
+<li><strong>Agent/checkpoint badges</strong></li>
+<li><strong>Reasoning token display</strong></li>
+</ol>
+<p><strong>The document previously claimed parity but testing revealed core chat functionality is broken.</strong></p>
 <hr />
-<h2 id="completed-in-this-session">COMPLETED IN THIS SESSION<a class="headerlink" href="#completed-in-this-session" title="Permanent link">&para;</a></h2>
+<h2 id="completed-in-this-session-2026-01-26">COMPLETED IN THIS SESSION (2026-01-26)<a class="headerlink" href="#completed-in-this-session-2026-01-26" title="Permanent link">&para;</a></h2>
 <ul>
 <li>✅ Type-based file display migration for /show command</li>
 <li>✅ TreeResult uses DataViewer with Ctrl+V toggle (tree ↔ source)</li>
@@ -2351,6 +2396,17 @@
 <li>✅ FileViewResult uses CodeEditor</li>
 <li>✅ python-magic dependency for file type detection</li>
 <li>✅ All 1105 tests passing</li>
+</ul>
+<h2 id="fixes-attempted-2026-01-27">FIXES ATTEMPTED (2026-01-27)<a class="headerlink" href="#fixes-attempted-2026-01-27" title="Permanent link">&para;</a></h2>
+<ul>
+<li>🔧 Added consent handlers (_file_edit_consent_handler, _shell_consent_handler)</li>
+<li>🔧 Wired consent callbacks to EngineClient constructor</li>
+<li>🔧 Fixed STREAM_END to use event.data when no chunks accumulated</li>
+<li>🔧 Added timestamps to MessageBox (like Rich TUI)</li>
+<li>🔧 Replaced python-magic with filetype library (PyInstaller fix)</li>
+<li>⚠️ Status bar CSS updated but still needs testing</li>
+<li>❌ Core AI chat flow still not working (needs rebuild/test)</li>
+<li>❌ <strong>Consent still not working</strong> - prompts not appearing even after fix attempt</li>
 </ul>
 
 
