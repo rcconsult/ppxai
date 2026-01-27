@@ -202,6 +202,77 @@ class CommandFactory:
         cls._aliases.clear()
 
     @classmethod
+    def generate_help(cls, client: Optional[str] = None) -> str:
+        """Generate help text from registered commands.
+
+        Dynamically builds help output grouped by category.
+
+        Args:
+            client: Optional client filter ("rich", "textual", or None for all)
+
+        Returns:
+            Formatted help text with Rich markup
+        """
+        lines = ["[bold]Available Commands:[/bold]\n"]
+
+        # Group by category
+        for category in cls.get_categories():
+            commands = cls.list_by_category(category)
+            if not commands:
+                continue
+
+            # Category header
+            lines.append(f"[cyan]{category.title()}:[/cyan]")
+
+            # Commands in category, sorted by name
+            for cmd in sorted(commands, key=lambda c: c.name):
+                alias_str = ""
+                if cmd.aliases:
+                    alias_str = f" [dim](/{', /'.join(cmd.aliases)})[/dim]"
+                lines.append(f"  /{cmd.name}{alias_str} - {cmd.description}")
+
+            lines.append("")  # Blank line between categories
+
+        lines.append("[dim]Use /help <command> for detailed help on a specific command.[/dim]")
+        return "\n".join(lines)
+
+    @classmethod
+    def get_command_help(cls, name: str) -> Optional[str]:
+        """Get detailed help for a specific command.
+
+        Args:
+            name: Command name or alias (without leading /)
+
+        Returns:
+            Formatted help text, or None if command not found
+        """
+        spec = cls.get(name)
+        if not spec:
+            return None
+
+        lines = []
+
+        # Command header
+        lines.append(f"[bold]/{spec.name}[/bold] - {spec.description}")
+        lines.append("")
+
+        # Usage
+        if spec.usage:
+            lines.append(f"[cyan]Usage:[/cyan] {spec.usage}")
+        else:
+            lines.append(f"[cyan]Usage:[/cyan] /{spec.name}")
+
+        # Aliases
+        if spec.aliases:
+            aliases = ", ".join(f"/{a}" for a in spec.aliases)
+            lines.append(f"[cyan]Aliases:[/cyan] {aliases}")
+
+        # Category
+        lines.append(f"[cyan]Category:[/cyan] {spec.category}")
+
+        return "\n".join(lines)
+
+    @classmethod
     def reload_user_commands(cls) -> int:
         """Reload user commands from ~/.ppxai/commands/.
 

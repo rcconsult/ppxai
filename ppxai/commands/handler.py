@@ -502,6 +502,12 @@ class CommandHandler:
         if command in ["/quit", "/exit"]:
             return self.handle_quit()
 
+        # Handle /<command> help pattern - redirect to /help <command>
+        # e.g., "/usage help" becomes "/help usage"
+        if args.strip().lower() == "help" and cmd_name != "help":
+            args = cmd_name
+            cmd_name = "help"
+
         # All commands are now handled by CommandFactory
         if CommandFactory.get(cmd_name):
             try:

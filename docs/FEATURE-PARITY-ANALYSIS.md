@@ -1,8 +1,14 @@
 # ppxai (Rich TUI) vs ppxaide (Textual TUI) Feature Parity Analysis
 
 **Generated:** 2026-01-26
+**Last Updated:** 2026-01-27 (verification pass)
 **Target Release:** v1.15.0
 **Branch:** feature/new-tui-command
+
+## ⚠️ CRITICAL NOTE
+
+This document was found to have INCORRECT status markers during testing on 2026-01-27.
+Several features marked as ✅ were actually broken or not implemented. This has been corrected.
 
 ## Legend
 - ✅ = Fully implemented and working
@@ -10,6 +16,7 @@
 - ❌ = Not implemented
 - 🔷 = Textual-specific (no Rich equivalent)
 - 🔶 = Rich-specific (no Textual equivalent)
+- 🔴 = Previously marked ✅ but found BROKEN during testing
 
 ---
 
@@ -115,16 +122,16 @@
 | Atomic rollback | ❌ | ✅ | v1.15.0 feature |
 | **Message Display** |
 | User messages | ✅ | ✅ | |
-| Assistant messages | ✅ | ✅ | |
+| Assistant messages | ✅ | 🔴 BROKEN | STREAM_END.data not used when no chunks |
 | System messages | ✅ | ✅ | |
-| Tool messages | ✅ | ✅ | |
-| Streaming display | ✅ | ✅ | |
-| Reasoning tokens | ✅ | ⚠️ | Needs DeepSeek R1/GPT-OSS support |
+| Tool messages | ✅ | ⚠️ | Shows in chat but needs verification |
+| Streaming display | ✅ | 🔴 BROKEN | Non-streaming responses not displayed |
+| Reasoning tokens | ✅ | ❌ | Not implemented |
 | **Consent/Prompt Dialogs** |
-| Consent prompts | ✅ (inline) | ✅ (modal) | |
-| Text input prompts | ✅ (inline) | ✅ (modal) | |
-| File edit consent | ✅ | ✅ | |
-| Shell command consent | ✅ | ✅ | |
+| Consent prompts | ✅ (inline) | 🔴 BROKEN | Callbacks not wired to EngineClient |
+| Text input prompts | ✅ (inline) | ⚠️ (modal) | Needs testing |
+| File edit consent | ✅ | 🔴 BROKEN | No consent callback = auto-deny |
+| Shell command consent | ✅ | 🔴 BROKEN | No consent callback = auto-deny |
 
 ---
 
@@ -287,16 +294,25 @@ These are features unique to Textual that don't apply to Rich:
 | Keyboard Shortcuts | Basic | Extensive | ✅ |
 | File Viewers | Basic | Advanced | ✅ |
 | Session Management | Full | 90% | ⚠️ |
+| **AI Chat (CORE)** | Full | 🔴 BROKEN | ❌ |
+| **Tool Consent** | Full | 🔴 BROKEN | ❌ |
 
-**Bottom Line**: Core command functionality has parity. Main gaps are:
-1. **Tab autocomplete** (most impactful)
-2. **Status bar toggles** (version/cwd/datetime)
-3. **Agent/checkpoint badges**
-4. **Reasoning token display**
+**Bottom Line**: 🔴 **CRITICAL ISSUES FOUND** (2026-01-27)
+
+The Textual TUI has fundamental issues that prevent basic functionality:
+
+1. **AI responses not displayed** - STREAM_END.data ignored when no chunks
+2. **Tool consent broken** - No callbacks wired = all tools auto-denied
+3. **Tab autocomplete** - Not implemented
+4. **Status bar toggles** - (version/cwd/datetime)
+5. **Agent/checkpoint badges**
+6. **Reasoning token display**
+
+**The document previously claimed parity but testing revealed core chat functionality is broken.**
 
 ---
 
-## COMPLETED IN THIS SESSION
+## COMPLETED IN THIS SESSION (2026-01-26)
 
 - ✅ Type-based file display migration for /show command
 - ✅ TreeResult uses DataViewer with Ctrl+V toggle (tree ↔ source)
@@ -306,3 +322,14 @@ These are features unique to Textual that don't apply to Rich:
 - ✅ FileViewResult uses CodeEditor
 - ✅ python-magic dependency for file type detection
 - ✅ All 1105 tests passing
+
+## FIXES ATTEMPTED (2026-01-27)
+
+- 🔧 Added consent handlers (_file_edit_consent_handler, _shell_consent_handler)
+- 🔧 Wired consent callbacks to EngineClient constructor
+- 🔧 Fixed STREAM_END to use event.data when no chunks accumulated
+- 🔧 Added timestamps to MessageBox (like Rich TUI)
+- 🔧 Replaced python-magic with filetype library (PyInstaller fix)
+- ⚠️ Status bar CSS updated but still needs testing
+- ❌ Core AI chat flow still not working (needs rebuild/test)
+- ❌ **Consent still not working** - prompts not appearing even after fix attempt

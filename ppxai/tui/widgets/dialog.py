@@ -20,6 +20,49 @@ class ConsentDialog(ModalScreen):
     Used for tool consent, session restoration, etc.
     """
 
+    DEFAULT_CSS = """
+    ConsentDialog {
+        align: center middle;
+        background: rgba(0, 0, 0, 0.7);
+    }
+
+    ConsentDialog #dialog-container {
+        width: 60;
+        height: auto;
+        min-height: 12;
+        max-height: 25;
+        background: $surface;
+        border: thick $primary;
+        padding: 1 2;
+    }
+
+    ConsentDialog #dialog-title {
+        color: $primary;
+        text-style: bold;
+        text-align: center;
+        margin-bottom: 1;
+    }
+
+    ConsentDialog #dialog-message {
+        margin-bottom: 1;
+    }
+
+    ConsentDialog #dialog-question {
+        text-style: bold;
+        margin-bottom: 1;
+    }
+
+    ConsentDialog #dialog-buttons {
+        height: 3;
+        align: center middle;
+    }
+
+    ConsentDialog Button {
+        min-width: 10;
+        margin: 0 1;
+    }
+    """
+
     class Responded(Message):
         """Posted when user responds to dialog."""
         def __init__(self, response: str) -> None:

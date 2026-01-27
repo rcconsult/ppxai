@@ -34,32 +34,52 @@ if TYPE_CHECKING:
 def handle_help(context: CommandContext, args: str) -> CommandResult:
     """Handle /help command - display help information.
 
+    Supports:
+        /help           - Show all commands grouped by category
+        /help <command> - Show detailed help for a specific command
+
     Args:
         context: Command context providing access to engine client
-        args: Command arguments (unused)
+        args: Optional command name for detailed help
 
     Returns:
         TextResult with help content
     """
     from ..version import __version__
+    from .factory import CommandFactory
 
-    help_text = f"""[bold]ppxai v{__version__} - AI Chat Assistant[/bold]
+    args = args.strip().lower() if args else ""
 
-[cyan]Available Commands:[/cyan]
-  /help, /h, /?           Show this help message
-  /model, /m              Switch or list AI models
-  /provider, /p           Switch AI provider
-  /tools, /t              Enable/disable AI tools
-  /show <file>            Display file contents
-  /status                 Show system status
-  /theme                  Switch UI theme
-  /save, /s               Save conversation
-  /load, /l               Load conversation
-  /clear, /c              Clear conversation
-  /exit, /quit            Exit application
+    # /help <command> - detailed help for specific command
+    if args:
+        # Remove leading slash if present
+        cmd_name = args.lstrip("/")
+        detailed_help = CommandFactory.get_command_help(cmd_name)
 
-[dim]For detailed command usage, see the full documentation.[/dim]
-"""
+        if detailed_help:
+            return TextResult(
+                status=ResultStatus.INFO,
+                message=detailed_help
+            )
+        else:
+            # Command not found - show error with suggestions
+            available = CommandFactory.list_all()
+            # Find similar commands
+            suggestions = [c for c in available if cmd_name in c or c in cmd_name][:3]
+            suggestion_text = ""
+            if suggestions:
+                suggestion_text = f"\n\nDid you mean: {', '.join(f'/{s}' for s in suggestions)}"
+
+            return ErrorResult(
+                status=ResultStatus.ERROR,
+                message=f"Unknown command: /{cmd_name}",
+                suggestions=[f"Use /help to see all available commands{suggestion_text}"]
+            )
+
+    # /help - show all commands
+    header = f"[bold]ppxai v{__version__} - AI Chat Assistant[/bold]\n\n"
+    help_text = header + CommandFactory.generate_help()
+
     return TextResult(
         status=ResultStatus.INFO,
         message=help_text

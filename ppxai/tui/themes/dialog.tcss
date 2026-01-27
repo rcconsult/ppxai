@@ -55,7 +55,16 @@
     margin: 0 1;
 }
 
-/* Backdrop for modal */
+/* Backdrop for modal - dark overlay to block underlying content */
 ConsentDialog, PromptDialog, MessageDialog {
     align: center middle;
+    background: rgba(0, 0, 0, 0.7);
+}
+
+/* Ensure dialog container is visible on top of backdrop */
+ConsentDialog #dialog-container,
+PromptDialog #dialog-container,
+MessageDialog #dialog-container {
+    background: $surface;
+    border: thick $primary;
 }

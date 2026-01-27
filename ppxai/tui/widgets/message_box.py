@@ -2,6 +2,8 @@
 MessageBox widget - Individual chat message display.
 """
 
+from datetime import datetime
+
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.css.query import NoMatches
@@ -41,6 +43,7 @@ class MessageBox(Static):
         self.content = content
         self.role = role
         self.streaming = streaming
+        self.timestamp = datetime.now().strftime("%H:%M:%S")
         self.add_class(role)
         if streaming:
             self.add_class("streaming")
@@ -48,9 +51,11 @@ class MessageBox(Static):
     def compose(self) -> ComposeResult:
         icon = self.ROLE_ICONS.get(self.role, "")
         label = self.ROLE_LABELS.get(self.role, self.role.title())
+        # Add timestamp like Rich TUI: "Assistant [16:45:27]"
+        timestamp_display = f"[dim]\\[{self.timestamp}][/dim]"
 
         with Vertical():
-            yield Static(f"{icon} [bold]{label}[/bold]", classes="role-label")
+            yield Static(f"{icon} [bold]{label}[/bold] {timestamp_display}", classes="role-label")
 
             # Tool messages get scrollable content for long outputs
             if self.role == "tool":

@@ -9,6 +9,7 @@ This is the core application class that manages:
 - Split view for file viewing/editing
 """
 
+import asyncio
 import os
 from pathlib import Path
 from typing import Optional
@@ -16,6 +17,7 @@ from typing import Optional
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
+from textual.message import Message
 from textual.widgets import Header, Footer, Static, Input, RichLog
 
 from ppxai.tui.widgets.status_bar import StatusBar
@@ -69,6 +71,11 @@ class PPXAIDEApp(App):
     SPLIT_RATIOS = [30, 40, 50, 60, 70]
     DEFAULT_SPLIT_INDEX = 2  # 50%
 
+    # Custom message for triggering consent dialog display
+    class ShowConsentDialog(Message):
+        """Message to trigger consent dialog display from main event loop."""
+        pass
+
     def __init__(self):
         super().__init__()
         # Use ppxai's logger instead of Textual's self.log (which doesn't write to our log file)
@@ -86,6 +93,9 @@ class PPXAIDEApp(App):
         # Streaming state (Phase 6.1)
         self._current_message_content = ""
         self._is_streaming = False
+
+        # Consent dialog state (for async dialog during streaming)
+        self._pending_consent: Optional[dict] = None
 
     def compose(self) -> ComposeResult:
         """Compose the application layout with split view support."""
@@ -247,6 +257,7 @@ class PPXAIDEApp(App):
         - Engine client instance
         - Working directory
         - Bootstrap context (Phase 6.3)
+        - Consent callbacks for tool execution
 
         Note: initialize() is called in main() before event loop starts (matches Rich TUI)
         """
@@ -254,8 +265,11 @@ class PPXAIDEApp(App):
         self._provider = get_default_provider()
         self._model = get_default_model(self._provider)
 
-        # Create engine client (automatically loads bootstrap context)
-        self._engine_client = EngineClient()
+        # Create engine client with consent callbacks for tool execution
+        self._engine_client = EngineClient(
+            consent_callback=self._file_edit_consent_handler,
+            shell_consent_callback=self._shell_consent_handler
+        )
 
         # Set provider and model
         try:
@@ -284,6 +298,153 @@ class PPXAIDEApp(App):
             self._log.info(f"Engine initialized: {self._provider}/{self._model}")
         else:
             self._log.warning("Engine not fully initialized - use /provider and /model commands")
+
+    async def _file_edit_consent_handler(self, file_path: str) -> tuple[bool, str]:
+        """Handle file edit consent request using Textual dialog.
+
+        Args:
+            file_path: Path to file that needs editing
+
+        Returns:
+            tuple: (approved: bool, response: str)
+        """
+        self._log.info(f"File edit consent requested for: {file_path}")
+
+        try:
+            result = await self._show_consent_dialog(
+                title="⚠️  File Edit Request",
+                message=f"AI wants to edit: {file_path}",
+                question="Allow this file edit?"
+            )
+            return result
+
+        except Exception as e:
+            self._log.error(f"Consent dialog error: {e}")
+            return (False, "no")
+
+    async def _shell_consent_handler(self, command: str, working_dir: str, risk_level: str) -> tuple[bool, str]:
+        """Handle shell command consent request using Textual dialog.
+
+        Args:
+            command: Shell command that needs execution
+            working_dir: Working directory for the command
+            risk_level: Risk level classification (safe, dangerous, never)
+
+        Returns:
+            tuple: (approved: bool, response: str)
+        """
+        self._log.info(f"Shell consent requested for: {command[:50]}... (risk: {risk_level})")
+
+        # Determine risk color/emoji
+        risk_display = {
+            "never": "🔴 BLOCKED",
+            "dangerous": "🟡 DANGEROUS",
+            "safe": "🟢 SAFE"
+        }.get(risk_level, "🟡 UNKNOWN")
+
+        try:
+            result = await self._show_consent_dialog(
+                title=f"⚠️  Shell Command Request ({risk_display})",
+                message=f"Command: {command}\nDirectory: {working_dir}",
+                question="Allow this shell command?"
+            )
+            return result
+
+        except Exception as e:
+            self._log.error(f"Shell consent dialog error: {e}")
+            return (False, "no")
+
+    async def _show_consent_dialog(
+        self, title: str, message: str, question: str
+    ) -> tuple[bool, str]:
+        """Show consent dialog during streaming using callback pattern.
+
+        Uses push_screen with callback instead of push_screen_wait to avoid
+        blocking the event loop. A Future is used to await the result.
+
+        Args:
+            title: Dialog title
+            message: Dialog message
+            question: Question to ask
+
+        Returns:
+            tuple: (approved: bool, response: str)
+        """
+        self._log.info(f"Showing consent dialog: {title}")
+
+        # Create a Future to wait for the dialog result
+        loop = asyncio.get_event_loop()
+        future: asyncio.Future[str] = loop.create_future()
+
+        # Store pending consent info
+        self._pending_consent = {
+            "title": title,
+            "message": message,
+            "question": question,
+            "future": future
+        }
+
+        # Post message to trigger dialog display from main event loop
+        # This ensures the dialog is shown in the correct context
+        self.post_message(self.ShowConsentDialog())
+
+        # Wait for the future to be resolved by the callback
+        # This yields control to the event loop, allowing UI to remain responsive
+        try:
+            response = await future
+        except Exception as e:
+            self._log.error(f"Consent dialog await error: {e}")
+            response = "no"
+
+        # Process response
+        response_lower = response.lower() if response else "no"
+
+        if response_lower == "yes":
+            self._log.info("Consent approved")
+            return (True, "yes")
+        elif response_lower == "always":
+            self._log.info("All actions approved for this session")
+            return (True, "always")
+        elif response_lower == "never":
+            self._log.info("All actions blocked for this session")
+            return (False, "never")
+        else:  # "no" or cancelled
+            self._log.info("Consent denied")
+            return (False, "no")
+
+    def on_ppxaide_app_show_consent_dialog(self, event: ShowConsentDialog) -> None:
+        """Handle ShowConsentDialog message - display the consent dialog.
+
+        This handler runs in the main event loop context where push_screen works.
+        Uses callback pattern to resolve the pending Future when dialog dismisses.
+        """
+        if not self._pending_consent:
+            self._log.warning("ShowConsentDialog received but no pending consent")
+            return
+
+        from ppxai.tui.widgets.dialog import ConsentDialog
+
+        info = self._pending_consent
+        future = info["future"]
+
+        def on_dialog_dismiss(response: str) -> None:
+            """Callback when dialog is dismissed."""
+            self._log.info(f"Dialog dismissed with response: {response}")
+            # Resolve the future with the response
+            if not future.done():
+                future.set_result(response or "no")
+            self._pending_consent = None
+
+        # Push the modal screen with callback (non-blocking)
+        self.push_screen(
+            ConsentDialog(
+                title=info["title"],
+                message=info["message"],
+                question=info["question"],
+                options=["Yes", "No", "Always", "Never"]
+            ),
+            callback=on_dialog_dismiss
+        )
 
     def _update_datetime(self) -> None:
         """Update datetime badge every minute (Phase 1.2)."""
@@ -338,14 +499,20 @@ class PPXAIDEApp(App):
                 self._log.info(f"Detected dirty session (crash): {session_name}")
 
                 # Always show crash recovery prompt (higher priority than auto_restore)
-                response = await self.push_screen_wait(
-                    ConsentDialog(
-                        title="⚠ Session Recovery",
-                        message=f"ppxaide was interrupted during last session",
-                        question=f"Recover session '{session_name}'?\n{message_count} messages, Provider: {provider_info}, Tools: {tools_info}",
-                        options=["Yes", "No"]
+                self._log.info("Showing crash recovery dialog...")
+                try:
+                    response = await self.push_screen_wait(
+                        ConsentDialog(
+                            title="⚠ Session Recovery",
+                            message=f"ppxaide was interrupted during last session",
+                            question=f"Recover session '{session_name}'?\n{message_count} messages, Provider: {provider_info}, Tools: {tools_info}",
+                            options=["Yes", "No"]
+                        )
                     )
-                )
+                    self._log.info(f"Dialog response: {response!r}")
+                except Exception as e:
+                    self._log.error(f"Dialog error: {e}")
+                    response = "yes"  # Default to recovery on error
 
                 if response == "yes":
                     if await self._restore_session(session_name, last_state):
@@ -656,21 +823,56 @@ class PPXAIDEApp(App):
             user_input: User's message
         """
         chat_view = self.query_one("#chat-view", ChatView)
+        status_bar = self.query_one(StatusBar)
 
         # Reset streaming state
         self._current_message_content = ""
         self._is_streaming = True
 
+        # Debug: Log state at start
+        self._log.info(f"=== _stream_response START ===")
+        self._log.info(f"user_input: {user_input[:50]}...")
+        self._log.info(f"provider: {self._provider}, model: {self._model}")
+        self._log.info(f"engine_client: {self._engine_client is not None}")
+        if self._engine_client:
+            self._log.info(f"engine provider: {self._engine_client.provider_name}")
+            self._log.info(f"engine model: {self._engine_client.model}")
+            self._log.info(f"engine provider object: {self._engine_client.provider}")
+
+        # Show processing indicator
+        status_bar.add_badge("streaming", "AI", "●", variant="warning")
+        self._log.info("Added streaming badge")
+
         try:
+            event_count = 0
+            self._log.info("About to call self._engine_client.chat()")
+
             # Stream events from engine
             async for event in self._engine_client.chat(user_input, stream=True):
+                event_count += 1
+                self._log.info(f"Received event #{event_count}: type={event.type}, data_len={len(str(event.data)) if event.data else 0}")
                 await self._handle_event(event)
+
+            self._log.info(f"Chat loop finished, total events: {event_count}")
+
+            # If no events at all, show debug info
+            if event_count == 0:
+                self._log.warning("No events received from engine!")
+                chat_view.add_system_message(
+                    "[yellow]No response from AI provider. Check provider/model configuration.[/yellow]\n"
+                    f"[dim]Provider: {self._provider}, Model: {self._model}[/dim]"
+                )
 
         except Exception as e:
             self._log.error(f"Stream error: {e}")
+            import traceback
+            self._log.error(traceback.format_exc())
             chat_view.add_system_message(f"[red]Error:[/red] {e}")
         finally:
             self._is_streaming = False
+            # Remove processing indicator
+            status_bar.remove_badge("streaming")
+            self._log.info("=== _stream_response END ===")
 
     async def _handle_event(self, event: Event) -> None:
         """Handle engine events during streaming (Phase 6.1).
@@ -689,9 +891,35 @@ class PPXAIDEApp(App):
             self._current_message_content += event.data
 
         elif event.type == EventType.STREAM_END:
-            # Finalize and display (only if there's content)
-            if self._current_message_content.strip():
-                chat_view.add_assistant_message(self._current_message_content)
+            # Debug: Log what we actually received
+            self._log.info(f"STREAM_END: event.data type={type(event.data).__name__}")
+            self._log.info(f"STREAM_END: event.data={repr(event.data)[:200]}")
+            self._log.info(f"STREAM_END: accumulated={len(self._current_message_content)} chars")
+
+            # Get final response - use accumulated chunks OR event.data directly
+            # (some providers don't stream, they send full response in STREAM_END)
+            final_response = self._current_message_content
+
+            # If no chunks accumulated, try to extract from event.data
+            if not final_response:
+                if isinstance(event.data, str):
+                    final_response = event.data
+                elif isinstance(event.data, dict):
+                    # Some providers return {"content": "text"} or {"message": "text"}
+                    final_response = event.data.get("content") or event.data.get("message") or event.data.get("text") or ""
+                    self._log.info(f"STREAM_END: extracted from dict: {len(final_response)} chars")
+                else:
+                    final_response = str(event.data) if event.data else ""
+
+            self._log.info(f"STREAM_END: final_response={len(final_response)} chars")
+
+            # Display if there's content
+            if final_response.strip():
+                chat_view.add_assistant_message(final_response)
+                self._log.info(f"Added assistant message: {len(final_response)} chars")
+            else:
+                self._log.warning("STREAM_END with no content to display")
+
             self._current_message_content = ""
 
             # Update usage stats in status bar (Phase 6.4)
@@ -713,6 +941,7 @@ class PPXAIDEApp(App):
             tool_data = event.data
             tool_name = tool_data.get("tool", "unknown")
             tool_args = tool_data.get("arguments", {})
+            self._log.info(f"TOOL_CALL: {tool_name} with {len(tool_args)} args")
 
             # Format arguments for display
             if tool_args:
@@ -734,6 +963,7 @@ class PPXAIDEApp(App):
                 content = "[dim]Called with no arguments[/dim]"
 
             chat_view.add_tool_message(tool_name, content)
+            self._log.info(f"Added tool call message for: {tool_name}")
 
         elif event.type == EventType.TOOL_RESULT:
             # Show tool result (Phase 6.5)
@@ -816,6 +1046,12 @@ class PPXAIDEApp(App):
         if cmd in ("quit", "q", "exit"):
             self.exit()
             return
+
+        # Handle /<command> help pattern - redirect to /help <command>
+        # e.g., "/usage help" becomes "/help usage"
+        if args.strip().lower() == "help" and cmd != "help":
+            args = cmd
+            cmd = "help"
 
         # Try Command Factory first
         spec = CommandFactory.get(cmd)

@@ -1,8 +1,11 @@
 """
-File type detection using libmagic with fallback to extension-based detection.
+File type detection using filetype library with fallback to extension-based detection.
 
 This module provides accurate file type detection for the /show and /edit commands,
 enabling proper widget selection (TreeViewer, TableViewer, Markdown, CodeEditor, ImageViewer).
+
+Uses the pure-Python 'filetype' library for magic byte detection, which works reliably
+with PyInstaller on Windows (no native DLL dependencies like python-magic).
 
 Usage:
     from ppxai.common.file_type import detect_file_type, FileType
@@ -244,7 +247,7 @@ FILETYPE_TO_LANGUAGE = {
 
 
 def detect_file_type(path: Path, content: Optional[str] = None) -> FileType:
-    """Detect file type using libmagic with extension fallback.
+    """Detect file type using filetype library with extension fallback.
 
     Args:
         path: Path to the file
@@ -253,28 +256,31 @@ def detect_file_type(path: Path, content: Optional[str] = None) -> FileType:
     Returns:
         FileType enum indicating the detected type
     """
-    # Try magic-based detection first
+    # Try filetype-based detection first (magic byte detection)
     try:
-        import magic
-        mime = magic.from_file(str(path), mime=True)
-        if mime in MIME_TO_FILETYPE:
-            return MIME_TO_FILETYPE[mime]
+        import filetype
+        kind = filetype.guess(str(path))
+        if kind is not None:
+            mime = kind.mime
+            if mime in MIME_TO_FILETYPE:
+                return MIME_TO_FILETYPE[mime]
 
-        # Check for generic text types - fall through to extension
-        if mime and mime.startswith("text/"):
-            # Text file, check extension for more specific type
-            pass
-        elif mime and not mime.startswith("text/"):
-            # Non-text, likely binary
+            # Check for image types not in our mapping
             if mime.startswith("image/"):
                 return FileType.IMAGE
-            return FileType.BINARY
+
+            # Check for binary types
+            if mime.startswith("application/") and mime not in (
+                "application/json", "application/xml", "application/yaml",
+                "application/toml", "application/javascript"
+            ):
+                return FileType.BINARY
 
     except ImportError:
-        # python-magic not installed, use fallback
+        # filetype not installed, use fallback
         pass
     except Exception:
-        # Magic detection failed, use fallback
+        # Detection failed, use fallback
         pass
 
     # Fallback to extension-based detection

@@ -9,18 +9,18 @@ Screen {
 }
 
 Header {
-    background: $surface;
-    color: $primary;
+    background: $primary-darken-3;
+    color: $primary-lighten-2;
 }
 
 Footer {
-    background: $surface;
+    background: $surface-darken-1;
     color: $text-muted;
 }
 
-/* Status bar */
+/* Status bar - distinct color from main content */
 StatusBar {
-    background: $surface;
+    background: $surface-darken-1;
     color: $text;
     height: 1;
     padding: 0 1;
