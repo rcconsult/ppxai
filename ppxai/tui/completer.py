@@ -199,7 +199,7 @@ class TextualCompleter:
         completions = []
 
         # Get all commands from factory
-        all_commands = CommandFactory.list_commands()
+        all_commands = CommandFactory.list_all()
         for cmd in all_commands:
             cmd_name = f'/{cmd}'
             if cmd.startswith(query):

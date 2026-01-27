@@ -10,7 +10,7 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.message import Message
 from textual.widgets import Input, Static
-from textual_autocomplete import AutoComplete, DropdownItem
+from textual_autocomplete import AutoComplete, DropdownItem, TargetState
 
 from ..autocomplete_adapter import create_completion_callback
 
@@ -34,17 +34,24 @@ class InputBox(Static):
         self._completer = completer
         self._completion_callback = None
 
-    def _get_completions(self, current_text: str) -> Iterable[DropdownItem]:
+    def _get_completions(self, target_state: TargetState) -> Iterable[DropdownItem]:
         """
         Lazy completion callback that checks if completer is set.
 
         This allows the completer to be set after compose() via set_completer().
+
+        Args:
+            target_state: TargetState object with text and cursor_position
+
+        Returns:
+            Iterable of DropdownItem objects for autocomplete
         """
         if self._completer:
             if not self._completion_callback:
                 # Create callback on first use
                 self._completion_callback = create_completion_callback(self._completer)
-            return self._completion_callback(current_text)
+            # Extract text from TargetState and pass to our callback
+            return self._completion_callback(target_state.text)
         return []
 
     def compose(self) -> ComposeResult:
