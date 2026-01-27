@@ -61,15 +61,17 @@ class InputBox(Static):
         """Compose the input box with autocomplete support."""
         with Horizontal():
             yield Static("[bold cyan]>[/bold cyan]", classes="prompt")
-            yield Input(
+            # Store reference to Input so we can pass to AutoComplete
+            self._input_widget = Input(
                 placeholder="Type a message or /help for commands...",
                 id="chat-input"
             )
+            yield self._input_widget
 
-        # Yield AutoComplete as a sibling to Horizontal (not inside it)
-        # AutoComplete will attach to the Input via ID
+        # CRITICAL: Must pass Input widget instance, not selector
+        # Selector doesn't work when widgets are in different containers
         yield AutoComplete(
-            target="#chat-input",  # Use ID selector
+            target=self._input_widget,  # Pass widget instance directly
             candidates=self._get_completions,  # Lazy callback
             prevent_default_enter=False,  # Don't block Enter - allow submit
             # prevent_default_tab=True by default - Tab selects from dropdown
@@ -77,14 +79,17 @@ class InputBox(Static):
 
     def on_mount(self) -> None:
         """Focus the input on mount."""
-        input_widget = self.query_one(Input)
-        input_widget.focus()
+        self._input_widget.focus()
 
     def focus(self) -> None:
         """Focus the input widget."""
         try:
-            input_widget = self.query_one(Input)
-            input_widget.focus()
+            if hasattr(self, '_input_widget'):
+                self._input_widget.focus()
+            else:
+                # Fallback if called before compose
+                input_widget = self.query_one(Input)
+                input_widget.focus()
         except:
             pass
 
