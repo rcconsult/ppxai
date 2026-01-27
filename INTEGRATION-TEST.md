@@ -145,6 +145,28 @@ input_box.focus()
 **Files modified:**
 - [ppxai/tui/app.py](ppxai/tui/app.py:512) - Added focus() call after session restoration
 
+## How Autocomplete Works
+
+**textual-autocomplete displays suggestions AUTOMATICALLY as you type - you don't press Tab to trigger them.**
+
+**Usage:**
+1. Start typing a completion pattern:
+   - `/` → shows slash commands
+   - `@` → shows context providers (@file, @clipboard, @url)
+   - `/show @` → shows context providers for command arguments
+   - `@file` → shows file list
+
+2. Dropdown appears automatically (no Tab needed!)
+
+3. Navigate suggestions:
+   - **Arrow keys** - Move up/down through suggestions
+   - **Tab or Enter** - Select highlighted suggestion
+   - **Escape** - Dismiss dropdown
+
+**Key difference from bash/zsh:**
+- bash/zsh: Press Tab to show completions
+- textual-autocomplete: Completions show automatically, Tab selects from list
+
 ## Conclusion
 
 **Status:** ✅ **FULLY INTEGRATED AND TESTED**
@@ -155,14 +177,13 @@ is set AFTER compose().
 
 **Integration pattern:**
 1. InputBox creates Input widget in compose()
-2. Wraps it with AutoComplete using lazy callback
+2. Mounts AutoComplete in on_mount() with lazy callback
 3. Completer is set later via set_completer()
 4. Lazy callback returns [] if completer not set, calls completer when available
 
 **Next steps:**
 1. Manual testing in ppxaide (run `uv run ppxaide`)
 2. Test all completion types (slash commands, @file, @clipboard, @url, subcommands)
-3. Merge to feature/new-tui-command branch (when user approves)
-4. Include in v1.15.0 release
+3. Include in v1.15.0 release
 
 **No code changes required in app.py or other files.**
