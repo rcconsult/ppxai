@@ -122,10 +122,17 @@ class EventBus:
         for receiver in receivers:
             try:
                 if asyncio.iscoroutinefunction(receiver):
-                    # Schedule async handler as task
-                    asyncio.create_task(
-                        self._handle_async(event, receiver, kwargs)
-                    )
+                    # Schedule async handler as task (if event loop running)
+                    try:
+                        loop = asyncio.get_running_loop()
+                        asyncio.create_task(
+                            self._handle_async(event, receiver, kwargs)
+                        )
+                    except RuntimeError:
+                        # No event loop running - this is expected outside Textual app
+                        # In Textual app, there's always an event loop
+                        if self._log_events:
+                            logger.debug(f"[EventBus] No event loop for async handler '{receiver.__name__}', skipping")
                 else:
                     # Call sync handler immediately
                     receiver(sender=self, **kwargs)
