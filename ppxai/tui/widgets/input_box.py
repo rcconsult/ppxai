@@ -1,22 +1,15 @@
 """
-InputBox widget - Multi-line input with history and autocomplete.
-
-Updated for v1.16.0: Now uses textual-autocomplete library for better UX.
+InputBox widget - Multi-line input with history.
 """
-
-from typing import Iterable
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.message import Message
 from textual.widgets import Input, Static
-from textual_autocomplete import AutoComplete, DropdownItem, TargetState
-
-from ..autocomplete_adapter import create_completion_callback
 
 
 class InputBox(Static):
-    """Input widget with command detection, history, and autocomplete."""
+    """Input widget with command detection and history."""
 
     # CSS is in layout.tcss
 
@@ -31,65 +24,26 @@ class InputBox(Static):
         super().__init__(id=id)
         self._history: list[str] = []
         self._history_index = -1
-        self._completer = completer
-        self._completion_callback = None
-
-    def _get_completions(self, target_state: TargetState) -> Iterable[DropdownItem]:
-        """
-        Lazy completion callback that checks if completer is set.
-
-        This allows the completer to be set after compose() via set_completer().
-
-        Args:
-            target_state: TargetState object with text and cursor_position
-
-        Returns:
-            Iterable of DropdownItem objects for autocomplete
-        """
-        if self._completer:
-            if not self._completion_callback:
-                # Create callback on first use
-                self._completion_callback = create_completion_callback(self._completer)
-            # Extract text from TargetState and pass to our callback
-            completions = list(self._completion_callback(target_state.text))
-            # Debug: Log completion requests (remove after testing)
-            print(f"[DEBUG] Completions for '{target_state.text}': {len(completions)}")
-            return completions
-        return []
+        self._completer = completer  # Keep for API compatibility but unused
 
     def compose(self) -> ComposeResult:
-        """Compose the input box with autocomplete support."""
+        """Compose the input box."""
         with Horizontal():
             yield Static("[bold cyan]>[/bold cyan]", classes="prompt")
-            # Store reference to Input so we can pass to AutoComplete
-            self._input_widget = Input(
+            yield Input(
                 placeholder="Type a message or /help for commands...",
                 id="chat-input"
             )
-            yield self._input_widget
-
-        # CRITICAL: Must pass Input widget instance, not selector
-        # Selector doesn't work when widgets are in different containers
-        yield AutoComplete(
-            target=self._input_widget,  # Pass widget instance directly
-            candidates=self._get_completions,  # Lazy callback
-            prevent_default_enter=False,  # Don't block Enter - allow submit
-            # prevent_default_tab=True by default - Tab selects from dropdown
-        )
 
     def on_mount(self) -> None:
         """Focus the input on mount."""
-        self._input_widget.focus()
+        self.query_one(Input).focus()
 
     def focus(self) -> None:
         """Focus the input widget."""
         try:
-            if hasattr(self, '_input_widget'):
-                self._input_widget.focus()
-            else:
-                # Fallback if called before compose
-                input_widget = self.query_one(Input)
-                input_widget.focus()
+            input_widget = self.query_one(Input)
+            input_widget.focus()
         except:
             pass
 
@@ -116,7 +70,6 @@ class InputBox(Static):
         elif event.key == "down":
             self._navigate_history(1)
             event.prevent_default()
-        # Note: Tab key is now handled by textual-autocomplete library
 
     def _navigate_history(self, direction: int) -> None:
         """Navigate through command history."""
@@ -170,11 +123,9 @@ class InputBox(Static):
         input_widget.cursor_position = len(input_widget.value)
 
     def set_completer(self, completer) -> None:
-        """Set the completer for autocomplete.
+        """Set the completer (kept for API compatibility, currently unused).
 
         Args:
             completer: TextualCompleter instance
         """
         self._completer = completer
-        # Reset callback so it gets recreated with new completer
-        self._completion_callback = None
