@@ -45,16 +45,13 @@ class CompletionAdapter:
 
         # Convert to DropdownItem format
         for completion_text, description in completions:
-            # Combine completion and description in main text
-            # Use dim markup for description to make it less prominent
-            if description:
-                display_text = f"{completion_text} [dim]- {description}[/dim]"
-            else:
-                display_text = completion_text
-
+            # Use completion_text as main - this is what gets inserted
+            # The library uses option.value which returns main.plain, so we can't
+            # use markup here or it will be inserted literally
             yield DropdownItem(
-                main=display_text,         # The display text (with description)
-                id=completion_text,        # Use completion_text as ID for insertion
+                main=completion_text,  # The completion text - will be inserted
+                prefix=None,           # Could add icons here if needed
+                id=completion_text,    # ID for tracking
             )
 
 
