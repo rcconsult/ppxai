@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/RELEASE-PLAN-v1.15.x/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/WIP-v1.15.0-FEATURE-PARITY/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>Release Plan: v1.15.x Series - ppxai Documentation</title>
+        <title>Work In Progress: v1.15.0 Feature Parity - ppxai Documentation</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#release-plan-v115x-series" class="md-skip">
+        <a href="#work-in-progress-v1150-feature-parity" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Release Plan: v1.15.x Series
+              Work In Progress: v1.15.0 Feature Parity
             
           </span>
         </div>
@@ -973,10 +973,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#theme-next-generation-tui-ppxaide" class="md-nav__link">
+  <a href="#completed-this-session" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Theme: Next Generation TUI (ppxaide)
+        Completed This Session
       
     </span>
   </a>
@@ -984,66 +984,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#phase-1-critical-missing-features-user-visible" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Overview
+        Phase 1 - Critical Missing Features (User-Visible)
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#release-strategy" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Release Strategy
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#architecture" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Architecture
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Prerequisites
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#v1150-implementation-phases" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        v1.15.0 Implementation Phases
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="v1.15.0 Implementation Phases">
+    <nav class="md-nav" aria-label="Phase 1 - Critical Missing Features (User-Visible)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#phase-0-foundation-complete-in-progress" class="md-nav__link">
+  <a href="#11-tab-autocomplete-deferred-to-phase-45" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 0: Foundation (Complete + In Progress)
+        1.1 Tab Autocomplete ⚠️ DEFERRED TO PHASE 4/5
       
     </span>
   </a>
@@ -1051,10 +1007,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#phase-0-complete-platform-widgets" class="md-nav__link">
+  <a href="#12-status-bar-toggles" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 0 (Complete): Platform Widgets
+        1.2 Status Bar Toggles ✅
       
     </span>
   </a>
@@ -1062,10 +1018,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#phase-1-core-visual-validation-complete" class="md-nav__link">
+  <a href="#13-agent-mode-badges" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 1: Core Visual Validation (Complete)
+        1.3 Agent Mode Badges ✅
       
     </span>
   </a>
@@ -1073,76 +1029,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#phase-2-dataviewer-widget-complete" class="md-nav__link">
+  <a href="#14-reasoning-token-display" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 2: DataViewer Widget (Complete)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-3-imageviewer-widget-complete" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 3: ImageViewer Widget (Complete)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-4-side-panel-integration-complete" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 4: Side Panel Integration (Complete)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-45-tableviewer-widget-complete" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 4.5: TableViewer Widget (Complete)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-5-end-to-end-validation-complete" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 5: End-to-End Validation (Complete)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-6-engine-integration-next" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 6: Engine Integration (Next)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-7-polish-release" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 7: Polish &amp; Release
+        1.4 Reasoning Token Display
       
     </span>
   </a>
@@ -1155,22 +1045,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#feature-parity-checklist" class="md-nav__link">
+  <a href="#phase-2-consistency-fixes-completed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Feature Parity Checklist
+        Phase 2 - Consistency Fixes ✅ COMPLETED
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Feature Parity Checklist">
+    <nav class="md-nav" aria-label="Phase 2 - Consistency Fixes ✅ COMPLETED">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#core-chat" class="md-nav__link">
+  <a href="#21-auto-save-interval" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Core Chat
+        2.1 Auto-save Interval ✅
       
     </span>
   </a>
@@ -1178,10 +1068,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#commands" class="md-nav__link">
+  <a href="#22-crash-recovery" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Commands
+        2.2 Crash Recovery ✅
       
     </span>
   </a>
@@ -1189,10 +1079,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#visual-features" class="md-nav__link">
+  <a href="#23-debug-log-display" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Visual Features
+        2.3 Debug Log Display ✅
       
     </span>
   </a>
@@ -1200,10 +1090,54 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#desktop-web-app-features-to-port" class="md-nav__link">
+  <a href="#24-tools-config" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Desktop Web App features to port
+        2.4 Tools Config ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-session-restoration-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.5 Session Restoration Fix ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#26-bootstrap-sequence-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.6 Bootstrap Sequence Fix ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#27-async-event-loop-error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.7 Async Event Loop Error Handling ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#28-debug-and-trace-cli-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.8 Debug and Trace CLI Flags ✅
       
     </span>
   </a>
@@ -1216,44 +1150,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#risks-and-mitigations" class="md-nav__link">
+  <a href="#phase-3-rich-only-features-consider-adding-completed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Risks and Mitigations
+        Phase 3 - Rich-Only Features (Consider Adding) ✅ COMPLETED
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#success-metrics" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Success Metrics
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Success Metrics">
+    <nav class="md-nav" aria-label="Phase 3 - Rich-Only Features (Consider Adding) ✅ COMPLETED">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#phase-0-5-ui-validation-complete" class="md-nav__link">
+  <a href="#31-emoji-mode-optional-rich-tui-only" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 0-5 (UI Validation) - COMPLETE ✅
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-6-7-engine-integration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 6-7 (Engine Integration)
+        3.1 Emoji Mode (Optional) - Rich TUI-only
       
     </span>
   </a>
@@ -1266,10 +1178,71 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
+  <a href="#todo-phase-45-deferred-features-needs-refactoring" class="md-nav__link">
     <span class="md-ellipsis">
       
-        References
+        TODO: Phase 4/5 - Deferred Features (Needs Refactoring)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TODO: Phase 4/5 - Deferred Features (Needs Refactoring)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-autocomplete-enhancement-disabled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Autocomplete Enhancement ❌ DISABLED
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#todo-release-prep" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TODO: Release Prep
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#files-modified-in-this-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Files Modified in This Work
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start-for-next-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start for Next Session
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reference-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reference Documents
       
     </span>
   </a>
@@ -1296,689 +1269,343 @@
   
 
 
-<h1 id="release-plan-v115x-series">Release Plan: v1.15.x Series<a class="headerlink" href="#release-plan-v115x-series" title="Permanent link">&para;</a></h1>
-<p><strong>Created:</strong> January 24, 2026
-<strong>Last Updated:</strong> January 25, 2026 (Phase 5 Complete + Image Viewer Fixes)
-<strong>Status:</strong> In Progress - Phase 6 (Engine Integration) Next
-<strong>Branch:</strong> feature/new-tui-command
-<strong>Latest Commit:</strong> f777028 (Image viewer display fixes)</p>
+<h1 id="work-in-progress-v1150-feature-parity">Work In Progress: v1.15.0 Feature Parity<a class="headerlink" href="#work-in-progress-v1150-feature-parity" title="Permanent link">&para;</a></h1>
+<p><strong>Branch:</strong> <code>feature/new-tui-command</code>
+<strong>Last Updated:</strong> 2026-01-26
+<strong>Status:</strong> In Progress</p>
+<h2 id="completed-this-session">Completed This Session<a class="headerlink" href="#completed-this-session" title="Permanent link">&para;</a></h2>
+<p><strong>Phase 1 - Type-based rendering:</strong>
+- [x] Type-based file display migration for /show command
+- [x] TreeResult uses DataViewer with Ctrl+V toggle (tree ↔ source)
+- [x] TableResult uses TableViewer with Ctrl+V toggle (table ↔ source)
+- [x] MarkdownResult renders in side panel
+- [x] ImageResult uses ImageViewer
+- [x] FileViewResult uses CodeEditor
+- [x] python-magic dependency for file type detection
+- [x] All 1105 tests passing
+- [x] FEATURE-PARITY-ANALYSIS.md created</p>
+<p><strong>Phase 2 - Consistency fixes:</strong>
+- [x] Auto-save interval (commit 00b0348)
+- [x] Crash recovery with dirty flag (commit 00b0348)
+- [x] Debug log display fix (commit 4e876f0)
+- [x] Session restore config fix (commit a059c42)
+- [x] Session restoration permissive mode (commit f1547bd)
+- [x] Bootstrap sequence fix (commit 8620dd6)
+- [x] Async event loop error handling (commit b09169e)
+- [x] Async session restoration (commit 5785506)
+- [x] Debug and trace CLI flags (commit 30fc1d9, 89d5be9)
+- [x] Coding commands async compatibility (commit pending)
+- [x] Logger enhancement with exc_info (commit pending)
+- [x] Textual logger override (commit pending)
+- [x] Session restoration worker fix (commit pending)
+- [x] Autocomplete disabled and deferred (commit 87785e9)</p>
 <hr />
-<h2 id="theme-next-generation-tui-ppxaide">Theme: Next Generation TUI (ppxaide)<a class="headerlink" href="#theme-next-generation-tui-ppxaide" title="Permanent link">&para;</a></h2>
-<p><strong>Tagline:</strong> Textual-based TUI replacing Rich-based TUI as the primary terminal interface</p>
-<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>The v1.15.x series introduces <code>ppxaide</code> - a new terminal UI built on the Textual framework. This replaces the current Rich-based TUI (<code>ppxai</code>) which has reached its feature ceiling due to framework limitations.</p>
-<p><strong>Why a new TUI?</strong>
-- Rich framework cannot handle proper editor workflows (keyboard input, cursor navigation)
-- No mouse support in Rich-based TUI
-- Limited widget-based composition
-- CSS theming not possible with Rich</p>
-<h2 id="release-strategy">Release Strategy<a class="headerlink" href="#release-strategy" title="Permanent link">&para;</a></h2>
-<p><strong>v1.15.0</strong> is a comprehensive release that ships when ready. It includes:
-- All UI platform work (widgets, themes, layouts)
-- Visual validation (stress tests, edge cases)
-- Data visualization widgets (DataViewer, ImageViewer, TableViewer)
-- Engine integration (EngineClient, streaming, commands)
-- Full feature parity with Rich TUI
-- Polish and performance optimization</p>
-<p><strong>v1.15.1</strong> - Bug fixes and cross-platform validation</p>
-<p><strong>v1.15.2</strong> - Additional features after stabilization:
-- PDFViewer widget (PyMuPDF integration, cross-platform tested)
-- Cursor position preservation across view toggles (DataViewer, TableViewer) - <em>if requested by users</em></p>
-<p><strong>Philosophy:</strong> Validate the new Textual framework thoroughly before connecting to the proven engine layer.
-The engine is already battle-tested in Rich TUI, Web App, and VSCode. What's new is the UI.</p>
-<p><strong>Migration Path:</strong>
-- v1.15.0: ppxaide launches as separate command (<code>ppxaide</code> vs <code>ppxai</code>)
-- v1.16.x: ppxaide becomes <code>ppxai</code>, old TUI deprecated</p>
-<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>ppxai/tui/                     # New module (Textual-based)
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── __init__.py                # Entry point: ppxaide command
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── app.py                     # PPXAIDEApp(textual.App)
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>├── widgets/                   # Custom widgets
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│   ├── chat_view.py           # Chat message container
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│   ├── message_box.py         # Individual message display
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│   ├── streaming.py           # Streaming response widget (TODO)
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│   ├── status_bar.py          # Status badges (provider, model, context)
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│   └── input_box.py           # Multi-line input with history
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>├── screens/                   # Application screens (TODO)
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>└── themes/                    # Theme system
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    ├── __init__.py            # Theme exports
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    ├── themes.py              # Custom theme definitions (tron-legacy, matrix)
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    └── layout.tcss            # Layout CSS using Textual design tokens
+<h2 id="phase-1-critical-missing-features-user-visible">Phase 1 - Critical Missing Features (User-Visible)<a class="headerlink" href="#phase-1-critical-missing-features-user-visible" title="Permanent link">&para;</a></h2>
+<h3 id="11-tab-autocomplete-deferred-to-phase-45">1.1 Tab Autocomplete ⚠️ DEFERRED TO PHASE 4/5<a class="headerlink" href="#11-tab-autocomplete-deferred-to-phase-45" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] Command completion (slash commands) - All 30+ commands from CommandFactory</li>
+<li>[x] @file/@clipboard/@url context providers - With descriptions</li>
+<li>[x] File path completion with ignore patterns (.git, node_modules, <strong>pycache</strong>, .venv)</li>
+<li>[x] Model/provider name completion - Dynamic from config</li>
+<li>[x] Subcommand completion (tools, usage, checkpoint, status, theme)</li>
+<li>[ ] <strong>DISABLED:</strong> Inadequate implementation, needs complete refactoring</li>
+</ul>
+<p><strong>Implementation:</strong>
+- <code>ppxai/tui/completer.py</code> - TextualCompleter with 440 lines of completion logic
+- <code>ppxai/tui/widgets/completion_popup.py</code> - Visual popup widget with arrow key navigation
+- Press Tab to show completions, arrow keys to navigate, Enter/Tab to select
+- File cache with 5-second TTL for performance
+- <strong>Commit:</strong> 4400480 (initial), disabled in 87785e9 - see Phase 4/5 for refactoring requirements</p>
+<h3 id="12-status-bar-toggles">1.2 Status Bar Toggles ✅<a class="headerlink" href="#12-status-bar-toggles" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] <code>/status version</code> - toggle version display (v1.15.0)</li>
+<li>[x] <code>/status cwd</code> - toggle working directory display (ppxai/utils)</li>
+<li>[x] <code>/status datetime</code> - toggle date/time display (2026-01-26 20:30)</li>
+</ul>
+<p><strong>Implementation:</strong>
+- Config stored in <code>ppxai-config.json</code> under <code>tui.show_version</code>, <code>show_cwd</code>, <code>show_datetime</code>
+- Badges added on app startup from config
+- Toggle commands update config and show/hide badges dynamically
+- DateTime badge updates every minute when enabled</p>
+<h3 id="13-agent-mode-badges">1.3 Agent Mode Badges ✅<a class="headerlink" href="#13-agent-mode-badges" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] Agent mode indicator badge - Shows "Agent: ACTIVE" in green</li>
+<li>[x] Checkpoint status badge (↶ valid, ↶! stale) - Unicode arrows</li>
+</ul>
+<p><strong>Implementation:</strong>
+- Agent badge shows when <code>/agent on</code> is executed
+- Checkpoint badge shows ↶ for valid checkpoint (undo available)
+- Checkpoint badge shows ↶! for stale checkpoint (undo may not work)
+- Badges update dynamically when agent mode changes</p>
+<h3 id="14-reasoning-token-display">1.4 Reasoning Token Display<a class="headerlink" href="#14-reasoning-token-display" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] DeepSeek R1 reasoning tokens - DEFERRED (not in Rich TUI yet)</li>
+<li>[ ] GPT-OSS thinking display - DEFERRED (requires special handling)</li>
+<li>[ ] Collapsible reasoning sections - DEFERRED</li>
+</ul>
+<p><strong>Note:</strong> Reasoning token display is not yet implemented in Rich TUI either, so this is not a parity gap. Will be added in future version when provider support is more mature.</p>
+<hr />
+<h2 id="phase-2-consistency-fixes-completed">Phase 2 - Consistency Fixes ✅ COMPLETED<a class="headerlink" href="#phase-2-consistency-fixes-completed" title="Permanent link">&para;</a></h2>
+<h3 id="21-auto-save-interval">2.1 Auto-save Interval ✅<a class="headerlink" href="#21-auto-save-interval" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] Implement configurable auto-save interval</li>
+<li>[x] Match Rich TUI behavior</li>
+<li>[x] Auto-save after each message pair</li>
+</ul>
+<p><strong>Implementation:</strong>
+- Auto-save in <code>_handle_event()</code> after STREAM_END
+- Uses <code>session.save_dirty()</code> to mark session as dirty
+- Configurable via <code>session.auto_save_interval</code> (default: 1)
+- <strong>Commit:</strong> 00b0348</p>
+<h3 id="22-crash-recovery">2.2 Crash Recovery ✅<a class="headerlink" href="#22-crash-recovery" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] Dirty session detection</li>
+<li>[x] Crash recovery prompt on startup</li>
+<li>[x] Mark session clean on graceful exit</li>
+</ul>
+<p><strong>Implementation:</strong>
+- Check <code>dirty</code> flag in <code>_check_session_restoration()</code>
+- Show "⚠ Session Recovery" modal (higher priority than auto_restore)
+- Clear dirty flag if user declines
+- Call <code>session.mark_clean()</code> in <code>action_quit()</code>
+- <strong>Commit:</strong> 00b0348</p>
+<h3 id="23-debug-log-display">2.3 Debug Log Display ✅<a class="headerlink" href="#23-debug-log-display" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] Show debug log output in TUI (side panel)</li>
+<li>[x] <code>/debug-log [on|off|show|clear]</code> command integration</li>
+<li>[x] Use FileViewResult for proper display</li>
+</ul>
+<p><strong>Implementation:</strong>
+- Fixed <code>/debug-log show</code> to return FileViewResult instead of TextResult
+- Displays last 50 lines in CodeEditor side panel
+- Read-only view with syntax highlighting
+- <strong>Commit:</strong> (pending)</p>
+<h3 id="24-tools-config">2.4 Tools Config ✅<a class="headerlink" href="#24-tools-config" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] <code>/tools config</code> works correctly in Textual TUI</li>
+<li>[x] Uses KeyValueResult renderer (already implemented)</li>
+</ul>
+<p><strong>Implementation:</strong>
+- Command already existed and worked
+- KeyValueResult renderer displays tool configuration
+- No changes needed</p>
+<h3 id="25-session-restoration-fix">2.5 Session Restoration Fix ✅<a class="headerlink" href="#25-session-restoration-fix" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] Match Rich TUI's permissive restoration behavior</li>
+<li>[x] Don't fail restoration when API key missing</li>
+<li>[x] Always render messages regardless of provider/model status</li>
+<li>[x] Use strict=True for model validation</li>
+<li>[x] Fall back to default model if stored model unavailable</li>
+</ul>
+<p><strong>Implementation:</strong>
+- Don't check return value of <code>set_provider()</code> - just call it (Rich TUI line 579)
+- Use <code>strict=True</code> for <code>set_model()</code> validation (Rich TUI line 586)
+- Fall back to provider's default model if unavailable (Rich TUI lines 589-594)
+- Always continue restoration even if provider/model can't be activated
+- <strong>Commit:</strong> f1547bd</p>
+<p><strong>Bug Fixed:</strong>
+- Session with 70 messages + provider=gemini showed empty chat with provider=perplexity
+- Root cause: Textual TUI was too strict - checked <code>set_provider()</code> return value
+- When GEMINI_API_KEY missing, restoration failed and stopped
+- Now matches Rich TUI: permissive restoration, always shows messages</p>
+<p><strong>Additional Fix (commit 5785506):</strong>
+- Made <code>_restore_session()</code> async to properly integrate with Textual's event loop
+- All callers now use <code>await</code> when calling the method
+- Fixes asyncio.run() errors during session restoration</p>
+<h3 id="26-bootstrap-sequence-fix">2.6 Bootstrap Sequence Fix ✅<a class="headerlink" href="#26-bootstrap-sequence-fix" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] Initialize config before event loop starts</li>
+<li>[x] Match Rich TUI's bootstrap sequence exactly</li>
+<li>[x] Prevent asyncio.run() conflicts</li>
+<li>[x] Ensure .env files loaded before event loop</li>
+</ul>
+<p><strong>Implementation:</strong>
+- Move <code>initialize()</code> call from <code>_initialize_engine()</code> to <code>main()</code> in <code>tui/__init__.py</code>
+- Call <code>initialize()</code> BEFORE <code>app.run()</code> starts Textual's event loop
+- Remove duplicate <code>initialize()</code> call from <code>_initialize_engine()</code>
+- <strong>Commit:</strong> 8620dd6</p>
+<p><strong>Bug Fixed:</strong>
+- "asyncio.run() cannot be called from a running event loop" error on startup
+- Root cause: Textual TUI called initialize() inside on_mount() (after event loop started)
+- Rich TUI calls initialize() in main() (before event loop starts)
+- Now matches Rich TUI: initialize → load .env → start event loop</p>
+<p><strong>Bootstrap Sequence:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Rich TUI:  main() → initialize() → load .env → create objects → start loop
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>Textual TUI (old): main() → app.run() → [loop] → initialize() ❌
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>Textual TUI (new): main() → initialize() → app.run() → [loop] ✅
+</span></code></pre></div></p>
+<h3 id="27-async-event-loop-error-handling">2.7 Async Event Loop Error Handling ✅<a class="headerlink" href="#27-async-event-loop-error-handling" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] Support async command handlers</li>
+<li>[x] Catch asyncio.run() errors with helpful messages</li>
+<li>[x] Add async_compat module for event loop detection</li>
+</ul>
+<p><strong>Implementation:</strong>
+- Check if command handler returns coroutine and await it
+- Catch RuntimeError from asyncio.run() attempts
+- Show clear error message suggesting Rich TUI for incompatible commands
+- Add <code>ppxai/common/async_compat.py</code> with event loop helpers
+- <strong>Commit:</strong> b09169e</p>
+<p><strong>Error Message:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Command failed: &lt;command&gt;
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>This command is not compatible with the Textual TUI yet.
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>It tries to create a new event loop while one is already running.
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>Try using the Rich TUI instead: uv run ppxai
+</span></code></pre></div></p>
+<h3 id="28-debug-and-trace-cli-flags">2.8 Debug and Trace CLI Flags ✅<a class="headerlink" href="#28-debug-and-trace-cli-flags" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] Add --debug flag for stderr logging</li>
+<li>[x] Add --trace flag for full exception tracebacks</li>
+<li>[x] Update Logger.error() to support exc_info parameter</li>
+<li>[x] Enhanced exception handling with traceback display</li>
+</ul>
+<p><strong>Implementation:</strong>
+- <code>--debug</code>: Enables logging to both stderr and file (~/.ppxai/logs/tui-debug.log)
+- <code>--trace</code>: Shows full stack traces in chat view (implies --debug)
+- Sets PPXAIDE_TRACE env var for exception handlers
+- All exceptions logged with full traceback when --trace enabled
+- <strong>Commit:</strong> 30fc1d9</p>
+<p><strong>Usage:</strong>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>run<span class="w"> </span>ppxaide<span class="w"> </span>--debug<span class="w">           </span><span class="c1"># Debug logging to stderr + file</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>uv<span class="w"> </span>run<span class="w"> </span>ppxaide<span class="w"> </span>--trace<span class="w">           </span><span class="c1"># Full tracebacks in chat + debug logging</span>
+</span></code></pre></div></p>
+<p><strong>Benefits:</strong>
+- Systematic debugging instead of random code changes
+- Immediate visibility of errors during development
+- Full stack traces show exact location of issues
+- Works with async event loop errors</p>
+<hr />
+<h2 id="phase-3-rich-only-features-consider-adding-completed">Phase 3 - Rich-Only Features (Consider Adding) ✅ COMPLETED<a class="headerlink" href="#phase-3-rich-only-features-consider-adding-completed" title="Permanent link">&para;</a></h2>
+<p><strong>Status:</strong> Phase 3 feature parity achieved. All critical gaps addressed.</p>
+<p><strong>Feature Parity Summary:</strong>
+- ✅ Status Bar: 100% parity (version/cwd/datetime toggles working)
+- ✅ Session Management: 100% parity (restoration, auto-save, crash recovery)
+- ✅ Agent/Checkpoint Badges: 100% parity (agent mode + checkpoint status)
+- ⚠️ Tab Autocomplete: Deferred to Phase 4/5 (see below)
+- ⏸️ Reasoning Tokens: Deferred (not in Rich TUI yet, not a parity gap)</p>
+<p><strong>Textual TUI Advantages:</strong>
+- More themes (17+ vs 6+)
+- Better keyboard shortcuts (Ctrl+T, Ctrl+P, Ctrl+W, etc.)
+- Advanced file viewers (tree/table toggle, image support)
+- Transactional state management (badge transactions)
+- Side panel editing with syntax highlighting</p>
+<h3 id="31-emoji-mode-optional-rich-tui-only">3.1 Emoji Mode (Optional) - Rich TUI-only<a class="headerlink" href="#31-emoji-mode-optional-rich-tui-only" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Text symbol fallback for terminal alignment</li>
+<li>[ ] <code>/theme emoji on|off</code> command</li>
+</ul>
+<p><strong>Note:</strong> Emoji mode is a Rich TUI-specific feature for terminal alignment. Not critical for parity.</p>
+<hr />
+<h2 id="todo-phase-45-deferred-features-needs-refactoring">TODO: Phase 4/5 - Deferred Features (Needs Refactoring)<a class="headerlink" href="#todo-phase-45-deferred-features-needs-refactoring" title="Permanent link">&para;</a></h2>
+<h3 id="41-autocomplete-enhancement-disabled">4.1 Autocomplete Enhancement ❌ DISABLED<a class="headerlink" href="#41-autocomplete-enhancement-disabled" title="Permanent link">&para;</a></h3>
+<p><strong>Status:</strong> Disabled in commit 87785e9 - inadequate implementation</p>
+<p><strong>Current Issues:</strong>
+- Fixed offset positioning (<code>offset-y: 90%</code>) instead of cursor-based
+- Single column layout instead of multi-column like Rich TUI
+- No alphabetical sorting of file list
+- No lazy loading/virtual scrolling for large file lists
+- Fixed 100 file limit with no dynamic pagination
+- Files shown in random order, priority files hack</p>
+<p><strong>What Rich TUI Has:</strong>
+- Cursor-based positioning (popup appears exactly at '@' character)
+- Multi-column scrollable layout
+- Alphabetical sorting of all files
+- Dynamic lazy loading as user scrolls
+- No file limit - entire project tree available</p>
+<p><strong>Implementation Requirements:</strong>
+1. <strong>Cursor positioning</strong>: Get actual cursor coordinates in terminal, position popup relative to cursor
+2. <strong>Multi-column layout</strong>: Use Textual Grid or Horizontal containers for columns
+3. <strong>Alphabetical sorting</strong>: Sort files before display
+4. <strong>Virtual scrolling</strong>: Implement lazy loading with scroll events
+5. <strong>Integration</strong>: Study prompt_toolkit approach in Rich TUI (<code>ppxai/rich/completer.py</code>)</p>
+<p><strong>Files to modify:</strong>
+- <code>ppxai/tui/widgets/input_box.py</code> - Re-enable tab handler (line 94-96)
+- <code>ppxai/tui/widgets/completion_popup.py</code> - Complete refactoring needed
+- <code>ppxai/tui/completer.py</code> - Sorting and pagination logic</p>
+<p><strong>User feedback:</strong> "showing fixed list... is not presentable to any user, it is a bug"</p>
+<p><strong>Decision:</strong> Focus on Phase 3 feature parity first, tackle this properly in Phase 4/5.</p>
+<hr />
+<h2 id="todo-release-prep">TODO: Release Prep<a class="headerlink" href="#todo-release-prep" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[ ] Run full test suite</li>
+<li>[ ] Update CHANGELOG.md for v1.15.0</li>
+<li>[ ] Create release notes: <code>docs/RELEASE-NOTES-v1.15.0.md</code></li>
+<li>[ ] Version bump in all files</li>
+<li>[ ] Merge to master</li>
+</ul>
+<hr />
+<h2 id="files-modified-in-this-work">Files Modified in This Work<a class="headerlink" href="#files-modified-in-this-work" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Changes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ppxai/common/file_type.py</code></td>
+<td>NEW - File type detection</td>
+</tr>
+<tr>
+<td><code>ppxai/common/__init__.py</code></td>
+<td>Export file_type module</td>
+</tr>
+<tr>
+<td><code>ppxai/commands/display.py</code></td>
+<td>/show returns typed results</td>
+</tr>
+<tr>
+<td><code>ppxai/commands/results.py</code></td>
+<td>Add MarkdownResult</td>
+</tr>
+<tr>
+<td><code>ppxai/rendering/textual_renderer.py</code></td>
+<td>Use DataViewer/TableViewer</td>
+</tr>
+<tr>
+<td><code>ppxai/rendering/rich_renderer.py</code></td>
+<td>Add MarkdownResult renderer</td>
+</tr>
+<tr>
+<td><code>ppxai/tui/themes/layout.tcss</code></td>
+<td>Markdown styles for SidePanel</td>
+</tr>
+<tr>
+<td><code>pyproject.toml</code></td>
+<td>Add python-magic dependency</td>
+</tr>
+<tr>
+<td><code>tests/test_tui.py</code></td>
+<td>Update test assertions</td>
+</tr>
+<tr>
+<td><code>docs/FEATURE-PARITY-ANALYSIS.md</code></td>
+<td>Full comparison document</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="quick-start-for-next-session">Quick Start for Next Session<a class="headerlink" href="#quick-start-for-next-session" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Checkout the branch</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>git<span class="w"> </span>checkout<span class="w"> </span>feature/new-tui-command
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>git<span class="w"> </span>pull
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1"># Sync dependencies</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>uv<span class="w"> </span>sync<span class="w"> </span>--all-extras
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c1"># Run tests to verify state</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_commands.py<span class="w"> </span>tests/test_tui.py<span class="w"> </span>-v
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="c1"># Build and test TUI</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>uv<span class="w"> </span>run<span class="w"> </span>ppxaide
 </span></code></pre></div>
-<p><strong>Note:</strong> Uses Textual's 17+ built-in themes (catppuccin-mocha, nord, dracula, etc.)
-plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles curated list.</p>
-<p><strong>Key Design Decisions:</strong>
-- <strong>Separate command</strong> - <code>ppxaide</code> coexists with <code>ppxai</code> during transition
-- <strong>Shared engine</strong> - Uses existing <code>EngineClient</code> via composition (no duplication)
-- <strong>CSS-first theming</strong> - Leverage Textual's CSS for consistent, maintainable styling
-- <strong>Widget composition</strong> - Build complex UI from reusable components
-- <strong>Incremental parity</strong> - Match current TUI and Desktop Web App features over multiple releases</p>
-<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
-<p><strong>v1.14.x Complete:</strong>
-- Bootstrap context (AGENTS.md) support
-- Context scopes (global, project, subdirectory)
-- <code>/edit</code> command (VSCode + Web App)
-- Documentation site (GitHub Pages)</p>
-<p><strong>Dependencies:</strong>
-- <code>textual&gt;=0.47.0</code> (added to optional extras)
-- Install: <code>pip install ppxai[tui]</code></p>
 <hr />
-<h2 id="v1150-implementation-phases">v1.15.0 Implementation Phases<a class="headerlink" href="#v1150-implementation-phases" title="Permanent link">&para;</a></h2>
-<p>All phases below are part of v1.15.0. See <a href="../design/tui-side-panel-refactor/">tui-side-panel-refactor.md</a> for detailed specifications.</p>
-<hr />
-<h3 id="phase-0-foundation-complete-in-progress">Phase 0: Foundation (Complete + In Progress)<a class="headerlink" href="#phase-0-foundation-complete-in-progress" title="Permanent link">&para;</a></h3>
-<p><strong>Goal:</strong> Clean codebase with zero technical debt</p>
-<table>
-<thead>
-<tr>
-<th>Phase</th>
-<th>Focus</th>
-<th>Status</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>0.0</td>
-<td>Rich TUI isolation (move to <code>ppxai/rich/</code>)</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>0.1.1</td>
-<td>Error handling cleanup</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>0.1.2</td>
-<td>CSS consolidation</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>0.1.3</td>
-<td>SafeQueryMixin helper</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>0.1.4</td>
-<td>Content factory</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>0.1.5</td>
-<td>Input validation</td>
-<td>✅ Done</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h3 id="phase-0-complete-platform-widgets">Phase 0 (Complete): Platform Widgets<a class="headerlink" href="#phase-0-complete-platform-widgets" title="Permanent link">&para;</a></h3>
-<p><strong>Previously done work:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Feature</th>
-<th>Status</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Textual SDK integration</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td><code>ppxaide</code> entry point</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>17+ built-in themes + 2 custom</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Basic commands (<code>/help</code>, <code>/quit</code>, <code>/clear</code>, <code>/theme</code>)</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>StatusBar with badges</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>ChatView message display</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>InputBox multi-line input</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>TreeViewer widget</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>CodeEditor widget</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>SplitPane layouts</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Mouse support, clipboard</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Basic tests (22 in <code>tests/test_tui.py</code>)</td>
-<td>✅ Done</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h3 id="phase-1-core-visual-validation-complete">Phase 1: Core Visual Validation (Complete)<a class="headerlink" href="#phase-1-core-visual-validation-complete" title="Permanent link">&para;</a></h3>
-<p><strong>Goal:</strong> Prove core widgets work reliably before adding complexity</p>
-<table>
-<thead>
-<tr>
-<th>Test Area</th>
-<th>Coverage</th>
-<th>Status</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>StatusBar stress test</td>
-<td>Rapid updates, long text, Unicode, themes</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>ChatView scrolling</td>
-<td>1000+ messages, long content, Unicode</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>InputBox edge cases</td>
-<td>History storage, Unicode, multi-line</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Theme switching</td>
-<td>All themes, syntax highlighting mapping</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Keybinding conflicts</td>
-<td>No collisions, all actions have methods</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>MessageBox</td>
-<td>Content storage, streaming support</td>
-<td>✅ Done</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Deliverable:</strong> Core widget tests (96 → 113 with DataViewer tests) proving core widgets work reliably</p>
-<hr />
-<h3 id="phase-2-dataviewer-widget-complete">Phase 2: DataViewer Widget (Complete)<a class="headerlink" href="#phase-2-dataviewer-widget-complete" title="Permanent link">&para;</a></h3>
-<p><strong>Goal:</strong> Complex widget for structured data</p>
-<table>
-<thead>
-<tr>
-<th>Feature</th>
-<th>Description</th>
-<th>Status</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Tree mode</td>
-<td>JSON/YAML/TOML hierarchical display</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Source mode</td>
-<td>CodeEditor with syntax highlighting</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Toggle</td>
-<td>Ctrl+V switches between tree/source</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>State preservation</td>
-<td>View mode state preserved</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Large files</td>
-<td>Performance with 10K+ nodes tested</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Format detection</td>
-<td>Auto-detect from file extension</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Unicode support</td>
-<td>Full Unicode data handling</td>
-<td>✅ Done</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Deliverable:</strong> DataViewer widget with 17 tests in <code>tests/test_tui.py</code></p>
-<hr />
-<h3 id="phase-3-imageviewer-widget-complete">Phase 3: ImageViewer Widget (Complete)<a class="headerlink" href="#phase-3-imageviewer-widget-complete" title="Permanent link">&para;</a></h3>
-<p><strong>Goal:</strong> Terminal image support with graceful degradation</p>
-<table>
-<thead>
-<tr>
-<th>Feature</th>
-<th>Description</th>
-<th>Status</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Fallback mode</td>
-<td>File info when library not installed</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Full mode</td>
-<td>textual-image integration (factory pattern)</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Controls</td>
-<td>+/- zoom, WASD pan, 0 reset</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Properties</td>
-<td>path, dimensions, file_size, format, is_loaded</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Large files</td>
-<td>check_file_size() validation</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td><strong>Image display fixes</strong></td>
-<td><strong>CSS selector, aspect ratio, centering</strong></td>
-<td><strong>✅ Done (commit f777028)</strong></td>
-</tr>
-</tbody>
-</table>
-<p><strong>Deliverable:</strong> ImageViewer widget with 15 tests + 21 handler tests in <code>tests/test_image_handlers.py</code></p>
-<p><strong>Critical fixes applied (Jan 25, 2026):</strong>
-- Fixed CSS selector: <code>AutoImage</code> → <code>Image</code> (textual-image uses <code>Image</code> class)
-- Fixed aspect ratio: <code>height: 1fr</code> → <code>height: auto</code> (preserve proportions)
-- Added vertical centering: Wrapped image in <code>Center</code> container
-- Images now display correctly without overflow or distortion</p>
-<hr />
-<h3 id="phase-4-side-panel-integration-complete">Phase 4: Side Panel Integration (Complete)<a class="headerlink" href="#phase-4-side-panel-integration-complete" title="Permanent link">&para;</a></h3>
-<p><strong>Goal:</strong> Unified file viewing experience</p>
-<table>
-<thead>
-<tr>
-<th>Feature</th>
-<th>Description</th>
-<th>Status</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>DataViewer integration</td>
-<td>Tree/source toggle for JSON/YAML/TOML</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>ImageViewer integration</td>
-<td>Zoom/pan controls for images</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td><code>/show</code> polish</td>
-<td>All file types via content factory</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td><code>/edit</code> command</td>
-<td>CodeEditor in edit mode</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Split pane UX</td>
-<td>Resize (Ctrl+[/]), focus switching (F6)</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>State management</td>
-<td>Open/close, content tracking</td>
-<td>✅ Done</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Deliverable:</strong> 16 integration tests in <code>tests/test_tui.py</code> (Total: 144 tests)</p>
-<hr />
-<h3 id="phase-45-tableviewer-widget-complete">Phase 4.5: TableViewer Widget (Complete)<a class="headerlink" href="#phase-45-tableviewer-widget-complete" title="Permanent link">&para;</a></h3>
-<p><strong>Goal:</strong> Tabular data display for CSV/TSV files (parity with Desktop Web App)</p>
-<table>
-<thead>
-<tr>
-<th>Feature</th>
-<th>Description</th>
-<th>Status</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>DataTable core</td>
-<td>Textual's DataTable for grid display</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Format support</td>
-<td>CSV, TSV, PSV (delimiter detection)</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Header detection</td>
-<td>Auto-detect heuristics</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Table/source toggle</td>
-<td>Ctrl+V switches views (like DataViewer)</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Column sizing</td>
-<td>Auto-width with max 50 chars</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>Large files</td>
-<td>Row limit (1000 initial rows)</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>SidePanel integration</td>
-<td><code>/show data.csv</code> displays table</td>
-<td>✅ Done</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Deliverable:</strong> 24 TableViewer tests in <code>tests/test_tui.py</code> (Total: 168 tests)</p>
-<hr />
-<h3 id="phase-5-end-to-end-validation-complete">Phase 5: End-to-End Validation (Complete)<a class="headerlink" href="#phase-5-end-to-end-validation-complete" title="Permanent link">&para;</a></h3>
-<p><strong>Goal:</strong> Prove UI shell works WITHOUT engine</p>
-<table>
-<thead>
-<tr>
-<th>Phase</th>
-<th>Focus</th>
-<th>Tests</th>
-<th>Status</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>5.1</td>
-<td>Widget lifecycle (mount/unmount, focus, events)</td>
-<td>20</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>5.2</td>
-<td>Theme consistency (all themes, all widgets)</td>
-<td>13</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>5.3</td>
-<td>Keyboard navigation (no dead-ends, focus mgmt)</td>
-<td>16</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>5.4</td>
-<td>Edge cases (empty states, Unicode, large files)</td>
-<td>19</td>
-<td>✅ Done</td>
-</tr>
-<tr>
-<td>5.5</td>
-<td>App integration (commands, multi-widget)</td>
-<td>18</td>
-<td>✅ Done</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Deliverable:</strong> 86 comprehensive tests proving UI reliability (Total: 275 tests including image handlers)</p>
-<p><strong>Test Coverage:</strong>
-- Platform widgets: 254 tests
-- Image handlers: 21 tests (factory pattern, delegation, fallback modes)
-- <strong>Total: 275 tests passing</strong></p>
-<hr />
-<h3 id="phase-6-engine-integration-next">Phase 6: Engine Integration (Next)<a class="headerlink" href="#phase-6-engine-integration-next" title="Permanent link">&para;</a></h3>
-<p><strong>Goal:</strong> Connect validated UI to proven backend</p>
-<p><strong>Rationale:</strong> Engine is already battle-tested. Integration is mechanical once UI is stable.</p>
-<p><strong>Status:</strong> Ready to start - all prerequisites complete</p>
-<table>
-<thead>
-<tr>
-<th>Feature</th>
-<th>Description</th>
-<th>Status</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Factory pattern</td>
-<td><code>PPXAIDEApp.initialize()</code></td>
-<td>⏳ Pending</td>
-</tr>
-<tr>
-<td>Config loading</td>
-<td><code>get_default_provider()</code>, etc.</td>
-<td>⏳ Pending</td>
-</tr>
-<tr>
-<td>EngineClient</td>
-<td>Composition, event subscription</td>
-<td>⏳ Pending</td>
-</tr>
-<tr>
-<td>Streaming</td>
-<td>Progressive rendering</td>
-<td>⏳ Pending</td>
-</tr>
-<tr>
-<td>Provider/model switching</td>
-<td>Reactive StatusBar updates</td>
-<td>⏳ Pending</td>
-</tr>
-<tr>
-<td>Command handlers</td>
-<td>Full parity with Rich TUI</td>
-<td>⏳ Pending</td>
-</tr>
-<tr>
-<td>Feature parity</td>
-<td>Token usage, cost, context injection</td>
-<td>⏳ Pending</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Deliverable:</strong> Fully functional AI assistant</p>
-<p><strong>Key Files to Modify:</strong>
-- <code>ppxai/tui/app.py</code> - Add <code>initialize()</code>, EngineClient composition
-- <code>ppxai/tui/commands.py</code> - Wire up slash commands to engine
-- <code>ppxai/tui/widgets/chat_view.py</code> - Stream event handlers
-- <code>ppxai/tui/widgets/status_bar.py</code> - Reactive provider/model updates</p>
-<hr />
-<h3 id="phase-7-polish-release">Phase 7: Polish &amp; Release<a class="headerlink" href="#phase-7-polish-release" title="Permanent link">&para;</a></h3>
-<p><strong>Goal:</strong> Production-ready v1.15.0</p>
-<table>
-<thead>
-<tr>
-<th>Task</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Performance</td>
-<td>Optimize rendering</td>
-</tr>
-<tr>
-<td>Accessibility</td>
-<td>Screen reader, high contrast</td>
-</tr>
-<tr>
-<td>Documentation</td>
-<td>User guide, shortcuts</td>
-</tr>
-<tr>
-<td>Cross-platform</td>
-<td>Linux, macOS, Windows testing</td>
-</tr>
-<tr>
-<td>Binaries</td>
-<td>PyInstaller builds</td>
-</tr>
-<tr>
-<td>Release notes</td>
-<td>Changelog, migration guide</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Deliverable:</strong> v1.15.0 release</p>
-<hr />
-<h2 id="feature-parity-checklist">Feature Parity Checklist<a class="headerlink" href="#feature-parity-checklist" title="Permanent link">&para;</a></h2>
-<p><strong>Current TUI (<code>ppxai</code>) features to port:</strong></p>
-<h3 id="core-chat">Core Chat<a class="headerlink" href="#core-chat" title="Permanent link">&para;</a></h3>
+<h2 id="reference-documents">Reference Documents<a class="headerlink" href="#reference-documents" title="Permanent link">&para;</a></h2>
 <ul>
-<li>[ ] Streaming responses with Markdown rendering</li>
-<li>[ ] Multi-line input with history</li>
-<li>[ ] Provider/model switching mid-session</li>
-<li>[ ] Token usage display</li>
-<li>[ ] Cost estimation</li>
-</ul>
-<h3 id="commands">Commands<a class="headerlink" href="#commands" title="Permanent link">&para;</a></h3>
-<ul>
-<li>[ ] <code>/help</code> - Command reference</li>
-<li>[ ] <code>/model</code> - Switch model</li>
-<li>[ ] <code>/provider</code> - Switch provider</li>
-<li>[ ] <code>/tools</code> - Enable/disable tools</li>
-<li>[ ] <code>/agent</code> - Start agent mode</li>
-<li>[ ] <code>/consent</code> - Manage consent settings</li>
-<li>[ ] <code>/session</code> - Session management</li>
-<li>[ ] <code>/save</code> - Save session</li>
-<li>[ ] <code>/load</code> - Load session</li>
-<li>[ ] <code>/export</code> - Export to markdown</li>
-<li>[ ] <code>/checkpoint</code> - Checkpoint management</li>
-<li>[ ] <code>/undo</code> - Revert last agent task</li>
-<li>[ ] <code>/context</code> - Context management</li>
-<li>[ ] <code>/usage</code> - Usage statistics</li>
-<li>[ ] <code>/show</code> - File preview</li>
-<li>[ ] <code>/edit</code> - File editing (NEW in ppxaide)</li>
-<li>[ ] <code>/theme</code> - Theme switching</li>
-<li>[ ] <code>/config</code> - Configuration</li>
-<li>[ ] <code>/clear</code> - Clear conversation</li>
-<li>[ ] <code>/quit</code> - Exit application</li>
-</ul>
-<h3 id="visual-features">Visual Features<a class="headerlink" href="#visual-features" title="Permanent link">&para;</a></h3>
-<ul>
-<li>[ ] 4 color themes</li>
-<li>[ ] Status bar with badges</li>
-<li>[ ] Clickable file links (OSC 8)</li>
-<li>[ ] Markdown tables</li>
-<li>[ ] Code block syntax highlighting</li>
-<li>[ ] Tool call display</li>
-</ul>
-<h3 id="desktop-web-app-features-to-port">Desktop Web App features to port<a class="headerlink" href="#desktop-web-app-features-to-port" title="Permanent link">&para;</a></h3>
-<ul>
-<li>[x] Data viewers (JSON, YAML, TOML) - DataViewer widget</li>
-<li>[x] Data viewers (CSV, TSV) - TableViewer widget</li>
-<li>[x] File editor with syntax highlighting - CodeEditor widget</li>
-<li>[x] Image preview - ImageViewer widget</li>
-<li>[ ] PDF preview - <strong>Deferred to v1.15.2</strong> (requires PyMuPDF, cross-platform testing)</li>
-</ul>
-<hr />
-<h2 id="risks-and-mitigations">Risks and Mitigations<a class="headerlink" href="#risks-and-mitigations" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Risk</th>
-<th>Mitigation</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Textual learning curve</td>
-<td>Start with simple widgets, iterate</td>
-</tr>
-<tr>
-<td>Terminal compatibility</td>
-<td>Test on major terminals (iTerm2, Windows Terminal, GNOME Terminal)</td>
-</tr>
-<tr>
-<td>Performance with long conversations</td>
-<td>Virtual scrolling, message pagination</td>
-</tr>
-<tr>
-<td>Feature creep</td>
-<td>Strict scope per release, defer nice-to-haves</td>
-</tr>
-<tr>
-<td>Migration friction</td>
-<td>Keep <code>ppxai</code> available throughout v1.15.x</td>
-</tr>
-</tbody>
-</table>
-<h2 id="success-metrics">Success Metrics<a class="headerlink" href="#success-metrics" title="Permanent link">&para;</a></h2>
-<h3 id="phase-0-5-ui-validation-complete">Phase 0-5 (UI Validation) - COMPLETE ✅<a class="headerlink" href="#phase-0-5-ui-validation-complete" title="Permanent link">&para;</a></h3>
-<ul>
-<li>[x] All widgets mount/unmount cleanly (275 tests passing)</li>
-<li>[x] Widget lifecycle tested (mount, unmount, focus, events, state)</li>
-<li>[x] Theme consistency validated (all 17+ themes work)</li>
-<li>[x] Keyboard navigation tested (Tab, Escape, arrows, no dead-ends)</li>
-<li>[x] Edge cases covered (Unicode, large files, empty states, errors)</li>
-<li>[x] App integration verified (commands, multi-widget, state preservation)</li>
-<li>[x] DataViewer tree/source toggle works</li>
-<li>[x] ImageViewer displays correctly (aspect ratio, centering, no overflow)</li>
-<li>[x] ImageViewer fallback modes work (library/terminal/error reasons)</li>
-<li>[x] TableViewer table/source toggle works</li>
-<li>[x] Side panel <code>/show</code> and <code>/edit</code> work</li>
-<li>[x] Performance acceptable with 1000+ messages (stress tests)</li>
-<li>[x] Handler factory pattern validated (21 tests)</li>
-<li>[x] Terminal capability detection works (iTerm2, Kitty, Sixel)</li>
-</ul>
-<p><strong>Image Display Validation (Jan 25, 2026):</strong>
-- [x] textual-image widget integration (uses <code>Image</code> class, not <code>AutoImage</code>)
-- [x] CSS width constraints applied (<code>width: 100%</code>, <code>max-width: 100%</code>)
-- [x] Aspect ratio preserved (<code>height: auto</code> instead of <code>height: 1fr</code>)
-- [x] Vertical centering works (<code>Center</code> container with <code>align: center middle</code>)
-- [x] No horizontal overflow in side panel</p>
-<h3 id="phase-6-7-engine-integration">Phase 6-7 (Engine Integration)<a class="headerlink" href="#phase-6-7-engine-integration" title="Permanent link">&para;</a></h3>
-<ul>
-<li>[ ] ppxaide connects to EngineClient</li>
-<li>[ ] Streaming responses render correctly</li>
-<li>[ ] All slash commands work as expected</li>
-<li>[ ] Provider/model switching works</li>
-<li>[ ] Full feature parity with Rich TUI</li>
-<li>[ ] Works on Linux, macOS, Windows</li>
-</ul>
-<hr />
-<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="https://textual.textualize.io/">Textual Documentation</a></li>
-<li><a href="https://textual.textualize.io/guide/CSS/">Textual CSS Reference</a></li>
-<li><a href="../design/tui-side-panel-refactor/">TUI Side Panel Refactor Design Doc</a> (detailed specs)</li>
-<li><a href="../ROADMAP.md">ROADMAP.md v1.15.x section</a></li>
-<li><a href="../RELEASE-PLAN-v1.14.x/">v1.14.x Release Plan</a> (completed series)</li>
+<li><a href="../FEATURE-PARITY-ANALYSIS/">FEATURE-PARITY-ANALYSIS.md</a> - Full comparison</li>
+<li><a href="../TUI-COMMAND-REFACTORING-PLAN/">TUI-COMMAND-REFACTORING-PLAN.md</a> - Architecture plan</li>
+<li><a href="../ARCHITECTURE/">ARCHITECTURE.md</a> - Transactional state pattern</li>
 </ul>
 
 
