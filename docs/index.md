@@ -2,8 +2,11 @@
 
 **Multi-LLM Interface for Developers** - Use your favorite AI provider in terminal or VSCode with zero vendor lock-in.
 
-[![Version](https://img.shields.io/badge/version-1.14.2-blue)](https://github.com/rcconsult/ppxai/releases)
+[![Version](https://img.shields.io/badge/version-1.15.0--dev-blue)](https://github.com/rcconsult/ppxai/releases)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](https://github.com/rcconsult/ppxai/blob/master/LICENSE)
+
+!!! tip "Development Branch"
+    You're viewing documentation for the **v1.15.0 development branch** (`feature/new-tui-command`). This version includes the new type-based renderer architecture with 17 CommandResult types for UI-agnostic command handling. See [Release Notes](RELEASE-NOTES-v1.15.0.md) for details.
 
 ## Why ppxai?
 
