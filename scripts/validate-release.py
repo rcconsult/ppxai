@@ -82,7 +82,7 @@ def validate_release(version: str) -> bool:
         },
         # event_handler.py has version in welcome message
         {
-            "file": "ppxai/common/event_handler.py",
+            "file": "ppxai/rich/event_handler.py",
             "pattern": r"Version:\s+v{version}",
             "critical": True,
         },
