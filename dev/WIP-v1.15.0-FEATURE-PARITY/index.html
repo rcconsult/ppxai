@@ -1271,8 +1271,8 @@
 
 <h1 id="work-in-progress-v1150-feature-parity">Work In Progress: v1.15.0 Feature Parity<a class="headerlink" href="#work-in-progress-v1150-feature-parity" title="Permanent link">&para;</a></h1>
 <p><strong>Branch:</strong> <code>feature/new-tui-command</code>
-<strong>Last Updated:</strong> 2026-01-26
-<strong>Status:</strong> In Progress</p>
+<strong>Last Updated:</strong> 2026-01-28
+<strong>Status:</strong> Ready for Release</p>
 <h2 id="completed-this-session">Completed This Session<a class="headerlink" href="#completed-this-session" title="Permanent link">&para;</a></h2>
 <p><strong>Phase 1 - Type-based rendering:</strong>
 - [x] Type-based file display migration for /show command
@@ -1299,6 +1299,13 @@
 - [x] Textual logger override (commit pending)
 - [x] Session restoration worker fix (commit pending)
 - [x] Autocomplete disabled and deferred (commit 87785e9)</p>
+<p><strong>Phase 3 - Blinker Event Bus Integration (2026-01-28):</strong>
+- [x] Blinker event bus for decoupled components (commit 6eb83e2)
+- [x] 8 event handlers subscribed (STREAM_START, STREAM_CHUNK, STREAM_END, TOOL_CALL, TOOL_RESULT, TOOL_ERROR, ERROR, INFO)
+- [x] STREAM_END.data handling fixed (extracts content when no chunks)
+- [x] Tool consent callbacks wired to EngineClient
+- [x] All 1105 tests passing
+- [x] Documentation updated (FEATURE-PARITY-ANALYSIS.md)</p>
 <hr />
 <h2 id="phase-1-critical-missing-features-user-visible">Phase 1 - Critical Missing Features (User-Visible)<a class="headerlink" href="#phase-1-critical-missing-features-user-visible" title="Permanent link">&para;</a></h2>
 <h3 id="11-tab-autocomplete-deferred-to-phase-45">1.1 Tab Autocomplete ⚠️ DEFERRED TO PHASE 4/5<a class="headerlink" href="#11-tab-autocomplete-deferred-to-phase-45" title="Permanent link">&para;</a></h3>

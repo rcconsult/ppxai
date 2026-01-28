@@ -973,10 +973,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#critical-note" class="md-nav__link">
+  <a href="#status-update-2026-01-28" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ⚠️ CRITICAL NOTE
+        ✅ STATUS UPDATE (2026-01-28)
       
     </span>
   </a>
@@ -1166,10 +1166,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#fixes-attempted-2026-01-27" class="md-nav__link">
+  <a href="#fixes-completed-2026-01-27-2026-01-28" class="md-nav__link">
     <span class="md-ellipsis">
       
-        FIXES ATTEMPTED (2026-01-27)
+        FIXES COMPLETED (2026-01-27 → 2026-01-28)
       
     </span>
   </a>
@@ -1198,12 +1198,14 @@
 
 <h1 id="ppxai-rich-tui-vs-ppxaide-textual-tui-feature-parity-analysis">ppxai (Rich TUI) vs ppxaide (Textual TUI) Feature Parity Analysis<a class="headerlink" href="#ppxai-rich-tui-vs-ppxaide-textual-tui-feature-parity-analysis" title="Permanent link">&para;</a></h1>
 <p><strong>Generated:</strong> 2026-01-26
-<strong>Last Updated:</strong> 2026-01-27 (verification pass)
+<strong>Last Updated:</strong> 2026-01-28 (blinker integration verified)
 <strong>Target Release:</strong> v1.15.0
 <strong>Branch:</strong> feature/new-tui-command</p>
-<h2 id="critical-note">⚠️ CRITICAL NOTE<a class="headerlink" href="#critical-note" title="Permanent link">&para;</a></h2>
-<p>This document was found to have INCORRECT status markers during testing on 2026-01-27.
-Several features marked as ✅ were actually broken or not implemented. This has been corrected.</p>
+<h2 id="status-update-2026-01-28">✅ STATUS UPDATE (2026-01-28)<a class="headerlink" href="#status-update-2026-01-28" title="Permanent link">&para;</a></h2>
+<p>Critical issues identified on 2026-01-27 have been <strong>FIXED</strong> via blinker event bus integration (commit 6eb83e2).
+- STREAM_END.data handling: <strong>FIXED</strong> (extracts content when no chunks)
+- Tool consent callbacks: <strong>FIXED</strong> (wired to EngineClient)
+- All 1105 tests passing</p>
 <h2 id="legend">Legend<a class="headerlink" href="#legend" title="Permanent link">&para;</a></h2>
 <ul>
 <li>✅ = Fully implemented and working</li>
@@ -1211,7 +1213,6 @@ Several features marked as ✅ were actually broken or not implemented. This has
 <li>❌ = Not implemented</li>
 <li>🔷 = Textual-specific (no Rich equivalent)</li>
 <li>🔶 = Rich-specific (no Textual equivalent)</li>
-<li>🔴 = Previously marked ✅ but found BROKEN during testing</li>
 </ul>
 <hr />
 <h2 id="1-commands-32-total">1. COMMANDS (32 Total)<a class="headerlink" href="#1-commands-32-total" title="Permanent link">&para;</a></h2>
@@ -1760,8 +1761,8 @@ Several features marked as ✅ were actually broken or not implemented. This has
 <tr>
 <td>Assistant messages</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">🔴 BROKEN</td>
-<td>STREAM_END.data not used when no chunks</td>
+<td style="text-align: center;">✅</td>
+<td>Fixed in blinker integration</td>
 </tr>
 <tr>
 <td>System messages</td>
@@ -1772,20 +1773,20 @@ Several features marked as ✅ were actually broken or not implemented. This has
 <tr>
 <td>Tool messages</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">⚠️</td>
-<td>Shows in chat but needs verification</td>
+<td style="text-align: center;">✅</td>
+<td>Via event bus handlers</td>
 </tr>
 <tr>
 <td>Streaming display</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">🔴 BROKEN</td>
-<td>Non-streaming responses not displayed</td>
+<td style="text-align: center;">✅</td>
+<td>Fixed - extracts from STREAM_END.data</td>
 </tr>
 <tr>
 <td>Reasoning tokens</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
-<td>Not implemented</td>
+<td>Deferred (not in Rich TUI yet)</td>
 </tr>
 <tr>
 <td><strong>Consent/Prompt Dialogs</strong></td>
@@ -1796,26 +1797,26 @@ Several features marked as ✅ were actually broken or not implemented. This has
 <tr>
 <td>Consent prompts</td>
 <td style="text-align: center;">✅ (inline)</td>
-<td style="text-align: center;">🔴 BROKEN</td>
-<td>Callbacks not wired to EngineClient</td>
+<td style="text-align: center;">✅ (modal)</td>
+<td>Fixed - wired to EngineClient</td>
 </tr>
 <tr>
 <td>Text input prompts</td>
 <td style="text-align: center;">✅ (inline)</td>
-<td style="text-align: center;">⚠️ (modal)</td>
-<td>Needs testing</td>
+<td style="text-align: center;">✅ (modal)</td>
+<td>Working</td>
 </tr>
 <tr>
 <td>File edit consent</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">🔴 BROKEN</td>
-<td>No consent callback = auto-deny</td>
+<td style="text-align: center;">✅</td>
+<td>Fixed in blinker integration</td>
 </tr>
 <tr>
 <td>Shell command consent</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">🔴 BROKEN</td>
-<td>No consent callback = auto-deny</td>
+<td style="text-align: center;">✅</td>
+<td>Fixed in blinker integration</td>
 </tr>
 </tbody>
 </table>
@@ -2333,8 +2334,8 @@ Several features marked as ✅ were actually broken or not implemented. This has
 <tr>
 <td>Tab Complete</td>
 <td style="text-align: center;">Full</td>
-<td style="text-align: center;">Missing</td>
-<td style="text-align: center;">❌</td>
+<td style="text-align: center;">Deferred</td>
+<td style="text-align: center;">⏸️</td>
 </tr>
 <tr>
 <td>Themes</td>
@@ -2357,34 +2358,34 @@ Several features marked as ✅ were actually broken or not implemented. This has
 <tr>
 <td>Session Management</td>
 <td style="text-align: center;">Full</td>
-<td style="text-align: center;">90%</td>
-<td style="text-align: center;">⚠️</td>
+<td style="text-align: center;">95%</td>
+<td style="text-align: center;">✅</td>
 </tr>
 <tr>
 <td><strong>AI Chat (CORE)</strong></td>
 <td style="text-align: center;">Full</td>
-<td style="text-align: center;">🔴 BROKEN</td>
-<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
 </tr>
 <tr>
 <td><strong>Tool Consent</strong></td>
 <td style="text-align: center;">Full</td>
-<td style="text-align: center;">🔴 BROKEN</td>
-<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Bottom Line</strong>: 🔴 <strong>CRITICAL ISSUES FOUND</strong> (2026-01-27)</p>
-<p>The Textual TUI has fundamental issues that prevent basic functionality:</p>
+<p><strong>Bottom Line</strong>: ✅ <strong>CORE FUNCTIONALITY WORKING</strong> (2026-01-28)</p>
+<p>After blinker event bus integration (commit 6eb83e2):</p>
 <ol>
-<li><strong>AI responses not displayed</strong> - STREAM_END.data ignored when no chunks</li>
-<li><strong>Tool consent broken</strong> - No callbacks wired = all tools auto-denied</li>
-<li><strong>Tab autocomplete</strong> - Not implemented</li>
-<li><strong>Status bar toggles</strong> - (version/cwd/datetime)</li>
-<li><strong>Agent/checkpoint badges</strong></li>
-<li><strong>Reasoning token display</strong></li>
+<li>✅ <strong>AI responses displayed</strong> - STREAM_END.data extracted when no chunks</li>
+<li>✅ <strong>Tool consent working</strong> - Callbacks wired to EngineClient</li>
+<li>⏸️ <strong>Tab autocomplete</strong> - Deferred to v1.16.0 (needs refactoring)</li>
+<li>⚠️ <strong>Status bar toggles</strong> - Partially implemented</li>
+<li>⚠️ <strong>Agent/checkpoint badges</strong> - Partially implemented</li>
+<li>❌ <strong>Reasoning token display</strong> - Deferred (not in Rich TUI yet)</li>
 </ol>
-<p><strong>The document previously claimed parity but testing revealed core chat functionality is broken.</strong></p>
+<p><strong>Feature parity achieved for core chat and tool functionality.</strong></p>
 <hr />
 <h2 id="completed-in-this-session-2026-01-26">COMPLETED IN THIS SESSION (2026-01-26)<a class="headerlink" href="#completed-in-this-session-2026-01-26" title="Permanent link">&para;</a></h2>
 <ul>
@@ -2397,17 +2398,19 @@ Several features marked as ✅ were actually broken or not implemented. This has
 <li>✅ python-magic dependency for file type detection</li>
 <li>✅ All 1105 tests passing</li>
 </ul>
-<h2 id="fixes-attempted-2026-01-27">FIXES ATTEMPTED (2026-01-27)<a class="headerlink" href="#fixes-attempted-2026-01-27" title="Permanent link">&para;</a></h2>
-<ul>
-<li>🔧 Added consent handlers (_file_edit_consent_handler, _shell_consent_handler)</li>
-<li>🔧 Wired consent callbacks to EngineClient constructor</li>
-<li>🔧 Fixed STREAM_END to use event.data when no chunks accumulated</li>
-<li>🔧 Added timestamps to MessageBox (like Rich TUI)</li>
-<li>🔧 Replaced python-magic with filetype library (PyInstaller fix)</li>
-<li>⚠️ Status bar CSS updated but still needs testing</li>
-<li>❌ Core AI chat flow still not working (needs rebuild/test)</li>
-<li>❌ <strong>Consent still not working</strong> - prompts not appearing even after fix attempt</li>
-</ul>
+<h2 id="fixes-completed-2026-01-27-2026-01-28">FIXES COMPLETED (2026-01-27 → 2026-01-28)<a class="headerlink" href="#fixes-completed-2026-01-27-2026-01-28" title="Permanent link">&para;</a></h2>
+<p><strong>Blinker Event Bus Integration (commit 6eb83e2):</strong>
+- ✅ Added consent handlers (_file_edit_consent_handler, _shell_consent_handler)
+- ✅ Wired consent callbacks to EngineClient constructor
+- ✅ Fixed STREAM_END to use event.data when no chunks accumulated
+- ✅ Added timestamps to MessageBox (like Rich TUI)
+- ✅ Replaced python-magic with filetype library (PyInstaller fix)
+- ✅ 8 event handlers subscribed via blinker event bus
+- ✅ All 1105 tests passing</p>
+<p><strong>Remaining Work (v1.16.0):</strong>
+- ⏸️ Tab autocomplete - needs cursor-based positioning refactoring
+- ⚠️ Status bar toggles - partially implemented
+- ❌ Reasoning tokens - deferred (not in Rich TUI yet)</p>
 
 
 
