@@ -622,7 +622,7 @@ ppxai is **not** trying to be:
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ```bash
-uv run pytest tests/ -v       # Run tests (583 passing)
+uv run pytest tests/ -v       # Run tests (1105 passing)
 uv run ppxai-server           # Start server for VSCode dev
 ```
 
@@ -638,4 +638,4 @@ For archived planning documents:
 
 ---
 
-**Last Updated**: January 24, 2026
+**Last Updated**: January 28, 2026

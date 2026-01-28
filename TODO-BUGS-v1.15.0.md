@@ -8,26 +8,24 @@
 
 ## Critical Bugs
 
-### 1. Language Cycle Crash ⚠️ HIGH PRIORITY
+### 1. Language Cycle Crash ✅ RESOLVED
 
 **File:** `BUG-LANGUAGE-CYCLE-CRASH.md`
-**Status:** ⏳ Open
+**Status:** ✅ Resolved (2026-01-27)
 **Severity:** High - Crashes ppxaide TUI
-**Blocking:** Yes (if language cycling is enabled)
+**Blocking:** No (fixed)
 
-**Issue:** Ctrl+L language cycling crashes when reaching unsupported languages (go, rust, sql, xml, java, regex).
+**Issue:** Ctrl+L language cycling crashed when reaching unsupported languages (go, rust, sql, xml, java, regex).
 
-**Root Cause:** `SUPPORTED_LANGUAGES` includes 15 languages, but only 9 tree-sitter packages are installed.
+**Root Cause:** `SUPPORTED_LANGUAGES` included 15 languages, but only 9 tree-sitter packages were installed.
 
-**Quick Fix:**
-- [ ] Remove unsupported languages from `SUPPORTED_LANGUAGES` in `ppxai/tui/widgets/code_editor.py`
-- [ ] Keep only: bash, css, html, javascript, json, markdown, python, toml, yaml
-- [ ] Test language cycling with Ctrl+L
-- [ ] Verify no references to removed languages in `EXTENSION_TO_LANGUAGE`
-- [ ] Update documentation
+**Resolution:** Added all 15 tree-sitter packages to `pyproject.toml`:
+- [x] tree-sitter-go, tree-sitter-rust, tree-sitter-java
+- [x] tree-sitter-sql, tree-sitter-xml, tree-sitter-regex
+- [x] All 15 languages now work correctly
+- [x] Commit: 6eb83e2
 
-**Timeline:** 30 minutes
-**Assignee:** TBD
+**Verified:** Language cycling (Ctrl+L) works for all languages
 
 ---
 
@@ -65,26 +63,26 @@
 Before marking v1.15.0 ready for release:
 
 ### Critical Features
-- [ ] ppxaide launches without crash
-- [ ] Language cycling (Ctrl+L) doesn't crash
-- [ ] All 9 supported languages work correctly
-- [ ] Theme cycling (Ctrl+T) works
-- [ ] File viewing in side panel works
-- [ ] Markdown rendering works
-- [ ] Code syntax highlighting works
+- [x] ppxaide launches without crash
+- [x] Language cycling (Ctrl+L) doesn't crash
+- [x] All 15 supported languages work correctly
+- [x] Theme cycling (Ctrl+T) works
+- [x] File viewing in side panel works
+- [x] Markdown rendering works
+- [x] Code syntax highlighting works
 
 ### Integration Tests
-- [ ] TUI + engine integration works
-- [ ] Command execution works
-- [ ] Session save/load works
-- [ ] Bootstrap context loads
-- [ ] Token/cost tracking displays
+- [x] TUI + engine integration works
+- [x] Command execution works
+- [x] Session save/load works
+- [x] Bootstrap context loads
+- [x] Token/cost tracking displays
 
 ### Regression Tests
-- [ ] Rich TUI (ppxai) still works
-- [ ] Server (ppxai-server) still works
-- [ ] VSCode extension still connects
-- [ ] All 1105 tests pass
+- [x] Rich TUI (ppxai) still works
+- [x] Server (ppxai-server) still works
+- [x] VSCode extension still connects
+- [x] All 1105 tests pass
 
 ---
 

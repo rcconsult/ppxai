@@ -1,9 +1,10 @@
-# TODO: v1.15.0 - Blinker Event Bus Integration
+# TODO: v1.15.0 - Blinker Event Bus Integration ✅ COMPLETE
 
 **Date:** 2026-01-27
+**Completed:** 2026-01-28
 **Priority:** HIGH - Critical for debugging and bug resolution
 **Goal:** Integrate blinker event bus to resolve current ppxaide bugs
-**Timeline:** 3-4 days
+**Status:** ✅ Complete - All phases implemented and tested
 
 ---
 
@@ -23,25 +24,25 @@ Current bugs are caused by complex async event handling between EngineClient and
 
 ---
 
-## Current Status (186f910)
+## Current Status ✅ COMPLETE
 
-**Last Code Change:** feat(tui): consent dialog callback pattern, dynamic help, filetype lib
+**Last Commit:** 0ebc690 (fix: cross-platform temp paths for Windows)
 
-**Working:**
-- ✅ Consent dialog UI exists
-- ✅ Consent handlers wired to EngineClient
-- ✅ STREAM_END extraction improved (handles dict response)
-- ✅ Debug logging added throughout
+**All Issues Resolved:**
+- ✅ Blinker event bus integrated (ppxai/tui/event_bus.py)
+- ✅ 11 event types defined and working
+- ✅ AI responses display correctly
+- ✅ Tool consent callbacks working
+- ✅ Event flow visible in debug logs
+- ✅ All 1105 tests passing
 
-**Broken:**
-- ❌ AI responses sometimes not displayed
-- ❌ Consent callbacks not being triggered
-- ❌ Complex event flow hard to debug
+**Files Created/Modified:**
+- `ppxai/tui/event_bus.py` - EventBus class (~220 lines)
+- `ppxai/tui/app.py` - Event bus integration
+- `pyproject.toml` - Added blinker + 6 tree-sitter packages
+- `tests/test_event_bus.py` - Test suite (4 tests)
 
-**File Status:**
-- `ppxai/tui/app.py` - 1,545 lines, complex _handle_event() method
-- `ppxai/tui/widgets/dialog.py` - ConsentDialog exists
-- Consent handlers exist but not triggering reliably
+**See:** SESSION-SUMMARY-2026-01-27.md for full details
 
 ---
 
