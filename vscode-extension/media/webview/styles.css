@@ -455,7 +455,8 @@ body {
 }
 
 .message-content {
-    padding-right: 50px; /* Space for timestamp */
+    padding-right: 50px; /* Space for timestamp at top */
+    padding-bottom: 8px; /* Space for copy button at bottom */
 }
 
 .message.user {
@@ -759,6 +760,7 @@ body {
     color: var(--vscode-descriptionForeground);
     text-align: right;
     margin-top: 8px;
+    margin-bottom: 20px; /* Space for copy button */
     opacity: 0.7;
 }
 
@@ -962,21 +964,24 @@ body {
     border: 1px solid var(--vscode-panel-border);
 }
 
-/* v1.15.0: Copy button for assistant messages */
+/* v1.15.0: Copy button for assistant messages - positioned at bottom next to timestamp */
 .copy-btn {
     position: absolute;
-    top: 4px;
-    right: 55px;  /* Position before timestamp */
+    bottom: 8px;
+    right: 8px;
     padding: 2px 6px;
     background: transparent;
     border: 1px solid var(--vscode-panel-border);
     border-radius: 4px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 10px;
     opacity: 0;
     transition: opacity 0.2s, background 0.2s;
     color: var(--vscode-foreground);
     z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
 }
 
 .message:hover .copy-btn {
