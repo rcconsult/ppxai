@@ -467,8 +467,8 @@ class TestValidation:
         """safe_resolve_path should handle absolute paths."""
         from ppxai.tui.validation import safe_resolve_path
 
-        # Test with temp directory (exists)
-        result = safe_resolve_path("/tmp")
+        # Test with temp directory (exists on all platforms)
+        result = safe_resolve_path(tempfile.gettempdir())
         assert result is not None
         assert result.is_absolute()
 
@@ -526,10 +526,9 @@ class TestValidation:
         """validate_file_size should check file sizes correctly."""
         from ppxai.tui.validation import validate_file_size
 
-        with tempfile.NamedTemporaryFile(delete=False) as f:
-            f.write(b"x" * 1000)
-            f.flush()
-            path = Path(f.name)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "test_file.bin"
+            path.write_bytes(b"x" * 1000)
 
             # Should be valid for large limit
             is_valid, size = validate_file_size(path, max_size=10000)
@@ -540,8 +539,7 @@ class TestValidation:
             is_valid, size = validate_file_size(path, max_size=500)
             assert is_valid is False
             assert size == 1000
-
-            path.unlink()
+            # File cleaned up automatically when tmpdir is removed
 
     def test_get_size_limit_for_mode(self):
         """get_size_limit_for_mode should return appropriate limits."""
