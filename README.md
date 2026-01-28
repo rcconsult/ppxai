@@ -1,8 +1,6 @@
 # ppxai - Multi-LLM Interface for Developers
 
-![Version](https://img.shields.io/badge/version-1.15.0--dev-blue) ![Tests](https://img.shields.io/badge/tests-1105%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
-
-> **Development Branch:** This is the `feature/new-tui-command` branch with the new type-based renderer architecture. See the [v1.15.0 release notes](docs/RELEASE-NOTES-v1.15.0.md) for details on the 17 CommandResult types and mechanical UI dispatch.
+![Version](https://img.shields.io/badge/version-1.15.0-blue) ![Tests](https://img.shields.io/badge/tests-1105%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
 
 **Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
 
