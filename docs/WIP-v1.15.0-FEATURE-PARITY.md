@@ -1,8 +1,8 @@
 # Work In Progress: v1.15.0 Feature Parity
 
 **Branch:** `feature/new-tui-command`
-**Last Updated:** 2026-01-26
-**Status:** In Progress
+**Last Updated:** 2026-01-28
+**Status:** Ready for Release
 
 ## Completed This Session
 
@@ -32,6 +32,14 @@
 - [x] Textual logger override (commit pending)
 - [x] Session restoration worker fix (commit pending)
 - [x] Autocomplete disabled and deferred (commit 87785e9)
+
+**Phase 3 - Blinker Event Bus Integration (2026-01-28):**
+- [x] Blinker event bus for decoupled components (commit 6eb83e2)
+- [x] 8 event handlers subscribed (STREAM_START, STREAM_CHUNK, STREAM_END, TOOL_CALL, TOOL_RESULT, TOOL_ERROR, ERROR, INFO)
+- [x] STREAM_END.data handling fixed (extracts content when no chunks)
+- [x] Tool consent callbacks wired to EngineClient
+- [x] All 1105 tests passing
+- [x] Documentation updated (FEATURE-PARITY-ANALYSIS.md)
 
 ---
 
