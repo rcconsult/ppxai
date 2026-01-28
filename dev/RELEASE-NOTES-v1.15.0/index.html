@@ -1101,10 +1101,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#5-command-factory-pattern" class="md-nav__link">
+  <a href="#5-copy-to-clipboard-across-all-clients-new" class="md-nav__link">
     <span class="md-ellipsis">
       
-        5. Command Factory Pattern
+        5. Copy-to-Clipboard Across All Clients ⭐ NEW
       
     </span>
   </a>
@@ -1112,10 +1112,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#6-performance-optimization" class="md-nav__link">
+  <a href="#6-command-factory-pattern" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. Performance Optimization
+        6. Command Factory Pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-performance-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Performance Optimization
       
     </span>
   </a>
@@ -1194,6 +1205,17 @@
     <span class="md-ellipsis">
       
         Usage Tracking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clipboard-rich-tui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Clipboard (Rich TUI)
       
     </span>
   </a>
@@ -1525,6 +1547,7 @@
 - <strong>17 CommandResult types</strong> - Structured data types for all command outputs
 - <strong>2 renderer implementations</strong> - RichRenderer (legacy) + TextualRenderer (new TUI)
 - <strong>32 commands migrated</strong> - All commands return typed results
+- <strong>Copy-to-clipboard</strong> - Reliable copy across all clients (TUI, Web, VSCode)
 - <strong>~1,698 lines removed</strong> - Eliminated v2 naming artifacts and duplicate code
 - <strong>100% test coverage</strong> - All commands validated in both rendering modes</p>
 <p><strong>Architecture Benefits:</strong>
@@ -1697,8 +1720,50 @@
 <li><strong>Full <code>/context</code> support</strong> - show, hints, reload commands working</li>
 <li><strong>Provider/model hints</strong> - Dynamic prompt assembly based on active provider</li>
 </ul>
-<h3 id="5-command-factory-pattern">5. Command Factory Pattern<a class="headerlink" href="#5-command-factory-pattern" title="Permanent link">&para;</a></h3>
-<p>All 30 commands now use centralized factory:</p>
+<h3 id="5-copy-to-clipboard-across-all-clients-new">5. Copy-to-Clipboard Across All Clients ⭐ NEW<a class="headerlink" href="#5-copy-to-clipboard-across-all-clients-new" title="Permanent link">&para;</a></h3>
+<p>Reliable clipboard access for AI responses, avoiding terminal text selection issues:</p>
+<table>
+<thead>
+<tr>
+<th>Client</th>
+<th>Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ppxai</strong> (Rich TUI)</td>
+<td><code>/copy [n]</code> command</td>
+<td>Copies nth response from end (default: last)</td>
+</tr>
+<tr>
+<td><strong>ppxai</strong> (Rich TUI)</td>
+<td>Click <code>#</code> link in title</td>
+<td>OSC 8 hyperlink opens temp file (works without xclip)</td>
+</tr>
+<tr>
+<td><strong>ppxaide</strong> (Textual TUI)</td>
+<td>📋 button</td>
+<td>Click button in message header</td>
+</tr>
+<tr>
+<td><strong>Web App</strong></td>
+<td>📋 button</td>
+<td>Hover over message to reveal</td>
+</tr>
+<tr>
+<td><strong>VSCode</strong></td>
+<td>📋 button</td>
+<td>Hover over message to reveal</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Error Feedback (ppxaide):</strong>
+- Red ✗ when clipboard unavailable
+- Toast notification: "Clipboard unavailable. Install xclip, xsel, or wl-clipboard."</p>
+<p><strong>Why?</strong> Terminal text selection often copies panel borders (Rich TUI) or conflicts with terminal plugins (iTerm2). Dedicated copy ensures clean text.</p>
+<h3 id="6-command-factory-pattern">6. Command Factory Pattern<a class="headerlink" href="#6-command-factory-pattern" title="Permanent link">&para;</a></h3>
+<p>All 32 commands now use centralized factory:</p>
 <ul>
 <li><strong>Type-based dispatch</strong> - Commands return typed result objects</li>
 <li><strong>9 command categories</strong> - agent, coding, display, navigation, provider, session, system, tools, utility</li>
@@ -1706,7 +1771,7 @@
 <li><strong>Consistent error handling</strong> - All commands use ErrorResult with suggestions</li>
 <li><strong>No circular imports</strong> - Clean dependency graph</li>
 </ul>
-<h3 id="6-performance-optimization">6. Performance Optimization<a class="headerlink" href="#6-performance-optimization" title="Permanent link">&para;</a></h3>
+<h3 id="7-performance-optimization">7. Performance Optimization<a class="headerlink" href="#7-performance-optimization" title="Permanent link">&para;</a></h3>
 <p>Established baseline metrics for TUI operations:</p>
 <ul>
 <li><strong>Command lookup:</strong> 3,539,698 lookups/second (28.25ms for 100K lookups)</li>
@@ -1797,6 +1862,29 @@
 </tr>
 </tbody>
 </table>
+<h3 id="clipboard-rich-tui">Clipboard (Rich TUI)<a class="headerlink" href="#clipboard-rich-tui" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/copy</code></td>
+<td>Copy last response to clipboard</td>
+<td><code>/copy</code></td>
+</tr>
+<tr>
+<td><code>/copy n</code></td>
+<td>Copy nth response from end</td>
+<td><code>/copy 2</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Aliases:</strong> <code>cp</code></p>
 <hr />
 <h2 id="architecture-changes">Architecture Changes<a class="headerlink" href="#architecture-changes" title="Permanent link">&para;</a></h2>
 <h3 id="phase-6-implementation-timeline">Phase 6 Implementation Timeline<a class="headerlink" href="#phase-6-implementation-timeline" title="Permanent link">&para;</a></h3>
@@ -2014,6 +2102,7 @@
 <ul>
 <li>[x] Code review &amp; cleanup</li>
 <li>[x] Documentation updates</li>
+<li>[x] Copy-to-clipboard across all clients</li>
 <li>[ ] Manual testing checklist</li>
 <li>[ ] Release preparation</li>
 <li>[ ] Merge to master</li>
