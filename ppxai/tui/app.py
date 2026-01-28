@@ -641,11 +641,17 @@ class PPXAIDEApp(App):
             else:
                 # Model not available - use provider's default (Rich TUI lines 589-594)
                 from ppxai.config import get_default_model
-                default_model = get_default_model(self._engine_client.provider_name) if self._engine_client.provider else None
+                provider_name = self._engine_client.provider_name if self._engine_client.provider else self._provider
+                default_model = get_default_model(provider_name) if provider_name else None
                 if default_model:
                     self._engine_client.set_model(default_model)
                     self._model = default_model
+                    status_bar.update_badge("model", default_model)
                     self._log.warning(f"Model '{stored_model}' not available, using default: {default_model}")
+                else:
+                    # No valid model found - show error
+                    self._log.error(f"Model '{stored_model}' not available and no default found for {provider_name}")
+                    status_bar.update_badge("model", "[red]invalid[/red]")
 
         # Restore tools state from loaded session (not session_state parameter)
         # session.load() already set session.tools_enabled from the session file
