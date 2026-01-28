@@ -766,7 +766,9 @@ def get_generation_params(provider: str = None, model: str = None) -> Dict[str, 
         if "generation_params" in model_config:
             params.update(model_config["generation_params"])
 
-    return params
+    # Filter out comment keys (e.g., "__comment_temperature")
+    # These are for documentation in config, not for API calls
+    return {k: v for k, v in params.items() if not k.startswith("__comment")}
 
 
 # =============================================================================
