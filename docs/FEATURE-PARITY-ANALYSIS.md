@@ -127,7 +127,7 @@ Critical issues identified on 2026-01-27 have been **FIXED** via blinker event b
 | System messages | ✅ | ✅ | |
 | Tool messages | ✅ | ✅ | Via event bus handlers |
 | Streaming display | ✅ | ✅ | Fixed - extracts from STREAM_END.data |
-| Reasoning tokens | ✅ | ❌ | Deferred (not in Rich TUI yet) |
+| Reasoning tokens | ✅ | ✅ | DeepSeek R1, GPT-OSS thinking display |
 | **Consent/Prompt Dialogs** |
 | Consent prompts | ✅ (inline) | ✅ (modal) | Fixed - wired to EngineClient |
 | Text input prompts | ✅ (inline) | ✅ (modal) | Working |
@@ -307,7 +307,7 @@ After blinker event bus integration (commit 6eb83e2):
 3. ⏸️ **Tab autocomplete** - Deferred to v1.16.0 (needs refactoring)
 4. ✅ **Status bar toggles** - /status version|cwd|datetime working
 5. ✅ **Agent/checkpoint badges** - Shows ↶ (valid) or ↶! (stale)
-6. ❌ **Reasoning token display** - Deferred (not in Rich TUI yet)
+6. ✅ **Reasoning token display** - DeepSeek R1, GPT-OSS thinking with streaming
 
 **Feature parity achieved for core chat and tool functionality.**
 
@@ -337,4 +337,3 @@ After blinker event bus integration (commit 6eb83e2):
 
 **Remaining Work (v1.16.0):**
 - ⏸️ Tab autocomplete - needs cursor-based positioning refactoring
-- ❌ Reasoning tokens - deferred (not in Rich TUI yet)

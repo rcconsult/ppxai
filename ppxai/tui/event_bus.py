@@ -192,6 +192,7 @@ class Events:
     # Engine events (from EngineClient)
     ENGINE_STREAM_START = "engine:stream_start"
     ENGINE_STREAM_CHUNK = "engine:stream_chunk"
+    ENGINE_REASONING_CHUNK = "engine:reasoning_chunk"  # DeepSeek R1, GPT-OSS thinking
     ENGINE_STREAM_END = "engine:stream_end"
     ENGINE_ERROR = "engine:error"
     ENGINE_INFO = "engine:info"

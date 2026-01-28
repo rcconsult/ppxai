@@ -97,6 +97,12 @@ class PPXAIDEApp(App):
         # Streaming state (Phase 6.1)
         self._current_message_content = ""
         self._is_streaming = False
+        # Thinking/waiting indicator (like web app)
+        self._thinking_message: Optional["MessageBox"] = None
+        # Reasoning token state (DeepSeek R1, GPT-OSS thinking)
+        self._reasoning_started = False
+        self._reasoning_content = ""
+        self._reasoning_message: Optional["MessageBox"] = None  # For streaming updates
 
         # Consent dialog state (for async dialog during streaming)
         self._pending_consent: Optional[dict] = None
@@ -278,6 +284,7 @@ class PPXAIDEApp(App):
         # Subscribe to engine events via event bus (v1.15.0 blinker integration)
         self._event_bus.on(Events.ENGINE_STREAM_START, self._on_stream_start)
         self._event_bus.on(Events.ENGINE_STREAM_CHUNK, self._on_stream_chunk)
+        self._event_bus.on(Events.ENGINE_REASONING_CHUNK, self._on_reasoning_chunk)
         self._event_bus.on(Events.ENGINE_STREAM_END, self._on_stream_end)
         self._event_bus.on(Events.ENGINE_TOOL_CALL, self._on_tool_call)
         self._event_bus.on(Events.ENGINE_TOOL_RESULT, self._on_tool_result)
@@ -903,6 +910,7 @@ class PPXAIDEApp(App):
         event_map = {
             EventType.STREAM_START: Events.ENGINE_STREAM_START,
             EventType.STREAM_CHUNK: Events.ENGINE_STREAM_CHUNK,
+            EventType.REASONING_CHUNK: Events.ENGINE_REASONING_CHUNK,
             EventType.STREAM_END: Events.ENGINE_STREAM_END,
             EventType.TOOL_CALL: Events.ENGINE_TOOL_CALL,
             EventType.TOOL_RESULT: Events.ENGINE_TOOL_RESULT,
@@ -921,17 +929,99 @@ class PPXAIDEApp(App):
     # Event handlers - subscribed to event bus
 
     async def _on_stream_start(self, sender, **kwargs) -> None:
-        """Handle STREAM_START event."""
+        """Handle STREAM_START event.
+
+        Shows a "thinking" indicator like web app while waiting for response.
+        """
+        from ppxai.tui.widgets.message_box import MessageBox
+
         self._current_message_content = ""
-        self._log.debug("[Event] Stream started")
+        # Reset reasoning state for new turn
+        self._reasoning_started = False
+        self._reasoning_content = ""
+        self._reasoning_message = None
+
+        # Show thinking indicator (like web app's animated dots)
+        chat_view = self.query_one("#chat-view", ChatView)
+        self._thinking_message = MessageBox(
+            content="[dim italic]⏳ Thinking...[/dim italic]",
+            role="system",
+            streaming=True
+        )
+        chat_view._messages.append(self._thinking_message)
+        chat_view.mount(self._thinking_message)
+        chat_view.scroll_end(animate=True)
+        self._log.debug("[Event] Stream started, showing thinking indicator")
 
     async def _on_stream_chunk(self, sender, data, **kwargs) -> None:
-        """Handle STREAM_CHUNK event."""
+        """Handle STREAM_CHUNK event.
+
+        Removes thinking indicator on first chunk (content is arriving).
+        """
+        # Clear thinking indicator on first content chunk
+        if self._thinking_message and not self._current_message_content:
+            self._clear_thinking_indicator()
+
         self._current_message_content += data
         self._log.debug(f"[Event] Chunk: {len(data)} chars")
 
+    def _clear_thinking_indicator(self) -> None:
+        """Clear the thinking indicator message.
+
+        Called when content or reasoning starts arriving.
+        """
+        if self._thinking_message:
+            try:
+                chat_view = self.query_one("#chat-view", ChatView)
+                if self._thinking_message in chat_view._messages:
+                    chat_view._messages.remove(self._thinking_message)
+                self._thinking_message.remove()
+                self._log.debug("[Event] Cleared thinking indicator")
+            except Exception as e:
+                self._log.debug(f"[Event] Could not clear thinking indicator: {e}")
+            finally:
+                self._thinking_message = None
+
+    async def _on_reasoning_chunk(self, sender, data, **kwargs) -> None:
+        """Handle REASONING_CHUNK event (DeepSeek R1, GPT-OSS thinking tokens).
+
+        Streams reasoning/thinking tokens in real-time like Rich TUI.
+        Shows reasoning with dim italic styling, updated incrementally.
+        """
+        from ppxai.tui.widgets.message_box import MessageBox
+
+        chat_view = self.query_one("#chat-view", ChatView)
+
+        # Create reasoning message on first chunk
+        if not self._reasoning_started:
+            self._reasoning_started = True
+            # Clear thinking indicator (reasoning replaces it)
+            self._clear_thinking_indicator()
+            # Create a system message that we'll update with streaming content
+            self._reasoning_message = MessageBox(
+                content="[dim italic]💭 Thinking...[/dim italic]",
+                role="system",
+                streaming=True
+            )
+            chat_view._messages.append(self._reasoning_message)
+            chat_view.mount(self._reasoning_message)
+            chat_view.scroll_end(animate=True)
+            self._log.debug("[Event] Reasoning started")
+
+        # Accumulate and stream reasoning content
+        self._reasoning_content += data
+
+        # Update the reasoning message with accumulated content (streaming style)
+        if self._reasoning_message:
+            self._reasoning_message.content = f"[dim italic]💭 Thinking...\n{self._reasoning_content}[/dim italic]"
+
+        self._log.debug(f"[Event] Reasoning chunk: {len(data)} chars")
+
     async def _on_stream_end(self, sender, data, **kwargs) -> None:
         """Handle STREAM_END event."""
+        # Clear thinking indicator if still present (non-streaming providers)
+        self._clear_thinking_indicator()
+
         chat_view = self.query_one("#chat-view", ChatView)
 
         # Debug: Log what we actually received
@@ -958,12 +1048,25 @@ class PPXAIDEApp(App):
 
         # Display if there's content
         if final_response.strip():
+            # If reasoning was streamed, finalize the reasoning message and add separator
+            if self._reasoning_message and self._reasoning_content:
+                # Mark reasoning as complete (update title)
+                self._reasoning_message.content = f"[dim italic]💭 Thought process:\n{self._reasoning_content}[/dim italic]"
+                self._reasoning_message.streaming = False
+                # Add separator like Rich TUI
+                chat_view.add_system_message("[dim]───[/dim]")
+                self._log.info(f"Finalized reasoning message: {len(self._reasoning_content)} chars")
+
             chat_view.add_assistant_message(final_response)
             self._log.info(f"Added assistant message: {len(final_response)} chars")
         else:
             self._log.warning("STREAM_END with no content to display")
 
+        # Reset state
         self._current_message_content = ""
+        self._reasoning_content = ""
+        self._reasoning_started = False
+        self._reasoning_message = None
 
         # Update usage stats in status bar (Phase 6.4)
         self._update_usage_display()
