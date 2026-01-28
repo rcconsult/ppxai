@@ -61,16 +61,26 @@ class MessageBox(Static):
             if self.role == "tool":
                 with VerticalScroll(classes="content-scroll"):
                     yield Static(self.content, classes="content", markup=True)
+            elif self.role in ("assistant", "user"):
+                # Use Markdown widget for proper rendering with clickable URLs
+                yield Markdown(self.content, classes="content")
             else:
+                # System messages use Rich markup
                 yield Static(self.content, classes="content", markup=True)
 
     def watch_content(self, content: str) -> None:
         """Update content when it changes (for streaming)."""
         try:
-            content_widget = self.query_one(".content", Static)
+            # Try Markdown widget first (assistant/user messages)
+            content_widget = self.query_one(".content", Markdown)
             content_widget.update(content)
         except NoMatches:
-            pass  # Widget not yet composed
+            try:
+                # Fall back to Static widget (system/tool messages)
+                content_widget = self.query_one(".content", Static)
+                content_widget.update(content)
+            except NoMatches:
+                pass  # Widget not yet composed
 
     def watch_streaming(self, streaming: bool) -> None:
         """Update streaming state."""

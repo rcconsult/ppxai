@@ -136,6 +136,58 @@ MessageBox.streaming .content {
     color: $text-muted;
 }
 
+/* Markdown rendering in chat messages */
+MessageBox Markdown {
+    padding: 0;
+    background: transparent;
+    height: auto;
+}
+
+MessageBox Markdown H1 {
+    color: $primary;
+    text-style: bold;
+    margin: 0 0 1 0;
+}
+
+MessageBox Markdown H2 {
+    color: $secondary;
+    text-style: bold;
+    margin: 0 0 1 0;
+}
+
+MessageBox Markdown H3, MessageBox Markdown H4 {
+    color: $accent;
+    text-style: bold;
+}
+
+MessageBox Markdown MarkdownFence {
+    background: $surface-darken-1;
+    border: round $primary;
+    margin: 1 0;
+    padding: 0 1;
+}
+
+MessageBox Markdown MarkdownBlockQuote {
+    background: $surface-darken-1;
+    border-left: thick $accent;
+    padding-left: 1;
+    margin: 1 0;
+}
+
+/* Links in markdown (clickable URLs) */
+MessageBox Markdown .link {
+    color: $accent;
+    text-style: underline;
+}
+
+MessageBox Markdown MarkdownBulletList, MessageBox Markdown MarkdownOrderedList {
+    margin: 0 0 0 2;
+}
+
+MessageBox Markdown MarkdownTable {
+    margin: 1 0;
+}
+
 /* Input box */
 InputBox {
     background: $surface;
