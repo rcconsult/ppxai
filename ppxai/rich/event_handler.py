@@ -245,6 +245,8 @@ class TUIEventHandler(EventHandler):
         self._injected_contexts = []
         # Track reasoning state for collapsible display
         self._reasoning_started = False
+        # Track if thinking indicator was shown (v1.15.0)
+        self._thinking_shown = False
 
     async def handle_event(self, event: Event) -> bool:
         """Override to handle CONTEXT_INJECTED and AGENT_* events for TUI display."""
@@ -307,22 +309,31 @@ class TUIEventHandler(EventHandler):
 
     def _on_stream_start(self):
         """Handle stream start for TUI."""
-        # Reset reasoning state for new turn (v1.13.9)
+        # Reset state for new turn
         self._reasoning_started = False
-        # With themed panels, we show header after content is complete
-        pass
+        self._thinking_shown = True
+        # Show thinking indicator while waiting for response (v1.15.0)
+        self.console.print("[dim italic]⏳ Thinking...[/dim italic]", end="\r")
 
     def _on_reasoning_chunk(self, chunk: str):
         """Handle reasoning chunk for TUI (v1.13.9 - DeepSeek R1, GPT-OSS 120B)."""
         # Show reasoning header on first chunk
         if not self._reasoning_started:
             self._reasoning_started = True
+            # Clear "Thinking..." and show reasoning header (v1.15.0)
+            if self._thinking_shown:
+                self.console.print(" " * 20, end="\r")  # Clear line
+                self._thinking_shown = False
             self.console.print("[dim italic]💭 Thinking...[/dim italic]")
         # Stream reasoning in dim italic style
         self.console.print(f"[dim italic]{chunk}[/dim italic]", end="")
 
     def _on_stream_chunk(self, chunk: str):
         """Handle stream chunk for TUI (silent accumulation for final render)."""
+        # Clear thinking indicator on first content chunk (v1.15.0)
+        if self._thinking_shown:
+            self.console.print(" " * 20, end="\r")  # Clear line
+            self._thinking_shown = False
         # If we were in reasoning mode, add separator before content
         if self._reasoning_started and self._full_response == "":
             self.console.print()  # Newline after reasoning
@@ -335,6 +346,11 @@ class TUIEventHandler(EventHandler):
         """Handle stream end for TUI with themed panel."""
         from datetime import datetime
         from ppxai.rich.ui_components import render_message
+
+        # Clear thinking indicator if still showing (v1.15.0)
+        if self._thinking_shown:
+            self.console.print(" " * 20, end="\r")
+            self._thinking_shown = False
 
         self.logger.log_assistant_message(response)
         if response.strip():
