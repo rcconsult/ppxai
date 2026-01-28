@@ -703,8 +703,14 @@ class PPXAIDEApp(App):
             self.sub_title = f"{self._provider}/{self._model}"
             self._log.info(f"Updated subtitle: {self.sub_title}")
 
-        # Refocus input box after session restoration (critical for autocomplete integration)
+        # Restore command history to InputBox (matches Rich TUI behavior)
         input_box = self.query_one("#input-box", InputBox)
+        command_history = self._engine_client.session.command_history
+        if command_history:
+            input_box.set_history(command_history)
+            self._log.info(f"Restored {len(command_history)} commands to input history")
+
+        # Refocus input box after session restoration (critical for autocomplete integration)
         input_box.focus()
 
         self._log.info(f"Session restoration complete: provider={self._provider}, model={self._model}, tools={self._tools_enabled}")
@@ -825,6 +831,10 @@ class PPXAIDEApp(App):
         message = event.value.strip()
         if not message:
             return
+
+        # Add to session command history for persistence (matches Rich TUI behavior)
+        if self._engine_client:
+            self._engine_client.session.add_to_history(message)
 
         chat_view = self.query_one("#chat-view", ChatView)
 
