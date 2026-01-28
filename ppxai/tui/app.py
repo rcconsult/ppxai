@@ -905,6 +905,10 @@ class PPXAIDEApp(App):
         chat_view.scroll_end(animate=True)
         self._log.info("Showing thinking indicator")
 
+        # CRITICAL: Yield control to event loop so thinking indicator renders
+        # Without this, long provider delays (30+ seconds) block UI updates
+        await asyncio.sleep(0)
+
         try:
             event_count = 0
             self._log.info("About to call self._engine_client.chat()")
@@ -914,6 +918,8 @@ class PPXAIDEApp(App):
                 event_count += 1
                 self._log.info(f"Received event #{event_count}: type={event.type}, data_len={len(str(event.data)) if event.data else 0}")
                 await self._handle_event(event)
+                # Yield to event loop after each event to keep UI responsive
+                await asyncio.sleep(0)
 
             self._log.info(f"Chat loop finished, total events: {event_count}")
 
