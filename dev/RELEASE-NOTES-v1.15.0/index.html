@@ -1101,6 +1101,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#41-session-restore-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Session Restore Improvements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#5-copy-to-clipboard-across-all-clients-new" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1112,10 +1123,65 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#6-command-factory-pattern" class="md-nav__link">
+  <a href="#6-blinker-event-bus-new" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. Command Factory Pattern
+        6. Blinker Event Bus ⭐ NEW
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-generation-parameters-new" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Generation Parameters ⭐ NEW
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-markdown-rendering-in-chat-new" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Markdown Rendering in Chat ⭐ NEW
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-thinking-indicators-new" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Thinking Indicators ⭐ NEW
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-new-configuration-sections-new" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. New Configuration Sections ⭐ NEW
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-command-factory-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Command Factory Pattern
       
     </span>
   </a>
@@ -1456,6 +1522,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#new-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#credits" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1479,10 +1556,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#phase-7-polish-release-current" class="md-nav__link">
+  <a href="#phase-7-polish-release-complete" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 7: Polish &amp; Release (Current)
+        Phase 7: Polish &amp; Release (Complete)
       
     </span>
   </a>
@@ -1547,6 +1624,10 @@
 - <strong>17 CommandResult types</strong> - Structured data types for all command outputs
 - <strong>2 renderer implementations</strong> - RichRenderer (legacy) + TextualRenderer (new TUI)
 - <strong>32 commands migrated</strong> - All commands return typed results
+- <strong>Blinker event bus</strong> - Decoupled component communication for better debugging
+- <strong>Generation parameters</strong> - Configure temperature, top_p, frequency_penalty per provider/model
+- <strong>Markdown in chat</strong> - Rich markdown rendering in TUI message bubbles
+- <strong>Thinking indicators</strong> - Show "⏳ Thinking..." for reasoning models
 - <strong>Copy-to-clipboard</strong> - Reliable copy across all clients (TUI, Web, VSCode)
 - <strong>~1,698 lines removed</strong> - Eliminated v2 naming artifacts and duplicate code
 - <strong>100% test coverage</strong> - All commands validated in both rendering modes</p>
@@ -1720,6 +1801,14 @@
 <li><strong>Full <code>/context</code> support</strong> - show, hints, reload commands working</li>
 <li><strong>Provider/model hints</strong> - Dynamic prompt assembly based on active provider</li>
 </ul>
+<h3 id="41-session-restore-improvements">4.1 Session Restore Improvements<a class="headerlink" href="#41-session-restore-improvements" title="Permanent link">&para;</a></h3>
+<p>Enhanced session restoration:</p>
+<ul>
+<li><strong>Command history restore</strong> - Previous commands available via up/down arrows</li>
+<li><strong>Model badge update</strong> - Status bar shows correct model after restore</li>
+<li><strong>Fallback handling</strong> - Graceful fallback if stored model unavailable</li>
+<li><strong>WORKING_DIR_CHANGED events</strong> - Properly handle directory changes</li>
+</ul>
 <h3 id="5-copy-to-clipboard-across-all-clients-new">5. Copy-to-Clipboard Across All Clients ⭐ NEW<a class="headerlink" href="#5-copy-to-clipboard-across-all-clients-new" title="Permanent link">&para;</a></h3>
 <p>Reliable clipboard access for AI responses, avoiding terminal text selection issues:</p>
 <table>
@@ -1762,7 +1851,84 @@
 - Red ✗ when clipboard unavailable
 - Toast notification: "Clipboard unavailable. Install xclip, xsel, or wl-clipboard."</p>
 <p><strong>Why?</strong> Terminal text selection often copies panel borders (Rich TUI) or conflicts with terminal plugins (iTerm2). Dedicated copy ensures clean text.</p>
-<h3 id="6-command-factory-pattern">6. Command Factory Pattern<a class="headerlink" href="#6-command-factory-pattern" title="Permanent link">&para;</a></h3>
+<h3 id="6-blinker-event-bus-new">6. Blinker Event Bus ⭐ NEW<a class="headerlink" href="#6-blinker-event-bus-new" title="Permanent link">&para;</a></h3>
+<p>Decoupled component communication using the blinker library:</p>
+<ul>
+<li><strong>11 event types</strong> - STREAM_START/CHUNK/END, TOOL_CALL/RESULT/ERROR, CONSENT_FILE/SHELL, ERROR, INFO</li>
+<li><strong>Async support</strong> - Handlers can be sync or async</li>
+<li><strong>Event logging</strong> - All events logged for debugging</li>
+<li><strong>Error isolation</strong> - Handler errors don't crash the bus</li>
+<li><strong>Thread-safe</strong> - Ready for embedded server architecture (v1.16.0)</li>
+</ul>
+<p><strong>Benefits:</strong>
+- Easier debugging - see exact event flow in logs
+- Simpler code - no complex Future coordination
+- Testable - mock event bus for unit tests
+- Extensible - add new handlers without modifying core</p>
+<h3 id="7-generation-parameters-new">7. Generation Parameters ⭐ NEW<a class="headerlink" href="#7-generation-parameters-new" title="Permanent link">&para;</a></h3>
+<p>Configure model behavior to reduce hallucinations:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">&quot;providers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;custom&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">&quot;generation_params&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">      </span><span class="nt">&quot;temperature&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">&quot;top_p&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.9</span><span class="p">,</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">      </span><span class="nt">&quot;frequency_penalty&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.15</span><span class="p">,</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">      </span><span class="nt">&quot;presence_penalty&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="p">},</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="nt">&quot;models&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">      </span><span class="nt">&quot;my-model&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">        </span><span class="nt">&quot;generation_params&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;temperature&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="p">}</span>
+</span></code></pre></div>
+<p><strong>Supported parameters:</strong>
+| Parameter | Range | Recommended | Purpose |
+|-----------|-------|-------------|---------|
+| <code>temperature</code> | 0.0-2.0 | 0.1-0.3 | Lower = more deterministic |
+| <code>top_p</code> | 0.0-1.0 | 0.9 | Nucleus sampling |
+| <code>frequency_penalty</code> | -2.0-2.0 | 0.1-0.2 | Reduces repetition |
+| <code>presence_penalty</code> | -2.0-2.0 | 0.0 | Encourages new topics |
+| <code>seed</code> | int | - | Reproducibility |</p>
+<p><strong>Precedence:</strong> Model-level overrides provider-level.</p>
+<h3 id="8-markdown-rendering-in-chat-new">8. Markdown Rendering in Chat ⭐ NEW<a class="headerlink" href="#8-markdown-rendering-in-chat-new" title="Permanent link">&para;</a></h3>
+<p>Rich markdown rendering in TUI message bubbles:</p>
+<ul>
+<li><strong>Headings</strong> - Styled H1-H6 with proper hierarchy</li>
+<li><strong>Code blocks</strong> - Syntax highlighting with language detection</li>
+<li><strong>Links</strong> - Clickable URLs and citations</li>
+<li><strong>Blockquotes</strong> - Styled quote blocks</li>
+<li><strong>Lists</strong> - Ordered and unordered lists</li>
+</ul>
+<h3 id="9-thinking-indicators-new">9. Thinking Indicators ⭐ NEW<a class="headerlink" href="#9-thinking-indicators-new" title="Permanent link">&para;</a></h3>
+<p>Visual feedback for reasoning models:</p>
+<ul>
+<li><strong>"⏳ Thinking..."</strong> - Shown before stream starts</li>
+<li><strong>Reasoning tokens</strong> - Display thinking time for o1/o3/o4 models</li>
+<li><strong>Thinking badge</strong> - Status bar shows when model is reasoning</li>
+</ul>
+<h3 id="10-new-configuration-sections-new">10. New Configuration Sections ⭐ NEW<a class="headerlink" href="#10-new-configuration-sections-new" title="Permanent link">&para;</a></h3>
+<p><strong>Visualization settings</strong> (<code>visualization</code>):
+<div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">&quot;visualization&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">&quot;max_rows&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span><span class="p">,</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">&quot;max_columns&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">&quot;page_size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">&quot;tree_depth&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">&quot;auto_detect&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nt">&quot;csv_delimiter&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="nt">&quot;theme&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;default&quot;</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="p">}</span>
+</span></code></pre></div></p>
+<p><strong>TUI settings</strong> (<code>tui</code>):
+<div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">&quot;tui&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;theme&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;standard&quot;</span><span class="p">,</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">&quot;show_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">&quot;show_cwd&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">&quot;show_datetime&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="p">}</span>
+</span></code></pre></div></p>
+<h3 id="11-command-factory-pattern">11. Command Factory Pattern<a class="headerlink" href="#11-command-factory-pattern" title="Permanent link">&para;</a></h3>
 <p>All 32 commands now use centralized factory:</p>
 <ul>
 <li><strong>Type-based dispatch</strong> - Commands return typed result objects</li>
@@ -2076,35 +2242,89 @@
 <hr />
 <h2 id="performance-benchmarks">Performance Benchmarks<a class="headerlink" href="#performance-benchmarks" title="Permanent link">&para;</a></h2>
 <h3 id="command-execution">Command Execution<a class="headerlink" href="#command-execution" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Command lookup:    3,539,698 lookups/second
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>Event processing:  6,118,906 events/second
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Stream latency:    &lt; 0.16ms per event
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Command lookup:    3,539,698 lookups/second
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>Event processing:  6,118,906 events/second
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>Stream latency:    &lt; 0.16ms per event
 </span></code></pre></div>
 <h3 id="memory-usage">Memory Usage<a class="headerlink" href="#memory-usage" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>TUI startup:       ~40MB
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>Active session:    ~60MB
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>Long conversation: ~100MB (stable, no leaks)
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>TUI startup:       ~40MB
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>Active session:    ~60MB
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>Long conversation: ~100MB (stable, no leaks)
 </span></code></pre></div>
 <h3 id="binary-size">Binary Size<a class="headerlink" href="#binary-size" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>ppxaide:          42MB
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>ppxai (TUI):      40MB
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>ppxai-server:     38MB
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>ppxaide:          42MB
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>ppxai (TUI):      40MB
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>ppxai-server:     38MB
 </span></code></pre></div>
 <hr />
+<h2 id="new-dependencies">New Dependencies<a class="headerlink" href="#new-dependencies" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Version</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>blinker</code></td>
+<td>≥1.7.0</td>
+<td>Event bus for decoupled communication</td>
+</tr>
+<tr>
+<td><code>tree-sitter-go</code></td>
+<td>≥0.23.4</td>
+<td>Go syntax highlighting</td>
+</tr>
+<tr>
+<td><code>tree-sitter-rust</code></td>
+<td>≥0.23.2</td>
+<td>Rust syntax highlighting</td>
+</tr>
+<tr>
+<td><code>tree-sitter-java</code></td>
+<td>≥0.23.5</td>
+<td>Java syntax highlighting</td>
+</tr>
+<tr>
+<td><code>tree-sitter-sql</code></td>
+<td>≥0.3.8</td>
+<td>SQL syntax highlighting</td>
+</tr>
+<tr>
+<td><code>tree-sitter-xml</code></td>
+<td>≥0.7.0</td>
+<td>XML syntax highlighting</td>
+</tr>
+<tr>
+<td><code>tree-sitter-regex</code></td>
+<td>≥0.24.3</td>
+<td>Regex syntax highlighting</td>
+</tr>
+</tbody>
+</table>
+<hr />
 <h2 id="credits">Credits<a class="headerlink" href="#credits" title="Permanent link">&para;</a></h2>
-<p><strong>Development:</strong> Phase 6 TUI integration (January 20-26, 2026)
-<strong>Testing:</strong> 28 unit tests + 7 integration tests + 5 validation scripts
-<strong>Documentation:</strong> PHASE-6-PROGRESS.md, ARCHITECTURE.md, validation scripts
-<strong>Contributors:</strong> Claude Code (Claude Sonnet 4.5)</p>
+<p><strong>Development:</strong> Phase 6-7 TUI integration (January 20-28, 2026)
+<strong>Testing:</strong> 1105 unit tests + validation scripts
+<strong>Documentation:</strong> PHASE-6-PROGRESS.md, ARCHITECTURE.md, SESSION-SUMMARY-<em>.md
+</em><em>Contributors:</em>* Claude Code (Claude Opus 4.5)</p>
 <hr />
 <h2 id="whats-next">What's Next<a class="headerlink" href="#whats-next" title="Permanent link">&para;</a></h2>
-<h3 id="phase-7-polish-release-current">Phase 7: Polish &amp; Release (Current)<a class="headerlink" href="#phase-7-polish-release-current" title="Permanent link">&para;</a></h3>
+<h3 id="phase-7-polish-release-complete">Phase 7: Polish &amp; Release (Complete)<a class="headerlink" href="#phase-7-polish-release-complete" title="Permanent link">&para;</a></h3>
 <ul>
 <li>[x] Code review &amp; cleanup</li>
 <li>[x] Documentation updates</li>
 <li>[x] Copy-to-clipboard across all clients</li>
-<li>[ ] Manual testing checklist</li>
-<li>[ ] Release preparation</li>
+<li>[x] Blinker event bus integration</li>
+<li>[x] Generation parameters support</li>
+<li>[x] Markdown rendering in chat</li>
+<li>[x] Thinking indicators</li>
+<li>[x] Command history restore on session load</li>
+<li>[x] Config sections (visualization, tui)</li>
+<li>[x] Windows test compatibility fixes</li>
+<li>[x] All 1105 tests passing</li>
 <li>[ ] Merge to master</li>
 <li>[ ] Tag v1.15.0 release</li>
 </ul>
