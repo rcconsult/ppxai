@@ -25,7 +25,7 @@ jobs:
       run: uv python install 3.11
 
     - name: Install dependencies
-      run: uv sync --frozen --dev
+      run: uv sync --frozen --all-extras
 
     - name: Run Python tests
       run: uv run pytest tests/ -v --ignore=tests/test_custom_endpoint_integration.py --ignore=tests/e2e
