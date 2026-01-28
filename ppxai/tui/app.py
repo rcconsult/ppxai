@@ -91,6 +91,7 @@ class PPXAIDEApp(App):
         self._provider = "perplexity"
         self._model = "sonar"
         self._tools_enabled = False
+        self._tools_verbose = False  # Tool output verbosity (controlled via /tools verbose on/off)
         self._working_dir = os.getcwd()
         self._split_index = self.DEFAULT_SPLIT_INDEX  # Current split ratio index
 
@@ -789,13 +790,12 @@ class PPXAIDEApp(App):
 
     def get_tools_verbose(self) -> bool:
         """Get tool verbose logging status (CommandContext protocol)."""
-        # TUI doesn't have verbose tool logging yet
-        return False
+        return self._tools_verbose
 
     def set_tools_verbose(self, verbose: bool) -> None:
         """Set tool verbose logging status (CommandContext protocol)."""
-        # TUI doesn't have verbose tool logging yet
-        pass
+        self._tools_verbose = verbose
+        self._log.debug(f"Tools verbose mode: {'enabled' if verbose else 'disabled'}")
 
     @property
     def tools_enabled(self) -> bool:
@@ -1109,8 +1109,8 @@ class PPXAIDEApp(App):
         tool_args = data.get("arguments", {})
         self._log.info(f"[Event] Tool call: {tool_name} with {len(tool_args)} args")
 
-        # Format arguments for display
-        if tool_args:
+        # Always show tool name; only show args if verbose mode enabled
+        if self._tools_verbose and tool_args:
             # Format as compact JSON-like string
             args_parts = []
             for key, value in tool_args.items():
@@ -1124,11 +1124,12 @@ class PPXAIDEApp(App):
                     value_str = str(value)
                 args_parts.append(f"{key}={value_str}")
             args_str = ", ".join(args_parts)
-            content = f"[dim]Calling with:[/dim] {args_str}"
+            content = f"[dim]Arguments:[/dim] {args_str}"
+            chat_view.add_tool_message(tool_name, content)
         else:
-            content = "[dim]Called with no arguments[/dim]"
+            # Non-verbose: just show tool name inline (no separate message bubble)
+            chat_view.add_system_message(f"[cyan]→ Calling tool: {tool_name}[/cyan]")
 
-        chat_view.add_tool_message(tool_name, content)
         self._log.debug(f"[Event] Added tool call message for: {tool_name}")
 
     async def _on_tool_result(self, sender, data, **kwargs) -> None:
@@ -1137,10 +1138,17 @@ class PPXAIDEApp(App):
 
         tool_name = data.get("tool", "unknown")
         result = data.get("result", "")
-        self._log.debug(f"[Event] Tool result from {tool_name}: {len(str(result))} chars")
+        result_str = str(result) if result else ""
+        self._log.debug(f"[Event] Tool result from {tool_name}: {len(result_str)} chars")
 
-        # Show full result (scrollable bubble will handle long content)
-        chat_view.add_tool_message(f"{tool_name} result", result)
+        # Only show full result if verbose mode enabled
+        if self._tools_verbose:
+            # Show full result (scrollable bubble will handle long content)
+            chat_view.add_tool_message(f"{tool_name} result", result_str)
+        else:
+            # Non-verbose: show brief completion notice
+            size_str = f"{len(result_str)} chars" if result_str else "empty"
+            chat_view.add_system_message(f"[dim]  ✓ {tool_name} completed ({size_str})[/dim]")
 
     async def _on_tool_error(self, sender, data, **kwargs) -> None:
         """Handle TOOL_ERROR event."""
