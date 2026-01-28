@@ -57,5 +57,7 @@ def main():
     from ppxai.config import initialize
     initialize()
 
-    app = PPXAIDEApp()
+    # Pass debug flag to app for conditional logging
+    debug_mode = args.debug or args.trace
+    app = PPXAIDEApp(debug_logging=debug_mode)
     app.run()

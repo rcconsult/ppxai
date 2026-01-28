@@ -77,14 +77,18 @@ class PPXAIDEApp(App):
         """Message to trigger consent dialog display from main event loop."""
         pass
 
-    def __init__(self):
+    def __init__(self, debug_logging: bool = False):
         super().__init__()
         # Use ppxai's logger instead of Textual's self.log (which doesn't write to our log file)
         from ppxai.common.logger import get_logger
         self._log = get_logger("tui")
 
+        # Debug mode controls event bus logging and handler verbosity
+        self._debug_logging = debug_logging
+
         # Event bus for decoupled component communication (v1.15.0 blinker integration)
-        self._event_bus = EventBus(log_events=True)
+        # Only log events when debug mode is enabled (--debug/--trace or /debug-log on)
+        self._event_bus = EventBus(log_events=self._debug_logging)
 
         self._current_theme_index = 0
         self._engine_client: Optional[EngineClient] = None
@@ -104,6 +108,8 @@ class PPXAIDEApp(App):
         self._reasoning_started = False
         self._reasoning_content = ""
         self._reasoning_message: Optional["MessageBox"] = None  # For streaming updates
+        self._reasoning_update_pending = False  # Throttling flag
+        self._reasoning_update_timer = None  # Timer for throttled updates
 
         # Consent dialog state (for async dialog during streaming)
         self._pending_consent: Optional[dict] = None
@@ -970,7 +976,8 @@ class PPXAIDEApp(App):
         BEFORE the event loop to avoid async race conditions. This handler
         just logs for debugging.
         """
-        self._log.debug("[Event] STREAM_START received (thinking indicator already shown)")
+        if self._debug_logging:
+            self._log.debug("[Event] STREAM_START received (thinking indicator already shown)")
 
     async def _on_stream_chunk(self, sender, data, **kwargs) -> None:
         """Handle STREAM_CHUNK event.
@@ -982,7 +989,8 @@ class PPXAIDEApp(App):
             self._clear_thinking_indicator()
 
         self._current_message_content += data
-        self._log.debug(f"[Event] Chunk: {len(data)} chars")
+        if self._debug_logging:
+            self._log.debug(f"[Event] Chunk: {len(data)} chars")
 
     def _clear_thinking_indicator(self) -> None:
         """Clear the thinking indicator message.
@@ -995,9 +1003,11 @@ class PPXAIDEApp(App):
                 if self._thinking_message in chat_view._messages:
                     chat_view._messages.remove(self._thinking_message)
                 self._thinking_message.remove()
-                self._log.debug("[Event] Cleared thinking indicator")
+                if self._debug_logging:
+                    self._log.debug("[Event] Cleared thinking indicator")
             except Exception as e:
-                self._log.debug(f"[Event] Could not clear thinking indicator: {e}")
+                if self._debug_logging:
+                    self._log.debug(f"[Event] Could not clear thinking indicator: {e}")
             finally:
                 self._thinking_message = None
 
@@ -1005,7 +1015,8 @@ class PPXAIDEApp(App):
         """Handle REASONING_CHUNK event (DeepSeek R1, GPT-OSS thinking tokens).
 
         Streams reasoning/thinking tokens in real-time like Rich TUI.
-        Shows reasoning with dim italic styling, updated incrementally.
+        Shows reasoning with italic styling (without dim for better visibility).
+        Throttles updates to 100ms intervals when not in debug mode.
         """
         from ppxai.tui.widgets.message_box import MessageBox
 
@@ -1017,24 +1028,45 @@ class PPXAIDEApp(App):
             # Clear thinking indicator (reasoning replaces it)
             self._clear_thinking_indicator()
             # Create a system message that we'll update with streaming content
+            # Removed [dim] for better visibility
             self._reasoning_message = MessageBox(
-                content="[dim italic]💭 Thinking...[/dim italic]",
+                content="[italic]💭 Thinking...[/italic]",
                 role="system",
                 streaming=True
             )
             chat_view._messages.append(self._reasoning_message)
             chat_view.mount(self._reasoning_message)
             chat_view.scroll_end(animate=True)
-            self._log.debug("[Event] Reasoning started")
+            if self._debug_logging:
+                self._log.debug("[Event] Reasoning started")
 
-        # Accumulate and stream reasoning content
+        # Accumulate reasoning content
         self._reasoning_content += data
 
-        # Update the reasoning message with accumulated content (streaming style)
-        if self._reasoning_message:
-            self._reasoning_message.content = f"[dim italic]💭 Thinking...\n{self._reasoning_content}[/dim italic]"
+        if self._debug_logging:
+            self._log.debug(f"[Event] Reasoning chunk: {len(data)} chars, total: {len(self._reasoning_content)}")
 
-        self._log.debug(f"[Event] Reasoning chunk: {len(data)} chars")
+        # Throttle updates when not in debug mode (100ms batching for performance)
+        # In debug mode, update immediately for visibility
+        if self._debug_logging:
+            # Debug mode: immediate updates for visibility
+            self._update_reasoning_display()
+        else:
+            # Production mode: throttle to 10 updates/sec max
+            if not self._reasoning_update_pending:
+                self._reasoning_update_pending = True
+                self.set_timer(0.1, self._update_reasoning_display)
+
+    def _update_reasoning_display(self) -> None:
+        """Update reasoning bubble display with accumulated content.
+
+        Called either immediately (debug mode) or throttled (production mode).
+        """
+        if self._reasoning_message:
+            # Update with accumulated content (without dim for better visibility)
+            self._reasoning_message.content = f"[italic]💭 Thinking...\n{self._reasoning_content}[/italic]"
+        # Reset throttle flag
+        self._reasoning_update_pending = False
 
     async def _on_stream_end(self, sender, data, **kwargs) -> None:
         """Handle STREAM_END event."""
@@ -1069,12 +1101,15 @@ class PPXAIDEApp(App):
         if final_response.strip():
             # If reasoning was streamed, finalize the reasoning message and add separator
             if self._reasoning_message and self._reasoning_content:
-                # Mark reasoning as complete (update title)
-                self._reasoning_message.content = f"[dim italic]💭 Thought process:\n{self._reasoning_content}[/dim italic]"
+                # Flush any pending throttled updates before finalizing
+                self._update_reasoning_display()
+                # Mark reasoning as complete - keep visible without dim for readability
+                self._reasoning_message.content = f"[italic]💭 Thought process:\n{self._reasoning_content}[/italic]"
                 self._reasoning_message.streaming = False
                 # Add separator like Rich TUI
                 chat_view.add_system_message("[dim]───[/dim]")
-                self._log.info(f"Finalized reasoning message: {len(self._reasoning_content)} chars")
+                if self._debug_logging:
+                    self._log.info(f"Finalized reasoning message: {len(self._reasoning_content)} chars")
 
             chat_view.add_assistant_message(final_response)
             self._log.info(f"Added assistant message: {len(final_response)} chars")
@@ -1130,7 +1165,8 @@ class PPXAIDEApp(App):
             # Non-verbose: just show tool name inline (no separate message bubble)
             chat_view.add_system_message(f"[cyan]→ Calling tool: {tool_name}[/cyan]")
 
-        self._log.debug(f"[Event] Added tool call message for: {tool_name}")
+        if self._debug_logging:
+            self._log.debug(f"[Event] Added tool call message for: {tool_name}")
 
     async def _on_tool_result(self, sender, data, **kwargs) -> None:
         """Handle TOOL_RESULT event."""
@@ -1139,7 +1175,8 @@ class PPXAIDEApp(App):
         tool_name = data.get("tool", "unknown")
         result = data.get("result", "")
         result_str = str(result) if result else ""
-        self._log.debug(f"[Event] Tool result from {tool_name}: {len(result_str)} chars")
+        if self._debug_logging:
+            self._log.debug(f"[Event] Tool result from {tool_name}: {len(result_str)} chars")
 
         # Only show full result if verbose mode enabled
         if self._tools_verbose:
@@ -1170,7 +1207,8 @@ class PPXAIDEApp(App):
     async def _on_engine_info(self, sender, data, **kwargs) -> None:
         """Handle ENGINE_INFO event."""
         chat_view = self.query_one("#chat-view", ChatView)
-        self._log.debug(f"[Event] Engine info: {data}")
+        if self._debug_logging:
+            self._log.debug(f"[Event] Engine info: {data}")
 
         chat_view.add_system_message(f"[dim]{data}[/dim]")
 
@@ -1178,7 +1216,8 @@ class PPXAIDEApp(App):
         """Handle WORKING_DIR_CHANGED event."""
         path = data.get("path", "") if isinstance(data, dict) else str(data)
         if path:
-            self._log.debug(f"[Event] Working directory changed: {path}")
+            if self._debug_logging:
+                self._log.debug(f"[Event] Working directory changed: {path}")
             # Update internal state
             self._working_dir = path
 
@@ -1250,6 +1289,11 @@ class PPXAIDEApp(App):
             self.exit()
             return
 
+        # Special case: debug-log (TUI-specific, not in command factory)
+        if cmd == "debug-log":
+            await self._handle_debug_log_command(args)
+            return
+
         # Handle /<command> help pattern - redirect to /help <command>
         # e.g., "/usage help" becomes "/help usage"
         if args.strip().lower() == "help" and cmd != "help":
@@ -1261,14 +1305,17 @@ class PPXAIDEApp(App):
         if spec:
             try:
                 # Call command handler with context
-                self._log.debug(f"Calling handler for command: {cmd} with args: {args}")
+                if self._debug_logging:
+                    self._log.debug(f"Calling handler for command: {cmd} with args: {args}")
                 result = spec.handler(self, args)
-                self._log.debug(f"Handler returned: {type(result).__name__}")
+                if self._debug_logging:
+                    self._log.debug(f"Handler returned: {type(result).__name__}")
 
                 # Check if result is a coroutine (async handler)
                 import inspect
                 if inspect.iscoroutine(result):
-                    self._log.debug(f"Handler returned coroutine, awaiting it")
+                    if self._debug_logging:
+                        self._log.debug(f"Handler returned coroutine, awaiting it")
                     result = await result
 
                 # Render result if it's a CommandResult type
@@ -1434,6 +1481,42 @@ class PPXAIDEApp(App):
             chat_view.add_system_message(
                 f"[yellow]Unknown command: /{cmd}[/yellow]\n"
                 "Type /help for available commands."
+            )
+
+    async def _handle_debug_log_command(self, args: str) -> None:
+        """Handle /debug-log command to toggle verbose event logging.
+
+        Usage:
+            /debug-log on   - Enable event bus and handler logging
+            /debug-log off  - Disable event bus and handler logging
+            /debug-log      - Show current status
+        """
+        chat_view = self.query_one("#chat-view", ChatView)
+        args = args.strip().lower()
+
+        if not args:
+            # Show current status
+            status = "enabled" if self._debug_logging else "disabled"
+            chat_view.add_system_message(
+                f"[bold]Debug Logging:[/bold] {status}\n"
+                f"Use [cyan]/debug-log on[/cyan] or [cyan]/debug-log off[/cyan] to toggle."
+            )
+        elif args == "on":
+            self.toggle_debug_logging(True)
+            chat_view.add_system_message(
+                "[green]✓[/green] Debug logging enabled\n"
+                "[dim]Event bus and handler logs will be verbose[/dim]"
+            )
+        elif args == "off":
+            self.toggle_debug_logging(False)
+            chat_view.add_system_message(
+                "[green]✓[/green] Debug logging disabled\n"
+                "[dim]Event bus and handler logs will be minimal[/dim]"
+            )
+        else:
+            chat_view.add_system_message(
+                f"[yellow]Unknown argument: {args}[/yellow]\n"
+                f"Use [cyan]/debug-log on[/cyan] or [cyan]/debug-log off[/cyan]"
             )
 
     async def _handle_badge_command(self, args: str) -> None:
@@ -1667,6 +1750,16 @@ class PPXAIDEApp(App):
         # Update widths dynamically
         chat_pane.styles.width = f"{chat_pct}%"
         side_panel.styles.width = f"{panel_pct}%"
+
+    def toggle_debug_logging(self, enabled: bool) -> None:
+        """Toggle debug logging for event bus and handlers.
+
+        Args:
+            enabled: True to enable debug logging, False to disable
+        """
+        self._debug_logging = enabled
+        self._event_bus._log_events = enabled
+        self._log.info(f"Debug logging {'enabled' if enabled else 'disabled'}")
 
     def on_side_panel_opened(self, event: SidePanel.Opened) -> None:
         """Handle side panel opened - adjust layout."""
