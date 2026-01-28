@@ -14,6 +14,10 @@ Version 1.15.0 introduces a revolutionary type-based renderer dispatch system th
 - **17 CommandResult types** - Structured data types for all command outputs
 - **2 renderer implementations** - RichRenderer (legacy) + TextualRenderer (new TUI)
 - **32 commands migrated** - All commands return typed results
+- **Blinker event bus** - Decoupled component communication for better debugging
+- **Generation parameters** - Configure temperature, top_p, frequency_penalty per provider/model
+- **Markdown in chat** - Rich markdown rendering in TUI message bubbles
+- **Thinking indicators** - Show "⏳ Thinking..." for reasoning models
 - **Copy-to-clipboard** - Reliable copy across all clients (TUI, Web, VSCode)
 - **~1,698 lines removed** - Eliminated v2 naming artifacts and duplicate code
 - **100% test coverage** - All commands validated in both rendering modes
@@ -129,6 +133,15 @@ Auto-load project instructions on startup:
 - **Full `/context` support** - show, hints, reload commands working
 - **Provider/model hints** - Dynamic prompt assembly based on active provider
 
+### 4.1 Session Restore Improvements
+
+Enhanced session restoration:
+
+- **Command history restore** - Previous commands available via up/down arrows
+- **Model badge update** - Status bar shows correct model after restore
+- **Fallback handling** - Graceful fallback if stored model unavailable
+- **WORKING_DIR_CHANGED events** - Properly handle directory changes
+
 ### 5. Copy-to-Clipboard Across All Clients ⭐ NEW
 
 Reliable clipboard access for AI responses, avoiding terminal text selection issues:
@@ -147,7 +160,99 @@ Reliable clipboard access for AI responses, avoiding terminal text selection iss
 
 **Why?** Terminal text selection often copies panel borders (Rich TUI) or conflicts with terminal plugins (iTerm2). Dedicated copy ensures clean text.
 
-### 6. Command Factory Pattern
+### 6. Blinker Event Bus ⭐ NEW
+
+Decoupled component communication using the blinker library:
+
+- **11 event types** - STREAM_START/CHUNK/END, TOOL_CALL/RESULT/ERROR, CONSENT_FILE/SHELL, ERROR, INFO
+- **Async support** - Handlers can be sync or async
+- **Event logging** - All events logged for debugging
+- **Error isolation** - Handler errors don't crash the bus
+- **Thread-safe** - Ready for embedded server architecture (v1.16.0)
+
+**Benefits:**
+- Easier debugging - see exact event flow in logs
+- Simpler code - no complex Future coordination
+- Testable - mock event bus for unit tests
+- Extensible - add new handlers without modifying core
+
+### 7. Generation Parameters ⭐ NEW
+
+Configure model behavior to reduce hallucinations:
+
+```json
+"providers": {
+  "custom": {
+    "generation_params": {
+      "temperature": 0.2,
+      "top_p": 0.9,
+      "frequency_penalty": 0.15,
+      "presence_penalty": 0.0
+    },
+    "models": {
+      "my-model": {
+        "generation_params": { "temperature": 0.1 }
+      }
+    }
+  }
+}
+```
+
+**Supported parameters:**
+| Parameter | Range | Recommended | Purpose |
+|-----------|-------|-------------|---------|
+| `temperature` | 0.0-2.0 | 0.1-0.3 | Lower = more deterministic |
+| `top_p` | 0.0-1.0 | 0.9 | Nucleus sampling |
+| `frequency_penalty` | -2.0-2.0 | 0.1-0.2 | Reduces repetition |
+| `presence_penalty` | -2.0-2.0 | 0.0 | Encourages new topics |
+| `seed` | int | - | Reproducibility |
+
+**Precedence:** Model-level overrides provider-level.
+
+### 8. Markdown Rendering in Chat ⭐ NEW
+
+Rich markdown rendering in TUI message bubbles:
+
+- **Headings** - Styled H1-H6 with proper hierarchy
+- **Code blocks** - Syntax highlighting with language detection
+- **Links** - Clickable URLs and citations
+- **Blockquotes** - Styled quote blocks
+- **Lists** - Ordered and unordered lists
+
+### 9. Thinking Indicators ⭐ NEW
+
+Visual feedback for reasoning models:
+
+- **"⏳ Thinking..."** - Shown before stream starts
+- **Reasoning tokens** - Display thinking time for o1/o3/o4 models
+- **Thinking badge** - Status bar shows when model is reasoning
+
+### 10. New Configuration Sections ⭐ NEW
+
+**Visualization settings** (`visualization`):
+```json
+"visualization": {
+  "max_rows": 10000,
+  "max_columns": 50,
+  "page_size": 50,
+  "tree_depth": 3,
+  "auto_detect": true,
+  "csv_delimiter": "auto",
+  "theme": "default"
+}
+```
+
+**TUI settings** (`tui`):
+```json
+"tui": {
+  "theme": "standard",
+  "show_version": true,
+  "show_cwd": true,
+  "show_datetime": false
+}
+```
+
+### 11. Command Factory Pattern
 
 All 32 commands now use centralized factory:
 
@@ -358,24 +463,44 @@ ppxai-server:     38MB
 
 ---
 
+## New Dependencies
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `blinker` | ≥1.7.0 | Event bus for decoupled communication |
+| `tree-sitter-go` | ≥0.23.4 | Go syntax highlighting |
+| `tree-sitter-rust` | ≥0.23.2 | Rust syntax highlighting |
+| `tree-sitter-java` | ≥0.23.5 | Java syntax highlighting |
+| `tree-sitter-sql` | ≥0.3.8 | SQL syntax highlighting |
+| `tree-sitter-xml` | ≥0.7.0 | XML syntax highlighting |
+| `tree-sitter-regex` | ≥0.24.3 | Regex syntax highlighting |
+
+---
+
 ## Credits
 
-**Development:** Phase 6 TUI integration (January 20-26, 2026)
-**Testing:** 28 unit tests + 7 integration tests + 5 validation scripts
-**Documentation:** PHASE-6-PROGRESS.md, ARCHITECTURE.md, validation scripts
-**Contributors:** Claude Code (Claude Sonnet 4.5)
+**Development:** Phase 6-7 TUI integration (January 20-28, 2026)
+**Testing:** 1105 unit tests + validation scripts
+**Documentation:** PHASE-6-PROGRESS.md, ARCHITECTURE.md, SESSION-SUMMARY-*.md
+**Contributors:** Claude Code (Claude Opus 4.5)
 
 ---
 
 ## What's Next
 
-### Phase 7: Polish & Release (Current)
+### Phase 7: Polish & Release (Complete)
 
 - [x] Code review & cleanup
 - [x] Documentation updates
 - [x] Copy-to-clipboard across all clients
-- [ ] Manual testing checklist
-- [ ] Release preparation
+- [x] Blinker event bus integration
+- [x] Generation parameters support
+- [x] Markdown rendering in chat
+- [x] Thinking indicators
+- [x] Command history restore on session load
+- [x] Config sections (visualization, tui)
+- [x] Windows test compatibility fixes
+- [x] All 1105 tests passing
 - [ ] Merge to master
 - [ ] Tag v1.15.0 release
 
