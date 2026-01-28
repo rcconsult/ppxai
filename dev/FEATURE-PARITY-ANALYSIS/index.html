@@ -1683,14 +1683,14 @@
 <tr>
 <td>Agent badge</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">⚠️</td>
-<td>Needs agent mode indicator</td>
+<td style="text-align: center;">✅</td>
+<td>Shows "Agent: ACTIVE" when enabled</td>
 </tr>
 <tr>
 <td>Checkpoint badge</td>
 <td style="text-align: center;">✅ (↶)</td>
-<td style="text-align: center;">⚠️</td>
-<td>Needs checkpoint status</td>
+<td style="text-align: center;">✅</td>
+<td>Shows ↶ (valid) or ↶! (stale)</td>
 </tr>
 <tr>
 <td>Token count</td>
@@ -1707,20 +1707,20 @@
 <tr>
 <td>Version toggle</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td>Needs /status version toggle</td>
+<td style="text-align: center;">✅</td>
+<td>/status version toggles</td>
 </tr>
 <tr>
 <td>CWD toggle</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td>Needs /status cwd toggle</td>
+<td style="text-align: center;">✅</td>
+<td>/status cwd toggles</td>
 </tr>
 <tr>
 <td>DateTime toggle</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td>Needs /status datetime toggle</td>
+<td style="text-align: center;">✅</td>
+<td>/status datetime toggles</td>
 </tr>
 <tr>
 <td>Context badge</td>
@@ -2328,8 +2328,8 @@
 <tr>
 <td>Status Bar</td>
 <td style="text-align: center;">Full</td>
-<td style="text-align: center;">80%</td>
-<td style="text-align: center;">⚠️</td>
+<td style="text-align: center;">100%</td>
+<td style="text-align: center;">✅</td>
 </tr>
 <tr>
 <td>Tab Complete</td>
@@ -2381,8 +2381,8 @@
 <li>✅ <strong>AI responses displayed</strong> - STREAM_END.data extracted when no chunks</li>
 <li>✅ <strong>Tool consent working</strong> - Callbacks wired to EngineClient</li>
 <li>⏸️ <strong>Tab autocomplete</strong> - Deferred to v1.16.0 (needs refactoring)</li>
-<li>⚠️ <strong>Status bar toggles</strong> - Partially implemented</li>
-<li>⚠️ <strong>Agent/checkpoint badges</strong> - Partially implemented</li>
+<li>✅ <strong>Status bar toggles</strong> - /status version|cwd|datetime working</li>
+<li>✅ <strong>Agent/checkpoint badges</strong> - Shows ↶ (valid) or ↶! (stale)</li>
 <li>❌ <strong>Reasoning token display</strong> - Deferred (not in Rich TUI yet)</li>
 </ol>
 <p><strong>Feature parity achieved for core chat and tool functionality.</strong></p>
@@ -2409,7 +2409,6 @@
 - ✅ All 1105 tests passing</p>
 <p><strong>Remaining Work (v1.16.0):</strong>
 - ⏸️ Tab autocomplete - needs cursor-based positioning refactoring
-- ⚠️ Status bar toggles - partially implemented
 - ❌ Reasoning tokens - deferred (not in Rich TUI yet)</p>
 
 
