@@ -14,6 +14,7 @@ Version 1.15.0 introduces a revolutionary type-based renderer dispatch system th
 - **17 CommandResult types** - Structured data types for all command outputs
 - **2 renderer implementations** - RichRenderer (legacy) + TextualRenderer (new TUI)
 - **32 commands migrated** - All commands return typed results
+- **Copy-to-clipboard** - Reliable copy across all clients (TUI, Web, VSCode)
 - **~1,698 lines removed** - Eliminated v2 naming artifacts and duplicate code
 - **100% test coverage** - All commands validated in both rendering modes
 
@@ -128,9 +129,27 @@ Auto-load project instructions on startup:
 - **Full `/context` support** - show, hints, reload commands working
 - **Provider/model hints** - Dynamic prompt assembly based on active provider
 
-### 5. Command Factory Pattern
+### 5. Copy-to-Clipboard Across All Clients ⭐ NEW
 
-All 30 commands now use centralized factory:
+Reliable clipboard access for AI responses, avoiding terminal text selection issues:
+
+| Client | Method | Description |
+|--------|--------|-------------|
+| **ppxai** (Rich TUI) | `/copy [n]` command | Copies nth response from end (default: last) |
+| **ppxai** (Rich TUI) | Click `#` link in title | OSC 8 hyperlink opens temp file (works without xclip) |
+| **ppxaide** (Textual TUI) | 📋 button | Click button in message header |
+| **Web App** | 📋 button | Hover over message to reveal |
+| **VSCode** | 📋 button | Hover over message to reveal |
+
+**Error Feedback (ppxaide):**
+- Red ✗ when clipboard unavailable
+- Toast notification: "Clipboard unavailable. Install xclip, xsel, or wl-clipboard."
+
+**Why?** Terminal text selection often copies panel borders (Rich TUI) or conflicts with terminal plugins (iTerm2). Dedicated copy ensures clean text.
+
+### 6. Command Factory Pattern
+
+All 32 commands now use centralized factory:
 
 - **Type-based dispatch** - Commands return typed result objects
 - **9 command categories** - agent, coding, display, navigation, provider, session, system, tools, utility
@@ -138,7 +157,7 @@ All 30 commands now use centralized factory:
 - **Consistent error handling** - All commands use ErrorResult with suggestions
 - **No circular imports** - Clean dependency graph
 
-### 6. Performance Optimization
+### 7. Performance Optimization
 
 Established baseline metrics for TUI operations:
 
@@ -183,6 +202,15 @@ Established baseline metrics for TUI operations:
 | `/usage session` | Session-level stats | `/usage session` |
 | `/usage provider` | Provider-level stats | `/usage provider` |
 | `/usage off` | Disable usage display | `/usage off` |
+
+### Clipboard (Rich TUI)
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `/copy` | Copy last response to clipboard | `/copy` |
+| `/copy n` | Copy nth response from end | `/copy 2` |
+
+**Aliases:** `cp`
 
 ---
 
@@ -345,6 +373,7 @@ ppxai-server:     38MB
 
 - [x] Code review & cleanup
 - [x] Documentation updates
+- [x] Copy-to-clipboard across all clients
 - [ ] Manual testing checklist
 - [ ] Release preparation
 - [ ] Merge to master
