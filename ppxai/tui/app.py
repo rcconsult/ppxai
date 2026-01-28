@@ -291,6 +291,7 @@ class PPXAIDEApp(App):
         self._event_bus.on(Events.ENGINE_TOOL_ERROR, self._on_tool_error)
         self._event_bus.on(Events.ENGINE_ERROR, self._on_engine_error)
         self._event_bus.on(Events.ENGINE_INFO, self._on_engine_info)
+        self._event_bus.on(Events.ENGINE_WORKING_DIR_CHANGED, self._on_working_dir_changed)
         self._log.info("[EventBus] Subscribed to all engine events")
 
         # Set provider and model
@@ -950,6 +951,7 @@ class PPXAIDEApp(App):
             EventType.TOOL_ERROR: Events.ENGINE_TOOL_ERROR,
             EventType.ERROR: Events.ENGINE_ERROR,
             EventType.INFO: Events.ENGINE_INFO,
+            EventType.WORKING_DIR_CHANGED: Events.ENGINE_WORKING_DIR_CHANGED,
         }
 
         # Emit event via bus with data
@@ -1163,6 +1165,27 @@ class PPXAIDEApp(App):
         self._log.debug(f"[Event] Engine info: {data}")
 
         chat_view.add_system_message(f"[dim]{data}[/dim]")
+
+    async def _on_working_dir_changed(self, sender, data, **kwargs) -> None:
+        """Handle WORKING_DIR_CHANGED event."""
+        path = data.get("path", "") if isinstance(data, dict) else str(data)
+        if path:
+            self._log.debug(f"[Event] Working directory changed: {path}")
+            # Update internal state
+            self._working_dir = path
+
+            # Update status bar cwd badge if visible
+            from ppxai.config import get_tui_config
+            tui_config = get_tui_config()
+            if tui_config.get("show_cwd", True):
+                status_bar = self.query_one(StatusBar)
+                cwd_parts = Path(path).parts
+                cwd_display = "/".join(cwd_parts[-2:]) if len(cwd_parts) >= 2 else path
+                status_bar.update_badge("cwd", cwd_display)
+
+            # Show notification in chat
+            chat_view = self.query_one("#chat-view", ChatView)
+            chat_view.add_system_message(f"[cyan]📁 Working directory: {path}[/cyan]")
 
     def _update_usage_display(self) -> None:
         """Update usage stats in status bar (Phase 6.4).

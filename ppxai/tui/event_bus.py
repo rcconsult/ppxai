@@ -202,6 +202,7 @@ class Events:
     ENGINE_CONTEXT_INJECTED = "engine:context_injected"
     ENGINE_CONSENT_FILE = "engine:consent_file"
     ENGINE_CONSENT_SHELL = "engine:consent_shell"
+    ENGINE_WORKING_DIR_CHANGED = "engine:working_dir_changed"
 
     # Consent responses (from UI)
     CONSENT_FILE_RESPONSE = "consent:file_response"
