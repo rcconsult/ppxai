@@ -289,12 +289,21 @@
       "coding_model": "openai/gpt-oss-120b",
       "system_prompt": "You are a helpful AI coding assistant. Be concise and direct. When executing tools, report only the essential results. Avoid lengthy explanations unless explicitly requested.",
       "__comment_system_prompt": "Custom system prompt to reduce chattiness (v1.13.6+)",
+      "generation_params": {
+        "temperature": 0.3,
+        "__comment_temperature": "Lower temperature (0.0-0.5) reduces hallucinations and produces more factual responses"
+      },
+      "__comment_generation_params": "v1.15.0: Generation params passed to API. Supports: temperature, top_p, frequency_penalty, presence_penalty, seed",
       "models": {
         "openai/gpt-oss-120b": {
           "name": "GPT-OSS 120B",
           "description": "GPT-OSS 120B model with native tool calling via vLLM",
           "context_limit": 131072,
-          "__comment_context_limit": "vLLM requires power of 2. Model supports ~120K, rounded up to 2^17=131072"
+          "__comment_context_limit": "vLLM requires power of 2. Model supports ~120K, rounded up to 2^17=131072",
+          "generation_params": {
+            "temperature": 0.3,
+            "__comment": "Model-level override (takes precedence over provider-level)"
+          }
         }
       },
       "pricing": {

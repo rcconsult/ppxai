@@ -871,6 +871,23 @@ class PPXAIDEApp(App):
         status_bar.add_badge("streaming", "AI", "●", variant="warning")
         self._log.info("Added streaming badge")
 
+        # Show thinking indicator BEFORE event loop (guaranteed to display)
+        # This bypasses the async event bus race condition
+        from ppxai.tui.widgets.message_box import MessageBox
+        self._current_message_content = ""
+        self._reasoning_started = False
+        self._reasoning_content = ""
+        self._reasoning_message = None
+        self._thinking_message = MessageBox(
+            content="[dim italic]⏳ Thinking...[/dim italic]",
+            role="system",
+            streaming=True
+        )
+        chat_view._messages.append(self._thinking_message)
+        await chat_view.mount(self._thinking_message)
+        chat_view.scroll_end(animate=True)
+        self._log.info("Showing thinking indicator")
+
         try:
             event_count = 0
             self._log.info("About to call self._engine_client.chat()")
@@ -937,27 +954,11 @@ class PPXAIDEApp(App):
     async def _on_stream_start(self, sender, **kwargs) -> None:
         """Handle STREAM_START event.
 
-        Shows a "thinking" indicator like web app while waiting for response.
+        Note: Thinking indicator is now shown directly in _stream_response()
+        BEFORE the event loop to avoid async race conditions. This handler
+        just logs for debugging.
         """
-        from ppxai.tui.widgets.message_box import MessageBox
-
-        self._current_message_content = ""
-        # Reset reasoning state for new turn
-        self._reasoning_started = False
-        self._reasoning_content = ""
-        self._reasoning_message = None
-
-        # Show thinking indicator (like web app's animated dots)
-        chat_view = self.query_one("#chat-view", ChatView)
-        self._thinking_message = MessageBox(
-            content="[dim italic]⏳ Thinking...[/dim italic]",
-            role="system",
-            streaming=True
-        )
-        chat_view._messages.append(self._thinking_message)
-        chat_view.mount(self._thinking_message)
-        chat_view.scroll_end(animate=True)
-        self._log.debug("[Event] Stream started, showing thinking indicator")
+        self._log.debug("[Event] STREAM_START received (thinking indicator already shown)")
 
     async def _on_stream_chunk(self, sender, data, **kwargs) -> None:
         """Handle STREAM_CHUNK event.

@@ -95,6 +95,24 @@ class OpenAICompatibleProvider(BaseProvider):
         except (ImportError, AttributeError):
             return None  # Let provider use its default
 
+    def _get_generation_params(self, model: str) -> Dict[str, Any]:
+        """Get generation parameters (temperature, top_p, etc.) from config.
+
+        v1.15.0: Allows setting temperature and other params to reduce hallucinations.
+        Lower temperature (0.0-0.5) produces more deterministic, factual responses.
+
+        Args:
+            model: Model ID to check
+
+        Returns:
+            Dict of generation params to pass to API (empty if none configured)
+        """
+        try:
+            from ...config import get_generation_params
+            return get_generation_params(self.provider_id, model)
+        except (ImportError, AttributeError):
+            return {}  # No params configured
+
     def _estimate_tokens(self, messages: List[Dict[str, Any]]) -> int:
         """Estimate token count for messages.
 
@@ -211,6 +229,12 @@ class OpenAICompatibleProvider(BaseProvider):
             max_tokens = self._get_max_tokens(model)
             if max_tokens:
                 request_kwargs["max_tokens"] = max_tokens
+
+            # Add generation params (temperature, top_p, etc.) if configured
+            # v1.15.0: Lower temperature reduces hallucinations
+            generation_params = self._get_generation_params(model)
+            if generation_params:
+                request_kwargs.update(generation_params)
 
             # Add tools if native tool calling is enabled
             if tools and self.capabilities.native_tool_calling:

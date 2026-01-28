@@ -712,6 +712,63 @@ def get_model_max_tokens(provider: str = None, model: str = None) -> Optional[in
     return None
 
 
+def get_generation_params(provider: str = None, model: str = None) -> Dict[str, Any]:
+    """Get generation parameters (temperature, top_p, etc.) for a model.
+
+    These params are passed directly to the chat completions API.
+    Supports both provider-level defaults and model-level overrides.
+
+    Config structure:
+        providers:
+          custom:
+            generation_params:      # Provider-level defaults
+              temperature: 0.7
+            models:
+              my-model:
+                generation_params:  # Model-level overrides
+                  temperature: 0.3
+                  top_p: 0.9
+
+    Supported parameters (OpenAI-compatible):
+        - temperature: 0.0-2.0 (lower = more deterministic, reduces hallucinations)
+        - top_p: 0.0-1.0 (nucleus sampling)
+        - frequency_penalty: -2.0-2.0 (reduce repetition)
+        - presence_penalty: -2.0-2.0 (encourage new topics)
+        - seed: int (for reproducibility, if supported by provider)
+
+    Args:
+        provider: Provider name (uses default if not specified)
+        model: Model name (uses default if not specified)
+
+    Returns:
+        Dict of generation parameters to pass to API (empty if none configured)
+    """
+    if provider is None:
+        provider = get_default_provider()
+
+    if model is None:
+        model = get_default_model(provider)
+
+    params = {}
+
+    config_path = find_config_file()
+    if config_path:
+        json_config = _load_json_config(config_path)
+        provider_config = json_config.get("providers", {}).get(provider, {})
+
+        # Start with provider-level defaults
+        if "generation_params" in provider_config:
+            params.update(provider_config["generation_params"])
+
+        # Override with model-level params
+        models = provider_config.get("models", {})
+        model_config = models.get(model, {})
+        if "generation_params" in model_config:
+            params.update(model_config["generation_params"])
+
+    return params
+
+
 # =============================================================================
 # Public API Exports
 # =============================================================================
