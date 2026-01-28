@@ -40,9 +40,9 @@ Based on `docs/FEATURE-PARITY-ANALYSIS.md` and code inspection:
 
 | Issue | Status | Files | Notes |
 |-------|--------|-------|-------|
-| Status bar toggles | Incomplete | `app.py`, `status_bar.py` | `/status version/cwd/datetime` toggles need work |
-| Agent mode badge | Incomplete | `status_bar.py` | Needs agent mode indicator |
-| Checkpoint badge | Incomplete | `status_bar.py` | ↶/↶! status not showing |
+| Status bar toggles | ✅ DONE | `app.py` lines 1165-1198 | `/status version/cwd/datetime` toggles working |
+| Agent mode badge | ✅ DONE | `app.py` lines 1137-1155 | Shows "Agent: ACTIVE" when enabled |
+| Checkpoint badge | ✅ DONE | `app.py` lines 1142-1151 | Shows ↶ (valid) or ↶! (stale) |
 | Reasoning tokens | Not impl | N/A | DeepSeek R1 / GPT-OSS thinking display |
 | @file completion | Not impl | `completer.py` | Disabled with autocomplete |
 | @clipboard/@url | Not impl | N/A | Context providers |

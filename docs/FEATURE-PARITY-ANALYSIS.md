@@ -110,13 +110,13 @@ Critical issues identified on 2026-01-27 have been **FIXED** via blinker event b
 | Provider badge | ✅ | ✅ | |
 | Model badge | ✅ | ✅ | |
 | Tools badge | ✅ | ✅ | |
-| Agent badge | ✅ | ⚠️ | Needs agent mode indicator |
-| Checkpoint badge | ✅ (↶) | ⚠️ | Needs checkpoint status |
+| Agent badge | ✅ | ✅ | Shows "Agent: ACTIVE" when enabled |
+| Checkpoint badge | ✅ (↶) | ✅ | Shows ↶ (valid) or ↶! (stale) |
 | Token count | ✅ | ✅ | |
 | Cost display | ✅ | ✅ | |
-| Version toggle | ✅ | ❌ | Needs /status version toggle |
-| CWD toggle | ✅ | ❌ | Needs /status cwd toggle |
-| DateTime toggle | ✅ | ❌ | Needs /status datetime toggle |
+| Version toggle | ✅ | ✅ | /status version toggles |
+| CWD toggle | ✅ | ✅ | /status cwd toggles |
+| DateTime toggle | ✅ | ✅ | /status datetime toggles |
 | Context badge | ✅ | ✅ | |
 | **Transactional Updates** |
 | Badge transactions | ⚠️ | ✅ | Textual has full impl |
@@ -289,7 +289,7 @@ These are features unique to Textual that don't apply to Rich:
 | Commands | 32 | 32 | ✅ |
 | Command Handlers | 100% | 100% | ✅ |
 | Renderers | 17 types | 17 types | ✅ |
-| Status Bar | Full | 80% | ⚠️ |
+| Status Bar | Full | 100% | ✅ |
 | Tab Complete | Full | Deferred | ⏸️ |
 | Themes | 6+ | 17+ | ✅ |
 | Keyboard Shortcuts | Basic | Extensive | ✅ |
@@ -305,8 +305,8 @@ After blinker event bus integration (commit 6eb83e2):
 1. ✅ **AI responses displayed** - STREAM_END.data extracted when no chunks
 2. ✅ **Tool consent working** - Callbacks wired to EngineClient
 3. ⏸️ **Tab autocomplete** - Deferred to v1.16.0 (needs refactoring)
-4. ⚠️ **Status bar toggles** - Partially implemented
-5. ⚠️ **Agent/checkpoint badges** - Partially implemented
+4. ✅ **Status bar toggles** - /status version|cwd|datetime working
+5. ✅ **Agent/checkpoint badges** - Shows ↶ (valid) or ↶! (stale)
 6. ❌ **Reasoning token display** - Deferred (not in Rich TUI yet)
 
 **Feature parity achieved for core chat and tool functionality.**
@@ -337,5 +337,4 @@ After blinker event bus integration (commit 6eb83e2):
 
 **Remaining Work (v1.16.0):**
 - ⏸️ Tab autocomplete - needs cursor-based positioning refactoring
-- ⚠️ Status bar toggles - partially implemented
 - ❌ Reasoning tokens - deferred (not in Rich TUI yet)
