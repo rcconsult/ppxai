@@ -1,10 +1,10 @@
 # Release Plan: v1.15.x Series
 
 **Created:** January 24, 2026
-**Last Updated:** January 25, 2026 (Phase 5 Complete + Image Viewer Fixes)
-**Status:** In Progress - Phase 6 (Engine Integration) Next
+**Last Updated:** January 28, 2026 (Phase 7 Complete - Ready for Release)
+**Status:** ✅ COMPLETE - Ready for Merge to Master
 **Branch:** feature/new-tui-command
-**Latest Commit:** f777028 (Image viewer display fixes)
+**Tests:** 1105 passing
 
 ---
 
@@ -244,25 +244,27 @@ All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tu
 
 ---
 
-### Phase 6: Engine Integration (Next)
+### Phase 6: Engine Integration (Complete ✅)
 
 **Goal:** Connect validated UI to proven backend
 
 **Rationale:** Engine is already battle-tested. Integration is mechanical once UI is stable.
 
-**Status:** Ready to start - all prerequisites complete
+**Status:** ✅ Complete
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| Factory pattern | `PPXAIDEApp.initialize()` | ⏳ Pending |
-| Config loading | `get_default_provider()`, etc. | ⏳ Pending |
-| EngineClient | Composition, event subscription | ⏳ Pending |
-| Streaming | Progressive rendering | ⏳ Pending |
-| Provider/model switching | Reactive StatusBar updates | ⏳ Pending |
-| Command handlers | Full parity with Rich TUI | ⏳ Pending |
-| Feature parity | Token usage, cost, context injection | ⏳ Pending |
+| Factory pattern | `PPXAIDEApp.initialize()` | ✅ Done |
+| Config loading | `get_default_provider()`, etc. | ✅ Done |
+| EngineClient | Composition, event subscription | ✅ Done |
+| Streaming | Progressive rendering | ✅ Done |
+| Provider/model switching | Reactive StatusBar updates | ✅ Done |
+| Command handlers | Full parity with Rich TUI | ✅ Done |
+| Feature parity | Token usage, cost, context injection | ✅ Done |
+| Blinker event bus | Decoupled component communication | ✅ Done |
+| Type-based renderer | 17 CommandResult types | ✅ Done |
 
-**Deliverable:** Fully functional AI assistant
+**Deliverable:** ✅ Fully functional AI assistant
 
 **Key Files to Modify:**
 - `ppxai/tui/app.py` - Add `initialize()`, EngineClient composition
@@ -272,20 +274,24 @@ All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tu
 
 ---
 
-### Phase 7: Polish & Release
+### Phase 7: Polish & Release (Complete ✅)
 
 **Goal:** Production-ready v1.15.0
 
-| Task | Description |
-|------|-------------|
-| Performance | Optimize rendering |
-| Accessibility | Screen reader, high contrast |
-| Documentation | User guide, shortcuts |
-| Cross-platform | Linux, macOS, Windows testing |
-| Binaries | PyInstaller builds |
-| Release notes | Changelog, migration guide |
+| Task | Description | Status |
+|------|-------------|--------|
+| Performance | Optimize rendering | ✅ Done |
+| Accessibility | Screen reader, high contrast | ✅ Done |
+| Documentation | User guide, shortcuts | ✅ Done |
+| Cross-platform | Linux, macOS, Windows testing | ✅ Done (1105 tests) |
+| Binaries | PyInstaller builds | ✅ Done |
+| Release notes | Changelog, migration guide | ✅ Done |
+| Copy-to-clipboard | All clients | ✅ Done |
+| Generation params | Provider/model settings | ✅ Done |
+| Markdown rendering | Chat bubbles | ✅ Done |
+| Thinking indicators | Reasoning models | ✅ Done |
 
-**Deliverable:** v1.15.0 release
+**Deliverable:** ✅ v1.15.0 ready for release
 
 ---
 
@@ -294,41 +300,43 @@ All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tu
 **Current TUI (`ppxai`) features to port:**
 
 ### Core Chat
-- [ ] Streaming responses with Markdown rendering
-- [ ] Multi-line input with history
-- [ ] Provider/model switching mid-session
-- [ ] Token usage display
-- [ ] Cost estimation
+- [x] Streaming responses with Markdown rendering
+- [x] Multi-line input with history
+- [x] Provider/model switching mid-session
+- [x] Token usage display
+- [x] Cost estimation
 
 ### Commands
-- [ ] `/help` - Command reference
-- [ ] `/model` - Switch model
-- [ ] `/provider` - Switch provider
-- [ ] `/tools` - Enable/disable tools
-- [ ] `/agent` - Start agent mode
-- [ ] `/consent` - Manage consent settings
-- [ ] `/session` - Session management
-- [ ] `/save` - Save session
-- [ ] `/load` - Load session
-- [ ] `/export` - Export to markdown
-- [ ] `/checkpoint` - Checkpoint management
-- [ ] `/undo` - Revert last agent task
-- [ ] `/context` - Context management
-- [ ] `/usage` - Usage statistics
-- [ ] `/show` - File preview
-- [ ] `/edit` - File editing (NEW in ppxaide)
-- [ ] `/theme` - Theme switching
-- [ ] `/config` - Configuration
-- [ ] `/clear` - Clear conversation
-- [ ] `/quit` - Exit application
+- [x] `/help` - Command reference
+- [x] `/model` - Switch model
+- [x] `/provider` - Switch provider
+- [x] `/tools` - Enable/disable tools
+- [x] `/agent` - Start agent mode
+- [x] `/consent` - Manage consent settings
+- [x] `/session` - Session management
+- [x] `/save` - Save session
+- [x] `/load` - Load session
+- [x] `/export` - Export to markdown
+- [x] `/checkpoint` - Checkpoint management
+- [x] `/undo` - Revert last agent task
+- [x] `/context` - Context management
+- [x] `/usage` - Usage statistics
+- [x] `/show` - File preview
+- [x] `/edit` - File editing (NEW in ppxaide)
+- [x] `/theme` - Theme switching
+- [x] `/config` - Configuration
+- [x] `/clear` - Clear conversation
+- [x] `/quit` - Exit application
+- [x] `/copy` - Copy to clipboard (NEW in v1.15.0)
 
 ### Visual Features
-- [ ] 4 color themes
-- [ ] Status bar with badges
-- [ ] Clickable file links (OSC 8)
-- [ ] Markdown tables
-- [ ] Code block syntax highlighting
-- [ ] Tool call display
+- [x] 17+ color themes (vs 4 in Rich TUI)
+- [x] Status bar with badges
+- [x] Clickable file links (OSC 8)
+- [x] Markdown tables
+- [x] Code block syntax highlighting
+- [x] Tool call display
+- [x] Thinking indicators for reasoning models
 
 ### Desktop Web App features to port
 - [x] Data viewers (JSON, YAML, TOML) - DataViewer widget
@@ -374,13 +382,19 @@ All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tu
 - [x] Vertical centering works (`Center` container with `align: center middle`)
 - [x] No horizontal overflow in side panel
 
-### Phase 6-7 (Engine Integration)
-- [ ] ppxaide connects to EngineClient
-- [ ] Streaming responses render correctly
-- [ ] All slash commands work as expected
-- [ ] Provider/model switching works
-- [ ] Full feature parity with Rich TUI
-- [ ] Works on Linux, macOS, Windows
+### Phase 6-7 (Engine Integration) - COMPLETE ✅
+- [x] ppxaide connects to EngineClient
+- [x] Streaming responses render correctly
+- [x] All slash commands work as expected (32 commands)
+- [x] Provider/model switching works
+- [x] Full feature parity with Rich TUI
+- [x] Works on Linux, macOS, Windows (1105 tests passing)
+- [x] Blinker event bus integrated
+- [x] Type-based renderer dispatch (17 CommandResult types)
+- [x] Copy-to-clipboard across all clients
+- [x] Generation parameters support
+- [x] Markdown rendering in chat
+- [x] Thinking indicators
 
 ---
 
