@@ -59,6 +59,7 @@ class GeminiProvider:
         enable_grounding: bool = True,
         enable_thinking: bool = True,
         thinking_budget: Optional[int] = None,
+        provider_id: Optional[str] = None,
         **kwargs
     ):
         """Initialize the Gemini provider.
@@ -70,6 +71,7 @@ class GeminiProvider:
             enable_grounding: Whether to enable Google Search Grounding (default: True)
             enable_thinking: Whether to include thinking summaries (default: True)
             thinking_budget: Token budget for thinking (None = dynamic, 0 = disabled)
+            provider_id: Provider identifier (for config lookup consistency)
             **kwargs: Additional options (ignored for compatibility)
         """
         if not _genai_available:
@@ -84,6 +86,7 @@ class GeminiProvider:
         self.enable_grounding = enable_grounding
         self.enable_thinking = enable_thinking
         self.thinking_budget = thinking_budget
+        self.provider_id = provider_id  # For consistency with BaseProvider
 
         # Initialize the Gemini client
         self.client = genai.Client(api_key=api_key)

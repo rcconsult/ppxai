@@ -22,11 +22,20 @@ def get_provider_class(name: str) -> Optional[Type]:
 
 
 def create_provider(name: str, **kwargs) -> Optional[Union[BaseProvider, "GeminiProvider"]]:
-    """Create an instance of a provider by name."""
+    """Create an instance of a provider by name.
+
+    Args:
+        name: Provider name (e.g., "openai", "custom", "perplexity")
+        **kwargs: Provider-specific arguments (api_key, base_url, models, etc.)
+
+    Returns:
+        Provider instance or None if not found
+    """
     provider_class = _providers.get(name)
     if provider_class is None:
         return None
-    return provider_class(**kwargs)
+    # Pass provider_id so provider can look up config (generation_params, max_tokens, etc.)
+    return provider_class(provider_id=name, **kwargs)
 
 
 def list_registered_providers() -> List[str]:

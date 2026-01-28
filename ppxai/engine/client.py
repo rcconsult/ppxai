@@ -428,7 +428,8 @@ class EngineClient:
                 api_key=api_key,
                 base_url=base_url,
                 models=provider_config.get("models", {}),
-                capabilities=capabilities
+                capabilities=capabilities,
+                provider_id=provider_name  # For config lookup (generation_params, max_tokens)
             )
 
         self.provider_name = provider_name

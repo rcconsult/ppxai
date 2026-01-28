@@ -29,6 +29,7 @@ class BaseProvider(ABC):
         base_url: str,
         models: Optional[Dict[str, Dict[str, str]]] = None,
         capabilities: Optional[ProviderCapabilities] = None,
+        provider_id: Optional[str] = None,
         **kwargs
     ):
         """Initialize the provider.
@@ -38,12 +39,14 @@ class BaseProvider(ABC):
             base_url: Base URL for the API
             models: Dictionary of available models
             capabilities: Provider capabilities (native features)
+            provider_id: Provider identifier (e.g., "openai", "custom") for config lookup
             **kwargs: Additional provider-specific options
         """
         self.api_key = api_key
         self.base_url = base_url
         self.models = models or {}
         self.capabilities = capabilities or self.default_capabilities
+        self.provider_id = provider_id  # Used by _get_generation_params(), _get_max_tokens()
 
         # Check SSL configuration
         # SSL_VERIFY=false disables SSL verification entirely
