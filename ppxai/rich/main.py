@@ -174,6 +174,7 @@ class PPXAICompleter(Completer):
         ('/clear', 'Clear conversation history'),
         ('/save', 'Save session to JSON'),
         ('/export', 'Export last answer to markdown'),
+        ('/copy', 'Copy last response to clipboard'),
         ('/load', 'Load a saved session'),
         ('/sessions', 'List saved sessions'),
         ('/new', 'Start new session'),

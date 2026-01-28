@@ -67,6 +67,7 @@ MessageBox.tool {
 MessageBox .role-label {
     color: #6c7086;
     text-style: bold;
+    width: auto;
     margin-bottom: 1;
 }
 
@@ -76,6 +77,38 @@ MessageBox .content {
 
 MessageBox.streaming .content {
     color: #6c7086;
+}
+
+/* v1.15.0: Message header with copy button */
+MessageBox .message-header {
+    height: 1;
+    width: 100%;
+    layout: horizontal;
+}
+
+MessageBox .copy-btn {
+    width: 3;
+    min-width: 3;
+    height: 1;
+    padding: 0;
+    margin: 0 0 0 1;
+    border: none;
+    background: #45475a;
+    color: #6c7086;
+}
+
+MessageBox .copy-btn:hover {
+    background: #45475a;
+    color: #cdd6f4;
+}
+
+MessageBox .copy-btn.copied {
+    color: #a6e3a1;
+}
+
+MessageBox .copy-btn.failed {
+    color: #f38ba8;
+    background: #45292e;
 }
 
 /* Input box */

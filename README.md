@@ -223,6 +223,19 @@ Enable with `/tools enable` (or use Agent Mode):
 - `/export` - Export to markdown
 - `/usage [24h|week|month|all]` - View token counts and cost estimates
 
+### Copying Responses (v1.15.0+)
+All clients provide reliable ways to copy AI responses to clipboard:
+
+| Client | Method | Notes |
+|--------|--------|-------|
+| **ppxai** (Rich TUI) | `/copy` command | Copies last response; `/copy 2` for second-to-last |
+| **ppxai** (Rich TUI) | Click `#` link in title | Opens temp file for copying (works without xclip) |
+| **ppxaide** (Textual TUI) | Click 📋 button | Button in message header |
+| **Web App** | Click 📋 button | Hover over message to reveal |
+| **VSCode** | Click 📋 button | Hover over message to reveal |
+
+**Why dedicated copy?** Terminal text selection often copies panel borders (Rich TUI) or conflicts with terminal plugins (iTerm2). The `/copy` command and buttons guarantee clean text.
+
 ## Configuration
 
 **Simple (one provider):**

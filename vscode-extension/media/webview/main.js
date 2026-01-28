@@ -992,6 +992,31 @@ function addMessage(role, content, useMarkdown = true) {
     timestamp.textContent = formatTimestamp();
     el.appendChild(timestamp);
 
+    // Add copy button for assistant messages (v1.15.0)
+    if (role === 'assistant') {
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-btn';
+        copyBtn.title = 'Copy to clipboard';
+        copyBtn.textContent = '📋';
+        copyBtn.onclick = function() {
+            const contentEl = el.querySelector('.message-content');
+            if (contentEl) {
+                const text = contentEl.innerText || contentEl.textContent;
+                navigator.clipboard.writeText(text).then(() => {
+                    copyBtn.textContent = '✓';
+                    copyBtn.classList.add('copied');
+                    setTimeout(() => {
+                        copyBtn.textContent = '📋';
+                        copyBtn.classList.remove('copied');
+                    }, 1500);
+                }).catch(err => {
+                    console.error('Failed to copy:', err);
+                });
+            }
+        };
+        el.appendChild(copyBtn);
+    }
+
     // Update last message time
     lastMessageTime = now;
 

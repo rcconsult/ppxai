@@ -116,6 +116,7 @@ MessageBox .role-label {
     color: $text-muted;
     text-style: bold;
     height: 1;
+    width: auto;
     margin-bottom: 0;
 }
 
@@ -134,6 +135,38 @@ MessageBox.tool .content-scroll {
 
 MessageBox.streaming .content {
     color: $text-muted;
+}
+
+/* v1.15.0: Message header with copy button */
+MessageBox .message-header {
+    height: 1;
+    width: 100%;
+    layout: horizontal;
+}
+
+MessageBox .copy-btn {
+    width: 3;
+    min-width: 3;
+    height: 1;
+    padding: 0;
+    margin: 0 0 0 1;
+    border: none;
+    background: $surface-lighten-1;
+    color: $text-muted;
+}
+
+MessageBox .copy-btn:hover {
+    background: $surface-lighten-1;
+    color: $text;
+}
+
+MessageBox .copy-btn.copied {
+    color: $success;
+}
+
+MessageBox .copy-btn.failed {
+    color: $error;
+    background: $error-darken-3;
 }
 
 /* Markdown rendering in chat messages */

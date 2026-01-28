@@ -29,6 +29,7 @@ Welcome to the AI terminal interface!
 - Type your question or prompt to chat
 - `/save` - Save session to JSON file
 - `/export [filename]` - Export last answer to markdown file
+- `/copy [n]` - Copy last response to clipboard (or click # link in title)
 - `/sessions` - List all saved sessions
 - `/load <session>` - Load a previous session
 - `/usage` - Show current session usage statistics

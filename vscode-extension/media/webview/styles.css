@@ -961,3 +961,36 @@ body {
     border-radius: 10px;
     border: 1px solid var(--vscode-panel-border);
 }
+
+/* v1.15.0: Copy button for assistant messages */
+.copy-btn {
+    position: absolute;
+    top: 4px;
+    right: 55px;  /* Position before timestamp */
+    padding: 2px 6px;
+    background: transparent;
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.2s, background 0.2s;
+    color: var(--vscode-foreground);
+    z-index: 10;
+}
+
+.message:hover .copy-btn {
+    opacity: 0.6;
+}
+
+.copy-btn:hover {
+    opacity: 1;
+    background: var(--vscode-toolbar-hoverBackground);
+}
+
+.copy-btn.copied {
+    opacity: 1;
+    background: var(--vscode-testing-iconPassed, #89d185);
+    color: var(--vscode-editor-background);
+    border-color: var(--vscode-testing-iconPassed, #89d185);
+}

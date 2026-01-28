@@ -238,6 +238,82 @@ def handle_export(context: CommandContext, args: str) -> CommandResult:
         )
 
 
+def handle_copy(context: CommandContext, args: str) -> CommandResult:
+    """Handle /copy command - copies last response to clipboard.
+
+    v1.15.0: Added to provide reliable clipboard copy for Rich TUI
+    where text selection copies frame borders.
+
+    Args:
+        context: Command context providing access to engine client
+        args: "n" to copy nth message from end (default: 1 = last)
+
+    Returns:
+        ConfirmationResult on success, ErrorResult/NotificationResult on failure
+    """
+    try:
+        import pyperclip
+    except ImportError:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="Clipboard not available: install pyperclip",
+            suggestions=["Run: pip install pyperclip"]
+        )
+
+    try:
+        # Parse optional argument for which message to copy
+        offset = 1  # Default: last assistant message
+        if args.strip():
+            try:
+                offset = int(args.strip())
+                if offset < 1:
+                    offset = 1
+            except ValueError:
+                pass  # Use default
+
+        # Find nth assistant message from end
+        assistant_messages = [
+            msg.content for msg in context.engine_client.session.messages
+            if msg.role == 'assistant'
+        ]
+
+        if not assistant_messages:
+            return NotificationResult(
+                status=ResultStatus.WARNING,
+                message="No assistant response to copy yet"
+            )
+
+        # Get the requested message (1-indexed from end)
+        if offset > len(assistant_messages):
+            offset = len(assistant_messages)
+
+        target_msg = assistant_messages[-offset]
+
+        # Copy to clipboard
+        pyperclip.copy(target_msg)
+
+        # Truncate preview for confirmation
+        preview = target_msg[:100] + "..." if len(target_msg) > 100 else target_msg
+        preview = preview.replace("\n", " ")
+
+        return ConfirmationResult(
+            status=ResultStatus.SUCCESS,
+            message=f"Copied to clipboard ({len(target_msg):,} chars)",
+            details={
+                "length": len(target_msg),
+                "preview": preview,
+                "message_offset": offset
+            }
+        )
+
+    except Exception as e:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=f"Error copying to clipboard: {e}",
+            error_details=str(e)
+        )
+
+
 # =============================================================================
 # Command Registration
 # =============================================================================
@@ -284,4 +360,13 @@ CommandFactory.register(CommandSpec(
     category="session",
     aliases=["e"],
     usage="/export [filename]"
+))
+
+CommandFactory.register(CommandSpec(
+    name="copy",
+    description="Copy last response to clipboard",
+    handler=handle_copy,
+    category="session",
+    aliases=["cp"],
+    usage="/copy [n]  - Copy nth response from end (default: 1 = last)"
 ))

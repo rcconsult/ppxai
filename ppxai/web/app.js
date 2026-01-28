@@ -1804,10 +1804,16 @@ class PpxaiApp {
             ? '<div class="thinking-indicator"><span class="thinking-dots"></span><span class="thinking-text">Thinking...</span></div>'
             : '';
 
+        // Add copy button for assistant messages
+        const copyButton = role === 'assistant'
+            ? '<button class="copy-btn" title="Copy to clipboard" onclick="window.ppxaiApp.copyMessageToClipboard(this)">📋</button>'
+            : '';
+
         msgEl.innerHTML = `
             <div class="message-header">
                 <span class="message-role">${role === 'user' ? 'You' : role === 'assistant' ? 'Assistant' : 'System'}</span>
                 <span class="message-time">${timestamp}</span>
+                ${copyButton}
             </div>
             <div class="message-content">${streaming ? thinkingHtml : this.renderMarkdown(content)}</div>
         `;
@@ -1816,6 +1822,32 @@ class PpxaiApp {
         this.scrollToBottom();
 
         return msgEl;
+    }
+
+    // v1.15.0: Copy message content to clipboard
+    copyMessageToClipboard(button) {
+        const msgEl = button.closest('.message');
+        if (!msgEl) return;
+
+        const contentEl = msgEl.querySelector('.message-content');
+        if (!contentEl) return;
+
+        // Get text content (strips HTML but preserves text)
+        const text = contentEl.innerText || contentEl.textContent;
+
+        navigator.clipboard.writeText(text).then(() => {
+            // Visual feedback
+            const originalText = button.textContent;
+            button.textContent = '✓';
+            button.classList.add('copied');
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.classList.remove('copied');
+            }, 1500);
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+            this.showError('Failed to copy to clipboard');
+        });
     }
 
     // v1.13.2: Update thinking indicator with processing status

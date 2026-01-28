@@ -5,10 +5,12 @@ MessageBox widget - Individual chat message display.
 from datetime import datetime
 
 from textual.app import ComposeResult
-from textual.containers import Vertical, VerticalScroll
+from textual.containers import Vertical, Horizontal, VerticalScroll
 from textual.css.query import NoMatches
 from textual.reactive import reactive
-from textual.widgets import Static, Markdown
+from textual.widgets import Static, Markdown, Button
+
+from ..clipboard import copy_to_clipboard
 
 
 class MessageBox(Static):
@@ -55,7 +57,12 @@ class MessageBox(Static):
         timestamp_display = f"[dim]\\[{self.timestamp}][/dim]"
 
         with Vertical():
-            yield Static(f"{icon} [bold]{label}[/bold] {timestamp_display}", classes="role-label")
+            # Header row with role label and copy button
+            with Horizontal(classes="message-header"):
+                yield Static(f"{icon} [bold]{label}[/bold] {timestamp_display}", classes="role-label")
+                # Copy button for assistant/tool messages (v1.15.0)
+                if self.role in ("assistant", "tool"):
+                    yield Button("📋", id="copy-btn", classes="copy-btn", variant="default")
 
             # Tool messages get scrollable content for long outputs
             if self.role == "tool":
@@ -96,3 +103,33 @@ class MessageBox(Static):
     def finish_streaming(self) -> None:
         """Mark streaming as complete."""
         self.streaming = False
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle copy button click (v1.15.0)."""
+        if event.button.id == "copy-btn":
+            event.stop()
+            # Copy the raw content (without markdown rendering)
+            success = copy_to_clipboard(self.content)
+            if success:
+                # Show feedback by changing button text temporarily
+                event.button.label = "✓"
+                event.button.add_class("copied")
+                # Reset after 1.5 seconds
+                self.set_timer(1.5, lambda: self._reset_copy_button(event.button))
+            else:
+                # Clipboard not available - show red X and notify user
+                event.button.label = "✗"
+                event.button.add_class("failed")
+                self.notify(
+                    "Clipboard unavailable. Install xclip, xsel, or wl-clipboard.",
+                    title="Copy Failed",
+                    severity="error",
+                    timeout=4,
+                )
+                self.set_timer(1.5, lambda: self._reset_copy_button(event.button))
+
+    def _reset_copy_button(self, button: Button) -> None:
+        """Reset copy button to original state."""
+        button.label = "📋"
+        button.remove_class("copied")
+        button.remove_class("failed")

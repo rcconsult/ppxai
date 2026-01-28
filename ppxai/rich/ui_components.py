@@ -11,7 +11,9 @@ This module is designed to be imported by ui.py without breaking existing functi
 """
 
 import re
+import tempfile
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 from rich import box
@@ -22,6 +24,10 @@ from rich.table import Table
 from rich.text import Text
 
 from .themes import Theme, get_theme, DEFAULT_THEME, THEMES
+
+# Single temp file for copy link feature (v1.15.0)
+# Gets overwritten with each new assistant response - no accumulation
+_TEMP_MSG_FILE = Path(tempfile.gettempdir()) / "ppxai-last-response.md"
 
 
 def normalize_emoji_width(text: str) -> str:
@@ -245,6 +251,25 @@ def sanitize_for_panel(text: str, use_text_symbols: bool = True) -> str:
     return result
 
 
+def _save_message_for_copy(content: str) -> Optional[str]:
+    """Save message content to temp file for copy link (v1.15.0).
+
+    Overwrites a single temp file with latest response content.
+    File can be opened via file:// URL in terminal.
+
+    Args:
+        content: Message content to save
+
+    Returns:
+        file:// URL path, or None on error
+    """
+    try:
+        _TEMP_MSG_FILE.write_text(content, encoding='utf-8')
+        return f"file://{_TEMP_MSG_FILE}"
+    except Exception:
+        return None
+
+
 # Shared console instance
 console = Console()
 
@@ -256,6 +281,7 @@ def render_message(
     timestamp: Optional[datetime] = None,
     show_timestamp: bool = True,
     normalize_emojis: bool = True,
+    show_copy_link: bool = True,
 ) -> Panel:
     """Render a chat message with rounded corners and theme styling.
 
@@ -266,6 +292,7 @@ def render_message(
         timestamp: Message timestamp (optional)
         show_timestamp: Whether to show timestamp in title
         normalize_emojis: Whether to normalize emoji widths for alignment
+        show_copy_link: Whether to show clickable copy link (v1.15.0)
 
     Returns:
         Rich Panel with rounded corners
@@ -289,16 +316,28 @@ def render_message(
         time_str = timestamp.strftime("%H:%M:%S")
         title = f"{title} [{time_str}]"
 
+    # v1.15.0: Add clickable copy link for assistant messages
+    # Uses OSC 8 terminal hyperlinks to open temp file with message content
+    # Only save for assistant (overwrites single temp file with latest response)
+    copy_link_suffix = ""
+    if show_copy_link and role == "assistant":
+        # Save original content (before emoji normalization) to temp file
+        file_url = _save_message_for_copy(content)
+        if file_url:
+            # Rich supports [link=URL]text[/link] for OSC 8 hyperlinks
+            copy_link_suffix = f" [link={file_url}][dim]#[/dim][/link]"
+
     # Normalize emoji widths to prevent panel misalignment
+    display_content = content
     if normalize_emojis:
-        content = sanitize_for_panel(content)
+        display_content = sanitize_for_panel(content)
 
     # Render content as markdown
-    rendered_content = Markdown(content)
+    rendered_content = Markdown(display_content)
 
     # Build title with theme-specific styling
     # Title uses border color for visual consistency
-    styled_title = f"[bold {border_style}]{title}[/bold {border_style}]"
+    styled_title = f"[bold {border_style}]{title}[/bold {border_style}]{copy_link_suffix}"
 
     return Panel(
         rendered_content,
@@ -681,6 +720,7 @@ Welcome to the AI terminal interface!
 - Type your question or prompt to chat
 - `/save` - Save session to JSON file
 - `/export [filename]` - Export last answer to markdown
+- `/copy [n]` - Copy last response to clipboard (or click # link in title)
 - `/usage` - Show current session usage statistics
 - `/theme` - List or switch themes
 - `/clear` - Clear conversation history
