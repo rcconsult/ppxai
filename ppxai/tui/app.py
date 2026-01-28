@@ -896,7 +896,7 @@ class PPXAIDEApp(App):
         self._reasoning_content = ""
         self._reasoning_message = None
         self._thinking_message = MessageBox(
-            content="[dim italic]⏳ Thinking...[/dim italic]",
+            content="[italic]⏳ Thinking...[/italic]",
             role="system",
             streaming=True
         )
