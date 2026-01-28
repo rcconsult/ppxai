@@ -1128,10 +1128,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#phase-6-engine-integration-next" class="md-nav__link">
+  <a href="#phase-6-engine-integration-complete" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 6: Engine Integration (Next)
+        Phase 6: Engine Integration (Complete ✅)
       
     </span>
   </a>
@@ -1139,10 +1139,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#phase-7-polish-release" class="md-nav__link">
+  <a href="#phase-7-polish-release-complete" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 7: Polish &amp; Release
+        Phase 7: Polish &amp; Release (Complete ✅)
       
     </span>
   </a>
@@ -1250,10 +1250,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#phase-6-7-engine-integration" class="md-nav__link">
+  <a href="#phase-6-7-engine-integration-complete" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 6-7 (Engine Integration)
+        Phase 6-7 (Engine Integration) - COMPLETE ✅
       
     </span>
   </a>
@@ -1298,10 +1298,10 @@
 
 <h1 id="release-plan-v115x-series">Release Plan: v1.15.x Series<a class="headerlink" href="#release-plan-v115x-series" title="Permanent link">&para;</a></h1>
 <p><strong>Created:</strong> January 24, 2026
-<strong>Last Updated:</strong> January 25, 2026 (Phase 5 Complete + Image Viewer Fixes)
-<strong>Status:</strong> In Progress - Phase 6 (Engine Integration) Next
+<strong>Last Updated:</strong> January 28, 2026 (Phase 7 Complete - Ready for Release)
+<strong>Status:</strong> ✅ COMPLETE - Ready for Merge to Master
 <strong>Branch:</strong> feature/new-tui-command
-<strong>Latest Commit:</strong> f777028 (Image viewer display fixes)</p>
+<strong>Tests:</strong> 1105 passing</p>
 <hr />
 <h2 id="theme-next-generation-tui-ppxaide">Theme: Next Generation TUI (ppxaide)<a class="headerlink" href="#theme-next-generation-tui-ppxaide" title="Permanent link">&para;</a></h2>
 <p><strong>Tagline:</strong> Textual-based TUI replacing Rich-based TUI as the primary terminal interface</p>
@@ -1761,10 +1761,10 @@ plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles c
 - Image handlers: 21 tests (factory pattern, delegation, fallback modes)
 - <strong>Total: 275 tests passing</strong></p>
 <hr />
-<h3 id="phase-6-engine-integration-next">Phase 6: Engine Integration (Next)<a class="headerlink" href="#phase-6-engine-integration-next" title="Permanent link">&para;</a></h3>
+<h3 id="phase-6-engine-integration-complete">Phase 6: Engine Integration (Complete ✅)<a class="headerlink" href="#phase-6-engine-integration-complete" title="Permanent link">&para;</a></h3>
 <p><strong>Goal:</strong> Connect validated UI to proven backend</p>
 <p><strong>Rationale:</strong> Engine is already battle-tested. Integration is mechanical once UI is stable.</p>
-<p><strong>Status:</strong> Ready to start - all prerequisites complete</p>
+<p><strong>Status:</strong> ✅ Complete</p>
 <table>
 <thead>
 <tr>
@@ -1777,126 +1777,165 @@ plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles c
 <tr>
 <td>Factory pattern</td>
 <td><code>PPXAIDEApp.initialize()</code></td>
-<td>⏳ Pending</td>
+<td>✅ Done</td>
 </tr>
 <tr>
 <td>Config loading</td>
 <td><code>get_default_provider()</code>, etc.</td>
-<td>⏳ Pending</td>
+<td>✅ Done</td>
 </tr>
 <tr>
 <td>EngineClient</td>
 <td>Composition, event subscription</td>
-<td>⏳ Pending</td>
+<td>✅ Done</td>
 </tr>
 <tr>
 <td>Streaming</td>
 <td>Progressive rendering</td>
-<td>⏳ Pending</td>
+<td>✅ Done</td>
 </tr>
 <tr>
 <td>Provider/model switching</td>
 <td>Reactive StatusBar updates</td>
-<td>⏳ Pending</td>
+<td>✅ Done</td>
 </tr>
 <tr>
 <td>Command handlers</td>
 <td>Full parity with Rich TUI</td>
-<td>⏳ Pending</td>
+<td>✅ Done</td>
 </tr>
 <tr>
 <td>Feature parity</td>
 <td>Token usage, cost, context injection</td>
-<td>⏳ Pending</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>Blinker event bus</td>
+<td>Decoupled component communication</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>Type-based renderer</td>
+<td>17 CommandResult types</td>
+<td>✅ Done</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Deliverable:</strong> Fully functional AI assistant</p>
+<p><strong>Deliverable:</strong> ✅ Fully functional AI assistant</p>
 <p><strong>Key Files to Modify:</strong>
 - <code>ppxai/tui/app.py</code> - Add <code>initialize()</code>, EngineClient composition
 - <code>ppxai/tui/commands.py</code> - Wire up slash commands to engine
 - <code>ppxai/tui/widgets/chat_view.py</code> - Stream event handlers
 - <code>ppxai/tui/widgets/status_bar.py</code> - Reactive provider/model updates</p>
 <hr />
-<h3 id="phase-7-polish-release">Phase 7: Polish &amp; Release<a class="headerlink" href="#phase-7-polish-release" title="Permanent link">&para;</a></h3>
+<h3 id="phase-7-polish-release-complete">Phase 7: Polish &amp; Release (Complete ✅)<a class="headerlink" href="#phase-7-polish-release-complete" title="Permanent link">&para;</a></h3>
 <p><strong>Goal:</strong> Production-ready v1.15.0</p>
 <table>
 <thead>
 <tr>
 <th>Task</th>
 <th>Description</th>
+<th>Status</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Performance</td>
 <td>Optimize rendering</td>
+<td>✅ Done</td>
 </tr>
 <tr>
 <td>Accessibility</td>
 <td>Screen reader, high contrast</td>
+<td>✅ Done</td>
 </tr>
 <tr>
 <td>Documentation</td>
 <td>User guide, shortcuts</td>
+<td>✅ Done</td>
 </tr>
 <tr>
 <td>Cross-platform</td>
 <td>Linux, macOS, Windows testing</td>
+<td>✅ Done (1105 tests)</td>
 </tr>
 <tr>
 <td>Binaries</td>
 <td>PyInstaller builds</td>
+<td>✅ Done</td>
 </tr>
 <tr>
 <td>Release notes</td>
 <td>Changelog, migration guide</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>Copy-to-clipboard</td>
+<td>All clients</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>Generation params</td>
+<td>Provider/model settings</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>Markdown rendering</td>
+<td>Chat bubbles</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>Thinking indicators</td>
+<td>Reasoning models</td>
+<td>✅ Done</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Deliverable:</strong> v1.15.0 release</p>
+<p><strong>Deliverable:</strong> ✅ v1.15.0 ready for release</p>
 <hr />
 <h2 id="feature-parity-checklist">Feature Parity Checklist<a class="headerlink" href="#feature-parity-checklist" title="Permanent link">&para;</a></h2>
 <p><strong>Current TUI (<code>ppxai</code>) features to port:</strong></p>
 <h3 id="core-chat">Core Chat<a class="headerlink" href="#core-chat" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] Streaming responses with Markdown rendering</li>
-<li>[ ] Multi-line input with history</li>
-<li>[ ] Provider/model switching mid-session</li>
-<li>[ ] Token usage display</li>
-<li>[ ] Cost estimation</li>
+<li>[x] Streaming responses with Markdown rendering</li>
+<li>[x] Multi-line input with history</li>
+<li>[x] Provider/model switching mid-session</li>
+<li>[x] Token usage display</li>
+<li>[x] Cost estimation</li>
 </ul>
 <h3 id="commands">Commands<a class="headerlink" href="#commands" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] <code>/help</code> - Command reference</li>
-<li>[ ] <code>/model</code> - Switch model</li>
-<li>[ ] <code>/provider</code> - Switch provider</li>
-<li>[ ] <code>/tools</code> - Enable/disable tools</li>
-<li>[ ] <code>/agent</code> - Start agent mode</li>
-<li>[ ] <code>/consent</code> - Manage consent settings</li>
-<li>[ ] <code>/session</code> - Session management</li>
-<li>[ ] <code>/save</code> - Save session</li>
-<li>[ ] <code>/load</code> - Load session</li>
-<li>[ ] <code>/export</code> - Export to markdown</li>
-<li>[ ] <code>/checkpoint</code> - Checkpoint management</li>
-<li>[ ] <code>/undo</code> - Revert last agent task</li>
-<li>[ ] <code>/context</code> - Context management</li>
-<li>[ ] <code>/usage</code> - Usage statistics</li>
-<li>[ ] <code>/show</code> - File preview</li>
-<li>[ ] <code>/edit</code> - File editing (NEW in ppxaide)</li>
-<li>[ ] <code>/theme</code> - Theme switching</li>
-<li>[ ] <code>/config</code> - Configuration</li>
-<li>[ ] <code>/clear</code> - Clear conversation</li>
-<li>[ ] <code>/quit</code> - Exit application</li>
+<li>[x] <code>/help</code> - Command reference</li>
+<li>[x] <code>/model</code> - Switch model</li>
+<li>[x] <code>/provider</code> - Switch provider</li>
+<li>[x] <code>/tools</code> - Enable/disable tools</li>
+<li>[x] <code>/agent</code> - Start agent mode</li>
+<li>[x] <code>/consent</code> - Manage consent settings</li>
+<li>[x] <code>/session</code> - Session management</li>
+<li>[x] <code>/save</code> - Save session</li>
+<li>[x] <code>/load</code> - Load session</li>
+<li>[x] <code>/export</code> - Export to markdown</li>
+<li>[x] <code>/checkpoint</code> - Checkpoint management</li>
+<li>[x] <code>/undo</code> - Revert last agent task</li>
+<li>[x] <code>/context</code> - Context management</li>
+<li>[x] <code>/usage</code> - Usage statistics</li>
+<li>[x] <code>/show</code> - File preview</li>
+<li>[x] <code>/edit</code> - File editing (NEW in ppxaide)</li>
+<li>[x] <code>/theme</code> - Theme switching</li>
+<li>[x] <code>/config</code> - Configuration</li>
+<li>[x] <code>/clear</code> - Clear conversation</li>
+<li>[x] <code>/quit</code> - Exit application</li>
+<li>[x] <code>/copy</code> - Copy to clipboard (NEW in v1.15.0)</li>
 </ul>
 <h3 id="visual-features">Visual Features<a class="headerlink" href="#visual-features" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] 4 color themes</li>
-<li>[ ] Status bar with badges</li>
-<li>[ ] Clickable file links (OSC 8)</li>
-<li>[ ] Markdown tables</li>
-<li>[ ] Code block syntax highlighting</li>
-<li>[ ] Tool call display</li>
+<li>[x] 17+ color themes (vs 4 in Rich TUI)</li>
+<li>[x] Status bar with badges</li>
+<li>[x] Clickable file links (OSC 8)</li>
+<li>[x] Markdown tables</li>
+<li>[x] Code block syntax highlighting</li>
+<li>[x] Tool call display</li>
+<li>[x] Thinking indicators for reasoning models</li>
 </ul>
 <h3 id="desktop-web-app-features-to-port">Desktop Web App features to port<a class="headerlink" href="#desktop-web-app-features-to-port" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1962,14 +2001,20 @@ plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles c
 - [x] Aspect ratio preserved (<code>height: auto</code> instead of <code>height: 1fr</code>)
 - [x] Vertical centering works (<code>Center</code> container with <code>align: center middle</code>)
 - [x] No horizontal overflow in side panel</p>
-<h3 id="phase-6-7-engine-integration">Phase 6-7 (Engine Integration)<a class="headerlink" href="#phase-6-7-engine-integration" title="Permanent link">&para;</a></h3>
+<h3 id="phase-6-7-engine-integration-complete">Phase 6-7 (Engine Integration) - COMPLETE ✅<a class="headerlink" href="#phase-6-7-engine-integration-complete" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] ppxaide connects to EngineClient</li>
-<li>[ ] Streaming responses render correctly</li>
-<li>[ ] All slash commands work as expected</li>
-<li>[ ] Provider/model switching works</li>
-<li>[ ] Full feature parity with Rich TUI</li>
-<li>[ ] Works on Linux, macOS, Windows</li>
+<li>[x] ppxaide connects to EngineClient</li>
+<li>[x] Streaming responses render correctly</li>
+<li>[x] All slash commands work as expected (32 commands)</li>
+<li>[x] Provider/model switching works</li>
+<li>[x] Full feature parity with Rich TUI</li>
+<li>[x] Works on Linux, macOS, Windows (1105 tests passing)</li>
+<li>[x] Blinker event bus integrated</li>
+<li>[x] Type-based renderer dispatch (17 CommandResult types)</li>
+<li>[x] Copy-to-clipboard across all clients</li>
+<li>[x] Generation parameters support</li>
+<li>[x] Markdown rendering in chat</li>
+<li>[x] Thinking indicators</li>
 </ul>
 <hr />
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
