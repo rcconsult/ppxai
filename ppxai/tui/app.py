@@ -874,6 +874,10 @@ class PPXAIDEApp(App):
         self._current_message_content = ""
         self._is_streaming = True
 
+        # Track request timing for response time badge
+        import time
+        start_time = time.time()
+
         # Debug: Log state at start
         self._log.info(f"=== _stream_response START ===")
         self._log.info(f"user_input: {user_input[:50]}...")
@@ -887,6 +891,9 @@ class PPXAIDEApp(App):
         # Show processing indicator
         status_bar.add_badge("streaming", "AI", "●", variant="warning")
         self._log.info("Added streaming badge")
+
+        # Store start time for response time calculation
+        self._response_start_time = start_time
 
         # Show thinking indicator BEFORE event loop (guaranteed to display)
         # This bypasses the async event bus race condition
@@ -1117,8 +1124,12 @@ class PPXAIDEApp(App):
                 if self._debug_logging:
                     self._log.info(f"Finalized reasoning message: {len(self._reasoning_content)} chars")
 
-            chat_view.add_assistant_message(final_response)
-            self._log.info(f"Added assistant message: {len(final_response)} chars")
+            # Calculate response time
+            import time
+            response_time = time.time() - self._response_start_time if hasattr(self, '_response_start_time') else 0.0
+
+            chat_view.add_assistant_message(final_response, response_time=response_time)
+            self._log.info(f"Added assistant message: {len(final_response)} chars, {response_time:.1f}s")
         else:
             self._log.warning("STREAM_END with no content to display")
 

@@ -40,11 +40,13 @@ class MessageBox(Static):
         content: str = "",
         role: str = "assistant",
         streaming: bool = False,
+        response_time: float = 0.0,
     ):
         super().__init__()
         self.content = content
         self.role = role
         self.streaming = streaming
+        self.response_time = response_time
         self.timestamp = datetime.now().strftime("%H:%M:%S")
         self.add_class(role)
         if streaming:
@@ -55,6 +57,10 @@ class MessageBox(Static):
         label = self.ROLE_LABELS.get(self.role, self.role.title())
         # Add timestamp like Rich TUI: "Assistant [16:45:27]"
         timestamp_display = f"[dim]\\[{self.timestamp}][/dim]"
+
+        # Add response time badge if provided (assistant messages only)
+        if self.response_time > 0 and self.role == "assistant":
+            timestamp_display += f" [dim]({self.response_time:.1f}s)[/dim]"
 
         with Vertical():
             # Header row with role label and copy button
