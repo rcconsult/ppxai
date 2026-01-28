@@ -291,9 +291,16 @@
       "__comment_system_prompt": "Custom system prompt to reduce chattiness (v1.13.6+)",
       "generation_params": {
         "temperature": 0.3,
-        "__comment_temperature": "Lower temperature (0.0-0.5) reduces hallucinations and produces more factual responses"
+        "top_p": 0.9,
+        "frequency_penalty": 0.1,
+        "presence_penalty": 0.0,
+        "__comment_temperature": "0.0-2.0: Lower = more deterministic, reduces hallucinations (recommended: 0.1-0.5)",
+        "__comment_top_p": "0.0-1.0: Nucleus sampling, controls diversity (recommended: 0.9)",
+        "__comment_frequency_penalty": "-2.0-2.0: Reduces repetition of tokens (recommended: 0.0-0.5)",
+        "__comment_presence_penalty": "-2.0-2.0: Encourages new topics (recommended: 0.0)",
+        "__comment_seed": "int: For reproducibility (if supported by provider)"
       },
-      "__comment_generation_params": "v1.15.0: Generation params passed to API. Supports: temperature, top_p, frequency_penalty, presence_penalty, seed",
+      "__comment_generation_params": "v1.15.0: Generation params passed to API. Model-level overrides provider-level.",
       "models": {
         "openai/gpt-oss-120b": {
           "name": "GPT-OSS 120B",
@@ -302,6 +309,9 @@
           "__comment_context_limit": "vLLM requires power of 2. Model supports ~120K, rounded up to 2^17=131072",
           "generation_params": {
             "temperature": 0.3,
+            "top_p": 0.9,
+            "frequency_penalty": 0.1,
+            "presence_penalty": 0.0,
             "__comment": "Model-level override (takes precedence over provider-level)"
           }
         }
