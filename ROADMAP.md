@@ -392,16 +392,26 @@ https://rcconsult.github.io/ppxai/
 - v1.15.x: Feature parity achieved incrementally
 - v1.16.x: ppxaide becomes `ppxai`, old TUI deprecated
 
-### v1.15.0 - ppxaide Core TUI
+### v1.15.0 - ppxaide Core TUI ✅
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **Textual SDK integration** | Build on current `ppxai/engine/` architecture | Planned |
-| **New entry point** | `ppxaide` command (separate from `ppxai`) | Planned |
-| **Core chat UI** | Streaming responses with Markdown rendering | Planned |
-| **Status badges** | Provider, model, tools, context in header | Planned |
-| **Mouse support** | Click-to-scroll, selectable text | Planned |
-| **CSS themes** | 4 themes: standard, tron-legacy, matrix, nord | Planned |
+| **Textual SDK integration** | Build on current `ppxai/engine/` architecture | ✅ Done |
+| **New entry point** | `ppxaide` command (separate from `ppxai`) | ✅ Done |
+| **Core chat UI** | Streaming responses with Markdown rendering | ✅ Done |
+| **Markdown in chat bubbles** | Full markdown with clickable URLs, headers, code blocks | ✅ Done |
+| **Status badges** | Provider, model, tools, context, CWD in header | ✅ Done |
+| **Mouse support** | Click-to-scroll, selectable text | ✅ Done |
+| **CSS themes** | 17+ themes (catppuccin-mocha, dracula, tokyo-night, etc.) | ✅ Done |
+| **Type-based renderer** | 17 CommandResult types with mechanical UI dispatch | ✅ Done |
+| **Blinker event bus** | Decoupled component communication | ✅ Done |
+| **Thinking indicators** | "Thinking..." animation while waiting for response | ✅ Done |
+| **Reasoning token support** | DeepSeek R1, GPT-OSS thinking visualization | ✅ Done |
+| **Generation params** | temperature, top_p, frequency_penalty configuration | ✅ Done |
+| **Tools verbose setting** | `/tools set verbose on/off` for detailed tool output | ✅ Done |
+| **Command history** | Arrow key history navigation with session persistence | ✅ Done |
+| **WORKING_DIR_CHANGED** | Status bar updates on `cd` command | ✅ Done |
+| **1105 tests passing** | Comprehensive test coverage | ✅ Done |
 
 **Architecture:**
 

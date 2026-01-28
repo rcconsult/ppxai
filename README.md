@@ -129,18 +129,20 @@ Switch providers anytime: `/provider gemini` or `/model gpt-4o`
 
 **ppxaide features (v1.15.0+):**
 - **Type-based renderer architecture** - All 32 commands return structured result objects (17 types), enabling mechanical UI dispatch without conditionals
-- **Modern async architecture** with real-time streaming
+- **Markdown in chat bubbles** - Full markdown rendering with clickable URLs, headers, code blocks, and citations
+- **Modern async architecture** with real-time streaming and thinking indicators
 - **17+ themes** (vs 6 in Rich TUI) - cycle with Ctrl+T or Ctrl+P for palette
 - **Advanced file viewers** with tree/table/image support via typed results
 - **Real-time token/cost tracking** in status bar with smart formatting
-- **Tool execution display** with formatted arguments/results
+- **Tool execution display** with verbose mode (`/tools set verbose on/off`)
+- **Reasoning token support** - DeepSeek R1, GPT-OSS thinking visualization
 - **Bootstrap context auto-loading** from AGENTS.md
 - **UI-agnostic commands** - Same command logic works in TUI, VSCode, and Web
 
 **Desktop Web App (v1.13.1+):** Run `ppxai-desktop` to launch a browser-based chat interface. macOS users can download the `.dmg` installer for a native app experience.
 
 ### UX Highlights
-- **Full Markdown Rendering** - Tables, code blocks with syntax highlighting, clickable links (OSC 8), citations with URLs
+- **Full Markdown Rendering** - Tables, code blocks with syntax highlighting, clickable links (OSC 8), citations with URLs. **ppxaide (v1.15.0+)** renders markdown directly in chat bubbles with clickable URLs and styled headers.
 - **Context Preservation** - Switch providers/models mid-conversation without losing history. Start with cheap model, switch to powerful one when needed
 - **Smart Context Injection** - `@file` for code, `@git` for uncommitted changes, `@tree` for project structure, `@clipboard` for clipboard text, `@url` for web content. Hash-based deduplication prevents duplicate injections.
 - **Context Management** - `/context` shows usage vs model limit, `/context show` displays bootstrap hierarchy, `/context clear` removes injected files. Context badge shows percentage in TUI status line and VSCode header.
@@ -203,6 +205,8 @@ Enable with `/tools enable` (or use Agent Mode):
 - `calculator`, `get_datetime`, `get_working_directory` - Utilities
 - `web_search` - Premium web search (Perplexity/Gemini/DuckDuckGo fallback)
 
+**Tool Settings:** `/tools set verbose on` shows full arguments and results; `/tools set verbose off` (default) shows brief status only.
+
 ### Coding Commands
 ```
 /generate   Generate code from description
@@ -245,11 +249,18 @@ OPENROUTER_API_KEY=sk-or-xxxxx
       "name": "Local Ollama",
       "base_url": "http://localhost:11434/v1",
       "api_key_env": "OLLAMA_API_KEY",
-      "default_model": "llama3.2"
+      "default_model": "llama3.2",
+      "generation_params": {
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "frequency_penalty": 0.15
+      }
     }
   }
 }
 ```
+
+**Generation Parameters (v1.15.0+):** Configure `temperature`, `top_p`, `frequency_penalty`, `presence_penalty` per-provider or per-model. Lower temperature (0.1-0.3) recommended for coding tasks.
 
 See [docs/PROVIDER_SETUP.md](docs/PROVIDER_SETUP.md) for detailed examples.
 

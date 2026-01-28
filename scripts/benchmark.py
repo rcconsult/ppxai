@@ -42,8 +42,11 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from dotenv import load_dotenv
 
-# Load environment variables
+# Load environment variables (check both project and user config locations)
 load_dotenv(PROJECT_ROOT / ".env")
+# Also load from ~/.ppxai/.env (user config location)
+from pathlib import Path
+load_dotenv(Path.home() / ".ppxai" / ".env")
 
 
 # Benchmark prompts (varying complexity)
@@ -470,7 +473,8 @@ async def main():
     if args.mock:
         providers = ["mock"]
     elif args.all_providers:
-        from ppxai.config import get_available_providers, get_api_key
+        from ppxai.config import get_available_providers, get_api_key, initialize
+        initialize()  # Load config and .env from ~/.ppxai/
         all_providers = get_available_providers()
         # Filter to only providers with valid API keys
         providers = [p for p in all_providers if get_api_key(p)]

@@ -630,3 +630,125 @@ Use `/context hints` to see which hints are active for your current provider/mod
 ```
 
 See [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md) for full documentation.
+
+---
+
+## Generation Parameters (v1.15.0+)
+
+Fine-tune model behavior with generation parameters at the provider or model level. These parameters control response determinism, creativity, and repetition.
+
+### Available Parameters
+
+| Parameter | Range | Coding Recommendation | Description |
+|-----------|-------|----------------------|-------------|
+| `temperature` | 0.0-2.0 | 0.1-0.3 | Lower = more deterministic, reduces hallucinations |
+| `top_p` | 0.0-1.0 | 0.9 | Nucleus sampling, controls diversity |
+| `frequency_penalty` | -2.0-2.0 | 0.1-0.2 | Reduces token repetition |
+| `presence_penalty` | -2.0-2.0 | 0.0 | Encourages new topics (keep at 0 for focused coding) |
+| `seed` | integer | (optional) | For reproducibility (if supported by provider) |
+
+### Provider-Level Configuration
+
+Apply parameters to all models from a provider:
+
+```json
+{
+  "providers": {
+    "custom": {
+      "name": "Internal Code AI",
+      "base_url": "https://your-server/v1",
+      "api_key_env": "CUSTOM_API_KEY",
+      "default_model": "your-model",
+      "generation_params": {
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "frequency_penalty": 0.15,
+        "presence_penalty": 0.0
+      }
+    }
+  }
+}
+```
+
+### Model-Level Configuration
+
+Override provider defaults for specific models:
+
+```json
+{
+  "providers": {
+    "ollama": {
+      "name": "Ollama Local",
+      "base_url": "http://localhost:11434/v1",
+      "api_key_env": "OLLAMA_API_KEY",
+      "default_model": "qwen2.5-coder:3b",
+      "generation_params": {
+        "temperature": 0.2,
+        "top_p": 0.9
+      },
+      "models": {
+        "qwen2.5-coder:3b": {
+          "name": "Qwen2.5 Coder 3B",
+          "description": "Best coding model",
+          "context_limit": 32768,
+          "generation_params": {
+            "temperature": 0.1,
+            "frequency_penalty": 0.2
+          }
+        },
+        "deepseek-r1:8b": {
+          "name": "DeepSeek R1 8B",
+          "description": "Reasoning model",
+          "generation_params": {
+            "temperature": 0.6
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**Priority**: Model-level params > Provider-level params > ppxai defaults
+
+### Recommended Settings by Use Case
+
+| Use Case | Temperature | Top P | Freq Penalty | Notes |
+|----------|-------------|-------|--------------|-------|
+| **Code generation** | 0.1-0.2 | 0.9 | 0.15 | Deterministic, avoid repetition |
+| **Code review** | 0.2-0.3 | 0.9 | 0.1 | Slightly more flexible analysis |
+| **Creative writing** | 0.7-1.0 | 0.95 | 0.0 | Allow diversity |
+| **Reasoning tasks** | 0.5-0.7 | 0.9 | 0.0 | DeepSeek R1, o1 models |
+| **Web search/research** | 0.3 | 0.9 | 0.1 | Balance accuracy and readability |
+
+### Using Comments in Config
+
+You can add documentation comments (ignored by ppxai):
+
+```json
+{
+  "generation_params": {
+    "temperature": 0.2,
+    "top_p": 0.9,
+    "frequency_penalty": 0.15,
+    "__comment_temperature": "0.0-2.0: Lower = more deterministic (coding: 0.1-0.3)",
+    "__comment_top_p": "0.0-1.0: Nucleus sampling (coding: 0.9)",
+    "__comment_frequency_penalty": "-2.0-2.0: Reduces repetition (coding: 0.1-0.2)"
+  }
+}
+```
+
+Keys starting with `__comment` are automatically filtered out before API calls.
+
+### Verifying Parameters
+
+Check that parameters are being applied:
+
+```bash
+# Enable debug logging
+ppxaide --debug
+
+# Look for generation_params in the debug output
+```
+
+Or check the TUI debug log at `~/.ppxai/logs/tui-debug.log`.
