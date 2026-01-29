@@ -25,6 +25,7 @@ class EventType(Enum):
     AGENT_MAX_ITERATIONS = "agent_max_iterations"  # Max iterations reached (v1.11.8)
     STATUS = "status"  # Status/notification messages (v1.12.0 - checkpoints, etc.)
     WORKING_DIR_CHANGED = "working_dir_changed"  # Working directory changed (v1.13.2)
+    DISPLAY_FILE = "display_file"  # Display file in viewer (v1.15.1)
     ERROR = "error"
     INFO = "info"
 

@@ -63,12 +63,8 @@ class MessageBox(Static):
             timestamp_display += f" [dim]({self.response_time:.1f}s)[/dim]"
 
         with Vertical():
-            # Header row with role label and copy button
-            with Horizontal(classes="message-header"):
-                yield Static(f"{icon} [bold]{label}[/bold] {timestamp_display}", classes="role-label")
-                # Copy button for assistant/tool messages (v1.15.0)
-                if self.role in ("assistant", "tool"):
-                    yield Button("📋", id="copy-btn", classes="copy-btn", variant="default")
+            # Header row with role label (no button - moved to footer)
+            yield Static(f"{icon} [bold]{label}[/bold] {timestamp_display}", classes="role-label")
 
             # Tool messages get scrollable content for long outputs
             if self.role == "tool":
@@ -80,6 +76,12 @@ class MessageBox(Static):
             else:
                 # System messages use Rich markup
                 yield Static(self.content, classes="content", markup=True)
+
+            # Footer with copy button (v1.15.1 - moved from header to match VSCode)
+            if self.role in ("assistant", "tool"):
+                with Horizontal(classes="message-footer"):
+                    yield Static("", classes="footer-spacer")
+                    yield Button("📋 Copy", id="copy-btn", classes="copy-btn", variant="default")
 
     def watch_content(self, content: str) -> None:
         """Update content when it changes (for streaming)."""
@@ -106,9 +108,28 @@ class MessageBox(Static):
         """Append content chunk (for streaming responses)."""
         self.content += chunk
 
-    def finish_streaming(self) -> None:
-        """Mark streaming as complete."""
+    def finish_streaming(self, response_time: float = 0.0) -> None:
+        """Mark streaming as complete and optionally set response time."""
         self.streaming = False
+        if response_time > 0:
+            self.response_time = response_time
+            self._update_header()
+
+    def _update_header(self) -> None:
+        """Update the header to show response time badge."""
+        try:
+            role_label = self.query_one(".role-label", Static)
+            icon = self.ROLE_ICONS.get(self.role, "")
+            label = self.ROLE_LABELS.get(self.role, self.role.title())
+            timestamp_display = f"[dim]\\[{self.timestamp}][/dim]"
+
+            # Add response time badge if set
+            if self.response_time > 0 and self.role == "assistant":
+                timestamp_display += f" [dim]({self.response_time:.1f}s)[/dim]"
+
+            role_label.update(f"{icon} [bold]{label}[/bold] {timestamp_display}")
+        except Exception:
+            pass  # Widget not yet composed
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle copy button click (v1.15.0)."""

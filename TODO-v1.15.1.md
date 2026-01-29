@@ -9,30 +9,71 @@
 
 ## Issues to Address
 
-### 1. VSCode Extension - Unused Imports
+### 1. ppxaide TUI - Blocked Event Loop During Streaming
+
+**Source:** User testing
+**Severity:** High - UI freezes during long provider responses
+**Status:** ✅ **FIXED** (v1.15.1)
+
+**Problem:**
+The `async for` loop in `_stream_response()` blocks Textual's event loop while waiting for HTTP responses from AI providers (30+ second waits). During this time:
+- Screen appears frozen
+- Scroll events not processed
+- Status bar updates don't render
+
+**Root Cause:**
+Engine client's HTTP streaming doesn't properly yield to event loop during network waits, even though marked as async.
+
+**Attempted Fixes:**
+- ❌ `asyncio.create_task()` - still blocks in same event loop
+- ❌ `loop.run_in_executor()` - can't update Textual widgets from thread
+- ❌ Explicit `asyncio.sleep(0)` - HTTP client doesn't yield between calls
+- ❌ Custom `queue.Queue` + `set_interval()` consumer - over-engineered
+
+**Final Solution (v1.15.1):**
+✅ **Textual's `call_from_thread()`** - Native framework pattern for thread-safe UI updates
+- Worker thread runs HTTP streaming without blocking main event loop
+- Uses `self.call_from_thread()` to schedule UI updates in main thread
+- UI stays responsive: scrolling, history navigation, etc. all work during streaming
+- Input box disabled during streaming to prevent concurrent request race conditions
+
+**Implementation:**
+- Thread: `_stream_response_thread()` creates event loop, runs `_stream_response()`
+- Events: `self.call_from_thread(self._handle_stream_event, type, data)`
+- Completion: `self.call_from_thread(self._handle_stream_end)`
+- Errors: `self.call_from_thread(self._handle_stream_error, msg)`
+
+**Concurrency Protection:**
+- Submission blocked during streaming (notification shown if attempted)
+- Input box remains enabled - users can type, navigate history, prepare next prompt
+- Prevents overlapping requests that would confuse the AI provider
+
+---
+
+### 2. VSCode Extension - Unused Imports
 
 **Source:** CI build warnings
 **Severity:** Low - No functional impact, just code cleanup
+**Status:** ✅ **FIXED** (v1.15.1)
+
 **File:** `vscode-extension/src/chatPanel.ts`
 
-**Warnings:**
-```
-vscode-extension/src/chatPanel.ts#L17: 'SLASH_COMMANDS' is defined but never used
-vscode-extension/src/chatPanel.ts#L19: 'isAIForwardedCommand' is defined but never used
-vscode-extension/src/chatPanel.ts#L20: 'parseCommand' is defined but never used
-vscode-extension/src/chatPanel.ts#L23: 'formatToolsStatus' is defined but never used
-vscode-extension/src/chatPanel.ts#L24: 'formatToolsList' is defined but never used
-vscode-extension/src/chatPanel.ts#L25: 'formatToolConfig' is defined but never used
-vscode-extension/src/chatPanel.ts#L26: 'formatToolHelp' is defined but never used
-vscode-extension/src/chatPanel.ts#L27: 'formatAgentStatus' is defined but never used
-vscode-extension/src/chatPanel.ts#L28: 'formatCheckpointStatus' is defined but never used
-vscode-extension/src/chatPanel.ts#L29: 'formatCheckpointList' is defined but never used
-```
+**Removed Imports:**
+- `SLASH_COMMANDS` - only imported, never used
+- `isAIForwardedCommand` - only imported, never used
+- `parseCommand` - only imported, never used
+- `formatToolsStatus` - only imported, never used
+- `formatToolsList` - only imported, never used
+- `formatToolConfig` - only imported, never used
+- `formatToolHelp` - only imported, never used
+- `formatAgentStatus` - only imported, never used
+- `formatCheckpointStatus` - only imported, never used
+- `formatCheckpointList` - only imported, never used
 
-**Resolution:**
-- [ ] Remove unused imports from chatPanel.ts
-- [ ] Verify no regressions in VSCode extension functionality
-- [ ] Run TypeScript lint to confirm no warnings
+**Verification:**
+- ✅ Removed unused imports from chatPanel.ts
+- ✅ TypeScript compilation successful with no warnings
+- ✅ All remaining imports are actively used in the code
 
 ---
 
@@ -56,17 +97,23 @@ The following fixes were applied during v1.15.0 release:
 
 Before releasing v1.15.1:
 
-- [ ] All 1105 tests pass
-- [ ] TypeScript lint shows 0 warnings
-- [ ] VSCode extension works correctly
-- [ ] All v1.15.0 features still work
+- [x] All 1105 tests pass (66.74s)
+- [x] TypeScript lint shows 0 warnings
+- [x] display_file tool implemented and integrated
+- [ ] VSCode extension works correctly (requires manual testing)
+- [ ] All v1.15.0 features still work (requires manual testing)
+- [ ] Test display_file tool with AI (manual testing)
 
 ---
 
 ## Release Checklist
 
-- [ ] Update CHANGELOG.md with v1.15.1 entry
-- [ ] Create docs/RELEASE-NOTES-v1.15.1.md
+- [x] Update CHANGELOG.md with v1.15.1 entry
+- [x] Update version numbers across all files
+- [x] Create docs/RELEASE-NOTES-v1.15.1.md
+- [x] Implement /show command as AI tool (`display_file` tool)
+- [x] All 1105 tests passing
+- [x] TypeScript compilation: 0 warnings
 - [ ] Merge to master
 - [ ] Run `/release v1.15.1`
 

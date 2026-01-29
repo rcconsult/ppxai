@@ -47,6 +47,23 @@ class InputBox(Static):
         except:
             pass
 
+    def disable(self) -> None:
+        """Disable the input widget (prevent submission during streaming)."""
+        try:
+            input_widget = self.query_one(Input)
+            input_widget.disabled = True
+        except:
+            pass
+
+    def enable(self) -> None:
+        """Enable the input widget."""
+        try:
+            input_widget = self.query_one(Input)
+            input_widget.disabled = False
+            input_widget.focus()
+        except:
+            pass
+
     def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle input submission."""
         value = event.value.strip()

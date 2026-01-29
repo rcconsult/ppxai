@@ -632,7 +632,8 @@ def handle_agent(context: CommandContext, args: str) -> CommandResult:
             event_handler = TUIEventHandler(
                 console, context.engine_client.logger,
                 verbose=getattr(context, '_handler', None) and getattr(context._handler, 'tools_verbose', False),
-                emoji_mode=getattr(context, '_handler', None) and getattr(context._handler, 'emoji_mode', False)
+                emoji_mode=getattr(context, '_handler', None) and getattr(context._handler, 'emoji_mode', False),
+                engine_client=context.engine_client
             )
 
             try:

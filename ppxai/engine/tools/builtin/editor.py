@@ -165,7 +165,7 @@ class ReplaceBlockTool(BaseTool):
         """
         self.engine = engine
         self.name = "replace_block"
-        self.description = "Search for exact text block and replace it (case-sensitive, must be unique)"
+        self.description = "Search for exact text block and replace it (case-sensitive, must be unique). After modifying files, consider using display_file to show the result to the user."
         self.parameters = {
             "type": "object",
             "properties": {
@@ -278,7 +278,7 @@ class InsertTextTool(BaseTool):
         """
         self.engine = engine
         self.name = "insert_text"
-        self.description = "Insert text at a specific line number (1-indexed)"
+        self.description = "Insert text at a specific line number (1-indexed). After creating/modifying files, consider using display_file to show the result to the user."
         self.parameters = {
             "type": "object",
             "properties": {

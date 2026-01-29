@@ -49,8 +49,8 @@ def main():
             logger._logger.addHandler(stderr_handler)
 
     # Store trace flag globally for exception handlers
+    import os
     if args.trace:
-        import os
         os.environ['PPXAIDE_TRACE'] = '1'
 
     # Initialize config and load .env BEFORE starting event loop (matches Rich TUI)
