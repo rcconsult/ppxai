@@ -13,6 +13,10 @@
          <lastmod>2026-01-29</lastmod>
     </url>
     <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/AUTOCOMPLETE-SUPPORT-ANALYSIS/</loc>
+         <lastmod>2026-01-29</lastmod>
+    </url>
+    <url>
          <loc>https://rcconsult.github.io/ppxai/dev/AUTOROUTER-CONFIG/</loc>
          <lastmod>2026-01-29</lastmod>
     </url>
@@ -86,6 +90,10 @@
     </url>
     <url>
          <loc>https://rcconsult.github.io/ppxai/dev/IMPLEMENTATION-PLAN-AUTOCOMPLETE-v1.16.0/</loc>
+         <lastmod>2026-01-29</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/IMPLEMENTATION-PLAN-TEXTUAL-TAB-COMPLETION/</loc>
          <lastmod>2026-01-29</lastmod>
     </url>
     <url>
@@ -237,6 +245,10 @@
          <lastmod>2026-01-29</lastmod>
     </url>
     <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.15.1/</loc>
+         <lastmod>2026-01-29</lastmod>
+    </url>
+    <url>
          <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-PLAN-v1.12.x/</loc>
          <lastmod>2026-01-29</lastmod>
     </url>
@@ -274,6 +286,14 @@
     </url>
     <url>
          <loc>https://rcconsult.github.io/ppxai/dev/TEXTUAL-WIDGETS-RESEARCH/</loc>
+         <lastmod>2026-01-29</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/TODO-v1.15.2-CONTEXT-INJECTOR-PARITY/</loc>
+         <lastmod>2026-01-29</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/TODO-v1.15.2-TEXTUAL-TUI-AUTOCOMPLETE/</loc>
          <lastmod>2026-01-29</lastmod>
     </url>
     <url>
