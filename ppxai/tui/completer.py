@@ -294,7 +294,7 @@ class TextualCompleter:
             return []
 
         completions = []
-        current_provider = self.engine_client.provider
+        current_provider = self.engine_client.provider_name  # Use provider_name (string), not provider (object)
 
         # Get models for current provider
         provider_config = get_provider_config(current_provider)
