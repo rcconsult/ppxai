@@ -807,6 +807,11 @@ class PPXAIDEApp(App):
 
         self._log.info(f"Theme changed: {old_theme} → {new_theme}, syntax: {syntax_theme}")
 
+    async def on_input_box_status_update(self, event: InputBox.StatusUpdate) -> None:
+        """Handle completion status messages from InputBox."""
+        # Show as toast notification with brief timeout
+        self.notify(event.text, timeout=2)
+
     async def on_input_box_submitted(self, event: InputBox.Submitted) -> None:
         """Handle user input submission (Phase 6.1 - Engine integration)."""
         message = event.value.strip()
@@ -1299,6 +1304,11 @@ class PPXAIDEApp(App):
             # Update internal state
             self._working_dir = path
 
+            # Update completer's working directory for file completions
+            input_box = self.query_one("#input-box", InputBox)
+            if input_box._completer:
+                input_box._completer.update_working_dir(Path(path))
+
             # Update status bar cwd badge if visible
             from ppxai.config import get_tui_config
             tui_config = get_tui_config()
@@ -1436,6 +1446,11 @@ class PPXAIDEApp(App):
                     if engine_working_dir != self._working_dir:
                         self._working_dir = engine_working_dir
                         self._log.info(f"Working directory synced: {engine_working_dir}")
+
+                        # Update completer working directory for file completions
+                        input_box = self.query_one("#input-box", InputBox)
+                        if input_box._completer:
+                            input_box._completer.update_working_dir(Path(engine_working_dir))
 
                 # Handle status bar toggle commands (Phase 1.2)
                 if cmd == "status" and args and args.split()[0] in ("version", "cwd", "datetime"):

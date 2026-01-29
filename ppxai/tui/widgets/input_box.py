@@ -20,11 +20,23 @@ class InputBox(Static):
             super().__init__()
             self.value = value
 
+    class StatusUpdate(Message):
+        """Message to update status line with completion info."""
+
+        def __init__(self, text: str):
+            super().__init__()
+            self.text = text
+
     def __init__(self, id: str = None, completer=None):
         super().__init__(id=id)
         self._history: list[str] = []
         self._history_index = -1
-        self._completer = completer  # Keep for API compatibility but unused
+        self._completer = completer  # NOW USED for tab completion
+
+        # Tab completion state
+        self._completion_matches: list[tuple[str, str]] = []  # [(text, description), ...]
+        self._completion_index = 0
+        self._last_completion_text = ""  # Track when to reset cycle
 
     def compose(self) -> ComposeResult:
         """Compose the input box."""
@@ -79,14 +91,110 @@ class InputBox(Static):
             # Post our own message
             self.post_message(self.Submitted(value))
 
+    def on_input_changed(self, event: Input.Changed) -> None:
+        """Reset completion state when user types (not from Tab completion)."""
+        if event.input.id != "chat-input":
+            return
+
+        # If text changed and it's not our completion, reset cycle
+        if event.value != self._last_completion_text:
+            self._completion_matches = []
+            self._completion_index = 0
+            self._last_completion_text = ""
+
     def on_key(self, event) -> None:
-        """Handle key events for history navigation."""
+        """Handle key events for history navigation and tab completion."""
+
+        # ============================================================
+        # TAB COMPLETION
+        # ============================================================
+        if event.key == "tab":
+            input_widget = self.query_one("#chat-input", Input)
+
+            # Only handle if input is focused
+            if not input_widget.has_focus:
+                return
+
+            if not self._completer:
+                return
+
+            text = input_widget.value
+
+            # First Tab press OR text changed: get new completions
+            if text != self._last_completion_text or not self._completion_matches:
+                self._completion_matches = self._completer.get_completions(text)
+                self._completion_index = 0
+
+            if self._completion_matches:
+                # Apply current completion
+                completion_text, description = self._completion_matches[self._completion_index]
+
+                # Handle different completion types
+                if text.rfind('@') >= 0:
+                    # @file/@clipboard/@url completion: replace from @ to end
+                    at_pos = text.rfind('@')
+                    input_widget.value = text[:at_pos] + completion_text
+                elif self._is_file_command(text):
+                    # File commands (/show, /edit, /cat): replace from command to end
+                    # Example: "/show READ" + Tab → "/show README.md"
+                    parts = text.split(None, 1)  # Split on first whitespace
+                    if len(parts) == 2:
+                        # Has command + partial filename
+                        input_widget.value = f"{parts[0]} {completion_text}"
+                    else:
+                        # Just command, no space yet
+                        input_widget.value = f"{parts[0]} {completion_text}"
+                elif text.startswith('/'):
+                    # Slash command/subcommand: replace entire input
+                    input_widget.value = completion_text
+                else:
+                    # Fallback: replace entire input
+                    input_widget.value = completion_text
+
+                # Move cursor to end
+                input_widget.cursor_position = len(input_widget.value)
+
+                # Track for state management
+                self._last_completion_text = input_widget.value
+
+                # Cycle to next completion for next Tab press
+                self._completion_index = (self._completion_index + 1) % len(self._completion_matches)
+
+                # Show status
+                status_msg = f"Completed: {completion_text}"
+                if len(self._completion_matches) > 1:
+                    # Show cycle position (using previous index since we already incremented)
+                    current = (self._completion_index - 1) % len(self._completion_matches) + 1
+                    total = len(self._completion_matches)
+                    status_msg += f" ({current}/{total}) - Press Tab to cycle"
+
+                self.post_message(self.StatusUpdate(status_msg))
+
+                # CRITICAL: Prevent Tab from moving focus
+                event.prevent_default()
+                event.stop()
+            else:
+                # No matches
+                self.post_message(self.StatusUpdate("No completions available"))
+                event.prevent_default()
+                event.stop()
+
+            return  # Don't fall through to history navigation
+
+        # ============================================================
+        # HISTORY NAVIGATION (existing code)
+        # ============================================================
         if event.key == "up":
             self._navigate_history(-1)
             event.prevent_default()
         elif event.key == "down":
             self._navigate_history(1)
             event.prevent_default()
+
+    def _is_file_command(self, text: str) -> bool:
+        """Check if text is a file-referencing command (/show, /edit, /cat)."""
+        text_lower = text.lower().strip()
+        return text_lower.startswith(('/show ', '/edit ', '/cat '))
 
     def _navigate_history(self, direction: int) -> None:
         """Navigate through command history."""
@@ -140,7 +248,7 @@ class InputBox(Static):
         input_widget.cursor_position = len(input_widget.value)
 
     def set_completer(self, completer) -> None:
-        """Set the completer (kept for API compatibility, currently unused).
+        """Set the completer for tab-based autocomplete.
 
         Args:
             completer: TextualCompleter instance
