@@ -49,13 +49,15 @@ def main():
             logger._logger.addHandler(stderr_handler)
 
     # Store trace flag globally for exception handlers
+    import os
     if args.trace:
-        import os
         os.environ['PPXAIDE_TRACE'] = '1'
 
     # Initialize config and load .env BEFORE starting event loop (matches Rich TUI)
     from ppxai.config import initialize
     initialize()
 
-    app = PPXAIDEApp()
+    # Pass debug flag to app for conditional logging
+    debug_mode = args.debug or args.trace
+    app = PPXAIDEApp(debug_logging=debug_mode)
     app.run()

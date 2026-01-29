@@ -40,6 +40,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.15.1] - 2026-01-29
+
+### Added - AI Tool Integration
+
+- **`display_file` tool** - AI can now proactively show files after generating/modifying them
+  - Works across all clients: ppxaide (Textual TUI), ppxai (Rich TUI), VSCode, Web
+  - Reuses existing `/show` command infrastructure - no parallel event systems
+  - INFO event with `execute_command` metadata triggers client-side `/show` command
+  - Graceful degradation: clients without interception just show the INFO message
+
+### Fixed - ppxaide TUI Performance
+
+- **UI responsiveness during streaming** - Worker threads with `call_from_thread()` prevent event loop blocking
+  - UI stays responsive during 30+ second HTTP waits
+  - Scrolling, history navigation work during streaming
+  - Footer status widget shows live elapsed timer
+- **CPU usage fix** - Timer cleanup safeguard prevents runaway processes
+- **VSCode extension cleanup** - Removed 10 unused imports from chatPanel.ts
+- **Copy button layout** - Moved to bottom of message bubble (matches VSCode)
+
+### Technical
+
+- Textual's `call_from_thread()` for thread-safe UI updates from worker threads
+- Worker threads with isolated asyncio event loops
+- Footer status widget with 100ms timer updates
+- Input box disabled during streaming to prevent concurrent requests
+- INFO events with metadata for client-agnostic command execution
+
+---
+
 ## [1.15.0] - 2026-01-26
 
 ### Added - New TUI Engine Integration

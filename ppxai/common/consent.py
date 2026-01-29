@@ -31,6 +31,63 @@ from ..constants import (
 logger = get_logger("tui")
 
 
+def normalize_consent_response(response: str) -> str:
+    """Normalize consent responses to standard enum values.
+
+    Handles all variations of user responses (case-insensitive, full words, abbreviations)
+    and returns the canonical ConsentResponse enum value.
+
+    Args:
+        response: User response (e.g., "yes", "Yes", "YES", "y", "Y", "always", "no", "n")
+
+    Returns:
+        Normalized response matching ConsentResponse enum:
+        - "y" for yes/approve
+        - "n" for no/deny
+        - "always" for always approve
+        - "never" for always deny
+
+    Examples:
+        >>> normalize_consent_response("yes")
+        'y'
+        >>> normalize_consent_response("YES")
+        'y'
+        >>> normalize_consent_response("y")
+        'y'
+        >>> normalize_consent_response("always")
+        'always'
+        >>> normalize_consent_response("ALWAYS")
+        'always'
+        >>> normalize_consent_response("no")
+        'n'
+        >>> normalize_consent_response("n")
+        'n'
+    """
+    if not response:
+        return ConsentResponse.NO  # Default to no for empty/None
+
+    response_lower = response.lower().strip()
+
+    # Map all variations to enum values
+    yes_variations = ["y", "yes", "approve", "ok", "allow"]
+    no_variations = ["n", "no", "deny", "cancel", "reject"]
+    always_variations = ["always", "a", "all"]
+    never_variations = ["never", "block", "none"]
+
+    if response_lower in yes_variations:
+        return ConsentResponse.YES  # "y"
+    elif response_lower in no_variations:
+        return ConsentResponse.NO   # "n"
+    elif response_lower in always_variations:
+        return ConsentResponse.ALWAYS  # "always"
+    elif response_lower in never_variations:
+        return ConsentResponse.NEVER   # "never"
+    else:
+        # Unknown response, default to no for safety
+        logger.warning(f"Unknown consent response '{response}', defaulting to 'no'")
+        return ConsentResponse.NO
+
+
 def classify_shell_command(command: str, config: Dict[str, List[str]]) -> str:
     """Classify shell command risk level.
 

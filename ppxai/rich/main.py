@@ -749,7 +749,8 @@ def main():
                         console, logger,
                         verbose=verbose,
                         theme_name=theme_name,
-                        emoji_mode=emoji_mode
+                        emoji_mode=emoji_mode,
+                        engine_client=handler.engine_client
                     )
 
                     # Check for pending consent requests before streaming

@@ -14,19 +14,9 @@ import { startServer, stopServer, onServerStatusChange } from './extension';
 
 // Import shared modules for command definitions and formatters
 import {
-    SLASH_COMMANDS,
-    generateHelpText,
-    isAIForwardedCommand,
-    parseCommand
+    generateHelpText
 } from './shared/commands';
 import {
-    formatToolsStatus,
-    formatToolsList,
-    formatToolConfig,
-    formatToolHelp,
-    formatAgentStatus,
-    formatCheckpointStatus,
-    formatCheckpointList,
     formatCheckpointInfo,
     formatCheckpointBackendHelp,
     formatUsageStats,

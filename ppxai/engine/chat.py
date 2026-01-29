@@ -360,6 +360,31 @@ async def chat_with_tools(
                     except Exception:
                         pass
 
+                # Emit DISPLAY_FILE event for display_file tool (v1.15.1)
+                logger.debug(f"[display_file] Tool executed: {tool_name}, args: {list(tool_args.keys())}")
+                if tool_name == "display_file" and "filepath" in tool_args:
+                    from pathlib import Path
+                    filepath = tool_args["filepath"]
+                    try:
+                        working_dir_str = ctx.get_working_dir() if hasattr(ctx, 'get_working_dir') else None
+                        working_dir = Path(working_dir_str) if working_dir_str else Path.cwd()
+                        path = Path(filepath).expanduser()
+                        if not path.is_absolute():
+                            path = working_dir / filepath
+                        path = path.resolve()
+
+                        if path.exists() and path.is_file():
+                            logger.debug(f"[display_file] Emitting DISPLAY_FILE event for: {path}")
+                            yield Event(EventType.DISPLAY_FILE, {
+                                "filepath": str(path)
+                            })
+                        else:
+                            logger.debug(f"[display_file] Path validation failed: exists={path.exists()}, is_file={path.is_file() if path.exists() else 'N/A'}")
+                    except Exception as e:
+                        # Log exception for debugging
+                        logger.debug(f"[display_file] Exception during event emission: {e}")
+                        pass
+
                 yield Event(EventType.TOOL_RESULT, {
                     "tool": tool_name,
                     "result": result[:2000] + "..." if len(result) > 2000 else result

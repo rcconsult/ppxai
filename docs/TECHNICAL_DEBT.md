@@ -1,7 +1,7 @@
 # Technical Debt Tracker
 
-**Last Updated:** 2026-01-28
-**Version:** v1.15.0 (type-based renderer architecture, event bus integration)
+**Last Updated:** 2026-01-29
+**Version:** v1.15.1 (ppxaide TUI performance fixes, VSCode cleanup)
 
 This document tracks identified technical debt and refactoring opportunities in the ppxai codebase. Items are removed as they are addressed.
 

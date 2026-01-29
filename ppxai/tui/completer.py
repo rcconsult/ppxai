@@ -1,8 +1,14 @@
 """
 Autocomplete logic for Textual TUI.
 
-Provides completions for slash commands, @file references, model names,
-provider names, and subcommands.
+Provides completions for:
+- Slash commands (/help, /model, /tools, etc.)
+- Subcommands (/tools enable, /checkpoint backend git, etc.)
+- File arguments for commands (/show README.md, /edit src/main.py)
+- Context providers (@file, @git, @tree, @clipboard, @url)
+- Model names (dynamic from current provider)
+- Provider names (dynamic from config)
+- Theme names
 """
 
 import time
@@ -25,8 +31,10 @@ class TextualCompleter:
     # Context providers (in addition to @file)
     CONTEXT_PROVIDERS = [
         ('@file', 'Include file contents'),
-        ('@clipboard', 'Include clipboard contents'),
-        ('@url', 'Fetch and include URL contents'),
+        ('@git', 'Include git diff (staged + unstaged)'),
+        ('@tree', 'Include project directory structure'),
+        ('@clipboard', 'Include clipboard text content'),
+        ('@url', 'Fetch and include URL content'),
     ]
 
     # Subcommands for various commands
@@ -99,6 +107,11 @@ class TextualCompleter:
         Returns:
             List of (completion_text, description) tuples
         """
+        # Priority 0: File commands (/show, /edit, /cat) - return plain filenames
+        text_lower = text.lower()
+        if text_lower.startswith(('/show ', '/edit ', '/cat ')):
+            return self._complete_file_argument(text)
+
         # Priority 1: @context providers (anywhere in text)
         at_pos = text.rfind('@')
         if at_pos >= 0:
@@ -145,6 +158,46 @@ class TextualCompleter:
 
         return completions[:20]  # Limit to 20 completions
 
+    def _complete_file_argument(self, text: str) -> list[tuple[str, str]]:
+        """Complete file arguments for /show, /edit, /cat commands.
+
+        Returns plain filenames (no @ prefix) for terminal-like UX.
+
+        Args:
+            text: Full input text (e.g., "/show REA")
+
+        Returns:
+            List of (filename, filepath) tuples
+        """
+        # Extract the file query after the command
+        parts = text.split(None, 1)  # Split on first whitespace
+        if len(parts) < 2:
+            # Just "/show" with no query - return all files
+            query = ""
+        else:
+            # "/show READ" - extract "READ"
+            query = parts[1].strip()
+
+        # Remove @ prefix if user typed it (for backward compatibility)
+        query = query.lstrip('@')
+
+        # Check if query is a directory path (contains path separator)
+        is_dir_path = '/' in query or '\\' in query
+
+        # Get files matching query
+        completions = []
+        for filename, filepath in self._get_files():
+            if not query or query.lower() in filename.lower() or query.lower() in filepath.lower():
+                # For directory paths, return full relative path
+                # Example: "/show src/" should complete to "/show src/main.py", not "/show main.py"
+                if is_dir_path:
+                    completions.append((filepath, filepath))
+                else:
+                    # For simple queries, just return filename
+                    completions.append((filename, filepath))
+
+        return completions[:20]  # Limit to 20 completions
+
     def _complete_command(self, text: str) -> list[tuple[str, str]]:
         """Complete slash commands and subcommands.
 
@@ -156,6 +209,13 @@ class TextualCompleter:
         """
         parts = text.split()
         cmd_text = text.lower()
+
+        # If text ends with whitespace, user is asking for next part
+        # Example: "/tools " should complete subcommands, not slash commands
+        has_trailing_space = text and text[-1].isspace()
+        if has_trailing_space and len(parts) >= 1:
+            # Add empty string to represent the part being typed
+            parts.append('')
 
         # Handle subcommands
         if len(parts) >= 2:
@@ -234,7 +294,7 @@ class TextualCompleter:
             return []
 
         completions = []
-        current_provider = self.engine_client.provider
+        current_provider = self.engine_client.provider_name  # Use provider_name (string), not provider (object)
 
         # Get models for current provider
         provider_config = get_provider_config(current_provider)

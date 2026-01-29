@@ -1,9 +1,9 @@
 # Release Plan: v1.15.x Series
 
 **Created:** January 24, 2026
-**Last Updated:** January 28, 2026 (Phase 7 Complete - Ready for Release)
-**Status:** ✅ COMPLETE - Ready for Merge to Master
-**Branch:** feature/new-tui-command
+**Last Updated:** January 29, 2026 (v1.15.1 Released)
+**Status:** ✅ v1.15.0 RELEASED, v1.15.1 RELEASED
+**Branch:** feature/1-15-1 (merged to master)
 **Tests:** 1105 passing
 
 ---

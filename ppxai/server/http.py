@@ -1803,12 +1803,12 @@ async def respond_to_consent(
     # Determine session ID (use default if not provided)
     session_id = x_session_id or "default"
 
-    file_path = request.file_path
-    response = request.response.lower()
+    from ppxai.common.consent import normalize_consent_response
 
-    # Validate response
-    if response not in ['y', 'n', 'always', 'never']:
-        raise HTTPException(status_code=400, detail=f"Invalid response: {response}. Must be y, n, always, or never")
+    file_path = request.file_path
+
+    # Normalize response to standard enum value (handles yes/Yes/YES/y/etc.)
+    response = normalize_consent_response(request.response)
 
     # Resolve via SessionManager (v1.13.10)
     resolved = await session_manager.resolve_consent(session_id, file_path, response)
@@ -1848,12 +1848,12 @@ async def respond_to_shell_consent(
     # Determine session ID (use default if not provided)
     session_id = x_session_id or "default"
 
-    command = request.command
-    response = request.response.lower()
+    from ppxai.common.consent import normalize_consent_response
 
-    # Validate response
-    if response not in ['y', 'n', 'always', 'never']:
-        raise HTTPException(status_code=400, detail=f"Invalid response: {response}. Must be y, n, always, or never")
+    command = request.command
+
+    # Normalize response to standard enum value (handles yes/Yes/YES/y/etc.)
+    response = normalize_consent_response(request.response)
 
     # Resolve via SessionManager (v1.13.10)
     resolved = await session_manager.resolve_shell_consent(session_id, command, response)

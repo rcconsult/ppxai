@@ -11,6 +11,7 @@ This is the core application class that manages:
 
 import asyncio
 import os
+import threading
 from pathlib import Path
 from typing import Optional
 
@@ -21,6 +22,7 @@ from textual.message import Message
 from textual.widgets import Header, Footer, Static, Input, RichLog
 
 from ppxai.tui.widgets.status_bar import StatusBar
+from ppxai.tui.widgets.footer_status import FooterStatus
 from ppxai.tui.widgets.chat_view import ChatView
 from ppxai.tui.widgets.input_box import InputBox
 from ppxai.tui.widgets.side_panel import SidePanel
@@ -72,19 +74,18 @@ class PPXAIDEApp(App):
     SPLIT_RATIOS = [30, 40, 50, 60, 70]
     DEFAULT_SPLIT_INDEX = 2  # 50%
 
-    # Custom message for triggering consent dialog display
-    class ShowConsentDialog(Message):
-        """Message to trigger consent dialog display from main event loop."""
-        pass
-
-    def __init__(self):
+    def __init__(self, debug_logging: bool = False):
         super().__init__()
         # Use ppxai's logger instead of Textual's self.log (which doesn't write to our log file)
         from ppxai.common.logger import get_logger
         self._log = get_logger("tui")
 
+        # Debug mode controls event bus logging and handler verbosity
+        self._debug_logging = debug_logging
+
         # Event bus for decoupled component communication (v1.15.0 blinker integration)
-        self._event_bus = EventBus(log_events=True)
+        # Only log events when debug mode is enabled (--debug/--trace or /debug-log on)
+        self._event_bus = EventBus(log_events=self._debug_logging)
 
         self._current_theme_index = 0
         self._engine_client: Optional[EngineClient] = None
@@ -98,15 +99,12 @@ class PPXAIDEApp(App):
         # Streaming state (Phase 6.1)
         self._current_message_content = ""
         self._is_streaming = False
-        # Thinking/waiting indicator (like web app)
-        self._thinking_message: Optional["MessageBox"] = None
         # Reasoning token state (DeepSeek R1, GPT-OSS thinking)
         self._reasoning_started = False
         self._reasoning_content = ""
         self._reasoning_message: Optional["MessageBox"] = None  # For streaming updates
-
-        # Consent dialog state (for async dialog during streaming)
-        self._pending_consent: Optional[dict] = None
+        self._reasoning_update_pending = False  # Throttling flag
+        self._reasoning_update_timer = None  # Timer for throttled updates
 
     def compose(self) -> ComposeResult:
         """Compose the application layout with split view support."""
@@ -124,6 +122,7 @@ class PPXAIDEApp(App):
                 yield InputBox(id="input-box")
             # Right pane: side panel (hidden by default)
             yield SidePanel(id="side-panel")
+        yield FooterStatus()
         yield Footer()
 
     async def on_mount(self) -> None:
@@ -290,6 +289,8 @@ class PPXAIDEApp(App):
         self._event_bus.on(Events.ENGINE_TOOL_CALL, self._on_tool_call)
         self._event_bus.on(Events.ENGINE_TOOL_RESULT, self._on_tool_result)
         self._event_bus.on(Events.ENGINE_TOOL_ERROR, self._on_tool_error)
+        self._event_bus.on(Events.ENGINE_DISPLAY_FILE, self._on_display_file)
+        self._event_bus.on(Events.ENGINE_CONSENT_FILE, self._on_consent_request)
         self._event_bus.on(Events.ENGINE_ERROR, self._on_engine_error)
         self._event_bus.on(Events.ENGINE_INFO, self._on_engine_info)
         self._event_bus.on(Events.ENGINE_WORKING_DIR_CHANGED, self._on_working_dir_changed)
@@ -381,10 +382,10 @@ class PPXAIDEApp(App):
     async def _show_consent_dialog(
         self, title: str, message: str, question: str
     ) -> tuple[bool, str]:
-        """Show consent dialog during streaming using callback pattern.
+        """Show consent dialog during streaming using threading.Event pattern.
 
-        Uses push_screen with callback instead of push_screen_wait to avoid
-        blocking the event loop. A Future is used to await the result.
+        When called from worker thread, uses call_from_thread to show dialog in main thread.
+        Uses threading.Event for synchronization between threads.
 
         Args:
             title: Dialog title
@@ -392,83 +393,62 @@ class PPXAIDEApp(App):
             question: Question to ask
 
         Returns:
-            tuple: (approved: bool, response: str)
+            tuple: (approved: bool, response: str) - response is normalized to ConsentResponse enum
         """
+        import threading
+        from ppxai.common.consent import normalize_consent_response
+        from ppxai.constants import ConsentResponse
+
         self._log.info(f"Showing consent dialog: {title}")
 
-        # Create a Future to wait for the dialog result
-        loop = asyncio.get_event_loop()
-        future: asyncio.Future[str] = loop.create_future()
+        # Create threading event and result container for cross-thread communication
+        consent_event = threading.Event()
+        consent_result = {"response": "no"}
 
-        # Store pending consent info
-        self._pending_consent = {
-            "title": title,
-            "message": message,
-            "question": question,
-            "future": future
-        }
+        def show_dialog_in_main_thread():
+            """Show dialog in main Textual thread."""
+            from ppxai.tui.widgets.dialog import ConsentDialog
 
-        # Post message to trigger dialog display from main event loop
-        # This ensures the dialog is shown in the correct context
-        self.post_message(self.ShowConsentDialog())
+            def on_dialog_dismiss(response: str) -> None:
+                """Callback when dialog is dismissed."""
+                self._log.info(f"Dialog dismissed with response: {response}")
+                consent_result["response"] = response or "no"
+                consent_event.set()
 
-        # Wait for the future to be resolved by the callback
-        # This yields control to the event loop, allowing UI to remain responsive
-        try:
-            response = await future
-        except Exception as e:
-            self._log.error(f"Consent dialog await error: {e}")
-            response = "no"
+            # Show dialog with callback (CORRECT: callback passed to push_screen, not dialog)
+            dialog = ConsentDialog(
+                title=title,
+                message=message,
+                question=question
+            )
+            self.push_screen(dialog, on_dialog_dismiss)
 
-        # Process response
-        response_lower = response.lower() if response else "no"
+        # Use call_from_thread to show dialog in main thread (thread-safe)
+        self.call_from_thread(show_dialog_in_main_thread)
 
-        if response_lower == "yes":
-            self._log.info("Consent approved")
-            return (True, "yes")
-        elif response_lower == "always":
+        # Wait for user response (blocks worker thread, not main thread)
+        consent_event.wait()
+
+        # Normalize response to ConsentResponse enum value
+        raw_response = consent_result["response"]
+        normalized_response = normalize_consent_response(raw_response)
+
+        # Determine approval status and log
+        approved = normalized_response in (ConsentResponse.YES, ConsentResponse.ALWAYS)
+
+        if normalized_response == ConsentResponse.YES:
+            self._log.info("Consent approved (this file only)")
+        elif normalized_response == ConsentResponse.ALWAYS:
             self._log.info("All actions approved for this session")
-            return (True, "always")
-        elif response_lower == "never":
+        elif normalized_response == ConsentResponse.NEVER:
             self._log.info("All actions blocked for this session")
-            return (False, "never")
-        else:  # "no" or cancelled
+        else:  # NO
             self._log.info("Consent denied")
-            return (False, "no")
 
-    def on_ppxaide_app_show_consent_dialog(self, event: ShowConsentDialog) -> None:
-        """Handle ShowConsentDialog message - display the consent dialog.
+        return (approved, normalized_response)
 
-        This handler runs in the main event loop context where push_screen works.
-        Uses callback pattern to resolve the pending Future when dialog dismisses.
-        """
-        if not self._pending_consent:
-            self._log.warning("ShowConsentDialog received but no pending consent")
-            return
-
-        from ppxai.tui.widgets.dialog import ConsentDialog
-
-        info = self._pending_consent
-        future = info["future"]
-
-        def on_dialog_dismiss(response: str) -> None:
-            """Callback when dialog is dismissed."""
-            self._log.info(f"Dialog dismissed with response: {response}")
-            # Resolve the future with the response
-            if not future.done():
-                future.set_result(response or "no")
-            self._pending_consent = None
-
-        # Push the modal screen with callback (non-blocking)
-        self.push_screen(
-            ConsentDialog(
-                title=info["title"],
-                message=info["message"],
-                question=info["question"],
-                options=["Yes", "No", "Always", "Never"]
-            ),
-            callback=on_dialog_dismiss
-        )
+    # Removed: on_ppxaide_app_show_consent_dialog - no longer using message-based consent
+    # Now using call_from_thread + threading.Event for direct cross-thread communication
 
     def _update_datetime(self) -> None:
         """Update datetime badge every minute (Phase 1.2)."""
@@ -827,10 +807,25 @@ class PPXAIDEApp(App):
 
         self._log.info(f"Theme changed: {old_theme} → {new_theme}, syntax: {syntax_theme}")
 
+    async def on_input_box_status_update(self, event: InputBox.StatusUpdate) -> None:
+        """Handle completion status messages from InputBox."""
+        # Show as toast notification with brief timeout
+        self.notify(event.text, timeout=2)
+
     async def on_input_box_submitted(self, event: InputBox.Submitted) -> None:
         """Handle user input submission (Phase 6.1 - Engine integration)."""
         message = event.value.strip()
         if not message:
+            return
+
+        # Prevent concurrent submissions while streaming
+        if self._is_streaming:
+            self.notify(
+                "Please wait for the current response to complete",
+                title="Streaming in Progress",
+                severity="warning",
+                timeout=3,
+            )
             return
 
         # Add to session command history for persistence (matches Rich TUI behavior)
@@ -847,88 +842,140 @@ class PPXAIDEApp(App):
         # Add user message to chat
         chat_view.add_user_message(message)
 
-        # Stream response from engine
+        # Stream response from engine using Textual's call_from_thread()
         if self._engine_client:
-            await self._stream_response(message)
+            # Setup in main thread (UI-safe)
+            status_bar = self.query_one(StatusBar)
+            self._current_message_content = ""
+            self._is_streaming = True
+            self._reasoning_started = False
+            self._reasoning_content = ""
+            self._reasoning_message = None
+
+            # Track timing
+            import time
+            self._response_start_time = time.time()
+
+            # Show streaming indicator in footer
+            footer_status = self.query_one(FooterStatus)
+            footer_status.set_thinking()
+
+            self._log.info("Stream setup complete, starting worker thread")
+
+            # Start worker thread (doesn't block UI)
+            # Worker will use call_from_thread() to emit events in main thread
+            thread = threading.Thread(
+                target=self._stream_response_thread,
+                args=(message, self._engine_client),
+                daemon=True
+            )
+            thread.start()
         else:
             chat_view.add_system_message(
                 "[yellow]Engine not initialized[/yellow]"
             )
 
-    async def _stream_response(self, user_input: str) -> None:
-        """Stream AI response from engine (Phase 6.1).
+    def _stream_response_thread(self, user_input: str, engine_client) -> None:
+        """Worker thread: Stream from engine without blocking Textual's event loop.
+
+        Uses Textual's call_from_thread() to safely emit events in main thread.
 
         Args:
             user_input: User's message
+            engine_client: Engine client instance (passed to avoid thread access issues)
         """
-        chat_view = self.query_one("#chat-view", ChatView)
-        status_bar = self.query_one(StatusBar)
-
-        # Reset streaming state
-        self._current_message_content = ""
-        self._is_streaming = True
-
-        # Debug: Log state at start
-        self._log.info(f"=== _stream_response START ===")
-        self._log.info(f"user_input: {user_input[:50]}...")
-        self._log.info(f"provider: {self._provider}, model: {self._model}")
-        self._log.info(f"engine_client: {self._engine_client is not None}")
-        if self._engine_client:
-            self._log.info(f"engine provider: {self._engine_client.provider_name}")
-            self._log.info(f"engine model: {self._engine_client.model}")
-            self._log.info(f"engine provider object: {self._engine_client.provider}")
-
-        # Show processing indicator
-        status_bar.add_badge("streaming", "AI", "●", variant="warning")
-        self._log.info("Added streaming badge")
-
-        # Show thinking indicator BEFORE event loop (guaranteed to display)
-        # This bypasses the async event bus race condition
-        from ppxai.tui.widgets.message_box import MessageBox
-        self._current_message_content = ""
-        self._reasoning_started = False
-        self._reasoning_content = ""
-        self._reasoning_message = None
-        self._thinking_message = MessageBox(
-            content="[dim italic]⏳ Thinking...[/dim italic]",
-            role="system",
-            streaming=True
-        )
-        chat_view._messages.append(self._thinking_message)
-        await chat_view.mount(self._thinking_message)
-        chat_view.scroll_end(animate=True)
-        self._log.info("Showing thinking indicator")
-
+        # Create new event loop for this thread
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         try:
-            event_count = 0
-            self._log.info("About to call self._engine_client.chat()")
+            loop.run_until_complete(self._stream_response(user_input, engine_client))
+        finally:
+            # Signal end of stream using call_from_thread (thread-safe)
+            self.call_from_thread(self._handle_stream_end)
+            loop.close()
+
+    def _handle_stream_end(self) -> None:
+        """Handle stream completion (called via call_from_thread)."""
+        # Cleanup: clear footer status, reset state
+        footer_status = self.query_one(FooterStatus)
+        footer_status.clear()
+        self._is_streaming = False
+        self._log.info("Stream complete, cleaned up")
+
+    def _handle_stream_error(self, error_msg: str) -> None:
+        """Handle stream error (called via call_from_thread)."""
+        chat_view = self.query_one("#chat-view", ChatView)
+        chat_view.add_system_message(f"[red]Stream error:[/red] {error_msg}")
+        self._log.error(f"Stream error from thread: {error_msg}")
+
+        # Cleanup: clear footer status, reset state
+        footer_status = self.query_one(FooterStatus)
+        footer_status.clear()
+        self._is_streaming = False
+
+    def _handle_stream_event(self, event_type: str, event_data: any) -> None:
+        """Handle stream event in main thread (called via call_from_thread).
+
+        Args:
+            event_type: Type of event from engine
+            event_data: Event data
+        """
+        # Convert to Event object and emit via event bus
+        from ppxai.engine.types import EventType, Event
+
+        event = Event(type=EventType[event_type], data=event_data)
+
+        # Emit via event bus (same as before, but now in main thread)
+        event_map = {
+            EventType.STREAM_START: Events.ENGINE_STREAM_START,
+            EventType.STREAM_CHUNK: Events.ENGINE_STREAM_CHUNK,
+            EventType.REASONING_CHUNK: Events.ENGINE_REASONING_CHUNK,
+            EventType.STREAM_END: Events.ENGINE_STREAM_END,
+            EventType.TOOL_CALL: Events.ENGINE_TOOL_CALL,
+            EventType.TOOL_RESULT: Events.ENGINE_TOOL_RESULT,
+            EventType.TOOL_ERROR: Events.ENGINE_TOOL_ERROR,
+            EventType.ERROR: Events.ENGINE_ERROR,
+            EventType.INFO: Events.ENGINE_INFO,
+            EventType.WORKING_DIR_CHANGED: Events.ENGINE_WORKING_DIR_CHANGED,
+            EventType.DISPLAY_FILE: Events.ENGINE_DISPLAY_FILE,
+            EventType.CONSENT_REQUEST: Events.ENGINE_CONSENT_FILE,  # For logging only
+        }
+
+        if event.type in event_map:
+            bus_event = event_map[event.type]
+            self._event_bus.emit(bus_event, data=event.data, event_type=event.type)
+        else:
+            # Log unknown events for debugging
+            if self._debug_logging:
+                self._log.debug(f"Unhandled event type: {event.type}")
+
+    async def _stream_response(self, user_input: str, engine_client) -> None:
+        """Stream AI response from engine (runs in thread's event loop).
+
+        Uses call_from_thread() to safely handle events in main thread.
+
+        Args:
+            user_input: User's message
+            engine_client: Engine client instance (passed from thread creator)
+        """
+        try:
+            self._log.info(f"Thread: Starting stream for: {user_input[:50]}...")
 
             # Stream events from engine
-            async for event in self._engine_client.chat(user_input, stream=True):
+            event_count = 0
+            async for event in engine_client.chat(user_input, stream=True):
                 event_count += 1
-                self._log.info(f"Received event #{event_count}: type={event.type}, data_len={len(str(event.data)) if event.data else 0}")
-                await self._handle_event(event)
+                self._log.info(f"Thread: Event #{event_count}: {event.type.name}")
 
-            self._log.info(f"Chat loop finished, total events: {event_count}")
+                # Use call_from_thread to handle event in main thread (thread-safe)
+                self.call_from_thread(self._handle_stream_event, event.type.name, event.data)
 
-            # If no events at all, show debug info
-            if event_count == 0:
-                self._log.warning("No events received from engine!")
-                chat_view.add_system_message(
-                    "[yellow]No response from AI provider. Check provider/model configuration.[/yellow]\n"
-                    f"[dim]Provider: {self._provider}, Model: {self._model}[/dim]"
-                )
+            self._log.info(f"Thread: Stream finished, {event_count} events")
 
         except Exception as e:
-            self._log.error(f"Stream error: {e}")
-            import traceback
-            self._log.error(traceback.format_exc())
-            chat_view.add_system_message(f"[red]Error:[/red] {e}")
-        finally:
-            self._is_streaming = False
-            # Remove processing indicator
-            status_bar.remove_badge("streaming")
-            self._log.info("=== _stream_response END ===")
+            self._log.error(f"Thread: Stream error: {e}")
+            # Handle error in main thread
+            self.call_from_thread(self._handle_stream_error, str(e))
 
     async def _handle_event(self, event: Event) -> None:
         """Handle engine events during streaming - bridge to event bus.
@@ -952,6 +999,8 @@ class PPXAIDEApp(App):
             EventType.ERROR: Events.ENGINE_ERROR,
             EventType.INFO: Events.ENGINE_INFO,
             EventType.WORKING_DIR_CHANGED: Events.ENGINE_WORKING_DIR_CHANGED,
+            EventType.DISPLAY_FILE: Events.ENGINE_DISPLAY_FILE,
+            EventType.CONSENT_REQUEST: Events.ENGINE_CONSENT_FILE,  # For logging only
         }
 
         # Emit event via bus with data
@@ -959,7 +1008,9 @@ class PPXAIDEApp(App):
             bus_event = event_map[event.type]
             self._event_bus.emit(bus_event, data=event.data, event_type=event.type)
         else:
-            self._log.warning(f"Unknown event type: {event.type}")
+            # Log unknown events for debugging
+            if self._debug_logging:
+                self._log.debug(f"Unhandled event type: {event.type}")
 
     # Event handlers - subscribed to event bus
 
@@ -970,42 +1021,47 @@ class PPXAIDEApp(App):
         BEFORE the event loop to avoid async race conditions. This handler
         just logs for debugging.
         """
-        self._log.debug("[Event] STREAM_START received (thinking indicator already shown)")
+        if self._debug_logging:
+            self._log.debug("[Event] STREAM_START received (thinking indicator already shown)")
 
     async def _on_stream_chunk(self, sender, data, **kwargs) -> None:
         """Handle STREAM_CHUNK event.
 
         Removes thinking indicator on first chunk (content is arriving).
+        Accumulates text; markdown rendering happens at STREAM_END like Rich TUI.
         """
-        # Clear thinking indicator on first content chunk
-        if self._thinking_message and not self._current_message_content:
+        # Clear thinking indicator on first chunk
+        if not self._current_message_content:
             self._clear_thinking_indicator()
+            if self._debug_logging:
+                self._log.debug("[Event] First chunk received, cleared thinking indicator")
 
+        # Accumulate content - no UI update yet (like Rich TUI)
         self._current_message_content += data
-        self._log.debug(f"[Event] Chunk: {len(data)} chars")
+
+        if self._debug_logging:
+            self._log.debug(f"[Event] Chunk: {len(data)} chars, total: {len(self._current_message_content)}")
 
     def _clear_thinking_indicator(self) -> None:
-        """Clear the thinking indicator message.
+        """Clear the thinking indicator from footer.
 
         Called when content or reasoning starts arriving.
         """
-        if self._thinking_message:
-            try:
-                chat_view = self.query_one("#chat-view", ChatView)
-                if self._thinking_message in chat_view._messages:
-                    chat_view._messages.remove(self._thinking_message)
-                self._thinking_message.remove()
-                self._log.debug("[Event] Cleared thinking indicator")
-            except Exception as e:
-                self._log.debug(f"[Event] Could not clear thinking indicator: {e}")
-            finally:
-                self._thinking_message = None
+        try:
+            footer_status = self.query_one(FooterStatus)
+            footer_status.set_streaming()  # Change from "Thinking..." to "Streaming..."
+            if self._debug_logging:
+                self._log.debug("[Event] Changed footer status to streaming")
+        except Exception as e:
+            if self._debug_logging:
+                self._log.debug(f"[Event] Could not update footer status: {e}")
 
     async def _on_reasoning_chunk(self, sender, data, **kwargs) -> None:
         """Handle REASONING_CHUNK event (DeepSeek R1, GPT-OSS thinking tokens).
 
         Streams reasoning/thinking tokens in real-time like Rich TUI.
-        Shows reasoning with dim italic styling, updated incrementally.
+        Shows reasoning with italic styling (without dim for better visibility).
+        Throttles updates to 100ms intervals when not in debug mode.
         """
         from ppxai.tui.widgets.message_box import MessageBox
 
@@ -1017,24 +1073,48 @@ class PPXAIDEApp(App):
             # Clear thinking indicator (reasoning replaces it)
             self._clear_thinking_indicator()
             # Create a system message that we'll update with streaming content
+            # Removed [dim] for better visibility
             self._reasoning_message = MessageBox(
-                content="[dim italic]💭 Thinking...[/dim italic]",
+                content="[italic]💭 Thinking...[/italic]",
                 role="system",
                 streaming=True
             )
             chat_view._messages.append(self._reasoning_message)
             chat_view.mount(self._reasoning_message)
-            chat_view.scroll_end(animate=True)
-            self._log.debug("[Event] Reasoning started")
+            # Scroll without animation to avoid blocking user input
+            chat_view.scroll_end(animate=False)
+            # Force refresh so reasoning bubble appears immediately
+            chat_view.refresh()
+            if self._debug_logging:
+                self._log.debug("[Event] Reasoning started")
 
-        # Accumulate and stream reasoning content
+        # Accumulate reasoning content
         self._reasoning_content += data
 
-        # Update the reasoning message with accumulated content (streaming style)
-        if self._reasoning_message:
-            self._reasoning_message.content = f"[dim italic]💭 Thinking...\n{self._reasoning_content}[/dim italic]"
+        if self._debug_logging:
+            self._log.debug(f"[Event] Reasoning chunk: {len(data)} chars, total: {len(self._reasoning_content)}")
 
-        self._log.debug(f"[Event] Reasoning chunk: {len(data)} chars")
+        # Throttle updates when not in debug mode (100ms batching for performance)
+        # In debug mode, update immediately for visibility
+        if self._debug_logging:
+            # Debug mode: immediate updates for visibility
+            self._update_reasoning_display()
+        else:
+            # Production mode: throttle to 10 updates/sec max
+            if not self._reasoning_update_pending:
+                self._reasoning_update_pending = True
+                self.set_timer(0.1, self._update_reasoning_display)
+
+    def _update_reasoning_display(self) -> None:
+        """Update reasoning bubble display with accumulated content.
+
+        Called either immediately (debug mode) or throttled (production mode).
+        """
+        if self._reasoning_message:
+            # Update with accumulated content (without dim for better visibility)
+            self._reasoning_message.content = f"[italic]💭 Thinking...\n{self._reasoning_content}[/italic]"
+        # Reset throttle flag
+        self._reasoning_update_pending = False
 
     async def _on_stream_end(self, sender, data, **kwargs) -> None:
         """Handle STREAM_END event."""
@@ -1069,15 +1149,23 @@ class PPXAIDEApp(App):
         if final_response.strip():
             # If reasoning was streamed, finalize the reasoning message and add separator
             if self._reasoning_message and self._reasoning_content:
-                # Mark reasoning as complete (update title)
-                self._reasoning_message.content = f"[dim italic]💭 Thought process:\n{self._reasoning_content}[/dim italic]"
+                # Flush any pending throttled updates before finalizing
+                self._update_reasoning_display()
+                # Mark reasoning as complete - keep visible without dim for readability
+                self._reasoning_message.content = f"[italic]💭 Thought process:\n{self._reasoning_content}[/italic]"
                 self._reasoning_message.streaming = False
                 # Add separator like Rich TUI
                 chat_view.add_system_message("[dim]───[/dim]")
-                self._log.info(f"Finalized reasoning message: {len(self._reasoning_content)} chars")
+                if self._debug_logging:
+                    self._log.info(f"Finalized reasoning message: {len(self._reasoning_content)} chars")
 
-            chat_view.add_assistant_message(final_response)
-            self._log.info(f"Added assistant message: {len(final_response)} chars")
+            # Calculate response time
+            import time
+            response_time = time.time() - self._response_start_time if hasattr(self, '_response_start_time') else 0.0
+
+            # Render markdown once with full content (like Rich TUI)
+            chat_view.add_assistant_message(final_response, response_time=response_time)
+            self._log.info(f"Added assistant message: {len(final_response)} chars, {response_time:.1f}s")
         else:
             self._log.warning("STREAM_END with no content to display")
 
@@ -1130,7 +1218,8 @@ class PPXAIDEApp(App):
             # Non-verbose: just show tool name inline (no separate message bubble)
             chat_view.add_system_message(f"[cyan]→ Calling tool: {tool_name}[/cyan]")
 
-        self._log.debug(f"[Event] Added tool call message for: {tool_name}")
+        if self._debug_logging:
+            self._log.debug(f"[Event] Added tool call message for: {tool_name}")
 
     async def _on_tool_result(self, sender, data, **kwargs) -> None:
         """Handle TOOL_RESULT event."""
@@ -1139,7 +1228,8 @@ class PPXAIDEApp(App):
         tool_name = data.get("tool", "unknown")
         result = data.get("result", "")
         result_str = str(result) if result else ""
-        self._log.debug(f"[Event] Tool result from {tool_name}: {len(result_str)} chars")
+        if self._debug_logging:
+            self._log.debug(f"[Event] Tool result from {tool_name}: {len(result_str)} chars")
 
         # Only show full result if verbose mode enabled
         if self._tools_verbose:
@@ -1160,6 +1250,36 @@ class PPXAIDEApp(App):
 
         chat_view.add_tool_message(f"{tool_name} [red]ERROR[/red]", f"[red]{error_msg}[/red]")
 
+    async def _on_display_file(self, sender, data, **kwargs) -> None:
+        """Handle DISPLAY_FILE event - AI-triggered file display.
+
+        v1.15.1: When AI calls display_file tool, this opens the file
+        in the side panel by executing the /show command.
+        """
+        if not data or not isinstance(data, dict):
+            self._log.error("[Event] DISPLAY_FILE: Invalid data")
+            return
+
+        filepath = data.get("filepath")
+        if not filepath:
+            self._log.error("[Event] DISPLAY_FILE: No filepath provided")
+            return
+
+        # Execute /show command with the filepath
+        self._log.info(f"[Event] DISPLAY_FILE: Opening {filepath}")
+        await self._handle_command(f"/show {filepath}")
+
+    async def _on_consent_request(self, sender, data, **kwargs) -> None:
+        """Handle CONSENT_REQUEST event - for logging/notification only.
+
+        Actual consent handling is done via callback mechanism
+        (_file_edit_consent_handler, _shell_consent_handler).
+        This event is just emitted for logging purposes.
+        """
+        if self._debug_logging:
+            if data and isinstance(data, dict):
+                self._log.debug(f"[Event] Consent requested: {data}")
+
     async def _on_engine_error(self, sender, data, **kwargs) -> None:
         """Handle ENGINE_ERROR event."""
         chat_view = self.query_one("#chat-view", ChatView)
@@ -1170,7 +1290,8 @@ class PPXAIDEApp(App):
     async def _on_engine_info(self, sender, data, **kwargs) -> None:
         """Handle ENGINE_INFO event."""
         chat_view = self.query_one("#chat-view", ChatView)
-        self._log.debug(f"[Event] Engine info: {data}")
+        if self._debug_logging:
+            self._log.debug(f"[Event] Engine info: {data}")
 
         chat_view.add_system_message(f"[dim]{data}[/dim]")
 
@@ -1178,9 +1299,15 @@ class PPXAIDEApp(App):
         """Handle WORKING_DIR_CHANGED event."""
         path = data.get("path", "") if isinstance(data, dict) else str(data)
         if path:
-            self._log.debug(f"[Event] Working directory changed: {path}")
+            if self._debug_logging:
+                self._log.debug(f"[Event] Working directory changed: {path}")
             # Update internal state
             self._working_dir = path
+
+            # Update completer's working directory for file completions
+            input_box = self.query_one("#input-box", InputBox)
+            if input_box._completer:
+                input_box._completer.update_working_dir(Path(path))
 
             # Update status bar cwd badge if visible
             from ppxai.config import get_tui_config
@@ -1250,6 +1377,11 @@ class PPXAIDEApp(App):
             self.exit()
             return
 
+        # Special case: debug-log (TUI-specific, not in command factory)
+        if cmd == "debug-log":
+            await self._handle_debug_log_command(args)
+            return
+
         # Handle /<command> help pattern - redirect to /help <command>
         # e.g., "/usage help" becomes "/help usage"
         if args.strip().lower() == "help" and cmd != "help":
@@ -1261,14 +1393,17 @@ class PPXAIDEApp(App):
         if spec:
             try:
                 # Call command handler with context
-                self._log.debug(f"Calling handler for command: {cmd} with args: {args}")
+                if self._debug_logging:
+                    self._log.debug(f"Calling handler for command: {cmd} with args: {args}")
                 result = spec.handler(self, args)
-                self._log.debug(f"Handler returned: {type(result).__name__}")
+                if self._debug_logging:
+                    self._log.debug(f"Handler returned: {type(result).__name__}")
 
                 # Check if result is a coroutine (async handler)
                 import inspect
                 if inspect.iscoroutine(result):
-                    self._log.debug(f"Handler returned coroutine, awaiting it")
+                    if self._debug_logging:
+                        self._log.debug(f"Handler returned coroutine, awaiting it")
                     result = await result
 
                 # Render result if it's a CommandResult type
@@ -1311,6 +1446,11 @@ class PPXAIDEApp(App):
                     if engine_working_dir != self._working_dir:
                         self._working_dir = engine_working_dir
                         self._log.info(f"Working directory synced: {engine_working_dir}")
+
+                        # Update completer working directory for file completions
+                        input_box = self.query_one("#input-box", InputBox)
+                        if input_box._completer:
+                            input_box._completer.update_working_dir(Path(engine_working_dir))
 
                 # Handle status bar toggle commands (Phase 1.2)
                 if cmd == "status" and args and args.split()[0] in ("version", "cwd", "datetime"):
@@ -1434,6 +1574,42 @@ class PPXAIDEApp(App):
             chat_view.add_system_message(
                 f"[yellow]Unknown command: /{cmd}[/yellow]\n"
                 "Type /help for available commands."
+            )
+
+    async def _handle_debug_log_command(self, args: str) -> None:
+        """Handle /debug-log command to toggle verbose event logging.
+
+        Usage:
+            /debug-log on   - Enable event bus and handler logging
+            /debug-log off  - Disable event bus and handler logging
+            /debug-log      - Show current status
+        """
+        chat_view = self.query_one("#chat-view", ChatView)
+        args = args.strip().lower()
+
+        if not args:
+            # Show current status
+            status = "enabled" if self._debug_logging else "disabled"
+            chat_view.add_system_message(
+                f"[bold]Debug Logging:[/bold] {status}\n"
+                f"Use [cyan]/debug-log on[/cyan] or [cyan]/debug-log off[/cyan] to toggle."
+            )
+        elif args == "on":
+            self.toggle_debug_logging(True)
+            chat_view.add_system_message(
+                "[green]✓[/green] Debug logging enabled\n"
+                "[dim]Event bus and handler logs will be verbose[/dim]"
+            )
+        elif args == "off":
+            self.toggle_debug_logging(False)
+            chat_view.add_system_message(
+                "[green]✓[/green] Debug logging disabled\n"
+                "[dim]Event bus and handler logs will be minimal[/dim]"
+            )
+        else:
+            chat_view.add_system_message(
+                f"[yellow]Unknown argument: {args}[/yellow]\n"
+                f"Use [cyan]/debug-log on[/cyan] or [cyan]/debug-log off[/cyan]"
             )
 
     async def _handle_badge_command(self, args: str) -> None:
@@ -1667,6 +1843,16 @@ class PPXAIDEApp(App):
         # Update widths dynamically
         chat_pane.styles.width = f"{chat_pct}%"
         side_panel.styles.width = f"{panel_pct}%"
+
+    def toggle_debug_logging(self, enabled: bool) -> None:
+        """Toggle debug logging for event bus and handlers.
+
+        Args:
+            enabled: True to enable debug logging, False to disable
+        """
+        self._debug_logging = enabled
+        self._event_bus._log_events = enabled
+        self._log.info(f"Debug logging {'enabled' if enabled else 'disabled'}")
 
     def on_side_panel_opened(self, event: SidePanel.Opened) -> None:
         """Handle side panel opened - adjust layout."""

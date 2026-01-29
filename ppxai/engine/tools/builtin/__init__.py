@@ -61,3 +61,11 @@ def register_all_builtin_tools(manager: 'ToolManager', provider: str = None, eng
         except Exception:
             # Silently skip if container tools fail to register
             pass
+
+        # Display tools (v1.15.1)
+        try:
+            from . import display
+            display.register_tools(manager, engine)
+        except Exception:
+            # Silently skip if display tools fail to register
+            pass

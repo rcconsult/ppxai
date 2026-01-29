@@ -98,8 +98,10 @@ async def tui_consent_handler(file_path: str) -> tuple[bool, str]:
         file_path: Path to file that needs editing
 
     Returns:
-        tuple: (approved: bool, response: str)
+        tuple: (approved: bool, response: str) - response is normalized to ConsentResponse enum
     """
+    from ppxai.common.consent import normalize_consent_response
+
     console.print(f"\n[bold yellow]⚠️  File Edit Request[/bold yellow]")
     console.print(f"[cyan]AI wants to edit:[/cyan] {file_path}")
     console.print("[dim]Options: y (yes), n (no), always (all files), never (block all)[/dim]")
@@ -112,25 +114,23 @@ async def tui_consent_handler(file_path: str) -> tuple[bool, str]:
             validator=ConsentValidator(),
             validate_while_typing=False
         )
-        response = response.strip().lower()
 
-        # Normalize response
-        if response in [ConsentDecision.YES, ConsentResponse.YES]:
-            response = ConsentResponse.YES
-            approved = True
+        # Normalize response to ConsentResponse enum value
+        normalized_response = normalize_consent_response(response)
+
+        # Determine approval and show feedback
+        approved = normalized_response in (ConsentResponse.YES, ConsentResponse.ALWAYS)
+
+        if normalized_response == ConsentResponse.YES:
             console.print("[green]✓ Edit approved for this file[/green]\n")
-        elif response == ConsentResponse.ALWAYS:
-            approved = True
+        elif normalized_response == ConsentResponse.ALWAYS:
             console.print("[green]✓ All file edits approved for this session[/green]\n")
-        elif response == ConsentResponse.NEVER:
-            approved = False
+        elif normalized_response == ConsentResponse.NEVER:
             console.print("[yellow]✗ All file edits blocked for this session[/yellow]\n")
-        else:  # 'no', 'n'
-            approved = False
-            response = ConsentResponse.NO
+        else:  # NO
             console.print("[yellow]✗ Edit denied for this file[/yellow]\n")
 
-        return (approved, response)
+        return (approved, normalized_response)
 
     except (KeyboardInterrupt, EOFError):
         # User cancelled - deny for safety
@@ -154,8 +154,10 @@ async def tui_shell_consent_handler(command: str, working_dir: str, risk_level: 
         risk_level: Risk level classification (safe, dangerous, never)
 
     Returns:
-        tuple: (approved: bool, response: str)
+        tuple: (approved: bool, response: str) - response is normalized to ConsentResponse enum
     """
+    from ppxai.common.consent import normalize_consent_response
+
     # Determine risk color
     risk_color = {
         ShellRiskLevel.NEVER: "red",
@@ -177,25 +179,23 @@ async def tui_shell_consent_handler(command: str, working_dir: str, risk_level: 
             validator=ConsentValidator(),
             validate_while_typing=False
         )
-        response = response.strip().lower()
 
-        # Normalize response
-        if response in [ConsentDecision.YES, ConsentResponse.YES]:
-            response = ConsentResponse.YES
-            approved = True
+        # Normalize response to ConsentResponse enum value
+        normalized_response = normalize_consent_response(response)
+
+        # Determine approval and show feedback
+        approved = normalized_response in (ConsentResponse.YES, ConsentResponse.ALWAYS)
+
+        if normalized_response == ConsentResponse.YES:
             console.print("[green]✓ Command approved[/green]\n")
-        elif response == ConsentResponse.ALWAYS:
-            approved = True
+        elif normalized_response == ConsentResponse.ALWAYS:
             console.print("[green]✓ All shell commands approved for this session[/green]\n")
-        elif response == ConsentResponse.NEVER:
-            approved = False
+        elif normalized_response == ConsentResponse.NEVER:
             console.print("[yellow]✗ All shell commands blocked for this session[/yellow]\n")
-        else:  # 'no', 'n'
-            approved = False
-            response = ConsentResponse.NO
+        else:  # NO
             console.print("[yellow]✗ Command denied[/yellow]\n")
 
-        return (approved, response)
+        return (approved, normalized_response)
 
     except (KeyboardInterrupt, EOFError):
         # User cancelled - deny for safety

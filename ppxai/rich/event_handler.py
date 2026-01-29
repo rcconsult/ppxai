@@ -9,7 +9,7 @@ Architecture:
 - Callbacks are provided by the client for rendering
 - Business logic is centralized, UI is delegated
 
-Version: v1.15.0
+Version: v1.15.1
 """
 
 from datetime import datetime
@@ -201,7 +201,7 @@ class TUIEventHandler(EventHandler):
             await handler.handle_event(event)
     """
 
-    def __init__(self, console, logger, verbose: bool = False, theme_name: str = None, emoji_mode: bool = False):
+    def __init__(self, console, logger, verbose: bool = False, theme_name: str = None, emoji_mode: bool = False, engine_client=None):
         """
         Initialize TUI-specific event handler.
 
@@ -211,6 +211,7 @@ class TUIEventHandler(EventHandler):
             verbose: Whether to show verbose tool output
             theme_name: Theme name for styled rendering (optional, uses config default)
             emoji_mode: Whether to show original emojis (True) or convert to text symbols (False)
+            engine_client: Engine client instance (for DISPLAY_FILE event handler)
         """
         from ppxai.rich.markdown_tables import render_markdown_with_tables
         from ppxai.rich.themes import get_theme, DEFAULT_THEME
@@ -220,6 +221,7 @@ class TUIEventHandler(EventHandler):
         self.logger = logger
         self.verbose = verbose
         self.emoji_mode = emoji_mode  # emoji rendering mode
+        self.engine_client = engine_client  # for /show command in DISPLAY_FILE handler
         self._render_markdown = render_markdown_with_tables
 
         # Get theme (from arg, config, or default)
@@ -303,6 +305,34 @@ class TUIEventHandler(EventHandler):
             self.console.print(f"\n[yellow]⚠️  Max iterations ({max_iter}) reached[/yellow]")
             self.console.print("[dim]Task may be incomplete. Review output above.[/dim]\n")
             return False  # Signal completion
+
+        # DISPLAY_FILE event - AI-triggered file display (v1.15.1)
+        elif event.type == EventType.DISPLAY_FILE:
+            filepath = event.data.get("filepath") if isinstance(event.data, dict) else None
+            if filepath:
+                # Execute /show command via command handler
+                from ppxai.commands.factory import CommandFactory
+                from ppxai.rendering.rich_renderer import RichRenderer
+
+                spec = CommandFactory.get('show')
+                if spec:
+                    try:
+                        # Create minimal context for command execution with engine_client
+                        class SimpleContext:
+                            def __init__(self, console, engine_client):
+                                self.console = console
+                                self.engine_client = engine_client
+
+                        context = SimpleContext(self.console, self.engine_client)
+                        result = spec.handler(context, filepath)
+
+                        # Render result with RichRenderer (class method - no instantiation)
+                        RichRenderer.render(result)
+                        return True
+                    except Exception as e:
+                        self.logger.error(f"Error displaying file: {e}")
+                        self.console.print(f"[red]Error displaying file: {e}[/red]")
+                        return True
 
         # Delegate to parent for all other event types
         return await super().handle_event(event)

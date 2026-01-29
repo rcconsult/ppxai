@@ -272,7 +272,7 @@ This installs:
 
 ```bash
 # Install the extension
-code --install-extension ~/.local/bin/ppxai-1.15.0.vsix
+code --install-extension ~/.local/bin/ppxai-1.15.1.vsix
 
 # Or drag and drop the .vsix file into VSCode
 ```

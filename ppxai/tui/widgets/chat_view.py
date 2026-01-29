@@ -18,20 +18,21 @@ class ChatView(VerticalScroll):
         super().__init__(id=id)
         self._messages = []
 
-    def add_message(self, content: str, role: str = "assistant") -> None:
+    def add_message(self, content: str, role: str = "assistant", response_time: float = 0.0) -> None:
         """Add a message to the chat view."""
-        message = MessageBox(content=content, role=role)
+        message = MessageBox(content=content, role=role, response_time=response_time)
         self._messages.append(message)
         self.mount(message)
+        # Smooth scroll animation (non-blocking now with worker threads)
         self.scroll_end(animate=True)
 
     def add_user_message(self, content: str) -> None:
         """Add a user message."""
         self.add_message(content, role="user")
 
-    def add_assistant_message(self, content: str) -> None:
-        """Add an assistant message."""
-        self.add_message(content, role="assistant")
+    def add_assistant_message(self, content: str, response_time: float = 0.0) -> None:
+        """Add an assistant message with optional response time."""
+        self.add_message(content, role="assistant", response_time=response_time)
 
     def add_system_message(self, content: str) -> None:
         """Add a system/info message."""
@@ -52,6 +53,7 @@ class ChatView(VerticalScroll):
         message = MessageBox(content="", role="assistant", streaming=True)
         self._messages.append(message)
         self.mount(message)
+        # Smooth scroll animation (non-blocking now with worker threads)
         self.scroll_end(animate=True)
         return message
 
