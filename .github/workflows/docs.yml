@@ -67,10 +67,19 @@ jobs:
           # Fetch gh-pages branch if it exists
           git fetch origin gh-pages:gh-pages || true
 
-          if [ -n "$ALIAS" ]; then
-            mike deploy --push --update-aliases "$VERSION" "$ALIAS"
+          # Set descriptive title based on version
+          if [ "$VERSION" = "dev" ]; then
+            TITLE="Development (Unreleased)"
+          elif [ -n "$ALIAS" ]; then
+            TITLE="$VERSION (Latest)"
           else
-            mike deploy --push "$VERSION"
+            TITLE="$VERSION"
+          fi
+
+          if [ -n "$ALIAS" ]; then
+            mike deploy --push --update-aliases --title "$TITLE" "$VERSION" "$ALIAS"
+          else
+            mike deploy --push --title "$TITLE" "$VERSION"
           fi
 
       - name: Set default version
