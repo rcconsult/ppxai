@@ -2,7 +2,7 @@
 
 **Multi-LLM Interface for Developers** - Use your favorite AI provider in terminal or VSCode with zero vendor lock-in.
 
-[![Version](https://img.shields.io/badge/version-1.15.0-blue)](https://github.com/rcconsult/ppxai/releases)
+[![Version](https://img.shields.io/badge/version-1.15.1-blue)](https://github.com/rcconsult/ppxai/releases)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](https://github.com/rcconsult/ppxai/blob/master/LICENSE)
 
 ## Why ppxai?
@@ -49,7 +49,8 @@ OPENAI_API_KEY=sk-xxx
 ### Run
 
 ```bash
-ppxai              # Terminal UI
+ppxai              # Rich TUI (original)
+ppxaide            # Textual TUI (v1.15.0+)
 ppxai-server       # HTTP server for VSCode
 ppxai-desktop      # Desktop web app
 ```
@@ -64,15 +65,18 @@ ppxai-desktop      # Desktop web app
 - **OpenRouter** - 100+ models including Claude
 - **Local Models** - Ollama, vLLM, LMStudio
 
-### Three Interfaces
+### Four Interfaces
 
-| Feature | TUI | VSCode | Web App |
-|---------|-----|--------|---------|
-| Streaming responses | ✅ | ✅ | ✅ |
-| Syntax highlighting | ✅ | ✅ | ✅ |
-| File editing tools | ✅ | ✅ | ✅ |
-| Agent mode | ✅ | ✅ | ✅ |
-| Checkpoint/undo | ✅ | ✅ | ✅ |
+| Feature | ppxai (Rich TUI) | ppxaide (Textual TUI) | VSCode | Web App |
+|---------|------------------|----------------------|--------|---------|
+| Streaming responses | ✅ | ✅ | ✅ | ✅ |
+| Syntax highlighting | ✅ | ✅ | ✅ | ✅ |
+| File editing tools | ✅ | ✅ | ✅ | ✅ |
+| Agent mode | ✅ | ✅ | ✅ | ✅ |
+| Checkpoint/undo | ✅ | ✅ | ✅ | ✅ |
+| Markdown in chat | Limited | ✅ Full rendering | ✅ | ✅ |
+| Themes | 6 themes | 17+ themes | N/A | N/A |
+| Tab completion | ✅ | ✅ | N/A | N/A |
 
 ### Agent Mode
 
