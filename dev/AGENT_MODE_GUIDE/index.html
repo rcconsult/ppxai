@@ -2178,7 +2178,7 @@
 <h1 id="agent-mode-user-guide">Agent Mode User Guide<a class="headerlink" href="#agent-mode-user-guide" title="Permanent link">&para;</a></h1>
 <p><strong>Version</strong>: v1.14.2+
 <strong>Status</strong>: Production Ready</p>
-<p>This guide explains how to use ppxai's autonomous agent mode for multi-step task execution.</p>
+<p>This guide explains how to use autonomous agent mode for multi-step task execution. Agent mode works with both <strong>ppxai</strong> (Rich TUI) and <strong>ppxaide</strong> (Textual TUI).</p>
 <hr />
 <h2 id="table-of-contents">Table of Contents<a class="headerlink" href="#table-of-contents" title="Permanent link">&para;</a></h2>
 <ol>
@@ -2193,7 +2193,7 @@
 </ol>
 <hr />
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>Agent mode transforms ppxai from a turn-based chat assistant into an autonomous developer agent. Instead of requiring manual direction for each step, the agent can:</p>
+<p>Agent mode transforms the TUI from a turn-based chat assistant into an autonomous developer agent. Instead of requiring manual direction for each step, the agent can:</p>
 <ul>
 <li><strong>Plan</strong> - Analyze tasks and create execution strategies</li>
 <li><strong>Execute</strong> - Use tools to read, edit files, and run commands</li>
@@ -2251,8 +2251,8 @@
 <li>For file editing, you'll need to approve edits (consent system)</li>
 </ol>
 <h3 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Start ppxai</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>ppxai
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Start ppxai (Rich TUI) or ppxaide (Textual TUI)</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>ppxai<span class="w">    </span><span class="c1"># or ppxaide</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Enable agent mode (optional - auto-enabled when using /agent)</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>/tools<span class="w"> </span>agent<span class="w"> </span>on

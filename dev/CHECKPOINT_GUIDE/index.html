@@ -2011,7 +2011,7 @@
 
 <h1 id="checkpoint-system-user-guide-v1124">Checkpoint System User Guide (v1.12.4)<a class="headerlink" href="#checkpoint-system-user-guide-v1124" title="Permanent link">&para;</a></h1>
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>ppxai's checkpoint system provides <strong>atomic multi-file rollback</strong> for agent mode tasks. Before executing autonomous tasks, ppxai creates a checkpoint that lets you undo all changes with a single <code>/undo</code> command.</p>
+<p>The checkpoint system provides <strong>atomic multi-file rollback</strong> for agent mode tasks. Works with both <strong>ppxai</strong> (Rich TUI) and <strong>ppxaide</strong> (Textual TUI). Before executing autonomous tasks, a checkpoint is created that lets you undo all changes with a single <code>/undo</code> command.</p>
 <p><strong>Key Features:</strong>
 - ✅ <strong>Atomic Rollback</strong> - Revert all file changes from the last agent task
 - ✅ <strong>Git Integration</strong> - Uses native git commits for version-controlled projects
@@ -2042,18 +2042,18 @@
 <hr />
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <h3 id="git-backend-preferred">Git Backend (Preferred)<a class="headerlink" href="#git-backend-preferred" title="Permanent link">&para;</a></h3>
-<p>When your project has a git repository, ppxai uses <strong>git-based checkpoints</strong>:</p>
+<p>When your project has a git repository, the TUI uses <strong>git-based checkpoints</strong>:</p>
 <ol>
 <li>
 <p><strong>Before Agent Task:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># ppxai automatically runs:</span>
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Automatically runs:</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>git<span class="w"> </span>add<span class="w"> </span>-A
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;ppxai checkpoint: refactor auth module&quot;</span>
 </span></code></pre></div></p>
 </li>
 <li>
 <p><strong>After /undo:</strong>
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># ppxai automatically runs:</span>
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Automatically runs:</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>git<span class="w"> </span>revert<span class="w"> </span>HEAD<span class="w"> </span>--no-edit
 </span></code></pre></div></p>
 </li>

@@ -2680,10 +2680,10 @@
 <p>Consent decisions are <strong>not</strong> persisted to disk. To reset:</p>
 <ol>
 <li>
-<p><strong>Restart ppxai TUI:</strong>
+<p><strong>Restart TUI (ppxai or ppxaide):</strong>
    <div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Exit and restart</span>
 </span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>/quit
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>uv<span class="w"> </span>run<span class="w"> </span>ppxai
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>uv<span class="w"> </span>run<span class="w"> </span>ppxai<span class="w">    </span><span class="c1"># or: uv run ppxaide</span>
 </span></code></pre></div></p>
 </li>
 <li>
@@ -2887,7 +2887,7 @@
 </span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a><span class="p">}</span>
 </span></code></pre></div>
 <h3 id="q-what-happens-if-i-choose-always-by-mistake">Q: What happens if I choose "always" by mistake?<a class="headerlink" href="#q-what-happens-if-i-choose-always-by-mistake" title="Permanent link">&para;</a></h3>
-<p><strong>A:</strong> Restart ppxai to reset consent decisions. Consider using version control to track changes.</p>
+<p><strong>A:</strong> Restart the TUI (ppxai or ppxaide) to reset consent decisions. Consider using version control to track changes.</p>
 <h3 id="q-can-consent-decisions-be-saved-across-sessions">Q: Can consent decisions be saved across sessions?<a class="headerlink" href="#q-can-consent-decisions-be-saved-across-sessions" title="Permanent link">&para;</a></h3>
 <p><strong>A:</strong> Not currently. This is a security feature to prevent unauthorized persistence of dangerous command approvals.</p>
 <h3 id="q-how-do-i-debug-pattern-matching">Q: How do I debug pattern matching?<a class="headerlink" href="#q-how-do-i-debug-pattern-matching" title="Permanent link">&para;</a></h3>
