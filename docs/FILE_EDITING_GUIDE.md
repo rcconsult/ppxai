@@ -1,6 +1,6 @@
 # File Editing Tools Guide (v1.11.0)
 
-**ppxai** now includes powerful file editing capabilities that allow AI to make autonomous code modifications with your consent. This guide shows you how to use these tools effectively.
+Both **ppxai** (Rich TUI) and **ppxaide** (Textual TUI) include powerful file editing capabilities that allow AI to make autonomous code modifications with your consent. This guide shows you how to use these tools effectively.
 
 ## Table of Contents
 
@@ -18,7 +18,7 @@
 
 ### What's New in v1.11.0
 
-ppxai can now autonomously edit files during conversations! The AI can:
+The AI can now autonomously edit files during conversations! It can:
 - ✅ Apply patches and diffs
 - ✅ Replace code blocks
 - ✅ Insert new code at specific locations

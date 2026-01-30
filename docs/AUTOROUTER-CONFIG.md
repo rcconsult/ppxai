@@ -4,6 +4,8 @@
 
 The autorouter automatically switches to a provider's best coding model when you use coding commands. This ensures you get the most capable model for tasks like code generation, debugging, and conversion.
 
+Works with **ppxai** (Rich TUI), **ppxaide** (Textual TUI), and the VSCode extension.
+
 ## How It Works
 
 When you use coding commands with autoroute enabled (default):

@@ -322,11 +322,11 @@ consent_decisions = {
 
 Consent decisions are **not** persisted to disk. To reset:
 
-1. **Restart ppxai TUI:**
+1. **Restart TUI (ppxai or ppxaide):**
    ```bash
    # Exit and restart
    /quit
-   uv run ppxai
+   uv run ppxai    # or: uv run ppxaide
    ```
 
 2. **Restart ppxai-server (for VSCode):**
@@ -598,7 +598,7 @@ async def directory_based_consent(request: ConsentRequest) -> ConsentDecision:
 
 ### Q: What happens if I choose "always" by mistake?
 
-**A:** Restart ppxai to reset consent decisions. Consider using version control to track changes.
+**A:** Restart the TUI (ppxai or ppxaide) to reset consent decisions. Consider using version control to track changes.
 
 ### Q: Can consent decisions be saved across sessions?
 

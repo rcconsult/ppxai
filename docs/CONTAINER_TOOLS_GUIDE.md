@@ -22,7 +22,7 @@ This guide covers ppxai's built-in tools for managing Docker, Podman, and Kubern
 
 ## Overview
 
-ppxai provides 14 container management tools that allow AI models to inspect and manage containers and Kubernetes resources on your behalf. These tools:
+Both **ppxai** (Rich TUI) and **ppxaide** (Textual TUI) provide 14 container management tools that allow AI models to inspect and manage containers and Kubernetes resources on your behalf. These tools:
 
 - Use CLI wrappers (no external SDKs required)
 - Work with Docker, Podman, and kubectl

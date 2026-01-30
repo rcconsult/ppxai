@@ -5,7 +5,7 @@
 
 ## Overview
 
-Bootstrap context allows you to define project-specific instructions that are automatically loaded when starting a ppxai session. These instructions become part of the system prompt, guiding AI behavior for your specific project.
+Bootstrap context allows you to define project-specific instructions that are automatically loaded when starting **ppxai** (Rich TUI) or **ppxaide** (Textual TUI). These instructions become part of the system prompt, guiding AI behavior for your specific project.
 
 **Key Features:**
 - **Hierarchical scopes** (v1.14.2) - Global, project, and subdirectory contexts that merge automatically
@@ -39,7 +39,7 @@ This is a Python 3.11+ project using pytest for testing.
 Always use type hints and follow PEP 8 style guidelines.
 ```
 
-When you start ppxai in this directory, these instructions are automatically loaded.
+When you start ppxai or ppxaide in this directory, these instructions are automatically loaded.
 
 ## File Format
 

@@ -1,6 +1,6 @@
 # Custom Tool Development Guide
 
-Complete guide to creating, testing, and integrating custom tools into ppxai.
+Complete guide to creating, testing, and integrating custom tools. Custom tools work with both **ppxai** (Rich TUI) and **ppxaide** (Textual TUI), as well as the VSCode extension.
 
 ## Table of Contents
 

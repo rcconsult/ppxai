@@ -1,6 +1,6 @@
 # Custom Command Development Guide
 
-This guide explains how to create, register, and debug custom commands for ppxai using the Command Factory framework.
+This guide explains how to create, register, and debug custom commands using the Command Factory framework. Custom commands work with both **ppxai** (Rich TUI) and **ppxaide** (Textual TUI).
 
 ---
 

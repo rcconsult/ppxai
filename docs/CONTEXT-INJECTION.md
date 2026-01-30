@@ -5,7 +5,7 @@
 
 ## Overview
 
-ppxai supports two types of context injection:
+Both **ppxai** (Rich TUI) and **ppxaide** (Textual TUI) support two types of context injection:
 
 1. **Runtime injection** (`@file`, `@git`, `@tree`, `@clipboard`, `@url`) - Include content in specific messages
 2. **Bootstrap context** (`AGENTS.md`) - Project instructions loaded at session start

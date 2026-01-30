@@ -2,7 +2,7 @@
 
 ## Overview
 
-ppxai's checkpoint system provides **atomic multi-file rollback** for agent mode tasks. Before executing autonomous tasks, ppxai creates a checkpoint that lets you undo all changes with a single `/undo` command.
+The checkpoint system provides **atomic multi-file rollback** for agent mode tasks. Works with both **ppxai** (Rich TUI) and **ppxaide** (Textual TUI). Before executing autonomous tasks, a checkpoint is created that lets you undo all changes with a single `/undo` command.
 
 **Key Features:**
 - ✅ **Atomic Rollback** - Revert all file changes from the last agent task
@@ -40,18 +40,18 @@ That's it! The checkpoint system handles everything automatically.
 
 ### Git Backend (Preferred)
 
-When your project has a git repository, ppxai uses **git-based checkpoints**:
+When your project has a git repository, the TUI uses **git-based checkpoints**:
 
 1. **Before Agent Task:**
    ```bash
-   # ppxai automatically runs:
+   # Automatically runs:
    git add -A
    git commit -m "ppxai checkpoint: refactor auth module"
    ```
 
 2. **After /undo:**
    ```bash
-   # ppxai automatically runs:
+   # Automatically runs:
    git revert HEAD --no-edit
    ```
 

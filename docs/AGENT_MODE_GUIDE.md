@@ -3,7 +3,7 @@
 **Version**: v1.14.2+
 **Status**: Production Ready
 
-This guide explains how to use ppxai's autonomous agent mode for multi-step task execution.
+This guide explains how to use autonomous agent mode for multi-step task execution. Agent mode works with both **ppxai** (Rich TUI) and **ppxaide** (Textual TUI).
 
 ---
 
@@ -22,7 +22,7 @@ This guide explains how to use ppxai's autonomous agent mode for multi-step task
 
 ## Overview
 
-Agent mode transforms ppxai from a turn-based chat assistant into an autonomous developer agent. Instead of requiring manual direction for each step, the agent can:
+Agent mode transforms the TUI from a turn-based chat assistant into an autonomous developer agent. Instead of requiring manual direction for each step, the agent can:
 
 - **Plan** - Analyze tasks and create execution strategies
 - **Execute** - Use tools to read, edit files, and run commands
@@ -62,8 +62,8 @@ Agent mode transforms ppxai from a turn-based chat assistant into an autonomous 
 ### Quick Start
 
 ```bash
-# Start ppxai
-ppxai
+# Start ppxai (Rich TUI) or ppxaide (Textual TUI)
+ppxai    # or ppxaide
 
 # Enable agent mode (optional - auto-enabled when using /agent)
 /tools agent on
