@@ -408,10 +408,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#three-interfaces" class="md-nav__link">
+  <a href="#four-interfaces" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Three Interfaces
+        Four Interfaces
       
     </span>
   </a>
@@ -1250,10 +1250,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#three-interfaces" class="md-nav__link">
+  <a href="#four-interfaces" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Three Interfaces
+        Four Interfaces
       
     </span>
   </a>
@@ -1331,7 +1331,7 @@
 
 <h1 id="ppxai-documentation">ppxai Documentation<a class="headerlink" href="#ppxai-documentation" title="Permanent link">&para;</a></h1>
 <p><strong>Multi-LLM Interface for Developers</strong> - Use your favorite AI provider in terminal or VSCode with zero vendor lock-in.</p>
-<p><a href="https://github.com/rcconsult/ppxai/releases"><img alt="Version" src="https://img.shields.io/badge/version-1.15.0-blue" /></a>
+<p><a href="https://github.com/rcconsult/ppxai/releases"><img alt="Version" src="https://img.shields.io/badge/version-1.15.1-blue" /></a>
 <a href="https://github.com/rcconsult/ppxai/blob/master/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-brightgreen" /></a></p>
 <h2 id="why-ppxai">Why ppxai?<a class="headerlink" href="#why-ppxai" title="Permanent link">&para;</a></h2>
 <table>
@@ -1389,9 +1389,10 @@
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nv">OPENAI_API_KEY</span><span class="o">=</span>sk-xxx
 </span></code></pre></div>
 <h3 id="run">Run<a class="headerlink" href="#run" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>ppxai<span class="w">              </span><span class="c1"># Terminal UI</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>ppxai-server<span class="w">       </span><span class="c1"># HTTP server for VSCode</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>ppxai-desktop<span class="w">      </span><span class="c1"># Desktop web app</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>ppxai<span class="w">              </span><span class="c1"># Rich TUI (original)</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>ppxaide<span class="w">            </span><span class="c1"># Textual TUI (v1.15.0+)</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>ppxai-server<span class="w">       </span><span class="c1"># HTTP server for VSCode</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>ppxai-desktop<span class="w">      </span><span class="c1"># Desktop web app</span>
 </span></code></pre></div>
 <h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
 <h3 id="multi-provider-support">Multi-Provider Support<a class="headerlink" href="#multi-provider-support" title="Permanent link">&para;</a></h3>
@@ -1402,12 +1403,13 @@
 <li><strong>OpenRouter</strong> - 100+ models including Claude</li>
 <li><strong>Local Models</strong> - Ollama, vLLM, LMStudio</li>
 </ul>
-<h3 id="three-interfaces">Three Interfaces<a class="headerlink" href="#three-interfaces" title="Permanent link">&para;</a></h3>
+<h3 id="four-interfaces">Four Interfaces<a class="headerlink" href="#four-interfaces" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
 <th>Feature</th>
-<th>TUI</th>
+<th>ppxai (Rich TUI)</th>
+<th>ppxaide (Textual TUI)</th>
 <th>VSCode</th>
 <th>Web App</th>
 </tr>
@@ -1418,9 +1420,11 @@
 <td>✅</td>
 <td>✅</td>
 <td>✅</td>
+<td>✅</td>
 </tr>
 <tr>
 <td>Syntax highlighting</td>
+<td>✅</td>
 <td>✅</td>
 <td>✅</td>
 <td>✅</td>
@@ -1430,9 +1434,11 @@
 <td>✅</td>
 <td>✅</td>
 <td>✅</td>
+<td>✅</td>
 </tr>
 <tr>
 <td>Agent mode</td>
+<td>✅</td>
 <td>✅</td>
 <td>✅</td>
 <td>✅</td>
@@ -1442,6 +1448,28 @@
 <td>✅</td>
 <td>✅</td>
 <td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Markdown in chat</td>
+<td>Limited</td>
+<td>✅ Full rendering</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Themes</td>
+<td>6 themes</td>
+<td>17+ themes</td>
+<td>N/A</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>Tab completion</td>
+<td>✅</td>
+<td>✅</td>
+<td>N/A</td>
+<td>N/A</td>
 </tr>
 </tbody>
 </table>
