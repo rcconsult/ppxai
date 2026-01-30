@@ -94,3 +94,50 @@ Implement a NvChad-inspired file tree explorer for ppxaide:
 - NvChad file tree screenshot (user-provided)
 - Textual DirectoryTree: https://textual.textualize.io/widgets/directory_tree/
 - Nerd Fonts for icons: https://www.nerdfonts.com/
+
+---
+
+### 3. Verify display_file Tool in Web App and VSCode
+
+**Priority:** High
+**Status:** ⏳ Testing Required
+
+**Current State:**
+- `display_file` tool was added in v1.15.1 for AI to proactively show files
+- Tool emits DISPLAY_FILE event after successful execution
+- ppxaide (Textual TUI) handles the event and opens files in side panel
+- Unclear if Web App and VSCode handle this event correctly
+
+**Goal:**
+Verify and fix display_file tool integration across all clients:
+- **Web App** - Confirm files open in Monaco editor when AI uses display_file
+- **VSCode** - Confirm files open in native editor with proper line:col support
+- **Error handling** - Verify graceful degradation if file doesn't exist
+- **Event flow** - Ensure DISPLAY_FILE events propagate through HTTP/SSE correctly
+
+**Testing Checklist:**
+- [ ] Test display_file tool in Web App with agent mode
+- [ ] Test display_file tool in VSCode extension with agent mode
+- [ ] Verify file paths (relative vs absolute) work correctly
+- [ ] Test with non-existent files (error handling)
+- [ ] Test with binary files (images, PDFs)
+- [ ] Verify event is emitted after tool execution completes
+- [ ] Check server logs for DISPLAY_FILE event transmission
+
+**Files to Check:**
+- `ppxai/engine/tools/builtin/display.py` - Tool implementation
+- `ppxai/engine/chat.py` - DISPLAY_FILE event emission (v1.15.1)
+- `ppxai/server/http.py` - Event streaming to clients
+- `vscode-extension/src/chatPanel.ts` - VSCode event handler
+- `ppxai/web/app.js` - Web App event handler
+
+**Expected Behavior:**
+1. AI calls `display_file(filepath="path/to/file.py")`
+2. Tool validates file exists and returns success message
+3. `chat.py` emits DISPLAY_FILE event with resolved path
+4. Server streams event to client via SSE
+5. Client opens file in appropriate viewer/editor
+
+**Reference:**
+- display_file implementation: `ppxai/engine/tools/builtin/display.py:44-94`
+- Event emission: Added in v1.15.1 (check chat.py for DISPLAY_FILE)
