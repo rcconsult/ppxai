@@ -289,6 +289,18 @@ def handle_status(context: CommandContext, args: str) -> CommandResult:
     pairs["show_cwd"] = "true" if tui_config.get('show_cwd', True) else "false"
     pairs["show_datetime"] = "true" if tui_config.get('show_datetime', False) else "false"
 
+    # Terminal capabilities (optional - may not be available in all environments)
+    try:
+        from ..tui.terminal import get_capabilities, get_image_protocol_name
+        caps = get_capabilities()
+        pairs["Terminal"] = caps.name
+        pairs["True Color"] = "yes" if caps.true_color else "no"
+        pairs["Images"] = get_image_protocol_name()
+        pairs["Hyperlinks"] = "yes" if caps.osc_hyperlinks else "no"
+    except ImportError:
+        # Terminal detection not available (e.g., in server mode)
+        pass
+
     return KeyValueResult(
         status=ResultStatus.SUCCESS,
         message="ppxai Status",

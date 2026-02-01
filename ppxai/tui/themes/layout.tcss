@@ -615,6 +615,19 @@ SidePanel ImageViewer Image {
     max-width: 100%;
 }
 
+/* iTerm2 image widget (for WezTerm) */
+ImageViewer ITerm2ImageWidget {
+    width: auto;
+    height: auto;
+    content-align: center middle;
+}
+
+SidePanel ImageViewer ITerm2ImageWidget {
+    width: auto;
+    height: auto;
+    content-align: center middle;
+}
+
 /* TableViewer widget for tabular data (CSV/TSV) */
 TableViewer {
     background: $surface;

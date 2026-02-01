@@ -22,13 +22,71 @@ from ppxai.tui.validation import format_file_size
 # Check if textual-image is available
 _IMAGEVIEW_AVAILABLE = False
 _TextualImage = None
+_TGPImage = None
+_SixelImage = None
 
 try:
     from textual_image.widget import Image as TextualImage
+    from textual_image.widget import TGPImage, SixelImage
     _IMAGEVIEW_AVAILABLE = True
     _TextualImage = TextualImage
+    _TGPImage = TGPImage
+    _SixelImage = SixelImage
 except ImportError:
     pass
+
+# Check for our native iTerm2 renderable
+_ITerm2Image = None
+try:
+    from ppxai.tui.renderable.iterm2 import ITerm2Image
+    _ITerm2Image = ITerm2Image
+except ImportError:
+    pass
+
+
+def _get_image_widget_class():
+    """Get the best image widget class for the current terminal.
+
+    textual-image's auto-detection queries the terminal at import time,
+    which can fail on Windows. We use our own terminal detection to
+    force high-res rendering for known terminals.
+
+    Terminal support:
+    - WezTerm: Uses our native iTerm2 protocol implementation (textual-image
+      doesn't support iTerm2, only TGP which is Kitty protocol)
+    - Windows Terminal: Uses textual-image auto-detection (Sixel works)
+    - Kitty: Uses TGP (Kitty Graphics Protocol)
+    - iTerm2: Uses TGP (also supports iTerm2 protocol but TGP is preferred)
+
+    Returns:
+        The appropriate image widget class
+    """
+    import os
+
+    term_program = os.environ.get("TERM_PROGRAM", "").lower()
+
+    # WezTerm: Use our native iTerm2 protocol implementation
+    # WezTerm supports iTerm2 inline images but not Kitty TGP or Sixel queries.
+    # We use the same integration technique as textual-image's Sixel renderer:
+    # placeholder text + cursor save/restore + control segment trick.
+    if term_program == "wezterm":
+        if _ITerm2Image is not None:
+            from ppxai.tui.widgets.iterm2_widget import ITerm2ImageWidget
+            return ITerm2ImageWidget
+
+    # iTerm2 on macOS: Use TGP (native support)
+    if term_program == "iterm.app":
+        if _TGPImage is not None:
+            return _TGPImage
+
+    # Kitty: Use TGP (native support)
+    if os.environ.get("KITTY_WINDOW_ID"):
+        if _TGPImage is not None:
+            return _TGPImage
+
+    # All other terminals (including Windows Terminal): use auto-detection
+    # Windows Terminal responds to Sixel queries and works well with textual-image
+    return _TextualImage
 
 
 class ImageHandler(Protocol):
@@ -84,9 +142,12 @@ class FullImageHandler:
 
         # Create the textual-image widget
         try:
+            # Use the best image widget class for this terminal
+            # This forces TGPImage for WezTerm/iTerm2 to get high-res rendering
+            ImageWidgetClass = _get_image_widget_class()
             # textual-image accepts Path objects directly
             # Sizing is controlled via CSS (width: 100% in layout.tcss)
-            self._viewer = _TextualImage(path)
+            self._viewer = ImageWidgetClass(path)
         except Exception as e:
             # Failed to create viewer - will fall back to None
             # Log the error for debugging

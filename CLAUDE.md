@@ -481,6 +481,54 @@ The `TextArea` widget has its own internal rendering engine with hardcoded color
 2. **Tree-sitter dependencies** in pyproject.toml
 3. **Language detection** via `EXTENSION_TO_LANGUAGE` mapping in code_editor.py
 
+## Terminal Image Rendering (v1.15.2)
+
+ppxai supports high-resolution inline image display in terminals that support image protocols.
+
+### Supported Terminals and Protocols
+
+| Terminal | Protocol | ppxaide (Textual) | ppxai (Rich) |
+|----------|----------|-------------------|--------------|
+| Windows Terminal | Sixel | ✅ textual-image | ✅ textual-image |
+| WezTerm | iTerm2 | ✅ ITerm2ImageWidget | ✅ ITerm2Image |
+| iTerm2 (macOS) | TGP/iTerm2 | ✅ textual-image | ✅ ITerm2Image |
+| Kitty | TGP | ✅ textual-image | ⚠️ Fallback |
+
+### Key Implementation Details
+
+**Textual TUI (ppxaide):**
+- Uses `render_lines()` override to inject escape sequences into Textual's rendering pipeline
+- Cannot use Rich renderables directly because Textual processes segments differently
+- See `ppxai/tui/widgets/iterm2_widget.py` for the implementation pattern
+
+**Rich TUI (ppxai):**
+- Uses Rich renderables with the `_NULL_CONTROL` trick to pass escape sequences through
+- Terminal detection in `ppxai/rendering/rich_renderer.py`
+
+**The `_NULL_CONTROL` trick:**
+```python
+_NULL_CONTROL = [(ControlType.CURSOR_FORWARD, 0)]
+yield Segment(escape_sequence, control=_NULL_CONTROL)
+```
+This tells Rich the segment contains control codes, so it passes the content through unchanged.
+
+### WezTerm Configuration
+
+WezTerm requires `TERM_PROGRAM` environment variable for detection:
+```lua
+-- ~/.wezterm.lua
+config.set_environment_variables = {
+  TERM_PROGRAM = 'WezTerm',
+}
+```
+
+### Key Files
+
+- `ppxai/tui/renderable/iterm2.py` - ITerm2Image Rich renderable
+- `ppxai/tui/widgets/iterm2_widget.py` - Textual widget using render_lines() injection
+- `ppxai/tui/widgets/image_handlers.py` - Terminal detection and widget selection
+- `ppxai/rendering/rich_renderer.py` - Rich TUI image rendering
+
 ## vLLM/GPT-OSS Tool Calling Reference
 
 **Critical Finding:** Harmony format is **mandatory** for GPT-OSS. From official documentation:

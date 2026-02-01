@@ -240,20 +240,82 @@ def render_markdown(result: MarkdownResult) -> None:
         console.print(f"[dim]File: {result.filepath}[/dim]")
 
 
+def _get_terminal_type() -> str:
+    """Detect terminal type for image rendering."""
+    import os
+    term_program = os.environ.get("TERM_PROGRAM", "").lower()
+    if term_program == "wezterm":
+        return "wezterm"
+    if term_program == "iterm.app":
+        return "iterm2"
+    if os.environ.get("WT_SESSION"):
+        return "windows_terminal"
+    if os.environ.get("KITTY_WINDOW_ID"):
+        return "kitty"
+    return "unknown"
+
+
+def _render_image_iterm2(filepath: str) -> bool:
+    """Render image using iTerm2 protocol (for WezTerm, iTerm2)."""
+    from pathlib import Path
+    try:
+        from ..tui.renderable.iterm2 import ITerm2Image
+        path = Path(filepath)
+        if path.exists():
+            img = ITerm2Image(path)
+            console.print(img)
+            return True
+    except Exception as e:
+        import logging
+        logging.debug(f"iTerm2 image rendering failed: {e}")
+    return False
+
+
+def _render_image_sixel(filepath: str) -> bool:
+    """Render image using Sixel protocol (for Windows Terminal)."""
+    from pathlib import Path
+    try:
+        from textual_image.renderable.sixel import Image as SixelImage
+        path = Path(filepath)
+        if path.exists():
+            img = SixelImage(path)
+            console.print(img)
+            return True
+    except Exception as e:
+        import logging
+        logging.debug(f"Sixel image rendering failed: {e}")
+    return False
+
+
 @RichRenderer.register(ImageResult)
 def render_image(result: ImageResult) -> None:
-    """Render image (show path, terminal display if supported)."""
+    """Render image with terminal-specific protocols when supported.
+
+    Supports:
+    - Windows Terminal: Sixel graphics
+    - WezTerm/iTerm2: iTerm2 inline images protocol
+    - Others: Fallback to file metadata
+    """
     if result.message:
         console.print(f"[bold]{result.message}[/bold]")
 
-    # Rich doesn't support inline images in most terminals
-    # Just show file path and format info
-    console.print(f"📊 [cyan]Image:[/cyan] {result.filepath}")
-    console.print(f"   [dim]Format: {result.format}[/dim]")
+    # Try terminal-specific rendering
+    terminal = _get_terminal_type()
+    rendered = False
 
-    if result.metadata:
-        if 'width' in result.metadata and 'height' in result.metadata:
-            console.print(f"   [dim]Size: {result.metadata['width']}x{result.metadata['height']}[/dim]")
+    if terminal == "windows_terminal":
+        rendered = _render_image_sixel(result.filepath)
+    elif terminal in ("wezterm", "iterm2"):
+        rendered = _render_image_iterm2(result.filepath)
+
+    # Fallback to metadata display
+    if not rendered:
+        console.print(f"📊 [cyan]Image:[/cyan] {result.filepath}")
+        console.print(f"   [dim]Format: {result.format}[/dim]")
+
+        if result.metadata:
+            if 'width' in result.metadata and 'height' in result.metadata:
+                console.print(f"   [dim]Size: {result.metadata['width']}x{result.metadata['height']}[/dim]")
 
 
 # ============================================================================

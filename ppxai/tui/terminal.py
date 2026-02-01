@@ -47,6 +47,10 @@ def detect_terminal() -> str:
     if term_program:
         return term_program
 
+    # Check for Windows Terminal (sets WT_SESSION)
+    if os.environ.get("WT_SESSION"):
+        return "Windows Terminal"
+
     # Check for Kitty
     if os.environ.get("KITTY_WINDOW_ID"):
         return "kitty"
@@ -96,6 +100,10 @@ def detect_true_color() -> bool:
     if os.environ.get("KITTY_WINDOW_ID"):
         return True
 
+    # Windows Terminal supports true color
+    if os.environ.get("WT_SESSION"):
+        return True
+
     return False
 
 
@@ -126,6 +134,11 @@ def detect_image_protocol() -> ImageProtocol:
     if "sixel" in term.lower():
         return ImageProtocol.SIXEL
 
+    # Windows Terminal has experimental Sixel (requires settings.json: experimental.enableImages)
+    # We can't detect if it's enabled, so report as available but experimental
+    if os.environ.get("WT_SESSION"):
+        return ImageProtocol.SIXEL
+
     return ImageProtocol.NONE
 
 
@@ -151,6 +164,10 @@ def detect_osc_hyperlinks() -> bool:
 
     # Recent GNOME Terminal versions support it
     if os.environ.get("GNOME_TERMINAL_SCREEN"):
+        return True
+
+    # Windows Terminal supports OSC 8 hyperlinks
+    if os.environ.get("WT_SESSION"):
         return True
 
     return False
