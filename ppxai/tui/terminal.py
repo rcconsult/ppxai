@@ -35,12 +35,50 @@ class TerminalCapabilities:
     bracketed_paste: bool              # Bracketed paste mode
 
 
+def get_user_terminal_override() -> Optional[str]:
+    """Get user-configured terminal override from environment.
+
+    Returns:
+        Terminal name if PPXAI_TERMINAL is set and not 'auto', None otherwise
+    """
+    override = os.environ.get("PPXAI_TERMINAL", "").strip()
+    if override and override.lower() != "auto":
+        return override
+    return None
+
+
+def get_user_protocol_override() -> Optional[ImageProtocol]:
+    """Get user-configured image protocol override from environment.
+
+    Returns:
+        ImageProtocol if PPXAI_IMAGE_PROTOCOL is set and not 'auto', None otherwise
+    """
+    override = os.environ.get("PPXAI_IMAGE_PROTOCOL", "").strip().lower()
+    if not override or override == "auto":
+        return None
+
+    protocol_map = {
+        "iterm2": ImageProtocol.ITERM2,
+        "kitty": ImageProtocol.KITTY,
+        "sixel": ImageProtocol.SIXEL,
+        "none": ImageProtocol.NONE,
+    }
+    return protocol_map.get(override)
+
+
 def detect_terminal() -> str:
     """Detect the terminal emulator name.
+
+    Respects PPXAI_TERMINAL environment variable override.
 
     Returns:
         Terminal emulator name or 'unknown'
     """
+    # Check for user override first
+    user_override = get_user_terminal_override()
+    if user_override:
+        return user_override
+
     # Check common environment variables
     term_program = os.environ.get("TERM_PROGRAM", "")
 
@@ -110,9 +148,16 @@ def detect_true_color() -> bool:
 def detect_image_protocol() -> ImageProtocol:
     """Detect the best available image display protocol.
 
+    Respects PPXAI_IMAGE_PROTOCOL environment variable override.
+
     Returns:
         The best available ImageProtocol
     """
+    # Check for user override first
+    user_override = get_user_protocol_override()
+    if user_override is not None:
+        return user_override
+
     term_program = os.environ.get("TERM_PROGRAM", "")
 
     # iTerm2 and compatible terminals
@@ -240,13 +285,109 @@ def format_capabilities() -> str:
     """
     caps = get_capabilities()
 
+    # Check for user overrides
+    terminal_override = get_user_terminal_override()
+    protocol_override = get_user_protocol_override()
+
     lines = [
         f"Terminal: {caps.name}",
+    ]
+
+    if terminal_override:
+        lines.append(f"  (override via PPXAI_TERMINAL={terminal_override})")
+
+    lines.extend([
         f"True Color: {'yes' if caps.true_color else 'no'}",
         f"Unicode: {'yes' if caps.unicode else 'no'}",
         f"Image Protocol: {get_image_protocol_name()}",
+    ])
+
+    if protocol_override is not None:
+        lines.append(f"  (override via PPXAI_IMAGE_PROTOCOL)")
+
+    lines.extend([
         f"OSC 8 Hyperlinks: {'yes' if caps.osc_hyperlinks else 'no'}",
         f"Mouse: {'yes' if caps.mouse else 'no'}",
+    ])
+
+    return "\n".join(lines)
+
+
+def get_terminal_help() -> str:
+    """Get help text for configuring terminal image display.
+
+    Returns:
+        Help text with configuration instructions
+    """
+    caps = get_capabilities()
+    protocol = detect_image_protocol()
+
+    lines = [
+        "## Terminal Image Configuration",
+        "",
+        f"**Detected Terminal:** {caps.name}",
+        f"**Image Protocol:** {get_image_protocol_name()}",
+        "",
     ]
+
+    # Check environment variables
+    term_program = os.environ.get("TERM_PROGRAM", "(not set)")
+    wt_session = "yes" if os.environ.get("WT_SESSION") else "no"
+    kitty_id = "yes" if os.environ.get("KITTY_WINDOW_ID") else "no"
+
+    lines.extend([
+        "### Environment Variables",
+        f"- `TERM_PROGRAM`: {term_program}",
+        f"- `WT_SESSION`: {wt_session}",
+        f"- `KITTY_WINDOW_ID`: {kitty_id}",
+        "",
+    ])
+
+    # User overrides
+    terminal_override = os.environ.get("PPXAI_TERMINAL", "(not set)")
+    protocol_override = os.environ.get("PPXAI_IMAGE_PROTOCOL", "(not set)")
+
+    lines.extend([
+        "### User Overrides",
+        f"- `PPXAI_TERMINAL`: {terminal_override}",
+        f"- `PPXAI_IMAGE_PROTOCOL`: {protocol_override}",
+        "",
+    ])
+
+    # Recommendations based on current state
+    if protocol == ImageProtocol.NONE:
+        lines.extend([
+            "### Recommendations",
+            "",
+            "No image protocol detected. Options:",
+            "",
+            "1. **Use a supported terminal:**",
+            "   - [WezTerm](https://wezfurlong.org/wezterm/) (Windows/macOS/Linux)",
+            "   - [iTerm2](https://iterm2.com/) (macOS)",
+            "   - [Kitty](https://sw.kovidgoyal.net/kitty/) (macOS/Linux)",
+            "   - Windows Terminal (enable Sixel in settings)",
+            "",
+            "2. **Force a protocol** (if your terminal supports it):",
+            "   ```",
+            "   # In ~/.ppxai/.env",
+            "   PPXAI_IMAGE_PROTOCOL=sixel",
+            "   ```",
+            "",
+        ])
+    elif protocol == ImageProtocol.ITERM2 and "wezterm" not in caps.name.lower():
+        if os.environ.get("TERM_PROGRAM", "").lower() != "wezterm":
+            lines.extend([
+                "### WezTerm Users",
+                "",
+                "If using WezTerm, ensure `TERM_PROGRAM` is set:",
+                "",
+                "```lua",
+                "-- ~/.wezterm.lua",
+                "config.set_environment_variables = {",
+                "  TERM_PROGRAM = 'WezTerm',",
+                "}",
+                "```",
+                "",
+            ])
 
     return "\n".join(lines)

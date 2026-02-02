@@ -422,6 +422,191 @@ For advanced provider configuration, create `~/.ppxai/ppxai-config.json`:
 }
 ```
 
+## Terminal Image Display (v1.15.2+)
+
+ppxai supports inline image rendering in terminals that support image protocols. This section covers configuration for users who want to enable image display or use multiple terminals.
+
+### Supported Terminals and Protocols
+
+| Terminal | Platform | Protocol | Auto-Detected |
+|----------|----------|----------|---------------|
+| **WezTerm** | Windows/macOS/Linux | iTerm2 | ⚠️ Requires config |
+| **Windows Terminal** | Windows | Sixel | ✅ Yes |
+| **iTerm2** | macOS | iTerm2/TGP | ✅ Yes |
+| **Kitty** | macOS/Linux | Kitty TGP | ✅ Yes |
+| **Konsole** | Linux | Sixel | ✅ Yes |
+| **xterm** (sixel build) | Linux | Sixel | ✅ Yes |
+
+### Checking Terminal Detection
+
+Use the `/terminal` command in ppxai to see current detection status:
+
+```
+/terminal
+```
+
+Or check with `/status`:
+```
+/status
+
+  ...
+  Terminal      : Windows Terminal
+  True Color    : yes
+  Images        : sixel
+  Hyperlinks    : yes
+```
+
+### Terminal-Specific Configuration
+
+#### WezTerm Setup
+
+WezTerm requires `TERM_PROGRAM` to be set for auto-detection. Add to `~/.wezterm.lua` (or `%USERPROFILE%\.wezterm.lua` on Windows):
+
+```lua
+local wezterm = require 'wezterm'
+local config = {}
+
+-- Required for ppxai terminal detection
+config.set_environment_variables = {
+  TERM_PROGRAM = 'WezTerm',
+}
+
+return config
+```
+
+After this change, ppxai will automatically use the iTerm2 image protocol in WezTerm.
+
+#### Windows Terminal Setup
+
+Windows Terminal auto-detection works out of the box via the `WT_SESSION` environment variable. No configuration needed.
+
+**Optional:** To explicitly set the image protocol, add to your Windows Terminal `settings.json` (Ctrl+Shift+, in Windows Terminal):
+
+```json
+{
+  "profiles": {
+    "defaults": {
+      "environment": {
+        "PPXAI_IMAGE_PROTOCOL": "sixel"
+      }
+    }
+  }
+}
+```
+
+Or for a specific profile only:
+
+```json
+{
+  "profiles": {
+    "list": [
+      {
+        "name": "PowerShell",
+        "guid": "{your-profile-guid}",
+        "environment": {
+          "PPXAI_IMAGE_PROTOCOL": "sixel"
+        }
+      }
+    ]
+  }
+}
+```
+
+### Environment Variable Overrides
+
+For advanced users or when auto-detection doesn't work, you can override terminal detection via environment variables. These can be set in:
+- Terminal-specific config (recommended for multi-terminal setups)
+- `~/.ppxai/.env` (applies to all terminals)
+- Shell profile (`~/.bashrc`, `~/.zshrc`, PowerShell profile)
+
+| Variable | Values | Description |
+|----------|--------|-------------|
+| `PPXAI_TERMINAL` | `WezTerm`, `iTerm.app`, `kitty`, `Windows Terminal`, `auto` | Override terminal identification |
+| `PPXAI_IMAGE_PROTOCOL` | `iterm2`, `kitty`, `sixel`, `none`, `auto` | Override image protocol |
+
+**Example in ~/.ppxai/.env:**
+```bash
+# Force iTerm2 protocol (for WezTerm users)
+PPXAI_IMAGE_PROTOCOL=iterm2
+
+# Or disable images entirely
+PPXAI_IMAGE_PROTOCOL=none
+```
+
+### Multi-Terminal Setup (Windows)
+
+If you use both WezTerm and Windows Terminal on Windows, configure each terminal separately rather than using `~/.ppxai/.env`:
+
+1. **WezTerm** - Set `TERM_PROGRAM=WezTerm` in `.wezterm.lua` (see above)
+2. **Windows Terminal** - Auto-detects via `WT_SESSION` (no config needed)
+
+This way, each terminal automatically uses the correct protocol:
+- WezTerm → iTerm2 protocol
+- Windows Terminal → Sixel protocol
+
+### Windows Desktop Shortcuts
+
+When launching ppxai from a Windows shortcut, you must launch via a modern terminal (Windows Terminal or WezTerm) to get image support. Direct shortcuts to `ppxai.exe` run in the legacy console (`conhost.exe`) which doesn't support image protocols.
+
+#### Creating a Proper Shortcut
+
+**For Windows Terminal:**
+
+1. Right-click Desktop → New → Shortcut
+2. Set target to:
+   ```
+   wt.exe -d "%USERPROFILE%\.ppxai" -- "%USERPROFILE%\.ppxai\bin\ppxai.exe"
+   ```
+3. Or for a specific starting directory:
+   ```
+   wt.exe -d "C:\Projects\MyProject" -- "%USERPROFILE%\.ppxai\bin\ppxai.exe"
+   ```
+
+**For WezTerm:**
+
+1. Right-click Desktop → New → Shortcut
+2. Set target to:
+   ```
+   wezterm.exe start --cwd "%USERPROFILE%\.ppxai" -- "%USERPROFILE%\.ppxai\bin\ppxai.exe"
+   ```
+
+**Shortcut Properties:**
+- **Start in:** Leave empty (the `-d` flag sets the working directory)
+- **Run:** Normal window
+- **Icon:** Optionally set to `ppxai.exe` for the ppxai icon
+
+#### ppxaide (Textual TUI) Shortcuts
+
+Replace `ppxai.exe` with `ppxaide.exe` in the above examples:
+
+```
+wt.exe -d "%USERPROFILE%\.ppxai" -- "%USERPROFILE%\.ppxai\bin\ppxaide.exe"
+```
+
+### Verifying Image Support
+
+After configuration, verify image support:
+
+1. Start ppxai in your configured terminal
+2. Run `/status` and check:
+   - `Terminal` shows the correct terminal name
+   - `Images` shows `sixel` or `iterm2` (not `none`)
+3. Test with `/display <path-to-image>` (if you have an image file)
+
+**Expected output for Windows Terminal:**
+```
+Terminal      : Windows Terminal
+Images        : sixel
+```
+
+**Expected output for WezTerm:**
+```
+Terminal      : WezTerm
+Images        : iterm2
+```
+
+If `Terminal` shows `unknown` and `Images` shows `none`, you're running in the legacy console - use a proper terminal shortcut.
+
 ## Troubleshooting
 
 ### "command not found: ppxai"
@@ -488,6 +673,62 @@ If PowerShell blocks the install script:
 ```powershell
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
+
+### Terminal Shows "unknown" and Images "none"
+
+This means ppxai is running in a terminal that doesn't support image protocols (likely the legacy Windows console).
+
+**Solution:** Launch ppxai via Windows Terminal or WezTerm:
+```powershell
+# Windows Terminal
+wt.exe -- ppxai
+
+# WezTerm
+wezterm.exe start -- ppxai
+```
+
+See [Terminal Image Display](#terminal-image-display-v1152) for shortcut configuration.
+
+### WezTerm Not Detected (Shows "unknown")
+
+WezTerm doesn't set `TERM_PROGRAM` by default. Add to `~/.wezterm.lua`:
+
+```lua
+config.set_environment_variables = {
+  TERM_PROGRAM = 'WezTerm',
+}
+```
+
+Restart WezTerm after making this change.
+
+### Images Don't Render in Windows Terminal
+
+1. Ensure Sixel is enabled in Windows Terminal settings (`settings.json`):
+   ```json
+   {
+     "profiles": {
+       "defaults": {
+         "experimental": {
+           "enableImages": true
+         }
+       }
+     }
+   }
+   ```
+2. Check `/status` shows `Images: sixel`
+3. Windows Terminal Preview may have better image support than stable
+
+### Images Don't Render in WezTerm
+
+1. Check `TERM_PROGRAM` is set (run `/terminal` to verify)
+2. Ensure you're using a recent WezTerm version (iTerm2 protocol support)
+3. Try forcing the protocol in `.wezterm.lua`:
+   ```lua
+   config.set_environment_variables = {
+     TERM_PROGRAM = 'WezTerm',
+     PPXAI_IMAGE_PROTOCOL = 'iterm2',
+   }
+   ```
 
 ## Updating
 

@@ -99,6 +99,10 @@ class PPXAIDEApp(App):
         # Streaming state (Phase 6.1)
         self._current_message_content = ""
         self._is_streaming = False
+
+        # Ctrl+C double-press tracking (v1.15.2)
+        self._last_ctrl_c_time: float = 0.0
+        self._CTRL_C_TIMEOUT = 2.0  # seconds to press Ctrl+C again
         # Reasoning token state (DeepSeek R1, GPT-OSS thinking)
         self._reasoning_started = False
         self._reasoning_content = ""
@@ -1747,15 +1751,34 @@ class PPXAIDEApp(App):
             chat_view.add_system_message(f"[yellow]Unknown badge action:[/yellow] {action}")
 
     def action_quit(self) -> None:
-        """Quit the application."""
-        # Mark session clean on graceful exit (Phase 2.2)
-        if self._engine_client:
-            try:
-                self._engine_client.session.mark_clean()
-                self._log.debug("Marked session as clean on exit")
-            except Exception as e:
-                self._log.warning(f"Failed to mark session clean: {e}")
-        self.exit()
+        """Quit the application with double Ctrl+C confirmation.
+
+        First Ctrl+C shows a warning, second Ctrl+C within timeout actually exits.
+        This prevents accidental exits when user intends to copy text.
+        """
+        import time
+
+        now = time.time()
+        time_since_last = now - self._last_ctrl_c_time
+
+        if time_since_last < self._CTRL_C_TIMEOUT:
+            # Second Ctrl+C within timeout - actually quit
+            # Mark session clean on graceful exit (Phase 2.2)
+            if self._engine_client:
+                try:
+                    self._engine_client.session.mark_clean()
+                    self._log.debug("Marked session as clean on exit")
+                except Exception as e:
+                    self._log.warning(f"Failed to mark session clean: {e}")
+            self.exit()
+        else:
+            # First Ctrl+C - show warning
+            self._last_ctrl_c_time = now
+            self.notify(
+                "Press Ctrl+C again to exit",
+                title="Quit?",
+                timeout=self._CTRL_C_TIMEOUT
+            )
 
     def action_clear(self) -> None:
         """Clear the chat view."""

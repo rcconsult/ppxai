@@ -145,8 +145,26 @@ class InputBox(Static):
                         # Just command, no space yet
                         input_widget.value = f"{parts[0]} {completion_text}"
                 elif text.startswith('/'):
-                    # Slash command/subcommand: replace entire input
-                    input_widget.value = completion_text
+                    # Slash command handling - preserve command prefix for subcommands
+                    parts = text.split()
+                    has_space = text and text[-1].isspace()
+
+                    if len(parts) >= 1 and (len(parts) > 1 or has_space):
+                        # Subcommand completion: preserve command prefix
+                        # Examples:
+                        #   "/provider " + Tab → "/provider perplexity"
+                        #   "/model son" + Tab → "/model sonar"
+                        #   "/tools ena" + Tab → "/tools enable"
+                        cmd = parts[0]
+                        if completion_text.startswith('/'):
+                            # Completion is a full command - replace entirely
+                            input_widget.value = completion_text
+                        else:
+                            # Completion is a subcommand/argument - preserve prefix
+                            input_widget.value = f"{cmd} {completion_text}"
+                    else:
+                        # Simple command completion: replace entire input
+                        input_widget.value = completion_text
                 else:
                     # Fallback: replace entire input
                     input_widget.value = completion_text

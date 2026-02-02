@@ -291,11 +291,29 @@ def handle_status(context: CommandContext, args: str) -> CommandResult:
 
     # Terminal capabilities (optional - may not be available in all environments)
     try:
-        from ..tui.terminal import get_capabilities, get_image_protocol_name
+        from ..tui.terminal import (
+            get_capabilities, get_image_protocol_name,
+            get_user_terminal_override, get_user_protocol_override
+        )
         caps = get_capabilities()
-        pairs["Terminal"] = caps.name
+
+        # Show terminal with override indicator
+        terminal_override = get_user_terminal_override()
+        if terminal_override:
+            pairs["Terminal"] = f"{caps.name} (override)"
+        else:
+            pairs["Terminal"] = caps.name
+
         pairs["True Color"] = "yes" if caps.true_color else "no"
-        pairs["Images"] = get_image_protocol_name()
+
+        # Show image protocol with override indicator
+        protocol_override = get_user_protocol_override()
+        protocol_name = get_image_protocol_name()
+        if protocol_override is not None:
+            pairs["Images"] = f"{protocol_name} (override)"
+        else:
+            pairs["Images"] = protocol_name
+
         pairs["Hyperlinks"] = "yes" if caps.osc_hyperlinks else "no"
     except ImportError:
         # Terminal detection not available (e.g., in server mode)
@@ -348,6 +366,35 @@ provides comprehensive templates with examples and best practices.
     )
 
 
+def handle_terminal(context: CommandContext, args: str) -> CommandResult:
+    """Handle /terminal command - show terminal capabilities and configuration help.
+
+    Useful for users who use multiple terminals and need to configure
+    image rendering settings.
+
+    Args:
+        context: Command context providing access to engine client
+        args: Currently unused
+
+    Returns:
+        TextResult with terminal info and configuration help
+    """
+    try:
+        from ..tui.terminal import get_terminal_help
+        help_text = get_terminal_help()
+        return TextResult(
+            status=ResultStatus.INFO,
+            message="Terminal Configuration",
+            content=help_text
+        )
+    except ImportError:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="Terminal detection not available",
+            suggestions=["This command requires the TUI components to be installed"]
+        )
+
+
 # =============================================================================
 # Command Registration
 # =============================================================================
@@ -383,4 +430,12 @@ CommandFactory.register(CommandSpec(
     handler=handle_spec,
     category="system",
     usage="/spec [api|cli|lib|algo|ui]"
+))
+
+CommandFactory.register(CommandSpec(
+    name="terminal",
+    description="Show terminal capabilities and image config help",
+    handler=handle_terminal,
+    category="system",
+    usage="/terminal"
 ))

@@ -47,6 +47,8 @@ except ImportError:
 def _get_image_widget_class():
     """Get the best image widget class for the current terminal.
 
+    Respects PPXAI_IMAGE_PROTOCOL and PPXAI_TERMINAL environment overrides.
+
     textual-image's auto-detection queries the terminal at import time,
     which can fail on Windows. We use our own terminal detection to
     force high-res rendering for known terminals.
@@ -62,8 +64,28 @@ def _get_image_widget_class():
         The appropriate image widget class
     """
     import os
+    from ppxai.tui.terminal import ImageProtocol, get_user_protocol_override, get_user_terminal_override
 
-    term_program = os.environ.get("TERM_PROGRAM", "").lower()
+    # Check for user protocol override first
+    protocol_override = get_user_protocol_override()
+    if protocol_override is not None:
+        if protocol_override == ImageProtocol.ITERM2:
+            if _ITerm2Image is not None:
+                from ppxai.tui.widgets.iterm2_widget import ITerm2ImageWidget
+                return ITerm2ImageWidget
+        elif protocol_override == ImageProtocol.KITTY:
+            if _TGPImage is not None:
+                return _TGPImage
+        elif protocol_override == ImageProtocol.SIXEL:
+            if _SixelImage is not None:
+                return _SixelImage
+        elif protocol_override == ImageProtocol.NONE:
+            return None  # Force fallback handler
+        # Fall through to auto-detect if override widget not available
+
+    # Check for terminal override
+    terminal_override = get_user_terminal_override()
+    term_program = (terminal_override or os.environ.get("TERM_PROGRAM", "")).lower()
 
     # WezTerm: Use our native iTerm2 protocol implementation
     # WezTerm supports iTerm2 inline images but not Kitty TGP or Sixel queries.

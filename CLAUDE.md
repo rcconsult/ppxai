@@ -8,6 +8,14 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current Version:** v1.15.2
 
+**v1.15.2 highlights:**
+- **NEW:** `/terminal` command - shows terminal detection and image protocol config help
+- **NEW:** `PPXAI_TERMINAL` and `PPXAI_IMAGE_PROTOCOL` env vars for multi-terminal setups
+- **NEW:** Double Ctrl+C to quit pattern in ppxaide (prevents accidental exits)
+- **FIX:** Autocomplete preserves command prefix for subcommands (`/provider ` + TAB works)
+- **FIX:** `/status` shows terminal override indicators when env vars are set
+- **DOCS:** Comprehensive terminal image display guide in INSTALLATION.md
+
 **v1.15.0 highlights:**
 - **NEW:** Type-based renderer dispatch - commands return typed result objects
 - **NEW:** 17 CommandResult types for UI-agnostic command architecture
@@ -36,9 +44,9 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - `local` provider inheritance - ollama, vllm, lmstudio inherit from `local` hints
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.14.2
-- VSCode extension (package.json): v1.14.2
-- Git tag: v1.14.2
+- Python package (pyproject.toml): v1.15.2
+- VSCode extension (package.json): v1.15.2
+- Git tag: v1.15.2
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
 
