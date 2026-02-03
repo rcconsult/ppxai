@@ -978,6 +978,13 @@ class PpxaiApp {
             case 'error':
                 this.showError(event.data);
                 break;
+
+            case 'display_file':
+                // v1.15.2: Handle display_file event from AI tool
+                if (event.data && event.data.filepath) {
+                    this.displayFileFromEvent(event.data.filepath);
+                }
+                break;
         }
 
         return fullContent;
@@ -1100,6 +1107,10 @@ class PpxaiApp {
 
             case '/pwd':
                 await this.handlePwdCommand();
+                break;
+
+            case '/config':
+                await this.handleConfigCommand(args);
                 break;
 
             case '/generate':
@@ -1528,6 +1539,23 @@ class PpxaiApp {
                 text += `| **TOTAL** | | **${(data.prompt_tokens || 0).toLocaleString()}** | **${(data.completion_tokens || 0).toLocaleString()}** | **$${(data.estimated_cost || 0).toFixed(4)}** |\n`;
             }
 
+            // Premium web search / tool usage (v1.15.2)
+            if (data.tool_calls && Object.keys(data.tool_calls).length > 0) {
+                text += '\n**Premium Tool Usage:**\n\n';
+                text += '| Tool | Provider | Calls | Tokens (In/Out) | Cost |\n';
+                text += '|:-----|:---------|------:|----------------:|-----:|\n';
+                let totalToolCost = 0;
+                Object.entries(data.tool_calls).sort().forEach(([toolName, stats]) => {
+                    const tokenInfo = `${stats.tokens_in?.toLocaleString() || 0}/${stats.tokens_out?.toLocaleString() || 0}`;
+                    const cost = stats.estimated_cost || 0;
+                    totalToolCost += cost;
+                    text += `| ${toolName} | ${stats.provider || '-'} | ${stats.call_count || 0} | ${tokenInfo} | $${cost.toFixed(4)} |\n`;
+                });
+                if (Object.keys(data.tool_calls).length > 1) {
+                    text += `| **TOTAL** | | | | **$${totalToolCost.toFixed(4)}** |\n`;
+                }
+            }
+
             this.addMessage('system', text);
         } catch (error) {
             this.showError(`Failed to get usage: ${error.message}`);
@@ -1566,11 +1594,20 @@ class PpxaiApp {
                 const data = await response.json();
 
                 if (data.success) {
-                    const status = data.status || {};
-                    if (status.loaded) {
-                        this.showSystemMessage(`✓ Bootstrap context reloaded from \`${status.source}\` (${status.size || 'unknown'} bytes)`);
+                    // v1.15.2: Server returns flat structure, not nested under 'status'
+                    if (data.loaded) {
+                        const sources = data.sources || [];
+                        const sourceCount = sources.length;
+                        const charCount = data.char_count || 0;
+                        if (sourceCount > 1) {
+                            this.showSystemMessage(`✓ Bootstrap context reloaded (merged ${sourceCount} files, ${charCount} chars)`);
+                        } else if (sourceCount === 1) {
+                            this.showSystemMessage(`✓ Bootstrap context reloaded from \`${sources[0].path}\` (${charCount} chars)`);
+                        } else {
+                            this.showSystemMessage(`✓ Bootstrap context reloaded (${charCount} chars)`);
+                        }
                     } else {
-                        this.showSystemMessage('Bootstrap context reloaded (no AGENTS.md/CLAUDE.md found in working directory).');
+                        this.showSystemMessage('Bootstrap context reloaded (no AGENTS.md/CLAUDE.md found in any scope).');
                     }
                 } else {
                     this.showError(`Failed to reload context: ${data.error || 'Unknown error'}`);
@@ -1806,7 +1843,7 @@ class PpxaiApp {
 
         // Add copy button for assistant messages
         const copyButton = role === 'assistant'
-            ? '<button class="copy-btn" title="Copy to clipboard" onclick="window.ppxaiApp.copyMessageToClipboard(this)">📋</button>'
+            ? '<button class="copy-btn" title="Copy to clipboard" onclick="window.ppxai.copyMessageToClipboard(this)">📋</button>'
             : '';
 
         msgEl.innerHTML = `
@@ -1825,6 +1862,7 @@ class PpxaiApp {
     }
 
     // v1.15.0: Copy message content to clipboard
+    // v1.15.2: Added fallback for non-secure contexts
     copyMessageToClipboard(button) {
         const msgEl = button.closest('.message');
         if (!msgEl) return;
@@ -1835,19 +1873,57 @@ class PpxaiApp {
         // Get text content (strips HTML but preserves text)
         const text = contentEl.innerText || contentEl.textContent;
 
-        navigator.clipboard.writeText(text).then(() => {
-            // Visual feedback
-            const originalText = button.textContent;
-            button.textContent = '✓';
-            button.classList.add('copied');
-            setTimeout(() => {
-                button.textContent = originalText;
-                button.classList.remove('copied');
-            }, 1500);
-        }).catch(err => {
-            console.error('Failed to copy:', err);
-            this.showError('Failed to copy to clipboard');
+        // Try modern Clipboard API first, then fallback
+        this.copyTextToClipboard(text).then(success => {
+            if (success) {
+                // Visual feedback
+                const originalText = button.textContent;
+                button.textContent = '✓';
+                button.classList.add('copied');
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 1500);
+            } else {
+                this.showError('Failed to copy to clipboard');
+            }
         });
+    }
+
+    // v1.15.2: Copy text with fallback for non-secure contexts
+    async copyTextToClipboard(text) {
+        // Try modern Clipboard API first
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            try {
+                await navigator.clipboard.writeText(text);
+                return true;
+            } catch (err) {
+                console.warn('Clipboard API failed, trying fallback:', err);
+            }
+        }
+
+        // Fallback: Create temporary textarea and use execCommand
+        try {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            textarea.style.top = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+
+            const success = document.execCommand('copy');
+            document.body.removeChild(textarea);
+
+            if (!success) {
+                console.error('execCommand copy failed');
+            }
+            return success;
+        } catch (err) {
+            console.error('Fallback copy failed:', err);
+            return false;
+        }
     }
 
     // v1.13.2: Update thinking indicator with processing status
@@ -2438,6 +2514,38 @@ class PpxaiApp {
     }
 
     /**
+     * Handle /config command - configuration management (v1.15.2)
+     * Subcommands: reload, path, or no args for help
+     */
+    async handleConfigCommand(args) {
+        const subCmd = args ? args.trim().toLowerCase() : '';
+
+        if (subCmd === 'reload') {
+            await this.reloadConfig();
+        } else if (subCmd === 'path') {
+            try {
+                const response = await fetch(`${this.serverUrl}/config/path`, {
+                    headers: this.getSessionHeaders()
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    this.showSystemMessage(`**Config file:** \`${data.path || 'Not found'}\``);
+                } else {
+                    this.showError('Failed to get config path');
+                }
+            } catch (error) {
+                this.showError(`Failed to get config path: ${error.message}`);
+            }
+        } else {
+            // Show help
+            let msg = '**Config Commands:**\n\n';
+            msg += '- `/config reload` - Reload config from file\n';
+            msg += '- `/config path` - Show config file path\n';
+            this.addMessage('system', msg);
+        }
+    }
+
+    /**
      * Handle /edit command - open file in CodeMirror 6 editor (v1.14.1)
      * Syntax: /edit filepath[:line[:col]]
      */
@@ -2966,6 +3074,39 @@ class PpxaiApp {
             }
         } catch (error) {
             this.showError(`Failed to read file: ${error.message}`);
+        }
+    }
+
+    /**
+     * Display file from display_file event (v1.15.2)
+     * Called when AI uses the display_file tool
+     */
+    async displayFileFromEvent(filepath) {
+        try {
+            const response = await fetch(`${this.serverUrl}/files/read`, {
+                method: 'POST',
+                headers: this.getSessionHeaders(true),
+                body: JSON.stringify({ path: filepath })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                // Handle different file types
+                if (data.type === 'image') {
+                    this.showImagePreview(data.filename || filepath, data.content, data.mime_type, data.size);
+                } else if (data.type === 'pdf') {
+                    this.showPdfPreview(data.filename || filepath, data.content, data.size);
+                } else {
+                    // Show text in preview panel
+                    this.showPreviewPanel(data.filename || filepath, data.content, data.size, data.lines);
+                }
+            } else {
+                // Don't show error to user - the AI tool already reports status
+                console.error(`Failed to display file: ${filepath}`);
+            }
+        } catch (error) {
+            console.error(`Failed to display file: ${error.message}`);
         }
     }
 

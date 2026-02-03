@@ -576,6 +576,19 @@ async def get_paths_config():
     return _get_paths_config()
 
 
+@app.get("/config/path")
+async def get_config_path():
+    """Get the current config file path (v1.15.2).
+
+    Returns:
+        path: Path to the config file, or null if not found
+    """
+    from ..config import find_config_file
+
+    config_path = find_config_file()
+    return {"path": str(config_path) if config_path else None}
+
+
 @app.post("/config/reload")
 async def reload_config_endpoint():
     """Reload configuration from file without restarting server.

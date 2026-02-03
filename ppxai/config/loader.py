@@ -375,6 +375,12 @@ def load_config() -> Dict[str, Any]:
             "providers": providers,
             "tools": json_config.get("tools", {}),
             "context": json_config.get("context", {}),
+            "server": json_config.get("server", {}),  # v1.15.2: Fix idle_timeout not being read
+            "session": json_config.get("session", {}),
+            "tui": json_config.get("tui", {}),
+            "bootstrap": json_config.get("bootstrap", {}),
+            "visualization": json_config.get("visualization", {}),
+            "paths": json_config.get("paths", {}),
         }
 
     else:

@@ -290,6 +290,7 @@ def get_shell_config() -> Dict[str, Any]:
         "sandboxed_paths": shell_config.get("sandboxed_paths", []),
         "interactive_commands": shell_config.get("interactive_commands", default_interactive),
         "non_interactive_with_args": shell_config.get("non_interactive_with_args", default_non_interactive_with_args),
+        "timeout": shell_config.get("timeout", 30),  # Default 30 seconds, configurable (v1.15.2)
     }
 
 

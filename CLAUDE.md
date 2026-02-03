@@ -14,6 +14,11 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **NEW:** Double Ctrl+C to quit pattern in ppxaide (prevents accidental exits)
 - **FIX:** Autocomplete preserves command prefix for subcommands (`/provider ` + TAB works)
 - **FIX:** `/status` shows terminal override indicators when env vars are set
+- **FIX:** Config loader now includes all config sections (`server`, `session`, `tui`, `paths`, etc.)
+- **FIX:** `server.idle_timeout` config now properly read (was always using 300s default)
+- **FIX:** Web app `/context reload` shows correct message instead of false "not found"
+- **FIX:** Web app clipboard button now uses correct global reference (`window.ppxai`)
+- **FIX:** Web app `display_file` event now handled properly (opens split preview)
 - **DOCS:** Comprehensive terminal image display guide in INSTALLATION.md
 
 **v1.15.0 highlights:**
