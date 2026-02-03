@@ -1,32 +1,29 @@
 #!/bin/bash
 #
-# Create ppxaide.icns from ppxaide-nobg.png for macOS app bundles
-#
-# Usage:
-#   ./scripts/create-ppxaide-icns.sh
-#
-# Requirements:
-#   - macOS (uses sips and iconutil)
-#   - resources/ppxaide-nobg.png (source image)
-#
-# Output:
-#   - resources/ppxaide.icns
+# Create ppxaide.icns from ppxaide-icon-source.png (scaled ppxai-tui-preview.png)
 #
 
 set -e
 
-SOURCE="resources/ppxaide-nobg.png"
+SOURCE="resources/ppxaide-icon-source.png"
 ICONSET="resources/ppxaide.iconset"
 OUTPUT="resources/ppxaide.icns"
 
 echo "========================================"
-echo "Creating ppxaide.icns for macOS"
+echo "Creating ppxaide.icns (ppxai TUI style)"
 echo "========================================"
 
 # Check if source exists
 if [ ! -f "$SOURCE" ]; then
     echo "Error: Source image not found: $SOURCE"
+    echo "Run: python -c \"from PIL import Image; Image.open('resources/ppxai-tui-preview.png').resize((1024,1024), Image.Resampling.LANCZOS).save('$SOURCE')\""
     exit 1
+fi
+
+# Backup old icns
+if [ -f "$OUTPUT" ]; then
+    mv "$OUTPUT" "${OUTPUT}.backup-$(date +%Y%m%d-%H%M%S)"
+    echo "Backed up old icon"
 fi
 
 # Clean up previous iconset
@@ -36,9 +33,6 @@ mkdir -p "$ICONSET"
 echo "Converting PNG to iconset..."
 
 # Generate all required sizes for macOS icons
-# Standard sizes: 16, 32, 64, 128, 256, 512, 1024
-# Retina sizes: @2x versions
-
 sips -z 16 16     "$SOURCE" --out "${ICONSET}/icon_16x16.png"
 sips -z 32 32     "$SOURCE" --out "${ICONSET}/icon_16x16@2x.png"
 sips -z 32 32     "$SOURCE" --out "${ICONSET}/icon_32x32.png"
