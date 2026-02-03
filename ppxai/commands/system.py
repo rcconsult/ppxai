@@ -20,6 +20,7 @@ from .results import (
     ErrorResult,
     KeyValueResult,
     ListResult,
+    MarkdownResult,
     TextResult,
 )
 
@@ -377,12 +378,12 @@ def handle_terminal(context: CommandContext, args: str) -> CommandResult:
         args: Currently unused
 
     Returns:
-        TextResult with terminal info and configuration help
+        MarkdownResult with terminal info and configuration help
     """
     try:
         from ..tui.terminal import get_terminal_help
         help_text = get_terminal_help()
-        return TextResult(
+        return MarkdownResult(
             status=ResultStatus.INFO,
             message="Terminal Configuration",
             content=help_text
