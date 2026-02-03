@@ -335,7 +335,7 @@ def handle_spec(context: CommandContext, args: str) -> CommandResult:
         args: Spec type (api, cli, lib, algo, ui) or empty for list
 
     Returns:
-        TextResult with spec template content
+        MarkdownResult with spec template content
     """
     spec_type = args.strip().lower() if args else None
 
@@ -360,7 +360,7 @@ For detailed {spec_type} specification templates, the full rich UI version
 provides comprehensive templates with examples and best practices.
 """
 
-    return TextResult(
+    return MarkdownResult(
         status=ResultStatus.INFO,
         message=f"Specification Template{f': {spec_type}' if spec_type else 's'}",
         content=spec_text
