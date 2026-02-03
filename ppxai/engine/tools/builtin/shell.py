@@ -95,8 +95,9 @@ class ShellExecuteTool(BaseTool):
             Command output (stdout + stderr) or error message
         """
         # Request consent for shell command execution (v1.11.2)
-        # Use engine's working directory if not specified
-        if working_dir is None:
+        # Use engine's working directory if not specified or empty (v1.15.2)
+        # Model may pass working_dir='' which is falsy but not None
+        if not working_dir:
             working_dir = self.engine.get_working_dir() or "."
 
         consent_approved = await self.engine.request_shell_consent(command, working_dir)
