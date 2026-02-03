@@ -306,3 +306,95 @@ def parse_tool_call(
             start_idx = end if end > start else start + 1
 
     return None
+
+
+def detect_truncated_tool_call(text: str) -> Optional[Dict[str, Any]]:
+    """Detect if a response contains a truncated/incomplete tool call attempt.
+
+    v1.15.2: GPT-OSS and other models sometimes output "I'll use X tool" followed
+    by JSON that gets truncated due to token limits. This function detects such
+    patterns to enable targeted retry feedback.
+
+    Args:
+        text: Model response text
+
+    Returns:
+        Dict with 'tool' (detected tool name) and 'reason' (why it's truncated),
+        or None if no truncated tool call detected
+    """
+    # Pattern 1: "I'll use the X tool" followed by incomplete JSON
+    intent_patterns = [
+        r"I'll use (?:the )?(\w+(?:_\w+)*) tool",
+        r"I will use (?:the )?(\w+(?:_\w+)*) tool",
+        r"Let me use (?:the )?(\w+(?:_\w+)*) tool",
+        r"Using (?:the )?(\w+(?:_\w+)*) tool",
+    ]
+
+    tool_name = None
+    for pattern in intent_patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            tool_name = match.group(1)
+            break
+
+    if not tool_name:
+        return None
+
+    # Check for incomplete JSON after the tool mention
+    # Look for opening brace without matching close
+    json_start = text.find('{')
+    if json_start == -1:
+        # No JSON started - model just said it would use tool but didn't output JSON
+        return {
+            "tool": tool_name,
+            "reason": "no_json",
+            "message": f"Model stated intent to use '{tool_name}' but did not output tool call JSON"
+        }
+
+    # Count braces to detect incomplete JSON
+    open_braces = 0
+    in_string = False
+    escape_next = False
+
+    for char in text[json_start:]:
+        if escape_next:
+            escape_next = False
+            continue
+        if char == '\\':
+            escape_next = True
+            continue
+        if char == '"' and not escape_next:
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if char == '{':
+            open_braces += 1
+        elif char == '}':
+            open_braces -= 1
+
+    if open_braces > 0:
+        # Unclosed braces - JSON is truncated
+        return {
+            "tool": tool_name,
+            "reason": "truncated_json",
+            "message": f"Model attempted to call '{tool_name}' but JSON was truncated (unclosed braces: {open_braces})"
+        }
+
+    # JSON looks complete but parse_tool_call failed - might be malformed
+    # Check for common truncation indicators
+    truncation_indicators = [
+        text.rstrip().endswith('...'),
+        text.rstrip().endswith('"'),  # String cut mid-value
+        text.rstrip().endswith(','),  # Cut after a comma
+        '```json' in text and text.count('```') % 2 != 0,  # Unclosed code block
+    ]
+
+    if any(truncation_indicators):
+        return {
+            "tool": tool_name,
+            "reason": "likely_truncated",
+            "message": f"Model attempted to call '{tool_name}' but response appears truncated"
+        }
+
+    return None

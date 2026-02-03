@@ -18,7 +18,7 @@ from typing import AsyncIterator, Dict, Any, List, Optional, Protocol, Callable
 from .types import Event, EventType, Message, UsageStats
 from .session import SessionManager
 from .tools.manager import ToolManager
-from .tools.parser import parse_tool_call
+from .tools.parser import parse_tool_call, detect_truncated_tool_call
 from .providers.base import BaseProvider
 from ..config import get_system_prompt, get_system_prompt_mode, calculate_cost
 from ..common.logger import get_logger
@@ -425,6 +425,25 @@ async def chat_with_tools(
 
         else:
             # No tool call - final response
+            # v1.15.2: Check for truncated tool call attempts (GPT-OSS intermittent issue)
+            truncated = detect_truncated_tool_call(full_response)
+            if truncated and iteration < max_iterations:
+                logger.info(f"Truncated tool call detected: {truncated['message']}")
+                yield Event(
+                    EventType.INFO,
+                    f"Truncated tool call: {truncated['reason']} - requesting retry"
+                )
+                # Add targeted feedback to help model recover
+                recovery_msg = (
+                    f"Your previous response was incomplete. You tried to use the '{truncated['tool']}' tool "
+                    f"but the tool call was not properly formatted or was truncated.\n\n"
+                    f"IMPORTANT: Do NOT say 'I'll use X tool' - just call the tool directly using native tool calling.\n"
+                    f"If the task requires writing large content, break it into smaller operations or use a different approach."
+                )
+                ctx.session.add_message(Message("assistant", full_response[:500] + "..." if len(full_response) > 500 else full_response))
+                ctx.session.add_message(Message("user", recovery_msg))
+                continue
+
             # Handle empty responses
             if iteration == 1 and not full_response.strip() and ctx.tool_manager.auto_retry_empty > 0:
                 empty_retry_count += 1

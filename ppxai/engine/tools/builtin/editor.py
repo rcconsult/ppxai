@@ -8,6 +8,7 @@ All tools check for user consent before modifying files.
 import difflib
 import os
 import re
+import unicodedata
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Dict, Any
 
@@ -731,8 +732,52 @@ def _apply_search_replace_diff(original_lines: list, diff_text: str) -> list:
     return result_lines
 
 
+def _normalize_whitespace(text: str) -> str:
+    """Normalize all Unicode whitespace variants to regular ASCII space.
+
+    v1.15.2: GPT-OSS and other models often output Unicode whitespace characters
+    like NBSP (\\xa0), Narrow No-Break Space (\\u202f), etc. that don't match
+    the regular spaces in the actual file content.
+
+    Args:
+        text: Text to normalize
+
+    Returns:
+        Text with all Unicode whitespace normalized to ASCII space
+    """
+    result = []
+    for char in text:
+        # Unicode category 'Zs' = Space Separator (includes NBSP, NNBSP, etc.)
+        if unicodedata.category(char) == 'Zs':
+            result.append(' ')
+        else:
+            result.append(char)
+    return ''.join(result)
+
+
+def _collapse_whitespace(text: str) -> str:
+    """Collapse multiple whitespace characters into single space.
+
+    v1.15.2: For aggressive fuzzy matching when normal matching fails.
+
+    Args:
+        text: Text to normalize
+
+    Returns:
+        Text with collapsed whitespace
+    """
+    # First normalize Unicode whitespace, then collapse runs of spaces
+    normalized = _normalize_whitespace(text)
+    return re.sub(r'\s+', ' ', normalized).strip()
+
+
 def _replace_hunk(content: str, old_lines: list, new_lines: list) -> str:
     """Replace old lines with new lines in content.
+
+    v1.15.2: Enhanced with multi-level fuzzy matching to handle:
+    - Unicode whitespace variants (NBSP, NNBSP, etc.)
+    - Leading/trailing whitespace differences
+    - Collapsed whitespace matching as last resort
 
     Args:
         content: File content as string
@@ -750,24 +795,46 @@ def _replace_hunk(content: str, old_lines: list, new_lines: list) -> str:
     old_text = '\n'.join(old_lines)
     new_text = '\n'.join(new_lines)
 
-    # Try exact match first
+    # Level 1: Try exact match first
     if old_text in content:
         return content.replace(old_text, new_text, 1)
 
-    # Try with different line ending styles
+    # Level 2: Try with different line ending styles
     old_text_crlf = '\r\n'.join(old_lines)
     if old_text_crlf in content:
         return content.replace(old_text_crlf, new_text.replace('\n', '\r\n'), 1)
 
-    # Try fuzzy match - strip leading/trailing whitespace from each line
-    old_stripped = '\n'.join(line.strip() for line in old_lines)
+    # Level 3: Normalize Unicode whitespace (NBSP, NNBSP → regular space)
+    old_normalized = '\n'.join(_normalize_whitespace(line) for line in old_lines)
+    content_normalized = _normalize_whitespace(content)
+    if old_normalized in content_normalized:
+        # Find position in normalized content, apply to original
+        pos = content_normalized.index(old_normalized)
+        # Find corresponding position in original by counting chars
+        return content[:pos] + new_text + content[pos + len(old_normalized):]
+
+    # Level 4: Strip leading/trailing whitespace + normalize Unicode
     content_lines = content.splitlines(keepends=True)
+    old_stripped = '\n'.join(_normalize_whitespace(line.strip()) for line in old_lines)
 
     for i in range(len(content_lines) - len(old_lines) + 1):
         window = content_lines[i:i + len(old_lines)]
-        window_stripped = '\n'.join(line.strip() for line in window).rstrip('\n')
+        window_stripped = '\n'.join(_normalize_whitespace(line.strip()) for line in window).rstrip('\n')
         if window_stripped == old_stripped:
             # Found match - replace
+            before = ''.join(content_lines[:i])
+            after = ''.join(content_lines[i + len(old_lines):])
+            new_with_newlines = '\n'.join(new_lines) + '\n'
+            return before + new_with_newlines + after
+
+    # Level 5: Aggressive - collapse all whitespace and compare
+    old_collapsed = '\n'.join(_collapse_whitespace(line) for line in old_lines)
+
+    for i in range(len(content_lines) - len(old_lines) + 1):
+        window = content_lines[i:i + len(old_lines)]
+        window_collapsed = '\n'.join(_collapse_whitespace(line.rstrip('\r\n')) for line in window)
+        if window_collapsed == old_collapsed:
+            # Found match with collapsed whitespace - replace
             before = ''.join(content_lines[:i])
             after = ''.join(content_lines[i + len(old_lines):])
             new_with_newlines = '\n'.join(new_lines) + '\n'

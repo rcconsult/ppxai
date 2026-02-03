@@ -25,6 +25,9 @@ from ppxai.engine.tools.builtin.editor import (
     _is_new_file_diff,
     _apply_unified_diff,
     _apply_search_replace_diff,
+    _normalize_whitespace,
+    _collapse_whitespace,
+    _replace_hunk,
 )
 
 
@@ -910,6 +913,147 @@ class TestSearchReplaceDiff:
             assert "Path.cwd()" in content
             assert "# Config" in content
             assert "print('done')" in content
+        finally:
+            temp_path.unlink()
+
+
+# === Unicode Whitespace Normalization Tests (v1.15.2) ===
+
+class TestUnicodeWhitespaceNormalization:
+    """Tests for Unicode whitespace normalization in patch matching (v1.15.2).
+
+    GPT-OSS and other models often output Unicode whitespace characters like:
+    - \\xa0 (Non-Breaking Space / NBSP)
+    - \\u202f (Narrow No-Break Space / NNBSP)
+    - \\u2009 (Thin Space)
+    - \\u00a0 (NBSP variant)
+
+    These should match regular ASCII spaces when applying patches.
+    """
+
+    def test_normalize_whitespace_nbsp(self):
+        """Test normalization of Non-Breaking Space (NBSP)."""
+        text = "Price:\xa0100\xa0CHF"  # NBSP characters
+        normalized = _normalize_whitespace(text)
+        assert normalized == "Price: 100 CHF"
+
+    def test_normalize_whitespace_narrow_nbsp(self):
+        """Test normalization of Narrow No-Break Space (NNBSP)."""
+        text = "Page\u202f2\u202fTable"  # NNBSP characters
+        normalized = _normalize_whitespace(text)
+        assert normalized == "Page 2 Table"
+
+    def test_normalize_whitespace_mixed(self):
+        """Test normalization of mixed Unicode whitespace."""
+        text = "A\xa0B\u202fC\u2009D E"  # NBSP, NNBSP, Thin Space, regular space
+        normalized = _normalize_whitespace(text)
+        assert normalized == "A B C D E"
+
+    def test_normalize_whitespace_preserves_non_space(self):
+        """Test that non-space characters are preserved."""
+        text = "Hello\nWorld\tTab"
+        normalized = _normalize_whitespace(text)
+        assert normalized == "Hello\nWorld\tTab"
+
+    def test_collapse_whitespace_multiple_spaces(self):
+        """Test collapsing multiple spaces."""
+        text = "too   many    spaces"
+        collapsed = _collapse_whitespace(text)
+        assert collapsed == "too many spaces"
+
+    def test_collapse_whitespace_with_unicode(self):
+        """Test collapsing mixed Unicode whitespace."""
+        text = "A\xa0\xa0B\u202f\u202fC"  # Multiple NBSPs and NNBSPs
+        collapsed = _collapse_whitespace(text)
+        assert collapsed == "A B C"
+
+    def test_replace_hunk_with_nbsp_in_diff(self):
+        """Test that diff with NBSP matches file with regular space."""
+        # File has regular spaces
+        content = "Price: 100 CHF\nTotal: 200 CHF\n"
+        # Diff has NBSP (model hallucinated NBSP)
+        old_lines = ["Price:\xa0100\xa0CHF"]  # NBSP
+        new_lines = ["Price: 150 CHF"]
+        result = _replace_hunk(content, old_lines, new_lines)
+        assert "Price: 150 CHF" in result
+        assert "Total: 200 CHF" in result
+
+    def test_replace_hunk_with_nnbsp_in_diff(self):
+        """Test that diff with NNBSP matches file with regular space."""
+        # File has regular spaces
+        content = "Page 2 Table 1\nSome content\n"
+        # Diff has NNBSP (common in GPT-OSS outputs)
+        old_lines = ["Page\u202f2\u202fTable\u202f1"]  # NNBSP
+        new_lines = ["Page 2 - Table 1 (Updated)"]
+        result = _replace_hunk(content, old_lines, new_lines)
+        assert "Page 2 - Table 1 (Updated)" in result
+        assert "Some content" in result
+
+    def test_replace_hunk_with_mixed_unicode_whitespace(self):
+        """Test matching with various Unicode whitespace variants."""
+        # File has regular spaces
+        content = "A B C D\nE F G H\n"
+        # Diff has mixed Unicode whitespace
+        old_lines = ["A\xa0B\u202fC\u2009D"]  # NBSP, NNBSP, Thin Space
+        new_lines = ["A-B-C-D"]
+        result = _replace_hunk(content, old_lines, new_lines)
+        assert "A-B-C-D" in result
+        assert "E F G H" in result
+
+    def test_replace_hunk_exact_match_preferred(self):
+        """Test that exact match is used when available."""
+        content = "exact match here\n"
+        old_lines = ["exact match here"]
+        new_lines = ["replaced"]
+        result = _replace_hunk(content, old_lines, new_lines)
+        assert result == "replaced\n"
+
+    def test_replace_hunk_crlf_handling(self):
+        """Test handling of CRLF line endings."""
+        content = "line 1\r\nline 2\r\n"
+        old_lines = ["line 1", "line 2"]
+        new_lines = ["modified 1", "modified 2"]
+        result = _replace_hunk(content, old_lines, new_lines)
+        assert "modified 1" in result
+        assert "modified 2" in result
+
+    def test_replace_hunk_collapsed_whitespace_fallback(self):
+        """Test aggressive collapsed whitespace matching as last resort."""
+        content = "too   many    spaces\n"
+        old_lines = ["too many spaces"]  # Diff has single spaces
+        new_lines = ["fixed spacing"]
+        result = _replace_hunk(content, old_lines, new_lines)
+        assert "fixed spacing" in result
+
+    @pytest.mark.asyncio
+    async def test_apply_patch_with_unicode_whitespace(self, engine_with_consent):
+        """Integration test: apply_patch with Unicode whitespace in diff."""
+        tool = ApplyPatchTool(engine_with_consent)
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as f:
+            # File with regular spaces
+            f.write("# Report\n\nPage 2 Table 1\n\n| Col A | Col B |\n")
+            temp_path = Path(f.name)
+
+        try:
+            # Diff with NNBSP (common GPT-OSS output)
+            diff = """*** Begin Patch
+*** Update File: report.md
+@@
+-Page\u202f2\u202fTable\u202f1
++**Page 2 Table 1** - Updated
+*** End Patch"""
+
+            result = await tool.execute(
+                file_path=str(temp_path),
+                unified_diff=diff
+            )
+
+            assert "Successfully applied patch" in result
+            content = temp_path.read_text()
+            assert "**Page 2 Table 1** - Updated" in content
+            assert "# Report" in content
+            assert "| Col A | Col B |" in content
         finally:
             temp_path.unlink()
 

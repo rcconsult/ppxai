@@ -893,3 +893,108 @@ class TestToolArgumentValidation:
         )
         # Should succeed despite unexpected parameters
         assert "Contents of: /etc/hosts" in result
+
+
+class TestTruncatedToolCallDetection:
+    """Tests for detecting truncated/incomplete tool call attempts (v1.15.2).
+
+    GPT-OSS and other models sometimes output "I'll use X tool" followed by
+    JSON that gets truncated due to token limits. This detection enables
+    targeted retry feedback.
+    """
+
+    def test_detect_truncated_json_unclosed_braces(self):
+        """Test detection of truncated JSON with unclosed braces."""
+        from ppxai.engine.tools.parser import detect_truncated_tool_call
+
+        text = """I'll use the apply_patch tool to fix the issue.
+```json
+{
+  "tool": "apply_patch",
+  "arguments": {
+    "file_path": "test.py",
+    "content": "some very long content that gets cut off"""
+
+        result = detect_truncated_tool_call(text)
+
+        assert result is not None
+        assert result["tool"] == "apply_patch"
+        assert result["reason"] == "truncated_json"
+
+    def test_detect_no_json_after_intent(self):
+        """Test detection when model states intent but outputs no JSON."""
+        from ppxai.engine.tools.parser import detect_truncated_tool_call
+
+        text = "I'll use the write_file tool to create the file."
+
+        result = detect_truncated_tool_call(text)
+
+        assert result is not None
+        assert result["tool"] == "write_file"
+        assert result["reason"] == "no_json"
+
+    def test_detect_unclosed_code_block(self):
+        """Test detection of unclosed markdown code block."""
+        from ppxai.engine.tools.parser import detect_truncated_tool_call
+
+        text = """I'll use the read_file tool.
+```json
+{"tool": "read_file", "arguments": {"filepath": "test.py"}}"""
+
+        result = detect_truncated_tool_call(text)
+
+        assert result is not None
+        assert result["tool"] == "read_file"
+        assert result["reason"] == "likely_truncated"
+
+    def test_no_detection_for_normal_text(self):
+        """Test that normal text without tool intent is not flagged."""
+        from ppxai.engine.tools.parser import detect_truncated_tool_call
+
+        text = "Here's the answer to your question. The file contains valid data."
+
+        result = detect_truncated_tool_call(text)
+
+        assert result is None
+
+    def test_no_detection_for_complete_tool_call(self):
+        """Test that complete tool calls are not flagged as truncated."""
+        from ppxai.engine.tools.parser import detect_truncated_tool_call
+
+        text = """I'll use the shell tool.
+```json
+{"tool": "shell", "arguments": {"command": "ls -la"}}
+```
+Done."""
+
+        result = detect_truncated_tool_call(text)
+
+        # Should not detect as truncated since JSON is complete
+        assert result is None
+
+    def test_detect_various_intent_patterns(self):
+        """Test detection of various intent phrase patterns."""
+        from ppxai.engine.tools.parser import detect_truncated_tool_call
+
+        patterns = [
+            ("I'll use the test_tool tool.", "test_tool"),
+            ("I will use test_tool tool now.", "test_tool"),
+            ("Let me use the my_function tool.", "my_function"),
+            ("Using the helper_tool tool:", "helper_tool"),
+        ]
+
+        for text, expected_tool in patterns:
+            result = detect_truncated_tool_call(text)
+            assert result is not None, f"Failed to detect: {text}"
+            assert result["tool"] == expected_tool, f"Wrong tool for: {text}"
+
+    def test_detect_tool_with_underscores(self):
+        """Test detection of tools with underscores in name."""
+        from ppxai.engine.tools.parser import detect_truncated_tool_call
+
+        text = "I'll use the execute_shell_command tool to run the script."
+
+        result = detect_truncated_tool_call(text)
+
+        assert result is not None
+        assert result["tool"] == "execute_shell_command"
