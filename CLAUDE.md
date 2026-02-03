@@ -20,6 +20,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **FIX:** Web app clipboard button now uses correct global reference (`window.ppxai`)
 - **FIX:** Web app `display_file` event now handled properly (opens split preview)
 - **DOCS:** Comprehensive terminal image display guide in INSTALLATION.md
+- **DOCS:** GPT-OSS "explain before calling" tool issue and `max_tokens` mitigation
 
 **v1.15.0 highlights:**
 - **NEW:** Type-based renderer dispatch - commands return typed result objects
@@ -578,6 +579,38 @@ The model was trained specifically on Harmony's response format with control tok
 - ppxai default: `native_tool_calling: true`
 
 **For developers hitting HarmonyError:** Set `native_tool_calling: false` in provider config, or use the standalone example for non-ppxai applications.
+
+**Known Issue: "I'll use X tool" followed by JSON text (v1.15.2)**
+
+Sometimes GPT-OSS outputs tool calls as JSON text in the response instead of using native tool calling:
+```
+I'll use the apply_patch tool.
+```json
+{"tool": "apply_patch", "arguments": {...}}
+```
+
+**Root causes:**
+1. vLLM's Harmony parser intermittently fails to capture tool calls
+2. Model explains what it will do before calling the tool (learned behavior)
+3. Long tool calls (e.g., apply_patch with large diffs) may be truncated if no `max_tokens` is set
+
+**Mitigation:**
+1. Add `max_tokens: 8192` (or higher) to model config to prevent truncation
+2. Add system prompt instruction: "NEVER say 'I'll use X tool' then output JSON - call tools directly"
+3. Add AGENTS.md hint: "Do NOT output tool call JSON in your response text"
+4. The fallback parser (`ppxai/engine/tools/parser.py`) will attempt to extract tool calls from text responses
+
+**Example config:**
+```json
+{
+  "models": {
+    "openai/gpt-oss-120b": {
+      "max_tokens": 8192,
+      "generation_params": { "temperature": 0.2 }
+    }
+  }
+}
+```
 
 ## Commit Guidelines
 
