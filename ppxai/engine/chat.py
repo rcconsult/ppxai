@@ -79,6 +79,10 @@ class ChatContext(Protocol):
         """Get bootstrap prompt for current provider/model (v1.14.0)."""
         ...
 
+    def get_working_dir(self) -> Optional[str]:
+        """Get current working directory (v1.15.2)."""
+        ...
+
 
 async def chat_simple(
     ctx: ChatContext,
@@ -227,7 +231,8 @@ async def chat_with_tools(
 
         if not use_native_tools:
             # Prompt-based tool calling
-            tool_prompt = ctx.tool_manager.get_tools_prompt()
+            # v1.15.2: Pass working directory so LLM knows current directory even after /cd
+            tool_prompt = ctx.tool_manager.get_tools_prompt(working_dir=ctx.get_working_dir())
             if tool_prompt:
                 # Add provider-specific guidance
                 has_native_search = ctx.provider and (

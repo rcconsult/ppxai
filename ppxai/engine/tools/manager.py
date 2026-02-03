@@ -287,8 +287,11 @@ class ToolManager:
 
         return await tool.execute(**kwargs)
 
-    def get_tools_prompt(self) -> str:
+    def get_tools_prompt(self, working_dir: Optional[str] = None) -> str:
         """Generate system prompt describing available tools.
+
+        Args:
+            working_dir: Current working directory to include in prompt (v1.15.2)
 
         Returns:
             System prompt text for tool usage
@@ -298,6 +301,14 @@ class ToolManager:
             return ""
 
         prompt = "# IMPORTANT: You Have Access to Tools\n\n"
+
+        # Include current working directory if available (v1.15.2)
+        # This ensures LLM knows the current directory even after /cd commands
+        if working_dir:
+            prompt += f"**Current Working Directory:** `{working_dir}`\n"
+            prompt += "All relative paths in tool calls will be resolved relative to this directory.\n"
+            prompt += "When the user asks about the current directory, use this value - do NOT rely on previous tool results.\n\n"
+
         prompt += "You MUST use these tools when the user asks for information you don't have access to natively.\n"
         prompt += "You are an AI assistant with tool capabilities. You have access to the user's filesystem, can run commands, search the web, and more. Use the tools proactively - don't ask the user for information you can get yourself!\n\n"
         prompt += "## How to Call a Tool\n\n"
