@@ -583,6 +583,251 @@ Replace `ppxai.exe` with `ppxaide.exe` in the above examples:
 wt.exe -d "%USERPROFILE%\.ppxai" -- "%USERPROFILE%\.ppxai\bin\ppxaide.exe"
 ```
 
+### macOS Terminal Configuration
+
+macOS users have several terminal options with different image protocol capabilities.
+
+#### Terminal Comparison (macOS)
+
+| Terminal | Protocol | Image Support | Performance | Installation | Recommendation |
+|----------|----------|---------------|-------------|--------------|----------------|
+| **iTerm2** | iTerm2 (OSC 1337) | ✅ Excellent | Good | [iterm2.com](https://iterm2.com/) | Best native macOS |
+| **WezTerm** | iTerm2 | ✅ Excellent | Excellent | [wezfurlong.org](https://wezfurlong.org/wezterm/) | Best cross-platform |
+| **Kitty** | Kitty TGP | ✅ Excellent | Excellent | [sw.kovidgoyal.net](https://sw.kovidgoyal.net/kitty/) | Linux-focused, works on macOS |
+| **Terminal.app** | None | ❌ No support | Good | Built-in | Text-only |
+
+**Recommendation:** Use iTerm2 for the best native macOS experience, or WezTerm for cross-platform consistency.
+
+#### iTerm2 Setup
+
+iTerm2 supports image display out of the box with no configuration needed. ppxai automatically detects iTerm2 via the `TERM_PROGRAM` environment variable.
+
+**Verify detection:**
+```bash
+echo $TERM_PROGRAM
+# Should output: iTerm.app
+```
+
+If not set (e.g., when using tmux), you can force iTerm2 protocol:
+
+```bash
+# In ~/.zshrc or ~/.bash_profile
+export PPXAI_IMAGE_PROTOCOL=iterm2
+```
+
+**Optional: iTerm2 Profile Optimization**
+
+For best results with ppxai image rendering:
+
+1. Open iTerm2 → Preferences (⌘,)
+2. Go to **Profiles** → **Terminal**
+3. Ensure these settings:
+   - **Report Terminal Type:** `xterm-256color` or `xterm-256color-italic`
+   - **Character Encoding:** UTF-8
+4. Go to **Profiles** → **Text**
+   - Use a font with good Unicode support (e.g., SF Mono, Menlo, Fira Code)
+
+#### WezTerm Setup (macOS)
+
+WezTerm requires `TERM_PROGRAM` to be set for auto-detection. Add to `~/.wezterm.lua`:
+
+```lua
+local wezterm = require 'wezterm'
+local config = {}
+
+-- Required for ppxai terminal detection
+config.set_environment_variables = {
+  TERM_PROGRAM = 'WezTerm',
+}
+
+return config
+```
+
+After this change, ppxai will automatically use the iTerm2 image protocol in WezTerm.
+
+#### Kitty Setup (macOS)
+
+Kitty is auto-detected via the `KITTY_WINDOW_ID` environment variable. No configuration needed.
+
+Install via Homebrew:
+```bash
+brew install kitty
+```
+
+#### Terminal.app (Not Recommended for Image Display)
+
+Apple's built-in Terminal.app **does not support** image display protocols (Sixel, iTerm2, or Kitty). If you need image rendering:
+
+1. Install iTerm2 (recommended): `brew install --cask iterm2`
+2. Or install WezTerm: `brew install --cask wezterm`
+
+You can still use ppxai in Terminal.app for text-only chat.
+
+### macOS Desktop Launchers
+
+#### Option 1: Automator Application
+
+Create a native macOS app that launches ppxai in your preferred terminal:
+
+**For iTerm2:**
+
+1. Open **Automator.app** (Applications → Automator)
+2. Choose **New Document** → **Application**
+3. Search for "Run AppleScript" and drag it to the workflow
+4. Replace the script with:
+
+```applescript
+on run {input, parameters}
+    tell application "iTerm"
+        activate
+        create window with default profile
+        tell current session of current window
+            write text "ppxai"
+        end tell
+    end tell
+    return input
+end run
+```
+
+5. Save as `ppxai.app` in `/Applications/` or `~/Applications/`
+6. **Optional:** Right-click → Get Info → drag custom icon
+
+**For WezTerm:**
+
+```applescript
+on run {input, parameters}
+    do shell script "/Applications/WezTerm.app/Contents/MacOS/wezterm start --always-new-process -- ~/.local/bin/ppxai"
+    return input
+end run
+```
+
+**For ppxaide (Textual TUI):**
+
+Replace `ppxai` with `ppxaide` in the scripts above.
+
+#### Option 2: Alfred Workflow
+
+Create an Alfred workflow for quick launch:
+
+1. Open **Alfred Preferences** → **Workflows**
+2. Click **+** → **Blank Workflow**
+3. Add **Hotkey** trigger (e.g., ⌥⌘P)
+4. Add **Run Script** action:
+
+```bash
+osascript -e 'tell application "iTerm" to create window with default profile command "ppxai"'
+```
+
+5. Connect trigger to action
+
+#### Option 3: Raycast Script Command
+
+Create `~/.config/raycast/scripts/ppxai.sh`:
+
+```bash
+#!/bin/bash
+
+# Required parameters:
+# @raycast.schemaVersion 1
+# @raycast.title Launch ppxai
+# @raycast.mode silent
+# @raycast.packageName ppxai
+
+# Launch ppxai in iTerm2
+osascript -e 'tell application "iTerm" to create window with default profile command "ppxai"'
+```
+
+Make it executable:
+```bash
+chmod +x ~/.config/raycast/scripts/ppxai.sh
+```
+
+#### Option 4: Dock Icon
+
+To add ppxai to the Dock:
+
+1. Create Automator app (see Option 1)
+2. Drag `ppxai.app` from `/Applications/` to Dock
+3. **Optional:** Add custom icon:
+   - Download ppxai icon from GitHub releases
+   - Right-click app → Get Info
+   - Drag icon to the icon area in top-left
+
+### macOS Shell Profile Examples
+
+Add environment variable overrides to your shell profile for persistent configuration.
+
+#### Zsh (Default on macOS Catalina+)
+
+Add to `~/.zshrc`:
+
+```bash
+# ppxai Terminal Configuration
+# Force terminal identification (if auto-detection fails)
+export PPXAI_TERMINAL=iTerm.app
+
+# Force image protocol (if auto-detection fails)
+export PPXAI_IMAGE_PROTOCOL=iterm2
+
+# Or disable images entirely
+# export PPXAI_IMAGE_PROTOCOL=none
+```
+
+Apply changes:
+```bash
+source ~/.zshrc
+```
+
+#### Bash (Legacy)
+
+Add to `~/.bash_profile` or `~/.bashrc`:
+
+```bash
+# ppxai Terminal Configuration
+export PPXAI_TERMINAL=iTerm.app
+export PPXAI_IMAGE_PROTOCOL=iterm2
+```
+
+Apply changes:
+```bash
+source ~/.bash_profile
+```
+
+#### Per-Terminal Configuration (Recommended)
+
+For users who switch between multiple terminals (e.g., iTerm2 + WezTerm), configure each terminal separately rather than using shell profile:
+
+**iTerm2:**
+1. Open **Preferences** → **Profiles** → **Your Profile**
+2. Go to **General** → **Environment**
+3. Click **+** and add:
+   - `PPXAI_TERMINAL=iTerm.app`
+   - `PPXAI_IMAGE_PROTOCOL=iterm2`
+
+**WezTerm:**
+Use `.wezterm.lua` config (see WezTerm Setup section above).
+
+This way, each terminal automatically uses the correct protocol without conflicts.
+
+### Multi-Terminal Setup (macOS)
+
+If you use multiple terminals on macOS, configure image protocols per-terminal to avoid conflicts:
+
+| Terminal | Configuration Method | Priority |
+|----------|---------------------|----------|
+| **iTerm2** | iTerm2 Profile → Environment variables | High |
+| **WezTerm** | `~/.wezterm.lua` → `set_environment_variables` | High |
+| **Kitty** | Auto-detected via `KITTY_WINDOW_ID` | Auto |
+| **Terminal.app** | No configuration (images not supported) | N/A |
+
+**Avoid** setting `PPXAI_TERMINAL` or `PPXAI_IMAGE_PROTOCOL` in `~/.zshrc` when using multiple terminals, as it forces the same protocol for all terminals.
+
+**Example Multi-Terminal Workflow:**
+
+1. **Daily work (iTerm2)** - Auto-detected, iTerm2 protocol for images
+2. **SSH sessions (WezTerm)** - Configured in `.wezterm.lua`, iTerm2 protocol
+3. **Quick scripts (Terminal.app)** - Text-only, no image support
+
 ### Verifying Image Support
 
 After configuration, verify image support:

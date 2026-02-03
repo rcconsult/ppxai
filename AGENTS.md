@@ -68,20 +68,22 @@ PPXAI_CONFIG_FILE="$HOME/.ppxai/ppxai-config.json" uv run pytest tests/test_cust
 - `ROADMAP.md` - Feature roadmap and version planning
 - `docs/RELEASE-PLAN-v1.14.x.md` - Current release series plan
 
-### Current Version: v1.14.2
+### Current Version: v1.15.2
 
-**v1.14.2 Features:**
-- Hierarchical context scopes (global, project, subdirectory)
-- `@clipboard` and `@url` context providers
-- Include directive for AGENTS.md
-- Hint templates (`~/.ppxai/hint-templates.yaml`)
-- `/context show` command with scope labels
+**v1.15.2 Features:**
+- **NEW:** `/terminal` command - shows terminal detection and image protocol config help
+- **NEW:** `PPXAI_TERMINAL` and `PPXAI_IMAGE_PROTOCOL` env vars for multi-terminal setups
+- **NEW:** Double Ctrl+C to quit pattern in ppxaide (prevents accidental exits)
+- **FIX:** Autocomplete preserves command prefix for subcommands (`/provider ` + TAB works)
+- **FIX:** `/status` shows terminal override indicators when env vars are set
+- **DOCS:** Comprehensive terminal image display guide in INSTALLATION.md
 
-**v1.14.1 Features:**
-- `/edit` command for VSCode - Opens file in native editor with line:col support
-- `/edit` command for Web App - CodeMirror 6 editor with syntax highlighting
-- `/context reload` - Reloads AGENTS.md without server restart
+**v1.15.1 Features:**
+- Minor bug fixes and stability improvements for the new Textual TUI (`ppxaide`).
 
-**TUI `/edit` - Deferred to v1.15.x**
-
-The simple line editor approach had UX issues (Rich-based TUI can't handle proper editor workflows). A better approach is needed - possibly using an external editor or a different TUI framework.
+**v1.15.0 Features:**
+- **New Textual TUI (`ppxaide`)**: A modern, async-first terminal UI powered by the Textual framework.
+- **Type-Based Renderer Architecture**: Core logic is now decoupled from the UI. Commands return structured data (`CommandResult` types), which are then dispatched to a specific renderer (Rich for `ppxai`, Textual for `ppxaide`).
+- **UI-Agnostic Commands**: All 32 slash commands work identically across the legacy TUI, the new Textual TUI, the VSCode extension, and the Web App.
+- **Enhanced UX in `ppxaide`**: Full markdown rendering in chat, 17+ themes, real-time cost tracking, and dedicated copy buttons.
+- **/copy command**: A reliable way to copy the last AI response to the clipboard in any TUI.
