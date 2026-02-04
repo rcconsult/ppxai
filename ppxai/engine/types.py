@@ -26,6 +26,7 @@ class EventType(Enum):
     STATUS = "status"  # Status/notification messages (v1.12.0 - checkpoints, etc.)
     WORKING_DIR_CHANGED = "working_dir_changed"  # Working directory changed (v1.13.2)
     DISPLAY_FILE = "display_file"  # Display file in viewer (v1.15.1)
+    WARNING = "warning"  # Validation warning (v1.15.2 - hallucination detection)
     ERROR = "error"
     INFO = "info"
 

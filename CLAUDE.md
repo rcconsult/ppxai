@@ -16,6 +16,11 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **TESTS:** 20 new tests for Unicode whitespace normalization and truncated tool call detection
 
 **v1.15.2 highlights:**
+- **NEW:** Response validation system - detects LLM hallucinations and tool result contradictions
+- **NEW:** `ResponseValidator` class in `engine/tools/validator.py` - tracks tool calls and validates claims
+- **NEW:** WARNING SSE events - real-time alerts when model claims contradict tool results
+- **NEW:** Web app warning display - styled warnings show detected issues with suggested actions
+- **NEW:** Enhanced system prompt - instructs models to verify tool results before claiming success
 - **NEW:** `/terminal` command - shows terminal detection and image protocol config help
 - **NEW:** `PPXAI_TERMINAL` and `PPXAI_IMAGE_PROTOCOL` env vars for multi-terminal setups
 - **NEW:** Double Ctrl+C to quit pattern in ppxaide (prevents accidental exits)

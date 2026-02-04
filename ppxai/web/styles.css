@@ -854,6 +854,66 @@ body {
     max-width: 100%;
 }
 
+/* v1.15.2: Validation warning messages (hallucination detection) */
+.message.warning-message {
+    background: rgba(255, 152, 0, 0.15);
+    border: 1px solid #ff9800;
+    border-left: 4px solid #ff9800;
+    color: #ff9800;
+    max-width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+}
+
+.message.warning-message.severity-error {
+    background: rgba(244, 67, 54, 0.15);
+    border-color: var(--error-color);
+    color: var(--error-color);
+}
+
+.warning-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.warning-icon {
+    font-size: 18px;
+}
+
+.warning-type {
+    font-family: monospace;
+    font-size: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.warning-message-text {
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.warning-details {
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: rgba(0, 0, 0, 0.15);
+    padding: 8px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    font-family: monospace;
+    word-break: break-word;
+}
+
+.warning-action {
+    font-size: 13px;
+    color: var(--text-primary);
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 152, 0, 0.3);
+}
+
 .message.tool-message {
     background: var(--tool-call-bg);
     border-left: 3px solid var(--info-color);

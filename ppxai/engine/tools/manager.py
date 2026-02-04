@@ -366,6 +366,19 @@ class ToolManager:
         prompt += f"{instruction_num}. NEVER say 'I don't have access to real-time data' or 'I can't execute commands' - you DO have access via these tools!\n"
         instruction_num += 1
         prompt += f"{instruction_num}. Don't pass unnecessary parameters - use tool defaults (e.g., don't specify max_lines unless you need a specific limit).\n"
+        instruction_num += 1
+
+        # v1.15.2: Add critical instructions to prevent hallucination and tool avoidance
+        prompt += "\n## CRITICAL: Tool Result Validation\n\n"
+        prompt += f"{instruction_num}. **ALWAYS check tool results before claiming success**. If a tool returns 'Error:', 'not found', or 'failed', you MUST acknowledge the failure - do NOT claim success.\n"
+        instruction_num += 1
+        prompt += f"{instruction_num}. **NEVER claim to have created/written/opened a file unless a tool result confirms it**. Describing what you would write is NOT the same as actually writing it.\n"
+        instruction_num += 1
+        prompt += f"{instruction_num}. **If the user asks you to 'display' or 'show' a file, you MUST call the display_file tool**. Do NOT just describe the file contents.\n"
+        instruction_num += 1
+        prompt += f"{instruction_num}. **If the user gives a shell command (like 'ls', 'dir', 'cat'), you MUST use execute_shell_command**. Do NOT fabricate the output.\n"
+        instruction_num += 1
+        prompt += f"{instruction_num}. **Call tools directly - do NOT output tool JSON in your response text**. When you want to use a tool, make the tool call immediately.\n"
 
         return prompt
 

@@ -40,6 +40,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.15.2] - 2026-02-03
+
+### Added - Response Validation & Hallucination Detection
+
+- **ResponseValidator class** (`engine/tools/validator.py`) - Detects when LLM models:
+  - Claim success after tool failures (e.g., "I've created the file" when write_file returned error)
+  - Claim file operations without calling appropriate tools
+  - Output tool call JSON as text instead of making actual calls
+  - Fabricate output that looks like tool results (fake shell listings)
+- **WARNING event type** - New SSE event for real-time validation warnings to clients
+- **Web app warning display** - Styled warnings with severity, message, details, and suggested actions
+- **Enhanced tool system prompt** - 5 new critical instructions for tool result validation:
+  1. Always check tool results before claiming success
+  2. Never claim file creation without tool confirmation
+  3. Must call display_file when asked to display files
+  4. Must use execute_shell_command for shell commands
+  5. Call tools directly, never output JSON in response text
+
+### Added - Terminal Features
+
+- **`/terminal` command** - Shows terminal detection and image protocol config help
+- **`PPXAI_TERMINAL` and `PPXAI_IMAGE_PROTOCOL`** - Environment variables for multi-terminal setups
+- **Double Ctrl+C to quit** - Pattern in ppxaide prevents accidental exits
+
+### Fixed
+
+- **Autocomplete** preserves command prefix for subcommands (`/provider ` + TAB works)
+- **`/status`** shows terminal override indicators when env vars are set
+- **Config loader** now includes all config sections (`server`, `session`, `tui`, `paths`, etc.)
+- **`server.idle_timeout`** config now properly read (was always using 300s default)
+- **Web app `/context reload`** shows correct message instead of false "not found"
+- **Web app clipboard button** now uses correct global reference (`window.ppxai`)
+- **Web app `display_file` event** now handled properly (opens split preview)
+
+### Documentation
+
+- Comprehensive terminal image display guide in INSTALLATION.md
+- GPT-OSS "explain before calling" tool issue and `max_tokens` mitigation
+
+### Technical
+
+- `ValidationResult` enum: VALID, CLAIM_WITHOUT_ACTION, CLAIM_CONTRADICTS_RESULT, TOOL_JSON_IN_TEXT, FABRICATED_OUTPUT
+- `ValidationWarning` dataclass with severity levels (info, warning, error)
+- Validator integrated into `chat.py` tool execution loop
+- 27 new tests for response validation in `tests/test_validator.py`
+
+---
+
 ## [1.15.1] - 2026-01-29
 
 ### Added - AI Tool Integration

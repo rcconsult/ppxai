@@ -19,6 +19,7 @@ from .types import Event, EventType, Message, UsageStats
 from .session import SessionManager
 from .tools.manager import ToolManager
 from .tools.parser import parse_tool_call, detect_truncated_tool_call
+from .tools.validator import ResponseValidator, ValidationResult
 from .providers.base import BaseProvider
 from ..config import get_system_prompt, get_system_prompt_mode, calculate_cost
 from ..common.logger import get_logger
@@ -190,6 +191,9 @@ async def chat_with_tools(
     # Reset tool call history for loop detection
     ctx.tool_manager.reset_tool_history()
 
+    # v1.15.2: Initialize response validator for hallucination detection
+    validator = ResponseValidator()
+
     # Track accumulated usage
     accumulated_usage = UsageStats()
 
@@ -355,6 +359,21 @@ async def chat_with_tools(
 
                 result = await tool_task
 
+                # v1.15.2: Determine if tool succeeded based on result content
+                tool_success = not any(
+                    indicator in result.lower()
+                    for indicator in ['error:', 'not found', 'failed', 'does not exist', 'permission denied']
+                )
+
+                # v1.15.2: Record tool call for validation
+                validator.record_tool_call(
+                    tool_name=tool_name,
+                    arguments=tool_args,
+                    result=result,
+                    success=tool_success,
+                    iteration=iteration
+                )
+
                 # Track tool usage for premium search
                 if tool_name == "web_search":
                     try:
@@ -406,6 +425,16 @@ async def chat_with_tools(
 
             except Exception as e:
                 error_msg = str(e)
+
+                # v1.15.2: Record failed tool call for validation
+                validator.record_tool_call(
+                    tool_name=tool_name,
+                    arguments=tool_args,
+                    result=f"Error: {error_msg}",
+                    success=False,
+                    iteration=iteration
+                )
+
                 yield Event(EventType.TOOL_ERROR, {
                     "tool": tool_name,
                     "error": error_msg
@@ -488,6 +517,20 @@ async def chat_with_tools(
                     ctx.session.messages.pop()
 
             ctx.session.add_message(Message("assistant", full_response))
+
+            # v1.15.2: Validate response against tool results to detect hallucinations
+            warnings = validator.validate_response(full_response)
+            for warning in warnings:
+                logger.warning(
+                    f"Response validation warning: {warning.result.value} - {warning.message}"
+                )
+                yield Event(EventType.WARNING, {
+                    "type": warning.result.value,
+                    "severity": warning.severity,
+                    "message": warning.message,
+                    "details": warning.details,
+                    "suggested_action": warning.suggested_action
+                })
 
             # Commit agent changes if needed
             commit_hash = ctx.commit_agent_changes_if_needed("Task completed")

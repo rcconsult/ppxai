@@ -985,6 +985,13 @@ class PpxaiApp {
                     this.displayFileFromEvent(event.data.filepath);
                 }
                 break;
+
+            case 'warning':
+                // v1.15.2: Handle validation warnings (hallucination detection)
+                if (event.data) {
+                    this.showValidationWarning(event.data);
+                }
+                break;
         }
 
         return fullContent;
@@ -2019,6 +2026,43 @@ class PpxaiApp {
         `;
         this.elements.messagesContainer.appendChild(msgEl);
         this.scrollToBottom();
+    }
+
+    /**
+     * Show a validation warning (v1.15.2 - hallucination detection)
+     * @param {Object} data - Warning data with type, severity, message, details, suggested_action
+     */
+    showValidationWarning(data) {
+        const msgEl = document.createElement('div');
+        msgEl.className = `message warning-message severity-${data.severity || 'warning'}`;
+
+        // Build warning message
+        let warningIcon = '⚠️';
+        if (data.severity === 'error') {
+            warningIcon = '🚨';
+        }
+
+        let content = `<div class="warning-header">
+            <span class="warning-icon">${warningIcon}</span>
+            <span class="warning-type">${this.escapeHtml(data.type || 'validation_warning')}</span>
+        </div>`;
+
+        content += `<div class="warning-message-text">${this.escapeHtml(data.message || 'Validation warning')}</div>`;
+
+        if (data.details) {
+            content += `<div class="warning-details">${this.escapeHtml(data.details)}</div>`;
+        }
+
+        if (data.suggested_action) {
+            content += `<div class="warning-action"><strong>Suggestion:</strong> ${this.escapeHtml(data.suggested_action)}</div>`;
+        }
+
+        msgEl.innerHTML = content;
+        this.elements.messagesContainer.appendChild(msgEl);
+        this.scrollToBottom();
+
+        // Log to console for debugging
+        console.warn('[Validation Warning]', data);
     }
 
     showToolCall(data) {
