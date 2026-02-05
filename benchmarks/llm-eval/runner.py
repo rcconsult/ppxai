@@ -1,0 +1,245 @@
+"""
+Benchmark runner - executes tests against LLM API.
+"""
+
+import asyncio
+import os
+import time
+from datetime import datetime
+from typing import Optional
+
+from openai import AsyncOpenAI
+
+from test_cases import ALL_TESTS, TestCase, get_categories
+from results import BenchmarkResult
+
+
+class LLMClient:
+    """Wrapper for OpenAI-compatible API."""
+
+    def __init__(
+        self,
+        provider: str,
+        model: str,
+        base_url: Optional[str] = None,
+        api_key: Optional[str] = None,
+        timeout: int = 60,
+    ):
+        self.provider = provider
+        self.model = model
+        self.timeout = timeout
+
+        # Determine base URL and API key
+        if base_url:
+            self.base_url = base_url
+        else:
+            self.base_url = self._default_base_url(provider)
+
+        if api_key:
+            self.api_key = api_key
+        else:
+            self.api_key = self._default_api_key(provider)
+
+        self.client = AsyncOpenAI(
+            base_url=self.base_url,
+            api_key=self.api_key,
+            timeout=timeout,
+        )
+
+    def _default_base_url(self, provider: str) -> str:
+        """Get default base URL for provider."""
+        defaults = {
+            "openai": "https://api.openai.com/v1",
+            "perplexity": "https://api.perplexity.ai",
+            "openrouter": "https://openrouter.ai/api/v1",
+            "ollama": "http://localhost:11434/v1",
+            "vllm": "http://localhost:8000/v1",
+            "lmstudio": "http://localhost:1234/v1",
+        }
+        return defaults.get(provider, "http://localhost:8000/v1")
+
+    def _default_api_key(self, provider: str) -> str:
+        """Get API key from environment."""
+        env_vars = {
+            "openai": "OPENAI_API_KEY",
+            "perplexity": "PERPLEXITY_API_KEY",
+            "openrouter": "OPENROUTER_API_KEY",
+            "anthropic": "ANTHROPIC_API_KEY",
+        }
+        env_var = env_vars.get(provider, f"{provider.upper()}_API_KEY")
+        key = os.environ.get(env_var, "")
+
+        # For local providers, use dummy key
+        if not key and provider in ("ollama", "vllm", "lmstudio", "local"):
+            key = "not-needed"
+
+        return key
+
+    async def chat(
+        self,
+        messages: list[dict],
+        tools: Optional[list[dict]] = None,
+        **kwargs,
+    ) -> dict:
+        """Send chat completion request."""
+        try:
+            params = {
+                "model": self.model,
+                "messages": messages,
+            }
+
+            if tools:
+                params["tools"] = tools
+                params["tool_choice"] = "auto"
+
+            response = await self.client.chat.completions.create(**params)
+
+            # Extract response
+            choice = response.choices[0]
+            result = {
+                "content": choice.message.content or "",
+                "tool_calls": [],
+                "finish_reason": choice.finish_reason,
+            }
+
+            if choice.message.tool_calls:
+                result["tool_calls"] = [
+                    {
+                        "id": tc.id,
+                        "type": tc.type,
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments,
+                        }
+                    }
+                    for tc in choice.message.tool_calls
+                ]
+
+            return result
+
+        except Exception as e:
+            return {
+                "content": "",
+                "tool_calls": [],
+                "error": str(e),
+            }
+
+
+class BenchmarkRunner:
+    """Runs benchmark tests against an LLM."""
+
+    def __init__(
+        self,
+        provider: str,
+        model: str,
+        base_url: Optional[str] = None,
+        api_key: Optional[str] = None,
+        timeout: int = 60,
+        retries: int = 1,
+        verbose: bool = False,
+    ):
+        self.provider = provider
+        self.model = model
+        self.timeout = timeout
+        self.retries = retries
+        self.verbose = verbose
+
+        self.client = LLMClient(
+            provider=provider,
+            model=model,
+            base_url=base_url,
+            api_key=api_key,
+            timeout=timeout,
+        )
+
+    def run(self, categories: Optional[list[str]] = None) -> BenchmarkResult:
+        """Run benchmark synchronously."""
+        return asyncio.run(self.run_async(categories))
+
+    async def run_async(self, categories: Optional[list[str]] = None) -> BenchmarkResult:
+        """Run benchmark tests."""
+        start_time = time.time()
+
+        # Filter tests by category if specified
+        tests = ALL_TESTS
+        if categories:
+            tests = [t for t in tests if t.category in categories]
+
+        test_results = []
+        category_results = {}  # category -> list of (passed, weight)
+
+        print(f"Running {len(tests)} tests...")
+        print()
+
+        for i, test in enumerate(tests, 1):
+            print(f"[{i}/{len(tests)}] {test.category}/{test.name}...", end=" ", flush=True)
+
+            passed = False
+            details = {}
+
+            for attempt in range(self.retries):
+                try:
+                    passed, details = await asyncio.wait_for(
+                        test.run(self.client),
+                        timeout=self.timeout,
+                    )
+                    if passed:
+                        break
+                except asyncio.TimeoutError:
+                    details = {"error": "Timeout"}
+                except Exception as e:
+                    details = {"error": str(e)}
+
+                if attempt < self.retries - 1:
+                    print("(retry)", end=" ", flush=True)
+
+            status = "✓" if passed else "✗"
+            print(status)
+
+            if self.verbose and not passed:
+                error = details.get("error", "Unknown error")
+                print(f"      Error: {error[:80]}")
+
+            # Record result
+            test_results.append({
+                "name": test.name,
+                "category": test.category,
+                "passed": passed,
+                "details": details,
+                "weight": test.weight,
+            })
+
+            # Track by category
+            if test.category not in category_results:
+                category_results[test.category] = []
+            category_results[test.category].append((passed, test.weight))
+
+        # Calculate scores
+        total_weight = sum(t.weight for t in tests)
+        passed_weight = sum(r["weight"] for r in test_results if r["passed"])
+        overall_score = (passed_weight / total_weight * 100) if total_weight > 0 else 0
+
+        category_scores = {}
+        for category, results in category_results.items():
+            cat_total = sum(w for _, w in results)
+            cat_passed = sum(w for p, w in results if p)
+            category_scores[category] = (cat_passed / cat_total * 100) if cat_total > 0 else 0
+
+        duration = time.time() - start_time
+
+        return BenchmarkResult(
+            provider=self.provider,
+            model=self.model,
+            timestamp=datetime.utcnow().isoformat(),
+            overall_score=overall_score,
+            tests_passed=sum(1 for r in test_results if r["passed"]),
+            tests_total=len(test_results),
+            duration_seconds=duration,
+            category_scores=category_scores,
+            test_results=test_results,
+            metadata={
+                "base_url": self.client.base_url,
+                "timeout": self.timeout,
+                "retries": self.retries,
+            },
+        )

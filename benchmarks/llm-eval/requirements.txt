@@ -1,0 +1,2 @@
+# LLM Benchmark Suite Dependencies
+openai>=1.0.0
