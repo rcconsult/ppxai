@@ -1180,7 +1180,18 @@ async def test_multi_turn_consistency(client) -> tuple[bool, dict]:
 # =============================================================================
 
 ALL_TESTS = [
-    # Tool Calling
+    # ==========================================================================
+    # GATE TESTS: Hallucination Resistance (run first - if these fail, model is unreliable)
+    # ==========================================================================
+    TestCase("respects_tool_failure", "hallucination_resistance", "Acknowledges tool failures, doesn't claim success", test_respects_tool_failure, weight=2.0, tags=["gpt-oss", "critical", "gate"]),
+    TestCase("no_phantom_tool_calls", "hallucination_resistance", "Doesn't claim actions it didn't take", test_no_phantom_tool_calls, weight=1.5, tags=["gpt-oss", "gate"]),
+    TestCase("repeated_failure_acknowledgment", "hallucination_resistance", "Doesn't ignore repeated failures", test_repeated_failure_acknowledgment, weight=2.0, tags=["gpt-oss", "critical", "gate"]),
+    TestCase("contradiction_detection", "hallucination_resistance", "Doesn't contradict tool results", test_contradiction_detection, weight=2.0, tags=["gpt-oss", "critical", "gate"]),
+    TestCase("multi_turn_consistency", "hallucination_resistance", "Maintains accuracy over multiple turns", test_multi_turn_consistency, weight=1.5, tags=["gpt-oss", "gate"]),
+
+    # ==========================================================================
+    # FUNCTIONAL TESTS: Tool Calling
+    # ==========================================================================
     TestCase("simple_tool_call", "tool_calling", "Basic single tool invocation", test_simple_tool_call),
     TestCase("complex_args", "tool_calling", "Tool call with multiple arguments", test_tool_call_with_complex_args),
     TestCase("large_payload", "tool_calling", "Tool call with large JSON (truncation test)", test_tool_call_large_payload, weight=1.5, tags=["gpt-oss"]),
@@ -1188,37 +1199,40 @@ ALL_TESTS = [
     TestCase("no_explain_before_tool", "tool_calling", "Calls tool without 'I'll use X' preamble", test_no_explain_before_tool, tags=["gpt-oss"]),
     TestCase("no_json_in_content", "tool_calling", "Tool calls not leaked as JSON in content", test_tool_call_json_in_content, tags=["gpt-oss"]),
 
-    # Code Editing
+    # ==========================================================================
+    # FUNCTIONAL TESTS: Code Editing
+    # ==========================================================================
     TestCase("patch_simple", "code_editing", "Simple apply_patch with exact content", test_apply_patch_simple),
     TestCase("patch_indentation", "code_editing", "apply_patch preserves indentation", test_apply_patch_indentation, weight=1.5),
     TestCase("patch_multiline", "code_editing", "apply_patch with multi-line changes", test_apply_patch_multiline),
 
-    # Format Compliance
+    # ==========================================================================
+    # FUNCTIONAL TESTS: Format Compliance
+    # ==========================================================================
     TestCase("json_output", "format_compliance", "Outputs valid JSON when requested", test_json_output_format),
     TestCase("markdown_code_blocks", "format_compliance", "Proper markdown code block formatting", test_markdown_code_blocks),
     TestCase("no_hallucinated_paths", "format_compliance", "Doesn't hallucinate file paths", test_no_hallucinated_paths),
 
-    # Instruction Following
+    # ==========================================================================
+    # FUNCTIONAL TESTS: Instruction Following
+    # ==========================================================================
     TestCase("do_not_explain", "instruction_following", "Follows 'do not explain' instruction", test_do_not_explain),
     TestCase("constraint_respect", "instruction_following", "Respects explicit constraints", test_constraint_respect, weight=1.5),
     TestCase("format_specification", "instruction_following", "Follows specific output format", test_format_specification),
 
-    # Reasoning
+    # ==========================================================================
+    # FUNCTIONAL TESTS: Reasoning
+    # ==========================================================================
     TestCase("multi_step_planning", "reasoning", "Plans multi-step tasks", test_multi_step_planning),
     TestCase("dependency_ordering", "reasoning", "Understands task dependencies", test_dependency_ordering),
     TestCase("edge_case_handling", "reasoning", "Recognizes edge cases", test_edge_case_handling),
 
-    # Error Recovery
+    # ==========================================================================
+    # FUNCTIONAL TESTS: Error Recovery
+    # ==========================================================================
     TestCase("tool_error_recovery", "error_recovery", "Recovers from tool errors", test_tool_error_recovery),
     TestCase("self_correction", "error_recovery", "Corrects mistakes when pointed out", test_self_correction),
     TestCase("graceful_degradation", "error_recovery", "Handles limited capabilities gracefully", test_graceful_degradation),
-
-    # Hallucination Resistance (GPT-OSS degradation event detection)
-    TestCase("respects_tool_failure", "hallucination_resistance", "Acknowledges tool failures, doesn't claim success", test_respects_tool_failure, weight=2.0, tags=["gpt-oss", "critical"]),
-    TestCase("no_phantom_tool_calls", "hallucination_resistance", "Doesn't claim actions it didn't take", test_no_phantom_tool_calls, weight=1.5, tags=["gpt-oss"]),
-    TestCase("repeated_failure_acknowledgment", "hallucination_resistance", "Doesn't ignore repeated failures", test_repeated_failure_acknowledgment, weight=2.0, tags=["gpt-oss", "critical"]),
-    TestCase("contradiction_detection", "hallucination_resistance", "Doesn't contradict tool results", test_contradiction_detection, weight=2.0, tags=["gpt-oss", "critical"]),
-    TestCase("multi_turn_consistency", "hallucination_resistance", "Maintains accuracy over multiple turns", test_multi_turn_consistency, weight=1.5, tags=["gpt-oss"]),
 ]
 
 
