@@ -10,6 +10,16 @@
         "filename": "custom_openai_gpt-oss-120b_2026-02-05_eed66e22.json",
         "timestamp": "2026-02-05T13:53:31.366561",
         "overall_score": 89.13043478260869
+      },
+      {
+        "filename": "custom_openai_gpt-oss-120b_2026-02-05_bc177204.json",
+        "timestamp": "2026-02-05T13:59:37.704117",
+        "overall_score": 55.55555555555556
+      },
+      {
+        "filename": "custom_openai_gpt-oss-120b_2026-02-05_c63a1599.json",
+        "timestamp": "2026-02-05T14:01:34.223740",
+        "overall_score": 78.125
       }
     ]
   },
@@ -25,6 +35,18 @@
       "filename": "custom_openai_gpt-oss-120b_2026-02-05_eed66e22.json",
       "timestamp": "2026-02-05T13:53:31.366561",
       "overall_score": 89.13043478260869
+    },
+    {
+      "pair": "custom/openai/gpt-oss-120b",
+      "filename": "custom_openai_gpt-oss-120b_2026-02-05_bc177204.json",
+      "timestamp": "2026-02-05T13:59:37.704117",
+      "overall_score": 55.55555555555556
+    },
+    {
+      "pair": "custom/openai/gpt-oss-120b",
+      "filename": "custom_openai_gpt-oss-120b_2026-02-05_c63a1599.json",
+      "timestamp": "2026-02-05T14:01:34.223740",
+      "overall_score": 78.125
     }
   ]
 }
