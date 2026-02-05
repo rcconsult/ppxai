@@ -73,6 +73,8 @@ Examples:
     run_group.add_argument("--categories", type=str, help="Comma-separated test categories to run")
     run_group.add_argument("--timeout", type=int, default=60, help="Timeout per test in seconds (default: 60)")
     run_group.add_argument("--retries", type=int, default=1, help="Number of retries per test (default: 1)")
+    run_group.add_argument("--no-ssl-verify", action="store_true", help="Disable SSL certificate verification")
+    run_group.add_argument("--ssl-cert-file", type=str, help="Path to custom CA certificate bundle")
 
     # Analysis mode
     analysis_group = parser.add_argument_group("Analysis")
@@ -113,6 +115,8 @@ def run_benchmark(args: argparse.Namespace) -> int:
         timeout=args.timeout,
         retries=args.retries,
         verbose=args.verbose,
+        ssl_verify=not args.no_ssl_verify,
+        ssl_cert_file=args.ssl_cert_file,
     )
 
     print(f"\n{'='*60}")
@@ -164,17 +168,17 @@ def print_result(result: BenchmarkResult, format: str, verbose: bool):
     print("Category Scores:")
     print("-" * 40)
     for category, score in sorted(result.category_scores.items()):
-        bar = "█" * int(score / 5) + "░" * (20 - int(score / 5))
-        print(f"  {category:20} {bar} {score:5.1f}%")
+        bar = "#" * int(score / 5) + "-" * (20 - int(score / 5))
+        print(f"  {category:20} [{bar}] {score:5.1f}%")
 
     if verbose:
         print("\nDetailed Results:")
         print("-" * 40)
         for test in result.test_results:
-            status = "✓" if test["passed"] else "✗"
-            print(f"  {status} [{test['category']}] {test['name']}")
+            status = "PASS" if test["passed"] else "FAIL"
+            print(f"  {status:4} [{test['category']}] {test['name']}")
             if not test["passed"] and test.get("error"):
-                print(f"      Error: {test['error'][:80]}")
+                print(f"        Error: {test['error'][:80]}")
 
 
 def print_history_comparison(current: BenchmarkResult, history: list[BenchmarkResult]):
@@ -185,7 +189,7 @@ def print_history_comparison(current: BenchmarkResult, history: list[BenchmarkRe
     previous = history[-2]  # Second to last (last is current)
 
     delta = current.overall_score - previous.overall_score
-    direction = "↑" if delta > 0 else "↓" if delta < 0 else "→"
+    direction = "^" if delta > 0 else "v" if delta < 0 else "="
 
     print(f"\nCurrent:  {current.overall_score:.1f}%")
     print(f"Previous: {previous.overall_score:.1f}%")
@@ -198,7 +202,7 @@ def print_history_comparison(current: BenchmarkResult, history: list[BenchmarkRe
         prev = previous.category_scores.get(category, 0)
         delta = curr - prev
         if abs(delta) > 0.1:
-            direction = "↑" if delta > 0 else "↓"
+            direction = "^" if delta > 0 else "v"
             print(f"  {category:20} {direction} {abs(delta):.1f}%")
 
 
@@ -212,7 +216,7 @@ def print_ranking(ranking: list[tuple[str, float, int]], current_pair: Optional[
     print("-" * 62)
 
     for i, (pair, score, runs) in enumerate(ranking, 1):
-        marker = " ← current" if pair == current_pair else ""
+        marker = " <- current" if pair == current_pair else ""
         print(f"{i:<6} {pair:<40} {score:>7.1f}% {runs:>6}{marker}")
 
 

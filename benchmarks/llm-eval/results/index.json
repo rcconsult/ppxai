@@ -1,0 +1,30 @@
+{
+  "pairs": {
+    "custom/openai/gpt-oss-120b": [
+      {
+        "filename": "custom_openai_gpt-oss-120b_2026-02-05_5f98e17e.json",
+        "timestamp": "2026-02-05T13:50:44.198220",
+        "overall_score": 8.695652173913043
+      },
+      {
+        "filename": "custom_openai_gpt-oss-120b_2026-02-05_eed66e22.json",
+        "timestamp": "2026-02-05T13:53:31.366561",
+        "overall_score": 89.13043478260869
+      }
+    ]
+  },
+  "runs": [
+    {
+      "pair": "custom/openai/gpt-oss-120b",
+      "filename": "custom_openai_gpt-oss-120b_2026-02-05_5f98e17e.json",
+      "timestamp": "2026-02-05T13:50:44.198220",
+      "overall_score": 8.695652173913043
+    },
+    {
+      "pair": "custom/openai/gpt-oss-120b",
+      "filename": "custom_openai_gpt-oss-120b_2026-02-05_eed66e22.json",
+      "timestamp": "2026-02-05T13:53:31.366561",
+      "overall_score": 89.13043478260869
+    }
+  ]
+}

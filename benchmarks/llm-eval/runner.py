@@ -4,10 +4,12 @@ Benchmark runner - executes tests against LLM API.
 
 import asyncio
 import os
+import ssl
 import time
 from datetime import datetime
 from typing import Optional
 
+import httpx
 from openai import AsyncOpenAI
 
 from test_cases import ALL_TESTS, TestCase, get_categories
@@ -24,6 +26,8 @@ class LLMClient:
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
         timeout: int = 60,
+        ssl_verify: bool = True,
+        ssl_cert_file: Optional[str] = None,
     ):
         self.provider = provider
         self.model = model
@@ -40,10 +44,20 @@ class LLMClient:
         else:
             self.api_key = self._default_api_key(provider)
 
+        # Configure SSL
+        http_client = None
+        if not ssl_verify:
+            # Disable SSL verification (for corporate proxies)
+            http_client = httpx.AsyncClient(verify=False)
+        elif ssl_cert_file:
+            # Use custom CA bundle
+            http_client = httpx.AsyncClient(verify=ssl_cert_file)
+
         self.client = AsyncOpenAI(
             base_url=self.base_url,
             api_key=self.api_key,
             timeout=timeout,
+            http_client=http_client,
         )
 
     def _default_base_url(self, provider: str) -> str:
@@ -79,6 +93,7 @@ class LLMClient:
         self,
         messages: list[dict],
         tools: Optional[list[dict]] = None,
+        verbose: bool = False,
         **kwargs,
     ) -> dict:
         """Send chat completion request."""
@@ -93,6 +108,9 @@ class LLMClient:
                 params["tool_choice"] = "auto"
 
             response = await self.client.chat.completions.create(**params)
+
+            if verbose:
+                print(f"\n  [DEBUG] Raw response: {response}")
 
             # Extract response
             choice = response.choices[0]
@@ -118,6 +136,8 @@ class LLMClient:
             return result
 
         except Exception as e:
+            if verbose:
+                print(f"\n  [DEBUG] Exception: {e}")
             return {
                 "content": "",
                 "tool_calls": [],
@@ -137,6 +157,8 @@ class BenchmarkRunner:
         timeout: int = 60,
         retries: int = 1,
         verbose: bool = False,
+        ssl_verify: bool = True,
+        ssl_cert_file: Optional[str] = None,
     ):
         self.provider = provider
         self.model = model
@@ -150,6 +172,8 @@ class BenchmarkRunner:
             base_url=base_url,
             api_key=api_key,
             timeout=timeout,
+            ssl_verify=ssl_verify,
+            ssl_cert_file=ssl_cert_file,
         )
 
     def run(self, categories: Optional[list[str]] = None) -> BenchmarkResult:
@@ -193,7 +217,7 @@ class BenchmarkRunner:
                 if attempt < self.retries - 1:
                     print("(retry)", end=" ", flush=True)
 
-            status = "✓" if passed else "✗"
+            status = "PASS" if passed else "FAIL"
             print(status)
 
             if self.verbose and not passed:
