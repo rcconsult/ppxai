@@ -75,6 +75,7 @@ Examples:
     run_group.add_argument("--retries", type=int, default=1, help="Number of retries per test (default: 1)")
     run_group.add_argument("--no-ssl-verify", action="store_true", help="Disable SSL certificate verification")
     run_group.add_argument("--ssl-cert-file", type=str, help="Path to custom CA certificate bundle")
+    run_group.add_argument("--no-ppxai-config", action="store_true", help="Don't load generation params from ppxai config")
 
     # Analysis mode
     analysis_group = parser.add_argument_group("Analysis")
@@ -117,6 +118,7 @@ def run_benchmark(args: argparse.Namespace) -> int:
         verbose=args.verbose,
         ssl_verify=not args.no_ssl_verify,
         ssl_cert_file=args.ssl_cert_file,
+        use_ppxai_config=not args.no_ppxai_config,
     )
 
     print(f"\n{'='*60}")
@@ -124,8 +126,10 @@ def run_benchmark(args: argparse.Namespace) -> int:
     print(f"{'='*60}")
     print(f"Provider: {args.provider}")
     print(f"Model:    {args.model}")
-    if args.base_url:
-        print(f"Base URL: {args.base_url}")
+    if runner.client.base_url:
+        print(f"Base URL: {runner.client.base_url}")
+    if runner.generation_params:
+        print(f"Gen Params: {runner.generation_params}")
     print(f"{'='*60}\n")
 
     # Run benchmark
