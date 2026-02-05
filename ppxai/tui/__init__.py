@@ -18,6 +18,7 @@ __all__ = ["PPXAIDEApp", "main"]
 def main():
     """Entry point for ppxaide command."""
     import argparse
+    import signal
     import sys
     from ppxai.common.logger import get_logger
 
@@ -57,7 +58,30 @@ def main():
     from ppxai.config import initialize
     initialize()
 
-    # Pass debug flag to app for conditional logging
+    # Create app instance
     debug_mode = args.debug or args.trace
-    app = PPXAIDEApp(debug_logging=debug_mode)
-    app.run()
+    trace_mode = args.trace
+    app = PPXAIDEApp(debug_logging=debug_mode, trace_logging=trace_mode)
+
+    # Install SIGINT handler for graceful shutdown (v1.15.2)
+    # This ensures Ctrl+C during long operations doesn't crash the app
+    def sigint_handler(signum, frame):
+        """Handle SIGINT gracefully by triggering Textual's quit action."""
+        # Use call_later to invoke action_quit in the main thread safely
+        try:
+            app.call_from_thread(app.action_quit)
+        except Exception:
+            # If app not running yet or already stopped, just exit cleanly
+            sys.exit(0)
+
+    # Only install on non-Windows (Windows signal handling has quirks)
+    if sys.platform != 'win32':
+        signal.signal(signal.SIGINT, sigint_handler)
+
+    # Run app with KeyboardInterrupt handling for graceful shutdown on all platforms
+    try:
+        app.run()
+    except KeyboardInterrupt:
+        # Graceful exit on Ctrl+C that bypassed Textual's handling
+        logger.info("Received KeyboardInterrupt, exiting gracefully")
+        sys.exit(0)

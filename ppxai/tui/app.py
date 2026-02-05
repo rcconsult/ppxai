@@ -74,7 +74,7 @@ class PPXAIDEApp(App):
     SPLIT_RATIOS = [30, 40, 50, 60, 70]
     DEFAULT_SPLIT_INDEX = 2  # 50%
 
-    def __init__(self, debug_logging: bool = False):
+    def __init__(self, debug_logging: bool = False, trace_logging: bool = False):
         super().__init__()
         # Use ppxai's logger instead of Textual's self.log (which doesn't write to our log file)
         from ppxai.common.logger import get_logger
@@ -82,10 +82,12 @@ class PPXAIDEApp(App):
 
         # Debug mode controls event bus logging and handler verbosity
         self._debug_logging = debug_logging
+        # Trace mode: verbose per-event logging (--trace flag)
+        self._trace_logging = trace_logging
 
         # Event bus for decoupled component communication (v1.15.0 blinker integration)
-        # Only log events when debug mode is enabled (--debug/--trace or /debug-log on)
-        self._event_bus = EventBus(log_events=self._debug_logging)
+        # Only log events when trace mode is enabled (--trace or /debug-log on)
+        self._event_bus = EventBus(log_events=self._trace_logging)
 
         self._current_theme_index = 0
         self._engine_client: Optional[EngineClient] = None
@@ -99,6 +101,7 @@ class PPXAIDEApp(App):
         # Streaming state (Phase 6.1)
         self._current_message_content = ""
         self._is_streaming = False
+        self._cancel_requested = False  # Signal to cancel streaming (v1.15.2)
 
         # Ctrl+C double-press tracking (v1.15.2)
         self._last_ctrl_c_time: float = 0.0
@@ -190,10 +193,7 @@ class PPXAIDEApp(App):
         if tui_config.get("show_cwd", True) and self._engine_client:
             cwd = self._engine_client.get_working_dir()
             if cwd:
-                # Show abbreviated path (last 2 components)
-                cwd_parts = Path(cwd).parts
-                cwd_display = "/".join(cwd_parts[-2:]) if len(cwd_parts) >= 2 else cwd
-                status_bar.add_badge("cwd", "Dir", cwd_display, variant="info")
+                status_bar.add_badge("cwd", "Dir", self._format_cwd_display(cwd), variant="info")
 
         # DateTime badge
         if tui_config.get("show_datetime", False):
@@ -206,19 +206,7 @@ class PPXAIDEApp(App):
         # Agent mode badge (Phase 1.3)
         if self._engine_client and self._engine_client.agent_mode:
             status_bar.add_badge("agent", "Agent", "ACTIVE", variant="success")
-
-            # Checkpoint status badge (Phase 1.3)
-            checkpoint_status = self._engine_client.get_checkpoint_status()
-            if checkpoint_status.get("enabled"):
-                last_checkpoint = checkpoint_status.get("last_checkpoint")
-                is_valid = checkpoint_status.get("is_valid", True)
-                if last_checkpoint:
-                    if not is_valid:
-                        # Stale checkpoint - undo may not work correctly
-                        status_bar.add_badge("checkpoint", "Undo", "↶!", variant="warning")
-                    else:
-                        # Valid checkpoint - undo available
-                        status_bar.add_badge("checkpoint", "Undo", "↶", variant="success")
+            self._update_checkpoint_badge(status_bar)
 
         # Focus the input box and set up autocomplete
         input_box = self.query_one("#input-box", InputBox)
@@ -465,6 +453,48 @@ class PPXAIDEApp(App):
             now = datetime.now().strftime("%Y-%m-%d %H:%M")
             status_bar.update_badge("datetime", now)
 
+    def _format_cwd_display(self, path: str) -> str:
+        """Format working directory path for status bar display.
+
+        Shows abbreviated path with last 2 components for readability.
+        Example: "/home/user/projects/myapp" -> "projects/myapp"
+
+        Args:
+            path: Full working directory path
+
+        Returns:
+            Abbreviated path string for display
+        """
+        cwd_parts = Path(path).parts
+        return "/".join(cwd_parts[-2:]) if len(cwd_parts) >= 2 else path
+
+    def _update_checkpoint_badge(self, status_bar: "StatusBar") -> None:
+        """Update checkpoint/undo badge based on current checkpoint status.
+
+        Shows ↶ for valid checkpoint (undo available), ↶! for stale checkpoint
+        (undo may not work correctly), or nothing if no checkpoint exists.
+
+        Args:
+            status_bar: StatusBar widget to update
+        """
+        if not self._engine_client:
+            return
+
+        checkpoint_status = self._engine_client.get_checkpoint_status()
+        if not checkpoint_status.get("enabled"):
+            return
+
+        last_checkpoint = checkpoint_status.get("last_checkpoint")
+        is_valid = checkpoint_status.get("is_valid", True)
+
+        if last_checkpoint:
+            if not is_valid:
+                # Stale checkpoint - undo may not work correctly
+                status_bar.add_badge("checkpoint", "Undo", "↶!", variant="warning")
+            else:
+                # Valid checkpoint - undo available
+                status_bar.add_badge("checkpoint", "Undo", "↶", variant="success")
+
     async def _check_session_restoration(self) -> None:
         """Check for last session and offer to restore (Phase 7).
 
@@ -662,8 +692,23 @@ class PPXAIDEApp(App):
                 os.chdir(working_dir)
                 self._engine_client.set_working_dir(working_dir)
                 self._working_dir = working_dir
-            except Exception:
-                pass
+                self._log.info(f"Restored working directory: {working_dir}")
+
+                # Update completer's working directory for file completions
+                input_box = self.query_one("#input-box", InputBox)
+                if input_box._completer:
+                    input_box._completer.update_working_dir(Path(working_dir))
+
+                # Update status bar cwd badge
+                from ppxai.config import get_tui_config
+                tui_config = get_tui_config()
+                if tui_config.get("show_cwd", True):
+                    status_bar = self.query_one(StatusBar)
+                    cwd_display = self._format_cwd_display(working_dir)
+                    status_bar.update_badge("cwd", cwd_display)
+                    self._log.info(f"Updated cwd badge to: {cwd_display}")
+            except Exception as e:
+                self._log.warning(f"Failed to restore working directory: {e}")
 
         # Render loaded messages into ChatView (like /load command does)
         chat_view = self.query_one("#chat-view", ChatView)
@@ -852,6 +897,7 @@ class PPXAIDEApp(App):
             status_bar = self.query_one(StatusBar)
             self._current_message_content = ""
             self._is_streaming = True
+            self._cancel_requested = False  # Reset cancellation flag (v1.15.2)
             self._reasoning_started = False
             self._reasoning_content = ""
             self._reasoning_message = None
@@ -904,7 +950,23 @@ class PPXAIDEApp(App):
         footer_status = self.query_one(FooterStatus)
         footer_status.clear()
         self._is_streaming = False
+        self._cancel_requested = False  # Reset cancellation flag (v1.15.2)
         self._log.info("Stream complete, cleaned up")
+
+    def _handle_stream_cancelled(self) -> None:
+        """Handle stream cancellation (called via call_from_thread).
+
+        Added in v1.15.2 for graceful Ctrl+C handling during streaming.
+        """
+        chat_view = self.query_one("#chat-view", ChatView)
+        chat_view.add_system_message("[yellow]⚠ Stream cancelled[/yellow]")
+        self._log.info("Stream cancelled by user")
+
+        # Cleanup: clear footer status, reset state
+        footer_status = self.query_one(FooterStatus)
+        footer_status.clear()
+        self._is_streaming = False
+        self._cancel_requested = False  # Reset flag
 
     def _handle_stream_error(self, error_msg: str) -> None:
         """Handle stream error (called via call_from_thread)."""
@@ -916,6 +978,7 @@ class PPXAIDEApp(App):
         footer_status = self.query_one(FooterStatus)
         footer_status.clear()
         self._is_streaming = False
+        self._cancel_requested = False  # Reset flag (v1.15.2)
 
     def _handle_stream_event(self, event_type: str, event_data: any) -> None:
         """Handle stream event in main thread (called via call_from_thread).
@@ -949,14 +1012,15 @@ class PPXAIDEApp(App):
             bus_event = event_map[event.type]
             self._event_bus.emit(bus_event, data=event.data, event_type=event.type)
         else:
-            # Log unknown events for debugging
-            if self._debug_logging:
+            # Log unknown events for debugging (trace-only to avoid noise)
+            if self._trace_logging:
                 self._log.debug(f"Unhandled event type: {event.type}")
 
     async def _stream_response(self, user_input: str, engine_client) -> None:
         """Stream AI response from engine (runs in thread's event loop).
 
         Uses call_from_thread() to safely handle events in main thread.
+        Checks for cancellation request between events (v1.15.2).
 
         Args:
             user_input: User's message
@@ -968,8 +1032,14 @@ class PPXAIDEApp(App):
             # Stream events from engine
             event_count = 0
             async for event in engine_client.chat(user_input, stream=True):
+                # Check for cancellation request (v1.15.2)
+                if self._cancel_requested:
+                    self._log.info("Thread: Cancellation requested, stopping stream")
+                    self.call_from_thread(self._handle_stream_cancelled)
+                    return
+
                 event_count += 1
-                self._log.info(f"Thread: Event #{event_count}: {event.type.name}")
+                self._log.debug(f"Thread: Event #{event_count}: {event.type.name}")
 
                 # Use call_from_thread to handle event in main thread (thread-safe)
                 self.call_from_thread(self._handle_stream_event, event.type.name, event.data)
@@ -1012,8 +1082,8 @@ class PPXAIDEApp(App):
             bus_event = event_map[event.type]
             self._event_bus.emit(bus_event, data=event.data, event_type=event.type)
         else:
-            # Log unknown events for debugging
-            if self._debug_logging:
+            # Log unknown events for debugging (trace-only to avoid noise)
+            if self._trace_logging:
                 self._log.debug(f"Unhandled event type: {event.type}")
 
     # Event handlers - subscribed to event bus
@@ -1025,7 +1095,7 @@ class PPXAIDEApp(App):
         BEFORE the event loop to avoid async race conditions. This handler
         just logs for debugging.
         """
-        if self._debug_logging:
+        if self._trace_logging:
             self._log.debug("[Event] STREAM_START received (thinking indicator already shown)")
 
     async def _on_stream_chunk(self, sender, data, **kwargs) -> None:
@@ -1037,13 +1107,13 @@ class PPXAIDEApp(App):
         # Clear thinking indicator on first chunk
         if not self._current_message_content:
             self._clear_thinking_indicator()
-            if self._debug_logging:
+            if self._trace_logging:
                 self._log.debug("[Event] First chunk received, cleared thinking indicator")
 
         # Accumulate content - no UI update yet (like Rich TUI)
         self._current_message_content += data
 
-        if self._debug_logging:
+        if self._trace_logging:
             self._log.debug(f"[Event] Chunk: {len(data)} chars, total: {len(self._current_message_content)}")
 
     def _clear_thinking_indicator(self) -> None:
@@ -1054,10 +1124,10 @@ class PPXAIDEApp(App):
         try:
             footer_status = self.query_one(FooterStatus)
             footer_status.set_streaming()  # Change from "Thinking..." to "Streaming..."
-            if self._debug_logging:
+            if self._trace_logging:
                 self._log.debug("[Event] Changed footer status to streaming")
         except Exception as e:
-            if self._debug_logging:
+            if self._trace_logging:
                 self._log.debug(f"[Event] Could not update footer status: {e}")
 
     async def _on_reasoning_chunk(self, sender, data, **kwargs) -> None:
@@ -1089,25 +1159,25 @@ class PPXAIDEApp(App):
             chat_view.scroll_end(animate=False)
             # Force refresh so reasoning bubble appears immediately
             chat_view.refresh()
-            if self._debug_logging:
+            if self._trace_logging:
                 self._log.debug("[Event] Reasoning started")
 
         # Accumulate reasoning content
         self._reasoning_content += data
 
-        if self._debug_logging:
+        if self._trace_logging:
             self._log.debug(f"[Event] Reasoning chunk: {len(data)} chars, total: {len(self._reasoning_content)}")
 
-        # Throttle updates when not in debug mode (100ms batching for performance)
-        # In debug mode, update immediately for visibility
+        # Throttle updates when not in debug mode (50ms batching for smoother display)
+        # In debug/trace mode, update immediately for visibility
         if self._debug_logging:
             # Debug mode: immediate updates for visibility
             self._update_reasoning_display()
         else:
-            # Production mode: throttle to 10 updates/sec max
+            # Production mode: throttle to 20 updates/sec max (smoother than 10/sec)
             if not self._reasoning_update_pending:
                 self._reasoning_update_pending = True
-                self.set_timer(0.1, self._update_reasoning_display)
+                self.set_timer(0.05, self._update_reasoning_display)
 
     def _update_reasoning_display(self) -> None:
         """Update reasoning bubble display with accumulated content.
@@ -1128,9 +1198,9 @@ class PPXAIDEApp(App):
         chat_view = self.query_one("#chat-view", ChatView)
 
         # Debug: Log what we actually received
-        self._log.info(f"STREAM_END: data type={type(data).__name__}")
-        self._log.info(f"STREAM_END: data={repr(data)[:200]}")
-        self._log.info(f"STREAM_END: accumulated={len(self._current_message_content)} chars")
+        self._log.debug(f"STREAM_END: data type={type(data).__name__}")
+        self._log.debug(f"STREAM_END: data={repr(data)[:200]}")
+        self._log.debug(f"STREAM_END: accumulated={len(self._current_message_content)} chars")
 
         # Get final response - use accumulated chunks OR data directly
         # (some providers don't stream, they send full response in STREAM_END)
@@ -1143,11 +1213,11 @@ class PPXAIDEApp(App):
             elif isinstance(data, dict):
                 # Some providers return {"content": "text"} or {"message": "text"}
                 final_response = data.get("content") or data.get("message") or data.get("text") or ""
-                self._log.info(f"STREAM_END: extracted from dict: {len(final_response)} chars")
+                self._log.debug(f"STREAM_END: extracted from dict: {len(final_response)} chars")
             else:
                 final_response = str(data) if data else ""
 
-        self._log.info(f"STREAM_END: final_response={len(final_response)} chars")
+        self._log.debug(f"STREAM_END: final_response={len(final_response)} chars")
 
         # Display if there's content
         if final_response.strip():
@@ -1160,8 +1230,8 @@ class PPXAIDEApp(App):
                 self._reasoning_message.streaming = False
                 # Add separator like Rich TUI
                 chat_view.add_system_message("[dim]───[/dim]")
-                if self._debug_logging:
-                    self._log.info(f"Finalized reasoning message: {len(self._reasoning_content)} chars")
+                if self._trace_logging:
+                    self._log.debug(f"Finalized reasoning message: {len(self._reasoning_content)} chars")
 
             # Calculate response time
             import time
@@ -1169,7 +1239,7 @@ class PPXAIDEApp(App):
 
             # Render markdown once with full content (like Rich TUI)
             chat_view.add_assistant_message(final_response, response_time=response_time)
-            self._log.info(f"Added assistant message: {len(final_response)} chars, {response_time:.1f}s")
+            self._log.debug(f"Added assistant message: {len(final_response)} chars, {response_time:.1f}s")
         else:
             self._log.warning("STREAM_END with no content to display")
 
@@ -1199,7 +1269,7 @@ class PPXAIDEApp(App):
 
         tool_name = data.get("tool", "unknown")
         tool_args = data.get("arguments", {})
-        self._log.info(f"[Event] Tool call: {tool_name} with {len(tool_args)} args")
+        self._log.debug(f"[Event] Tool call: {tool_name} with {len(tool_args)} args")
 
         # Always show tool name; only show args if verbose mode enabled
         if self._tools_verbose and tool_args:
@@ -1222,7 +1292,7 @@ class PPXAIDEApp(App):
             # Non-verbose: just show tool name inline (no separate message bubble)
             chat_view.add_system_message(f"[cyan]→ Calling tool: {tool_name}[/cyan]")
 
-        if self._debug_logging:
+        if self._trace_logging:
             self._log.debug(f"[Event] Added tool call message for: {tool_name}")
 
     async def _on_tool_result(self, sender, data, **kwargs) -> None:
@@ -1232,7 +1302,7 @@ class PPXAIDEApp(App):
         tool_name = data.get("tool", "unknown")
         result = data.get("result", "")
         result_str = str(result) if result else ""
-        if self._debug_logging:
+        if self._trace_logging:
             self._log.debug(f"[Event] Tool result from {tool_name}: {len(result_str)} chars")
 
         # Only show full result if verbose mode enabled
@@ -1280,7 +1350,7 @@ class PPXAIDEApp(App):
         (_file_edit_consent_handler, _shell_consent_handler).
         This event is just emitted for logging purposes.
         """
-        if self._debug_logging:
+        if self._trace_logging:
             if data and isinstance(data, dict):
                 self._log.debug(f"[Event] Consent requested: {data}")
 
@@ -1294,7 +1364,7 @@ class PPXAIDEApp(App):
     async def _on_engine_info(self, sender, data, **kwargs) -> None:
         """Handle ENGINE_INFO event."""
         chat_view = self.query_one("#chat-view", ChatView)
-        if self._debug_logging:
+        if self._trace_logging:
             self._log.debug(f"[Event] Engine info: {data}")
 
         chat_view.add_system_message(f"[dim]{data}[/dim]")
@@ -1303,7 +1373,13 @@ class PPXAIDEApp(App):
         """Handle WORKING_DIR_CHANGED event."""
         path = data.get("path", "") if isinstance(data, dict) else str(data)
         if path:
-            if self._debug_logging:
+            # Skip if same directory (avoid redundant updates during transient changes)
+            if path == self._working_dir:
+                if self._trace_logging:
+                    self._log.debug(f"[Event] Working directory unchanged: {path}")
+                return
+
+            if self._trace_logging:
                 self._log.debug(f"[Event] Working directory changed: {path}")
             # Update internal state
             self._working_dir = path
@@ -1318,9 +1394,7 @@ class PPXAIDEApp(App):
             tui_config = get_tui_config()
             if tui_config.get("show_cwd", True):
                 status_bar = self.query_one(StatusBar)
-                cwd_parts = Path(path).parts
-                cwd_display = "/".join(cwd_parts[-2:]) if len(cwd_parts) >= 2 else path
-                status_bar.update_badge("cwd", cwd_display)
+                status_bar.update_badge("cwd", self._format_cwd_display(path))
 
             # Show notification in chat
             chat_view = self.query_one("#chat-view", ChatView)
@@ -1428,17 +1502,7 @@ class PPXAIDEApp(App):
                         agent_mode = self._engine_client.agent_mode
                         if agent_mode:
                             status_bar.add_badge("agent", "Agent", "ACTIVE", variant="success")
-
-                            # Check checkpoint status
-                            checkpoint_status = self._engine_client.get_checkpoint_status()
-                            if checkpoint_status.get("enabled"):
-                                last_checkpoint = checkpoint_status.get("last_checkpoint")
-                                is_valid = checkpoint_status.get("is_valid", True)
-                                if last_checkpoint:
-                                    if not is_valid:
-                                        status_bar.add_badge("checkpoint", "Undo", "↶!", variant="warning")
-                                    else:
-                                        status_bar.add_badge("checkpoint", "Undo", "↶", variant="success")
+                            self._update_checkpoint_badge(status_bar)
                         else:
                             # Agent mode disabled - remove badges
                             status_bar.remove_badge("agent")
@@ -1477,9 +1541,7 @@ class PPXAIDEApp(App):
                         if tui_config.get("show_cwd", True) and self._engine_client:
                             cwd = self._engine_client.get_working_dir()
                             if cwd:
-                                cwd_parts = Path(cwd).parts
-                                cwd_display = "/".join(cwd_parts[-2:]) if len(cwd_parts) >= 2 else cwd
-                                status_bar.add_badge("cwd", "Dir", cwd_display, variant="info")
+                                status_bar.add_badge("cwd", "Dir", self._format_cwd_display(cwd), variant="info")
                         else:
                             status_bar.remove_badge("cwd")
 
@@ -1755,11 +1817,26 @@ class PPXAIDEApp(App):
 
         First Ctrl+C shows a warning, second Ctrl+C within timeout actually exits.
         This prevents accidental exits when user intends to copy text.
+
+        If streaming is active, first Ctrl+C cancels the stream instead of showing quit warning.
         """
         import time
 
         now = time.time()
         time_since_last = now - self._last_ctrl_c_time
+
+        # If streaming is active, first Ctrl+C cancels the stream
+        if self._is_streaming and not self._cancel_requested:
+            self._cancel_requested = True
+            self._log.info("Cancellation requested for active stream")
+            self.notify(
+                "Cancelling stream... Press Ctrl+C again to force quit",
+                title="Cancelling",
+                timeout=2.0
+            )
+            # Reset timer so next Ctrl+C within timeout will quit
+            self._last_ctrl_c_time = now
+            return
 
         if time_since_last < self._CTRL_C_TIMEOUT:
             # Second Ctrl+C within timeout - actually quit
@@ -1874,6 +1951,7 @@ class PPXAIDEApp(App):
             enabled: True to enable debug logging, False to disable
         """
         self._debug_logging = enabled
+        self._trace_logging = enabled  # Enable trace for verbose per-event logging
         self._event_bus._log_events = enabled
         self._log.info(f"Debug logging {'enabled' if enabled else 'disabled'}")
 

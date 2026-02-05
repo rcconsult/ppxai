@@ -1499,22 +1499,27 @@ async def search_files(
         for path in working_dir.rglob('*'):
             if len(results) >= request.max_results:
                 break
-            if path.is_file():
-                # Skip files in ignored directories
-                if any(ignored in path.parts for ignored in IGNORE_DIRS):
-                    continue
-                try:
-                    rel_path = str(path.relative_to(working_dir))
-                    filename = path.name
-                    # Match query against filename or path
-                    if not query or query in filename.lower() or query in rel_path.lower():
-                        results.append({
-                            "name": filename,
-                            "path": rel_path
-                        })
-                except ValueError:
-                    pass
-    except PermissionError:
+            try:
+                # Check if file - can fail on network paths (WinError 4350)
+                if path.is_file():
+                    # Skip files in ignored directories
+                    if any(ignored in path.parts for ignored in IGNORE_DIRS):
+                        continue
+                    try:
+                        rel_path = str(path.relative_to(working_dir))
+                        filename = path.name
+                        # Match query against filename or path
+                        if not query or query in filename.lower() or query in rel_path.lower():
+                            results.append({
+                                "name": filename,
+                                "path": rel_path
+                            })
+                    except ValueError:
+                        pass
+            except OSError:
+                # Network file unavailable, skip it
+                pass
+    except (PermissionError, OSError):
         pass
 
     # Also add special @ references
@@ -1658,12 +1663,17 @@ async def read_file(
 
         try:
             for path in working_dir.rglob('*'):
-                if path.is_file():
-                    if query.lower() in path.name.lower():
-                        matches.append(path)
-                        if len(matches) >= 1:  # Just get first match
-                            break
-        except PermissionError:
+                try:
+                    # Check if file - can fail on network paths (WinError 4350)
+                    if path.is_file():
+                        if query.lower() in path.name.lower():
+                            matches.append(path)
+                            if len(matches) >= 1:  # Just get first match
+                                break
+                except OSError:
+                    # Network file unavailable, skip it
+                    pass
+        except (PermissionError, OSError):
             pass
 
         if not matches:

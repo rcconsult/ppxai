@@ -5,6 +5,7 @@ FooterStatus widget - Shows streaming status and indicators at the bottom.
 import time
 from textual.app import ComposeResult
 from textual.containers import Horizontal
+from textual.css.query import NoMatches
 from textual.reactive import reactive
 from textual.widgets import Static
 
@@ -35,16 +36,16 @@ class FooterStatus(Static):
         try:
             status_text = self.query_one("#footer-status-text", Static)
             status_text.update(f"  {message}" if message else "  Ready")
-        except:
-            pass
+        except NoMatches:
+            pass  # Widget not mounted yet
 
     def watch_elapsed_time(self, elapsed: float) -> None:
         """Update elapsed time display."""
         try:
             timer_text = self.query_one("#footer-status-timer", Static)
             timer_text.update(f"{elapsed:.1f}s  " if elapsed > 0 else "")
-        except:
-            pass
+        except NoMatches:
+            pass  # Widget not mounted yet
 
     def _update_timer(self) -> None:
         """Update elapsed time (called by interval)."""
@@ -60,8 +61,8 @@ class FooterStatus(Static):
         self.status_message = "⏳ Thinking..."
         self._start_time = time.time()
         self.elapsed_time = 0.0
-        # Update timer every 100ms
-        self._timer = self.set_interval(0.1, self._update_timer)
+        # Update timer every 200ms (sufficient precision, reduces overhead)
+        self._timer = self.set_interval(0.2, self._update_timer)
 
     def set_streaming(self) -> None:
         """Show 'Streaming...' indicator (keep timer running)."""

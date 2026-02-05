@@ -94,7 +94,7 @@ class TextualCompleter:
         """
         self.working_dir = working_dir
         self.engine_client = engine_client
-        self._file_cache = {}
+        self._file_cache = []  # List of (filename, rel_path) tuples
         self._cache_time = 0
         self._cache_dir = None
 
@@ -405,55 +405,92 @@ class TextualCompleter:
         }
         return descriptions.get(cmd, '')
 
-    def _get_files(self, max_files: int = 100) -> list[tuple[str, str]]:
+    def _get_files(self, max_files: int = 100, max_depth: int = 3, max_time_ms: int = 100) -> list[tuple[str, str]]:
         """Get files in the working directory for completion.
+
+        Uses depth-limited search to avoid blocking on large directories.
+        v1.15.2: Performance optimization - limit recursion depth and time.
 
         Args:
             max_files: Maximum number of files to return
+            max_depth: Maximum directory depth to search (default 3)
+            max_time_ms: Maximum time to spend scanning in milliseconds (default 100)
 
         Returns:
             List of (filename, relative_path) tuples, with priority files first
         """
         now = time.time()
 
-        # Cache for 5 seconds
+        # Cache for 5 seconds (cache stores list of (filename, rel_path) tuples)
         if (now - self._cache_time < 5 and
             self._file_cache and
             self._cache_dir == self.working_dir):
-            return list(self._file_cache.items())[:max_files]
+            return self._file_cache[:max_files]
 
         # Priority files - always include these first
-        priority_files = ['AGENTS.md', 'CLAUDE.md', 'README.md', '.env', 'pyproject.toml', 'package.json']
-        priority_dict = {}
-        regular_files = {}
+        priority_names = {'AGENTS.md', 'CLAUDE.md', 'README.md', '.env', 'pyproject.toml', 'package.json'}
+        priority_files = []  # List of (filename, rel_path) tuples
+        regular_files = []   # List of (filename, rel_path) tuples
+        start_time = time.time()
+        timeout = max_time_ms / 1000.0  # Convert to seconds
 
-        try:
-            for path in self.working_dir.rglob('*'):
-                if len(regular_files) >= max_files * 2:
-                    break
-                if path.is_file():
-                    # Skip files in ignored directories
-                    if any(ignored in path.parts for ignored in self.IGNORE_DIRS):
+        def scan_dir(dir_path: Path, depth: int) -> bool:
+            """Recursively scan directory with depth limit.
+
+            Returns False if scan should stop (timeout or max files reached).
+            """
+            if depth > max_depth:
+                return True
+            if len(regular_files) >= max_files * 2:
+                return False
+            # Check timeout periodically
+            if time.time() - start_time > timeout:
+                return False
+
+            try:
+                # Use iterdir() instead of rglob() for controlled recursion
+                for path in dir_path.iterdir():
+                    if len(regular_files) >= max_files * 2:
+                        return False
+
+                    # Skip ignored directories
+                    if path.name in self.IGNORE_DIRS:
                         continue
+
                     try:
-                        rel_path = str(path.relative_to(self.working_dir))
-                        # Prioritize important files
-                        if path.name in priority_files:
-                            priority_dict[path.name] = rel_path
-                        else:
-                            regular_files[path.name] = rel_path
-                    except ValueError:
+                        # Check file type - can fail on network paths (WinError 4350)
+                        if path.is_file():
+                            try:
+                                rel_path = str(path.relative_to(self.working_dir))
+                                # Prioritize important files
+                                if path.name in priority_names:
+                                    priority_files.append((path.name, rel_path))
+                                else:
+                                    regular_files.append((path.name, rel_path))
+                            except ValueError:
+                                pass
+                        elif path.is_dir():
+                            # Recurse into subdirectory
+                            if not scan_dir(path, depth + 1):
+                                return False
+                    except OSError:
+                        # Network file unavailable (WinError 4350), skip it
                         pass
-        except PermissionError:
-            pass
+            except (PermissionError, OSError):
+                pass
+            return True
 
-        # Combine: priority files first, then regular files
-        files = {**priority_dict, **regular_files}
+        # Start scanning from working directory
+        scan_dir(self.working_dir, 0)
 
-        self._file_cache = files
+        # Combine: priority files first, then regular files (as list, not dict)
+        all_files = priority_files + regular_files
+
+        # Cache as list of (filename, rel_path) tuples
+        self._file_cache = all_files
         self._cache_time = now
         self._cache_dir = self.working_dir
-        return list(files.items())[:max_files]
+        return all_files[:max_files]
 
     def update_working_dir(self, working_dir: Path) -> None:
         """Update the working directory for file completions.
@@ -461,8 +498,11 @@ class TextualCompleter:
         Args:
             working_dir: New working directory
         """
+        # Skip if same directory (avoid unnecessary cache invalidation)
+        if self.working_dir == working_dir:
+            return
         self.working_dir = working_dir
         # Invalidate cache
-        self._file_cache = {}
+        self._file_cache = []
         self._cache_time = 0
         self._cache_dir = None

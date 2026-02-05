@@ -23,8 +23,8 @@ class ChatView(VerticalScroll):
         message = MessageBox(content=content, role=role, response_time=response_time)
         self._messages.append(message)
         self.mount(message)
-        # Smooth scroll animation (non-blocking now with worker threads)
-        self.scroll_end(animate=True)
+        # No animation during streaming - reduces visual lag
+        self.scroll_end(animate=False)
 
     def add_user_message(self, content: str) -> None:
         """Add a user message."""
@@ -53,8 +53,8 @@ class ChatView(VerticalScroll):
         message = MessageBox(content="", role="assistant", streaming=True)
         self._messages.append(message)
         self.mount(message)
-        # Smooth scroll animation (non-blocking now with worker threads)
-        self.scroll_end(animate=True)
+        # No animation during streaming - reduces visual lag
+        self.scroll_end(animate=False)
         return message
 
     def get_messages(self) -> list:

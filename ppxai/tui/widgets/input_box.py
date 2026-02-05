@@ -4,6 +4,7 @@ InputBox widget - Multi-line input with history.
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal
+from textual.css.query import NoMatches
 from textual.message import Message
 from textual.widgets import Input, Static
 
@@ -56,16 +57,16 @@ class InputBox(Static):
         try:
             input_widget = self.query_one(Input)
             input_widget.focus()
-        except:
-            pass
+        except NoMatches:
+            pass  # Widget not mounted yet
 
     def disable(self) -> None:
         """Disable the input widget (prevent submission during streaming)."""
         try:
             input_widget = self.query_one(Input)
             input_widget.disabled = True
-        except:
-            pass
+        except NoMatches:
+            pass  # Widget not mounted yet
 
     def enable(self) -> None:
         """Enable the input widget."""
@@ -73,8 +74,8 @@ class InputBox(Static):
             input_widget = self.query_one(Input)
             input_widget.disabled = False
             input_widget.focus()
-        except:
-            pass
+        except NoMatches:
+            pass  # Widget not mounted yet
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle input submission."""

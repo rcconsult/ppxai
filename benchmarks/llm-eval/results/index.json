@@ -2,73 +2,69 @@
   "pairs": {
     "custom/openai/gpt-oss-120b": [
       {
-        "filename": "custom_openai_gpt-oss-120b_2026-02-05_5f98e17e.json",
-        "timestamp": "2026-02-05T13:50:44.198220",
-        "overall_score": 8.695652173913043
-      },
-      {
         "filename": "custom_openai_gpt-oss-120b_2026-02-05_eed66e22.json",
         "timestamp": "2026-02-05T13:53:31.366561",
-        "overall_score": 89.13043478260869
-      },
-      {
-        "filename": "custom_openai_gpt-oss-120b_2026-02-05_bc177204.json",
-        "timestamp": "2026-02-05T13:59:37.704117",
-        "overall_score": 55.55555555555556
-      },
-      {
-        "filename": "custom_openai_gpt-oss-120b_2026-02-05_c63a1599.json",
-        "timestamp": "2026-02-05T14:01:34.223740",
-        "overall_score": 78.125
-      },
-      {
-        "filename": "custom_openai_gpt-oss-120b_2026-02-05_38ad9a4a.json",
-        "timestamp": "2026-02-05T14:06:10.275396",
-        "overall_score": 73.4375
+        "overall_score": 89.13
       },
       {
         "filename": "custom_openai_gpt-oss-120b_2026-02-05_9c9afdc0.json",
         "timestamp": "2026-02-05T14:10:07.111453",
-        "overall_score": 82.8125
+        "overall_score": 82.81
+      },
+      {
+        "filename": "custom_openai_gpt-oss-120b_2026-02-05_c63a1599.json",
+        "timestamp": "2026-02-05T14:01:34.223740",
+        "overall_score": 78.13
+      },
+      {
+        "filename": "custom_openai_gpt-oss-120b_2026-02-05_38ad9a4a.json",
+        "timestamp": "2026-02-05T14:06:10.275396",
+        "overall_score": 73.44
+      }
+    ],
+    "perplexity/sonar-pro": [
+      {
+        "filename": "perplexity_sonar-pro_2026-02-05_a865bedd.json",
+        "timestamp": "2026-02-05T14:20:46.694111",
+        "overall_score": 100.0
+      },
+      {
+        "filename": "perplexity_sonar-pro_2026-02-05_ea4d94dd.json",
+        "timestamp": "2026-02-05T14:23:27.033237",
+        "overall_score": 71.88
+      }
+    ],
+    "gemini/gemini-2.5-flash": [
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-02-05_309f76bb.json",
+        "timestamp": "2026-02-05T14:26:50.262340",
+        "overall_score": 81.25
+      }
+    ],
+    "gemini/gemini-3-pro-preview": [
+      {
+        "filename": "gemini_gemini-3-pro-preview_2026-02-05_6d5eef49.json",
+        "timestamp": "2026-02-05T15:03:35.876530",
+        "overall_score": 70.31
+      }
+    ],
+    "gemini/gemini-3-flash-preview": [
+      {
+        "filename": "gemini_gemini-3-flash-preview_2026-02-05_b1f71b9c.json",
+        "timestamp": "2026-02-05T15:02:31.241055",
+        "overall_score": 62.5
       }
     ]
   },
-  "runs": [
-    {
-      "pair": "custom/openai/gpt-oss-120b",
-      "filename": "custom_openai_gpt-oss-120b_2026-02-05_5f98e17e.json",
-      "timestamp": "2026-02-05T13:50:44.198220",
-      "overall_score": 8.695652173913043
+  "summary": {
+    "best_scores": {
+      "custom/openai/gpt-oss-120b": 89.13,
+      "perplexity/sonar-pro": 100.0,
+      "gemini/gemini-2.5-flash": 81.25,
+      "gemini/gemini-3-pro-preview": 70.31,
+      "gemini/gemini-3-flash-preview": 62.5
     },
-    {
-      "pair": "custom/openai/gpt-oss-120b",
-      "filename": "custom_openai_gpt-oss-120b_2026-02-05_eed66e22.json",
-      "timestamp": "2026-02-05T13:53:31.366561",
-      "overall_score": 89.13043478260869
-    },
-    {
-      "pair": "custom/openai/gpt-oss-120b",
-      "filename": "custom_openai_gpt-oss-120b_2026-02-05_bc177204.json",
-      "timestamp": "2026-02-05T13:59:37.704117",
-      "overall_score": 55.55555555555556
-    },
-    {
-      "pair": "custom/openai/gpt-oss-120b",
-      "filename": "custom_openai_gpt-oss-120b_2026-02-05_c63a1599.json",
-      "timestamp": "2026-02-05T14:01:34.223740",
-      "overall_score": 78.125
-    },
-    {
-      "pair": "custom/openai/gpt-oss-120b",
-      "filename": "custom_openai_gpt-oss-120b_2026-02-05_38ad9a4a.json",
-      "timestamp": "2026-02-05T14:06:10.275396",
-      "overall_score": 73.4375
-    },
-    {
-      "pair": "custom/openai/gpt-oss-120b",
-      "filename": "custom_openai_gpt-oss-120b_2026-02-05_9c9afdc0.json",
-      "timestamp": "2026-02-05T14:10:07.111453",
-      "overall_score": 82.8125
-    }
-  ]
+    "total_valid_runs": 10,
+    "cleanup_date": "2026-02-05"
+  }
 }

@@ -291,16 +291,21 @@ class PPXAICompleter(Completer):
             for path in root.rglob('*'):
                 if len(files) >= max_files * 2:
                     break
-                if path.is_file():
-                    # Skip files in ignored directories
-                    if any(ignored in path.parts for ignored in self.IGNORE_DIRS):
-                        continue
-                    try:
-                        rel_path = str(path.relative_to(root))
-                        files[path.name] = rel_path
-                    except ValueError:
-                        pass
-        except PermissionError:
+                try:
+                    # Check if file - can fail on network paths (WinError 4350)
+                    if path.is_file():
+                        # Skip files in ignored directories
+                        if any(ignored in path.parts for ignored in self.IGNORE_DIRS):
+                            continue
+                        try:
+                            rel_path = str(path.relative_to(root))
+                            files[path.name] = rel_path
+                        except ValueError:
+                            pass
+                except OSError:
+                    # Network file unavailable, skip it
+                    pass
+        except (PermissionError, OSError):
             pass
 
         self._file_cache = files
