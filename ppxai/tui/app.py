@@ -18,6 +18,7 @@ from typing import Optional
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
+from textual.css.query import NoMatches
 from textual.message import Message
 from textual.widgets import Header, Footer, Static, Input, RichLog
 
@@ -1268,7 +1269,11 @@ class PPXAIDEApp(App):
 
     async def _on_tool_call(self, sender, data, **kwargs) -> None:
         """Handle TOOL_CALL event."""
-        chat_view = self.query_one("#chat-view", ChatView)
+        try:
+            chat_view = self.query_one("#chat-view", ChatView)
+        except NoMatches:
+            self._log.warning("[Event] Chat view not mounted, skipping tool call display")
+            return
 
         tool_name = data.get("tool", "unknown")
         tool_args = data.get("arguments", {})
@@ -1300,7 +1305,11 @@ class PPXAIDEApp(App):
 
     async def _on_tool_result(self, sender, data, **kwargs) -> None:
         """Handle TOOL_RESULT event."""
-        chat_view = self.query_one("#chat-view", ChatView)
+        try:
+            chat_view = self.query_one("#chat-view", ChatView)
+        except NoMatches:
+            self._log.warning("[Event] Chat view not mounted, skipping tool result display")
+            return
 
         tool_name = data.get("tool", "unknown")
         result = data.get("result", "")
@@ -1319,7 +1328,11 @@ class PPXAIDEApp(App):
 
     async def _on_tool_error(self, sender, data, **kwargs) -> None:
         """Handle TOOL_ERROR event."""
-        chat_view = self.query_one("#chat-view", ChatView)
+        try:
+            chat_view = self.query_one("#chat-view", ChatView)
+        except NoMatches:
+            self._log.warning("[Event] Chat view not mounted, skipping tool error display")
+            return
 
         tool_name = data.get("tool", "unknown") if isinstance(data, dict) else "unknown"
         error_msg = data.get("error", str(data)) if isinstance(data, dict) else str(data)
@@ -1359,14 +1372,23 @@ class PPXAIDEApp(App):
 
     async def _on_engine_error(self, sender, data, **kwargs) -> None:
         """Handle ENGINE_ERROR event."""
-        chat_view = self.query_one("#chat-view", ChatView)
-        self._log.error(f"[Event] Engine error: {data}")
+        try:
+            chat_view = self.query_one("#chat-view", ChatView)
+        except NoMatches:
+            self._log.error(f"[Event] Engine error (chat view not mounted): {data}")
+            return
 
+        self._log.error(f"[Event] Engine error: {data}")
         chat_view.add_system_message(f"[red]Error:[/red] {data}")
 
     async def _on_engine_warning(self, sender, data, **kwargs) -> None:
         """Handle ENGINE_WARNING event (hallucination detection, v1.15.3)."""
-        chat_view = self.query_one("#chat-view", ChatView)
+        try:
+            chat_view = self.query_one("#chat-view", ChatView)
+        except NoMatches:
+            self._log.warning(f"[Event] Engine warning (chat view not mounted): {data}")
+            return
+
         if data and isinstance(data, str):
             self._log.warning(f"[Event] Engine warning: {data}")
             # Display warning with visual indicator (yellow for warnings)
@@ -1374,7 +1396,13 @@ class PPXAIDEApp(App):
 
     async def _on_engine_info(self, sender, data, **kwargs) -> None:
         """Handle ENGINE_INFO event."""
-        chat_view = self.query_one("#chat-view", ChatView)
+        try:
+            chat_view = self.query_one("#chat-view", ChatView)
+        except NoMatches:
+            if self._trace_logging:
+                self._log.debug(f"[Event] Engine info (chat view not mounted): {data}")
+            return
+
         if self._trace_logging:
             self._log.debug(f"[Event] Engine info: {data}")
 
