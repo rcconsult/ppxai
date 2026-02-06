@@ -68,7 +68,7 @@ PPXAI_CONFIG_FILE="$HOME/.ppxai/ppxai-config.json" uv run pytest tests/test_cust
 - `ROADMAP.md` - Feature roadmap and version planning
 - `docs/RELEASE-PLAN-v1.14.x.md` - Current release series plan
 
-### Current Version: v1.15.2
+### Current Version: v1.15.3
 
 **v1.15.2 Features:**
 - **NEW:** `/terminal` command - shows terminal detection and image protocol config help
