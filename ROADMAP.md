@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.15.2 (January 2026)
+> **Current Version**: v1.15.2 (on feature/1-15-2 branch) (January 2026)
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
@@ -464,6 +464,73 @@ ppxai/tui/                     # New module (Textual-based)
 
 **Dependencies:**
 - `textual>=0.47.0` (added to optional extras: `pip install ppxai[tui]`)
+
+---
+
+## Planned (v1.16.x - File Navigation)
+
+### v1.16.0 - Command-Based File Navigation (MVP)
+**Status:** Planned
+**Branch:** feature/1-16-0 (to be created)
+**Effort:** 2 days
+**See:** `TODO-v1.16.0.md` Phase 0
+
+**Features:**
+- `/ls [path]` - List files and directories (Unix-style)
+- `/tree [depth]` - Render directory tree structure
+- Works in ALL clients (ppxaide, Web App, Rich CLI)
+
+**Why This First:**
+- Quick win: 70% of value with 20% of effort
+- Provides immediate utility across all clients
+- Foundation for interactive file tree in later releases
+
+---
+
+### v1.16.1 - ppxaide Interactive File Tree
+**Status:** Planned
+**Branch:** feature/1-16-1 (to be created)
+**Effort:** 5 days
+**See:** `TODO-v1.16.0.md` Phase 1
+
+**Features:**
+- NvChad-inspired file tree sidebar in ppxaide
+- Keyboard navigation (`Ctrl+E` toggle, arrow keys)
+- Click to open files in side panel
+- `Ctrl+I` to inject `@file` references
+- Respects `.gitignore` patterns
+- Uses Textual's DirectoryTree widget
+
+**Why ppxaide First:**
+- Textual's DirectoryTree is production-ready
+- Best architectural fit (already has 3-panel layout)
+- Users expect file trees in TUI applications
+
+---
+
+### v1.17.0 - Web App File Tree Sidebar
+**Status:** Planned
+**Branch:** feature/1-17-0 (to be created)
+**Effort:** 7 days
+**See:** `TODO-v1.16.0.md` Phase 2
+
+**Features:**
+- Collapsible sidebar (VSCode-style)
+- Server endpoint `/files/list` for directory scanning
+- Persistent expanded state (localStorage)
+- Right-click context menu for `@file` injection
+- Reuses tree-viewer.js component pattern
+
+**Why Later:**
+- More complex (requires new server endpoint)
+- Web users can use browser file managers meanwhile
+- ppxaide tree provides UX template
+
+**NOT Planned:**
+- ❌ Interactive file tree for ppxai (Rich CLI) - architecturally inappropriate
+  - Rich is a rendering library, not a TUI framework
+  - Cannot handle interactive keyboard navigation
+  - Users should use ppxaide for interactive file browsing
 
 ---
 
