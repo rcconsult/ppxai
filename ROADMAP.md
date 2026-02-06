@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.15.2 (on feature/1-15-2 branch) (January 2026)
+> **Current Version**: v1.15.2 (February 2026) (January 2026)
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
