@@ -2,7 +2,7 @@
 
 **Created:** 2026-01-30
 **Branch:** feature/1-15-2
-**Status:** In Progress
+**Status:** ✅ Complete (Released 2026-02-06)
 **Previous Release:** v1.15.1
 
 ---

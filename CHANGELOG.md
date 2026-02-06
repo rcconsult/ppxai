@@ -7,30 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- **LLM benchmark suite** (`benchmarks/llm-eval/`) - 6 test categories, 21+ test cases for evaluating agentic coding capabilities
-- **Generation params from config** - Gemini and Perplexity providers now load `temperature`, `top_p`, etc. from `ppxai-config.json`
-- **Streaming cancellation** - Ctrl+C during streaming gracefully cancels the response in ppxaide
-- **SIGINT handler** - Graceful shutdown on Ctrl+C for ppxaide on Linux/macOS
-- **Trace logging mode** - `--trace` flag for verbose per-event logging (separate from `--debug`)
-
-### Fixed
-
-- **Unicode whitespace normalization** in `apply_patch` - NBSP (`\xa0`), NNBSP (`\u202f`), Thin Space now match regular spaces
-- **5-level fuzzy matching** in `_replace_hunk()`: exact → CRLF → Unicode normalize → strip+normalize → collapse
-- **Truncated tool call detection** - detects "I'll use X tool" with incomplete JSON and provides recovery feedback
-- **GPT-OSS intermittent tool calling** - auto-retry with targeted guidance when vLLM Harmony parser fails
-
-### Technical
-
-- 20 new tests for Unicode whitespace normalization and truncated tool call detection
-- Refactored StatusBar badge helpers (`_format_cwd_display`, `_update_checkpoint_badge`)
-- EventBus logging now tied to `--trace` mode instead of `--debug`
-
 ---
 
-## [1.15.2] - 2026-02-03
+## [1.15.2] - 2026-02-06
+
+### Added - Gemini Native Tool Calling
+
+- **Native function calling** - Gemini provider now uses `function_declarations` instead of prompt-based tool calling
+  - Converts OpenAI tool format to Gemini format with `_convert_tools_to_gemini()`
+  - Handles tool calls in streaming and non-streaming modes
+  - Default capabilities include `native_tool_calling=True`
+  - Backward compatible - prompt-based mode works with `native_tool_calling: false`
+- **Gemini generation params** - Loads `temperature`, `top_p`, etc. from `ppxai-config.json`
+- **Perplexity generation params** - Also loads generation params from config
+- **Workaround for web search** - `web_search` tool now available for Gemini in agent mode
+  - Uses premium search (Perplexity → Gemini grounding API → DuckDuckGo fallback)
+  - Separate grounding-only API call when agent needs web data
+- **Limitation:** Multi-tool use (GoogleSearch + function_declarations) requires Live API
+  - Standard `generate_content` API cannot mix grounding with tools
+
+### Added - LLM Benchmark Suite
+
+- **Comprehensive benchmark suite** (`benchmarks/llm-eval/`) - 6 test categories, 21+ test cases
+  - `hallucination_resistance` - Gate tests for basic reliability (must pass 100%)
+  - `tool_calling` - Native tool execution accuracy
+  - `file_editing` - apply_patch, replace_block, insert_text
+  - `code_generation` - Generate working code from descriptions
+  - `multi_step_tasks` - Complex multi-step agent workflows
+  - `error_recovery` - Handle failures and retry
+- **Generation params from config** - Benchmarks load `temperature`, `top_p` from `ppxai-config.json`
+- **Engine runner** - Benchmark evaluation using ppxai Engine (not subprocess)
+- **Test ordering** - `hallucination_resistance` runs first as gate tests
+
+### Added - ppxaide TUI Improvements
+
+- **Streaming cancellation** - Ctrl+C during streaming gracefully cancels the response
+- **SIGINT handler** - Graceful shutdown on Ctrl+C for Linux/macOS
+- **Trace logging mode** - `--trace` flag for verbose per-event logging (separate from `--debug`)
+- **Performance optimization** - Network file crash fix (WinError 4350 on DFS paths)
+- **StatusBar refactoring** - Extracted helpers (`_format_cwd_display`, `_update_checkpoint_badge`)
 
 ### Added - Response Validation & Hallucination Detection
 
@@ -54,7 +69,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`PPXAI_TERMINAL` and `PPXAI_IMAGE_PROTOCOL`** - Environment variables for multi-terminal setups
 - **Double Ctrl+C to quit** - Pattern in ppxaide prevents accidental exits
 
-### Fixed
+### Fixed - VSCode display_file Integration
+
+- **EventBus architecture completion** - Fixed display_file tool in VSCode extension
+  - Files now open in editor tab (ViewColumn.Beside) instead of chat window
+  - Added missing `display_file` case in `httpClient.mapServerEvent()`
+  - Completed incomplete EventBus refactoring - `handleStreamEvent()` now calls `processStreamEvent()`
+  - Added `processDisplayFile()` in `stream.ts` and `stream:display_file` event type
+  - Root cause: EventBus infrastructure existed but wasn't connected
+- **Lesson learned:** Incomplete refactoring can leave both old and new code paths active
+
+### Fixed - Unicode Whitespace & Tool Calling
+
+- **Unicode whitespace normalization** in `apply_patch` - NBSP (`\xa0`), NNBSP (`\u202f`), Thin Space now match regular spaces
+- **5-level fuzzy matching** in `_replace_hunk()`: exact → CRLF → Unicode normalize → strip+normalize → collapse
+- **Truncated tool call detection** - Detects "I'll use X tool" with incomplete JSON and provides recovery feedback
+- **GPT-OSS intermittent tool calling** - Auto-retry with targeted guidance when vLLM Harmony parser fails
+
+### Fixed - Configuration & UI
 
 - **Autocomplete** preserves command prefix for subcommands (`/provider ` + TAB works)
 - **`/status`** shows terminal override indicators when env vars are set
@@ -71,10 +103,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Technical
 
-- `ValidationResult` enum: VALID, CLAIM_WITHOUT_ACTION, CLAIM_CONTRADICTS_RESULT, TOOL_JSON_IN_TEXT, FABRICATED_OUTPUT
-- `ValidationWarning` dataclass with severity levels (info, warning, error)
-- Validator integrated into `chat.py` tool execution loop
-- 27 new tests for response validation in `tests/test_validator.py`
+- **Gemini provider:** `_convert_tools_to_gemini()`, `_parse_function_call()`, generation params support
+- **Benchmark suite:** 20+ test cases across 6 categories, engine runner integration
+- **StatusBar helpers:** `_format_cwd_display()`, `_update_checkpoint_badge()` extracted
+- **EventBus logging:** Now tied to `--trace` mode instead of `--debug`
+- **Network file handling:** OSError exception handling for DFS/network paths (WinError 4350)
+- **Validation system:** `ValidationResult` enum, `ValidationWarning` dataclass, 27 new tests
+- **Test coverage:** 20 new tests for Unicode normalization, 20 for truncation detection
+- **Total tests:** 1,105 passing tests
 
 ---
 
