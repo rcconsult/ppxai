@@ -553,7 +553,24 @@ config.set_environment_variables = {
 - `ppxai/tui/widgets/image_handlers.py` - Terminal detection and widget selection
 - `ppxai/rendering/rich_renderer.py` - Rich TUI image rendering
 
-## vLLM/GPT-OSS Tool Calling Reference
+## vLLM Tool Calling Reference
+
+### **Tool Call Parsers: Hermes vs Harmony**
+
+vLLM supports multiple tool calling formats via `--tool-call-parser` flag. Different model families use different parsers:
+
+| Model Family | Parser | vLLM Flag | Stability | Notes |
+|--------------|--------|-----------|-----------|-------|
+| **GPT-OSS** | Harmony | `--tool-call-parser openai` | ⚠️ Intermittent | See Harmony section below |
+| **Qwen3** | Hermes | `--tool-call-parser hermes` | ✅ Stable | Different grammar than Harmony |
+| **Qwen2.5** | Hermes | `--tool-call-parser hermes` | ✅ Stable | - |
+| **Nous Hermes** | Hermes | `--tool-call-parser hermes` | ✅ Stable | - |
+
+**Key Point:** Always use the correct parser for your model family. Using the wrong parser causes tool calling to fail completely.
+
+---
+
+### **GPT-OSS (Harmony Format)**
 
 **Critical Finding:** Harmony format is **mandatory** for GPT-OSS. From official documentation:
 > "GPT-OSS should not be used without using the Harmony format as it will not work correctly."
@@ -589,6 +606,47 @@ The model was trained specifically on Harmony's response format with control tok
 - ppxai default: `native_tool_calling: true`
 
 **For developers hitting HarmonyError:** Set `native_tool_calling: false` in provider config, or use the standalone example for non-ppxai applications.
+
+---
+
+### **Qwen3 / Qwen2.5 (Hermes Format)**
+
+**Status:** Generally more stable than Harmony. Hermes grammar is well-tested and widely adopted.
+
+**vLLM Server Setup:**
+```bash
+vllm serve Qwen/Qwen3-... \
+  --enable-auto-tool-choice \
+  --tool-call-parser hermes \
+  --max-model-len 32768
+```
+
+**ppxai Config:**
+```json
+{
+  "providers": {
+    "custom": {
+      "base_url": "http://localhost:8000/v1",
+      "native_tool_calling": true,
+      "models": {
+        "Qwen/Qwen3-...": {
+          "max_tokens": 8192,
+          "temperature": 0.2
+        }
+      }
+    }
+  }
+}
+```
+
+**Known Issues:**
+- Same truncation issues as GPT-OSS if `max_tokens` too low
+- Unicode whitespace in code (Pattern #2 still applies)
+- May still exhibit "I'll use X tool" behavior (test with your specific model)
+
+**Fallback:** If native tool calling fails, set `native_tool_calling: false` for prompt-based tools.
+
+---
 
 **Known Issue: "I'll use X tool" followed by JSON text (v1.15.2)**
 
