@@ -546,14 +546,8 @@ class EngineClient:
                 f"Model switch to '{model_id}': "
                 f"{model_count} model hints (matched: {patterns})"
             )
-        else:
-            # Log available patterns when no match
-            available = hints_info["all_model_patterns"]
-            if available:
-                logger.debug(
-                    f"Model switch to '{model_id}': "
-                    f"no model hints matched (available patterns: {available})"
-                )
+        # No logging when no hints matched - reduces noise in logs
+        # Available patterns can be seen via /context show command
 
     def list_models(self) -> List[ModelInfo]:
         """List available models for current provider.
