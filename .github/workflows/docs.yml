@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - feature/new-tui-command  # Temporary: auto-build dev docs
     tags:
       - 'v*'
     paths:
@@ -22,6 +21,10 @@ permissions:
   contents: write
   pages: write
   id-token: write
+
+concurrency:
+  group: docs-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -76,13 +79,35 @@ jobs:
             TITLE="$VERSION"
           fi
 
-          if [ -n "$ALIAS" ]; then
-            mike deploy --push --update-aliases --title "$TITLE" "$VERSION" "$ALIAS"
-          else
-            mike deploy --push --title "$TITLE" "$VERSION"
-          fi
+          # Deploy with retry to handle concurrent push conflicts
+          for attempt in 1 2 3; do
+            if [ -n "$ALIAS" ]; then
+              mike deploy --push --update-aliases --title "$TITLE" "$VERSION" "$ALIAS" && break
+            else
+              mike deploy --push --title "$TITLE" "$VERSION" && break
+            fi
+            echo "Push attempt $attempt failed, retrying..."
+            sleep 5
+            git fetch origin gh-pages:gh-pages --force
+          done
+
+      - name: Retitle previous versions
+        if: steps.version.outputs.alias == 'latest'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git fetch origin gh-pages:gh-pages --force || true
+
+          # Remove stale "(Latest)" from previous version titles
+          mike list 2>/dev/null | grep "(Latest)" | grep -v "$VERSION" | while read -r line; do
+            OLD_VER=$(echo "$line" | awk '{print $1}')
+            if [ -n "$OLD_VER" ] && [ "$OLD_VER" != "$VERSION" ]; then
+              echo "Retitling $OLD_VER to remove stale (Latest) label"
+              mike retitle --push "$OLD_VER" "$OLD_VER"
+            fi
+          done
 
       - name: Set default version
         if: steps.version.outputs.alias == 'latest'
         run: |
+          git fetch origin gh-pages:gh-pages --force || true
           mike set-default --push latest
