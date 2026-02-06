@@ -123,3 +123,35 @@ gh release view v{version}
 **"Missing assets"**
 - Intel Mac builds require running `build-intel.sh` on a Mac
 - Other missing assets indicate CI failure
+
+**"Tests failed in CI but pass locally"**
+- Check if test relies on registration order or other non-deterministic behavior
+- Fix the test and push to master
+- CI failure prevents asset builds, but release is already created
+- Option 1: Manual build and upload (see below)
+- Option 2: Create patch release (v1.X.Y+1) with test fix
+
+## Manual Build & Upload
+
+If CI fails after release is created, manually build and upload assets:
+
+```bash
+# On Linux/macOS
+cd scripts
+./build-all.sh v1.15.2
+
+# On Windows
+cd scripts
+.\build-windows.ps1 -Version v1.15.2
+
+# Upload assets
+cd ..
+gh release upload v1.15.2 dist/ppxai-*
+gh release upload v1.15.2 dist/ppxaide-*
+gh release upload v1.15.2 dist/ppxai-server-*
+gh release upload v1.15.2 dist/ppxai-desktop-*
+gh release upload v1.15.2 vscode-extension/ppxai-*.vsix
+
+# Verify
+gh release view v1.15.2 --json assets --jq '.assets[].name'
+```

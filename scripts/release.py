@@ -472,11 +472,7 @@ def create_commit(version: str, message: str) -> bool:
         print(f"  ⏭️  No changes to commit (version files already up to date)")
         return False
 
-    commit_msg = f"""{message}
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"""
+    commit_msg = message
 
     # Write commit message to temp file to handle multiline
     msg_file = PROJECT_ROOT / ".git/RELEASE_COMMIT_MSG"
