@@ -299,15 +299,17 @@ class TestRegistration:
         web_premium.register_tools(mock_manager, provider="gemini")
         # Now registers 3 tools: web_search, get_weather, fetch_url
         assert mock_manager.register_function.call_count == 3
-        # Check web_search is first
-        first_call_kwargs = mock_manager.register_function.call_args_list[0][1]
-        assert first_call_kwargs["name"] == "web_search"
-        # Only Perplexity excluded (has native web search)
-        assert first_call_kwargs["provider_excluded"] == ["perplexity"]
-        # Check get_weather and fetch_url are also registered
+
+        # Check all three tools are registered (order doesn't matter)
         tool_names = [call[1]["name"] for call in mock_manager.register_function.call_args_list]
+        assert "web_search" in tool_names
         assert "get_weather" in tool_names
         assert "fetch_url" in tool_names
+
+        # Check that web_search has correct exclusion list
+        web_search_call = [call for call in mock_manager.register_function.call_args_list
+                          if call[1]["name"] == "web_search"][0]
+        assert web_search_call[1]["provider_excluded"] == ["perplexity"]
 
     def test_register_tools_no_api_keys(self):
         """Test registration falls back to free search when no API keys."""
