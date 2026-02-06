@@ -176,6 +176,12 @@ class EngineClient:
         Args:
             path: Working directory path
         """
+        # Check if directory actually changed to avoid duplicate events (v1.15.3)
+        current_dir = self.get_working_dir()
+        if current_dir and Path(current_dir).resolve() == Path(path).resolve():
+            logger.debug(f"Working directory unchanged: {path}")
+            return
+
         self.context_injector.set_working_dir(path)
         self.session.set_working_dir(path)  # Also update session for persistence
         self._init_checkpoint_manager(path)
@@ -189,7 +195,7 @@ class EngineClient:
             backend=checkpoint_backend
         )
 
-        # Emit working directory change event (v1.13.2)
+        # Emit working directory change event only if directory actually changed (v1.13.2, v1.15.3)
         # This event will be picked up by SSE stream and sent to clients
         self._consent_event_queue.append(Event(
             type=EventType.WORKING_DIR_CHANGED,
