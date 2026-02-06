@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.15.3] - 2026-02-07
+
+### Fixed - TUI EventBus Stability
+
+- **WARNING event handler** - Added ENGINE_WARNING event handler for hallucination detection alerts
+  - Displays validation warnings in chat with yellow ⚠ indicator
+  - Completes v1.15.2 response validation system integration with TUI
+  - Fixes "Unhandled event type: EventType.WARNING" debug messages
+- **EventBus handler resilience** - Added NoMatches guards to all event handlers
+  - Prevents crashes when handlers fire before chat_view is mounted
+  - Fixes "No nodes match '#chat-view'" errors during startup/shutdown
+  - Protected handlers: `_on_tool_call`, `_on_tool_result`, `_on_tool_error`, `_on_engine_error`, `_on_engine_warning`, `_on_engine_info`
+- **Shell consent dialog threading** - Verified correct implementation using `call_from_thread()` + callback pattern
+  - No `wait_for_dismiss` usage (follows Textual best practices)
+
+### Fixed - Engine & Performance
+
+- **Model hints debug noise** - Removed verbose "no model hints matched" messages
+  - Only logs when hints ARE matched, not when they aren't
+  - Reduces duplicate log messages during session restoration and model switching
+  - Available patterns still visible via `/context show` command
+- **Working directory change deduplication** - Only emit WORKING_DIR_CHANGED event when directory actually changes
+  - Compares resolved paths to prevent duplicate events
+  - Fixes double events from temporary cwd switches during tool execution
+
+### Documentation
+
+- **MEMORY.md** - Added v1.15.3 critical patterns:
+  - Pattern #8: TUI EventBus Handler Resilience
+  - Pattern #9: WARNING Event Handling
+  - Pattern #10: Working Directory Change Deduplication
+- **RELEASE-NOTES-v1.15.3.md** - Complete release documentation with implementation details
+
+---
+
 ## [1.15.2] - 2026-02-06
 
 ### Added - Gemini Native Tool Calling
