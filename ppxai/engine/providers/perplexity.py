@@ -61,6 +61,26 @@ class PerplexityProvider(BaseProvider):
         streaming=True
     )
 
+    def _get_generation_params(self, model: str) -> Dict[str, Any]:
+        """Get generation parameters (temperature, top_p, etc.) from config.
+
+        v1.15.2: Allows setting temperature and other params to reduce hallucinations.
+        Lower temperature (0.0-0.5) produces more deterministic, factual responses.
+
+        Args:
+            model: Model ID to check
+
+        Returns:
+            Dict of generation params to pass to API (empty if none configured)
+        """
+        try:
+            from ...config import get_generation_params
+            # Use provider_id if set, otherwise fall back to class name
+            provider = self.provider_id or self.name
+            return get_generation_params(provider, model)
+        except (ImportError, AttributeError):
+            return {}  # No params configured
+
     async def chat(
         self,
         messages: List[Message],
@@ -83,16 +103,23 @@ class PerplexityProvider(BaseProvider):
         try:
             api_messages = self._convert_messages(messages)
 
+            # Load generation params from config (v1.15.2)
+            generation_params = self._get_generation_params(model)
+
             yield Event(EventType.STREAM_START, {"model": model})
 
             if stream:
                 # Streaming response with usage tracking
-                response_stream = self.client.chat.completions.create(
-                    model=model,
-                    messages=api_messages,
-                    stream=True,
-                    stream_options={"include_usage": True}
-                )
+                request_kwargs = {
+                    "model": model,
+                    "messages": api_messages,
+                    "stream": True,
+                    "stream_options": {"include_usage": True}
+                }
+                # Add generation params if configured
+                if generation_params:
+                    request_kwargs.update(generation_params)
+                response_stream = self.client.chat.completions.create(**request_kwargs)
 
                 full_response = []
                 usage = None
@@ -124,11 +151,15 @@ class PerplexityProvider(BaseProvider):
 
             else:
                 # Non-streaming response
-                response = self.client.chat.completions.create(
-                    model=model,
-                    messages=api_messages,
-                    stream=False
-                )
+                request_kwargs = {
+                    "model": model,
+                    "messages": api_messages,
+                    "stream": False
+                }
+                # Add generation params if configured
+                if generation_params:
+                    request_kwargs.update(generation_params)
+                response = self.client.chat.completions.create(**request_kwargs)
 
                 content = response.choices[0].message.content or ""
                 usage = self._parse_usage(response.usage)
@@ -168,11 +199,16 @@ class PerplexityProvider(BaseProvider):
             Assistant's response content
         """
         api_messages = self._convert_messages(messages)
+        generation_params = self._get_generation_params(model)
 
-        response = self.client.chat.completions.create(
-            model=model,
-            messages=api_messages,
-            stream=False
-        )
+        request_kwargs = {
+            "model": model,
+            "messages": api_messages,
+            "stream": False
+        }
+        if generation_params:
+            request_kwargs.update(generation_params)
+
+        response = self.client.chat.completions.create(**request_kwargs)
 
         return response.choices[0].message.content or ""

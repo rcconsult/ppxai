@@ -7,36 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added - Type-Based Renderer Architecture (v1.15.0)
+### Added
 
-- **17 CommandResult types** - Structured data types for all command outputs
-  - `MessageResult`, `StatusResult`, `TableResult`, `TreeResult`, `ErrorResult`
-  - `CodeResult`, `DataResult`, `ImageResult`, `DiffResult`
-  - `ConfirmResult`, `SelectResult`, `ProgressResult`
-  - `InfoResult`, `SuccessResult`, `ThemeResult`, `UsageResult`, `EmptyResult`
-- **2 renderer implementations**:
-  - `RichRenderer` - Legacy Rich TUI (ppxai)
-  - `TextualRenderer` - New Textual TUI (ppxaide)
-- **Mechanical dispatch** - Type-based routing via `isinstance()` checks, zero conditionals
-- **UI-agnostic commands** - Same command logic works in TUI, VSCode, Web, future GUIs
-- **100% testable** - Commands tested without UI framework dependencies
+- **LLM benchmark suite** (`benchmarks/llm-eval/`) - 6 test categories, 21+ test cases for evaluating agentic coding capabilities
+- **Generation params from config** - Gemini and Perplexity providers now load `temperature`, `top_p`, etc. from `ppxai-config.json`
+- **Streaming cancellation** - Ctrl+C during streaming gracefully cancels the response in ppxaide
+- **SIGINT handler** - Graceful shutdown on Ctrl+C for ppxaide on Linux/macOS
+- **Trace logging mode** - `--trace` flag for verbose per-event logging (separate from `--debug`)
 
-### Changed
+### Fixed
 
-- **All 32 commands migrated** to return typed results instead of direct rendering
-- **Command logic decoupled** from UI presentation layer
-- **Single source of truth** - One command implementation, multiple renderers
-
-### Removed
-
-- **~1,698 lines** of v2 naming artifacts and duplicate rendering code
-- **Direct UI dependencies** from command implementations
+- **Unicode whitespace normalization** in `apply_patch` - NBSP (`\xa0`), NNBSP (`\u202f`), Thin Space now match regular spaces
+- **5-level fuzzy matching** in `_replace_hunk()`: exact → CRLF → Unicode normalize → strip+normalize → collapse
+- **Truncated tool call detection** - detects "I'll use X tool" with incomplete JSON and provides recovery feedback
+- **GPT-OSS intermittent tool calling** - auto-retry with targeted guidance when vLLM Harmony parser fails
 
 ### Technical
 
-- Type-safe dispatch using Python's `isinstance()` for runtime type checking
-- Extensible pattern for future UI implementations (Web, GUI, etc.)
-- Clean separation of concerns: commands produce data, renderers handle presentation
+- 20 new tests for Unicode whitespace normalization and truncated tool call detection
+- Refactored StatusBar badge helpers (`_format_cwd_display`, `_update_checkpoint_badge`)
+- EventBus logging now tied to `--trace` mode instead of `--debug`
 
 ---
 

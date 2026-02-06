@@ -6,14 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.15.3
-
-**v1.15.3 highlights:**
-- **FIX:** Unicode whitespace normalization in `apply_patch` - NBSP (`\xa0`), NNBSP (`\u202f`), Thin Space now match regular spaces
-- **FIX:** 5-level fuzzy matching in `_replace_hunk()`: exact → CRLF → Unicode normalize → strip+normalize → collapse
-- **FIX:** Truncated tool call detection - detects "I'll use X tool" with incomplete JSON and provides recovery feedback
-- **FIX:** GPT-OSS intermittent tool calling issue - auto-retry with targeted guidance when vLLM Harmony parser fails
-- **TESTS:** 20 new tests for Unicode whitespace normalization and truncated tool call detection
+**Current Version:** v1.15.2
 
 **v1.15.2 highlights:**
 - **NEW:** Response validation system - detects LLM hallucinations and tool result contradictions
@@ -24,6 +17,10 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **NEW:** `/terminal` command - shows terminal detection and image protocol config help
 - **NEW:** `PPXAI_TERMINAL` and `PPXAI_IMAGE_PROTOCOL` env vars for multi-terminal setups
 - **NEW:** Double Ctrl+C to quit pattern in ppxaide (prevents accidental exits)
+- **FIX:** Unicode whitespace normalization in `apply_patch` - NBSP (`\xa0`), NNBSP (`\u202f`), Thin Space now match regular spaces
+- **FIX:** 5-level fuzzy matching in `_replace_hunk()`: exact → CRLF → Unicode normalize → strip+normalize → collapse
+- **FIX:** Truncated tool call detection - detects "I'll use X tool" with incomplete JSON and provides recovery feedback
+- **FIX:** GPT-OSS intermittent tool calling issue - auto-retry with targeted guidance when vLLM Harmony parser fails
 - **FIX:** Autocomplete preserves command prefix for subcommands (`/provider ` + TAB works)
 - **FIX:** `/status` shows terminal override indicators when env vars are set
 - **FIX:** Config loader now includes all config sections (`server`, `session`, `tui`, `paths`, etc.)
@@ -31,6 +28,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **FIX:** Web app `/context reload` shows correct message instead of false "not found"
 - **FIX:** Web app clipboard button now uses correct global reference (`window.ppxai`)
 - **FIX:** Web app `display_file` event now handled properly (opens split preview)
+- **TESTS:** 20 new tests for Unicode whitespace normalization and truncated tool call detection
 - **DOCS:** Comprehensive terminal image display guide in INSTALLATION.md
 - **DOCS:** GPT-OSS "explain before calling" tool issue and `max_tokens` mitigation
 

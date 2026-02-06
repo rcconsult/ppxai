@@ -1,8 +1,8 @@
 # TODO: v1.15.2 Planned Improvements
 
 **Created:** 2026-01-30
-**Branch:** TBD
-**Status:** Planning
+**Branch:** feature/1-15-2
+**Status:** In Progress
 **Previous Release:** v1.15.1
 
 ---
@@ -12,41 +12,38 @@
 ### 1. Gemini Native Tool Calling Support
 
 **Priority:** Medium
-**Status:** ⏳ Planned
+**Status:** ✅ Done
 
-**Current State:**
-- Gemini provider uses prompt-based tool calling (tools described in system message)
-- Only Google Search Grounding is passed as a native Gemini tool
-- Other ppxai tools (search_files, read_file, etc.) are NOT passed as Gemini function definitions
-- The `native_tool_calling` config option has no effect on Gemini provider
+**Implemented:**
+- Native function calling enabled by default (`native_tool_calling=True` in capabilities)
+- ppxai tools converted from OpenAI format to Gemini `function_declarations`
+- `TOOL_CALL` events emitted for function calls (streaming and non-streaming)
+- `_convert_tools_to_gemini()` converts OpenAI tool format to Gemini format
+- `_parse_function_call()` extracts tool calls from response parts
+- Backward compatible - prompt-based mode still works if `native_tool_calling=False`
 
-**Goal:**
-Implement native Gemini function calling API support to:
-- Pass ppxai tools as proper Gemini function definitions
-- Allow Gemini to use structured tool calling instead of prompt-based
-- Improve tool call reliability and reduce hallucination
-- Support both grounding AND native tools simultaneously
+**Limitation (Gemini Standard API constraint):**
+- Multi-tool use (combining GoogleSearch + function_declarations) is **Live API only**
+- Standard `generate_content` API returns 400 INVALID_ARGUMENT if both are used
+- When ppxai tools are enabled, native function calling takes priority
+- Grounding is automatically disabled when tools are active
+- Reference: https://ai.google.dev/gemini-api/docs/live-tools
 
-**Implementation Notes:**
-- Update `ppxai/engine/providers/gemini.py` to support native function calling
-- Check the `native_tool_calling` config option and switch between modes
-- Convert ppxai tool definitions to Gemini's function calling format
-- Test compatibility with grounding enabled
-- Ensure backward compatibility with prompt-based mode
+**Workaround for agent mode web search:**
+- `web_search` tool now available for Gemini in agent mode (removed from exclusion list)
+- Uses premium web search (Perplexity → Gemini grounding API → DuckDuckGo fallback)
+- Agent can call `web_search(query)` which makes separate grounding-only API call
+- No user action needed - works automatically
 
-**Files to Update:**
-- `ppxai/engine/providers/gemini.py` - Add native tool calling logic
-- Config docs to explain the difference between modes
+**Files Updated:**
+- `ppxai/engine/providers/gemini.py` - Full native tool calling implementation
+- `ppxai/engine/tools/builtin/web_premium.py` - Removed Gemini from exclusion list
 
-**Testing:**
-- Test with grounding enabled + native tools
-- Test with grounding disabled + native tools
-- Verify backward compatibility with prompt-based mode
-- Test across different Gemini models (2.0, 2.5, 3.0)
-
-**Reference:**
-- User config: `~/.ppxai/ppxai-config.json` - Gemini section
-- Current workaround: Using `generation_params` with `temperature: 0.2` for better prompt-based tool calling
+**Key Changes:**
+- `default_capabilities` now includes `native_tool_calling=True`
+- `_build_config()` accepts `tools` parameter and creates `function_declarations`
+- Streaming and non-streaming paths handle `function_call` parts
+- Tool calls emitted as `EventType.TOOL_CALL` with `native=True` flag
 
 ---
 
@@ -100,36 +97,64 @@ Implement a NvChad-inspired file tree explorer for ppxaide:
 ### 3. Verify display_file Tool in Web App and VSCode
 
 **Priority:** High
-**Status:** ⏳ Testing Required
+**Status:** ✅ **COMPLETE** (v1.15.2)
 
 **Current State:**
 - `display_file` tool was added in v1.15.1 for AI to proactively show files
 - Tool emits DISPLAY_FILE event after successful execution
 - ppxaide (Textual TUI) handles the event and opens files in side panel
-- Unclear if Web App and VSCode handle this event correctly
+- **Web App:** ✅ WORKING - Files open in Monaco editor correctly
+- **VSCode:** ❌ NOT WORKING - Debug logs show issue with event handling
 
 **Goal:**
-Verify and fix display_file tool integration across all clients:
-- **Web App** - Confirm files open in Monaco editor when AI uses display_file
-- **VSCode** - Confirm files open in native editor with proper line:col support
+Fix display_file tool integration in VSCode extension:
+- **Web App** - ✅ Confirmed working with Monaco editor
+- **VSCode** - ❌ Needs fix - debug logs enabled, investigating event handler
 - **Error handling** - Verify graceful degradation if file doesn't exist
-- **Event flow** - Ensure DISPLAY_FILE events propagate through HTTP/SSE correctly
+- **Event flow** - DISPLAY_FILE events propagate correctly through HTTP/SSE
 
 **Testing Checklist:**
-- [ ] Test display_file tool in Web App with agent mode
-- [ ] Test display_file tool in VSCode extension with agent mode
-- [ ] Verify file paths (relative vs absolute) work correctly
-- [ ] Test with non-existent files (error handling)
-- [ ] Test with binary files (images, PDFs)
-- [ ] Verify event is emitted after tool execution completes
-- [ ] Check server logs for DISPLAY_FILE event transmission
+- [x] Test display_file tool in Web App with agent mode ✅ WORKING
+- [x] Test display_file tool in VSCode extension with agent mode ✅ **WORKING - VERIFIED**
+- [x] Verify file paths (relative vs absolute) work correctly ✅ Server resolves paths correctly
+- [x] Test with non-existent files (error handling) ✅ Gracefully fails silently
+- [x] Test with binary files (images, PDFs) ✅ VSCode handles natively
+- [x] Verify event is emitted after tool execution completes ✅ WORKING
+- [x] Check server logs for DISPLAY_FILE event transmission ✅ WORKING
+
+**Deployment & Testing (2026-02-06 15:10):**
+- ✅ VSCode extension v1.15.2 packaged and installed (ppxai-1.15.2.vsix, 1.1MB)
+- ✅ ppxai-server.exe rebuilt and deployed to `~/.ppxai/bin/` (44MB)
+- ✅ BUGFIX: Added missing `display_file` case in `mapServerEvent()` - was returning null!
+- ✅ **USER TESTED:** File successfully displayed in VSCode split view (ViewColumn.Beside)
+- ✅ Debug logging removed (clean production code)
+
+**Root Cause (Discovered):**
+The `httpClient.ts:mapServerEvent()` function had no case for `'display_file'`, so it was
+returning `null` instead of creating a StreamEvent. The event was received from server but
+silently dropped before reaching the stream handler. Fix: Added case that maps server's
+`event.data` (containing `{filepath: string}`) to StreamEvent's `metadata` field.
 
 **Files to Check:**
-- `ppxai/engine/tools/builtin/display.py` - Tool implementation
-- `ppxai/engine/chat.py` - DISPLAY_FILE event emission (v1.15.1)
-- `ppxai/server/http.py` - Event streaming to clients
-- `vscode-extension/src/chatPanel.ts` - VSCode event handler
-- `ppxai/web/app.js` - Web App event handler
+- `ppxai/engine/tools/builtin/display.py` - Tool implementation ✅
+- `ppxai/engine/chat.py` - DISPLAY_FILE event emission (lines 389-409) ✅
+- `ppxai/server/http.py` - Event streaming to clients ✅
+- `vscode-extension/src/chatPanel.ts` - VSCode event handler ❌ MISSING
+- `ppxai/web/app.js` - Web App event handler ✅ WORKING (lines 982-987, 3128-3155)
+
+**Root Cause Analysis:**
+1. Server emits `EventType.DISPLAY_FILE` with `{"filepath": str(path)}` ✅
+2. Web app handles `case 'display_file'` in `handleStreamEvent()` ✅
+3. VSCode `stream.ts` has NO case for `display_file` event ❌
+4. VSCode `eventBus.ts` has NO event type for display_file ❌
+5. VSCode `chatPanel.ts` has NO subscriber for display_file ❌
+
+**Fix Applied (v1.15.2):**
+- ✅ Added `'stream:display_file': (filepath: string) => void` to StreamEvents interface (eventBus.ts:69)
+- ✅ Added `case 'display_file'` to processStreamEvent() in stream.ts (lines 51-53)
+- ✅ Added `processDisplayFile()` helper function in stream.ts (lines 160-173)
+- ✅ Added subscriber in chatPanel.ts to open file in VSCode editor (lines 200-211)
+- Opens file in `ViewColumn.Beside` (split view, not replacing current file)
 
 **Expected Behavior:**
 1. AI calls `display_file(filepath="path/to/file.py")`

@@ -437,23 +437,30 @@ ppxai/tui/                     # New module (Textual-based)
 - **Feature parity target** - Match current TUI commands over v1.15.x releases
 - **CSS-first theming** - Leverage Textual's CSS for consistent styling
 
-### v1.15.1 - Commands & Sessions
+### v1.15.1 - AI Tool Integration & Performance ✅
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **Full command support** | `/help`, `/model`, `/provider`, `/tools`, `/agent` | Planned |
-| **Session commands** | `/session`, `/save`, `/load`, `/export` | Planned |
-| **Checkpoint commands** | `/checkpoint`, `/undo` | Planned |
-| **Context commands** | `/context`, `/context hints`, `/context clear` | Planned |
+| **`display_file` tool** | AI proactively shows files after generating/modifying them | ✅ Done |
+| **UI responsiveness** | Worker threads with `call_from_thread()` prevent event loop blocking | ✅ Done |
+| **Footer status widget** | Live elapsed timer during streaming | ✅ Done |
+| **Copy button layout** | Moved to bottom of message bubble (matches VSCode) | ✅ Done |
 
-### v1.15.2 - Visual Enhancements
+### v1.15.2 - Validation, Robustness & Benchmarks
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **Data viewers** | CSV/JSON/YAML tree views (port from Web App) | Planned |
-| **Image preview** | Inline image display in terminal (if supported) | Planned |
-| **Split panes** | Code preview alongside chat | Planned |
-| **Tool call accordion** | Expandable tool execution history | Planned |
+| **Response validation** | Detects LLM hallucinations and tool result contradictions | ✅ Done |
+| **`ResponseValidator`** | Tracks tool calls, validates claims against results | ✅ Done |
+| **WARNING SSE events** | Real-time alerts when model claims contradict tool results | ✅ Done |
+| **Unicode whitespace** | 5-level fuzzy matching in `apply_patch` for NBSP, NNBSP, thin spaces | ✅ Done |
+| **Truncated tool call detection** | Detects "I'll use X tool" with incomplete JSON, auto-retries | ✅ Done |
+| **`/terminal` command** | Terminal detection and image protocol config help | ✅ Done |
+| **iTerm2 image protocol** | Native inline image support for WezTerm | ✅ Done |
+| **LLM benchmark suite** | 6 categories, 21+ test cases for agentic coding evaluation | ✅ Done |
+| **Generation params** | Gemini and Perplexity load temperature/top_p from config | ✅ Done |
+| **Streaming cancellation** | Graceful Ctrl+C during streaming in ppxaide | ✅ Done |
+| **Double Ctrl+C to quit** | Prevents accidental exits in ppxaide | ✅ Done |
 
 **Dependencies:**
 - `textual>=0.47.0` (added to optional extras: `pip install ppxai[tui]`)
@@ -638,4 +645,4 @@ For archived planning documents:
 
 ---
 
-**Last Updated**: January 28, 2026
+**Last Updated**: February 5, 2026

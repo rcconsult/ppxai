@@ -56,7 +56,7 @@ During a 90-minute debugging session, the GPT-OSS 120B model exhibited severe ag
 
 **Root Cause:** This is the documented GPT-OSS "explain before calling" issue where the vLLM Harmony parser fails to capture tool calls, causing them to leak into the response text.
 
-**Current Mitigation:** v1.15.3 added truncated tool call detection, but it may not trigger in all cases.
+**Current Mitigation:** v1.15.2 added truncated tool call detection, but it may not trigger in all cases.
 
 ---
 
@@ -121,7 +121,7 @@ During a 90-minute debugging session, the GPT-OSS 120B model exhibited severe ag
 16:31:17 | tool_result: 'Error: No changes applied'
 ```
 
-**Current Mitigation:** v1.15.3 added 5-level fuzzy matching in `_replace_hunk()`.
+**Current Mitigation:** v1.15.2 added 5-level fuzzy matching in `_replace_hunk()`.
 
 ---
 

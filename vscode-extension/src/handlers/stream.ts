@@ -49,6 +49,10 @@ export function processStreamEvent(event: StreamEvent, eventBus: ChatEventBus): 
             processContextInjected(event.content, eventBus);
             break;
 
+        case 'display_file':
+            processDisplayFile(event, eventBus);
+            break;
+
         case 'consent_request':
             processConsentRequest(event, eventBus);
             break;
@@ -137,6 +141,22 @@ function processContextInjected(content: string, eventBus: ChatEventBus): void {
         });
     } catch {
         // Ignore parse errors for context injection
+    }
+}
+
+/**
+ * Parse and emit display file event (v1.15.2).
+ * Triggered when AI uses display_file tool to proactively show a file.
+ */
+function processDisplayFile(event: StreamEvent, eventBus: ChatEventBus): void {
+    try {
+        // Event metadata contains {filepath: string}
+        const filepath = event.metadata?.filepath as string;
+        if (filepath) {
+            eventBus.emit('stream:display_file', filepath);
+        }
+    } catch (error) {
+        console.warn('Failed to parse display_file event:', error);
     }
 }
 

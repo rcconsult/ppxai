@@ -1,0 +1,283 @@
+{
+  "provider": "gemini",
+  "model": "gemini-3-pro-preview",
+  "timestamp": "2026-02-05T15:03:35.876530",
+  "overall_score": 70.3125,
+  "tests_passed": 19,
+  "tests_total": 26,
+  "duration_seconds": 1412.0525877475739,
+  "category_scores": {
+    "hallucination_resistance": 55.55555555555556,
+    "tool_calling": 50.0,
+    "code_editing": 100.0,
+    "format_compliance": 100.0,
+    "instruction_following": 100.0,
+    "reasoning": 66.66666666666666,
+    "error_recovery": 66.66666666666666
+  },
+  "test_results": [
+    {
+      "name": "respects_tool_failure",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "acknowledged_failure": true
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "no_phantom_tool_calls",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "made_tool_calls": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "repeated_failure_acknowledgment",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "Didn't acknowledge persistent failure",
+        "content_preview": "{\n  \"tool\": \"write_file\",\n  \"arguments\": {\n    \"path\": \"test.txt\",\n    \"content\": \"hello world\"\n  }\n}"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "contradiction_detection",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "Model contradicted tool result",
+        "contradiction": "running on port 8080",
+        "tool_result": "Connection refused",
+        "content_preview": "based on the tool result, the server is **not** running on port 8080 (connection refused).\n\ni will now check if the `ppxai` process is running at all to see if it's on a different port or simply stopped.\n\n```json\n{\n  \"tool\": \"run_command\",\n  \"arguments\": {\n    \"command\": \"tasklist | findstr python\","
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "multi_turn_consistency",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "accurate_status_report": true,
+        "mentioned_failure": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool": "read_file",
+        "args": {
+          "path": "/src/main.py"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool": "write_file",
+        "args": {
+          "path": "/tmp/test.txt",
+          "content": "Hello, World!"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "content_length": 3322
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Timeout"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Timeout"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Tool call JSON found in content instead of tool_calls",
+        "pattern_matched": "\\{\\s*\"tool\"\\s*:",
+        "content_preview": "{\n  \"tool\": \"search_code\",\n  \"arguments\": {\n    \"pattern\": \"TODO\",\n    \"path\": \"/src\",\n    \"file_pattern\": \"*\"\n  }\n}"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": true,
+      "details": {
+        "patch_length": 114
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": true,
+      "details": {
+        "patch_length": 223
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": true,
+      "details": {
+        "patch_length": 268
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "json_output",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "items": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "markdown_code_blocks",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "code_blocks": 2
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_hallucinated_paths",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "content_length": 2527
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "do_not_explain",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "content_length": 45
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "constraint_respect",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "line_count": 6
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "format_specification",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "blocks": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "multi_step_planning",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "concepts_found": [
+          "password",
+          "login",
+          "session"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "dependency_ordering",
+      "category": "reasoning",
+      "passed": false,
+      "details": {
+        "error": "Didn't prioritize running tests first"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "edge_case_handling",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "handled": [
+          "division_by_zero",
+          "error_handling"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "tool_error_recovery",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "recovery": "acknowledged_error"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "self_correction",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "acknowledged_correction": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "graceful_degradation",
+      "category": "error_recovery",
+      "passed": false,
+      "details": {
+        "error": "Hallucinated unavailable tool",
+        "tools_called": [
+          "list_directory"
+        ]
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1
+  }
+}

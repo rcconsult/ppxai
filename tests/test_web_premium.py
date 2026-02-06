@@ -282,16 +282,32 @@ class TestRegistration:
     """Tests for tool registration."""
 
     def test_register_tools_native_search_provider(self):
-        """Test web_search tool not registered for providers with native search."""
+        """Test web_search tool registration for providers with native search.
+
+        Perplexity: Skipped (has native web search always on)
+        Gemini: Registered (v1.15.2) - grounding disabled when tools active
+        """
         mock_manager = MagicMock()
 
-        # Should skip registration for Perplexity
+        # Should skip registration for Perplexity (native web search)
         web_premium.register_tools(mock_manager, provider="perplexity")
         mock_manager.register_function.assert_not_called()
 
-        # Should skip registration for Gemini
+        # Should register for Gemini (v1.15.2) - needs web_search tool in agent mode
+        # because grounding is disabled when native function calling is active
+        mock_manager.reset_mock()
         web_premium.register_tools(mock_manager, provider="gemini")
-        mock_manager.register_function.assert_not_called()
+        # Now registers 3 tools: web_search, get_weather, fetch_url
+        assert mock_manager.register_function.call_count == 3
+        # Check web_search is first
+        first_call_kwargs = mock_manager.register_function.call_args_list[0][1]
+        assert first_call_kwargs["name"] == "web_search"
+        # Only Perplexity excluded (has native web search)
+        assert first_call_kwargs["provider_excluded"] == ["perplexity"]
+        # Check get_weather and fetch_url are also registered
+        tool_names = [call[1]["name"] for call in mock_manager.register_function.call_args_list]
+        assert "get_weather" in tool_names
+        assert "fetch_url" in tool_names
 
     def test_register_tools_no_api_keys(self):
         """Test registration falls back to free search when no API keys."""
@@ -323,12 +339,19 @@ class TestRegistration:
                 with patch.object(web_premium, "get_premium_search_provider", return_value="perplexity"):
                     web_premium.register_tools(mock_manager, provider="openai")
 
-                    # Should register premium search
-                    mock_manager.register_function.assert_called_once()
-                    call_kwargs = mock_manager.register_function.call_args[1]
-                    assert call_kwargs["name"] == "web_search"
-                    assert "perplexity" in call_kwargs["description"].lower()
-                    assert call_kwargs["provider_excluded"] == ["perplexity", "gemini"]
+                    # Should register 3 tools: web_search, get_weather, fetch_url
+                    assert mock_manager.register_function.call_count == 3
+                    # Check web_search is first
+                    first_call_kwargs = mock_manager.register_function.call_args_list[0][1]
+                    assert first_call_kwargs["name"] == "web_search"
+                    assert "perplexity" in first_call_kwargs["description"].lower()
+                    # Only Perplexity excluded (has native web search)
+                    # Gemini needs web_search in agent mode (grounding disabled with native tools)
+                    assert first_call_kwargs["provider_excluded"] == ["perplexity"]
+                    # Check get_weather and fetch_url are also registered
+                    tool_names = [call[1]["name"] for call in mock_manager.register_function.call_args_list]
+                    assert "get_weather" in tool_names
+                    assert "fetch_url" in tool_names
 
 
 class TestIntegration:

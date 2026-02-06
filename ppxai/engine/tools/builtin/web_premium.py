@@ -282,16 +282,36 @@ async def web_search_premium(query: str, num_results: int = 5, _provider_name: O
             from . import web
             return web.web_search(query, num_results)
 
-        # Format result with sources
-        result = f"{content}\n\nSources:\n"
+        # Format result with provider tag at the beginning for visibility
+        tag = f"[via {provider}]"
+        result = f"{tag}\n\n{content.lstrip()}\n\nSources:\n"
         for url in citations:
             result += f"- {url}\n"
         return result
 
     except Exception as e:
-        # Fall back to DuckDuckGo on any error
+        # Fall back chain: Perplexity -> Gemini -> DuckDuckGo (v1.15.2)
         import logging
-        logging.getLogger(__name__).warning(f"Premium search failed ({provider}): {e}, falling back to DuckDuckGo")
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Premium search failed ({provider}): {e}")
+
+        # If Perplexity failed, try Gemini as fallback before DuckDuckGo
+        if provider == "perplexity" and os.getenv("GEMINI_API_KEY"):
+            try:
+                logger.info("Trying Gemini grounding as fallback")
+                content, citations, usage = await web_search_gemini(query, num_results)
+                _last_tool_usage = usage
+                # v1.15.3: Tag at beginning for visibility (not truncated)
+                tag = "[via gemini (fallback)]"
+                result = f"{tag}\n\n{content.lstrip()}\n\nSources:\n"
+                for url in citations:
+                    result += f"- {url}\n"
+                return result
+            except Exception as gemini_error:
+                logger.warning(f"Gemini fallback also failed: {gemini_error}")
+
+        # Final fallback to DuckDuckGo
+        logger.info("Falling back to DuckDuckGo")
         from . import web
         return web.web_search(query, num_results)
 
@@ -320,8 +340,10 @@ def register_tools(manager, provider=None):
         manager: ToolManager instance
         provider: Current provider name (e.g., 'perplexity', 'gemini', 'custom-vllm')
     """
-    # Skip for providers with native search
-    if provider in ["perplexity", "gemini"]:
+    # Skip for providers with native search (Perplexity only)
+    # NOTE: Gemini removed from skip list (v1.15.2) because grounding is disabled
+    # when native function calling is active. Gemini needs web_search tool in agent mode.
+    if provider == "perplexity":
         return
 
     # Only register if premium provider available
@@ -363,5 +385,57 @@ def register_tools(manager, provider=None):
             "required": ["query"]
         },
         handler=web_search_with_provider,
-        provider_excluded=["perplexity", "gemini"]
+        # Only exclude Perplexity (has native web search)
+        # Gemini needs web_search tool in agent mode because grounding is disabled
+        # when native function calling is active (Live API limitation)
+        provider_excluded=["perplexity"]
+    )
+
+    # Also register get_weather and fetch_url from web.py (v1.15.2)
+    # These use free services (wttr.in, direct fetch) and should always be available
+    from . import web
+    web.get_weather  # Import the function
+    web.fetch_url
+
+    manager.register_function(
+        name="get_weather",
+        description="Get current weather and forecast for a location. Uses wttr.in service (no API key needed)",
+        parameters={
+            "type": "object",
+            "properties": {
+                "location": {
+                    "type": "string",
+                    "description": "City name, optionally with country (e.g., 'Geneva', 'Geneva,Switzerland', 'New York', 'Tokyo')"
+                },
+                "format": {
+                    "type": "string",
+                    "description": "Output format: 'short' (one line), 'detailed' (current only), 'forecast' (2-day forecast)",
+                    "enum": ["short", "detailed", "forecast"]
+                }
+            },
+            "required": ["location"]
+        },
+        handler=web.get_weather,
+        provider_excluded=["perplexity"]  # Perplexity has native weather via grounding
+    )
+
+    manager.register_function(
+        name="fetch_url",
+        description="Fetch and read the text content of a web page URL",
+        parameters={
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "Full URL to fetch (e.g., 'https://example.com/page')"
+                },
+                "max_length": {
+                    "type": "integer",
+                    "description": "Maximum characters to return (default: 5000)"
+                }
+            },
+            "required": ["url"]
+        },
+        handler=web.fetch_url,
+        provider_excluded=["perplexity"]  # Perplexity can fetch URLs via search
     )

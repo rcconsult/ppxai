@@ -29,6 +29,7 @@ from typing import Optional
 from enum import Enum
 
 from runner import BenchmarkRunner
+from engine_runner import EngineBenchmarkRunner
 from results import ResultsStore, BenchmarkResult
 
 
@@ -44,11 +45,15 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Run benchmark against OpenAI
+  # Run benchmark against OpenAI (direct API)
   python benchmark.py --provider openai --model gpt-4o
 
-  # Run against local vLLM
+  # Run against local vLLM (direct API)
   python benchmark.py --provider vllm --model openai/gpt-oss-120b --base-url http://localhost:8000/v1
+
+  # Run using ppxai Engine (supports all providers including Perplexity, Gemini)
+  python benchmark.py --provider perplexity --model sonar-pro --engine
+  python benchmark.py --provider gemini --model gemini-2.5-flash --engine
 
   # Run specific test categories
   python benchmark.py --provider openai --model gpt-4o --categories tool_calling,code_editing
@@ -76,6 +81,7 @@ Examples:
     run_group.add_argument("--no-ssl-verify", action="store_true", help="Disable SSL certificate verification")
     run_group.add_argument("--ssl-cert-file", type=str, help="Path to custom CA certificate bundle")
     run_group.add_argument("--no-ppxai-config", action="store_true", help="Don't load generation params from ppxai config")
+    run_group.add_argument("--engine", action="store_true", help="Use ppxai Engine instead of direct OpenAI API (supports all providers)")
 
     # Analysis mode
     analysis_group = parser.add_argument_group("Analysis")
@@ -108,28 +114,47 @@ def run_benchmark(args: argparse.Namespace) -> int:
     if args.categories:
         categories = [c.strip() for c in args.categories.split(",")]
 
-    runner = BenchmarkRunner(
-        provider=args.provider,
-        model=args.model,
-        base_url=args.base_url,
-        api_key=args.api_key,
-        timeout=args.timeout,
-        retries=args.retries,
-        verbose=args.verbose,
-        ssl_verify=not args.no_ssl_verify,
-        ssl_cert_file=args.ssl_cert_file,
-        use_ppxai_config=not args.no_ppxai_config,
-    )
+    # Choose runner based on --engine flag
+    if args.engine:
+        # Use ppxai Engine-based runner (supports all providers including native APIs)
+        runner = EngineBenchmarkRunner(
+            provider=args.provider,
+            model=args.model,
+            timeout=args.timeout,
+            retries=args.retries,
+            verbose=args.verbose,
+        )
+        runner_type = "ppxai Engine"
+        base_url = "(via ppxai config)"
+        gen_params = "(via ppxai config)"
+    else:
+        # Use direct OpenAI API runner
+        runner = BenchmarkRunner(
+            provider=args.provider,
+            model=args.model,
+            base_url=args.base_url,
+            api_key=args.api_key,
+            timeout=args.timeout,
+            retries=args.retries,
+            verbose=args.verbose,
+            ssl_verify=not args.no_ssl_verify,
+            ssl_cert_file=args.ssl_cert_file,
+            use_ppxai_config=not args.no_ppxai_config,
+        )
+        runner_type = "OpenAI API"
+        base_url = runner.client.base_url
+        gen_params = runner.generation_params
 
     print(f"\n{'='*60}")
     print(f"LLM Agentic Coding Assistant Benchmark")
     print(f"{'='*60}")
+    print(f"Runner:   {runner_type}")
     print(f"Provider: {args.provider}")
     print(f"Model:    {args.model}")
-    if runner.client.base_url:
-        print(f"Base URL: {runner.client.base_url}")
-    if runner.generation_params:
-        print(f"Gen Params: {runner.generation_params}")
+    if base_url:
+        print(f"Base URL: {base_url}")
+    if gen_params:
+        print(f"Gen Params: {gen_params}")
     print(f"{'='*60}\n")
 
     # Run benchmark

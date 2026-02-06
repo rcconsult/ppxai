@@ -197,6 +197,18 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             });
         });
 
+        // v1.15.2: Handle display_file event - open file in VSCode editor
+        this._eventBus.on('stream:display_file', async (filepath) => {
+            try {
+                const uri = vscode.Uri.file(filepath);
+                const doc = await vscode.workspace.openTextDocument(uri);
+                await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+            } catch (error) {
+                console.error(`Failed to open file from display_file event: ${filepath}`, error);
+                // Silently fail - the AI tool already reported the action in chat
+            }
+        });
+
         this._eventBus.on('stream:done', (content) => {
             if (content && content.trim()) {
                 postMessage({ type: 'fullResponse', content });
@@ -590,6 +602,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     private handleStreamEvent(event: StreamEvent) {
         if (!this._view) { return; }
 
+        // Phase 3b: Use EventBus architecture - process event and emit typed events
+        processStreamEvent(event, this._eventBus);
+
+        // Legacy direct handling for events not yet migrated to EventBus
         switch (event.type) {
             case 'thinking':
                 // Request received, processing
@@ -664,6 +680,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     // Ignore parse errors
                 }
                 break;
+            // display_file handled by EventBus (see wireUISubscriptions)
             case 'consent_request':
                 // Phase 1C: File edit consent request
                 this.handleConsentRequest(event);

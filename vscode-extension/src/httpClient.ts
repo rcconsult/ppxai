@@ -40,7 +40,7 @@ export interface EventMetadata {
 }
 
 export interface StreamEvent {
-    type: 'thinking' | 'started' | 'reasoning_chunk' | 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'context_injected' | 'consent_request' | 'status' | 'agent_iteration' | 'agent_complete' | 'agent_max_iterations' | 'working_dir_changed';
+    type: 'thinking' | 'started' | 'reasoning_chunk' | 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'context_injected' | 'display_file' | 'consent_request' | 'status' | 'agent_iteration' | 'agent_complete' | 'agent_max_iterations' | 'working_dir_changed';
     content: string;
     metadata?: EventMetadata;
 }
@@ -971,6 +971,13 @@ export class HttpClient {
                     type: 'working_dir_changed',
                     content: event.data?.path || '',
                     metadata: event.data
+                };
+            case 'display_file':
+                // v1.15.2: AI tool requests to display a file
+                return {
+                    type: 'display_file',
+                    content: '',
+                    metadata: event.data  // Contains {filepath: string}
                 };
             case 'error':
                 return { type: 'error', content: event.data || 'Unknown error' };

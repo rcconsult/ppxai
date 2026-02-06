@@ -1,9 +1,9 @@
 # Release Plan: v1.15.x Series
 
 **Created:** January 24, 2026
-**Last Updated:** January 29, 2026 (v1.15.1 Released)
-**Status:** ✅ v1.15.0 RELEASED, v1.15.1 RELEASED
-**Branch:** feature/1-15-1 (merged to master)
+**Last Updated:** February 5, 2026
+**Status:** ✅ v1.15.0 RELEASED, ✅ v1.15.1 RELEASED, ⏳ v1.15.2 IN PROGRESS
+**Branch:** feature/1-15-2
 **Tests:** 1105 passing
 
 ---
@@ -34,9 +34,14 @@ The v1.15.x series introduces `ppxaide` - a new terminal UI built on the Textual
 
 **v1.15.1** - Bug fixes and cross-platform validation
 
-**v1.15.2** - Additional features after stabilization:
-- PDFViewer widget (PyMuPDF integration, cross-platform tested)
-- Cursor position preservation across view toggles (DataViewer, TableViewer) - *if requested by users*
+**v1.15.2** - Validation, robustness, and benchmarks:
+- Response validation system (hallucination/contradiction detection)
+- Unicode whitespace normalization in apply_patch (5-level fuzzy matching)
+- Truncated tool call detection and auto-retry
+- `/terminal` command and iTerm2 image protocol support
+- LLM benchmark suite (6 categories, 21+ test cases)
+- Generation params support for Gemini and Perplexity
+- Streaming cancellation and graceful Ctrl+C handling
 
 **Philosophy:** Validate the new Textual framework thoroughly before connecting to the proven engine layer.
 The engine is already battle-tested in Rich TUI, Web App, and VSCode. What's new is the UI.

@@ -82,7 +82,7 @@ def _web_search_ddg_package(query: str, num_results: int = 5) -> str:
             results = list(ddgs.text(query, max_results=min(num_results, 10)))
 
         if not results:
-            return f"No results found for '{query}'"
+            return f"[via duckduckgo]\n\nNo results found for '{query}'"
 
         formatted = []
         for i, r in enumerate(results, 1):
@@ -91,7 +91,7 @@ def _web_search_ddg_package(query: str, num_results: int = 5) -> str:
             snippet = r.get('body', '')[:200]
             formatted.append(f"{i}. {title}\n   URL: {url}\n   {snippet}\n")
 
-        return f"Search results for '{query}':\n\n" + "\n".join(formatted)
+        return f"[via duckduckgo]\n\nSearch results for '{query}':\n\n" + "\n".join(formatted)
 
     except Exception as e:
         # Fall back to HTML scraping on any error
@@ -139,9 +139,9 @@ def _web_search_html_fallback(query: str, num_results: int = 5) -> str:
             results.append(f"{i+1}. {title}\n   URL: {link}\n   {snippet}\n")
 
         if not results:
-            return f"No results found for '{query}'"
+            return f"[via duckduckgo]\n\nNo results found for '{query}'"
 
-        return f"Search results for '{query}':\n\n" + "\n".join(results)
+        return f"[via duckduckgo]\n\nSearch results for '{query}':\n\n" + "\n".join(results)
 
     except urllib.error.URLError as e:
         return f"Error: Could not connect to search service. {str(e.reason)}"
@@ -238,9 +238,11 @@ def register_tools(manager: 'ToolManager', provider: str = None):
     """
     # Providers with native web capabilities don't need these tools
     # - perplexity: Native web search with citations
-    # - gemini: Native web search via Google Search Grounding
-    providers_with_web_search = ["perplexity", "gemini"]
-    providers_with_weather = ["perplexity", "gemini"]
+    # NOTE: Gemini removed from exclusion list (v1.15.2) because grounding is
+    # disabled when native tool calling is active. Gemini needs web_search/get_weather
+    # tools in agent mode to get web info via wttr.in or separate grounding API call.
+    providers_with_web_search = ["perplexity"]
+    providers_with_weather = ["perplexity"]
 
     manager.register_function(
         name="get_weather",
