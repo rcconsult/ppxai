@@ -1298,9 +1298,9 @@
 
 <h1 id="release-plan-v115x-series">Release Plan: v1.15.x Series<a class="headerlink" href="#release-plan-v115x-series" title="Permanent link">&para;</a></h1>
 <p><strong>Created:</strong> January 24, 2026
-<strong>Last Updated:</strong> January 29, 2026 (v1.15.1 Released)
-<strong>Status:</strong> ✅ v1.15.0 RELEASED, v1.15.1 RELEASED
-<strong>Branch:</strong> feature/1-15-1 (merged to master)
+<strong>Last Updated:</strong> February 5, 2026
+<strong>Status:</strong> ✅ v1.15.0 RELEASED, ✅ v1.15.1 RELEASED, ⏳ v1.15.2 IN PROGRESS
+<strong>Branch:</strong> feature/1-15-2
 <strong>Tests:</strong> 1105 passing</p>
 <hr />
 <h2 id="theme-next-generation-tui-ppxaide">Theme: Next Generation TUI (ppxaide)<a class="headerlink" href="#theme-next-generation-tui-ppxaide" title="Permanent link">&para;</a></h2>
@@ -1321,9 +1321,14 @@
 - Full feature parity with Rich TUI
 - Polish and performance optimization</p>
 <p><strong>v1.15.1</strong> - Bug fixes and cross-platform validation</p>
-<p><strong>v1.15.2</strong> - Additional features after stabilization:
-- PDFViewer widget (PyMuPDF integration, cross-platform tested)
-- Cursor position preservation across view toggles (DataViewer, TableViewer) - <em>if requested by users</em></p>
+<p><strong>v1.15.2</strong> - Validation, robustness, and benchmarks:
+- Response validation system (hallucination/contradiction detection)
+- Unicode whitespace normalization in apply_patch (5-level fuzzy matching)
+- Truncated tool call detection and auto-retry
+- <code>/terminal</code> command and iTerm2 image protocol support
+- LLM benchmark suite (6 categories, 21+ test cases)
+- Generation params support for Gemini and Perplexity
+- Streaming cancellation and graceful Ctrl+C handling</p>
 <p><strong>Philosophy:</strong> Validate the new Textual framework thoroughly before connecting to the proven engine layer.
 The engine is already battle-tested in Rich TUI, Web App, and VSCode. What's new is the UI.</p>
 <p><strong>Migration Path:</strong>
@@ -2023,7 +2028,7 @@ plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles c
 <li><a href="https://textual.textualize.io/guide/CSS/">Textual CSS Reference</a></li>
 <li><a href="../design/tui-side-panel-refactor/">TUI Side Panel Refactor Design Doc</a> (detailed specs)</li>
 <li><a href="../ROADMAP.md">ROADMAP.md v1.15.x section</a></li>
-<li><a href="../RELEASE-PLAN-v1.14.x/">v1.14.x Release Plan</a> (completed series)</li>
+<li><a href="RELEASE-PLAN-v1.14.x.md">v1.14.x Release Plan</a> (completed series)</li>
 </ul>
 
 
