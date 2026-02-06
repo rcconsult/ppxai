@@ -284,6 +284,7 @@ class PPXAIDEApp(App):
         self._event_bus.on(Events.ENGINE_DISPLAY_FILE, self._on_display_file)
         self._event_bus.on(Events.ENGINE_CONSENT_FILE, self._on_consent_request)
         self._event_bus.on(Events.ENGINE_ERROR, self._on_engine_error)
+        self._event_bus.on(Events.ENGINE_WARNING, self._on_engine_warning)
         self._event_bus.on(Events.ENGINE_INFO, self._on_engine_info)
         self._event_bus.on(Events.ENGINE_WORKING_DIR_CHANGED, self._on_working_dir_changed)
         self._log.info("[EventBus] Subscribed to all engine events")
@@ -1002,6 +1003,7 @@ class PPXAIDEApp(App):
             EventType.TOOL_RESULT: Events.ENGINE_TOOL_RESULT,
             EventType.TOOL_ERROR: Events.ENGINE_TOOL_ERROR,
             EventType.ERROR: Events.ENGINE_ERROR,
+            EventType.WARNING: Events.ENGINE_WARNING,
             EventType.INFO: Events.ENGINE_INFO,
             EventType.WORKING_DIR_CHANGED: Events.ENGINE_WORKING_DIR_CHANGED,
             EventType.DISPLAY_FILE: Events.ENGINE_DISPLAY_FILE,
@@ -1071,6 +1073,7 @@ class PPXAIDEApp(App):
             EventType.TOOL_RESULT: Events.ENGINE_TOOL_RESULT,
             EventType.TOOL_ERROR: Events.ENGINE_TOOL_ERROR,
             EventType.ERROR: Events.ENGINE_ERROR,
+            EventType.WARNING: Events.ENGINE_WARNING,
             EventType.INFO: Events.ENGINE_INFO,
             EventType.WORKING_DIR_CHANGED: Events.ENGINE_WORKING_DIR_CHANGED,
             EventType.DISPLAY_FILE: Events.ENGINE_DISPLAY_FILE,
@@ -1360,6 +1363,14 @@ class PPXAIDEApp(App):
         self._log.error(f"[Event] Engine error: {data}")
 
         chat_view.add_system_message(f"[red]Error:[/red] {data}")
+
+    async def _on_engine_warning(self, sender, data, **kwargs) -> None:
+        """Handle ENGINE_WARNING event (hallucination detection, v1.15.3)."""
+        chat_view = self.query_one("#chat-view", ChatView)
+        if data and isinstance(data, str):
+            self._log.warning(f"[Event] Engine warning: {data}")
+            # Display warning with visual indicator (yellow for warnings)
+            chat_view.add_system_message(f"[yellow]⚠ Warning:[/yellow] {data}")
 
     async def _on_engine_info(self, sender, data, **kwargs) -> None:
         """Handle ENGINE_INFO event."""
