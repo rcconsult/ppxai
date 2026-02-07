@@ -1,9 +1,10 @@
-# TODO: v1.15.2 Planned Improvements
+# TODO: v1.15.2 Completed
 
 **Created:** 2026-01-30
 **Branch:** feature/1-15-2
 **Status:** ✅ Complete (Released 2026-02-06)
 **Previous Release:** v1.15.1
+**Next:** v1.15.3 (bugfix/v1.15.3)
 
 ---
 
@@ -47,50 +48,11 @@
 
 ---
 
-## Backlog
+## Backlog (Moved)
 
-### 2. NvChad-Style File Tree for ppxaide
+### ~~2. NvChad-Style File Tree for ppxaide~~
 
-**Priority:** Medium
-**Status:** ⏳ Planned
-
-**Current State:**
-- ppxaide has no built-in file browser or project explorer
-- Users must use `/show` command or `@file` context injection to view files
-- No visual directory navigation in the TUI
-
-**Goal:**
-Implement a NvChad-inspired file tree explorer for ppxaide:
-- **File/folder icons** - Visual indicators for file types and directories
-- **Expandable tree** - Click to expand/collapse folders
-- **Clean hierarchy** - Indented structure with clear parent-child relationships
-- **Keyboard navigation** - Arrow keys, Enter to open, Space to expand
-- **Integration** - Open files in CodeEditor side panel on selection
-- **Git awareness** - Show modified/untracked files (optional)
-
-**Implementation Notes:**
-- Use Textual's `DirectoryTree` widget as base
-- Add custom rendering for icons (Nerd Font support or Unicode fallbacks)
-- Integrate with existing CodeEditor widget
-- Add keybinding to toggle file tree (e.g., Ctrl+B)
-- Consider file filtering (hide .git, __pycache__, etc.)
-- Respect .gitignore patterns
-
-**Files to Update:**
-- `ppxai/tui/widgets/` - Create `file_tree.py` widget
-- `ppxai/tui/app.py` - Add file tree panel to layout
-- `ppxai/tui/widgets/code_editor.py` - Handle file tree selection events
-
-**Testing:**
-- Test with large repositories (performance)
-- Test icon rendering across different terminals
-- Verify keyboard navigation
-- Test file opening integration with CodeEditor
-
-**Reference:**
-- NvChad file tree screenshot (user-provided)
-- Textual DirectoryTree: https://textual.textualize.io/widgets/directory_tree/
-- Nerd Fonts for icons: https://www.nerdfonts.com/
+**Status:** ➡️ Moved to v1.15.3 (bugfix/v1.15.3) — see [TODO-v1.16.0.md](TODO-v1.16.0.md) for full spec
 
 ---
 
