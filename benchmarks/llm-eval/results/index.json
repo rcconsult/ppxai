@@ -97,6 +97,13 @@
         "timestamp": "2026-02-06T21:58:01.819830",
         "overall_score": 54.6875
       }
+    ],
+    "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8": [
+      {
+        "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-07_e21de04b.json",
+        "timestamp": "2026-02-07T00:44:19.998895",
+        "overall_score": 81.25
+      }
     ]
   },
   "summary": {
@@ -152,6 +159,12 @@
       "filename": "asusai-vllm_RedHatAI_Qwen3-30B-A3B-FP8-dynamic_2026-02-06_cf1559a8.json",
       "timestamp": "2026-02-06T21:58:01.819830",
       "overall_score": 54.6875
+    },
+    {
+      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-07_e21de04b.json",
+      "timestamp": "2026-02-07T00:44:19.998895",
+      "overall_score": 81.25
     }
   ]
 }
