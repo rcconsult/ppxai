@@ -8,6 +8,14 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current Version:** v1.15.3
 
+**v1.15.3 highlights:**
+- **FIX:** Stale config cache - `/model` and `/provider` commands now auto-reload config from disk before listing
+- **FIX:** Provider switch using wrong model - switching providers no longer uses stale model from previous provider
+- **FIX:** Session restore with outdated config - all 3 clients (Textual, Rich, HTTP server) reload config before restoring sessions
+- **FIX:** `/config reload` now also refreshes EngineClient's cached provider list (previously only refreshed ConfigStore)
+- **NEW:** `EngineClient.reload_config()` method - single entry point to reload ConfigStore + refresh all cached config data
+- **DOCS:** DGX Spark setup guide renamed and expanded (vLLM + Ollama, model testing log, benchmark results)
+
 **v1.15.2 highlights:**
 - **NEW:** Response validation system - detects LLM hallucinations and tool result contradictions
 - **NEW:** `ResponseValidator` class in `engine/tools/validator.py` - tracks tool calls and validates claims

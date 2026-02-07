@@ -36,6 +36,10 @@ def handle_model(context: CommandContext, args: str) -> CommandResult:
     """
     from ..config import get_provider_config
 
+    # Reload config from disk to pick up external changes (e.g., new models added)
+    if context.engine_client:
+        context.engine_client.reload_config()
+
     args = args.strip().lower()
     provider = context.get_provider()
     current_model = context.get_model()
@@ -105,7 +109,14 @@ def handle_provider(context: CommandContext, args: str) -> CommandResult:
     Returns:
         ListResult when listing, ConfirmationResult when switching, ErrorResult on failure
     """
-    from ..config import PROVIDERS, get_api_key, get_base_url, get_provider_config
+    from ..config import get_api_key, get_base_url, get_provider_config
+
+    # Reload config from disk to pick up external changes (e.g., new providers)
+    if context.engine_client:
+        context.engine_client.reload_config()
+
+    # Import PROVIDERS after reload so we get the fresh config
+    from ..config import PROVIDERS
 
     args = args.strip().lower()
     current_provider = context.get_provider()

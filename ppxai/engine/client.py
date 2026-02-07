@@ -144,6 +144,21 @@ class EngineClient:
         self._shell_config = get_shell_config()
         self._agent_config = get_agent_config()
 
+    def reload_config(self):
+        """Reload configuration from disk and refresh cached provider data.
+
+        Reloads the ConfigStore from disk, then refreshes the engine client's
+        cached provider list, shell config, and agent config.
+        """
+        from ..config import reload_config as _reload_config
+        _reload_config()
+        # Re-read providers from the freshly loaded config
+        # (PROVIDERS is a lazy __getattr__ that reads from ConfigStore each time)
+        from ..config import _get_providers
+        self._providers_config = _get_providers()
+        self._shell_config = get_shell_config()
+        self._agent_config = get_agent_config()
+
     # === Context Injection ===
 
     def _init_checkpoint_manager(self, path: str):

@@ -1433,6 +1433,9 @@ async def restore_last_session(x_session_id: Optional[str] = Header(None)):
 
     session_name = state["name"]
 
+    # Reload config from disk to pick up any external changes since last run
+    engine.reload_config()
+
     # Load the session
     success = engine.session.load(session_name)
     if not success:

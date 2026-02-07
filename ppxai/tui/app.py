@@ -624,6 +624,10 @@ class PPXAIDEApp(App):
             self._log.error("Restoration failed: No engine client")
             return False
 
+        # Reload config from disk to pick up any external changes since last run
+        # This ensures model validation uses the latest provider/model definitions
+        self._engine_client.reload_config()
+
         # Load the session
         self._log.info(f"Loading session: {session_name}")
         if not self._engine_client.session.load(session_name):
