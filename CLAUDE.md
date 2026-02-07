@@ -68,9 +68,9 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - `local` provider inheritance - ollama, vllm, lmstudio inherit from `local` hints
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.15.2
-- VSCode extension (package.json): v1.15.2
-- Git tag: v1.15.2
+- Python package (pyproject.toml): v1.15.3
+- VSCode extension (package.json): v1.15.3
+- Git tag: v1.15.3
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
 
@@ -159,19 +159,19 @@ The `AppData\Local\ppxai` path exists only as a **search path** for finding bina
 # First-time setup
 python scripts/bootstrap.py --all
 
-# Or manual setup
-uv sync --all-extras
+# Or manual setup (creates .uv/uv bootstrapped installation)
+.uv/uv sync --all-extras
 
 # Configure API keys
 cp .env.example .env
 # Edit .env and add your API keys
 
 # Run
-uv run ppxai           # TUI
-uv run ppxai-server    # HTTP server for VSCode
+.uv/uv run ppxai           # TUI
+.uv/uv run ppxai-server    # HTTP server for VSCode
 
 # Test
-uv run pytest tests/ -v
+.uv/uv run pytest tests/ -v
 ```
 
 ### Alternative: pip
@@ -182,6 +182,61 @@ pip install -r requirements.txt
 cp .env.example .env
 python ppxai.py
 ```
+
+## Windows Store Python + uv/venv Recovery (CRITICAL)
+
+**Problem:** Windows Store Python prevents uv from creating temporary virtualenvs (Error 1920: "The file cannot be accessed by the system")
+
+### Using Existing venv with `.uv/uv run`
+```bash
+# ✅ Use --no-sync to skip package rebuild
+.uv/uv run --no-sync python -m <command>
+
+# ❌ Without --no-sync triggers temp virtualenv creation (fails on Windows Store Python)
+.uv/uv run python -m <command>
+```
+
+### Checking venv/lock Status
+```bash
+# Check if lock file is up to date
+.uv/uv lock --check
+
+# Check installed package version
+.uv/uv pip list | grep ppxai
+
+# Verify runtime version
+.venv/Scripts/python.exe -c "import ppxai; print(ppxai.__version__)"
+```
+
+### Refreshing Package Metadata (After Version Bump)
+When version numbers change in source but venv metadata is stale:
+
+```bash
+# 1. Install build dependencies in venv
+SSL_CERT_FILE="C:/.ssh/Fortinet_CA_SSL.cer" .uv/uv pip install hatchling editables
+
+# 2. Reinstall package with --no-build-isolation
+SSL_CERT_FILE="C:/.ssh/Fortinet_CA_SSL.cer" .uv/uv pip install --no-build-isolation --reinstall --no-deps -e .
+
+# 3. Verify metadata updated
+.uv/uv pip list | grep ppxai  # Should show new version
+```
+
+### Building Binaries with PyInstaller
+```bash
+# ✅ Use venv's Python directly (avoids uv temp virtualenv issue)
+SSL_CERT_FILE="C:/.ssh/Fortinet_CA_SSL.cer" .venv/Scripts/python.exe -m PyInstaller ppxai.spec --noconfirm
+
+# Or use .uv/uv with --no-sync
+SSL_CERT_FILE="C:/.ssh/Fortinet_CA_SSL.cer" .uv/uv run --no-sync python -m PyInstaller ppxai.spec --noconfirm
+```
+
+### Key Insights
+- **Editable install:** Changes to source files (`.py`) are reflected immediately without reinstall
+- **Metadata stale:** Package metadata (version, dependencies) requires reinstall to update
+- **Lock file:** Only needs refresh when pyproject.toml dependencies change, not for source code changes
+- **Windows Store Python:** Fundamental limitation - uv cannot create temp virtualenvs from Store Python executables
+- **Workaround:** Use existing venv with `--no-sync` or `.venv/Scripts/python.exe` directly
 
 ## Architecture
 
@@ -226,15 +281,16 @@ vscode-extension/        # TypeScript VSCode extension
 
 ```bash
 # Run application
-uv run ppxai                    # TUI
-uv run ppxai-server             # HTTP server
-uv run ppxai-desktop            # Desktop web app
+.uv/uv run ppxai                    # TUI
+.uv/uv run ppxai-server             # HTTP server
+.uv/uv run ppxai-desktop            # Desktop web app
 
 # Testing
-uv run pytest tests/ -v
+.uv/uv run pytest tests/ -v
 
-# Build binaries (Windows with corporate proxy)
-SSL_CERT_FILE="C:/.ssh/Fortinet_CA_SSL.cer" .uv/uv run pyinstaller ppxai.spec --noconfirm
+# Build binaries (Windows with corporate proxy + Store Python)
+SSL_CERT_FILE="C:/.ssh/Fortinet_CA_SSL.cer" .venv/Scripts/python.exe -m PyInstaller ppxai.spec --noconfirm
+# Or with .uv/uv: .uv/uv run --no-sync python -m PyInstaller ppxai.spec --noconfirm
 
 # Build VSCode extension
 cd vscode-extension && npm run compile && npx vsce package --allow-missing-repository
