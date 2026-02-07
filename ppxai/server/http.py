@@ -761,6 +761,9 @@ async def get_providers(x_session_id: Optional[str] = Header(None)):
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
+    # Reload config to pick up external changes (e.g., new providers added)
+    engine.reload_config()
+
     providers = engine.list_providers()
     return {
         "providers": [
@@ -792,6 +795,9 @@ async def set_provider(
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
+    # Reload config to pick up external changes before switching
+    engine.reload_config()
+
     success = engine.set_provider(request.provider)
     if not success:
         raise HTTPException(status_code=400, detail=f"Failed to set provider: {request.provider}")
@@ -813,6 +819,9 @@ async def get_models(x_session_id: Optional[str] = Header(None)):
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
+
+    # Reload config to pick up external changes (e.g., new models added)
+    engine.reload_config()
 
     models = engine.list_models()
     return {
@@ -839,6 +848,9 @@ async def set_model(
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
+
+    # Reload config to pick up external changes before switching
+    engine.reload_config()
 
     success = engine.set_model(request.model)
     if not success:
