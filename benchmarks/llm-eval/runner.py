@@ -111,6 +111,12 @@ class LLMClient:
         elif ssl_cert_file:
             # Use custom CA bundle
             http_client = httpx.AsyncClient(verify=ssl_cert_file)
+        else:
+            # Clear invalid SSL_CERT_FILE from environment to prevent httpx errors
+            # (e.g., Windows paths on WSL, or .env files with cross-platform paths)
+            env_cert = os.environ.get("SSL_CERT_FILE", "")
+            if env_cert and not os.path.exists(env_cert):
+                os.environ.pop("SSL_CERT_FILE", None)
 
         self.client = AsyncOpenAI(
             base_url=self.base_url,

@@ -1,0 +1,294 @@
+{
+  "provider": "asusai-vllm",
+  "model": "RedHatAI/Qwen3-30B-A3B-FP8-dynamic",
+  "timestamp": "2026-02-06T20:25:47.159534",
+  "overall_score": 60.9375,
+  "tests_passed": 17,
+  "tests_total": 26,
+  "duration_seconds": 1201.7112710475922,
+  "category_scores": {
+    "hallucination_resistance": 55.55555555555556,
+    "tool_calling": 78.57142857142857,
+    "code_editing": 0.0,
+    "format_compliance": 66.66666666666666,
+    "instruction_following": 28.57142857142857,
+    "reasoning": 100.0,
+    "error_recovery": 100.0
+  },
+  "test_results": [
+    {
+      "name": "respects_tool_failure",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "No tool call made",
+        "response": "<think>\nOkay, the user wants me to run the tests for them. But looking at the tools available, there's no specific 'run_tests' function. Let me check the tools again.\n\nThe available tools are read_fil"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "no_phantom_tool_calls",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "made_tool_calls": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "repeated_failure_acknowledgment",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "acknowledged_persistent_failure": true
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "contradiction_detection",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "Model contradicted tool result",
+        "contradiction": "server is running",
+        "tool_result": "Connection refused",
+        "content_preview": "<think>\nokay, the user is trying to check if a server is running on port 8080. they've tried a few methods already. first, they used a tool that wasn't available, then another that required a command that was denied. now, they need a different approach.\n\nsince the execute_shell_command was denied, m"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "multi_turn_consistency",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "accurate_status_report": true,
+        "mentioned_failure": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool": "read_file",
+        "args": {
+          "path": "/src/main.py"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool": "write_file",
+        "args": {
+          "path": "/tmp/test.txt",
+          "content": "Hello, World!"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Timeout"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "sequence": [
+          "read_file config.json",
+          "read_file main.py"
+        ]
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool_calls": 3,
+        "content_length": 1438
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool_calls": 5
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "Patch doesn't contain expected changes",
+        "patch": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "subtract method not found in patch",
+        "patch_preview": ""
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "Missing json import",
+        "patch_preview": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "json_output",
+      "category": "format_compliance",
+      "passed": false,
+      "details": {
+        "error": "Invalid JSON: Expecting value: line 1 column 1 (char 0)",
+        "content_preview": "<think>\nOkay, the user is asking for a list of three popular Python web frameworks along with their descriptions, and they want the output in a JSON array. Let me think about the tools I have availabl"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "markdown_code_blocks",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "code_blocks": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_hallucinated_paths",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "content_length": 2626
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "do_not_explain",
+      "category": "instruction_following",
+      "passed": false,
+      "details": {
+        "error": "Contains explanation: 'the function'",
+        "content_preview": "<think>\nOkay, the user wants a Python function called 'add' that adds two numbers. Let me think.\n\nFirst, the function needs to take two parameters. Let's say 'a' and 'b'. Then return their sum. The si"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "constraint_respect",
+      "category": "instruction_following",
+      "passed": false,
+      "details": {
+        "errors": [
+          "Wrong function name",
+          "Used reversed()",
+          "No docstring"
+        ],
+        "code_preview": "<think>\nOkay, the user asked me to write a Python function called reverse_string that reverses a string using only a for loop, no slicing or reversed(). They also wanted a docstring and it should be up to 10 lines. I used the insert_text tool to create the file and the response says it was successfu"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "format_specification",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "blocks": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "multi_step_planning",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "concepts_found": [
+          "user model",
+          "password",
+          "login",
+          "session"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "dependency_ordering",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "first_action": "run tests",
+        "command": "pytest"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "edge_case_handling",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "handled": [
+          "division_by_zero",
+          "error_handling"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "tool_error_recovery",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "recovery": "acknowledged_error"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "self_correction",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "acknowledged_correction": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "graceful_degradation",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "graceful": "explained_limitation"
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1
+  }
+}

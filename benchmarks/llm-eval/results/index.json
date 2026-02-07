@@ -20,6 +20,11 @@
         "filename": "custom_openai_gpt-oss-120b_2026-02-05_38ad9a4a.json",
         "timestamp": "2026-02-05T14:06:10.275396",
         "overall_score": 73.44
+      },
+      {
+        "filename": "custom_openai_gpt-oss-120b_2026-02-06_06cc583e.json",
+        "timestamp": "2026-02-06T17:20:55.529814",
+        "overall_score": 85.9375
       }
     ],
     "perplexity/sonar-pro": [
@@ -54,6 +59,44 @@
         "timestamp": "2026-02-05T15:02:31.241055",
         "overall_score": 62.5
       }
+    ],
+    "asusai/qwen2.5-coder:32b": [
+      {
+        "filename": "asusai_qwen2.5-coder:32b_2026-02-06_8d69e30a.json",
+        "timestamp": "2026-02-06T17:46:41.473399",
+        "overall_score": 51.5625
+      }
+    ],
+    "asusai/qwen3:30b-a3b": [
+      {
+        "filename": "asusai_qwen3:30b-a3b_2026-02-06_b428bb08.json",
+        "timestamp": "2026-02-06T18:25:47.778980",
+        "overall_score": 46.875
+      }
+    ],
+    "asusai/qwen2.5-coder:32b-64k": [
+      {
+        "filename": "asusai_qwen2.5-coder:32b-64k_2026-02-06_2e0c1914.json",
+        "timestamp": "2026-02-06T18:41:34.871171",
+        "overall_score": 57.8125
+      }
+    ],
+    "asusai-vllm/RedHatAI/Qwen3-30B-A3B-FP8-dynamic": [
+      {
+        "filename": "asusai-vllm_RedHatAI_Qwen3-30B-A3B-FP8-dynamic_2026-02-06_57968d9e.json",
+        "timestamp": "2026-02-06T19:59:32.909289",
+        "overall_score": 10.9375
+      },
+      {
+        "filename": "asusai-vllm_RedHatAI_Qwen3-30B-A3B-FP8-dynamic_2026-02-06_9d46e1f4.json",
+        "timestamp": "2026-02-06T20:25:47.159534",
+        "overall_score": 60.9375
+      },
+      {
+        "filename": "asusai-vllm_RedHatAI_Qwen3-30B-A3B-FP8-dynamic_2026-02-06_cf1559a8.json",
+        "timestamp": "2026-02-06T21:58:01.819830",
+        "overall_score": 54.6875
+      }
     ]
   },
   "summary": {
@@ -66,5 +109,49 @@
     },
     "total_valid_runs": 10,
     "cleanup_date": "2026-02-05"
-  }
+  },
+  "runs": [
+    {
+      "pair": "custom/openai/gpt-oss-120b",
+      "filename": "custom_openai_gpt-oss-120b_2026-02-06_06cc583e.json",
+      "timestamp": "2026-02-06T17:20:55.529814",
+      "overall_score": 85.9375
+    },
+    {
+      "pair": "asusai/qwen2.5-coder:32b",
+      "filename": "asusai_qwen2.5-coder:32b_2026-02-06_8d69e30a.json",
+      "timestamp": "2026-02-06T17:46:41.473399",
+      "overall_score": 51.5625
+    },
+    {
+      "pair": "asusai/qwen3:30b-a3b",
+      "filename": "asusai_qwen3:30b-a3b_2026-02-06_b428bb08.json",
+      "timestamp": "2026-02-06T18:25:47.778980",
+      "overall_score": 46.875
+    },
+    {
+      "pair": "asusai/qwen2.5-coder:32b-64k",
+      "filename": "asusai_qwen2.5-coder:32b-64k_2026-02-06_2e0c1914.json",
+      "timestamp": "2026-02-06T18:41:34.871171",
+      "overall_score": 57.8125
+    },
+    {
+      "pair": "asusai-vllm/RedHatAI/Qwen3-30B-A3B-FP8-dynamic",
+      "filename": "asusai-vllm_RedHatAI_Qwen3-30B-A3B-FP8-dynamic_2026-02-06_57968d9e.json",
+      "timestamp": "2026-02-06T19:59:32.909289",
+      "overall_score": 10.9375
+    },
+    {
+      "pair": "asusai-vllm/RedHatAI/Qwen3-30B-A3B-FP8-dynamic",
+      "filename": "asusai-vllm_RedHatAI_Qwen3-30B-A3B-FP8-dynamic_2026-02-06_9d46e1f4.json",
+      "timestamp": "2026-02-06T20:25:47.159534",
+      "overall_score": 60.9375
+    },
+    {
+      "pair": "asusai-vllm/RedHatAI/Qwen3-30B-A3B-FP8-dynamic",
+      "filename": "asusai-vllm_RedHatAI_Qwen3-30B-A3B-FP8-dynamic_2026-02-06_cf1559a8.json",
+      "timestamp": "2026-02-06T21:58:01.819830",
+      "overall_score": 54.6875
+    }
+  ]
 }

@@ -194,11 +194,11 @@ async def run_mock_benchmark() -> dict:
     }
 
 
-async def run_benchmark(provider_id: str, iterations: int = 3) -> dict:
+async def run_benchmark(provider_id: str, iterations: int = 3, model_override: str = None) -> dict:
     """Run full benchmark suite."""
     from ppxai.config import get_default_model
 
-    model = get_default_model(provider_id)
+    model = model_override or get_default_model(provider_id)
     results = []
 
     print(f"\nBenchmarking {provider_id} with model {model}")
@@ -459,6 +459,11 @@ async def main():
         help="Don't save results to log file",
     )
     parser.add_argument(
+        "--model",
+        default=None,
+        help="Specific model to benchmark (overrides provider default)",
+    )
+    parser.add_argument(
         "--all-providers",
         action="store_true",
         help="Benchmark all configured providers",
@@ -469,12 +474,21 @@ async def main():
     print(f"ppxai Latency Benchmark v{get_version()}")
     print(f"Git: {get_git_info()['commit']} ({get_git_info()['branch']})")
 
+    # Always initialize config (loads ppxai-config.json and .env)
+    from ppxai.config import initialize
+    initialize()
+
+    # Clean up invalid SSL_CERT_FILE from .env (e.g., Windows paths on WSL)
+    import os
+    env_cert = os.environ.get("SSL_CERT_FILE", "")
+    if env_cert and not os.path.exists(env_cert):
+        os.environ.pop("SSL_CERT_FILE", None)
+
     # Determine which providers to benchmark
     if args.mock:
         providers = ["mock"]
     elif args.all_providers:
-        from ppxai.config import get_available_providers, get_api_key, initialize
-        initialize()  # Load config and .env from ~/.ppxai/
+        from ppxai.config import get_available_providers, get_api_key
         all_providers = get_available_providers()
         # Filter to only providers with valid API keys
         providers = [p for p in all_providers if get_api_key(p)]
@@ -497,7 +511,7 @@ async def main():
         if provider_id == "mock":
             benchmark_data = await run_mock_benchmark()
         else:
-            benchmark_data = await run_benchmark(provider_id, args.iterations)
+            benchmark_data = await run_benchmark(provider_id, args.iterations, args.model)
 
         # Calculate summary
         summary = calculate_summary(benchmark_data["results"])

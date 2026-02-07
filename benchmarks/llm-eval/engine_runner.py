@@ -18,14 +18,15 @@ from typing import Optional
 # Add parent directory to path for ppxai imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-# Load environment variables from user's ppxai .env
-try:
-    from dotenv import load_dotenv
-    env_path = Path.home() / '.ppxai' / '.env'
-    if env_path.exists():
-        load_dotenv(env_path)
-except ImportError:
-    pass  # dotenv not available, rely on environment variables
+# Initialize ppxai config system (loads .env, config, directories)
+from ppxai.config import initialize
+initialize()
+
+# Clean up invalid SSL_CERT_FILE from .env (e.g., Windows paths on WSL)
+import os
+env_cert = os.environ.get("SSL_CERT_FILE", "")
+if env_cert and not os.path.exists(env_cert):
+    os.environ.pop("SSL_CERT_FILE", None)
 
 from ppxai.engine.client import EngineClient
 from ppxai.engine.types import EventType, Message

@@ -53,6 +53,9 @@ class ResultsStore:
         if self.index_file.exists():
             with open(self.index_file, "r", encoding="utf-8") as f:
                 self.index = json.load(f)
+            # Ensure "runs" key exists (may be missing from older index files)
+            if "runs" not in self.index:
+                self.index["runs"] = []
         else:
             self.index = {"pairs": {}, "runs": []}
 
