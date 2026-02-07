@@ -208,15 +208,27 @@ python ppxai.py
 .venv/Scripts/python.exe -c "import ppxai; print(ppxai.__version__)"
 ```
 
+### Corporate Proxy / TLS (CRITICAL)
+```bash
+# ✅ Use UV_NATIVE_TLS=true to use Windows native TLS (SChannel) - trusts system cert store
+set UV_NATIVE_TLS=true   # cmd
+$env:UV_NATIVE_TLS="true"  # PowerShell
+
+# Then all uv commands work without SSL_CERT_FILE:
+.uv/uv run python -m PyInstaller ppxai.spec --noconfirm
+.uv/uv pip install hatchling editables
+```
+**Why:** `UV_NATIVE_TLS=true` tells uv to use the OS native TLS stack (Windows SChannel) instead of bundled rustls. This automatically trusts certificates from the Windows certificate store (including corporate proxy CAs). No need for `SSL_CERT_FILE`.
+
 ### Refreshing Package Metadata (After Version Bump)
 When version numbers change in source but venv metadata is stale:
 
 ```bash
 # 1. Install build dependencies in venv
-SSL_CERT_FILE="C:/.ssh/Fortinet_CA_SSL.cer" .uv/uv pip install hatchling editables
+.uv/uv pip install hatchling editables
 
 # 2. Reinstall package with --no-build-isolation
-SSL_CERT_FILE="C:/.ssh/Fortinet_CA_SSL.cer" .uv/uv pip install --no-build-isolation --reinstall --no-deps -e .
+.uv/uv pip install --no-build-isolation --reinstall --no-deps -e .
 
 # 3. Verify metadata updated
 .uv/uv pip list | grep ppxai  # Should show new version
@@ -224,11 +236,11 @@ SSL_CERT_FILE="C:/.ssh/Fortinet_CA_SSL.cer" .uv/uv pip install --no-build-isolat
 
 ### Building Binaries with PyInstaller
 ```bash
-# ✅ Use venv's Python directly (avoids uv temp virtualenv issue)
-SSL_CERT_FILE="C:/.ssh/Fortinet_CA_SSL.cer" .venv/Scripts/python.exe -m PyInstaller ppxai.spec --noconfirm
+# ✅ Preferred: use UV_NATIVE_TLS for corporate proxy environments
+set UV_NATIVE_TLS=true && .uv/uv run python -m PyInstaller ppxai.spec --noconfirm
 
-# Or use .uv/uv with --no-sync
-SSL_CERT_FILE="C:/.ssh/Fortinet_CA_SSL.cer" .uv/uv run --no-sync python -m PyInstaller ppxai.spec --noconfirm
+# Alternative: use venv's Python directly
+.venv/Scripts/python.exe -m PyInstaller ppxai.spec --noconfirm
 ```
 
 ### Key Insights
@@ -236,6 +248,7 @@ SSL_CERT_FILE="C:/.ssh/Fortinet_CA_SSL.cer" .uv/uv run --no-sync python -m PyIns
 - **Metadata stale:** Package metadata (version, dependencies) requires reinstall to update
 - **Lock file:** Only needs refresh when pyproject.toml dependencies change, not for source code changes
 - **Windows Store Python:** Fundamental limitation - uv cannot create temp virtualenvs from Store Python executables
+- **UV_NATIVE_TLS:** Preferred over SSL_CERT_FILE - uses OS native TLS, no hardcoded cert paths
 - **Workaround:** Use existing venv with `--no-sync` or `.venv/Scripts/python.exe` directly
 
 ## Architecture
@@ -288,9 +301,8 @@ vscode-extension/        # TypeScript VSCode extension
 # Testing
 .uv/uv run pytest tests/ -v
 
-# Build binaries (Windows with corporate proxy + Store Python)
-SSL_CERT_FILE="C:/.ssh/Fortinet_CA_SSL.cer" .venv/Scripts/python.exe -m PyInstaller ppxai.spec --noconfirm
-# Or with .uv/uv: .uv/uv run --no-sync python -m PyInstaller ppxai.spec --noconfirm
+# Build binaries (Windows with corporate proxy)
+set UV_NATIVE_TLS=true && .uv/uv run python -m PyInstaller ppxai.spec --noconfirm
 
 # Build VSCode extension
 cd vscode-extension && npm run compile && npx vsce package --allow-missing-repository
