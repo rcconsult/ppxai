@@ -51,9 +51,9 @@ model_hints:
     - "Include all necessary imports and context in patches."
     - "Verify tool exists in available tools list before calling - don't hallucinate tool names."
     - "For file edits: apply_patch > write_file. Only use write_file for new files."
-    - "CRITICAL: Call apply_patch ONCE - detected issue: you make 4+ duplicate calls."
-    - "After calling apply_patch, your response should be empty or minimal confirmation only."
-    - "Do NOT output code blocks in your response - the patch contains all the code."
+    - "IMPORTANT: Call apply_patch ONCE per file - avoid making duplicate tool calls."
+    - "Let the patch contain all code changes - your response can briefly confirm the action taken."
+    - "For complex patches (indentation, multiline): Include ALL affected lines with proper context (3+ lines before/after)."
   "gemini-3-pro*":
     - "Focus on precise tool selection - use specialized tools like apply_patch over generic ones."
     - "Generate complete unified diffs with proper context lines (3+ lines before/after)."
