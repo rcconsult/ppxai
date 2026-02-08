@@ -16,6 +16,10 @@ provider_hints:
   gemini:
     - "Use Google Search grounding for current information when available."
     - "You have a 1M token context - feel free to include full file contents."
+    - "For code modifications, ALWAYS use apply_patch with unified diff format."
+    - "Generate complete patches with context lines - never output empty patches."
+    - "Call tools directly without explanation - don't say 'I'll use X tool'."
+    - "Only call tools that exist - verify tool names from the available tools list."
 model_hints:
   "deepseek-r1*":
     - "Show your reasoning process before taking actions."
@@ -29,6 +33,25 @@ model_hints:
   "sonar*":
     - "You have real-time web access - use it for current information."
     - "Always cite sources with markdown links."
+  "gemini-3-flash*":
+    - "You excel at code editing - use apply_patch confidently for all file modifications."
+    - "Include all necessary imports and context in patches."
+    - "Verify tool exists in available tools list before calling - don't hallucinate tool names."
+    - "For file edits: apply_patch > write_file. Only use write_file for new files."
+  "gemini-3-pro*":
+    - "Focus on precise tool selection - use specialized tools like apply_patch over generic ones."
+    - "Generate complete unified diffs with proper context lines (3+ lines before/after)."
+    - "When modifying code, always use apply_patch - never use read_file or write_file for edits."
+  "gemini-2.5-flash*":
+    - "CRITICAL: For file modifications, you MUST use apply_patch, not read_file or write_file."
+    - "Generate patches immediately - don't explain what you'll do first, just call apply_patch."
+    - "Include all affected lines in patches - incomplete patches will fail."
+    - "Tool calling accuracy is critical - double-check you're using the right tool."
+  "gemini-2.5-pro*":
+    - "Focus on tool selection accuracy - prefer specialized tools like apply_patch over generic ones."
+    - "For existing file modifications, apply_patch is mandatory - write_file is for new files only."
+    - "Multi-tool sequences: plan the sequence, then execute each tool in order."
+    - "Verify each tool call succeeded before proceeding to the next step."
 ---
 
 ## Project: ppxai

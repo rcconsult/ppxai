@@ -30,6 +30,8 @@ if env_cert and not os.path.exists(env_cert):
 
 from ppxai.engine.client import EngineClient
 from ppxai.engine.types import EventType, Message
+from ppxai.engine.bootstrap import BootstrapContext
+from ppxai.engine.context import ScopedBootstrapSource
 
 from test_cases import ALL_TESTS, TestCase, get_categories, TOOLS
 from results import BenchmarkResult
@@ -51,17 +53,46 @@ class EngineClientWrapper:
         provider: str,
         model: str,
         verbose: bool = False,
+        debug: bool = False,
+        debug_dir: Optional[Path] = None,
     ):
         self.provider = provider
         self.model = model
         self.verbose = verbose
+        self.debug = debug
+        self.debug_dir = debug_dir
         self._client: Optional[EngineClient] = None
         self._initialized = False
+        self._request_count = 0
+        self._response_samples = []  # For model fingerprinting
 
     async def initialize(self) -> bool:
         """Initialize the EngineClient with provider and model."""
         try:
             self._client = EngineClient()
+
+            # Load AGENTS.md if present (for provider/model hints)
+            agents_md = Path(__file__).parent.parent.parent / "AGENTS.md"
+            if agents_md.exists():
+                try:
+                    bootstrap_ctx = BootstrapContext.from_file(agents_md)
+                    # Inject bootstrap context into engine client
+                    self._client._bootstrap_context = bootstrap_ctx
+                    # Create ScopedBootstrapSource (dataclass with keyword args)
+                    source = ScopedBootstrapSource(
+                        path=agents_md,
+                        scope="project",
+                        size=agents_md.stat().st_size
+                    )
+                    self._client._bootstrap_sources = [source]
+                    if self.verbose:
+                        hints = bootstrap_ctx.get_active_hints_for(self.provider, self.model)
+                        hint_count = len(hints.get("provider_hints", [])) + len(hints.get("model_hints", []))
+                        if hint_count > 0:
+                            print(f"  [INFO] Loaded {hint_count} hints from AGENTS.md")
+                except Exception as e:
+                    if self.verbose:
+                        print(f"  [WARN] Failed to load AGENTS.md: {e}")
 
             # Set provider
             if not self._client.set_provider(self.provider):
@@ -167,6 +198,19 @@ class EngineClientWrapper:
             "finish_reason": "stop",
         }
 
+        # Debug logging: Save request details
+        if self.debug and self.debug_dir:
+            self._request_count += 1
+            debug_log = {
+                "request_id": self._request_count,
+                "provider": self.provider,
+                "model": self.model,
+                "messages": messages,
+                "tools_provided": len(tools) if tools else 0,
+                "tools": [t.get("function", {}).get("name") for t in tools] if tools else [],
+                "last_message": last_message,
+            }
+
         try:
             async for event in self._client.chat(last_message, stream=False):
                 if self.verbose:
@@ -206,11 +250,39 @@ class EngineClientWrapper:
                     result["tool_calls"] = extracted
                     result["finish_reason"] = "tool_calls"
 
+            # Collect response samples for model fingerprinting (first 3 only)
+            if len(self._response_samples) < 3 and result["content"]:
+                self._response_samples.append(result["content"][:500])  # First 500 chars
+
+            # Debug logging: Save response details
+            if self.debug and self.debug_dir:
+                debug_log["response"] = {
+                    "content": result["content"],
+                    "tool_calls": result["tool_calls"],
+                    "finish_reason": result["finish_reason"],
+                    "error": result.get("error"),
+                }
+                log_file = self.debug_dir / f"request_{self._request_count:03d}.json"
+                with open(log_file, "w") as f:
+                    json.dump(debug_log, f, indent=2)
+
             return result
 
         except Exception as e:
             if self.verbose:
                 print(f"  [ERROR] Chat exception: {e}")
+
+            # Debug logging: Save exception details
+            if self.debug and self.debug_dir:
+                debug_log["exception"] = {
+                    "type": type(e).__name__,
+                    "message": str(e),
+                    "traceback": __import__("traceback").format_exc(),
+                }
+                log_file = self.debug_dir / f"request_{self._request_count:03d}_EXCEPTION.json"
+                with open(log_file, "w") as f:
+                    json.dump(debug_log, f, indent=2)
+
             return {"content": "", "tool_calls": [], "error": str(e)}
 
     def _build_tool_prompt(self, tools: list[dict]) -> str:
@@ -322,18 +394,88 @@ class EngineBenchmarkRunner:
         timeout: int = 120,
         retries: int = 1,
         verbose: bool = False,
+        debug: bool = False,
     ):
         self.provider = provider
         self.model = model
         self.timeout = timeout
         self.retries = retries
         self.verbose = verbose
+        self.debug = debug
+
+        # Setup debug logging directory
+        self.debug_dir = None
+        if debug:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            self.debug_dir = Path(__file__).parent / "debug" / f"{provider}_{model}_{timestamp}"
+            self.debug_dir.mkdir(parents=True, exist_ok=True)
+            print(f"Debug logs will be saved to: {self.debug_dir}")
+
+        # Configure logging for debug mode or if PPXAI_LOG_LEVEL is set
+        if debug or os.getenv("PPXAI_LOG_LEVEL"):
+            try:
+                import logging
+
+                # Set root logger to DEBUG
+                logging.basicConfig(
+                    level=logging.DEBUG,
+                    format='[%(name)s] %(levelname)s: %(message)s'
+                )
+
+                if verbose:
+                    print("  [INFO] Logging configured at DEBUG level")
+            except Exception as e:
+                if verbose:
+                    print(f"  [WARN] Failed to configure logging: {e}")
 
         self.client = EngineClientWrapper(
             provider=provider,
             model=model,
             verbose=verbose,
+            debug=debug,
+            debug_dir=self.debug_dir,
         )
+
+    def _get_sdk_versions(self) -> dict:
+        """Get SDK versions for provider-specific packages."""
+        versions = {}
+
+        # Try to get google-genai version
+        try:
+            import google.genai
+            versions["google-genai"] = getattr(google.genai, "__version__", "unknown")
+        except (ImportError, AttributeError):
+            pass
+
+        # Try to get openai version
+        try:
+            import openai
+            versions["openai"] = openai.__version__
+        except (ImportError, AttributeError):
+            pass
+
+        # Try to get anthropic version
+        try:
+            import anthropic
+            versions["anthropic"] = anthropic.__version__
+        except (ImportError, AttributeError):
+            pass
+
+        return versions
+
+    def _compute_model_fingerprint(self) -> str:
+        """Compute a fingerprint from first 3 test responses.
+
+        This helps detect when model behavior changes (e.g., Google updates the model).
+        Uses MD5 hash of concatenated response content.
+        """
+        if not self.client._response_samples:
+            return "no-samples"
+
+        import hashlib
+        # Concatenate first 3 responses (or fewer if less available)
+        combined = "\n".join(self.client._response_samples[:3])
+        return hashlib.md5(combined.encode()).hexdigest()[:12]
 
     def run(self, categories: Optional[list[str]] = None) -> BenchmarkResult:
         """Run benchmark synchronously."""
@@ -383,24 +525,63 @@ class EngineBenchmarkRunner:
             passed = False
             details = {}
 
+            # Debug logging: Save test start
+            if self.debug and self.debug_dir:
+                test_log_file = self.debug_dir / f"test_{i:03d}_{test.category}_{test.name}.json"
+                test_log = {
+                    "test_number": i,
+                    "test_name": test.name,
+                    "category": test.category,
+                    "weight": test.weight,
+                    "attempts": [],
+                }
+
             for attempt in range(self.retries):
                 try:
                     passed, details = await asyncio.wait_for(
                         test.run(self.client),
                         timeout=self.timeout,
                     )
+                    if self.debug and self.debug_dir:
+                        test_log["attempts"].append({
+                            "attempt": attempt + 1,
+                            "passed": passed,
+                            "details": details,
+                        })
                     if passed:
                         break
                 except asyncio.TimeoutError:
                     details = {"error": "Timeout"}
+                    if self.debug and self.debug_dir:
+                        test_log["attempts"].append({
+                            "attempt": attempt + 1,
+                            "passed": False,
+                            "error": "Timeout",
+                        })
                 except Exception as e:
                     details = {"error": str(e)}
+                    if self.debug and self.debug_dir:
+                        test_log["attempts"].append({
+                            "attempt": attempt + 1,
+                            "passed": False,
+                            "error": str(e),
+                            "traceback": __import__("traceback").format_exc(),
+                        })
 
                 if attempt < self.retries - 1:
                     print("(retry)", end=" ", flush=True)
 
             status = "PASS" if passed else "FAIL"
             print(status)
+
+            # Debug logging: Save test result
+            if self.debug and self.debug_dir:
+                test_log["final_result"] = {
+                    "passed": passed,
+                    "details": details,
+                }
+                with open(test_log_file, "w") as f:
+                    json.dump(test_log, f, indent=2)
 
             if self.verbose and not passed:
                 error = details.get("error", "Unknown error")
@@ -433,6 +614,38 @@ class EngineBenchmarkRunner:
 
         duration = time.time() - start_time
 
+        # Debug logging: Create summary file
+        if self.debug and self.debug_dir:
+            summary = {
+                "provider": self.provider,
+                "model": self.model,
+                "timestamp": datetime.utcnow().isoformat(),
+                "overall_score": overall_score,
+                "tests_passed": sum(1 for r in test_results if r["passed"]),
+                "tests_total": len(test_results),
+                "duration_seconds": duration,
+                "category_scores": category_scores,
+                "failed_tests": [
+                    {
+                        "name": r["name"],
+                        "category": r["category"],
+                        "error": r["details"].get("error", "Unknown"),
+                        "log_file": f"test_{i+1:03d}_{r['category']}_{r['name']}.json"
+                    }
+                    for i, r in enumerate(test_results) if not r["passed"]
+                ],
+                "debug_directory": str(self.debug_dir),
+            }
+            summary_file = self.debug_dir / "SUMMARY.json"
+            with open(summary_file, "w") as f:
+                json.dump(summary, f, indent=2)
+            print(f"\nDebug logs saved to: {self.debug_dir}")
+            print(f"Summary: {summary_file}")
+
+        # Get SDK versions and model fingerprint
+        sdk_versions = self._get_sdk_versions()
+        model_fingerprint = self._compute_model_fingerprint()
+
         return BenchmarkResult(
             provider=self.provider,
             model=self.model,
@@ -447,5 +660,7 @@ class EngineBenchmarkRunner:
                 "runner": "engine",
                 "timeout": self.timeout,
                 "retries": self.retries,
+                "sdk_versions": sdk_versions,
+                "model_fingerprint": model_fingerprint,
             },
         )

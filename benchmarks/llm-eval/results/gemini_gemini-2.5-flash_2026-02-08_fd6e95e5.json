@@ -1,0 +1,24 @@
+{
+  "provider": "gemini",
+  "model": "gemini-2.5-flash",
+  "timestamp": "2026-02-08T17:20:15.152250",
+  "overall_score": 0.0,
+  "tests_passed": 0,
+  "tests_total": 3,
+  "duration_seconds": 0.0,
+  "category_scores": {},
+  "test_results": [
+    {
+      "name": "initialization",
+      "category": "system",
+      "passed": false,
+      "details": {
+        "error": "Client initialization failed"
+      },
+      "weight": 0
+    }
+  ],
+  "metadata": {
+    "error": "Client initialization failed"
+  }
+}

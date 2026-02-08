@@ -1,0 +1,48 @@
+{
+  "provider": "gemini",
+  "model": "gemini-2.5-flash",
+  "timestamp": "2026-02-08T16:29:45.205105",
+  "overall_score": 0.0,
+  "tests_passed": 0,
+  "tests_total": 3,
+  "duration_seconds": 23.62456488609314,
+  "category_scores": {
+    "code_editing": 0.0
+  },
+  "test_results": [
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "Wrong tool: read_file"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "subtract method not found in patch",
+        "patch_preview": ""
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "Missing json import",
+        "patch_preview": ""
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1
+  }
+}
