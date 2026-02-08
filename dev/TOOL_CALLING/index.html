@@ -1279,6 +1279,78 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#tool-result-display-limits-v1153" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool Result Display Limits (v1.15.3)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tool Result Display Limits (v1.15.3)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overview_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#format-aware-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Format-Aware Limits
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Points
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#frequently-asked-questions" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1675,6 +1747,88 @@
 <li>OpenAI Function Calling: https://platform.openai.com/docs/guides/function-calling</li>
 </ul>
 <hr />
+<h2 id="tool-result-display-limits-v1153">Tool Result Display Limits (v1.15.3)<a class="headerlink" href="#tool-result-display-limits-v1153" title="Permanent link">&para;</a></h2>
+<h3 id="overview_1">Overview<a class="headerlink" href="#overview_1" title="Permanent link">&para;</a></h3>
+<p>Tool results displayed to users are truncated for readability, but <strong>full results are always sent to the LLM</strong>. This ensures the AI has complete information while keeping the UI clean.</p>
+<h3 id="configuration_1">Configuration<a class="headerlink" href="#configuration_1" title="Permanent link">&para;</a></h3>
+<p>Display limits are configured in <code>ToolManager</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Default limit for all tools</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">manager</span><span class="o">.</span><span class="n">default_display_limit</span> <span class="o">=</span> <span class="mi">2000</span>  <span class="c1"># characters</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Tool-specific limits</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">manager</span><span class="o">.</span><span class="n">tool_display_limits</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="s2">&quot;get_weather&quot;</span><span class="p">:</span> <span class="p">{</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>        <span class="s2">&quot;short&quot;</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span>      <span class="c1"># One-line format</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>        <span class="s2">&quot;detailed&quot;</span><span class="p">:</span> <span class="mi">1500</span><span class="p">,</span>  <span class="c1"># Current weather</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>        <span class="s2">&quot;forecast&quot;</span><span class="p">:</span> <span class="mi">5000</span><span class="p">,</span>  <span class="c1"># Full 2-day forecast</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>        <span class="s2">&quot;default&quot;</span><span class="p">:</span> <span class="mi">2000</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>    <span class="p">},</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>    <span class="s2">&quot;fetch_url&quot;</span><span class="p">:</span> <span class="mi">5000</span><span class="p">,</span>     <span class="c1"># Web pages</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>    <span class="s2">&quot;web_search&quot;</span><span class="p">:</span> <span class="mi">3000</span><span class="p">,</span>    <span class="c1"># Search results</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>    <span class="s2">&quot;read_file&quot;</span><span class="p">:</span> <span class="mi">10000</span><span class="p">,</span>    <span class="c1"># Code files</span>
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="format-aware-limits">Format-Aware Limits<a class="headerlink" href="#format-aware-limits" title="Permanent link">&para;</a></h3>
+<p>The <code>get_weather</code> tool uses <strong>format-aware limits</strong> - different truncation based on the selected format:</p>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Limit</th>
+<th>Typical Size</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>short</code></td>
+<td>500 chars</td>
+<td>~50 chars</td>
+<td>One line: "Geneva: ☁️  +5°C"</td>
+</tr>
+<tr>
+<td><code>detailed</code></td>
+<td>1500 chars</td>
+<td>~200 chars</td>
+<td>Current weather with wind, humidity</td>
+</tr>
+<tr>
+<td><code>forecast</code></td>
+<td>5000 chars</td>
+<td>~4300 chars</td>
+<td>Full 2-day forecast with hourly data</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Short format uses 500 char limit</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">get_weather</span><span class="p">(</span><span class="s2">&quot;Geneva&quot;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;short&quot;</span><span class="p">)</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="c1"># → &quot;Geneva: ☁️  +5°C&quot;</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="c1"># Forecast format uses 5000 char limit</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="n">get_weather</span><span class="p">(</span><span class="s2">&quot;Geneva&quot;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;forecast&quot;</span><span class="p">)</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># → Full 2-day forecast (4300 chars displayed)</span>
+</span></code></pre></div></p>
+<h3 id="implementation">Implementation<a class="headerlink" href="#implementation" title="Permanent link">&para;</a></h3>
+<p>Display limits are applied in <a href="../ppxai/engine/chat.py#L412-L417">chat.py:412-417</a>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Get tool-specific limit</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">display_limit</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">tool_manager</span><span class="o">.</span><span class="n">get_tool_display_limit</span><span class="p">(</span><span class="n">tool_name</span><span class="p">,</span> <span class="n">tool_args</span><span class="p">)</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">truncated_result</span> <span class="o">=</span> <span class="n">result</span><span class="p">[:</span><span class="n">display_limit</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;...&quot;</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">display_limit</span> <span class="k">else</span> <span class="n">result</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="c1"># Display to user (truncated)</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="k">yield</span> <span class="n">Event</span><span class="p">(</span><span class="n">EventType</span><span class="o">.</span><span class="n">TOOL_RESULT</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;tool&quot;</span><span class="p">:</span> <span class="n">tool_name</span><span class="p">,</span> <span class="s2">&quot;result&quot;</span><span class="p">:</span> <span class="n">truncated_result</span><span class="p">})</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="c1"># Send to LLM (full result)</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="n">ctx</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Tool returned:</span><span class="se">\n\n</span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">))</span>
+</span></code></pre></div>
+<h3 id="key-points">Key Points<a class="headerlink" href="#key-points" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Display truncation only</strong> - LLM always receives full result</li>
+<li><strong>Format-aware</strong> - Weather tool adjusts limit based on format parameter</li>
+<li><strong>Configurable</strong> - Can be customized per tool or globally</li>
+<li><strong>Intelligent defaults</strong> - Web pages get more space than one-line results</li>
+</ul>
+<hr />
 <h2 id="frequently-asked-questions">Frequently Asked Questions<a class="headerlink" href="#frequently-asked-questions" title="Permanent link">&para;</a></h2>
 <h3 id="q-why-does-perplexity-not-support-native-tool-calling">Q: Why does Perplexity not support native tool calling?<a class="headerlink" href="#q-why-does-perplexity-not-support-native-tool-calling" title="Permanent link">&para;</a></h3>
 <p>Perplexity Sonar models are optimized for search and reasoning, not function calling. Their API accepts the <code>tools</code> parameter for compatibility but doesn't use it.</p>
@@ -1695,6 +1849,11 @@
 <li>✅ Verified Perplexity uses prompt-based method</li>
 <li>✅ Verified Gemini uses native method</li>
 <li>✅ Added benchmark metadata for tool calling method</li>
+<li>✅ <strong>NEW:</strong> Configurable, format-aware tool result display limits</li>
+<li>Default: 2000 characters for display (full result always sent to LLM)</li>
+<li>Weather tool: 500/1500/5000 chars for short/detailed/forecast formats</li>
+<li>Custom limits for web_search (3000), fetch_url (5000), read_file (10000)</li>
+<li>11 new tests in <code>tests/test_tool_display_limits.py</code></li>
 </ul>
 
 
