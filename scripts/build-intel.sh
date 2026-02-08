@@ -6,6 +6,7 @@
 #   - ppxai (TUI application)
 #   - ppxai-server (HTTP server for VSCode extension)
 #   - ppxai-desktop (Desktop launcher for web UI)
+#   - ppxaide (Textual TUI application)
 #   - ppxai-VERSION-macos-intel.dmg (DMG installer with app bundle)
 #
 # Usage:
@@ -110,17 +111,36 @@ echo "Desktop build successful!"
 ls -lh dist/ppxai-desktop
 file dist/ppxai-desktop
 
+# Build ppxaide executable
+echo ""
+echo "Building ppxaide executable with PyInstaller..."
+uv run pyinstaller ppxaide.spec
+
+# Verify ppxaide build
+if [ ! -f "dist/ppxaide" ]; then
+    echo "Error: ppxaide build failed - dist/ppxaide not found"
+    exit 1
+fi
+
+echo ""
+echo "ppxaide build successful!"
+ls -lh dist/ppxaide
+file dist/ppxaide
+
 # Rename for release
 TUI_ASSET="ppxai-macos-intel"
 SERVER_ASSET="ppxai-server-macos-intel"
 DESKTOP_ASSET="ppxai-desktop-macos-intel"
+AIDE_ASSET="ppxaide-macos-intel"
 cp dist/ppxai "dist/$TUI_ASSET"
 cp dist/ppxai-server "dist/$SERVER_ASSET"
 cp dist/ppxai-desktop "dist/$DESKTOP_ASSET"
+cp dist/ppxaide "dist/$AIDE_ASSET"
 echo ""
 echo "Created: dist/$TUI_ASSET"
 echo "Created: dist/$SERVER_ASSET"
 echo "Created: dist/$DESKTOP_ASSET"
+echo "Created: dist/$AIDE_ASSET"
 
 # Upload to release if version specified
 if [ -n "$VERSION" ]; then
@@ -141,8 +161,8 @@ if [ -n "$VERSION" ]; then
         exit 1
     fi
 
-    # Upload all three assets
-    gh release upload "$VERSION" "dist/$TUI_ASSET" "dist/$SERVER_ASSET" "dist/$DESKTOP_ASSET" --clobber
+    # Upload all four assets
+    gh release upload "$VERSION" "dist/$TUI_ASSET" "dist/$SERVER_ASSET" "dist/$DESKTOP_ASSET" "dist/$AIDE_ASSET" --clobber
 
     echo ""
     echo "Binaries uploaded!"
@@ -160,8 +180,8 @@ if [ -n "$VERSION" ]; then
 else
     echo ""
     echo "To upload to a release, run:"
-    echo "  gh release upload <version> dist/$TUI_ASSET dist/$SERVER_ASSET dist/$DESKTOP_ASSET"
+    echo "  gh release upload <version> dist/$TUI_ASSET dist/$SERVER_ASSET dist/$DESKTOP_ASSET dist/$AIDE_ASSET"
     echo ""
     echo "Example:"
-    echo "  gh release upload v1.9.0 dist/$TUI_ASSET dist/$SERVER_ASSET dist/$DESKTOP_ASSET"
+    echo "  gh release upload v1.9.0 dist/$TUI_ASSET dist/$SERVER_ASSET dist/$DESKTOP_ASSET dist/$AIDE_ASSET"
 fi
