@@ -540,6 +540,29 @@
           "__comment": "Google Search Grounding: $35/1000 queries = $0.035 per query"
         }
       }
+    },
+    "display_limits": {
+      "__comment": "Tool result display truncation limits (v1.15.3+). Full results always sent to LLM, only UI display is truncated.",
+      "default": 2000,
+      "__comment_default": "Default character limit for tool result display (applies to tools without specific limits)",
+      "get_weather": {
+        "__comment": "Format-aware limits for weather tool - different truncation per format parameter",
+        "short": 500,
+        "__comment_short": "One-line weather: 'Geneva: ☁️  +5°C' (~50 chars typical)",
+        "detailed": 1500,
+        "__comment_detailed": "Current weather with wind, humidity, pressure (~200 chars typical)",
+        "forecast": 5000,
+        "__comment_forecast": "Full 2-day forecast with hourly data (~4300 chars typical)",
+        "default": 2000
+      },
+      "fetch_url": 5000,
+      "__comment_fetch_url": "Web page content can be long - higher limit for readability",
+      "web_search": 3000,
+      "__comment_web_search": "Search results with multiple entries and snippets",
+      "list_directory": 3000,
+      "__comment_list_directory": "Large directories with many files",
+      "read_file": 10000,
+      "__comment_read_file": "Code files can be long - highest limit for full visibility"
     }
   },
   "visualization": {

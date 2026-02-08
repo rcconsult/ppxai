@@ -284,6 +284,80 @@ Full test results available in archived documentation:
 
 ---
 
+## Tool Result Display Limits (v1.15.3)
+
+### Overview
+
+Tool results displayed to users are truncated for readability, but **full results are always sent to the LLM**. This ensures the AI has complete information while keeping the UI clean.
+
+### Configuration
+
+Display limits are configured in `ToolManager`:
+
+```python
+# Default limit for all tools
+manager.default_display_limit = 2000  # characters
+
+# Tool-specific limits
+manager.tool_display_limits = {
+    "get_weather": {
+        "short": 500,      # One-line format
+        "detailed": 1500,  # Current weather
+        "forecast": 5000,  # Full 2-day forecast
+        "default": 2000
+    },
+    "fetch_url": 5000,     # Web pages
+    "web_search": 3000,    # Search results
+    "read_file": 10000,    # Code files
+}
+```
+
+### Format-Aware Limits
+
+The `get_weather` tool uses **format-aware limits** - different truncation based on the selected format:
+
+| Format | Limit | Typical Size | Reason |
+|--------|-------|--------------|--------|
+| `short` | 500 chars | ~50 chars | One line: "Geneva: ☁️  +5°C" |
+| `detailed` | 1500 chars | ~200 chars | Current weather with wind, humidity |
+| `forecast` | 5000 chars | ~4300 chars | Full 2-day forecast with hourly data |
+
+**Example:**
+```python
+# Short format uses 500 char limit
+get_weather("Geneva", format="short")
+# → "Geneva: ☁️  +5°C"
+
+# Forecast format uses 5000 char limit
+get_weather("Geneva", format="forecast")
+# → Full 2-day forecast (4300 chars displayed)
+```
+
+### Implementation
+
+Display limits are applied in [chat.py:412-417](../ppxai/engine/chat.py#L412-L417):
+
+```python
+# Get tool-specific limit
+display_limit = ctx.tool_manager.get_tool_display_limit(tool_name, tool_args)
+truncated_result = result[:display_limit] + "..." if len(result) > display_limit else result
+
+# Display to user (truncated)
+yield Event(EventType.TOOL_RESULT, {"tool": tool_name, "result": truncated_result})
+
+# Send to LLM (full result)
+ctx.session.add_message(Message("user", f"Tool returned:\n\n{result}\n\n"))
+```
+
+### Key Points
+
+- **Display truncation only** - LLM always receives full result
+- **Format-aware** - Weather tool adjusts limit based on format parameter
+- **Configurable** - Can be customized per tool or globally
+- **Intelligent defaults** - Web pages get more space than one-line results
+
+---
+
 ## Frequently Asked Questions
 
 ### Q: Why does Perplexity not support native tool calling?
@@ -316,3 +390,8 @@ Check the `native_tool_calling` capability flag in `ppxai-config.json` or see th
 - ✅ Verified Perplexity uses prompt-based method
 - ✅ Verified Gemini uses native method
 - ✅ Added benchmark metadata for tool calling method
+- ✅ **NEW:** Configurable, format-aware tool result display limits
+  - Default: 2000 characters for display (full result always sent to LLM)
+  - Weather tool: 500/1500/5000 chars for short/detailed/forecast formats
+  - Custom limits for web_search (3000), fetch_url (5000), read_file (10000)
+  - 11 new tests in `tests/test_tool_display_limits.py`

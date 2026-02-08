@@ -568,6 +568,19 @@
           "model": "per_query"
         }
       }
+    },
+    "display_limits": {
+      "default": 2000,
+      "get_weather": {
+        "short": 500,
+        "detailed": 1500,
+        "forecast": 5000,
+        "default": 2000
+      },
+      "fetch_url": 5000,
+      "web_search": 3000,
+      "list_directory": 3000,
+      "read_file": 10000
     }
   },
   "visualization": {

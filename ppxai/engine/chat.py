@@ -409,9 +409,13 @@ async def chat_with_tools(
                         logger.debug(f"[display_file] Exception during event emission: {e}")
                         pass
 
+                # v1.15.3: Use configurable, format-aware display limits
+                display_limit = ctx.tool_manager.get_tool_display_limit(tool_name, tool_args)
+                truncated_result = result[:display_limit] + "..." if len(result) > display_limit else result
+
                 yield Event(EventType.TOOL_RESULT, {
                     "tool": tool_name,
-                    "result": result[:2000] + "..." if len(result) > 2000 else result
+                    "result": truncated_result
                 })
 
                 ctx.session.add_message(Message(

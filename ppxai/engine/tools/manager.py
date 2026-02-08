@@ -28,6 +28,27 @@ class ToolManager:
         self.max_same_tool_calls: int = 3  # Max consecutive calls to same tool+args (0=disabled)
         self._tool_call_history: List[Tuple[str, str]] = []  # Track (tool_name, args_hash) for loop detection
 
+        # Display limit configuration (v1.15.3)
+        # Controls how much of a tool result is displayed to the user
+        # (Full result is always sent to the LLM regardless of display limit)
+        self.default_display_limit: int = 2000
+
+        # Tool-specific display limits
+        self.tool_display_limits: Dict[str, Any] = {
+            # Weather tool has format-specific limits
+            "get_weather": {
+                "short": 500,      # One-line format: "Geneva: ☁️  +5°C"
+                "detailed": 1500,  # Current weather with details
+                "forecast": 5000,  # Full 2-day forecast (4300 chars typical)
+                "default": 2000
+            },
+            # Other tools with custom limits
+            "fetch_url": 5000,  # Web pages can be long
+            "web_search": 3000,  # Search results with multiple entries
+            "list_directory": 3000,  # Large directories
+            "read_file": 10000,  # Code files can be long
+        }
+
     def register_tool(self, tool: BaseTool):
         """Register a tool.
 
@@ -110,6 +131,38 @@ class ToolManager:
             Tool description (override if configured, otherwise default)
         """
         return self._description_overrides.get(tool.name, tool.description)
+
+    def get_tool_display_limit(self, tool_name: str, tool_args: Optional[Dict[str, Any]] = None) -> int:
+        """Get display limit for a specific tool result.
+
+        v1.15.3: Configurable, format-aware display limits for tool results.
+        Full result is always sent to LLM; this only affects user display.
+
+        Args:
+            tool_name: Name of the tool
+            tool_args: Tool arguments (used for format-specific limits)
+
+        Returns:
+            Character limit for displaying tool result to user
+        """
+        # Check if tool has specific configuration
+        tool_config = self.tool_display_limits.get(tool_name)
+
+        if tool_config is None:
+            # No specific config, use default
+            return self.default_display_limit
+
+        # If config is a dict (format-specific), extract based on arguments
+        if isinstance(tool_config, dict):
+            # For get_weather, check the format parameter
+            if tool_name == "get_weather" and tool_args:
+                format_param = tool_args.get("format", "default")
+                return tool_config.get(format_param, tool_config.get("default", self.default_display_limit))
+            # For other dict-based configs, use default key
+            return tool_config.get("default", self.default_display_limit)
+
+        # Direct integer limit
+        return tool_config
 
     def get_tool(self, name: str) -> Optional[BaseTool]:
         """Get a specific tool by name.
