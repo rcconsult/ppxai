@@ -19,6 +19,8 @@ import re
 from typing import Callable, Any
 from dataclasses import dataclass
 
+from response_quality import validate_response_quality, QualityMetrics
+
 
 @dataclass
 class TestCase:
@@ -357,13 +359,19 @@ def main():
         tools=TOOLS,
     )
 
+    # Validate response quality first
+    quality = validate_response_quality(response, expected_tool="apply_patch")
+
     tool_calls = response.get("tool_calls", [])
     if not tool_calls:
-        return False, {"error": "No tool call made"}
+        return False, {"error": "No tool call made", **quality.to_dict()}
 
     call = tool_calls[0]
     if call.get("function", {}).get("name") != "apply_patch":
-        return False, {"error": f"Wrong tool: {call.get('function', {}).get('name')}"}
+        return False, {
+            "error": f"Wrong tool: {call.get('function', {}).get('name')}",
+            **quality.to_dict()
+        }
 
     try:
         args = json.loads(call["function"]["arguments"])
@@ -371,15 +379,30 @@ def main():
 
         # Validate patch structure
         if "Hello" not in patch or "Hello, World!" not in patch:
-            return False, {"error": "Patch doesn't contain expected changes", "patch": patch[:200]}
+            quality.tool_success = False
+            return False, {
+                "error": "Patch doesn't contain expected changes",
+                "patch": patch[:200],
+                **quality.to_dict()
+            }
 
         # Check for unified diff markers
         if not any(marker in patch for marker in ["@@", "---", "+++"]):
-            return False, {"error": "Not a valid unified diff format", "patch": patch[:200]}
+            quality.tool_success = False
+            return False, {
+                "error": "Not a valid unified diff format",
+                "patch": patch[:200],
+                **quality.to_dict()
+            }
 
-        return True, {"patch_length": len(patch)}
+        # Patch is valid - return quality-based pass/fail
+        return quality.passed, {
+            "patch_length": len(patch),
+            **quality.to_dict()
+        }
     except json.JSONDecodeError as e:
-        return False, {"error": f"Invalid JSON: {e}"}
+        quality.tool_success = False
+        return False, {"error": f"Invalid JSON: {e}", **quality.to_dict()}
 
 
 async def test_apply_patch_indentation(client) -> tuple[bool, dict]:
@@ -404,9 +427,12 @@ async def test_apply_patch_indentation(client) -> tuple[bool, dict]:
         tools=TOOLS,
     )
 
+    # Validate response quality first
+    quality = validate_response_quality(response, expected_tool="apply_patch")
+
     tool_calls = response.get("tool_calls", [])
     if not tool_calls:
-        return False, {"error": "No tool call made"}
+        return False, {"error": "No tool call made", **quality.to_dict()}
 
     call = tool_calls[0]
     try:
@@ -417,13 +443,28 @@ async def test_apply_patch_indentation(client) -> tuple[bool, dict]:
         if "    def subtract" not in patch:
             # Check for tab or different indentation
             if "\tdef subtract" in patch or "  def subtract" in patch:
-                return False, {"error": "Wrong indentation style", "patch_preview": patch[:300]}
+                quality.tool_success = False
+                return False, {
+                    "error": "Wrong indentation style",
+                    "patch_preview": patch[:300],
+                    **quality.to_dict()
+                }
             if "def subtract" not in patch:
-                return False, {"error": "subtract method not found in patch", "patch_preview": patch[:300]}
+                quality.tool_success = False
+                return False, {
+                    "error": "subtract method not found in patch",
+                    "patch_preview": patch[:300],
+                    **quality.to_dict()
+                }
 
-        return True, {"patch_length": len(patch)}
+        # Patch is valid - return quality-based pass/fail
+        return quality.passed, {
+            "patch_length": len(patch),
+            **quality.to_dict()
+        }
     except json.JSONDecodeError as e:
-        return False, {"error": f"Invalid JSON: {e}"}
+        quality.tool_success = False
+        return False, {"error": f"Invalid JSON: {e}", **quality.to_dict()}
 
 
 async def test_apply_patch_multiline(client) -> tuple[bool, dict]:
@@ -447,9 +488,13 @@ if __name__ == "__main__":
         tools=TOOLS,
     )
 
+    # Validate response quality
+    quality = validate_response_quality(response, expected_tool="apply_patch")
+
     tool_calls = response.get("tool_calls", [])
     if not tool_calls:
-        return False, {"error": "No tool call made"}
+        quality.tool_success = False
+        return False, {"error": "No tool call made", **quality.to_dict()}
 
     call = tool_calls[0]
     try:
@@ -462,13 +507,16 @@ if __name__ == "__main__":
         has_config = "config" in patch.lower() and "json" in patch.lower()
 
         if not has_import:
-            return False, {"error": "Missing json import", "patch_preview": patch[:400]}
+            quality.tool_success = False
+            return False, {"error": "Missing json import", "patch_preview": patch[:400], **quality.to_dict()}
         if not has_config:
-            return False, {"error": "Missing config loading code", "patch_preview": patch[:400]}
+            quality.tool_success = False
+            return False, {"error": "Missing config loading code", "patch_preview": patch[:400], **quality.to_dict()}
 
-        return True, {"patch_length": len(patch)}
+        return quality.passed, {"patch_length": len(patch), **quality.to_dict()}
     except json.JSONDecodeError as e:
-        return False, {"error": f"Invalid JSON: {e}"}
+        quality.tool_success = False
+        return False, {"error": f"Invalid JSON: {e}", **quality.to_dict()}
 
 
 # =============================================================================

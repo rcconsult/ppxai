@@ -82,6 +82,21 @@
         "filename": "perplexity_sonar-pro_2026-02-08_71f3b268.json",
         "timestamp": "2026-02-08T14:03:51.303031",
         "overall_score": 73.4375
+      },
+      {
+        "filename": "perplexity_sonar-pro_2026-02-08_a755ae49.json",
+        "timestamp": "2026-02-08T17:49:00.698529",
+        "overall_score": 100.0
+      },
+      {
+        "filename": "perplexity_sonar-pro_2026-02-08_3ee25581.json",
+        "timestamp": "2026-02-08T17:58:56.187091",
+        "overall_score": 100.0
+      },
+      {
+        "filename": "perplexity_sonar-pro_2026-02-08_e96b90d6.json",
+        "timestamp": "2026-02-08T18:24:42.872521",
+        "overall_score": 0.0
       }
     ],
     "gemini/gemini-2.5-flash": [
@@ -291,6 +306,21 @@
         "filename": "perplexity_sonar_2026-02-08_7676e2a0.json",
         "timestamp": "2026-02-08T13:44:16.236968",
         "overall_score": 75.0
+      },
+      {
+        "filename": "perplexity_sonar_2026-02-08_440c87aa.json",
+        "timestamp": "2026-02-08T17:48:31.688107",
+        "overall_score": 71.42857142857143
+      },
+      {
+        "filename": "perplexity_sonar_2026-02-08_dd834524.json",
+        "timestamp": "2026-02-08T17:59:27.377615",
+        "overall_score": 57.14285714285714
+      },
+      {
+        "filename": "perplexity_sonar_2026-02-08_f0ff44cd.json",
+        "timestamp": "2026-02-08T18:25:48.921602",
+        "overall_score": 0.0
       }
     ],
     "perplexity/sonar-reasoning-pro": [
@@ -303,6 +333,21 @@
         "filename": "perplexity_sonar-reasoning-pro_2026-02-08_03857c80.json",
         "timestamp": "2026-02-08T14:01:23.655139",
         "overall_score": 65.625
+      },
+      {
+        "filename": "perplexity_sonar-reasoning-pro_2026-02-08_2066ae5c.json",
+        "timestamp": "2026-02-08T17:49:39.510840",
+        "overall_score": 28.57142857142857
+      },
+      {
+        "filename": "perplexity_sonar-reasoning-pro_2026-02-08_294ec52c.json",
+        "timestamp": "2026-02-08T18:00:25.481139",
+        "overall_score": 28.57142857142857
+      },
+      {
+        "filename": "perplexity_sonar-reasoning-pro_2026-02-08_f267393e.json",
+        "timestamp": "2026-02-08T18:26:43.911150",
+        "overall_score": 28.57142857142857
       }
     ]
   },
@@ -592,6 +637,60 @@
       "pair": "gemini/gemini-3-pro-preview",
       "filename": "gemini_gemini-3-pro-preview_2026-02-08_4e235513.json",
       "timestamp": "2026-02-08T17:40:16.702039",
+      "overall_score": 28.57142857142857
+    },
+    {
+      "pair": "perplexity/sonar",
+      "filename": "perplexity_sonar_2026-02-08_440c87aa.json",
+      "timestamp": "2026-02-08T17:48:31.688107",
+      "overall_score": 71.42857142857143
+    },
+    {
+      "pair": "perplexity/sonar-pro",
+      "filename": "perplexity_sonar-pro_2026-02-08_a755ae49.json",
+      "timestamp": "2026-02-08T17:49:00.698529",
+      "overall_score": 100.0
+    },
+    {
+      "pair": "perplexity/sonar-reasoning-pro",
+      "filename": "perplexity_sonar-reasoning-pro_2026-02-08_2066ae5c.json",
+      "timestamp": "2026-02-08T17:49:39.510840",
+      "overall_score": 28.57142857142857
+    },
+    {
+      "pair": "perplexity/sonar-pro",
+      "filename": "perplexity_sonar-pro_2026-02-08_3ee25581.json",
+      "timestamp": "2026-02-08T17:58:56.187091",
+      "overall_score": 100.0
+    },
+    {
+      "pair": "perplexity/sonar",
+      "filename": "perplexity_sonar_2026-02-08_dd834524.json",
+      "timestamp": "2026-02-08T17:59:27.377615",
+      "overall_score": 57.14285714285714
+    },
+    {
+      "pair": "perplexity/sonar-reasoning-pro",
+      "filename": "perplexity_sonar-reasoning-pro_2026-02-08_294ec52c.json",
+      "timestamp": "2026-02-08T18:00:25.481139",
+      "overall_score": 28.57142857142857
+    },
+    {
+      "pair": "perplexity/sonar-pro",
+      "filename": "perplexity_sonar-pro_2026-02-08_e96b90d6.json",
+      "timestamp": "2026-02-08T18:24:42.872521",
+      "overall_score": 0.0
+    },
+    {
+      "pair": "perplexity/sonar",
+      "filename": "perplexity_sonar_2026-02-08_f0ff44cd.json",
+      "timestamp": "2026-02-08T18:25:48.921602",
+      "overall_score": 0.0
+    },
+    {
+      "pair": "perplexity/sonar-reasoning-pro",
+      "filename": "perplexity_sonar-reasoning-pro_2026-02-08_f267393e.json",
+      "timestamp": "2026-02-08T18:26:43.911150",
       "overall_score": 28.57142857142857
     }
   ]
