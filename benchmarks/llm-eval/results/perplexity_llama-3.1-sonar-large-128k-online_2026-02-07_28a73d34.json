@@ -1,0 +1,280 @@
+{
+  "provider": "perplexity",
+  "model": "llama-3.1-sonar-large-128k-online",
+  "timestamp": "2026-02-07T23:00:40.776443",
+  "overall_score": 10.9375,
+  "tests_passed": 3,
+  "tests_total": 26,
+  "duration_seconds": 3.7204580307006836,
+  "category_scores": {
+    "hallucination_resistance": 16.666666666666664,
+    "tool_calling": 0.0,
+    "code_editing": 0.0,
+    "format_compliance": 33.33333333333333,
+    "instruction_following": 0.0,
+    "reasoning": 0.0,
+    "error_recovery": 33.33333333333333
+  },
+  "test_results": [
+    {
+      "name": "respects_tool_failure",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "No tool call made",
+        "response": ""
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "no_phantom_tool_calls",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "no_phantom_claims": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "repeated_failure_acknowledgment",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "No initial tool call"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "contradiction_detection",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "No tool call made"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "multi_turn_consistency",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "No tool call for step 1"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "No tool call made",
+        "response": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "No tool call made",
+        "response": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "No tool call made",
+        "response": ""
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "No tool call in first turn"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "No tool call made",
+        "response": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "No tool call made",
+        "response": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "No tool call made"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "No tool call made"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "No tool call made"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "json_output",
+      "category": "format_compliance",
+      "passed": false,
+      "details": {
+        "error": "Invalid JSON: Expecting value: line 1 column 1 (char 0)",
+        "content_preview": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "markdown_code_blocks",
+      "category": "format_compliance",
+      "passed": false,
+      "details": {
+        "error": "No code block found",
+        "content_preview": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_hallucinated_paths",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "content_length": 0
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "do_not_explain",
+      "category": "instruction_following",
+      "passed": false,
+      "details": {
+        "error": "Function not found",
+        "content_preview": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "constraint_respect",
+      "category": "instruction_following",
+      "passed": false,
+      "details": {
+        "errors": [
+          "Wrong function name",
+          "No docstring"
+        ],
+        "code_preview": ""
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "format_specification",
+      "category": "instruction_following",
+      "passed": false,
+      "details": {
+        "error": "Expected 3 blocks, got 0",
+        "content_preview": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "multi_step_planning",
+      "category": "reasoning",
+      "passed": false,
+      "details": {
+        "error": "Missing key concepts: ['user model', 'password', 'login', 'session']",
+        "found": []
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "dependency_ordering",
+      "category": "reasoning",
+      "passed": false,
+      "details": {
+        "error": "Didn't prioritize running tests first"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "edge_case_handling",
+      "category": "reasoning",
+      "passed": false,
+      "details": {
+        "error": "No edge cases handled",
+        "missing": [
+          "division_by_zero",
+          "error_handling"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "tool_error_recovery",
+      "category": "error_recovery",
+      "passed": false,
+      "details": {
+        "error": "No initial tool call"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "self_correction",
+      "category": "error_recovery",
+      "passed": false,
+      "details": {
+        "error": "Didn't correct the issue",
+        "response": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "graceful_degradation",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "graceful": "appropriate_response"
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "base_url": "https://api.perplexity.ai",
+    "timeout": 60,
+    "retries": 1,
+    "generation_params": {}
+  }
+}

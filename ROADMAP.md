@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.15.2 (February 2026) (January 2026)
+> **Current Version**: v1.15.3 (February 2026)
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
@@ -290,7 +290,7 @@ ppxai/engine/bootstrap.py (new)
 |---------|-------------|--------|
 | **`/edit` command (VSCode)** | Opens file in native VSCode editor | ✅ Done |
 | **`/edit` command (Web App)** | Monaco-style editor with syntax highlighting | ✅ Done |
-| **`/edit` command (TUI)** | Simple line editor | ⏳ Deferred to v1.15.x |
+| **`/edit` command (TUI)** | Simple line editor | ❌ Cancelled (Rich TUI deprecated in favor of ppxaide) |
 | **`/context reload`** | Refresh AGENTS.md from disk | ✅ Done |
 | **Auto-reload on save** | `/edit AGENTS.md` + save triggers context reload | ✅ Done |
 | **`POST /files/write`** | Server endpoint for file writes | ✅ Done |
@@ -465,52 +465,30 @@ ppxai/tui/                     # New module (Textual-based)
 **Dependencies:**
 - `textual>=0.47.0` (added to optional extras: `pip install ppxai[tui]`)
 
+### v1.15.3 - Config Hot-Reload Fix & File Navigation
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Config auto-reload** | `/model` and `/provider` commands reload config from disk before listing | ✅ Done |
+| **`EngineClient.reload_config()`** | Single entry point to refresh all cached config data | ✅ Done |
+| **Session restore reload** | All 3 clients (Textual, Rich, HTTP) reload config before restore | ✅ Done |
+| **Server endpoint reload** | HTTP + JSON-RPC endpoints reload config before listing/switching | ✅ Done |
+| **Root cause identified** | ConfigStore singleton + EngineClient snapshot = stale config (since v1.8.0) | ✅ Done |
+| **`/ls [path]`** | List files and directories (all clients) | ⏳ Planned |
+| **`/tree [depth]`** | Render directory tree structure (all clients) | ⏳ Planned |
+| **ppxaide file tree sidebar** | NvChad-inspired interactive file tree (Textual DirectoryTree) | ⏳ Planned |
+
+**Tech debt:** `__getattr__` lazy loading for PROVIDERS still exists. Proper DAG-based initialization planned for v1.16.0.
+
+**File Navigation:** See [TODO-v1.16.0.md](TODO-v1.16.0.md) for detailed spec (Phase 0: commands, Phase 1: ppxaide sidebar).
+
 ---
 
-## Planned (v1.16.x - File Navigation)
+## Planned (v1.16.x)
 
-### v1.16.0 - Command-Based File Navigation (MVP)
+### v1.16.0 - Web App File Tree Sidebar
 **Status:** Planned
 **Branch:** feature/1-16-0 (to be created)
-**Effort:** 2 days
-**See:** `TODO-v1.16.0.md` Phase 0
-
-**Features:**
-- `/ls [path]` - List files and directories (Unix-style)
-- `/tree [depth]` - Render directory tree structure
-- Works in ALL clients (ppxaide, Web App, Rich CLI)
-
-**Why This First:**
-- Quick win: 70% of value with 20% of effort
-- Provides immediate utility across all clients
-- Foundation for interactive file tree in later releases
-
----
-
-### v1.16.1 - ppxaide Interactive File Tree
-**Status:** Planned
-**Branch:** feature/1-16-1 (to be created)
-**Effort:** 5 days
-**See:** `TODO-v1.16.0.md` Phase 1
-
-**Features:**
-- NvChad-inspired file tree sidebar in ppxaide
-- Keyboard navigation (`Ctrl+E` toggle, arrow keys)
-- Click to open files in side panel
-- `Ctrl+I` to inject `@file` references
-- Respects `.gitignore` patterns
-- Uses Textual's DirectoryTree widget
-
-**Why ppxaide First:**
-- Textual's DirectoryTree is production-ready
-- Best architectural fit (already has 3-panel layout)
-- Users expect file trees in TUI applications
-
----
-
-### v1.17.0 - Web App File Tree Sidebar
-**Status:** Planned
-**Branch:** feature/1-17-0 (to be created)
 **Effort:** 7 days
 **See:** `TODO-v1.16.0.md` Phase 2
 
@@ -712,4 +690,4 @@ For archived planning documents:
 
 ---
 
-**Last Updated**: February 5, 2026
+**Last Updated**: February 7, 2026

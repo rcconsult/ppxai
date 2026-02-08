@@ -32,8 +32,8 @@
   },
   "bootstrap": {
     "__comment": "Bootstrap context from project instruction files (v1.14.0+)",
-    "files": ["AGENTS.md", "CLAUDE.md"],
-    "__comment_files": "Filenames to search for project instructions. First match wins. Empty list disables bootstrap.",
+    "files": ["AGENTS.md", "CLAUDE.md", "INSTRUCTIONS.md"],
+    "__comment_files": "Filenames to search for project instructions. All matches loaded with scope labels. Empty list disables bootstrap.",
     "enabled": true,
     "__comment_enabled": "Set to false to disable bootstrap context loading entirely"
   },
@@ -63,27 +63,46 @@
       "system_prompt": "You are a helpful AI assistant with web search. Be concise. Cite sources as markdown links.",
       "__comment_system_prompt": "Per-provider system prompt override (v1.13.6+)",
       "generation_params": {
-        "temperature": 0.3,
+        "temperature": 0.2,
         "top_p": 0.9,
-        "frequency_penalty": 0.1
+        "frequency_penalty": 0.15,
+        "__comment": "Benchmark-optimized params (v1.15.3). CRITICAL: Perplexity API does NOT support both presence_penalty and frequency_penalty - use only frequency_penalty."
       },
       "models": {
         "sonar": {
           "name": "Sonar",
-          "description": "Lightweight search model with real-time grounding"
+          "description": "Lightweight search model with real-time grounding",
+          "__comment_best_for": "Quick file operations, simple edits, list/read tasks, directory navigation",
+          "generation_params": {
+            "temperature": 0.1,
+            "top_p": 0.85,
+            "max_tokens": 2048,
+            "frequency_penalty": 0.2
+          }
         },
         "sonar-pro": {
           "name": "Sonar Pro",
           "description": "Advanced search model for complex queries",
-          "context_limit": 200000
+          "context_limit": 200000,
+          "__comment_best_for": "Complex refactoring, multi-file changes, architecture decisions, code review, debugging. Best all-around model for agentic coding tasks (73.4% benchmark)."
         },
         "sonar-reasoning-pro": {
           "name": "Sonar Reasoning Pro",
-          "description": "Precision reasoning with Chain of Thought capabilities"
+          "description": "Precision reasoning with Chain of Thought capabilities (DeepSeek-R1)",
+          "__comment_best_for": "Algorithm design, bug root cause analysis, test generation, complex logic",
+          "__comment_warning": "Poor tool calling (50% benchmark) and code editing (28.6%) - avoid for agentic tasks that require direct tool execution",
+          "generation_params": {
+            "temperature": 0.2,
+            "top_p": 0.9,
+            "max_tokens": 12288,
+            "frequency_penalty": 0.15
+          }
         },
         "sonar-deep-research": {
           "name": "Sonar Deep Research",
-          "description": "Exhaustive research with comprehensive reports"
+          "description": "Exhaustive research with comprehensive reports (Async Jobs API)",
+          "__comment_best_for": "Comprehensive documentation, multi-step research, technical writing",
+          "__comment_note": "Uses Jobs API with reasoning_effort parameter (low/medium/high), not chat completions"
         }
       },
       "pricing": {
@@ -96,15 +115,18 @@
         "web_search": true,
         "web_fetch": true,
         "weather": true,
-        "realtime_info": true
+        "realtime_info": true,
+        "native_tool_calling": false,
+        "__comment_native_tool_calling": "Perplexity Sonar models do NOT support native function calling - ppxai uses prompt-based tool calling as fallback"
       }
     },
     "gemini": {
       "name": "Google Gemini",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
       "api_key_env": "GEMINI_API_KEY",
-      "default_model": "gemini-2.5-flash",
-      "coding_model": "gemini-2.5-pro",
+      "default_model": "gemini-3-flash-preview",
+      "coding_model": "gemini-3-flash-preview",
+      "__comment_benchmark": "Benchmark results (v1.15.3): gemini-3-flash-preview achieved 100% quality score with refined hints. Best model for code editing.",
       "options": {
         "enable_grounding": true,
         "__comment_enable_grounding": "Enable Google Search Grounding for native web search (default: true)"
@@ -126,8 +148,9 @@
         },
         "gemini-2.5-flash": {
           "name": "Gemini 2.5 Flash",
-          "description": "Latest fast model, best price/performance",
-          "context_limit": 1000000
+          "description": "Latest fast model, best price/performance. 71.4% code editing quality with aggressive hints.",
+          "context_limit": 1000000,
+          "__comment_best_for": "Good alternative if gemini-3-flash-preview unavailable. Requires aggressive AGENTS.md hints."
         },
         "gemini-2.5-pro": {
           "name": "Gemini 2.5 Pro",
@@ -141,8 +164,9 @@
         },
         "gemini-3-flash-preview": {
           "name": "Gemini 3 Flash Preview",
-          "description": "Speed-optimized preview with frontier intelligence and 1M context",
-          "context_limit": 1000000
+          "description": "Speed-optimized preview with frontier intelligence and 1M context. RECOMMENDED: Best code editing quality (100% benchmark).",
+          "context_limit": 1000000,
+          "__comment_best_for": "Code editing, refactoring, debugging. Achieved 100% quality score with balanced AGENTS.md hints."
         },
         "gemini-3-pro-preview": {
           "name": "Gemini 3 Pro Preview",
@@ -163,7 +187,9 @@
         "web_search": true,
         "web_fetch": false,
         "weather": false,
-        "realtime_info": false
+        "realtime_info": false,
+        "native_tool_calling": true,
+        "__comment_native_tool_calling": "Gemini 2.5+ supports native function calling via OpenAI-compatible API"
       }
     },
     "openai": {
@@ -326,6 +352,8 @@
           "description": "GPT-OSS 120B model with native tool calling via vLLM",
           "context_limit": 131072,
           "__comment_context_limit": "vLLM requires power of 2. Model supports ~120K, rounded up to 2^17=131072",
+          "max_tokens": 8192,
+          "__comment_max_tokens": "Max output tokens. Set explicitly to prevent truncated tool calls (v1.15.2+)",
           "generation_params": {
             "temperature": 0.3,
             "top_p": 0.9,
@@ -366,17 +394,20 @@
         "qwen2.5-coder:3b": {
           "name": "Qwen2.5 Coder 3B",
           "description": "Best coding model: 3.38GB VRAM, 75% tool accuracy, ~60 tok/s (recommended)",
-          "context_length": 32768
+          "context_limit": 32768,
+          "max_tokens": 4096
         },
         "qwen2.5:3b": {
           "name": "Qwen2.5 3B General",
           "description": "Highest tool accuracy: 3.38GB VRAM, 79.2% tool accuracy, better reasoning",
-          "context_length": 32768
+          "context_limit": 32768,
+          "max_tokens": 4096
         },
         "qwen2.5-coder:0.5b": {
           "name": "Qwen2.5 Coder 0.5B",
           "description": "Fast router: 1.44GB VRAM, 70.8% tool accuracy, 448ms latency",
-          "context_length": 32768
+          "context_limit": 32768,
+          "max_tokens": 2048
         }
       },
       "pricing": {
@@ -419,6 +450,8 @@
       }
     },
     "shell": {
+      "timeout": 120,
+      "__comment_timeout": "Shell command timeout in seconds (default: 30). Increase for long-running commands like pip install.",
       "require_consent": true,
       "dangerous_commands": [
         "^rm\\s+",
@@ -474,6 +507,17 @@
       "__comment_checkpoint_backend": "Checkpoint backend: 'auto' (detect git), 'git' (git-only), 'file' (file snapshots), 'none' (disabled)",
       "checkpoint_message": "ppxai checkpoint: {task}",
       "__comment_checkpoint_message": "Git commit message template ({task} is replaced with task description)"
+    },
+    "container": {
+      "__comment": "Container tool configuration (v1.15.0+)",
+      "enabled": true,
+      "__comment_enabled": "Enable container tools (Docker/Podman)",
+      "require_consent": true,
+      "__comment_require_consent": "Require user approval before container operations",
+      "default_runtime": "auto",
+      "__comment_default_runtime": "Container runtime: 'auto' (detect), 'docker', 'podman'",
+      "timeout": 60,
+      "__comment_timeout": "Container command timeout in seconds"
     },
     "web_search": {
       "__comment": "Premium web search configuration (v1.13.4+)",

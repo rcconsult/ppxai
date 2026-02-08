@@ -1,10 +1,10 @@
 # Release Plan: v1.15.x Series
 
 **Created:** January 24, 2026
-**Last Updated:** February 5, 2026
-**Status:** ✅ v1.15.0 RELEASED, ✅ v1.15.1 RELEASED, ⏳ v1.15.2 IN PROGRESS
-**Branch:** feature/1-15-2
-**Tests:** 1105 passing
+**Last Updated:** February 7, 2026
+**Status:** ✅ v1.15.0 RELEASED, ✅ v1.15.1 RELEASED, ✅ v1.15.2 RELEASED, ⏳ v1.15.3 IN PROGRESS
+**Branch:** bugfix/v1.15.3
+**Tests:** 1157 passing
 
 ---
 
@@ -42,6 +42,13 @@ The v1.15.x series introduces `ppxaide` - a new terminal UI built on the Textual
 - LLM benchmark suite (6 categories, 21+ test cases)
 - Generation params support for Gemini and Perplexity
 - Streaming cancellation and graceful Ctrl+C handling
+
+**v1.15.3** - Config hot-reload and stale cache fix:
+- `/model` and `/provider` commands auto-reload config from disk before listing
+- `EngineClient.reload_config()` refreshes cached `_providers_config`, shell/agent config
+- Session restore reloads config in all 3 clients (Textual, Rich, HTTP server)
+- HTTP and JSON-RPC server endpoints reload config before listing/switching providers/models
+- Root cause: ConfigStore singleton + EngineClient snapshot = stale config (since v1.8.0)
 
 **Philosophy:** Validate the new Textual framework thoroughly before connecting to the proven engine layer.
 The engine is already battle-tested in Rich TUI, Web App, and VSCode. What's new is the UI.
@@ -400,6 +407,57 @@ All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tu
 - [x] Generation parameters support
 - [x] Markdown rendering in chat
 - [x] Thinking indicators
+
+---
+
+## v1.15.2 - Validation, Robustness & Benchmarks ✅
+
+**Released:** 2026-02-06
+**Branch:** feature/1-15-2
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Response validation** | Detects LLM hallucinations and tool result contradictions | ✅ Done |
+| **Unicode whitespace** | 5-level fuzzy matching in `apply_patch` for NBSP, NNBSP, thin spaces | ✅ Done |
+| **Truncated tool call detection** | Detects "I'll use X tool" with incomplete JSON, auto-retries | ✅ Done |
+| **`/terminal` command** | Terminal detection and image protocol config help | ✅ Done |
+| **iTerm2 image protocol** | Native inline image support for WezTerm | ✅ Done |
+| **LLM benchmark suite** | 6 categories, 21+ test cases for agentic coding evaluation | ✅ Done |
+| **Generation params** | Gemini and Perplexity load temperature/top_p from config | ✅ Done |
+| **Streaming cancellation** | Graceful Ctrl+C during streaming in ppxaide | ✅ Done |
+| **VSCode display_file** | Fixed missing EventBus event for display_file tool | ✅ Done |
+| **Gemini native tool calling** | function_declarations format with grounding fallback | ✅ Done |
+
+---
+
+## v1.15.3 - Config Hot-Reload Fix & File Navigation ⏳
+
+**Status:** In Progress
+**Branch:** bugfix/v1.15.3
+
+### Config Hot-Reload (Done)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Config auto-reload** | `/model` and `/provider` commands reload config from disk | ✅ Done |
+| **`EngineClient.reload_config()`** | Single entry point to refresh all cached config data | ✅ Done |
+| **Session restore reload** | All 3 clients reload config before restoring sessions | ✅ Done |
+| **Server endpoint reload** | HTTP + JSON-RPC endpoints reload before listing/switching | ✅ Done |
+| **Root cause** | ConfigStore singleton + EngineClient snapshot = stale config (since v1.8.0) | ✅ Identified |
+
+**Root Cause:** `EngineClient._load_config()` captures `self._providers_config = PROVIDERS` at init time. When config file is edited externally (e.g., adding new models), the cached dict goes stale. `reload_config()` now refreshes ConfigStore + all cached config snapshots.
+
+**Tech Debt Note:** The `__getattr__` lazy loading pattern in `config/__init__.py` still exists. Proper DAG-based initialization planned for v1.16.0.
+
+### File Navigation (Planned)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **`/ls [path]`** | List files and directories (all clients) | ⏳ Planned |
+| **`/tree [depth]`** | Render directory tree structure (all clients) | ⏳ Planned |
+| **ppxaide file tree sidebar** | NvChad-inspired interactive file tree (Textual DirectoryTree) | ⏳ Planned |
+
+**Spec:** See [TODO-v1.16.0.md](../TODO-v1.16.0.md) (Phase 0: commands ~2 days, Phase 1: ppxaide sidebar ~5 days).
 
 ---
 

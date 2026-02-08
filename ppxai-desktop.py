@@ -16,7 +16,7 @@ import webbrowser
 from pathlib import Path
 
 # Version - keep in sync with ppxai/__init__.py
-__version__ = "1.14.1"
+__version__ = "1.15.3"
 
 
 def get_resource_path(relative_path: str) -> Path:
@@ -70,8 +70,8 @@ def find_server_binary() -> Path | None:
             except Exception:
                 pass
 
-    # Default locations (fallback if no config)
-    default_locations = [
+    # Default locations (fallback if no config) - platform-aware (v1.15.3)
+    all_default_locations = [
         # Primary: ~/.ppxai/bin/ (v1.13.2)
         Path.home() / '.ppxai' / 'bin' / binary_name,
         # Same directory as this script/binary
@@ -80,14 +80,22 @@ def find_server_binary() -> Path | None:
         Path.home() / '.local' / 'bin' / binary_name,
         # User bin
         Path.home() / 'bin' / binary_name,
-        # System paths
+        # System paths (Unix only)
         Path('/usr/local/bin') / binary_name,
         Path('/usr/bin') / binary_name,
-        # Windows AppData
+        # Windows AppData (Windows only)
         Path.home() / 'AppData' / 'Local' / 'ppxai' / binary_name,
     ]
 
-    # Check config paths first, then defaults
+    # Filter platform-specific paths for efficiency
+    if sys.platform == 'win32':
+        # Windows: Skip Unix system paths
+        default_locations = [p for p in all_default_locations if not str(p).startswith('/usr')]
+    else:
+        # Unix/macOS/Linux: Skip Windows AppData
+        default_locations = [p for p in all_default_locations if 'AppData' not in str(p)]
+
+    # Check config paths first, then filtered defaults
     for loc in config_paths + default_locations:
         if loc.exists():
             return loc

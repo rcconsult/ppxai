@@ -596,6 +596,11 @@ async def reload_config_endpoint():
     This allows hot-reloading of provider prompts, settings, and other
     configuration changes from ppxai-config.json.
 
+    Note: This updates PROVIDERS/MODELS module-level dicts in-place (v1.15.3),
+    so all engine clients will see fresh provider data immediately via the
+    providers_config property. Individual sessions' shell/agent configs remain
+    cached until the session explicitly calls engine.reload_config().
+
     Returns:
         success: Whether reload succeeded
         message: Status message
@@ -604,7 +609,7 @@ async def reload_config_endpoint():
     from ..config import reload_config, find_config_file
 
     try:
-        reload_config()
+        reload_config()  # Updates PROVIDERS/MODELS in place via initialize()
         config_path = find_config_file()
         logger.info(f"Configuration reloaded from {config_path}")
         return {
@@ -761,6 +766,9 @@ async def get_providers(x_session_id: Optional[str] = Header(None)):
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
+    # Reload config to pick up external changes (e.g., new providers added)
+    engine.reload_config()
+
     providers = engine.list_providers()
     return {
         "providers": [
@@ -792,6 +800,9 @@ async def set_provider(
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
+    # Reload config to pick up external changes before switching
+    engine.reload_config()
+
     success = engine.set_provider(request.provider)
     if not success:
         raise HTTPException(status_code=400, detail=f"Failed to set provider: {request.provider}")
@@ -813,6 +824,9 @@ async def get_models(x_session_id: Optional[str] = Header(None)):
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
+
+    # Reload config to pick up external changes (e.g., new models added)
+    engine.reload_config()
 
     models = engine.list_models()
     return {
@@ -839,6 +853,9 @@ async def set_model(
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
+
+    # Reload config to pick up external changes before switching
+    engine.reload_config()
 
     success = engine.set_model(request.model)
     if not success:
@@ -1432,6 +1449,9 @@ async def restore_last_session(x_session_id: Optional[str] = Header(None)):
         raise HTTPException(status_code=404, detail="No last session found")
 
     session_name = state["name"]
+
+    # Reload config from disk to pick up any external changes since last run
+    engine.reload_config()
 
     # Load the session
     success = engine.session.load(session_name)

@@ -571,6 +571,9 @@ def restore_session_to_handler(handler: CommandHandler, session_state: dict) -> 
     if not session_name:
         return False
 
+    # Reload config from disk to pick up any external changes since last run
+    handler.engine_client.reload_config()
+
     # Load the session
     if not handler.engine_client.session.load_with_extras(session_name):
         console.print(f"[red]Failed to load session: {session_name}[/red]")

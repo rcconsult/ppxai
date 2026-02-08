@@ -195,6 +195,7 @@ class Events:
     ENGINE_REASONING_CHUNK = "engine:reasoning_chunk"  # DeepSeek R1, GPT-OSS thinking
     ENGINE_STREAM_END = "engine:stream_end"
     ENGINE_ERROR = "engine:error"
+    ENGINE_WARNING = "engine:warning"  # Validation warnings (v1.15.3)
     ENGINE_INFO = "engine:info"
     ENGINE_TOOL_CALL = "engine:tool_call"
     ENGINE_TOOL_RESULT = "engine:tool_result"

@@ -1,29 +1,31 @@
 # LLM Agentic Coding Assistant Benchmark Suite
 
-A standalone benchmark suite for evaluating LLM models on capabilities critical for coding assistants.
+A benchmark suite for evaluating LLM models on capabilities critical for coding assistants.
+Uses **ppxai Engine** for consistent tool handling across all providers.
 
 ## Features
 
 - **6 Test Categories**: Tool calling, code editing, format compliance, instruction following, reasoning, error recovery
-- **21 Test Cases**: Targeting real-world agentic coding scenarios
+- **26 Test Cases**: Targeting real-world agentic coding scenarios
+- **Engine-Based**: Uses ppxai's EngineClient for automatic tool registration
 - **Historical Tracking**: Results stored per provider/model pair
 - **Ranking System**: Compare across runs and models
-- **GPT-OSS Specific Tests**: Tests for known failure modes (truncation, "I'll use X tool" pattern)
+- **Multi-Provider**: Supports Perplexity, Gemini, OpenAI, OpenRouter, vLLM, Ollama, and custom providers
 
 ## Quick Start
 
 ```bash
-# Install dependencies
-pip install openai
+# Run against Perplexity
+python benchmark.py --provider perplexity --model sonar-pro
+
+# Run against Gemini
+python benchmark.py --provider gemini --model gemini-2.5-flash
 
 # Run against OpenAI
 python benchmark.py --provider openai --model gpt-4o
 
-# Run against local vLLM
-python benchmark.py --provider vllm --model openai/gpt-oss-120b --base-url http://localhost:8000/v1
-
-# Run against Ollama
-python benchmark.py --provider ollama --model llama3.1:70b
+# Run against custom provider (vLLM, Ollama, etc.)
+python benchmark.py --provider custom --model openai/gpt-oss-120b
 ```
 
 ## Test Categories
@@ -73,16 +75,16 @@ Tests failure handling:
 
 ```bash
 # Full benchmark
-python benchmark.py --provider openai --model gpt-4o
+python benchmark.py --provider perplexity --model sonar-pro
 
 # Specific categories only
-python benchmark.py --provider openai --model gpt-4o --categories tool_calling,code_editing
+python benchmark.py --provider gemini --model gemini-2.5-flash --categories tool_calling,code_editing
 
 # With verbose output (shows error details)
 python benchmark.py --provider openai --model gpt-4o -v
 
 # Custom timeout and retries
-python benchmark.py --provider vllm --model gpt-oss-120b --timeout 120 --retries 2
+python benchmark.py --provider custom --model openai/gpt-oss-120b --timeout 120 --retries 2
 ```
 
 ### View Results

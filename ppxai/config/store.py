@@ -117,5 +117,9 @@ def get_config() -> Dict[str, Any]:
 
 
 def reload_config() -> Dict[str, Any]:
-    """Reload configuration from disk."""
-    return ConfigStore.get_instance().reload()
+    """Reload configuration from disk and refresh module-level attributes."""
+    result = ConfigStore.get_instance().reload()
+    # Re-populate PROVIDERS/MODELS from fresh config
+    from . import initialize
+    initialize()
+    return result

@@ -134,15 +134,33 @@ class EngineClient:
     def _load_config(self):
         """Load configuration from ppxai-config.json and .env."""
         # Store references to config functions for provider management
-        self._providers_config = PROVIDERS
         self._get_api_key = get_api_key
         self._get_base_url = get_base_url
-        self._get_default_model = get_default_model
-        self._default_provider = get_default_provider()
 
         # Use centralized config functions with defaults from config/defaults.py
         self._shell_config = get_shell_config()
         self._agent_config = get_agent_config()
+
+    def reload_config(self):
+        """Reload configuration from disk and refresh engine state.
+
+        Reloads the ConfigStore from disk, which also updates module-level
+        PROVIDERS/MODELS in-place. Then refreshes shell and agent configs.
+        """
+        from ..config import reload_config as _reload_config
+        _reload_config()  # Updates PROVIDERS/MODELS in place via initialize()
+        self._shell_config = get_shell_config()
+        self._agent_config = get_agent_config()
+
+    @property
+    def providers_config(self) -> dict:
+        """Always returns current providers from config module.
+
+        No caching - reads fresh PROVIDERS dict which is updated in-place
+        by config.reload_config() -> initialize().
+        """
+        from ..config import PROVIDERS
+        return PROVIDERS
 
     # === Context Injection ===
 
@@ -176,6 +194,12 @@ class EngineClient:
         Args:
             path: Working directory path
         """
+        # Check if directory actually changed to avoid duplicate events (v1.15.3)
+        current_dir = self.get_working_dir()
+        if current_dir and Path(current_dir).resolve() == Path(path).resolve():
+            logger.debug(f"Working directory unchanged: {path}")
+            return
+
         self.context_injector.set_working_dir(path)
         self.session.set_working_dir(path)  # Also update session for persistence
         self._init_checkpoint_manager(path)
@@ -189,7 +213,7 @@ class EngineClient:
             backend=checkpoint_backend
         )
 
-        # Emit working directory change event (v1.13.2)
+        # Emit working directory change event only if directory actually changed (v1.13.2, v1.15.3)
         # This event will be picked up by SSE stream and sent to clients
         self._consent_event_queue.append(Event(
             type=EventType.WORKING_DIR_CHANGED,
@@ -396,7 +420,7 @@ class EngineClient:
         Returns:
             True if provider was set successfully
         """
-        if provider_name not in self._providers_config:
+        if provider_name not in self.providers_config:
             return False
 
         api_key = self._get_api_key(provider_name)
@@ -404,7 +428,7 @@ class EngineClient:
             return False
 
         base_url = self._get_base_url(provider_name)
-        provider_config = self._providers_config[provider_name]
+        provider_config = self.providers_config[provider_name]
 
         # Parse capabilities from config
         caps_dict = provider_config.get("capabilities", {})
@@ -473,7 +497,7 @@ class EngineClient:
             List of ProviderInfo objects
         """
         providers = []
-        for provider_id, config in self._providers_config.items():
+        for provider_id, config in self.providers_config.items():
             has_key = bool(self._get_api_key(provider_id))
             caps_dict = config.get("capabilities", {})
 
@@ -546,14 +570,8 @@ class EngineClient:
                 f"Model switch to '{model_id}': "
                 f"{model_count} model hints (matched: {patterns})"
             )
-        else:
-            # Log available patterns when no match
-            available = hints_info["all_model_patterns"]
-            if available:
-                logger.debug(
-                    f"Model switch to '{model_id}': "
-                    f"no model hints matched (available patterns: {available})"
-                )
+        # No logging when no hints matched - reduces noise in logs
+        # Available patterns can be seen via /context show command
 
     def list_models(self) -> List[ModelInfo]:
         """List available models for current provider.

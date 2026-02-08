@@ -5527,6 +5527,1642 @@
           "iteration": 3
         }
       ]
+    },
+    {
+      "timestamp": "2026-02-06T18:15:39.045438",
+      "version": "1.15.2",
+      "git_commit": "790fedc",
+      "git_branch": "master",
+      "provider": "asusai",
+      "model": "sonar-pro",
+      "summary": {
+        "error": "No valid results"
+      },
+      "detailed_results": [
+        {
+          "prompt_type": "simple",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 2,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 3,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 2,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 3,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 2,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 3,
+          "error": "API Error: No provider configured"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-06T18:16:14.918291",
+      "version": "1.15.2",
+      "git_commit": "790fedc",
+      "git_branch": "master",
+      "provider": "custom",
+      "model": "meta-llama/Llama-3.1-70B-Instruct",
+      "summary": {
+        "error": "No valid results"
+      },
+      "detailed_results": [
+        {
+          "prompt_type": "simple",
+          "iteration": 1,
+          "error": "API Error: Connection failed: Unable to reach the server."
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 2,
+          "error": "API Error: Connection failed: Unable to reach the server."
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 3,
+          "error": "API Error: Connection failed: Unable to reach the server."
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 1,
+          "error": "API Error: Connection failed: Unable to reach the server."
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 2,
+          "error": "API Error: Connection failed: Unable to reach the server."
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 3,
+          "error": "API Error: Connection failed: Unable to reach the server."
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 1,
+          "error": "API Error: Connection failed: Unable to reach the server."
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 2,
+          "error": "API Error: Connection failed: Unable to reach the server."
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 3,
+          "error": "API Error: Connection failed: Unable to reach the server."
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-06T18:21:46.637399",
+      "version": "1.15.2",
+      "git_commit": "790fedc",
+      "git_branch": "master",
+      "provider": "asusai",
+      "model": "sonar-pro",
+      "summary": {
+        "error": "No valid results"
+      },
+      "detailed_results": [
+        {
+          "prompt_type": "simple",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 2,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 3,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 2,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 3,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 2,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 3,
+          "error": "API Error: No provider configured"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-06T18:22:22.107865",
+      "version": "1.15.2",
+      "git_commit": "790fedc",
+      "git_branch": "master",
+      "provider": "custom",
+      "model": "meta-llama/Llama-3.1-70B-Instruct",
+      "summary": {
+        "error": "No valid results"
+      },
+      "detailed_results": [
+        {
+          "prompt_type": "simple",
+          "iteration": 1,
+          "error": "API Error: Connection failed: Unable to reach the server."
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 2,
+          "error": "API Error: Connection failed: Unable to reach the server."
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 3,
+          "error": "API Error: Connection failed: Unable to reach the server."
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 1,
+          "error": "API Error: Connection failed: Unable to reach the server."
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 2,
+          "error": "API Error: Connection failed: Unable to reach the server."
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 3,
+          "error": "API Error: Connection failed: Unable to reach the server."
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 1,
+          "error": "API Error: Connection failed: Unable to reach the server."
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 2,
+          "error": "API Error: Connection failed: Unable to reach the server."
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 3,
+          "error": "API Error: Connection failed: Unable to reach the server."
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-06T18:29:22.367598",
+      "version": "1.15.2",
+      "git_commit": "unknown",
+      "git_branch": "unknown",
+      "provider": "asusai",
+      "model": "sonar-pro",
+      "summary": {
+        "error": "No valid results"
+      },
+      "detailed_results": [
+        {
+          "prompt_type": "simple",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-06T18:30:12.523804",
+      "version": "1.15.2",
+      "git_commit": "790fedc",
+      "git_branch": "master",
+      "provider": "asusai",
+      "model": "sonar-pro",
+      "summary": {
+        "error": "No valid results"
+      },
+      "detailed_results": [
+        {
+          "prompt_type": "simple",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-06T18:31:32.620767",
+      "version": "1.15.2",
+      "git_commit": "790fedc",
+      "git_branch": "master",
+      "provider": "custom",
+      "model": "openai/gpt-oss-120b",
+      "summary": {
+        "total_runs": 9,
+        "successful_runs": 9,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 432.57,
+          "min": 290.56,
+          "max": 528.82,
+          "stdev": 77.34
+        },
+        "total_ms": {
+          "mean": 2027.97,
+          "min": 350.05,
+          "max": 4817.45,
+          "stdev": 1944.64
+        },
+        "tokens_per_sec": {
+          "mean": 83.4,
+          "min": 10.55,
+          "max": 138.04
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 512.81,
+          "total_ms": 568.84,
+          "tokens": 6,
+          "tokens_per_sec": 10.55,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 290.56,
+          "total_ms": 350.05,
+          "tokens": 6,
+          "tokens_per_sec": 17.14,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 356.85,
+          "total_ms": 406.73,
+          "tokens": 6,
+          "tokens_per_sec": 14.75,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 528.82,
+          "total_ms": 1138.36,
+          "tokens": 112,
+          "tokens_per_sec": 98.39,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 508.34,
+          "total_ms": 1129.31,
+          "tokens": 114,
+          "tokens_per_sec": 100.95,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 417.32,
+          "total_ms": 887.68,
+          "tokens": 85,
+          "tokens_per_sec": 95.76,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 434.98,
+          "total_ms": 4415.64,
+          "tokens": 606,
+          "tokens_per_sec": 137.24,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 417.28,
+          "total_ms": 4537.67,
+          "tokens": 625,
+          "tokens_per_sec": 137.74,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 426.15,
+          "total_ms": 4817.45,
+          "tokens": 665,
+          "tokens_per_sec": 138.04,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-06T18:39:09.931944",
+      "version": "1.15.2",
+      "git_commit": "790fedc",
+      "git_branch": "master",
+      "provider": "asusai",
+      "model": "qwen2.5-coder:32b",
+      "summary": {
+        "total_runs": 9,
+        "successful_runs": 9,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 7849.03,
+          "min": 726.43,
+          "max": 14959.0,
+          "stdev": 4804.39
+        },
+        "total_ms": {
+          "mean": 28282.2,
+          "min": 1476.1,
+          "max": 59807.43,
+          "stdev": 21275.66
+        },
+        "tokens_per_sec": {
+          "mean": 6.27,
+          "min": 3.26,
+          "max": 8.36
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 726.43,
+          "total_ms": 1476.1,
+          "tokens": 6,
+          "tokens_per_sec": 4.06,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 12094.02,
+          "total_ms": 18667.3,
+          "tokens": 68,
+          "tokens_per_sec": 3.64,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 14959.0,
+          "total_ms": 21808.66,
+          "tokens": 71,
+          "tokens_per_sec": 3.26,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 2887.3,
+          "total_ms": 12738.5,
+          "tokens": 105,
+          "tokens_per_sec": 8.24,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 2838.69,
+          "total_ms": 13158.32,
+          "tokens": 110,
+          "tokens_per_sec": 8.36,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 10047.13,
+          "total_ms": 20847.05,
+          "tokens": 115,
+          "tokens_per_sec": 5.52,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 8735.14,
+          "total_ms": 59807.43,
+          "tokens": 481,
+          "tokens_per_sec": 8.04,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 10978.12,
+          "total_ms": 56561.38,
+          "tokens": 438,
+          "tokens_per_sec": 7.74,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 7375.41,
+          "total_ms": 49475.06,
+          "tokens": 376,
+          "tokens_per_sec": 7.6,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-06T18:58:30.621355",
+      "version": "1.15.2",
+      "git_commit": "790fedc",
+      "git_branch": "master",
+      "provider": "asusai",
+      "model": "qwen3:30b-a3b",
+      "summary": {
+        "total_runs": 9,
+        "successful_runs": 9,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 6969.71,
+          "min": 3006.1,
+          "max": 19657.45,
+          "stdev": 5374.13
+        },
+        "total_ms": {
+          "mean": 10224.98,
+          "min": 4617.9,
+          "max": 26809.62,
+          "stdev": 7357.09
+        },
+        "tokens_per_sec": {
+          "mean": 22.59,
+          "min": 6.95,
+          "max": 47.78
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 4317.29,
+          "total_ms": 6127.21,
+          "tokens": 139,
+          "tokens_per_sec": 22.69,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 5598.69,
+          "total_ms": 6188.14,
+          "tokens": 43,
+          "tokens_per_sec": 6.95,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 6248.69,
+          "total_ms": 8099.1,
+          "tokens": 141,
+          "tokens_per_sec": 17.41,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 4418.8,
+          "total_ms": 5978.14,
+          "tokens": 127,
+          "tokens_per_sec": 21.24,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 3098.07,
+          "total_ms": 4617.9,
+          "tokens": 124,
+          "tokens_per_sec": 26.85,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 4993.86,
+          "total_ms": 6569.16,
+          "tokens": 127,
+          "tokens_per_sec": 19.33,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 3006.1,
+          "total_ms": 9836.57,
+          "tokens": 470,
+          "tokens_per_sec": 47.78,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 11388.47,
+          "total_ms": 17798.97,
+          "tokens": 424,
+          "tokens_per_sec": 23.82,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 19657.45,
+          "total_ms": 26809.62,
+          "tokens": 462,
+          "tokens_per_sec": 17.23,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-06T19:02:19.553530",
+      "version": "1.15.2",
+      "git_commit": "790fedc",
+      "git_branch": "master",
+      "provider": "asusai",
+      "model": "qwen2.5-coder:32b-64k",
+      "summary": {
+        "total_runs": 9,
+        "successful_runs": 9,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 1300.37,
+          "min": 208.81,
+          "max": 9632.58,
+          "stdev": 3124.72
+        },
+        "total_ms": {
+          "mean": 23858.19,
+          "min": 2438.23,
+          "max": 56835.57,
+          "stdev": 23287.37
+        },
+        "tokens_per_sec": {
+          "mean": 8.56,
+          "min": 0.58,
+          "max": 10.41
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 9632.58,
+          "total_ms": 10408.07,
+          "tokens": 6,
+          "tokens_per_sec": 0.58,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 258.12,
+          "total_ms": 2438.23,
+          "tokens": 21,
+          "tokens_per_sec": 8.61,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 298.03,
+          "total_ms": 5400.35,
+          "tokens": 52,
+          "tokens_per_sec": 9.63,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 306.22,
+          "total_ms": 11076.59,
+          "tokens": 114,
+          "tokens_per_sec": 10.29,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 258.42,
+          "total_ms": 10648.09,
+          "tokens": 110,
+          "tokens_per_sec": 10.33,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 208.81,
+          "total_ms": 10851.04,
+          "tokens": 113,
+          "tokens_per_sec": 10.41,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 267.17,
+          "total_ms": 56835.57,
+          "tokens": 520,
+          "tokens_per_sec": 9.15,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 239.17,
+          "total_ms": 52470.84,
+          "tokens": 470,
+          "tokens_per_sec": 8.96,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 234.84,
+          "total_ms": 54594.94,
+          "tokens": 495,
+          "tokens_per_sec": 9.07,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-06T19:05:07.478239",
+      "version": "1.15.2",
+      "git_commit": "790fedc",
+      "git_branch": "master",
+      "provider": "asusai",
+      "model": "qwen3:30b-a3b-96k",
+      "summary": {
+        "total_runs": 9,
+        "successful_runs": 9,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 7910.3,
+          "min": 3687.81,
+          "max": 18590.37,
+          "stdev": 4710.31
+        },
+        "total_ms": {
+          "mean": 11121.98,
+          "min": 5154.64,
+          "max": 25219.52,
+          "stdev": 6645.86
+        },
+        "tokens_per_sec": {
+          "mean": 20.21,
+          "min": 11.08,
+          "max": 32.58
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 10018.56,
+          "total_ms": 11729.69,
+          "tokens": 130,
+          "tokens_per_sec": 11.08,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 6991.33,
+          "total_ms": 8192.58,
+          "tokens": 92,
+          "tokens_per_sec": 11.23,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 5695.72,
+          "total_ms": 8246.94,
+          "tokens": 200,
+          "tokens_per_sec": 24.25,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 4688.87,
+          "total_ms": 6027.65,
+          "tokens": 119,
+          "tokens_per_sec": 19.74,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 4034.33,
+          "total_ms": 5154.64,
+          "tokens": 91,
+          "tokens_per_sec": 17.65,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 3687.81,
+          "total_ms": 5225.95,
+          "tokens": 124,
+          "tokens_per_sec": 23.73,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 18590.37,
+          "total_ms": 25219.52,
+          "tokens": 433,
+          "tokens_per_sec": 17.17,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 6666.54,
+          "total_ms": 13076.63,
+          "tokens": 426,
+          "tokens_per_sec": 32.58,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 10819.15,
+          "total_ms": 17224.2,
+          "tokens": 422,
+          "tokens_per_sec": 24.5,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-06T20:57:18.018545",
+      "version": "1.15.2",
+      "git_commit": "790fedc",
+      "git_branch": "master",
+      "provider": "asusai-vllm",
+      "model": "RedHatAI/Qwen3-30B-A3B-FP8-dynamic",
+      "summary": {
+        "total_runs": 9,
+        "successful_runs": 9,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 174.8,
+          "min": 113.37,
+          "max": 448.77,
+          "stdev": 103.92
+        },
+        "total_ms": {
+          "mean": 20760.47,
+          "min": 5485.81,
+          "max": 54716.33,
+          "stdev": 19870.05
+        },
+        "tokens_per_sec": {
+          "mean": 45.12,
+          "min": 42.49,
+          "max": 47.33
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 448.77,
+          "total_ms": 10263.98,
+          "tokens": 459,
+          "tokens_per_sec": 44.72,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 127.45,
+          "total_ms": 6230.28,
+          "tokens": 278,
+          "tokens_per_sec": 44.62,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 113.37,
+          "total_ms": 5485.81,
+          "tokens": 251,
+          "tokens_per_sec": 45.75,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 167.33,
+          "total_ms": 8567.21,
+          "tokens": 400,
+          "tokens_per_sec": 46.69,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 148.87,
+          "total_ms": 8009.59,
+          "tokens": 379,
+          "tokens_per_sec": 47.32,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 147.15,
+          "total_ms": 8346.12,
+          "tokens": 395,
+          "tokens_per_sec": 47.33,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 151.3,
+          "total_ms": 54716.33,
+          "tokens": 2325,
+          "tokens_per_sec": 42.49,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 130.9,
+          "total_ms": 38704.8,
+          "tokens": 1694,
+          "tokens_per_sec": 43.77,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 138.05,
+          "total_ms": 46520.07,
+          "tokens": 2017,
+          "tokens_per_sec": 43.36,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-06T22:19:09.695760",
+      "version": "1.15.2",
+      "git_commit": "790fedc",
+      "git_branch": "master",
+      "provider": "asusai-vllm",
+      "model": "RedHatAI/Qwen3-30B-A3B-FP8-dynamic",
+      "summary": {
+        "error": "No valid results"
+      },
+      "detailed_results": [
+        {
+          "prompt_type": "simple",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 2,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 3,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 2,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 3,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 2,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 3,
+          "error": "API Error: No provider configured"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-06T22:31:57.473251",
+      "version": "1.15.2",
+      "git_commit": "790fedc",
+      "git_branch": "master",
+      "provider": "asusai-vllm",
+      "model": "RedHatAI/Qwen3-30B-A3B-FP8-dynamic",
+      "summary": {
+        "total_runs": 9,
+        "successful_runs": 9,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 391.97,
+          "min": 118.3,
+          "max": 2394.27,
+          "stdev": 751.0
+        },
+        "total_ms": {
+          "mean": 23189.21,
+          "min": 7471.76,
+          "max": 58526.78,
+          "stdev": 22179.77
+        },
+        "tokens_per_sec": {
+          "mean": 44.48,
+          "min": 34.32,
+          "max": 47.82
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 2394.27,
+          "total_ms": 9382.71,
+          "tokens": 322,
+          "tokens_per_sec": 34.32,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 127.44,
+          "total_ms": 8227.05,
+          "tokens": 381,
+          "tokens_per_sec": 46.31,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 118.3,
+          "total_ms": 7471.76,
+          "tokens": 343,
+          "tokens_per_sec": 45.91,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 149.2,
+          "total_ms": 7960.98,
+          "tokens": 380,
+          "tokens_per_sec": 47.73,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 152.98,
+          "total_ms": 8044.39,
+          "tokens": 382,
+          "tokens_per_sec": 47.49,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 142.59,
+          "total_ms": 10832.74,
+          "tokens": 518,
+          "tokens_per_sec": 47.82,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 167.1,
+          "total_ms": 54857.74,
+          "tokens": 2378,
+          "tokens_per_sec": 43.35,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 145.16,
+          "total_ms": 58526.78,
+          "tokens": 2573,
+          "tokens_per_sec": 43.96,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 130.73,
+          "total_ms": 43398.76,
+          "tokens": 1884,
+          "tokens_per_sec": 43.41,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-06T23:35:40.470244",
+      "version": "1.15.2",
+      "git_commit": "790fedc",
+      "git_branch": "master",
+      "provider": "asusai-vllm",
+      "model": "RedHatAI/Llama-3.3-70B-Instruct-NVFP4",
+      "summary": {
+        "total_runs": 9,
+        "successful_runs": 9,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 534.8,
+          "min": 297.27,
+          "max": 2371.74,
+          "stdev": 688.88
+        },
+        "total_ms": {
+          "mean": 33121.75,
+          "min": 1908.87,
+          "max": 84376.2,
+          "stdev": 31712.22
+        },
+        "tokens_per_sec": {
+          "mean": 3.35,
+          "min": 1.26,
+          "max": 4.31
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 2371.74,
+          "total_ms": 3977.83,
+          "tokens": 5,
+          "tokens_per_sec": 1.26,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 297.27,
+          "total_ms": 1908.87,
+          "tokens": 5,
+          "tokens_per_sec": 2.62,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 304.29,
+          "total_ms": 1915.7,
+          "tokens": 5,
+          "tokens_per_sec": 2.61,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 308.15,
+          "total_ms": 22828.33,
+          "tokens": 98,
+          "tokens_per_sec": 4.29,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 297.46,
+          "total_ms": 25317.82,
+          "tokens": 109,
+          "tokens_per_sec": 4.31,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 302.72,
+          "total_ms": 23017.72,
+          "tokens": 99,
+          "tokens_per_sec": 4.3,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 315.61,
+          "total_ms": 84376.2,
+          "tokens": 310,
+          "tokens_per_sec": 3.67,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 307.45,
+          "total_ms": 68978.31,
+          "tokens": 246,
+          "tokens_per_sec": 3.57,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 308.48,
+          "total_ms": 65774.93,
+          "tokens": 233,
+          "tokens_per_sec": 3.54,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-07T01:01:39.208654",
+      "version": "1.15.2",
+      "git_commit": "790fedc",
+      "git_branch": "master",
+      "provider": "asusai-vllm",
+      "model": "RedHatAI/Qwen3-32B-NVFP4",
+      "summary": {
+        "total_runs": 9,
+        "successful_runs": 9,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 230.96,
+          "min": 175.66,
+          "max": 580.53,
+          "stdev": 131.71
+        },
+        "total_ms": {
+          "mean": 116815.77,
+          "min": 36349.37,
+          "max": 374063.79,
+          "stdev": 125722.27
+        },
+        "tokens_per_sec": {
+          "mean": 9.39,
+          "min": 8.87,
+          "max": 9.85
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 580.53,
+          "total_ms": 41173.83,
+          "tokens": 386,
+          "tokens_per_sec": 9.37,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 176.48,
+          "total_ms": 38416.99,
+          "tokens": 371,
+          "tokens_per_sec": 9.66,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 189.83,
+          "total_ms": 36759.14,
+          "tokens": 341,
+          "tokens_per_sec": 9.28,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 208.95,
+          "total_ms": 36349.37,
+          "tokens": 358,
+          "tokens_per_sec": 9.85,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 176.68,
+          "total_ms": 37159.01,
+          "tokens": 364,
+          "tokens_per_sec": 9.8,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 206.42,
+          "total_ms": 38857.99,
+          "tokens": 379,
+          "tokens_per_sec": 9.75,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 187.47,
+          "total_ms": 224095.55,
+          "tokens": 2001,
+          "tokens_per_sec": 8.93,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 176.66,
+          "total_ms": 224466.25,
+          "tokens": 1991,
+          "tokens_per_sec": 8.87,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 175.66,
+          "total_ms": 374063.79,
+          "tokens": 3369,
+          "tokens_per_sec": 9.01,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 3
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-02-07T01:36:54.801218",
+      "version": "1.15.3",
+      "git_commit": "b12cfe3",
+      "git_branch": "bugfix/v1.15.3",
+      "provider": "asusai-vllm",
+      "model": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "summary": {
+        "total_runs": 9,
+        "successful_runs": 9,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 174.44,
+          "min": 116.7,
+          "max": 499.24,
+          "stdev": 122.61
+        },
+        "total_ms": {
+          "mean": 5067.72,
+          "min": 996.88,
+          "max": 11309.7,
+          "stdev": 4368.6
+        },
+        "tokens_per_sec": {
+          "mean": 43.78,
+          "min": 35.03,
+          "max": 49.41
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 499.24,
+          "total_ms": 1655.89,
+          "tokens": 58,
+          "tokens_per_sec": 35.03,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 116.7,
+          "total_ms": 996.88,
+          "tokens": 43,
+          "tokens_per_sec": 43.13,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 117.94,
+          "total_ms": 998.14,
+          "tokens": 43,
+          "tokens_per_sec": 43.08,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 150.35,
+          "total_ms": 3247.5,
+          "tokens": 160,
+          "tokens_per_sec": 49.27,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 128.49,
+          "total_ms": 3238.1,
+          "tokens": 160,
+          "tokens_per_sec": 49.41,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 139.18,
+          "total_ms": 3188.78,
+          "tokens": 157,
+          "tokens_per_sec": 49.24,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 157.98,
+          "total_ms": 10548.57,
+          "tokens": 437,
+          "tokens_per_sec": 41.43,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 123.14,
+          "total_ms": 10425.92,
+          "tokens": 432,
+          "tokens_per_sec": 41.44,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 136.91,
+          "total_ms": 11309.7,
+          "tokens": 475,
+          "tokens_per_sec": 42.0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 3
+        }
+      ]
     }
   ]
 }

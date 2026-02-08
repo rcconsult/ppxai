@@ -19,6 +19,25 @@ def pytest_configure(config):
     if os.path.exists(user_env_path):
         load_dotenv(dotenv_path=user_env_path, override=True)
 
+    # Initialize config system (v1.15.3: DAG-based init)
+    from ppxai.config import initialize
+    initialize()
+
+
+@pytest.fixture(autouse=True)
+def reset_config_after_test():
+    """Reset PROVIDERS/MODELS after each test for isolation.
+
+    v1.15.3: With DAG-based init, PROVIDERS/MODELS are module-level dicts
+    that persist across tests. This fixture ensures each test starts with
+    a clean config state by re-initializing after each test.
+    """
+    yield  # Run the test
+    # After test completes, reload config to reset PROVIDERS/MODELS
+    from ppxai.config import initialize
+    initialize()
+
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     outcome = yield

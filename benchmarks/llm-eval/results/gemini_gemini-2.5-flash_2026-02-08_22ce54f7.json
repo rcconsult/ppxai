@@ -1,0 +1,88 @@
+{
+  "provider": "gemini",
+  "model": "gemini-2.5-flash",
+  "timestamp": "2026-02-08T20:03:35.937682",
+  "overall_score": 71.42857142857143,
+  "tests_passed": 2,
+  "tests_total": 3,
+  "duration_seconds": 40.99523901939392,
+  "category_scores": {
+    "code_editing": 71.42857142857143
+  },
+  "test_results": [
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": true,
+      "details": {
+        "patch_length": 144,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 0.9,
+        "anti_patterns": [
+          "duplicate_tool_calls"
+        ],
+        "quality_notes": [
+          "Model made 2 tool calls, some may be unnecessary"
+        ],
+        "overall_score": 0.75,
+        "passed": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": true,
+      "details": {
+        "patch_length": 249,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 0.9,
+        "anti_patterns": [
+          "duplicate_tool_calls"
+        ],
+        "quality_notes": [
+          "Model made 2 tool calls, some may be unnecessary"
+        ],
+        "overall_score": 0.75,
+        "passed": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "patch_length": 408,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 0.5,
+        "anti_patterns": [
+          "explained_before_tool",
+          "duplicate_tool_calls",
+          "hallucinated_tools"
+        ],
+        "quality_notes": [
+          "Model explained what it would do instead of calling tool directly",
+          "Model made 2 tool calls, some may be unnecessary",
+          "Model mentioned tools in content that weren't actually called"
+        ],
+        "overall_score": 0.050000000000000044,
+        "passed": false
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "dcb37c78eb18"
+  }
+}

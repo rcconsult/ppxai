@@ -171,6 +171,7 @@ class JsonRpcServer:
 
     def get_providers(self) -> list:
         """Get list of available providers."""
+        self.engine.reload_config()
         providers = self.engine.list_providers()
         return [
             {
@@ -183,12 +184,14 @@ class JsonRpcServer:
 
     def set_provider(self, provider: str) -> bool:
         """Switch to a different provider."""
+        self.engine.reload_config()
         return self.engine.set_provider(provider)
 
     # === Model Methods ===
 
     def get_models(self) -> list:
         """Get list of models for current provider."""
+        self.engine.reload_config()
         models = self.engine.list_models()
         return [
             {
@@ -201,6 +204,7 @@ class JsonRpcServer:
 
     def set_model(self, model: str) -> bool:
         """Switch to a different model."""
+        self.engine.reload_config()
         return self.engine.set_model(model)
 
     # === Tool Methods ===

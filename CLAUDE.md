@@ -6,7 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.15.2
+**Current Version:** v1.15.3
+
+**v1.15.3 highlights:**
+- **FIX:** Stale config cache - `/model` and `/provider` commands now auto-reload config from disk before listing
+- **FIX:** Provider switch using wrong model - switching providers no longer uses stale model from previous provider
+- **FIX:** Session restore with outdated config - all 3 clients (Textual, Rich, HTTP server) reload config before restoring sessions
+- **FIX:** `/config reload` now also refreshes EngineClient's cached provider list (previously only refreshed ConfigStore)
+- **NEW:** `EngineClient.reload_config()` method - single entry point to reload ConfigStore + refresh all cached config data
+- **DOCS:** DGX Spark setup guide renamed and expanded (vLLM + Ollama, model testing log, benchmark results)
 
 **v1.15.2 highlights:**
 - **NEW:** Response validation system - detects LLM hallucinations and tool result contradictions
@@ -46,7 +54,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **NEW:** `@clipboard` and `@url` context providers - inject clipboard text or web content
 - **NEW:** Include directive - `<!-- include: ./file.md -->` for modular AGENTS.md
 - **NEW:** Hint templates - reusable hints in `~/.ppxai/hint-templates.yaml`
-- **CHANGE:** Gemini default model updated to `gemini-2.5-flash` (2.0 deprecated March 2026)
+- **CHANGE:** Gemini recommended model updated to `gemini-3-flash-preview` (best code editing performance with AGENTS.md hints)
 - **CHANGE:** Provider/model hints from all scopes merge additively
 
 **v1.14.1 highlights:**
@@ -60,9 +68,9 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - `local` provider inheritance - ollama, vllm, lmstudio inherit from `local` hints
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.15.2
-- VSCode extension (package.json): v1.15.2
-- Git tag: v1.15.2
+- Python package (pyproject.toml): v1.15.3
+- VSCode extension (package.json): v1.15.3
+- Git tag: v1.15.3
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
 
@@ -151,19 +159,19 @@ The `AppData\Local\ppxai` path exists only as a **search path** for finding bina
 # First-time setup
 python scripts/bootstrap.py --all
 
-# Or manual setup
-uv sync --all-extras
+# Or manual setup (creates .uv/uv bootstrapped installation)
+.uv/uv sync --all-extras
 
 # Configure API keys
 cp .env.example .env
 # Edit .env and add your API keys
 
 # Run
-uv run ppxai           # TUI
-uv run ppxai-server    # HTTP server for VSCode
+.uv/uv run ppxai           # TUI
+.uv/uv run ppxai-server    # HTTP server for VSCode
 
 # Test
-uv run pytest tests/ -v
+.uv/uv run pytest tests/ -v
 ```
 
 ### Alternative: pip
@@ -174,6 +182,74 @@ pip install -r requirements.txt
 cp .env.example .env
 python ppxai.py
 ```
+
+## Windows Store Python + uv/venv Recovery (CRITICAL)
+
+**Problem:** Windows Store Python prevents uv from creating temporary virtualenvs (Error 1920: "The file cannot be accessed by the system")
+
+### Using Existing venv with `.uv/uv run`
+```bash
+# ✅ Use --no-sync to skip package rebuild
+.uv/uv run --no-sync python -m <command>
+
+# ❌ Without --no-sync triggers temp virtualenv creation (fails on Windows Store Python)
+.uv/uv run python -m <command>
+```
+
+### Checking venv/lock Status
+```bash
+# Check if lock file is up to date
+.uv/uv lock --check
+
+# Check installed package version
+.uv/uv pip list | grep ppxai
+
+# Verify runtime version
+.venv/Scripts/python.exe -c "import ppxai; print(ppxai.__version__)"
+```
+
+### Corporate Proxy / TLS (CRITICAL)
+```bash
+# ✅ Use UV_NATIVE_TLS=true to use Windows native TLS (SChannel) - trusts system cert store
+set UV_NATIVE_TLS=true   # cmd
+$env:UV_NATIVE_TLS="true"  # PowerShell
+
+# Then all uv commands work without SSL_CERT_FILE:
+.uv/uv run python -m PyInstaller ppxai.spec --noconfirm
+.uv/uv pip install hatchling editables
+```
+**Why:** `UV_NATIVE_TLS=true` tells uv to use the OS native TLS stack (Windows SChannel) instead of bundled rustls. This automatically trusts certificates from the Windows certificate store (including corporate proxy CAs). No need for `SSL_CERT_FILE`.
+
+### Refreshing Package Metadata (After Version Bump)
+When version numbers change in source but venv metadata is stale:
+
+```bash
+# 1. Install build dependencies in venv
+.uv/uv pip install hatchling editables
+
+# 2. Reinstall package with --no-build-isolation
+.uv/uv pip install --no-build-isolation --reinstall --no-deps -e .
+
+# 3. Verify metadata updated
+.uv/uv pip list | grep ppxai  # Should show new version
+```
+
+### Building Binaries with PyInstaller
+```bash
+# ✅ Preferred: use UV_NATIVE_TLS for corporate proxy environments
+set UV_NATIVE_TLS=true && .uv/uv run python -m PyInstaller ppxai.spec --noconfirm
+
+# Alternative: use venv's Python directly
+.venv/Scripts/python.exe -m PyInstaller ppxai.spec --noconfirm
+```
+
+### Key Insights
+- **Editable install:** Changes to source files (`.py`) are reflected immediately without reinstall
+- **Metadata stale:** Package metadata (version, dependencies) requires reinstall to update
+- **Lock file:** Only needs refresh when pyproject.toml dependencies change, not for source code changes
+- **Windows Store Python:** Fundamental limitation - uv cannot create temp virtualenvs from Store Python executables
+- **UV_NATIVE_TLS:** Preferred over SSL_CERT_FILE - uses OS native TLS, no hardcoded cert paths
+- **Workaround:** Use existing venv with `--no-sync` or `.venv/Scripts/python.exe` directly
 
 ## Architecture
 
@@ -218,15 +294,15 @@ vscode-extension/        # TypeScript VSCode extension
 
 ```bash
 # Run application
-uv run ppxai                    # TUI
-uv run ppxai-server             # HTTP server
-uv run ppxai-desktop            # Desktop web app
+.uv/uv run ppxai                    # TUI
+.uv/uv run ppxai-server             # HTTP server
+.uv/uv run ppxai-desktop            # Desktop web app
 
 # Testing
-uv run pytest tests/ -v
+.uv/uv run pytest tests/ -v
 
 # Build binaries (Windows with corporate proxy)
-SSL_CERT_FILE="C:/.ssh/Fortinet_CA_SSL.cer" .uv/uv run pyinstaller ppxai.spec --noconfirm
+set UV_NATIVE_TLS=true && .uv/uv run python -m PyInstaller ppxai.spec --noconfirm
 
 # Build VSCode extension
 cd vscode-extension && npm run compile && npx vsce package --allow-missing-repository
@@ -553,7 +629,24 @@ config.set_environment_variables = {
 - `ppxai/tui/widgets/image_handlers.py` - Terminal detection and widget selection
 - `ppxai/rendering/rich_renderer.py` - Rich TUI image rendering
 
-## vLLM/GPT-OSS Tool Calling Reference
+## vLLM Tool Calling Reference
+
+### **Tool Call Parsers: Hermes vs Harmony**
+
+vLLM supports multiple tool calling formats via `--tool-call-parser` flag. Different model families use different parsers:
+
+| Model Family | Parser | vLLM Flag | Stability | Notes |
+|--------------|--------|-----------|-----------|-------|
+| **GPT-OSS** | Harmony | `--tool-call-parser openai` | ⚠️ Intermittent | See Harmony section below |
+| **Qwen3** | Hermes | `--tool-call-parser hermes` | ✅ Stable | Different grammar than Harmony |
+| **Qwen2.5** | Hermes | `--tool-call-parser hermes` | ✅ Stable | - |
+| **Nous Hermes** | Hermes | `--tool-call-parser hermes` | ✅ Stable | - |
+
+**Key Point:** Always use the correct parser for your model family. Using the wrong parser causes tool calling to fail completely.
+
+---
+
+### **GPT-OSS (Harmony Format)**
 
 **Critical Finding:** Harmony format is **mandatory** for GPT-OSS. From official documentation:
 > "GPT-OSS should not be used without using the Harmony format as it will not work correctly."
@@ -589,6 +682,47 @@ The model was trained specifically on Harmony's response format with control tok
 - ppxai default: `native_tool_calling: true`
 
 **For developers hitting HarmonyError:** Set `native_tool_calling: false` in provider config, or use the standalone example for non-ppxai applications.
+
+---
+
+### **Qwen3 / Qwen2.5 (Hermes Format)**
+
+**Status:** Generally more stable than Harmony. Hermes grammar is well-tested and widely adopted.
+
+**vLLM Server Setup:**
+```bash
+vllm serve Qwen/Qwen3-... \
+  --enable-auto-tool-choice \
+  --tool-call-parser hermes \
+  --max-model-len 32768
+```
+
+**ppxai Config:**
+```json
+{
+  "providers": {
+    "custom": {
+      "base_url": "http://localhost:8000/v1",
+      "native_tool_calling": true,
+      "models": {
+        "Qwen/Qwen3-...": {
+          "max_tokens": 8192,
+          "temperature": 0.2
+        }
+      }
+    }
+  }
+}
+```
+
+**Known Issues:**
+- Same truncation issues as GPT-OSS if `max_tokens` too low
+- Unicode whitespace in code (Pattern #2 still applies)
+- May still exhibit "I'll use X tool" behavior (test with your specific model)
+
+**Fallback:** If native tool calling fails, set `native_tool_calling: false` for prompt-based tools.
+
+---
 
 **Known Issue: "I'll use X tool" followed by JSON text (v1.15.2)**
 

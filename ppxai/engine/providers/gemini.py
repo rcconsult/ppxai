@@ -20,6 +20,7 @@ Requires: pip install ppxai[gemini]
 
 import json
 from typing import List, AsyncIterator, Optional, Dict, Any
+from ...common.logger import get_logger
 from ..types import Message, Event, EventType, ProviderCapabilities, ModelInfo, UsageStats
 
 
@@ -32,6 +33,9 @@ try:
 except ImportError:
     genai = None
     genai_types = None
+
+# Initialize logger
+logger = get_logger("gemini")
 
 
 def is_available() -> bool:
@@ -121,6 +125,74 @@ class GeminiProvider:
             return get_generation_params(self.provider_id, model)
         except (ImportError, AttributeError):
             return {}  # No params configured
+
+    def _filter_empty_parts(self, parts: List[Any], context: str = "") -> List[Any]:
+        """Filter out empty parts to work around SDK v1.57.0+ regression.
+
+        Issue: https://github.com/googleapis/python-genai/issues/1789
+        SDK versions 1.57.0+ removed validation on empty text parts, causing
+        incomplete responses (e.g., patches missing imports) to pass through.
+
+        Args:
+            parts: List of response parts from Gemini API
+            context: Context string for logging (e.g., "streaming", "non-streaming")
+
+        Returns:
+            Filtered list with only non-empty parts
+        """
+        if not parts:
+            return parts
+
+        # Enhanced debug logging
+        logger.debug(f"[{context}] Processing {len(parts)} parts")
+
+        filtered_parts = []
+        empty_count = 0
+
+        for i, part in enumerate(parts):
+            # Keep function call parts always
+            if hasattr(part, 'function_call') and part.function_call:
+                logger.debug(f"[{context}] Part {i}: function_call (kept)")
+                filtered_parts.append(part)
+                continue
+
+            # Check text parts
+            if hasattr(part, 'text'):
+                text = part.text
+                text_len = len(text) if text else 0
+                has_strip = text.strip() if text else ""
+                strip_len = len(has_strip)
+
+                if text and has_strip:
+                    # Keep non-empty text
+                    logger.debug(
+                        f"[{context}] Part {i}: text len={text_len}, "
+                        f"stripped={strip_len}, preview='{text[:50]}...' (kept)"
+                    )
+                    filtered_parts.append(part)
+                else:
+                    # Filter empty/whitespace text
+                    empty_count += 1
+                    logger.warning(
+                        f"[{context}] Part {i}: text len={text_len}, "
+                        f"stripped={strip_len}, content='{text}' (FILTERED)"
+                    )
+            else:
+                # Part has no text or function_call
+                empty_count += 1
+                logger.warning(
+                    f"[{context}] Part {i}: unknown type, "
+                    f"has_text={hasattr(part, 'text')}, "
+                    f"has_function_call={hasattr(part, 'function_call')} (FILTERED)"
+                )
+
+        if empty_count > 0:
+            logger.warning(
+                f"Gemini SDK workaround: Filtered {empty_count}/{len(parts)} empty parts "
+                f"from {context} response (Issue #1789)"
+            )
+
+        return filtered_parts
 
     async def chat(
         self,

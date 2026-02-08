@@ -9,6 +9,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.15.3] - 2026-02-07
+
+### Fixed - Config Hot-Reload & DAG-Based Initialization
+
+- **Config hot-reload** - `/model` and `/provider` commands now auto-reload config from disk
+  - All 3 clients (TUI, Rich, HTTP server) reload config before restoring sessions
+  - HTTP + JSON-RPC endpoints reload before listing/switching providers/models
+  - Fixes stale config cache when config file is edited externally
+  - Root cause: ConfigStore singleton + EngineClient snapshot pattern caused stale references
+- **DAG-based config initialization** - Replaced `__getattr__` lazy loading with explicit `initialize()`
+  - Module-level PROVIDERS/MODELS dicts populated at startup
+  - In-place mutation (`.clear()` + `.update()`) ensures all references stay fresh
+  - EngineClient uses `@property providers_config` instead of snapshot
+  - Removed 4 workarounds (deferred imports, manual re-fetches)
+  - Added `reset_config_after_test` fixture for test isolation
+  - All 1157 tests pass (100% pass rate)
+- **New `EngineClient.reload_config()` method** - Single entry point to refresh all cached config data
+  - Refreshes ConfigStore + shell/agent configs
+  - Automatically called by `/config reload` command
+
+### Fixed - Platform Alignment (Windows/macOS/Linux)
+
+- **Signal handling** - SIGINT (Ctrl+C) and SIGTERM now work on all platforms including Windows
+  - Removed Windows exclusion for signal handlers
+  - TUI gracefully shuts down on both signals across all platforms
+  - Uses `call_from_thread()` for thread-safe quit action
+- **Binary search path filtering** - Platform-aware filtering for efficiency
+  - Windows skips `/usr/*` paths (Unix-only)
+  - Unix/macOS/Linux skip `AppData` paths (Windows-only)
+  - Desktop app uses filtered paths from config
+- **Path expansion standardization** - Standardized to `Path.home()` for internal paths
+  - Intentional `os.path.expanduser()` kept only in tool handlers (supports `~username` syntax)
+  - Consistent path handling across all platforms
+
+### Fixed - TUI EventBus Stability
+
+- **WARNING event handler** - Added ENGINE_WARNING event handler for hallucination detection alerts
+  - Displays validation warnings in chat with yellow ⚠ indicator
+  - Completes v1.15.2 response validation system integration with TUI
+  - Fixes "Unhandled event type: EventType.WARNING" debug messages
+- **EventBus handler resilience** - Added NoMatches guards to all event handlers
+  - Prevents crashes when handlers fire before chat_view is mounted
+  - Fixes "No nodes match '#chat-view'" errors during startup/shutdown
+  - Protected handlers: `_on_tool_call`, `_on_tool_result`, `_on_tool_error`, `_on_engine_error`, `_on_engine_warning`, `_on_engine_info`
+- **Shell consent dialog threading** - Verified correct implementation using `call_from_thread()` + callback pattern
+  - No `wait_for_dismiss` usage (follows Textual best practices)
+
+### Fixed - Engine & Performance
+
+- **Model hints debug noise** - Removed verbose "no model hints matched" messages
+  - Only logs when hints ARE matched, not when they aren't
+  - Reduces duplicate log messages during session restoration and model switching
+  - Available patterns still visible via `/context show` command
+- **Working directory change deduplication** - Only emit WORKING_DIR_CHANGED event when directory actually changes
+  - Compares resolved paths to prevent duplicate events
+  - Fixes double events from temporary cwd switches during tool execution
+
+### Added - Benchmarks & Testing
+
+- **DGX Spark benchmarks** - Added benchmark results for local models
+  - GPT-OSS-120B, Qwen3-30B-A3B, Qwen2.5-Coder-32B tested
+  - Results tracked in `benchmarks/llm-eval/results/`
+  - Hallucination resistance gate tests added
+
+### Documentation
+
+- **INSTALLATION.md** - Added platform-specific notes section
+  - Clipboard support requirements per platform
+  - Signal handling (Ctrl+C, SIGTERM) on all platforms (v1.15.3+)
+  - Linux headless requirements (`xclip`/`xsel`)
+- **MEMORY.md** - Added v1.15.3 critical patterns:
+  - Pattern #8: TUI EventBus Handler Resilience
+  - Pattern #9: WARNING Event Handling
+  - Pattern #10: Working Directory Change Deduplication
+- **RELEASE-NOTES-v1.15.3.md** - Complete release documentation with implementation details
+
+---
+
 ## [1.15.2] - 2026-02-06
 
 ### Added - Gemini Native Tool Calling

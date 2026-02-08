@@ -1,0 +1,52 @@
+{
+  "provider": "perplexity",
+  "model": "sonar",
+  "timestamp": "2026-02-08T17:48:31.688107",
+  "overall_score": 71.42857142857143,
+  "tests_passed": 2,
+  "tests_total": 3,
+  "duration_seconds": 16.486354112625122,
+  "category_scores": {
+    "code_editing": 71.42857142857143
+  },
+  "test_results": [
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "Patch doesn't contain expected changes",
+        "patch": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": true,
+      "details": {
+        "patch_length": 225
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": true,
+      "details": {
+        "patch_length": 302
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "d9bb3642e19d"
+  }
+}

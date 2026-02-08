@@ -1,15 +1,25 @@
 {
+  "$schema": "https://raw.githubusercontent.com/rcconsult/ppxai/master/ppxai-config.schema.json",
   "version": "1.3",
   "default_provider": "perplexity",
-  "system_prompt": "You are a helpful AI assistant. Be concise and direct. Report tool results briefly.",
+  "system_prompt": "You are an expert AI coding assistant. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
   "system_prompt_mode": "prepend",
   "server": {
-    "idle_timeout": 300,
+    "idle_timeout": 600,
     "port": 54320
   },
   "session": {
     "auto_restore": "prompt",
     "auto_save_interval": 1
+  },
+  "context": {
+    "max_injection_size": 100000,
+    "default_context_limit": 128000,
+    "warn_at_percent": 80
+  },
+  "bootstrap": {
+    "files": ["AGENTS.md", "CLAUDE.md", "INSTRUCTIONS.md"],
+    "enabled": true
   },
   "paths": {
     "bin_search_paths": [
@@ -19,7 +29,10 @@
       "{home}/bin",
       "/usr/local/bin"
     ],
-    "data_dir": "{home}/.ppxai"
+    "data_dir": "{home}/.ppxai",
+    "sessions": "~/.ppxai/sessions",
+    "exports": "~/.ppxai/exports",
+    "checkpoints": "~/.ppxai/checkpoints"
   },
   "providers": {
     "perplexity": {
@@ -29,47 +42,90 @@
       "default_model": "sonar-pro",
       "coding_model": "sonar-pro",
       "system_prompt": "You have two capabilities: (1) NATIVE WEB SEARCH for research, facts, and current information - use this automatically for questions and cite sources as markdown links. (2) EXTERNAL TOOLS for file operations, shell commands, and editing - when tools are available and the user asks to DO something (cd, ls, edit, fix, run, create, analyze), execute the appropriate tool immediately instead of explaining how. For actions: act first, report results briefly. For questions: search and cite. Never tell the user to do manually what a tool can do.",
+      "generation_params": {
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "frequency_penalty": 0.15
+      },
       "models": {
         "sonar": {
           "name": "Sonar",
-          "description": "Lightweight search model with real-time grounding"
+          "description": "Lightweight search model with real-time grounding",
+          "__comment_best_for": "Quick file operations, simple edits, list/read tasks, directory navigation",
+          "generation_params": {
+            "temperature": 0.1,
+            "top_p": 0.85,
+            "max_tokens": 2048,
+            "frequency_penalty": 0.2
+          }
         },
         "sonar-pro": {
           "name": "Sonar Pro",
           "description": "Advanced search model for complex queries",
-          "context_limit": 200000
+          "context_limit": 200000,
+          "__comment_best_for": "Complex refactoring, multi-file changes, architecture decisions, code review, debugging. Best all-around model for agentic coding tasks (73.4% benchmark)."
         },
         "sonar-reasoning-pro": {
           "name": "Sonar Reasoning Pro",
-          "description": "Precision reasoning with Chain of Thought capabilities"
+          "description": "Precision reasoning with Chain of Thought capabilities (DeepSeek-R1)",
+          "__comment_best_for": "Algorithm design, bug root cause analysis, test generation, complex logic",
+          "__comment_warning": "Poor tool calling (50% benchmark) and code editing (28.6%) - avoid for agentic tasks that require direct tool execution",
+          "generation_params": {
+            "temperature": 0.2,
+            "top_p": 0.9,
+            "max_tokens": 12288,
+            "frequency_penalty": 0.15
+          }
         },
         "sonar-deep-research": {
           "name": "Sonar Deep Research",
-          "description": "Exhaustive research with comprehensive reports"
+          "description": "Exhaustive research with comprehensive reports (Async Jobs API)",
+          "__comment_best_for": "Comprehensive documentation, multi-step research, technical writing",
+          "__comment_note": "Uses Jobs API with reasoning_effort parameter (low/medium/high), not chat completions"
         }
       },
       "pricing": {
-        "sonar": {"input": 0.20, "output": 0.20},
-        "sonar-pro": {"input": 3.00, "output": 15.00},
-        "sonar-reasoning-pro": {"input": 5.00, "output": 15.00},
-        "sonar-deep-research": {"input": 5.00, "output": 15.00}
+        "sonar": {
+          "input": 0.2,
+          "output": 0.2
+        },
+        "sonar-pro": {
+          "input": 3.0,
+          "output": 15.0
+        },
+        "sonar-reasoning-pro": {
+          "input": 5.0,
+          "output": 15.0
+        },
+        "sonar-deep-research": {
+          "input": 5.0,
+          "output": 15.0
+        }
       },
       "capabilities": {
         "web_search": true,
         "web_fetch": true,
         "weather": true,
-        "realtime_info": true
+        "realtime_info": true,
+        "native_tool_calling": false,
+        "__comment_native_tool_calling": "Perplexity uses prompt-based tool calling (not native API)"
       }
     },
     "gemini": {
       "name": "Google Gemini",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
       "api_key_env": "GEMINI_API_KEY",
-      "default_model": "gemini-2.5-flash",
-      "coding_model": "gemini-2.5-pro",
-      "system_prompt": "You are a helpful AI assistant. Be concise and direct. When using tools, report results briefly. Cite sources as markdown links.",
+      "default_model": "gemini-3-flash-preview",
+      "coding_model": "gemini-3-flash-preview",
+      "__comment_benchmark": "Benchmark results (v1.15.3): gemini-3-flash-preview achieved 100% quality score with refined hints. Best model for code editing.",
+      "system_prompt": "You are an expert AI coding assistant with web search capabilities. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices. Cite sources as markdown links when using web search.",
       "options": {
-        "enable_grounding": true
+        "enable_grounding": true,
+        "native_tool_calling": true
+      },
+      "generation_params": {
+        "temperature": 0.2,
+        "top_p": 0.9
       },
       "models": {
         "gemini-2.0-flash": {
@@ -84,8 +140,9 @@
         },
         "gemini-2.5-flash": {
           "name": "Gemini 2.5 Flash",
-          "description": "Latest fast model, best price/performance",
-          "context_limit": 1000000
+          "description": "Latest fast model, best price/performance. 71.4% code editing quality with aggressive hints.",
+          "context_limit": 1000000,
+          "__comment_best_for": "Good alternative if gemini-3-flash-preview unavailable. Requires aggressive AGENTS.md hints."
         },
         "gemini-2.5-pro": {
           "name": "Gemini 2.5 Pro",
@@ -99,8 +156,9 @@
         },
         "gemini-3-flash-preview": {
           "name": "Gemini 3 Flash Preview",
-          "description": "Speed-optimized preview with frontier intelligence and 1M context",
-          "context_limit": 1000000
+          "description": "Speed-optimized preview with frontier intelligence and 1M context. RECOMMENDED: Best code editing quality (100% benchmark).",
+          "context_limit": 1000000,
+          "__comment_best_for": "Code editing, refactoring, debugging. Achieved 100% quality score with balanced AGENTS.md hints."
         },
         "gemini-3-pro-preview": {
           "name": "Gemini 3 Pro Preview",
@@ -109,20 +167,43 @@
         }
       },
       "pricing": {
-        "gemini-2.0-flash": {"input": 0.10, "output": 0.40},
-        "gemini-2.0-flash-lite": {"input": 0.075, "output": 0.30},
-        "gemini-2.5-flash": {"input": 0.15, "output": 0.60},
-        "gemini-2.5-flash-lite": {"input": 0.075, "output": 0.30},
-        "gemini-2.5-pro": {"input": 1.25, "output": 5.00},
-        "gemini-3-flash-preview": {"input": 0.15, "output": 0.60},
-        "gemini-3-pro-preview": {"input": 1.25, "output": 5.00}
+        "gemini-2.0-flash": {
+          "input": 0.1,
+          "output": 0.4
+        },
+        "gemini-2.0-flash-lite": {
+          "input": 0.075,
+          "output": 0.3
+        },
+        "gemini-2.5-flash": {
+          "input": 0.15,
+          "output": 0.6
+        },
+        "gemini-2.5-flash-lite": {
+          "input": 0.075,
+          "output": 0.3
+        },
+        "gemini-2.5-pro": {
+          "input": 1.25,
+          "output": 5.0
+        },
+        "gemini-3-flash-preview": {
+          "input": 0.15,
+          "output": 0.6
+        },
+        "gemini-3-pro-preview": {
+          "input": 1.25,
+          "output": 5.0
+        }
       },
       "capabilities": {
         "web_search": true,
         "web_fetch": true,
         "weather": true,
         "realtime_info": true,
-        "citations": true
+        "citations": true,
+        "native_tool_calling": true,
+        "__comment_native_tool_calling": "Gemini supports native function calling"
       }
     },
     "openai": {
@@ -131,6 +212,12 @@
       "api_key_env": "OPENAI_API_KEY",
       "default_model": "gpt-4o",
       "coding_model": "gpt-4o",
+      "system_prompt": "You are an expert AI coding assistant. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
+      "generation_params": {
+        "temperature": 0.2,
+        "top_p": 0.95,
+        "frequency_penalty": 0.1
+      },
       "web_search": {
         "preferred": "gemini"
       },
@@ -154,14 +241,45 @@
         "o1-mini": {
           "name": "o1 Mini",
           "description": "Fast reasoning model"
+        },
+        "o3-mini": {
+          "name": "o3-mini",
+          "description": "Latest reasoning (limited: no streaming, no system prompts via Chat API)"
+        },
+        "o4-mini": {
+          "name": "o4-mini",
+          "description": "Newest reasoning model (limited: no streaming, no system prompts via Chat API)"
         }
       },
       "pricing": {
-        "gpt-4o": {"input": 2.50, "output": 10.00},
-        "gpt-4o-mini": {"input": 0.15, "output": 0.60},
-        "gpt-4-turbo": {"input": 10.00, "output": 30.00},
-        "o1": {"input": 15.00, "output": 60.00},
-        "o1-mini": {"input": 3.00, "output": 12.00}
+        "gpt-4o": {
+          "input": 2.5,
+          "output": 10.0
+        },
+        "gpt-4o-mini": {
+          "input": 0.15,
+          "output": 0.6
+        },
+        "gpt-4-turbo": {
+          "input": 10.0,
+          "output": 30.0
+        },
+        "o1": {
+          "input": 15.0,
+          "output": 60.0
+        },
+        "o1-mini": {
+          "input": 3.0,
+          "output": 12.0
+        },
+        "o3-mini": {
+          "input": 1.1,
+          "output": 4.4
+        },
+        "o4-mini": {
+          "input": 1.1,
+          "output": 4.4
+        }
       },
       "capabilities": {
         "web_search": false,
@@ -176,6 +294,12 @@
       "api_key_env": "OPENROUTER_API_KEY",
       "default_model": "anthropic/claude-sonnet-4",
       "coding_model": "anthropic/claude-sonnet-4",
+      "system_prompt": "You are an expert AI coding assistant. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
+      "generation_params": {
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "frequency_penalty": 0.1
+      },
       "models": {
         "anthropic/claude-sonnet-4": {
           "name": "Claude Sonnet 4",
@@ -189,21 +313,52 @@
           "name": "Claude Haiku",
           "description": "Fast and affordable Claude model"
         },
-        "google/gemini-2.0-flash-001": {
-          "name": "Gemini 2.0 Flash",
-          "description": "Google's fast multimodal model"
+        "deepseek/deepseek-r1": {
+          "name": "DeepSeek R1",
+          "description": "Reasoning model with Chain of Thought"
+        },
+        "meta-llama/llama-3.1-70b-instruct": {
+          "name": "Llama 3.1 70B",
+          "description": "Meta's open-weight model"
         },
         "meta-llama/llama-3.1-405b-instruct": {
           "name": "Llama 3.1 405B",
           "description": "Meta's largest open model"
+        },
+        "google/gemini-2.0-flash-001": {
+          "name": "Gemini 2.0 Flash",
+          "description": "Google's fast multimodal model"
         }
       },
       "pricing": {
-        "anthropic/claude-sonnet-4": {"input": 3.00, "output": 15.00},
-        "anthropic/claude-opus-4": {"input": 15.00, "output": 75.00},
-        "anthropic/claude-haiku": {"input": 0.25, "output": 1.25},
-        "google/gemini-2.0-flash-001": {"input": 0.10, "output": 0.40},
-        "meta-llama/llama-3.1-405b-instruct": {"input": 3.00, "output": 3.00}
+        "anthropic/claude-sonnet-4": {
+          "input": 3.0,
+          "output": 15.0
+        },
+        "anthropic/claude-opus-4": {
+          "input": 15.0,
+          "output": 75.0
+        },
+        "anthropic/claude-haiku": {
+          "input": 0.25,
+          "output": 1.25
+        },
+        "deepseek/deepseek-r1": {
+          "input": 0.55,
+          "output": 2.19
+        },
+        "meta-llama/llama-3.1-70b-instruct": {
+          "input": 0.59,
+          "output": 0.79
+        },
+        "meta-llama/llama-3.1-405b-instruct": {
+          "input": 3.0,
+          "output": 3.0
+        },
+        "google/gemini-2.0-flash-001": {
+          "input": 0.1,
+          "output": 0.4
+        }
       },
       "capabilities": {
         "web_search": false,
@@ -218,30 +373,45 @@
       "api_key_env": "OLLAMA_API_KEY",
       "default_model": "qwen2.5-coder:3b",
       "coding_model": "qwen2.5-coder:3b",
-      "__comment_vram": "RTX 3050 6GB VRAM - only Qwen models with tool calling support listed",
-      "__comment_benchmark": "Tested 2026-01-14: Only Qwen family supports tool calling. Others (deepseek, starcoder, codegemma, codellama) return errors.",
       "system_prompt": "You are an expert coding assistant running locally via Ollama. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
+      "generation_params": {
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "frequency_penalty": 0.15
+      },
       "models": {
         "qwen2.5-coder:3b": {
           "name": "Qwen2.5 Coder 3B",
           "description": "Best coding model: 3.38GB VRAM, 75% tool accuracy, ~60 tok/s (recommended)",
-          "context_length": 32768
+          "context_limit": 32768,
+          "max_tokens": 4096
         },
         "qwen2.5:3b": {
           "name": "Qwen2.5 3B General",
           "description": "Highest tool accuracy: 3.38GB VRAM, 79.2% tool accuracy, better reasoning",
-          "context_length": 32768
+          "context_limit": 32768,
+          "max_tokens": 4096
         },
         "qwen2.5-coder:0.5b": {
           "name": "Qwen2.5 Coder 0.5B",
           "description": "Fast router: 1.44GB VRAM, 70.8% tool accuracy, 448ms latency",
-          "context_length": 32768
+          "context_limit": 32768,
+          "max_tokens": 2048
         }
       },
       "pricing": {
-        "qwen2.5-coder:3b": {"input": 0.0, "output": 0.0},
-        "qwen2.5:3b": {"input": 0.0, "output": 0.0},
-        "qwen2.5-coder:0.5b": {"input": 0.0, "output": 0.0}
+        "qwen2.5-coder:3b": {
+          "input": 0.0,
+          "output": 0.0
+        },
+        "qwen2.5:3b": {
+          "input": 0.0,
+          "output": 0.0
+        },
+        "qwen2.5-coder:0.5b": {
+          "input": 0.0,
+          "output": 0.0
+        }
       },
       "capabilities": {
         "web_search": true,
@@ -250,34 +420,39 @@
         "realtime_info": true,
         "native_tool_calling": true
       }
-    },
-    "custom": {
-      "name": "Custom vLLM Server",
-      "base_url": "http://localhost:8000/v1",
-      "api_key_env": "CUSTOM_API_KEY",
-      "default_model": "meta-llama/Llama-3.1-70B-Instruct",
-      "coding_model": "meta-llama/Llama-3.1-70B-Instruct",
-      "system_prompt": "You are a helpful AI coding assistant. Be concise and direct. When executing tools, report only the essential results. Avoid lengthy explanations unless explicitly requested.",
-      "models": {
-        "meta-llama/Llama-3.1-70B-Instruct": {
-          "name": "Llama 3.1 70B",
-          "description": "Self-hosted Llama model with native tool calling via vLLM"
-        }
-      },
-      "pricing": {
-        "meta-llama/Llama-3.1-70B-Instruct": {"input": 0.0, "output": 0.0}
-      },
-      "capabilities": {
-        "web_search": false,
-        "web_fetch": false,
-        "weather": false,
-        "realtime_info": false,
-        "native_tool_calling": true
-      }
     }
   },
   "tools": {
+    "overrides": {
+      "search_files": "Find files by glob pattern (*.py, test*, *config*) - use when searching for files by NAME",
+      "read_file": "Read the complete contents of a file",
+      "write_file": "Create or overwrite a file with new content",
+      "edit_file": "Make precise edits to existing files using search/replace",
+      "list_directory": "List all files and directories in a path",
+      "shell": "Execute shell commands (bash/zsh/sh)"
+    },
+    "provider_overrides": {
+      "ollama": {
+        "list_directory": "Show all files in a folder",
+        "search_files": "Find files by pattern like *.py",
+        "read_file": "Read file contents",
+        "write_file": "Create or update file",
+        "edit_file": "Change file contents",
+        "shell": "Run shell command"
+      }
+    },
+    "model_overrides": {
+      "qwen2.5-coder:0.5b": {
+        "shell": "Run command",
+        "read_file": "Read file",
+        "write_file": "Write file",
+        "edit_file": "Edit file",
+        "list_directory": "List directory",
+        "search_files": "Search files by pattern"
+      }
+    },
     "shell": {
+      "timeout": 120,
       "require_consent": true,
       "dangerous_commands": [
         "^rm\\s+",
@@ -313,17 +488,54 @@
       ],
       "sandboxed_paths": [],
       "interactive_commands": [
-        "nano", "vim", "vi", "emacs", "pico", "joe",
-        "less", "more", "top", "htop", "btop",
-        "python", "python3", "ipython", "node", "irb", "ruby",
-        "ssh", "telnet", "ftp", "sftp",
-        "mysql", "psql", "mongo", "redis-cli",
-        "bash", "zsh", "sh", "fish", "csh", "tcsh"
+        "nano",
+        "vim",
+        "vi",
+        "emacs",
+        "pico",
+        "joe",
+        "less",
+        "more",
+        "top",
+        "htop",
+        "btop",
+        "python",
+        "python3",
+        "ipython",
+        "node",
+        "irb",
+        "ruby",
+        "ssh",
+        "telnet",
+        "ftp",
+        "sftp",
+        "mysql",
+        "psql",
+        "mongo",
+        "redis-cli",
+        "bash",
+        "zsh",
+        "sh",
+        "fish",
+        "csh",
+        "tcsh"
       ],
       "non_interactive_with_args": [
-        "python", "python3", "ipython", "node", "irb", "ruby",
-        "bash", "zsh", "sh", "fish", "csh", "tcsh",
-        "ssh", "mysql", "psql"
+        "python",
+        "python3",
+        "ipython",
+        "node",
+        "irb",
+        "ruby",
+        "bash",
+        "zsh",
+        "sh",
+        "fish",
+        "csh",
+        "tcsh",
+        "ssh",
+        "mysql",
+        "psql"
       ]
     },
     "agent": {
@@ -332,7 +544,14 @@
       "max_same_tool_calls": 3,
       "context_char_limit": 4096,
       "min_task_words": 3,
-      "checkpoint_backend": "auto"
+      "checkpoint_backend": "auto",
+      "checkpoint_message": "ppxai checkpoint: {task}"
+    },
+    "container": {
+      "enabled": true,
+      "require_consent": true,
+      "default_runtime": "auto",
+      "timeout": 60
     },
     "web_search": {
       "preferred": "auto",
@@ -340,8 +559,8 @@
       "gemini_model": "gemini-2.5-flash",
       "pricing": {
         "perplexity": {
-          "input": 0.20,
-          "output": 0.20,
+          "input": 0.2,
+          "output": 0.2,
           "model": "per_token"
         },
         "gemini_grounding": {
@@ -351,7 +570,19 @@
       }
     }
   },
+  "visualization": {
+    "max_rows": 10000,
+    "max_columns": 50,
+    "page_size": 50,
+    "tree_depth": 3,
+    "auto_detect": true,
+    "csv_delimiter": "auto",
+    "theme": "default"
+  },
   "tui": {
+    "theme": "catppuccin-mocha",
+    "show_version": true,
+    "show_cwd": true,
     "show_datetime": true
   }
 }

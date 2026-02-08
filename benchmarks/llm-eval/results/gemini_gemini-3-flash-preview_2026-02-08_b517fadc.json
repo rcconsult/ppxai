@@ -1,0 +1,51 @@
+{
+  "provider": "gemini",
+  "model": "gemini-3-flash-preview",
+  "timestamp": "2026-02-08T17:29:31.639744",
+  "overall_score": 100.0,
+  "tests_passed": 3,
+  "tests_total": 3,
+  "duration_seconds": 57.3566951751709,
+  "category_scores": {
+    "code_editing": 100.0
+  },
+  "test_results": [
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": true,
+      "details": {
+        "patch_length": 139
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": true,
+      "details": {
+        "patch_length": 221
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": true,
+      "details": {
+        "patch_length": 273
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "55506b567baa"
+  }
+}

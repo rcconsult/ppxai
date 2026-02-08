@@ -263,7 +263,11 @@ def handle_config(context: CommandContext, args: str) -> CommandResult:
 
     if subcommand == "reload":
         try:
-            reload_config()
+            # Reload config store and refresh engine client's cached providers
+            if context.engine_client:
+                context.engine_client.reload_config()
+            else:
+                reload_config()
             return ConfirmationResult(
                 status=ResultStatus.SUCCESS,
                 message="Configuration reloaded successfully. Provider prompts and settings updated from config file.",
