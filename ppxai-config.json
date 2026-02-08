@@ -106,7 +106,9 @@
         "web_search": true,
         "web_fetch": true,
         "weather": true,
-        "realtime_info": true
+        "realtime_info": true,
+        "native_tool_calling": false,
+        "__comment_native_tool_calling": "Perplexity uses prompt-based tool calling (not native API)"
       }
     },
     "gemini": {
@@ -199,7 +201,9 @@
         "web_fetch": true,
         "weather": true,
         "realtime_info": true,
-        "citations": true
+        "citations": true,
+        "native_tool_calling": true,
+        "__comment_native_tool_calling": "Gemini supports native function calling"
       }
     },
     "openai": {

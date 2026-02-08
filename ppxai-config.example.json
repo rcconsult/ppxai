@@ -115,7 +115,9 @@
         "web_search": true,
         "web_fetch": true,
         "weather": true,
-        "realtime_info": true
+        "realtime_info": true,
+        "native_tool_calling": false,
+        "__comment_native_tool_calling": "Perplexity Sonar models do NOT support native function calling - ppxai uses prompt-based tool calling as fallback"
       }
     },
     "gemini": {
@@ -185,7 +187,9 @@
         "web_search": true,
         "web_fetch": false,
         "weather": false,
-        "realtime_info": false
+        "realtime_info": false,
+        "native_tool_calling": true,
+        "__comment_native_tool_calling": "Gemini 2.5+ supports native function calling via OpenAI-compatible API"
       }
     },
     "openai": {
