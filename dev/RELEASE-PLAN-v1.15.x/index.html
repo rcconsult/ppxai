@@ -1266,6 +1266,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v1152-validation-robustness-benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.15.2 - Validation, Robustness &amp; Benchmarks ✅
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v1153-config-hot-reload-fix-file-navigation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.15.3 - Config Hot-Reload Fix &amp; File Navigation ⏳
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v1.15.3 - Config Hot-Reload Fix &amp; File Navigation ⏳">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#config-hot-reload-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config Hot-Reload (Done)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-navigation-planned" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File Navigation (Planned)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#references" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1298,10 +1348,10 @@
 
 <h1 id="release-plan-v115x-series">Release Plan: v1.15.x Series<a class="headerlink" href="#release-plan-v115x-series" title="Permanent link">&para;</a></h1>
 <p><strong>Created:</strong> January 24, 2026
-<strong>Last Updated:</strong> February 5, 2026
-<strong>Status:</strong> ✅ v1.15.0 RELEASED, ✅ v1.15.1 RELEASED, ⏳ v1.15.2 IN PROGRESS
-<strong>Branch:</strong> feature/1-15-2
-<strong>Tests:</strong> 1105 passing</p>
+<strong>Last Updated:</strong> February 7, 2026
+<strong>Status:</strong> ✅ v1.15.0 RELEASED, ✅ v1.15.1 RELEASED, ✅ v1.15.2 RELEASED, ⏳ v1.15.3 IN PROGRESS
+<strong>Branch:</strong> bugfix/v1.15.3
+<strong>Tests:</strong> 1157 passing</p>
 <hr />
 <h2 id="theme-next-generation-tui-ppxaide">Theme: Next Generation TUI (ppxaide)<a class="headerlink" href="#theme-next-generation-tui-ppxaide" title="Permanent link">&para;</a></h2>
 <p><strong>Tagline:</strong> Textual-based TUI replacing Rich-based TUI as the primary terminal interface</p>
@@ -1329,6 +1379,12 @@
 - LLM benchmark suite (6 categories, 21+ test cases)
 - Generation params support for Gemini and Perplexity
 - Streaming cancellation and graceful Ctrl+C handling</p>
+<p><strong>v1.15.3</strong> - Config hot-reload and stale cache fix:
+- <code>/model</code> and <code>/provider</code> commands auto-reload config from disk before listing
+- <code>EngineClient.reload_config()</code> refreshes cached <code>_providers_config</code>, shell/agent config
+- Session restore reloads config in all 3 clients (Textual, Rich, HTTP server)
+- HTTP and JSON-RPC server endpoints reload config before listing/switching providers/models
+- Root cause: ConfigStore singleton + EngineClient snapshot = stale config (since v1.8.0)</p>
 <p><strong>Philosophy:</strong> Validate the new Textual framework thoroughly before connecting to the proven engine layer.
 The engine is already battle-tested in Rich TUI, Web App, and VSCode. What's new is the UI.</p>
 <p><strong>Migration Path:</strong>
@@ -2021,6 +2077,142 @@ plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles c
 <li>[x] Markdown rendering in chat</li>
 <li>[x] Thinking indicators</li>
 </ul>
+<hr />
+<h2 id="v1152-validation-robustness-benchmarks">v1.15.2 - Validation, Robustness &amp; Benchmarks ✅<a class="headerlink" href="#v1152-validation-robustness-benchmarks" title="Permanent link">&para;</a></h2>
+<p><strong>Released:</strong> 2026-02-06
+<strong>Branch:</strong> feature/1-15-2</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Description</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Response validation</strong></td>
+<td>Detects LLM hallucinations and tool result contradictions</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>Unicode whitespace</strong></td>
+<td>5-level fuzzy matching in <code>apply_patch</code> for NBSP, NNBSP, thin spaces</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>Truncated tool call detection</strong></td>
+<td>Detects "I'll use X tool" with incomplete JSON, auto-retries</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong><code>/terminal</code> command</strong></td>
+<td>Terminal detection and image protocol config help</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>iTerm2 image protocol</strong></td>
+<td>Native inline image support for WezTerm</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>LLM benchmark suite</strong></td>
+<td>6 categories, 21+ test cases for agentic coding evaluation</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>Generation params</strong></td>
+<td>Gemini and Perplexity load temperature/top_p from config</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>Streaming cancellation</strong></td>
+<td>Graceful Ctrl+C during streaming in ppxaide</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>VSCode display_file</strong></td>
+<td>Fixed missing EventBus event for display_file tool</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>Gemini native tool calling</strong></td>
+<td>function_declarations format with grounding fallback</td>
+<td>✅ Done</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="v1153-config-hot-reload-fix-file-navigation">v1.15.3 - Config Hot-Reload Fix &amp; File Navigation ⏳<a class="headerlink" href="#v1153-config-hot-reload-fix-file-navigation" title="Permanent link">&para;</a></h2>
+<p><strong>Status:</strong> In Progress
+<strong>Branch:</strong> bugfix/v1.15.3</p>
+<h3 id="config-hot-reload-done">Config Hot-Reload (Done)<a class="headerlink" href="#config-hot-reload-done" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Description</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Config auto-reload</strong></td>
+<td><code>/model</code> and <code>/provider</code> commands reload config from disk</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong><code>EngineClient.reload_config()</code></strong></td>
+<td>Single entry point to refresh all cached config data</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>Session restore reload</strong></td>
+<td>All 3 clients reload config before restoring sessions</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>Server endpoint reload</strong></td>
+<td>HTTP + JSON-RPC endpoints reload before listing/switching</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>Root cause</strong></td>
+<td>ConfigStore singleton + EngineClient snapshot = stale config (since v1.8.0)</td>
+<td>✅ Identified</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Root Cause:</strong> <code>EngineClient._load_config()</code> captures <code>self._providers_config = PROVIDERS</code> at init time. When config file is edited externally (e.g., adding new models), the cached dict goes stale. <code>reload_config()</code> now refreshes ConfigStore + all cached config snapshots.</p>
+<p><strong>Tech Debt Note:</strong> The <code>__getattr__</code> lazy loading pattern in <code>config/__init__.py</code> still exists. Proper DAG-based initialization planned for v1.16.0.</p>
+<h3 id="file-navigation-planned">File Navigation (Planned)<a class="headerlink" href="#file-navigation-planned" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Description</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>/ls [path]</code></strong></td>
+<td>List files and directories (all clients)</td>
+<td>⏳ Planned</td>
+</tr>
+<tr>
+<td><strong><code>/tree [depth]</code></strong></td>
+<td>Render directory tree structure (all clients)</td>
+<td>⏳ Planned</td>
+</tr>
+<tr>
+<td><strong>ppxaide file tree sidebar</strong></td>
+<td>NvChad-inspired interactive file tree (Textual DirectoryTree)</td>
+<td>⏳ Planned</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Spec:</strong> See <a href="../TODO-v1.16.0.md">TODO-v1.16.0.md</a> (Phase 0: commands ~2 days, Phase 1: ppxaide sidebar ~5 days).</p>
 <hr />
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
 <ul>

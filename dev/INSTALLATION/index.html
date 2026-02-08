@@ -1301,6 +1301,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#platform-specific-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Platform-Specific Notes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Platform-Specific Notes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#clipboard-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Clipboard Support
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signal-handling-ctrlc-process-termination" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signal Handling (Ctrl+C / Process Termination)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#binary-search-path-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Binary Search Path Optimization
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#updating" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2912,6 +2962,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#platform-specific-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Platform-Specific Notes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Platform-Specific Notes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#clipboard-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Clipboard Support
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#signal-handling-ctrlc-process-termination" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Signal Handling (Ctrl+C / Process Termination)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#binary-search-path-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Binary Search Path Optimization
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#updating" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3956,50 +4056,107 @@ Use <code>.wezterm.lua</code> config (see WezTerm Setup section above).</p>
 </span><span id="__span-62-4"><a id="__codelineno-62-4" name="__codelineno-62-4" href="#__codelineno-62-4"></a><span class="p">}</span>
 </span></code></pre></div></li>
 </ol>
+<h2 id="platform-specific-notes">Platform-Specific Notes<a class="headerlink" href="#platform-specific-notes" title="Permanent link">&para;</a></h2>
+<h3 id="clipboard-support">Clipboard Support<a class="headerlink" href="#clipboard-support" title="Permanent link">&para;</a></h3>
+<p><strong>Windows:</strong>
+- Clipboard functionality works out of the box (uses <code>pyperclip</code> auto-installed with dependencies)
+- Copy/paste operations in ppxaide work with standard Windows clipboard (Ctrl+C/Ctrl+V)</p>
+<p><strong>macOS:</strong>
+- Clipboard functionality works out of the box
+- Copy/paste operations use native macOS clipboard (Cmd+C/Cmd+V)</p>
+<p><strong>Linux (GUI Desktop):</strong>
+- Clipboard functionality works out of the box for most desktop environments (GNOME, KDE, XFCE)
+- Uses <code>pyperclip</code> which detects available clipboard backends automatically</p>
+<p><strong>Linux (Headless/SSH):</strong>
+- Requires <code>xclip</code> or <code>xsel</code> for clipboard operations:
+  <div class="language-bash highlight"><pre><span></span><code><span id="__span-63-1"><a id="__codelineno-63-1" name="__codelineno-63-1" href="#__codelineno-63-1"></a><span class="c1"># Ubuntu/Debian</span>
+</span><span id="__span-63-2"><a id="__codelineno-63-2" name="__codelineno-63-2" href="#__codelineno-63-2"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>xclip
+</span><span id="__span-63-3"><a id="__codelineno-63-3" name="__codelineno-63-3" href="#__codelineno-63-3"></a>
+</span><span id="__span-63-4"><a id="__codelineno-63-4" name="__codelineno-63-4" href="#__codelineno-63-4"></a><span class="c1"># Fedora/RHEL</span>
+</span><span id="__span-63-5"><a id="__codelineno-63-5" name="__codelineno-63-5" href="#__codelineno-63-5"></a>sudo<span class="w"> </span>dnf<span class="w"> </span>install<span class="w"> </span>xclip
+</span><span id="__span-63-6"><a id="__codelineno-63-6" name="__codelineno-63-6" href="#__codelineno-63-6"></a>
+</span><span id="__span-63-7"><a id="__codelineno-63-7" name="__codelineno-63-7" href="#__codelineno-63-7"></a><span class="c1"># Arch</span>
+</span><span id="__span-63-8"><a id="__codelineno-63-8" name="__codelineno-63-8" href="#__codelineno-63-8"></a>sudo<span class="w"> </span>pacman<span class="w"> </span>-S<span class="w"> </span>xclip
+</span></code></pre></div>
+- Without these tools, clipboard operations will gracefully fail (copy returns false, paste returns None)
+- This is expected behavior - clipboard requires X11 or Wayland display server</p>
+<h3 id="signal-handling-ctrlc-process-termination">Signal Handling (Ctrl+C / Process Termination)<a class="headerlink" href="#signal-handling-ctrlc-process-termination" title="Permanent link">&para;</a></h3>
+<p><strong>v1.15.3+:</strong> All platforms support graceful shutdown</p>
+<ul>
+<li><strong>SIGINT (Ctrl+C):</strong> Supported on Windows, macOS, Linux</li>
+<li>Gracefully terminates ppxaide without corrupting sessions</li>
+<li>
+<p>Double Ctrl+C pattern in ppxaide (first cancels current operation, second quits)</p>
+</li>
+<li>
+<p><strong>SIGTERM (Process Termination):</strong> Supported on Windows, macOS, Linux</p>
+</li>
+<li>Sent by Task Manager "End Task" (Windows) or <code>kill &lt;pid&gt;</code> (Unix)</li>
+<li>
+<p>Triggers graceful cleanup and session save</p>
+</li>
+<li>
+<p><strong>Previous versions (≤v1.15.2):</strong> Windows did not support SIGINT - required task kill</p>
+</li>
+</ul>
+<h3 id="binary-search-path-optimization">Binary Search Path Optimization<a class="headerlink" href="#binary-search-path-optimization" title="Permanent link">&para;</a></h3>
+<p><strong>v1.15.3+:</strong> Platform-aware path filtering for faster startup</p>
+<ul>
+<li><strong>Windows:</strong> Only checks Windows-specific paths (<code>~/.ppxai/bin/</code>, <code>~/AppData/Local/ppxai/</code>)</li>
+<li>
+<p>Skips Unix system paths (<code>/usr/local/bin</code>, <code>/usr/bin</code>) for efficiency</p>
+</li>
+<li>
+<p><strong>Linux/macOS:</strong> Only checks Unix-specific paths (<code>~/.local/bin/</code>, <code>/usr/local/bin/</code>)</p>
+</li>
+<li>Skips Windows paths (<code>AppData/Local/ppxai</code>) for efficiency</li>
+</ul>
+<p>This reduces unnecessary filesystem checks and improves startup time (~10-20% faster on first run).</p>
+<hr />
 <h2 id="updating">Updating<a class="headerlink" href="#updating" title="Permanent link">&para;</a></h2>
 <h3 id="linux-macos_3">Linux / macOS<a class="headerlink" href="#linux-macos_3" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-63-1"><a id="__codelineno-63-1" name="__codelineno-63-1" href="#__codelineno-63-1"></a>curl<span class="w"> </span>-sSL<span class="w"> </span>https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-64-1"><a id="__codelineno-64-1" name="__codelineno-64-1" href="#__codelineno-64-1"></a>curl<span class="w"> </span>-sSL<span class="w"> </span>https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash
 </span></code></pre></div>
 <h3 id="windows_4">Windows<a class="headerlink" href="#windows_4" title="Permanent link">&para;</a></h3>
-<div class="language-powershell highlight"><pre><span></span><code><span id="__span-64-1"><a id="__codelineno-64-1" name="__codelineno-64-1" href="#__codelineno-64-1"></a><span class="p">.\</span><span class="n">install</span><span class="p">.</span><span class="n">ps1</span> <span class="n">-Force</span>
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-65-1"><a id="__codelineno-65-1" name="__codelineno-65-1" href="#__codelineno-65-1"></a><span class="p">.\</span><span class="n">install</span><span class="p">.</span><span class="n">ps1</span> <span class="n">-Force</span>
 </span></code></pre></div>
 <p>This will download and replace the binaries with the latest version.</p>
 <h2 id="uninstalling">Uninstalling<a class="headerlink" href="#uninstalling" title="Permanent link">&para;</a></h2>
 <h3 id="linux-macos-automated">Linux / macOS (Automated)<a class="headerlink" href="#linux-macos-automated" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-65-1"><a id="__codelineno-65-1" name="__codelineno-65-1" href="#__codelineno-65-1"></a><span class="c1"># Uninstall ppxai (preserves config files)</span>
-</span><span id="__span-65-2"><a id="__codelineno-65-2" name="__codelineno-65-2" href="#__codelineno-65-2"></a>curl<span class="w"> </span>-sSL<span class="w"> </span>https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash<span class="w"> </span>-s<span class="w"> </span>--<span class="w"> </span>--uninstall
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-66-1"><a id="__codelineno-66-1" name="__codelineno-66-1" href="#__codelineno-66-1"></a><span class="c1"># Uninstall ppxai (preserves config files)</span>
+</span><span id="__span-66-2"><a id="__codelineno-66-2" name="__codelineno-66-2" href="#__codelineno-66-2"></a>curl<span class="w"> </span>-sSL<span class="w"> </span>https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash<span class="w"> </span>-s<span class="w"> </span>--<span class="w"> </span>--uninstall
 </span></code></pre></div>
 <h3 id="linux-macos-manual">Linux / macOS (Manual)<a class="headerlink" href="#linux-macos-manual" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-66-1"><a id="__codelineno-66-1" name="__codelineno-66-1" href="#__codelineno-66-1"></a><span class="c1"># Remove binaries</span>
-</span><span id="__span-66-2"><a id="__codelineno-66-2" name="__codelineno-66-2" href="#__codelineno-66-2"></a>rm<span class="w"> </span>~/.local/bin/ppxai
-</span><span id="__span-66-3"><a id="__codelineno-66-3" name="__codelineno-66-3" href="#__codelineno-66-3"></a>rm<span class="w"> </span>~/.local/bin/ppxaide
-</span><span id="__span-66-4"><a id="__codelineno-66-4" name="__codelineno-66-4" href="#__codelineno-66-4"></a>rm<span class="w"> </span>~/.local/bin/ppxai-server
-</span><span id="__span-66-5"><a id="__codelineno-66-5" name="__codelineno-66-5" href="#__codelineno-66-5"></a>rm<span class="w"> </span>~/.local/bin/ppxai-desktop
-</span><span id="__span-66-6"><a id="__codelineno-66-6" name="__codelineno-66-6" href="#__codelineno-66-6"></a>rm<span class="w"> </span>~/.local/bin/ppxai-*.vsix
-</span><span id="__span-66-7"><a id="__codelineno-66-7" name="__codelineno-66-7" href="#__codelineno-66-7"></a>
-</span><span id="__span-66-8"><a id="__codelineno-66-8" name="__codelineno-66-8" href="#__codelineno-66-8"></a><span class="c1"># Remove Linux desktop integration (if installed)</span>
-</span><span id="__span-66-9"><a id="__codelineno-66-9" name="__codelineno-66-9" href="#__codelineno-66-9"></a>rm<span class="w"> </span>~/.local/share/applications/ppxai.desktop
-</span><span id="__span-66-10"><a id="__codelineno-66-10" name="__codelineno-66-10" href="#__codelineno-66-10"></a>rm<span class="w"> </span>~/.local/share/icons/hicolor/128x128/apps/ppxai.png
-</span><span id="__span-66-11"><a id="__codelineno-66-11" name="__codelineno-66-11" href="#__codelineno-66-11"></a>
-</span><span id="__span-66-12"><a id="__codelineno-66-12" name="__codelineno-66-12" href="#__codelineno-66-12"></a><span class="c1"># Remove macOS app (if installed)</span>
-</span><span id="__span-66-13"><a id="__codelineno-66-13" name="__codelineno-66-13" href="#__codelineno-66-13"></a>rm<span class="w"> </span>-rf<span class="w"> </span>/Applications/ppxai.app
-</span><span id="__span-66-14"><a id="__codelineno-66-14" name="__codelineno-66-14" href="#__codelineno-66-14"></a>
-</span><span id="__span-66-15"><a id="__codelineno-66-15" name="__codelineno-66-15" href="#__codelineno-66-15"></a><span class="c1"># Remove macOS LaunchAgent (if installed)</span>
-</span><span id="__span-66-16"><a id="__codelineno-66-16" name="__codelineno-66-16" href="#__codelineno-66-16"></a>launchctl<span class="w"> </span>unload<span class="w"> </span>~/Library/LaunchAgents/com.ppxai.server.plist<span class="w"> </span><span class="m">2</span>&gt;/dev/null
-</span><span id="__span-66-17"><a id="__codelineno-66-17" name="__codelineno-66-17" href="#__codelineno-66-17"></a>rm<span class="w"> </span>~/Library/LaunchAgents/com.ppxai.server.plist
-</span><span id="__span-66-18"><a id="__codelineno-66-18" name="__codelineno-66-18" href="#__codelineno-66-18"></a>
-</span><span id="__span-66-19"><a id="__codelineno-66-19" name="__codelineno-66-19" href="#__codelineno-66-19"></a><span class="c1"># Remove configuration (optional)</span>
-</span><span id="__span-66-20"><a id="__codelineno-66-20" name="__codelineno-66-20" href="#__codelineno-66-20"></a>rm<span class="w"> </span>-rf<span class="w"> </span>~/.ppxai
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-67-1"><a id="__codelineno-67-1" name="__codelineno-67-1" href="#__codelineno-67-1"></a><span class="c1"># Remove binaries</span>
+</span><span id="__span-67-2"><a id="__codelineno-67-2" name="__codelineno-67-2" href="#__codelineno-67-2"></a>rm<span class="w"> </span>~/.local/bin/ppxai
+</span><span id="__span-67-3"><a id="__codelineno-67-3" name="__codelineno-67-3" href="#__codelineno-67-3"></a>rm<span class="w"> </span>~/.local/bin/ppxaide
+</span><span id="__span-67-4"><a id="__codelineno-67-4" name="__codelineno-67-4" href="#__codelineno-67-4"></a>rm<span class="w"> </span>~/.local/bin/ppxai-server
+</span><span id="__span-67-5"><a id="__codelineno-67-5" name="__codelineno-67-5" href="#__codelineno-67-5"></a>rm<span class="w"> </span>~/.local/bin/ppxai-desktop
+</span><span id="__span-67-6"><a id="__codelineno-67-6" name="__codelineno-67-6" href="#__codelineno-67-6"></a>rm<span class="w"> </span>~/.local/bin/ppxai-*.vsix
+</span><span id="__span-67-7"><a id="__codelineno-67-7" name="__codelineno-67-7" href="#__codelineno-67-7"></a>
+</span><span id="__span-67-8"><a id="__codelineno-67-8" name="__codelineno-67-8" href="#__codelineno-67-8"></a><span class="c1"># Remove Linux desktop integration (if installed)</span>
+</span><span id="__span-67-9"><a id="__codelineno-67-9" name="__codelineno-67-9" href="#__codelineno-67-9"></a>rm<span class="w"> </span>~/.local/share/applications/ppxai.desktop
+</span><span id="__span-67-10"><a id="__codelineno-67-10" name="__codelineno-67-10" href="#__codelineno-67-10"></a>rm<span class="w"> </span>~/.local/share/icons/hicolor/128x128/apps/ppxai.png
+</span><span id="__span-67-11"><a id="__codelineno-67-11" name="__codelineno-67-11" href="#__codelineno-67-11"></a>
+</span><span id="__span-67-12"><a id="__codelineno-67-12" name="__codelineno-67-12" href="#__codelineno-67-12"></a><span class="c1"># Remove macOS app (if installed)</span>
+</span><span id="__span-67-13"><a id="__codelineno-67-13" name="__codelineno-67-13" href="#__codelineno-67-13"></a>rm<span class="w"> </span>-rf<span class="w"> </span>/Applications/ppxai.app
+</span><span id="__span-67-14"><a id="__codelineno-67-14" name="__codelineno-67-14" href="#__codelineno-67-14"></a>
+</span><span id="__span-67-15"><a id="__codelineno-67-15" name="__codelineno-67-15" href="#__codelineno-67-15"></a><span class="c1"># Remove macOS LaunchAgent (if installed)</span>
+</span><span id="__span-67-16"><a id="__codelineno-67-16" name="__codelineno-67-16" href="#__codelineno-67-16"></a>launchctl<span class="w"> </span>unload<span class="w"> </span>~/Library/LaunchAgents/com.ppxai.server.plist<span class="w"> </span><span class="m">2</span>&gt;/dev/null
+</span><span id="__span-67-17"><a id="__codelineno-67-17" name="__codelineno-67-17" href="#__codelineno-67-17"></a>rm<span class="w"> </span>~/Library/LaunchAgents/com.ppxai.server.plist
+</span><span id="__span-67-18"><a id="__codelineno-67-18" name="__codelineno-67-18" href="#__codelineno-67-18"></a>
+</span><span id="__span-67-19"><a id="__codelineno-67-19" name="__codelineno-67-19" href="#__codelineno-67-19"></a><span class="c1"># Remove configuration (optional)</span>
+</span><span id="__span-67-20"><a id="__codelineno-67-20" name="__codelineno-67-20" href="#__codelineno-67-20"></a>rm<span class="w"> </span>-rf<span class="w"> </span>~/.ppxai
 </span></code></pre></div>
 <h3 id="windows_5">Windows<a class="headerlink" href="#windows_5" title="Permanent link">&para;</a></h3>
-<div class="language-powershell highlight"><pre><span></span><code><span id="__span-67-1"><a id="__codelineno-67-1" name="__codelineno-67-1" href="#__codelineno-67-1"></a><span class="c"># Run uninstaller</span>
-</span><span id="__span-67-2"><a id="__codelineno-67-2" name="__codelineno-67-2" href="#__codelineno-67-2"></a><span class="p">.\</span><span class="n">install</span><span class="p">.</span><span class="n">ps1</span> <span class="n">-Uninstall</span>
-</span><span id="__span-67-3"><a id="__codelineno-67-3" name="__codelineno-67-3" href="#__codelineno-67-3"></a>
-</span><span id="__span-67-4"><a id="__codelineno-67-4" name="__codelineno-67-4" href="#__codelineno-67-4"></a><span class="c"># Or manually remove</span>
-</span><span id="__span-67-5"><a id="__codelineno-67-5" name="__codelineno-67-5" href="#__codelineno-67-5"></a><span class="nb">Remove-Item</span> <span class="n">-Recurse</span> <span class="nv">$env:USERPROFILE</span><span class="p">\.</span><span class="n">ppxai</span>
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-68-1"><a id="__codelineno-68-1" name="__codelineno-68-1" href="#__codelineno-68-1"></a><span class="c"># Run uninstaller</span>
+</span><span id="__span-68-2"><a id="__codelineno-68-2" name="__codelineno-68-2" href="#__codelineno-68-2"></a><span class="p">.\</span><span class="n">install</span><span class="p">.</span><span class="n">ps1</span> <span class="n">-Uninstall</span>
+</span><span id="__span-68-3"><a id="__codelineno-68-3" name="__codelineno-68-3" href="#__codelineno-68-3"></a>
+</span><span id="__span-68-4"><a id="__codelineno-68-4" name="__codelineno-68-4" href="#__codelineno-68-4"></a><span class="c"># Or manually remove</span>
+</span><span id="__span-68-5"><a id="__codelineno-68-5" name="__codelineno-68-5" href="#__codelineno-68-5"></a><span class="nb">Remove-Item</span> <span class="n">-Recurse</span> <span class="nv">$env:USERPROFILE</span><span class="p">\.</span><span class="n">ppxai</span>
 </span></code></pre></div>
 <h3 id="vscode-extension">VSCode Extension<a class="headerlink" href="#vscode-extension" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-68-1"><a id="__codelineno-68-1" name="__codelineno-68-1" href="#__codelineno-68-1"></a>code<span class="w"> </span>--uninstall-extension<span class="w"> </span>ppxai.ppxai
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-69-1"><a id="__codelineno-69-1" name="__codelineno-69-1" href="#__codelineno-69-1"></a>code<span class="w"> </span>--uninstall-extension<span class="w"> </span>ppxai.ppxai
 </span></code></pre></div>
 
 
