@@ -1,0 +1,62 @@
+{
+  "provider": "gemini",
+  "model": "gemini-3-pro-preview",
+  "timestamp": "2026-02-08T18:42:44.277447",
+  "overall_score": 28.57142857142857,
+  "tests_passed": 1,
+  "tests_total": 3,
+  "duration_seconds": 358.08885622024536,
+  "category_scores": {
+    "code_editing": 28.57142857142857
+  },
+  "test_results": [
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": true,
+      "details": {
+        "patch_length": 141,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 0.85,
+        "anti_patterns": [
+          "duplicate_code_in_content"
+        ],
+        "quality_notes": [
+          "Model output code in response when tool call should handle it"
+        ],
+        "overall_score": 0.7,
+        "passed": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "Timeout"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "Timeout"
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "c5c7e4da9704"
+  }
+}

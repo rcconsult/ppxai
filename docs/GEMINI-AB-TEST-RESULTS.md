@@ -1,24 +1,60 @@
 # Gemini A/B Test Results: AGENTS.md Hints Impact
 
-**Date:** 2026-02-08
+**Date:** 2026-02-08 (Updated with Multi-Criteria Evaluation)
 **Test Type:** A/B comparison - Baseline (no hints) vs Enhanced AGENTS.md hints
 **Category:** Code editing (apply_patch tool usage)
 
 ---
 
-## Executive Summary
+## 🚨 CRITICAL UPDATE: Multi-Criteria Evaluation Reveals Hidden Issues
 
-**BREAKTHROUGH RESULTS:** Enhanced AGENTS.md hints produced dramatic improvements for **flash models**, with gemini-3-flash-preview achieving **perfect 100% code editing score** and gemini-2.5-flash **completely restored from 0%**.
+**Date:** 2026-02-08 19:45 CET
 
-**Key Findings:**
-1. ✅ **AGENTS.md hints are HIGHLY effective** for flash models (gemini-3-flash, gemini-2.5-flash)
-2. ✅ **gemini-2.5-flash regression COMPLETELY MITIGATED** with targeted hints
-3. ✅ **gemini-3-flash-preview now ranks #1** tied with sonar-pro (100%)
-4. ❌ **Pro models (gemini-3-pro, gemini-2.5-pro) did NOT benefit** from same hints
-5. ✅ **Model fingerprinting** successfully implemented and working
-6. ✅ **SDK version tracking** now captured in metadata
+### Binary Scoring Masked Quality Issues in ALL Gemini Models
 
-**Recommendation:** Use **gemini-3-flash-preview** for all code editing tasks. Pro models need different optimization approach.
+Initial binary benchmarks showed gemini-3-flash-preview at **100% "perfect" score**, but multi-criteria evaluation reveals significant quality problems:
+
+| Model | Binary Score | Quality Score | Reality |
+|-------|--------------|---------------|---------|
+| **gemini-3-flash-preview** | 100.0% ✅ | **57.1%** ⚠️ | Duplicate tool calls (4x), verbose responses |
+| **gemini-2.5-flash** | 71.4% | **28.6%** ⚠️ | Severe anti-patterns (tool JSON in content) |
+| gemini-3-pro-preview | 28.6% | **28.6%** | No change (fails due to wrong tools) |
+| **gemini-2.5-pro** | 64.3% | **0.0%** ❌ | Complete breakdown with all anti-patterns |
+
+**Key Discovery:** gemini-3-flash-preview is the **best Gemini model** (57.1%) but far from perfect. It makes **4 duplicate tool calls** instead of 1 and outputs duplicate code in responses.
+
+### Anti-Patterns Detected
+
+**gemini-3-flash-preview (100% → 57.1%):**
+- patch_indentation: **4 duplicate tool calls** instead of 1
+- Quality: 0.75 - 0.3 (2 anti-patterns) = 0.45 < 0.7 → FAIL
+- patch_multiline: Barely passed (0.7 exactly at threshold)
+
+**gemini-2.5-flash (71.4% → 28.6%):**
+- patch_simple: **3 anti-patterns** (tool_json_in_content, duplicate_tool_calls, hallucinated_tools)
+- Quality: 0.4 - 0.45 = 0.0 → FAIL
+
+**gemini-2.5-pro (64.3% → 0.0%):**
+- All tests failed - every response has anti-patterns
+- tool_json_in_content (2x), hallucinated_tools (2x), duplicate calls
+
+**See:** `docs/GEMINI-QUALITY-VALIDATION-RESULTS.md` for complete analysis
+
+---
+
+## Executive Summary (Original Binary Benchmarks)
+
+⚠️ **Note:** The findings below used binary pass/fail scoring and did not detect response quality issues. See multi-criteria evaluation results above for accurate assessment.
+
+### Key Findings (Binary Scoring Only)
+
+1. ~~✅ **AGENTS.md hints produced perfect 100% score**~~ ⚠️ **Actually 57.1% with quality validation**
+2. ~~✅ **gemini-3-flash-preview now ranks #1**~~ ⚠️ **Still best Gemini model, but has quality issues**
+3. ✅ **gemini-2.5-flash restored from 0%** → But only to 28.6% with quality validation
+4. ❌ **Pro models did NOT benefit** from same hints (confirmed by quality validation)
+5. 🔑 **Flash models cleaner than pro models** - confirmed by anti-pattern analysis
+
+**Updated Recommendation:** Use **gemini-3-flash-preview** with caution - it's the best Gemini model (57.1%) but still has duplicate tool calls and verbose responses. Consider adding anti-pattern-specific hints.
 
 ---
 

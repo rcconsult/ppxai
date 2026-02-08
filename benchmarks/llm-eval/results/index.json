@@ -174,6 +174,11 @@
         "filename": "gemini_gemini-2.5-flash_2026-02-08_dfafb33a.json",
         "timestamp": "2026-02-08T17:30:08.780975",
         "overall_score": 71.42857142857143
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-02-08_34786292.json",
+        "timestamp": "2026-02-08T18:36:41.133302",
+        "overall_score": 28.57142857142857
       }
     ],
     "gemini/gemini-3-pro-preview": [
@@ -190,6 +195,11 @@
       {
         "filename": "gemini_gemini-3-pro-preview_2026-02-08_4e235513.json",
         "timestamp": "2026-02-08T17:40:16.702039",
+        "overall_score": 28.57142857142857
+      },
+      {
+        "filename": "gemini_gemini-3-pro-preview_2026-02-08_6fa4d7dc.json",
+        "timestamp": "2026-02-08T18:42:44.277447",
         "overall_score": 28.57142857142857
       }
     ],
@@ -218,6 +228,11 @@
         "filename": "gemini_gemini-3-flash-preview_2026-02-08_b517fadc.json",
         "timestamp": "2026-02-08T17:29:31.639744",
         "overall_score": 100.0
+      },
+      {
+        "filename": "gemini_gemini-3-flash-preview_2026-02-08_cd299e80.json",
+        "timestamp": "2026-02-08T18:36:08.079762",
+        "overall_score": 57.14285714285714
       }
     ],
     "asusai/qwen2.5-coder:32b": [
@@ -289,6 +304,11 @@
         "filename": "gemini_gemini-2.5-pro_2026-02-07_6e1eb727.json",
         "timestamp": "2026-02-07T23:57:29.052605",
         "overall_score": 64.28571428571429
+      },
+      {
+        "filename": "gemini_gemini-2.5-pro_2026-02-08_697d309a.json",
+        "timestamp": "2026-02-08T18:44:14.463386",
+        "overall_score": 0.0
       }
     ],
     "perplexity/sonar": [
@@ -692,6 +712,30 @@
       "filename": "perplexity_sonar-reasoning-pro_2026-02-08_f267393e.json",
       "timestamp": "2026-02-08T18:26:43.911150",
       "overall_score": 28.57142857142857
+    },
+    {
+      "pair": "gemini/gemini-3-flash-preview",
+      "filename": "gemini_gemini-3-flash-preview_2026-02-08_cd299e80.json",
+      "timestamp": "2026-02-08T18:36:08.079762",
+      "overall_score": 57.14285714285714
+    },
+    {
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-02-08_34786292.json",
+      "timestamp": "2026-02-08T18:36:41.133302",
+      "overall_score": 28.57142857142857
+    },
+    {
+      "pair": "gemini/gemini-3-pro-preview",
+      "filename": "gemini_gemini-3-pro-preview_2026-02-08_6fa4d7dc.json",
+      "timestamp": "2026-02-08T18:42:44.277447",
+      "overall_score": 28.57142857142857
+    },
+    {
+      "pair": "gemini/gemini-2.5-pro",
+      "filename": "gemini_gemini-2.5-pro_2026-02-08_697d309a.json",
+      "timestamp": "2026-02-08T18:44:14.463386",
+      "overall_score": 0.0
     }
   ]
 }
