@@ -1,0 +1,83 @@
+{
+  "provider": "perplexity",
+  "model": "sonar-pro",
+  "timestamp": "2026-02-08T13:29:07.646578",
+  "overall_score": 64.28571428571429,
+  "tests_passed": 4,
+  "tests_total": 6,
+  "duration_seconds": 31.2082359790802,
+  "category_scores": {
+    "tool_calling": 64.28571428571429
+  },
+  "test_results": [
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool": "read_file",
+        "args": {
+          "path": "/src/main.py"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool": "write_file",
+        "args": {
+          "path": "/tmp/test.txt",
+          "content": "Hello, World!"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "content_length": 3322
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Didn't use info from first tool: {'path': '/src/config.json'}"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool_calls": 1,
+        "content_length": 1452
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Tool call JSON found in content instead of tool_calls",
+        "pattern_matched": "\\{\\s*\"tool\"\\s*:",
+        "content_preview": "```json\n{\n  \"tool\": \"search_code\",\n  \"arguments\": {\n    \"pattern\": \"TODO\",\n    \"path\": \"/src\",\n    \"file_pattern\": \"*\"\n  }\n}\n```"
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1
+  }
+}

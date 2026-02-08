@@ -13,6 +13,10 @@ provider_hints:
   perplexity:
     - "Use your native web search for current information - don't use web_search tool."
     - "Cite sources as markdown links inline."
+    - "CRITICAL: Make EXACTLY ONE tool call per task - do NOT make duplicate or redundant calls."
+    - "Do NOT output tool call JSON in your response - use native tool calling only."
+    - "Do NOT output code blocks when using apply_patch - the tool handles the code."
+    - "Do NOT mention tools in your response that you didn't actually call."
   gemini:
     - "Use Google Search grounding for current information when available."
     - "You have a 1M token context - feel free to include full file contents."
@@ -20,6 +24,10 @@ provider_hints:
     - "Generate complete patches with context lines - never output empty patches."
     - "Call tools directly without explanation - don't say 'I'll use X tool'."
     - "Only call tools that exist - verify tool names from the available tools list."
+    - "CRITICAL: Make EXACTLY ONE tool call - NEVER call the same tool multiple times."
+    - "Do NOT output code in your response when using apply_patch - let the tool handle it."
+    - "Do NOT output tool call JSON in your response text - use native tool calling only."
+    - "Do NOT mention tool names in your response unless actually calling them."
 model_hints:
   "deepseek-r1*":
     - "Show your reasoning process before taking actions."
@@ -33,11 +41,19 @@ model_hints:
   "sonar*":
     - "You have real-time web access - use it for current information."
     - "Always cite sources with markdown links."
+    - "CRITICAL: For code editing, call apply_patch ONCE - detected issue: you make 5-6 duplicate calls."
+    - "Do NOT output tool call JSON in your response text - use native tool calling only."
+    - "Do NOT output code blocks when using apply_patch - the tool contains the code."
+    - "Do NOT mention tools in your response that you didn't actually call."
+    - "After calling a tool, provide minimal response - let the tool output speak for itself."
   "gemini-3-flash*":
     - "You excel at code editing - use apply_patch confidently for all file modifications."
     - "Include all necessary imports and context in patches."
     - "Verify tool exists in available tools list before calling - don't hallucinate tool names."
     - "For file edits: apply_patch > write_file. Only use write_file for new files."
+    - "CRITICAL: Call apply_patch ONCE - detected issue: you make 4+ duplicate calls."
+    - "After calling apply_patch, your response should be empty or minimal confirmation only."
+    - "Do NOT output code blocks in your response - the patch contains all the code."
   "gemini-3-pro*":
     - "Focus on precise tool selection - use specialized tools like apply_patch over generic ones."
     - "Generate complete unified diffs with proper context lines (3+ lines before/after)."
@@ -47,6 +63,10 @@ model_hints:
     - "Generate patches immediately - don't explain what you'll do first, just call apply_patch."
     - "Include all affected lines in patches - incomplete patches will fail."
     - "Tool calling accuracy is critical - double-check you're using the right tool."
+    - "CRITICAL: Do NOT output tool call JSON in your response text - severe anti-pattern detected."
+    - "Do NOT mention tools in your response that you didn't call - hallucination detected."
+    - "Make ONE tool call only - do NOT make duplicate calls."
+    - "Keep your response minimal when using tools - let the tool output speak for itself."
   "gemini-2.5-pro*":
     - "Focus on tool selection accuracy - prefer specialized tools like apply_patch over generic ones."
     - "For existing file modifications, apply_patch is mandatory - write_file is for new files only."

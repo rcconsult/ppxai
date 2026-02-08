@@ -1,0 +1,78 @@
+{
+  "provider": "perplexity",
+  "model": "sonar-reasoning-pro",
+  "timestamp": "2026-02-08T13:27:42.588744",
+  "overall_score": 0.0,
+  "tests_passed": 0,
+  "tests_total": 6,
+  "duration_seconds": 1.3033490180969238,
+  "category_scores": {
+    "tool_calling": 0.0
+  },
+  "test_results": [
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "No tool call made",
+        "response": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "No tool call made",
+        "response": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "No tool call made",
+        "response": ""
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "No tool call in first turn"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "No tool call made",
+        "response": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "No tool call made",
+        "response": ""
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1
+  }
+}

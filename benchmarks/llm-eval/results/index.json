@@ -97,6 +97,11 @@
         "filename": "perplexity_sonar-pro_2026-02-08_e96b90d6.json",
         "timestamp": "2026-02-08T18:24:42.872521",
         "overall_score": 0.0
+      },
+      {
+        "filename": "perplexity_sonar-pro_2026-02-08_b1a5cd1b.json",
+        "timestamp": "2026-02-08T20:04:06.864341",
+        "overall_score": 28.57142857142857
       }
     ],
     "gemini/gemini-2.5-flash": [
@@ -179,6 +184,11 @@
         "filename": "gemini_gemini-2.5-flash_2026-02-08_34786292.json",
         "timestamp": "2026-02-08T18:36:41.133302",
         "overall_score": 28.57142857142857
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-02-08_22ce54f7.json",
+        "timestamp": "2026-02-08T20:03:35.937682",
+        "overall_score": 71.42857142857143
       }
     ],
     "gemini/gemini-3-pro-preview": [
@@ -233,6 +243,11 @@
         "filename": "gemini_gemini-3-flash-preview_2026-02-08_cd299e80.json",
         "timestamp": "2026-02-08T18:36:08.079762",
         "overall_score": 57.14285714285714
+      },
+      {
+        "filename": "gemini_gemini-3-flash-preview_2026-02-08_49efa714.json",
+        "timestamp": "2026-02-08T20:02:37.164967",
+        "overall_score": 71.42857142857143
       }
     ],
     "asusai/qwen2.5-coder:32b": [
@@ -341,6 +356,11 @@
         "filename": "perplexity_sonar_2026-02-08_f0ff44cd.json",
         "timestamp": "2026-02-08T18:25:48.921602",
         "overall_score": 0.0
+      },
+      {
+        "filename": "perplexity_sonar_2026-02-08_76fe94e3.json",
+        "timestamp": "2026-02-08T20:04:37.335020",
+        "overall_score": 28.57142857142857
       }
     ],
     "perplexity/sonar-reasoning-pro": [
@@ -736,6 +756,30 @@
       "filename": "gemini_gemini-2.5-pro_2026-02-08_697d309a.json",
       "timestamp": "2026-02-08T18:44:14.463386",
       "overall_score": 0.0
+    },
+    {
+      "pair": "gemini/gemini-3-flash-preview",
+      "filename": "gemini_gemini-3-flash-preview_2026-02-08_49efa714.json",
+      "timestamp": "2026-02-08T20:02:37.164967",
+      "overall_score": 71.42857142857143
+    },
+    {
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-02-08_22ce54f7.json",
+      "timestamp": "2026-02-08T20:03:35.937682",
+      "overall_score": 71.42857142857143
+    },
+    {
+      "pair": "perplexity/sonar-pro",
+      "filename": "perplexity_sonar-pro_2026-02-08_b1a5cd1b.json",
+      "timestamp": "2026-02-08T20:04:06.864341",
+      "overall_score": 28.57142857142857
+    },
+    {
+      "pair": "perplexity/sonar",
+      "filename": "perplexity_sonar_2026-02-08_76fe94e3.json",
+      "timestamp": "2026-02-08T20:04:37.335020",
+      "overall_score": 28.57142857142857
     }
   ]
 }
