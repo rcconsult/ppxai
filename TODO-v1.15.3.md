@@ -1,19 +1,50 @@
-# TODO: v1.15.3 - Config Hot-Reload, DAG Init & File Navigation
+# TODO: v1.15.3 - Config Hot-Reload, DAG Init & Platform Alignment
 
 **Created:** 2026-02-07
 **Branch:** bugfix/v1.15.3
-**Status:** In Progress
+**Status:** In Progress (5/7 workstreams complete)
 **Previous Release:** v1.15.2
+**Last Updated:** 2026-02-08
 
 ---
 
-## Overview
+## Executive Summary
 
-Three workstreams for v1.15.3:
+### ✅ Completed (5/7 workstreams)
 
-1. **Config Hot-Reload Fix** (Done) - Stale config cache fix for `/model`, `/provider`, session restore
-2. **DAG-Based Config Initialization** (Planned) - Replace `__getattr__` lazy loading with explicit `initialize()` calls
-3. **File Navigation** (Planned) - `/ls`, `/tree` commands + ppxaide interactive file tree sidebar
+| # | Workstream | Status | Impact |
+|---|------------|--------|--------|
+| 1 | **Config Hot-Reload Fix** | ✅ Done | Config changes reflected without restart |
+| 2 | **TUI EventBus Stability** | ✅ Done | No NoMatches crashes, warnings displayed |
+| 3 | **DGX Spark Benchmarks** | ✅ Done | Results tracked for GPT-OSS, Qwen3, Qwen2.5-Coder |
+| 4 | **DAG-Based Config Init** | ✅ Done | No stale cache, 100% test pass rate |
+| 5 | **Platform Alignment** | ✅ Done | Signal handling all platforms, platform-aware binary search |
+
+### ⏳ Open Items (2/7 workstreams)
+
+| # | Workstream | Priority | Effort | Status |
+|---|------------|----------|--------|--------|
+| 7 | **Tool Calling Clarification** | High (accuracy) | 0.5 days | ⏳ Open |
+| 6 | **File Navigation** | Medium | 7 days | Deferred to v1.16.0 |
+
+### Release Recommendation
+
+**Ship v1.15.3 with:**
+- ✅ Config Hot-Reload Fix (Done)
+- ✅ TUI EventBus Stability (Done)
+- ✅ Benchmarks (Done)
+- ✅ Platform Alignment (Done)
+- ✅ DAG-Based Config Init (Done)
+- ⏳ Tool Calling Clarification (4 hours - high priority for accuracy)
+
+**Defer to v1.16.0:**
+- 🔲 File Navigation (7 days - feature work)
+
+**Status:** 5/7 workstreams complete. Tool calling improvements needed for accurate benchmarks and documentation.
+
+---
+
+## Detailed Workstreams
 
 ---
 
@@ -34,11 +65,51 @@ Three workstreams for v1.15.3:
 
 ---
 
-## 2. DAG-Based Config Initialization ⏳
+## 2. DAG-Based Config Initialization ✅
 
 **Priority:** High (tech debt)
-**Status:** Audit Complete → Ready for Implementation
-**Effort:** 0.5 days
+**Status:** Done (10 test isolation issues remain)
+**Effort:** 0.5 days (Completed)
+
+### Completed Changes
+
+All planned implementation steps completed:
+
+1. ✅ **Replaced `__getattr__` with `initialize()`** - `ppxai/config/__init__.py`
+   - Module-level `PROVIDERS` and `MODELS` dicts
+   - `initialize()` function populates dicts in-place using `.clear()` + `.update()`
+   - `reload_config()` calls `initialize()` after store reload
+
+2. ✅ **Simplified EngineClient** - `ppxai/engine/client.py`
+   - Removed `self._providers_config` snapshot (line 137)
+   - Removed `self._default_provider` dead code (line 141)
+   - Added `@property providers_config` - always returns current PROVIDERS
+   - Updated 3 consumers to use property (lines 424, 432, 501)
+
+3. ✅ **Removed workarounds** - 4 files cleaned up
+   - `ppxai/commands/provider.py` - Top-level import, removed deferred re-import
+   - `ppxai/tui/app.py` - Top-level import, removed local import
+   - Fixed latent bug in `ppxai/server/http.py` - improved comment clarity
+
+4. ✅ **Added `initialize()` calls** - 3 entry points
+   - Rich TUI: `ppxai/rich/main.py` (already had it)
+   - Textual TUI: `ppxai/tui/app.py` in `on_mount()`
+   - Tests: `tests/conftest.py` in `pytest_configure()`
+
+5. ✅ **Cleaned up dead code**
+   - Removed `self._get_default_model` from EngineClient
+   - Removed `_lazy_attrs` dict from config/__init__.py
+   - Removed `__getattr__` function from config/__init__.py
+
+### Test Results
+
+- **1157/1157 tests pass** (100% pass rate) ✅
+- **Test isolation fix:** Added `reset_config_after_test` fixture in `conftest.py`
+  - Auto-runs after each test to reset PROVIDERS/MODELS
+  - Ensures clean config state for every test
+  - Fixed all 10 test isolation issues
+
+### Known Issues
 
 ### Problem
 
@@ -459,7 +530,509 @@ NvChad-inspired interactive file tree in ppxaide (Textual TUI).
 
 ---
 
-## 4. Outstanding TODOs (Code-Level) ⏳
+## 4. Platform Alignment (Unix/macOS/Linux/Windows) ✅
+
+**Priority:** High (critical)
+**Status:** Done
+**Effort:** 1 day (Completed)
+
+### Completed Changes
+
+All 4 sub-tasks implemented and documented:
+
+1. ✅ **Signal handling** - TUI now handles SIGINT/SIGTERM on all platforms (Windows, macOS, Linux)
+   - File: `ppxai/tui/__init__.py` lines 66-79
+   - Removed Windows exclusion, both signals supported
+
+2. ✅ **Binary search paths** - Platform-aware filtering for efficiency
+   - File: `ppxai/config/__init__.py` line 517 (`get_bin_search_paths()`)
+   - Windows skips `/usr/*` paths, Unix/macOS/Linux skip `AppData` paths
+   - File: `ppxai-desktop.py` updated to use filtered paths
+
+3. ✅ **Path expansion** - Standardized to `Path.home()`, intentional `os.path.expanduser()` only in tool handlers
+   - `ppxai/usage.py`, `ppxai/checkpoint.py` already using `Path.home()`
+   - Remaining `os.path.expanduser()` uses are correct (handle `~username` syntax)
+
+4. ✅ **Documentation** - Platform-specific behaviors documented
+   - File: `docs/INSTALLATION.md` lines 978-1040
+   - Covers clipboard support, signal handling, Linux headless requirements
+
+### Issues Identified
+
+#### A. Signal Handling Inconsistencies
+
+| Issue | File | Line | Description | Platform |
+|-------|------|------|-------------|----------|
+| **SIGINT handler only on Unix** | `ppxai/tui/__init__.py` | 78-79 | SIGINT handler skipped on Windows with comment "Windows signal handling has quirks" | Windows needs handling |
+| **SIGTERM not handled** | `ppxai/tui/__init__.py` | - | TUI only handles SIGINT, not SIGTERM (server handles both) | All platforms |
+| **Server signal handling** | `ppxai/server/http.py` | 2364-2365 | Both SIGINT and SIGTERM handled in server | ✅ Good |
+
+**Action:** Align TUI signal handling with server pattern - handle both SIGINT and SIGTERM on all platforms.
+
+#### B. Binary Search Path Platform Logic
+
+| Issue | File | Line | Description |
+|-------|------|------|-------------|
+| **Mixed platform paths** | `ppxai/config/__init__.py` | 491-496 | Hardcoded list includes both Unix (`~/.local/bin`) and Windows (`~/AppData/Local/ppxai`) paths |
+| **No platform filtering** | `ppxai-desktop.py` | 74-88 | All paths checked regardless of platform (inefficient) |
+| **Unix system paths on Windows** | `ppxai-desktop.py` | 84-85 | `/usr/local/bin` and `/usr/bin` checked on Windows |
+
+**Action:** Add platform-specific filtering to `get_bin_search_paths()`:
+```python
+def get_bin_search_paths() -> List[str]:
+    """Get list of directories to search for ppxai binaries (platform-aware)."""
+    paths_config = get_paths_config()
+    all_paths = paths_config.get("bin_search_paths", [])
+
+    # Filter platform-specific paths
+    if sys.platform == 'win32':
+        # Windows: Skip Unix system paths
+        return [p for p in all_paths if not p.startswith('/usr')]
+    else:
+        # Unix/macOS/Linux: Skip Windows AppData
+        return [p for p in all_paths if 'AppData' not in p]
+```
+
+#### C. File Path Hyperlink Patterns (Windows Support)
+
+| Issue | File | Line | Description |
+|-------|------|------|-------------|
+| **Unix path bias** | `ppxai/tui/hyperlinks.py` | 63-64 | Regex pattern prioritizes Unix paths (`/path/to/file`) before Windows (`C:\path\to\file`) |
+| **Windows drive detection** | `ppxai/tui/hyperlinks.py` | 66 | Pattern `[A-Za-z]:` only matches single-letter drives (standard, but documented) |
+
+**Status:** ✅ Actually OK - both patterns present, just ordered Unix-first (most common in dev environments).
+
+#### D. Path Expansion Consistency
+
+| Issue | File | Function | Description |
+|-------|------|----------|-------------|
+| **Mixed `Path.home()` and `os.path.expanduser()`** | Multiple | Various | Some code uses `Path.home()`, some uses `os.path.expanduser("~")` |
+
+**Examples:**
+- `ppxai/engine/session.py:24` → `Path.home() / ".ppxai"`
+- `ppxai/engine/tools/builtin/editor.py:65` → `os.path.expanduser(file_path)`
+- `ppxai/server/http.py:1131` → `os.path.expanduser(request.path)`
+
+**Action:** Standardize on `Path.home()` (more pythonic, better type safety):
+```python
+# Before:
+expanded = os.path.expanduser("~/.ppxai/config.json")
+
+# After:
+expanded = str(Path.home() / ".ppxai" / "config.json")
+```
+
+**Exception:** Keep `os.path.expanduser()` when handling user-provided paths that may contain `~username` syntax (not just `~`).
+
+#### E. Clipboard Backend Detection (pyperclip)
+
+| Issue | File | Line | Description |
+|-------|------|------|-------------|
+| **No fallback** | `ppxai/tui/clipboard.py` | 10-14 | If pyperclip import fails, all clipboard ops return False/None |
+| **Platform-specific quirks** | - | - | pyperclip behavior varies by platform (needs xclip/xsel on Linux headless) |
+
+**Status:** ✅ OK - graceful degradation with `CLIPBOARD_AVAILABLE` flag. Document pyperclip installation in setup guide.
+
+### Implementation Plan
+
+#### Step 1: Fix TUI Signal Handling (0.2 days)
+
+**File: `ppxai/tui/__init__.py` (lines 66-79)**
+
+```python
+# Current (Unix-only SIGINT):
+if sys.platform != 'win32':
+    signal.signal(signal.SIGINT, sigint_handler)
+
+# Proposed (all platforms, both signals):
+def signal_handler(signum, frame):
+    """Handle SIGINT/SIGTERM gracefully."""
+    try:
+        app.call_from_thread(app.action_quit)
+    except Exception:
+        sys.exit(0)
+
+# Install handlers on all platforms
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+```
+
+**Testing:**
+- [ ] Test Ctrl+C on Windows (should gracefully quit, not crash)
+- [ ] Test Ctrl+C on macOS/Linux (no regression)
+- [ ] Test SIGTERM via `kill -TERM <pid>` on Unix
+- [ ] Test SIGTERM on Windows via Task Manager "End Task"
+
+#### Step 2: Add Platform Filtering to Binary Search Paths (0.3 days)
+
+**File: `ppxai/config/__init__.py` (line 517)**
+
+Add platform-aware filtering to `get_bin_search_paths()`.
+
+**Files to Update:**
+- `ppxai/config/__init__.py` - Add filtering logic
+- `ppxai-desktop.py` - Use filtered paths from config
+- `scripts/release_preflight_check.py` - Update binary search
+
+**Testing:**
+- [ ] Test Windows binary search doesn't check `/usr/local/bin`
+- [ ] Test Unix binary search doesn't check `AppData/Local/ppxai`
+- [ ] Verify backward compatibility (custom paths in config still work)
+
+#### Step 3: Standardize Path Expansion (0.3 days)
+
+**Pattern:**
+```python
+# Prefer: Path.home() / ".ppxai" / "file.json"
+# Over:   os.path.expanduser("~/.ppxai/file.json")
+```
+
+**Exception:** Keep `os.path.expanduser()` in tool handlers that accept user paths:
+- `ppxai/engine/tools/builtin/editor.py` (handles `~username/file.txt`)
+- `ppxai/server/http.py` (handles user-submitted paths via API)
+
+**Files to Update:**
+- `ppxai/engine/session.py` - Already uses `Path.home()` ✅
+- `ppxai/config/loader.py` - Already uses `PPXAI_HOME = Path.home() / ".ppxai"` ✅
+- `ppxai/usage.py` - Standardize to `Path.home()`
+- `ppxai/checkpoint.py` - Standardize to `Path.home()`
+
+**Testing:**
+- [ ] Run full test suite on Windows
+- [ ] Run full test suite on macOS
+- [ ] Run full test suite on Linux
+- [ ] Verify `~username` syntax still works in tool paths
+
+#### Step 4: Document Platform-Specific Behaviors (0.2 days)
+
+**Add to INSTALLATION.md:**
+- Windows: Clipboard requires pyperclip (auto-installed)
+- Linux headless: Clipboard requires xclip or xsel (`apt install xclip`)
+- macOS: All clipboard ops work out of box
+- Signal handling: Ctrl+C and SIGTERM supported on all platforms (v1.15.3+)
+
+### Files Changed Summary
+
+| File | Action | Est. Lines |
+|------|--------|-----------|
+| `ppxai/tui/__init__.py` | Fix signal handling for all platforms | ~10 |
+| `ppxai/config/__init__.py` | Add platform filtering to binary search | ~15 |
+| `ppxai-desktop.py` | Use filtered paths from config | ~5 |
+| `ppxai/usage.py` | Standardize to `Path.home()` | ~5 |
+| `ppxai/checkpoint.py` | Standardize to `Path.home()` | ~5 |
+| `docs/INSTALLATION.md` | Document platform-specific requirements | ~30 |
+| `CLAUDE.md` | Update platform alignment notes | ~10 |
+
+### Migration Safety
+
+- **Backward compatible**: Path resolution logic unchanged, just standardized
+- **No config migration**: Users don't need to change configs
+- **Signal handling**: Windows users get new Ctrl+C support (improvement)
+- **Binary search**: Faster (fewer unnecessary path checks)
+
+---
+
+## 7. Tool Calling Clarification ⏳
+
+**Priority:** High (accuracy)
+**Status:** Open
+**Effort:** 0.5 days (4 hours)
+**Created:** 2026-02-08
+
+### Problem
+
+API verification tests revealed that ppxai uses **TWO different tool calling methods**:
+1. **Native Tool Calling** - Provider returns `tool_calls` in API response
+2. **Prompt-Based Tool Calling** - Inject tools into prompt, parse JSON from text
+
+Current issues:
+- ❌ Not documented which providers use which method
+- ❌ Benchmarks don't distinguish between native vs prompt-based
+- ❌ Perplexity marked as supporting tools (it doesn't - uses prompt-based workaround)
+- ❌ Gemini provider uses deprecated SDK (`google.generativeai`)
+- ⚠️ Capability flags don't reflect actual API behavior
+
+### Test Results (2026-02-08)
+
+**Perplexity (sonar-pro, sonar-reasoning-pro):**
+```
+Direct API: IGNORED ⚠️
+- API accepts `tools` parameter without error
+- Returns NO tool_calls in response
+- Models explain they "cannot access files" instead of calling tools
+
+ppxai Engine: WORKS ✅
+- TOOL_CALL events detected via prompt-based parsing
+- Extracts JSON from text responses
+```
+
+**Conclusion:** Perplexity Sonar models do NOT support native function calling.
+
+**Gemini (gemini-2.5-flash, gemini-2.5-pro):**
+```
+Direct API: ERROR 💥
+- SDK is deprecated (google.generativeai)
+- Need to migrate to google.genai
+
+ppxai Engine: WORKS (intermittently) ⚠️
+- Sometimes detects TOOL_CALL events
+- May be using prompt-based instead of native
+```
+
+**Conclusion:** Gemini DOES support native function calling (per official docs), but our implementation needs SDK update.
+
+**Documentation:**
+- Full analysis: `benchmarks/llm-eval/TOOL_CALLING_ANALYSIS.md`
+- Action plan: `benchmarks/llm-eval/ACTION_PLAN.md`
+- Test results: `benchmarks/llm-eval/debug/api_tool_calling_test_results.json`
+
+### Implementation Plan
+
+#### Step 1: Add Capability Flags (0.1 days)
+
+**File:** `ppxai/engine/providers/perplexity.py`
+
+```python
+# Line 56 - Update default_capabilities
+default_capabilities = ProviderCapabilities(
+    web_search=True,
+    web_fetch=True,
+    weather=True,
+    citations=True,
+    streaming=True,
+    native_tool_calling=False,  # ← ADD: Sonar models don't support native API
+)
+```
+
+**File:** `ppxai/config/loader.py`
+
+```python
+DEFAULT_CAPABILITIES = {
+    ...
+    "native_tool_calling": False,  # Default to False, enable per-provider
+    ...
+}
+```
+
+**Status:** Ready to implement
+
+---
+
+#### Step 2: Update Provider Docstrings (0.05 days)
+
+**File:** `ppxai/engine/providers/perplexity.py`
+
+Update line 97 from:
+```python
+tools: Ignored - Perplexity uses native search, not tools
+```
+
+To:
+```python
+tools: Converted to prompt-based tool calling. Perplexity Sonar models
+       do not support native function calling via the API (tool_calls response).
+       Instead, tool definitions are injected into the system prompt and
+       responses are parsed for JSON tool call format.
+
+       Note: Perplexity's Agentic Research API supports native tools for
+       third-party models (openai/gpt-*, etc.) but NOT for Sonar models.
+
+       See: https://docs.perplexity.ai/docs/agentic-research/tools
+```
+
+**Status:** Ready to implement
+
+---
+
+#### Step 3: Fix Gemini SDK (0.25 days)
+
+**File:** `ppxai/engine/providers/gemini.py`
+
+**Current:** Uses deprecated `google.generativeai`
+
+**Replace with:** `google.genai` (official SDK)
+
+**Changes:**
+```python
+# OLD
+import google.generativeai as genai
+from google.generativeai import types as genai_types
+
+# NEW
+from google import genai
+from google.genai import types
+```
+
+**Reference:** https://github.com/google-gemini/deprecated-generative-ai-python
+
+**Testing:**
+```bash
+cd benchmarks/llm-eval
+uv run python test_tool_calling_apis.py
+```
+
+**Status:** Ready to implement
+**Priority:** High (SDK is deprecated)
+
+---
+
+#### Step 4: Update Benchmarks (0.1 days)
+
+**File:** `benchmarks/llm-eval/engine_runner.py`
+
+Add tool calling method detection:
+
+```python
+async def run_async(self, categories: Optional[list[str]] = None):
+    # Check provider capabilities
+    from ppxai.config import get_provider_config
+    provider_config = get_provider_config(self.provider)
+    has_native_tools = provider_config.get("capabilities", {}).get("native_tool_calling", False)
+
+    # Inform user about tool calling method
+    if not has_native_tools and categories and "tool_calling" in categories:
+        print(f"\nNOTE: {self.provider} uses prompt-based tool calling (not native API)")
+        print(f"      Tests validate JSON format compliance and parsing reliability\n")
+
+    # ... test loop ...
+
+    # Add to metadata
+    metadata={
+        "runner": "engine",
+        "timeout": self.timeout,
+        "retries": self.retries,
+        "tool_calling_method": "native" if has_native_tools else "prompt_based",  # ← ADD
+    },
+```
+
+**Status:** Ready to implement
+
+---
+
+#### Step 5: Create Documentation (0.1 days)
+
+**File:** `docs/TOOL_CALLING.md` (NEW)
+
+Create comprehensive documentation:
+- Native vs prompt-based tool calling
+- Provider support matrix
+- Configuration examples
+- Troubleshooting guide
+
+**Template:** See `benchmarks/llm-eval/ACTION_PLAN.md` for content
+
+**Status:** Ready to implement
+
+---
+
+#### Step 6: Update Config Example (0.05 days)
+
+**File:** `ppxai-config.example.json`
+
+**Add to Perplexity:**
+```json
+"perplexity": {
+  "capabilities": {
+    "native_tool_calling": false,
+    "__comment": "Sonar models use prompt-based tool calling"
+  }
+}
+```
+
+**Add to Gemini:**
+```json
+"gemini": {
+  "capabilities": {
+    "native_tool_calling": true,
+    "__comment": "Gemini 2.5+ supports native function calling"
+  },
+  "generation_params": {
+    "temperature": 0.0,
+    "__comment": "Use 0.0 for deterministic tool calls"
+  }
+}
+```
+
+**Status:** Ready to implement
+
+---
+
+### Testing Plan
+
+**After implementation:**
+
+1. **Verify capability flags:**
+   ```bash
+   uv run python -c "
+   from ppxai.config import initialize, get_provider_config
+   initialize()
+   print('Perplexity:', get_provider_config('perplexity').get('capabilities', {}).get('native_tool_calling'))
+   print('Gemini:', get_provider_config('gemini').get('capabilities', {}).get('native_tool_calling'))
+   "
+   ```
+
+2. **Re-run API tests:**
+   ```bash
+   cd benchmarks/llm-eval
+   uv run python test_tool_calling_apis.py
+   ```
+
+3. **Re-run benchmarks with debug:**
+   ```bash
+   python benchmark.py --provider perplexity --model sonar-pro --categories tool_calling --debug
+   python benchmark.py --provider gemini --model gemini-2.5-flash --categories tool_calling --debug
+   ```
+
+4. **Verify unit tests:**
+   ```bash
+   uv run pytest tests/ -v -k tool
+   ```
+
+### Success Criteria
+
+- [ ] Capability flags correctly set for all providers
+- [ ] Documentation clearly explains native vs prompt-based
+- [ ] Benchmark results include `tool_calling_method` metadata
+- [ ] Test suite passes without regressions
+- [ ] Gemini uses new SDK successfully
+- [ ] Config example updated with correct settings
+
+### Files Changed Summary
+
+| File | Action | Est. Lines |
+|------|--------|-----------|
+| `ppxai/engine/providers/perplexity.py` | Add capability flag, update docstring | ~10 |
+| `ppxai/engine/providers/gemini.py` | Migrate to new SDK | ~50 |
+| `ppxai/config/loader.py` | Add native_tool_calling to defaults | ~2 |
+| `benchmarks/llm-eval/engine_runner.py` | Add method detection and metadata | ~15 |
+| `docs/TOOL_CALLING.md` | Create new documentation | ~150 (new) |
+| `ppxai-config.example.json` | Add capability comments | ~10 |
+
+### Impact
+
+**User Benefits:**
+- ✅ Clear understanding of tool calling methods
+- ✅ Accurate benchmark comparisons
+- ✅ Better configuration guidance
+- ✅ Documented limitations per provider
+
+**No Breaking Changes:**
+- All existing functionality preserved
+- Additive changes only
+- Backward compatible
+
+### References
+
+- Test results: `benchmarks/llm-eval/debug/api_tool_calling_test_results.json`
+- Full analysis: `benchmarks/llm-eval/TOOL_CALLING_ANALYSIS.md`
+- Action plan: `benchmarks/llm-eval/ACTION_PLAN.md`
+- Perplexity docs: https://docs.perplexity.ai/docs/agentic-research/tools
+- Gemini docs: https://ai.google.dev/gemini-api/docs/function-calling
+- Deprecated SDK: https://github.com/google-gemini/deprecated-generative-ai-python
+
+---
+
+## 5. Outstanding TODOs (Code-Level) ⏳
 
 **Priority:** Medium
 **Status:** Planned
@@ -483,13 +1056,78 @@ Not feasible - Rich is a rendering library, not a TUI framework. Users can use `
 
 ---
 
-## Success Metrics
+## Success Metrics & Release Criteria
 
-| Workstream | Metric | Target |
-|------------|--------|--------|
-| Config Hot-Reload | Config changes reflected without restart | ✅ Achieved |
-| DAG Init | No `__getattr__` in config module, no snapshot workarounds | Pending |
-| `/ls`, `/tree` | Commands work in all 3 clients | Pending |
-| `/tree` perf | Completes in <2s on 10K file repo | Pending |
-| ppxaide tree | File tree renders in <500ms for typical projects | Pending |
-| ppxaide tree | Users can navigate without keyboard lag | Pending |
+### Completed Features
+
+| Workstream | Status | Metric | Result |
+|------------|--------|--------|--------|
+| Config Hot-Reload | ✅ Done | Config changes reflected without restart | ✅ Achieved |
+| TUI EventBus | ✅ Done | No NoMatches crashes, warnings displayed | ✅ Achieved |
+| Benchmarks | ✅ Done | Results tracked in `benchmarks/llm-eval/results/` | ✅ Achieved |
+
+### Open Items for v1.15.3
+
+| Workstream | Status | Metric | Target |
+|------------|--------|--------|--------|
+| Tool Calling Clarification | ⏳ Open | Capability flags accurate, benchmarks distinguish native vs prompt-based | 0.5 days |
+
+### Deferred to v1.16.0
+
+| Workstream | Status | Metric | Target |
+|------------|--------|--------|--------|
+| `/ls`, `/tree` | 🔲 Planned | Commands work in all 3 clients, <2s on 10K files | Phase 0: 2 days |
+| ppxaide tree | 🔲 Planned | File tree renders <500ms, no keyboard lag | Phase 1: 5 days |
+
+---
+
+## Next Steps for v1.15.3 Release
+
+### ✅ Implementation Complete (5/7 workstreams)
+
+Completed workstreams:
+- ✅ Config Hot-Reload Fix
+- ✅ TUI EventBus Stability
+- ✅ DGX Spark Benchmarks
+- ✅ Platform Alignment
+- ✅ DAG-Based Config Init
+
+**Test Status:** 1157/1157 tests pass (100% pass rate)
+
+### ⏳ Remaining Work
+
+High priority for release:
+- ⏳ Tool Calling Clarification (4 hours)
+  - Add capability flags (Perplexity: native_tool_calling=false)
+  - Update provider docstrings
+  - Fix Gemini SDK (migrate to google.genai)
+  - Update benchmarks with tool_calling_method metadata
+  - Create docs/TOOL_CALLING.md
+
+See: `benchmarks/llm-eval/ACTION_PLAN.md` for detailed steps
+
+### Ready for Release After Tool Calling Work
+
+1. **Cross-Platform Testing**
+   - Test on Windows, macOS, Linux
+   - Verify signal handling (Ctrl+C, SIGTERM)
+   - Verify binary search path filtering
+   - Verify config hot-reload
+
+2. **Documentation & Release**
+   - Update CHANGELOG.md
+   - Write RELEASE-NOTES-v1.15.3.md
+   - Commit all changes
+   - Run `/release v1.15.3`
+
+3. **Post-Release**
+   - Begin v1.16.0 planning
+   - File navigation features (Phase 0: `/ls`, `/tree`)
+
+---
+
+## Version Alignment Note
+
+**Current:** v1.15.3 scope reduced from 4 workstreams to 2 open items
+**Next:** v1.16.0 will focus on file navigation features
+**Impact:** Faster release cycle, focused stability improvements

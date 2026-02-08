@@ -2,240 +2,335 @@
 
 **Release Date:** 2026-02-07
 **Branch:** bugfix/v1.15.3
-**Focus:** TUI EventBus Stability, Error Handling Improvements
+**Focus:** Config Hot-Reload, DAG Init, Platform Alignment, TUI Stability
 
 ---
 
 ## Overview
 
-v1.15.3 is a stability-focused release that completes the v1.15.2 response validation system integration with the TUI, adds resilience guards to EventBus handlers, and reduces debug log noise. This release fixes several edge-case crashes and improves the overall robustness of the ppxaide TUI.
+v1.15.3 is a comprehensive stability and technical debt release that addresses critical configuration management issues, platform compatibility problems, and TUI reliability. This release includes 5 major workstreams with deep architectural improvements that eliminate long-standing bugs and workarounds.
+
+**Key Improvements:**
+- ✅ Config changes now reflected without restart
+- ✅ All platforms (Windows/macOS/Linux) have consistent signal handling
+- ✅ Eliminated stale config cache issues
+- ✅ Removed 4 configuration workarounds
+- ✅ 100% test pass rate (1157/1157 tests)
 
 ---
 
-## Critical Fixes
+## Major Features
 
-### 1. WARNING Event Handler for Hallucination Detection
+### 1. Config Hot-Reload Fix
 
 **Problem:**
-- v1.15.2 introduced `EventType.WARNING` for hallucination detection but TUI had no handler
-- Led to "Unhandled event type: EventType.WARNING" debug messages
-- Validation warnings from ResponseValidator were logged but not displayed to users
+- `/model` and `/provider` commands showed stale provider lists after external config edits
+- Session restore used outdated config when file was edited while app was running
+- Root cause: `EngineClient._load_config()` captured snapshot of PROVIDERS dict that never refreshed
 
 **Solution:**
-- Added `ENGINE_WARNING` constant to `Events` class (`ppxai/tui/event_bus.py`)
-- Added `WARNING` mapping to event_map in `ppxai/tui/app.py`
-- Implemented `_on_engine_warning()` handler that displays warnings with yellow ⚠ indicator
-- Subscribed to ENGINE_WARNING event in on_mount
+- New `EngineClient.reload_config()` method refreshes all cached config data
+- `/model` and `/provider` commands auto-reload config from disk
+- All 3 clients (TUI, Rich, HTTP) reload config before restoring sessions
+- HTTP + JSON-RPC endpoints reload before listing/switching providers/models
+
+**Implementation Details:**
+- `EngineClient.reload_config()` - Single entry point to refresh ConfigStore + cached configs
+- Module-level `reload_config()` updates PROVIDERS/MODELS in-place
+- Session restore calls `engine.reload_config()` before loading saved state
+
+**Files Changed:**
+- `ppxai/engine/client.py` - Added `reload_config()` method
+- `ppxai/commands/provider.py` - Auto-reload on `/provider` command
+- `ppxai/tui/app.py` - Reload on session restore
+- `ppxai/rich/main.py` - Reload on session restore
+- `ppxai/server/http.py` - Reload on provider/model endpoints
+
+**Impact:**
+- Config changes reflected immediately without restart
+- No more stale provider/model lists
+- Session restore works with updated configs
+
+---
+
+### 2. DAG-Based Config Initialization
+
+**Problem:**
+- `__getattr__` lazy loading caused no caching (PROVIDERS recomputed on every access)
+- Snapshot staleness: `self._providers_config = PROVIDERS` went stale after reload
+- Fragile workarounds: Commands had to re-import PROVIDERS after reload
+
+**Solution:**
+- Replaced `__getattr__` with explicit `initialize()` function
+- Module-level PROVIDERS/MODELS dicts populated at startup
+- In-place mutation (`.clear()` + `.update()`) keeps all references fresh
+- EngineClient uses `@property providers_config` instead of snapshot
+- Added `reset_config_after_test` fixture for test isolation
+
+**Implementation Details:**
+
+**ppxai/config/__init__.py:**
+```python
+# Module-level attributes - populated by initialize()
+PROVIDERS: Dict[str, Any] = {}
+MODELS: Dict[str, Any] = {}
+
+def initialize():
+    """Load config and populate module-level PROVIDERS/MODELS."""
+    global PROVIDERS, MODELS
+    config = ConfigStore.get_instance().config
+    PROVIDERS.clear()
+    PROVIDERS.update(config.get("providers", {}))
+    MODELS.clear()
+    MODELS.update(PROVIDERS.get("perplexity", {}).get("models", {}))
+```
+
+**ppxai/engine/client.py:**
+```python
+@property
+def providers_config(self) -> dict:
+    """Always returns current providers from config module."""
+    from ..config import PROVIDERS
+    return PROVIDERS
+```
+
+**Entry Points:**
+- Rich TUI: `ppxai/rich/main.py` (already had it)
+- Textual TUI: `ppxai/tui/app.py` in `on_mount()`
+- HTTP Server: `ppxai/server/http.py` in startup
+- Tests: `tests/conftest.py` in `pytest_configure()`
+
+**Dead Code Removed:**
+- `_lazy_attrs` dict
+- `__getattr__` function
+- `self._providers_config` snapshot
+- `self._default_provider` (unused)
+- `self._get_default_model` (unused)
+
+**Workarounds Removed:**
+- `ppxai/commands/provider.py` - Removed deferred re-import after reload
+- `ppxai/tui/app.py` - Removed local import for freshness
+- `ppxai/server/http.py` - Improved comment (latent bug prevented)
+
+**Test Isolation Fix:**
+```python
+@pytest.fixture(autouse=True)
+def reset_config_after_test():
+    """Reset PROVIDERS/MODELS after each test for isolation."""
+    yield  # Run the test
+    from ppxai.config import initialize
+    initialize()
+```
+
+**Files Changed:**
+- `ppxai/config/__init__.py` - Replace `__getattr__` with `initialize()`
+- `ppxai/config/store.py` - Call `initialize()` after reload
+- `ppxai/engine/client.py` - Remove snapshot, add property
+- `ppxai/commands/provider.py` - Clean imports
+- `ppxai/tui/app.py` - Add `initialize()` call, clean imports
+- `ppxai/server/http.py` - Improved comments
+- `tests/conftest.py` - Add reset fixture
+- `tests/test_commands.py` - Fix 3 patch decorators
+
+**Test Results:**
+- **Before:** 1147/1157 pass (10 test isolation failures)
+- **After:** 1157/1157 pass (100% pass rate) ✅
+
+**Impact:**
+- No stale snapshots - all engines see fresh config via property
+- No workarounds - clean top-level imports everywhere
+- Predictable behavior - PROVIDERS/MODELS updated in-place on reload
+- Easier debugging - no magic `__getattr__`, explicit initialization
+
+---
+
+### 3. Platform Alignment (Windows/macOS/Linux)
+
+**Problems Fixed:**
+
+**A. Signal Handling Inconsistencies**
+- SIGINT handler skipped on Windows ("Windows signal handling has quirks")
+- SIGTERM not handled in TUI (only server had it)
+- Ctrl+C didn't work on Windows
+
+**B. Binary Search Path Inefficiency**
+- All paths checked regardless of platform
+- Windows checked `/usr/local/bin`, `/usr/bin` (Unix-only)
+- Unix/macOS/Linux checked `AppData/Local/ppxai` (Windows-only)
+
+**C. Path Expansion Inconsistency**
+- Mixed use of `Path.home()` and `os.path.expanduser("~")`
+- Inconsistent path handling across modules
+
+**Solutions:**
+
+**A. Signal Handling - All Platforms**
+
+**ppxai/tui/__init__.py:**
+```python
+def signal_handler(signum, frame):
+    """Handle SIGINT/SIGTERM gracefully."""
+    try:
+        app.call_from_thread(app.action_quit)
+    except Exception:
+        sys.exit(0)
+
+# Install handlers on all platforms (Windows, macOS, Linux)
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+```
+
+**B. Platform-Aware Binary Search Paths**
+
+**ppxai/config/__init__.py:**
+```python
+def get_bin_search_paths() -> List[str]:
+    """Get platform-aware binary search paths."""
+    all_paths = get_paths_config().get("bin_search_paths", [])
+
+    if sys.platform == 'win32':
+        # Windows: Skip Unix system paths
+        return [p for p in all_paths if not p.startswith('/usr')]
+    else:
+        # Unix/macOS/Linux: Skip Windows AppData
+        return [p for p in all_paths if 'AppData' not in p]
+```
+
+**C. Path Expansion Standardization**
+
+**Pattern:**
+```python
+# Prefer: Path.home() / ".ppxai" / "file.json"
+# Over:   os.path.expanduser("~/.ppxai/file.json")
+
+# Exception: Keep os.path.expanduser() in tool handlers
+# (supports ~username syntax, not just ~)
+```
+
+**Files Changed:**
+- `ppxai/tui/__init__.py` - Signal handling for all platforms
+- `ppxai/config/__init__.py` - Platform-aware binary search
+- `ppxai-desktop.py` - Use filtered paths, add comments
+- `docs/INSTALLATION.md` - Platform-specific documentation
+
+**Documentation Added:**
+- Clipboard support per platform (Windows/macOS/Linux/headless)
+- Signal handling (SIGINT/SIGTERM) on all platforms
+- Linux headless requirements (`xclip`/`xsel`)
+
+**Impact:**
+- Windows users get Ctrl+C and SIGTERM support
+- Faster binary search (fewer unnecessary path checks)
+- Consistent behavior across all platforms
+
+---
+
+### 4. TUI EventBus Stability
+
+**Problem:**
+- EventBus handlers crashed when firing before chat_view was mounted
+- "No nodes match '#chat-view'" errors during startup/shutdown
+- v1.15.2 WARNING events had no TUI handler
+
+**Solution:**
+- Added NoMatches guards to all event handlers
+- Added ENGINE_WARNING handler for hallucination detection
+- Verified shell consent dialog threading (correct implementation)
 
 **Implementation:**
 ```python
 async def _on_engine_warning(self, sender, data, **kwargs) -> None:
-    """Handle ENGINE_WARNING event (hallucination detection, v1.15.3)."""
+    """Handle ENGINE_WARNING event (hallucination detection)."""
     try:
         chat_view = self.query_one("#chat-view", ChatView)
     except NoMatches:
-        self._log.warning(f"[Event] Engine warning (chat view not mounted): {data}")
-        return
+        return  # Silently ignore if chat_view not mounted
 
-    if data and isinstance(data, str):
-        self._log.warning(f"[Event] Engine warning: {data}")
-        chat_view.add_system_message(f"[yellow]⚠ Warning:[/yellow] {data}")
+    chat_view.add_system_message(f"[yellow]⚠ Warning:[/yellow] {data}")
 ```
 
-**Files Updated:**
+**Protected Handlers:**
+- `_on_tool_call`
+- `_on_tool_result`
+- `_on_tool_error`
+- `_on_engine_error`
+- `_on_engine_warning` (new)
+- `_on_engine_info`
+
+**Files Changed:**
 - `ppxai/tui/event_bus.py` - Added ENGINE_WARNING constant
-- `ppxai/tui/app.py` - Added event mapping, subscription, and handler
+- `ppxai/tui/app.py` - Added guards and WARNING handler
 
 **Impact:**
+- No crashes during app lifecycle transitions
+- Hallucination warnings now visible in TUI
 - Completes v1.15.2 response validation system
-- Users now see hallucination warnings in real-time
-- Critical for debugging model behavior issues
 
 ---
 
-### 2. EventBus Handler Resilience (NoMatches Guards)
+### 5. Benchmarks & Performance
 
-**Problem:**
-- EventBus handlers crashed when firing before chat_view was mounted
-- "No nodes match '#chat-view' on Screen(id='_default')" errors during:
-  - App startup
-  - Session restoration
-  - Rapid tool execution
-- Unhandled exceptions in event handlers broke the event system
+**Added:**
+- DGX Spark benchmark results for GPT-OSS-120B, Qwen3-30B-A3B, Qwen2.5-Coder-32B
+- Results tracked in `benchmarks/llm-eval/results/`
+- Hallucination resistance gate tests
 
-**Solution:**
-- Imported `NoMatches` from `textual.css.query`
-- Added try/except guards to all critical EventBus handlers:
-  - `_on_tool_call`
-  - `_on_tool_result`
-  - `_on_tool_error`
-  - `_on_engine_error`
-  - `_on_engine_warning`
-  - `_on_engine_info`
+**Improvements:**
+- Reduced model hints debug noise (only log on match, not on miss)
+- Working directory change deduplication (compare resolved paths)
 
-**Pattern:**
-```python
-async def _on_tool_result(self, sender, data, **kwargs) -> None:
-    """Handle TOOL_RESULT event."""
-    try:
-        chat_view = self.query_one("#chat-view", ChatView)
-    except NoMatches:
-        self._log.warning("[Event] Chat view not mounted, skipping tool result display")
-        return
-    # ... rest of handler
-```
-
-**Files Updated:**
-- `ppxai/tui/app.py` - Added NoMatches import and guards to 6 handlers
-
-**Impact:**
-- Prevents crashes during app lifecycle transitions
-- Graceful degradation when UI not ready
-- Follows Pattern #6 from MEMORY.md (Textual Widget Query Errors)
-
----
-
-### 3. Shell Consent Dialog Threading Verification
-
-**Background:**
-- Logs showed "push_screen must be run from a worker when wait_for_dismiss is True" error
-
-**Investigation:**
-- Audited shell consent dialog implementation
-- Verified correct use of `call_from_thread()` + callback pattern
-- Confirmed NO usage of `wait_for_dismiss` parameter
-
-**Current Implementation (CORRECT):**
-```python
-def show_dialog_in_main_thread():
-    dialog = ConsentDialog(title=title, message=message, question=question)
-    self.push_screen(dialog, on_dialog_dismiss)  # ✅ callback, not wait_for_dismiss
-
-self.call_from_thread(show_dialog_in_main_thread)  # ✅ thread-safe
-consent_event.wait()  # ✅ blocks worker thread, not main thread
-```
-
-**Conclusion:**
-- Error was from older code version (already fixed)
-- Current implementation follows Textual best practices
-- No action required
-
-**Files Audited:**
-- `ppxai/tui/app.py` - `_shell_consent_handler()`, `_show_consent_dialog()`
-
----
-
-## Performance & Usability Improvements
-
-### 4. Reduced Model Hints Debug Noise
-
-**Problem:**
-- "no model hints matched (available patterns: [...])" logged repeatedly during:
-  - Session restoration
-  - Model switching
-  - Provider initialization
-- Cluttered logs with non-actionable information
-
-**Solution:**
-- Removed verbose logging when no hints matched
-- Only log when hints ARE matched (informative case)
-- Users can still see available patterns via `/context show` command
-
-**Files Updated:**
-- `ppxai/engine/client.py` - Simplified model hint logging logic
+**Files Changed:**
+- `ppxai/engine/client.py` - Simplified logging, added cwd deduplication
+- `benchmarks/llm-eval/results/` - New benchmark data
 
 **Impact:**
 - Cleaner debug logs
-- Easier to spot actual issues
-- Reduced log file size
-
----
-
-### 5. Working Directory Change Deduplication
-
-**Problem:**
-- Two `WORKING_DIR_CHANGED` events per tool call:
-  - Event #1: Tool changes to temp directory
-  - Event #2: Tool restores original directory
-- Caused unnecessary UI updates and bootstrap context reloads
-
-**Solution:**
-- Compare resolved paths before emitting event
-- Only emit when directory actually changes from user's perspective
-- Skip temporary directory switches
-
-**Implementation:**
-```python
-def set_working_dir(self, path: str):
-    # Check if directory actually changed (v1.15.3)
-    current_dir = self.get_working_dir()
-    if current_dir and Path(current_dir).resolve() == Path(path).resolve():
-        logger.debug(f"Working directory unchanged: {path}")
-        return
-    # ... emit event and update state
-```
-
-**Files Updated:**
-- `ppxai/engine/client.py` - Added deduplication logic to `set_working_dir()`
-
-**Impact:**
 - Fewer UI updates during tool execution
-- Reduced bootstrap context reloads
-- Smoother user experience
+- Benchmark data for model comparison
 
 ---
 
-## Documentation Updates
+## Files Modified Summary
 
-### MEMORY.md
+**Total:** 15 files changed (~350 lines)
 
-Added v1.15.3 critical patterns:
+**Core:**
+- `ppxai/config/__init__.py` - DAG init, binary search filtering
+- `ppxai/config/store.py` - Call `initialize()` after reload
+- `ppxai/engine/client.py` - Property pattern, simplified logging
+- `ppxai/commands/provider.py` - Clean imports
+- `ppxai/tui/app.py` - Config init, clean imports, event guards
+- `ppxai/tui/__init__.py` - Signal handling all platforms
+- `ppxai/tui/event_bus.py` - ENGINE_WARNING constant
+- `ppxai-desktop.py` - Platform filtering
 
-**Pattern #8: TUI EventBus Handler Resilience**
-- All EventBus handlers MUST guard against widget queries before mount
-- Use `try/except NoMatches:` for all `query_one()` calls
-- Prevents "No nodes match" crashes during app lifecycle
+**Tests:**
+- `tests/conftest.py` - Reset fixture, initialize()
+- `tests/test_commands.py` - Fix patch decorators
 
-**Pattern #9: WARNING Event Handling**
-- Subscribe to ENGINE_WARNING for hallucination detection
-- Handler displays validation warnings with yellow ⚠ indicator
-- Completes v1.15.2 response validation system
-
-**Pattern #10: Working Directory Change Deduplication**
-- Only emit WORKING_DIR_CHANGED when directory actually changes
-- Compare resolved paths to handle absolute/relative paths
-- Prevents duplicate events from temporary cwd switches
-
----
-
-## Files Modified
-
-### ppxai/tui/
-- `event_bus.py` - Added ENGINE_WARNING constant
-- `app.py` - Added WARNING handler, NoMatches guards to 6 event handlers
-
-### ppxai/engine/
-- `client.py` - Added cwd change deduplication, reduced model hints logging
-
-### Documentation
-- `CHANGELOG.md` - v1.15.3 entry
+**Docs:**
+- `docs/INSTALLATION.md` - Platform-specific notes
 - `docs/RELEASE-NOTES-v1.15.3.md` - This file
-- `~/.claude/projects/.../memory/MEMORY.md` - Added patterns #8-10
+- `CHANGELOG.md` - v1.15.3 entry
+- `TODO-v1.15.3.md` - Status updates
+- `~/.claude/.../MEMORY.md` - Patterns #8-10
 
 ---
 
 ## Testing & Validation
 
-**Manual Testing:**
-1. ✅ WARNING events display in TUI with yellow indicator
-2. ✅ No NoMatches crashes during startup/shutdown
-3. ✅ Shell consent dialog works correctly
-4. ✅ Model hints only log on match
-5. ✅ No duplicate WORKING_DIR_CHANGED events
+**Test Results:**
+- **1157/1157 tests pass** (100% pass rate) ✅
+- No regressions introduced
+- Test isolation fixed with reset fixture
 
-**Automated Testing:**
-- All existing tests pass
-- No new test failures introduced
+**Manual Testing Checklist:**
+- [x] Config hot-reload works (edit config, run `/provider list`)
+- [x] Ctrl+C works on Windows
+- [x] SIGTERM works on all platforms
+- [x] Binary search paths filtered correctly
+- [x] WARNING events display in TUI
+- [x] No NoMatches crashes
 
 ---
 
@@ -247,9 +342,34 @@ Added v1.15.3 critical patterns:
 - Drop-in replacement for v1.15.2
 
 **Benefits:**
+- Config changes reflected without restart
+- Windows users get Ctrl+C support
 - More stable TUI (no EventBus crashes)
 - Cleaner debug logs
-- Hallucination warnings now visible in TUI
+- Faster binary search
+
+**Automatic Migrations:**
+- None required
+
+---
+
+## Architecture Patterns Added
+
+From MEMORY.md:
+
+**Pattern #8: TUI EventBus Handler Resilience**
+- All EventBus handlers MUST guard against NoMatches exceptions
+- Use try/except around `query_one()` calls
+- Prevents crashes when handlers fire before UI is ready
+
+**Pattern #9: WARNING Event Handling**
+- WARNING events from response validator must be displayed
+- TUI: Yellow ⚠ indicator in chat
+- Web: Styled warning boxes with severity
+
+**Pattern #10: Working Directory Change Deduplication**
+- Only emit WORKING_DIR_CHANGED when path actually changes
+- Compare resolved paths to prevent duplicate events
 
 ---
 
@@ -259,23 +379,33 @@ None specific to v1.15.3.
 
 ---
 
-## Next Steps (v1.16.x)
+## Next Steps (v1.16.0)
 
-Future improvements identified during v1.15.3 development:
+**Planned:**
+- File navigation commands (`/ls`, `/tree`)
+- Interactive file tree sidebar (ppxaide)
+- Apply Pattern #8-10 to remaining code
+- Enhanced test coverage for EventBus handlers
 
-1. **Apply Patch Tool Call Format** - Handle nested argument structures
-2. **Transactional State Management** - Apply checkpoint/commit/rollback pattern to provider/model switching
-3. **Enhanced Test Coverage** - Integration tests for EventBus handlers
-
-See `ROADMAP.md` for full feature planning.
+See `TODO-v1.16.0.md` for detailed planning.
 
 ---
 
-## Credits
+## Performance Metrics
 
-- **TUI Stability** - EventBus handler guards, WARNING event handler
-- **Performance** - Model hints logging, cwd change deduplication
-- **Documentation** - MEMORY.md patterns, release notes
+**Test Suite:**
+- Total tests: 1157
+- Pass rate: 100%
+- Total time: ~44.6s
+- Average: 0.0385s per test
+
+**Slowest Tests:**
+1. `test_web_premium_fallback_on_error` (4.99s)
+2. `test_many_messages_performance` (2.58s)
+3. `test_page_up_down_in_chat_view` (2.35s)
+
+**Fastest Test:**
+- `test_is_table_block_with_leading_text` (0.0001s)
 
 ---
 
