@@ -36,9 +36,16 @@ class TestPremiumWebSearchIntegration:
         # Gemini has native Google Search Grounding
         assert provider_needs_tool("gemini", "web_search") is False
 
-    def test_web_search_tool_required_for_custom(self):
+    @patch('ppxai.config._get_providers')
+    def test_web_search_tool_required_for_custom(self, mock_get_providers):
         """Test that web_search tool is required for custom provider."""
         from ppxai.config import provider_needs_tool
+
+        # Mock providers dict with custom provider having no native web_search
+        mock_get_providers.return_value = {
+            'custom': {'capabilities': {'web_search': False}},
+            'perplexity': {'capabilities': {'web_search': True}}
+        }
 
         # Custom provider doesn't have native web search
         assert provider_needs_tool("custom", "web_search") is True
@@ -318,6 +325,11 @@ class TestPremiumWebSearchIntegration:
         assert usage.tool_calls["web_search"].provider == "perplexity"
         assert usage.tool_calls["web_search"].estimated_cost == 0.01
 
+    @patch('ppxai.config.PROVIDERS', {
+        'perplexity': {'capabilities': {'web_search': True}},
+        'gemini': {'capabilities': {'web_search': True}},
+        'custom': {'capabilities': {'web_search': False}}
+    })
     def test_native_search_providers_exclude_tool(self):
         """Test that native search providers don't need web_search tool."""
         from ppxai.config import PROVIDERS

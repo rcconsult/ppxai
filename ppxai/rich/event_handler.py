@@ -229,7 +229,9 @@ class TUIEventHandler(EventHandler):
             self.theme = get_theme(theme_name)
             self.theme_name = theme_name
         else:
-            self.theme_name = get_tui_theme()
+            # Use Rich CLI default theme (not TUI theme which has different theme names)
+            from ppxai.rich.themes import DEFAULT_THEME
+            self.theme_name = DEFAULT_THEME
             self.theme = get_theme(self.theme_name)
 
         super().__init__(

@@ -355,6 +355,7 @@ class TestCommandHandlerBothProviders:
         # Should show available providers
         assert "provider" in captured.out.lower() or "perplexity" in captured.out.lower()
 
+    @patch('ppxai.commands.provider.PROVIDERS', {'perplexity': {}, 'custom': {}})
     @patch('ppxai.commands.provider.get_api_key')
     @patch('ppxai.commands.provider.get_base_url')
     @patch('ppxai.commands.provider.get_provider_config')
@@ -417,6 +418,7 @@ class TestCommandHandlerBothProviders:
         # Should show "already using" message
         assert "already" in captured.out.lower() or "custom" in captured.out.lower()
 
+    @patch('ppxai.commands.provider.PROVIDERS', {'perplexity': {}, 'custom': {}})
     @patch('ppxai.config.get_api_key')
     @patch('ppxai.config.get_provider_config')
     def test_provider_switch_missing_api_key_perplexity(

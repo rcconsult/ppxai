@@ -54,7 +54,7 @@ class ContextScope(Enum):
 LOCAL_PROVIDERS = {"ollama", "vllm", "lmstudio"}
 
 # Default bootstrap file aliases (checked in order)
-DEFAULT_BOOTSTRAP_FILES = ["AGENTS.md", "CLAUDE.md"]
+DEFAULT_BOOTSTRAP_FILES = ["AGENTS.md", "CLAUDE.md", "INSTRUCTIONS.md"]
 
 # Hint templates file location (v1.14.2)
 HINT_TEMPLATES_FILE = Path.home() / ".ppxai" / "hint-templates.yaml"

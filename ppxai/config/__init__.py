@@ -643,7 +643,7 @@ def get_context_config() -> Dict[str, Any]:
 # =============================================================================
 
 # Default bootstrap file aliases (checked in order)
-DEFAULT_BOOTSTRAP_FILES = ["AGENTS.md", "CLAUDE.md"]
+DEFAULT_BOOTSTRAP_FILES = ["AGENTS.md", "CLAUDE.md", "INSTRUCTIONS.md"]
 
 
 def get_bootstrap_config() -> Dict[str, Any]:
