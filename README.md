@@ -1,6 +1,6 @@
 # ppxai - Multi-LLM Interface for Developers
 
-![Version](https://img.shields.io/badge/version-1.15.2-blue) ![Tests](https://img.shields.io/badge/tests-1105%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
+![Version](https://img.shields.io/badge/version-1.15.3-blue) ![Tests](https://img.shields.io/badge/tests-1157%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
 
 **Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
 
@@ -54,7 +54,7 @@ ppxai-desktop
 - Full macOS setup: `curl -sSL ... | bash -s -- --with-macos-app --with-config --with-launchagent`
 - Uninstall: `curl -sSL ... | bash -s -- --uninstall`
 
-**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.15.2` (specific version), `-Uninstall`
+**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.15.3` (specific version), `-Uninstall`
 
 See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed installation options including Windows.
 
@@ -299,7 +299,7 @@ No telemetry. No tracking. Data only goes to the LLM provider you choose.
 | [File Editing](docs/FILE_EDITING_GUIDE.md) | Consent-based file operations |
 | [Specifications](SPECIFICATIONS.md) | Code generation templates |
 | [Architecture](docs/ARCHITECTURE.md) | Type-based renderer design (v1.15.0) |
-| [Release Notes v1.15.0](docs/RELEASE-NOTES-v1.15.0.md) | Latest development features |
+| [Release Notes v1.15.0](docs/RELEASE-NOTES-v1.15.0.md) | Type-based architecture and ppxaide TUI |
 
 ## Project Structure
 
@@ -323,7 +323,7 @@ ppxai/
 ├── vscode-extension/         # VSCode extension (TypeScript)
 ├── scripts/                  # Build, release, install scripts
 ├── resources/                # Icons (PNG, ICO, ICNS) and desktop files
-├── tests/                    # 1105 tests
+├── tests/                    # 1157 tests
 └── docs/                     # Documentation
 ```
 
