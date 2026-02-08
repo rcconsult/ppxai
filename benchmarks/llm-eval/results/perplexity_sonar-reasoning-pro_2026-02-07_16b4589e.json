@@ -1,0 +1,279 @@
+{
+  "provider": "perplexity",
+  "model": "sonar-reasoning-pro",
+  "timestamp": "2026-02-07T23:41:45.707931",
+  "overall_score": 67.1875,
+  "tests_passed": 17,
+  "tests_total": 26,
+  "duration_seconds": 329.3261950016022,
+  "category_scores": {
+    "hallucination_resistance": 100.0,
+    "tool_calling": 28.57142857142857,
+    "code_editing": 0.0,
+    "format_compliance": 66.66666666666666,
+    "instruction_following": 100.0,
+    "reasoning": 66.66666666666666,
+    "error_recovery": 100.0
+  },
+  "test_results": [
+    {
+      "name": "respects_tool_failure",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "acknowledged_failure": true
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "no_phantom_tool_calls",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "made_tool_calls": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "repeated_failure_acknowledgment",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "acknowledged_persistent_failure": true
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "contradiction_detection",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "respected_tool_result": true
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "multi_turn_consistency",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "accurate_status_report": true,
+        "mentioned_failure": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Wrong path: None",
+        "expected": "/src/main.py"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool": "write_file",
+        "args": {
+          "path": "/tmp/test.txt",
+          "content": "Hello, World!"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Content truncated: got 0 chars, expected ~3500"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Didn't use info from first tool: {'filepath': 'src/main.py'}"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Model explained before calling tool",
+        "pattern_matched": "using the .* tool",
+        "content_preview": "The file `/src/app.py` does not exist. \n\nTo proceed, you can:\n- Provide the correct path to the file you want to read\n- Create the file first using the `write_file` or `insert_text` tool\n- List the di"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool_calls": 1
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "Patch doesn't contain expected changes",
+        "patch": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "subtract method not found in patch",
+        "patch_preview": ""
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "Missing json import",
+        "patch_preview": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "json_output",
+      "category": "format_compliance",
+      "passed": false,
+      "details": {
+        "error": "Not a list with 3+ items",
+        "data": "{'frameworks': [{'name': 'Django', 'description': 'A rock-solid full-stack framework that includes everything needed to build complete web applications. Includes built-in admin panels, authentication "
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "markdown_code_blocks",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "code_blocks": 4
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_hallucinated_paths",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "content_length": 1950
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "do_not_explain",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "content_length": 45
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "constraint_respect",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "line_count": 6
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "format_specification",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "blocks": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "multi_step_planning",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "concepts_found": [
+          "user model",
+          "password",
+          "login",
+          "session"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "dependency_ordering",
+      "category": "reasoning",
+      "passed": false,
+      "details": {
+        "error": "Didn't prioritize running tests first"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "edge_case_handling",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "handled": [
+          "division_by_zero",
+          "error_handling"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "tool_error_recovery",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "recovery": "acknowledged_error"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "self_correction",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "acknowledged_correction": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "graceful_degradation",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "graceful": "asked_for_clarification"
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1
+  }
+}

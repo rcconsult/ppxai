@@ -1,0 +1,24 @@
+{
+  "provider": "perplexity",
+  "model": "sonar-pro",
+  "timestamp": "2026-02-07T23:25:58.048580",
+  "overall_score": 0.0,
+  "tests_passed": 0,
+  "tests_total": 26,
+  "duration_seconds": 0.0,
+  "category_scores": {},
+  "test_results": [
+    {
+      "name": "initialization",
+      "category": "system",
+      "passed": false,
+      "details": {
+        "error": "Client initialization failed"
+      },
+      "weight": 0
+    }
+  ],
+  "metadata": {
+    "error": "Client initialization failed"
+  }
+}
