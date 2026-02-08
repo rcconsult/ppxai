@@ -9,13 +9,15 @@ Evaluates LLM models on capabilities critical for coding assistants:
 - Error recovery and self-correction
 - Multi-step reasoning
 
+Uses ppxai Engine for consistent tool handling across all providers.
 Results are stored per provider/model pair with historical comparison.
 
 Usage:
-    python benchmark.py --provider openai --model gpt-4o --base-url https://api.openai.com/v1
-    python benchmark.py --provider vllm --model openai/gpt-oss-120b --base-url http://localhost:8000/v1
+    python benchmark.py --provider perplexity --model sonar-pro
+    python benchmark.py --provider gemini --model gemini-2.5-flash
+    python benchmark.py --provider custom --model openai/gpt-oss-120b
     python benchmark.py --list-results
-    python benchmark.py --compare openai/gpt-4o vllm/openai/gpt-oss-120b
+    python benchmark.py --compare perplexity/sonar-pro gemini/gemini-2.5-flash
 """
 
 import argparse
@@ -28,7 +30,6 @@ from dataclasses import dataclass, field, asdict
 from typing import Optional
 from enum import Enum
 
-from runner import BenchmarkRunner
 from engine_runner import EngineBenchmarkRunner
 from results import ResultsStore, BenchmarkResult
 
@@ -45,15 +46,13 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Run benchmark against OpenAI (direct API)
+  # Run benchmark against any provider (uses ppxai Engine)
+  python benchmark.py --provider perplexity --model sonar-pro
+  python benchmark.py --provider gemini --model gemini-2.5-flash
   python benchmark.py --provider openai --model gpt-4o
 
-  # Run against local vLLM (direct API)
-  python benchmark.py --provider vllm --model openai/gpt-oss-120b --base-url http://localhost:8000/v1
-
-  # Run using ppxai Engine (supports all providers including Perplexity, Gemini)
-  python benchmark.py --provider perplexity --model sonar-pro --engine
-  python benchmark.py --provider gemini --model gemini-2.5-flash --engine
+  # Run against custom providers (vLLM, Ollama, etc.)
+  python benchmark.py --provider custom --model openai/gpt-oss-120b
 
   # Run specific test categories
   python benchmark.py --provider openai --model gpt-4o --categories tool_calling,code_editing
@@ -62,7 +61,7 @@ Examples:
   python benchmark.py --list-results
 
   # Compare two provider/model pairs
-  python benchmark.py --compare openai/gpt-4o vllm/openai/gpt-oss-120b
+  python benchmark.py --compare openai/gpt-4o custom/openai/gpt-oss-120b
 
   # Show ranking across all tested models
   python benchmark.py --ranking
@@ -71,17 +70,11 @@ Examples:
 
     # Run mode
     run_group = parser.add_argument_group("Run Benchmark")
-    run_group.add_argument("--provider", type=str, help="Provider name (e.g., openai, vllm, ollama)")
+    run_group.add_argument("--provider", type=str, help="Provider name (e.g., perplexity, gemini, openai, custom)")
     run_group.add_argument("--model", type=str, help="Model name/ID")
-    run_group.add_argument("--base-url", type=str, help="API base URL (default: provider-specific)")
-    run_group.add_argument("--api-key", type=str, help="API key (or set via environment)")
     run_group.add_argument("--categories", type=str, help="Comma-separated test categories to run")
-    run_group.add_argument("--timeout", type=int, default=60, help="Timeout per test in seconds (default: 60)")
+    run_group.add_argument("--timeout", type=int, default=120, help="Timeout per test in seconds (default: 120)")
     run_group.add_argument("--retries", type=int, default=1, help="Number of retries per test (default: 1)")
-    run_group.add_argument("--no-ssl-verify", action="store_true", help="Disable SSL certificate verification")
-    run_group.add_argument("--ssl-cert-file", type=str, help="Path to custom CA certificate bundle")
-    run_group.add_argument("--no-ppxai-config", action="store_true", help="Don't load generation params from ppxai config")
-    run_group.add_argument("--engine", action="store_true", help="Use ppxai Engine instead of direct OpenAI API (supports all providers)")
 
     # Analysis mode
     analysis_group = parser.add_argument_group("Analysis")
@@ -94,7 +87,8 @@ Examples:
     output_group = parser.add_argument_group("Output")
     output_group.add_argument("--format", type=str, choices=["text", "json", "markdown"], default="text", help="Output format")
     output_group.add_argument("--output", type=str, help="Output file (default: stdout)")
-    output_group.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
+    output_group.add_argument("--verbose", "-v", action="store_true", help="Verbose output (show error summaries)")
+    output_group.add_argument("--debug", "-d", action="store_true", help="Debug mode (save detailed logs to debug/)")
     output_group.add_argument("--results-dir", type=str, help="Results directory (default: ./results)")
 
     return parser
@@ -114,47 +108,22 @@ def run_benchmark(args: argparse.Namespace) -> int:
     if args.categories:
         categories = [c.strip() for c in args.categories.split(",")]
 
-    # Choose runner based on --engine flag
-    if args.engine:
-        # Use ppxai Engine-based runner (supports all providers including native APIs)
-        runner = EngineBenchmarkRunner(
-            provider=args.provider,
-            model=args.model,
-            timeout=args.timeout,
-            retries=args.retries,
-            verbose=args.verbose,
-        )
-        runner_type = "ppxai Engine"
-        base_url = "(via ppxai config)"
-        gen_params = "(via ppxai config)"
-    else:
-        # Use direct OpenAI API runner
-        runner = BenchmarkRunner(
-            provider=args.provider,
-            model=args.model,
-            base_url=args.base_url,
-            api_key=args.api_key,
-            timeout=args.timeout,
-            retries=args.retries,
-            verbose=args.verbose,
-            ssl_verify=not args.no_ssl_verify,
-            ssl_cert_file=args.ssl_cert_file,
-            use_ppxai_config=not args.no_ppxai_config,
-        )
-        runner_type = "OpenAI API"
-        base_url = runner.client.base_url
-        gen_params = runner.generation_params
+    # Use ppxai Engine-based runner (handles tools automatically)
+    runner = EngineBenchmarkRunner(
+        provider=args.provider,
+        model=args.model,
+        timeout=args.timeout,
+        retries=args.retries,
+        verbose=args.verbose,
+        debug=args.debug,
+    )
 
     print(f"\n{'='*60}")
     print(f"LLM Agentic Coding Assistant Benchmark")
     print(f"{'='*60}")
-    print(f"Runner:   {runner_type}")
     print(f"Provider: {args.provider}")
     print(f"Model:    {args.model}")
-    if base_url:
-        print(f"Base URL: {base_url}")
-    if gen_params:
-        print(f"Gen Params: {gen_params}")
+    print(f"Timeout:  {args.timeout}s per test")
     print(f"{'='*60}\n")
 
     # Run benchmark
