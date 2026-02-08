@@ -1,0 +1,1695 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.15.3/archive/v1.15.1-completed/WIP-v1.15.0-FEATURE-PARITY/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Work In Progress: v1.15.0 Feature Parity - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#work-in-progress-v1150-feature-parity" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Work In Progress: v1.15.0 Feature Parity
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../INSTALLATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../PROVIDER_SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../AGENT_MODE_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CONTEXT-INJECTION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CHECKPOINT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../FILE_EDITING_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../AUTOROUTER-CONFIG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#completed-this-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Completed This Session
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-1-critical-missing-features-user-visible" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1 - Critical Missing Features (User-Visible)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 1 - Critical Missing Features (User-Visible)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-tab-autocomplete-deferred-to-phase-45" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 Tab Autocomplete ⚠️ DEFERRED TO PHASE 4/5
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-status-bar-toggles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 Status Bar Toggles ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-agent-mode-badges" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 Agent Mode Badges ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-reasoning-token-display" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.4 Reasoning Token Display
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-2-consistency-fixes-completed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2 - Consistency Fixes ✅ COMPLETED
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 2 - Consistency Fixes ✅ COMPLETED">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-auto-save-interval" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Auto-save Interval ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-crash-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Crash Recovery ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-debug-log-display" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Debug Log Display ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-tools-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 Tools Config ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-session-restoration-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.5 Session Restoration Fix ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#26-bootstrap-sequence-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.6 Bootstrap Sequence Fix ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#27-async-event-loop-error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.7 Async Event Loop Error Handling ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#28-debug-and-trace-cli-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.8 Debug and Trace CLI Flags ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-3-rich-only-features-consider-adding-completed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3 - Rich-Only Features (Consider Adding) ✅ COMPLETED
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 3 - Rich-Only Features (Consider Adding) ✅ COMPLETED">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-emoji-mode-optional-rich-tui-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Emoji Mode (Optional) - Rich TUI-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#todo-phase-45-deferred-features-needs-refactoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TODO: Phase 4/5 - Deferred Features (Needs Refactoring)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="TODO: Phase 4/5 - Deferred Features (Needs Refactoring)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-autocomplete-enhancement-disabled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Autocomplete Enhancement ❌ DISABLED
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#todo-release-prep" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TODO: Release Prep
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#files-modified-in-this-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Files Modified in This Work
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start-for-next-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start for Next Session
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reference-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reference Documents
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="work-in-progress-v1150-feature-parity">Work In Progress: v1.15.0 Feature Parity<a class="headerlink" href="#work-in-progress-v1150-feature-parity" title="Permanent link">&para;</a></h1>
+<p><strong>Branch:</strong> <code>feature/new-tui-command</code>
+<strong>Last Updated:</strong> 2026-01-28
+<strong>Status:</strong> Ready for Release</p>
+<h2 id="completed-this-session">Completed This Session<a class="headerlink" href="#completed-this-session" title="Permanent link">&para;</a></h2>
+<p><strong>Phase 1 - Type-based rendering:</strong>
+- [x] Type-based file display migration for /show command
+- [x] TreeResult uses DataViewer with Ctrl+V toggle (tree ↔ source)
+- [x] TableResult uses TableViewer with Ctrl+V toggle (table ↔ source)
+- [x] MarkdownResult renders in side panel
+- [x] ImageResult uses ImageViewer
+- [x] FileViewResult uses CodeEditor
+- [x] python-magic dependency for file type detection
+- [x] All 1105 tests passing
+- [x] FEATURE-PARITY-ANALYSIS.md created</p>
+<p><strong>Phase 2 - Consistency fixes:</strong>
+- [x] Auto-save interval (commit 00b0348)
+- [x] Crash recovery with dirty flag (commit 00b0348)
+- [x] Debug log display fix (commit 4e876f0)
+- [x] Session restore config fix (commit a059c42)
+- [x] Session restoration permissive mode (commit f1547bd)
+- [x] Bootstrap sequence fix (commit 8620dd6)
+- [x] Async event loop error handling (commit b09169e)
+- [x] Async session restoration (commit 5785506)
+- [x] Debug and trace CLI flags (commit 30fc1d9, 89d5be9)
+- [x] Coding commands async compatibility (commit pending)
+- [x] Logger enhancement with exc_info (commit pending)
+- [x] Textual logger override (commit pending)
+- [x] Session restoration worker fix (commit pending)
+- [x] Autocomplete disabled and deferred (commit 87785e9)</p>
+<p><strong>Phase 3 - Blinker Event Bus Integration (2026-01-28):</strong>
+- [x] Blinker event bus for decoupled components (commit 6eb83e2)
+- [x] 8 event handlers subscribed (STREAM_START, STREAM_CHUNK, STREAM_END, TOOL_CALL, TOOL_RESULT, TOOL_ERROR, ERROR, INFO)
+- [x] STREAM_END.data handling fixed (extracts content when no chunks)
+- [x] Tool consent callbacks wired to EngineClient
+- [x] All 1105 tests passing
+- [x] Documentation updated (FEATURE-PARITY-ANALYSIS.md)</p>
+<hr />
+<h2 id="phase-1-critical-missing-features-user-visible">Phase 1 - Critical Missing Features (User-Visible)<a class="headerlink" href="#phase-1-critical-missing-features-user-visible" title="Permanent link">&para;</a></h2>
+<h3 id="11-tab-autocomplete-deferred-to-phase-45">1.1 Tab Autocomplete ⚠️ DEFERRED TO PHASE 4/5<a class="headerlink" href="#11-tab-autocomplete-deferred-to-phase-45" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] Command completion (slash commands) - All 30+ commands from CommandFactory</li>
+<li>[x] @file/@clipboard/@url context providers - With descriptions</li>
+<li>[x] File path completion with ignore patterns (.git, node_modules, <strong>pycache</strong>, .venv)</li>
+<li>[x] Model/provider name completion - Dynamic from config</li>
+<li>[x] Subcommand completion (tools, usage, checkpoint, status, theme)</li>
+<li>[ ] <strong>DISABLED:</strong> Inadequate implementation, needs complete refactoring</li>
+</ul>
+<p><strong>Implementation:</strong>
+- <code>ppxai/tui/completer.py</code> - TextualCompleter with 440 lines of completion logic
+- <code>ppxai/tui/widgets/completion_popup.py</code> - Visual popup widget with arrow key navigation
+- Press Tab to show completions, arrow keys to navigate, Enter/Tab to select
+- File cache with 5-second TTL for performance
+- <strong>Commit:</strong> 4400480 (initial), disabled in 87785e9 - see Phase 4/5 for refactoring requirements</p>
+<h3 id="12-status-bar-toggles">1.2 Status Bar Toggles ✅<a class="headerlink" href="#12-status-bar-toggles" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] <code>/status version</code> - toggle version display (v1.15.0)</li>
+<li>[x] <code>/status cwd</code> - toggle working directory display (ppxai/utils)</li>
+<li>[x] <code>/status datetime</code> - toggle date/time display (2026-01-26 20:30)</li>
+</ul>
+<p><strong>Implementation:</strong>
+- Config stored in <code>ppxai-config.json</code> under <code>tui.show_version</code>, <code>show_cwd</code>, <code>show_datetime</code>
+- Badges added on app startup from config
+- Toggle commands update config and show/hide badges dynamically
+- DateTime badge updates every minute when enabled</p>
+<h3 id="13-agent-mode-badges">1.3 Agent Mode Badges ✅<a class="headerlink" href="#13-agent-mode-badges" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] Agent mode indicator badge - Shows "Agent: ACTIVE" in green</li>
+<li>[x] Checkpoint status badge (↶ valid, ↶! stale) - Unicode arrows</li>
+</ul>
+<p><strong>Implementation:</strong>
+- Agent badge shows when <code>/agent on</code> is executed
+- Checkpoint badge shows ↶ for valid checkpoint (undo available)
+- Checkpoint badge shows ↶! for stale checkpoint (undo may not work)
+- Badges update dynamically when agent mode changes</p>
+<h3 id="14-reasoning-token-display">1.4 Reasoning Token Display<a class="headerlink" href="#14-reasoning-token-display" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] DeepSeek R1 reasoning tokens - DEFERRED (not in Rich TUI yet)</li>
+<li>[ ] GPT-OSS thinking display - DEFERRED (requires special handling)</li>
+<li>[ ] Collapsible reasoning sections - DEFERRED</li>
+</ul>
+<p><strong>Note:</strong> Reasoning token display is not yet implemented in Rich TUI either, so this is not a parity gap. Will be added in future version when provider support is more mature.</p>
+<hr />
+<h2 id="phase-2-consistency-fixes-completed">Phase 2 - Consistency Fixes ✅ COMPLETED<a class="headerlink" href="#phase-2-consistency-fixes-completed" title="Permanent link">&para;</a></h2>
+<h3 id="21-auto-save-interval">2.1 Auto-save Interval ✅<a class="headerlink" href="#21-auto-save-interval" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] Implement configurable auto-save interval</li>
+<li>[x] Match Rich TUI behavior</li>
+<li>[x] Auto-save after each message pair</li>
+</ul>
+<p><strong>Implementation:</strong>
+- Auto-save in <code>_handle_event()</code> after STREAM_END
+- Uses <code>session.save_dirty()</code> to mark session as dirty
+- Configurable via <code>session.auto_save_interval</code> (default: 1)
+- <strong>Commit:</strong> 00b0348</p>
+<h3 id="22-crash-recovery">2.2 Crash Recovery ✅<a class="headerlink" href="#22-crash-recovery" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] Dirty session detection</li>
+<li>[x] Crash recovery prompt on startup</li>
+<li>[x] Mark session clean on graceful exit</li>
+</ul>
+<p><strong>Implementation:</strong>
+- Check <code>dirty</code> flag in <code>_check_session_restoration()</code>
+- Show "⚠ Session Recovery" modal (higher priority than auto_restore)
+- Clear dirty flag if user declines
+- Call <code>session.mark_clean()</code> in <code>action_quit()</code>
+- <strong>Commit:</strong> 00b0348</p>
+<h3 id="23-debug-log-display">2.3 Debug Log Display ✅<a class="headerlink" href="#23-debug-log-display" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] Show debug log output in TUI (side panel)</li>
+<li>[x] <code>/debug-log [on|off|show|clear]</code> command integration</li>
+<li>[x] Use FileViewResult for proper display</li>
+</ul>
+<p><strong>Implementation:</strong>
+- Fixed <code>/debug-log show</code> to return FileViewResult instead of TextResult
+- Displays last 50 lines in CodeEditor side panel
+- Read-only view with syntax highlighting
+- <strong>Commit:</strong> (pending)</p>
+<h3 id="24-tools-config">2.4 Tools Config ✅<a class="headerlink" href="#24-tools-config" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] <code>/tools config</code> works correctly in Textual TUI</li>
+<li>[x] Uses KeyValueResult renderer (already implemented)</li>
+</ul>
+<p><strong>Implementation:</strong>
+- Command already existed and worked
+- KeyValueResult renderer displays tool configuration
+- No changes needed</p>
+<h3 id="25-session-restoration-fix">2.5 Session Restoration Fix ✅<a class="headerlink" href="#25-session-restoration-fix" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] Match Rich TUI's permissive restoration behavior</li>
+<li>[x] Don't fail restoration when API key missing</li>
+<li>[x] Always render messages regardless of provider/model status</li>
+<li>[x] Use strict=True for model validation</li>
+<li>[x] Fall back to default model if stored model unavailable</li>
+</ul>
+<p><strong>Implementation:</strong>
+- Don't check return value of <code>set_provider()</code> - just call it (Rich TUI line 579)
+- Use <code>strict=True</code> for <code>set_model()</code> validation (Rich TUI line 586)
+- Fall back to provider's default model if unavailable (Rich TUI lines 589-594)
+- Always continue restoration even if provider/model can't be activated
+- <strong>Commit:</strong> f1547bd</p>
+<p><strong>Bug Fixed:</strong>
+- Session with 70 messages + provider=gemini showed empty chat with provider=perplexity
+- Root cause: Textual TUI was too strict - checked <code>set_provider()</code> return value
+- When GEMINI_API_KEY missing, restoration failed and stopped
+- Now matches Rich TUI: permissive restoration, always shows messages</p>
+<p><strong>Additional Fix (commit 5785506):</strong>
+- Made <code>_restore_session()</code> async to properly integrate with Textual's event loop
+- All callers now use <code>await</code> when calling the method
+- Fixes asyncio.run() errors during session restoration</p>
+<h3 id="26-bootstrap-sequence-fix">2.6 Bootstrap Sequence Fix ✅<a class="headerlink" href="#26-bootstrap-sequence-fix" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] Initialize config before event loop starts</li>
+<li>[x] Match Rich TUI's bootstrap sequence exactly</li>
+<li>[x] Prevent asyncio.run() conflicts</li>
+<li>[x] Ensure .env files loaded before event loop</li>
+</ul>
+<p><strong>Implementation:</strong>
+- Move <code>initialize()</code> call from <code>_initialize_engine()</code> to <code>main()</code> in <code>tui/__init__.py</code>
+- Call <code>initialize()</code> BEFORE <code>app.run()</code> starts Textual's event loop
+- Remove duplicate <code>initialize()</code> call from <code>_initialize_engine()</code>
+- <strong>Commit:</strong> 8620dd6</p>
+<p><strong>Bug Fixed:</strong>
+- "asyncio.run() cannot be called from a running event loop" error on startup
+- Root cause: Textual TUI called initialize() inside on_mount() (after event loop started)
+- Rich TUI calls initialize() in main() (before event loop starts)
+- Now matches Rich TUI: initialize → load .env → start event loop</p>
+<p><strong>Bootstrap Sequence:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Rich TUI:  main() → initialize() → load .env → create objects → start loop
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>Textual TUI (old): main() → app.run() → [loop] → initialize() ❌
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>Textual TUI (new): main() → initialize() → app.run() → [loop] ✅
+</span></code></pre></div></p>
+<h3 id="27-async-event-loop-error-handling">2.7 Async Event Loop Error Handling ✅<a class="headerlink" href="#27-async-event-loop-error-handling" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] Support async command handlers</li>
+<li>[x] Catch asyncio.run() errors with helpful messages</li>
+<li>[x] Add async_compat module for event loop detection</li>
+</ul>
+<p><strong>Implementation:</strong>
+- Check if command handler returns coroutine and await it
+- Catch RuntimeError from asyncio.run() attempts
+- Show clear error message suggesting Rich TUI for incompatible commands
+- Add <code>ppxai/common/async_compat.py</code> with event loop helpers
+- <strong>Commit:</strong> b09169e</p>
+<p><strong>Error Message:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Command failed: &lt;command&gt;
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>This command is not compatible with the Textual TUI yet.
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>It tries to create a new event loop while one is already running.
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>Try using the Rich TUI instead: uv run ppxai
+</span></code></pre></div></p>
+<h3 id="28-debug-and-trace-cli-flags">2.8 Debug and Trace CLI Flags ✅<a class="headerlink" href="#28-debug-and-trace-cli-flags" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] Add --debug flag for stderr logging</li>
+<li>[x] Add --trace flag for full exception tracebacks</li>
+<li>[x] Update Logger.error() to support exc_info parameter</li>
+<li>[x] Enhanced exception handling with traceback display</li>
+</ul>
+<p><strong>Implementation:</strong>
+- <code>--debug</code>: Enables logging to both stderr and file (~/.ppxai/logs/tui-debug.log)
+- <code>--trace</code>: Shows full stack traces in chat view (implies --debug)
+- Sets PPXAIDE_TRACE env var for exception handlers
+- All exceptions logged with full traceback when --trace enabled
+- <strong>Commit:</strong> 30fc1d9</p>
+<p><strong>Usage:</strong>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>run<span class="w"> </span>ppxaide<span class="w"> </span>--debug<span class="w">           </span><span class="c1"># Debug logging to stderr + file</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>uv<span class="w"> </span>run<span class="w"> </span>ppxaide<span class="w"> </span>--trace<span class="w">           </span><span class="c1"># Full tracebacks in chat + debug logging</span>
+</span></code></pre></div></p>
+<p><strong>Benefits:</strong>
+- Systematic debugging instead of random code changes
+- Immediate visibility of errors during development
+- Full stack traces show exact location of issues
+- Works with async event loop errors</p>
+<hr />
+<h2 id="phase-3-rich-only-features-consider-adding-completed">Phase 3 - Rich-Only Features (Consider Adding) ✅ COMPLETED<a class="headerlink" href="#phase-3-rich-only-features-consider-adding-completed" title="Permanent link">&para;</a></h2>
+<p><strong>Status:</strong> Phase 3 feature parity achieved. All critical gaps addressed.</p>
+<p><strong>Feature Parity Summary:</strong>
+- ✅ Status Bar: 100% parity (version/cwd/datetime toggles working)
+- ✅ Session Management: 100% parity (restoration, auto-save, crash recovery)
+- ✅ Agent/Checkpoint Badges: 100% parity (agent mode + checkpoint status)
+- ⚠️ Tab Autocomplete: Deferred to Phase 4/5 (see below)
+- ⏸️ Reasoning Tokens: Deferred (not in Rich TUI yet, not a parity gap)</p>
+<p><strong>Textual TUI Advantages:</strong>
+- More themes (17+ vs 6+)
+- Better keyboard shortcuts (Ctrl+T, Ctrl+P, Ctrl+W, etc.)
+- Advanced file viewers (tree/table toggle, image support)
+- Transactional state management (badge transactions)
+- Side panel editing with syntax highlighting</p>
+<h3 id="31-emoji-mode-optional-rich-tui-only">3.1 Emoji Mode (Optional) - Rich TUI-only<a class="headerlink" href="#31-emoji-mode-optional-rich-tui-only" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Text symbol fallback for terminal alignment</li>
+<li>[ ] <code>/theme emoji on|off</code> command</li>
+</ul>
+<p><strong>Note:</strong> Emoji mode is a Rich TUI-specific feature for terminal alignment. Not critical for parity.</p>
+<hr />
+<h2 id="todo-phase-45-deferred-features-needs-refactoring">TODO: Phase 4/5 - Deferred Features (Needs Refactoring)<a class="headerlink" href="#todo-phase-45-deferred-features-needs-refactoring" title="Permanent link">&para;</a></h2>
+<h3 id="41-autocomplete-enhancement-disabled">4.1 Autocomplete Enhancement ❌ DISABLED<a class="headerlink" href="#41-autocomplete-enhancement-disabled" title="Permanent link">&para;</a></h3>
+<p><strong>Status:</strong> Disabled in commit 87785e9 - inadequate implementation</p>
+<p><strong>Current Issues:</strong>
+- Fixed offset positioning (<code>offset-y: 90%</code>) instead of cursor-based
+- Single column layout instead of multi-column like Rich TUI
+- No alphabetical sorting of file list
+- No lazy loading/virtual scrolling for large file lists
+- Fixed 100 file limit with no dynamic pagination
+- Files shown in random order, priority files hack</p>
+<p><strong>What Rich TUI Has:</strong>
+- Cursor-based positioning (popup appears exactly at '@' character)
+- Multi-column scrollable layout
+- Alphabetical sorting of all files
+- Dynamic lazy loading as user scrolls
+- No file limit - entire project tree available</p>
+<p><strong>Implementation Requirements:</strong>
+1. <strong>Cursor positioning</strong>: Get actual cursor coordinates in terminal, position popup relative to cursor
+2. <strong>Multi-column layout</strong>: Use Textual Grid or Horizontal containers for columns
+3. <strong>Alphabetical sorting</strong>: Sort files before display
+4. <strong>Virtual scrolling</strong>: Implement lazy loading with scroll events
+5. <strong>Integration</strong>: Study prompt_toolkit approach in Rich TUI (<code>ppxai/rich/completer.py</code>)</p>
+<p><strong>Files to modify:</strong>
+- <code>ppxai/tui/widgets/input_box.py</code> - Re-enable tab handler (line 94-96)
+- <code>ppxai/tui/widgets/completion_popup.py</code> - Complete refactoring needed
+- <code>ppxai/tui/completer.py</code> - Sorting and pagination logic</p>
+<p><strong>User feedback:</strong> "showing fixed list... is not presentable to any user, it is a bug"</p>
+<p><strong>Decision:</strong> Focus on Phase 3 feature parity first, tackle this properly in Phase 4/5.</p>
+<hr />
+<h2 id="todo-release-prep">TODO: Release Prep<a class="headerlink" href="#todo-release-prep" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[ ] Run full test suite</li>
+<li>[ ] Update CHANGELOG.md for v1.15.0</li>
+<li>[ ] Create release notes: <code>docs/RELEASE-NOTES-v1.15.0.md</code></li>
+<li>[ ] Version bump in all files</li>
+<li>[ ] Merge to master</li>
+</ul>
+<hr />
+<h2 id="files-modified-in-this-work">Files Modified in This Work<a class="headerlink" href="#files-modified-in-this-work" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Changes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ppxai/common/file_type.py</code></td>
+<td>NEW - File type detection</td>
+</tr>
+<tr>
+<td><code>ppxai/common/__init__.py</code></td>
+<td>Export file_type module</td>
+</tr>
+<tr>
+<td><code>ppxai/commands/display.py</code></td>
+<td>/show returns typed results</td>
+</tr>
+<tr>
+<td><code>ppxai/commands/results.py</code></td>
+<td>Add MarkdownResult</td>
+</tr>
+<tr>
+<td><code>ppxai/rendering/textual_renderer.py</code></td>
+<td>Use DataViewer/TableViewer</td>
+</tr>
+<tr>
+<td><code>ppxai/rendering/rich_renderer.py</code></td>
+<td>Add MarkdownResult renderer</td>
+</tr>
+<tr>
+<td><code>ppxai/tui/themes/layout.tcss</code></td>
+<td>Markdown styles for SidePanel</td>
+</tr>
+<tr>
+<td><code>pyproject.toml</code></td>
+<td>Add python-magic dependency</td>
+</tr>
+<tr>
+<td><code>tests/test_tui.py</code></td>
+<td>Update test assertions</td>
+</tr>
+<tr>
+<td><code>docs/FEATURE-PARITY-ANALYSIS.md</code></td>
+<td>Full comparison document</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="quick-start-for-next-session">Quick Start for Next Session<a class="headerlink" href="#quick-start-for-next-session" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Checkout the branch</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>git<span class="w"> </span>checkout<span class="w"> </span>feature/new-tui-command
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>git<span class="w"> </span>pull
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1"># Sync dependencies</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>uv<span class="w"> </span>sync<span class="w"> </span>--all-extras
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c1"># Run tests to verify state</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_commands.py<span class="w"> </span>tests/test_tui.py<span class="w"> </span>-v
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="c1"># Build and test TUI</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>uv<span class="w"> </span>run<span class="w"> </span>ppxaide
+</span></code></pre></div>
+<hr />
+<h2 id="reference-documents">Reference Documents<a class="headerlink" href="#reference-documents" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="FEATURE-PARITY-ANALYSIS.md">FEATURE-PARITY-ANALYSIS.md</a> - Full comparison</li>
+<li><a href="../TUI-COMMAND-REFACTORING-PLAN/">TUI-COMMAND-REFACTORING-PLAN.md</a> - Architecture plan</li>
+<li><a href="ARCHITECTURE.md">ARCHITECTURE.md</a> - Transactional state pattern</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
