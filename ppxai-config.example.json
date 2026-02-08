@@ -63,27 +63,46 @@
       "system_prompt": "You are a helpful AI assistant with web search. Be concise. Cite sources as markdown links.",
       "__comment_system_prompt": "Per-provider system prompt override (v1.13.6+)",
       "generation_params": {
-        "temperature": 0.3,
+        "temperature": 0.2,
         "top_p": 0.9,
-        "frequency_penalty": 0.1
+        "frequency_penalty": 0.15,
+        "__comment": "Benchmark-optimized params (v1.15.3). CRITICAL: Perplexity API does NOT support both presence_penalty and frequency_penalty - use only frequency_penalty."
       },
       "models": {
         "sonar": {
           "name": "Sonar",
-          "description": "Lightweight search model with real-time grounding"
+          "description": "Lightweight search model with real-time grounding",
+          "__comment_best_for": "Quick file operations, simple edits, list/read tasks, directory navigation",
+          "generation_params": {
+            "temperature": 0.1,
+            "top_p": 0.85,
+            "max_tokens": 2048,
+            "frequency_penalty": 0.2
+          }
         },
         "sonar-pro": {
           "name": "Sonar Pro",
           "description": "Advanced search model for complex queries",
-          "context_limit": 200000
+          "context_limit": 200000,
+          "__comment_best_for": "Complex refactoring, multi-file changes, architecture decisions, code review, debugging. Best all-around model for agentic coding tasks (73.4% benchmark)."
         },
         "sonar-reasoning-pro": {
           "name": "Sonar Reasoning Pro",
-          "description": "Precision reasoning with Chain of Thought capabilities"
+          "description": "Precision reasoning with Chain of Thought capabilities (DeepSeek-R1)",
+          "__comment_best_for": "Algorithm design, bug root cause analysis, test generation, complex logic",
+          "__comment_warning": "Poor tool calling (50% benchmark) and code editing (28.6%) - avoid for agentic tasks that require direct tool execution",
+          "generation_params": {
+            "temperature": 0.2,
+            "top_p": 0.9,
+            "max_tokens": 12288,
+            "frequency_penalty": 0.15
+          }
         },
         "sonar-deep-research": {
           "name": "Sonar Deep Research",
-          "description": "Exhaustive research with comprehensive reports"
+          "description": "Exhaustive research with comprehensive reports (Async Jobs API)",
+          "__comment_best_for": "Comprehensive documentation, multi-step research, technical writing",
+          "__comment_note": "Uses Jobs API with reasoning_effort parameter (low/medium/high), not chat completions"
         }
       },
       "pricing": {
@@ -103,8 +122,9 @@
       "name": "Google Gemini",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
       "api_key_env": "GEMINI_API_KEY",
-      "default_model": "gemini-2.5-flash",
-      "coding_model": "gemini-2.5-pro",
+      "default_model": "gemini-3-flash-preview",
+      "coding_model": "gemini-3-flash-preview",
+      "__comment_benchmark": "Benchmark results (v1.15.3): gemini-3-flash-preview achieved 100% quality score with refined hints. Best model for code editing.",
       "options": {
         "enable_grounding": true,
         "__comment_enable_grounding": "Enable Google Search Grounding for native web search (default: true)"
@@ -126,8 +146,9 @@
         },
         "gemini-2.5-flash": {
           "name": "Gemini 2.5 Flash",
-          "description": "Latest fast model, best price/performance",
-          "context_limit": 1000000
+          "description": "Latest fast model, best price/performance. 71.4% code editing quality with aggressive hints.",
+          "context_limit": 1000000,
+          "__comment_best_for": "Good alternative if gemini-3-flash-preview unavailable. Requires aggressive AGENTS.md hints."
         },
         "gemini-2.5-pro": {
           "name": "Gemini 2.5 Pro",
@@ -141,8 +162,9 @@
         },
         "gemini-3-flash-preview": {
           "name": "Gemini 3 Flash Preview",
-          "description": "Speed-optimized preview with frontier intelligence and 1M context",
-          "context_limit": 1000000
+          "description": "Speed-optimized preview with frontier intelligence and 1M context. RECOMMENDED: Best code editing quality (100% benchmark).",
+          "context_limit": 1000000,
+          "__comment_best_for": "Code editing, refactoring, debugging. Achieved 100% quality score with balanced AGENTS.md hints."
         },
         "gemini-3-pro-preview": {
           "name": "Gemini 3 Pro Preview",
