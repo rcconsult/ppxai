@@ -355,9 +355,9 @@ class TestCommandHandlerBothProviders:
         # Should show available providers
         assert "provider" in captured.out.lower() or "perplexity" in captured.out.lower()
 
-    @patch('ppxai.config.get_api_key')
-    @patch('ppxai.config.get_base_url')
-    @patch('ppxai.config.get_provider_config')
+    @patch('ppxai.commands.provider.get_api_key')
+    @patch('ppxai.commands.provider.get_base_url')
+    @patch('ppxai.commands.provider.get_provider_config')
     def test_provider_switch_perplexity_to_custom(
         self,
         mock_get_config,
@@ -379,9 +379,9 @@ class TestCommandHandlerBothProviders:
         # Verify set_provider was called
         mock_engine_client.set_provider.assert_called_once_with("custom")
 
-    @patch('ppxai.config.get_api_key')
-    @patch('ppxai.config.get_base_url')
-    @patch('ppxai.config.get_provider_config')
+    @patch('ppxai.commands.provider.get_api_key')
+    @patch('ppxai.commands.provider.get_base_url')
+    @patch('ppxai.commands.provider.get_provider_config')
     def test_provider_switch_custom_to_perplexity(
         self,
         mock_get_config,
@@ -436,8 +436,8 @@ class TestCommandHandlerBothProviders:
         # Should show error about missing API key
         assert "api" in captured.out.lower() or "key" in captured.out.lower() or "error" in captured.out.lower()
 
-    @patch('ppxai.config.get_api_key')
-    @patch('ppxai.config.get_provider_config')
+    @patch('ppxai.commands.provider.get_api_key')
+    @patch('ppxai.commands.provider.get_provider_config')
     def test_provider_switch_missing_api_key_custom(
         self,
         mock_get_config,

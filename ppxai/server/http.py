@@ -596,6 +596,11 @@ async def reload_config_endpoint():
     This allows hot-reloading of provider prompts, settings, and other
     configuration changes from ppxai-config.json.
 
+    Note: This updates PROVIDERS/MODELS module-level dicts in-place (v1.15.3),
+    so all engine clients will see fresh provider data immediately via the
+    providers_config property. Individual sessions' shell/agent configs remain
+    cached until the session explicitly calls engine.reload_config().
+
     Returns:
         success: Whether reload succeeded
         message: Status message
@@ -604,7 +609,7 @@ async def reload_config_endpoint():
     from ..config import reload_config, find_config_file
 
     try:
-        reload_config()
+        reload_config()  # Updates PROVIDERS/MODELS in place via initialize()
         config_path = find_config_file()
         logger.info(f"Configuration reloaded from {config_path}")
         return {

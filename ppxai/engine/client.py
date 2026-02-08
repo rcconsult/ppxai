@@ -134,30 +134,33 @@ class EngineClient:
     def _load_config(self):
         """Load configuration from ppxai-config.json and .env."""
         # Store references to config functions for provider management
-        self._providers_config = PROVIDERS
         self._get_api_key = get_api_key
         self._get_base_url = get_base_url
-        self._get_default_model = get_default_model
-        self._default_provider = get_default_provider()
 
         # Use centralized config functions with defaults from config/defaults.py
         self._shell_config = get_shell_config()
         self._agent_config = get_agent_config()
 
     def reload_config(self):
-        """Reload configuration from disk and refresh cached provider data.
+        """Reload configuration from disk and refresh engine state.
 
-        Reloads the ConfigStore from disk, then refreshes the engine client's
-        cached provider list, shell config, and agent config.
+        Reloads the ConfigStore from disk, which also updates module-level
+        PROVIDERS/MODELS in-place. Then refreshes shell and agent configs.
         """
         from ..config import reload_config as _reload_config
-        _reload_config()
-        # Re-read providers from the freshly loaded config
-        # (PROVIDERS is a lazy __getattr__ that reads from ConfigStore each time)
-        from ..config import _get_providers
-        self._providers_config = _get_providers()
+        _reload_config()  # Updates PROVIDERS/MODELS in place via initialize()
         self._shell_config = get_shell_config()
         self._agent_config = get_agent_config()
+
+    @property
+    def providers_config(self) -> dict:
+        """Always returns current providers from config module.
+
+        No caching - reads fresh PROVIDERS dict which is updated in-place
+        by config.reload_config() -> initialize().
+        """
+        from ..config import PROVIDERS
+        return PROVIDERS
 
     # === Context Injection ===
 
@@ -417,7 +420,7 @@ class EngineClient:
         Returns:
             True if provider was set successfully
         """
-        if provider_name not in self._providers_config:
+        if provider_name not in self.providers_config:
             return False
 
         api_key = self._get_api_key(provider_name)
@@ -425,7 +428,7 @@ class EngineClient:
             return False
 
         base_url = self._get_base_url(provider_name)
-        provider_config = self._providers_config[provider_name]
+        provider_config = self.providers_config[provider_name]
 
         # Parse capabilities from config
         caps_dict = provider_config.get("capabilities", {})
@@ -494,7 +497,7 @@ class EngineClient:
             List of ProviderInfo objects
         """
         providers = []
-        for provider_id, config in self._providers_config.items():
+        for provider_id, config in self.providers_config.items():
             has_key = bool(self._get_api_key(provider_id))
             caps_dict = config.get("capabilities", {})
 

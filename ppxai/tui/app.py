@@ -37,7 +37,7 @@ from ppxai.tui.event_bus import EventBus, Events
 # Engine integration (Phase 6.1)
 from ppxai.engine import EngineClient
 from ppxai.engine.types import Event, EventType
-from ppxai.config import get_default_provider, get_default_model, get_api_key, initialize
+from ppxai.config import PROVIDERS, get_default_provider, get_default_model, get_api_key, initialize
 
 # Command Factory integration (Phase 6.1.1 - Technical debt cleanup)
 from ppxai.commands import CommandFactory
@@ -136,6 +136,8 @@ class PPXAIDEApp(App):
     async def on_mount(self) -> None:
         """Called when the app is mounted."""
         self._log.info("=== on_mount() START ===")
+        # Initialize config system (v1.15.3: DAG-based init)
+        initialize()
         # Initialize engine client (Phase 6.1)
         self._initialize_engine()
         self._log.info("=== After _initialize_engine() ===")
@@ -643,7 +645,6 @@ class PPXAIDEApp(App):
         stored_model = self._engine_client.session.metadata.get("model")
 
         if stored_provider:
-            from ppxai.config import PROVIDERS
             if stored_provider in PROVIDERS:
                 try:
                     # Don't check return value - just try to set it (Rich TUI line 579)

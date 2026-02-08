@@ -63,20 +63,20 @@ def main():
     trace_mode = args.trace
     app = PPXAIDEApp(debug_logging=debug_mode, trace_logging=trace_mode)
 
-    # Install SIGINT handler for graceful shutdown (v1.15.2)
-    # This ensures Ctrl+C during long operations doesn't crash the app
-    def sigint_handler(signum, frame):
-        """Handle SIGINT gracefully by triggering Textual's quit action."""
-        # Use call_later to invoke action_quit in the main thread safely
+    # Install signal handlers for graceful shutdown (v1.15.3)
+    # Handles SIGINT (Ctrl+C) and SIGTERM on all platforms including Windows
+    def signal_handler(signum, frame):
+        """Handle SIGINT/SIGTERM gracefully by triggering Textual's quit action."""
+        # Use call_from_thread to invoke action_quit in the main thread safely
         try:
             app.call_from_thread(app.action_quit)
         except Exception:
             # If app not running yet or already stopped, just exit cleanly
             sys.exit(0)
 
-    # Only install on non-Windows (Windows signal handling has quirks)
-    if sys.platform != 'win32':
-        signal.signal(signal.SIGINT, sigint_handler)
+    # Install handlers on all platforms (Windows, macOS, Linux)
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
 
     # Run app with KeyboardInterrupt handling for graceful shutdown on all platforms
     try:

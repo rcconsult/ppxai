@@ -80,22 +80,41 @@ CODING_MODEL = "sonar-pro"
 
 
 # =============================================================================
-# Module-level lazy attributes via __getattr__
+# Module-level attributes - populated by initialize()
 # =============================================================================
-# PROVIDERS and MODELS need to be dict-like but should not trigger config
-# loading at import time. Using __getattr__ defers loading until first use.
+# PROVIDERS and MODELS are module-level dicts that are populated when
+# initialize() is called. They are mutated in-place on reload, so all
+# existing references see the updated data (no stale snapshots).
 
-_lazy_attrs = {
-    "PROVIDERS": _get_providers,
-    "MODELS": _get_models,
-}
+PROVIDERS: Dict[str, Any] = {}
+MODELS: Dict[str, Any] = {}
+_initialized = False
 
 
-def __getattr__(name: str):
-    """Lazy module attribute access for PROVIDERS and MODELS."""
-    if name in _lazy_attrs:
-        return _lazy_attrs[name]()
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+def initialize():
+    """Initialize config system and populate module-level PROVIDERS/MODELS.
+
+    This function:
+    1. Loads .env files (PERPLEXITY_API_KEY, GEMINI_API_KEY, etc.)
+    2. Loads config from ppxai-config.json
+    3. Populates PROVIDERS/MODELS dicts
+
+    Safe to call multiple times (idempotent). Uses .clear() + .update()
+    to mutate dicts in-place, ensuring existing references see new data.
+    """
+    global PROVIDERS, MODELS, _initialized
+
+    # First, load .env files (from loader.py)
+    from .loader import initialize as loader_initialize
+    loader_initialize()
+
+    # Then populate PROVIDERS/MODELS from config
+    config = ConfigStore.get_instance().config
+    PROVIDERS.clear()
+    PROVIDERS.update(config.get("providers", {}))
+    MODELS.clear()
+    MODELS.update(PROVIDERS.get("perplexity", {}).get("models", {}))
+    _initialized = True
 
 
 # =============================================================================
@@ -515,8 +534,22 @@ def get_paths_config() -> Dict[str, Any]:
 
 
 def get_bin_search_paths() -> List[str]:
-    """Get list of directories to search for ppxai binaries."""
-    return get_paths_config().get("bin_search_paths", [])
+    """Get list of directories to search for ppxai binaries (platform-aware).
+
+    Returns only paths relevant to the current platform:
+    - Windows: Excludes Unix system paths (/usr/*)
+    - Unix/macOS/Linux: Excludes Windows AppData paths
+    """
+    import sys
+    all_paths = get_paths_config().get("bin_search_paths", [])
+
+    # Filter platform-specific paths for efficiency
+    if sys.platform == 'win32':
+        # Windows: Skip Unix system paths
+        return [p for p in all_paths if not p.startswith('/usr')]
+    else:
+        # Unix/macOS/Linux: Skip Windows AppData
+        return [p for p in all_paths if 'AppData' not in p]
 
 
 def get_data_dir() -> Path:

@@ -9,6 +9,7 @@ v1.15.0: Migrated to type-based renderer dispatch
 
 from typing import TYPE_CHECKING
 
+from ..config import PROVIDERS, get_api_key, get_base_url, get_provider_config
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
@@ -109,14 +110,10 @@ def handle_provider(context: CommandContext, args: str) -> CommandResult:
     Returns:
         ListResult when listing, ConfirmationResult when switching, ErrorResult on failure
     """
-    from ..config import get_api_key, get_base_url, get_provider_config
-
     # Reload config from disk to pick up external changes (e.g., new providers)
+    # reload_config() updates PROVIDERS dict in-place via initialize()
     if context.engine_client:
         context.engine_client.reload_config()
-
-    # Import PROVIDERS after reload so we get the fresh config
-    from ..config import PROVIDERS
 
     args = args.strip().lower()
     current_provider = context.get_provider()

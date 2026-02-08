@@ -58,7 +58,8 @@ class PerplexityProvider(BaseProvider):
         web_fetch=True,
         weather=True,  # Can answer weather via search
         citations=True,
-        streaming=True
+        streaming=True,
+        native_tool_calling=False  # Sonar models don't support native API tool_calls
     )
 
     def _get_generation_params(self, model: str) -> Dict[str, Any]:
@@ -94,7 +95,15 @@ class PerplexityProvider(BaseProvider):
             messages: Conversation history
             model: Model ID to use
             stream: Whether to stream the response
-            tools: Ignored - Perplexity uses native search, not tools
+            tools: Converted to prompt-based tool calling. Perplexity Sonar models
+                   do not support native function calling via the API (tool_calls response).
+                   Instead, tool definitions are injected into the system prompt and
+                   responses are parsed for JSON tool call format.
+
+                   Note: Perplexity's Agentic Research API supports native tools for
+                   third-party models (openai/gpt-*, etc.) but NOT for Sonar models.
+
+                   See: https://docs.perplexity.ai/docs/agentic-research/tools
 
         Yields:
             Event objects including citations when available

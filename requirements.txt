@@ -7,6 +7,7 @@ python-dotenv>=1.0.0
 tzdata>=2024.1
 
 # Server dependencies (matches [project.optional-dependencies].server)
+mangum>=0.17.0
 fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
 sse-starlette>=1.6.0
