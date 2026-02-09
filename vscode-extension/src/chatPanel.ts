@@ -1041,6 +1041,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                             if (selected) {
                                 await this._backend.loadSession(selected.label);
                                 await this.refreshHistory();
+                                await this.updateStatus();  // v1.15.3: Update provider/model from restored session
                                 this._view.webview.postMessage({
                                     type: 'systemMessage',
                                     content: `✓ Loaded session: ${selected.label}`
@@ -1051,6 +1052,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                         const loaded = await this._backend.loadSession(args[0]);
                         if (loaded) {
                             await this.refreshHistory();
+                            await this.updateStatus();  // v1.15.3: Update provider/model from restored session
                             this._view.webview.postMessage({
                                 type: 'systemMessage',
                                 content: `✓ Loaded session: ${args[0]}`

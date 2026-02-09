@@ -590,6 +590,7 @@ class PpxaiApp {
 
     /**
      * Restore the last session (v1.13.9)
+     * v1.15.3: Now restores provider and model from session metadata
      */
     async restoreLastSession() {
         try {
@@ -609,6 +610,20 @@ class PpxaiApp {
                 if (data.tools_enabled) {
                     this.toolsEnabled = true;
                     this.updateToolsBadge();
+                }
+
+                // Restore provider and model (v1.15.3)
+                if (data.provider) {
+                    this.currentProvider = data.provider;
+                    this.elements.providerSelect.value = data.provider;
+                    console.log(`[PpxaiApp] Restored provider: ${data.provider}`);
+                }
+                if (data.model) {
+                    this.currentModel = data.model;
+                    // Reload models for the restored provider
+                    await this.loadModels();
+                    this.elements.modelSelect.value = data.model;
+                    console.log(`[PpxaiApp] Restored model: ${data.model}`);
                 }
 
                 // Reload working dir badge

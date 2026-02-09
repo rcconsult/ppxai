@@ -431,6 +431,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 const success = await backend.loadSession(sessionName);
                 if (success) {
                     chatViewProvider.refreshHistory();
+                    await chatViewProvider.updateStatus();  // v1.15.3: Update provider/model from restored session
                     vscode.window.showInformationMessage(`Loaded session: ${sessionName}`);
                 } else {
                     vscode.window.showErrorMessage(`Session not found: ${sessionName}`);
