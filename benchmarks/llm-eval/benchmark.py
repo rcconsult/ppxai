@@ -21,14 +21,32 @@ Usage:
 """
 
 import argparse
+import io
 import json
 import hashlib
+import os
 import sys
 from datetime import datetime
 from pathlib import Path
 from dataclasses import dataclass, field, asdict
 from typing import Optional
 from enum import Enum
+
+# Fix Windows console encoding: force UTF-8 for stdout/stderr to prevent
+# 'charmap' codec errors when model responses contain Unicode characters
+# (e.g., \u2713 checkmark, \u2011 non-breaking hyphen in model output)
+if sys.platform == "win32" and not os.environ.get("PYTHONIOENCODING"):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except (AttributeError, io.UnsupportedOperation):
+        # Fallback for older Python or non-standard streams
+        sys.stdout = io.TextIOWrapper(
+            sys.stdout.buffer, encoding='utf-8', errors='replace', line_buffering=True
+        )
+        sys.stderr = io.TextIOWrapper(
+            sys.stderr.buffer, encoding='utf-8', errors='replace', line_buffering=True
+        )
 
 from engine_runner import EngineBenchmarkRunner
 from results import ResultsStore, BenchmarkResult
