@@ -105,6 +105,7 @@ model_hints:
     - "IMPORTANT: Call apply_patch ONCE per file - avoid making duplicate tool calls."
     - "Let the patch contain all code changes - your response can briefly confirm the action taken."
     - "For complex patches (indentation, multiline): Include ALL affected lines with proper context (3+ lines before/after)."
+    - "replace_block requires ALL 3 parameters: file_path, search, replace — NEVER omit search."
   "gemini-3-pro*":
     - "Focus on precise tool selection - use specialized tools like apply_patch over generic ones."
     - "Generate complete unified diffs with proper context lines (3+ lines before/after)."
