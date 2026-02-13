@@ -302,7 +302,7 @@ async def chat_with_tools(
             elif event.type == EventType.TOOL_CALL:
                 native_tool_calls.append(event.data)
             elif event.type == EventType.STREAM_END:
-                full_response = event.data
+                full_response = event.data or ""
                 if event.metadata and event.metadata.get("usage"):
                     usage = event.metadata["usage"]
                     accumulated_usage.prompt_tokens += usage.prompt_tokens
@@ -507,7 +507,7 @@ async def chat_with_tools(
                         yield event
                         return
                     elif event.type == EventType.STREAM_END:
-                        full_response = event.data
+                        full_response = event.data or ""
                         if event.metadata and event.metadata.get("usage"):
                             usage = event.metadata["usage"]
                             accumulated_usage.prompt_tokens += usage.prompt_tokens

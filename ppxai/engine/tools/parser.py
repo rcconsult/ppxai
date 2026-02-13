@@ -227,6 +227,8 @@ def parse_tool_call(
     Returns:
         Tool call dict with 'tool' and 'arguments' keys, or None if not found
     """
+    if not text:
+        return None
     # Try entire response as JSON first (most common case for tool calls)
     text_stripped = text.strip()
     if text_stripped.startswith('{') and text_stripped.endswith('}'):
@@ -322,6 +324,8 @@ def detect_truncated_tool_call(text: str) -> Optional[Dict[str, Any]]:
         Dict with 'tool' (detected tool name) and 'reason' (why it's truncated),
         or None if no truncated tool call detected
     """
+    if not text:
+        return None
     # Pattern 1: "I'll use the X tool" followed by incomplete JSON
     intent_patterns = [
         r"I'll use (?:the )?(\w+(?:_\w+)*) tool",

@@ -998,3 +998,43 @@ Done."""
 
         assert result is not None
         assert result["tool"] == "execute_shell_command"
+
+    def test_detect_truncated_none_input(self):
+        """Test detect_truncated_tool_call with None input doesn't crash.
+
+        Regression test: provider may emit STREAM_END with data=None,
+        causing 'NoneType' object has no attribute 'strip' error.
+        """
+        from ppxai.engine.tools.parser import detect_truncated_tool_call
+
+        result = detect_truncated_tool_call(None)
+        assert result is None
+
+    def test_detect_truncated_empty_input(self):
+        """Test detect_truncated_tool_call with empty string."""
+        from ppxai.engine.tools.parser import detect_truncated_tool_call
+
+        result = detect_truncated_tool_call("")
+        assert result is None
+
+
+class TestParseToolCallNoneGuard:
+    """Regression tests for None/empty input to parse_tool_call.
+
+    Bug: STREAM_END event with data=None caused 'NoneType' object has no
+    attribute 'strip' in parse_tool_call() when provider returned no content.
+    """
+
+    def test_parse_tool_call_none_input(self):
+        """parse_tool_call(None) returns None without crashing."""
+        from ppxai.engine.tools.parser import parse_tool_call
+
+        result = parse_tool_call(None, lambda name: None)
+        assert result is None
+
+    def test_parse_tool_call_empty_input(self):
+        """parse_tool_call('') returns None."""
+        from ppxai.engine.tools.parser import parse_tool_call
+
+        result = parse_tool_call("", lambda name: None)
+        assert result is None

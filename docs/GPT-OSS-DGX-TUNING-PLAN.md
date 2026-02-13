@@ -59,10 +59,60 @@
 
 **Decision:** Restored Qwen3-Coder-30B FP8 (81.2%) as DGX Spark production model. Qwen3-Next cached for potential future NVFP4 kernel fix or Qwen3-Coder-Next testing.
 
+### Qwen3-Coder-Next-FP8 Testing (2026-02-12)
+
+**Architecture:** 80B total / 3B active, 512 experts (10 active + 1 shared), Gated DeltaNet + Gated Attention hybrid, `Qwen3NextForCausalLM`, 256K native context.
+
+**vLLM Setup:** `qwen3_coder` tool call parser (confirmed available in vLLM 0.16.0rc1), `--entrypoint vllm` override required (same as production container), 74.89 GiB GPU memory, TRITON FP8 MoE backend, FLASHINFER attention.
+
+**Three benchmark runs** tested different parser and parameter combinations:
+
+| Run | Date | Parser | Temp | Top P | Overall | Passed | Duration |
+|-----|------|--------|------|-------|---------|--------|----------|
+| 1 | Feb 10 | hermes | 0.2 | 0.9 | **60.9%** | 18/26 | 818s |
+| 2 | Feb 12 | qwen3_coder | 1.0 | 0.95 | **57.8%** | 17/26 | 630s |
+| 3 | Feb 12 | qwen3_coder | 0.2 | 0.9 | **54.7%** | 16/26 | 927s |
+
+**Per-category breakdown (all 3 runs):**
+
+| Category | Run 1 (hermes) | Run 2 (qwen3_coder, t=1.0) | Run 3 (qwen3_coder, t=0.2) | Variance |
+|----------|---------------|---------------------------|---------------------------|----------|
+| code_editing | 57.1% | 57.1% | **100%** | High |
+| error_recovery | 66.7% | **100%** | 33.3% | **Extreme** |
+| format_compliance | 100% | 100% | 100% | None |
+| hallucination_resistance | 33.3% | 33.3% | 16.7% | Moderate |
+| instruction_following | 57.1% | 28.6% | 28.6% | High |
+| reasoning | 100% | 66.7% | 100% | High |
+| tool_calling | 64.3% | 64.3% | 64.3% | **None** |
+
+**Consistent failures (all 3 runs):** `respects_tool_failure`, `repeated_failure_acknowledgment`, `contradiction_detection` (hallucination_resistance), `large_payload` (tool_calling — timeout or truncation), `constraint_respect` (instruction_following), `patch_indentation` or `do_not_explain` (alternating).
+
+**Key Finding #8:** Qwen3-Coder-Next FP8 is **not competitive** with Qwen3-Coder-30B FP8 (81.2%):
+- **20+ points below production** across all 3 runs (54.7%–60.9%)
+- **Extreme variance** in error_recovery (33%–100%) and code_editing (57%–100%) — unreliable
+- **Persistent weaknesses** in hallucination_resistance (16.7%–33.3%) and tool_calling (stuck at 64.3%)
+- **qwen3_coder parser didn't help** — scores were lower (57.8%, 54.7%) vs hermes (60.9%)
+- **Temperature insensitive** — t=1.0 and t=0.2 both underperform, different failure modes
+- 24 AGENTS.md hints loaded (Qwen/Qwen3-Coder* + *Qwen3-Next* patterns merged) — no meaningful improvement
+
+**Decision:** Qwen3-Coder-Next is not viable for production. Stopped test container, restored Qwen3-Coder-30B FP8 (container 913d32a3acdd). Model cached for future re-evaluation if Qwen releases improved checkpoint.
+
+### Model Evaluation Summary (as of 2026-02-12)
+
+| Model | Type | Active | Best Score | Speed | Verdict |
+|-------|------|--------|------------|-------|---------|
+| **Qwen3-Coder-30B FP8** | MoE | 3B | **81.2%** | ~50 t/s | **PRODUCTION** |
+| Qwen3-Coder-30B + eagle3 | MoE+spec | 3B | 70.3% | ~67 t/s | Reverted (quality loss) |
+| GPT-OSS 120B (remote) | Dense | 120B | 68.8% | cloud | Good with hints |
+| Qwen3-Coder-Next FP8 | MoE | 3B | 60.9% | ~43 t/s | Not competitive (high variance) |
+| Qwen3-Next-80B Thinking FP8 | MoE | 3B | 57.8% | ~12 t/s | Slow, same flaws |
+| Qwen3-Next-80B FP8 | MoE | 3B | 54.7% | ~50 t/s | Hints had 0% effect |
+| Qwen2.5-Coder-32B BF16 | Dense | 32B | aborted | ~4 t/s | Too slow (dense on single GPU) |
+
 ### Changes Made
 
 1. **AGENTS.md** - Added 38+13 hints (custom: 7, asusai-vllm: 9, gpt-oss*: 8, Qwen/Qwen3-Coder*: 10, *Qwen3-Next*: 13, qwen2.5-coder*: 4)
-2. **ppxai-config.json** - Set `frequency_penalty: 0.0` for asusai-vllm; added Qwen3-Next FP8 + NVFP4 model entries
+2. **ppxai-config.json** - Set `frequency_penalty: 0.0` for asusai-vllm; added Qwen3-Next FP8 + NVFP4 + Qwen3-Coder-Next FP8 model entries
 3. **benchmark.py** - UTF-8 stdout/stderr encoding fix for Windows
 4. **engine_runner.py** - (encoding fix reverted, handled at benchmark.py level)
 

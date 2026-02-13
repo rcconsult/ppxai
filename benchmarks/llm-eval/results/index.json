@@ -12,6 +12,16 @@
         "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-10_cee37b05.json",
         "timestamp": "2026-02-10T13:25:33.321635",
         "overall_score": 60.94
+      },
+      {
+        "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-12_aec09c1b.json",
+        "timestamp": "2026-02-12T12:33:11.439010",
+        "overall_score": 57.8125
+      },
+      {
+        "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-12_9334c773.json",
+        "timestamp": "2026-02-12T13:52:38.299008",
+        "overall_score": 54.6875
       }
     ],
     "asusai-vllm/Qwen/Qwen3-Next-80B-A3B-Instruct-FP8": [
@@ -126,5 +136,19 @@
         "overall_score": 75.0
       }
     ]
-  }
+  },
+  "runs": [
+    {
+      "pair": "asusai-vllm/Qwen/Qwen3-Coder-Next-FP8",
+      "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-12_aec09c1b.json",
+      "timestamp": "2026-02-12T12:33:11.439010",
+      "overall_score": 57.8125
+    },
+    {
+      "pair": "asusai-vllm/Qwen/Qwen3-Coder-Next-FP8",
+      "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-12_9334c773.json",
+      "timestamp": "2026-02-12T13:52:38.299008",
+      "overall_score": 54.6875
+    }
+  ]
 }

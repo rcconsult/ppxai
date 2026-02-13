@@ -156,13 +156,34 @@ Integration tests (require custom endpoint):
 PPXAI_CONFIG_FILE="$HOME/.ppxai/ppxai-config.json" uv run pytest tests/test_custom_endpoint_integration.py -v
 ```
 
+### Web Tools & Corporate Proxy Support
+
+The web tools (`get_weather`, `fetch_url`, `web_search`) support corporate proxy environments:
+- `SSL_VERIFY=false` env var disables SSL certificate verification
+- `SSL_CERT_FILE=/path/to/cert.pem` env var loads a custom CA certificate
+- `get_weather` tries HTTPS first, falls back to HTTP when corporate proxies stall HTTPS
+- Timeouts are configurable via `tools.<name>.timeout` in ppxai-config.json (default: 15s)
+
+### Debug Logging
+
+- `/debug-log on` enables logging for ALL logger instances (tui, chat, session, validator, server, etc.)
+- Log files: `~/.ppxai/logs/<component>-debug.log` (tui, chat, session, validator, gemini, server, webclient)
+- Tool calls and results are logged by the `chat` logger, not `tui`
+
 ### Important Files
 
 - `CLAUDE.md` - Detailed project instructions for Claude Code
 - `ROADMAP.md` - Feature roadmap and version planning
 - `docs/RELEASE-PLAN-v1.14.x.md` - Current release series plan
 
-### Current Version: v1.15.3
+### Current Version: v1.15.4
+
+**v1.15.3 Features:**
+- **FIX:** Web tools SSL/corporate proxy support - `_create_ssl_context()` respects `SSL_VERIFY` and `SSL_CERT_FILE` env vars
+- **FIX:** `get_weather` HTTP fallback when HTTPS stalls behind corporate SSL-inspecting proxies
+- **FIX:** `/debug-log on` enables all logger instances (tui, chat, session, validator, etc.)
+- **NEW:** Configurable web tool timeouts via `tools.<name>.timeout` in ppxai-config.json
+- **NEW:** `Logger.enable_all()` / `Logger.disable_all()` for centralized log control
 
 **v1.15.2 Features:**
 - **NEW:** `/terminal` command - shows terminal detection and image protocol config help

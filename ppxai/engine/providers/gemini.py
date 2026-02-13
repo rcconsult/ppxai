@@ -19,6 +19,7 @@ Requires: pip install ppxai[gemini]
 """
 
 import json
+import os
 from typing import List, AsyncIterator, Optional, Dict, Any
 from ...common.logger import get_logger
 from ..types import Message, Event, EventType, ProviderCapabilities, ModelInfo, UsageStats
@@ -105,8 +106,23 @@ class GeminiProvider:
         self.thinking_budget = thinking_budget
         self.provider_id = provider_id or "gemini"  # For config lookup
 
-        # Initialize the Gemini client
-        self.client = genai.Client(api_key=api_key)
+        # Initialize the Gemini client with SSL configuration
+        # Respects SSL_VERIFY and SSL_CERT_FILE env vars (consistent with BaseProvider)
+        ssl_verify_env = os.getenv("SSL_VERIFY", "true").lower()
+        ssl_cert_file = os.getenv("SSL_CERT_FILE", "")
+
+        http_options = None
+        if ssl_verify_env == "false" or ssl_cert_file:
+            import httpx
+            verify = False if ssl_verify_env == "false" else ssl_cert_file
+            http_options = genai_types.HttpOptions(
+                httpx_client=httpx.Client(verify=verify)
+            )
+
+        self.client = genai.Client(
+            api_key=api_key,
+            http_options=http_options
+        )
 
     def _get_generation_params(self, model: str) -> Dict[str, Any]:
         """Get generation parameters (temperature, top_p, etc.) from config.
