@@ -96,6 +96,7 @@ a = Analysis(
         'ppxai.config',
         'ppxai.server',
         'ppxai.server.http',
+        'ppxai.common.preview',
         # Timezone support
         'tzdata',
         'zoneinfo',

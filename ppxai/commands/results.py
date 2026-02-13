@@ -335,6 +335,30 @@ class ImageResult(CommandResult):
     format: str = "png"  # png, jpg, svg, etc.
 
 
+@dataclass
+class PreviewResult(CommandResult):
+    """Live HTML preview result.
+
+    Used for: /preview command - live-reloading HTML in browser/iframe
+
+    Rendering:
+    - Rich: Start PreviewServer, open browser, show URL
+    - Textual: Start PreviewServer, open browser, show notification
+    - Web App: iframe in split panel (via server /preview/ endpoint)
+    - VSCode: WebviewPanel with FileSystemWatcher
+
+    Example:
+        PreviewResult(
+            status=ResultStatus.SUCCESS,
+            message="Preview: index.html",
+            filepath="/path/to/index.html",
+            url="http://localhost:54321/"
+        )
+    """
+    filepath: str = ""
+    url: str = ""
+
+
 # ============================================================================
 # Operations Result Types
 # ============================================================================
@@ -553,6 +577,7 @@ __all__ = [
     "FileViewResult",
     "MarkdownResult",
     "ImageResult",
+    "PreviewResult",
     # Operations
     "ProgressResult",
     "DiffResult",

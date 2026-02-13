@@ -1131,6 +1131,10 @@ class PpxaiApp {
                 await this.handlePwdCommand();
                 break;
 
+            case '/preview':
+                await this.handlePreviewCommand(args);
+                break;
+
             case '/config':
                 await this.handleConfigCommand(args);
                 break;
@@ -3098,6 +3102,100 @@ class PpxaiApp {
         // Hide preview panel
         this.elements.previewPanel.classList.add('hidden');
         this.elements.resizeHandle.classList.add('hidden');
+    }
+
+    // === /preview Command (v1.16.0) ===
+
+    async handlePreviewCommand(args) {
+        if (!args || !args.trim()) {
+            this.showError('Usage: /preview <file.html>');
+            return;
+        }
+
+        const filepath = args.trim();
+
+        if (filepath.toLowerCase() === 'close') {
+            this.closeHtmlPreview();
+            return;
+        }
+
+        this.openHtmlPreview(filepath);
+    }
+
+    openHtmlPreview(filepath) {
+        const panel = this.elements.previewPanel;
+        const contentEl = document.getElementById('previewContent');
+        if (!panel || !contentEl) {
+            this.showError('Preview panel not available');
+            return;
+        }
+
+        // Set filename header
+        this.elements.previewFilename.textContent = filepath;
+        this.elements.previewInfo.textContent = 'Live Preview';
+
+        // Hide view toggle (not applicable for iframe preview)
+        if (this.elements.previewViewToggle) {
+            this.elements.previewViewToggle.classList.add('hidden');
+        }
+
+        // Hide code/markdown/data viewers
+        if (this.elements.previewCode && this.elements.previewCode.parentElement) {
+            this.elements.previewCode.parentElement.classList.add('hidden');
+        }
+        if (this.elements.previewMarkdown) {
+            this.elements.previewMarkdown.classList.add('hidden');
+        }
+        const dataViewer = document.getElementById('previewDataViewer');
+        if (dataViewer) dataViewer.classList.add('hidden');
+
+        // Hide image and PDF containers
+        const imageContainer = panel.querySelector('.preview-image-container');
+        if (imageContainer) imageContainer.classList.add('hidden');
+        const pdfContainer = panel.querySelector('.preview-pdf-container');
+        if (pdfContainer) pdfContainer.classList.add('hidden');
+
+        // Remove existing preview iframe if any
+        let iframe = contentEl.querySelector('.preview-iframe');
+        if (iframe) iframe.remove();
+
+        // Create iframe pointing to server preview endpoint
+        iframe = document.createElement('iframe');
+        iframe.className = 'preview-iframe';
+        iframe.src = `${this.serverUrl}/preview/${encodeURIComponent(filepath)}?session=${encodeURIComponent(this.sessionId)}`;
+        iframe.sandbox = 'allow-scripts allow-same-origin';
+        iframe.style.cssText = 'width:100%;height:100%;border:none;background:#fff;';
+        contentEl.appendChild(iframe);
+
+        // Show panel
+        panel.classList.remove('hidden');
+        this.elements.resizeHandle.classList.remove('hidden');
+
+        // Track state
+        this._htmlPreviewActive = true;
+        this._htmlPreviewFilepath = filepath;
+    }
+
+    closeHtmlPreview() {
+        if (!this._htmlPreviewActive) {
+            this.showSystemMessage('No active preview');
+            return;
+        }
+
+        const contentEl = document.getElementById('previewContent');
+        if (contentEl) {
+            const iframe = contentEl.querySelector('.preview-iframe');
+            if (iframe) iframe.remove();
+        }
+
+        // Restore code viewer visibility
+        if (this.elements.previewCode && this.elements.previewCode.parentElement) {
+            this.elements.previewCode.parentElement.classList.remove('hidden');
+        }
+
+        this.hidePreviewPanel();
+        this._htmlPreviewActive = false;
+        this._htmlPreviewFilepath = null;
     }
 
     async handleShowCommand(args) {

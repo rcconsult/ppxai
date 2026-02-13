@@ -20,6 +20,7 @@ from rich.panel import Panel
 from rich.markdown import Markdown
 
 from .base import Renderer
+from ..preview_server import PreviewServer
 from ..commands.results import (
     ResultStatus,
     NotificationResult,
@@ -33,6 +34,7 @@ from ..commands.results import (
     FileViewResult,
     MarkdownResult,
     ImageResult,
+    PreviewResult,
     ProgressResult,
     DiffResult,
     ConsentResult,
@@ -449,6 +451,41 @@ def render_tool_execution(result: ToolExecutionResult) -> None:
             if i > 0:
                 console.print()
             RichRenderer.render(artifact)
+
+
+# ============================================================================
+# Preview Result Renderer
+# ============================================================================
+
+# Module-level active preview server (singleton)
+_active_preview = None
+
+
+@RichRenderer.register(PreviewResult)
+def render_preview(result: PreviewResult) -> None:
+    """Render preview result - start PreviewServer and open browser."""
+    global _active_preview
+
+    # Handle close action
+    if result.metadata and result.metadata.get("action") == "close":
+        if _active_preview and _active_preview.is_running:
+            _active_preview.stop()
+            _active_preview = None
+            console.print("[green]Preview server stopped[/green]")
+        else:
+            console.print("[dim]No active preview[/dim]")
+        return
+
+    # Stop existing preview if running
+    if _active_preview and _active_preview.is_running:
+        _active_preview.stop()
+
+    working_dir = result.metadata.get("working_dir", ".") if result.metadata else "."
+    _active_preview = PreviewServer(result.filepath, working_dir)
+    url = _active_preview.start(open_browser=True)
+    result.url = url
+    console.print(f"[green]Preview opened:[/green] {result.filepath}")
+    console.print(f"[dim]URL: {url}[/dim]")
 
 
 # ============================================================================

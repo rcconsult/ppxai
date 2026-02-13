@@ -24,10 +24,13 @@ from .results import (
     FileViewResult,
     ImageResult,
     MarkdownResult,
+    NotificationResult,
+    PreviewResult,
     TableResult,
     TextResult,
     TreeResult,
 )
+from ppxai.common.preview import resolve_preview_path
 from ppxai.common.file_type import (
     FileType,
     detect_file_type,
@@ -439,4 +442,76 @@ CommandFactory.register(CommandSpec(
     category="display",
     aliases=["cat"],
     usage="/show <filepath> [--source|--rendered|-i]"
+))
+
+
+# =============================================================================
+# /preview Command — Live HTML Preview
+# =============================================================================
+
+def handle_preview(context: CommandContext, args: str) -> CommandResult:
+    """Handle /preview command - open live-reloading HTML preview.
+
+    Args:
+        context: Command context providing access to engine client
+        args: Filepath to HTML file, or "close" to stop preview
+
+    Returns:
+        PreviewResult on success, ErrorResult on failure
+    """
+    if not args.strip():
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="Usage: /preview <file.html>",
+            suggestions=[
+                "/preview index.html     — Open live preview",
+                "/preview close           — Close preview",
+            ]
+        )
+
+    args_stripped = args.strip()
+
+    # Handle /preview close
+    if args_stripped.lower() == 'close':
+        return NotificationResult(
+            status=ResultStatus.INFO,
+            message="Preview closed",
+            metadata={"action": "close"}
+        )
+
+    # Resolve and validate HTML file path
+    working_dir = context.engine_client.get_working_dir()
+
+    try:
+        path = resolve_preview_path(args_stripped, working_dir)
+    except FileNotFoundError:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=f"File not found: {args_stripped}",
+            suggestions=["Check the file path and try again"]
+        )
+    except ValueError as e:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=str(e),
+            suggestions=[
+                "Only .html and .htm files are supported",
+                "Use /show for other file types"
+            ]
+        )
+
+    return PreviewResult(
+        status=ResultStatus.SUCCESS,
+        message=f"Preview: {path.name}",
+        filepath=str(path),
+        metadata={"working_dir": working_dir}
+    )
+
+
+CommandFactory.register(CommandSpec(
+    name="preview",
+    description="Open live-reloading HTML preview",
+    handler=handle_preview,
+    category="display",
+    usage="/preview <file.html>"
 ))

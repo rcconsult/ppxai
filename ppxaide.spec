@@ -26,6 +26,8 @@ a = Analysis(
         'openai',
         'dotenv',
         'ppxai.tui.themes.themes',
+        'ppxai.common.preview',
+        'ppxai.preview_server',
     ],
     hookspath=[],
     hooksconfig={},

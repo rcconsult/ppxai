@@ -88,6 +88,8 @@ a = Analysis(
         'ppxai.common.consent',
         'ppxai.common.file_type',
         'ppxai.common.logger',
+        'ppxai.common.preview',
+        'ppxai.preview_server',
     ],
     hookspath=[],
     hooksconfig={},

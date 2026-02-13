@@ -419,8 +419,8 @@ class TestCommandHandlerBothProviders:
         assert "already" in captured.out.lower() or "custom" in captured.out.lower()
 
     @patch('ppxai.commands.provider.PROVIDERS', {'perplexity': {}, 'custom': {}})
-    @patch('ppxai.config.get_api_key')
-    @patch('ppxai.config.get_provider_config')
+    @patch('ppxai.commands.provider.get_api_key')
+    @patch('ppxai.commands.provider.get_provider_config')
     def test_provider_switch_missing_api_key_perplexity(
         self,
         mock_get_config,

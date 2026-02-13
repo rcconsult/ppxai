@@ -7,7 +7,7 @@
  *
  * When adding new commands, update this file and both UIs will have access.
  *
- * @version 1.14.0
+ * @version 1.16.0
  */
 
 // Command categories for organization
@@ -145,6 +145,11 @@ export const SLASH_COMMANDS: Record<string, CommandDefinition> = {
     '/pwd': {
         description: 'Print working directory',
         usage: '/pwd',
+        category: CommandCategory.FILE
+    },
+    '/preview': {
+        description: 'Open live-reloading HTML preview',
+        usage: '/preview <file.html>',
         category: CommandCategory.FILE
     },
 

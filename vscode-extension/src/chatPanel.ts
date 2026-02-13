@@ -11,6 +11,7 @@
 import * as vscode from 'vscode';
 import { HttpClient, StreamEvent, FileConsentRequest, ShellConsentRequest, EventMetadata, ConsentResponse } from './httpClient';
 import { startServer, stopServer, onServerStatusChange } from './extension';
+import { openHtmlPreview, closeHtmlPreview } from './previewPanel';
 
 // Import shared modules for command definitions and formatters
 import {
@@ -1204,6 +1205,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
                 case '/pwd':
                     await this.handlePwdCommand();
+                    break;
+
+                case '/preview':
+                    await this.handlePreviewCommand(args);
                     break;
 
                 case '/usage':
@@ -2935,6 +2940,53 @@ Use \`/usage show <session|provider|model|off>\` to change.`;
             this._view.webview.postMessage({
                 type: 'error',
                 content: `Failed to get working directory: ${error}`
+            });
+        }
+    }
+
+    /**
+     * Handle /preview command - open live-reloading HTML preview (v1.16.0)
+     */
+    private async handlePreviewCommand(args: string[]) {
+        if (!this._view) { return; }
+
+        if (args.length === 0) {
+            this._view.webview.postMessage({
+                type: 'systemMessage',
+                content: 'Usage: `/preview <file.html>`\n\nExamples:\n- `/preview index.html`\n- `/preview close` — Close preview'
+            });
+            return;
+        }
+
+        const arg = args.join(' ').trim();
+
+        // Handle /preview close
+        if (arg.toLowerCase() === 'close') {
+            closeHtmlPreview();
+            this._view.webview.postMessage({
+                type: 'systemMessage',
+                content: 'Preview closed'
+            });
+            return;
+        }
+
+        // Resolve filepath against workspace root
+        const pathModule = require('path');
+        let fullPath = arg;
+
+        if (!pathModule.isAbsolute(arg)) {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (workspaceFolders && workspaceFolders.length > 0) {
+                fullPath = pathModule.resolve(workspaceFolders[0].uri.fsPath, arg);
+            }
+        }
+
+        const success = openHtmlPreview(fullPath);
+        if (success) {
+            const fileName = pathModule.basename(fullPath);
+            this._view.webview.postMessage({
+                type: 'systemMessage',
+                content: `Preview opened: **${fileName}** (live-reload enabled)`
             });
         }
     }

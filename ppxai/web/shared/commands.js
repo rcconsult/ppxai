@@ -7,7 +7,7 @@
  *
  * When adding new commands, update this file and both UIs will have access.
  *
- * @version 1.14.0
+ * @version 1.16.0
  */
 
 // Command categories for organization
@@ -107,6 +107,12 @@ const SLASH_COMMANDS = {
         usage: '/status',
         category: CommandCategory.USAGE
     },
+    '/context': {
+        description: 'Show context window usage and injected files',
+        usage: '/context [clear|hints|show|reload]',
+        category: CommandCategory.USAGE,
+        subcommands: ['clear', 'hints', 'show', 'reload']
+    },
 
     // === File Display ===
     '/show': {
@@ -119,6 +125,11 @@ const SLASH_COMMANDS = {
         usage: '/cat <filepath>',
         category: CommandCategory.FILE
     },
+    '/edit': {
+        description: 'Open file in editor (supports line:col)',
+        usage: '/edit <filepath[:line[:col]]>',
+        category: CommandCategory.FILE
+    },
     '/cd': {
         description: 'Change working directory',
         usage: '/cd <path>',
@@ -127,6 +138,11 @@ const SLASH_COMMANDS = {
     '/pwd': {
         description: 'Print working directory',
         usage: '/pwd',
+        category: CommandCategory.FILE
+    },
+    '/preview': {
+        description: 'Open live-reloading HTML preview',
+        usage: '/preview <file.html>',
         category: CommandCategory.FILE
     },
 

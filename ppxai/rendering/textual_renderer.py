@@ -18,6 +18,7 @@ from textual.widgets import DataTable, Tree, Static, Markdown as TextualMarkdown
 from textual.containers import VerticalScroll
 
 from .base import AsyncRenderer
+from ..preview_server import PreviewServer
 from ..commands.results import (
     ResultStatus,
     NotificationResult,
@@ -31,6 +32,7 @@ from ..commands.results import (
     FileViewResult,
     MarkdownResult,
     ImageResult,
+    PreviewResult,
     ProgressResult,
     DiffResult,
     ConsentResult,
@@ -535,6 +537,42 @@ async def render_tool_execution(renderer: TextualRenderer, result: ToolExecution
         chat_view.add_system_message(f"\n[bold]Artifacts ({len(result.artifacts)}):[/bold]")
         for artifact in result.artifacts:
             await renderer.render(artifact)
+
+
+# ============================================================================
+# Preview Result Renderer
+# ============================================================================
+
+# Module-level active preview server (singleton)
+_active_preview = None
+
+
+@TextualRenderer.register(PreviewResult)
+async def render_preview(renderer: TextualRenderer, result: PreviewResult) -> None:
+    """Render preview result - start PreviewServer and open browser."""
+    global _active_preview
+    chat_view = renderer._get_chat_view()
+
+    # Handle close action
+    if result.metadata and result.metadata.get("action") == "close":
+        if _active_preview and _active_preview.is_running:
+            _active_preview.stop()
+            _active_preview = None
+            chat_view.add_system_message("[green]Preview server stopped[/green]")
+        else:
+            chat_view.add_system_message("[dim]No active preview[/dim]")
+        return
+
+    # Stop existing preview if running
+    if _active_preview and _active_preview.is_running:
+        _active_preview.stop()
+
+    working_dir = result.metadata.get("working_dir", ".") if result.metadata else "."
+    _active_preview = PreviewServer(result.filepath, working_dir)
+    url = _active_preview.start(open_browser=True)
+    chat_view.add_system_message(
+        f"[dim]Preview opened: {result.filepath}\nURL: {url}[/dim]"
+    )
 
 
 # ============================================================================
