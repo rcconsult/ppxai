@@ -6,14 +6,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.15.3
+**Current Version:** v1.15.4
+
+**v1.15.4 highlights:**
+- **NEW:** `/preview` command — live-reloading HTML preview across TUI (stdlib server), Web App (iframe), and VSCode (WebviewPanel)
+- **NEW:** `PreviewServer` — stdlib HTTP server with mtime polling, auto-reload, static asset serving
+- **NEW:** `rewrite_asset_paths()` with cache-buster support for reliable CSS/JS/JSON live-reload
+- **NEW:** FastAPI `/preview/{path}` endpoints with session-scoped working directory
+- **FIX:** Browser cache busting — asset URLs get `?_t=<mtime>` to force re-fetch on changes
+- **FIX:** Preview iframe `fetch()` for non-HTML files (JSON data files now served correctly)
+- **FIX:** VSCode FileSystemWatcher expanded to all sibling assets (CSS/JS/JSON/SVG/PNG/JPG)
+- **TESTS:** 34 new preview tests covering utilities, server, cache-busting, and data file serving
 
 **v1.15.3 highlights:**
 - **FIX:** Stale config cache - `/model` and `/provider` commands now auto-reload config from disk before listing
 - **FIX:** Provider switch using wrong model - switching providers no longer uses stale model from previous provider
 - **FIX:** Session restore with outdated config - all 3 clients (Textual, Rich, HTTP server) reload config before restoring sessions
 - **FIX:** `/config reload` now also refreshes EngineClient's cached provider list (previously only refreshed ConfigStore)
+- **FIX:** Web tools SSL/corporate proxy support - `_create_ssl_context()` respects `SSL_VERIFY` and `SSL_CERT_FILE` env vars
+- **FIX:** `get_weather` HTTP fallback - tries HTTPS first, falls back to HTTP when corporate proxy stalls HTTPS
+- **FIX:** `/debug-log on` now enables all logger instances (tui, chat, session, validator, etc.), not just "tui"
 - **NEW:** `EngineClient.reload_config()` method - single entry point to reload ConfigStore + refresh all cached config data
+- **NEW:** Configurable web tool timeouts via `tools.<name>.timeout` in ppxai-config.json (default 15s)
+- **NEW:** `Logger.enable_all()` / `Logger.disable_all()` class methods for centralized log control
 - **DOCS:** DGX Spark setup guide renamed and expanded (vLLM + Ollama, model testing log, benchmark results)
 
 **v1.15.2 highlights:**
@@ -68,9 +83,9 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - `local` provider inheritance - ollama, vllm, lmstudio inherit from `local` hints
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.15.3
-- VSCode extension (package.json): v1.15.3
-- Git tag: v1.15.3
+- Python package (pyproject.toml): v1.15.4
+- VSCode extension (package.json): v1.15.4
+- Git tag: v1.15.4
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
 
