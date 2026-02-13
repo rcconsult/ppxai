@@ -48,26 +48,45 @@ let autocompleteQuery = '';
 let autocompleteStartPos = 0;
 let autocompleteDisabled = false; // Disabled for special providers (@git, @tree)
 
-// Slash commands for autocomplete
+// Slash commands for autocomplete (keep in sync with shared/commands.ts)
 const slashCommands = [
+    // Session & Chat
     { name: '/help', description: 'Show available commands' },
     { name: '/clear', description: 'Clear conversation history' },
     { name: '/save', description: 'Save session to JSON' },
     { name: '/export', description: 'Export last answer to markdown' },
     { name: '/load', description: 'Load a saved session' },
     { name: '/sessions', description: 'List saved sessions' },
-    { name: '/model', description: 'Switch model' },
-    { name: '/provider', description: 'Switch provider' },
+    // Provider & Model
+    { name: '/provider', description: 'Switch provider or list providers' },
+    { name: '/model', description: 'Switch model or list models' },
+    // Tools & Agent
     { name: '/tools', description: 'Manage AI tools (enable|disable|list)' },
-    { name: '/show', description: 'Display file contents' },
+    { name: '/agent', description: 'Run autonomous agent task' },
+    // Checkpoint
+    { name: '/checkpoint', description: 'Manage checkpoints (status|list|undo)' },
+    // Usage & Status
     { name: '/usage', description: 'Show token usage stats' },
     { name: '/status', description: 'Show current status' },
+    { name: '/context', description: 'Show context window usage and injected files' },
+    // File Display
+    { name: '/show', description: 'Display file contents locally' },
+    { name: '/cat', description: 'Alias for /show' },
+    { name: '/edit', description: 'Open file in editor' },
+    { name: '/cd', description: 'Change working directory' },
+    { name: '/pwd', description: 'Print working directory' },
+    { name: '/preview', description: 'Open live-reloading HTML preview' },
+    // Coding Tasks
     { name: '/generate', description: 'Generate code from description' },
     { name: '/explain', description: 'Explain code or concept' },
     { name: '/test', description: 'Generate tests for code' },
     { name: '/docs', description: 'Generate documentation' },
     { name: '/debug', description: 'Debug an error message' },
     { name: '/implement', description: 'Implement from description' },
+    { name: '/convert', description: 'Convert code between languages' },
+    { name: '/spec', description: 'Show specification templates' },
+    // Other
+    { name: '/theme', description: 'Switch theme (dark|light)' },
 ];
 
 // Configure marked for GFM

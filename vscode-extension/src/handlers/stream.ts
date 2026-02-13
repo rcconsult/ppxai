@@ -58,9 +58,8 @@ export function processStreamEvent(event: StreamEvent, eventBus: ChatEventBus): 
             break;
 
         case 'status':
-            // Status messages go through as system messages
-            // UI subscriber handles postMessage
-            eventBus.emit('stream:chunk', event.content);
+            // Status messages (checkpoint notifications, etc.)
+            eventBus.emit('stream:status', event.content);
             break;
 
         case 'agent_iteration':

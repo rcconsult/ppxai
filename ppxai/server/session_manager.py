@@ -383,15 +383,25 @@ class SessionManager:
     async def _handle_consent(self, session_id: str, file_path: str) -> tuple[bool, str]:
         """Handle file edit consent request for a specific session."""
         key = (session_id, file_path)
+        logger.debug(f"Consent: _handle_consent called for key={key}")
 
         async with self._consent_lock:
             future: asyncio.Future[tuple[bool, str]] = asyncio.Future()
             self._pending_consent[key] = future
+            logger.debug(f"Consent: Future created, pending keys={list(self._pending_consent.keys())}")
 
         try:
             approved, response = await asyncio.wait_for(future, timeout=300.0)
+            logger.debug(f"Consent: Future resolved approved={approved} response={response}")
             return (approved, response)
         except asyncio.TimeoutError:
+            logger.debug(f"Consent: Future TIMED OUT for key={key}")
+            return (False, 'n')
+        except asyncio.CancelledError:
+            logger.debug(f"Consent: Future CANCELLED for key={key}")
+            return (False, 'n')
+        except Exception as e:
+            logger.debug(f"Consent: Future EXCEPTION for key={key}: {e}")
             return (False, 'n')
         finally:
             async with self._consent_lock:
@@ -438,17 +448,22 @@ class SessionManager:
             True if request was found and resolved, False otherwise
         """
         key = (session_id, file_path)
+        logger.debug(f"Consent: resolve_consent called key={key} response={response}")
+        logger.debug(f"Consent: pending keys={list(self._pending_consent.keys())}")
 
         async with self._consent_lock:
             if key not in self._pending_consent:
+                logger.debug(f"Consent: key NOT FOUND in pending_consent!")
                 return False
 
             future = self._pending_consent[key]
             if future.done():
+                logger.debug(f"Consent: Future already done!")
                 return False
 
             approved = response in ['y', 'always']
             future.set_result((approved, response))
+            logger.debug(f"Consent: Future SET approved={approved}")
             return True
 
     async def resolve_shell_consent(

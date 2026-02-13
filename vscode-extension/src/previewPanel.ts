@@ -1,10 +1,13 @@
 /**
  * HTML Preview Panel for VSCode Extension
  *
- * Opens an HTML file in a WebviewPanel with live-reload support.
- * Uses FileSystemWatcher to detect changes and automatically refresh.
+ * Opens an HTML file using the best available preview method:
+ * 1. Microsoft Live Preview (ms-vscode.live-server) — embedded HTTP preview
+ * 2. Live Server (ritwickdey.liveserver) — external browser HTTP preview
+ * 3. Webview fallback — direct HTML injection (no fetch() for data files)
  *
- * v1.15.4: Initial implementation
+ * v1.15.4: Initial implementation (webview only)
+ * v1.15.4+: Live Preview / Live Server delegation with webview fallback
  */
 
 import * as vscode from 'vscode';
@@ -13,14 +16,19 @@ import * as path from 'path';
 
 let activePanel: vscode.WebviewPanel | undefined;
 let activeWatcher: vscode.FileSystemWatcher | undefined;
+/** Track whether we've shown the Live Preview suggestion this session */
+let livePreviewSuggestionShown = false;
 
 /**
  * Open an HTML file in a live-reloading preview panel.
  *
+ * Tries Live Preview (embedded HTTP) first, then Live Server (external browser),
+ * then falls back to webview injection.
+ *
  * @param filePath Absolute path to the HTML file
  * @returns true if preview opened successfully
  */
-export function openHtmlPreview(filePath: string): boolean {
+export async function openHtmlPreview(filePath: string): Promise<boolean> {
     if (!fs.existsSync(filePath)) {
         vscode.window.showErrorMessage(`Preview: file not found: ${filePath}`);
         return false;
@@ -32,6 +40,103 @@ export function openHtmlPreview(filePath: string): boolean {
         return false;
     }
 
+    // Try Live Preview (Microsoft) — best option: embedded HTTP preview
+    if (await tryLivePreview(filePath)) {
+        return true;
+    }
+
+    // Try Live Server (Ritwick Dey) — opens in external browser
+    if (await tryLiveServer(filePath)) {
+        return true;
+    }
+
+    // Fallback: webview injection (static HTML works, fetch() for data files won't)
+    suggestLivePreview();
+    return openWebviewFallback(filePath);
+}
+
+/**
+ * Close the active preview panel (webview fallback only).
+ * Live Preview / Live Server manage their own lifecycle.
+ */
+export function closeHtmlPreview(): void {
+    if (activeWatcher) {
+        activeWatcher.dispose();
+        activeWatcher = undefined;
+    }
+    if (activePanel) {
+        activePanel.dispose();
+        activePanel = undefined;
+    }
+}
+
+/**
+ * Whether a preview panel is currently open (webview fallback only).
+ */
+export function isPreviewActive(): boolean {
+    return activePanel !== undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Live Preview (ms-vscode.live-server)
+// ---------------------------------------------------------------------------
+
+async function tryLivePreview(filePath: string): Promise<boolean> {
+    const ext = vscode.extensions.getExtension('ms-vscode.live-server');
+    if (!ext) {
+        return false;
+    }
+
+    try {
+        // Ensure Live Preview uses filesystem watcher (not editor-only changes).
+        // AI tool edits write directly to disk, bypassing VSCode's editor model.
+        // The default "On All Changes in Editor" only watches in-memory buffers.
+        const config = vscode.workspace.getConfiguration('livePreview');
+        const currentMode = config.get<string>('autoRefreshPreview');
+        if (currentMode !== 'On Changes to Saved Files') {
+            await config.update(
+                'autoRefreshPreview',
+                'On Changes to Saved Files',
+                vscode.ConfigurationTarget.Workspace
+            );
+        }
+
+        await vscode.commands.executeCommand(
+            'livePreview.start.preview.atFile',
+            vscode.Uri.file(filePath)
+        );
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Live Server (ritwickdey.liveserver)
+// ---------------------------------------------------------------------------
+
+async function tryLiveServer(filePath: string): Promise<boolean> {
+    const ext = vscode.extensions.getExtension('ritwickdey.LiveServer');
+    if (!ext) {
+        return false;
+    }
+
+    try {
+        await vscode.commands.executeCommand(
+            'extension.liveServer.goOnline',
+            vscode.Uri.file(filePath)
+        );
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Webview Fallback
+// ---------------------------------------------------------------------------
+
+function openWebviewFallback(filePath: string): boolean {
     const fileDir = path.dirname(filePath);
     const fileName = path.basename(filePath);
     const localResourceRoot = vscode.Uri.file(fileDir);
@@ -74,27 +179,6 @@ export function openHtmlPreview(filePath: string): boolean {
     });
 
     return true;
-}
-
-/**
- * Close the active preview panel.
- */
-export function closeHtmlPreview(): void {
-    if (activeWatcher) {
-        activeWatcher.dispose();
-        activeWatcher = undefined;
-    }
-    if (activePanel) {
-        activePanel.dispose();
-        activePanel = undefined;
-    }
-}
-
-/**
- * Whether a preview panel is currently open.
- */
-export function isPreviewActive(): boolean {
-    return activePanel !== undefined;
 }
 
 /**
@@ -148,4 +232,27 @@ function rewriteAssetPaths(
             return `${attr}${quote}${webviewUri}${quote}`;
         }
     );
+}
+
+// ---------------------------------------------------------------------------
+// User guidance
+// ---------------------------------------------------------------------------
+
+function suggestLivePreview(): void {
+    if (livePreviewSuggestionShown) {
+        return;
+    }
+    livePreviewSuggestionShown = true;
+
+    vscode.window.showInformationMessage(
+        'For full preview support (dynamic data loading via fetch), install the "Live Preview" extension.',
+        'Install Live Preview'
+    ).then(choice => {
+        if (choice === 'Install Live Preview') {
+            vscode.commands.executeCommand(
+                'workbench.extensions.installExtension',
+                'ms-vscode.live-server'
+            );
+        }
+    });
 }

@@ -2083,10 +2083,12 @@ async def respond_to_consent(
 
     # Normalize response to standard enum value (handles yes/Yes/YES/y/etc.)
     response = normalize_consent_response(request.response)
+    logger.debug(f"Consent: POST /consent session={session_id} file={file_path} response={request.response} -> {response}")
 
     # Resolve via SessionManager (v1.13.10)
     resolved = await session_manager.resolve_consent(session_id, file_path, response)
     if resolved:
+        logger.debug(f"Consent: resolved OK for {file_path}")
         return {
             "file_path": file_path,
             "response": response,
@@ -2094,6 +2096,7 @@ async def respond_to_consent(
         }
 
     # No pending request found
+    logger.debug(f"Consent: NO PENDING REQUEST for session={session_id} file={file_path}")
     raise HTTPException(status_code=404, detail=f"No pending consent request for: {file_path}")
 
 

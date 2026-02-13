@@ -963,15 +963,19 @@ class EngineClient:
                 metadata={"file_path": str(path)}
             )
             self._consent_event_queue.append(consent_event)
+            logger.debug(f"Consent: queued consent_request event for {path}")
 
             # Call consent callback and wait for response
+            logger.debug(f"Consent: calling callback for {path}")
             approved, response = await self.consent_callback(str(path))
+            logger.debug(f"Consent: callback returned approved={approved} response={response}")
 
             if response == ConsentResponse.YES:
                 self.session.allowed_files.add(path)
                 return True
             elif response == ConsentResponse.ALWAYS:
                 self.session.edit_consent_mode = ConsentMode.ALWAYS
+                logger.debug("Consent: set edit_consent_mode to ALWAYS")
                 return True
             elif response == ConsentResponse.NEVER:
                 self.session.edit_consent_mode = ConsentMode.NEVER
@@ -981,6 +985,7 @@ class EngineClient:
 
         except Exception as e:
             # If consent callback fails, deny for safety
+            logger.debug(f"Consent: callback EXCEPTION: {type(e).__name__}: {e}")
             print(f"Consent callback error: {e}")
             return False
 
