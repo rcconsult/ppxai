@@ -10,7 +10,7 @@ Spawns a minimal HTTPServer in a daemon thread that:
 
 Zero new dependencies: http.server, threading, webbrowser are all stdlib.
 
-v1.16.0: Initial implementation
+v1.15.4: Initial implementation
 """
 
 import json

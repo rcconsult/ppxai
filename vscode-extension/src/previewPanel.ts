@@ -4,7 +4,7 @@
  * Opens an HTML file in a WebviewPanel with live-reload support.
  * Uses FileSystemWatcher to detect changes and automatically refresh.
  *
- * v1.16.0: Initial implementation
+ * v1.15.4: Initial implementation
  */
 
 import * as vscode from 'vscode';

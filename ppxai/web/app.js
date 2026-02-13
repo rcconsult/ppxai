@@ -3104,7 +3104,7 @@ class PpxaiApp {
         this.elements.resizeHandle.classList.add('hidden');
     }
 
-    // === /preview Command (v1.16.0) ===
+    // === /preview Command (v1.15.4) ===
 
     async handlePreviewCommand(args) {
         if (!args || !args.trim()) {

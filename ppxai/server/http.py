@@ -1713,25 +1713,45 @@ async def write_file(
         raise HTTPException(status_code=500, detail=f"Error writing file: {str(e)}")
 
 
-# === HTML Preview Endpoints (v1.16.0) ===
+# === HTML Preview Endpoints (v1.15.4) ===
 # Route order matters: poll and static must be defined BEFORE the catch-all
+
+
+def _extract_session_from_referer(request: Request) -> Optional[str]:
+    """Extract session ID from the Referer header's query string.
+
+    When JS inside a preview iframe does fetch('recipes.json'), the browser
+    resolves it to /preview/recipes.json with no session param.  But the
+    Referer header still points to the parent page URL which *does* contain
+    ?session=xxx.  This lets us recover the correct working directory.
+    """
+    referer = request.headers.get('referer', '')
+    if 'session=' in referer:
+        from urllib.parse import urlparse, parse_qs
+        qs = parse_qs(urlparse(referer).query)
+        ids = qs.get('session', [])
+        if ids:
+            return ids[0]
+    return None
 
 
 @app.get("/preview/poll/{filepath:path}")
 async def preview_poll(
+    request: Request,
     filepath: str,
     x_session_id: Optional[str] = Header(None),
     session: Optional[str] = None
 ):
     """Return file modification time for preview reload polling.
 
-    v1.16.0: Used by the injected reload script to detect file changes.
+    v1.15.4: Used by the injected reload script to detect file changes.
     Accepts session ID via header (X-Session-Id) or query param (?session=).
 
     Returns:
         JSON: {"mtime": float}
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id or session)
+    sid = x_session_id or session or _extract_session_from_referer(request)
+    session_id, engine, _ = await get_or_create_session(sid)
     working_dir = engine.get_working_dir() or os.getcwd()
 
     try:
@@ -1757,19 +1777,22 @@ async def preview_poll(
 
 @app.get("/preview/static/{filepath:path}")
 async def preview_static(
+    request: Request,
     filepath: str,
     x_session_id: Optional[str] = Header(None),
     session: Optional[str] = None
 ):
     """Serve static assets (CSS/JS/images) referenced by preview HTML.
 
-    v1.16.0: Resolves paths relative to the working directory.
-    Accepts session ID via header (X-Session-Id) or query param (?session=).
+    v1.15.4: Resolves paths relative to the working directory.
+    Accepts session ID via header (X-Session-Id), query param (?session=),
+    or extracted from Referer header.
 
     Returns:
         FileResponse for the static asset with no-cache headers
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id or session)
+    sid = x_session_id or session or _extract_session_from_referer(request)
+    session_id, engine, _ = await get_or_create_session(sid)
     working_dir = engine.get_working_dir() or os.getcwd()
 
     try:
@@ -1785,25 +1808,28 @@ async def preview_static(
 
 @app.get("/preview/{filepath:path}")
 async def preview_html(
+    request: Request,
     filepath: str,
     x_session_id: Optional[str] = Header(None),
     session: Optional[str] = None
 ):
     """Serve HTML file with injected reload script, or static assets.
 
-    v1.16.0: The reload script polls /preview/poll/{filepath} for mtime
+    v1.15.4: The reload script polls /preview/poll/{filepath} for mtime
     changes and triggers a page reload when the file is modified.
 
     Non-HTML files (e.g., recipes.json fetched by JS in the page) are
     served as static assets so that fetch() calls with relative URLs work
     inside the preview iframe.
 
-    Accepts session ID via header (X-Session-Id) or query param (?session=).
+    Accepts session ID via header (X-Session-Id), query param (?session=),
+    or extracted from Referer header (for JS fetch() calls inside iframe).
 
     Returns:
         HTMLResponse with injected reload script, or FileResponse for non-HTML
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id or session)
+    sid = x_session_id or session or _extract_session_from_referer(request)
+    session_id, engine, _ = await get_or_create_session(sid)
     working_dir = engine.get_working_dir() or os.getcwd()
 
     # First resolve without extension restriction to check if file exists
@@ -1816,12 +1842,11 @@ async def preview_html(
 
     # Non-HTML files: serve as static assets (supports JS fetch() calls)
     if path.suffix.lower() not in ('.html', '.htm'):
-        return FileResponse(path)
+        return FileResponse(path, headers={"Cache-Control": "no-cache"})
 
     content = path.read_text(encoding='utf-8')
     # Include session in poll URL so reload script uses the right working dir
-    sid = x_session_id or session or ''
-    poll_url = f'/preview/poll/{filepath}?session={sid}' if sid else f'/preview/poll/{filepath}'
+    poll_url = f'/preview/poll/{filepath}?session={session_id}' if session_id else f'/preview/poll/{filepath}'
 
     # Compute cache buster from newest sibling mtime so browser re-fetches
     # changed CSS/JS instead of using stale cached versions
@@ -1844,8 +1869,8 @@ async def preview_html(
         static_base = '/preview/static/'
     else:
         static_base = f'/preview/static/{file_dir}/'
-    if sid:
-        static_base = f'{static_base}?session={sid}'
+    if session_id:
+        static_base = f'{static_base}?session={session_id}'
     content = rewrite_asset_paths(content, static_base, cache_buster=cache_ts)
 
     html = inject_reload_script(content, poll_url)

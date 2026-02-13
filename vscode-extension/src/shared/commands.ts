@@ -7,7 +7,7 @@
  *
  * When adding new commands, update this file and both UIs will have access.
  *
- * @version 1.16.0
+ * @version 1.15.4
  */
 
 // Command categories for organization

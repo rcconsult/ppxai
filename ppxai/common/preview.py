@@ -4,7 +4,7 @@ Shared HTML preview utilities.
 Provides the reload script injection used by both FastAPI server
 and stdlib PreviewServer for live-reloading HTML previews.
 
-v1.16.0: Initial implementation
+v1.15.4: Initial implementation
 """
 
 import re

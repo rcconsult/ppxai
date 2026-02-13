@@ -2945,7 +2945,7 @@ Use \`/usage show <session|provider|model|off>\` to change.`;
     }
 
     /**
-     * Handle /preview command - open live-reloading HTML preview (v1.16.0)
+     * Handle /preview command - open live-reloading HTML preview (v1.15.4)
      */
     private async handlePreviewCommand(args: string[]) {
         if (!this._view) { return; }
