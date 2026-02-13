@@ -5,6 +5,7 @@ These tools are provider-aware - providers with native web capabilities
 (like Perplexity) won't have these registered.
 """
 
+import os
 import re
 import ssl
 import urllib.request
@@ -14,6 +15,38 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..manager import ToolManager
+
+
+def _create_ssl_context() -> ssl.SSLContext:
+    """Create SSL context respecting SSL_VERIFY and SSL_CERT_FILE env vars.
+
+    Consistent with BaseProvider (base.py) pattern for corporate proxy support.
+    """
+    ssl_verify = os.getenv("SSL_VERIFY", "true").lower()
+    ssl_cert_file = os.getenv("SSL_CERT_FILE", "")
+
+    if ssl_verify == "false":
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        return ctx
+    elif ssl_cert_file and os.path.exists(ssl_cert_file):
+        return ssl.create_default_context(cafile=ssl_cert_file)
+    else:
+        return ssl.create_default_context()
+
+
+def _get_web_timeout(tool_name: str, default: int = 15) -> int:
+    """Get timeout for a web tool from config.
+
+    Reads from tools.<tool_name>.timeout in ppxai-config.json.
+    """
+    try:
+        from ppxai.config import get_tool_config
+        config = get_tool_config(tool_name)
+        return config.get("timeout", default)
+    except Exception:
+        return default
 
 
 def get_weather(location: str, format: str = "short") -> str:
@@ -26,39 +59,48 @@ def get_weather(location: str, format: str = "short") -> str:
     Returns:
         Weather information
     """
-    # Create SSL context that doesn't verify (for corporate proxies)
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
+    timeout = _get_web_timeout("get_weather", default=15)
 
-    try:
-        if format == "short":
-            url = f"https://wttr.in/{urllib.parse.quote(location)}?format=4"
-        elif format == "detailed":
-            url = f"https://wttr.in/{urllib.parse.quote(location)}?0&m"
-        else:
-            url = f"https://wttr.in/{urllib.parse.quote(location)}?2&m"
+    if format == "short":
+        path = f"{urllib.parse.quote(location)}?format=4"
+    elif format == "detailed":
+        path = f"{urllib.parse.quote(location)}?0&m"
+    else:
+        path = f"{urllib.parse.quote(location)}?2&m"
 
-        req = urllib.request.Request(
-            url,
-            headers={"User-Agent": "curl/7.68.0"}
-        )
+    # Try HTTPS first, fall back to HTTP (wttr.in supports both).
+    # Corporate proxies with SSL inspection can stall HTTPS handshakes.
+    last_error = None
+    for scheme in ("https", "http"):
+        try:
+            url = f"{scheme}://wttr.in/{path}"
+            ctx = _create_ssl_context() if scheme == "https" else None
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "curl/7.68.0"}
+            )
 
-        with urllib.request.urlopen(req, timeout=10, context=ssl_context) as response:
-            result = response.read().decode('utf-8')
+            with urllib.request.urlopen(req, timeout=timeout, context=ctx) as response:
+                result = response.read().decode('utf-8')
 
-        # Clean up ANSI codes
-        result = re.sub(r'\x1b\[[0-9;]*m', '', result)
-        return f"Weather for {location}:\n{result}"
+            # Clean up ANSI codes
+            result = re.sub(r'\x1b\[[0-9;]*m', '', result)
+            return f"Weather for {location}:\n{result}"
 
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return f"Error: Location '{location}' not found. Try a different city name or format like 'Geneva,Switzerland'"
-        return f"Error fetching weather: HTTP {e.code}"
-    except urllib.error.URLError as e:
-        return f"Error: Could not connect to weather service. {str(e.reason)}"
-    except Exception as e:
-        return f"Error getting weather: {str(e)}"
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return f"Error: Location '{location}' not found. Try a different city name or format like 'Geneva,Switzerland'"
+            last_error = f"Error fetching weather: HTTP {e.code}"
+            break  # HTTP errors won't be fixed by switching scheme
+        except (urllib.error.URLError, ssl.SSLError, OSError) as e:
+            last_error = f"Error: Could not connect to weather service. {str(getattr(e, 'reason', e))}"
+            if scheme == "https":
+                continue  # Fall back to HTTP
+        except Exception as e:
+            last_error = f"Error getting weather: {str(e)}"
+            break
+
+    return last_error or "Error getting weather: unknown error"
 
 
 # Try to import ddgs package (optional dependency, v1.12.4+)
@@ -100,9 +142,8 @@ def _web_search_ddg_package(query: str, num_results: int = 5) -> str:
 
 def _web_search_html_fallback(query: str, num_results: int = 5) -> str:
     """Fallback: Search using DuckDuckGo HTML interface (no package needed)."""
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
+    ssl_context = _create_ssl_context()
+    timeout = _get_web_timeout("web_search", default=15)
 
     try:
         encoded_query = urllib.parse.quote_plus(query)
@@ -115,7 +156,7 @@ def _web_search_html_fallback(query: str, num_results: int = 5) -> str:
             }
         )
 
-        with urllib.request.urlopen(req, timeout=15, context=ssl_context) as response:
+        with urllib.request.urlopen(req, timeout=timeout, context=ssl_context) as response:
             html = response.read().decode('utf-8')
 
         results = []
@@ -178,9 +219,8 @@ def fetch_url(url: str, max_length: int = 5000) -> str:
     Returns:
         Page content
     """
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
+    ssl_context = _create_ssl_context()
+    timeout = _get_web_timeout("fetch_url", default=15)
 
     try:
         req = urllib.request.Request(
@@ -190,7 +230,7 @@ def fetch_url(url: str, max_length: int = 5000) -> str:
             }
         )
 
-        with urllib.request.urlopen(req, timeout=15, context=ssl_context) as response:
+        with urllib.request.urlopen(req, timeout=timeout, context=ssl_context) as response:
             content_type = response.headers.get('Content-Type', '')
             if 'text/html' not in content_type and 'text/plain' not in content_type:
                 return f"Error: URL returns non-text content ({content_type})"

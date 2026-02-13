@@ -1,11 +1,11 @@
 # Bugfix: Web Tools Failing in Corporate Proxy Environments
 
 **Date:** 2026-02-10
-**Status:** Planned (not yet implemented)
+**Status:** FIXED
 **Severity:** Medium — tools time out silently, fallback to `web_search` (Perplexity) works
 **Affects:** `get_weather`, `fetch_url`, `_web_search_html_fallback` in `ppxai/engine/tools/builtin/web.py`
-**Session:**  "C:\Users\radovan.chytracek\.ppxai\sessions\session_20260210_140416.json"
-**Debug log:** "C:\Users\radovan.chytracek\.ppxai\logs\tui-debug.log"
+**Session:** `~/.ppxai/sessions/session_20260210_140416.json`
+**Debug log:** `~/.ppxai/logs/tui-debug.log`
 
 ---
 

@@ -165,6 +165,18 @@ class Logger:
         self._logger = logging.getLogger(f'ppxai.{self.name}.noop')
         self._logger.addHandler(logging.NullHandler())
 
+    @classmethod
+    def enable_all(cls):
+        """Enable all existing logger instances."""
+        for logger in cls._instances.values():
+            logger.enable()
+
+    @classmethod
+    def disable_all(cls):
+        """Disable all existing logger instances."""
+        for logger in cls._instances.values():
+            logger.disable()
+
     def clear(self):
         """Clear the log file."""
         if self._log_file and self._log_file.exists():

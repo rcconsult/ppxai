@@ -341,17 +341,19 @@ def handle_debug_log(context: CommandContext, args: str) -> CommandResult:
     cmd = args.strip().lower()
 
     if cmd in ["on", "enable", "1", "true", "yes"]:
-        logger.enable()
+        from ..common.logger import Logger
+        Logger.enable_all()
         return ConfirmationResult(
             status=ResultStatus.SUCCESS,
-            message=f"Debug logging enabled. Logs will be written to: {log_file}. All message flow, API requests, and tool executions will be logged.",
+            message=f"Debug logging enabled for all components. Logs: {log_file.parent}/. All message flow, API requests, and tool executions will be logged.",
             details={"log_file": str(log_file), "enabled": True}
         )
     elif cmd in ["off", "disable", "0", "false", "no"]:
-        logger.disable()
+        from ..common.logger import Logger
+        Logger.disable_all()
         return ConfirmationResult(
             status=ResultStatus.SUCCESS,
-            message="Debug logging disabled",
+            message="Debug logging disabled for all components",
             details={"enabled": False}
         )
     elif cmd in ["show", "view", "cat"]:
