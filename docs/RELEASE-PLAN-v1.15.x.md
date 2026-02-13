@@ -1,10 +1,10 @@
 # Release Plan: v1.15.x Series
 
 **Created:** January 24, 2026
-**Last Updated:** February 7, 2026
-**Status:** ✅ v1.15.0 RELEASED, ✅ v1.15.1 RELEASED, ✅ v1.15.2 RELEASED, ⏳ v1.15.3 IN PROGRESS
-**Branch:** bugfix/v1.15.3
-**Tests:** 1157 passing
+**Last Updated:** February 13, 2026
+**Status:** ✅ v1.15.0 RELEASED, ✅ v1.15.1 RELEASED, ✅ v1.15.2 RELEASED, ✅ v1.15.3 RELEASED, ⏳ v1.15.4 IN PROGRESS
+**Branch:** bugfix/v1.15.4
+**Tests:** 1227 passing
 
 ---
 
@@ -430,12 +430,10 @@ All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tu
 
 ---
 
-## v1.15.3 - Config Hot-Reload Fix & File Navigation ⏳
+## v1.15.3 - Config Hot-Reload Fix ✅
 
-**Status:** In Progress
+**Released:** 2026-02-07
 **Branch:** bugfix/v1.15.3
-
-### Config Hot-Reload (Done)
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -443,13 +441,57 @@ All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tu
 | **`EngineClient.reload_config()`** | Single entry point to refresh all cached config data | ✅ Done |
 | **Session restore reload** | All 3 clients reload config before restoring sessions | ✅ Done |
 | **Server endpoint reload** | HTTP + JSON-RPC endpoints reload before listing/switching | ✅ Done |
-| **Root cause** | ConfigStore singleton + EngineClient snapshot = stale config (since v1.8.0) | ✅ Identified |
+| **Platform alignment** | Signal handling (SIGINT/SIGTERM) on all platforms | ✅ Done |
+| **TUI EventBus stability** | NoMatches guards, WARNING event handler | ✅ Done |
+| **DGX Spark benchmarks** | GPT-OSS, Qwen3-30B, Qwen2.5-Coder results | ✅ Done |
 
-**Root Cause:** `EngineClient._load_config()` captures `self._providers_config = PROVIDERS` at init time. When config file is edited externally (e.g., adding new models), the cached dict goes stale. `reload_config()` now refreshes ConfigStore + all cached config snapshots.
+---
 
-**Tech Debt Note:** The `__getattr__` lazy loading pattern in `config/__init__.py` still exists. Proper DAG-based initialization planned for v1.16.0.
+## v1.15.4 - Live HTML Preview & SSL Fixes ⏳
 
-### File Navigation (Planned)
+**Status:** In Progress
+**Branch:** bugfix/v1.15.4
+
+### Live HTML Preview (Done)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **`/preview` command** | Live-reloading HTML preview across all 3 clients | ✅ Done |
+| **TUI PreviewServer** | Stdlib HTTP server with mtime polling, auto-opens browser | ✅ Done |
+| **Web App iframe** | `/preview/{filepath}` endpoint with split panel UI | ✅ Done |
+| **VSCode WebviewPanel** | `FileSystemWatcher` for CSS/JS/JSON/SVG/PNG/JPG live reload | ✅ Done |
+| **Cache busting** | `rewrite_asset_paths()` appends `?_t=<mtime>` to asset URLs | ✅ Done |
+| **Non-HTML serving** | `fetch('data.json')` from preview iframe works correctly | ✅ Done |
+| **Session from Referer** | JS `fetch()` resolves session from Referer header | ✅ Done |
+| **Shared utilities** | `inject_reload_script()`, `rewrite_asset_paths()`, `resolve_preview_path()` | ✅ Done |
+
+### Corporate SSL & Web Tools (Done)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **SSL context** | `_create_ssl_context()` respects `SSL_VERIFY` and `SSL_CERT_FILE` | ✅ Done |
+| **HTTP fallback** | `get_weather` tries HTTPS first, falls back to HTTP | ✅ Done |
+| **Configurable timeouts** | `tools.<name>.timeout` in ppxai-config.json (default 15s) | ✅ Done |
+
+### Debug Logging & VSCode (Done)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Logger.enable_all()** | `/debug-log on` enables ALL logger instances | ✅ Done |
+| **Consent EventBus** | Consent dialogs migrated to EventBus pattern | ✅ Done |
+| **highlight.js rebuild** | Added PowerShell, Dockerfile, DOS, AppleScript | ✅ Done |
+| **Autocomplete fixes** | Improved slash command autocomplete reliability | ✅ Done |
+
+### Benchmarks & Testing
+
+| Metric | Value |
+|--------|-------|
+| **Preview tests** | 34 new |
+| **SSL tests** | 16 new |
+| **Total tests** | 1,227 passing |
+| **Qwen3-Coder-Next FP8** | 54.7-60.9% (not competitive with Coder-30B at 81.2%) |
+
+### File Navigation (Planned - deferred to v1.16.0)
 
 | Feature | Description | Status |
 |---------|-------------|--------|

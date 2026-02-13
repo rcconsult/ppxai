@@ -11,8 +11,10 @@ ppxai/
 ├── prompts.py         # LEAF: No ppxai imports
 ├── utils.py           # LEAF: No ppxai imports
 ├── common/            # Low-level utilities
-│   ├── logger.py      # LEAF: No ppxai imports
+│   ├── logger.py      # LEAF: No ppxai imports (enable_all/disable_all v1.15.4)
+│   ├── preview.py     # LEAF: Preview utilities (v1.15.4)
 │   └── consent.py     # Uses logger only
+├── preview_server.py  # Stdlib HTTP preview server (v1.15.4)
 ├── engine/            # Core business logic
 │   ├── types.py       # LEAF: No ppxai imports
 │   ├── bootstrap.py   # LEAF: Bootstrap context parsing (v1.14.0)

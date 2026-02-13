@@ -23,20 +23,30 @@
 | [Agent Mode Guide](AGENT_MODE_GUIDE.md) | Autonomous multi-step task execution |
 | [Checkpoint Guide](CHECKPOINT_GUIDE.md) | Undo and rollback agent operations |
 | [Ollama Limitations](ollama-limitations.md) | Local model constraints and workarounds |
+| [Tool Calling](TOOL_CALLING.md) | Native vs prompt-based tool calling (v1.15.3+) |
 | [Installation Guide](INSTALLATION.md) | Install ppxai on any platform |
 
 ### Technical Reference
 
 | Document | Description |
 |----------|-------------|
-| [Agentic Workflow Plan](v1.11.0-agentic-workflow-plan.md) | Technical implementation of agentic features |
-| [Architecture Refactoring](architecture-refactoring.md) | EngineClient architecture design |
+| [Architecture](ARCHITECTURE.md) | Module hierarchy, import patterns, transactional state |
+| [DGX Spark Setup](DGX-SPARK-SETUP.md) | vLLM + Ollama on NVIDIA DGX Spark |
+| [vLLM Tool Calling](vllm-tool-calling-guide.md) | Hermes vs Harmony, native vs prompt-based |
+| [Prompt-Based Tool Calling](prompt-based-tool-calling.md) | Developer guide for non-native tool calling |
+| [Release Notes v1.15.4](RELEASE-NOTES-v1.15.4.md) | Live preview, SSL fixes, debug logging |
+| [Release Plan v1.15.x](RELEASE-PLAN-v1.15.x.md) | Development plan for v1.15.x series |
 
 ### Archived Documentation
 
-Legacy documentation is preserved in `archive/` for historical reference:
-- `archive/legacy-tools-docs/` - Legacy tool system docs (pre-EngineClient)
-- `archive/bug-reports/` - Historical bug reports
+Legacy and completed documentation is preserved in `archive/` for historical reference:
+- `archive/release-notes/` - Release notes for v1.11.x through v1.14.x
+- `archive/benchmarks/` - Model evaluation reports (Gemini, Perplexity, GPT-OSS tuning)
+- `archive/design/` - Completed design documents (image handler, side panel, distributed arch)
+- `archive/v1.15.1-completed/` - v1.15.1 planning and implementation docs
+- `archive/v1.15.2-completed/` - v1.15.2 planning and implementation docs
+- `archive/v1.15.3/` - v1.15.3 planning docs
+- `archive/v1.15.4/` - v1.15.4 planning docs (preview, SSL bugfix)
 
 ## Tool System Overview
 
@@ -57,8 +67,11 @@ ppxai includes built-in tools for AI-powered development:
 | `web_search_premium` | Premium web search (Perplexity/Gemini) |
 | `fetch_url` | Fetch URL contents |
 | `get_datetime` | Get current date/time |
-| `get_weather` | Get weather information |
+| `get_weather` | Get weather information (HTTPS/HTTP fallback for corporate proxies) |
 | `calculator` | Perform calculations |
+| `display_file` | AI proactively shows files after generating them |
+| `search_files` | Search for files by pattern |
+| `get_working_directory` | Get current working directory |
 | `container_list` | List Docker/Podman containers |
 | `container_logs` | Get container logs |
 | `pod_list` | List Kubernetes pods |
@@ -201,4 +214,4 @@ A: Type `@filename`, `@git`, or `@tree` in your messages. See [Context Injection
 ---
 
 **Current Version**: v1.15.4
-**Last Updated**: 2026-02-08
+**Last Updated**: 2026-02-13

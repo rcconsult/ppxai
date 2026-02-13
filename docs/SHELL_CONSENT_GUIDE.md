@@ -621,7 +621,7 @@ Then review logs in `~/.ppxai/logs/tui-debug.log`.
 ## See Also
 
 - [File Editing Guide](FILE_EDITING_GUIDE.md) - User consent for file modifications
-- [Agentic Workflow Plan](v1.11.0-agentic-workflow-plan.md) - Technical implementation details
+- [Agentic Workflow Plan](archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan.md) - Technical implementation details
 - [Security Policy](../SECURITY.md) - Overall security documentation
 - [Configuration Guide](README.md) - ppxai configuration system
 

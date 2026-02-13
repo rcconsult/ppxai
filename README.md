@@ -1,6 +1,6 @@
 # ppxai - Multi-LLM Interface for Developers
 
-![Version](https://img.shields.io/badge/version-1.15.3-blue) ![Tests](https://img.shields.io/badge/tests-1157%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
+![Version](https://img.shields.io/badge/version-1.15.4-blue) ![Tests](https://img.shields.io/badge/tests-1227%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
 
 **Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
 
@@ -54,7 +54,7 @@ ppxai-desktop
 - Full macOS setup: `curl -sSL ... | bash -s -- --with-macos-app --with-config --with-launchagent`
 - Uninstall: `curl -sSL ... | bash -s -- --uninstall`
 
-**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.15.3` (specific version), `-Uninstall`
+**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.15.4` (specific version), `-Uninstall`
 
 See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed installation options including Windows.
 
@@ -104,6 +104,18 @@ if isinstance(result, CodeResult):
 This enables **single-source command logic** that renders correctly in any UI—terminal, VSCode webview, or browser—just by swapping the renderer implementation.
 
 See [Architecture Docs](docs/ARCHITECTURE.md) and [v1.15.0 Release Notes](docs/RELEASE-NOTES-v1.15.0.md) for details.
+
+### Live HTML Preview (v1.15.4)
+
+The `/preview` command opens a live-reloading HTML preview across all clients:
+
+| Client | Implementation | Live Reload |
+|--------|----------------|-------------|
+| **TUI** | Stdlib `PreviewServer`, auto-opens browser | mtime polling at `/poll` |
+| **Web App** | Iframe with `/preview/{path}` endpoint | SSE polling |
+| **VSCode** | `WebviewPanel` with `FileSystemWatcher` | Native file watcher |
+
+Asset cache busting (`?_t=<mtime>`) ensures CSS/JS/JSON changes are immediately reflected.
 
 ### Multi-Provider Support
 - **Perplexity AI** - Real-time search with citations
@@ -202,6 +214,7 @@ Enable with `/tools enable` (or use Agent Mode):
 - `apply_patch`, `replace_block`, `insert_text`, `delete_lines` - File editing with consent
 - `calculator`, `get_datetime`, `get_working_directory` - Utilities
 - `web_search` - Premium web search (Perplexity/Gemini/DuckDuckGo fallback)
+- `get_weather` - Weather info with HTTPS/HTTP fallback for corporate proxies (v1.15.4)
 
 **Tool Settings:** `/tools set verbose on` shows full arguments and results; `/tools set verbose off` (default) shows brief status only.
 
@@ -213,6 +226,7 @@ Enable with `/tools enable` (or use Agent Mode):
 /explain    Explain code logic
 /debug      Analyze errors
 /convert    Translate between languages
+/preview    Live-reloading HTML preview (v1.15.4)
 ```
 
 ### Session Management
@@ -299,7 +313,8 @@ No telemetry. No tracking. Data only goes to the LLM provider you choose.
 | [File Editing](docs/FILE_EDITING_GUIDE.md) | Consent-based file operations |
 | [Specifications](SPECIFICATIONS.md) | Code generation templates |
 | [Architecture](docs/ARCHITECTURE.md) | Type-based renderer design (v1.15.0) |
-| [Release Notes v1.15.0](docs/RELEASE-NOTES-v1.15.0.md) | Type-based architecture and ppxaide TUI |
+| [Tool Calling](docs/TOOL_CALLING.md) | Native vs prompt-based tool calling |
+| [Release Notes v1.15.4](docs/RELEASE-NOTES-v1.15.4.md) | Live preview, SSL fixes, debug logging |
 
 ## Project Structure
 
@@ -319,11 +334,12 @@ ppxai/
 │   │   └── base.py           # BaseRenderer interface
 │   ├── server/               # HTTP + JSON-RPC servers
 │   ├── web/                  # Desktop Web App static files
-│   └── common/               # Shared utilities (logger, event handler)
+│   ├── common/               # Shared utilities (logger, event handler, preview)
+│   └── preview_server.py     # Stdlib HTTP preview server (v1.15.4)
 ├── vscode-extension/         # VSCode extension (TypeScript)
 ├── scripts/                  # Build, release, install scripts
 ├── resources/                # Icons (PNG, ICO, ICNS) and desktop files
-├── tests/                    # 1157 tests
+├── tests/                    # 1227 tests
 └── docs/                     # Documentation
 ```
 

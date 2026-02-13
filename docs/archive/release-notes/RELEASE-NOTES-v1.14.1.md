@@ -4,7 +4,7 @@
 
 ## Summary
 
-v1.14.1 adds the `/edit` command for VSCode and Web App interfaces, enabling an edit-test-save workflow for tuning AGENTS.md bootstrap context. The TUI `/edit` command is deferred to v1.15.x pending a better editor approach.
+v1.14.1 adds the `/edit` command for VSCode and Web App interfaces, enabling an edit-test-save workflow for tuning AGENTS.md bootstrap context. The TUI `/edit` command was cancelled for the Rich TUI; ppxaide (Textual TUI) provides full file editing via its CodeEditor widget.
 
 ## New Features
 

@@ -912,6 +912,23 @@ If you're behind a corporate proxy with SSL inspection, add to your `.env`:
 SSL_VERIFY=false
 ```
 
+Or to use a specific certificate file:
+```
+SSL_CERT_FILE=/path/to/corporate-ca-bundle.pem
+```
+
+**v1.15.4+:** Web tools (`get_weather`, `fetch_url`, `web_search`) automatically use these settings. The `get_weather` tool also falls back to HTTP when HTTPS fails.
+
+You can also configure per-tool timeouts in `ppxai-config.json`:
+```json
+{
+  "tools": {
+    "get_weather": { "timeout": 15 },
+    "fetch_url": { "timeout": 30 }
+  }
+}
+```
+
 ### Windows: ExecutionPolicy Error
 
 If PowerShell blocks the install script:

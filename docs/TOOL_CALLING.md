@@ -1,7 +1,7 @@
 # Tool Calling in ppxai
 
-**Version:** v1.15.3
-**Updated:** 2026-02-08
+**Version:** v1.15.4
+**Updated:** 2026-02-13
 
 ---
 
@@ -271,10 +271,10 @@ Full test results available in archived documentation:
 
 ### Related Documentation
 
-- **Multi-Criteria Evaluation:** `docs/MULTI-CRITERIA-EVALUATION.md`
-- **Benchmark Summary:** `docs/FINAL-BENCHMARK-SUMMARY.md`
-- **Perplexity Analysis:** `docs/PERPLEXITY-AB-TEST-RESULTS.md`
-- **Gemini Results:** `docs/GEMINI-QUALITY-VALIDATION-RESULTS.md`
+- **Multi-Criteria Evaluation:** `docs/archive/benchmarks/MULTI-CRITERIA-EVALUATION.md`
+- **Benchmark Summary:** `docs/archive/benchmarks/FINAL-BENCHMARK-SUMMARY.md`
+- **Perplexity Analysis:** `docs/archive/benchmarks/PERPLEXITY-AB-TEST-RESULTS.md`
+- **Gemini Results:** `docs/archive/benchmarks/GEMINI-QUALITY-VALIDATION-RESULTS.md`
 
 ### Provider Documentation
 
@@ -395,3 +395,10 @@ Check the `native_tool_calling` capability flag in `ppxai-config.json` or see th
   - Weather tool: 500/1500/5000 chars for short/detailed/forecast formats
   - Custom limits for web_search (3000), fetch_url (5000), read_file (10000)
   - 11 new tests in `tests/test_tool_display_limits.py`
+
+### v1.15.4 (2026-02-13)
+- ✅ **Corporate SSL support** for web tools (`get_weather`, `fetch_url`, `web_search`)
+  - `_create_ssl_context()` respects `SSL_VERIFY` and `SSL_CERT_FILE` env vars
+  - `get_weather` tries HTTPS first, falls back to HTTP for corporate proxies
+- ✅ **Configurable timeouts** - `tools.<name>.timeout` in ppxai-config.json (default 15s)
+- ✅ **16 new SSL tests** in `tests/test_web_tools_ssl.py`

@@ -16,10 +16,12 @@ Multi-provider AI chat interface for VS Code, powered by ppxai.
   - Explain Selection
   - Generate Tests
   - Generate Documentation
-- **Slash Commands**: `/help`, `/show`, `/tools`, `/model`, `/provider`, `/generate`, etc.
+- **Live HTML Preview** (v1.15.4): `/preview` opens HTML files in a WebviewPanel with live reload via `FileSystemWatcher`
+- **Slash Commands**: `/help`, `/show`, `/tools`, `/model`, `/provider`, `/generate`, `/preview`, etc.
 - **Multi-Provider Support**: Perplexity, OpenAI, Gemini, OpenRouter, local models
 - **Session Management**: Save and load conversation sessions
 - **Streaming Responses**: Real-time SSE streaming with timing info
+- **Syntax Highlighting**: PowerShell, Dockerfile, DOS, AppleScript support (v1.15.4)
 
 ## Requirements
 
@@ -177,6 +179,7 @@ Type these directly in the chat input:
 | `/docs <code or @file>` | Generate documentation |
 | `/debug <error>` | Debug an error message |
 | `/implement <desc>` | Implement from description |
+| `/preview <file>` | Live-reloading HTML preview (v1.15.4) |
 
 ### Session & Config
 | Command | Description |
@@ -217,6 +220,7 @@ vscode-extension/
 │   ├── extension.ts       # Extension entry point
 │   ├── httpClient.ts      # HTTP + SSE client for ppxai-server
 │   ├── chatPanel.ts       # Webview chat UI (orchestrator)
+│   ├── previewPanel.ts    # Live HTML preview panel (v1.15.4)
 │   ├── sessionsProvider.ts # Sessions tree view
 │   └── handlers/          # Extracted handlers (v1.14.0+)
 │       ├── eventBus.ts    # Type-safe pub/sub communication

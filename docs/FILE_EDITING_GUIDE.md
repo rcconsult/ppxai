@@ -644,7 +644,7 @@ Ready to try file editing tools? Here's your checklist:
 - [ ] Review the consent prompt
 - [ ] Check the edit with `git diff`
 - [ ] Try a multi-file refactoring with "always" mode
-- [ ] Read [docs/v1.11.0-agentic-workflow-plan.md](v1.11.0-agentic-workflow-plan.md) for technical details
+- [ ] Read [Agentic Workflow Plan](archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan.md) for technical details
 
 ---
 

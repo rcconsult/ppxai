@@ -601,7 +601,7 @@ See [Shell Consent Guide](SHELL_CONSENT_GUIDE.md) for complete documentation.
 - [Checkpoint Guide](CHECKPOINT_GUIDE.md) - Atomic rollback for agent tasks
 - [Shell Consent Guide](SHELL_CONSENT_GUIDE.md) - Shell command security
 - [Custom Tools Guide](CUSTOM_TOOL_DEVELOPMENT_GUIDE.md) - Creating custom tools
-- [Agentic Workflow Plan](v1.11.0-agentic-workflow-plan.md) - Technical implementation details
+- [Agentic Workflow Plan](archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan.md) - Technical implementation details
 
 ---
 

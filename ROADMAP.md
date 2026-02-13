@@ -465,22 +465,30 @@ ppxai/tui/                     # New module (Textual-based)
 **Dependencies:**
 - `textual>=0.47.0` (added to optional extras: `pip install ppxai[tui]`)
 
-### v1.15.3 - Config Hot-Reload Fix & File Navigation
+### v1.15.3 - Config Hot-Reload Fix ✅
 
 | Feature | Description | Status |
 |---------|-------------|--------|
 | **Config auto-reload** | `/model` and `/provider` commands reload config from disk before listing | ✅ Done |
 | **`EngineClient.reload_config()`** | Single entry point to refresh all cached config data | ✅ Done |
 | **Session restore reload** | All 3 clients (Textual, Rich, HTTP) reload config before restore | ✅ Done |
-| **Server endpoint reload** | HTTP + JSON-RPC endpoints reload config before listing/switching | ✅ Done |
-| **Root cause identified** | ConfigStore singleton + EngineClient snapshot = stale config (since v1.8.0) | ✅ Done |
-| **`/ls [path]`** | List files and directories (all clients) | ⏳ Planned |
-| **`/tree [depth]`** | Render directory tree structure (all clients) | ⏳ Planned |
-| **ppxaide file tree sidebar** | NvChad-inspired interactive file tree (Textual DirectoryTree) | ⏳ Planned |
+| **Platform alignment** | Signal handling (SIGINT/SIGTERM) on all platforms | ✅ Done |
+| **TUI EventBus stability** | NoMatches guards, WARNING event handler | ✅ Done |
 
-**Tech debt:** `__getattr__` lazy loading for PROVIDERS still exists. Proper DAG-based initialization planned for v1.16.0.
+### v1.15.4 - Live HTML Preview & SSL Fixes
 
-**File Navigation:** See [TODO-v1.16.0.md](TODO-v1.16.0.md) for detailed spec (Phase 0: commands, Phase 1: ppxaide sidebar).
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **`/preview` command** | Live-reloading HTML preview across all 3 clients (TUI, Web, VSCode) | ✅ Done |
+| **PreviewServer** | Stdlib HTTP server with mtime polling, auto-opens browser | ✅ Done |
+| **Cache busting** | `rewrite_asset_paths()` appends `?_t=<mtime>` to asset URLs | ✅ Done |
+| **Corporate SSL** | `_create_ssl_context()`, HTTP fallback, configurable timeouts | ✅ Done |
+| **Debug logging** | `Logger.enable_all()` / `disable_all()` for all logger instances | ✅ Done |
+| **VSCode consent EventBus** | Consent dialogs migrated to EventBus pattern | ✅ Done |
+| **highlight.js rebuild** | Added PowerShell, Dockerfile, DOS, AppleScript | ✅ Done |
+| **1,227 tests passing** | 34 preview + 16 SSL tests added | ✅ Done |
+
+**File Navigation:** Deferred to v1.16.0. See [TODO-v1.16.0.md](TODO-v1.16.0.md) for detailed spec.
 
 ---
 
@@ -674,7 +682,7 @@ ppxai is **not** trying to be:
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ```bash
-uv run pytest tests/ -v       # Run tests (1105 passing)
+uv run pytest tests/ -v       # Run tests (1227 passing)
 uv run ppxai-server           # Start server for VSCode dev
 ```
 
@@ -685,9 +693,10 @@ uv run ppxai-server           # Start server for VSCode dev
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md).
 
 For archived planning documents:
-- [docs/v1.11.0-agentic-workflow-plan.md](docs/v1.11.0-agentic-workflow-plan.md) - Agentic workflow design
-- Legacy archive available at tag [v1.13.3](https://github.com/rcconsult/ppxai/tree/v1.13.3/docs/archive)
+- [Agentic workflow design](docs/archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan.md)
+- [Archived release notes](docs/archive/release-notes/) (v1.11.x through v1.14.x)
+- [Benchmark reports](docs/archive/benchmarks/) (Gemini, Perplexity, GPT-OSS tuning)
 
 ---
 
-**Last Updated**: February 7, 2026
+**Last Updated**: February 13, 2026

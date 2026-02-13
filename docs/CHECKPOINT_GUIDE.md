@@ -796,5 +796,5 @@ A: Use `/checkpoint list` to see the last 10 checkpoints, or `/checkpoint info <
 ## See Also
 
 - [Agent Mode Guide](AGENT_MODE_GUIDE.md) - Autonomous agent mode documentation
-- [VSCode Checkpoint UI Spec](VSCODE-CHECKPOINT-UI-SPEC.md) - VSCode extension implementation
-- [Release Notes v1.12.0](RELEASE-NOTES-v1.12.0.md) - Full feature list and changelog
+- [VSCode Checkpoint UI Spec](archive/v1.15.2-completed/VSCODE-CHECKPOINT-UI-SPEC.md) - VSCode extension implementation
+- [Release Notes v1.12.0](archive/release-notes/RELEASE-NOTES-v1.12.0.md) - Full feature list and changelog

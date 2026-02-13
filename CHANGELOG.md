@@ -9,6 +9,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.15.4] - 2026-02-13
+
+### Added - Live HTML Preview (`/preview` command)
+
+- **`/preview` command** - Live-reloading HTML preview across all 3 clients
+  - **TUI**: Stdlib `PreviewServer` (http.server + threading), auto-opens browser
+  - **Web App**: Iframe with `/preview/{filepath}` endpoint, split panel UI
+  - **VSCode**: `WebviewPanel` with `FileSystemWatcher` for live reload
+- **`PreviewServer`** (`ppxai/preview_server.py`) - Standalone HTTP server with mtime polling at `/poll`
+- **`rewrite_asset_paths()`** - Cache-buster support appending `?_t=<mtime>` for reliable CSS/JS/JSON live-reload
+- **`inject_reload_script()`** - Auto-injects polling JavaScript into preview HTML
+- **`resolve_preview_path()`** - Resolves preview file paths with security validation
+- **FastAPI endpoints** - `/preview/poll/{path}`, `/preview/static/{path}`, `/preview/{path}` with session-scoped working directory
+- **Non-HTML asset serving** - Preview iframe `fetch()` for JSON/CSS/JS files now served correctly via `FileResponse`
+- **Session resolution from Referer** - JS `fetch()` calls from preview iframe resolve session from Referer header
+
+### Added - VSCode Extension Improvements
+
+- **Consent EventBus migration** - Consent dialog handling moved to EventBus pattern
+- **Preview auto-refresh** - `FileSystemWatcher` monitors CSS/JS/JSON/SVG/PNG/JPG siblings for live reload
+- **Autocomplete fixes** - Improved slash command autocomplete reliability
+- **highlight.js rebuild** - Added PowerShell, Dockerfile, DOS, AppleScript language support
+
+### Fixed - Web Tools & SSL
+
+- **Corporate SSL support** - New `_create_ssl_context()` respects `SSL_VERIFY` and `SSL_CERT_FILE` env vars
+- **`get_weather` HTTP fallback** - Tries HTTPS first, falls back to HTTP when corporate proxy stalls HTTPS
+- **Configurable web tool timeouts** - `tools.<name>.timeout` in ppxai-config.json (default 15s)
+
+### Fixed - Debug Logging
+
+- **`/debug-log on` enables ALL logger instances** - Previously only enabled "tui" logger
+- **`Logger.enable_all()` / `Logger.disable_all()`** - Class methods for centralized log control across all components
+
+### Fixed - Session & Provider
+
+- **Session restore** - Correctly restores provider/model from session metadata
+- **Gemini provider** - Fixed content handling for tool responses with None content
+
+### Added - Benchmarks & Testing
+
+- **Qwen3-Coder-Next FP8 benchmarks** - 3 benchmark runs with per-category analysis
+- **Model evaluation summary** - Comparative table across 7 tested models
+- **34 new preview tests** - Covering utilities, server, cache-busting, and data file serving
+- **16 new SSL tests** - Corporate proxy, timeout, and fallback scenarios
+- **Total tests: 1,227 passing**
+
+### Documentation
+
+- **RELEASE-NOTES-v1.15.4.md** - Complete release documentation
+- **archive/v1.15.4/PLAN-live-html-preview.md** - Implementation plan for preview feature
+- **archive/v1.15.4/BUGFIX-WEB-TOOLS-CORPORATE-SSL.md** - Updated from planned to fixed status
+
+---
+
 ## [1.15.3] - 2026-02-07
 
 ### Fixed - Config Hot-Reload & DAG-Based Initialization
@@ -335,9 +390,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Gemini provider error formatting** - Added missing `_format_error` and `_log_error_traceback` methods to GeminiProvider class
 
-### Deferred
+### Cancelled
 
-- **TUI `/edit` command** - Deferred to v1.15.x; simple line editor approach had UX issues (stacked views, no horizontal cursor movement)
+- **TUI `/edit` command** - Cancelled for Rich TUI; ppxaide (Textual TUI) provides full file editing via CodeEditor widget with syntax highlighting
 
 ## [1.14.0] - 2026-01-19
 
@@ -1589,6 +1644,28 @@ ppxai follows [Semantic Versioning](https://semver.org/):
 5. Push tag: `git push origin v1.x.x`
 6. GitHub Actions automatically builds and creates release
 
+[1.15.4]: https://github.com/rcconsult/ppxai/releases/tag/v1.15.4
+[1.15.3]: https://github.com/rcconsult/ppxai/releases/tag/v1.15.3
+[1.15.2]: https://github.com/rcconsult/ppxai/releases/tag/v1.15.2
+[1.15.1]: https://github.com/rcconsult/ppxai/releases/tag/v1.15.1
+[1.15.0]: https://github.com/rcconsult/ppxai/releases/tag/v1.15.0
+[1.14.2]: https://github.com/rcconsult/ppxai/releases/tag/v1.14.2
+[1.14.1]: https://github.com/rcconsult/ppxai/releases/tag/v1.14.1
+[1.14.0]: https://github.com/rcconsult/ppxai/releases/tag/v1.14.0
+[1.13.10]: https://github.com/rcconsult/ppxai/releases/tag/v1.13.10
+[1.13.9]: https://github.com/rcconsult/ppxai/releases/tag/v1.13.9
+[1.13.8]: https://github.com/rcconsult/ppxai/releases/tag/v1.13.8
+[1.13.7]: https://github.com/rcconsult/ppxai/releases/tag/v1.13.7
+[1.13.6]: https://github.com/rcconsult/ppxai/releases/tag/v1.13.6
+[1.13.5]: https://github.com/rcconsult/ppxai/releases/tag/v1.13.5
+[1.13.4]: https://github.com/rcconsult/ppxai/releases/tag/v1.13.4
+[1.13.3]: https://github.com/rcconsult/ppxai/releases/tag/v1.13.3
+[1.13.2]: https://github.com/rcconsult/ppxai/releases/tag/v1.13.2
+[1.13.1]: https://github.com/rcconsult/ppxai/releases/tag/v1.13.1
+[1.13.0]: https://github.com/rcconsult/ppxai/releases/tag/v1.13.0
+[1.12.5]: https://github.com/rcconsult/ppxai/releases/tag/v1.12.5
+[1.12.4]: https://github.com/rcconsult/ppxai/releases/tag/v1.12.4
+[1.12.3]: https://github.com/rcconsult/ppxai/releases/tag/v1.12.3
 [1.12.2]: https://github.com/rcconsult/ppxai/releases/tag/v1.12.2
 [1.12.1]: https://github.com/rcconsult/ppxai/releases/tag/v1.12.1
 [1.12.0]: https://github.com/rcconsult/ppxai/releases/tag/v1.12.0
