@@ -1445,6 +1445,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#v1154-2026-02-13" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.15.4 (2026-02-13)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1471,8 +1482,8 @@
 
 
 <h1 id="tool-calling-in-ppxai">Tool Calling in ppxai<a class="headerlink" href="#tool-calling-in-ppxai" title="Permanent link">&para;</a></h1>
-<p><strong>Version:</strong> v1.15.3
-<strong>Updated:</strong> 2026-02-08</p>
+<p><strong>Version:</strong> v1.15.4
+<strong>Updated:</strong> 2026-02-13</p>
 <hr />
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>ppxai supports <strong>two different tool calling methods</strong> depending on the AI provider:</p>
@@ -1735,10 +1746,10 @@
 - <code>docs/archive/v1.15.3/ACTION_PLAN.md</code> - Implementation plan</p>
 <h3 id="related-documentation">Related Documentation<a class="headerlink" href="#related-documentation" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Multi-Criteria Evaluation:</strong> <code>docs/MULTI-CRITERIA-EVALUATION.md</code></li>
-<li><strong>Benchmark Summary:</strong> <code>docs/FINAL-BENCHMARK-SUMMARY.md</code></li>
-<li><strong>Perplexity Analysis:</strong> <code>docs/PERPLEXITY-AB-TEST-RESULTS.md</code></li>
-<li><strong>Gemini Results:</strong> <code>docs/GEMINI-QUALITY-VALIDATION-RESULTS.md</code></li>
+<li><strong>Multi-Criteria Evaluation:</strong> <code>docs/archive/benchmarks/MULTI-CRITERIA-EVALUATION.md</code></li>
+<li><strong>Benchmark Summary:</strong> <code>docs/archive/benchmarks/FINAL-BENCHMARK-SUMMARY.md</code></li>
+<li><strong>Perplexity Analysis:</strong> <code>docs/archive/benchmarks/PERPLEXITY-AB-TEST-RESULTS.md</code></li>
+<li><strong>Gemini Results:</strong> <code>docs/archive/benchmarks/GEMINI-QUALITY-VALIDATION-RESULTS.md</code></li>
 </ul>
 <h3 id="provider-documentation">Provider Documentation<a class="headerlink" href="#provider-documentation" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1854,6 +1865,14 @@
 <li>Weather tool: 500/1500/5000 chars for short/detailed/forecast formats</li>
 <li>Custom limits for web_search (3000), fetch_url (5000), read_file (10000)</li>
 <li>11 new tests in <code>tests/test_tool_display_limits.py</code></li>
+</ul>
+<h3 id="v1154-2026-02-13">v1.15.4 (2026-02-13)<a class="headerlink" href="#v1154-2026-02-13" title="Permanent link">&para;</a></h3>
+<ul>
+<li>✅ <strong>Corporate SSL support</strong> for web tools (<code>get_weather</code>, <code>fetch_url</code>, <code>web_search</code>)</li>
+<li><code>_create_ssl_context()</code> respects <code>SSL_VERIFY</code> and <code>SSL_CERT_FILE</code> env vars</li>
+<li><code>get_weather</code> tries HTTPS first, falls back to HTTP for corporate proxies</li>
+<li>✅ <strong>Configurable timeouts</strong> - <code>tools.&lt;name&gt;.timeout</code> in ppxai-config.json (default 15s)</li>
+<li>✅ <strong>16 new SSL tests</strong> in <code>tests/test_web_tools_ssl.py</code></li>
 </ul>
 
 
