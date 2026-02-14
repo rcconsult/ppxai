@@ -18,13 +18,16 @@ class ChatTextArea(TextArea):
 
     def _on_key(self, event) -> None:
         """Handle key events - intercept Enter before TextArea processes it."""
-        if event.key == "enter" and not event.shift:
-            # Enter without Shift → submit (don't let TextArea handle it)
+        # In Textual, Shift+Enter is not "enter", it's handled differently
+        # We only intercept plain "enter" (without modifiers)
+        if event.key == "enter":
+            # Plain Enter → submit (don't let TextArea handle it)
             self.post_message(self.Submit())
             event.prevent_default()
             event.stop()
         else:
-            # All other keys (including Shift+Enter) → let TextArea handle normally
+            # All other keys (including Shift+Enter which is handled as newline insertion)
+            # → let TextArea handle normally
             super()._on_key(event)
 
 
