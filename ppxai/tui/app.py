@@ -57,9 +57,6 @@ class PPXAIDEApp(App):
 
     CSS_PATH = ["themes/layout.tcss", "themes/dialog.tcss"]
 
-    # Disable command palette - we use Ctrl+T for theme cycling instead
-    ENABLE_COMMAND_PALETTE = False
-
     BINDINGS = [
         Binding("ctrl+enter", "", "Send", show=True, priority=True),  # Display only - handled by ChatTextArea
         Binding("ctrl+c", "quit", "Quit", show=True),
@@ -1918,11 +1915,19 @@ class PPXAIDEApp(App):
         self.notify(f"Theme: {theme_name}", title="Theme Changed")
 
     def action_cancel(self) -> None:
-        """Cancel current operation or close side panel."""
+        """Cancel current operation or close side panel.
+
+        Note: Command palette and other modal screens handle Escape themselves.
+        We only handle it when side panel is open.
+        """
         side_panel = self.query_one("#side-panel", SidePanel)
         if side_panel.is_open:
             side_panel.close()
-        # TODO: Cancel streaming response if in progress
+            return  # Event handled
+
+        # If nothing to cancel, let the event bubble up to command palette or other handlers
+        # In Textual, returning False prevents the action from consuming the event
+        return False
 
     def action_close_panel(self) -> None:
         """Close the side panel (Ctrl+W)."""
