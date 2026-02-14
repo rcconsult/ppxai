@@ -21,12 +21,18 @@ class ChatTextArea(TextArea):
 
         Note: Many terminals don't distinguish Shift+Enter from Enter,
         so we use Ctrl+Enter for submission (universally supported).
+
+        Escape is explicitly allowed to bubble up to app level for closing panels.
         """
         if event.key == "ctrl+enter":
             # Ctrl+Enter → submit
             self.post_message(self.Submit())
             event.prevent_default()
             event.stop()
+        elif event.key == "escape":
+            # Let Escape bubble up to app level (for closing side panel, help, etc.)
+            # Don't call super() - let it propagate
+            pass
         else:
             # All other keys including plain Enter → let TextArea handle normally
             super()._on_key(event)
