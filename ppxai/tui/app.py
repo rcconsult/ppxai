@@ -67,6 +67,7 @@ class PPXAIDEApp(App):
         Binding("f6", "toggle_focus", "Switch Pane", show=False),
         Binding("ctrl+tab", "toggle_focus", "Switch Pane", show=False),
         Binding("escape", "cancel", "Cancel", show=False),
+        Binding("q", "hide_help_panel", "Close Help", show=False),  # Close help panel with 'q'
         # Split resize bindings (use ctrl+[ and ctrl+] to avoid conflict with text navigation)
         Binding("ctrl+left_square_bracket", "resize_panel('left')", "Shrink Panel", show=False),
         Binding("ctrl+right_square_bracket", "resize_panel('right')", "Grow Panel", show=False),
@@ -1915,18 +1916,23 @@ class PPXAIDEApp(App):
         self.notify(f"Theme: {theme_name}", title="Theme Changed")
 
     def action_cancel(self) -> None:
-        """Cancel current operation or close side panel.
+        """Cancel current operation or close help panel/side panel.
 
-        Note: Command palette and other modal screens handle Escape themselves.
-        We only handle it when side panel is open.
+        Handles Escape key for various dismissible UI elements.
+        Priority order: help panel > side panel > bubble up
         """
+        # Check if Textual's help panel is showing
+        if hasattr(self, '_help_panel') and self._help_panel:
+            self.action_hide_help_panel()
+            return
+
+        # Check if side panel is open
         side_panel = self.query_one("#side-panel", SidePanel)
         if side_panel.is_open:
             side_panel.close()
-            return  # Event handled
+            return
 
-        # If nothing to cancel, let the event bubble up to command palette or other handlers
-        # In Textual, returning False prevents the action from consuming the event
+        # Nothing to close - let event bubble to command palette or other handlers
         return False
 
     def action_close_panel(self) -> None:
