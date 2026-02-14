@@ -58,6 +58,7 @@ class PPXAIDEApp(App):
     CSS_PATH = ["themes/layout.tcss", "themes/dialog.tcss"]
 
     BINDINGS = [
+        Binding("ctrl+enter", "", "Send", show=True, priority=True),  # Display only - handled by ChatTextArea
         Binding("ctrl+c", "quit", "Quit", show=True),
         Binding("ctrl+l", "clear", "Clear", show=True),
         Binding("ctrl+t", "cycle_theme", "Theme", show=True),
