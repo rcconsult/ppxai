@@ -1919,15 +1919,16 @@ class PPXAIDEApp(App):
         """Cancel current operation or close help panel/side panel.
 
         Handles Escape key for various dismissible UI elements.
-        Priority order: help panel > side panel > bubble up
+        Priority order: modal screens > side panel > nothing
         """
         # Debug: Show that we received the Escape key
         self.notify("Escape pressed", timeout=1)
 
-        # Check if Textual's help panel is showing
-        if hasattr(self, '_help_panel') and self._help_panel:
-            self.notify("Closing help panel", timeout=1)
-            self.action_hide_help_panel()
+        # Check if there's a modal screen (help panel, etc.)
+        # screen_stack > 1 means a modal/overlay is showing on top of main screen
+        if len(self.screen_stack) > 1:
+            self.notify("Closing modal screen", timeout=1)
+            self.pop_screen()
             return
 
         # Check if side panel is open
