@@ -1919,15 +1919,24 @@ class PPXAIDEApp(App):
         """Cancel current operation or close help panel/side panel.
 
         Handles Escape key for various dismissible UI elements.
-        Priority order: modal screens > side panel > nothing
+        Priority order: help panel > side panel > modal screens > nothing
         """
         # Debug: Show screen stack info
         stack_len = len(self.screen_stack)
         screen_names = [type(s).__name__ for s in self.screen_stack]
         self.notify(f"Esc: stack={stack_len} screens={screen_names}", timeout=3)
 
-        # Check if there's a modal screen (help panel, etc.)
-        # screen_stack > 1 means a modal/overlay is showing on top of main screen
+        # Try to close help panel first (Textual's built-in keys help)
+        # action_hide_help_panel() is safe to call even if help panel isn't showing
+        try:
+            self.notify("Trying hide_help_panel()", timeout=1)
+            self.action_hide_help_panel()
+            self.notify("hide_help_panel() succeeded", timeout=1)
+            return
+        except Exception as e:
+            self.notify(f"hide_help_panel() failed: {e}", timeout=2)
+
+        # Check if there's a modal screen (fallback)
         if len(self.screen_stack) > 1:
             self.notify("Closing modal screen", timeout=1)
             self.pop_screen()
