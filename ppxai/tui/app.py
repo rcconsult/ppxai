@@ -1921,19 +1921,23 @@ class PPXAIDEApp(App):
         Handles Escape key for various dismissible UI elements.
         Priority order: help panel > side panel > bubble up
         """
+        # Debug: Show that we received the Escape key
+        self.notify("Escape pressed", timeout=1)
+
         # Check if Textual's help panel is showing
         if hasattr(self, '_help_panel') and self._help_panel:
+            self.notify("Closing help panel", timeout=1)
             self.action_hide_help_panel()
             return
 
         # Check if side panel is open
         side_panel = self.query_one("#side-panel", SidePanel)
         if side_panel.is_open:
+            self.notify("Closing side panel", timeout=1)
             side_panel.close()
             return
 
-        # Nothing to close - let event bubble to command palette or other handlers
-        return False
+        self.notify("Nothing to close", timeout=1)
 
     def action_close_panel(self) -> None:
         """Close the side panel (Ctrl+W)."""
