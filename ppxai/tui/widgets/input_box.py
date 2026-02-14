@@ -16,26 +16,18 @@ class ChatTextArea(TextArea):
         """Message sent when user presses Enter (without Shift)."""
         pass
 
-    def _on_key(self, event) -> None:
-        """Handle key events - Ctrl+Enter submits, Enter adds newline.
+    def on_key(self, event) -> None:
+        """Handle Ctrl+Enter for submission.
 
-        Note: Many terminals don't distinguish Shift+Enter from Enter,
-        so we use Ctrl+Enter for submission (universally supported).
-
-        Escape is explicitly allowed to bubble up to app level for closing panels.
+        Using on_key() instead of _on_key() allows Escape to bubble up naturally
+        to app-level handlers (for closing panels, help, etc.).
         """
         if event.key == "ctrl+enter":
             # Ctrl+Enter → submit
             self.post_message(self.Submit())
             event.prevent_default()
             event.stop()
-        elif event.key == "escape":
-            # Let Escape bubble up to app level (for closing side panel, help, etc.)
-            # Don't call super() - let it propagate
-            pass
-        else:
-            # All other keys including plain Enter → let TextArea handle normally
-            super()._on_key(event)
+        # All other keys (including Escape, Enter) → let them bubble naturally
 
 
 class InputBox(Static):
