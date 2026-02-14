@@ -9,6 +9,25 @@ from textual.message import Message
 from textual.widgets import Input, Static, TextArea
 
 
+class ChatTextArea(TextArea):
+    """Custom TextArea that handles Enter for submission and Shift-Enter for newlines."""
+
+    class Submit(Message):
+        """Message sent when user presses Enter (without Shift)."""
+        pass
+
+    def _on_key(self, event) -> None:
+        """Handle key events - intercept Enter before TextArea processes it."""
+        if event.key == "enter" and not event.shift:
+            # Enter without Shift → submit (don't let TextArea handle it)
+            self.post_message(self.Submit())
+            event.prevent_default()
+            event.stop()
+        else:
+            # All other keys (including Shift+Enter) → let TextArea handle normally
+            super()._on_key(event)
+
+
 class InputBox(Static):
     """Input widget with command detection and history."""
 
@@ -43,7 +62,7 @@ class InputBox(Static):
         """Compose the input box."""
         with Horizontal():
             yield Static("[bold cyan]>[/bold cyan]", classes="prompt")
-            yield TextArea(
+            yield ChatTextArea(
                 "",  # Empty initial content
                 id="chat-input",
                 show_line_numbers=False,
@@ -51,16 +70,13 @@ class InputBox(Static):
 
     def on_mount(self) -> None:
         """Focus the input on mount."""
-        text_area = self.query_one(TextArea)
+        text_area = self.query_one(ChatTextArea)
         text_area.focus()
-        # Set placeholder-like behavior
-        if not text_area.text:
-            self._show_placeholder()
 
     def focus(self) -> None:
         """Focus the input widget."""
         try:
-            text_area = self.query_one(TextArea)
+            text_area = self.query_one(ChatTextArea)
             text_area.focus()
         except NoMatches:
             pass  # Widget not mounted yet
@@ -68,7 +84,7 @@ class InputBox(Static):
     def disable(self) -> None:
         """Disable the input widget (prevent submission during streaming)."""
         try:
-            text_area = self.query_one(TextArea)
+            text_area = self.query_one(ChatTextArea)
             text_area.disabled = True
         except NoMatches:
             pass  # Widget not mounted yet
@@ -76,26 +92,16 @@ class InputBox(Static):
     def enable(self) -> None:
         """Enable the input widget."""
         try:
-            text_area = self.query_one(TextArea)
+            text_area = self.query_one(ChatTextArea)
             text_area.disabled = False
             text_area.focus()
         except NoMatches:
             pass  # Widget not mounted yet
 
-    def _show_placeholder(self) -> None:
-        """Show placeholder text (dimmed)."""
+    def on_chat_text_area_submit(self, event: ChatTextArea.Submit) -> None:
+        """Handle submission from ChatTextArea (Enter key pressed)."""
         try:
-            text_area = self.query_one(TextArea)
-            if not text_area.text:
-                # Placeholder is handled via CSS or we can set it as comment
-                pass
-        except NoMatches:
-            pass
-
-    def _submit_input(self) -> None:
-        """Submit the current input."""
-        try:
-            text_area = self.query_one(TextArea)
+            text_area = self.query_one(ChatTextArea)
             value = text_area.text.strip()
 
             if value:
@@ -127,22 +133,10 @@ class InputBox(Static):
         """Handle key events for history navigation and tab completion."""
 
         # ============================================================
-        # ENTER KEY HANDLING (Submit vs Newline)
-        # ============================================================
-        if event.key == "enter":
-            # Shift+Enter → insert newline (default TextArea behavior)
-            # Enter (no shift) → submit
-            if not event.shift:
-                self._submit_input()
-                event.prevent_default()
-                event.stop()
-                return
-
-        # ============================================================
         # TAB COMPLETION
         # ============================================================
         if event.key == "tab":
-            text_area = self.query_one("#chat-input", TextArea)
+            text_area = self.query_one("#chat-input", ChatTextArea)
 
             # Only handle if input is focused
             if not text_area.has_focus:
@@ -252,7 +246,7 @@ class InputBox(Static):
         if not self._history:
             return
 
-        text_area = self.query_one(TextArea)
+        text_area = self.query_one(ChatTextArea)
 
         if self._history_index == -1:
             # Starting from current input
@@ -293,7 +287,7 @@ class InputBox(Static):
         Args:
             text: Text to insert
         """
-        text_area = self.query_one(TextArea)
+        text_area = self.query_one(ChatTextArea)
         # Insert at cursor position
         text_area.insert(text)
         text_area.move_cursor_relative(columns=len(text))
