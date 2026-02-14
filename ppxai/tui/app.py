@@ -57,6 +57,9 @@ class PPXAIDEApp(App):
 
     CSS_PATH = ["themes/layout.tcss", "themes/dialog.tcss"]
 
+    # Disable command palette - we use Ctrl+T for theme cycling instead
+    ENABLE_COMMAND_PALETTE = False
+
     BINDINGS = [
         Binding("ctrl+enter", "", "Send", show=True, priority=True),  # Display only - handled by ChatTextArea
         Binding("ctrl+c", "quit", "Quit", show=True),
