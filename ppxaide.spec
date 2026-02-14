@@ -25,6 +25,7 @@ a = Analysis(
         'rich.syntax',
         'openai',
         'dotenv',
+        'blinker',  # EventBus dependency
         'ppxai.tui.themes.themes',
         'ppxai.common.preview',
         'ppxai.preview_server',
