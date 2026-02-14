@@ -1,46 +1,46 @@
 # TODO: v1.15.3 - Config Hot-Reload, DAG Init & Platform Alignment
 
 **Created:** 2026-02-07
-**Branch:** bugfix/v1.15.3
-**Status:** In Progress (5/7 workstreams complete)
+**Branch:** feature/v1.15.5 (completed)
+**Status:** ✅ Complete (6/6 workstreams)
 **Previous Release:** v1.15.2
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-02-14
 
 ---
 
 ## Executive Summary
 
-### ✅ Completed (5/7 workstreams)
+### ✅ Completed (6/6 workstreams)
 
-| # | Workstream | Status | Impact |
-|---|------------|--------|--------|
-| 1 | **Config Hot-Reload Fix** | ✅ Done | Config changes reflected without restart |
-| 2 | **TUI EventBus Stability** | ✅ Done | No NoMatches crashes, warnings displayed |
-| 3 | **DGX Spark Benchmarks** | ✅ Done | Results tracked for GPT-OSS, Qwen3, Qwen2.5-Coder |
-| 4 | **DAG-Based Config Init** | ✅ Done | No stale cache, 100% test pass rate |
-| 5 | **Platform Alignment** | ✅ Done | Signal handling all platforms, platform-aware binary search |
+| # | Workstream | Status | Impact | Completed |
+|---|------------|--------|--------|-----------|
+| 1 | **Config Hot-Reload Fix** | ✅ Done | Config changes reflected without restart | 2026-02-08 |
+| 2 | **TUI EventBus Stability** | ✅ Done | No NoMatches crashes, warnings displayed | 2026-02-08 |
+| 3 | **DGX Spark Benchmarks** | ✅ Done | Results tracked for GPT-OSS, Qwen3, Qwen2.5-Coder | 2026-02-08 |
+| 4 | **DAG-Based Config Init** | ✅ Done | No stale cache, 100% test pass rate | 2026-02-08 |
+| 5 | **Platform Alignment** | ✅ Done | Signal handling all platforms, platform-aware binary search | 2026-02-08 |
+| 7 | **Tool Calling Clarification** | ✅ Done | Metadata distinguishes native vs prompt-based | 2026-02-14 |
 
-### ⏳ Open Items (2/7 workstreams)
+### ⏳ Deferred Items (1/7 workstreams)
 
 | # | Workstream | Priority | Effort | Status |
 |---|------------|----------|--------|--------|
-| 7 | **Tool Calling Clarification** | High (accuracy) | 0.5 days | ⏳ Open |
 | 6 | **File Navigation** | Medium | 7 days | Deferred to v1.16.0 |
 
 ### Release Recommendation
 
-**Ship v1.15.3 with:**
+**v1.15.3 is COMPLETE with:**
 - ✅ Config Hot-Reload Fix (Done)
 - ✅ TUI EventBus Stability (Done)
 - ✅ Benchmarks (Done)
 - ✅ Platform Alignment (Done)
 - ✅ DAG-Based Config Init (Done)
-- ⏳ Tool Calling Clarification (4 hours - high priority for accuracy)
+- ✅ Tool Calling Clarification (Done)
 
-**Defer to v1.16.0:**
+**Deferred to v1.16.0:**
 - 🔲 File Navigation (7 days - feature work)
 
-**Status:** 5/7 workstreams complete. Tool calling improvements needed for accurate benchmarks and documentation.
+**Status:** ✅ All v1.15.3 work complete (6/6 workstreams). Ready for v1.15.5 release.
 
 ---
 
@@ -732,12 +732,14 @@ Add platform-aware filtering to `get_bin_search_paths()`.
 
 ---
 
-## 7. Tool Calling Clarification ⏳
+## 7. Tool Calling Clarification ✅
 
 **Priority:** High (accuracy)
-**Status:** Open
+**Status:** ✅ Complete
 **Effort:** 0.5 days (4 hours)
 **Created:** 2026-02-08
+**Completed:** 2026-02-14
+**Commit:** 26217e0
 
 ### Problem
 
@@ -953,7 +955,41 @@ Create comprehensive documentation:
 }
 ```
 
-**Status:** Ready to implement
+**Status:** ✅ Implemented (config example updated)
+
+---
+
+### ✅ Implementation Summary (2026-02-14)
+
+**All 6 steps completed:**
+
+| Step | Task | Status | Files Modified |
+|------|------|--------|----------------|
+| 1 | Add capability flags | ✅ Done | Already existed in v1.15.2 |
+| 2 | Update provider docstrings | ✅ Done | Already existed in v1.15.2 |
+| 3 | Fix Gemini SDK | ✅ Done | Migrated to google.genai in v1.15.2 |
+| 4 | Update benchmarks | ✅ Done | engine_runner.py (+13 lines) |
+| 5 | Create documentation | ✅ Done | docs/TOOL_CALLING.md (exists, 267 lines) |
+| 6 | Update config example | ✅ Done | ppxai-config.example.json (+6 lines) |
+
+**Changes made (commit 26217e0):**
+
+1. **benchmarks/llm-eval/engine_runner.py** (+13 lines)
+   - Added `_detect_tool_calling_method()` method
+   - Added `tool_calling_method` field to metadata
+   - Returns "native" or "prompt_based"
+
+2. **ppxai-config.example.json** (+6 lines)
+   - Fixed OpenAI: added `native_tool_calling: true`
+   - Fixed OpenRouter: added `native_tool_calling: true`
+
+**Results:**
+- Perplexity → `prompt_based` ✓
+- Gemini → `native` ✓
+- OpenAI → `native` ✓
+- OpenRouter → `native` ✓
+
+**Note:** Steps 1-3 and 5 were already complete from v1.15.2 work. This task completed the remaining metadata and config updates.
 
 ---
 
