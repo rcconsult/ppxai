@@ -477,6 +477,18 @@ class EngineBenchmarkRunner:
         combined = "\n".join(self.client._response_samples[:3])
         return hashlib.md5(combined.encode()).hexdigest()[:12]
 
+    def _detect_tool_calling_method(self) -> str:
+        """Detect if provider uses native or prompt-based tool calling.
+
+        Returns:
+            "native" if provider supports native function calling API
+            "prompt_based" if tools are injected via system prompt
+        """
+        from ppxai.config import PROVIDERS
+        provider_config = PROVIDERS.get(self.provider, {})
+        capabilities = provider_config.get("capabilities", {})
+        return "native" if capabilities.get("native_tool_calling") else "prompt_based"
+
     def run(self, categories: Optional[list[str]] = None) -> BenchmarkResult:
         """Run benchmark synchronously."""
         return asyncio.run(self.run_async(categories))
@@ -662,5 +674,6 @@ class EngineBenchmarkRunner:
                 "retries": self.retries,
                 "sdk_versions": sdk_versions,
                 "model_fingerprint": model_fingerprint,
+                "tool_calling_method": self._detect_tool_calling_method(),
             },
         )

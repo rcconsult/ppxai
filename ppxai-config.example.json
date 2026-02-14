@@ -246,7 +246,9 @@
         "web_search": false,
         "web_fetch": false,
         "weather": false,
-        "realtime_info": false
+        "realtime_info": false,
+        "native_tool_calling": true,
+        "__comment_native_tool_calling": "OpenAI supports native function calling via tools parameter"
       },
       "__comment_web_search_override": "v1.13.4: Optional per-provider override for premium web search",
       "web_search": {
@@ -298,7 +300,9 @@
         "web_search": false,
         "web_fetch": false,
         "weather": false,
-        "realtime_info": false
+        "realtime_info": false,
+        "native_tool_calling": true,
+        "__comment_native_tool_calling": "OpenRouter supports native function calling via tools parameter (varies by model)"
       }
     },
     "local-vllm": {
