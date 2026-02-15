@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.15.4 (February 2026)
+> **Current Version**: v1.15.5 (February 2026)
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
@@ -489,6 +489,18 @@ ppxai/tui/                     # New module (Textual-based)
 | **1,227 tests passing** | 34 preview + 16 SSL tests added | ✅ Done |
 
 **File Navigation:** Deferred to v1.16.0. See [TODO-v1.16.0.md](TODO-v1.16.0.md) for detailed spec.
+
+### v1.15.5 - Multi-Line Input & Escape Key Fix
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Multi-line input** | TextArea replaces Input widget; Enter=newline, Ctrl+Enter=submit | ✅ Done |
+| **Escape key fix** | Priority-based dismissal: help panel > modals > side panel | ✅ Done |
+| **PyInstaller blinker fix** | Added `blinker` to ppxaide.spec hiddenimports | ✅ Done |
+| **Benchmark metadata** | `tool_calling_method` field (native vs prompt_based) in results | ✅ Done |
+| **BENCHMARKS.md guide** | 700+ line guide for benchmark system | ✅ Done |
+| **Debug cleanup** | Removed development debug notifications from action_cancel | ✅ Done |
+| **1,237 tests passing** | 15 new multi-line input tests added | ✅ Done |
 
 ---
 

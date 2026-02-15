@@ -177,7 +177,17 @@ The web tools (`get_weather`, `fetch_url`, `web_search`) support corporate proxy
 - `ROADMAP.md` - Feature roadmap and version planning
 - `docs/RELEASE-PLAN-v1.14.x.md` - Current release series plan
 
-### Current Version: v1.15.4
+### Current Version: v1.15.5
+
+**v1.15.5 Features:**
+- **CHANGE:** Multi-line chat input — Enter inserts newlines, Ctrl+Enter submits
+- **FIX:** Escape key priority-based dismissal — help panel > modal screens > side panel
+- **FIX:** PyInstaller build — added missing `blinker` hiddenimport for EventBus
+
+**v1.15.4 Features:**
+- **NEW:** `/preview` command — live-reloading HTML preview across TUI, Web App, VSCode
+- **FIX:** Browser cache busting for CSS/JS/JSON assets in preview
+- **FIX:** Corporate SSL support with `_create_ssl_context()` and HTTP fallback
 
 **v1.15.3 Features:**
 - **FIX:** Web tools SSL/corporate proxy support - `_create_ssl_context()` respects `SSL_VERIFY` and `SSL_CERT_FILE` env vars

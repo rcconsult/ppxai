@@ -965,6 +965,126 @@ class TestInputBoxEdgeCases:
         assert hasattr(box, "show_line_numbers") or True  # May vary by implementation
 
 
+class TestMultiLineInput:
+    """Tests for multi-line input (ChatTextArea) with Ctrl+Enter submission."""
+
+    def test_chat_text_area_is_textarea(self):
+        """ChatTextArea should be a TextArea subclass."""
+        from ppxai.tui.widgets.input_box import ChatTextArea
+        from textual.widgets import TextArea
+
+        assert issubclass(ChatTextArea, TextArea)
+
+    def test_chat_text_area_has_submit_message(self):
+        """ChatTextArea should define a Submit message class."""
+        from ppxai.tui.widgets.input_box import ChatTextArea
+
+        assert hasattr(ChatTextArea, "Submit")
+        # Submit is a Message subclass
+        from textual.message import Message
+        assert issubclass(ChatTextArea.Submit, Message)
+
+    def test_chat_text_area_creation(self):
+        """ChatTextArea should create without error."""
+        from ppxai.tui.widgets.input_box import ChatTextArea
+
+        ta = ChatTextArea("")
+        assert ta is not None
+
+    def test_chat_text_area_has_on_key(self):
+        """ChatTextArea should override on_key for Ctrl+Enter handling."""
+        from ppxai.tui.widgets.input_box import ChatTextArea
+
+        ta = ChatTextArea("")
+        assert hasattr(ta, "on_key")
+        assert callable(ta.on_key)
+
+    def test_input_box_compose_references_chat_text_area(self):
+        """InputBox compose method should reference ChatTextArea, not Input."""
+        import inspect
+        from ppxai.tui.widgets.input_box import InputBox
+
+        source = inspect.getsource(InputBox.compose)
+        # compose should yield ChatTextArea, not the old Input widget
+        assert "ChatTextArea" in source
+        assert "Input(" not in source
+
+    def test_input_box_submit_handler_exists(self):
+        """InputBox should have handler for ChatTextArea.Submit events."""
+        from ppxai.tui.widgets.input_box import InputBox
+
+        box = InputBox()
+        assert hasattr(box, "on_chat_text_area_submit")
+        assert callable(box.on_chat_text_area_submit)
+
+    def test_input_box_submitted_message_has_value(self):
+        """InputBox.Submitted message should carry the submitted text."""
+        from ppxai.tui.widgets.input_box import InputBox
+
+        msg = InputBox.Submitted("hello world")
+        assert msg.value == "hello world"
+
+    def test_input_box_submitted_multiline_value(self):
+        """InputBox.Submitted should preserve multi-line text."""
+        from ppxai.tui.widgets.input_box import InputBox
+
+        msg = InputBox.Submitted("line 1\nline 2\nline 3")
+        assert msg.value == "line 1\nline 2\nline 3"
+        assert msg.value.count("\n") == 2
+
+    def test_ctrl_enter_binding_is_priority(self):
+        """Ctrl+Enter binding must be priority — display-only, ChatTextArea.on_key() handles it."""
+        from ppxai.tui.app import PPXAIDEApp
+
+        ctrl_enter = [b for b in PPXAIDEApp.BINDINGS if b.key == "ctrl+enter"]
+        assert len(ctrl_enter) == 1
+        assert ctrl_enter[0].priority is True
+
+    def test_ctrl_enter_binding_is_visible(self):
+        """Ctrl+Enter binding should be visible in footer for discoverability."""
+        from ppxai.tui.app import PPXAIDEApp
+
+        ctrl_enter = [b for b in PPXAIDEApp.BINDINGS if b.key == "ctrl+enter"]
+        assert len(ctrl_enter) == 1
+        assert ctrl_enter[0].show is True
+
+    def test_ctrl_enter_binding_description(self):
+        """Ctrl+Enter binding should have 'Send' description."""
+        from ppxai.tui.app import PPXAIDEApp
+
+        ctrl_enter = [b for b in PPXAIDEApp.BINDINGS if b.key == "ctrl+enter"]
+        assert ctrl_enter[0].description == "Send"
+
+    def test_input_box_history_preserves_multiline(self):
+        """History should store and retrieve multi-line entries correctly."""
+        from ppxai.tui.widgets.input_box import InputBox
+
+        box = InputBox()
+        multiline = ["first\nsecond", "third\nfourth\nfifth", "single"]
+        box.set_history(multiline)
+        retrieved = box.get_history()
+        assert retrieved == multiline
+        assert "\n" in retrieved[0]
+        assert retrieved[1].count("\n") == 2
+
+    def test_input_box_clear_history_works(self):
+        """clear_history should empty the history list."""
+        from ppxai.tui.widgets.input_box import InputBox
+
+        box = InputBox()
+        box.set_history(["a", "b", "c"])
+        box.clear_history()
+        assert box.get_history() == []
+
+    def test_ctrl_enter_binding_is_display_only(self):
+        """Ctrl+Enter binding should have empty action (display-only, ChatTextArea handles it)."""
+        from ppxai.tui.app import PPXAIDEApp
+
+        ctrl_enter = [b for b in PPXAIDEApp.BINDINGS if b.key == "ctrl+enter"]
+        assert len(ctrl_enter) == 1
+        assert ctrl_enter[0].action == ""
+
+
 class TestThemeSwitching:
     """Phase 1.4: Theme switching tests for all available themes."""
 
@@ -1068,10 +1188,15 @@ class TestKeybindingConflicts:
         assert len(keys) >= 8  # We have at least 8 bindings
 
     def test_app_bindings_have_actions(self):
-        """All app bindings should have actions."""
+        """All app bindings should have actions (except display-only bindings)."""
         from ppxai.tui.app import PPXAIDEApp
 
+        # Display-only bindings have empty action (key handled by widget on_key())
+        display_only_keys = {"ctrl+enter"}
+
         for binding in PPXAIDEApp.BINDINGS:
+            if binding.key in display_only_keys:
+                continue
             assert binding.action is not None
             assert len(binding.action) > 0
 
@@ -1087,6 +1212,7 @@ class TestKeybindingConflicts:
         assert "ctrl+t" in binding_keys  # Theme cycle
         assert "ctrl+w" in binding_keys  # Close panel
         assert "ctrl+s" in binding_keys  # Save
+        assert "ctrl+enter" in binding_keys  # Submit message
 
     def test_binding_actions_are_methods(self):
         """Binding actions should correspond to methods."""

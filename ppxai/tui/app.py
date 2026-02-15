@@ -58,7 +58,7 @@ class PPXAIDEApp(App):
     CSS_PATH = ["themes/layout.tcss", "themes/dialog.tcss"]
 
     BINDINGS = [
-        Binding("ctrl+enter", "", "Send", show=True, priority=True),  # Display only - handled by ChatTextArea
+        Binding("ctrl+enter", "", "Send", show=True, priority=True),  # Display only - handled by ChatTextArea.on_key()
         Binding("ctrl+c", "quit", "Quit", show=True),
         Binding("ctrl+l", "clear", "Clear", show=True),
         Binding("ctrl+t", "cycle_theme", "Theme", show=True),
@@ -1908,6 +1908,7 @@ class PPXAIDEApp(App):
         chat_view = self.query_one("#chat-view", ChatView)
         chat_view.clear()
 
+
     def action_cycle_theme(self) -> None:
         """Cycle through curated themes (Ctrl+T)."""
         self._current_theme_index = (self._current_theme_index + 1) % len(CYCLE_THEMES)
@@ -1919,44 +1920,25 @@ class PPXAIDEApp(App):
         """Cancel current operation or close help panel/side panel.
 
         Handles Escape key for various dismissible UI elements.
-        Priority order: help panel > side panel > modal screens > nothing
+        Priority order: help panel > modal screens > side panel > nothing
         """
-        # Debug: Show screen stack info (only when debug logging is on)
-        if self._debug_logging:
-            stack_len = len(self.screen_stack)
-            screen_names = [type(s).__name__ for s in self.screen_stack]
-            self.notify(f"Esc: stack={stack_len} screens={screen_names}", timeout=3)
-
         # Try to close help panel first (Textual's built-in keys help)
         # action_hide_help_panel() is safe to call even if help panel isn't showing
         try:
-            if self._debug_logging:
-                self.notify("Trying hide_help_panel()", timeout=1)
             self.action_hide_help_panel()
-            if self._debug_logging:
-                self.notify("hide_help_panel() succeeded", timeout=1)
             return
-        except Exception as e:
-            if self._debug_logging:
-                self.notify(f"hide_help_panel() failed: {e}", timeout=2)
+        except Exception:
+            pass
 
         # Check if there's a modal screen (fallback)
         if len(self.screen_stack) > 1:
-            if self._debug_logging:
-                self.notify("Closing modal screen", timeout=1)
             self.pop_screen()
             return
 
         # Check if side panel is open
         side_panel = self.query_one("#side-panel", SidePanel)
         if side_panel.is_open:
-            if self._debug_logging:
-                self.notify("Closing side panel", timeout=1)
             side_panel.close()
-            return
-
-        if self._debug_logging:
-            self.notify("Nothing to close", timeout=1)
 
     def action_close_panel(self) -> None:
         """Close the side panel (Ctrl+W)."""

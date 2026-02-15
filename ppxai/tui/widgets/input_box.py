@@ -16,14 +16,32 @@ class ChatTextArea(TextArea):
         """Message sent when user presses Enter (without Shift)."""
         pass
 
+    # Keys that trigger submission across different terminals:
+    # - "ctrl+enter": Kitty keyboard protocol (kitty, WezTerm, some Linux terminals)
+    # - "ctrl+j": Windows Terminal sends Ctrl+Enter as ctrl+j (\n)
+    SUBMIT_KEYS = {"ctrl+enter", "ctrl+j"}
+
     def on_key(self, event) -> None:
         """Handle Ctrl+Enter for submission.
 
         Using on_key() instead of _on_key() allows Escape to bubble up naturally
         to app-level handlers (for closing panels, help, etc.).
         """
-        if event.key == "ctrl+enter":
-            # Ctrl+Enter → submit
+        # Log key events when debug logging is enabled (/debug-log on)
+        try:
+            if getattr(self.app, "_debug_logging", False):
+                from pathlib import Path
+                log_path = Path.home() / ".ppxai" / "logs" / "keys.log"
+                log_path.parent.mkdir(parents=True, exist_ok=True)
+                k = repr(event.key)
+                c = repr(event.character)
+                a = repr(event.aliases) if hasattr(event, "aliases") else "N/A"
+                with open(log_path, "a") as f:
+                    f.write(f"key={k} character={c} aliases={a}\n")
+        except Exception:
+            pass
+
+        if event.key in self.SUBMIT_KEYS:
             self.post_message(self.Submit())
             event.prevent_default()
             event.stop()

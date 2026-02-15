@@ -1,6 +1,6 @@
 # ppxai - Multi-LLM Interface for Developers
 
-![Version](https://img.shields.io/badge/version-1.15.4-blue) ![Tests](https://img.shields.io/badge/tests-1227%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
+![Version](https://img.shields.io/badge/version-1.15.5-blue) ![Tests](https://img.shields.io/badge/tests-1237%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
 
 **Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
 
@@ -54,7 +54,7 @@ ppxai-desktop
 - Full macOS setup: `curl -sSL ... | bash -s -- --with-macos-app --with-config --with-launchagent`
 - Uninstall: `curl -sSL ... | bash -s -- --uninstall`
 
-**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.15.4` (specific version), `-Uninstall`
+**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.15.5` (specific version), `-Uninstall`
 
 See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed installation options including Windows.
 
@@ -65,7 +65,7 @@ Download from [Releases](../../releases):
 - `ppxaide-{platform}` - Textual TUI (new in v1.15.0)
 - `ppxai-server-{platform}` - HTTP server for VSCode
 - `ppxai-desktop-{platform}` - Desktop Web App
-- `ppxai-1.15.4.vsix` - VSCode extension
+- `ppxai-1.15.5.vsix` - VSCode extension
 - `ppxai-*-macos-arm64.dmg` - macOS app bundle installer
 
 ### Option 3: From Source
@@ -138,6 +138,7 @@ Switch providers anytime: `/provider gemini` or `/model gpt-4o`
 | Status bar with provider/model | SSE streaming | SSE streaming |
 
 **ppxaide features (v1.15.0+):**
+- **Multi-line input** (v1.15.5) - Enter inserts newlines, Ctrl+Enter submits. Auto-expands from 1 to 18 lines
 - **Type-based renderer architecture** - All 32 commands return structured result objects (17 types), enabling mechanical UI dispatch without conditionals
 - **Markdown in chat bubbles** - Full markdown rendering with clickable URLs, headers, code blocks, and citations
 - **Modern async architecture** with real-time streaming and thinking indicators
@@ -314,7 +315,7 @@ No telemetry. No tracking. Data only goes to the LLM provider you choose.
 | [Specifications](SPECIFICATIONS.md) | Code generation templates |
 | [Architecture](docs/ARCHITECTURE.md) | Type-based renderer design (v1.15.0) |
 | [Tool Calling](docs/TOOL_CALLING.md) | Native vs prompt-based tool calling |
-| [Release Notes v1.15.4](docs/RELEASE-NOTES-v1.15.4.md) | Live preview, SSL fixes, debug logging |
+| [Release Notes v1.15.5](docs/RELEASE-NOTES-v1.15.5.md) | Multi-line input, Escape key fix, build fix |
 
 ## Project Structure
 
@@ -339,7 +340,7 @@ ppxai/
 ├── vscode-extension/         # VSCode extension (TypeScript)
 ├── scripts/                  # Build, release, install scripts
 ├── resources/                # Icons (PNG, ICO, ICNS) and desktop files
-├── tests/                    # 1227 tests
+├── tests/                    # 1237 tests
 └── docs/                     # Documentation
 ```
 

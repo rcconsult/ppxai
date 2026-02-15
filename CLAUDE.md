@@ -6,7 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.15.4
+**Current Version:** v1.15.5
+
+**v1.15.5 highlights:**
+- **CHANGE:** Multi-line chat input — Enter inserts newlines, Ctrl+Enter submits (TextArea replaces Input widget)
+- **FIX:** Escape key priority-based dismissal — help panel > modal screens > side panel
+- **FIX:** PyInstaller build — added missing `blinker` hiddenimport for EventBus
+- **NEW:** `tool_calling_method` metadata in benchmark results (native vs prompt-based)
+- **NEW:** Comprehensive BENCHMARKS.md guide (700+ lines, 7 categories, 28 tests)
+- **TESTS:** 15 new multi-line input tests (ChatTextArea, bindings, submission, history)
 
 **v1.15.4 highlights:**
 - **NEW:** `/preview` command — live-reloading HTML preview across TUI (stdlib server), Web App (iframe), and VSCode (WebviewPanel)
@@ -83,9 +91,9 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - `local` provider inheritance - ollama, vllm, lmstudio inherit from `local` hints
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.15.4
-- VSCode extension (package.json): v1.15.4
-- Git tag: v1.15.4
+- Python package (pyproject.toml): v1.15.5
+- VSCode extension (package.json): v1.15.5
+- Git tag: v1.15.5
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
 
@@ -584,10 +592,13 @@ The `TextArea` widget has its own internal rendering engine with hardcoded color
 
 ### Key Bindings
 
+- `Ctrl+Enter` - Submit message (multi-line input: plain Enter inserts newlines)
 - `Ctrl+T` - Cycle through 8 curated themes
 - `Ctrl+P` - Command palette (all 17+ themes)
 - `Ctrl+[` / `Ctrl+]` - Resize split panes (macOS compatible)
 - `Ctrl+W` - Close side panel
+- `Ctrl+S` - Save side panel content
+- `Escape` - Close help panel / modal screen / side panel (priority order)
 - `F6` / `Ctrl+Tab` - Toggle focus between panes
 
 ### DO NOT BREAK

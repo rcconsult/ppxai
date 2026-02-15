@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.15.5] - 2026-02-15
+
+### Changed - Multi-Line Chat Input (Breaking UX Change)
+
+- **Multi-line input in ppxaide** - Input box now uses TextArea widget instead of single-line Input
+  - **Enter** inserts a newline (allows multi-line messages, code blocks, etc.)
+  - **Ctrl+Enter** submits the message (shown in footer for discoverability)
+  - Auto-expands from 1 line up to 18 lines as content grows, then shows scrollbar
+  - All existing functionality preserved: command history (Up/Down), tab completion, focus management
+  - Design rationale: Shift+Enter was tried first but many terminals cannot distinguish it from Enter
+
+### Fixed - Escape Key Handling
+
+- **Escape key properly dismisses UI elements** - Priority-based dismissal: help panel > modal screens > side panel
+  - `action_cancel()` rewritten with clean priority chain
+  - `on_key()` used instead of `_on_key()` in ChatTextArea — allows Escape to bubble up to app-level handlers
+  - `q` key binding added to close help panel (common convention)
+  - Command palette re-enabled (was temporarily disabled during debugging)
+
+### Fixed - Build
+
+- **PyInstaller `blinker` hiddenimport** - Added `blinker` to `ppxaide.spec` to fix `ModuleNotFoundError` when running ppxaide binary (required by EventBus)
+
+### Changed - Benchmarks
+
+- **`tool_calling_method` metadata** - Benchmark results now record whether native or prompt-based tool calling was used
+- **Comprehensive BENCHMARKS.md guide** - 700+ line guide covering all 7 test categories (28 tests), scoring, analysis tools
+- **Legacy benchmark files archived** - 15 old JSON files moved to `benchmarks/llm-eval/docs/archive/legacy/`
+
+### Housekeeping
+
+- **Removed 7 debug notifications** from `action_cancel()` that were added during Escape key development
+- **15 new multi-line input tests** - ChatTextArea, Ctrl+Enter binding, submit handler, history preservation
+- **`native_tool_calling: true`** added to OpenAI/OpenRouter in example config
+- **`RELATED-PROJECTS.md`** added documenting ppxai ↔ ppxai-sre relationship
+- **TODO-v1.15.3.md** marked as complete
+
+---
+
 ## [1.15.4] - 2026-02-13
 
 ### Added - Live HTML Preview (`/preview` command)
@@ -1644,6 +1683,7 @@ ppxai follows [Semantic Versioning](https://semver.org/):
 5. Push tag: `git push origin v1.x.x`
 6. GitHub Actions automatically builds and creates release
 
+[1.15.5]: https://github.com/rcconsult/ppxai/releases/tag/v1.15.5
 [1.15.4]: https://github.com/rcconsult/ppxai/releases/tag/v1.15.4
 [1.15.3]: https://github.com/rcconsult/ppxai/releases/tag/v1.15.3
 [1.15.2]: https://github.com/rcconsult/ppxai/releases/tag/v1.15.2

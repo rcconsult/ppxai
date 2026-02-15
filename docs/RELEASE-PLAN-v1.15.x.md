@@ -1,10 +1,10 @@
 # Release Plan: v1.15.x Series
 
 **Created:** January 24, 2026
-**Last Updated:** February 13, 2026
-**Status:** ✅ v1.15.0 RELEASED, ✅ v1.15.1 RELEASED, ✅ v1.15.2 RELEASED, ✅ v1.15.3 RELEASED, ⏳ v1.15.4 IN PROGRESS
-**Branch:** bugfix/v1.15.4
-**Tests:** 1227 passing
+**Last Updated:** February 15, 2026
+**Status:** ✅ v1.15.0 RELEASED, ✅ v1.15.1 RELEASED, ✅ v1.15.2 RELEASED, ✅ v1.15.3 RELEASED, ✅ v1.15.4 RELEASED, ⏳ v1.15.5 IN PROGRESS
+**Branch:** feature/v1.15.5
+**Tests:** 1237+ passing
 
 ---
 
@@ -447,9 +447,26 @@ All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tu
 
 ---
 
-## v1.15.4 - Live HTML Preview & SSL Fixes ⏳
+## v1.15.5 - Multi-Line Input & Escape Key Fix ⏳
 
 **Status:** In Progress
+**Branch:** feature/v1.15.5
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Multi-line input** | TextArea replaces Input widget; Enter=newline, Ctrl+Enter=submit | ✅ Done |
+| **Escape key fix** | Priority-based dismissal: help panel > modals > side panel | ✅ Done |
+| **PyInstaller blinker fix** | Added `blinker` to ppxaide.spec hiddenimports | ✅ Done |
+| **Benchmark metadata** | `tool_calling_method` field (native vs prompt_based) in results | ✅ Done |
+| **BENCHMARKS.md guide** | 700+ line guide for benchmark system | ✅ Done |
+| **Debug cleanup** | Removed 7 development debug notifications from action_cancel | ✅ Done |
+| **Multi-line tests** | 15 new tests for ChatTextArea, bindings, submission, history | ✅ Done |
+
+---
+
+## v1.15.4 - Live HTML Preview & SSL Fixes ✅
+
+**Released:** 2026-02-13
 **Branch:** bugfix/v1.15.4
 
 ### Live HTML Preview (Done)

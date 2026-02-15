@@ -3,7 +3,7 @@
 **Created:** 2026-02-06
 **Branch:** feature/1-16-0 (to be created)
 **Status:** Planning
-**Previous Release:** v1.15.4
+**Previous Release:** v1.15.5
 
 ---
 

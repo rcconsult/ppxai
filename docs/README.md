@@ -34,6 +34,7 @@
 | [DGX Spark Setup](DGX-SPARK-SETUP.md) | vLLM + Ollama on NVIDIA DGX Spark |
 | [vLLM Tool Calling](vllm-tool-calling-guide.md) | Hermes vs Harmony, native vs prompt-based |
 | [Prompt-Based Tool Calling](prompt-based-tool-calling.md) | Developer guide for non-native tool calling |
+| [Release Notes v1.15.5](RELEASE-NOTES-v1.15.5.md) | Multi-line input, Escape key fix, build fix |
 | [Release Notes v1.15.4](RELEASE-NOTES-v1.15.4.md) | Live preview, SSL fixes, debug logging |
 | [Release Plan v1.15.x](RELEASE-PLAN-v1.15.x.md) | Development plan for v1.15.x series |
 
@@ -213,5 +214,5 @@ A: Type `@filename`, `@git`, or `@tree` in your messages. See [Context Injection
 
 ---
 
-**Current Version**: v1.15.4
-**Last Updated**: 2026-02-13
+**Current Version**: v1.15.5
+**Last Updated**: 2026-02-15
