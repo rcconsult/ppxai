@@ -1,0 +1,44 @@
+[project]
+name = "ppxai-sre"
+version = "0.1.0"
+description = "Autonomous SRE agent platform built on ppxai"
+authors = [
+    {name = "Tradition Technology"}
+]
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+
+dependencies = [
+    "ppxai>=1.15.4",  # Core ppxai foundation
+    "apscheduler>=3.10.0",  # Heartbeat scheduler
+    "kubernetes>=30.0.0",  # k8s MCP server
+    "prometheus-api-client>=0.5.0",  # Prometheus MCP server
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatchling.build.targets.wheel]
+packages = ["ppxai_sre"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]  # Line too long (handled by formatter)

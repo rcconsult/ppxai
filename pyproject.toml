@@ -155,3 +155,6 @@ addopts = "--ignore=tests/test_custom_endpoint_integration.py"
 markers = [
     "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
 ]
+# Workspace configuration for monorepo
+[tool.uv.workspace]
+members = [".", "ppxai-sre"]
