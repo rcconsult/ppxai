@@ -49,10 +49,13 @@ ppxai-desktop
 **Installation options (Linux/macOS):**
 - With config templates: `curl -sSL ... | bash -s -- --with-config` (recommended for first-time setup)
 - With VSCode extension: `curl -sSL ... | bash -s -- --with-extension`
-- With Linux desktop integration: `curl -sSL ... | bash -s -- --with-desktop`
+- **With Linux desktop integration:** `curl -sSL ... | bash -s -- --with-desktop` (installs .desktop files, icons, Ghostty terminal)
 - macOS app bundle: `curl -sSL ... | bash -s -- --with-macos-app`
 - Full macOS setup: `curl -sSL ... | bash -s -- --with-macos-app --with-config --with-launchagent`
 - Uninstall: `curl -sSL ... | bash -s -- --uninstall`
+
+**Linux Desktop Integration (v1.15.5):**
+Provides one-click launching of ppxai, ppxaide, and ppxai-desktop from your application menu (GNOME, KDE, etc.). Includes Ghostty terminal configuration for proper Ctrl+Enter support in ppxaide. See [desktop/README.md](desktop/README.md) for details.
 
 **Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.15.5` (specific version), `-Uninstall`
 
@@ -77,6 +80,26 @@ cp .env.example .env                # Add your API keys
 uv run ppxai                        # Start Rich TUI
 uv run ppxaide                      # Or start Textual TUI
 ```
+
+### Linux Terminal Requirements (ppxaide only)
+
+**ppxaide requires a terminal with Ctrl+Enter support** for multi-line input. Standard terminals (GNOME Terminal, Konsole) don't distinguish Ctrl+Enter from Enter.
+
+**Recommended:** Install Ghostty terminal:
+```bash
+# One-line install (includes Ghostty + desktop integration)
+curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash -s -- --with-desktop
+
+# Or manual Ghostty setup
+wget https://github.com/pkgforge-dev/ghostty-appimage/releases/latest/download/Ghostty-1.2.3-x86_64.AppImage
+mv Ghostty-1.2.3-x86_64.AppImage ~/.local/bin/ghostty && chmod +x ~/.local/bin/ghostty
+mkdir -p ~/.config/ghostty && echo 'keybind = ctrl+enter=text:\x1b[13;5u' >> ~/.config/ghostty/config
+```
+
+**Alternatives:** Kitty, WezTerm (work out-of-the-box)
+**Fallback:** Use Ctrl+J instead of Ctrl+Enter (works in all terminals)
+
+See [docs/LINUX-TERMINAL-SETUP.md](docs/LINUX-TERMINAL-SETUP.md) for comprehensive setup guide.
 
 ## Features
 
@@ -305,6 +328,9 @@ No telemetry. No tracking. Data only goes to the LLM provider you choose.
 
 | Guide | Description |
 |-------|-------------|
+| [Installation](docs/INSTALLATION.md) | Detailed installation options (all platforms) |
+| [Linux Desktop Integration](desktop/README.md) | One-click app launcher integration (v1.15.5) |
+| [Linux Terminal Setup](docs/LINUX-TERMINAL-SETUP.md) | Ghostty/Kitty for Ctrl+Enter support (v1.15.5) |
 | [VSCode Extension](vscode-extension/README.md) | Installation and usage |
 | [Agent Mode](docs/AGENT_MODE_GUIDE.md) | Iterative tool execution |
 | [Checkpoint & Undo](docs/CHECKPOINT_GUIDE.md) | Atomic rollback for agent tasks |
@@ -321,27 +347,89 @@ No telemetry. No tracking. Data only goes to the LLM provider you choose.
 
 ```
 ppxai/
-├── ppxai/                    # Core package
-│   ├── rich/main.py          # Rich TUI entry point (legacy)
-│   ├── tui/                  # Textual TUI (ppxaide - v1.15.0+)
-│   │   ├── app.py            # Main Textual application
-│   │   ├── widgets/          # UI components (chat_view, code_editor, etc.)
-│   │   └── renderer.py       # TextualRenderer - type-based dispatch
-│   ├── engine/               # EngineClient, providers, tools
-│   ├── commands/             # 32 UI-agnostic command implementations
-│   │   └── types.py          # 17 CommandResult types
-│   ├── renderers/            # Renderer implementations
-│   │   ├── rich_renderer.py  # RichRenderer for legacy TUI
-│   │   └── base.py           # BaseRenderer interface
-│   ├── server/               # HTTP + JSON-RPC servers
-│   ├── web/                  # Desktop Web App static files
-│   ├── common/               # Shared utilities (logger, event handler, preview)
-│   └── preview_server.py     # Stdlib HTTP preview server (v1.15.4)
-├── vscode-extension/         # VSCode extension (TypeScript)
-├── scripts/                  # Build, release, install scripts
-├── resources/                # Icons (PNG, ICO, ICNS) and desktop files
-├── tests/                    # 1237 tests
-└── docs/                     # Documentation
+├── ppxai/                      # Core package
+│   ├── rich/main.py            # Rich TUI entry point (legacy ppxai)
+│   ├── tui/                    # Textual TUI (ppxaide - v1.15.0+)
+│   │   ├── app.py              # Main Textual application (PPXAIDEApp)
+│   │   ├── widgets/            # UI components
+│   │   │   ├── chat_view.py    # Main chat display with message bubbles
+│   │   │   ├── input_box.py    # Multi-line input (ChatTextArea)
+│   │   │   ├── side_panel.py   # File viewer/editor panel
+│   │   │   ├── code_editor.py  # Syntax-highlighted code editor
+│   │   │   └── status_bar.py   # Provider/model/tools status
+│   │   ├── themes/             # 17+ themes with layout.tcss
+│   │   ├── screens/            # Modal screens (command palette, etc.)
+│   │   └── renderer.py         # TextualRenderer - type-based dispatch
+│   ├── engine/                 # Core business logic (no UI dependencies)
+│   │   ├── client.py           # EngineClient facade
+│   │   ├── session.py          # Session management
+│   │   ├── types.py            # Message, Event, UsageStats types
+│   │   ├── providers/          # AI provider implementations
+│   │   │   ├── base.py         # BaseProvider abstract class
+│   │   │   ├── perplexity.py   # Perplexity AI (native search)
+│   │   │   └── openai_compat.py# OpenAI-compatible (Gemini, OpenRouter, local)
+│   │   └── tools/              # AI tools system
+│   │       ├── manager.py      # ToolManager with provider filtering
+│   │       ├── base.py         # BaseTool abstract class
+│   │       └── builtin/        # 10+ built-in tools
+│   ├── commands/               # 32 UI-agnostic command implementations
+│   │   ├── types.py            # 17 CommandResult types
+│   │   ├── context.py          # CommandContext protocol
+│   │   ├── factory.py          # CommandFactory (registry pattern)
+│   │   └── [show|tools|model|provider|...].py  # Individual commands
+│   ├── rendering/              # Renderer implementations
+│   │   ├── base.py             # BaseRenderer interface
+│   │   └── rich_renderer.py    # RichRenderer for legacy TUI
+│   ├── server/                 # HTTP + JSON-RPC servers
+│   │   ├── http_server.py      # FastAPI HTTP + SSE server (for VSCode/Web)
+│   │   └── jsonrpc.py          # JSON-RPC server over stdio (deprecated)
+│   ├── web/                    # Desktop Web App (ppxai-desktop)
+│   │   ├── server.py           # FastAPI server with SSE streaming
+│   │   └── [styles|components|lib|shared]/  # React-like frontend
+│   ├── common/                 # Shared utilities
+│   │   ├── logger.py           # Logging system
+│   │   ├── event_handler.py    # Event system for streaming
+│   │   ├── consent.py          # File/shell consent system
+│   │   └── preview.py          # HTML preview helpers
+│   ├── config/                 # Configuration system
+│   │   ├── settings.py         # Settings management
+│   │   └── provider_config.py  # Provider definitions
+│   └── data/                   # Session/usage data storage
+├── vscode-extension/           # VSCode extension (TypeScript)
+│   ├── src/
+│   │   ├── extension.ts        # Extension entry point
+│   │   ├── httpClient.ts       # HTTP + SSE client
+│   │   ├── chatPanel.ts        # Webview chat UI
+│   │   ├── previewPanel.ts     # Live HTML preview (v1.15.4)
+│   │   └── handlers/           # Event handlers (v1.14.0+)
+│   └── media/webview/          # External CSS/JS for webview
+├── desktop/                    # Linux desktop integration (v1.15.5)
+│   ├── install-desktop-integration.sh   # One-click installer
+│   ├── uninstall-desktop-integration.sh # Uninstaller
+│   └── README.md               # Installation guide
+├── scripts/                    # Build, release, install scripts
+│   ├── bootstrap.py            # Auto-downloads uv, sets up project
+│   ├── release.py              # Automated release script
+│   ├── install.sh              # One-line installer (Linux/macOS)
+│   └── install.ps1             # One-line installer (Windows)
+├── resources/                  # Icons and assets
+│   ├── ppxai.png               # ppxai icon (CLI)
+│   ├── ppxaide-nobg.png        # ppxaide icon (TUI)
+│   └── [.ico|.icns files]      # Platform-specific icons
+├── tests/                      # 1236+ tests
+│   ├── test_tui.py             # Textual TUI tests (180+ tests)
+│   ├── test_engine.py          # Engine layer tests
+│   ├── test_commands.py        # Command tests
+│   └── test_*.py               # Provider, tool, config tests
+├── docs/                       # Documentation
+│   ├── AGENT_MODE_GUIDE.md     # Iterative tool execution guide
+│   ├── CHECKPOINT_GUIDE.md     # Atomic rollback guide
+│   ├── LINUX-TERMINAL-SETUP.md # Ghostty/Kitty setup for Ctrl+Enter
+│   ├── PROVIDER_SETUP.md       # Multi-provider configuration
+│   ├── ARCHITECTURE.md         # Type-based renderer design
+│   └── RELEASE-NOTES-*.md      # Version release notes
+├── benchmarks/                 # LLM performance benchmarks
+└── kubernetes/                 # K8s deployment configs
 ```
 
 ## Contributing
