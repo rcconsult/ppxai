@@ -74,6 +74,57 @@ Added `blinker` to `ppxaide.spec` hiddenimports. The `blinker` library is used b
 - **BENCHMARKS.md guide:** Comprehensive 700+ line guide covering all 7 test categories, 28 tests, scoring system, and troubleshooting
 - **Legacy archive:** 15 old benchmark JSON files archived to `benchmarks/llm-eval/docs/archive/legacy/`
 
+### 5. Linux Desktop Integration (New)
+
+**One-click app launcher integration** for Linux desktop environments (GNOME, KDE, Cinnamon, MATE):
+
+**What's included:**
+- `desktop/install-desktop-integration.sh` - One-click installer for `.desktop` files and icons
+- `desktop/uninstall-desktop-integration.sh` - Clean uninstaller
+- Three `.desktop` entries for app menu launching:
+  - **ppxai** (Rich TUI) - Uses default terminal
+  - **ppxaide** (Textual TUI) - Uses Ghostty for Ctrl+Enter support
+  - **ppxai-desktop** (Web App) - Launches in browser
+- Application icons (256×256 for ppxai, 1024×1024 for ppxaide, 128×128 logo for desktop)
+- `docs/LINUX-TERMINAL-SETUP.md` - Comprehensive 293-line terminal setup guide
+
+**Ghostty Terminal Configuration:**
+ppxaide requires Ghostty (or Kitty/WezTerm) for proper Ctrl+Enter support. Standard terminals (GNOME Terminal, Konsole) send identical escape codes for Enter and Ctrl+Enter, making multi-line input impossible.
+
+**Quick setup:**
+```bash
+# Install Ghostty AppImage
+wget https://github.com/pkgforge-dev/ghostty-appimage/releases/latest/download/Ghostty-1.2.3-x86_64.AppImage
+mv Ghostty-1.2.3-x86_64.AppImage ~/.local/bin/ghostty && chmod +x ~/.local/bin/ghostty
+
+# Configure Ctrl+Enter keybind
+mkdir -p ~/.config/ghostty
+echo 'keybind = ctrl+enter=text:\x1b[13;5u' >> ~/.config/ghostty/config
+
+# Install desktop integration
+cd desktop && ./install-desktop-integration.sh
+```
+
+**Why Ghostty needs explicit keybind:**
+Ghostty 1.2.3 AppImage has incomplete Kitty keyboard protocol negotiation. The explicit keybind bypasses protocol negotiation and sends the CSI u sequence (`\x1b[13;5u`) that Textual recognizes as Ctrl+Enter.
+
+**Alternative terminals:**
+- **Kitty** - Works out-of-the-box
+- **WezTerm** - Add `enable_kitty_keyboard = true` to config
+- **Alacritty** - Recent versions support it
+- **GNOME Terminal/Konsole** - Use Ctrl+J as universal fallback
+
+**Documentation updates:**
+- `README.md` - Added Linux desktop integration section, terminal requirements, updated project structure
+- `desktop/README.md` - Comprehensive terminal requirements guide with alternatives table
+- `docs/INSTALLATION.md` - Added Linux terminal requirements section before TUI usage
+
+**Key files:**
+- `desktop/install-desktop-integration.sh` — Installer
+- `desktop/uninstall-desktop-integration.sh` — Uninstaller
+- `desktop/README.md` — Installation guide
+- `docs/LINUX-TERMINAL-SETUP.md` — Terminal setup guide
+
 ---
 
 ## Testing
@@ -83,7 +134,7 @@ Added `blinker` to `ppxaide.spec` hiddenimports. The `blinker` library is used b
 | **New multi-line input tests** | 15 |
 | **Updated keybinding tests** | 2 (action_submit_message added to expected actions) |
 | **Previous total** | 1,222 |
-| **New total** | 1,237+ |
+| **New total** | 1,236 |
 
 ---
 
