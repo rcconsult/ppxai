@@ -95,3 +95,6 @@ tests/e2e/test-results/
 
 # Benchmark debug logs (regenerable with --debug flag)
 benchmarks/llm-eval/debug/
+
+# DGX user guide (contains IPs, usernames, passwords - deployed to /opt/hf/ on DGX)
+docs/DGX-SPARK-USER-GUIDE.md

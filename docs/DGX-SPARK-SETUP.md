@@ -1,8 +1,12 @@
 # ASUS DGX Spark (GB10) Setup Guide
 
-**Last Updated:** 2026-02-07
+**Last Updated:** 2026-02-16
+**Purpose:** Feasibility study testbed for evaluating local LLM coding assistants
 **Hardware:** ASUS Ascent GX10 / DGX Spark
-**Provider IDs:** `asusai` (Ollama), `asusai-vllm` (vLLM)
+**Host IP:** `<dgx-spark-ip>`
+**Provider ID:** `asusai-vllm` (vLLM)
+**HF Cache:** `/opt/hf/cache` (287GB, `root:users`, 775)
+**Launch Script:** `/opt/hf/launch-vllm.sh`
 
 ## Hardware Specifications
 
@@ -40,18 +44,20 @@ NVIDIA GB10, [N/A], 580.126.09
 
 ## Option A: vLLM (Recommended for Coding Agents)
 
-vLLM provides native tool calling, FP8 quantization with Blackwell tensor cores, and significantly higher throughput than Ollama for MoE models.
+vLLM provides native tool calling, FP8 quantization with Blackwell tensor cores, and high throughput for MoE models.
 
-### Why vLLM over Ollama
+### Why vLLM
 
-| Feature | vLLM | Ollama |
-|---------|------|--------|
-| Throughput (MoE) | **43.8 tok/s** | 22.6 tok/s |
-| TTFT (warm) | **117ms** | 258ms+ |
-| Native tool calling | Yes (parser-based) | Limited |
-| FP8 quantization | Native HW support | GGUF only |
-| KV cache control | Configurable | Automatic |
-| Code editing quality | **100%** (Qwen3-Coder) | 57.8% best |
+vLLM was selected over Ollama based on benchmark evaluation:
+
+| Feature | vLLM |
+|---------|------|
+| Throughput (MoE) | **43.8 tok/s** |
+| TTFT (warm) | **117ms** |
+| Native tool calling | Yes (parser-based) |
+| FP8 quantization | Native HW support |
+| KV cache control | Configurable |
+| Code editing quality | **100%** (Qwen3-Coder) |
 
 ### Step A1: Docker Image
 
@@ -71,38 +77,37 @@ docker pull hellohal2064/vllm-dgx-spark-gb10:latest
 
 ### Step A2: Run vLLM Container (Recommended Model)
 
+Use the launch script at `/opt/hf/launch-vllm.sh`:
+
+```bash
+sudo bash /opt/hf/launch-vllm.sh              # Start with default model
+sudo bash /opt/hf/launch-vllm.sh stop          # Stop the running container
+sudo bash /opt/hf/launch-vllm.sh status        # Show container status
+sudo bash /opt/hf/launch-vllm.sh logs          # Tail container logs
+```
+
+Or run manually:
+
 ```bash
 docker run -d \
-  --name vllm \
-  --runtime=nvidia \
+  --name vllm-testbed \
   --gpus all \
-  -v ~/.cache/huggingface:/root/.cache/huggingface \
+  -v /opt/hf/cache:/root/.cache/huggingface \
   -p 8000:8000 \
-  --ipc=host \
   --restart unless-stopped \
-  --health-cmd 'curl -f http://localhost:8000/health || exit 1' \
-  --health-interval 30s \
-  --health-start-period 600s \
   --entrypoint vllm \
   hellohal2064/vllm-dgx-spark-gb10:latest \
   serve Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8 \
-  --host 0.0.0.0 \
-  --port 8000 \
-  --max-model-len 32768 \
-  --gpu-memory-utilization 0.90 \
-  --swap-space 32 \
-  --enable-auto-tool-choice \
   --tool-call-parser qwen3_coder \
-  --dtype auto
+  --enable-auto-tool-choice \
+  --max-model-len 131072
 ```
 
 Key flags:
-- `--runtime=nvidia --gpus all` — GPU access via NVIDIA Container Runtime
-- `-v ~/.cache/huggingface:/root/.cache/huggingface` — Persistent model cache (downloads survive container rebuilds)
+- `--gpus all` — GPU access via NVIDIA Container Runtime
+- `-v /opt/hf/cache:/root/.cache/huggingface` — Persistent model cache at `/opt/hf/cache` (owned by `root:users`, 775)
 - `--enable-auto-tool-choice --tool-call-parser qwen3_coder` — Native tool calling for Qwen3-Coder models
-- `--gpu-memory-utilization 0.90` — Reserve 90% of unified memory for model + KV cache
-- `--swap-space 32` — 32GB CPU swap for KV cache overflow
-- `--health-start-period 600s` — Allow 10 minutes for first-time model download
+- `--max-model-len 131072` — 131K context window (820K token KV cache)
 
 First-time startup downloads the model (~31 GiB, takes 4-5 minutes on a fast connection). Subsequent starts load from cache in ~3 minutes (model loading + CUDA graph compilation).
 
@@ -155,77 +160,12 @@ Key differences:
 To load a different model, stop the container and start a new one:
 
 ```bash
-docker stop vllm && docker rm vllm
-# Then run the docker command from Step A2 with a different model
+sudo bash /opt/hf/launch-vllm.sh stop
+# Edit MODEL= in /opt/hf/launch-vllm.sh, then:
+sudo bash /opt/hf/launch-vllm.sh
 ```
 
-Only one model can be loaded at a time (the GB10's unified memory is shared). Pre-downloaded models are cached in `~/.cache/huggingface/` and load without re-downloading.
-
----
-
-## Option B: Ollama (Simpler Setup, Lower Performance)
-
-Ollama is easier to set up but provides lower throughput and no native tool calling support via vLLM parsers.
-
-### Step B1: Run Ollama Container
-
-```bash
-docker run -d \
-  --name ollama \
-  --runtime=nvidia \
-  --gpus all \
-  -v ollama_data:/root/.ollama \
-  -p 11434:11434 \
-  --restart unless-stopped \
-  ollama/ollama
-```
-
-### Step B2: Pull Models
-
-```bash
-# Primary coding model (recommended for Ollama)
-docker exec ollama ollama pull qwen2.5-coder:32b
-
-# Fast coding model for quick iteration
-docker exec ollama ollama pull qwen2.5-coder:7b
-
-# MoE model - 30B params, only 3B active per token
-docker exec ollama ollama pull qwen3:30b-a3b
-```
-
-### Step B3: Create Extended Context Variants
-
-```bash
-# qwen2.5-coder:32b with 64K context
-docker exec ollama bash -c 'cat > /tmp/Modelfile-qwen25-64k << EOF
-FROM qwen2.5-coder:32b
-PARAMETER num_ctx 65536
-EOF
-ollama create qwen2.5-coder:32b-64k -f /tmp/Modelfile-qwen25-64k'
-
-# qwen3:30b-a3b with 96K context (MoE allows larger ctx in same memory)
-docker exec ollama bash -c 'cat > /tmp/Modelfile-qwen3-96k << EOF
-FROM qwen3:30b-a3b
-PARAMETER num_ctx 98304
-EOF
-ollama create qwen3:30b-a3b-96k -f /tmp/Modelfile-qwen3-96k'
-```
-
-### Step B4: Verify Ollama Models
-
-```bash
-docker exec ollama ollama list
-```
-
-Expected:
-```
-NAME                     ID              SIZE      MODIFIED
-qwen3:30b-a3b-96k        d77825500758    18 GB     ...
-qwen2.5-coder:32b-64k    427a4814ca5c    19 GB     ...
-qwen3:30b-a3b            ad815644918f    18 GB     ...
-qwen2.5-coder:32b        b92d6a0bd47e    19 GB     ...
-qwen2.5-coder:7b         dae161e27b0e    4.7 GB    ...
-```
+Only one model can be loaded at a time (the GB10's unified memory is shared). Pre-downloaded models are cached in `/opt/hf/cache/` and load without re-downloading.
 
 ---
 
@@ -234,8 +174,8 @@ qwen2.5-coder:7b         dae161e27b0e    4.7 GB    ...
 ### API key (`.env`)
 
 ```bash
-# Both Ollama and vLLM use a dummy key (no authentication required)
-OLLAMA_API_KEY=ollama
+# vLLM uses a dummy key (no authentication required)
+VLLM_API_KEY=dummy
 ```
 
 ### vLLM provider config (`ppxai-config.json`)
@@ -245,20 +185,20 @@ OLLAMA_API_KEY=ollama
   "asusai-vllm": {
     "name": "ASUS DGX Spark vLLM (GB10)",
     "base_url": "http://<dgx-spark-ip>:8000/v1",
-    "api_key_env": "OLLAMA_API_KEY",
+    "api_key_env": "VLLM_API_KEY",
     "default_model": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
     "coding_model": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
     "system_prompt": "You are an expert coding assistant running on a local NVIDIA GB10 GPU via vLLM. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
     "generation_params": {
       "temperature": 0.2,
       "top_p": 0.9,
-      "frequency_penalty": 0.1
+      "frequency_penalty": 0.0
     },
     "models": {
       "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8": {
         "name": "Qwen3 Coder 30B-A3B FP8 (MoE)",
-        "description": "Code-specialized MoE: 30.5B total / 3.3B active, FP8, native tool calling, 803K token KV cache",
-        "context_limit": 32768,
+        "description": "Code-specialized MoE: 30.5B total / 3.3B active, FP8, native tool calling via qwen3_coder parser, 820K token KV cache",
+        "context_limit": 131072,
         "max_tokens": 8192
       }
     },
@@ -276,90 +216,13 @@ OLLAMA_API_KEY=ollama
 }
 ```
 
-### Ollama provider config (`ppxai-config.json`)
-
-```json
-{
-  "asusai": {
-    "name": "ASUS DGX Spark (GB10)",
-    "base_url": "http://<dgx-spark-ip>:11434/v1",
-    "api_key_env": "OLLAMA_API_KEY",
-    "default_model": "qwen2.5-coder:32b",
-    "coding_model": "qwen2.5-coder:32b",
-    "system_prompt": "You are an expert coding assistant running on a local NVIDIA GB10 GPU via Ollama. Be concise and precise. When using tools, execute them directly and report results briefly.",
-    "generation_params": {
-      "temperature": 0.2,
-      "top_p": 0.9,
-      "frequency_penalty": 0.1
-    },
-    "models": {
-      "qwen2.5-coder:32b": {
-        "name": "Qwen2.5 Coder 32B",
-        "description": "High-quality coding model: ~19GB, excellent tool calling (recommended for Ollama)",
-        "context_limit": 32768,
-        "max_tokens": 8192
-      },
-      "qwen2.5-coder:32b-64k": {
-        "name": "Qwen2.5 Coder 32B (64K ctx)",
-        "description": "Extended context variant: 64K window for large codebases",
-        "context_limit": 65536,
-        "max_tokens": 8192
-      },
-      "qwen3:30b-a3b": {
-        "name": "Qwen3 30B-A3B (MoE)",
-        "description": "MoE: 30B total / 3B active, fast but weaker on code editing",
-        "context_limit": 32768,
-        "max_tokens": 8192
-      },
-      "qwen2.5-coder:7b": {
-        "name": "Qwen2.5 Coder 7B",
-        "description": "Fast coding model: ~4.7GB, good for quick iteration",
-        "context_limit": 32768,
-        "max_tokens": 4096
-      }
-    },
-    "pricing": {
-      "qwen2.5-coder:32b": { "input": 0.0, "output": 0.0 },
-      "qwen2.5-coder:32b-64k": { "input": 0.0, "output": 0.0 },
-      "qwen3:30b-a3b": { "input": 0.0, "output": 0.0 },
-      "qwen2.5-coder:7b": { "input": 0.0, "output": 0.0 }
-    },
-    "capabilities": {
-      "web_search": true,
-      "web_fetch": true,
-      "weather": true,
-      "realtime_info": true,
-      "native_tool_calling": true
-    }
-  }
-}
-```
-
-### Tool provider overrides (optional)
-
-Simplify tool descriptions for local models:
-
-```json
-{
-  "tools": {
-    "provider_overrides": {
-      "asusai": {
-        "list_directory": "Show all files in a folder",
-        "search_files": "Find files by pattern like *.py"
-      }
-    }
-  }
-}
-```
+> **Note:** `frequency_penalty: 0.0` is a tuning result — Qwen3-Coder scored 75% → 81.2% when reduced from 0.1 to 0.0. vLLM is the only supported runtime for this testbed.
 
 ## Verify Connectivity
 
 ```bash
 # vLLM (port 8000)
 curl http://<dgx-spark-ip>:8000/v1/models
-
-# Ollama (port 11434)
-curl http://<dgx-spark-ip>:11434/v1/models
 
 # Quick test via ppxai
 uv run ppxai
@@ -369,7 +232,7 @@ uv run ppxai
 
 ---
 
-## Benchmark Results (2026-02-07)
+## Benchmark Results (2026-02-12)
 
 All benchmarks run via ppxai Engine on the DGX Spark GB10.
 
@@ -381,9 +244,6 @@ All benchmarks run via ppxai Engine on the DGX Spark GB10.
 | vLLM | Qwen3-30B-A3B FP8 | 175ms | ~120ms | 45.1 tok/s | ~800K tokens |
 | vLLM | Qwen3-32B NVFP4 | 231ms | 176ms | 9.4 tok/s | 313K tokens |
 | vLLM | Llama-3.3-70B NVFP4 | 535ms | ~300ms | 3.4 tok/s | - |
-| Ollama | qwen3:30b-a3b | 6,970ms | ~3,000ms | 22.6 tok/s | - |
-| Ollama | qwen2.5-coder:32b-64k | 1,300ms | 258ms | 8.6 tok/s | - |
-| Ollama | qwen2.5-coder:32b | 7,849ms | ~3,000ms | 6.3 tok/s | - |
 
 ### LLM-Eval (Agentic Coding Quality, 26 tests)
 
@@ -391,16 +251,12 @@ All benchmarks run via ppxai Engine on the DGX Spark GB10.
 |---------|-------|-------|--------|-----------|-----------|-----------|--------|
 | **vLLM** | **Qwen3-Coder-30B-A3B FP8** | **81.2%** | **22/26** | **100%** | **100%** | **100%** | **100%** |
 | vLLM | Qwen3-30B-A3B FP8 | 60.9% | 17/26 | 78.6% | 0% | 100% | 66.7% |
-| Ollama | qwen2.5-coder:32b-64k | 57.8% | 17/26 | - | - | 100% | 100% |
-| Ollama | qwen2.5-coder:32b | 51.6% | 15/26 | - | - | - | - |
-| Ollama | qwen3:30b-a3b | 46.9% | 14/26 | - | 0% | - | - |
 
 ### Comparison with Cloud Providers
 
 | Provider | Model | Score | Throughput | Cost |
 |----------|-------|-------|------------|------|
 | Perplexity | sonar-pro | 100% | ~60 tok/s | $3-15/M tokens |
-| Internal | GPT-OSS-120B | 89.1% | ~77 tok/s | Free (self-hosted) |
 | **DGX Spark** | **Qwen3-Coder-30B-A3B FP8** | **81.2%** | **43.8 tok/s** | **Free (local)** |
 | Google | Gemini 2.5 Flash | 81.2% | ~45 tok/s | $0.15-0.60/M tokens |
 | Google | Gemini 3 Pro Preview | 70.3% | - | $1.25-5.0/M tokens |
@@ -413,20 +269,27 @@ All benchmarks run via ppxai Engine on the DGX Spark GB10.
 
 | Model | Quant | Size | Speed | Quality | Notes |
 |-------|-------|------|-------|---------|-------|
-| **Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8** | FP8 | ~30 GiB | 43.8 tok/s | 81.2% | **Best overall.** MoE (3.3B active), code-specialized, native tool calling via `qwen3_coder` parser. No thinking tokens. TRITON Fp8 MoE backend. |
+| **Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8** | FP8 | ~30 GiB | 50 tok/s | **81.2%** | **Best overall.** MoE (3.3B active), code-specialized, native tool calling via `qwen3_coder` parser. No thinking tokens. TRITON Fp8 MoE backend. |
 | RedHatAI/Qwen3-30B-A3B-FP8-dynamic | FP8 | ~9 GiB | 45.1 tok/s | 60.9% | Fast MoE baseline. Same architecture as Coder but general-purpose. `<think>` blocks pollute output. `hermes` parser. 0% code editing. |
 | RedHatAI/Qwen3-32B-NVFP4 | NVFP4 | ~19 GiB | 9.4 tok/s | - | Dense model, works but slow. Blackwell FP4 tensor cores active. 76 GiB KV cache. LLM-eval killed due to speed. |
-| qwen2.5-coder:32b (Ollama) | GGUF Q4 | ~19 GiB | 6.3 tok/s | 51.6% | Ollama best for code quality. Dense, all 32B params active → slow. |
-| qwen2.5-coder:32b-64k (Ollama) | GGUF Q4 | ~19 GiB | 8.6 tok/s | 57.8% | Extended context variant. Same weights, slightly better after warmup. |
+
+### Models Evaluated But Not Competitive
+
+| Model | Quant | Size | Speed | Quality | Notes |
+|-------|-------|------|-------|---------|-------|
+| Qwen/Qwen3-Coder-30B + eagle3 speculator | FP8+spec | ~31 GiB | 67 tok/s | 70.3% | +34% speed but -4.7% quality. tool_calling dropped 100% → 64.3%. Speculator trained for base Qwen3, not Coder variant. **Reverted.** |
+| Qwen/Qwen3-Coder-Next-FP8 | FP8 | ~75 GiB | 43 tok/s | 60.9% | Hybrid MoE (80B/3B, Gated DeltaNet). High variance across 3 runs (54.7%–60.9%). tool_calling stuck at 64.3%. Not competitive with Coder-30B. |
+| Qwen/Qwen3-Next-80B-A3B-Instruct-FP8 | FP8 | ~75 GiB | 50 tok/s | 54.7% | General-purpose hybrid MoE. Hints had 0% effect. code_editing 0%, hallucination_resistance 16.7%. |
+| Qwen/Qwen3-Next-80B-A3B-Thinking-FP8 | FP8 | ~77 GiB | 12 tok/s | 57.8% | Thinking variant with `<think>` blocks. Extremely slow (37 min benchmark). Only +3.1% over Instruct. Same core weaknesses. |
+| Qwen/Qwen2.5-Coder-32B-Instruct (vLLM) | BF16 | ~62 GiB | 4-5 tok/s | aborted | Dense 32B, all params active. 10x slower than MoE. Speed alone disqualifies for interactive use. |
 
 ### Models That Failed
 
 | Model | Quant | Issue | Root Cause |
 |-------|-------|-------|------------|
-| **RedHatAI/Qwen3-Next-80B-A3B-Thinking-NVFP4** | NVFP4 | **CRASH** during profiling | `RuntimeError: Could not construct fused moe op with Activation: uint8, Weight: int64, Output: bfloat16`. The flashinfer CUTLASS MoE backend doesn't support NVFP4 quantized MoE weight types. Model loads all 10 shards (44 GiB) but crashes during the first dummy inference. |
+| **RedHatAI/Qwen3-Next-80B-A3B-Instruct-NVFP4** | NVFP4 | **CRASH** during profiling | `RuntimeError: Could not construct fused moe op with Activation: uint8, Weight: int64, Output: bfloat16`. The flashinfer CUTLASS MoE backend doesn't support NVFP4 quantized MoE weight types. Model loads all 10 shards (44 GiB) but crashes during the first dummy inference. |
 | **RedHatAI/Llama-4-Scout-17B-16E-Instruct-NVFP4** | NVFP4 | **OOM** (silent kill) | Model is 17B params × 16 experts = ~70 GiB. Loads all 14 shards successfully, then EngineCore process is silently killed by Linux OOM killer during profiling/CUDA graph compilation. 70 GiB model + profiling overhead exceeds 128 GB unified memory. |
 | **RedHatAI/Llama-3.3-70B-Instruct-NVFP4** | NVFP4 | Works but **unusably slow** | 3.4 tok/s. Dense 70B model with all params active per token. NVFP4 saves memory but doesn't help throughput for dense architectures. |
-| qwen3:30b-a3b (Ollama) | GGUF Q4 | Works but **0% code editing** | Ollama doesn't support vLLM-style tool parsers. Qwen3 base model emits `<think>` blocks. Code patches arrive empty. |
 
 ### Key Technical Findings
 
@@ -446,13 +309,11 @@ Model weights + KV cache + CUDA graphs + profiling overhead must fit in 128 GB. 
 
 ## Model Selection Guide
 
-| Use Case | Recommended Model | Runtime |
-|----------|-------------------|---------|
-| **Coding agent (best quality + speed)** | `Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8` | vLLM |
-| Large codebase analysis | `qwen2.5-coder:32b-64k` | Ollama |
-| Quick iteration and testing | `qwen2.5-coder:7b` | Ollama |
-| General-purpose fast responses | `Qwen3-30B-A3B FP8` | vLLM |
-| Simple setup, no Docker tuning | `qwen2.5-coder:32b` | Ollama |
+| Use Case | Recommended Model | Notes |
+|----------|-------------------|-------|
+| **Coding agent (best quality + speed)** | `Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8` | 81.2% benchmark, 50 tok/s, 131K context |
+| General-purpose fast responses | `RedHatAI/Qwen3-30B-A3B-FP8-dynamic` | 60.9%, same speed, no code editing |
+| Dense model experimentation | `RedHatAI/Qwen3-32B-NVFP4` | Slow (9.4 tok/s) but Blackwell FP4 |
 
 ---
 
@@ -461,7 +322,7 @@ Model weights + KV cache + CUDA graphs + profiling overhead must fit in 128 GB. 
 ### vLLM container exits immediately (crash loop)
 
 ```bash
-docker logs vllm 2>&1 | tail -30
+docker logs vllm-testbed 2>&1 | tail -30
 ```
 
 Common causes:
@@ -478,24 +339,11 @@ curl http://localhost:8000/v1/chat/completions \
   -d '{"model": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8", "messages": [{"role": "user", "content": "hello"}], "max_tokens": 5}'
 ```
 
-### Ollama container won't start with GPU
-
-```bash
-docker info | grep Runtime   # Should show: nvidia
-nvidia-smi                   # Should show GB10
-```
-
-### Models not persisting (Ollama)
-
-Ensure named volume: `docker volume ls | grep ollama_data`
-
 ### Connection refused from WSL/remote
 
 ```bash
 # Check container is binding to all interfaces
-docker exec vllm printenv | grep HOST
-# For Ollama:
-docker exec ollama printenv OLLAMA_HOST
+docker exec vllm-testbed printenv | grep HOST
 # Should show: 0.0.0.0
 ```
 
@@ -573,9 +421,6 @@ vLLM automatically selects the MoE backend based on quantization:
 ## References
 
 - [vLLM Documentation](https://docs.vllm.ai/)
-- [Ollama Docker Guide](https://github.com/ollama/ollama/blob/main/docs/docker.md)
-- [Ollama Modelfile Reference](https://github.com/ollama/ollama/blob/main/docs/modelfile.md)
 - [Qwen3-Coder-30B-A3B-Instruct-FP8 Model Card](https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8)
 - [ppxai Provider Setup Guide](PROVIDER_SETUP.md)
-- [ppxai Ollama Limitations](ollama-limitations.md)
 - [ppxai vLLM Tool Calling Guide](vllm-tool-calling-guide.md)
