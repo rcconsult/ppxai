@@ -58,7 +58,7 @@ class PPXAIDEApp(App):
     CSS_PATH = ["themes/layout.tcss", "themes/dialog.tcss"]
 
     BINDINGS = [
-        Binding("ctrl+j", "", "Send", show=True, priority=True),  # Display Ctrl+J (works in all terminals) - handled by ChatTextArea.on_key()
+        Binding("ctrl+enter", "", "Send", show=True, priority=True),  # Display Ctrl+Enter (works in Ghostty/Kitty/WezTerm) - handled by ChatTextArea.on_key()
         Binding("ctrl+c", "quit", "Quit", show=True),
         Binding("ctrl+l", "clear", "Clear", show=True),
         Binding("ctrl+t", "cycle_theme", "Theme", show=True),

@@ -10,20 +10,23 @@ from textual.widgets import Input, Static, TextArea
 
 
 class ChatTextArea(TextArea):
-    """Custom TextArea that handles Ctrl+J/Ctrl+Enter for submission.
+    """Custom TextArea that handles Ctrl+Enter for submission.
 
-    NOTE: Most terminals (including Ghostty) cannot distinguish Ctrl+Enter from Enter
-    because they don't support enhanced keyboard protocol. Ctrl+J (\n newline) is the
-    universal fallback that works in all terminals.
+    Ctrl+Enter works in terminals with enhanced keyboard protocol support:
+    - Ghostty (with explicit keybind: ctrl+enter=text:\\x1b[13;5u in ~/.config/ghostty/config)
+    - Kitty (native support)
+    - WezTerm (with enable_kitty_keyboard)
+
+    Ctrl+J is the universal fallback that works in ALL terminals (GNOME Terminal, Konsole, etc.)
     """
 
     class Submit(Message):
-        """Message sent when user presses Ctrl+J or Ctrl+Enter (if terminal supports it)."""
+        """Message sent when user presses Ctrl+Enter or Ctrl+J."""
         pass
 
     # Keys that trigger submission across different terminals:
-    # - "ctrl+j": Universal - works in ALL terminals (sends \n newline character)
-    # - "ctrl+enter": Only works in terminals with enhanced keyboard protocol (Kitty, WezTerm with fixterms)
+    # - "ctrl+enter": Primary binding (works in Ghostty/Kitty/WezTerm with proper config)
+    # - "ctrl+j": Universal fallback - works in ALL terminals (sends \\n newline character)
     SUBMIT_KEYS = {"ctrl+enter", "ctrl+j"}
 
     def on_key(self, event) -> None:
