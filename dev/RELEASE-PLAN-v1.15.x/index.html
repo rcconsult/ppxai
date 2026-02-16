@@ -1288,15 +1288,26 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#v1154-live-html-preview-ssl-fixes" class="md-nav__link">
+  <a href="#v1155-multi-line-input-escape-key-fix" class="md-nav__link">
     <span class="md-ellipsis">
       
-        v1.15.4 - Live HTML Preview &amp; SSL Fixes ⏳
+        v1.15.5 - Multi-Line Input &amp; Escape Key Fix ⏳
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="v1.15.4 - Live HTML Preview &amp; SSL Fixes ⏳">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v1154-live-html-preview-ssl-fixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.15.4 - Live HTML Preview &amp; SSL Fixes ✅
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v1.15.4 - Live HTML Preview &amp; SSL Fixes ✅">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1392,10 +1403,10 @@
 
 <h1 id="release-plan-v115x-series">Release Plan: v1.15.x Series<a class="headerlink" href="#release-plan-v115x-series" title="Permanent link">&para;</a></h1>
 <p><strong>Created:</strong> January 24, 2026
-<strong>Last Updated:</strong> February 13, 2026
-<strong>Status:</strong> ✅ v1.15.0 RELEASED, ✅ v1.15.1 RELEASED, ✅ v1.15.2 RELEASED, ✅ v1.15.3 RELEASED, ⏳ v1.15.4 IN PROGRESS
-<strong>Branch:</strong> bugfix/v1.15.4
-<strong>Tests:</strong> 1227 passing</p>
+<strong>Last Updated:</strong> February 15, 2026
+<strong>Status:</strong> ✅ v1.15.0 RELEASED, ✅ v1.15.1 RELEASED, ✅ v1.15.2 RELEASED, ✅ v1.15.3 RELEASED, ✅ v1.15.4 RELEASED, ⏳ v1.15.5 IN PROGRESS
+<strong>Branch:</strong> feature/v1.15.5
+<strong>Tests:</strong> 1237+ passing</p>
 <hr />
 <h2 id="theme-next-generation-tui-ppxaide">Theme: Next Generation TUI (ppxaide)<a class="headerlink" href="#theme-next-generation-tui-ppxaide" title="Permanent link">&para;</a></h2>
 <p><strong>Tagline:</strong> Textual-based TUI replacing Rich-based TUI as the primary terminal interface</p>
@@ -2237,8 +2248,58 @@ plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles c
 </tbody>
 </table>
 <hr />
-<h2 id="v1154-live-html-preview-ssl-fixes">v1.15.4 - Live HTML Preview &amp; SSL Fixes ⏳<a class="headerlink" href="#v1154-live-html-preview-ssl-fixes" title="Permanent link">&para;</a></h2>
+<h2 id="v1155-multi-line-input-escape-key-fix">v1.15.5 - Multi-Line Input &amp; Escape Key Fix ⏳<a class="headerlink" href="#v1155-multi-line-input-escape-key-fix" title="Permanent link">&para;</a></h2>
 <p><strong>Status:</strong> In Progress
+<strong>Branch:</strong> feature/v1.15.5</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Description</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Multi-line input</strong></td>
+<td>TextArea replaces Input widget; Enter=newline, Ctrl+Enter=submit</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>Escape key fix</strong></td>
+<td>Priority-based dismissal: help panel &gt; modals &gt; side panel</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>PyInstaller blinker fix</strong></td>
+<td>Added <code>blinker</code> to ppxaide.spec hiddenimports</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>Benchmark metadata</strong></td>
+<td><code>tool_calling_method</code> field (native vs prompt_based) in results</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>BENCHMARKS.md guide</strong></td>
+<td>700+ line guide for benchmark system</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>Debug cleanup</strong></td>
+<td>Removed 7 development debug notifications from action_cancel</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>Multi-line tests</strong></td>
+<td>15 new tests for ChatTextArea, bindings, submission, history</td>
+<td>✅ Done</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="v1154-live-html-preview-ssl-fixes">v1.15.4 - Live HTML Preview &amp; SSL Fixes ✅<a class="headerlink" href="#v1154-live-html-preview-ssl-fixes" title="Permanent link">&para;</a></h2>
+<p><strong>Released:</strong> 2026-02-13
 <strong>Branch:</strong> bugfix/v1.15.4</p>
 <h3 id="live-html-preview-done">Live HTML Preview (Done)<a class="headerlink" href="#live-html-preview-done" title="Permanent link">&para;</a></h3>
 <table>
