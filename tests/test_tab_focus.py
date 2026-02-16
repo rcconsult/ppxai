@@ -10,7 +10,7 @@ from textual.containers import Vertical
 from textual.widgets import Input, Button, Static
 
 
-class TestApp(App):
+class TabFocusApp(App):
     """Test app to verify Tab interception."""
 
     CSS = """
@@ -116,5 +116,5 @@ class TestApp(App):
 
 
 if __name__ == "__main__":
-    app = TestApp()
+    app = TabFocusApp()
     app.run()

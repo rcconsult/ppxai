@@ -43,7 +43,6 @@ def test_basic_event_flow():
     assert received_events[0][1]["count"] == 42, "Count mismatch"
 
     print("\n✅ Test 1 PASSED: Basic event flow works")
-    return True
 
 
 def test_engine_event_constants():
@@ -69,7 +68,6 @@ def test_engine_event_constants():
         print(f"  ✓ {event_name} = '{event_value}'")
 
     print("\n✅ Test 2 PASSED: All engine event constants defined")
-    return True
 
 
 def test_event_bus_in_app():
@@ -109,7 +107,6 @@ def test_event_bus_in_app():
         print(f"  ✓ Handler exists: {handler_name}")
 
     print("\n✅ Test 3 PASSED: Event bus integrated in PPXAIDEApp")
-    return True
 
 
 async def test_stream_event_simulation_async():
@@ -169,7 +166,6 @@ def test_stream_event_simulation():
     asyncio.run(test_stream_event_simulation_async())
 
     print("\n✅ Test 4 PASSED: Stream events work correctly")
-    return True
 
 
 def main():
@@ -190,8 +186,8 @@ def main():
 
     for test_func in tests:
         try:
-            if test_func():
-                passed += 1
+            test_func()
+            passed += 1
         except Exception as e:
             print(f"\n❌ Test FAILED: {test_func.__name__}")
             print(f"   Error: {e}")
