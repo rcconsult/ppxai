@@ -81,9 +81,11 @@ Three `.desktop` files are installed to `~/.local/share/applications/`:
 
 Three PNG icons are installed to `~/.local/share/icons/`:
 
-- `ppxai.png` - For ppxai (terminal CLI)
-- `ppxaide.png` - For ppxaide (Textual TUI)
-- `ppxai-desktop.png` - For ppxai-desktop (web app)
+| Icon | Source | Size | Description |
+|------|--------|------|-------------|
+| `ppxai.png` | `resources/ppxai-tui-preview.png` | 256×256 | ppxai Rich TUI icon |
+| `ppxaide.png` | `resources/ppxaide-nobg.png` | 1024×1024 | ppxaide Textual TUI icon (no background) |
+| `ppxai-desktop.png` | `resources/ppxai.png` | 128×128 | ppxai logo (used for desktop app) |
 
 ## After Installation
 

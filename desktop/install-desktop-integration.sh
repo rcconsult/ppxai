@@ -20,7 +20,7 @@ mkdir -p "$ICONS_DIR"
 
 # Copy icons
 echo "Installing icons..."
-cp "$PROJECT_ROOT/resources/ppxai.png" "$ICONS_DIR/ppxai.png"
+cp "$PROJECT_ROOT/resources/ppxai-tui-preview.png" "$ICONS_DIR/ppxai.png"
 cp "$PROJECT_ROOT/resources/ppxaide-nobg.png" "$ICONS_DIR/ppxaide.png"
 cp "$PROJECT_ROOT/resources/ppxai.png" "$ICONS_DIR/ppxai-desktop.png"
 echo "  ✓ Icons installed to $ICONS_DIR"
