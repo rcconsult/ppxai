@@ -159,6 +159,49 @@ ppxai-server --version
 ppxai-desktop --version
 ```
 
+## Linux Terminal Requirements (ppxaide)
+
+**ppxaide requires enhanced keyboard protocol support** for multi-line input (Enter = newline, Ctrl+Enter = submit).
+
+### Why Standard Terminals Don't Work
+
+Standard Linux terminals (GNOME Terminal, Konsole, xterm) send identical escape codes for Enter and Ctrl+Enter, making them indistinguishable. This is a terminal emulator limitation, not a ppxai issue.
+
+### Recommended: Ghostty Terminal
+
+Install Ghostty for proper Ctrl+Enter support:
+
+```bash
+# Download and install Ghostty AppImage
+wget https://github.com/pkgforge-dev/ghostty-appimage/releases/latest/download/Ghostty-1.2.3-x86_64.AppImage
+mv Ghostty-1.2.3-x86_64.AppImage ~/.local/bin/ghostty
+chmod +x ~/.local/bin/ghostty
+
+# Configure Ctrl+Enter keybind
+mkdir -p ~/.config/ghostty
+cat >> ~/.config/ghostty/config << 'EOF'
+# Enable Ctrl+Enter for ppxaide (sends CSI u sequence)
+keybind = ctrl+enter=text:\x1b[13;5u
+EOF
+```
+
+### Alternative Terminals
+
+| Terminal | Ctrl+Enter | Configuration |
+|----------|-----------|---------------|
+| Ghostty | ✅ Yes | Requires keybind (above) |
+| Kitty | ✅ Yes | Works out-of-the-box |
+| WezTerm | ✅ Yes | `enable_kitty_keyboard = true` |
+| Alacritty | ✅ Yes | Recent versions |
+| GNOME Terminal | ❌ No | Use Ctrl+J fallback |
+| Konsole | ❌ No | Use Ctrl+J fallback |
+
+### Ctrl+J Fallback
+
+If using GNOME Terminal or Konsole, **Ctrl+J works universally** as an alternative to Ctrl+Enter.
+
+For comprehensive terminal setup, see [docs/LINUX-TERMINAL-SETUP.md](LINUX-TERMINAL-SETUP.md).
+
 ## Using the Terminal UI (TUI)
 
 Start the terminal chat interface:
@@ -168,10 +211,11 @@ Start the terminal chat interface:
 ppxai
 
 # Or Textual TUI (v1.15.0+ - modern async architecture)
-ppxaide
+ppxaide   # Note: Requires Ghostty, Kitty, or WezTerm on Linux (see above)
 ```
 
 **ppxaide features:**
+- **Multi-line input (v1.15.5)** - Enter adds newlines, Ctrl+Enter submits (or Ctrl+J)
 - Real-time streaming with async event loop
 - 17+ themes (vs 6 in Rich TUI) - cycle with Ctrl+T or `/theme`
 - Advanced file viewers (tree/table toggle, image support, syntax highlighting)
