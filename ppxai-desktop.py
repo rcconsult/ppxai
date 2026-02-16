@@ -16,7 +16,7 @@ import webbrowser
 from pathlib import Path
 
 # Version - keep in sync with ppxai/__init__.py
-__version__ = "1.15.3"
+__version__ = "1.15.5"
 
 
 def get_resource_path(relative_path: str) -> Path:
