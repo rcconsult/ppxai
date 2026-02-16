@@ -21,9 +21,15 @@ def main():
     import signal
     import sys
     from ppxai.common.logger import get_logger
+    from ppxai import __version__
 
     # Parse CLI arguments
     parser = argparse.ArgumentParser(description="ppxaide - Textual TUI for ppxai")
+    parser.add_argument(
+        "-v", "--version",
+        action="version",
+        version=f"ppxaide {__version__}"
+    )
     parser.add_argument(
         "--debug",
         action="store_true",
