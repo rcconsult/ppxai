@@ -135,6 +135,34 @@
         "timestamp": "2026-02-08T13:44:16.236968",
         "overall_score": 75.0
       }
+    ],
+    "openai/gpt-5.2": [
+      {
+        "filename": "openai_gpt-5.2_2026-02-17_9fa402e8.json",
+        "timestamp": "2026-02-17T20:40:51.392879",
+        "overall_score": 67.1875
+      }
+    ],
+    "openai/gpt-4.1": [
+      {
+        "filename": "openai_gpt-4.1_2026-02-17_daad9e8a.json",
+        "timestamp": "2026-02-17T20:46:47.677107",
+        "overall_score": 62.5
+      }
+    ],
+    "openai/o4-mini": [
+      {
+        "filename": "openai_o4-mini_2026-02-17_a3ef1abf.json",
+        "timestamp": "2026-02-17T20:52:11.270809",
+        "overall_score": 10.9375
+      }
+    ],
+    "openai/gpt-5": [
+      {
+        "filename": "openai_gpt-5_2026-02-17_2dafe4bf.json",
+        "timestamp": "2026-02-17T21:10:38.359647",
+        "overall_score": 48.4375
+      }
     ]
   },
   "runs": [
@@ -149,6 +177,30 @@
       "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-12_9334c773.json",
       "timestamp": "2026-02-12T13:52:38.299008",
       "overall_score": 54.6875
+    },
+    {
+      "pair": "openai/gpt-5.2",
+      "filename": "openai_gpt-5.2_2026-02-17_9fa402e8.json",
+      "timestamp": "2026-02-17T20:40:51.392879",
+      "overall_score": 67.1875
+    },
+    {
+      "pair": "openai/gpt-4.1",
+      "filename": "openai_gpt-4.1_2026-02-17_daad9e8a.json",
+      "timestamp": "2026-02-17T20:46:47.677107",
+      "overall_score": 62.5
+    },
+    {
+      "pair": "openai/o4-mini",
+      "filename": "openai_o4-mini_2026-02-17_a3ef1abf.json",
+      "timestamp": "2026-02-17T20:52:11.270809",
+      "overall_score": 10.9375
+    },
+    {
+      "pair": "openai/gpt-5",
+      "filename": "openai_gpt-5_2026-02-17_2dafe4bf.json",
+      "timestamp": "2026-02-17T21:10:38.359647",
+      "overall_score": 48.4375
     }
   ]
 }

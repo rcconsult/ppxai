@@ -1,0 +1,332 @@
+{
+  "provider": "openai",
+  "model": "gpt-5-mini",
+  "timestamp": "2026-02-17T21:02:26.569315",
+  "overall_score": 65.625,
+  "tests_passed": 18,
+  "tests_total": 26,
+  "duration_seconds": 493.3166298866272,
+  "category_scores": {
+    "hallucination_resistance": 55.55555555555556,
+    "tool_calling": 64.28571428571429,
+    "code_editing": 0.0,
+    "format_compliance": 100.0,
+    "instruction_following": 100.0,
+    "reasoning": 100.0,
+    "error_recovery": 66.66666666666666
+  },
+  "test_results": [
+    {
+      "name": "respects_tool_failure",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "acknowledged_failure": true
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "no_phantom_tool_calls",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "made_tool_calls": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "repeated_failure_acknowledgment",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "Didn't acknowledge persistent failure",
+        "content_preview": "{\"tool\":\"write_file\",\"arguments\":{\"path\":\"/tmp/test.txt\",\"content\":\"hello world\\n\"}}"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "contradiction_detection",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "Unclear response to tool result",
+        "content_preview": "{\"tool\":\"run_command\",\"arguments\":{\"command\":\"lsof -itcp:8080 -stcp:listen -p -n || ss -ltnp | grep :8080 || netstat -an | grep 8080\",\"working_dir\":\"/users/rado/git/utils/ppxai\"}}"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "multi_turn_consistency",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "accurate_status_report": true,
+        "mentioned_failure": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool": "read_file",
+        "args": {
+          "path": "/src/main.py"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool": "write_file",
+        "args": {
+          "path": "/tmp/test.txt",
+          "content": "Hello, World!\n"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "content_length": 6893
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Didn't use info from first tool: {'path': 'src/config.json'}"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool_calls": 2,
+        "content_length": 357
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Tool call JSON found in content instead of tool_calls",
+        "pattern_matched": "\\{\\s*\"tool\"\\s*:",
+        "content_preview": "{\n  \"tool\": \"search_code\",\n  \"arguments\": {\n    \"pattern\": \"TODO\",\n    \"path\": \"/Users/rado/git/utils/ppxai/src\",\n    \"file_pattern\": \"*\"\n  }\n}"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "patch_length": 154,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 0.49999999999999994,
+        "anti_patterns": [
+          "tool_json_in_content",
+          "hallucinated_tools"
+        ],
+        "quality_notes": [
+          "Model output tool JSON in response text while also making tool calls",
+          "Model mentioned tools in content that weren't actually called"
+        ],
+        "overall_score": 0.19999999999999996,
+        "passed": false
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "subtract method not found in patch",
+        "patch_preview": "",
+        "tool_correctness": false,
+        "tool_success": false,
+        "response_quality": 0.49999999999999994,
+        "anti_patterns": [
+          "tool_json_in_content",
+          "hallucinated_tools"
+        ],
+        "quality_notes": [
+          "Model output tool JSON in response text while also making tool calls",
+          "Model mentioned tools in content that weren't actually called",
+          "Expected apply_patch but got read_file"
+        ],
+        "overall_score": 0.0,
+        "passed": false
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "patch_length": 493,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 0.49999999999999994,
+        "anti_patterns": [
+          "tool_json_in_content",
+          "hallucinated_tools"
+        ],
+        "quality_notes": [
+          "Model output tool JSON in response text while also making tool calls",
+          "Model mentioned tools in content that weren't actually called"
+        ],
+        "overall_score": 0.19999999999999996,
+        "passed": false
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "json_output",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "items": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "markdown_code_blocks",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "code_blocks": 1
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_hallucinated_paths",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "content_length": 2442
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "do_not_explain",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "content_length": 86
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "constraint_respect",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "line_count": 6
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "format_specification",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "blocks": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "multi_step_planning",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "concepts_found": [
+          "user model",
+          "password",
+          "login",
+          "session"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "dependency_ordering",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "first_action": "run tests",
+        "command": "pytest -v"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "edge_case_handling",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "handled": [
+          "division_by_zero",
+          "error_handling"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "tool_error_recovery",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "recovery": "acknowledged_error"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "self_correction",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "acknowledged_correction": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "graceful_degradation",
+      "category": "error_recovery",
+      "passed": false,
+      "details": {
+        "error": "Hallucinated unavailable tool",
+        "tools_called": [
+          "list_directory",
+          "read_file"
+        ]
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "27179ad1e44e",
+    "tool_calling_method": "prompt_based"
+  }
+}

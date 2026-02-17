@@ -32,6 +32,13 @@ class OpenAICompatibleProvider(BaseProvider):
 
     # OpenAI reasoning model prefixes (o1, o3, o4 series)
     REASONING_MODEL_PREFIXES = ("o1", "o3", "o4")
+
+    # OpenAI models that require max_completion_tokens instead of max_tokens
+    # GPT-5.x, o-series, and newer models reject the legacy max_tokens parameter
+    MAX_COMPLETION_TOKENS_PREFIXES = ("gpt-5", "o1", "o3", "o4")
+
+    # Generation params unsupported by GPT-5.x and o-series (only temperature=1.0 allowed)
+    RESTRICTED_GENERATION_PARAMS = ("temperature", "top_p", "frequency_penalty", "presence_penalty")
     default_capabilities = ProviderCapabilities(
         web_search=False,
         web_fetch=False,
@@ -76,6 +83,17 @@ class OpenAICompatibleProvider(BaseProvider):
             return get_context_warn_percent()
         except ImportError:
             return 80  # Default
+
+    def _needs_max_completion_tokens(self, model: str) -> bool:
+        """Check if model requires max_completion_tokens instead of max_tokens.
+
+        OpenAI GPT-5.x and o-series models reject the legacy max_tokens parameter
+        and require max_completion_tokens. Only applies to OpenAI native endpoints.
+        """
+        if not self._is_openai_native():
+            return False
+        model_lower = model.lower()
+        return any(model_lower.startswith(p) for p in self.MAX_COMPLETION_TOKENS_PREFIXES)
 
     def _get_max_tokens(self, model: str) -> Optional[int]:
         """Get max_tokens for output generation.
@@ -226,14 +244,24 @@ class OpenAICompatibleProvider(BaseProvider):
 
             # Add max_tokens if configured for this model or provider
             # This ensures vLLM and other backends don't use too-small defaults
+            # v1.16.0: GPT-5.x and o-series require max_completion_tokens
+            use_completion_tokens = self._needs_max_completion_tokens(model)
             max_tokens = self._get_max_tokens(model)
             if max_tokens:
-                request_kwargs["max_tokens"] = max_tokens
+                token_key = "max_completion_tokens" if use_completion_tokens else "max_tokens"
+                request_kwargs[token_key] = max_tokens
 
             # Add generation params (temperature, top_p, etc.) if configured
             # v1.15.0: Lower temperature reduces hallucinations
             generation_params = self._get_generation_params(model)
             if generation_params:
+                # v1.16.0: GPT-5.x and o-series only accept temperature=1.0
+                # Strip unsupported params to avoid API errors
+                if use_completion_tokens:
+                    if "max_tokens" in generation_params:
+                        generation_params["max_completion_tokens"] = generation_params.pop("max_tokens")
+                    for param in self.RESTRICTED_GENERATION_PARAMS:
+                        generation_params.pop(param, None)
                 request_kwargs.update(generation_params)
 
             # Add tools if native tool calling is enabled

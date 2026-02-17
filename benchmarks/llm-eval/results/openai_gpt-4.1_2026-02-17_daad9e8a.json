@@ -1,0 +1,328 @@
+{
+  "provider": "openai",
+  "model": "gpt-4.1",
+  "timestamp": "2026-02-17T20:46:47.677107",
+  "overall_score": 62.5,
+  "tests_passed": 18,
+  "tests_total": 26,
+  "duration_seconds": 340.74241280555725,
+  "category_scores": {
+    "hallucination_resistance": 33.33333333333333,
+    "tool_calling": 42.857142857142854,
+    "code_editing": 71.42857142857143,
+    "format_compliance": 100.0,
+    "instruction_following": 100.0,
+    "reasoning": 100.0,
+    "error_recovery": 66.66666666666666
+  },
+  "test_results": [
+    {
+      "name": "respects_tool_failure",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "No tool call made",
+        "response": "{\n  \"run_command\": {\n    \"command\": \"pytest\",\n    \"working_dir\": \".\"\n  }\n}"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "no_phantom_tool_calls",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "no_phantom_claims": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "repeated_failure_acknowledgment",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "Didn't acknowledge persistent failure",
+        "content_preview": "{\n  \"tool\": \"write_file\",\n  \"arguments\": {\n    \"path\": \"/tmp/test.txt\",\n    \"content\": \"hello world\"\n  }\n}"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "contradiction_detection",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "Unclear response to tool result",
+        "content_preview": "{\n  \"tool\": \"run_command\",\n  \"arguments\": {\n    \"command\": \"lsof -i :8080 || netstat -an | grep 8080\",\n    \"working_dir\": \".\"\n  }\n}"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "multi_turn_consistency",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "accurate_status_report": true,
+        "mentioned_failure": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool": "read_file",
+        "args": {
+          "path": "/src/main.py"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool": "write_file",
+        "args": {
+          "path": "/tmp/test.txt",
+          "content": "Hello, World!"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Tool call appears in content instead of tool_calls (truncation?)",
+        "content_preview": "{\n  \"tool\": \"write_file\",\n  \"path\": \"/src/functions.py\",\n  \"content\": \"def function_{i}():\\n    '''Function {i} docstring.'''\\n    return {i}\\n\\ndef function_{i}():\\n    '''Function {i} docstring.'''\\n    return {i}\\n\\ndef function_{i}():\\n    '''Function {i} docstring.'''\\n    return {i}\\n\\ndef function_{i}():\\n    '''Function {i} docstring.'''\\n    return {i}\\n\\ndef function_{i}():\\n    '''Function {i} docstring.'''\\n    return {i}\\n\\ndef function_{i}():\\n    '''Function {i} docstring.'''\\n   "
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "No tool call in second turn",
+        "response": "{\n  \"tool\": \"read_file\",\n  \"path\": \"src/main.py\"\n}"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool_calls": 1,
+        "content_length": 105
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Tool call JSON found in content instead of tool_calls",
+        "pattern_matched": "\\{\\s*\"tool\"\\s*:",
+        "content_preview": "{\n  \"tool\": \"search_code\",\n  \"arguments\": {\n    \"pattern\": \"TODO\",\n    \"path\": \"./src\",\n    \"file_pattern\": \"*.py\"\n  }\n}"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "patch_length": 140,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 0.29999999999999993,
+        "anti_patterns": [
+          "tool_json_in_content",
+          "explained_before_tool",
+          "hallucinated_tools"
+        ],
+        "quality_notes": [
+          "Model output tool JSON in response text while also making tool calls",
+          "Model explained what it would do instead of calling tool directly",
+          "Model mentioned tools in content that weren't actually called"
+        ],
+        "overall_score": 0.0,
+        "passed": false
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": true,
+      "details": {
+        "patch_length": 211,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 0.85,
+        "anti_patterns": [
+          "duplicate_code_in_content"
+        ],
+        "quality_notes": [
+          "Model output code in response when tool call should handle it"
+        ],
+        "overall_score": 0.7,
+        "passed": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": true,
+      "details": {
+        "patch_length": 179,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 0.85,
+        "anti_patterns": [
+          "duplicate_code_in_content"
+        ],
+        "quality_notes": [
+          "Model output code in response when tool call should handle it"
+        ],
+        "overall_score": 0.7,
+        "passed": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "json_output",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "items": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "markdown_code_blocks",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "code_blocks": 2
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_hallucinated_paths",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "content_length": 501
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "do_not_explain",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "content_length": 68
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "constraint_respect",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "line_count": 12
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "format_specification",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "blocks": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "multi_step_planning",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "concepts_found": [
+          "user model",
+          "password",
+          "login",
+          "session"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "dependency_ordering",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "first_action": "run tests",
+        "command": "pytest -v"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "edge_case_handling",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "handled": [
+          "division_by_zero",
+          "error_handling"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "tool_error_recovery",
+      "category": "error_recovery",
+      "passed": false,
+      "details": {
+        "error": "No error recovery observed",
+        "response": "{\n  \"run_command\": {\n    \"command\": \"ls -l /src\",\n    \"working_dir\": \"/\"\n  }\n}"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "self_correction",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "acknowledged_correction": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "graceful_degradation",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "graceful": "asked_for_clarification"
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "a59c2f03b37f",
+    "tool_calling_method": "prompt_based"
+  }
+}
