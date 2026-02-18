@@ -260,6 +260,11 @@
         "filename": "openai_gpt-5.1-codex_2026-02-18_5bb807ba.json",
         "timestamp": "2026-02-18T21:13:04.860259",
         "overall_score": 37.5
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-18_088dd440.json",
+        "timestamp": "2026-02-18T21:59:57.298362",
+        "overall_score": 57.8125
       }
     ],
     "openai/gpt-5.1-codex-mini": [
@@ -431,6 +436,12 @@
       "filename": "openai_gpt-5.1-codex_2026-02-18_5bb807ba.json",
       "timestamp": "2026-02-18T21:13:04.860259",
       "overall_score": 37.5
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-18_088dd440.json",
+      "timestamp": "2026-02-18T21:59:57.298362",
+      "overall_score": 57.8125
     }
   ]
 }

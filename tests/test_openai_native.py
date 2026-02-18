@@ -549,6 +549,91 @@ class TestResponsesAPI:
         assert len(call_kwargs["input"]) == 1  # Only user message, not system
 
     @pytest.mark.asyncio
+    async def test_codex_streaming_tool_call(self, provider):
+        """Test that streaming Responses API emits TOOL_CALL events for function calls."""
+        item_added = SimpleNamespace(
+            type="response.output_item.added",
+            item=SimpleNamespace(type="function_call", call_id="call_abc", name="read_file"),
+        )
+        args_delta1 = SimpleNamespace(
+            type="response.function_call_arguments.delta",
+            call_id="call_abc",
+            delta='{"path":',
+        )
+        args_delta2 = SimpleNamespace(
+            type="response.function_call_arguments.delta",
+            call_id="call_abc",
+            delta='"/src/main.py"}',
+        )
+        args_done = SimpleNamespace(
+            type="response.function_call_arguments.done",
+            call_id="call_abc",
+            arguments='{"path":"/src/main.py"}',
+        )
+        completed = SimpleNamespace(
+            type="response.completed",
+            response=SimpleNamespace(usage=SimpleNamespace(input_tokens=20, output_tokens=10)),
+        )
+
+        provider.client.responses.create.return_value = iter([
+            item_added, args_delta1, args_delta2, args_done, completed
+        ])
+
+        events = []
+        async for event in provider.chat(
+            messages=[Message(role="user", content="Read /src/main.py")],
+            model="gpt-5.1-codex",
+            stream=True,
+            tools=[{"type": "function", "function": {"name": "read_file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}}}}],
+        ):
+            events.append(event)
+
+        tool_call_events = [e for e in events if e.type == EventType.TOOL_CALL]
+        assert len(tool_call_events) == 1
+        assert tool_call_events[0].data["tool"] == "read_file"
+        assert tool_call_events[0].data["arguments"] == {"path": "/src/main.py"}
+        assert tool_call_events[0].data["native"] is True
+        assert tool_call_events[0].data["tool_call_id"] == "call_abc"
+
+        stream_end = [e for e in events if e.type == EventType.STREAM_END][0]
+        assert stream_end.metadata["tool_calls"][0]["function"]["name"] == "read_file"
+
+    @pytest.mark.asyncio
+    async def test_codex_non_streaming_tool_call(self, provider):
+        """Test that non-streaming Responses API emits TOOL_CALL events for function_call items."""
+        mock_fc_item = SimpleNamespace(
+            type="function_call",
+            call_id="call_xyz",
+            name="write_file",
+            arguments='{"path":"/tmp/out.py","content":"print(1)"}',
+        )
+        mock_response = SimpleNamespace(
+            output=[mock_fc_item],
+            output_text=None,
+            usage=SimpleNamespace(input_tokens=30, output_tokens=15),
+        )
+        provider.client.responses.create.return_value = mock_response
+
+        events = []
+        async for event in provider.chat(
+            messages=[Message(role="user", content="Write to /tmp/out.py")],
+            model="gpt-5.1-codex",
+            stream=False,
+            tools=[{"type": "function", "function": {"name": "write_file", "parameters": {}}}],
+        ):
+            events.append(event)
+
+        tool_call_events = [e for e in events if e.type == EventType.TOOL_CALL]
+        assert len(tool_call_events) == 1
+        assert tool_call_events[0].data["tool"] == "write_file"
+        assert tool_call_events[0].data["arguments"] == {"path": "/tmp/out.py", "content": "print(1)"}
+        assert tool_call_events[0].data["tool_call_id"] == "call_xyz"
+
+        stream_end = [e for e in events if e.type == EventType.STREAM_END][0]
+        assert stream_end.data == ""  # No text content when tool called
+        assert stream_end.metadata["tool_calls"][0]["function"]["name"] == "write_file"
+
+    @pytest.mark.asyncio
     async def test_responses_api_error(self, provider):
         """Test error handling in Responses API."""
         import openai as openai_module

@@ -508,6 +508,8 @@ class OpenAINativeProvider:
 
         full_response = []
         usage = None
+        # Track in-progress function calls: call_id -> {"name": str, "arguments": str}
+        function_calls: Dict[str, Dict[str, str]] = {}
 
         for event in response_stream:
             event_type = getattr(event, "type", None)
@@ -519,15 +521,64 @@ class OpenAINativeProvider:
                     full_response.append(delta_text)
                     yield Event(EventType.STREAM_CHUNK, delta_text)
 
+            # Function call item started
+            elif event_type == "response.output_item.added":
+                item = getattr(event, "item", None)
+                if item and getattr(item, "type", None) == "function_call":
+                    call_id = getattr(item, "call_id", "") or getattr(item, "id", "")
+                    name = getattr(item, "name", "")
+                    if call_id:
+                        function_calls[call_id] = {"name": name, "arguments": ""}
+
+            # Function call arguments streaming
+            elif event_type == "response.function_call_arguments.delta":
+                call_id = getattr(event, "call_id", "")
+                delta = getattr(event, "delta", "")
+                if call_id in function_calls and delta:
+                    function_calls[call_id]["arguments"] += delta
+
+            # Function call arguments complete
+            elif event_type == "response.function_call_arguments.done":
+                call_id = getattr(event, "call_id", "")
+                arguments = getattr(event, "arguments", "")
+                name = getattr(event, "name", "")
+                if call_id in function_calls:
+                    function_calls[call_id]["arguments"] = arguments
+                    if name:
+                        function_calls[call_id]["name"] = name
+
             # Response completed — extract usage
             elif event_type == "response.completed":
                 resp = getattr(event, "response", None)
                 if resp:
                     usage = self._parse_responses_usage(getattr(resp, "usage", None))
 
+        # Emit TOOL_CALL events for all completed function calls
+        tool_calls_metadata = []
+        for call_id, fc in function_calls.items():
+            if fc.get("name"):
+                try:
+                    args = json.loads(fc["arguments"]) if fc["arguments"] else {}
+                except json.JSONDecodeError:
+                    args = {}
+                yield Event(EventType.TOOL_CALL, {
+                    "tool": fc["name"],
+                    "arguments": args,
+                    "native": True,
+                    "tool_call_id": call_id,
+                })
+                tool_calls_metadata.append({
+                    "id": call_id,
+                    "function": {"name": fc["name"], "arguments": fc["arguments"]},
+                })
+
         final_content = "".join(full_response)
-        metadata = {"usage": usage} if usage else None
-        yield Event(EventType.STREAM_END, final_content, metadata)
+        metadata: Dict[str, Any] = {}
+        if usage:
+            metadata["usage"] = usage
+        if tool_calls_metadata:
+            metadata["tool_calls"] = tool_calls_metadata
+        yield Event(EventType.STREAM_END, final_content, metadata or None)
 
     async def _non_stream_responses(
         self,
@@ -539,22 +590,47 @@ class OpenAINativeProvider:
             stream=False,
         )
 
-        # Extract text from output items
         content = ""
+        tool_calls_metadata = []
+
         if hasattr(response, "output"):
             for item in response.output:
-                if getattr(item, "type", None) == "message":
+                item_type = getattr(item, "type", None)
+
+                if item_type == "message":
                     for part in getattr(item, "content", []):
                         if getattr(part, "type", None) == "output_text":
                             content += getattr(part, "text", "")
 
+                elif item_type == "function_call":
+                    call_id = getattr(item, "call_id", "") or getattr(item, "id", "")
+                    name = getattr(item, "name", "")
+                    arguments = getattr(item, "arguments", "")
+                    if name:
+                        try:
+                            args = json.loads(arguments) if arguments else {}
+                        except json.JSONDecodeError:
+                            args = {}
+                        yield Event(EventType.TOOL_CALL, {
+                            "tool": name,
+                            "arguments": args,
+                            "native": True,
+                            "tool_call_id": call_id,
+                        })
+                        tool_calls_metadata.append({
+                            "id": call_id,
+                            "function": {"name": name, "arguments": arguments},
+                        })
+
         # Fallback: output_text convenience attribute
-        if not content and hasattr(response, "output_text"):
+        if not content and not tool_calls_metadata and hasattr(response, "output_text"):
             content = response.output_text or ""
 
         usage = self._parse_responses_usage(getattr(response, "usage", None))
 
         metadata: Dict[str, Any] = {"usage": usage}
+        if tool_calls_metadata:
+            metadata["tool_calls"] = tool_calls_metadata
         yield Event(EventType.STREAM_END, content, metadata)
 
     # ------------------------------------------------------------------

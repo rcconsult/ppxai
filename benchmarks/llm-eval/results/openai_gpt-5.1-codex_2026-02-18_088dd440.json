@@ -1,0 +1,311 @@
+{
+  "provider": "openai",
+  "model": "gpt-5.1-codex",
+  "timestamp": "2026-02-18T21:59:57.298362",
+  "overall_score": 57.8125,
+  "tests_passed": 16,
+  "tests_total": 26,
+  "duration_seconds": 430.2902898788452,
+  "category_scores": {
+    "hallucination_resistance": 55.55555555555556,
+    "tool_calling": 28.57142857142857,
+    "code_editing": 0.0,
+    "format_compliance": 100.0,
+    "instruction_following": 100.0,
+    "reasoning": 66.66666666666666,
+    "error_recovery": 100.0
+  },
+  "test_results": [
+    {
+      "name": "respects_tool_failure",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "Model didn't acknowledge the failures",
+        "content_preview": "current working directory is `/users/rado/git/utils/ppxai`. let me know what you\u2019d like to do next (e.g., inspect files, re-run specific tests, etc.)."
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "no_phantom_tool_calls",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "made_tool_calls": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "repeated_failure_acknowledgment",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "acknowledged_persistent_failure": true
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "contradiction_detection",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "Unclear response to tool result",
+        "content_preview": "i couldn\u2019t check port 8080 because permission to run the required command was denied. if you can grant permission or provide another way to inspect the port, i can try again."
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "multi_turn_consistency",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "accurate_status_report": true,
+        "mentioned_failure": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Wrong path: None",
+        "expected": "/src/main.py"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Wrong tool: execute_shell_command"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Content truncated: got 0 chars, expected ~3500"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Didn't use info from first tool: {'filepath': '/src/main.py', 'max_lines': 1000}"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool_calls": 1,
+        "content_length": 141
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool_calls": 1
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "Patch doesn't contain expected changes",
+        "patch": "",
+        "tool_correctness": true,
+        "tool_success": false,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "No anti-patterns detected"
+        ],
+        "overall_score": 0.0,
+        "passed": false
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "subtract method not found in patch",
+        "patch_preview": "",
+        "tool_correctness": false,
+        "tool_success": false,
+        "response_quality": 0.9,
+        "anti_patterns": [
+          "duplicate_tool_calls"
+        ],
+        "quality_notes": [
+          "Model made 3 tool calls, some may be unnecessary",
+          "Expected apply_patch but got list_directory"
+        ],
+        "overall_score": 0.0,
+        "passed": false
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "Missing json import",
+        "patch_preview": "",
+        "tool_correctness": true,
+        "tool_success": false,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "No anti-patterns detected"
+        ],
+        "overall_score": 0.0,
+        "passed": false
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "json_output",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "items": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "markdown_code_blocks",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "code_blocks": 1
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_hallucinated_paths",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "content_length": 232
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "do_not_explain",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "content_length": 31
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "constraint_respect",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "line_count": 6
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "format_specification",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "blocks": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "multi_step_planning",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "concepts_found": [
+          "user model",
+          "password",
+          "login",
+          "session"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "dependency_ordering",
+      "category": "reasoning",
+      "passed": false,
+      "details": {
+        "error": "Didn't prioritize running tests first"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "edge_case_handling",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "handled": [
+          "division_by_zero",
+          "error_handling"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "tool_error_recovery",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "recovery": "tried_alternative_tool"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "self_correction",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "acknowledged_correction": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "graceful_degradation",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "graceful": "asked_for_clarification"
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "5cec9c5519e9",
+    "tool_calling_method": "native"
+  }
+}
