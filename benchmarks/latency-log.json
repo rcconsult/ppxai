@@ -1,0 +1,133 @@
+{
+  "entries": [
+    {
+      "timestamp": "2026-02-18T22:07:43.568465",
+      "version": "1.15.6",
+      "git_commit": "e67798e",
+      "git_branch": "feature/benchmark-openai-models",
+      "provider": "openai",
+      "model": "gpt-5.1-codex",
+      "summary": {
+        "total_runs": 9,
+        "successful_runs": 9,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 2165.05,
+          "min": 1116.29,
+          "max": 3910.29,
+          "stdev": 968.97
+        },
+        "total_ms": {
+          "mean": 6191.37,
+          "min": 2664.06,
+          "max": 15407.12,
+          "stdev": 4360.36
+        },
+        "tokens_per_sec": {
+          "mean": 14.23,
+          "min": 0.23,
+          "max": 42.84
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 2885.11,
+          "total_ms": 3140.73,
+          "tokens": 6,
+          "tokens_per_sec": 1.91,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 2640.84,
+          "total_ms": 2664.06,
+          "tokens": 6,
+          "tokens_per_sec": 2.25,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 1377.95,
+          "total_ms": 4355.52,
+          "tokens": 1,
+          "tokens_per_sec": 0.23,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 3910.29,
+          "total_ms": 4325.01,
+          "tokens": 44,
+          "tokens_per_sec": 10.17,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1581.8,
+          "total_ms": 2690.23,
+          "tokens": 73,
+          "tokens_per_sec": 27.14,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 2969.75,
+          "total_ms": 10844.61,
+          "tokens": 79,
+          "tokens_per_sec": 7.28,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 1759.85,
+          "total_ms": 15407.12,
+          "tokens": 173,
+          "tokens_per_sec": 11.23,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 1116.29,
+          "total_ms": 4621.81,
+          "tokens": 198,
+          "tokens_per_sec": 42.84,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 1243.55,
+          "total_ms": 7673.21,
+          "tokens": 192,
+          "tokens_per_sec": 25.02,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 3
+        }
+      ]
+    }
+  ]
+}
