@@ -1,0 +1,87 @@
+# Multi-stage build: Compile PyInstaller binary + Minimal runtime
+# Best of both worlds: No external binaries needed + Small final image
+
+# ============================================================================
+# Stage 1: Build PyInstaller binary
+# ============================================================================
+FROM python:3.12-slim AS builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    binutils \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PyInstaller and dependencies
+COPY pyproject.toml README.md ./
+COPY ppxai/ ./ppxai/
+
+# Install package and PyInstaller
+RUN pip install --no-cache-dir ".[server,search]" && \
+    pip install --no-cache-dir pyinstaller
+
+# Create entry point wrapper for PyInstaller
+RUN printf 'from ppxai.server.http import run_server\nrun_server()\n' > /build/server_entry.py
+
+# Build binary
+RUN pyinstaller --onefile --name ppxai-server \
+    --hidden-import=uvicorn.logging \
+    --hidden-import=uvicorn.loops \
+    --hidden-import=uvicorn.loops.auto \
+    --hidden-import=uvicorn.protocols \
+    --hidden-import=uvicorn.protocols.http \
+    --hidden-import=uvicorn.protocols.http.auto \
+    --hidden-import=uvicorn.protocols.websockets \
+    --hidden-import=uvicorn.protocols.websockets.auto \
+    --hidden-import=uvicorn.lifespan \
+    --hidden-import=uvicorn.lifespan.on \
+    --collect-all tree_sitter \
+    --collect-all tree_sitter_bash \
+    --collect-all tree_sitter_css \
+    --collect-all tree_sitter_go \
+    --collect-all tree_sitter_html \
+    --collect-all tree_sitter_java \
+    --collect-all tree_sitter_javascript \
+    --collect-all tree_sitter_json \
+    --collect-all tree_sitter_markdown \
+    --collect-all tree_sitter_python \
+    --collect-all tree_sitter_regex \
+    --collect-all tree_sitter_rust \
+    --collect-all tree_sitter_sql \
+    --collect-all tree_sitter_toml \
+    --collect-all tree_sitter_xml \
+    --collect-all tree_sitter_yaml \
+    server_entry.py
+
+# ============================================================================
+# Stage 2: Minimal runtime (Debian slim - glibc compatible with PyInstaller)
+# ============================================================================
+FROM python:3.12-slim
+
+# Create non-root user
+RUN groupadd -g 1000 ppxai && \
+    useradd -u 1000 -g ppxai -m ppxai
+
+# Copy binary from builder
+COPY --from=builder /build/dist/ppxai-server /usr/local/bin/ppxai-server
+RUN chmod 755 /usr/local/bin/ppxai-server
+
+# Create config directory
+RUN mkdir -p /home/ppxai/.ppxai && \
+    chown -R ppxai:ppxai /home/ppxai/.ppxai
+
+# Switch to non-root user
+USER ppxai
+WORKDIR /home/ppxai
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:54320/health')" || exit 1
+
+# Server port
+EXPOSE 54320
+
+# Run server
+CMD ["ppxai-server", "--host", "0.0.0.0", "--port", "54320"]

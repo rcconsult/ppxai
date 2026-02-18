@@ -1,0 +1,40 @@
+# Binary-based container using pre-built PyInstaller binaries
+# Much smaller and faster than source-based build
+
+FROM alpine:3.19 AS base
+
+# Install minimal runtime dependencies
+RUN apk add --no-cache \
+    libstdc++ \
+    libgcc \
+    zlib
+
+# Create non-root user
+RUN addgroup -g 1000 ppxai && \
+    adduser -D -u 1000 -G ppxai ppxai
+
+FROM base AS runtime
+
+# Copy pre-built binaries
+# These should be built with PyInstaller on Linux (see build-binaries.yml)
+COPY ppxai-server-linux /usr/local/bin/ppxai-server
+COPY ppxai-desktop-linux /usr/local/bin/ppxai-desktop
+RUN chmod 755 /usr/local/bin/ppxai-server /usr/local/bin/ppxai-desktop
+
+# Create config directory
+RUN mkdir -p /home/ppxai/.ppxai && \
+    chown -R ppxai:ppxai /home/ppxai/.ppxai
+
+# Switch to non-root user
+USER ppxai
+WORKDIR /home/ppxai
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:54320/health || exit 1
+
+# Server port
+EXPOSE 54320
+
+# Run server
+CMD ["ppxai-server", "--host", "0.0.0.0", "--port", "54320"]
