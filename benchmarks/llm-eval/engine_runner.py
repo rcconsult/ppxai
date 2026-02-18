@@ -71,28 +71,23 @@ class EngineClientWrapper:
         try:
             self._client = EngineClient()
 
-            # Load AGENTS.md if present (for provider/model hints)
-            agents_md = Path(__file__).parent.parent.parent / "AGENTS.md"
-            if agents_md.exists():
-                try:
-                    bootstrap_ctx = BootstrapContext.from_file(agents_md)
-                    # Inject bootstrap context into engine client
-                    self._client._bootstrap_context = bootstrap_ctx
-                    # Create ScopedBootstrapSource (dataclass with keyword args)
-                    source = ScopedBootstrapSource(
-                        path=agents_md,
-                        scope="project",
-                        size=agents_md.stat().st_size
-                    )
-                    self._client._bootstrap_sources = [source]
-                    if self.verbose:
-                        hints = bootstrap_ctx.get_active_hints_for(self.provider, self.model)
-                        hint_count = len(hints.get("provider_hints", [])) + len(hints.get("model_hints", []))
-                        if hint_count > 0:
-                            print(f"  [INFO] Loaded {hint_count} hints from AGENTS.md")
-                except Exception as e:
-                    if self.verbose:
-                        print(f"  [WARN] Failed to load AGENTS.md: {e}")
+            # Load AGENTS.md from all scopes (global ~/.ppxai/, project root, cwd)
+            # Use the same merged loading as the real ppxai client (v1.14.2)
+            project_root = Path(__file__).parent.parent.parent
+            self._client.context_injector.working_dir = str(project_root)
+            try:
+                loaded = self._client.load_bootstrap_context()
+                if loaded and self.verbose:
+                    status = self._client.get_bootstrap_status()
+                    source_count = len(status.get("sources", []))
+                    hints = self._client._bootstrap_context.get_active_hints_for(self.provider, self.model)
+                    hint_count = len(hints.get("provider_hints", [])) + len(hints.get("model_hints", []))
+                    if hint_count > 0:
+                        scopes = [s["scope"] for s in status.get("sources", [])]
+                        print(f"  [INFO] Loaded {hint_count} hints from {source_count} AGENTS.md file(s) ({', '.join(scopes)})")
+            except Exception as e:
+                if self.verbose:
+                    print(f"  [WARN] Failed to load AGENTS.md: {e}")
 
             # Set provider
             if not self._client.set_provider(self.provider):

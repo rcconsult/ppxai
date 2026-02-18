@@ -21,7 +21,7 @@ def get_provider_class(name: str) -> Optional[Type]:
     return _providers.get(name)
 
 
-def create_provider(name: str, **kwargs) -> Optional[Union[BaseProvider, "GeminiProvider"]]:
+def create_provider(name: str, **kwargs) -> Optional[Union[BaseProvider, "GeminiProvider", "OpenAINativeProvider"]]:
     """Create an instance of a provider by name.
 
     Args:
@@ -48,12 +48,15 @@ def list_registered_providers() -> List[str]:
 from .openai_compat import OpenAICompatibleProvider
 from .perplexity import PerplexityProvider
 
+# Import native OpenAI provider
+from .openai_native import OpenAINativeProvider
+
 # Try to import native Gemini provider (optional dependency)
 # Falls back to OpenAI-compatible provider if google-genai not installed
 from .gemini import is_available as gemini_available, GeminiProvider
 
 # Register providers
-register_provider("openai", OpenAICompatibleProvider)
+register_provider("openai", OpenAINativeProvider)
 register_provider("perplexity", PerplexityProvider)
 register_provider("openrouter", OpenAICompatibleProvider)
 register_provider("local", OpenAICompatibleProvider)
@@ -69,6 +72,7 @@ else:
 __all__ = [
     "BaseProvider",
     "OpenAICompatibleProvider",
+    "OpenAINativeProvider",
     "PerplexityProvider",
     "GeminiProvider",
     "register_provider",

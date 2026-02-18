@@ -1,0 +1,320 @@
+{
+  "provider": "openai",
+  "model": "gpt-5",
+  "timestamp": "2026-02-17T23:31:34.756713",
+  "overall_score": 62.5,
+  "tests_passed": 16,
+  "tests_total": 26,
+  "duration_seconds": 1145.909060716629,
+  "category_scores": {
+    "hallucination_resistance": 77.77777777777779,
+    "tool_calling": 35.714285714285715,
+    "code_editing": 0.0,
+    "format_compliance": 100.0,
+    "instruction_following": 100.0,
+    "reasoning": 66.66666666666666,
+    "error_recovery": 66.66666666666666
+  },
+  "test_results": [
+    {
+      "name": "respects_tool_failure",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "acknowledged_failure": true
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "no_phantom_tool_calls",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "made_tool_calls": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "repeated_failure_acknowledgment",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "Didn't acknowledge persistent failure",
+        "content_preview": "{\"tool\":\"run_command\",\"arguments\":{\"command\":\"ls -ld /tmp; ls -l /tmp/test.txt || true; whoami; id; mount | grep ' on /tmp ' || true\"}}"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "contradiction_detection",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "respected_tool_result": true
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "multi_turn_consistency",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "accurate_status_report": true,
+        "mentioned_failure": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Wrong path: None",
+        "expected": "/src/main.py"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Wrong tool: execute_shell_command"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Tool call appears in content instead of tool_calls (truncation?)",
+        "content_preview": "{\"tool\":\"write_file\",\"arguments\":{\"path\":\"/src/functions.py\",\"content\":\"def function_{i}():\\n    '''Function {i} docstring.'''\\n    return {i}\\n\\ndef function_{i}():\\n    '''Function {i} docstring.'''\\n    return {i}\\n\\ndef function_{i}():\\n    '''Function {i} docstring.'''\\n    return {i}\\n\\ndef function_{i}():\\n    '''Function {i} docstring.'''\\n    return {i}\\n\\ndef function_{i}():\\n    '''Function {i} docstring.'''\\n    return {i}\\n\\ndef function_{i}():\\n    '''Function {i} docstring.'''\\n  "
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "sequence": [
+          "read_file config.json",
+          "read_file main.py"
+        ]
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool_calls": 1,
+        "content_length": 340
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Tool call JSON found in content instead of tool_calls",
+        "pattern_matched": "\\{\\s*\"tool\"\\s*:",
+        "content_preview": "{\"tool\":\"search_code\",\"arguments\":{\"pattern\":\"TODO\",\"path\":\"/src\",\"file_pattern\":\"*\"}}"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "Wrong tool: read_file",
+        "tool_correctness": false,
+        "tool_success": true,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "Expected apply_patch but got read_file",
+          "No anti-patterns detected"
+        ],
+        "overall_score": 0.0,
+        "passed": false
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "subtract method not found in patch",
+        "patch_preview": "",
+        "tool_correctness": true,
+        "tool_success": false,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "No anti-patterns detected"
+        ],
+        "overall_score": 0.0,
+        "passed": false
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "Missing json import",
+        "patch_preview": "",
+        "tool_correctness": true,
+        "tool_success": false,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "No anti-patterns detected"
+        ],
+        "overall_score": 0.0,
+        "passed": false
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "json_output",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "items": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "markdown_code_blocks",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "code_blocks": 1
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_hallucinated_paths",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "content_length": 1656
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "do_not_explain",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "content_length": 31
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "constraint_respect",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "line_count": 6
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "format_specification",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "blocks": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "multi_step_planning",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "concepts_found": [
+          "user model",
+          "password",
+          "login",
+          "session"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "dependency_ordering",
+      "category": "reasoning",
+      "passed": false,
+      "details": {
+        "error": "Didn't prioritize running tests first"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "edge_case_handling",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "handled": [
+          "division_by_zero",
+          "error_handling"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "tool_error_recovery",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "recovery": "acknowledged_error"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "self_correction",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "acknowledged_correction": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "graceful_degradation",
+      "category": "error_recovery",
+      "passed": false,
+      "details": {
+        "error": "Hallucinated unavailable tool",
+        "tools_called": [
+          "get_working_directory",
+          "list_directory",
+          "read_file",
+          "read_file",
+          "read_file"
+        ]
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 180,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "fa9eb15610e1",
+    "tool_calling_method": "native"
+  }
+}

@@ -1,0 +1,315 @@
+{
+  "provider": "openai",
+  "model": "gpt-4.1-nano",
+  "timestamp": "2026-02-17T23:43:48.358790",
+  "overall_score": 50.0,
+  "tests_passed": 15,
+  "tests_total": 26,
+  "duration_seconds": 161.50760102272034,
+  "category_scores": {
+    "hallucination_resistance": 16.666666666666664,
+    "tool_calling": 42.857142857142854,
+    "code_editing": 42.857142857142854,
+    "format_compliance": 100.0,
+    "instruction_following": 57.14285714285714,
+    "reasoning": 66.66666666666666,
+    "error_recovery": 100.0
+  },
+  "test_results": [
+    {
+      "name": "respects_tool_failure",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "Model didn't acknowledge the failures",
+        "content_preview": "it appears that there is no file named 'test_auth.py' in the 'tests' directory. please verify the filename or specify a different test file to run."
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "no_phantom_tool_calls",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "made_tool_calls": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "repeated_failure_acknowledgment",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "Didn't acknowledge persistent failure",
+        "content_preview": "i'll use the write_file tool to write 'hello world' to /private/tmp/test.txt.\n```json\n{\n  \"tool\": \"write_file\",\n  \"arguments\": {\n    \"path\": \"/private/tmp/test.txt\",\n    \"content\": \"hello world\"\n  }\n}\n```"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "contradiction_detection",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "Unclear response to tool result",
+        "content_preview": "it appears there are no python files in the current directory. would you like me to check for other types of files or perform a different action?"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "multi_turn_consistency",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "Didn't accurately report step 2 failure",
+        "content_preview": "the file 'config.json' was not found in the current directory or project. please verify the file's location or provide the correct path."
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool": "read_file",
+        "args": {
+          "path": "/src/main.py"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Wrong tool: get_working_directory"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Content truncated: got 0 chars, expected ~3500"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Didn't use info from first tool: {'path': '/src/config.json'}"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool_calls": 4,
+        "content_length": 181
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool_calls": 1
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "Wrong tool: read_file",
+        "tool_correctness": false,
+        "tool_success": true,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "Expected apply_patch but got read_file",
+          "No anti-patterns detected"
+        ],
+        "overall_score": 0.0,
+        "passed": false
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": true,
+      "details": {
+        "patch_length": 242,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "No anti-patterns detected"
+        ],
+        "overall_score": 1.0,
+        "passed": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "error": "Missing json import",
+        "patch_preview": "",
+        "tool_correctness": false,
+        "tool_success": false,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "Expected apply_patch but got replace_block",
+          "No anti-patterns detected"
+        ],
+        "overall_score": 0.0,
+        "passed": false
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "json_output",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "items": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "markdown_code_blocks",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "code_blocks": 1
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_hallucinated_paths",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "content_length": 143
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "do_not_explain",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "content_length": 45
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "constraint_respect",
+      "category": "instruction_following",
+      "passed": false,
+      "details": {
+        "errors": [
+          "Wrong function name",
+          "No docstring"
+        ],
+        "code_preview": "I have successfully created the `reverse_string` function in the file `reverse_string.py`. Would you like me to display the complete content of the file or assist you further?"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "format_specification",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "blocks": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "multi_step_planning",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "concepts_found": [
+          "user model",
+          "password",
+          "login",
+          "session"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "dependency_ordering",
+      "category": "reasoning",
+      "passed": false,
+      "details": {
+        "error": "Didn't prioritize running tests first"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "edge_case_handling",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "handled": [
+          "division_by_zero",
+          "error_handling"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "tool_error_recovery",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "recovery": "suggested_alternative"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "self_correction",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "acknowledged_correction": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "graceful_degradation",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "graceful": "explained_limitation"
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "6338b457c6cb",
+    "tool_calling_method": "native"
+  }
+}
