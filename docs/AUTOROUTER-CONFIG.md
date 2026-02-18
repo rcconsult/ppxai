@@ -82,8 +82,8 @@ You can customize which model is used for coding tasks by editing your `ppxai-co
       "name": "Google Gemini",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
       "api_key_env": "GEMINI_API_KEY",
-      "default_model": "gemini-2.0-flash-lite",
-      "coding_model": "gemini-2.0-flash-lite",  // Same as default, no switching
+      "default_model": "gemini-2.5-flash-lite",
+      "coding_model": "gemini-2.5-flash-lite",  // Same as default, no switching
       "models": {
         // ... model definitions ...
       }
@@ -119,7 +119,7 @@ When autorouting is disabled, all commands use your currently selected model.
 {
   "providers": {
     "gemini": {
-      "default_model": "gemini-2.0-flash-lite",  // $0.075/$0.30 per million tokens
+      "default_model": "gemini-2.5-flash-lite",  // $0.075/$0.30 per million tokens
       "coding_model": "gemini-2.5-pro"            // $1.25/$5.00 per million tokens
     }
   }
@@ -183,7 +183,7 @@ If you don't create a `ppxai-config.json`, these defaults are used:
     "coding_model": "sonar-pro"
   },
   "gemini": {
-    "default_model": "gemini-2.0-flash",
+    "default_model": "gemini-2.5-flash",
     "coding_model": "gemini-2.5-pro"
   }
 }

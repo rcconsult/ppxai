@@ -136,16 +136,6 @@
         "top_p": 0.9
       },
       "models": {
-        "gemini-2.0-flash": {
-          "name": "Gemini 2.0 Flash",
-          "description": "Fast model with multimodal support",
-          "context_limit": 1000000
-        },
-        "gemini-2.0-flash-lite": {
-          "name": "Gemini 2.0 Flash Lite",
-          "description": "Cost-efficient for high-volume tasks",
-          "context_limit": 1000000
-        },
         "gemini-2.5-flash": {
           "name": "Gemini 2.5 Flash",
           "description": "Latest fast model, best price/performance. 71.4% code editing quality with aggressive hints.",
@@ -175,8 +165,6 @@
         }
       },
       "pricing": {
-        "gemini-2.0-flash": {"input": 0.10, "output": 0.40},
-        "gemini-2.0-flash-lite": {"input": 0.075, "output": 0.30},
         "gemini-2.5-flash": {"input": 0.15, "output": 0.60},
         "gemini-2.5-flash-lite": {"input": 0.075, "output": 0.30},
         "gemini-2.5-pro": {"input": 1.25, "output": 5.00},
@@ -529,7 +517,7 @@
       "__comment_preferred": "Search provider: 'auto' (detect), 'perplexity', 'gemini', 'duckduckgo'",
       "perplexity_model": "sonar",
       "__comment_perplexity_model": "Model for Perplexity searches (sonar = cheapest)",
-      "gemini_model": "gemini-2.0-flash",
+      "gemini_model": "gemini-2.5-flash",
       "__comment_gemini_model": "Model for Gemini grounding searches",
       "pricing": {
         "perplexity": {

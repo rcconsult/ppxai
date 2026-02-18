@@ -108,12 +108,12 @@ MODEL_PROVIDER=gemini
         "enable_grounding": true
       },
       "models": {
-        "gemini-2.0-flash": {
-          "name": "Gemini 2.0 Flash",
-          "description": "Latest fast model with multimodal support"
+        "gemini-2.5-flash": {
+          "name": "Gemini 2.5 Flash",
+          "description": "Fast model with best price/performance"
         },
-        "gemini-2.0-flash-lite": {
-          "name": "Gemini 2.0 Flash Lite",
+        "gemini-2.5-flash-lite": {
+          "name": "Gemini 2.5 Flash Lite",
           "description": "Cost-efficient for high-volume tasks"
         },
         "gemini-1.5-pro": {
@@ -126,8 +126,8 @@ MODEL_PROVIDER=gemini
         }
       },
       "pricing": {
-        "gemini-2.0-flash": {"input": 0.10, "output": 0.40},
-        "gemini-2.0-flash-lite": {"input": 0.075, "output": 0.30},
+        "gemini-2.5-flash": {"input": 0.15, "output": 0.60},
+        "gemini-2.5-flash-lite": {"input": 0.075, "output": 0.30},
         "gemini-1.5-pro": {"input": 1.25, "output": 5.00},
         "gemini-1.5-flash": {"input": 0.075, "output": 0.30}
       },

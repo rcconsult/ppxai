@@ -254,7 +254,7 @@ class TestUsageStorage:
             ended_at=datetime.now() + timedelta(hours=1),
             usage_by_model={
                 "perplexity/sonar-pro": {"prompt_tokens": 100, "completion_tokens": 50, "estimated_cost": 0.01},
-                "gemini/gemini-2.0-flash": {"prompt_tokens": 200, "completion_tokens": 100, "estimated_cost": 0.02},
+                "gemini/gemini-2.5-flash": {"prompt_tokens": 200, "completion_tokens": 100, "estimated_cost": 0.02},
             },
             total_cost=0.03,
             total_tokens=450,

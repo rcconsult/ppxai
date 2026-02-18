@@ -222,7 +222,7 @@ class GeminiProvider:
 
         Args:
             messages: Conversation history
-            model: Model ID to use (e.g., 'gemini-2.0-flash')
+            model: Model ID to use (e.g., 'gemini-2.5-flash')
             stream: Whether to stream the response (default: True)
             tools: Tool definitions in OpenAI format - converted to Gemini
                    function_declarations for native tool calling (v1.15.2)

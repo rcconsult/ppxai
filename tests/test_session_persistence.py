@@ -62,12 +62,12 @@ class TestSessionManagerCommandHistory:
     def test_add_to_history(self, session_manager):
         """Test adding commands to history."""
         session_manager.add_to_history("Hello, AI!")
-        session_manager.add_to_history("/model gemini-2.0-flash")
+        session_manager.add_to_history("/model gemini-2.5-flash")
         session_manager.add_to_history("Explain this code")
 
         assert len(session_manager.command_history) == 3
         assert session_manager.command_history[0] == "Hello, AI!"
-        assert session_manager.command_history[1] == "/model gemini-2.0-flash"
+        assert session_manager.command_history[1] == "/model gemini-2.5-flash"
         assert session_manager.command_history[2] == "Explain this code"
 
     def test_add_to_history_strips_whitespace(self, session_manager):
@@ -170,7 +170,7 @@ class TestSessionStateFile:
         """Test the content of the state file."""
         state_file = tmp_path / "state.json"
         session_manager.metadata["provider"] = "gemini"
-        session_manager.metadata["model"] = "gemini-2.0-flash"
+        session_manager.metadata["model"] = "gemini-2.5-flash"
 
         with patch('ppxai.engine.session.SESSION_STATE_FILE', state_file):
             session_manager._update_state_file(dirty=False)
@@ -180,7 +180,7 @@ class TestSessionStateFile:
 
             assert data["last_session"]["name"] == session_manager.session_name
             assert data["last_session"]["provider"] == "gemini"
-            assert data["last_session"]["model"] == "gemini-2.0-flash"
+            assert data["last_session"]["model"] == "gemini-2.5-flash"
             assert data["last_session"]["dirty"] is False
             assert "updated_at" in data
 
@@ -377,7 +377,7 @@ class TestSessionFullFlow:
         original.metadata["provider"] = "custom"
         original.metadata["model"] = "openai/gpt-oss-120b"
         original.add_to_history("What is Python?")
-        original.add_to_history("/model gemini-2.0-flash")
+        original.add_to_history("/model gemini-2.5-flash")
         original.add_to_history("Explain decorators")
         original.set_working_dir("/home/user/myproject")
 

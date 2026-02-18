@@ -387,7 +387,7 @@ class BootstrapContext:
 
         Args:
             provider: Current provider ID (e.g., "ollama", "gemini")
-            model: Current model ID (e.g., "llama3.2:3b", "gemini-2.0-flash")
+            model: Current model ID (e.g., "llama3.2:3b", "gemini-2.5-flash")
 
         Returns:
             Assembled prompt string with base instructions and applicable hints

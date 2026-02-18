@@ -407,10 +407,6 @@ generate_config() {
       "default_model": "gemini-2.5-flash",
       "coding_model": "gemini-2.5-pro",
       "models": {
-        "gemini-2.0-flash": {
-          "name": "Gemini 2.0 Flash",
-          "description": "Fast model with multimodal support"
-        },
         "gemini-2.5-flash": {
           "name": "Gemini 2.5 Flash",
           "description": "Latest fast model, best price/performance"
@@ -421,7 +417,6 @@ generate_config() {
         }
       },
       "pricing": {
-        "gemini-2.0-flash": {"input": 0.10, "output": 0.40},
         "gemini-2.5-flash": {"input": 0.15, "output": 0.60},
         "gemini-2.5-pro": {"input": 1.25, "output": 5.00}
       },
@@ -566,7 +561,7 @@ generate_env_template() {
 # GOOGLE GEMINI (Free tier available)
 # =============================================================================
 # Google's multimodal AI with web search grounding.
-# Models: gemini-2.0-flash, gemini-2.5-flash, gemini-2.5-pro
+# Models: gemini-2.5-flash, gemini-2.5-pro, gemini-3-flash-preview
 #
 # GEMINI_API_KEY=AIzaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
