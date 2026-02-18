@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Native OpenAI Provider
+
+- **`OpenAINativeProvider`** (`ppxai/engine/providers/openai_native.py`) - Standalone provider for OpenAI API
+  - Chat Completions API for GPT-4.1, GPT-5.x, o-series models
+  - Responses API for Codex and Pro models (gpt-5.1-codex, gpt-5.2-pro)
+  - Automatic `max_completion_tokens` handling for GPT-5.x and o-series
+  - Restricted generation param stripping (temperature, top_p rejected by newer models)
+  - Reasoning token extraction for o-series models
+  - Native function calling with streaming tool call assembly
+  - 404 auto-fallback: Chat Completions → Responses API when model isn't a chat model
+  - Web search via `web_search_preview` tool (Responses API, opt-in)
+- **43 unit tests** for native OpenAI provider (model classification, message conversion, streaming, error handling)
+- **Benchmark results** for 9 OpenAI models via native provider (GPT-4.1 family, GPT-5 family, o4-mini, Codex)
+- **AGENTS.md hints** for OpenAI provider and model-specific hints (gpt-5.2, gpt-5, gpt-4.1, o4-mini, codex)
+
+### Changed
+
+- **OpenAI provider registration** - `openai` provider now uses `OpenAINativeProvider` instead of `OpenAICompatibleProvider`
+  - openrouter, local, custom providers unchanged (still use `OpenAICompatibleProvider`)
+- **Benchmark engine runner** - Now loads AGENTS.md hints from all scopes (global, project, subdir) matching real client behavior
+
 ---
 
 ## [1.15.5] - 2026-02-15

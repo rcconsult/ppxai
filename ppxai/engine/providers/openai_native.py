@@ -33,7 +33,9 @@ logger = get_logger("openai_native")
 # Model classification constants
 MAX_COMPLETION_TOKENS_PREFIXES = ("gpt-5", "o1", "o3", "o4")
 RESTRICTED_PARAM_PREFIXES = ("gpt-5", "o1", "o3", "o4")
-CODEX_MODEL_PREFIXES = ("gpt-5.1-codex", "codex")
+# Models that require Responses API instead of Chat Completions API
+# Codex models and Pro models return 404 on /v1/chat/completions
+RESPONSES_API_PREFIXES = ("gpt-5.1-codex", "codex", "gpt-5.2-pro", "gpt-5-pro", "gpt-6-pro")
 REASONING_MODEL_PREFIXES = ("o1", "o3", "o4")
 
 # Generation params unsupported by GPT-5.x and o-series
@@ -115,9 +117,9 @@ class OpenAINativeProvider:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _is_codex_model(model: str) -> bool:
-        """Check if model requires Responses API (codex models)."""
-        return model.lower().startswith(CODEX_MODEL_PREFIXES)
+    def _is_responses_api_model(model: str) -> bool:
+        """Check if model requires Responses API (codex, pro models)."""
+        return model.lower().startswith(RESPONSES_API_PREFIXES)
 
     @staticmethod
     def _is_reasoning_model(model: str) -> bool:
@@ -180,7 +182,7 @@ class OpenAINativeProvider:
         Yields:
             Event objects
         """
-        if self._is_codex_model(model):
+        if self._is_responses_api_model(model):
             async for event in self._chat_responses_api(messages, model, stream, tools):
                 yield event
         else:
@@ -298,6 +300,12 @@ class OpenAINativeProvider:
                     yield event
 
         except Exception as e:
+            # Auto-fallback to Responses API on 404 "not a chat model"
+            if hasattr(e, 'status_code') and e.status_code == 404 and "not a chat model" in str(e).lower():
+                logger.warning(f"Model {model} not supported on Chat Completions API, falling back to Responses API")
+                async for event in self._chat_responses_api(messages, model, stream, tools):
+                    yield event
+                return
             error_msg = self._format_error(e)
             yield Event(EventType.ERROR, error_msg)
             self._log_error_traceback(e)

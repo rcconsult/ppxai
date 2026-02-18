@@ -508,7 +508,9 @@ Tracks all benchmark runs for quick lookups:
 
 ## Benchmark History
 
-### Current Results (v1.15.4)
+### Current Results (v1.15.5)
+
+#### Self-Hosted / Third-Party Models (v1.15.4)
 
 | Model | Provider | Overall | Tool Calling | Code Editing | Hallucination | Tool Method |
 |-------|----------|---------|--------------|--------------|---------------|-------------|
@@ -517,11 +519,36 @@ Tracks all benchmark runs for quick lookups:
 | Qwen3-Coder-30B | vllm | 81.3% | 90.0% | 95.0% | 75.0% | native |
 | Sonar Pro | perplexity | 50.0% | 45.0% | 70.0% | 40.0% | prompt_based |
 
+#### OpenAI Native Provider (v1.15.6-dev)
+
+Benchmarked via `OpenAINativeProvider` with AGENTS.md hints loaded from global + project scope.
+Best scores shown (multiple runs per model, high variance observed for some models).
+
+| Model | Provider | Overall | Tool Calling | Code Editing | Hallucination | Tool Method |
+|-------|----------|---------|--------------|--------------|---------------|-------------|
+| GPT-5.2 | openai | 70.3% | 57.1% | 28.6% | 100.0% | native |
+| GPT-5 | openai | 62.5% | 50.0% | 0.0% | 77.8% | native |
+| GPT-5-mini | openai | 67.2% | 64.3% | 28.6% | 55.6% | native |
+| GPT-4.1 | openai | 67.2% | 64.3% | 71.4% | 33.3% | native |
+| GPT-4.1-mini | openai | 71.9% | 57.1% | 71.4% | 55.6% | native |
+| GPT-4.1-nano | openai | 57.8% | 64.3% | 42.9% | 16.7% | native |
+| o4-mini | openai | 62.5% | 28.6% | 100.0% | 33.3% | native |
+| GPT-5.1-codex | openai | 40.6% | 0.0% | 0.0% | 16.7% | native |
+| GPT-5.1-codex-mini | openai | 40.6% | 14.3% | 0.0% | 16.7% | native |
+
 **Key insights:**
 - Native tool calling scores ~30% higher than prompt-based on average
 - Gemini 3 Flash is currently the top performer (100% overall)
 - GPT-OSS-120B excels at code editing (100%) but has hallucination issues (85%)
 - Perplexity Sonar Pro struggles with tool calling reliability (45%)
+
+**OpenAI-specific observations:**
+- **GPT-4.1-mini** achieved highest overall among OpenAI models (71.9%) with best code editing (71.4%)
+- **GPT-5.2** leads on hallucination resistance (100%) but lower tool calling (57.1%)
+- **o4-mini** achieved 100% code editing in one run but scores vary wildly (10.9%-62.5%)
+- **Codex models** (gpt-5.1-codex) cannot reliably call tools via Responses API — 0% tool calling
+- **High variance** observed across runs, especially for GPT-4.1 (48%-67%) and o4-mini (10.9%-62.5%)
+- **AGENTS.md hints** improved GPT-5-mini by +9.4% (57.8% → 67.2%)
 
 ---
 
@@ -694,5 +721,5 @@ def get_categories() -> list[str]:
 
 ---
 
-**Last Updated:** 2026-02-14
-**Version:** v1.15.5
+**Last Updated:** 2026-02-18
+**Version:** v1.15.6-dev

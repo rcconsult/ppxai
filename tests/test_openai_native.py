@@ -9,7 +9,7 @@ from ppxai.engine.providers.openai_native import (
     OpenAINativeProvider,
     MAX_COMPLETION_TOKENS_PREFIXES,
     RESTRICTED_PARAM_PREFIXES,
-    CODEX_MODEL_PREFIXES,
+    RESPONSES_API_PREFIXES,
     REASONING_MODEL_PREFIXES,
     RESTRICTED_GENERATION_PARAMS,
 )
@@ -44,12 +44,14 @@ def provider_with_web_search():
 class TestModelClassification:
     """Test model classification helper methods."""
 
-    def test_codex_models(self):
-        assert OpenAINativeProvider._is_codex_model("gpt-5.1-codex") is True
-        assert OpenAINativeProvider._is_codex_model("gpt-5.1-codex-mini") is True
-        assert OpenAINativeProvider._is_codex_model("codex-mini") is True
-        assert OpenAINativeProvider._is_codex_model("gpt-5.2") is False
-        assert OpenAINativeProvider._is_codex_model("gpt-4.1") is False
+    def test_responses_api_models(self):
+        assert OpenAINativeProvider._is_responses_api_model("gpt-5.1-codex") is True
+        assert OpenAINativeProvider._is_responses_api_model("gpt-5.1-codex-mini") is True
+        assert OpenAINativeProvider._is_responses_api_model("codex-mini") is True
+        assert OpenAINativeProvider._is_responses_api_model("gpt-5.2-pro") is True
+        assert OpenAINativeProvider._is_responses_api_model("gpt-5-pro") is True
+        assert OpenAINativeProvider._is_responses_api_model("gpt-5.2") is False
+        assert OpenAINativeProvider._is_responses_api_model("gpt-4.1") is False
 
     def test_reasoning_models(self):
         assert OpenAINativeProvider._is_reasoning_model("o1") is True
