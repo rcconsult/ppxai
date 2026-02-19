@@ -1,0 +1,324 @@
+{
+  "provider": "perplexity",
+  "model": "sonar",
+  "timestamp": "2026-02-19T00:22:59.377786",
+  "overall_score": 48.4375,
+  "tests_passed": 14,
+  "tests_total": 26,
+  "duration_seconds": 110.52467608451843,
+  "category_scores": {
+    "hallucination_resistance": 38.88888888888889,
+    "tool_calling": 28.57142857142857,
+    "code_editing": 0.0,
+    "format_compliance": 100.0,
+    "instruction_following": 57.14285714285714,
+    "reasoning": 66.66666666666666,
+    "error_recovery": 100.0
+  },
+  "test_results": [
+    {
+      "name": "respects_tool_failure",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "No tool call made",
+        "response": "I appreciate you sharing this, but I need to clarify my role: I'm Perplexity, a search assistant designed to answer questions by synthesizing information from search results. I'm not a coding assistan"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "no_phantom_tool_calls",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "no_phantom_claims": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "repeated_failure_acknowledgment",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "acknowledged_persistent_failure": true
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "contradiction_detection",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "Model contradicted tool result",
+        "contradiction": "running on port 8080",
+        "tool_result": "Connection refused",
+        "content_preview": "i appreciate you providing the context, but i need to clarify the situation:\n\nbased on the tool result from your initial request, **the server is not running on port 8080**. the connection was refused, which means no process is currently listening on that port.\n\nif you need to identify what processe"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "multi_turn_consistency",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "No tool call for step 1"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool": "read_file",
+        "args": {
+          "path": "/src/main.py"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool": "write_file",
+        "args": {
+          "path": "/tmp/test.txt",
+          "content": "Hello, World!"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Content truncated: got 2652 chars, expected ~3500"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "No tool call in second turn",
+        "response": "I appreciate the detailed setup, but I need to clarify the situation:\n\nYou've asked me to read `/src/config.json` and then the main entry file based on its contents. I successfully read the config fil"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "No tool call made",
+        "response": "I appreciate you sharing this, but I need to clarify my role. I'm Perplexity, a search assistant designed to synthesize information from search results and provide answers to queries. I'm not a coding"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "Tool call JSON found in content instead of tool_calls",
+        "pattern_matched": "\\{\\s*\"tool\"\\s*:",
+        "content_preview": "```json\n{\n  \"tool\": \"search_code\",\n  \"arguments\": {\n    \"pattern\": \"TODO\",\n    \"path\": \"/src\",\n    \"file_pattern\": \"*\"\n  }\n}\n```"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "patch_length": 143,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 0.7,
+        "anti_patterns": [
+          "tool_json_in_content"
+        ],
+        "quality_notes": [
+          "Model output tool JSON in response text while also making tool calls"
+        ],
+        "overall_score": 0.5499999999999999,
+        "passed": false
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "patch_length": 267,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 0.7,
+        "anti_patterns": [
+          "tool_json_in_content"
+        ],
+        "quality_notes": [
+          "Model output tool JSON in response text while also making tool calls"
+        ],
+        "overall_score": 0.5499999999999999,
+        "passed": false
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": false,
+      "details": {
+        "patch_length": 245,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 0.7,
+        "anti_patterns": [
+          "tool_json_in_content"
+        ],
+        "quality_notes": [
+          "Model output tool JSON in response text while also making tool calls"
+        ],
+        "overall_score": 0.5499999999999999,
+        "passed": false
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "json_output",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "items": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "markdown_code_blocks",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "code_blocks": 4
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_hallucinated_paths",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "content_length": 2221
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "do_not_explain",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "content_length": 57
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "constraint_respect",
+      "category": "instruction_following",
+      "passed": false,
+      "details": {
+        "errors": [
+          "Too many lines: 15"
+        ],
+        "code_preview": "def reverse_string(s):\n    \"\"\"\n    Reverses the input string using a for loop.\n    \n    Args:\n        s (str): Input string to reverse.\n    \n    Returns:\n        str: Reversed string.\n    \n    Example:\n        >>> reverse_string(\"hello\")\n        'olleh'\n    \"\"\"\n    result = \"\"\n    for char in s:\n   "
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "format_specification",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "blocks": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "multi_step_planning",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "concepts_found": [
+          "user model",
+          "password",
+          "login",
+          "session"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "dependency_ordering",
+      "category": "reasoning",
+      "passed": false,
+      "details": {
+        "error": "Didn't prioritize running tests first"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "edge_case_handling",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "handled": [
+          "division_by_zero",
+          "error_handling"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "tool_error_recovery",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "recovery": "suggested_alternative"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "self_correction",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "acknowledged_correction": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "graceful_degradation",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "graceful": "explained_limitation"
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "7ecc235eea35",
+    "tool_calling_method": "prompt_based"
+  }
+}
