@@ -85,12 +85,14 @@ Ship what's already on the branch:
 
 Quick fixes that improve scores without restructuring `chat.py`:
 
-| Item | Description | Effort |
-|------|-------------|--------|
-| **o4-mini → prompt-based** | Override `get_capabilities_for_model()` to return `native_tool_calling=False` for o4-mini | 1 hour |
-| **gpt-4.1-mini → prompt-based** | Same override for gpt-4.1-mini | 1 hour |
-| **JSON stripping in response text** | When native `tool_calls` are present, strip `{"tool":...}` JSON from streamed text | 3 hours |
-| **Index unindexed results** | Add gpt-4.1-mini (71.9% prompt) and o4-mini (62.5% prompt) to benchmark index | 30 min |
+| Item | Description | Backlog | Effort |
+|------|-------------|---------|--------|
+| **o4-mini → prompt-based** | Override `get_capabilities_for_model()` to return `native_tool_calling=False` for o4-mini | — | 1 hour |
+| **gpt-4.1-mini → prompt-based** | Same override for gpt-4.1-mini | — | 1 hour |
+| **Codex → prompt-based** | Verify engine `get_capabilities_for_model()` returns `native_tool_calling=False` for codex models (already fixed in benchmark runner) | P0 | 1 hour |
+| **JSON stripping in response text** | When native `tool_calls` are present, strip `{"tool":...}` JSON from streamed text | — | 3 hours |
+| **Brace-counting JSON parser** | Port `_find_json_objects()` from benchmark runner to `engine/tools/parser.py` (regex breaks on apply_patch diffs with nested braces) | P2 | 3 hours |
+| **Index unindexed results** | Add gpt-4.1-mini (71.9% prompt) and o4-mini (62.5% prompt) to benchmark index | — | 30 min |
 
 **Validation:** Re-run benchmarks for o4-mini and gpt-4.1-mini after overrides. Expected improvement:
 - o4-mini: 10.9% → ~62.5%
@@ -144,8 +146,9 @@ class ModelProfile:
 | Test Type | What | Target |
 |-----------|------|--------|
 | **Unit tests** | ModelProfile dataclasses, registry, glob matching | 15-20 new tests |
-| **Unit tests** | OpenAI capability overrides (o4-mini, gpt-4.1-mini) | 5 new tests |
+| **Unit tests** | OpenAI capability overrides (o4-mini, gpt-4.1-mini, codex) | 5 new tests |
 | **Unit tests** | JSON stripping from response text | 5 new tests |
+| **Unit tests** | Brace-counting JSON parser (nested braces, apply_patch diffs) | 5 new tests |
 | **Benchmarks** | Re-run o4-mini, gpt-4.1-mini, gpt-5.2 to validate improvements | Manual |
 | **TUI manual test** | Verify o4-mini conversation with tools works in ppxaide | Manual |
 | **Regression** | Full `pytest tests/ -v` passes | ~1250 tests |
@@ -155,11 +158,12 @@ class ModelProfile:
 1. Native OpenAI provider (already done)
 2. Model behavior analysis document
 3. Benchmark results for 16 unique models
-4. Immediate capability overrides (o4-mini, gpt-4.1-mini)
-5. JSON stripping for native tool calls
-6. `model_profiles.py` module (data structures + registry)
-7. Benchmark runner profile integration
-8. Updated AGENTS.md hints
+4. Immediate capability overrides (o4-mini, gpt-4.1-mini, codex) — P0
+5. Brace-counting JSON parser ported to engine — P2
+6. JSON stripping for native tool calls
+7. `model_profiles.py` module (data structures + registry)
+8. Benchmark runner profile integration
+9. Updated AGENTS.md hints
 
 ---
 
@@ -199,6 +203,7 @@ tc_mode = profile.tool_calling.mode
 | **`strip_json_from_text`** | When profile says strip AND native tool calls present, clean response text | 3 hours |
 | **`fallback_on_empty`** | When native returns empty, fall back to prompt-based parsing | 3 hours |
 | **`auto` mode** | Start native, switch to prompt-based on first empty/failure | 2 hours |
+| **Belt-and-suspenders** | Always inject tool descriptions into system prompt even for native providers, so fallback parsing has schema context (P4) | 2 hours |
 | **Backwards compat** | Missing profile → default profile → current behavior | 1 hour |
 | **Tests** | Profile-driven routing unit tests with mock provider | 4 hours |
 
@@ -338,10 +343,12 @@ v1.16.0 (Breaking Changes)
 ### v1.15.6
 - [ ] o4-mini scores >60% (up from 10.9%)
 - [ ] gpt-4.1-mini scores >70% (up from 60.9%)
+- [ ] Codex capability override verified in engine (P0)
+- [ ] Brace-counting parser handles apply_patch diffs without breaking (P2)
 - [ ] JSON stripping cleans up tool_json_in_content responses
 - [ ] `ModelProfile` dataclasses exist with profiles for 27 models
 - [ ] No regressions for existing providers (Gemini, Perplexity, local)
-- [ ] All existing tests pass + 25+ new tests
+- [ ] All existing tests pass + 30+ new tests
 
 ### v1.16.0
 - [ ] Profile-driven routing replaces binary decision in chat.py
