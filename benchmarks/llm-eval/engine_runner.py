@@ -66,6 +66,14 @@ class EngineClientWrapper:
         self._request_count = 0
         self._response_samples = []  # For model fingerprinting
 
+    def _use_native_tools(self) -> bool:
+        """Check if the provider supports native tool calling."""
+        if not self._client or not self._client.provider:
+            return False
+        provider = self._client.provider
+        caps = getattr(provider, "capabilities", None)
+        return bool(caps and getattr(caps, "native_tool_calling", False))
+
     async def initialize(self) -> bool:
         """Initialize the EngineClient with provider and model."""
         try:
@@ -101,8 +109,10 @@ class EngineClientWrapper:
                     print(f"  [ERROR] Failed to set model: {self.model}")
                 return False
 
-            # Enable tools for tool-calling tests
-            self._client.enable_tools()
+            # NOTE: We intentionally do NOT call self._client.enable_tools().
+            # Engine tools (read_file(filepath), apply_patch(file_path, unified_diff))
+            # conflict with benchmark tools (read_file(path), apply_patch(path, patch)).
+            # Instead, we pass benchmark tools directly to the provider in chat().
 
             self._initialized = True
             return True
@@ -119,19 +129,24 @@ class EngineClientWrapper:
         **kwargs,
     ) -> dict:
         """
-        Send chat completion request using EngineClient.
+        Send chat completion request by calling the provider directly.
 
-        Converts from benchmark test format to EngineClient format and back.
+        Bypasses the engine's tool execution pipeline so that benchmark tools
+        (read_file(path), apply_patch(path, patch)) are the ONLY tools the model
+        sees — no conflict with engine's built-in tools.
+
+        For native tool calling providers: benchmark tools are passed as the
+        `tools=` parameter to provider.chat().
+        For prompt-based providers: benchmark tools are injected as text in the
+        system prompt.
         """
         if not self._initialized:
             if not await self.initialize():
                 return {"content": "", "tool_calls": [], "error": "Client not initialized"}
 
-        # Reset session for each test (fresh context)
-        self._client.session.clear()
+        # Build message list from benchmark format
+        use_native = self._use_native_tools()
 
-        # Build the conversation
-        # Extract system message if present
         system_content = ""
         user_messages = []
 
@@ -141,52 +156,57 @@ class EngineClientWrapper:
             else:
                 user_messages.append(msg)
 
-        # Add system message to session if present
-        if system_content:
-            self._client.session.add_message(Message(role="system", content=system_content))
+        # Build Message objects for the provider
+        provider_messages = []
 
-        # Add conversation history (excluding the last user message which we'll send via chat)
-        for i, msg in enumerate(user_messages[:-1] if user_messages else []):
+        # System message: test system prompt only (no AGENTS.md — it pollutes
+        # benchmark results by making models "pretend" to use tools)
+        if system_content:
+            provider_messages.append(Message(role="system", content=system_content))
+
+        # Add conversation history (excluding last message)
+        for msg in user_messages[:-1] if user_messages else []:
             role = msg["role"]
             content = msg.get("content") or ""
 
-            # Handle tool calls in assistant messages
-            if role == "assistant" and msg.get("tool_calls"):
-                # For now, just add as assistant message
-                # The engine handles tool call history internally
+            if role == "tool":
+                # Tool results — present as assistant context
+                provider_messages.append(Message(role="assistant", content=f"Tool result: {content}"))
+            elif role == "assistant" and msg.get("tool_calls"):
                 if content:
-                    self._client.session.add_message(Message(role="assistant", content=content))
-            elif role == "tool":
-                # Tool results - add as assistant message with context
-                tool_result = msg.get("content", "")
-                self._client.session.add_message(Message(role="assistant", content=f"Tool result: {tool_result}"))
+                    provider_messages.append(Message(role="assistant", content=content))
             else:
-                self._client.session.add_message(Message(role=role, content=content))
+                provider_messages.append(Message(role=role, content=content))
 
-        # Get the last user message to send
+        # Get the last user message
         last_message = ""
         if user_messages:
             last_msg = user_messages[-1]
             if last_msg["role"] == "user":
                 last_message = last_msg["content"]
             elif last_msg["role"] == "tool":
-                # If last message is a tool result, we need to prompt for continuation
                 tool_result = last_msg.get("content", "")
-                self._client.session.add_message(Message(role="assistant", content=f"Tool result: {tool_result}"))
+                provider_messages.append(Message(role="assistant", content=f"Tool result: {tool_result}"))
                 last_message = "Please continue based on the tool result."
             else:
                 last_message = last_msg.get("content", "")
 
         if not last_message:
-            return {"content": "", "tool_calls": [], "error": "No message to send"}
+            return {"content": "", "tool_calls": [], "error": "No user message to send"}
 
-        # Inject tool definitions into system prompt if tools provided
+        # Inject tool definitions into user message text (always, as fallback).
+        # Even with native tools, the text prompt ensures models that don't reliably
+        # use native function calls can still output JSON tool calls in content.
         if tools:
             tool_prompt = self._build_tool_prompt(tools)
-            # Prepend to last message or add as context
             last_message = f"{tool_prompt}\n\nUser request: {last_message}"
 
-        # Call the engine
+        provider_messages.append(Message(role="user", content=last_message))
+
+        # Prepare native tools for the provider (if supported)
+        native_tools = tools if (tools and use_native) else None
+
+        # Result container
         result = {
             "content": "",
             "tool_calls": [],
@@ -203,11 +223,15 @@ class EngineClientWrapper:
                 "messages": messages,
                 "tools_provided": len(tools) if tools else 0,
                 "tools": [t.get("function", {}).get("name") for t in tools] if tools else [],
-                "last_message": last_message,
+                "use_native_tools": use_native,
+                "bootstrap_prompt_length": len(bootstrap_prompt),
             }
 
         try:
-            async for event in self._client.chat(last_message, stream=False):
+            # Call provider directly — no engine tool execution pipeline
+            async for event in self._client.provider.chat(
+                provider_messages, self.model, stream=False, tools=native_tools
+            ):
                 if self.verbose:
                     print(f"  [DEBUG] Event: {event.type} - {str(event.data)[:100]}")
 
@@ -215,15 +239,14 @@ class EngineClientWrapper:
                     result["content"] = event.data or ""
 
                 elif event.type == EventType.STREAM_CHUNK:
-                    # For non-streaming, shouldn't get chunks
                     result["content"] += event.data or ""
 
                 elif event.type == EventType.TOOL_CALL:
-                    # Engine detected a tool call
+                    # Provider detected a native tool call — capture it, don't execute
                     tool_data = event.data
                     if isinstance(tool_data, dict):
                         tool_call = {
-                            "id": tool_data.get("id", f"call_{len(result['tool_calls'])}"),
+                            "id": tool_data.get("tool_call_id", tool_data.get("id", f"call_{len(result['tool_calls'])}")),
                             "type": "function",
                             "function": {
                                 "name": tool_data.get("tool", tool_data.get("name", "")),
@@ -237,8 +260,7 @@ class EngineClientWrapper:
                     result["error"] = event.data
                     break
 
-            # Try to extract tool calls from content if none were captured via events
-            # (handles prompt-based tool calling)
+            # Fallback: extract tool calls from content (prompt-based mode)
             if not result["tool_calls"] and result["content"]:
                 extracted = self._extract_tool_calls_from_content(result["content"], tools)
                 if extracted:
@@ -247,7 +269,7 @@ class EngineClientWrapper:
 
             # Collect response samples for model fingerprinting (first 3 only)
             if len(self._response_samples) < 3 and result["content"]:
-                self._response_samples.append(result["content"][:500])  # First 500 chars
+                self._response_samples.append(result["content"][:500])
 
             # Debug logging: Save response details
             if self.debug and self.debug_dir:
@@ -310,10 +332,9 @@ class EngineClientWrapper:
         Extract tool calls from response content.
 
         Handles cases where models output tool calls as JSON in the response
-        instead of using native tool calling.
+        instead of using native tool calling. Uses brace-counting to handle
+        nested JSON (e.g., apply_patch with unified diff content).
         """
-        import re
-
         tool_calls = []
         tool_names = set()
 
@@ -324,54 +345,97 @@ class EngineClientWrapper:
                     if name:
                         tool_names.add(name)
 
-        # Try to find JSON objects in content
-        # Pattern 1: {"tool": "name", "arguments": {...}}
-        pattern1 = r'\{\s*"tool"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^}]+\})\s*\}'
+        # Extract JSON objects using brace-counting (handles nested braces)
+        json_objects = self._find_json_objects(content)
 
-        for match in re.finditer(pattern1, content, re.DOTALL):
-            tool_name = match.group(1)
-            try:
-                args = json.loads(match.group(2))
+        for obj in json_objects:
+            # Pattern 1: {"tool": "name", "arguments": {...}}
+            if "tool" in obj and "arguments" in obj:
+                tool_name = obj["tool"]
+                args = obj["arguments"]
+                if isinstance(args, str):
+                    try:
+                        args = json.loads(args)
+                    except json.JSONDecodeError:
+                        args = {"raw": args}
                 if not tool_names or tool_name in tool_names:
                     tool_calls.append({
                         "id": f"call_{len(tool_calls)}",
                         "type": "function",
                         "function": {
                             "name": tool_name,
-                            "arguments": json.dumps(args),
+                            "arguments": json.dumps(args) if isinstance(args, dict) else json.dumps({"raw": args}),
                         }
                     })
-            except json.JSONDecodeError:
-                pass
 
-        # Pattern 2: {"name": "tool_name", ...} (OpenAI-style)
-        if not tool_calls:
-            pattern2 = r'\{\s*"name"\s*:\s*"([^"]+)"[^}]*"arguments"\s*:\s*(\{[^}]+\}|\[[^\]]+\]|"[^"]*")[^}]*\}'
-
-            for match in re.finditer(pattern2, content, re.DOTALL):
-                tool_name = match.group(1)
-                try:
-                    args_str = match.group(2)
-                    if args_str.startswith('"'):
-                        args = json.loads(args_str)
-                        if isinstance(args, str):
-                            args = json.loads(args)
-                    else:
-                        args = json.loads(args_str)
-
-                    if not tool_names or tool_name in tool_names:
-                        tool_calls.append({
-                            "id": f"call_{len(tool_calls)}",
-                            "type": "function",
-                            "function": {
-                                "name": tool_name,
-                                "arguments": json.dumps(args) if isinstance(args, dict) else args,
-                            }
-                        })
-                except json.JSONDecodeError:
-                    pass
+            # Pattern 2: {"name": "tool_name", "arguments": {...}} (OpenAI-style)
+            elif "name" in obj and "arguments" in obj:
+                tool_name = obj["name"]
+                args = obj["arguments"]
+                if isinstance(args, str):
+                    try:
+                        args = json.loads(args)
+                    except json.JSONDecodeError:
+                        args = {"raw": args}
+                if not tool_names or tool_name in tool_names:
+                    tool_calls.append({
+                        "id": f"call_{len(tool_calls)}",
+                        "type": "function",
+                        "function": {
+                            "name": tool_name,
+                            "arguments": json.dumps(args) if isinstance(args, dict) else json.dumps({"raw": args}),
+                        }
+                    })
 
         return tool_calls
+
+    @staticmethod
+    def _find_json_objects(text: str) -> list[dict]:
+        """Find JSON objects in text using brace-counting.
+
+        Handles nested braces, escaped characters, and string literals.
+        """
+        objects = []
+        i = 0
+        while i < len(text):
+            if text[i] == '{':
+                # Try to find matching closing brace
+                depth = 0
+                in_string = False
+                escape = False
+                start = i
+                for j in range(i, len(text)):
+                    c = text[j]
+                    if escape:
+                        escape = False
+                        continue
+                    if c == '\\' and in_string:
+                        escape = True
+                        continue
+                    if c == '"' and not escape:
+                        in_string = not in_string
+                        continue
+                    if in_string:
+                        continue
+                    if c == '{':
+                        depth += 1
+                    elif c == '}':
+                        depth -= 1
+                        if depth == 0:
+                            candidate = text[start:j+1]
+                            try:
+                                obj = json.loads(candidate)
+                                if isinstance(obj, dict):
+                                    objects.append(obj)
+                            except json.JSONDecodeError:
+                                pass
+                            i = j + 1
+                            break
+                else:
+                    i += 1
+            else:
+                i += 1
+        return objects
 
 
 class EngineBenchmarkRunner:
@@ -479,10 +543,9 @@ class EngineBenchmarkRunner:
             "native" if provider supports native function calling API
             "prompt_based" if tools are injected via system prompt
         """
-        from ppxai.config import PROVIDERS
-        provider_config = PROVIDERS.get(self.provider, {})
-        capabilities = provider_config.get("capabilities", {})
-        return "native" if capabilities.get("native_tool_calling") else "prompt_based"
+        if self.client._use_native_tools():
+            return "native"
+        return "prompt_based"
 
     def run(self, categories: Optional[list[str]] = None) -> BenchmarkResult:
         """Run benchmark synchronously."""

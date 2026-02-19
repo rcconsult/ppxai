@@ -265,6 +265,21 @@
         "filename": "openai_gpt-5.1-codex_2026-02-18_088dd440.json",
         "timestamp": "2026-02-18T21:59:57.298362",
         "overall_score": 57.8125
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-18_27c06eac.json",
+        "timestamp": "2026-02-18T22:42:41.003254",
+        "overall_score": 40.625
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-18_5395595c.json",
+        "timestamp": "2026-02-18T23:15:46.464906",
+        "overall_score": 53.125
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-19_2b86f072.json",
+        "timestamp": "2026-02-19T00:01:33.500214",
+        "overall_score": 64.0625
       }
     ],
     "openai/gpt-5.1-codex-mini": [
@@ -442,6 +457,24 @@
       "filename": "openai_gpt-5.1-codex_2026-02-18_088dd440.json",
       "timestamp": "2026-02-18T21:59:57.298362",
       "overall_score": 57.8125
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-18_27c06eac.json",
+      "timestamp": "2026-02-18T22:42:41.003254",
+      "overall_score": 40.625
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-18_5395595c.json",
+      "timestamp": "2026-02-18T23:15:46.464906",
+      "overall_score": 53.125
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-19_2b86f072.json",
+      "timestamp": "2026-02-19T00:01:33.500214",
+      "overall_score": 64.0625
     }
   ]
 }
