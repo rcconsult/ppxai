@@ -213,8 +213,7 @@ async def chat_with_tools(
     openai_tools = None
     if use_native_tools:
         openai_tools = ctx.tool_manager.get_tools_openai_format()
-    else:
-        openai_tools = True  # Signal tools enabled for prompt-based mode
+    # For prompt-based mode: tools stay None — they're injected in the system prompt instead
 
     # Debug: log session state at start of chat_with_tools
     logger.debug(

@@ -6,7 +6,7 @@
   "system_prompt_mode": "prepend",
   "server": {
     "idle_timeout": 600,
-    "port": 5433
+    "port": 54320
   },
   "session": {
     "auto_restore": "prompt",
@@ -189,11 +189,11 @@
       }
     },
     "openai": {
-      "name": "OpenAI ChatGPT",
+      "name": "OpenAI",
       "base_url": "https://api.openai.com/v1",
       "api_key_env": "OPENAI_API_KEY",
-      "default_model": "gpt-4o",
-      "coding_model": "gpt-4o",
+      "default_model": "gpt-5.2",
+      "coding_model": "gpt-5.1-codex",
       "system_prompt": "You are an expert AI coding assistant. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
       "generation_params": {
         "temperature": 0.2,
@@ -204,61 +204,172 @@
         "preferred": "gemini"
       },
       "models": {
-        "gpt-4o": {
-          "name": "GPT-4o",
-          "description": "Latest flagship model with vision"
+        "gpt-5.2": {
+          "name": "GPT-5.2",
+          "description": "Newest flagship model with 400K context. Best overall intelligence.",
+          "context_limit": 400000,
+          "__comment_best_for": "Complex refactoring, architecture decisions, multi-file changes, code review."
         },
-        "gpt-4o-mini": {
-          "name": "GPT-4o Mini",
-          "description": "Fast and affordable for simple tasks"
+        "gpt-5.2-pro": {
+          "name": "GPT-5.2 Pro",
+          "description": "Premium tier with highest capability for difficult tasks",
+          "context_limit": 400000,
+          "__comment_best_for": "Hardest problems, novel algorithm design, critical code review. Expensive.",
+          "generation_params": {
+            "temperature": 0.1,
+            "max_tokens": 16384
+          }
         },
-        "gpt-4-turbo": {
-          "name": "GPT-4 Turbo",
-          "description": "Previous generation with 128K context"
+        "gpt-5.1": {
+          "name": "GPT-5.1",
+          "description": "Previous flagship, still excellent for general coding",
+          "context_limit": 400000,
+          "__comment_best_for": "General coding, debugging, explanations. Slightly cheaper than 5.2."
         },
-        "o1": {
-          "name": "o1",
-          "description": "Advanced reasoning model"
+        "gpt-5.1-codex": {
+          "name": "GPT-5.1 Codex",
+          "description": "Code-specialized model optimized for software engineering tasks",
+          "context_limit": 400000,
+          "__comment_best_for": "Code generation, refactoring, debugging. Tuned specifically for coding."
         },
-        "o1-mini": {
-          "name": "o1 Mini",
-          "description": "Fast reasoning model"
+        "gpt-5.1-codex-mini": {
+          "name": "GPT-5.1 Codex Mini",
+          "description": "Lightweight code-specialized model for fast coding tasks",
+          "context_limit": 400000,
+          "__comment_best_for": "Quick edits, simple code generation, file operations. Budget codex option."
         },
-        "o3-mini": {
-          "name": "o3-mini",
-          "description": "Latest reasoning (limited: no streaming, no system prompts via Chat API)"
+        "gpt-5": {
+          "name": "GPT-5",
+          "description": "Capable flagship with 400K context",
+          "context_limit": 400000,
+          "__comment_best_for": "General coding tasks. Consider gpt-5.1+ for newer capabilities."
+        },
+        "gpt-5-mini": {
+          "name": "GPT-5 Mini",
+          "description": "Balanced performance at lower cost with 400K context",
+          "context_limit": 400000,
+          "__comment_best_for": "Everyday coding, quick edits, explanations. Good price/performance."
+        },
+        "gpt-5-nano": {
+          "name": "GPT-5 Nano",
+          "description": "Ultra-fast and cheapest GPT-5 variant",
+          "context_limit": 400000,
+          "__comment_best_for": "Simple edits, file operations, quick Q&A. Lowest cost GPT-5.",
+          "generation_params": {
+            "temperature": 0.1,
+            "top_p": 0.9,
+            "max_tokens": 2048
+          }
+        },
+        "gpt-4.1": {
+          "name": "GPT-4.1",
+          "description": "Previous generation flagship with 1M context",
+          "context_limit": 1047576,
+          "__comment_best_for": "Large codebase analysis (1M context advantage). Superseded by GPT-5.x for most tasks."
+        },
+        "gpt-4.1-mini": {
+          "name": "GPT-4.1 Mini",
+          "description": "Budget option with 1M context",
+          "context_limit": 1047576,
+          "__comment_best_for": "When 1M context needed at low cost."
+        },
+        "gpt-4.1-nano": {
+          "name": "GPT-4.1 Nano",
+          "description": "Cheapest model with 1M context",
+          "context_limit": 1047576,
+          "__comment_best_for": "Cheapest option when massive context needed.",
+          "generation_params": {
+            "temperature": 0.1,
+            "top_p": 0.9,
+            "max_tokens": 2048
+          }
         },
         "o4-mini": {
-          "name": "o4-mini",
-          "description": "Newest reasoning model (limited: no streaming, no system prompts via Chat API)"
+          "name": "o4 Mini",
+          "description": "Latest reasoning model with improved tool use",
+          "context_limit": 200000,
+          "__comment_best_for": "Reasoning + tool calling. Best reasoning model for agentic tasks.",
+          "generation_params": {
+            "temperature": 1.0,
+            "max_tokens": 8192
+          },
+          "__comment_temperature": "o-series models require temperature=1.0"
+        },
+        "o3": {
+          "name": "o3",
+          "description": "Advanced reasoning model with Chain of Thought",
+          "context_limit": 200000,
+          "__comment_best_for": "Algorithm design, complex logic, math, deep analysis. No streaming.",
+          "generation_params": {
+            "temperature": 1.0,
+            "max_tokens": 16384
+          }
+        },
+        "o3-mini": {
+          "name": "o3 Mini",
+          "description": "Fast reasoning model, good cost/performance for logic tasks",
+          "context_limit": 200000,
+          "__comment_best_for": "Reasoning on a budget. No streaming, no system prompts via Chat API.",
+          "generation_params": {
+            "temperature": 1.0,
+            "max_tokens": 8192
+          }
         }
       },
       "pricing": {
-        "gpt-4o": {
-          "input": 2.5,
+        "gpt-5.2": {
+          "input": 1.75,
+          "output": 14.0
+        },
+        "gpt-5.2-pro": {
+          "input": 21.0,
+          "output": 168.0
+        },
+        "gpt-5.1": {
+          "input": 1.25,
           "output": 10.0
         },
-        "gpt-4o-mini": {
-          "input": 0.15,
-          "output": 0.6
+        "gpt-5.1-codex": {
+          "input": 1.25,
+          "output": 10.0
         },
-        "gpt-4-turbo": {
-          "input": 10.0,
-          "output": 30.0
+        "gpt-5.1-codex-mini": {
+          "input": 0.25,
+          "output": 2.0
         },
-        "o1": {
-          "input": 15.0,
-          "output": 60.0
+        "gpt-5": {
+          "input": 1.25,
+          "output": 10.0
         },
-        "o1-mini": {
-          "input": 3.0,
-          "output": 12.0
+        "gpt-5-mini": {
+          "input": 0.25,
+          "output": 2.0
         },
-        "o3-mini": {
+        "gpt-5-nano": {
+          "input": 0.05,
+          "output": 0.4
+        },
+        "gpt-4.1": {
+          "input": 2.0,
+          "output": 8.0
+        },
+        "gpt-4.1-mini": {
+          "input": 0.4,
+          "output": 1.6
+        },
+        "gpt-4.1-nano": {
+          "input": 0.1,
+          "output": 0.4
+        },
+        "o4-mini": {
           "input": 1.1,
           "output": 4.4
         },
-        "o4-mini": {
+        "o3": {
+          "input": 2.0,
+          "output": 8.0
+        },
+        "o3-mini": {
           "input": 1.1,
           "output": 4.4
         }
@@ -267,7 +378,9 @@
         "web_search": false,
         "web_fetch": false,
         "weather": false,
-        "realtime_info": false
+        "realtime_info": false,
+        "native_tool_calling": true,
+        "__comment_native_tool_calling": "OpenAI supports native function calling via tools parameter"
       }
     },
     "openrouter": {
@@ -346,7 +459,9 @@
         "web_search": false,
         "web_fetch": false,
         "weather": false,
-        "realtime_info": false
+        "realtime_info": false,
+        "native_tool_calling": true,
+        "__comment_native_tool_calling": "OpenRouter supports native function calling via tools parameter (varies by model)"
       }
     },
     "ollama": {
@@ -434,7 +549,7 @@
       }
     },
     "shell": {
-      "timeout": 120,
+      "timeout": 300,
       "require_consent": true,
       "dangerous_commands": [
         "^rm\\s+",
@@ -557,7 +672,7 @@
         "short": 500,
         "detailed": 1500,
         "forecast": 5000,
-        "default": 2000
+        "default": 5000
       },
       "fetch_url": 5000,
       "web_search": 3000,
