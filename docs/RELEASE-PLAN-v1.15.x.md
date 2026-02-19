@@ -534,6 +534,18 @@ All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tu
 | **JSON stripping** | Strip tool JSON from text when native tool_calls present | ⏳ Planned |
 | **`model_profiles.py`** | Foundation data structures + registry (no chat.py changes) | ⏳ Planned |
 
+### Benchmark Findings Backlog (P0–P4)
+
+| Priority | Issue | Status |
+|----------|-------|--------|
+| **P0** | Codex `native_tool_calling` must be False — codex models output tool JSON as text, never native function calls | ✅ Fixed (runner); verify engine |
+| **P1** | AGENTS.md hints skipped for native providers — only injected for prompt-based mode | ✅ Fixed (chat.py) |
+| **P2** | Port brace-counting JSON parser from benchmark runner to `engine/tools/parser.py` | ⏳ Pending |
+| **P3** | Re-benchmark all providers with fixed runner (scores were artificially low) | ⏳ Partial (4/16 models) |
+| **P4** | Belt-and-suspenders — include tool text in system prompt even for native providers (→ v1.16.0) | ⏳ Pending |
+
+**Key findings:** GPT-5.2/codex use `*** Begin Patch` format (not unified diff, 0% code_editing); Perplexity sonar has identity leak without AGENTS.md override (75% → 48.4%).
+
 ---
 
 ## Series Closure

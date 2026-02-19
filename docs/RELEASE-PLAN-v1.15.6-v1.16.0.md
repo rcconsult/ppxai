@@ -20,6 +20,28 @@ The benchmark analysis ([MODEL-BEHAVIOR-ANALYSIS.md](MODEL-BEHAVIOR-ANALYSIS.md)
 
 ---
 
+## Benchmark Findings Backlog (P0–P4)
+
+Prioritized issues identified during the benchmark work (49+ runs, 27 models):
+
+| Priority | Issue | Target | Status |
+|----------|-------|--------|--------|
+| **P0** | **Codex `native_tool_calling` must be False** — Codex models via Responses API never emit native function calls; they output tool JSON as text. With `native_tool_calling=True` the engine sends tools as API params (codex ignores them) and skips prompt injection. Fix: `get_capabilities_for_model()` returns `native_tool_calling=False` for codex models. | v1.15.6 Goal 2 | ✅ Fixed (benchmark runner); needs engine verification |
+| **P1** | **AGENTS.md hints skipped for native providers** — Bootstrap/AGENTS.md hints were only injected for prompt-based mode. Native providers (OpenAI, Gemini) never saw the hints. Fix: inject hints into system prompt for ALL modes. | v1.15.6 Goal 1 | ✅ Fixed (chat.py) |
+| **P2** | **Port brace-counting JSON parser to engine** — Engine's `tools/parser.py` uses regex which breaks on `apply_patch` with complex diff content containing braces. Benchmark runner already has `_find_json_objects()` with brace-counting. Port it. | v1.15.6 Goal 2 | ⏳ Pending |
+| **P3** | **Re-benchmark all providers with fixed runner** — All provider scores were artificially low due to engine tool conflicts (engine tools `read_file(filepath)` vs benchmark tools `read_file(path)`). Need to re-run for GPT-5.2, Gemini, Perplexity sonar. | v1.15.6 Goal 4 | ⏳ Partially done (4 models re-run) |
+| **P4** | **Belt-and-suspenders in real engine** — Engine does either native OR prompt-based, never both. If native tool calling is flaky (codex, vLLM HarmonyError), there's no fallback. Consider always including tool text in system prompt even for native providers. | v1.16.0 Goal 1 | ⏳ Pending |
+
+### Key Findings (Unnumbered)
+
+Two critical behavioral findings that inform profile design but don't have direct code fixes:
+
+1. **`*** Begin Patch` format** — GPT-5.2 and codex models use `*** Begin Patch` format instead of unified diff for code editing. This causes 0% code_editing scores. The Model Profile system needs to account for patch format preferences, or AGENTS.md hints must explicitly instruct unified diff.
+
+2. **Perplexity identity leak** — Without AGENTS.md override, Perplexity sonar responds as "I'm Perplexity, a search assistant" and refuses tool use. Score dropped from 75.0% to 48.4% after the engine bypass fix removed implicit AGENTS.md injection. Confirms that AGENTS.md identity hints are critical for Perplexity models.
+
+---
+
 ## Release Strategy
 
 ### v1.15.6 — Foundation (Non-Breaking)
