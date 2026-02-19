@@ -5,11 +5,11 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — v1.15.6
+## [1.15.6] - 2026-02-19
 
 ### Added - Native OpenAI Provider
 
-- **`OpenAINativeProvider`** (`ppxai/engine/providers/openai_native.py`) - Standalone provider for OpenAI API
+- **`OpenAINativeProvider`** (`ppxai/engine/providers/openai_native.py`) — Standalone provider for OpenAI API
   - Chat Completions API for GPT-4.1, GPT-5.x, o-series models
   - Responses API for Codex and Pro models (gpt-5.1-codex, gpt-5.2-pro)
   - Automatic `max_completion_tokens` handling for GPT-5.x and o-series
@@ -19,22 +19,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 404 auto-fallback: Chat Completions → Responses API when model isn't a chat model
   - Web search via `web_search_preview` tool (Responses API, opt-in)
 - **43 unit tests** for native OpenAI provider (model classification, message conversion, streaming, error handling)
-- **Benchmark results** for 16 unique models (49+ runs across 27 model variants)
 - **AGENTS.md hints** for OpenAI provider and model-specific hints (gpt-5.2, gpt-5, gpt-4.1, o4-mini, codex)
-- **Model behavior analysis** (`docs/MODEL-BEHAVIOR-ANALYSIS.md`) — 5 behavior tiers, per-category scores, architectural gap analysis
 
-### Added - Model Profile System (Foundation)
+### Added - Model Profile System (Foundation for v1.16.0)
 
-- **`model_profiles.py`** — `ToolCallingProfile` and `ModelProfile` dataclasses with glob-pattern registry (planned)
-- **Capability overrides** — o4-mini and gpt-4.1-mini forced to prompt-based tool calling (planned)
-- **JSON stripping** — Strip tool JSON from response text when native tool_calls present (planned)
+- **`model_profiles.py`** (`ppxai/engine/model_profiles.py`) — `ToolCallingProfile` and `ModelProfile` dataclasses encoding per-model tool calling strategy, API routing, max_tokens, and benchmark tier
+- **`ModelProfileRegistry`** — Glob-pattern matching registry (case-insensitive, first match wins)
+- **43 built-in profiles** covering all benchmarked models: OpenAI (12), Perplexity (5), Gemini (5), DGX/vLLM Qwen3 (5), Ollama Qwen (3), OpenRouter (5), GPT-OSS (1), legacy GPT-4o (2), reasoning o-series (5)
+- **`get_model_profile()`** method added to `BaseProvider`, `OpenAINativeProvider`, and `GeminiProvider` (scaffolding for v1.16.0 profile-driven tool loop)
+- **41 model profile tests** — profile matching, glob patterns, shadowing prevention, tier validation, data integrity
+
+### Added - Tool Call Parser Improvements
+
+- **Brace-counting JSON parser** (`_find_json_objects()`) — Replaces regex-based extraction; correctly handles nested braces in `apply_patch` diffs containing code with `{` and `}` characters
+- **`strip_tool_json_from_text()`** — Strips duplicate tool call JSON from response text when native `tool_calls` are present (Gap 4: tool_json_in_content anti-pattern), also strips surrounding markdown code fences
+- **`detect_truncated_tool_call()`** — Detects "I'll use X tool" + incomplete JSON patterns for targeted retry feedback
+
+### Added - Benchmark System Improvements
+
+- **Benchmark results** for 27 model variants (54+ runs across 7 categories, 26 tests each)
+- **Model behavior analysis** (`docs/MODEL-BEHAVIOR-ANALYSIS.md`) — 5 behavior tiers (S/A/B/C/D), per-category scores, 5 architectural gap findings
+- **`--tool-calling-method`** CLI flag — Force `native`, `prompt_based`, or `auto` mode per benchmark run
+- **`--debug`** flag — Saves per-request JSON to `debug/` with full AI response content, tool_calls, and errors
+- **Profile-aware benchmark runner** — Consults `ModelProfile` for native vs prompt-based routing
+- **Engine bypass** — Benchmark runner calls provider directly, avoiding engine tool conflicts
+- **Prompt-based scoring fix** — `tool_json_in_content` penalty removed for prompt-based mode (expected behavior)
+
+### Added - Packaging
+
+- **Windows ZIP packager** (`scripts/package-windows-zip.ps1`) — Creates offline deployment ZIP with binaries + web UI for air-gapped environments
 
 ### Changed
 
-- **OpenAI provider registration** - `openai` provider now uses `OpenAINativeProvider` instead of `OpenAICompatibleProvider`
-  - openrouter, local, custom providers unchanged (still use `OpenAICompatibleProvider`)
-- **Benchmark engine runner** - Now loads AGENTS.md hints from all scopes (global, project, subdir) matching real client behavior
-- **Benchmark engine runner** - Profile-aware native vs prompt-based routing (planned)
+- **OpenAI provider registration** — `openai` provider now uses `OpenAINativeProvider` instead of `OpenAICompatibleProvider`; openrouter, local, custom providers unchanged
+- **Benchmark engine runner** — Loads AGENTS.md hints from all scopes (global, project, subdir) matching real client behavior
+- **Retired Gemini 2.0 Flash models** — Removed from default config (expired preview models)
+
+### Fixed
+
+- **AGENTS.md hints for native providers** — Bootstrap/AGENTS.md hints were only injected for prompt-based mode; now injected for ALL providers (P1)
+- **`bootstrap_prompt` NameError** in benchmark debug logging — Variable was never defined in scope; replaced with `system_content`
+
+### Documentation
+
+- **v1.15.6/v1.16.0 release plan** (`docs/RELEASE-PLAN-v1.15.6-v1.16.0.md`) — Phased release strategy, P0-P4 backlog, v1.16.0 breaking changes roadmap
+- **DGX Spark setup guide** — Sanitized, removed sensitive info and Ollama references
 
 ---
 
