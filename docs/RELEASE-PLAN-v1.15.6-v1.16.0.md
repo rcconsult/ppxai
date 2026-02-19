@@ -165,6 +165,20 @@ class ModelProfile:
 8. Benchmark runner profile integration
 9. Updated AGENTS.md hints
 
+#### Debug Session Findings (2026-02-19) — Additional v1.15.6 Items
+
+From [DEBUG-SESSION-2026-02-19.md](DEBUG-SESSION-2026-02-19.md) Section 5.1:
+
+| # | Item | Priority | Effort | Status |
+|---|------|----------|--------|--------|
+| A1 | **Read-claim validator** — `_check_read_claims_without_tools()` in `validator.py` to catch fabricated "I read each file" with 0 `read_file` calls | P1 | 2h | ⏳ |
+| A2 | **Stronger truncation retry** — `[SYSTEM: ...]` framing in `chat.py:492-496` so models don't misinterpret retry as conversation | P2 | 30min | ⏳ |
+| A3 | **Model switch warning** — emit WARNING from `client.py:set_provider()/set_model()` when session has existing messages | P2 | 1h | ⏳ |
+| A4 | **gpt-4o AGENTS.md hints** — add multi-file reading + no-narration hints for `gpt-4o*` | P2 | 15min | ⏳ |
+| A5 | **codex-mini profile fix** — change `model_profiles.py` from `mode="native"` to `mode="prompt_based"` | P2 | 30min | ⏳ |
+| A6 | **codex-mini benchmarks** — first benchmark run for gpt-5.1-codex-mini | P3 | 2h | ⏳ |
+| A7 | **codex limitation docs** — WARNING hint in AGENTS.md `gpt-5.1-codex*` section | P3 | 15min | ⏳ |
+
 ---
 
 ## v1.16.0 — Breaking Changes
@@ -290,6 +304,98 @@ The previously planned v1.16.0 content (file navigation) fits naturally alongsid
 
 **Why v1.16.0:** Changing the provider interface is a breaking change for any custom providers. The v1.15.6 duck-typing approach is a safe intermediate step.
 
+### Goal 7: Benchmark v2 — Real-World Agent Evaluation
+
+**Motivation:** Live testing on 2026-02-19 revealed a massive gap between benchmark scores and real-world agent behavior. gemini-3-flash-preview scored **57.81%** on the benchmark but was the **best performer** in actual web app usage — reading all 8 project files consecutively and producing a quality improvement plan. Meanwhile, sonar-pro and gpt-5.2 scored higher on the benchmark but failed basic multi-file tasks in practice (sonar fabricated results, gpt-5.2 read only 1 file per turn).
+
+**Root cause:** The current 26-test suite measures single-turn tool correctness (exact tool name, exact arg match, binary pass/fail) but misses the agentic patterns that matter: consecutive tool loops, multi-file navigation, search-then-edit workflows, and iterative refinement.
+
+#### Phase 1: Close Scoring Distortions (Priority)
+
+| Item | Description | Gap Addressed | Effort |
+|------|-------------|---------------|--------|
+| **`multi_file_review`** | "Read all files in this project and summarize" with 5-8 simulated files. Score = files_read / files_available (continuous 0.0-1.0). Must read files via tool calls, not fabricate content. | Multi-file read loops (gemini-3-flash: 8/8, gpt-5.2: 1/8 per turn, sonar: 0/8) | 4 hours |
+| **`consecutive_tool_loop`** | 5-step chain: list_dir → read config → read entry point → search for pattern → read matching file. Score = steps completed / total steps. Model must chain results (each step depends on previous). | Agent loop depth (current max: 3 turns) | 4 hours |
+| **`claim_without_action`** | Ask model to read and report file contents. Inject no tool results. Check if model fabricates a report. Inspired by sonar-pro claiming "ALL 8 FILES RE-READ" with zero tool calls. | Hallucination in agentic context (sonar fabricated entire reviews) | 3 hours |
+| **Partial credit scoring** | Replace binary pass/fail for tool calling tests: correct tool name +50%, correct args +50%. Wrong tool = 0%, right tool wrong arg key = 50%. Reduces cliff effect. | gemini-3-flash: 0% code editing for using `read_file` instead of `apply_patch` despite excellent real behavior | 4 hours |
+| **`patch_apply_verify`** | Give file content + edit instruction. Model generates patch. Actually apply the patch (using `_replace_hunk` from engine). Verify result matches expected output. | Current tests check patch structure, never apply it | 4 hours |
+
+**Expected impact:** These 5 items would have correctly ranked tonight's models: gemini-3-flash > gpt-5.2 > sonar-pro, matching observed real-world behavior.
+
+#### Phase 2: Agentic Patterns
+
+| Item | Description | Gap Addressed | Effort |
+|------|-------------|---------------|--------|
+| **`search_then_edit`** | "Fix the bug in the divide function" without giving file path. Model must: search_code → read_file → apply_patch. Simulated tool results guide the chain. | Real agents navigate, current tests give paths directly | 4 hours |
+| **`test_fix_verify`** | Write code → simulated test failure → model fixes → re-run tests → pass. Score = reached final passing state. | The core TDD loop is completely untested | 5 hours |
+| **`information_gathering`** | "How is authentication implemented?" with 3 files containing auth code spread across the project. Model must find and read all 3 to give a complete answer. Score = relevant files read / total relevant files. | Codebase understanding requires exploration, not given paths | 4 hours |
+| **`error_recovery_chain`** | Read file → not found → search for it → read result → edit it → permission denied → report failure clearly. Tests adaptive strategy over 4+ turns. | Current `tool_error_recovery` is single-turn | 3 hours |
+
+#### Phase 3: Efficiency & Hints
+
+| Item | Description | Gap Addressed | Effort |
+|------|-------------|---------------|--------|
+| **Token/cost metrics** | Track `prompt_tokens`, `completion_tokens`, `total_cost` per test. Report efficiency ratio: score_per_dollar. | No efficiency comparison between models | 3 hours |
+| **Time-to-first-tool-call** | Measure latency from prompt to first tool invocation. Penalize models that narrate before acting. | gpt-5.2 explains before each tool call, gemini-3-flash acts immediately | 2 hours |
+| **With/without AGENTS.md** | Run identical test suite twice per model: once with hints, once without. Report delta. | Perplexity dropped 75% → 48.4% without hints; currently no systematic measurement | 3 hours |
+| **Tool call efficiency** | Count total tool calls vs minimum required. Penalize unnecessary reads, reward models that batch independent operations. | sonar makes 5-6 duplicate calls; gemini reads exactly what's needed | 2 hours |
+
+#### New Category: Agent Loop (proposed, 5 tests)
+
+| Test | Weight | Tags | Source |
+|------|--------|------|--------|
+| `multi_file_review` | 2.0 | critical, gate | Phase 1 |
+| `consecutive_tool_loop` | 2.0 | critical | Phase 1 |
+| `claim_without_action` | 2.0 | critical, gate | Phase 1 |
+| `search_then_edit` | 1.5 | — | Phase 2 |
+| `test_fix_verify` | 1.5 | — | Phase 2 |
+
+**Total new weight: 9.0** (matches hallucination_resistance, the other critical gate category)
+
+#### Scoring Changes
+
+| Change | Current | Proposed |
+|--------|---------|----------|
+| **Tool call tests** | Binary pass/fail | Partial credit (tool name 50% + args 50%) |
+| **Agent loop tests** | N/A | Continuous 0.0-1.0 (steps completed / steps required) |
+| **Code editing tests** | Structural check only | Apply patch + verify output |
+| **New metric: efficiency** | Not tracked | tokens_per_point, cost_per_point, time_to_first_tool |
+| **New metric: AGENTS.md delta** | Not tracked | score_with_hints - score_without_hints |
+
+#### Real-World Validation Matrix (2026-02-19 Live Testing)
+
+This table documents the gap that Goal 7 aims to close. Models are ranked by **observed real-world utility**, not benchmark score:
+
+| Rank | Model | Benchmark Score | Real-World Behavior | Gap |
+|------|-------|----------------|---------------------|-----|
+| 1 | gemini-3-flash-preview | 57.81% | Read 8/8 files in 18s, produced quality improvement plan | Benchmark **under-scores** by ~30%: 0% code editing (wrong tool name), 16.7% hallucination (doesn't match behavior) |
+| 2 | gpt-5.2 | 70.31% | Tool calling works but reads 1 file/turn, requires repeated prompting | Benchmark **over-scores** by ~10%: doesn't test multi-file laziness |
+| 3 | sonar-pro | 68.75% | Fabricated "ALL 8 FILES RE-READ" with 0-1 tool calls, hallucinated results | Benchmark **over-scores** by ~30%: doesn't test agentic hallucination |
+| 4 | gpt-5.1-codex | 40.63% | Zero tool calls, refused to use tools entirely | Benchmark **approximately correct**: low score matches broken behavior |
+
+**Target:** After Goal 7, benchmark ranking should match columns 1-4 (real-world rank).
+
+### Debug Session Findings (2026-02-19) — Additional v1.16.0 Items
+
+From [DEBUG-SESSION-2026-02-19.md](DEBUG-SESSION-2026-02-19.md) Section 5.2:
+
+| # | Item | Aligns With | Priority | Effort |
+|---|------|-------------|----------|--------|
+| B1 | **Session context reset on model switch** — `session.reset_for_model_switch()` strips assistant/tool messages, keeps user messages | New (Goal 4) | P1 | 4h |
+| B2 | **Per-model iteration limit** — `max_tool_iterations` field in `ModelProfile`, consulted at `chat.py:189` | Goal 3 | P2 | 2h |
+| B3 | **Belt-and-suspenders** — inject `get_tools_prompt()` into system prompt even for native when profile has fallback flags | Goal 1 / P4 | P2 | 3h |
+| B7 | **Session pollution detection** — compare response similarity against previous assistant messages from different models | New | P3 | 3h |
+
+Benchmark v2 items (already captured in Goal 7):
+
+| # | Item | Goal 7 Phase | Priority | Effort |
+|---|------|-------------|----------|--------|
+| B4 | `multi_file_review` test — score = files_read / files_available | Phase 1 | P2 | 4h |
+| B5 | `claim_without_action` test — catch fabricated reports | Phase 1 | P2 | 3h |
+| B6 | `consecutive_tool_loop` test — 5-step dependent chain | Phase 1 | P2 | 4h |
+| B8 | `time_to_first_tool_call` metric | Phase 3 | P3 | 2h |
+| B9 | Partial credit scoring (tool name 50% + args 50%) | Phase 1 | P2 | 4h |
+
 ### v1.16.0 Testing Strategy
 
 | Test Type | What | Target |
@@ -297,7 +403,8 @@ The previously planned v1.16.0 content (file navigation) fits naturally alongsid
 | **Unit tests** | Profile-driven routing, message format, multi-tool | 40-50 new tests |
 | **Integration tests** | Full tool loop with mock providers in all modes | 10-15 new tests |
 | **TUI manual tests** | Test each provider with tool-using conversations | All providers |
-| **Benchmark re-runs** | Full suite for all 16 models to validate no regressions | 16+ runs |
+| **Benchmark v2 tests** | New agent_loop category (5 tests), partial credit scoring, patch verification | 8-10 new tests |
+| **Benchmark re-runs** | Full v2 suite for all 16 models to validate ranking matches real-world | 16+ runs |
 | **Session migration** | Load v1.15.x sessions in v1.16.0, verify no data loss | Manual |
 | **Regression** | Full `pytest tests/ -v` passes | ~1300+ tests |
 
@@ -310,6 +417,8 @@ The previously planned v1.16.0 content (file navigation) fits naturally alongsid
 | **Profile mismatch causes regressions** | Default profile = current behavior; explicit opt-in for new features |
 | **Session format incompatible** | Migration layer reads old format, writes new format |
 | **Benchmark scores drop** | Re-benchmark before and after; block release if any model regresses >5% |
+| **New benchmark tests too hard** | Phase 1 tests must have at least 1 model scoring >80%; if all fail, tests are unrealistic |
+| **Partial credit inflates scores** | Compare v1 and v2 overall scores; document mapping so historical results remain comparable |
 
 ---
 
@@ -336,8 +445,10 @@ v1.15.6 (Foundation, Non-Breaking)
 v1.16.0 (Breaking Changes)
 ├── Week 1: Goal 1 (Profile-driven tool loop) + Goal 2 (Message format)
 ├── Week 2: Goal 3 (Multi-tool) + Goal 5 (File navigation)
-├── Week 3: Goal 4 (Config integration) + comprehensive testing
-└── Release after full re-benchmark validates no regressions
+├── Week 2-3: Goal 7 Phase 1 (Benchmark v2 — scoring fixes + agent loop tests)
+├── Week 3: Goal 4 (Config integration) + Goal 6 (Provider hierarchy)
+├── Week 3-4: Goal 7 Phase 2-3 (Agentic patterns + efficiency metrics)
+└── Release after full v2 re-benchmark validates ranking matches real-world
 ```
 
 ---
@@ -363,6 +474,10 @@ v1.16.0 (Breaking Changes)
 - [ ] `ModelProfile` dataclasses exist with profiles for 27 models
 - [ ] No regressions for existing providers (Gemini, Perplexity, local)
 - [ ] All existing tests pass + 30+ new tests
+- [ ] Read-claim validator catches "I read each file" with 0 read_file calls (A1)
+- [ ] Truncation retry uses `[SYSTEM: ...]` framing (A2)
+- [ ] Model switch emits warning when session has messages (A3)
+- [ ] codex-mini profile corrected to prompt_based (A5)
 
 ### v1.16.0
 - [ ] Profile-driven routing replaces binary decision in chat.py
@@ -374,3 +489,12 @@ v1.16.0 (Breaking Changes)
 - [ ] No provider regressions (full benchmark suite)
 - [ ] Session migration from v1.15.x works seamlessly
 - [ ] All existing tests pass + 50+ new tests
+- [ ] Session context reset on model switch works correctly (B1)
+- [ ] Per-model iteration limit consulted from ModelProfile (B2)
+- [ ] Belt-and-suspenders prompt injection for fallback-enabled profiles (B3)
+- [ ] Session pollution detection emits WARNING on response replay (B7)
+- [ ] **Benchmark v2:** `agent_loop` category with 5 tests (multi_file_review, consecutive_tool_loop, claim_without_action, search_then_edit, test_fix_verify)
+- [ ] **Benchmark v2:** Partial credit scoring for tool calling tests (tool name 50% + args 50%)
+- [ ] **Benchmark v2:** `patch_apply_verify` test actually applies patches and verifies output
+- [ ] **Benchmark v2:** Efficiency metrics tracked (tokens, cost, time-to-first-tool-call)
+- [ ] **Benchmark v2:** Ranking matches real-world validation matrix (gemini-3-flash > gpt-5.2 > sonar > codex)
