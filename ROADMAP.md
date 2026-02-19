@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.15.5 (February 2026)
+> **Current Version**: v1.15.5 (February 2026) | **Next**: v1.15.6 (Model Profiles) → v1.16.0 (Profile-Driven Tool Loop)
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
@@ -502,33 +502,87 @@ ppxai/tui/                     # New module (Textual-based)
 | **Debug cleanup** | Removed development debug notifications from action_cancel | ✅ Done |
 | **1,237 tests passing** | 15 new multi-line input tests added | ✅ Done |
 
+### v1.15.6 - Model Profile System & Native OpenAI Provider
+
+**Status:** ⏳ In Progress
+**Branch:** feature/benchmark-openai-models
+**Analysis:** [docs/MODEL-BEHAVIOR-ANALYSIS.md](docs/MODEL-BEHAVIOR-ANALYSIS.md)
+**Detailed Plan:** [docs/RELEASE-PLAN-v1.15.6-v1.16.0.md](docs/RELEASE-PLAN-v1.15.6-v1.16.0.md)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **`OpenAINativeProvider`** | Native OpenAI API: Chat Completions + Responses API, 404 auto-fallback | ✅ Done |
+| **Benchmark results** | 49+ runs across 27 models, 16 unique full-suite results | ✅ Done |
+| **Model behavior analysis** | 5 behavior tiers, 5 architectural gaps identified | ✅ Done |
+| **o4-mini → prompt-based** | Capability override: 10.9% → ~62.5% expected | ⏳ Planned |
+| **gpt-4.1-mini → prompt-based** | Capability override: 60.9% → ~71.9% expected | ⏳ Planned |
+| **JSON stripping** | Strip tool JSON from response text when native tool_calls present | ⏳ Planned |
+| **`model_profiles.py`** | `ToolCallingProfile` + `ModelProfile` dataclasses + registry | ⏳ Planned |
+| **Profile registry** | Glob-pattern matching for 27 benchmarked models | ⏳ Planned |
+| **Benchmark profile integration** | Engine runner uses profiles for native vs prompt routing | ⏳ Planned |
+| **AGENTS.md hints** | OpenAI provider + model-specific hints | ✅ Done |
+
+**Key insight from benchmarks:** The binary `native_tool_calling: bool` decision is too coarse. Models like gpt-4.1-mini (71.9% prompt vs 60.9% native) and o4-mini (62.5% prompt vs 10.9% native) need per-model routing.
+
 ---
 
 ## Planned (v1.16.x)
 
-### v1.16.0 - Web App File Tree Sidebar
+### v1.16.0 - Profile-Driven Tool Loop & File Navigation
+
+**Status:** Planned (after v1.15.6)
+**Branch:** feature/v1.16.0 (to be created from master after v1.15.6 merge)
+**Detailed Plan:** [docs/RELEASE-PLAN-v1.15.6-v1.16.0.md](docs/RELEASE-PLAN-v1.15.6-v1.16.0.md)
+
+**Why major version bump:** Changes to `chat.py` tool loop affect every provider and every client.
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Profile-driven routing** | Replace binary `use_native_tools` with `ModelProfile` lookup in `chat.py` | ⏳ Planned |
+| **`strip_json_from_text`** | Profile-controlled response cleaning for leaky models | ⏳ Planned |
+| **`fallback_on_empty`** | Adaptive fallback: native → prompt-based mid-conversation | ⏳ Planned |
+| **Proper `tool` role messages** | Replace synthetic assistant/user pairs with `tool` role + `tool_call_id` | ⏳ Planned |
+| **Multi-tool support** | Process all native tool calls (not just first) when profile allows | ⏳ Planned |
+| **Config overrides** | `tool_calling` settings per model in ppxai-config.json | ⏳ Planned |
+| **`/model info`** | Show active profile for current model | ⏳ Planned |
+| **`/ls` command** | List files with sizes, permissions, gitignore | ⏳ Planned |
+| **`/tree` command** | Render directory tree structure | ⏳ Planned |
+| **Session migration** | v1.15.x sessions load in v1.16.0 without data loss | ⏳ Planned |
+
+**Gaps addressed (from MODEL-BEHAVIOR-ANALYSIS.md):**
+1. Binary decision at wrong layer → Profile-driven routing
+2. Tool results as synthetic messages → Proper `tool` role messages
+3. Single tool call per iteration → Multi-tool support
+4. No response deduplication → JSON stripping
+5. Static provider capabilities → Adaptive profiles with fallback
+
+### v1.16.1 - ppxaide Interactive File Tree
+
 **Status:** Planned
-**Branch:** feature/1-16-0 (to be created)
+**Effort:** 5 days
+**See:** `TODO-v1.16.0.md` Phase 1
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Interactive file explorer** | Left sidebar with expandable directory tree (NvChad-inspired) | ⏳ Planned |
+| **Keyboard navigation** | Arrow keys, Enter to open, Space to expand/collapse | ⏳ Planned |
+| **`@file` injection** | Ctrl+Enter on selected file injects reference into input | ⏳ Planned |
+| **File preview** | Click to open in side panel (read-only view) | ⏳ Planned |
+
+### v1.17.0 - Web App File Tree Sidebar
+
+**Status:** Planned
 **Effort:** 7 days
 **See:** `TODO-v1.16.0.md` Phase 2
 
-**Features:**
-- Collapsible sidebar (VSCode-style)
-- Server endpoint `/files/list` for directory scanning
-- Persistent expanded state (localStorage)
-- Right-click context menu for `@file` injection
-- Reuses tree-viewer.js component pattern
-
-**Why Later:**
-- More complex (requires new server endpoint)
-- Web users can use browser file managers meanwhile
-- ppxaide tree provides UX template
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Collapsible sidebar** | VSCode-style file tree with server endpoint `/files/list` | ⏳ Planned |
+| **Persistent state** | Remember expanded folders via localStorage | ⏳ Planned |
+| **Context menu** | Right-click for `@file` injection | ⏳ Planned |
 
 **NOT Planned:**
-- ❌ Interactive file tree for ppxai (Rich CLI) - architecturally inappropriate
-  - Rich is a rendering library, not a TUI framework
-  - Cannot handle interactive keyboard navigation
-  - Users should use ppxaide for interactive file browsing
+- ❌ Interactive file tree for ppxai (Rich CLI) - architecturally inappropriate (use ppxaide)
 
 ---
 
@@ -536,7 +590,7 @@ ppxai/tui/                     # New module (Textual-based)
 
 These are tracked but not prioritized:
 - **libghostty SDK** - Watch for stable C API (expected 2026)
-- **Per-provider tool config** - Enable/disable tools per provider
+- ~~**Per-provider tool config**~~ - ⏳ Partially addressed by Model Profile System (v1.15.6/v1.16.0)
 - **Custom tools** - User-defined tools in `~/.ppxai/tools/`
 - ~~**Provider-aware tool guidance**~~ - ✅ Implemented in v1.13.3
 - ~~**Cost display in `/usage`**~~ - ✅ Implemented (shows $ cost in session and reports)
@@ -711,4 +765,4 @@ For archived planning documents:
 
 ---
 
-**Last Updated**: February 13, 2026
+**Last Updated**: February 19, 2026

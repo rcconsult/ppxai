@@ -5,7 +5,7 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased] — v1.15.6
 
 ### Added - Native OpenAI Provider
 
@@ -19,14 +19,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 404 auto-fallback: Chat Completions → Responses API when model isn't a chat model
   - Web search via `web_search_preview` tool (Responses API, opt-in)
 - **43 unit tests** for native OpenAI provider (model classification, message conversion, streaming, error handling)
-- **Benchmark results** for 9 OpenAI models via native provider (GPT-4.1 family, GPT-5 family, o4-mini, Codex)
+- **Benchmark results** for 16 unique models (49+ runs across 27 model variants)
 - **AGENTS.md hints** for OpenAI provider and model-specific hints (gpt-5.2, gpt-5, gpt-4.1, o4-mini, codex)
+- **Model behavior analysis** (`docs/MODEL-BEHAVIOR-ANALYSIS.md`) — 5 behavior tiers, per-category scores, architectural gap analysis
+
+### Added - Model Profile System (Foundation)
+
+- **`model_profiles.py`** — `ToolCallingProfile` and `ModelProfile` dataclasses with glob-pattern registry (planned)
+- **Capability overrides** — o4-mini and gpt-4.1-mini forced to prompt-based tool calling (planned)
+- **JSON stripping** — Strip tool JSON from response text when native tool_calls present (planned)
 
 ### Changed
 
 - **OpenAI provider registration** - `openai` provider now uses `OpenAINativeProvider` instead of `OpenAICompatibleProvider`
   - openrouter, local, custom providers unchanged (still use `OpenAICompatibleProvider`)
 - **Benchmark engine runner** - Now loads AGENTS.md hints from all scopes (global, project, subdir) matching real client behavior
+- **Benchmark engine runner** - Profile-aware native vs prompt-based routing (planned)
 
 ---
 

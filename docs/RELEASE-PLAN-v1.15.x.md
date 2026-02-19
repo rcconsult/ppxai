@@ -1,9 +1,9 @@
 # Release Plan: v1.15.x Series
 
 **Created:** January 24, 2026
-**Last Updated:** February 15, 2026
-**Status:** ✅ v1.15.0 RELEASED, ✅ v1.15.1 RELEASED, ✅ v1.15.2 RELEASED, ✅ v1.15.3 RELEASED, ✅ v1.15.4 RELEASED, ⏳ v1.15.5 IN PROGRESS
-**Branch:** feature/v1.15.5
+**Last Updated:** February 19, 2026
+**Status:** ✅ v1.15.0-v1.15.5 RELEASED, ⏳ v1.15.6 IN PROGRESS (final release in series)
+**Branch:** feature/benchmark-openai-models (v1.15.6)
 **Tests:** 1237+ passing
 
 ---
@@ -447,9 +447,9 @@ All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tu
 
 ---
 
-## v1.15.5 - Multi-Line Input & Escape Key Fix ⏳
+## v1.15.5 - Multi-Line Input & Escape Key Fix ✅
 
-**Status:** In Progress
+**Status:** ✅ Released (2026-02-15)
 **Branch:** feature/v1.15.5
 
 | Feature | Description | Status |
@@ -517,6 +517,36 @@ All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tu
 | **ppxaide file tree sidebar** | NvChad-inspired interactive file tree (Textual DirectoryTree) | ⏳ Planned |
 
 **Spec:** See [TODO-v1.16.0.md](../TODO-v1.16.0.md) (Phase 0: commands ~2 days, Phase 1: ppxaide sidebar ~5 days).
+
+---
+
+## v1.15.6 - Model Profile System & Native OpenAI Provider ⏳
+
+**Status:** In Progress
+**Branch:** feature/benchmark-openai-models
+**Detailed Plan:** [RELEASE-PLAN-v1.15.6-v1.16.0.md](RELEASE-PLAN-v1.15.6-v1.16.0.md)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **`OpenAINativeProvider`** | Native OpenAI API: Chat Completions + Responses API | ✅ Done |
+| **Benchmark results** | 49+ runs, 16 unique full-suite results, behavior analysis | ✅ Done |
+| **o4-mini/gpt-4.1-mini overrides** | Force prompt-based for models broken on native | ⏳ Planned |
+| **JSON stripping** | Strip tool JSON from text when native tool_calls present | ⏳ Planned |
+| **`model_profiles.py`** | Foundation data structures + registry (no chat.py changes) | ⏳ Planned |
+
+---
+
+## Series Closure
+
+**v1.15.6 is the final release in the v1.15.x series.**
+
+The v1.15.x theme — "Next Generation TUI (ppxaide)" — is fully delivered:
+- Textual-based TUI with full feature parity (32 commands, 17+ themes)
+- All 7 implementation phases complete (foundation → polish)
+- 1,237+ tests passing across all platforms
+- v1.15.6 closes with the native OpenAI provider and model profile foundation
+
+**Next:** v1.16.0 starts the breaking changes series (profile-driven tool loop, multi-tool support, file navigation).
 
 ---
 
