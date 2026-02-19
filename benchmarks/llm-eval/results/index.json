@@ -97,6 +97,11 @@
         "filename": "gemini_gemini-2.5-pro_2026-02-19_ad2deaaa.json",
         "timestamp": "2026-02-19T00:26:40.529208",
         "overall_score": 81.25
+      },
+      {
+        "filename": "gemini_gemini-2.5-pro_2026-02-19_981722aa.json",
+        "timestamp": "2026-02-19T17:05:36.575896",
+        "overall_score": 75.0
       }
     ],
     "gemini/gemini-3-flash-preview": [
@@ -104,6 +109,11 @@
         "filename": "gemini_gemini-3-flash-preview_2026-02-08_b517fadc.json",
         "timestamp": "2026-02-08T17:29:31.639744",
         "overall_score": 100.0
+      },
+      {
+        "filename": "gemini_gemini-3-flash-preview_2026-02-19_a113e6d6.json",
+        "timestamp": "2026-02-19T17:09:42.077978",
+        "overall_score": 57.8125
       }
     ],
     "gemini/gemini-3-pro-preview": [
@@ -111,6 +121,11 @@
         "filename": "gemini_gemini-3-pro-preview_2026-02-05_6d5eef49.json",
         "timestamp": "2026-02-05T15:03:35.876530",
         "overall_score": 70.31
+      },
+      {
+        "filename": "gemini_gemini-3-pro-preview_2026-02-19_746a4f48.json",
+        "timestamp": "2026-02-19T17:32:38.839496",
+        "overall_score": 62.5
       }
     ],
     "perplexity/llama-3.1-sonar-large-128k-online": [
@@ -125,6 +140,11 @@
         "filename": "perplexity_sonar-pro_2026-02-08_a755ae49.json",
         "timestamp": "2026-02-08T17:49:00.698529",
         "overall_score": 100.0
+      },
+      {
+        "filename": "perplexity_sonar-pro_2026-02-19_5e057581.json",
+        "timestamp": "2026-02-19T17:01:09.462596",
+        "overall_score": 68.75
       }
     ],
     "perplexity/sonar-reasoning-pro": [
@@ -144,6 +164,11 @@
         "filename": "perplexity_sonar_2026-02-19_e0ff5a0d.json",
         "timestamp": "2026-02-19T00:22:59.377786",
         "overall_score": 48.4375
+      },
+      {
+        "filename": "perplexity_sonar_2026-02-19_0ea71109.json",
+        "timestamp": "2026-02-19T16:59:04.703362",
+        "overall_score": 70.3125
       }
     ],
     "openai/gpt-5.2": [
@@ -684,6 +709,36 @@
       "filename": "openai_gpt-4.1-mini_2026-02-19_16184614.json",
       "timestamp": "2026-02-19T15:58:10.447464",
       "overall_score": 100.0
+    },
+    {
+      "pair": "perplexity/sonar",
+      "filename": "perplexity_sonar_2026-02-19_0ea71109.json",
+      "timestamp": "2026-02-19T16:59:04.703362",
+      "overall_score": 70.3125
+    },
+    {
+      "pair": "perplexity/sonar-pro",
+      "filename": "perplexity_sonar-pro_2026-02-19_5e057581.json",
+      "timestamp": "2026-02-19T17:01:09.462596",
+      "overall_score": 68.75
+    },
+    {
+      "pair": "gemini/gemini-2.5-pro",
+      "filename": "gemini_gemini-2.5-pro_2026-02-19_981722aa.json",
+      "timestamp": "2026-02-19T17:05:36.575896",
+      "overall_score": 75.0
+    },
+    {
+      "pair": "gemini/gemini-3-flash-preview",
+      "filename": "gemini_gemini-3-flash-preview_2026-02-19_a113e6d6.json",
+      "timestamp": "2026-02-19T17:09:42.077978",
+      "overall_score": 57.8125
+    },
+    {
+      "pair": "gemini/gemini-3-pro-preview",
+      "filename": "gemini_gemini-3-pro-preview_2026-02-19_746a4f48.json",
+      "timestamp": "2026-02-19T17:32:38.839496",
+      "overall_score": 62.5
     }
   ]
 }

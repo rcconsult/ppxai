@@ -1,0 +1,323 @@
+{
+  "provider": "perplexity",
+  "model": "sonar-pro",
+  "timestamp": "2026-02-19T17:01:09.462596",
+  "overall_score": 68.75,
+  "tests_passed": 20,
+  "tests_total": 26,
+  "duration_seconds": 105.39652943611145,
+  "category_scores": {
+    "hallucination_resistance": 33.33333333333333,
+    "tool_calling": 78.57142857142857,
+    "code_editing": 100.0,
+    "format_compliance": 100.0,
+    "instruction_following": 57.14285714285714,
+    "reasoning": 66.66666666666666,
+    "error_recovery": 100.0
+  },
+  "test_results": [
+    {
+      "name": "respects_tool_failure",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "Model didn't acknowledge the failures",
+        "content_preview": ""
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "no_phantom_tool_calls",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "made_tool_calls": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "repeated_failure_acknowledgment",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "Didn't acknowledge persistent failure",
+        "content_preview": ""
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "contradiction_detection",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "details": {
+        "error": "Model contradicted tool result",
+        "contradiction": "running on port 8080",
+        "tool_result": "Connection refused",
+        "content_preview": "based on the tool result you provided earlier, **no server is currently running on port 8080**. the connection was refused, indicating that no process is listening on that port.\n\nif you need to verify this or check what ports are currently in use on your system, you can use several command-line tool"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "multi_turn_consistency",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "details": {
+        "accurate_status_report": true,
+        "mentioned_failure": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool": "read_file",
+        "args": {
+          "path": "/src/main.py"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool": "write_file",
+        "args": {
+          "path": "/tmp/test.txt",
+          "content": "Hello, World!"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "content_length": 818,
+        "repetitions": 10,
+        "model_max_tokens": 8192
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": false,
+      "details": {
+        "error": "No tool call in second turn",
+        "response": "I appreciate the context, but I need to clarify my role here. I'm Perplexity, a search assistant designed to synthesize information from search results and provide answers to queries.\n\nHowever, the cu"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool_calls": 1,
+        "content_length": 0
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool_calls": 1,
+        "mode": "prompt_based"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": true,
+      "details": {
+        "patch_length": 135,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "Clean tool-only response (no unnecessary text)",
+          "No anti-patterns detected"
+        ],
+        "overall_score": 1.0,
+        "passed": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": true,
+      "details": {
+        "patch_length": 267,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "Clean tool-only response (no unnecessary text)",
+          "No anti-patterns detected"
+        ],
+        "overall_score": 1.0,
+        "passed": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": true,
+      "details": {
+        "patch_length": 345,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "Clean tool-only response (no unnecessary text)",
+          "No anti-patterns detected"
+        ],
+        "overall_score": 1.0,
+        "passed": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "json_output",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "items": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "markdown_code_blocks",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "code_blocks": 4
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_hallucinated_paths",
+      "category": "format_compliance",
+      "passed": true,
+      "details": {
+        "content_length": 1663
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "do_not_explain",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "content_length": 45
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "constraint_respect",
+      "category": "instruction_following",
+      "passed": false,
+      "details": {
+        "errors": [
+          "Too many lines: 15"
+        ],
+        "code_preview": "def reverse_string(s):\n    \"\"\"\n    Reverses the input string using a for loop.\n    \n    Args:\n        s (str): Input string to reverse.\n    \n    Returns:\n        str: Reversed string.\n    \n    Example:\n        >>> reverse_string(\"hello\")\n        'olleh'\n    \"\"\"\n    result = \"\"\n    for char in s:\n   "
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "format_specification",
+      "category": "instruction_following",
+      "passed": true,
+      "details": {
+        "blocks": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "multi_step_planning",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "concepts_found": [
+          "user model",
+          "password",
+          "login"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "dependency_ordering",
+      "category": "reasoning",
+      "passed": false,
+      "details": {
+        "error": "Didn't prioritize running tests first"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "edge_case_handling",
+      "category": "reasoning",
+      "passed": true,
+      "details": {
+        "handled": [
+          "division_by_zero",
+          "error_handling"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "tool_error_recovery",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "recovery": "acknowledged_error"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "self_correction",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "acknowledged_correction": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "graceful_degradation",
+      "category": "error_recovery",
+      "passed": true,
+      "details": {
+        "graceful": "asked_for_clarification"
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "e81dba90db0c",
+    "tool_calling_method": "prompt_based"
+  }
+}

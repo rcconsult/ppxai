@@ -252,7 +252,7 @@ class EngineClientWrapper:
                 "tools_provided": len(tools) if tools else 0,
                 "tools": [t.get("function", {}).get("name") for t in tools] if tools else [],
                 "use_native_tools": use_native,
-                "bootstrap_prompt_length": len(bootstrap_prompt),
+                "system_prompt_length": len(system_content),
             }
 
         try:
