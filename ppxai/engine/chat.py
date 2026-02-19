@@ -198,11 +198,16 @@ async def chat_with_tools(
     accumulated_usage = UsageStats()
 
     # Check if provider supports native tool calling
-    use_native_tools = (
-        ctx.provider and
-        hasattr(ctx.provider, 'capabilities') and
-        ctx.provider.capabilities.native_tool_calling
-    )
+    # Use model-aware capabilities when available (e.g., codex models don't
+    # support native function calling via Responses API)
+    provider_caps = None
+    if ctx.provider:
+        if hasattr(ctx.provider, 'get_capabilities_for_model'):
+            provider_caps = ctx.provider.get_capabilities_for_model(ctx.model)
+        elif hasattr(ctx.provider, 'capabilities'):
+            provider_caps = ctx.provider.capabilities
+
+    use_native_tools = bool(provider_caps and provider_caps.native_tool_calling)
 
     # Get tools in OpenAI format for native tool calling
     openai_tools = None
@@ -281,6 +286,17 @@ async def chat_with_tools(
                 if bootstrap_prompt:
                     final_prompt = f"{bootstrap_prompt}\n\n---\n\n{final_prompt}"
 
+                messages = [Message("system", final_prompt)] + messages
+        else:
+            # Native tool calling — still inject bootstrap prompt (AGENTS.md hints)
+            # so provider/model-specific guidance is available for native tools too
+            bootstrap_prompt = ctx.get_bootstrap_prompt()
+            if bootstrap_prompt:
+                system_prompt = get_system_prompt(ctx.provider_name)
+                if system_prompt:
+                    final_prompt = f"{bootstrap_prompt}\n\n---\n\n{system_prompt}"
+                else:
+                    final_prompt = bootstrap_prompt
                 messages = [Message("system", final_prompt)] + messages
 
         # Get response from provider

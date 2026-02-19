@@ -242,6 +242,25 @@ class OpenAINativeProvider:
         """Check if provider needs a tool (doesn't have native capability)."""
         return not getattr(self.capabilities, tool_category, False)
 
+    def get_capabilities_for_model(self, model: str) -> ProviderCapabilities:
+        """Get model-aware capabilities.
+
+        Responses API models (codex, pro) don't reliably use native function
+        calling — they output tool calls as JSON text instead of function_call
+        items.  Return native_tool_calling=False for these so the engine uses
+        prompt-based tool injection.
+        """
+        if self._is_responses_api_model(model):
+            return ProviderCapabilities(
+                web_search=self.capabilities.web_search,
+                web_fetch=self.capabilities.web_fetch,
+                weather=self.capabilities.weather,
+                citations=self.capabilities.citations,
+                streaming=self.capabilities.streaming,
+                native_tool_calling=False,
+            )
+        return self.capabilities
+
     # ------------------------------------------------------------------
     # Chat Completions API
     # ------------------------------------------------------------------
