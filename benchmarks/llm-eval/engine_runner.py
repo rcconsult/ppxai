@@ -55,23 +55,51 @@ class EngineClientWrapper:
         verbose: bool = False,
         debug: bool = False,
         debug_dir: Optional[Path] = None,
+        tool_calling_method: str = "auto",
     ):
         self.provider = provider
         self.model = model
         self.verbose = verbose
         self.debug = debug
         self.debug_dir = debug_dir
+        self.tool_calling_method = tool_calling_method
         self._client: Optional[EngineClient] = None
         self._initialized = False
         self._request_count = 0
         self._response_samples = []  # For model fingerprinting
 
+    def get_effective_tool_calling_method(self) -> str:
+        """Return the resolved tool calling method ("native" or "prompt_based").
+
+        Resolves "auto" to the actual method based on provider capabilities.
+        Test cases can use this to adapt validation logic.
+        """
+        if self.tool_calling_method in ("native", "prompt_based"):
+            return self.tool_calling_method
+        # auto: resolve based on _use_native_tools()
+        return "native" if self._use_native_tools() else "prompt_based"
+
     def _use_native_tools(self) -> bool:
-        """Check if the provider supports native tool calling."""
+        """Check if the provider supports native tool calling.
+
+        Respects the --tool-calling-method override:
+        - "native": Force native tool calling regardless of provider caps
+        - "prompt_based": Force prompt-based, never send native tools
+        - "auto": Detect from provider capabilities (original behavior)
+        """
+        if self.tool_calling_method == "native":
+            return True
+        if self.tool_calling_method == "prompt_based":
+            return False
+        # auto: detect from provider capabilities
         if not self._client or not self._client.provider:
             return False
         provider = self._client.provider
-        caps = getattr(provider, "capabilities", None)
+        # Use model-aware capabilities when available (v1.15.6)
+        if hasattr(provider, 'get_capabilities_for_model'):
+            caps = provider.get_capabilities_for_model(self.model)
+        else:
+            caps = getattr(provider, "capabilities", None)
         return bool(caps and getattr(caps, "native_tool_calling", False))
 
     async def initialize(self) -> bool:
@@ -266,6 +294,9 @@ class EngineClientWrapper:
                 if extracted:
                     result["tool_calls"] = extracted
                     result["finish_reason"] = "tool_calls"
+                    # Strip extracted tool JSON from content so downstream
+                    # validators don't penalize expected prompt-based behavior
+                    result["content"] = self._strip_tool_json_from_content(result["content"])
 
             # Collect response samples for model fingerprinting (first 3 only)
             if len(self._response_samples) < 3 and result["content"]:
@@ -390,6 +421,82 @@ class EngineClientWrapper:
         return tool_calls
 
     @staticmethod
+    def _strip_tool_json_from_content(content: str) -> str:
+        """Strip tool call JSON objects from content text.
+
+        After extracting tool calls from content in prompt-based mode,
+        remove the JSON blocks so downstream validators see clean text.
+        Only strips objects that look like tool calls (contain "tool"/"name"
+        key with "arguments" key). Preserves surrounding text.
+        """
+        if not content or '{' not in content:
+            return content
+
+        spans_to_remove = []
+        i = 0
+        while i < len(content):
+            if content[i] == '{':
+                depth = 0
+                in_string = False
+                escape = False
+                start = i
+                for j in range(i, len(content)):
+                    c = content[j]
+                    if escape:
+                        escape = False
+                        continue
+                    if c == '\\' and in_string:
+                        escape = True
+                        continue
+                    if c == '"' and not escape:
+                        in_string = not in_string
+                        continue
+                    if in_string:
+                        continue
+                    if c == '{':
+                        depth += 1
+                    elif c == '}':
+                        depth -= 1
+                        if depth == 0:
+                            candidate = content[start:j + 1]
+                            try:
+                                obj = json.loads(candidate)
+                                if isinstance(obj, dict):
+                                    has_tool_key = "tool" in obj or "name" in obj
+                                    has_args = "arguments" in obj
+                                    if has_tool_key and has_args:
+                                        spans_to_remove.append((start, j + 1))
+                            except json.JSONDecodeError:
+                                pass
+                            i = j + 1
+                            break
+                else:
+                    i += 1
+            else:
+                i += 1
+
+        if not spans_to_remove:
+            return content
+
+        # Remove spans in reverse order to preserve indices
+        result = content
+        for start, end in reversed(spans_to_remove):
+            pre = result[:start].rstrip()
+            post = result[end:].lstrip()
+            # Strip surrounding markdown code fences
+            if pre.endswith('```json') or pre.endswith('```'):
+                fence_start = pre.rfind('```')
+                pre = pre[:fence_start].rstrip()
+            if post.startswith('```'):
+                post = post[3:].lstrip()
+            result = pre + '\n' + post
+
+        while '\n\n\n' in result:
+            result = result.replace('\n\n\n', '\n\n')
+
+        return result.strip()
+
+    @staticmethod
     def _find_json_objects(text: str) -> list[dict]:
         """Find JSON objects in text using brace-counting.
 
@@ -454,6 +561,7 @@ class EngineBenchmarkRunner:
         retries: int = 1,
         verbose: bool = False,
         debug: bool = False,
+        tool_calling_method: str = "auto",
     ):
         self.provider = provider
         self.model = model
@@ -461,6 +569,7 @@ class EngineBenchmarkRunner:
         self.retries = retries
         self.verbose = verbose
         self.debug = debug
+        self.tool_calling_method = tool_calling_method
 
         # Setup debug logging directory
         self.debug_dir = None
@@ -493,6 +602,7 @@ class EngineBenchmarkRunner:
             verbose=verbose,
             debug=debug,
             debug_dir=self.debug_dir,
+            tool_calling_method=tool_calling_method,
         )
 
     def _get_sdk_versions(self) -> dict:
@@ -537,12 +647,16 @@ class EngineBenchmarkRunner:
         return hashlib.md5(combined.encode()).hexdigest()[:12]
 
     def _detect_tool_calling_method(self) -> str:
-        """Detect if provider uses native or prompt-based tool calling.
+        """Get the effective tool calling method.
+
+        Respects --tool-calling-method override, falls back to detection.
 
         Returns:
-            "native" if provider supports native function calling API
+            "native" if using native function calling API
             "prompt_based" if tools are injected via system prompt
         """
+        if self.tool_calling_method != "auto":
+            return self.tool_calling_method
         if self.client._use_native_tools():
             return "native"
         return "prompt_based"

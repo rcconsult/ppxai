@@ -149,6 +149,63 @@ def _normalize_tool_call(
     return None
 
 
+def _find_json_objects(text: str) -> List[Dict[str, Any]]:
+    """Find all JSON objects in text using brace-counting.
+
+    Handles nested braces, escaped characters, and string literals correctly.
+    This is more robust than regex for tool calls containing code diffs
+    (apply_patch) where nested braces in the diff content break regex matching.
+
+    Ported from benchmarks/llm-eval/engine_runner.py (v1.15.6, P2).
+
+    Args:
+        text: Text potentially containing JSON objects
+
+    Returns:
+        List of parsed dict objects found in the text
+    """
+    objects: List[Dict[str, Any]] = []
+    i = 0
+    while i < len(text):
+        if text[i] == '{':
+            depth = 0
+            in_string = False
+            escape = False
+            start = i
+            for j in range(i, len(text)):
+                c = text[j]
+                if escape:
+                    escape = False
+                    continue
+                if c == '\\' and in_string:
+                    escape = True
+                    continue
+                if c == '"' and not escape:
+                    in_string = not in_string
+                    continue
+                if in_string:
+                    continue
+                if c == '{':
+                    depth += 1
+                elif c == '}':
+                    depth -= 1
+                    if depth == 0:
+                        candidate = text[start:j + 1]
+                        try:
+                            obj = json.loads(candidate)
+                            if isinstance(obj, dict):
+                                objects.append(obj)
+                        except json.JSONDecodeError:
+                            pass
+                        i = j + 1
+                        break
+            else:
+                i += 1
+        else:
+            i += 1
+    return objects
+
+
 def _infer_tool_from_arguments(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Infer which tool based on argument patterns when 'tool' key is missing.
 
@@ -216,9 +273,14 @@ def parse_tool_call(
     """Parse a tool call from model response text.
 
     Tries multiple parsing strategies:
-    1. Entire response as JSON
-    2. JSON in markdown code blocks
-    3. JSON with 'tool' key anywhere in text
+    1. Entire response as JSON (fast path for clean tool calls)
+    2. Brace-counting extraction of all JSON objects from text
+       (handles code blocks, inline JSON, nested braces in diffs)
+
+    Strategy 2 uses _find_json_objects() which correctly handles nested
+    braces inside string literals (e.g., apply_patch diffs containing
+    '{' and '}' in code). This replaced the previous regex-based approach
+    that broke on such content (v1.15.6, P2 backlog).
 
     Args:
         text: Model response text
@@ -229,7 +291,7 @@ def parse_tool_call(
     """
     if not text:
         return None
-    # Try entire response as JSON first (most common case for tool calls)
+    # Strategy 1: Try entire response as JSON (most common case for tool calls)
     text_stripped = text.strip()
     if text_stripped.startswith('{') and text_stripped.endswith('}'):
         data = _try_parse_json(text_stripped)
@@ -242,72 +304,110 @@ def parse_tool_call(
             if inferred:
                 return inferred
 
-    # Try extracting JSON from markdown code blocks
-    # Match ```json ... ``` or ``` ... ``` blocks
-    code_block_pattern = r'```(?:json)?\s*([\s\S]*?)```'
-    matches = re.findall(code_block_pattern, text)
-
-    for match in matches:
-        match_stripped = match.strip()
-        if match_stripped.startswith('{') and match_stripped.endswith('}'):
-            data = _try_parse_json(match_stripped)
-            if data:
-                normalized = _normalize_tool_call(data, get_tool)
-                if normalized:
-                    return normalized
-                # Fallback: try to infer tool from arguments
-                inferred = _infer_tool_from_arguments(data)
-                if inferred:
-                    return inferred
-
-    # Try JSON in code blocks - use greedy match for nested braces (fallback)
-    code_block_pattern2 = r'```(?:json)?\s*(\{[\s\S]*?\})\s*```'
-    matches = re.findall(code_block_pattern2, text)
-
-    for match in matches:
-        data = _try_parse_json(match)
-        if data:
-            normalized = _normalize_tool_call(data, get_tool)
-            if normalized:
-                return normalized
-            # Fallback: try to infer tool from arguments
-            inferred = _infer_tool_from_arguments(data)
-            if inferred:
-                return inferred
-
-    # Try to find JSON objects with "tool" key using a more robust approach
-    # Look for complete JSON objects by counting braces
-    # Also try single-quote style: {'tool'
-    for pattern in ['{"tool"', "{'tool'"]:
-        start_idx = 0
-        while True:
-            start = text.find(pattern, start_idx)
-            if start == -1:
-                break
-
-            # Find matching closing brace
-            depth = 0
-            end = start
-            for i, char in enumerate(text[start:], start):
-                if char == '{':
-                    depth += 1
-                elif char == '}':
-                    depth -= 1
-                    if depth == 0:
-                        end = i + 1
-                        break
-
-            if depth == 0 and end > start:
-                json_str = text[start:end]
-                data = _try_parse_json(json_str)
-                if data:
-                    normalized = _normalize_tool_call(data, get_tool)
-                    if normalized:
-                        return normalized
-
-            start_idx = end if end > start else start + 1
+    # Strategy 2: Find all JSON objects using brace-counting parser.
+    # This handles: markdown code blocks, inline JSON, "I'll use X tool" + JSON,
+    # and nested braces in apply_patch diffs that break regex extraction.
+    json_objects = _find_json_objects(text)
+    for data in json_objects:
+        # Try normalizing with explicit tool/name key first
+        normalized = _normalize_tool_call(data, get_tool)
+        if normalized:
+            return normalized
+        # Fallback: try to infer tool from argument patterns
+        inferred = _infer_tool_from_arguments(data)
+        if inferred:
+            return inferred
 
     return None
+
+
+def strip_tool_json_from_text(text: str) -> str:
+    """Strip tool call JSON objects from response text.
+
+    v1.15.6, Gap 4: When models output native tool_calls AND duplicate the
+    tool call JSON in the response content text, this function removes the
+    JSON blocks to prevent user confusion and context waste.
+
+    Only strips JSON objects that look like tool calls (contain "tool" or
+    "name" key with "arguments" key). Preserves any surrounding text.
+
+    Args:
+        text: Response text potentially containing embedded tool call JSON
+
+    Returns:
+        Text with tool call JSON blocks removed, whitespace cleaned up
+    """
+    if not text or '{' not in text:
+        return text
+
+    # Find all JSON object spans using brace-counting
+    spans_to_remove: List[tuple] = []
+    i = 0
+    while i < len(text):
+        if text[i] == '{':
+            depth = 0
+            in_string = False
+            escape = False
+            start = i
+            for j in range(i, len(text)):
+                c = text[j]
+                if escape:
+                    escape = False
+                    continue
+                if c == '\\' and in_string:
+                    escape = True
+                    continue
+                if c == '"' and not escape:
+                    in_string = not in_string
+                    continue
+                if in_string:
+                    continue
+                if c == '{':
+                    depth += 1
+                elif c == '}':
+                    depth -= 1
+                    if depth == 0:
+                        candidate = text[start:j + 1]
+                        try:
+                            obj = json.loads(candidate)
+                            if isinstance(obj, dict):
+                                # Only strip objects that look like tool calls
+                                has_tool_key = "tool" in obj or "name" in obj
+                                has_args = "arguments" in obj
+                                if has_tool_key and has_args:
+                                    spans_to_remove.append((start, j + 1))
+                        except json.JSONDecodeError:
+                            pass
+                        i = j + 1
+                        break
+            else:
+                i += 1
+        else:
+            i += 1
+
+    if not spans_to_remove:
+        return text
+
+    # Remove spans in reverse order to preserve indices
+    result = text
+    for start, end in reversed(spans_to_remove):
+        # Also strip surrounding markdown code block fences if present
+        pre = result[:start].rstrip()
+        post = result[end:].lstrip()
+        # Check for ```json or ``` before the JSON
+        if pre.endswith('```json') or pre.endswith('```'):
+            fence_start = pre.rfind('```')
+            pre = pre[:fence_start].rstrip()
+        # Check for ``` after the JSON
+        if post.startswith('```'):
+            post = post[3:].lstrip()
+        result = pre + '\n' + post
+
+    # Clean up excessive whitespace
+    while '\n\n\n' in result:
+        result = result.replace('\n\n\n', '\n\n')
+
+    return result.strip()
 
 
 def detect_truncated_tool_call(text: str) -> Optional[Dict[str, Any]]:

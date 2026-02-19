@@ -139,6 +139,11 @@
         "filename": "perplexity_sonar_2026-02-08_7676e2a0.json",
         "timestamp": "2026-02-08T13:44:16.236968",
         "overall_score": 75.0
+      },
+      {
+        "filename": "perplexity_sonar_2026-02-19_e0ff5a0d.json",
+        "timestamp": "2026-02-19T00:22:59.377786",
+        "overall_score": 48.4375
       }
     ],
     "openai/gpt-5.2": [
@@ -156,6 +161,16 @@
         "filename": "openai_gpt-5.2_2026-02-17_ac633924.json",
         "timestamp": "2026-02-17T23:12:20.943835",
         "overall_score": 70.3125
+      },
+      {
+        "filename": "openai_gpt-5.2_2026-02-17_dd8ce3c5.json",
+        "timestamp": "2026-02-17T20:58:07.743492",
+        "overall_score": 57.8125
+      },
+      {
+        "filename": "openai_gpt-5.2_2026-02-19_d4b2d2c7.json",
+        "timestamp": "2026-02-19T00:22:42.138143",
+        "overall_score": 57.8125
       }
     ],
     "openai/gpt-4.1": [
@@ -195,6 +210,26 @@
         "filename": "openai_o4-mini_2026-02-17_988bd548.json",
         "timestamp": "2026-02-17T23:44:03.725102",
         "overall_score": 10.9375
+      },
+      {
+        "filename": "openai_o4-mini_2026-02-17_c46cbed6.json",
+        "timestamp": "2026-02-17T20:59:06.596352",
+        "overall_score": 62.5
+      },
+      {
+        "filename": "openai_o4-mini_2026-02-19_63ba60bf.json",
+        "timestamp": "2026-02-19T15:20:25.526670",
+        "overall_score": 62.5
+      },
+      {
+        "filename": "openai_o4-mini_2026-02-19_de008a6a.json",
+        "timestamp": "2026-02-19T15:34:29.940394",
+        "overall_score": 73.4375
+      },
+      {
+        "filename": "openai_o4-mini_2026-02-19_3328c6f1.json",
+        "timestamp": "2026-02-19T15:57:43.418159",
+        "overall_score": 100.0
       }
     ],
     "openai/gpt-5": [
@@ -212,6 +247,16 @@
         "filename": "openai_gpt-5_2026-02-17_807fc47c.json",
         "timestamp": "2026-02-17T23:31:34.756713",
         "overall_score": 62.5
+      },
+      {
+        "filename": "openai_gpt-5_2026-02-17_04b44af2.json",
+        "timestamp": "2026-02-17T20:52:06.150591",
+        "overall_score": 10.9375
+      },
+      {
+        "filename": "openai_gpt-5_2026-02-17_f262fc9e.json",
+        "timestamp": "2026-02-17T20:41:19.546911",
+        "overall_score": 10.9375
       }
     ],
     "openai/gpt-4.1-mini": [
@@ -224,6 +269,21 @@
         "filename": "openai_gpt-4.1-mini_2026-02-17_6026f0f4.json",
         "timestamp": "2026-02-17T23:09:18.313608",
         "overall_score": 60.9375
+      },
+      {
+        "filename": "openai_gpt-4.1-mini_2026-02-17_a0a7d44e.json",
+        "timestamp": "2026-02-17T20:42:50.137327",
+        "overall_score": 71.875
+      },
+      {
+        "filename": "openai_gpt-4.1-mini_2026-02-19_2ab31d8d.json",
+        "timestamp": "2026-02-19T15:35:51.058690",
+        "overall_score": 71.875
+      },
+      {
+        "filename": "openai_gpt-4.1-mini_2026-02-19_16184614.json",
+        "timestamp": "2026-02-19T15:58:10.447464",
+        "overall_score": 100.0
       }
     ],
     "openai/gpt-4.1-nano": [
@@ -236,6 +296,11 @@
         "filename": "openai_gpt-4.1-nano_2026-02-17_386b021d.json",
         "timestamp": "2026-02-17T23:43:48.358790",
         "overall_score": 50.0
+      },
+      {
+        "filename": "openai_gpt-4.1-nano_2026-02-17_8a1c09d9.json",
+        "timestamp": "2026-02-17T20:41:55.766385",
+        "overall_score": 57.8125
       }
     ],
     "openai/gpt-5-mini": [
@@ -248,6 +313,21 @@
         "filename": "openai_gpt-5-mini_2026-02-17_b0aa8771.json",
         "timestamp": "2026-02-17T23:40:59.802576",
         "overall_score": 67.1875
+      },
+      {
+        "filename": "openai_gpt-5-mini_2026-02-17_39c2ef5e.json",
+        "timestamp": "2026-02-17T20:52:08.391266",
+        "overall_score": 10.9375
+      },
+      {
+        "filename": "openai_gpt-5-mini_2026-02-17_612ddadd.json",
+        "timestamp": "2026-02-17T20:41:20.277401",
+        "overall_score": 10.9375
+      },
+      {
+        "filename": "openai_gpt-5-mini_2026-02-17_89d73bc8.json",
+        "timestamp": "2026-02-17T21:02:26.569315",
+        "overall_score": 65.625
       }
     ],
     "openai/gpt-5.1-codex": [
@@ -285,6 +365,11 @@
         "filename": "openai_gpt-5.1-codex_2026-02-19_2b86f072.json",
         "timestamp": "2026-02-19T00:01:33.500214",
         "overall_score": 64.0625
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-17_00e60298.json",
+        "timestamp": "2026-02-17T20:34:42.657807",
+        "overall_score": 10.9375
       }
     ],
     "openai/gpt-5.1-codex-mini": [
@@ -297,6 +382,11 @@
         "filename": "openai_gpt-5.1-codex-mini_2026-02-17_042e54ec.json",
         "timestamp": "2026-02-17T23:49:11.804796",
         "overall_score": 40.625
+      },
+      {
+        "filename": "openai_gpt-5.1-codex-mini_2026-02-17_91f47beb.json",
+        "timestamp": "2026-02-17T20:34:43.899199",
+        "overall_score": 10.9375
       }
     ]
   },
@@ -486,6 +576,114 @@
       "filename": "gemini_gemini-2.5-pro_2026-02-19_ad2deaaa.json",
       "timestamp": "2026-02-19T00:26:40.529208",
       "overall_score": 81.25
+    },
+    {
+      "pair": "openai/gpt-4.1-mini",
+      "filename": "openai_gpt-4.1-mini_2026-02-17_a0a7d44e.json",
+      "timestamp": "2026-02-17T20:42:50.137327",
+      "overall_score": 71.875
+    },
+    {
+      "pair": "openai/gpt-4.1-nano",
+      "filename": "openai_gpt-4.1-nano_2026-02-17_8a1c09d9.json",
+      "timestamp": "2026-02-17T20:41:55.766385",
+      "overall_score": 57.8125
+    },
+    {
+      "pair": "openai/gpt-5-mini",
+      "filename": "openai_gpt-5-mini_2026-02-17_39c2ef5e.json",
+      "timestamp": "2026-02-17T20:52:08.391266",
+      "overall_score": 10.9375
+    },
+    {
+      "pair": "openai/gpt-5-mini",
+      "filename": "openai_gpt-5-mini_2026-02-17_612ddadd.json",
+      "timestamp": "2026-02-17T20:41:20.277401",
+      "overall_score": 10.9375
+    },
+    {
+      "pair": "openai/gpt-5-mini",
+      "filename": "openai_gpt-5-mini_2026-02-17_89d73bc8.json",
+      "timestamp": "2026-02-17T21:02:26.569315",
+      "overall_score": 65.625
+    },
+    {
+      "pair": "openai/gpt-5.1-codex-mini",
+      "filename": "openai_gpt-5.1-codex-mini_2026-02-17_91f47beb.json",
+      "timestamp": "2026-02-17T20:34:43.899199",
+      "overall_score": 10.9375
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-17_00e60298.json",
+      "timestamp": "2026-02-17T20:34:42.657807",
+      "overall_score": 10.9375
+    },
+    {
+      "pair": "openai/gpt-5.2",
+      "filename": "openai_gpt-5.2_2026-02-17_dd8ce3c5.json",
+      "timestamp": "2026-02-17T20:58:07.743492",
+      "overall_score": 57.8125
+    },
+    {
+      "pair": "openai/gpt-5.2",
+      "filename": "openai_gpt-5.2_2026-02-19_d4b2d2c7.json",
+      "timestamp": "2026-02-19T00:22:42.138143",
+      "overall_score": 57.8125
+    },
+    {
+      "pair": "openai/gpt-5",
+      "filename": "openai_gpt-5_2026-02-17_04b44af2.json",
+      "timestamp": "2026-02-17T20:52:06.150591",
+      "overall_score": 10.9375
+    },
+    {
+      "pair": "openai/gpt-5",
+      "filename": "openai_gpt-5_2026-02-17_f262fc9e.json",
+      "timestamp": "2026-02-17T20:41:19.546911",
+      "overall_score": 10.9375
+    },
+    {
+      "pair": "openai/o4-mini",
+      "filename": "openai_o4-mini_2026-02-17_c46cbed6.json",
+      "timestamp": "2026-02-17T20:59:06.596352",
+      "overall_score": 62.5
+    },
+    {
+      "pair": "perplexity/sonar",
+      "filename": "perplexity_sonar_2026-02-19_e0ff5a0d.json",
+      "timestamp": "2026-02-19T00:22:59.377786",
+      "overall_score": 48.4375
+    },
+    {
+      "pair": "openai/o4-mini",
+      "filename": "openai_o4-mini_2026-02-19_63ba60bf.json",
+      "timestamp": "2026-02-19T15:20:25.526670",
+      "overall_score": 62.5
+    },
+    {
+      "pair": "openai/o4-mini",
+      "filename": "openai_o4-mini_2026-02-19_de008a6a.json",
+      "timestamp": "2026-02-19T15:34:29.940394",
+      "overall_score": 73.4375
+    },
+    {
+      "pair": "openai/gpt-4.1-mini",
+      "filename": "openai_gpt-4.1-mini_2026-02-19_2ab31d8d.json",
+      "timestamp": "2026-02-19T15:35:51.058690",
+      "overall_score": 71.875
+    },
+    {
+      "pair": "openai/o4-mini",
+      "filename": "openai_o4-mini_2026-02-19_3328c6f1.json",
+      "timestamp": "2026-02-19T15:57:43.418159",
+      "overall_score": 100.0
+    },
+    {
+      "pair": "openai/gpt-4.1-mini",
+      "filename": "openai_gpt-4.1-mini_2026-02-19_16184614.json",
+      "timestamp": "2026-02-19T15:58:10.447464",
+      "overall_score": 100.0
     }
   ]
 }

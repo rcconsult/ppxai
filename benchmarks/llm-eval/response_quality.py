@@ -55,7 +55,8 @@ class QualityMetrics:
 
 def validate_response_quality(
     response: Dict[str, Any],
-    expected_tool: str = None
+    expected_tool: str = None,
+    tool_calling_method: str = "native",
 ) -> QualityMetrics:
     """
     Validate response quality and detect anti-patterns.
@@ -63,28 +64,42 @@ def validate_response_quality(
     Args:
         response: LLM response dict with 'content' and 'tool_calls'
         expected_tool: Expected tool name (if checking tool correctness)
+        tool_calling_method: How tool calls are made ("native", "prompt_based", "auto").
+            In prompt-based mode, tool JSON in content is expected behavior, not an
+            anti-pattern — the penalty is skipped.
 
     Returns:
         QualityMetrics with scores and detected anti-patterns
     """
     content = response.get("content", "")
     tool_calls = response.get("tool_calls", [])
+    is_prompt_based = tool_calling_method == "prompt_based"
 
     anti_patterns = []
     quality_notes = []
     base_quality = 1.0
 
     # 1. Tool JSON in content (while also making tool calls)
-    if tool_calls and _has_tool_json_in_content(content):
+    # In prompt-based mode, tool JSON in content IS the tool call mechanism,
+    # so this is expected behavior, not an anti-pattern.
+    if tool_calls and _has_tool_json_in_content(content) and not is_prompt_based:
         anti_patterns.append("tool_json_in_content")
         quality_notes.append("Model output tool JSON in response text while also making tool calls")
         base_quality -= 0.3
 
     # 2. Explanation before/with tool call
+    # In prompt-based mode, models commonly explain before outputting JSON —
+    # only penalize lightly since we care more about correctness.
     if tool_calls and _has_explanation_with_tool(content):
-        anti_patterns.append("explained_before_tool")
-        quality_notes.append("Model explained what it would do instead of calling tool directly")
-        base_quality -= 0.2
+        if is_prompt_based:
+            # Lighter penalty for prompt-based — explanation is common and less harmful
+            anti_patterns.append("explained_before_tool")
+            quality_notes.append("Model explained before tool call (minor in prompt-based mode)")
+            base_quality -= 0.05
+        else:
+            anti_patterns.append("explained_before_tool")
+            quality_notes.append("Model explained what it would do instead of calling tool directly")
+            base_quality -= 0.2
 
     # 3. Code blocks in content when tool call handles it
     if tool_calls and "```python" in content:

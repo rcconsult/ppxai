@@ -10,6 +10,7 @@ import os
 import httpx
 from openai import OpenAI
 
+from ..model_profiles import ModelProfile, get_profile
 from ..types import Message, Event, EventType, ProviderCapabilities, ModelInfo, UsageStats
 
 
@@ -159,6 +160,21 @@ class BaseProvider(ABC):
             True if provider needs this tool (doesn't have native capability)
         """
         return not getattr(self.capabilities, tool_category, False)
+
+    def get_model_profile(self, model: str) -> ModelProfile:
+        """Get the behavioral profile for a model.
+
+        Returns the ModelProfile that controls tool calling strategy, API
+        routing, and parameter handling. Providers can override this to
+        return custom profiles; the default looks up the built-in registry.
+
+        Args:
+            model: Model ID (e.g., "gpt-5.2", "sonar-pro")
+
+        Returns:
+            ModelProfile for the model
+        """
+        return get_profile(model)
 
     def _convert_messages(self, messages: List[Message]) -> List[Dict[str, str]]:
         """Convert Message objects to API format.

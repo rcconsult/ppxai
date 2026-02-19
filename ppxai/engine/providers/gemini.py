@@ -22,6 +22,7 @@ import json
 import os
 from typing import List, AsyncIterator, Optional, Dict, Any
 from ...common.logger import get_logger
+from ..model_profiles import ModelProfile, get_profile
 from ..types import Message, Event, EventType, ProviderCapabilities, ModelInfo, UsageStats
 
 
@@ -464,6 +465,19 @@ class GeminiProvider:
             True if provider needs this tool (doesn't have native capability)
         """
         return not getattr(self.capabilities, tool_category, False)
+
+    def get_model_profile(self, model: str) -> ModelProfile:
+        """Get the behavioral profile for a model.
+
+        Returns the ModelProfile from the built-in registry.
+
+        Args:
+            model: Model ID (e.g., "gemini-2.5-pro", "gemini-3-flash-preview")
+
+        Returns:
+            ModelProfile for the model
+        """
+        return get_profile(model)
 
     def _convert_messages(self, messages: List[Message]) -> tuple:
         """Convert Message objects to Gemini format.

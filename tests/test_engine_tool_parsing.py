@@ -9,6 +9,13 @@ import pytest
 from unittest.mock import Mock, patch, AsyncMock
 import json
 
+from ppxai.engine.tools.parser import (
+    _find_json_objects,
+    parse_tool_call,
+    strip_tool_json_from_text,
+    detect_truncated_tool_call,
+)
+
 
 class TestEngineToolCallParsing:
     """Test EngineClient._parse_tool_call method."""
@@ -1038,3 +1045,189 @@ class TestParseToolCallNoneGuard:
 
         result = parse_tool_call("", lambda name: None)
         assert result is None
+
+
+class TestFindJsonObjects:
+    """Tests for _find_json_objects brace-counting parser (v1.15.6, P2)."""
+
+    def test_simple_json_object(self):
+        """Parse a single JSON object from text."""
+
+        text = 'Here is the result: {"tool": "web_search", "arguments": {"query": "hello"}}'
+        objects = _find_json_objects(text)
+        assert len(objects) == 1
+        assert objects[0]["tool"] == "web_search"
+
+    def test_multiple_json_objects(self):
+        """Find multiple JSON objects in text."""
+
+        text = 'First: {"a": 1} then {"b": 2} end'
+        objects = _find_json_objects(text)
+        assert len(objects) == 2
+        assert objects[0] == {"a": 1}
+        assert objects[1] == {"b": 2}
+
+    def test_nested_braces_in_strings(self):
+        """Handle nested braces inside string values (apply_patch diffs)."""
+
+        text = '{"tool": "apply_patch", "arguments": {"patch": "--- a.py\\n+++ b.py\\n@@ -1 +1 @@\\n-def foo() {\\n+def bar() {"}}'
+        objects = _find_json_objects(text)
+        assert len(objects) == 1
+        assert objects[0]["tool"] == "apply_patch"
+
+    def test_escaped_quotes_in_strings(self):
+        """Handle escaped quotes inside string values."""
+
+        text = '{"key": "value with \\"quotes\\" inside"}'
+        objects = _find_json_objects(text)
+        assert len(objects) == 1
+        assert "quotes" in objects[0]["key"]
+
+    def test_json_in_code_block(self):
+        """Find JSON inside markdown code blocks."""
+
+        text = "Here's my tool call:\n```json\n{\"tool\": \"read_file\", \"arguments\": {\"filepath\": \"test.py\"}}\n```"
+        objects = _find_json_objects(text)
+        assert len(objects) == 1
+        assert objects[0]["tool"] == "read_file"
+
+    def test_no_json_in_text(self):
+        """Return empty list when no JSON objects found."""
+
+        objects = _find_json_objects("Just plain text with no JSON")
+        assert objects == []
+
+    def test_invalid_json_skipped(self):
+        """Skip text that looks like JSON but isn't valid."""
+
+        text = '{not valid json} and {"valid": true}'
+        objects = _find_json_objects(text)
+        assert len(objects) == 1
+        assert objects[0] == {"valid": True}
+
+    def test_unclosed_brace_handled(self):
+        """Handle unclosed braces without crashing."""
+
+        text = '{"unclosed": "value'
+        objects = _find_json_objects(text)
+        assert objects == []
+
+    def test_empty_string(self):
+        """Handle empty string input."""
+
+        assert _find_json_objects("") == []
+
+    def test_deeply_nested_json(self):
+        """Handle deeply nested JSON objects."""
+
+        text = '{"tool": "test", "arguments": {"nested": {"deep": {"value": 42}}}}'
+        objects = _find_json_objects(text)
+        assert len(objects) == 1
+        assert objects[0]["arguments"]["nested"]["deep"]["value"] == 42
+
+
+class TestStripToolJsonFromText:
+    """Tests for strip_tool_json_from_text (v1.15.6, Gap 4)."""
+
+    def test_strip_tool_call_json(self):
+        """Strip tool call JSON from response text."""
+
+        text = 'I will search for that. {"tool": "web_search", "arguments": {"query": "python"}} Let me know if you need more.'
+        result = strip_tool_json_from_text(text)
+        assert '{"tool"' not in result
+        assert "I will search for that." in result
+        assert "Let me know if you need more." in result
+
+    def test_preserve_non_tool_json(self):
+        """Don't strip JSON that isn't a tool call."""
+
+        text = 'The config is: {"debug": true, "level": 5}'
+        result = strip_tool_json_from_text(text)
+        assert '{"debug": true' in result
+
+    def test_strip_tool_json_in_code_block(self):
+        """Strip tool call JSON wrapped in markdown code block."""
+
+        text = 'I will call the tool:\n```json\n{"tool": "read_file", "arguments": {"filepath": "test.py"}}\n```\nDone.'
+        result = strip_tool_json_from_text(text)
+        assert '{"tool"' not in result
+        assert "```" not in result
+        assert "Done." in result
+
+    def test_no_stripping_needed(self):
+        """Return text unchanged when no tool JSON present."""
+
+        text = "Just a normal response with no JSON."
+        assert strip_tool_json_from_text(text) == text
+
+    def test_empty_input(self):
+        """Handle empty string."""
+
+        assert strip_tool_json_from_text("") == ""
+
+    def test_none_guard(self):
+        """Handle None input (returns None)."""
+
+        assert strip_tool_json_from_text(None) is None
+
+    def test_strip_name_key_variant(self):
+        """Strip JSON with 'name' key (OpenAI function call format)."""
+
+        text = 'Calling function: {"name": "web_search", "arguments": {"query": "test"}}'
+        result = strip_tool_json_from_text(text)
+        assert '{"name"' not in result
+        assert "Calling function:" in result
+
+    def test_strip_multiple_tool_calls(self):
+        """Strip multiple tool call JSON blocks."""
+
+        text = (
+            'Step 1: {"tool": "read_file", "arguments": {"filepath": "a.py"}} '
+            'Step 2: {"tool": "web_search", "arguments": {"query": "test"}}'
+        )
+        result = strip_tool_json_from_text(text)
+        assert '{"tool"' not in result
+
+    def test_no_brace_in_text(self):
+        """Fast path: text without braces returned as-is."""
+
+        text = "No braces here at all"
+        assert strip_tool_json_from_text(text) == text
+
+
+class TestParseToolCallBraceCountingIntegration:
+    """Integration tests verifying parse_tool_call uses brace-counting parser."""
+
+    @pytest.fixture
+    def mock_get_tool(self):
+        """Create a mock get_tool function."""
+        mock_tool = Mock()
+        mock_tool.parameters = {
+            "type": "object",
+            "properties": {
+                "patch": {"type": "string"},
+                "file_path": {"type": "string"},
+            },
+            "required": ["patch"]
+        }
+
+        def get_tool(name):
+            if name == "apply_patch":
+                return mock_tool
+            return None
+
+        return get_tool
+
+    def test_parse_apply_patch_with_nested_braces(self, mock_get_tool):
+        """parse_tool_call handles apply_patch with braces in diff content."""
+        # Simulate a model response with apply_patch containing code with braces
+        text = (
+            'I will apply the patch:\n'
+            '{"tool": "apply_patch", "arguments": {"patch": '
+            '"--- a/main.py\\n+++ b/main.py\\n@@ -1,3 +1,3 @@\\n'
+            '-def foo():\\n+def bar():\\n     return {\\\"key\\\": \\\"value\\\"}"}}'
+        )
+        result = parse_tool_call(text, mock_get_tool)
+        assert result is not None
+        assert result["tool"] == "apply_patch"
+        assert "patch" in result["arguments"]

@@ -1,0 +1,93 @@
+{
+  "provider": "openai",
+  "model": "gpt-4.1-mini",
+  "timestamp": "2026-02-19T15:58:10.447464",
+  "overall_score": 100.0,
+  "tests_passed": 6,
+  "tests_total": 6,
+  "duration_seconds": 19.383779048919678,
+  "category_scores": {
+    "tool_calling": 100.0
+  },
+  "test_results": [
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool": "read_file",
+        "args": {
+          "path": "/src/main.py"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool": "write_file",
+        "args": {
+          "path": "/tmp/test.txt",
+          "content": "Hello, World!"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "content_length": 2175,
+        "repetitions": 26,
+        "model_max_tokens": 32768
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "sequence": [
+          "read_file config.json",
+          "read_file main.py"
+        ]
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool_calls": 1,
+        "content_length": 0
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": true,
+      "details": {
+        "tool_calls": 1,
+        "mode": "prompt_based"
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "no-samples",
+    "tool_calling_method": "prompt_based"
+  }
+}

@@ -93,6 +93,13 @@ Examples:
     run_group.add_argument("--categories", type=str, help="Comma-separated test categories to run")
     run_group.add_argument("--timeout", type=int, default=120, help="Timeout per test in seconds (default: 120)")
     run_group.add_argument("--retries", type=int, default=1, help="Number of retries per test (default: 1)")
+    run_group.add_argument(
+        "--tool-calling-method", type=str,
+        choices=["native", "prompt_based", "auto"],
+        default="auto",
+        help="Force tool calling method: native (API function calling), "
+             "prompt_based (inject tools in prompt), auto (detect from provider caps)"
+    )
 
     # Analysis mode
     analysis_group = parser.add_argument_group("Analysis")
@@ -134,6 +141,7 @@ def run_benchmark(args: argparse.Namespace) -> int:
         retries=args.retries,
         verbose=args.verbose,
         debug=args.debug,
+        tool_calling_method=getattr(args, 'tool_calling_method', 'auto'),
     )
 
     print(f"\n{'='*60}")

@@ -18,7 +18,7 @@ from typing import AsyncIterator, Dict, Any, List, Optional, Protocol, Callable
 from .types import Event, EventType, Message, UsageStats
 from .session import SessionManager
 from .tools.manager import ToolManager
-from .tools.parser import parse_tool_call, detect_truncated_tool_call
+from .tools.parser import parse_tool_call, detect_truncated_tool_call, strip_tool_json_from_text
 from .tools.validator import ResponseValidator, ValidationResult
 from .providers.base import BaseProvider
 from ..config import get_system_prompt, get_system_prompt_mode, calculate_cost
@@ -333,6 +333,12 @@ async def chat_with_tools(
             if isinstance(tool_args, dict) and "tool" in tool_args and "arguments" in tool_args:
                 tool_args = tool_args["arguments"]
             tool_call = {"tool": tc["tool"], "arguments": tool_args}
+            # v1.15.6 Gap 4: Strip duplicated tool call JSON from response text.
+            # Some models (gpt-5-mini, gpt-5, etc.) output tool calls both via
+            # native tool_calls AND as JSON text in the content. Remove the
+            # duplicate to prevent user confusion and context waste.
+            if full_response:
+                full_response = strip_tool_json_from_text(full_response)
         else:
             tool_call = parse_tool_call(full_response, ctx.tool_manager.get_tool)
 

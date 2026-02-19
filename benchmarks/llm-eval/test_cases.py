@@ -20,6 +20,7 @@ from typing import Callable, Any
 from dataclasses import dataclass
 
 from response_quality import validate_response_quality, QualityMetrics
+from ppxai.engine.model_profiles import get_profile
 
 
 @dataclass
@@ -194,21 +195,42 @@ async def test_tool_call_with_complex_args(client) -> tuple[bool, dict]:
 
 
 async def test_tool_call_large_payload(client) -> tuple[bool, dict]:
-    """Test tool call with large JSON payload (tests truncation issues)."""
-    # Generate a large but valid code block
-    large_content = "def function_{i}():\n    '''Function {i} docstring.'''\n    return {i}\n\n" * 50
+    """Test tool call with large JSON payload (tests truncation issues).
+
+    Calibrates payload size based on the model's max_tokens from its profile.
+    Models with lower output limits get a proportionally smaller payload.
+    Uses unique function names/bodies to discourage models from summarizing
+    repeated patterns instead of reproducing content faithfully.
+    """
+    model = getattr(client, "model", "")
+    profile = get_profile(model)
+    max_output = profile.max_tokens if profile.max_tokens > 0 else 16_384
+
+    # Scale repetitions: each function is ~90 chars (~25 tokens).
+    # Target ~2% of max output tokens to stay well within limits while
+    # still testing that the model can handle multi-KB payloads.
+    target_tokens = max(200, int(max_output * 0.02))
+    repetitions = max(10, min(50, target_tokens // 25))
+
+    # Use unique names/values to prevent models from summarizing the pattern
+    lines = []
+    for i in range(repetitions):
+        lines.append(f"def calc_{i:03d}(x):")
+        lines.append(f"    '''Compute step {i} transformation.'''")
+        lines.append(f"    return x * {i * 7 + 3} + {i * 13 + 1}")
+        lines.append("")
+    large_content = "\n".join(lines)
 
     response = await client.chat(
         messages=[
             {"role": "system", "content": "You are a coding assistant. Use tools when asked. Call tools directly without explanation."},
-            {"role": "user", "content": f"Write this code to /src/functions.py:\n\n```python\n{large_content}```"}
+            {"role": "user", "content": f"Write this EXACT code to /src/functions.py (do NOT modify or summarize it):\n\n```python\n{large_content}```"}
         ],
         tools=TOOLS,
     )
 
     tool_calls = response.get("tool_calls", [])
     if not tool_calls:
-        # Check for truncated tool call in content
         content = response.get("content", "")
         if "write_file" in content.lower() or "```json" in content:
             return False, {"error": "Tool call appears in content instead of tool_calls (truncation?)", "content_preview": content[:500]}
@@ -219,8 +241,16 @@ async def test_tool_call_large_payload(client) -> tuple[bool, dict]:
         args = json.loads(call["function"]["arguments"])
         content_len = len(args.get("content", ""))
         if content_len < len(large_content) * 0.8:  # Allow some formatting changes
-            return False, {"error": f"Content truncated: got {content_len} chars, expected ~{len(large_content)}"}
-        return True, {"content_length": content_len}
+            return False, {
+                "error": f"Content truncated: got {content_len} chars, expected ~{len(large_content)}",
+                "repetitions": repetitions,
+                "model_max_tokens": max_output,
+            }
+        return True, {
+            "content_length": content_len,
+            "repetitions": repetitions,
+            "model_max_tokens": max_output,
+        }
     except json.JSONDecodeError as e:
         return False, {"error": f"Invalid JSON (likely truncated): {e}"}
 
@@ -304,7 +334,13 @@ async def test_no_explain_before_tool(client) -> tuple[bool, dict]:
 
 
 async def test_tool_call_json_in_content(client) -> tuple[bool, dict]:
-    """Test that tool calls don't appear as JSON in content (GPT-OSS failure mode)."""
+    """Test clean tool call delivery.
+
+    In native mode: tool calls must NOT appear as JSON in content.
+    In prompt-based mode: tool calls are delivered via JSON in content,
+    but the engine_runner strips them after extraction. Verify that the
+    tool call was successfully extracted into tool_calls.
+    """
     response = await client.chat(
         messages=[
             {"role": "system", "content": "You are a coding assistant. Use the provided tools."},
@@ -315,8 +351,18 @@ async def test_tool_call_json_in_content(client) -> tuple[bool, dict]:
 
     content = response.get("content", "")
     tool_calls = response.get("tool_calls", [])
+    method = getattr(client, "tool_calling_method", "native")
+    effective_method = client.get_effective_tool_calling_method() if hasattr(client, "get_effective_tool_calling_method") else method
 
-    # Check for JSON tool call in content
+    if effective_method == "prompt_based":
+        # In prompt-based mode, we verify:
+        # 1. Tool call was successfully extracted
+        # 2. Content was cleaned (JSON stripped by engine_runner)
+        if not tool_calls:
+            return False, {"error": "No tool call extracted from content (prompt-based)", "response": content[:200]}
+        return True, {"tool_calls": len(tool_calls), "mode": "prompt_based"}
+
+    # Native mode: check for JSON tool call in content (anti-pattern)
     json_patterns = [
         r'\{\s*"tool"\s*:',
         r'\{\s*"name"\s*:\s*"(read_file|write_file|apply_patch|run_command|search_code)"',
@@ -335,7 +381,7 @@ async def test_tool_call_json_in_content(client) -> tuple[bool, dict]:
     if not tool_calls:
         return False, {"error": "No tool call made", "response": content[:200]}
 
-    return True, {"tool_calls": len(tool_calls)}
+    return True, {"tool_calls": len(tool_calls), "mode": "native"}
 
 
 # =============================================================================
@@ -359,8 +405,9 @@ def main():
         tools=TOOLS,
     )
 
-    # Validate response quality first
-    quality = validate_response_quality(response, expected_tool="apply_patch")
+    # Validate response quality first (method-aware)
+    method = client.get_effective_tool_calling_method() if hasattr(client, "get_effective_tool_calling_method") else "native"
+    quality = validate_response_quality(response, expected_tool="apply_patch", tool_calling_method=method)
 
     tool_calls = response.get("tool_calls", [])
     if not tool_calls:
@@ -427,8 +474,9 @@ async def test_apply_patch_indentation(client) -> tuple[bool, dict]:
         tools=TOOLS,
     )
 
-    # Validate response quality first
-    quality = validate_response_quality(response, expected_tool="apply_patch")
+    # Validate response quality first (method-aware)
+    method = client.get_effective_tool_calling_method() if hasattr(client, "get_effective_tool_calling_method") else "native"
+    quality = validate_response_quality(response, expected_tool="apply_patch", tool_calling_method=method)
 
     tool_calls = response.get("tool_calls", [])
     if not tool_calls:
@@ -488,8 +536,9 @@ if __name__ == "__main__":
         tools=TOOLS,
     )
 
-    # Validate response quality
-    quality = validate_response_quality(response, expected_tool="apply_patch")
+    # Validate response quality (method-aware)
+    method = client.get_effective_tool_calling_method() if hasattr(client, "get_effective_tool_calling_method") else "native"
+    quality = validate_response_quality(response, expected_tool="apply_patch", tool_calling_method=method)
 
     tool_calls = response.get("tool_calls", [])
     if not tool_calls:

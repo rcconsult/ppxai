@@ -276,6 +276,20 @@ The previously planned v1.16.0 content (file navigation) fits naturally alongsid
 | **CommandResult types** | `DirectoryListingResult`, `DirectoryTreeResult` | 2 hours |
 | **Renderer implementations** | Rich + Textual renderers for new result types | 3 hours |
 
+### Goal 6: Provider Hierarchy Refactoring
+
+`OpenAINativeProvider` and `GeminiProvider` are standalone classes that duplicate the entire `BaseProvider` interface (duck typing via `hasattr` guards). This works but is fragile and prevents shared behavior.
+
+| Item | Description | Effort |
+|------|-------------|--------|
+| **Shared ABC or Protocol** | Make `OpenAINativeProvider` and `GeminiProvider` inherit from `BaseProvider` (or a shared `ProviderProtocol`) | 3 hours |
+| **Eliminate duplicate methods** | Move shared methods (`needs_tool`, `get_model_profile`, `_format_error`, `_log_error_traceback`) to base class | 2 hours |
+| **Remove `hasattr` guards** | Replace `hasattr(provider, 'get_capabilities_for_model')` / `hasattr(provider, 'get_model_profile')` in `chat.py` with guaranteed interface methods | 1 hour |
+| **`get_capabilities_for_model` → profile** | Replace `get_capabilities_for_model()` with `get_model_profile()` as the single source of truth for per-model behavior | 2 hours |
+| **Tests** | Verify all providers pass a shared interface compliance test | 2 hours |
+
+**Why v1.16.0:** Changing the provider interface is a breaking change for any custom providers. The v1.15.6 duck-typing approach is a safe intermediate step.
+
 ### v1.16.0 Testing Strategy
 
 | Test Type | What | Target |

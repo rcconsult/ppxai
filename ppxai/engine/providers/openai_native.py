@@ -24,6 +24,7 @@ import httpx
 from openai import OpenAI
 
 from ...common.logger import get_logger
+from ..model_profiles import ModelProfile, get_profile
 from ..types import Message, Event, EventType, ProviderCapabilities, ModelInfo, UsageStats
 
 
@@ -37,6 +38,12 @@ RESTRICTED_PARAM_PREFIXES = ("gpt-5", "o1", "o3", "o4")
 # Codex models and Pro models return 404 on /v1/chat/completions
 RESPONSES_API_PREFIXES = ("gpt-5.1-codex", "codex", "gpt-5.2-pro", "gpt-5-pro", "gpt-6-pro")
 REASONING_MODEL_PREFIXES = ("o1", "o3", "o4")
+
+# Models that perform better with prompt-based tool calling than native.
+# Benchmark evidence:
+#   o4-mini: 10.9% native → 62.5% prompt-based (native returns empty responses)
+#   gpt-4.1-mini: 60.9% native → 71.9% prompt-based (hybrid tool_json_in_content)
+PROMPT_BASED_MODELS = ("o4-mini", "gpt-4.1-mini")
 
 # Generation params unsupported by GPT-5.x and o-series
 RESTRICTED_GENERATION_PARAMS = ("temperature", "top_p", "frequency_penalty", "presence_penalty")
@@ -245,12 +252,19 @@ class OpenAINativeProvider:
     def get_capabilities_for_model(self, model: str) -> ProviderCapabilities:
         """Get model-aware capabilities.
 
-        Responses API models (codex, pro) don't reliably use native function
-        calling — they output tool calls as JSON text instead of function_call
-        items.  Return native_tool_calling=False for these so the engine uses
-        prompt-based tool injection.
+        Returns native_tool_calling=False for models that perform better with
+        prompt-based tool calling:
+        - Responses API models (codex, pro): output tool JSON as text, never
+          emit native function_call items
+        - PROMPT_BASED_MODELS (o4-mini, gpt-4.1-mini): benchmark-proven to
+          score significantly higher with prompt-based routing
         """
-        if self._is_responses_api_model(model):
+        model_lower = model.lower()
+        use_prompt_based = (
+            self._is_responses_api_model(model)
+            or model_lower in PROMPT_BASED_MODELS
+        )
+        if use_prompt_based:
             return ProviderCapabilities(
                 web_search=self.capabilities.web_search,
                 web_fetch=self.capabilities.web_fetch,
@@ -260,6 +274,19 @@ class OpenAINativeProvider:
                 native_tool_calling=False,
             )
         return self.capabilities
+
+    def get_model_profile(self, model: str) -> ModelProfile:
+        """Get the behavioral profile for a model.
+
+        Returns the ModelProfile from the built-in registry.
+
+        Args:
+            model: Model ID (e.g., "gpt-5.2", "o4-mini")
+
+        Returns:
+            ModelProfile for the model
+        """
+        return get_profile(model)
 
     # ------------------------------------------------------------------
     # Chat Completions API
