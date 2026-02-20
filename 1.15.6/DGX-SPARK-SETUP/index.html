@@ -1,0 +1,2218 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.15.6/DGX-SPARK-SETUP/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+    
+    
+      
+        <title>ASUS DGX Spark (GB10) Setup Guide - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#asus-dgx-spark-gb10-setup-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ASUS DGX Spark (GB10) Setup Guide
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../INSTALLATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROVIDER_SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AGENT_MODE_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTEXT-INJECTION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CHECKPOINT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../FILE_EDITING_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AUTOROUTER-CONFIG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#hardware-specifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hardware Specifications
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#option-a-vllm-recommended-for-coding-agents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option A: vLLM (Recommended for Coding Agents)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Option A: vLLM (Recommended for Coding Agents)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-vllm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why vLLM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-a1-docker-image" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step A1: Docker Image
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-a2-run-vllm-container-recommended-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step A2: Run vLLM Container (Recommended Model)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-a3-verify-vllm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step A3: Verify vLLM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-a4-tool-call-parser-selection-critical" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step A4: Tool Call Parser Selection (Critical)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-a5-switching-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step A5: Switching Models
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ppxai-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ppxai Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ppxai Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#api-key-env" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API key (.env)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vllm-provider-config-ppxai-configjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        vLLM provider config (ppxai-config.json)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verify-connectivity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verify Connectivity
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#benchmark-results-2026-02-12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benchmark Results (2026-02-12)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Benchmark Results (2026-02-12)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#latency-3-iterations-per-prompt-level-9-total-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Latency (3 iterations per prompt level, 9 total runs)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llm-eval-agentic-coding-quality-26-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LLM-Eval (Agentic Coding Quality, 26 tests)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comparison-with-cloud-providers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison with Cloud Providers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#model-testing-log" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Testing Log
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Model Testing Log">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#models-that-work-well" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Models That Work Well
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#models-evaluated-but-not-competitive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Models Evaluated But Not Competitive
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#models-that-failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Models That Failed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-technical-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Technical Findings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#model-selection-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Selection Guide
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vllm-container-exits-immediately-crash-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        vLLM container exits immediately (crash loop)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model-loading-is-slow-first-request" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model loading is slow (first request)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connection-refused-from-wslremote" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connection refused from WSL/remote
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ssl-issues-from-wsl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SSL issues from WSL
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running Benchmarks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Running Benchmarks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#latency-benchmark" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Latency benchmark
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#llm-eval-benchmark" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LLM-Eval benchmark
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vllm-docker-image-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        vLLM Docker Image Details
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="vLLM Docker Image Details">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#community-image-hellohal2064vllm-dgx-spark-gb10latest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Community Image: hellohal2064/vllm-dgx-spark-gb10:latest
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#available-tool-call-parsers-vllm-0160rc1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Tool Call Parsers (vLLM 0.16.0rc1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#moe-backend-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MoE Backend Selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="asus-dgx-spark-gb10-setup-guide">ASUS DGX Spark (GB10) Setup Guide<a class="headerlink" href="#asus-dgx-spark-gb10-setup-guide" title="Permanent link">&para;</a></h1>
+<p><strong>Last Updated:</strong> 2026-02-16
+<strong>Purpose:</strong> Feasibility study testbed for evaluating local LLM coding assistants
+<strong>Hardware:</strong> ASUS Ascent GX10 / DGX Spark
+<strong>Host IP:</strong> <code>&lt;dgx-spark-ip&gt;</code>
+<strong>Provider ID:</strong> <code>asusai-vllm</code> (vLLM)
+<strong>HF Cache:</strong> <code>/opt/hf/cache</code> (287GB, <code>root:users</code>, 775)
+<strong>Launch Script:</strong> <code>/opt/hf/launch-vllm.sh</code></p>
+<h2 id="hardware-specifications">Hardware Specifications<a class="headerlink" href="#hardware-specifications" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GPU</td>
+<td>NVIDIA GB10 Blackwell (SM 12.1, CUDA 13.0)</td>
+</tr>
+<tr>
+<td>GPU Memory</td>
+<td>128GB unified LPDDR5x (shared CPU/GPU)</td>
+</tr>
+<tr>
+<td>CPU</td>
+<td>20-core ARM (Cortex-X925 + Cortex-A725)</td>
+</tr>
+<tr>
+<td>RAM</td>
+<td>119GB total (shared with GPU)</td>
+</tr>
+<tr>
+<td>Storage</td>
+<td>916GB NVMe</td>
+</tr>
+<tr>
+<td>Architecture</td>
+<td>aarch64</td>
+</tr>
+<tr>
+<td>OS</td>
+<td>Ubuntu 24.04.3 LTS</td>
+</tr>
+<tr>
+<td>Kernel</td>
+<td>6.14.0-1015-nvidia</td>
+</tr>
+<tr>
+<td>NVIDIA Driver</td>
+<td>580.126.09</td>
+</tr>
+<tr>
+<td>Docker</td>
+<td>29.1.3</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Note:</strong> The GB10 reports <code>[N/A]</code> for <code>nvidia-smi</code> memory queries because it uses unified memory shared with the CPU, not dedicated VRAM. All 128GB is available for model weights + KV cache.</p>
+</blockquote>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
+<p>The DGX Spark ships with Docker and NVIDIA Container Toolkit pre-installed. Verify:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>--version
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>nvidia-smi<span class="w"> </span>--query-gpu<span class="o">=</span>name,memory.total,driver_version<span class="w"> </span>--format<span class="o">=</span>csv,noheader
+</span></code></pre></div>
+<p>Expected output:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Docker version 29.1.3, build f52814d
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>NVIDIA GB10, [N/A], 580.126.09
+</span></code></pre></div></p>
+<hr />
+<h2 id="option-a-vllm-recommended-for-coding-agents">Option A: vLLM (Recommended for Coding Agents)<a class="headerlink" href="#option-a-vllm-recommended-for-coding-agents" title="Permanent link">&para;</a></h2>
+<p>vLLM provides native tool calling, FP8 quantization with Blackwell tensor cores, and high throughput for MoE models.</p>
+<h3 id="why-vllm">Why vLLM<a class="headerlink" href="#why-vllm" title="Permanent link">&para;</a></h3>
+<p>vLLM was selected over Ollama based on benchmark evaluation:</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>vLLM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Throughput (MoE)</td>
+<td><strong>43.8 tok/s</strong></td>
+</tr>
+<tr>
+<td>TTFT (warm)</td>
+<td><strong>117ms</strong></td>
+</tr>
+<tr>
+<td>Native tool calling</td>
+<td>Yes (parser-based)</td>
+</tr>
+<tr>
+<td>FP8 quantization</td>
+<td>Native HW support</td>
+</tr>
+<tr>
+<td>KV cache control</td>
+<td>Configurable</td>
+</tr>
+<tr>
+<td>Code editing quality</td>
+<td><strong>100%</strong> (Qwen3-Coder)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="step-a1-docker-image">Step A1: Docker Image<a class="headerlink" href="#step-a1-docker-image" title="Permanent link">&para;</a></h3>
+<p>The official vLLM images do not support the GB10 (Blackwell SM 12.1 + driver 580.x). Use the community image:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>docker<span class="w"> </span>pull<span class="w"> </span>hellohal2064/vllm-dgx-spark-gb10:latest
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Image</th>
+<th>Version</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hellohal2064/vllm-dgx-spark-gb10:latest</code></td>
+<td>vLLM 0.16.0rc1</td>
+<td>Built for driver 580.x, aarch64, SM 12.1</td>
+</tr>
+<tr>
+<td><code>vllm/vllm-openai:latest</code></td>
+<td>-</td>
+<td><strong>Does NOT work</strong> — missing SM 12.1 support</td>
+</tr>
+<tr>
+<td><code>vllm/vllm-openai:v0.8.x</code></td>
+<td>-</td>
+<td><strong>Does NOT work</strong> — pre-Blackwell builds</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Security note:</strong> The community image is a rebuild of vLLM with Blackwell-compatible CUDA libraries. Verify the image digest and review the Dockerfile if security is a concern. HuggingFace models are downloaded with SHA-256 verification.</p>
+</blockquote>
+<h3 id="step-a2-run-vllm-container-recommended-model">Step A2: Run vLLM Container (Recommended Model)<a class="headerlink" href="#step-a2-run-vllm-container-recommended-model" title="Permanent link">&para;</a></h3>
+<p>Use the launch script at <code>/opt/hf/launch-vllm.sh</code>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>sudo<span class="w"> </span>bash<span class="w"> </span>/opt/hf/launch-vllm.sh<span class="w">              </span><span class="c1"># Start with default model</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>sudo<span class="w"> </span>bash<span class="w"> </span>/opt/hf/launch-vllm.sh<span class="w"> </span>stop<span class="w">          </span><span class="c1"># Stop the running container</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>sudo<span class="w"> </span>bash<span class="w"> </span>/opt/hf/launch-vllm.sh<span class="w"> </span>status<span class="w">        </span><span class="c1"># Show container status</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>sudo<span class="w"> </span>bash<span class="w"> </span>/opt/hf/launch-vllm.sh<span class="w"> </span>logs<span class="w">          </span><span class="c1"># Tail container logs</span>
+</span></code></pre></div>
+<p>Or run manually:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--name<span class="w"> </span>vllm-testbed<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>--gpus<span class="w"> </span>all<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>-v<span class="w"> </span>/opt/hf/cache:/root/.cache/huggingface<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span>-p<span class="w"> </span><span class="m">8000</span>:8000<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span>--restart<span class="w"> </span>unless-stopped<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span>--entrypoint<span class="w"> </span>vllm<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">  </span>hellohal2064/vllm-dgx-spark-gb10:latest<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">  </span>serve<span class="w"> </span>Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">  </span>--tool-call-parser<span class="w"> </span>qwen3_coder<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">  </span>--enable-auto-tool-choice<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">  </span>--max-model-len<span class="w"> </span><span class="m">131072</span>
+</span></code></pre></div>
+<p>Key flags:
+- <code>--gpus all</code> — GPU access via NVIDIA Container Runtime
+- <code>-v /opt/hf/cache:/root/.cache/huggingface</code> — Persistent model cache at <code>/opt/hf/cache</code> (owned by <code>root:users</code>, 775)
+- <code>--enable-auto-tool-choice --tool-call-parser qwen3_coder</code> — Native tool calling for Qwen3-Coder models
+- <code>--max-model-len 131072</code> — 131K context window (820K token KV cache)</p>
+<p>First-time startup downloads the model (~31 GiB, takes 4-5 minutes on a fast connection). Subsequent starts load from cache in ~3 minutes (model loading + CUDA graph compilation).</p>
+<h3 id="step-a3-verify-vllm">Step A3: Verify vLLM<a class="headerlink" href="#step-a3-verify-vllm" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Check container health</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>docker<span class="w"> </span>ps<span class="w"> </span>--format<span class="w"> </span><span class="s1">&#39;table {{.Names}}\t{{.Status}}&#39;</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Check loaded model</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>curl<span class="w"> </span>-s<span class="w"> </span>http://localhost:8000/v1/models<span class="w"> </span><span class="p">|</span><span class="w"> </span>python3<span class="w"> </span>-m<span class="w"> </span>json.tool
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># Quick inference test</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>curl<span class="w"> </span>-s<span class="w"> </span>http://localhost:8000/v1/chat/completions<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;model&quot;: &quot;Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8&quot;, &quot;messages&quot;: [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Write a Python hello world&quot;}], &quot;max_tokens&quot;: 100}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>python3<span class="w"> </span>-m<span class="w"> </span>json.tool
+</span></code></pre></div>
+<p>Expected model loading stats (from container logs):
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Model weights:  ~30 GiB
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>KV cache:       73.57 GiB (803,616 tokens)
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>MoE backend:    TRITON Fp8
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>Attention:      FLASHINFER
+</span></code></pre></div></p>
+<h3 id="step-a4-tool-call-parser-selection-critical">Step A4: Tool Call Parser Selection (Critical)<a class="headerlink" href="#step-a4-tool-call-parser-selection-critical" title="Permanent link">&para;</a></h3>
+<p>The tool call parser must match the model family. Using the wrong parser causes silent failures — tool calls either don't parse or responses contain <code>&lt;think&gt;</code> blocks that corrupt output.</p>
+<table>
+<thead>
+<tr>
+<th>Model Family</th>
+<th>Parser</th>
+<th>Flag</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Qwen3-Coder</strong></td>
+<td><code>qwen3_coder</code></td>
+<td><code>--tool-call-parser qwen3_coder</code></td>
+</tr>
+<tr>
+<td>Qwen3 (base)</td>
+<td><code>hermes</code></td>
+<td><code>--tool-call-parser hermes</code></td>
+</tr>
+<tr>
+<td>Llama 4</td>
+<td><code>llama4_json</code></td>
+<td><code>--tool-call-parser llama4_json</code></td>
+</tr>
+<tr>
+<td>GPT-OSS (Harmony)</td>
+<td><code>openai</code></td>
+<td><code>--tool-call-parser openai</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Impact of parser choice on benchmark results:</strong></p>
+<p>The base Qwen3-30B-A3B model was tested with <code>hermes</code> parser and scored <strong>60.9%</strong> on LLM-eval with <strong>0% code editing</strong>. The same-architecture Qwen3-Coder model with <code>qwen3_coder</code> parser scored <strong>81.2%</strong> with <strong>100% code editing</strong>.</p>
+<p>Key differences:
+- <strong><code>hermes</code></strong> parser with base Qwen3: Model emits <code>&lt;think&gt;</code> blocks that pollute responses. JSON output tests fail because responses start with <code>&lt;think&gt;</code> instead of JSON. Code editing patches arrive empty.
+- <strong><code>qwen3_coder</code></strong> parser with Qwen3-Coder: No thinking tokens, clean output, native tool call format parsed correctly.</p>
+<blockquote>
+<p><strong>Can re-testing base Qwen3 with <code>qwen3_coder</code> parser improve results?</strong> Unlikely. The <code>qwen3_coder</code> parser expects Qwen3-Coder's specific output format. The base Qwen3 model uses thinking mode and a different chat template. The poor code editing (0%) is caused by the model itself not generating proper patches, not just parser mismatch. The thinking tokens consuming the response budget is a model behavior, not a parser issue.</p>
+</blockquote>
+<h3 id="step-a5-switching-models">Step A5: Switching Models<a class="headerlink" href="#step-a5-switching-models" title="Permanent link">&para;</a></h3>
+<p>To load a different model, stop the container and start a new one:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>sudo<span class="w"> </span>bash<span class="w"> </span>/opt/hf/launch-vllm.sh<span class="w"> </span>stop
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># Edit MODEL= in /opt/hf/launch-vllm.sh, then:</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>sudo<span class="w"> </span>bash<span class="w"> </span>/opt/hf/launch-vllm.sh
+</span></code></pre></div>
+<p>Only one model can be loaded at a time (the GB10's unified memory is shared). Pre-downloaded models are cached in <code>/opt/hf/cache/</code> and load without re-downloading.</p>
+<hr />
+<h2 id="ppxai-configuration">ppxai Configuration<a class="headerlink" href="#ppxai-configuration" title="Permanent link">&para;</a></h2>
+<h3 id="api-key-env">API key (<code>.env</code>)<a class="headerlink" href="#api-key-env" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># vLLM uses a dummy key (no authentication required)</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nv">VLLM_API_KEY</span><span class="o">=</span>dummy
+</span></code></pre></div>
+<h3 id="vllm-provider-config-ppxai-configjson">vLLM provider config (<code>ppxai-config.json</code>)<a class="headerlink" href="#vllm-provider-config-ppxai-configjson" title="Permanent link">&para;</a></h3>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">&quot;asusai-vllm&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ASUS DGX Spark vLLM (GB10)&quot;</span><span class="p">,</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nt">&quot;base_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;http://&lt;dgx-spark-ip&gt;:8000/v1&quot;</span><span class="p">,</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="nt">&quot;api_key_env&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;VLLM_API_KEY&quot;</span><span class="p">,</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="nt">&quot;default_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8&quot;</span><span class="p">,</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="nt">&quot;coding_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8&quot;</span><span class="p">,</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">    </span><span class="nt">&quot;system_prompt&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;You are an expert coding assistant running on a local NVIDIA GB10 GPU via vLLM. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.&quot;</span><span class="p">,</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">    </span><span class="nt">&quot;generation_params&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">      </span><span class="nt">&quot;temperature&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">      </span><span class="nt">&quot;top_p&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.9</span><span class="p">,</span>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">      </span><span class="nt">&quot;frequency_penalty&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">    </span><span class="p">},</span>
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">    </span><span class="nt">&quot;models&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">      </span><span class="nt">&quot;Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="w">        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Qwen3 Coder 30B-A3B FP8 (MoE)&quot;</span><span class="p">,</span>
+</span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="w">        </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Code-specialized MoE: 30.5B total / 3.3B active, FP8, native tool calling via qwen3_coder parser, 820K token KV cache&quot;</span><span class="p">,</span>
+</span><span id="__span-9-18"><a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a><span class="w">        </span><span class="nt">&quot;context_limit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">131072</span><span class="p">,</span>
+</span><span id="__span-9-19"><a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="w">        </span><span class="nt">&quot;max_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8192</span>
+</span><span id="__span-9-20"><a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-9-21"><a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a><span class="w">    </span><span class="p">},</span>
+</span><span id="__span-9-22"><a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a><span class="w">    </span><span class="nt">&quot;pricing&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-9-23"><a id="__codelineno-9-23" name="__codelineno-9-23" href="#__codelineno-9-23"></a><span class="w">      </span><span class="nt">&quot;Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;input&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;output&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-9-24"><a id="__codelineno-9-24" name="__codelineno-9-24" href="#__codelineno-9-24"></a><span class="w">    </span><span class="p">},</span>
+</span><span id="__span-9-25"><a id="__codelineno-9-25" name="__codelineno-9-25" href="#__codelineno-9-25"></a><span class="w">    </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-9-26"><a id="__codelineno-9-26" name="__codelineno-9-26" href="#__codelineno-9-26"></a><span class="w">      </span><span class="nt">&quot;web_search&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-9-27"><a id="__codelineno-9-27" name="__codelineno-9-27" href="#__codelineno-9-27"></a><span class="w">      </span><span class="nt">&quot;web_fetch&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-9-28"><a id="__codelineno-9-28" name="__codelineno-9-28" href="#__codelineno-9-28"></a><span class="w">      </span><span class="nt">&quot;weather&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-9-29"><a id="__codelineno-9-29" name="__codelineno-9-29" href="#__codelineno-9-29"></a><span class="w">      </span><span class="nt">&quot;realtime_info&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-9-30"><a id="__codelineno-9-30" name="__codelineno-9-30" href="#__codelineno-9-30"></a><span class="w">      </span><span class="nt">&quot;native_tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-9-31"><a id="__codelineno-9-31" name="__codelineno-9-31" href="#__codelineno-9-31"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-9-32"><a id="__codelineno-9-32" name="__codelineno-9-32" href="#__codelineno-9-32"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-9-33"><a id="__codelineno-9-33" name="__codelineno-9-33" href="#__codelineno-9-33"></a><span class="p">}</span>
+</span></code></pre></div>
+<blockquote>
+<p><strong>Note:</strong> <code>frequency_penalty: 0.0</code> is a tuning result — Qwen3-Coder scored 75% → 81.2% when reduced from 0.1 to 0.0. vLLM is the only supported runtime for this testbed.</p>
+</blockquote>
+<h2 id="verify-connectivity">Verify Connectivity<a class="headerlink" href="#verify-connectivity" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># vLLM (port 8000)</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>curl<span class="w"> </span>http://&lt;dgx-spark-ip&gt;:8000/v1/models
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Quick test via ppxai</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>uv<span class="w"> </span>run<span class="w"> </span>ppxai
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="c1"># Then: /provider asusai-vllm</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="c1"># Then: Hello, write a Python hello world</span>
+</span></code></pre></div>
+<hr />
+<h2 id="benchmark-results-2026-02-12">Benchmark Results (2026-02-12)<a class="headerlink" href="#benchmark-results-2026-02-12" title="Permanent link">&para;</a></h2>
+<p>All benchmarks run via ppxai Engine on the DGX Spark GB10.</p>
+<h3 id="latency-3-iterations-per-prompt-level-9-total-runs">Latency (3 iterations per prompt level, 9 total runs)<a class="headerlink" href="#latency-3-iterations-per-prompt-level-9-total-runs" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Runtime</th>
+<th>Model</th>
+<th>TTFT (mean)</th>
+<th>TTFT (warm)</th>
+<th>Throughput</th>
+<th>KV Cache</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>vLLM</strong></td>
+<td><strong>Qwen3-Coder-30B-A3B FP8</strong></td>
+<td><strong>174ms</strong></td>
+<td><strong>117ms</strong></td>
+<td><strong>43.8 tok/s</strong></td>
+<td><strong>803K tokens</strong></td>
+</tr>
+<tr>
+<td>vLLM</td>
+<td>Qwen3-30B-A3B FP8</td>
+<td>175ms</td>
+<td>~120ms</td>
+<td>45.1 tok/s</td>
+<td>~800K tokens</td>
+</tr>
+<tr>
+<td>vLLM</td>
+<td>Qwen3-32B NVFP4</td>
+<td>231ms</td>
+<td>176ms</td>
+<td>9.4 tok/s</td>
+<td>313K tokens</td>
+</tr>
+<tr>
+<td>vLLM</td>
+<td>Llama-3.3-70B NVFP4</td>
+<td>535ms</td>
+<td>~300ms</td>
+<td>3.4 tok/s</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<h3 id="llm-eval-agentic-coding-quality-26-tests">LLM-Eval (Agentic Coding Quality, 26 tests)<a class="headerlink" href="#llm-eval-agentic-coding-quality-26-tests" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Runtime</th>
+<th>Model</th>
+<th>Score</th>
+<th>Passed</th>
+<th>Tool Call</th>
+<th>Code Edit</th>
+<th>Error Rec</th>
+<th>Format</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>vLLM</strong></td>
+<td><strong>Qwen3-Coder-30B-A3B FP8</strong></td>
+<td><strong>81.2%</strong></td>
+<td><strong>22/26</strong></td>
+<td><strong>100%</strong></td>
+<td><strong>100%</strong></td>
+<td><strong>100%</strong></td>
+<td><strong>100%</strong></td>
+</tr>
+<tr>
+<td>vLLM</td>
+<td>Qwen3-30B-A3B FP8</td>
+<td>60.9%</td>
+<td>17/26</td>
+<td>78.6%</td>
+<td>0%</td>
+<td>100%</td>
+<td>66.7%</td>
+</tr>
+</tbody>
+</table>
+<h3 id="comparison-with-cloud-providers">Comparison with Cloud Providers<a class="headerlink" href="#comparison-with-cloud-providers" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Model</th>
+<th>Score</th>
+<th>Throughput</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Perplexity</td>
+<td>sonar-pro</td>
+<td>100%</td>
+<td>~60 tok/s</td>
+<td>$3-15/M tokens</td>
+</tr>
+<tr>
+<td><strong>DGX Spark</strong></td>
+<td><strong>Qwen3-Coder-30B-A3B FP8</strong></td>
+<td><strong>81.2%</strong></td>
+<td><strong>43.8 tok/s</strong></td>
+<td><strong>Free (local)</strong></td>
+</tr>
+<tr>
+<td>Google</td>
+<td>Gemini 2.5 Flash</td>
+<td>81.2%</td>
+<td>~45 tok/s</td>
+<td>$0.15-0.60/M tokens</td>
+</tr>
+<tr>
+<td>Google</td>
+<td>Gemini 3 Pro Preview</td>
+<td>70.3%</td>
+<td>-</td>
+<td>$1.25-5.0/M tokens</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="model-testing-log">Model Testing Log<a class="headerlink" href="#model-testing-log" title="Permanent link">&para;</a></h2>
+<h3 id="models-that-work-well">Models That Work Well<a class="headerlink" href="#models-that-work-well" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Quant</th>
+<th>Size</th>
+<th>Speed</th>
+<th>Quality</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8</strong></td>
+<td>FP8</td>
+<td>~30 GiB</td>
+<td>50 tok/s</td>
+<td><strong>81.2%</strong></td>
+<td><strong>Best overall.</strong> MoE (3.3B active), code-specialized, native tool calling via <code>qwen3_coder</code> parser. No thinking tokens. TRITON Fp8 MoE backend.</td>
+</tr>
+<tr>
+<td>RedHatAI/Qwen3-30B-A3B-FP8-dynamic</td>
+<td>FP8</td>
+<td>~9 GiB</td>
+<td>45.1 tok/s</td>
+<td>60.9%</td>
+<td>Fast MoE baseline. Same architecture as Coder but general-purpose. <code>&lt;think&gt;</code> blocks pollute output. <code>hermes</code> parser. 0% code editing.</td>
+</tr>
+<tr>
+<td>RedHatAI/Qwen3-32B-NVFP4</td>
+<td>NVFP4</td>
+<td>~19 GiB</td>
+<td>9.4 tok/s</td>
+<td>-</td>
+<td>Dense model, works but slow. Blackwell FP4 tensor cores active. 76 GiB KV cache. LLM-eval killed due to speed.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="models-evaluated-but-not-competitive">Models Evaluated But Not Competitive<a class="headerlink" href="#models-evaluated-but-not-competitive" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Quant</th>
+<th>Size</th>
+<th>Speed</th>
+<th>Quality</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qwen/Qwen3-Coder-30B + eagle3 speculator</td>
+<td>FP8+spec</td>
+<td>~31 GiB</td>
+<td>67 tok/s</td>
+<td>70.3%</td>
+<td>+34% speed but -4.7% quality. tool_calling dropped 100% → 64.3%. Speculator trained for base Qwen3, not Coder variant. <strong>Reverted.</strong></td>
+</tr>
+<tr>
+<td>Qwen/Qwen3-Coder-Next-FP8</td>
+<td>FP8</td>
+<td>~75 GiB</td>
+<td>43 tok/s</td>
+<td>60.9%</td>
+<td>Hybrid MoE (80B/3B, Gated DeltaNet). High variance across 3 runs (54.7%–60.9%). tool_calling stuck at 64.3%. Not competitive with Coder-30B.</td>
+</tr>
+<tr>
+<td>Qwen/Qwen3-Next-80B-A3B-Instruct-FP8</td>
+<td>FP8</td>
+<td>~75 GiB</td>
+<td>50 tok/s</td>
+<td>54.7%</td>
+<td>General-purpose hybrid MoE. Hints had 0% effect. code_editing 0%, hallucination_resistance 16.7%.</td>
+</tr>
+<tr>
+<td>Qwen/Qwen3-Next-80B-A3B-Thinking-FP8</td>
+<td>FP8</td>
+<td>~77 GiB</td>
+<td>12 tok/s</td>
+<td>57.8%</td>
+<td>Thinking variant with <code>&lt;think&gt;</code> blocks. Extremely slow (37 min benchmark). Only +3.1% over Instruct. Same core weaknesses.</td>
+</tr>
+<tr>
+<td>Qwen/Qwen2.5-Coder-32B-Instruct (vLLM)</td>
+<td>BF16</td>
+<td>~62 GiB</td>
+<td>4-5 tok/s</td>
+<td>aborted</td>
+<td>Dense 32B, all params active. 10x slower than MoE. Speed alone disqualifies for interactive use.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="models-that-failed">Models That Failed<a class="headerlink" href="#models-that-failed" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Quant</th>
+<th>Issue</th>
+<th>Root Cause</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>RedHatAI/Qwen3-Next-80B-A3B-Instruct-NVFP4</strong></td>
+<td>NVFP4</td>
+<td><strong>CRASH</strong> during profiling</td>
+<td><code>RuntimeError: Could not construct fused moe op with Activation: uint8, Weight: int64, Output: bfloat16</code>. The flashinfer CUTLASS MoE backend doesn't support NVFP4 quantized MoE weight types. Model loads all 10 shards (44 GiB) but crashes during the first dummy inference.</td>
+</tr>
+<tr>
+<td><strong>RedHatAI/Llama-4-Scout-17B-16E-Instruct-NVFP4</strong></td>
+<td>NVFP4</td>
+<td><strong>OOM</strong> (silent kill)</td>
+<td>Model is 17B params × 16 experts = ~70 GiB. Loads all 14 shards successfully, then EngineCore process is silently killed by Linux OOM killer during profiling/CUDA graph compilation. 70 GiB model + profiling overhead exceeds 128 GB unified memory.</td>
+</tr>
+<tr>
+<td><strong>RedHatAI/Llama-3.3-70B-Instruct-NVFP4</strong></td>
+<td>NVFP4</td>
+<td>Works but <strong>unusably slow</strong></td>
+<td>3.4 tok/s. Dense 70B model with all params active per token. NVFP4 saves memory but doesn't help throughput for dense architectures.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="key-technical-findings">Key Technical Findings<a class="headerlink" href="#key-technical-findings" title="Permanent link">&para;</a></h3>
+<p><strong>NVFP4 MoE is broken on vLLM 0.16.0rc1:</strong>
+The flashinfer CUTLASS MoE kernel does not support the NVFP4 weight type combination (<code>uint8 activation + int64 weight + bfloat16 output</code>). This affects all MoE models with NVFP4 quantization. Dense NVFP4 models (like Qwen3-32B) work because they use a different kernel path. The TRITON Fp8 MoE backend works correctly with FP8 quantized MoE models.</p>
+<p><strong>FP8 MoE is the sweet spot for GB10:</strong>
+MoE architecture (only 3.3B of 30.5B params active per token) + FP8 quantization (native Blackwell tensor core support via TRITON backend) = best throughput. Dense models can't compete regardless of quantization because all params are active.</p>
+<p><strong>Tool call parser matters more than expected:</strong>
+Using <code>hermes</code> parser with base Qwen3 → 60.9% score, 0% code editing. Using <code>qwen3_coder</code> parser with Qwen3-Coder → 81.2% score, 100% code editing. The parser must match the model's output format. Base Qwen3 emits <code>&lt;think&gt;</code> tokens that hermes doesn't strip, corrupting JSON output and code patches.</p>
+<p><strong>Memory budget rule of thumb:</strong>
+Model weights + KV cache + CUDA graphs + profiling overhead must fit in 128 GB. Safe limit is ~35 GiB for model weights (leaving ~73 GiB for KV cache and ~20 GiB headroom). Models over ~60 GiB risk OOM during profiling even if weights load successfully.</p>
+<hr />
+<h2 id="model-selection-guide">Model Selection Guide<a class="headerlink" href="#model-selection-guide" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Use Case</th>
+<th>Recommended Model</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Coding agent (best quality + speed)</strong></td>
+<td><code>Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8</code></td>
+<td>81.2% benchmark, 50 tok/s, 131K context</td>
+</tr>
+<tr>
+<td>General-purpose fast responses</td>
+<td><code>RedHatAI/Qwen3-30B-A3B-FP8-dynamic</code></td>
+<td>60.9%, same speed, no code editing</td>
+</tr>
+<tr>
+<td>Dense model experimentation</td>
+<td><code>RedHatAI/Qwen3-32B-NVFP4</code></td>
+<td>Slow (9.4 tok/s) but Blackwell FP4</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="vllm-container-exits-immediately-crash-loop">vLLM container exits immediately (crash loop)<a class="headerlink" href="#vllm-container-exits-immediately-crash-loop" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>docker<span class="w"> </span>logs<span class="w"> </span>vllm-testbed<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tail<span class="w"> </span>-30
+</span></code></pre></div>
+<p>Common causes:
+- <strong>flashinfer MoE error</strong> — NVFP4 MoE models crash. Use FP8 MoE or dense NVFP4 instead.
+- <strong>OOM kill</strong> — Model too large. Check <code>dmesg | grep -i oom</code> on the host.
+- <strong>Wrong tool parser</strong> — <code>KeyError: invalid tool call parser</code>. Check available parsers in the error message.</p>
+<h3 id="model-loading-is-slow-first-request">Model loading is slow (first request)<a class="headerlink" href="#model-loading-is-slow-first-request" title="Permanent link">&para;</a></h3>
+<p>First request after container start triggers model loading (3-5 minutes for ~30 GiB). Pre-warm:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>curl<span class="w"> </span>http://localhost:8000/v1/chat/completions<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;model&quot;: &quot;Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8&quot;, &quot;messages&quot;: [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;hello&quot;}], &quot;max_tokens&quot;: 5}&#39;</span>
+</span></code></pre></div></p>
+<h3 id="connection-refused-from-wslremote">Connection refused from WSL/remote<a class="headerlink" href="#connection-refused-from-wslremote" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Check container is binding to all interfaces</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>vllm-testbed<span class="w"> </span>printenv<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>HOST
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="c1"># Should show: 0.0.0.0</span>
+</span></code></pre></div>
+<h3 id="ssl-issues-from-wsl">SSL issues from WSL<a class="headerlink" href="#ssl-issues-from-wsl" title="Permanent link">&para;</a></h3>
+<p>If <code>.env</code> has <code>SSL_CERT_FILE</code> pointing to a Windows path, it won't exist on WSL. The benchmark scripts handle this automatically. For manual runs:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nb">unset</span><span class="w"> </span>SSL_CERT_FILE
+</span></code></pre></div></p>
+<hr />
+<h2 id="running-benchmarks">Running Benchmarks<a class="headerlink" href="#running-benchmarks" title="Permanent link">&para;</a></h2>
+<h3 id="latency-benchmark">Latency benchmark<a class="headerlink" href="#latency-benchmark" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nv">PPXAI_CONFIG_FILE</span><span class="o">=</span>~/.ppxai/ppxai-config.json<span class="w"> </span><span class="nv">SSL_VERIFY</span><span class="o">=</span><span class="nb">false</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/benchmark.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span>--provider<span class="w"> </span>asusai-vllm<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span>--model<span class="w"> </span><span class="s2">&quot;Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">    </span>--iterations<span class="w"> </span><span class="m">3</span>
+</span></code></pre></div>
+<h3 id="llm-eval-benchmark">LLM-Eval benchmark<a class="headerlink" href="#llm-eval-benchmark" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nb">cd</span><span class="w"> </span>benchmarks/llm-eval
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nv">PPXAI_CONFIG_FILE</span><span class="o">=</span>~/.ppxai/ppxai-config.json<span class="w"> </span><span class="nv">SSL_VERIFY</span><span class="o">=</span><span class="nb">false</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmark.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">    </span>--provider<span class="w"> </span>asusai-vllm<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">    </span>--model<span class="w"> </span><span class="s2">&quot;Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">    </span>--engine<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">    </span>--timeout<span class="w"> </span><span class="m">120</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="w">    </span>-v
+</span></code></pre></div>
+<blockquote>
+<p><strong>Important:</strong> Run latency benchmarks first (3 iterations to warm up), then LLM-eval. Do not run both simultaneously — GPU contention skews results.</p>
+</blockquote>
+<hr />
+<h2 id="vllm-docker-image-details">vLLM Docker Image Details<a class="headerlink" href="#vllm-docker-image-details" title="Permanent link">&para;</a></h2>
+<h3 id="community-image-hellohal2064vllm-dgx-spark-gb10latest">Community Image: <code>hellohal2064/vllm-dgx-spark-gb10:latest</code><a class="headerlink" href="#community-image-hellohal2064vllm-dgx-spark-gb10latest" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>vLLM Version</td>
+<td>0.16.0rc1.dev122+g6595a2380</td>
+</tr>
+<tr>
+<td>CUDA</td>
+<td>13.1</td>
+</tr>
+<tr>
+<td>Python</td>
+<td>3.12</td>
+</tr>
+<tr>
+<td>Base</td>
+<td>Ubuntu 24.04 (aarch64)</td>
+</tr>
+<tr>
+<td>Architecture</td>
+<td>aarch64 + SM 12.1 (Blackwell)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="available-tool-call-parsers-vllm-0160rc1">Available Tool Call Parsers (vLLM 0.16.0rc1)<a class="headerlink" href="#available-tool-call-parsers-vllm-0160rc1" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>qwen3_coder, hermes, openai, llama3_json, llama4_json, llama4_pythonic,
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>mistral, deepseek_v3, deepseek_v31, deepseek_v32, granite, jamba,
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>internlm, minimax, pythonic, xlam, qwen3_xml, kimi_k2, ...
+</span></code></pre></div>
+<h3 id="moe-backend-selection">MoE Backend Selection<a class="headerlink" href="#moe-backend-selection" title="Permanent link">&para;</a></h3>
+<p>vLLM automatically selects the MoE backend based on quantization:</p>
+<table>
+<thead>
+<tr>
+<th>Quantization</th>
+<th>Backend</th>
+<th>Status on GB10</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>FP8</strong></td>
+<td>TRITON Fp8</td>
+<td><strong>Works</strong></td>
+</tr>
+<tr>
+<td>NVFP4</td>
+<td>flashinfer CUTLASS</td>
+<td><strong>Crashes</strong> (MoE only)</td>
+</tr>
+<tr>
+<td>NVFP4</td>
+<td>-</td>
+<td>Works for dense models</td>
+</tr>
+<tr>
+<td>BF16</td>
+<td>TRITON/flashinfer</td>
+<td>Works</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://docs.vllm.ai/">vLLM Documentation</a></li>
+<li><a href="https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8">Qwen3-Coder-30B-A3B-Instruct-FP8 Model Card</a></li>
+<li><a href="../PROVIDER_SETUP/">ppxai Provider Setup Guide</a></li>
+<li><a href="../vllm-tool-calling-guide/">ppxai vLLM Tool Calling Guide</a></li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

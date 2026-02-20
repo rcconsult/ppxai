@@ -1,0 +1,2555 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.15.6/archive/benchmarks/INDUSTRY-BENCHMARK-FRAMEWORKS/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+    
+    
+      
+        <title>Industry-Standard LLM Benchmark Frameworks - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#industry-standard-llm-benchmark-frameworks" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Industry-Standard LLM Benchmark Frameworks
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../INSTALLATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../PROVIDER_SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../AGENT_MODE_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CONTEXT-INJECTION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CHECKPOINT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../FILE_EDITING_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../AUTOROUTER-CONFIG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Executive Summary
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Executive Summary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Findings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-berkeley-function-calling-leaderboard-bfcl-v4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Berkeley Function Calling Leaderboard (BFCL) V4 ⭐⭐⭐
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Berkeley Function Calling Leaderboard (BFCL) V4 ⭐⭐⭐">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-categories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Categories
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#benefits-for-ppxai" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benefits for ppxai
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integration-effort" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration Effort
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-toolbench" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. ToolBench ⭐⭐
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. ToolBench ⭐⭐">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overview_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#features_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-categories_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Categories
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#benefits-for-ppxai_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benefits for ppxai
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integration-effort_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration Effort
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#references_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-scale-ai-toolcomp-benchmark" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Scale AI ToolComp Benchmark ⭐⭐
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Scale AI ToolComp Benchmark ⭐⭐">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overview_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#features_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-focus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Focus
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#benefits-for-ppxai_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benefits for ppxai
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integration-effort_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration Effort
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#references_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-agentbench" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. AgentBench ⭐
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. AgentBench ⭐">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overview_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#features_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#benefits-for-ppxai_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benefits for ppxai
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integration-effort_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration Effort
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#references_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-eleuther-ai-lm-evaluation-harness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Eleuther AI LM Evaluation Harness ⭐
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Eleuther AI LM Evaluation Harness ⭐">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overview_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#features_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#standard-benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standard Benchmarks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#benefits-for-ppxai_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benefits for ppxai
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integration-effort_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration Effort
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#references_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-toolscan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. ToolScan ⭐
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. ToolScan ⭐">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overview_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#features_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#benefits-for-ppxai_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benefits for ppxai
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integration-effort_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration Effort
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#references_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#comparison-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison Matrix
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#variance-analysis-ppxai-vs-industry-standards" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Variance Analysis: ppxai vs Industry Standards
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Variance Analysis: ppxai vs Industry Standards">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#problem-high-variance-in-ppxai-benchmark" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem: High Variance in ppxai Benchmark
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#solution-hybrid-approach" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Solution: Hybrid Approach
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommended-implementation-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended Implementation Strategy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recommended Implementation Strategy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-baseline-current" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Baseline (Current)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-add-bfcl-v4-recommended-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Add BFCL V4 (Recommended Next)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-add-toolbench-future" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Add ToolBench (Future)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-lm-evaluation-harness-long-term" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: LM Evaluation Harness (Long Term)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reporting-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reporting Format
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reporting Format">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#current-ppxai-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current (ppxai only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#proposed-hybrid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proposed (Hybrid)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cost-benefit-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cost-Benefit Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cost-Benefit Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-1-status-quo-ppxai-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 1: Status Quo (ppxai only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-2-add-bfcl-v4-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 2: Add BFCL V4 (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-3-add-toolbench" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 3: Add ToolBench
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-4-full-integration-all-frameworks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option 4: Full Integration (All frameworks)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#final-recommendation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Final Recommendation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Final Recommendation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#immediate-action-add-bfcl-v4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Immediate Action: Add BFCL V4
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future Considerations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Future Considerations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#when-to-add-toolbench" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to Add ToolBench
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#when-to-add-lm-evaluation-harness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to Add LM Evaluation Harness
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="References">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#primary-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Primary Sources
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#survey-papers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Survey Papers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tools-and-frameworks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tools and Frameworks
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-test-variance-mathematics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix: Test Variance Mathematics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Appendix: Test Variance Mathematics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-small-sample-size-causes-high-variance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Small Sample Size Causes High Variance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#confidence-intervals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Confidence Intervals
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conclusion
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="industry-standard-llm-benchmark-frameworks">Industry-Standard LLM Benchmark Frameworks<a class="headerlink" href="#industry-standard-llm-benchmark-frameworks" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-02-08
+<strong>Purpose:</strong> Evaluation of official benchmark frameworks for LLM tool calling and agent capabilities
+<strong>Context:</strong> Gemini tuning variance analysis led to investigation of industry-standard benchmarks</p>
+<hr />
+<h2 id="executive-summary">Executive Summary<a class="headerlink" href="#executive-summary" title="Permanent link">&para;</a></h2>
+<p>This document evaluates industry-standard LLM benchmark frameworks to complement or replace ppxai's custom benchmark suite (26 tests). The goal is to reduce variance and enable industry-standard comparisons while maintaining our coding-specific evaluation capabilities.</p>
+<h3 id="key-findings">Key Findings<a class="headerlink" href="#key-findings" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Berkeley Function Calling Leaderboard (BFCL) V4</strong> is the gold standard for tool calling evaluation</li>
+<li>Our custom benchmark has high variance (67.2% → 64.3% on single rerun)</li>
+<li>Industry benchmarks offer 2000+ tests vs our 26, dramatically reducing variance</li>
+<li>Hybrid approach recommended: BFCL V4 for tool calling + our custom tests for coding-specific capabilities</li>
+</ol>
+<hr />
+<h2 id="1-berkeley-function-calling-leaderboard-bfcl-v4">1. Berkeley Function Calling Leaderboard (BFCL) V4 ⭐⭐⭐<a class="headerlink" href="#1-berkeley-function-calling-leaderboard-bfcl-v4" title="Permanent link">&para;</a></h2>
+<p><strong>Relevance:</strong> 🔥 <strong>PERFECT FIT</strong> - Gold standard for function calling evaluation</p>
+<h3 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h3>
+<p>BFCL V4 evaluates LLM's ability to call functions (aka tools) accurately with holistic agentic evaluation.</p>
+<h3 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>2000 question-answer pairs</strong> (vs our 26 tests)</li>
+<li>Multi-language support</li>
+<li>Multiple and parallel function calls</li>
+<li>Function relevance detection</li>
+<li>Holistic agentic evaluation (V4 innovation)</li>
+<li>Active maintenance by UC Berkeley</li>
+</ul>
+<h3 id="test-categories">Test Categories<a class="headerlink" href="#test-categories" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Simple function calls</strong> - Single tool with clear parameters</li>
+<li><strong>Multiple function calls</strong> - Sequence of tool invocations</li>
+<li><strong>Parallel function calls</strong> - Simultaneous tool execution</li>
+<li><strong>Function relevance</strong> - Detecting when NOT to call tools</li>
+</ol>
+<h3 id="benefits-for-ppxai">Benefits for ppxai<a class="headerlink" href="#benefits-for-ppxai" title="Permanent link">&para;</a></h3>
+<ul>
+<li>✅ Industry-standard comparison</li>
+<li>✅ 2000 tests = dramatically lower variance</li>
+<li>✅ Tests parallel/multiple tool calls (our tests don't)</li>
+<li>✅ Comparable with published model results</li>
+<li>✅ Active development and maintenance</li>
+</ul>
+<h3 id="integration-effort">Integration Effort<a class="headerlink" href="#integration-effort" title="Permanent link">&para;</a></h3>
+<p><strong>Time:</strong> 2-3 days</p>
+<p><strong>Steps:</strong>
+1. Clone Gorilla repo: <code>git clone https://github.com/ShishirPatil/gorilla.git</code>
+2. Adapt BFCL tests to ppxai engine format
+3. Create ppxai runner: <code>benchmarks/bfcl/run_bfcl.py</code>
+4. Add to benchmark suite</p>
+<p><strong>Example usage:</strong>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks/bfcl/benchmark.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>--provider<span class="w"> </span>gemini<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>--model<span class="w"> </span>gemini-2.5-flash<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>--categories<span class="w"> </span>simple,multiple,parallel
+</span></code></pre></div></p>
+<h3 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="https://gorilla.cs.berkeley.edu/leaderboard.html">Berkeley Function Calling Leaderboard</a></li>
+<li><a href="https://openreview.net/forum?id=2GmDdhBdDk">BFCL Paper (OpenReview)</a></li>
+</ul>
+<hr />
+<h2 id="2-toolbench">2. ToolBench ⭐⭐<a class="headerlink" href="#2-toolbench" title="Permanent link">&para;</a></h2>
+<p><strong>Relevance:</strong> 🔥 <strong>HIGHLY RELEVANT</strong> - Real-world API tool use evaluation</p>
+<h3 id="overview_1">Overview<a class="headerlink" href="#overview_1" title="Permanent link">&para;</a></h3>
+<p>ToolBench assesses LLM tool-use by translating complex instructions into real-world API calls.</p>
+<h3 id="features_1">Features<a class="headerlink" href="#features_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>16,464 RESTful APIs</strong> across 49 categories</li>
+<li>Weather, finance, social media, travel, etc.</li>
+<li><strong>126,000+ instruction-solution path pairs</strong></li>
+<li>Automated instruction generation with ChatGPT</li>
+<li>DFSDT-based solution path annotation</li>
+<li>Tests generalization to unseen instructions, tools, and categories</li>
+</ul>
+<h3 id="test-categories_1">Test Categories<a class="headerlink" href="#test-categories_1" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Seen tools</strong> - APIs in training data</li>
+<li><strong>Unseen instructions</strong> - Novel use cases for known tools</li>
+<li><strong>Unseen tools</strong> - Completely new APIs</li>
+<li><strong>Unseen categories</strong> - New domains (e.g., blockchain)</li>
+</ol>
+<h3 id="benefits-for-ppxai_1">Benefits for ppxai<a class="headerlink" href="#benefits-for-ppxai_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>✅ Real-world API testing</li>
+<li>✅ Tests generalization capabilities</li>
+<li>✅ 49 diverse categories</li>
+<li>✅ Solution path evaluation (not just final answer)</li>
+</ul>
+<h3 id="integration-effort_1">Integration Effort<a class="headerlink" href="#integration-effort_1" title="Permanent link">&para;</a></h3>
+<p><strong>Time:</strong> 3-5 days</p>
+<p><strong>Complexity:</strong> Medium
+- Need API access simulation
+- Large dataset (126K+ pairs)
+- Solution path evaluation logic</p>
+<h3 id="references_1">References<a class="headerlink" href="#references_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="https://github.com/sambanova/toolbench">GitHub - sambanova/toolbench</a></li>
+<li><a href="https://www.emergentmind.com/topics/toolbench">ToolBench Paper</a></li>
+</ul>
+<hr />
+<h2 id="3-scale-ai-toolcomp-benchmark">3. Scale AI ToolComp Benchmark ⭐⭐<a class="headerlink" href="#3-scale-ai-toolcomp-benchmark" title="Permanent link">&para;</a></h2>
+<p><strong>Relevance:</strong> 🔥 <strong>HIGHLY RELEVANT</strong> - Enterprise tool composition evaluation</p>
+<h3 id="overview_2">Overview<a class="headerlink" href="#overview_2" title="Permanent link">&para;</a></h3>
+<p>ToolComp evaluates AI models in tasks requiring dependent tool usage and composition.</p>
+<h3 id="features_2">Features<a class="headerlink" href="#features_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>485 meticulously crafted prompts</strong></li>
+<li>Requires composing multiple tools together</li>
+<li>Golden answer chains provided</li>
+<li>Process supervision labels</li>
+<li>Enterprise-grade evaluation</li>
+</ul>
+<h3 id="test-focus">Test Focus<a class="headerlink" href="#test-focus" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Tool composition</strong> - Using output of one tool as input to another</li>
+<li><strong>Dependent tool chains</strong> - Multi-step workflows</li>
+<li><strong>Process supervision</strong> - Evaluating intermediate steps</li>
+</ul>
+<h3 id="benefits-for-ppxai_2">Benefits for ppxai<a class="headerlink" href="#benefits-for-ppxai_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>✅ Tests complex tool workflows</li>
+<li>✅ Enterprise quality standards</li>
+<li>✅ Process-level evaluation</li>
+<li>✅ Public leaderboard for comparison</li>
+</ul>
+<h3 id="integration-effort_2">Integration Effort<a class="headerlink" href="#integration-effort_2" title="Permanent link">&para;</a></h3>
+<p><strong>Time:</strong> 2-3 days</p>
+<p><strong>Note:</strong> May require Scale AI partnership for full dataset access</p>
+<h3 id="references_2">References<a class="headerlink" href="#references_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="https://scale.com/leaderboard/tool_use_enterprise">Scale AI Tool Use Enterprise Leaderboard</a></li>
+</ul>
+<hr />
+<h2 id="4-agentbench">4. AgentBench ⭐<a class="headerlink" href="#4-agentbench" title="Permanent link">&para;</a></h2>
+<p><strong>Relevance:</strong> ✅ <strong>USEFUL</strong> - Overall agent capabilities</p>
+<h3 id="overview_3">Overview<a class="headerlink" href="#overview_3" title="Permanent link">&para;</a></h3>
+<p>AgentBench assesses LLM-as-Agent reasoning and decision-making in multi-turn open-ended settings.</p>
+<h3 id="features_3">Features<a class="headerlink" href="#features_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>8 diverse environments:</strong></li>
+<li>Operating System</li>
+<li>Database</li>
+<li>Knowledge Graph</li>
+<li>Digital Card Game</li>
+<li>Lateral Thinking Puzzles</li>
+<li>House-Holding</li>
+<li>Web Shopping</li>
+<li>Web Browsing</li>
+<li>Multi-turn interactions</li>
+<li>Function-calling version integrated with AgentRL</li>
+</ul>
+<h3 id="benefits-for-ppxai_3">Benefits for ppxai<a class="headerlink" href="#benefits-for-ppxai_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li>✅ Tests reasoning in multi-turn scenarios</li>
+<li>✅ Diverse environment coverage</li>
+<li>✅ Open-ended task evaluation</li>
+</ul>
+<h3 id="integration-effort_3">Integration Effort<a class="headerlink" href="#integration-effort_3" title="Permanent link">&para;</a></h3>
+<p><strong>Time:</strong> 5-7 days</p>
+<p><strong>Complexity:</strong> High - requires environment simulation</p>
+<h3 id="references_3">References<a class="headerlink" href="#references_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="https://github.com/THUDM/AgentBench">GitHub - THUDM/AgentBench</a></li>
+<li><a href="https://arxiv.org/html/2507.21504v1">AgentBench Paper (ICLR'24)</a></li>
+</ul>
+<hr />
+<h2 id="5-eleuther-ai-lm-evaluation-harness">5. Eleuther AI LM Evaluation Harness ⭐<a class="headerlink" href="#5-eleuther-ai-lm-evaluation-harness" title="Permanent link">&para;</a></h2>
+<p><strong>Relevance:</strong> ✅ <strong>USEFUL</strong> - General LLM capabilities</p>
+<h3 id="overview_4">Overview<a class="headerlink" href="#overview_4" title="Permanent link">&para;</a></h3>
+<p>Unified framework for testing generative language models on hundreds of evaluation tasks.</p>
+<h3 id="features_4">Features<a class="headerlink" href="#features_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Backend for 🤗 Hugging Face Open LLM Leaderboard</li>
+<li>Used by NVIDIA, Cohere, BigScience, BigCode, Nous Research, Mosaic ML</li>
+<li>Hundreds of papers cite it</li>
+<li>1000+ tasks available</li>
+<li>Extensible task framework</li>
+</ul>
+<h3 id="standard-benchmarks">Standard Benchmarks<a class="headerlink" href="#standard-benchmarks" title="Permanent link">&para;</a></h3>
+<ul>
+<li>MMLU (Massive Multitask Language Understanding)</li>
+<li>HellaSwag</li>
+<li>TruthfulQA</li>
+<li>GSM8K (math reasoning)</li>
+<li>HumanEval (code generation)</li>
+</ul>
+<h3 id="benefits-for-ppxai_4">Benefits for ppxai<a class="headerlink" href="#benefits-for-ppxai_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li>✅ Industry standard comparison</li>
+<li>✅ General capabilities baseline</li>
+<li>✅ Extensive task library</li>
+<li>✅ Active community</li>
+</ul>
+<h3 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">&para;</a></h3>
+<ul>
+<li>⚠️ Limited tool calling evaluation</li>
+<li>⚠️ Not focused on agentic capabilities</li>
+</ul>
+<h3 id="integration-effort_4">Integration Effort<a class="headerlink" href="#integration-effort_4" title="Permanent link">&para;</a></h3>
+<p><strong>Time:</strong> 1 week</p>
+<p><strong>Complexity:</strong> High - large framework</p>
+<h3 id="references_4">References<a class="headerlink" href="#references_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="https://github.com/EleutherAI/lm-evaluation-harness">GitHub - EleutherAI/lm-evaluation-harness</a></li>
+<li><a href="https://huggingface.co/blog/Neo111x/integrating-benchmarks-into-lm-evaluation-harness">Hugging Face Integration</a></li>
+</ul>
+<hr />
+<h2 id="6-toolscan">6. ToolScan ⭐<a class="headerlink" href="#6-toolscan" title="Permanent link">&para;</a></h2>
+<p><strong>Relevance:</strong> ✅ <strong>USEFUL</strong> - Error pattern analysis</p>
+<h3 id="overview_5">Overview<a class="headerlink" href="#overview_5" title="Permanent link">&para;</a></h3>
+<p>Benchmark for characterizing errors in tool-use LLMs.</p>
+<h3 id="features_5">Features<a class="headerlink" href="#features_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Error pattern taxonomy</li>
+<li>Diagnostic capabilities</li>
+<li>Root cause analysis</li>
+</ul>
+<h3 id="benefits-for-ppxai_5">Benefits for ppxai<a class="headerlink" href="#benefits-for-ppxai_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li>✅ Understanding failure modes</li>
+<li>✅ Targeted improvement areas</li>
+</ul>
+<h3 id="integration-effort_5">Integration Effort<a class="headerlink" href="#integration-effort_5" title="Permanent link">&para;</a></h3>
+<p><strong>Time:</strong> 2-3 days</p>
+<h3 id="references_5">References<a class="headerlink" href="#references_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li><a href="https://arxiv.org/html/2411.13547v2">ToolScan Paper</a></li>
+</ul>
+<hr />
+<h2 id="comparison-matrix">Comparison Matrix<a class="headerlink" href="#comparison-matrix" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Framework</th>
+<th>Test Count</th>
+<th>Tool Calling</th>
+<th>Real APIs</th>
+<th>Code Editing</th>
+<th>Industry Use</th>
+<th>Integration Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ppxai Custom</strong></td>
+<td>26</td>
+<td>✅</td>
+<td>❌</td>
+<td>✅</td>
+<td>Internal</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td><strong>BFCL V4</strong></td>
+<td>2000</td>
+<td>✅✅</td>
+<td>❌</td>
+<td>❌</td>
+<td>Very High</td>
+<td>2-3 days</td>
+</tr>
+<tr>
+<td><strong>ToolBench</strong></td>
+<td>126K+</td>
+<td>✅</td>
+<td>✅✅</td>
+<td>❌</td>
+<td>Growing</td>
+<td>3-5 days</td>
+</tr>
+<tr>
+<td><strong>ToolComp</strong></td>
+<td>485</td>
+<td>✅✅</td>
+<td>⚠️</td>
+<td>❌</td>
+<td>High (Enterprise)</td>
+<td>2-3 days</td>
+</tr>
+<tr>
+<td><strong>AgentBench</strong></td>
+<td>1000+</td>
+<td>✅</td>
+<td>⚠️</td>
+<td>❌</td>
+<td>High (Academic)</td>
+<td>5-7 days</td>
+</tr>
+<tr>
+<td><strong>LM Eval Harness</strong></td>
+<td>1000+</td>
+<td>⚠️</td>
+<td>❌</td>
+<td>⚠️</td>
+<td>Very High</td>
+<td>1 week</td>
+</tr>
+<tr>
+<td><strong>ToolScan</strong></td>
+<td>500+</td>
+<td>✅</td>
+<td>❌</td>
+<td>❌</td>
+<td>Growing</td>
+<td>2-3 days</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Legend:</strong>
+- ✅✅ = Excellent coverage
+- ✅ = Good coverage
+- ⚠️ = Limited coverage
+- ❌ = Not covered</p>
+<hr />
+<h2 id="variance-analysis-ppxai-vs-industry-standards">Variance Analysis: ppxai vs Industry Standards<a class="headerlink" href="#variance-analysis-ppxai-vs-industry-standards" title="Permanent link">&para;</a></h2>
+<h3 id="problem-high-variance-in-ppxai-benchmark">Problem: High Variance in ppxai Benchmark<a class="headerlink" href="#problem-high-variance-in-ppxai-benchmark" title="Permanent link">&para;</a></h3>
+<p><strong>Observed:</strong>
+- gemini-2.5-flash: 67.2% → 64.3% on single rerun (-2.9%)
+- Tool calling category: -21.4% variance
+- Only 6 tests in tool_calling category</p>
+<p><strong>Root Cause:</strong> Small sample size (26 total tests, 6 per category)</p>
+<p><strong>Statistical Insight:</strong>
+- With 6 tests: ±16.7% variance per test
+- With 2000 tests (BFCL): ±0.05% variance per test
+- <strong>333x reduction in per-test variance</strong></p>
+<h3 id="solution-hybrid-approach">Solution: Hybrid Approach<a class="headerlink" href="#solution-hybrid-approach" title="Permanent link">&para;</a></h3>
+<p><strong>Combine:</strong>
+1. <strong>BFCL V4</strong> for reliable tool calling scores (2000 tests)
+2. <strong>ppxai custom</strong> for coding-specific capabilities (apply_patch, code editing)</p>
+<p><strong>Benefits:</strong>
+- ✅ Low variance (BFCL's large test set)
+- ✅ Industry comparison (BFCL leaderboard)
+- ✅ Coding-specific evaluation (ppxai custom)
+- ✅ Fast iteration (ppxai's 26 tests run in 10 minutes)</p>
+<hr />
+<h2 id="recommended-implementation-strategy">Recommended Implementation Strategy<a class="headerlink" href="#recommended-implementation-strategy" title="Permanent link">&para;</a></h2>
+<h3 id="phase-1-baseline-current">Phase 1: Baseline (Current)<a class="headerlink" href="#phase-1-baseline-current" title="Permanent link">&para;</a></h3>
+<p><strong>Keep ppxai custom benchmark for:</strong>
+- ✅ Fast iteration (26 tests, ~10 minutes)
+- ✅ Coding-specific capabilities (apply_patch, code editing)
+- ✅ Full control over test evolution</p>
+<p><strong>Use for:</strong>
+- Quick validation during development
+- Coding-specific feature testing
+- Internal progress tracking</p>
+<hr />
+<h3 id="phase-2-add-bfcl-v4-recommended-next">Phase 2: Add BFCL V4 (Recommended Next)<a class="headerlink" href="#phase-2-add-bfcl-v4-recommended-next" title="Permanent link">&para;</a></h3>
+<p><strong>Timeline:</strong> 2-3 days integration</p>
+<p><strong>Benefits:</strong>
+- ✅ Industry-standard tool calling evaluation
+- ✅ 2000 tests = 333x lower variance
+- ✅ Comparable with published models
+- ✅ Active Berkeley maintenance</p>
+<p><strong>Implementation:</strong>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Directory structure</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>benchmarks/
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>├──<span class="w"> </span>llm-eval/<span class="w">          </span><span class="c1"># ppxai custom (current)</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>│<span class="w">   </span>├──<span class="w"> </span>benchmark.py
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>│<span class="w">   </span>├──<span class="w"> </span>test_cases.py
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>│<span class="w">   </span>└──<span class="w"> </span>results/
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>└──<span class="w"> </span>bfcl/<span class="w">              </span><span class="c1"># BFCL V4 (new)</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span>├──<span class="w"> </span>benchmark.py
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span>├──<span class="w"> </span>dataset/<span class="w">       </span><span class="c1"># 2000 test cases</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span>└──<span class="w"> </span>results/
+</span></code></pre></div></p>
+<p><strong>Usage:</strong>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Run BFCL V4</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks/bfcl/benchmark.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--provider<span class="w"> </span>gemini<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--model<span class="w"> </span>gemini-2.5-flash
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c1"># Run ppxai custom</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks/llm-eval/benchmark.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>--provider<span class="w"> </span>gemini<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span>--model<span class="w"> </span>gemini-2.5-flash
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="c1"># Compare results</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks/compare.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">  </span>--bfcl<span class="w"> </span>results/bfcl_gemini-2.5-flash.json<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">  </span>--ppxai<span class="w"> </span>results/gemini_gemini-2.5-flash.json
+</span></code></pre></div></p>
+<hr />
+<h3 id="phase-3-add-toolbench-future">Phase 3: Add ToolBench (Future)<a class="headerlink" href="#phase-3-add-toolbench-future" title="Permanent link">&para;</a></h3>
+<p><strong>Timeline:</strong> 3-5 days integration</p>
+<p><strong>Benefits:</strong>
+- ✅ Real-world API testing
+- ✅ Generalization evaluation
+- ✅ 126K+ instruction-solution pairs</p>
+<p><strong>Use for:</strong>
+- Quarterly comprehensive evaluation
+- Release validation
+- Public benchmarking</p>
+<hr />
+<h3 id="phase-4-lm-evaluation-harness-long-term">Phase 4: LM Evaluation Harness (Long Term)<a class="headerlink" href="#phase-4-lm-evaluation-harness-long-term" title="Permanent link">&para;</a></h3>
+<p><strong>Timeline:</strong> 1 week integration</p>
+<p><strong>Benefits:</strong>
+- ✅ Industry-standard general capabilities
+- ✅ Comparable with Hugging Face leaderboard
+- ✅ Hundreds of tasks</p>
+<p><strong>Use for:</strong>
+- Major release validation
+- Cross-model comparison
+- Public benchmarking</p>
+<hr />
+<h2 id="reporting-format">Reporting Format<a class="headerlink" href="#reporting-format" title="Permanent link">&para;</a></h2>
+<h3 id="current-ppxai-only">Current (ppxai only)<a class="headerlink" href="#current-ppxai-only" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Model: gemini-2.5-flash
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>Overall:              81.2%
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>Tool Calling:         85.7%
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>Code Editing:         57.1%
+</span></code></pre></div>
+<h3 id="proposed-hybrid">Proposed (Hybrid)<a class="headerlink" href="#proposed-hybrid" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Model: gemini-2.5-flash
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>=== Industry Standard ===
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>BFCL V4 (function calling):    87.3% (1740/2000) ⭐ Rank 3
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>ToolBench (real APIs):         82.1% (103K/126K)
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>=== ppxai Coding Specific ===
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>Overall:                       81.2% (21/26)
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>  Tool Calling:                85.7% (6/7)
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>  Code Editing:                57.1% (4/7)
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>  Format Compliance:           100% (3/3)
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>  Instruction Following:       100% (3/3)
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>=== Composite Score ===
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>Weighted Average:              84.2%
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>  70% BFCL (industry standard)
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>  30% ppxai (coding specific)
+</span></code></pre></div>
+<hr />
+<h2 id="cost-benefit-analysis">Cost-Benefit Analysis<a class="headerlink" href="#cost-benefit-analysis" title="Permanent link">&para;</a></h2>
+<h3 id="option-1-status-quo-ppxai-only">Option 1: Status Quo (ppxai only)<a class="headerlink" href="#option-1-status-quo-ppxai-only" title="Permanent link">&para;</a></h3>
+<p><strong>Pros:</strong>
+- ✅ Zero integration effort
+- ✅ Fast iteration
+- ✅ Full control</p>
+<p><strong>Cons:</strong>
+- ❌ High variance (±16.7% per test)
+- ❌ No industry comparison
+- ❌ Limited credibility</p>
+<p><strong>Cost:</strong> $0
+<strong>Time:</strong> 0 days</p>
+<hr />
+<h3 id="option-2-add-bfcl-v4-recommended">Option 2: Add BFCL V4 (Recommended)<a class="headerlink" href="#option-2-add-bfcl-v4-recommended" title="Permanent link">&para;</a></h3>
+<p><strong>Pros:</strong>
+- ✅ 333x lower variance
+- ✅ Industry comparison
+- ✅ 2000 test cases
+- ✅ Active maintenance</p>
+<p><strong>Cons:</strong>
+- ⚠️ 2-3 days integration
+- ⚠️ Longer benchmark runtime (~2 hours for full BFCL vs 10 minutes ppxai)</p>
+<p><strong>Cost:</strong> 2-3 developer days
+<strong>Benefit:</strong> Reliable scores + industry credibility</p>
+<p><strong>ROI:</strong> High - solves variance problem we just encountered</p>
+<hr />
+<h3 id="option-3-add-toolbench">Option 3: Add ToolBench<a class="headerlink" href="#option-3-add-toolbench" title="Permanent link">&para;</a></h3>
+<p><strong>Pros:</strong>
+- ✅ Real-world APIs
+- ✅ 126K+ test cases
+- ✅ Generalization testing</p>
+<p><strong>Cons:</strong>
+- ⚠️ 3-5 days integration
+- ⚠️ Very long runtime (~24 hours)
+- ⚠️ API simulation complexity</p>
+<p><strong>Cost:</strong> 3-5 developer days
+<strong>Benefit:</strong> Real-world validation</p>
+<p><strong>ROI:</strong> Medium - valuable but high cost</p>
+<hr />
+<h3 id="option-4-full-integration-all-frameworks">Option 4: Full Integration (All frameworks)<a class="headerlink" href="#option-4-full-integration-all-frameworks" title="Permanent link">&para;</a></h3>
+<p><strong>Pros:</strong>
+- ✅ Comprehensive evaluation
+- ✅ Multiple perspectives
+- ✅ Maximum credibility</p>
+<p><strong>Cons:</strong>
+- ❌ 2+ weeks integration
+- ❌ Very long runtime
+- ❌ High maintenance burden</p>
+<p><strong>Cost:</strong> 2+ weeks
+<strong>Benefit:</strong> Complete coverage</p>
+<p><strong>ROI:</strong> Low - diminishing returns</p>
+<hr />
+<h2 id="final-recommendation">Final Recommendation<a class="headerlink" href="#final-recommendation" title="Permanent link">&para;</a></h2>
+<h3 id="immediate-action-add-bfcl-v4">Immediate Action: Add BFCL V4<a class="headerlink" href="#immediate-action-add-bfcl-v4" title="Permanent link">&para;</a></h3>
+<p><strong>Why:</strong>
+1. Solves our variance problem (67.2% → 64.3% swings)
+2. 2000 tests vs our 26 = stable scores
+3. Industry-standard comparison
+4. Only 2-3 days effort
+5. Active Berkeley maintenance</p>
+<p><strong>How:</strong>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># 1. Clone BFCL</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">cd</span><span class="w"> </span>benchmarks/
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/ShishirPatil/gorilla.git<span class="w"> </span>bfcl-upstream
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nb">cd</span><span class="w"> </span>bfcl-upstream/berkeley-function-call-leaderboard
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1"># 2. Adapt to ppxai</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="nb">cd</span><span class="w"> </span>../../
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>mkdir<span class="w"> </span>bfcl
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>python<span class="w"> </span>scripts/adapt_bfcl.py<span class="w">  </span><span class="c1"># Create ppxai-compatible runner</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="c1"># 3. Test integration</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks/bfcl/benchmark.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">  </span>--provider<span class="w"> </span>gemini<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">  </span>--model<span class="w"> </span>gemini-2.5-flash<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">  </span>--categories<span class="w"> </span>simple
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="c1"># 4. Full run</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks/bfcl/benchmark.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">  </span>--provider<span class="w"> </span>gemini<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">  </span>--model<span class="w"> </span>gemini-2.5-flash
+</span></code></pre></div></p>
+<p><strong>Timeline:</strong>
+- Day 1: Clone, understand BFCL structure, adapt dataset format
+- Day 2: Create ppxai runner, test simple category
+- Day 3: Full integration, documentation, testing</p>
+<p><strong>Deliverables:</strong>
+1. <code>benchmarks/bfcl/</code> directory with runner
+2. BFCL results for all Gemini models
+3. Comparison script for ppxai + BFCL results
+4. Updated docs with hybrid reporting format</p>
+<hr />
+<h2 id="future-considerations">Future Considerations<a class="headerlink" href="#future-considerations" title="Permanent link">&para;</a></h2>
+<h3 id="when-to-add-toolbench">When to Add ToolBench<a class="headerlink" href="#when-to-add-toolbench" title="Permanent link">&para;</a></h3>
+<p><strong>Trigger:</strong> v1.17.0 or v2.0.0 major release</p>
+<p><strong>Rationale:</strong>
+- Real-world API validation
+- Public benchmarking for marketing</p>
+<hr />
+<h3 id="when-to-add-lm-evaluation-harness">When to Add LM Evaluation Harness<a class="headerlink" href="#when-to-add-lm-evaluation-harness" title="Permanent link">&para;</a></h3>
+<p><strong>Trigger:</strong> Public benchmarking campaign</p>
+<p><strong>Rationale:</strong>
+- Comparable with Hugging Face leaderboard
+- General capabilities validation</p>
+<hr />
+<h2 id="references_6">References<a class="headerlink" href="#references_6" title="Permanent link">&para;</a></h2>
+<h3 id="primary-sources">Primary Sources<a class="headerlink" href="#primary-sources" title="Permanent link">&para;</a></h3>
+<ol>
+<li><a href="https://gorilla.cs.berkeley.edu/leaderboard.html">Berkeley Function Calling Leaderboard (BFCL)</a></li>
+<li><a href="https://openreview.net/forum?id=2GmDdhBdDk">BFCL Paper - OpenReview</a></li>
+<li><a href="https://github.com/sambanova/toolbench">ToolBench - GitHub</a></li>
+<li><a href="https://www.emergentmind.com/topics/toolbench">ToolBench Paper</a></li>
+<li><a href="https://scale.com/leaderboard/tool_use_enterprise">Scale AI Tool Use Enterprise</a></li>
+<li><a href="https://github.com/THUDM/AgentBench">AgentBench - GitHub</a></li>
+<li><a href="https://github.com/EleutherAI/lm-evaluation-harness">LM Evaluation Harness - GitHub</a></li>
+<li><a href="https://arxiv.org/html/2411.13547v2">ToolScan Paper</a></li>
+</ol>
+<h3 id="survey-papers">Survey Papers<a class="headerlink" href="#survey-papers" title="Permanent link">&para;</a></h3>
+<ol>
+<li><a href="https://arxiv.org/html/2507.21504v1">Evaluation and Benchmarking of LLM Agents: A Survey</a></li>
+<li><a href="https://www.evidentlyai.com/llm-guide/llm-benchmarks">30 LLM Evaluation Benchmarks</a></li>
+<li><a href="https://www.evidentlyai.com/blog/ai-agent-benchmarks">10 AI Agent Benchmarks</a></li>
+</ol>
+<h3 id="tools-and-frameworks">Tools and Frameworks<a class="headerlink" href="#tools-and-frameworks" title="Permanent link">&para;</a></h3>
+<ol>
+<li><a href="https://medium.com/online-inference/the-best-llm-evaluation-tools-of-2026-40fd9b654dce">Best LLM Evaluation Tools of 2026</a></li>
+<li><a href="https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents">Anthropic: Demystifying Evals for AI Agents</a></li>
+</ol>
+<hr />
+<h2 id="appendix-test-variance-mathematics">Appendix: Test Variance Mathematics<a class="headerlink" href="#appendix-test-variance-mathematics" title="Permanent link">&para;</a></h2>
+<h3 id="why-small-sample-size-causes-high-variance">Why Small Sample Size Causes High Variance<a class="headerlink" href="#why-small-sample-size-causes-high-variance" title="Permanent link">&para;</a></h3>
+<p><strong>ppxai tool_calling category:</strong>
+- 6 tests total
+- Each test worth 16.7% of category score
+- 1 test flip = ±16.7% variance</p>
+<p><strong>Example:</strong>
+- Run 1: 6/6 pass = 100%
+- Run 2: 5/6 pass = 83.3%
+- <strong>Variance: ±16.7%</strong></p>
+<p><strong>BFCL V4:</strong>
+- 2000 tests total
+- Each test worth 0.05% of overall score
+- 1 test flip = ±0.05% variance
+- <strong>333x more stable</strong></p>
+<h3 id="confidence-intervals">Confidence Intervals<a class="headerlink" href="#confidence-intervals" title="Permanent link">&para;</a></h3>
+<p><strong>ppxai (6 tests):</strong>
+- 95% CI: ±40% (extremely wide)
+- Need 10+ runs to establish true capability</p>
+<p><strong>BFCL (2000 tests):</strong>
+- 95% CI: ±2% (tight)
+- Single run gives reliable estimate</p>
+<h3 id="conclusion">Conclusion<a class="headerlink" href="#conclusion" title="Permanent link">&para;</a></h3>
+<p>Small sample size is the root cause of our variance problem. BFCL V4's 2000 tests solve this mathematically.</p>
+<hr />
+<p><strong>Document Status:</strong> Final
+<strong>Last Updated:</strong> 2026-02-08
+<strong>Next Review:</strong> After BFCL V4 integration</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
