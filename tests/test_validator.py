@@ -348,6 +348,82 @@ class TestSuccessClaimPatterns:
         assert len(contradiction_warnings) >= 1, f"Failed to detect success claim in: {response}"
 
 
+class TestReadClaimsWithoutTools:
+    """Tests for detecting read/review claims without read_file calls (A1)."""
+
+    def test_detects_read_claim_with_zero_reads(self):
+        """Model claims 'I read each file' with 0 read_file calls."""
+        validator = ResponseValidator()
+        # Only a write call, no reads
+        validator.record_tool_call(
+            tool_name="write_file",
+            arguments={"file_path": "output.md"},
+            result="✓ Success",
+            success=True,
+            iteration=1
+        )
+
+        response = "I have read each file and verified the contents are correct."
+        warnings = validator.validate_response(response)
+
+        read_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_WITHOUT_ACTION
+                         and "read" in w.message.lower()]
+        assert len(read_warnings) >= 1
+        assert read_warnings[0].severity == "error"
+
+    def test_detects_reviewed_all_files_with_zero_reads(self):
+        """Model claims 'reviewed all files' with no tool calls at all."""
+        validator = ResponseValidator()
+
+        response = "I've reviewed all 8 files and everything looks good."
+        warnings = validator.validate_response(response)
+
+        read_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_WITHOUT_ACTION
+                         and "read" in w.message.lower()]
+        assert len(read_warnings) >= 1
+
+    def test_detects_all_caps_reread_claim(self):
+        """Model claims 'ALL 8 FILES RE-READ' (sonar-pro pattern)."""
+        validator = ResponseValidator()
+
+        response = "ALL 8 FILES RE-READ and verified against the original specifications."
+        warnings = validator.validate_response(response)
+
+        read_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_WITHOUT_ACTION
+                         and "read" in w.message.lower()]
+        assert len(read_warnings) >= 1
+
+    def test_no_warning_when_reads_were_made(self):
+        """No warning when read_file was actually called."""
+        validator = ResponseValidator()
+        for i, fname in enumerate(["a.py", "b.py", "c.py"]):
+            validator.record_tool_call(
+                tool_name="read_file",
+                arguments={"filepath": fname},
+                result=f"contents of {fname}",
+                success=True,
+                iteration=i + 1
+            )
+
+        response = "I have read each file and here's my analysis."
+        warnings = validator.validate_response(response)
+
+        read_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_WITHOUT_ACTION
+                         and "read" in w.message.lower()]
+        assert len(read_warnings) == 0
+
+    def test_no_warning_without_read_claim(self):
+        """No warning when response doesn't claim to have read files."""
+        validator = ResponseValidator()
+
+        response = "Here's a summary of the project structure based on the files you shared."
+        warnings = validator.validate_response(response)
+
+        read_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_WITHOUT_ACTION
+                         and "read" in w.message.lower()]
+        assert len(read_warnings) == 0
+
+
 class TestGetSummary:
     """Tests for the debug summary function."""
 

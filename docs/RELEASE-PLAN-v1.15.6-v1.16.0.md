@@ -1,10 +1,11 @@
 # Release Plan: v1.15.6 (Foundation) → v1.16.0 (Breaking Changes)
 
 **Created:** 2026-02-19
-**Status:** Planning
+**Status:** v1.15.6 done (pending merge), v1.16.0 planning
 **Predecessor:** v1.15.5 (released 2026-02-15)
 **Active Branch:** `feature/benchmark-openai-models` (native OpenAI provider + benchmarks)
 **Analysis:** [MODEL-BEHAVIOR-ANALYSIS.md](MODEL-BEHAVIOR-ANALYSIS.md)
+**Debug Sessions:** [ARCHIVE-v1.15.6-debug-sessions.md](ARCHIVE-v1.15.6-debug-sessions.md)
 
 ---
 
@@ -171,13 +172,13 @@ From [DEBUG-SESSION-2026-02-19.md](DEBUG-SESSION-2026-02-19.md) Section 5.1:
 
 | # | Item | Priority | Effort | Status |
 |---|------|----------|--------|--------|
-| A1 | **Read-claim validator** — `_check_read_claims_without_tools()` in `validator.py` to catch fabricated "I read each file" with 0 `read_file` calls | P1 | 2h | ⏳ |
-| A2 | **Stronger truncation retry** — `[SYSTEM: ...]` framing in `chat.py:492-496` so models don't misinterpret retry as conversation | P2 | 30min | ⏳ |
-| A3 | **Model switch warning** — emit WARNING from `client.py:set_provider()/set_model()` when session has existing messages | P2 | 1h | ⏳ |
-| A4 | **gpt-4o AGENTS.md hints** — add multi-file reading + no-narration hints for `gpt-4o*` | P2 | 15min | ✅ Done |
-| A5 | **codex-mini profile fix** — change `model_profiles.py` from `mode="native"` to `mode="prompt_based"` | P2 | 30min | ⏳ |
-| A6 | **codex-mini benchmarks** — first benchmark run for gpt-5.1-codex-mini | P3 | 2h | ⏳ |
-| A7 | **codex limitation docs** — WARNING hint in AGENTS.md `gpt-5.1-codex*` section | P3 | 15min | ⏳ |
+| A1 | **Read-claim validator** — `_check_read_claims_without_tools()` in `validator.py` to catch fabricated "I read each file" with 0 `read_file` calls | P1 | 2h | ✅ Done (Session 5) |
+| A2 | **Stronger truncation retry** — `[SYSTEM: ...]` framing in `chat.py:504-509` | P2 | 30min | ✅ Done (Session 5) |
+| A3 | **Model switch warning** — deferred to v1.16.0 (B1 session reset is the proper fix) | P2 | — | → v1.16.0 |
+| A4 | **gpt-4o AGENTS.md hints** — multi-file reading + no-narration hints | P2 | 15min | ✅ Done (Session 2) |
+| A5 | **codex profiles** — reversed: native works, changed to `mode="native"` + `api_path="responses"` | P2 | 30min | ✅ Done (Session 3) |
+| A6 | **codex live validation** — codex: 71+ calls, codex-mini: 19 + synthesis | P3 | 2h | ✅ Done (Session 3) |
+| A7 | **codex AGENTS.md hints** — updated to "native function calling" language | P3 | 15min | ✅ Done (Session 3) |
 
 #### Debug Session 2 Findings (2026-02-20, macOS) — Additional v1.15.6 Items
 
@@ -189,10 +190,10 @@ From [DEBUG-SESSION-2026-02-19.md](DEBUG-SESSION-2026-02-19.md) Sections 9-13:
 | H1 | **"Make ONE" hint anti-pattern** — replaced 24 "Make ONE tool call" hints with "Chain multiple DIFFERENT tool calls" | P0 | done | ✅ Fixed |
 | H2 | **Interrupt during tool execution** — `chat.py:372` now checks `is_interrupted` and cancels running tool task | P0 | done | ✅ Fixed |
 | H3 | **Interrupt after provider.chat()** — `chat.py:327` catches interrupt before processing tools | P0 | done | ✅ Fixed |
-| A8 | **Codex native tool calling investigation** — codex models need `function_call` items via Responses API, not prompt-based injection | P1 | 4h | ⏳ |
-| A9 | **o3-mini provider routing** — currently uses `OpenAICompatibleProvider` (wrong `max_tokens` param). Must route through `OpenAINativeProvider` | P2 | 1h | ⏳ |
-| A10 | **gpt-5-mini hints** — "Do NOT ask permission before using tools. Call tools immediately." | P2 | 15min | ⏳ |
-| A11 | **gpt-5-nano synthesis failure** — empty response after 11 tool calls. Investigate `max_output_tokens` or iteration limit for nano | P2 | 2h | ⏳ |
+| A8 | **Codex native tool calling** — removed prompt-based override, added belt-and-suspenders hint injection | P0 | 4h | ✅ Done (Session 3) |
+| A9 | **o3-mini provider routing** — removed `openrouter` as built-in provider, o3-mini routes through `OpenAINativeProvider` | P2 | 1h | ✅ Done (Session 4) |
+| A10 | **gpt-5-mini hints** — "Do NOT ask permission before using tools" | P2 | 15min | ✅ Done (Session 4) |
+| A11 | **gpt-5-nano synthesis failure** — max_tokens 2048→8192, added profile with `fallback_on_empty` | P2 | 2h | ✅ Done (Session 5) |
 
 **Key validation from Session 2:** The "Make ONE" hint fix (H1) is confirmed transformative:
 - gpt-5.2: 1 tool/turn → 8 tools chained back-to-back
@@ -518,19 +519,23 @@ v1.16.0 (Breaking Changes)
 
 ## Success Criteria
 
-### v1.15.6
-- [ ] o4-mini scores >60% (up from 10.9%)
-- [ ] gpt-4.1-mini scores >70% (up from 60.9%)
-- [x] Codex native tool calling verified in engine — Session 3: 71+ calls (codex), 19 + synthesis (codex-mini)
-- [ ] Brace-counting parser handles apply_patch diffs without breaking (P2)
-- [ ] JSON stripping cleans up tool_json_in_content responses
-- [ ] `ModelProfile` dataclasses exist with profiles for 27 models
-- [ ] No regressions for existing providers (Gemini, Perplexity, local)
-- [ ] All existing tests pass + 30+ new tests
-- [ ] Read-claim validator catches "I read each file" with 0 read_file calls (A1)
-- [ ] Truncation retry uses `[SYSTEM: ...]` framing (A2)
-- [ ] Model switch emits warning when session has messages (A3)
+### v1.15.6 — All Done
+- [x] o4-mini scores up to 80.8% prompt-based (from 10.9% native)
+- [x] gpt-4.1-mini scores up to 100% prompt-based (from 60.9% native)
+- [x] Codex native tool calling verified — Session 3: 71+ calls (codex), 19 + synthesis (codex-mini)
+- [x] Brace-counting parser handles apply_patch diffs without breaking (P2)
+- [x] JSON stripping cleans up tool_json_in_content responses
+- [x] `ModelProfile` dataclasses with 37 built-in profiles
+- [x] No regressions for existing providers (Gemini, Perplexity, local)
+- [x] 1349 tests passing (87+ new tests)
+- [x] Read-claim validator catches "I read each file" with 0 read_file calls (A1)
+- [x] Truncation retry uses `[SYSTEM: ...]` framing (A2)
+- [x] Model switch warning → deferred to v1.16.0 (A3 → B1 session reset is proper fix)
 - [x] codex profiles corrected to native (A5 — reversed: native works, prompt_based was wrong)
+- [x] ppxaide `/debug-log on` fix — Logger.enable_all() (A14)
+- [x] codex-mini tuning — anti-hesitation, fallback_on_empty, restricted_params (A13)
+- [x] gpt-5-nano synthesis fix — max_tokens 8192, profile with fallback_on_empty (A11)
+- [x] Pre-release cleanup C1-C9 (profile count, prefix matching, tier fixes, doc sync)
 
 ### v1.16.0
 - [ ] Profile-driven routing replaces binary decision in chat.py

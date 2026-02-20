@@ -43,7 +43,7 @@ REASONING_MODEL_PREFIXES = ("o1", "o3", "o4")
 # Benchmark evidence:
 #   o4-mini: 10.9% native → 62.5% prompt-based (native returns empty responses)
 #   gpt-4.1-mini: 60.9% native → 71.9% prompt-based (hybrid tool_json_in_content)
-PROMPT_BASED_MODELS = ("o4-mini", "gpt-4.1-mini")
+PROMPT_BASED_MODEL_PREFIXES = ("o4-mini", "gpt-4.1-mini")
 
 # Generation params unsupported by GPT-5.x and o-series
 RESTRICTED_GENERATION_PARAMS = ("temperature", "top_p", "frequency_penalty", "presence_penalty")
@@ -254,7 +254,7 @@ class OpenAINativeProvider:
 
         Returns native_tool_calling=False for models that perform better with
         prompt-based tool calling:
-        - PROMPT_BASED_MODELS (o4-mini, gpt-4.1-mini): benchmark-proven to
+        - PROMPT_BASED_MODEL_PREFIXES (o4-mini, gpt-4.1-mini): benchmark-proven to
           score significantly higher with prompt-based routing
 
         Responses API models (codex, pro) now use native tool calling:
@@ -263,7 +263,7 @@ class OpenAINativeProvider:
         - Fallback: chat.py parse_tool_call() catches JSON-in-text output
         """
         model_lower = model.lower()
-        use_prompt_based = model_lower in PROMPT_BASED_MODELS
+        use_prompt_based = model_lower.startswith(PROMPT_BASED_MODEL_PREFIXES)
         if use_prompt_based:
             return ProviderCapabilities(
                 web_search=self.capabilities.web_search,

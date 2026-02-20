@@ -250,7 +250,10 @@
           "name": "GPT-5.1 Codex Mini",
           "description": "Lightweight code-specialized model for fast coding tasks",
           "context_limit": 400000,
-          "__comment_best_for": "Quick edits, simple code generation, file operations. Budget codex option."
+          "__comment_best_for": "Quick edits, simple code generation, file operations. Budget codex option.",
+          "generation_params": {
+            "max_tokens": 16384
+          }
         },
         "gpt-5": {
           "name": "GPT-5",
@@ -270,9 +273,7 @@
           "context_limit": 400000,
           "__comment_best_for": "Simple edits, file operations, quick Q&A. Lowest cost GPT-5.",
           "generation_params": {
-            "temperature": 0.1,
-            "top_p": 0.9,
-            "max_tokens": 2048
+            "max_tokens": 8192
           }
         },
         "gpt-4.1": {

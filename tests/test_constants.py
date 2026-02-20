@@ -165,7 +165,7 @@ class TestGenericHelpers:
         provider_values = get_enum_values(ProviderName)
         assert "perplexity" in provider_values
         assert "gemini" in provider_values
-        assert len(provider_values) == 6
+        assert len(provider_values) == 5
 
 
 class TestEnumMembership:
@@ -174,7 +174,7 @@ class TestEnumMembership:
     def test_enum_iteration(self):
         """Enums should be iterable."""
         providers = list(ProviderName)
-        assert len(providers) == 6
+        assert len(providers) == 5
         assert ProviderName.PERPLEXITY in providers
 
     def test_enum_membership_check(self):

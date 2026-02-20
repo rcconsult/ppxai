@@ -504,25 +504,24 @@ ppxai/tui/                     # New module (Textual-based)
 
 ### v1.15.6 - Model Profile System & Native OpenAI Provider
 
-**Status:** ⏳ In Progress
+**Status:** ✅ All items done, pre-release (pending merge)
 **Branch:** feature/benchmark-openai-models
-**Analysis:** [docs/MODEL-BEHAVIOR-ANALYSIS.md](docs/MODEL-BEHAVIOR-ANALYSIS.md)
-**Detailed Plan:** [docs/RELEASE-PLAN-v1.15.6-v1.16.0.md](docs/RELEASE-PLAN-v1.15.6-v1.16.0.md)
+**Release Notes:** [docs/RELEASE-NOTES-v1.15.6.md](docs/RELEASE-NOTES-v1.15.6.md)
+**Debug Sessions:** [docs/ARCHIVE-v1.15.6-debug-sessions.md](docs/ARCHIVE-v1.15.6-debug-sessions.md)
 
 | Feature | Description | Status |
 |---------|-------------|--------|
 | **`OpenAINativeProvider`** | Native OpenAI API: Chat Completions + Responses API, 404 auto-fallback | ✅ Done |
-| **Benchmark results** | 49+ runs across 27 models, 16 unique full-suite results | ✅ Done |
-| **Model behavior analysis** | 5 behavior tiers, 5 architectural gaps identified | ✅ Done |
-| **o4-mini → prompt-based** | Capability override: 10.9% → ~62.5% expected | ⏳ Planned |
-| **gpt-4.1-mini → prompt-based** | Capability override: 60.9% → ~71.9% expected | ⏳ Planned |
-| **JSON stripping** | Strip tool JSON from response text when native tool_calls present | ⏳ Planned |
-| **`model_profiles.py`** | `ToolCallingProfile` + `ModelProfile` dataclasses + registry | ⏳ Planned |
-| **Profile registry** | Glob-pattern matching for 27 benchmarked models | ⏳ Planned |
-| **Benchmark profile integration** | Engine runner uses profiles for native vs prompt routing | ⏳ Planned |
-| **AGENTS.md hints** | OpenAI provider + model-specific hints | ✅ Done |
-
-**Key insight from benchmarks:** The binary `native_tool_calling: bool` decision is too coarse. Models like gpt-4.1-mini (71.9% prompt vs 60.9% native) and o4-mini (62.5% prompt vs 10.9% native) need per-model routing.
+| **Benchmark results** | 54+ runs across 27 model variants, behavior analysis | ✅ Done |
+| **o4-mini/gpt-4.1-mini → prompt-based** | Prefix-based routing: up to 80.8% / 100% prompt-based | ✅ Done |
+| **JSON stripping** | Strip tool JSON from response text when native tool_calls present | ✅ Done |
+| **Brace-counting JSON parser** | `_find_json_objects()` handles nested braces in apply_patch diffs | ✅ Done |
+| **`model_profiles.py`** | 37 built-in profiles + `ModelProfileRegistry` with glob matching | ✅ Done |
+| **Codex native tool calling** | Both codex models work via Responses API with native function calls | ✅ Done |
+| **Read-claim validator** | Catches "I read each file" with 0 `read_file` calls | ✅ Done |
+| **ppxaide `/debug-log on` fix** | `Logger.enable_all()` now called when debug logging enabled | ✅ Done |
+| **AGENTS.md hints** | OpenAI model hints, anti-hesitation, anti-chaining | ✅ Done |
+| **1,349 tests passing** | 46 OpenAI provider + 41 model profile + others | ✅ Done |
 
 ---
 

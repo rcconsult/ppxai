@@ -211,6 +211,11 @@ class ResponseValidator:
         if display_warning:
             warnings.append(display_warning)
 
+        # Check for read/review claims without read_file calls
+        read_warning = self._check_read_claims_without_tools(response_text)
+        if read_warning:
+            warnings.append(read_warning)
+
         # Check for fabricated shell output
         fabricated_warning = self._check_fabricated_output(response_text)
         if fabricated_warning:
@@ -331,6 +336,40 @@ class ResponseValidator:
                             message="Model claims file is displayed but display_file was not called",
                             suggested_action="Call display_file to actually open the file in the viewer"
                         )
+
+        return None
+
+    # Patterns indicating the model claims to have read/reviewed files
+    READ_CLAIM_PATTERNS = [
+        r"I (?:have |'ve )?(?:read|reviewed|re-read|verified|confirmed|checked|examined|inspected) (?:each|all|every|the) (?:\d+ )?files?",
+        r"(?:read|reviewed|re-read|verified|confirmed|checked|examined|inspected) (?:each|all|every) (?:of the )?(?:\d+ )?files?",
+        r"re-read each file",
+        r"verified (?:that )?(?:the )?(?:files?|contents?) match",
+        r"I (?:have |'ve )?(?:gone through|looked at|analyzed) (?:each|all|every) (?:of the )?files?",
+        r"ALL \d+ FILES? (?:RE-)?READ",
+    ]
+
+    def _check_read_claims_without_tools(self, response: str) -> Optional[ValidationWarning]:
+        """Check if model claims to have read/reviewed files without any read_file calls."""
+        claims_read = any(
+            re.search(pattern, response, re.IGNORECASE)
+            for pattern in self.READ_CLAIM_PATTERNS
+        )
+
+        if not claims_read:
+            return None
+
+        # Count actual read_file calls
+        read_calls = [r for r in self._tool_calls if r.tool_name in self.FILE_READ_TOOLS]
+
+        if not read_calls:
+            return ValidationWarning(
+                result=ValidationResult.CLAIM_WITHOUT_ACTION,
+                severity="error",
+                message="Model claims to have read/reviewed files but no read_file calls were made",
+                details=f"Tool calls: {[r.tool_name for r in self._tool_calls] or 'none'}",
+                suggested_action="Use read_file to actually read files before claiming to have reviewed them"
+            )
 
         return None
 

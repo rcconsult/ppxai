@@ -58,7 +58,6 @@ from .gemini import is_available as gemini_available, GeminiProvider
 # Register providers
 register_provider("openai", OpenAINativeProvider)
 register_provider("perplexity", PerplexityProvider)
-register_provider("openrouter", OpenAICompatibleProvider)
 register_provider("local", OpenAICompatibleProvider)
 register_provider("custom", OpenAICompatibleProvider)
 

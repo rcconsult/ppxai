@@ -254,7 +254,10 @@
           "name": "GPT-5.1 Codex Mini",
           "description": "Lightweight code-specialized model for fast coding tasks",
           "context_limit": 400000,
-          "__comment_best_for": "Quick edits, simple code generation, file operations. Budget codex option."
+          "__comment_best_for": "Quick edits, simple code generation, file operations. Budget codex option.",
+          "generation_params": {
+            "max_tokens": 16384
+          }
         },
         "gpt-5": {
           "name": "GPT-5",
@@ -274,9 +277,7 @@
           "context_limit": 400000,
           "__comment_best_for": "Simple edits, file operations, quick Q&A. Lowest cost GPT-5.",
           "generation_params": {
-            "temperature": 0.1,
-            "top_p": 0.9,
-            "max_tokens": 2048
+            "max_tokens": 8192
           }
         },
         "gpt-4.1": {
@@ -399,87 +400,6 @@
         "realtime_info": false,
         "native_tool_calling": true,
         "__comment_native_tool_calling": "OpenAI supports native function calling via tools parameter"
-      }
-    },
-    "openrouter": {
-      "name": "OpenRouter",
-      "base_url": "https://openrouter.ai/api/v1",
-      "api_key_env": "OPENROUTER_API_KEY",
-      "default_model": "anthropic/claude-sonnet-4",
-      "coding_model": "anthropic/claude-sonnet-4",
-      "system_prompt": "You are an expert AI coding assistant. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
-      "generation_params": {
-        "temperature": 0.2,
-        "top_p": 0.9,
-        "frequency_penalty": 0.1
-      },
-      "models": {
-        "anthropic/claude-sonnet-4": {
-          "name": "Claude Sonnet 4",
-          "description": "Anthropic's balanced model for most tasks"
-        },
-        "anthropic/claude-opus-4": {
-          "name": "Claude Opus 4",
-          "description": "Anthropic's most capable model"
-        },
-        "anthropic/claude-haiku": {
-          "name": "Claude Haiku",
-          "description": "Fast and affordable Claude model"
-        },
-        "deepseek/deepseek-r1": {
-          "name": "DeepSeek R1",
-          "description": "Reasoning model with Chain of Thought"
-        },
-        "meta-llama/llama-3.1-70b-instruct": {
-          "name": "Llama 3.1 70B",
-          "description": "Meta's open-weight model"
-        },
-        "meta-llama/llama-3.1-405b-instruct": {
-          "name": "Llama 3.1 405B",
-          "description": "Meta's largest open model"
-        },
-        "google/gemini-2.0-flash-001": {
-          "name": "Gemini 2.0 Flash",
-          "description": "Google's fast multimodal model"
-        }
-      },
-      "pricing": {
-        "anthropic/claude-sonnet-4": {
-          "input": 3.0,
-          "output": 15.0
-        },
-        "anthropic/claude-opus-4": {
-          "input": 15.0,
-          "output": 75.0
-        },
-        "anthropic/claude-haiku": {
-          "input": 0.25,
-          "output": 1.25
-        },
-        "deepseek/deepseek-r1": {
-          "input": 0.55,
-          "output": 2.19
-        },
-        "meta-llama/llama-3.1-70b-instruct": {
-          "input": 0.59,
-          "output": 0.79
-        },
-        "meta-llama/llama-3.1-405b-instruct": {
-          "input": 3.0,
-          "output": 3.0
-        },
-        "google/gemini-2.0-flash-001": {
-          "input": 0.1,
-          "output": 0.4
-        }
-      },
-      "capabilities": {
-        "web_search": false,
-        "web_fetch": false,
-        "weather": false,
-        "realtime_info": false,
-        "native_tool_calling": true,
-        "__comment_native_tool_calling": "OpenRouter supports native function calling via tools parameter (varies by model)"
       }
     },
     "ollama": {

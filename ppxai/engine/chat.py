@@ -500,12 +500,14 @@ async def chat_with_tools(
                     EventType.INFO,
                     f"Truncated tool call: {truncated['reason']} - requesting retry"
                 )
-                # Add targeted feedback to help model recover
+                # Add targeted feedback with [SYSTEM:] framing so models don't
+                # misinterpret this as conversational correction (A2: codex treated
+                # the old format as "I won't use that wording going forward")
                 recovery_msg = (
-                    f"Your previous response was incomplete. You tried to use the '{truncated['tool']}' tool "
-                    f"but the tool call was not properly formatted or was truncated.\n\n"
-                    f"IMPORTANT: Do NOT say 'I'll use X tool' - just call the tool directly using native tool calling.\n"
-                    f"If the task requires writing large content, break it into smaller operations or use a different approach."
+                    f"[SYSTEM: Tool call failed. Your response contained text about using '{truncated['tool']}' "
+                    f"but no valid tool call was executed. "
+                    f"To use a tool, you MUST output ONLY the tool call — no surrounding text. "
+                    f"Retry the tool call now, or respond with your answer if you cannot use tools.]"
                 )
                 ctx.session.add_message(Message("assistant", full_response[:500] + "..." if len(full_response) > 500 else full_response))
                 ctx.session.add_message(Message("user", recovery_msg))

@@ -3,7 +3,7 @@ Engine-based benchmark runner using ppxai's EngineClient.
 
 This runner uses the ppxai Engine layer instead of direct OpenAI API calls,
 enabling benchmarking of all providers through their native implementations
-(Perplexity, Gemini, OpenRouter, vLLM/GPT-OSS, etc.).
+(Perplexity, Gemini, OpenAI, vLLM/GPT-OSS, etc.).
 """
 
 import asyncio

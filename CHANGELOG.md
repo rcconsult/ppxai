@@ -18,14 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Native function calling with streaming tool call assembly
   - 404 auto-fallback: Chat Completions → Responses API when model isn't a chat model
   - Web search via `web_search_preview` tool (Responses API, opt-in)
-- **43 unit tests** for native OpenAI provider (model classification, message conversion, streaming, error handling)
+- **46 unit tests** for native OpenAI provider (model classification, message conversion, streaming, error handling, prompt-based routing)
 - **AGENTS.md hints** for OpenAI provider and model-specific hints (gpt-5.2, gpt-5, gpt-4.1, o4-mini, codex)
 
 ### Added - Model Profile System (Foundation for v1.16.0)
 
 - **`model_profiles.py`** (`ppxai/engine/model_profiles.py`) — `ToolCallingProfile` and `ModelProfile` dataclasses encoding per-model tool calling strategy, API routing, max_tokens, and benchmark tier
 - **`ModelProfileRegistry`** — Glob-pattern matching registry (case-insensitive, first match wins)
-- **43 built-in profiles** covering all benchmarked models: OpenAI (12), Perplexity (5), Gemini (5), DGX/vLLM Qwen3 (5), Ollama Qwen (3), OpenRouter (5), GPT-OSS (1), legacy GPT-4o (2), reasoning o-series (5)
+- **37 built-in profiles** covering all benchmarked models: OpenAI (14), Perplexity (5), Gemini (5), DGX/vLLM Qwen3 (5), Ollama Qwen (3), GPT-OSS (1), legacy GPT-4o (2), reasoning o-series (5)
 - **`get_model_profile()`** method added to `BaseProvider`, `OpenAINativeProvider`, and `GeminiProvider` (scaffolding for v1.16.0 profile-driven tool loop)
 - **41 model profile tests** — profile matching, glob patterns, shadowing prevention, tier validation, data integrity
 
@@ -49,20 +49,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Windows ZIP packager** (`scripts/package-windows-zip.ps1`) — Creates offline deployment ZIP with binaries + web UI for air-gapped environments
 
+### Added - Response Validation & Debug Improvements
+
+- **Read-claim validator** (`_check_read_claims_without_tools()` in `validator.py`) — Detects "I read each file" / "reviewed all files" claims when 0 `read_file` tool calls were made; 6 regex patterns + 5 tests
+- **Truncation retry `[SYSTEM: ...]` framing** — Retry messages now use system framing instead of conversational text to prevent models from misinterpreting retries as conversation
+
 ### Changed
 
 - **OpenAI provider registration** — `openai` provider now uses `OpenAINativeProvider` instead of `OpenAICompatibleProvider`; openrouter, local, custom providers unchanged
+- **`PROMPT_BASED_MODEL_PREFIXES`** — Renamed from `PROMPT_BASED_MODELS`, changed from exact match (`in`) to prefix match (`.startswith()`) so dated model IDs like `o4-mini-2025-04-16` get correct prompt-based routing
 - **Benchmark engine runner** — Loads AGENTS.md hints from all scopes (global, project, subdir) matching real client behavior
 - **Retired Gemini 2.0 Flash models** — Removed from default config (expired preview models)
+- **gpt-5-nano max_tokens** — Increased from 2048 to 8192 to prevent empty synthesis after tool iterations
+- **codex-mini tuning** — Profile: added `strip_json_from_text`, `fallback_on_empty`, `restricted_params`, tier C→B; AGENTS.md: anti-hesitation hint; config: `max_tokens: 16384`
+- **gemini-3-pro tier** — Changed S→A (best benchmark 73.1%, below S threshold of 80%)
 
 ### Fixed
 
 - **AGENTS.md hints for native providers** — Bootstrap/AGENTS.md hints were only injected for prompt-based mode; now injected for ALL providers (P1)
 - **`bootstrap_prompt` NameError** in benchmark debug logging — Variable was never defined in scope; replaced with `system_content`
+- **ppxaide `/debug-log on`** — Was toggling in-memory flags only; now calls `Logger.enable_all()` / `Logger.disable_all()` to actually enable file logging
+- **Codex native tool calling** — Removed `_is_responses_api_model()` from prompt-based override; added belt-and-suspenders tool hint injection for Responses API models
 
 ### Documentation
 
 - **v1.15.6/v1.16.0 release plan** (`docs/RELEASE-PLAN-v1.15.6-v1.16.0.md`) — Phased release strategy, P0-P4 backlog, v1.16.0 breaking changes roadmap
+- **Debug session archive** (`docs/ARCHIVE-v1.15.6-debug-sessions.md`) — 5 debug sessions, 23 items (A0-A14, C1-C9), key discoveries
 - **DGX Spark setup guide** — Sanitized, removed sensitive info and Ollama references
 
 ---

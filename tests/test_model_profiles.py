@@ -214,13 +214,13 @@ class TestBuiltinProfiles:
     def test_codex_mini_not_shadowed_by_codex_glob(self):
         """gpt-5.1-codex-mini must match its own profile, not gpt-5.1-codex*."""
         profile = get_profile("gpt-5.1-codex-mini")
-        assert profile.tier == "C", f"codex-mini should be tier C, got {profile.tier}"
+        assert profile.tier == "B", f"codex-mini should be tier B, got {profile.tier}"
         assert profile.tool_calling.mode == "native", \
             f"codex-mini should be native, got {profile.tool_calling.mode}"
         # Verify codex (non-mini) still matches its own profile
         codex = get_profile("gpt-5.1-codex")
         assert codex.tier == "B"
-        assert codex.tool_calling.mode == "prompt_based"
+        assert codex.tool_calling.mode == "native"
 
     def test_max_tokens_perplexity_models(self):
         """Perplexity sonar models should have correct max_tokens."""
@@ -308,26 +308,13 @@ class TestBuiltinProfiles:
 
     def test_gemini_3_models(self):
         """Gemini 3 preview models should have profiles."""
-        for model in ["gemini-3-flash-preview", "gemini-3-pro-preview"]:
-            profile = get_profile(model)
-            assert profile.tier == "S", \
-                f"{model}: expected tier=S, got {profile.tier}"
-            assert profile.max_tokens == 65_536, \
-                f"{model}: expected max_tokens=65536, got {profile.max_tokens}"
+        flash = get_profile("gemini-3-flash-preview")
+        assert flash.tier == "S", f"gemini-3-flash: expected tier=S, got {flash.tier}"
+        assert flash.max_tokens == 65_536
 
-    def test_openrouter_claude_models(self):
-        """OpenRouter Claude models should have profiles."""
-        cases = [
-            ("anthropic/claude-sonnet-4", "A", 16_384),
-            ("anthropic/claude-opus-4", "S", 32_768),
-            ("anthropic/claude-haiku", "B", 8_192),
-        ]
-        for model, expected_tier, expected_tokens in cases:
-            profile = get_profile(model)
-            assert profile.tier == expected_tier, \
-                f"{model}: expected tier={expected_tier}, got {profile.tier}"
-            assert profile.max_tokens == expected_tokens, \
-                f"{model}: expected max_tokens={expected_tokens}, got {profile.max_tokens}"
+        pro = get_profile("gemini-3-pro-preview")
+        assert pro.tier == "A", f"gemini-3-pro: expected tier=A, got {pro.tier}"
+        assert pro.max_tokens == 65_536
 
     def test_max_tokens_default_zero(self):
         """Unknown models should have max_tokens=0 (use provider default)."""

@@ -57,7 +57,6 @@ class ProviderName(str, Enum):
     PERPLEXITY = "perplexity"
     GEMINI = "gemini"
     OPENAI = "openai"
-    OPENROUTER = "openrouter"
     LOCAL = "local"
     CUSTOM = "custom"
 

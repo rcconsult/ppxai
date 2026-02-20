@@ -115,6 +115,7 @@ model_hints:
   "gpt-5.1-codex-mini*":
     - "You are a lightweight code-specialized model with native function calling. Call tools directly — never output JSON in your response text."
     - "CRITICAL: Tools are available — CALL them. Do NOT say 'I don't have access' or 'no tools provided'."
+    - "Do NOT ask for confirmation or permission before using tools. Call tools immediately without explaining what you plan to do."
     - "For file modifications, use apply_patch with unified diff format. Include 3+ context lines."
     - "Chain consecutive tool calls for DIFFERENT files without stopping to narrate between them."
     - "Keep responses concise — focus on executing the task, not explaining what you'll do."
@@ -126,6 +127,10 @@ model_hints:
     - "Chain tool calls for DIFFERENT files consecutively. Do NOT stop to narrate between tool calls."
     - "Execute tools immediately - never describe what you would do, just call the function."
     - "When a tool returns an error, acknowledge the failure and explain what went wrong."
+  "gpt-5-mini*":
+    - "Do NOT ask permission before using tools. Call tools immediately without explaining."
+    - "For code modifications, use apply_patch with unified diff format including 3+ context lines."
+    - "Chain multiple DIFFERENT tool calls without stopping to narrate between them."
   "gpt-4o*":
     - "For code modifications, use apply_patch with unified diff format including 3+ context lines."
     - "CRITICAL: Do NOT output tool call JSON in your response text. Use the tools API."
@@ -198,7 +203,7 @@ model_hints:
 
 ## Project: ppxai
 
-ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, Gemini, OpenRouter, local models via Ollama/vLLM).
+ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, Gemini, local models via Ollama/vLLM).
 
 ### Code Style
 
@@ -213,7 +218,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - `ppxai/engine/providers/` - Provider implementations:
   - `openai_native.py` - Native OpenAI (GPT-5.x, o-series, Codex via Responses API)
   - `gemini.py` - Native Gemini (google-genai SDK)
-  - `openai_compat.py` - OpenAI-compatible (Perplexity, OpenRouter, local/vLLM, custom)
+  - `openai_compat.py` - OpenAI-compatible (Perplexity, local/vLLM, custom)
 - `ppxai/engine/model_profiles.py` - Per-model behavioral profiles (tool calling, API routing)
 - `ppxai/engine/tools/` - Tool system with builtins + brace-counting JSON parser
 - `ppxai/server/` - HTTP/SSE server for IDE integration
@@ -251,13 +256,13 @@ The web tools (`get_weather`, `fetch_url`, `web_search`) support corporate proxy
 
 - `CLAUDE.md` - Detailed project instructions for Claude Code
 - `ROADMAP.md` - Feature roadmap and version planning
-- `docs/RELEASE-PLAN-v1.14.x.md` - Current release series plan
+- `docs/RELEASE-PLAN-v1.15.6-v1.16.0.md` - Current release plan (v1.15.6 foundation + v1.16.0 breaking changes)
 
 ### Current Version: v1.15.6
 
 **v1.15.6 Features:**
 - **NEW:** Native OpenAI provider (`openai_native.py`) — Chat Completions + Responses API routing
-- **NEW:** Model profile system — 43 built-in profiles for 27 models (tool calling strategy, API routing, benchmark tier)
+- **NEW:** Model profile system — 37 built-in profiles for 27 models (tool calling strategy, API routing, benchmark tier)
 - **NEW:** Brace-counting JSON parser — handles nested braces in apply_patch diffs
 - **FIX:** Codex models use native function calling via Responses API with belt-and-suspenders fallback
 - **FIX:** AGENTS.md hints injected for native tool calling mode (was prompt-based only)

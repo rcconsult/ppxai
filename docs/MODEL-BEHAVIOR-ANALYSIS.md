@@ -2,7 +2,7 @@
 
 **Created:** 2026-02-19
 **Branch:** feature/benchmark-openai-models
-**Status:** Analysis complete, implementation pending
+**Status:** Analysis complete, v1.15.6 implementation done (profiles + native provider)
 
 ---
 

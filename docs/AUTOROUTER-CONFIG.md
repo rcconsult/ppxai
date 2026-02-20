@@ -27,8 +27,8 @@ Each provider has a pre-configured coding model optimized for development tasks:
 |----------|---------------------|-----------------|
 | **Perplexity** | `sonar-pro` | Advanced reasoning for complex coding tasks |
 | **Gemini** | `gemini-2.5-pro` | Most capable model for complex reasoning |
-| **OpenAI** | `gpt-4o` | Latest flagship with strong coding ability |
-| **OpenRouter** | `anthropic/claude-sonnet-4` | Balanced performance for development |
+| **OpenAI** | `gpt-5.2` | Flagship model with best native tool calling (70.3% benchmark) |
+| **Custom** | (user-configured) | Configure any OpenAI-compatible endpoint (OpenRouter, etc.) |
 | **Ollama** | `codellama` | Specialized local coding model |
 
 ## Customizing Coding Models

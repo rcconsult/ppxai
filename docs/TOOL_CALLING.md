@@ -1,7 +1,7 @@
 # Tool Calling in ppxai
 
-**Version:** v1.15.5
-**Updated:** 2026-02-15
+**Version:** v1.15.6
+**Updated:** 2026-02-20
 
 ---
 
@@ -22,10 +22,12 @@ This document explains which providers use which method and the implications for
 |----------|--------|-------------------|---------------------|
 | **Gemini** | Native | ✅ Yes | Uses `function_declarations` API |
 | **Perplexity** | Prompt-Based | ❌ No | Injects tools in prompt, parses JSON |
-| **OpenAI** | Native | ✅ Yes | Uses standard `tools` parameter |
-| **OpenRouter** | Native | ✅ Yes | Uses standard `tools` parameter |
+| **OpenAI** | Per-model | ✅ Yes | `OpenAINativeProvider` with model-specific routing (v1.15.6) |
+| **Custom** | Native | ✅ Yes | Uses standard `tools` parameter (OpenRouter, other OpenAI-compat) |
 | **vLLM** | Native | ✅ Yes (with --enable-auto-tool-choice) | Uses standard `tools` parameter |
 | **Ollama** | Native | ✅ Yes (Qwen models only) | Uses standard `tools` parameter |
+
+**Note (v1.15.6):** The OpenAI provider now uses a dedicated `OpenAINativeProvider` that routes models to their optimal tool calling mode. Some models (o4-mini, gpt-4.1-mini) use prompt-based mode even though the provider supports native tool calling, because benchmarks showed significantly better results. See [MODEL-BEHAVIOR-ANALYSIS.md](MODEL-BEHAVIOR-ANALYSIS.md) for details.
 
 ---
 

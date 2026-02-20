@@ -8,15 +8,15 @@
 
 ## Overview
 
-v1.15.6 adds a dedicated native OpenAI provider, a model profile system covering 43 models, and significant benchmark infrastructure improvements. This is the foundation release for v1.16.0's profile-driven tool loop.
+v1.15.6 adds a dedicated native OpenAI provider, a model profile system covering 37 models, and significant benchmark infrastructure improvements. This is the foundation release for v1.16.0's profile-driven tool loop.
 
 **Key Changes:**
 - Native OpenAI provider with Chat Completions + Responses API routing
-- Model profile system with 43 built-in profiles (data structure only, not yet wired into chat.py)
+- Model profile system with 37 built-in profiles (data structure only, not yet wired into chat.py)
 - Brace-counting JSON parser replacing regex (handles nested braces in apply_patch diffs)
 - JSON stripping from response text when native tool_calls are present
 - 54+ benchmark runs across 27 model variants with detailed analysis
-- 1,342 total tests passing
+- 1,349 total tests passing
 
 ---
 
@@ -48,14 +48,14 @@ v1.15.6 adds a dedicated native OpenAI provider, a model profile system covering
 
 **Key files:**
 - `ppxai/engine/providers/openai_native.py` — Provider implementation (812 lines)
-- `tests/test_openai_native_provider.py` — 43 unit tests
+- `tests/test_openai_native.py` — 46 unit tests
 
 ### 2. Model Profile System
 
 **What:** `model_profiles.py` — a registry of per-model behavioral profiles encoding tool calling strategy, API routing, max_tokens, and benchmark performance tier.
 
 **Why:** The benchmark analysis (27 models, 7 categories) showed that models have fundamentally different tool calling behaviors. A one-size-fits-all approach doesn't work:
-- o4-mini scores 73.4% with prompt-based vs 10.9% with native tool calling
+- o4-mini scores up to 80.8% with prompt-based vs 11.5% with native tool calling
 - gpt-4.1-mini scores 71.9% prompt-based vs 60.9% native
 - GPT-5.2 needs JSON stripping from response text
 - Codex models need Responses API routing
@@ -81,13 +81,12 @@ class ModelProfile:
     tier: str                    # S/A/B/C/D benchmark tier
 ```
 
-**43 built-in profiles** covering:
-- OpenAI: gpt-5.2, gpt-5, gpt-5-mini, gpt-4.1, gpt-4.1-mini, gpt-4.1-nano, gpt-4o, gpt-4o-mini, o4-mini, o3, o3-mini, o3-pro, o1, o1-mini, gpt-5.1-codex, gpt-5.1-codex-mini
+**37 built-in profiles** covering:
+- OpenAI: gpt-5.2, gpt-5, gpt-5-mini, gpt-5-nano, gpt-4.1, gpt-4.1-mini, gpt-4.1-nano, gpt-4o, gpt-4o-mini, o4-mini, o3, o3-mini, o3-pro, o1, o1-mini, gpt-5.1-codex, gpt-5.1-codex-mini
 - Perplexity: sonar, sonar-pro, sonar-reasoning-pro, sonar-deep-research, llama-3.1-sonar
 - Gemini: 2.5-pro, 2.5-flash, 3-flash-preview, 3-pro-preview, 2.0-flash-exp
 - DGX/vLLM: Qwen3-Coder-30B, Qwen3-Coder-Next, Qwen3-Next-80B (Instruct + Thinking), RedHatAI Qwen3-30B
 - Ollama: qwen2.5-coder:32b, qwen2.5-coder (small), qwen3:30b-a3b
-- OpenRouter: claude-sonnet-4, claude-opus-4, claude-haiku, deepseek-r1, llama-3.1
 - Other: openai/gpt-oss
 
 **v1.15.6 scope:** Data structure + registry only. Profiles are NOT yet consulted by `chat.py`. The profile-driven tool loop integration happens in v1.16.0.
@@ -155,7 +154,7 @@ The 27-model analysis identified 5 architectural gaps in `chat.py`:
 ### New Files
 - `ppxai/engine/providers/openai_native.py` — Native OpenAI provider
 - `ppxai/engine/model_profiles.py` — Model profile system
-- `tests/test_openai_native_provider.py` — OpenAI provider tests
+- `tests/test_openai_native.py` — OpenAI provider tests
 - `tests/test_model_profiles.py` — Model profile tests
 - `docs/MODEL-BEHAVIOR-ANALYSIS.md` — 27-model benchmark analysis
 - `docs/RELEASE-PLAN-v1.15.6-v1.16.0.md` — Phased release plan
@@ -191,9 +190,9 @@ The 27-model analysis identified 5 architectural gaps in `chat.py`:
 | Category | Count |
 |----------|-------|
 | Model profile tests | 41 |
-| OpenAI provider tests | 43 |
+| OpenAI provider tests | 46 |
 | Parser tests (existing + enhanced) | ~30 |
-| All other tests | ~1,228 |
-| **Total** | **1,342** |
+| All other tests | ~1,232 |
+| **Total** | **1,349** |
 
 All tests passing on Windows 11 (Python 3.12).

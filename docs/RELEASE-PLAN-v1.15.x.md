@@ -2,9 +2,9 @@
 
 **Created:** January 24, 2026
 **Last Updated:** February 19, 2026
-**Status:** ✅ v1.15.0-v1.15.5 RELEASED, ⏳ v1.15.6 IN PROGRESS (final release in series)
+**Status:** ✅ v1.15.0-v1.15.5 RELEASED, ⏳ v1.15.6 PRE-RELEASE (final release in series)
 **Branch:** feature/benchmark-openai-models (v1.15.6)
-**Tests:** 1237+ passing
+**Tests:** 1349 passing
 
 ---
 
@@ -520,31 +520,28 @@ All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tu
 
 ---
 
-## v1.15.6 - Model Profile System & Native OpenAI Provider ⏳
+## v1.15.6 - Model Profile System & Native OpenAI Provider ✅
 
-**Status:** In Progress
+**Status:** All items done, pre-release (pending merge)
 **Branch:** feature/benchmark-openai-models
 **Detailed Plan:** [RELEASE-PLAN-v1.15.6-v1.16.0.md](RELEASE-PLAN-v1.15.6-v1.16.0.md)
+**Release Notes:** [RELEASE-NOTES-v1.15.6.md](RELEASE-NOTES-v1.15.6.md)
+**Debug Sessions:** [ARCHIVE-v1.15.6-debug-sessions.md](ARCHIVE-v1.15.6-debug-sessions.md)
 
 | Feature | Description | Status |
 |---------|-------------|--------|
 | **`OpenAINativeProvider`** | Native OpenAI API: Chat Completions + Responses API | ✅ Done |
-| **Benchmark results** | 49+ runs, 16 unique full-suite results, behavior analysis | ✅ Done |
-| **o4-mini/gpt-4.1-mini overrides** | Force prompt-based for models broken on native | ⏳ Planned |
-| **JSON stripping** | Strip tool JSON from text when native tool_calls present | ⏳ Planned |
-| **`model_profiles.py`** | Foundation data structures + registry (no chat.py changes) | ⏳ Planned |
+| **Benchmark results** | 54+ runs, 27 model variants, behavior analysis | ✅ Done |
+| **o4-mini/gpt-4.1-mini overrides** | Force prompt-based for models broken on native | ✅ Done |
+| **JSON stripping** | Strip tool JSON from text when native tool_calls present | ✅ Done |
+| **Brace-counting JSON parser** | `_find_json_objects()` handles nested braces in apply_patch diffs | ✅ Done |
+| **`model_profiles.py`** | 37 built-in profiles + registry (data only, not wired into chat.py) | ✅ Done |
+| **Codex native tool calling** | Both codex models work via Responses API with native function calls | ✅ Done |
+| **Read-claim validator** | Catches "I read each file" with 0 `read_file` calls | ✅ Done |
+| **ppxaide `/debug-log on` fix** | `Logger.enable_all()` now called when debug logging enabled | ✅ Done |
+| **AGENTS.md hints** | OpenAI model hints, anti-hesitation, anti-chaining | ✅ Done |
 
-### Benchmark Findings Backlog (P0–P4)
-
-| Priority | Issue | Status |
-|----------|-------|--------|
-| **P0** | Codex `native_tool_calling` must be False — codex models output tool JSON as text, never native function calls | ✅ Fixed (runner); verify engine |
-| **P1** | AGENTS.md hints skipped for native providers — only injected for prompt-based mode | ✅ Fixed (chat.py) |
-| **P2** | Port brace-counting JSON parser from benchmark runner to `engine/tools/parser.py` | ⏳ Pending |
-| **P3** | Re-benchmark all providers with fixed runner (scores were artificially low) | ⏳ Partial (4/16 models) |
-| **P4** | Belt-and-suspenders — include tool text in system prompt even for native providers (→ v1.16.0) | ⏳ Pending |
-
-**Key findings:** GPT-5.2/codex use `*** Begin Patch` format (not unified diff, 0% code_editing); Perplexity sonar has identity leak without AGENTS.md override (75% → 48.4%).
+**Tests:** 1349 passing (46 new OpenAI provider tests, 41 model profile tests, others)
 
 ---
 
@@ -555,8 +552,8 @@ All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tu
 The v1.15.x theme — "Next Generation TUI (ppxaide)" — is fully delivered:
 - Textual-based TUI with full feature parity (32 commands, 17+ themes)
 - All 7 implementation phases complete (foundation → polish)
-- 1,237+ tests passing across all platforms
-- v1.15.6 closes with the native OpenAI provider and model profile foundation
+- 1,349 tests passing across all platforms
+- v1.15.6 closes with the native OpenAI provider, model profile system (37 profiles), and 5 debug session fixes
 
 **Next:** v1.16.0 starts the breaking changes series (profile-driven tool loop, multi-tool support, file navigation).
 

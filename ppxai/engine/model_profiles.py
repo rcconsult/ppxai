@@ -145,9 +145,12 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         tool_calling=ToolCallingProfile(
             mode="native",
             api_path="responses",
+            strip_json_from_text=True,
+            fallback_on_empty=True,
         ),
         max_tokens=128_000,
-        tier="C",
+        restricted_params=["temperature", "top_p"],
+        tier="B",
     ),
     "gpt-5.1-codex*": ModelProfile(
         tool_calling=ToolCallingProfile(
@@ -155,6 +158,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
             api_path="responses",
         ),
         max_tokens=128_000,
+        restricted_params=["temperature", "top_p"],
         tier="B",
     ),
     "o4-mini*": ModelProfile(
@@ -170,6 +174,16 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
 
     # ── Tier C: 40-60% success ────────────────────────────────────────
 
+    "gpt-5-nano*": ModelProfile(
+        tool_calling=ToolCallingProfile(
+            mode="native",
+            strip_json_from_text=True,
+            fallback_on_empty=True,
+        ),
+        max_tokens=8_192,
+        restricted_params=["temperature", "top_p"],
+        tier="C",
+    ),
     "gpt-4.1-nano*": ModelProfile(
         tool_calling=ToolCallingProfile(
             mode="native",
@@ -356,37 +370,9 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
     "gemini-3-pro*": ModelProfile(
         tool_calling=ToolCallingProfile(mode="native"),
         max_tokens=65_536,
-        tier="S",
-    ),
-
-    # ── OpenRouter models ───────────────────────────────────────────
-
-    "anthropic/claude-sonnet*": ModelProfile(
-        tool_calling=ToolCallingProfile(mode="native"),
-        max_tokens=16_384,
         tier="A",
     ),
-    "anthropic/claude-opus*": ModelProfile(
-        tool_calling=ToolCallingProfile(mode="native"),
-        max_tokens=32_768,
-        tier="S",
-    ),
-    "anthropic/claude-haiku*": ModelProfile(
-        tool_calling=ToolCallingProfile(mode="native"),
-        max_tokens=8_192,
-        tier="B",
-    ),
-    "deepseek/deepseek-r1*": ModelProfile(
-        tool_calling=ToolCallingProfile(mode="native"),
-        max_tokens=16_384,
-        supports_reasoning=True,
-        tier="A",
-    ),
-    "meta-llama/llama-3.1*": ModelProfile(
-        tool_calling=ToolCallingProfile(mode="native"),
-        max_tokens=4_096,
-        tier="C",
-    ),
+
 }
 
 

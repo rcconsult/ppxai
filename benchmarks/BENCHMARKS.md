@@ -1,7 +1,7 @@
 # ppxai Benchmark System
 
-**Version:** v1.15.5
-**Last Updated:** 2026-02-14
+**Version:** v1.15.6
+**Last Updated:** 2026-02-20
 
 ---
 
@@ -508,7 +508,7 @@ Tracks all benchmark runs for quick lookups:
 
 ## Benchmark History
 
-### Current Results (v1.15.5)
+### Current Results (v1.15.6)
 
 #### Self-Hosted / Third-Party Models (v1.15.4)
 

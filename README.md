@@ -1,6 +1,6 @@
 # ppxai - Multi-LLM Interface for Developers
 
-![Version](https://img.shields.io/badge/version-1.15.5-blue) ![Tests](https://img.shields.io/badge/tests-1237%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
+![Version](https://img.shields.io/badge/version-1.15.6-blue) ![Tests](https://img.shields.io/badge/tests-1349%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
 
 **Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
 
@@ -341,6 +341,7 @@ No telemetry. No tracking. Data only goes to the LLM provider you choose.
 | [Specifications](SPECIFICATIONS.md) | Code generation templates |
 | [Architecture](docs/ARCHITECTURE.md) | Type-based renderer design (v1.15.0) |
 | [Tool Calling](docs/TOOL_CALLING.md) | Native vs prompt-based tool calling |
+| [Release Notes v1.15.6](docs/RELEASE-NOTES-v1.15.6.md) | Native OpenAI provider, model profiles, benchmark analysis |
 | [Release Notes v1.15.5](docs/RELEASE-NOTES-v1.15.5.md) | Multi-line input, Escape key fix, build fix |
 
 ## Project Structure

@@ -33,6 +33,7 @@ from ppxai.tui.clipboard import copy_to_clipboard, paste_from_clipboard, is_clip
 from ppxai.tui import commands as local_commands
 from ppxai.tui.completer import TextualCompleter
 from ppxai.tui.event_bus import EventBus, Events
+from ppxai.common.logger import Logger
 
 # Engine integration (Phase 6.1)
 from ppxai.engine import EngineClient
@@ -2017,6 +2018,11 @@ class PPXAIDEApp(App):
         self._debug_logging = enabled
         self._trace_logging = enabled  # Enable trace for verbose per-event logging
         self._event_bus._log_events = enabled
+        # Enable/disable all file loggers (tui, chat, session, validator, etc.)
+        if enabled:
+            Logger.enable_all()
+        else:
+            Logger.disable_all()
         self._log.info(f"Debug logging {'enabled' if enabled else 'disabled'}")
 
     def on_side_panel_opened(self, event: SidePanel.Opened) -> None:

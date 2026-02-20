@@ -131,6 +131,37 @@ class TestInit:
 
 
 # ---------------------------------------------------------------------------
+# Prompt-based routing tests
+# ---------------------------------------------------------------------------
+
+class TestPromptBasedRouting:
+    """Test that PROMPT_BASED_MODEL_PREFIXES uses prefix matching."""
+
+    def test_prompt_based_for_dated_model_id(self):
+        """Dated model IDs like o4-mini-2025-04-16 should get prompt-based routing."""
+        with patch("ppxai.engine.providers.openai_native.OpenAI"):
+            p = OpenAINativeProvider(api_key="test-key")
+            caps = p.get_capabilities_for_model("o4-mini-2025-04-16")
+            assert caps.native_tool_calling is False
+
+    def test_prompt_based_for_exact_model_id(self):
+        """Exact model IDs should still get prompt-based routing."""
+        with patch("ppxai.engine.providers.openai_native.OpenAI"):
+            p = OpenAINativeProvider(api_key="test-key")
+            for model in ("o4-mini", "gpt-4.1-mini"):
+                caps = p.get_capabilities_for_model(model)
+                assert caps.native_tool_calling is False, f"{model} should be prompt-based"
+
+    def test_native_for_non_prompt_based_models(self):
+        """Other models should keep native tool calling."""
+        with patch("ppxai.engine.providers.openai_native.OpenAI"):
+            p = OpenAINativeProvider(api_key="test-key")
+            for model in ("gpt-5.2", "gpt-4.1", "gpt-5.1-codex"):
+                caps = p.get_capabilities_for_model(model)
+                assert caps.native_tool_calling is True, f"{model} should be native"
+
+
+# ---------------------------------------------------------------------------
 # Message conversion tests
 # ---------------------------------------------------------------------------
 
@@ -775,7 +806,6 @@ class TestProviderRegistry:
 
     def test_other_providers_unchanged(self):
         from ppxai.engine.providers import get_provider_class, OpenAICompatibleProvider
-        assert get_provider_class("openrouter") is OpenAICompatibleProvider
         assert get_provider_class("local") is OpenAICompatibleProvider
         assert get_provider_class("custom") is OpenAICompatibleProvider
 
