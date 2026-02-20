@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
     
     
       
@@ -1291,7 +1291,7 @@
   <a href="#v1155-multi-line-input-escape-key-fix" class="md-nav__link">
     <span class="md-ellipsis">
       
-        v1.15.5 - Multi-Line Input &amp; Escape Key Fix ⏳
+        v1.15.5 - Multi-Line Input &amp; Escape Key Fix ✅
       
     </span>
   </a>
@@ -1371,6 +1371,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v1156-model-profile-system-native-openai-provider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.15.6 - Model Profile System &amp; Native OpenAI Provider ✅
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#series-closure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Series Closure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#references" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1403,10 +1425,10 @@
 
 <h1 id="release-plan-v115x-series">Release Plan: v1.15.x Series<a class="headerlink" href="#release-plan-v115x-series" title="Permanent link">&para;</a></h1>
 <p><strong>Created:</strong> January 24, 2026
-<strong>Last Updated:</strong> February 15, 2026
-<strong>Status:</strong> ✅ v1.15.0 RELEASED, ✅ v1.15.1 RELEASED, ✅ v1.15.2 RELEASED, ✅ v1.15.3 RELEASED, ✅ v1.15.4 RELEASED, ⏳ v1.15.5 IN PROGRESS
-<strong>Branch:</strong> feature/v1.15.5
-<strong>Tests:</strong> 1237+ passing</p>
+<strong>Last Updated:</strong> February 19, 2026
+<strong>Status:</strong> ✅ v1.15.0-v1.15.5 RELEASED, ⏳ v1.15.6 PRE-RELEASE (final release in series)
+<strong>Branch:</strong> feature/benchmark-openai-models (v1.15.6)
+<strong>Tests:</strong> 1349 passing</p>
 <hr />
 <h2 id="theme-next-generation-tui-ppxaide">Theme: Next Generation TUI (ppxaide)<a class="headerlink" href="#theme-next-generation-tui-ppxaide" title="Permanent link">&para;</a></h2>
 <p><strong>Tagline:</strong> Textual-based TUI replacing Rich-based TUI as the primary terminal interface</p>
@@ -2248,8 +2270,8 @@ plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles c
 </tbody>
 </table>
 <hr />
-<h2 id="v1155-multi-line-input-escape-key-fix">v1.15.5 - Multi-Line Input &amp; Escape Key Fix ⏳<a class="headerlink" href="#v1155-multi-line-input-escape-key-fix" title="Permanent link">&para;</a></h2>
-<p><strong>Status:</strong> In Progress
+<h2 id="v1155-multi-line-input-escape-key-fix">v1.15.5 - Multi-Line Input &amp; Escape Key Fix ✅<a class="headerlink" href="#v1155-multi-line-input-escape-key-fix" title="Permanent link">&para;</a></h2>
+<p><strong>Status:</strong> ✅ Released (2026-02-15)
 <strong>Branch:</strong> feature/v1.15.5</p>
 <table>
 <thead>
@@ -2467,6 +2489,84 @@ plus 2 custom themes unique to ppxaide. Ctrl+P shows all themes, Ctrl+T cycles c
 </tbody>
 </table>
 <p><strong>Spec:</strong> See <a href="../TODO-v1.16.0.md">TODO-v1.16.0.md</a> (Phase 0: commands ~2 days, Phase 1: ppxaide sidebar ~5 days).</p>
+<hr />
+<h2 id="v1156-model-profile-system-native-openai-provider">v1.15.6 - Model Profile System &amp; Native OpenAI Provider ✅<a class="headerlink" href="#v1156-model-profile-system-native-openai-provider" title="Permanent link">&para;</a></h2>
+<p><strong>Status:</strong> All items done, pre-release (pending merge)
+<strong>Branch:</strong> feature/benchmark-openai-models
+<strong>Detailed Plan:</strong> <a href="../RELEASE-PLAN-v1.15.6-v1.16.0/">RELEASE-PLAN-v1.15.6-v1.16.0.md</a>
+<strong>Release Notes:</strong> <a href="../RELEASE-NOTES-v1.15.6/">RELEASE-NOTES-v1.15.6.md</a>
+<strong>Debug Sessions:</strong> <a href="../ARCHIVE-v1.15.6-debug-sessions/">ARCHIVE-v1.15.6-debug-sessions.md</a></p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Description</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>OpenAINativeProvider</code></strong></td>
+<td>Native OpenAI API: Chat Completions + Responses API</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>Benchmark results</strong></td>
+<td>54+ runs, 27 model variants, behavior analysis</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>o4-mini/gpt-4.1-mini overrides</strong></td>
+<td>Force prompt-based for models broken on native</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>JSON stripping</strong></td>
+<td>Strip tool JSON from text when native tool_calls present</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>Brace-counting JSON parser</strong></td>
+<td><code>_find_json_objects()</code> handles nested braces in apply_patch diffs</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong><code>model_profiles.py</code></strong></td>
+<td>37 built-in profiles + registry (data only, not wired into chat.py)</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>Codex native tool calling</strong></td>
+<td>Both codex models work via Responses API with native function calls</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>Read-claim validator</strong></td>
+<td>Catches "I read each file" with 0 <code>read_file</code> calls</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>ppxaide <code>/debug-log on</code> fix</strong></td>
+<td><code>Logger.enable_all()</code> now called when debug logging enabled</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>AGENTS.md hints</strong></td>
+<td>OpenAI model hints, anti-hesitation, anti-chaining</td>
+<td>✅ Done</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Tests:</strong> 1349 passing (46 new OpenAI provider tests, 41 model profile tests, others)</p>
+<hr />
+<h2 id="series-closure">Series Closure<a class="headerlink" href="#series-closure" title="Permanent link">&para;</a></h2>
+<p><strong>v1.15.6 is the final release in the v1.15.x series.</strong></p>
+<p>The v1.15.x theme — "Next Generation TUI (ppxaide)" — is fully delivered:
+- Textual-based TUI with full feature parity (32 commands, 17+ themes)
+- All 7 implementation phases complete (foundation → polish)
+- 1,349 tests passing across all platforms
+- v1.15.6 closes with the native OpenAI provider, model profile system (37 profiles), and 5 debug session fixes</p>
+<p><strong>Next:</strong> v1.16.0 starts the breaking changes series (profile-driven tool loop, multi-tool support, file navigation).</p>
 <hr />
 <h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
 <ul>
