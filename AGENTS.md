@@ -113,20 +113,18 @@ model_hints:
     - "CRITICAL: When a task requires multiple file operations, chain ALL tool calls consecutively. After receiving a tool result, immediately make the next tool call. Do NOT stop to narrate or summarize between tool calls."
     - "When asked to read multiple files, call read_file for EACH file before responding."
   "gpt-5.1-codex-mini*":
-    - "You are a lightweight code-specialized model. Use tools proactively for all file operations."
+    - "You are a lightweight code-specialized model with native function calling. Call tools directly — never output JSON in your response text."
     - "CRITICAL: Tools are available — CALL them. Do NOT say 'I don't have access' or 'no tools provided'."
     - "For file modifications, use apply_patch with unified diff format. Include 3+ context lines."
-    - "Do NOT make duplicate calls. Do NOT output tool JSON in your response text. Chain consecutive tool calls without stopping."
+    - "Chain consecutive tool calls for DIFFERENT files without stopping to narrate between them."
     - "Keep responses concise — focus on executing the task, not explaining what you'll do."
   "gpt-5.1-codex*":
-    - "You are a code-specialized model with access to tools. You MUST use tools when tasks require file operations."
-    - "CRITICAL: When asked to read a file, CALL the read_file tool. When asked to edit code, CALL the apply_patch tool. Do NOT say 'I don't have access' - you DO have tools available."
+    - "You are a code-specialized model with native function calling. You MUST call tools directly when tasks require file operations."
+    - "CRITICAL: When asked to read a file, CALL the read_file function. When asked to edit code, CALL apply_patch. Do NOT say 'I don't have access' - you have function calling tools available."
     - "CRITICAL: You MUST proactively call tools to complete tasks. Never respond with 'I haven't run any tools' or 'no tool results were provided' - USE the tools."
     - "For ALL file modifications, use apply_patch with unified diff format including 3+ context lines."
-    - "Include all necessary imports and complete context in patches."
-    - "Do NOT call apply_patch twice for the same file. One patch per file, but chain calls for DIFFERENT files."
-    - "Do NOT output code in markdown blocks when using apply_patch - the tool handles it."
-    - "Execute tools immediately - never describe what you would do, just call the tool."
+    - "Chain tool calls for DIFFERENT files consecutively. Do NOT stop to narrate between tool calls."
+    - "Execute tools immediately - never describe what you would do, just call the function."
     - "When a tool returns an error, acknowledge the failure and explain what went wrong."
   "gpt-4o*":
     - "For code modifications, use apply_patch with unified diff format including 3+ context lines."
@@ -261,7 +259,7 @@ The web tools (`get_weather`, `fetch_url`, `web_search`) support corporate proxy
 - **NEW:** Native OpenAI provider (`openai_native.py`) — Chat Completions + Responses API routing
 - **NEW:** Model profile system — 43 built-in profiles for 27 models (tool calling strategy, API routing, benchmark tier)
 - **NEW:** Brace-counting JSON parser — handles nested braces in apply_patch diffs
-- **FIX:** Codex models correctly use prompt-based tool calling (not native)
+- **FIX:** Codex models use native function calling via Responses API with belt-and-suspenders fallback
 - **FIX:** AGENTS.md hints injected for native tool calling mode (was prompt-based only)
 - **FIX:** Benchmark runner bypasses engine tool pipeline for accurate scoring
 

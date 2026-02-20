@@ -254,16 +254,16 @@ class OpenAINativeProvider:
 
         Returns native_tool_calling=False for models that perform better with
         prompt-based tool calling:
-        - Responses API models (codex, pro): output tool JSON as text, never
-          emit native function_call items
         - PROMPT_BASED_MODELS (o4-mini, gpt-4.1-mini): benchmark-proven to
           score significantly higher with prompt-based routing
+
+        Responses API models (codex, pro) now use native tool calling:
+        - Tools sent as function definitions in the API request
+        - Model emits function_call items handled by _stream_responses()
+        - Fallback: chat.py parse_tool_call() catches JSON-in-text output
         """
         model_lower = model.lower()
-        use_prompt_based = (
-            self._is_responses_api_model(model)
-            or model_lower in PROMPT_BASED_MODELS
-        )
+        use_prompt_based = model_lower in PROMPT_BASED_MODELS
         if use_prompt_based:
             return ProviderCapabilities(
                 web_search=self.capabilities.web_search,
@@ -495,8 +495,10 @@ class OpenAINativeProvider:
         """Responses API path for Codex models.
 
         Uses client.responses.create() with different message format.
-        Uses prompt-based tool calling (tools injected in system prompt)
-        to avoid the call_id threading complexity of Responses API.
+        Native function calling: tools sent as function definitions in the
+        API request. Model emits function_call items for tool use.
+        Belt-and-suspenders: tool descriptions also injected into instructions
+        so fallback text-based parsing works if model outputs JSON in content.
         """
         try:
             instructions, input_items = self._convert_messages_for_responses(messages)
@@ -524,8 +526,20 @@ class OpenAINativeProvider:
 
             # Add function tools if native tool calling enabled
             if tools and self.capabilities.native_tool_calling:
-                for tool_def in self._convert_tools_for_responses(tools):
-                    response_tools.append(tool_def)
+                converted = self._convert_tools_for_responses(tools)
+                response_tools.extend(converted)
+
+                # Belt-and-suspenders: also inject tool descriptions into
+                # instructions so text-based fallback parsing works if the
+                # model outputs tool calls as JSON in content instead of
+                # native function_call items.
+                tool_hint = self._build_tool_hint(tools)
+                if tool_hint:
+                    existing = request_kwargs.get("instructions", "")
+                    if existing:
+                        request_kwargs["instructions"] = f"{existing}\n\n{tool_hint}"
+                    else:
+                        request_kwargs["instructions"] = tool_hint
 
             if response_tools:
                 request_kwargs["tools"] = response_tools
@@ -731,6 +745,29 @@ class OpenAINativeProvider:
                     response_tool["parameters"] = func["parameters"]
                 response_tools.append(response_tool)
         return response_tools
+
+    @staticmethod
+    def _build_tool_hint(openai_tools: List[Dict[str, Any]]) -> str:
+        """Build a concise tool hint for injection into instructions.
+
+        This provides belt-and-suspenders context: if the model outputs
+        tool calls as JSON text instead of native function_call items,
+        the text-based parser in chat.py can still identify them.
+        """
+        if not openai_tools:
+            return ""
+        lines = ["You have the following tools available. Use them by calling the function directly:"]
+        for tool in openai_tools:
+            if tool.get("type") == "function" and "function" in tool:
+                func = tool["function"]
+                name = func.get("name", "")
+                desc = func.get("description", "")
+                params = func.get("parameters", {})
+                param_names = list(params.get("properties", {}).keys()) if params else []
+                if name:
+                    param_str = f"({', '.join(param_names)})" if param_names else "()"
+                    lines.append(f"- {name}{param_str}: {desc}")
+        return "\n".join(lines) if len(lines) > 1 else ""
 
     # ------------------------------------------------------------------
     # Usage parsing

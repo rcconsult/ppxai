@@ -151,7 +151,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
     ),
     "gpt-5.1-codex*": ModelProfile(
         tool_calling=ToolCallingProfile(
-            mode="prompt_based",
+            mode="native",
             api_path="responses",
         ),
         max_tokens=128_000,

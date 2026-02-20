@@ -324,6 +324,11 @@ async def chat_with_tools(
                     accumulated_usage.completion_tokens += usage.completion_tokens
                     accumulated_usage.total_tokens += usage.total_tokens
 
+        # Check interrupt after provider returns (stream=False blocks until complete)
+        if ctx.is_interrupted:
+            yield Event(EventType.ERROR, "Interrupted by user")
+            return
+
         # Determine tool call
         tool_call = None
         if native_tool_calls:
@@ -368,8 +373,16 @@ async def chat_with_tools(
                     ctx.tool_manager.execute_tool(tool_name, **tool_args)
                 )
 
-                # Yield consent events while tool runs
+                # Yield consent events while tool runs, check for interrupt
                 while not tool_task.done():
+                    if ctx.is_interrupted:
+                        tool_task.cancel()
+                        try:
+                            await tool_task
+                        except asyncio.CancelledError:
+                            pass
+                        yield Event(EventType.ERROR, "Interrupted by user")
+                        return
                     for consent_event in ctx.get_consent_events():
                         yield consent_event
                     await asyncio.sleep(0.05)

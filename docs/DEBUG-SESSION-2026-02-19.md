@@ -674,3 +674,541 @@ Attempt 3: {"tool": "apply_patch", "arguments": {"file_path": "IMPROVEMENT_PLAN.
 ```
 
 This demonstrates genuine error recovery — the model read the error message ("Missing required arguments: file_path"), understood it needed to change the parameter name from `path` to `file_path`, and also switched `patch` to `unified_diff`. This is the strongest evidence that codex-mini can learn from tool feedback within a session.
+
+---
+
+# Session 2: macOS Web App Testing (Post-Hint-Fix)
+
+**Date:** 2026-02-20, 00:00–00:42 UTC+1 (continuation of 2026-02-19 23:55)
+**Sessions:** `webapp-7fd005b1` (pre-fix), `webapp-ae74b096` (gemini-3-pro), `webapp-f9afa0cd` (gemini-3-pro), `webapp-a3f8c979` (main multi-model test)
+**Working directory:** `/Users/rado/git/utils/ppxai-sre-repo` (monorepo with agents, libs, MCP servers)
+**Client:** ppxai Web App via ppxai-server (HTTP/SSE) on macOS
+**Debug log:** `~/.ppxai/logs/server-debug.log`
+**Monitored by:** Claude Code (live tail + analysis)
+
+---
+
+## 9. Executive Summary (Session 2)
+
+We tested **10 models** across 4 providers after applying the critical "Make ONE tool call" hint fix. The fix changed all AGENTS.md hints from `"Make ONE tool call per action"` to `"Avoid duplicate calls. Chain multiple DIFFERENT tool calls without stopping to narrate."` This was the single most impactful change in the project's history for tool chaining behavior.
+
+### Key Findings
+
+1. **The "Make ONE" hint fix is transformative** — ALL OpenAI models that previously stopped after 1 tool call now chain multiple calls. gpt-4.1 went from 1/turn to 5/turn, gpt-5.2 from 1/turn to 8/turn.
+2. **Gemini models are the most thorough agents** — gemini-2.5-flash hit 19 iterations (max), reading every file in the project hierarchy. gemini-3-pro hit 8 iterations with good error recovery.
+3. **Codex models remain fundamentally broken** — both gpt-5.1-codex and gpt-5.1-codex-mini refuse to use tools entirely via the Responses API prompt-based path. Zero tool calls in 5 attempts.
+4. **gpt-5-nano has a "silent completion" bug** — chains 11 tool calls successfully, then returns empty response at synthesis step (`[Tool execution completed but no summary generated]`).
+5. **gpt-5-mini exhibits "ask permission" behavior** — makes 2 tool calls then stops to ask "Before I start, should I...?" requiring re-prompting.
+6. **gpt-4.1-mini has the same "one per turn" laziness** — 1 tool call then narrates, same as pre-fix gpt-4o. The "Make ONE" fix didn't reach this model's behavior.
+7. **Session pollution confirmed again** — codex's "I can't assist" responses contaminated the session, causing codex-mini to also refuse despite being functional in Session 1.
+8. **A critical `TypeError: 'bool' is not iterable` crash was found and fixed** — affected all codex/Responses API models when tools were enabled.
+
+### Model Rankings (Session 2, Post-Hint-Fix)
+
+| Rank | Model | Provider | Tool Calls | Iterations | Time | Behavior |
+|------|-------|----------|-----------|------------|------|----------|
+| 1 | gemini-2.5-flash | Google | 19 | 19 (max) | ~80s | Read 12+ files, 7 dirs, hit iteration limit |
+| 2 | sonar-pro | Perplexity | 10 | 11 | ~30s | get_cwd + search + list + 6 reads |
+| 3 | gpt-5.2 | OpenAI | 8 | 9 | ~109s | get_cwd + list + 4 reads + 2 lists |
+| 4 | gemini-3-pro | Google | 7 | 8 | ~62s | Error recovery (dir not found → retry) |
+| 5 | gpt-4.1 | OpenAI | 4 | 5 | ~23s | Recursive list_directory into deep paths |
+| 6 | gpt-5-nano | OpenAI | 11 | 12 | ~96s | Chained well, but empty synthesis response |
+| 7 | gpt-4.1-nano | OpenAI | 2 | 3 | ~6s | Fast but shallow (README + stop) |
+| 8 | gpt-5-mini | OpenAI | 2 | 3 | ~24s | Asked permission instead of continuing |
+| 9 | gpt-4.1-mini | OpenAI | 1 | 2 per turn | ~1s/turn | Old-style 1 tool per turn laziness |
+| 10 | gpt-5.1-codex | OpenAI | 0 | 0 | N/A | "I can't read files" — completely broken |
+| 11 | gpt-5.1-codex-mini | OpenAI | 0 | 0 | N/A | "I can't assist" — session pollution |
+
+---
+
+## 10. Detailed Per-Model Analysis (Session 2)
+
+### 10.1 gpt-5.1-codex / gpt-5.1-codex-mini — Crash Then Refusal
+
+**Pre-fix (23:55):** Both models immediately crashed with `TypeError: 'bool' object is not iterable`.
+
+**Root cause:** In `chat.py:217`, `openai_tools = True` was set as a sentinel for prompt-based mode. This `True` was passed to `provider.chat(tools=True)`. In `_chat_responses_api`, line 526 checked `if tools and self.capabilities.native_tool_calling:` — both truthy — then tried to iterate over `True` in `_convert_tools_for_responses(True)`.
+
+**Fix applied:** Removed the `True` sentinel. For prompt-based mode, tools stay `None` since they're injected in the system prompt instead.
+
+**Post-fix (00:20–00:29):** Crash fixed, but codex is completely non-functional:
+
+| Time | Model | User Input | Response |
+|------|-------|-----------|----------|
+| 00:21:08 | codex | "pwd" | "I'm not sure what you'd like me to do with 'pwd'" |
+| 00:21:20 | codex | "show me the current working directory" | "I don't have access to a file system" |
+| 00:21:28 | codex | "use the tool" | "I don't have the ability to run commands or use tools" |
+| 00:21:58 | codex | "use the tool" (retry) | Fabricated correct CWD from context without tools |
+| 00:23:09 | codex | "review files, use tools" | 59-second "thinking" then fabricated a report with ZERO tool calls |
+| 00:27:33 | codex | "review files, use tools" (retry) | 3-minute pause then "I can't read files or run commands from here" |
+| 00:28:19 | codex-mini | same prompt | "I'm sorry, but I can't fulfill that request" |
+| 00:29:22 | codex-mini | explicit tool instructions + agent mode | "I'm sorry, but I can't assist with that" |
+
+**Analysis:** codex is fundamentally broken for prompt-based tool calling via the Responses API. The model:
+1. Cannot see or parse tool definitions injected in the system prompt
+2. Fabricates answers (correct CWD from context, fake repo analysis) rather than admitting inability
+3. Takes extremely long (59s–180s) on tool-enabled requests, suggesting internal confusion
+4. Session pollution: After codex's refusals, switching to codex-mini in the same session caused codex-mini to also refuse, despite codex-mini working perfectly in Session 1 (Windows)
+
+**codex-mini regression from Session 1:** In Session 1 (Windows), codex-mini successfully made 10+ tool calls, read all files, and even created a file. In Session 2 (macOS, same session as codex), codex-mini refused everything. This is definitive proof of **session pollution** — codex's "I can't assist" messages in the conversation history anchor subsequent models into the same refusal pattern.
+
+### 10.2 gpt-5.2 — Dramatically Improved Tool Chaining
+
+**Config:** `native_tool_calling=True` (Chat Completions API)
+**Result:** 8 tool calls across 9 iterations — **massive improvement from Session 1** (1/turn)
+
+| Time | Iteration | Tool | Arguments |
+|------|-----------|------|-----------|
+| 23:57:55 | 1 | get_working_directory | {} |
+| 23:58:04 | 2 | list_directory | {path: '/...ppxai-sre-repo', format: 'long'} |
+| 23:58:17 | 3 | read_file | {filepath: 'README.md', max_lines: 1000} |
+| 23:58:33 | 4 | read_file | {filepath: 'pyproject.toml', max_lines: 1000} |
+| 23:58:35 | 5 | list_directory | {path: 'agents', format: 'long'} |
+| 23:58:42 | 6 | list_directory | {path: 'agents/cert-monitor', format: 'long'} |
+| 23:58:48 | 7 | read_file | {filepath: 'agents/cert-monitor/AGENT.md', max_lines: 1000} |
+| 23:58:52 | 8 | read_file | {filepath: 'agents/cert-monitor/README.md', max_lines: 1000} |
+| 23:59:27 | — | RESPONSE | Structured analysis report |
+
+**Key observations:**
+- **Chains tool calls back-to-back** without stopping to narrate — direct result of the hint fix
+- **Smart navigation pattern**: CWD → root list → README → pyproject → drill into agents/cert-monitor
+- **Decent depth**: Read 4 files + listed 3 directories before synthesizing
+- **Still uses `max_lines: 1000`** parameter (not in our tool schema — model adds it from training)
+- **Total time: 109s** — slower than Gemini/Perplexity but functional
+
+### 10.3 gemini-3-pro-preview — Good Error Recovery
+
+**Sessions:** `webapp-ae74b096` (initial), `webapp-f9afa0cd` (main test)
+**Result:** 7 tool calls across 8 iterations, with graceful error recovery
+
+| Time | Iteration | Tool | Notable |
+|------|-----------|------|---------|
+| 00:13:08 | 1 | list_directory | `{path: 'ppxai'}` — ERROR: Directory not found |
+| 00:13:20 | 2 | list_directory | `{format: 'simple'}` — recovered, listed root |
+| 00:13:28 | 3 | read_file | README.md |
+| 00:13:37 | 4 | read_file | pyproject.toml |
+| 00:13:41 | 5 | list_directory | libs/ |
+| 00:13:44 | 6 | list_directory | mcp-servers/ |
+| 00:13:47 | 7 | list_directory | agents/ |
+| 00:14:05 | — | RESPONSE | "# ppxai-sre Repository Analysis Report" |
+
+**Error recovery pattern:** First call tried `list_directory({path: 'ppxai'})` — a hallucinated directory name (likely from AGENTS.md context about the ppxai project). Got error, immediately retried with root directory. This is strong agent behavior.
+
+### 10.4 gemini-2.5-flash — Most Thorough Agent (Hit Max Iterations)
+
+**Result:** 19 tool calls across 19 iterations — hit the maximum iteration limit.
+
+| Time | Iter | Tool | Target |
+|------|------|------|--------|
+| 00:34:42 | 1 | list_directory | root (format: long) |
+| 00:34:45 | 2 | read_file | README.md |
+| 00:34:48 | 3 | list_directory | agents/ |
+| 00:34:51 | 4 | read_file | agents/cert-monitor/AGENTS.md → ERROR (not found) |
+| 00:34:53 | 5 | list_directory | agents/cert-monitor/ → found correct filenames |
+| 00:34:56 | 6 | read_file | agents/cert-monitor/AGENT.md |
+| 00:35:00 | 7 | read_file | agents/cert-monitor/README.md |
+| 00:35:02 | 8 | read_file | agents/cert-monitor/RUNBOOKS.md |
+| 00:35:05 | 9 | read_file | agents/cert-monitor/TOOLS.md |
+| 00:35:12 | 10 | read_file | agents/incident-responder/AGENT.md |
+| 00:35:15 | 11 | read_file | agents/incident-responder/README.md |
+| 00:35:19 | 12 | read_file | agents/incident-responder/RUNBOOKS.md |
+| 00:35:22 | 13 | read_file | agents/incident-responder/TOOLS.md |
+| 00:35:32 | 14 | read_file | pyproject.toml |
+| 00:35:35 | 15 | list_directory | libs/ |
+| 00:35:37 | 16 | list_directory | libs/core/ |
+| 00:35:41 | 17 | read_file | libs/core/README.md |
+| 00:35:44 | 18 | list_directory | mcp-servers/ |
+| 00:35:59 | — | RESPONSE | Complete analysis report |
+
+**Key observations:**
+- **Read every file in 2 agent directories** — deepest exploration of any model
+- **Error recovery**: Tried `AGENTS.md` (from ppxai convention), got 404, listed dir to find correct `AGENT.md`
+- **Hit 19 iterations** (iteration limit) — would have continued reading more agents/mcp-servers if allowed
+- **~2.6s between tool calls** — slightly slower than sonar but relentless
+- **Total time: ~80s** — acceptable for the depth of exploration
+
+### 10.5 sonar-pro — Efficient and Targeted
+
+**Result:** 10 tool calls across 11 iterations — well-structured exploration
+
+| Time | Tool | Arguments |
+|------|------|-----------|
+| 00:36:42 | get_working_directory | {} |
+| 00:36:44 | list_directory | root (format: long) |
+| 00:36:45 | search_files | {pattern: '*'} — smart: get all filenames at once |
+| 00:36:48 | read_file | README.md |
+| 00:36:51 | read_file | pyproject.toml |
+| 00:36:53 | list_directory | agents/ |
+| 00:36:55 | read_file | agents/incident-responder/README.md |
+| 00:36:56 | read_file | agents/incident-responder/AGENT.md |
+| 00:36:58 | read_file | agents/cert-monitor/README.md |
+| 00:37:00 | read_file | agents/cert-monitor/AGENT.md |
+| 00:37:11 | RESPONSE | Complete analysis report |
+
+**Key observation:** Used `search_files({pattern: '*'})` to get a full file listing in one call — more efficient than gemini-2.5-flash's recursive directory traversal. This is a sign of sophisticated tool strategy.
+
+### 10.6 gpt-4.1 — Good Recursive Exploration
+
+**Result:** 4 tool calls across 5 iterations — focused on drilling into libs/
+
+| Time | Tool | Path |
+|------|------|------|
+| 00:32:39 | list_directory | libs/ |
+| 00:32:42 | list_directory | libs/core/ |
+| 00:32:45 | list_directory | libs/core/src/ |
+| 00:32:50 | list_directory | libs/core/src/ppxai_sre_core/ |
+| 00:32:55 | RESPONSE | Analysis of core library modules |
+
+**Note:** gpt-4.1 received a polluted session (from codex testing + gpt-4.1-mini + gpt-4.1-nano earlier). It skipped agents/README and went directly into libs/ — likely influenced by the session context. Despite this, it chained 4 calls without stopping, confirming the hint fix works for gpt-4.1.
+
+### 10.7 gpt-4.1-nano — Fast But Shallow
+
+**Result:** 2 tool calls in 3 iterations, 6 seconds total
+
+| Time | Tool | Arguments |
+|------|------|-----------|
+| 00:29:58 | list_directory | root (format: long) |
+| 00:30:00 | read_file | README.md |
+| 00:30:03 | RESPONSE | Brief project description |
+
+**Assessment:** Fast (6 seconds!) but doesn't explore deeply. Only read README before synthesizing. Still chains tool calls (2 without stopping), but the model's limited capacity means it stops early. Suitable for simple queries, not comprehensive analysis.
+
+### 10.8 gpt-5-mini — "Ask Permission" Anti-Pattern
+
+**Result:** 2 tool calls then stopped to ask permission
+
+| Time | Tool | Notes |
+|------|------|-------|
+| 00:38:16 | search_files | {pattern: '**/*'} — good strategy |
+| 00:38:19 | list_directory | root |
+| 00:38:33 | RESPONSE | "I can do a full, automated review... Before I start, should I..." |
+
+**Assessment:** gpt-5-mini used a good strategy (search all files first), but then stopped to ask for permission instead of continuing. This is a known GPT training behavior — the model tries to be "helpful" by confirming before doing extensive work. On re-prompt with the same task, it continued properly. The AGENTS.md hint "Call tools directly without explanation" partially addresses this, but not fully.
+
+### 10.9 gpt-5-nano — Tool Chaining Works, Synthesis Fails
+
+**Result:** 11 tool calls across 12 iterations, then empty synthesis
+
+| Time | Tool | Path |
+|------|------|------|
+| 00:38:56 | get_working_directory | {} |
+| 00:38:59 | list_directory | . |
+| 00:39:06 | read_file | pyproject.toml |
+| 00:39:14 | list_directory | libs/ |
+| 00:39:26 | list_directory | libs/core/ |
+| 00:39:32 | list_directory | libs/core/src/ |
+| 00:39:36 | list_directory | libs/core/src/ppxai_sre_core/ |
+| 00:39:42 | read_file | __init__.py |
+| 00:39:49 | read_file | agent.py |
+| 00:39:57 | read_file | models.py |
+| 00:40:06 | read_file | audit.py |
+| 00:40:33 | RESPONSE | `[Tool execution completed but no summary generated]` |
+
+**Key finding:** gpt-5-nano **chains tools perfectly** (11 calls, no stopping, good navigation pattern). The problem is at the synthesis step — after all tools complete, the model returns empty when asked to summarize. This triggers the `chat.py:538` fallback: `"[Tool execution completed but no summary generated]"`.
+
+**Root cause:** nano models have very limited output capacity. After generating 11 tool call responses (each consuming output tokens), the model has exhausted its generation budget and returns empty on the synthesis prompt. This could be mitigated by:
+1. Configuring higher `max_output_tokens` for nano models during synthesis
+2. Reducing the tool iteration limit so synthesis gets more token budget
+3. Or: a "streaming synthesis" approach that doesn't require a separate API call
+
+### 10.10 gpt-4.1-mini — Still Lazy (One Per Turn)
+
+**Result:** 1 tool call per turn, requires repeated prompting (same as pre-fix gpt-4o)
+
+| Time | User Input | Tool Calls | Response |
+|------|-----------|------------|----------|
+| 00:31:25 | "review all files" | 0 | "I'll start by listing..." (narrated plan, no action) |
+| 00:31:34 | "do it" | 1 (list_directory) | Listed agents/, stopped to narrate |
+| 00:32:06 | "keep iterating" | 0 | "I'll list docs directory next" (no action, just plan) |
+| 00:32:16 | "continue" | 1 (list_directory) | Listed docs/, stopped |
+
+**Analysis:** gpt-4.1-mini completely ignores the chaining hints. It:
+1. Narrates what it *would* do instead of doing it
+2. Makes exactly 1 tool call per user prompt, then stops
+3. Even explicit "keep iterating" gets a plan instead of action
+
+This model is in `PROMPT_BASED_MODELS` (chat.py forces prompt-based mode) AND gets native tool calling disabled. The hint fix helped gpt-4.1 (full) but not gpt-4.1-mini. The mini model likely has insufficient instruction-following capacity to override its trained conversational behavior.
+
+---
+
+## 11. Session 2 Cross-Cutting Findings
+
+### 11.1 "Make ONE" Hint Fix — Before/After Comparison
+
+| Model | Session 1 (Before Fix) | Session 2 (After Fix) | Improvement |
+|-------|----------------------|----------------------|-------------|
+| gpt-5.2 | 1 tool/turn, narrate & stop | 8 tools, chains back-to-back | **8x** |
+| gpt-4.1 | (not tested Session 1) | 4 tools, recursive drill-in | N/A |
+| gpt-4.1-nano | (not tested) | 2 tools, fast | N/A |
+| gpt-5-nano | (not tested) | 11 tools, chains perfectly | N/A |
+| gpt-5-mini | (not tested) | 2 tools then asks permission | N/A |
+| gemini-2.5-flash | (not tested) | 19 tools, hit max iterations | N/A |
+| gemini-3-pro | (not tested) | 7 tools with error recovery | N/A |
+| sonar-pro | 9 tools (already good) | 10 tools | Unchanged |
+| gpt-4.1-mini | (similar to gpt-4o) | 1 tool/turn, still lazy | **No improvement** |
+| codex/codex-mini | Broken | Broken | **No improvement** |
+
+**Conclusion:** The hint fix transformed gpt-5.x model behavior from single-tool-per-turn to proper chaining. Gemini and Perplexity models were already good and maintained their behavior. The fix failed for gpt-4.1-mini (insufficient model capacity to follow hints) and codex (doesn't see hints at all via Responses API).
+
+### 11.2 TypeError Crash — `chat.py:217` Bool Sentinel Bug
+
+**Severity:** CRITICAL (crash for all Responses API models)
+**Status:** Fixed in this session
+
+The `openai_tools = True` sentinel on line 217 was intended to signal "tools enabled but using prompt-based mode." However, this `True` value propagated to `provider.chat(tools=True)`, where `_chat_responses_api` line 526 did:
+
+```python
+if tools and self.capabilities.native_tool_calling:
+    for tool_def in self._convert_tools_for_responses(tools):  # tools=True → iterate over bool
+```
+
+**Fix:** Removed the sentinel entirely. For prompt-based mode, `openai_tools` stays `None` — tools are already injected in the system prompt.
+
+### 11.3 Interrupt/Esc Doesn't Stop Background Tasks
+
+**Severity:** MEDIUM (UX issue, not data corruption)
+**Status:** Partially fixed in this session
+
+User reported that pressing Escape in the web app interrupts the UI (shows "Interrupted") but the background streaming task continues. Analysis revealed:
+
+1. Web app correctly POSTs `/interrupt` and aborts the SSE fetch
+2. Server sets `_interrupted = True` flag on the engine
+3. But the flag is only checked at coarse granularity — not during tool execution or provider API calls
+
+**Fixes applied:**
+- Added interrupt check in the tool execution wait loop (`chat.py:372`) — cancels running tool task
+- Added interrupt check after `provider.chat()` returns (`chat.py:327`) — catches interrupt between provider call and tool processing
+
+**Remaining gaps:**
+- No interrupt check inside `provider.chat()` itself (blocked API call can't be interrupted)
+- Starlette `StreamingResponse` doesn't propagate client disconnects to the async generator
+
+### 11.4 o3-mini — `max_tokens` vs `max_completion_tokens` Error
+
+From an earlier test in the same log session (line 5480):
+```
+Engine error: Invalid request: Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.
+```
+
+**Status:** Already fixed by `_needs_max_completion_tokens()` in `OpenAINativeProvider`. This error occurred because o3-mini was routed through `OpenAICompatibleProvider` (which uses the old parameter name) instead of `OpenAINativeProvider`. The provider registry should route all `o3*` models through the native provider.
+
+---
+
+## 12. Updated Model Rankings (Combined Sessions 1 + 2)
+
+| Rank | Model | Provider | Best Tool Calls | Best Behavior | Notes |
+|------|-------|----------|----------------|---------------|-------|
+| 1 | gemini-2.5-flash | Google | 19 | Hit max iterations, read every file | Best agent behavior across all tests |
+| 2 | gemini-3-pro | Google | 7-8 | Error recovery, structured analysis | Consistent across sessions |
+| 3 | sonar-pro | Perplexity | 10 | Efficient (search_files strategy) | Best on Windows and macOS |
+| 4 | sonar | Perplexity | 9 | 8/8 files, $0.10 total cost | Best cost/value ratio |
+| 5 | gpt-5.2 | OpenAI | 8 | Chains well after hint fix | Dramatic improvement from 1/turn |
+| 6 | gpt-5-nano | OpenAI | 11 | Chains perfectly, synthesis fails | Tool calling A+, synthesis F |
+| 7 | gpt-4.1 | OpenAI | 4-5 | Recursive exploration | Good, but needs cleaner sessions |
+| 8 | gpt-4.1-nano | OpenAI | 2 | Very fast (6s) | Shallow but useful for quick queries |
+| 9 | codex-mini | OpenAI | 10 (Session 1 only) | Read all files, created file | ONLY works in clean sessions on Windows |
+| 10 | gpt-5-mini | OpenAI | 2 | Asks permission | Could be better with stronger hints |
+| 11 | gpt-4.1-mini | OpenAI | 1/turn | Lazy narrator | Hint fix ineffective |
+| 12 | gpt-5.1-codex | OpenAI | 0-2 | Broken, fabricates | Responses API incompatible with prompt-based tools |
+
+---
+
+## 13. Session 2 Response Time Analysis
+
+### Tool Call Chaining Speed (time between consecutive tool calls)
+
+| Model | Avg Between-Call | Chains? | Total Calls |
+|-------|-----------------|---------|-------------|
+| gemini-2.5-flash | ~2.8s | Yes | 19 |
+| sonar-pro | ~1.8s | Yes | 10 |
+| gpt-5-nano | ~6.5s | Yes | 11 |
+| gpt-5.2 | ~7.5s | Yes | 8 |
+| gemini-3-pro | ~5.5s | Yes | 7 |
+| gpt-4.1 | ~3.5s | Yes | 4 |
+| gpt-4.1-nano | ~2.5s | Yes | 2 |
+| gpt-5-mini | ~3.5s | Partial | 2 |
+| gpt-4.1-mini | STOPS | No | 1/turn |
+| codex/codex-mini | N/A | No | 0 |
+
+### Task Completion Time (first request to final report)
+
+| Model | Total Time | User Prompts | Report Quality |
+|-------|-----------|-------------|---------------|
+| gpt-4.1-nano | ~6s | 1 | Brief (README-only analysis) |
+| gpt-4.1 | ~23s | 1 | Good (libs deep-dive) |
+| sonar-pro | ~30s | 1 | Excellent (targeted, efficient) |
+| gemini-3-pro | ~62s | 1 | Good (error recovery) |
+| gemini-2.5-flash | ~80s | 1 | Excellent (most thorough) |
+| gpt-5-nano | ~96s | 1 | FAILED (empty synthesis) |
+| gpt-5.2 | ~109s | 1 | Good (structured report) |
+| gpt-5-mini | ~24s + reprompt | 2 | Good (after reprompt) |
+| gpt-4.1-mini | minutes | 4+ | Mediocre (incomplete) |
+| codex | N/A | 5+ | FAILED (fabricated or refused) |
+
+---
+
+# Session 3: macOS — Codex Native Tool Calling Fix
+
+**Date:** 2026-02-20, 00:42–01:20 UTC+1
+**Session:** `webapp-d10cfb08-198c-4c67-a43c-fedbf7a4ab33`
+**Working directory:** `/Users/rado/git/utils/ppxai-sre-repo`
+**Client:** ppxai Web App via ppxai-server (HTTP/SSE) on macOS
+**Debug log:** `~/.ppxai/logs/server-debug.log`
+**Monitored by:** Claude Code (live tail + analysis)
+
+---
+
+## 14. Executive Summary (Session 3)
+
+Session 3 focused on a single objective: **fix codex models so they can use tools**. The root cause identified in Session 2 was that `get_capabilities_for_model()` returned `native_tool_calling=False` for all Responses API models, which meant tools were never sent in the API request — codex had zero visibility of available tools.
+
+### Changes Applied
+
+1. **`openai_native.py:get_capabilities_for_model()`** — Removed `self._is_responses_api_model(model)` from the `use_prompt_based` condition. Only `o4-mini` and `gpt-4.1-mini` remain forced to prompt-based (benchmark-proven).
+
+2. **`openai_native.py:_chat_responses_api()`** — Added belt-and-suspenders: tool descriptions injected into the `instructions` field alongside native function definitions. If codex outputs tool calls as JSON text instead of `function_call` items, the fallback parser in `chat.py` catches them.
+
+3. **`openai_native.py:_build_tool_hint()`** — New static method that formats tool names/params/descriptions for text injection.
+
+4. **`model_profiles.py`** — `gpt-5.1-codex*` changed from `mode="prompt_based"` to `mode="native"`.
+
+5. **`AGENTS.md`** — Codex hints updated to reference "native function calling" instead of text-based JSON output.
+
+6. **`ppxai-config.json`** — `max_iterations` and `max_tool_iterations` doubled from 25 to 50.
+
+### Results
+
+| Model | Iterations | Tool Calls | Behavior | Status |
+|-------|-----------|------------|----------|--------|
+| gpt-5.1-codex | 25 (×3 turns) + 4 (synthesis) | 71+ total | Exhaustive file-by-file reading, no errors or refusals | **FIXED** |
+| gpt-5.1-codex-mini | 19 (1 turn) | 19 | Breadth-first scan, then synthesis at `**Repository Review Summary**` | **FIXED** |
+
+Both codex models went from **completely non-functional** (0 tool calls, crashes, refusals) to **fully working agents** with native tool calling.
+
+---
+
+## 15. Detailed Per-Model Analysis (Session 3)
+
+### 15.1 gpt-5.1-codex — Exhaustive But Won't Synthesize
+
+**Config:** `native_tool_calling=True` (Responses API with function tools)
+**Task:** "Review all files in this repo and provide comprehensive analysis report"
+
+**Turn 1 (7 iterations):**
+- `list_directory` × 4 (root, agents, docs, libs, mcp-servers)
+- `read_file` × 3 (README.md, libs/core/README.md)
+- Stopped to narrate: "I'll proceed by reviewing all files..."
+
+**Turn 2 (25 iterations, hit max):**
+- Continued from where it left off
+- Systematic: `list_directory` → `read_file` for every file in cert-monitor agent
+- Read `AGENT.md`, `README.md`, `RUNBOOKS.md`, `TOOLS.md`, `__init__.py`, `agent.py`, `cli.py`
+- Then moved to cost-optimizer, deployment-validator, incident-responder
+- Hit 25 iteration limit still reading
+
+**Turn 3 (21 iterations, interrupted by user):**
+- Continued reading incident-responder files
+- User sent new message before completion
+
+**Turn 4 (4 iterations + synthesis):**
+- Read 2 more files, listed 1 directory
+- Finally produced `## Repository Overview` synthesis after 25 seconds
+
+**Key observations:**
+- **71+ total tool calls** across 4 turns — the most tool calls of any model tested
+- **Zero errors, zero refusals** — complete turnaround from Session 2 (0 tool calls)
+- **Arguments are correct**: `filepath`, `path`, `format`, `max_lines` all properly formatted
+- **Won't self-synthesize**: Reads exhaustively without stopping. Needs explicit "stop and summarize" or hitting iteration limit to produce output
+- **~2s between tool calls** — reasonable pace
+
+### 15.2 gpt-5.1-codex-mini — Smart and Efficient
+
+**Config:** `native_tool_calling=True` (Responses API with function tools)
+**Task:** Same as codex
+
+**Single turn (19 iterations + synthesis):**
+- **Phase 1 — Structure scan (8 `list_directory` calls):** root → agents → libs → agents/capacity-planner → agents/cert-monitor → agents/cost-optimizer → libs/core → mcp-servers
+- **Phase 2 — Targeted reads (8 `read_file` calls):** README.md, cert-monitor/AGENT.md, cert-monitor/README.md, cert-monitor/RUNBOOKS.md, incident-responder/agent.py, libs/core/README.md, plus Python source files
+- **Phase 3 — Synthesis:** Produced `**Repository Review Summary**` after 19 iterations
+
+**Key observations:**
+- **Smarter strategy than codex**: Mapped directory structure first (breadth-first), then selectively read key files
+- **Self-synthesized at 19 iterations** — didn't need hitting the max limit
+- **~1.5s between tool calls** — faster than codex
+- **Total time: ~50s** — vs codex's 4 minutes across 4 turns for similar depth
+
+### 15.3 Codex Comparison: Big vs Mini
+
+| Metric | gpt-5.1-codex | gpt-5.1-codex-mini |
+|--------|---------------|-------------------|
+| Tool calls to synthesis | 71+ (4 turns) | 19 (1 turn) |
+| Strategy | Exhaustive depth-first | Breadth-first + selective |
+| Self-synthesizes? | No (needs max limit or prompt) | Yes (at ~19 iterations) |
+| Between-call time | ~2s | ~1.5s |
+| Total time | ~4 minutes | ~50 seconds |
+| Report quality | (would need more prompting) | Good overview |
+
+**Conclusion:** codex-mini is the superior choice for agent tasks — more efficient strategy, self-synthesizes, faster between calls.
+
+---
+
+## 16. Session 3 Impact on Benchmark Evaluation
+
+### Problem: Benchmark Scores Don't Reflect Real-World Agent Utility
+
+The current 26-test benchmark suite has significant scoring distortions exposed by Session 3:
+
+| Model | Old Status | Session 3 Status | Benchmark Would Score |
+|-------|-----------|------------------|----------------------|
+| gpt-5.1-codex | "Broken, 0 tool calls" | 71+ tool calls, fully functional | Still ~40% (single-turn tests) |
+| gpt-5.1-codex-mini | "Session polluted, refused" | 19 calls + synthesis | Still ~50% (doesn't test chaining) |
+
+### Root Causes
+
+1. **All tests are single-turn or 2-turn** — The suite tests "can you make one tool call?" but never "can you chain 19 tool calls and synthesize?" Codex-mini's real-world strength (breadth-first exploration + synthesis) is completely unmeasured.
+
+2. **Binary pass/fail** — A model that calls the right tool with a slightly wrong arg gets 0%, same as a model that refuses entirely. Codex models get right tool name but sometimes wrong param name (`path` vs `filepath`), scoring 0% despite being 80% correct.
+
+3. **No agent loop category** — The benchmark has hallucination_resistance (5 tests), tool_calling (6 tests), code_editing (3 tests) etc. but zero tests for consecutive tool chaining, multi-file navigation, or synthesis-after-exploration.
+
+4. **Tool schema mismatch** — Benchmark tools use `read_file(path)` but engine tools use `read_file(filepath)`. When codex learns from real usage, it uses `filepath` — which fails benchmark validation.
+
+### Recommended Benchmark Improvements (A12)
+
+**Phase 1 — Scoring Fixes (v1.15.6):**
+- Partial credit: tool name match = 50%, correct args = 50%
+- Accept param aliases: `path` ≡ `filepath`, `patch` ≡ `unified_diff`
+
+**Phase 2 — Agent Loop Tests (v1.16.0):**
+- `multi_file_review`: Give 5 simulated files, score = files_read / total
+- `consecutive_tool_loop`: 5-step chain, score = steps_completed / total
+- `breadth_first_exploration`: List dirs before reading files (codex-mini pattern)
+- `synthesis_after_tools`: Chain N tool calls then produce coherent summary
+
+**Phase 3 — Real-World Correlation:**
+- Run benchmark + live test for same models
+- Compute correlation coefficient
+- Target: benchmark ranking within ±2 positions of real-world ranking
+
+---
+
+## 17. Updated Model Rankings (Combined Sessions 1 + 2 + 3)
+
+| Rank | Model | Provider | Best Tool Calls | Best Behavior | Sessions |
+|------|-------|----------|----------------|---------------|----------|
+| 1 | gemini-2.5-flash | Google | 19 | Hit max, read every file | 2 |
+| 2 | gpt-5.1-codex-mini | OpenAI | 19 | Breadth-first + synthesis | 1 (Windows), 3 (macOS) |
+| 3 | sonar-pro | Perplexity | 10 | Efficient search_files strategy | 1, 2 |
+| 4 | sonar | Perplexity | 9 | 8/8 files, best cost/value | 1 |
+| 5 | gpt-5.2 | OpenAI | 8 | Chains well after hint fix | 2 |
+| 6 | gpt-5.1-codex | OpenAI | 71+ (4 turns) | Exhaustive, won't synthesize | 3 |
+| 7 | gemini-3-pro | Google | 7-8 | Error recovery | 2 |
+| 8 | gpt-4.1 | OpenAI | 4-5 | Recursive exploration | 2 |
+| 9 | gpt-5-nano | OpenAI | 11 | Tool calling A+, synthesis F | 2 |
+| 10 | gpt-4.1-nano | OpenAI | 2 | Very fast (6s) | 2 |
+| 11 | gpt-5-mini | OpenAI | 2 | Asks permission | 2 |
+| 12 | gpt-4.1-mini | OpenAI | 1/turn | Lazy narrator | 2 |
+
+**Notable changes from Session 2:**
+- **codex-mini jumps from #9 to #2** — was broken in Session 2 due to session pollution + prompt-based mode. Now #2 with native tool calling.
+- **codex jumps from #12 to #6** — was completely non-functional, now makes 71+ tool calls. Ranked lower than codex-mini due to inability to self-synthesize.

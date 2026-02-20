@@ -26,11 +26,11 @@ Prioritized issues identified during the benchmark work (49+ runs, 27 models):
 
 | Priority | Issue | Target | Status |
 |----------|-------|--------|--------|
-| **P0** | **Codex `native_tool_calling` must be False** — Codex models via Responses API never emit native function calls; they output tool JSON as text. With `native_tool_calling=True` the engine sends tools as API params (codex ignores them) and skips prompt injection. Fix: `get_capabilities_for_model()` returns `native_tool_calling=False` for codex models. | v1.15.6 Goal 2 | ✅ Fixed (benchmark runner); needs engine verification |
+| **P0** | **Codex native tool calling works** — Codex models via Responses API DO emit native `function_call` items when tools are sent as API params. Previous assumption was wrong (prompt-based mode failed because codex can't parse tool schemas from text). Fix: `get_capabilities_for_model()` returns `native_tool_calling=True` for codex models + belt-and-suspenders hint injection. | v1.15.6 Goal 2 | ✅ Fixed + verified (Session 3: codex 71+ calls, codex-mini 19 calls + synthesis) |
 | **P1** | **AGENTS.md hints skipped for native providers** — Bootstrap/AGENTS.md hints were only injected for prompt-based mode. Native providers (OpenAI, Gemini) never saw the hints. Fix: inject hints into system prompt for ALL modes. | v1.15.6 Goal 1 | ✅ Fixed (chat.py) |
 | **P2** | **Port brace-counting JSON parser to engine** — Engine's `tools/parser.py` uses regex which breaks on `apply_patch` with complex diff content containing braces. Benchmark runner already has `_find_json_objects()` with brace-counting. Port it. | v1.15.6 Goal 2 | ✅ Done (`_find_json_objects()` ported, `parse_tool_call()` + `strip_tool_json_from_text()` use brace-counting) |
 | **P3** | **Re-benchmark all providers with fixed runner** — All provider scores were artificially low due to engine tool conflicts (engine tools `read_file(filepath)` vs benchmark tools `read_file(path)`). Need to re-run for GPT-5.2, Gemini, Perplexity sonar. | v1.15.6 Goal 4 | ✅ Done (sonar 70.3%, sonar-pro 68.8%, gemini-2.5-pro 75.0%, gemini-3-flash 57.8%, gemini-3-pro 62.5%) |
-| **P4** | **Belt-and-suspenders in real engine** — Engine does either native OR prompt-based, never both. If native tool calling is flaky (codex, vLLM HarmonyError), there's no fallback. Consider always including tool text in system prompt even for native providers. | v1.16.0 Goal 1 | ⏳ Pending |
+| **P4** | **Belt-and-suspenders in real engine** — Engine does either native OR prompt-based, never both. If native tool calling is flaky (vLLM HarmonyError), there's no fallback. **Partially done:** codex models now have belt-and-suspenders (tool hints in `instructions` field + native function tools). Generalize to other providers. | v1.16.0 Goal 1 | ⚡ Partially done (codex only) |
 
 ### Key Findings (Unnumbered)
 
@@ -89,7 +89,7 @@ Quick fixes that improve scores without restructuring `chat.py`:
 |------|-------------|---------|--------|
 | **o4-mini → prompt-based** | Override `get_capabilities_for_model()` to return `native_tool_calling=False` for o4-mini | — | 1 hour |
 | **gpt-4.1-mini → prompt-based** | Same override for gpt-4.1-mini | — | 1 hour |
-| **Codex → prompt-based** | Verify engine `get_capabilities_for_model()` returns `native_tool_calling=False` for codex models (already fixed in benchmark runner) | P0 | 1 hour |
+| **Codex → native** | Enable native tool calling for codex: removed `_is_responses_api_model()` from prompt-based override, added belt-and-suspenders hint injection, updated model profiles and AGENTS.md hints | P0 | ✅ Done (Session 3) |
 | **JSON stripping in response text** | When native `tool_calls` are present, strip `{"tool":...}` JSON from streamed text | — | 3 hours |
 | **Brace-counting JSON parser** | Port `_find_json_objects()` from benchmark runner to `engine/tools/parser.py` (regex breaks on apply_patch diffs with nested braces) | P2 | 3 hours |
 | **Index unindexed results** | Add gpt-4.1-mini (71.9% prompt) and o4-mini (62.5% prompt) to benchmark index | — | 30 min |
@@ -165,7 +165,7 @@ class ModelProfile:
 8. Benchmark runner profile integration
 9. Updated AGENTS.md hints
 
-#### Debug Session Findings (2026-02-19) — Additional v1.15.6 Items
+#### Debug Session 1 Findings (2026-02-19, Windows) — v1.15.6 Items
 
 From [DEBUG-SESSION-2026-02-19.md](DEBUG-SESSION-2026-02-19.md) Section 5.1:
 
@@ -174,10 +174,32 @@ From [DEBUG-SESSION-2026-02-19.md](DEBUG-SESSION-2026-02-19.md) Section 5.1:
 | A1 | **Read-claim validator** — `_check_read_claims_without_tools()` in `validator.py` to catch fabricated "I read each file" with 0 `read_file` calls | P1 | 2h | ⏳ |
 | A2 | **Stronger truncation retry** — `[SYSTEM: ...]` framing in `chat.py:492-496` so models don't misinterpret retry as conversation | P2 | 30min | ⏳ |
 | A3 | **Model switch warning** — emit WARNING from `client.py:set_provider()/set_model()` when session has existing messages | P2 | 1h | ⏳ |
-| A4 | **gpt-4o AGENTS.md hints** — add multi-file reading + no-narration hints for `gpt-4o*` | P2 | 15min | ⏳ |
+| A4 | **gpt-4o AGENTS.md hints** — add multi-file reading + no-narration hints for `gpt-4o*` | P2 | 15min | ✅ Done |
 | A5 | **codex-mini profile fix** — change `model_profiles.py` from `mode="native"` to `mode="prompt_based"` | P2 | 30min | ⏳ |
 | A6 | **codex-mini benchmarks** — first benchmark run for gpt-5.1-codex-mini | P3 | 2h | ⏳ |
 | A7 | **codex limitation docs** — WARNING hint in AGENTS.md `gpt-5.1-codex*` section | P3 | 15min | ⏳ |
+
+#### Debug Session 2 Findings (2026-02-20, macOS) — Additional v1.15.6 Items
+
+From [DEBUG-SESSION-2026-02-19.md](DEBUG-SESSION-2026-02-19.md) Sections 9-13:
+
+| # | Item | Priority | Effort | Status |
+|---|------|----------|--------|--------|
+| A0 | **Bool sentinel crash fix** — removed `openai_tools = True` in `chat.py:217` that caused `TypeError` for all Responses API models | P0 | done | ✅ Fixed |
+| H1 | **"Make ONE" hint anti-pattern** — replaced 24 "Make ONE tool call" hints with "Chain multiple DIFFERENT tool calls" | P0 | done | ✅ Fixed |
+| H2 | **Interrupt during tool execution** — `chat.py:372` now checks `is_interrupted` and cancels running tool task | P0 | done | ✅ Fixed |
+| H3 | **Interrupt after provider.chat()** — `chat.py:327` catches interrupt before processing tools | P0 | done | ✅ Fixed |
+| A8 | **Codex native tool calling investigation** — codex models need `function_call` items via Responses API, not prompt-based injection | P1 | 4h | ⏳ |
+| A9 | **o3-mini provider routing** — currently uses `OpenAICompatibleProvider` (wrong `max_tokens` param). Must route through `OpenAINativeProvider` | P2 | 1h | ⏳ |
+| A10 | **gpt-5-mini hints** — "Do NOT ask permission before using tools. Call tools immediately." | P2 | 15min | ⏳ |
+| A11 | **gpt-5-nano synthesis failure** — empty response after 11 tool calls. Investigate `max_output_tokens` or iteration limit for nano | P2 | 2h | ⏳ |
+
+**Key validation from Session 2:** The "Make ONE" hint fix (H1) is confirmed transformative:
+- gpt-5.2: 1 tool/turn → 8 tools chained back-to-back
+- gemini-2.5-flash: 19 iterations, hit max — read every file in 2 agent directories
+- sonar-pro: 10 tools with efficient search_files strategy
+- gpt-5-nano: 11 tools chained perfectly (synthesis failed due to model capacity)
+- gpt-4.1-mini: **no improvement** — insufficient model capacity to follow hints
 
 ---
 
@@ -340,6 +362,32 @@ The previously planned v1.16.0 content (file navigation) fits naturally alongsid
 | **With/without AGENTS.md** | Run identical test suite twice per model: once with hints, once without. Report delta. | Perplexity dropped 75% → 48.4% without hints; currently no systematic measurement | 3 hours |
 | **Tool call efficiency** | Count total tool calls vs minimum required. Penalize unnecessary reads, reward models that batch independent operations. | sonar makes 5-6 duplicate calls; gemini reads exactly what's needed | 2 hours |
 
+#### Framework: GenAIScript Integration
+
+**What:** [GenAIScript](https://microsoft.github.io/genaiscript/) — Microsoft's JS-based LLM orchestration framework with built-in evaluation via [promptfoo](https://promptfoo.dev/). Runs tests across multiple models in a single command.
+
+**Why:** Complements the existing Python benchmark suite. GenAIScript excels at multi-model comparison, rubric-based grading (LLM-as-judge), and agent loop testing with `defTool()` for simulated file systems. The Python suite remains the engine regression layer.
+
+**Key capabilities for our use:**
+- `--models` flag — run the same test against 16 models in one invocation
+- `defTool()` — define simulated `read_file`, `search_code`, `apply_patch` tools matching our engine's tool schemas
+- Rubric-based scoring via promptfoo — LLM-as-judge replaces binary pass/fail for code editing quality
+- `defFileOutput` — test code generation without actual file system changes
+- Built-in support for OpenAI, Gemini, Perplexity, local models (25+ providers)
+
+**Integration plan:**
+
+| Item | Description | Effort |
+|------|-------------|--------|
+| **GenAIScript agent loop tests** | Implement Phase 1-2 agent tests (`multi_file_review`, `consecutive_tool_loop`, `claim_without_action`, `search_then_edit`) as `.genai.mts` scripts with `defTool()` simulated tools | 6 hours |
+| **Multi-model comparison runner** | Single `npx genaiscript eval` invocation testing all 16 configured models, output as JSON for comparison dashboard | 2 hours |
+| **Rubric-based code editing eval** | Replace binary pass/fail for `apply_patch` tests with LLM-as-judge rubrics (correctness, minimal diff, context preservation) | 4 hours |
+| **CI integration** | `npm run benchmark:genaiscript` script in `benchmarks/` alongside existing Python runner | 2 hours |
+
+**Architecture:** GenAIScript tests live in `benchmarks/genaiscript/` alongside the existing `benchmarks/llm-eval/` Python suite. Both can run independently. Results feed into the same comparison dashboard.
+
+**Dependency:** Node.js 20+ (already required for VSCode extension build)
+
 #### New Category: Agent Loop (proposed, 5 tests)
 
 | Test | Weight | Tags | Source |
@@ -371,20 +419,22 @@ This table documents the gap that Goal 7 aims to close. Models are ranked by **o
 | 1 | gemini-3-flash-preview | 57.81% | Read 8/8 files in 18s, produced quality improvement plan | Benchmark **under-scores** by ~30%: 0% code editing (wrong tool name), 16.7% hallucination (doesn't match behavior) |
 | 2 | gpt-5.2 | 70.31% | Tool calling works but reads 1 file/turn, requires repeated prompting | Benchmark **over-scores** by ~10%: doesn't test multi-file laziness |
 | 3 | sonar-pro | 68.75% | Fabricated "ALL 8 FILES RE-READ" with 0-1 tool calls, hallucinated results | Benchmark **over-scores** by ~30%: doesn't test agentic hallucination |
-| 4 | gpt-5.1-codex | 40.63% | Zero tool calls, refused to use tools entirely | Benchmark **approximately correct**: low score matches broken behavior |
+| 4 | gpt-5.1-codex | 40.63% → TBD | Session 2: Zero tool calls (broken). **Session 3: 71+ tool calls, fully functional** with native tool calling fix | Benchmark **needs re-run**: old score reflects broken prompt-based mode, not current native mode |
 
 **Target:** After Goal 7, benchmark ranking should match columns 1-4 (real-world rank).
 
-### Debug Session Findings (2026-02-19) — Additional v1.16.0 Items
+### Debug Session Findings (2026-02-19 + 2026-02-20) — Additional v1.16.0 Items
 
-From [DEBUG-SESSION-2026-02-19.md](DEBUG-SESSION-2026-02-19.md) Section 5.2:
+From [DEBUG-SESSION-2026-02-19.md](DEBUG-SESSION-2026-02-19.md) Sections 5.2 + 11:
 
-| # | Item | Aligns With | Priority | Effort |
-|---|------|-------------|----------|--------|
-| B1 | **Session context reset on model switch** — `session.reset_for_model_switch()` strips assistant/tool messages, keeps user messages | New (Goal 4) | P1 | 4h |
-| B2 | **Per-model iteration limit** — `max_tool_iterations` field in `ModelProfile`, consulted at `chat.py:189` | Goal 3 | P2 | 2h |
-| B3 | **Belt-and-suspenders** — inject `get_tools_prompt()` into system prompt even for native when profile has fallback flags | Goal 1 / P4 | P2 | 3h |
-| B7 | **Session pollution detection** — compare response similarity against previous assistant messages from different models | New | P3 | 3h |
+| # | Item | Aligns With | Priority | Effort | Session |
+|---|------|-------------|----------|--------|---------|
+| B1 | **Session context reset on model switch** — `session.reset_for_model_switch()` strips assistant/tool messages, keeps user messages. **Definitively validated:** codex-mini worked in Session 1 (clean), completely broke in Session 2 (codex refusals polluted session) | New (Goal 4) | P1 | 4h | 1+2 |
+| B10 | ~~**Codex native tool calling via Responses API**~~ — **DONE in v1.15.6 (Session 3).** Native function calling works: codex-mini 19 iterations + synthesis, codex 71+ calls. No longer needed for v1.16.0. | New | ~~P1~~ | ~~8h~~ | 2→3 |
+| B2 | **Per-model iteration limit** — `max_tool_iterations` field in `ModelProfile`: gemini-2.5-flash→25 (hit 19 ceiling), gpt-5-nano→8 (prevent empty synthesis), sonar→20 | Goal 3 | P2 | 2h | 2 |
+| B3 | **Belt-and-suspenders** — inject `get_tools_prompt()` into system prompt even for native when profile has fallback flags | Goal 1 / P4 | P2 | 3h | 1 |
+| B11 | **SSE disconnect detection** — use `request.is_disconnected()` in `sse_event_generator` to cancel background generator when client disconnects. Currently Esc closes UI but server task continues. | New | P2 | 3h | 2 |
+| B7 | **Session pollution detection** — compare response similarity against previous assistant messages from different models | New | P3 | 3h | 1 |
 
 Benchmark v2 items (already captured in Goal 7):
 
@@ -404,7 +454,8 @@ Benchmark v2 items (already captured in Goal 7):
 | **Integration tests** | Full tool loop with mock providers in all modes | 10-15 new tests |
 | **TUI manual tests** | Test each provider with tool-using conversations | All providers |
 | **Benchmark v2 tests** | New agent_loop category (5 tests), partial credit scoring, patch verification | 8-10 new tests |
-| **Benchmark re-runs** | Full v2 suite for all 16 models to validate ranking matches real-world | 16+ runs |
+| **GenAIScript eval** | Agent loop tests via GenAIScript + rubric-based code editing scoring | 4-6 `.genai.mts` scripts |
+| **Benchmark re-runs** | Full v2 suite (Python + GenAIScript) for all 16 models to validate ranking matches real-world | 16+ runs |
 | **Session migration** | Load v1.15.x sessions in v1.16.0, verify no data loss | Manual |
 | **Regression** | Full `pytest tests/ -v` passes | ~1300+ tests |
 
@@ -468,7 +519,7 @@ v1.16.0 (Breaking Changes)
 ### v1.15.6
 - [ ] o4-mini scores >60% (up from 10.9%)
 - [ ] gpt-4.1-mini scores >70% (up from 60.9%)
-- [ ] Codex capability override verified in engine (P0)
+- [x] Codex native tool calling verified in engine — Session 3: 71+ calls (codex), 19 + synthesis (codex-mini)
 - [ ] Brace-counting parser handles apply_patch diffs without breaking (P2)
 - [ ] JSON stripping cleans up tool_json_in_content responses
 - [ ] `ModelProfile` dataclasses exist with profiles for 27 models
@@ -477,7 +528,7 @@ v1.16.0 (Breaking Changes)
 - [ ] Read-claim validator catches "I read each file" with 0 read_file calls (A1)
 - [ ] Truncation retry uses `[SYSTEM: ...]` framing (A2)
 - [ ] Model switch emits warning when session has messages (A3)
-- [ ] codex-mini profile corrected to prompt_based (A5)
+- [x] codex profiles corrected to native (A5 — reversed: native works, prompt_based was wrong)
 
 ### v1.16.0
 - [ ] Profile-driven routing replaces binary decision in chat.py
@@ -490,11 +541,13 @@ v1.16.0 (Breaking Changes)
 - [ ] Session migration from v1.15.x works seamlessly
 - [ ] All existing tests pass + 50+ new tests
 - [ ] Session context reset on model switch works correctly (B1)
-- [ ] Per-model iteration limit consulted from ModelProfile (B2)
+- [x] ~~Codex native tool calling via Responses API~~ — Done in v1.15.6 Session 3
+- [ ] Per-model iteration limit consulted from ModelProfile (B2) — gemini→25, nano→8
 - [ ] Belt-and-suspenders prompt injection for fallback-enabled profiles (B3)
+- [ ] SSE disconnect detection cancels background tasks on client disconnect (B11)
 - [ ] Session pollution detection emits WARNING on response replay (B7)
 - [ ] **Benchmark v2:** `agent_loop` category with 5 tests (multi_file_review, consecutive_tool_loop, claim_without_action, search_then_edit, test_fix_verify)
 - [ ] **Benchmark v2:** Partial credit scoring for tool calling tests (tool name 50% + args 50%)
 - [ ] **Benchmark v2:** `patch_apply_verify` test actually applies patches and verifies output
 - [ ] **Benchmark v2:** Efficiency metrics tracked (tokens, cost, time-to-first-tool-call)
-- [ ] **Benchmark v2:** Ranking matches real-world validation matrix (gemini-3-flash > gpt-5.2 > sonar > codex)
+- [ ] **Benchmark v2:** Ranking matches real-world validation matrix (gemini-2.5-flash > codex-mini > sonar-pro > gpt-5.2 > codex > gemini-3-pro > gpt-4.1)
