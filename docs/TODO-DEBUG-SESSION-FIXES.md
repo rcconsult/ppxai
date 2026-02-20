@@ -50,7 +50,7 @@
 - [ ] **B6** [P2] `consecutive_tool_loop` benchmark test — 5-step dependent chain
 - [ ] **B9** [P2] Partial credit scoring — tool name 50% + args 50%
 - [ ] **B11** [P2] SSE disconnect detection — use `request.is_disconnected()` in `sse_event_generator` to cancel background task when client disconnects
-- [ ] **B12** [P2] GenAIScript integration — implement Phase 1-2 agent loop tests as `.genai.mts` scripts with `defTool()` simulated tools, multi-model comparison runner, rubric-based code editing eval. Lives in `benchmarks/genaiscript/`.
+- [ ] **B12** [P2] GenAIScript integration — implement Phase 1-2 agent loop tests as `.genai.mts` scripts with `defTool()` simulated tools, multi-model comparison runner, rubric-based code editing eval. Lives in `benchmarks/genaiscript/`. Reference: [genaiscript-llms-full.txt](genaiscript-llms-full.txt)
 
 ### P3
 

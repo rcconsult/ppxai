@@ -1,15 +1,15 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "https://raw.githubusercontent.com/rcconsult/ppxai/master/ppxai-config.schema.json",
   "version": "1.3",
   "default_provider": "perplexity",
   "comment": "Configuration for ppxai - customize providers, models, and autorouting behavior",
-  "system_prompt": "You are a helpful AI assistant. Be concise and direct. Report tool results briefly.",
+  "system_prompt": "You are an expert AI coding assistant. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
   "__comment_system_prompt": "Global system prompt prepended to all conversations (v1.13.6+). Per-provider overrides below.",
   "system_prompt_mode": "prepend",
   "__comment_system_prompt_mode": "How to combine with tool instructions: 'prepend' (default), 'append', or 'replace'",
   "server": {
     "__comment": "HTTP server configuration (v1.13.6+)",
-    "idle_timeout": 300,
+    "idle_timeout": 600,
     "__comment_idle_timeout": "Auto-shutdown after N seconds of inactivity. 0 = disabled (server runs forever)",
     "port": 54320,
     "__comment_port": "Default HTTP server port"
@@ -50,7 +50,10 @@
     ],
     "__comment_bin_search_paths": "Directories to search for ppxai binaries (ppxai, ppxai-server, ppxai-desktop). Windows paths checked first.",
     "data_dir": "{home}/.ppxai",
-    "__comment_data_dir": "Directory for sessions, exports, usage data, and config files"
+    "__comment_data_dir": "Directory for sessions, exports, usage data, and config files",
+    "sessions": "~/.ppxai/sessions",
+    "exports": "~/.ppxai/exports",
+    "checkpoints": "~/.ppxai/checkpoints"
   },
   "providers": {
     "perplexity": {
@@ -60,7 +63,7 @@
       "default_model": "sonar-pro",
       "coding_model": "sonar-pro",
       "__comment_coding_model": "Model used for autorouting coding commands (/generate, /test, /convert, etc.)",
-      "system_prompt": "You are a helpful AI assistant with web search. Be concise. Cite sources as markdown links.",
+      "system_prompt": "You have two capabilities: (1) NATIVE WEB SEARCH for research, facts, and current information - use this automatically for questions and cite sources as markdown links. (2) EXTERNAL TOOLS for file operations, shell commands, and editing - when tools are available and the user asks to DO something (cd, ls, edit, fix, run, create, analyze), execute the appropriate tool immediately instead of explaining how. For actions: act first, report results briefly. For questions: search and cite. Never tell the user to do manually what a tool can do.",
       "__comment_system_prompt": "Per-provider system prompt override (v1.13.6+)",
       "generation_params": {
         "temperature": 0.2,
@@ -127,15 +130,27 @@
       "default_model": "gemini-3-flash-preview",
       "coding_model": "gemini-3-flash-preview",
       "__comment_benchmark": "Benchmark results (v1.15.3): gemini-3-flash-preview achieved 100% quality score with refined hints. Best model for code editing.",
+      "system_prompt": "You are an expert AI coding assistant with web search capabilities. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices. Cite sources as markdown links when using web search.",
       "options": {
         "enable_grounding": true,
-        "__comment_enable_grounding": "Enable Google Search Grounding for native web search (default: true)"
+        "__comment_enable_grounding": "Enable Google Search Grounding for native web search (default: true)",
+        "native_tool_calling": true
       },
       "generation_params": {
-        "temperature": 0.3,
+        "temperature": 0.2,
         "top_p": 0.9
       },
       "models": {
+        "gemini-2.0-flash": {
+          "name": "Gemini 2.0 Flash",
+          "description": "Fast model with multimodal support",
+          "context_limit": 1000000
+        },
+        "gemini-2.0-flash-lite": {
+          "name": "Gemini 2.0 Flash Lite",
+          "description": "Cost-efficient for high-volume tasks",
+          "context_limit": 1000000
+        },
         "gemini-2.5-flash": {
           "name": "Gemini 2.5 Flash",
           "description": "Latest fast model, best price/performance. 71.4% code editing quality with aggressive hints.",
@@ -165,6 +180,8 @@
         }
       },
       "pricing": {
+        "gemini-2.0-flash": {"input": 0.10, "output": 0.40},
+        "gemini-2.0-flash-lite": {"input": 0.075, "output": 0.30},
         "gemini-2.5-flash": {"input": 0.15, "output": 0.60},
         "gemini-2.5-flash-lite": {"input": 0.075, "output": 0.30},
         "gemini-2.5-pro": {"input": 1.25, "output": 5.00},
@@ -173,62 +190,167 @@
       },
       "capabilities": {
         "web_search": true,
-        "web_fetch": false,
-        "weather": false,
-        "realtime_info": false,
+        "web_fetch": true,
+        "weather": true,
+        "realtime_info": true,
+        "citations": true,
         "native_tool_calling": true,
-        "__comment_native_tool_calling": "Gemini 2.5+ supports native function calling via OpenAI-compatible API"
+        "__comment_native_tool_calling": "Gemini supports native function calling"
       }
     },
     "openai": {
-      "name": "OpenAI ChatGPT",
+      "name": "OpenAI",
       "base_url": "https://api.openai.com/v1",
       "api_key_env": "OPENAI_API_KEY",
-      "default_model": "gpt-4o",
-      "coding_model": "gpt-4o",
+      "default_model": "gpt-5.2",
+      "coding_model": "gpt-5.1-codex",
+      "system_prompt": "You are an expert AI coding assistant. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
       "generation_params": {
-        "temperature": 0.3,
+        "temperature": 0.2,
         "top_p": 0.95,
-        "frequency_penalty": 0.1
+        "frequency_penalty": 0.1,
+        "__comment_temperature": "0.0-2.0: Lower = more deterministic, reduces hallucinations (recommended: 0.1-0.5)",
+        "__comment_top_p": "0.0-1.0: Nucleus sampling, controls diversity (recommended: 0.9)",
+        "__comment_frequency_penalty": "-2.0-2.0: Reduces repetition of tokens (recommended: 0.0-0.5)"
+      },
+      "web_search": {
+        "__comment": "Override global tools.web_search.preferred for this provider only",
+        "preferred": "gemini"
       },
       "models": {
+        "gpt-5.2": {
+          "name": "GPT-5.2",
+          "description": "Newest flagship model with 400K context. Best overall intelligence.",
+          "context_limit": 400000,
+          "__comment_best_for": "Complex refactoring, architecture decisions, multi-file changes, code review."
+        },
+        "gpt-5.2-pro": {
+          "name": "GPT-5.2 Pro",
+          "description": "Premium tier with highest capability for difficult tasks",
+          "context_limit": 400000,
+          "__comment_best_for": "Hardest problems, novel algorithm design, critical code review. Expensive.",
+          "generation_params": {
+            "temperature": 0.1,
+            "max_tokens": 16384
+          }
+        },
+        "gpt-5.1": {
+          "name": "GPT-5.1",
+          "description": "Previous flagship, still excellent for general coding",
+          "context_limit": 400000,
+          "__comment_best_for": "General coding, debugging, explanations. Slightly cheaper than 5.2."
+        },
+        "gpt-5.1-codex": {
+          "name": "GPT-5.1 Codex",
+          "description": "Code-specialized model optimized for software engineering tasks",
+          "context_limit": 400000,
+          "__comment_best_for": "Code generation, refactoring, debugging. Tuned specifically for coding. Uses Responses API with native tool calling."
+        },
+        "gpt-5.1-codex-mini": {
+          "name": "GPT-5.1 Codex Mini",
+          "description": "Lightweight code-specialized model for fast coding tasks",
+          "context_limit": 400000,
+          "__comment_best_for": "Quick edits, simple code generation, file operations. Budget codex option."
+        },
+        "gpt-5": {
+          "name": "GPT-5",
+          "description": "Capable flagship with 400K context",
+          "context_limit": 400000,
+          "__comment_best_for": "General coding tasks. Consider gpt-5.1+ for newer capabilities."
+        },
+        "gpt-5-mini": {
+          "name": "GPT-5 Mini",
+          "description": "Balanced performance at lower cost with 400K context",
+          "context_limit": 400000,
+          "__comment_best_for": "Everyday coding, quick edits, explanations. Good price/performance."
+        },
+        "gpt-5-nano": {
+          "name": "GPT-5 Nano",
+          "description": "Ultra-fast and cheapest GPT-5 variant",
+          "context_limit": 400000,
+          "__comment_best_for": "Simple edits, file operations, quick Q&A. Lowest cost GPT-5.",
+          "generation_params": {
+            "temperature": 0.1,
+            "top_p": 0.9,
+            "max_tokens": 2048
+          }
+        },
+        "gpt-4.1": {
+          "name": "GPT-4.1",
+          "description": "Previous generation flagship with 1M context",
+          "context_limit": 1047576,
+          "__comment_best_for": "Large codebase analysis (1M context advantage). Superseded by GPT-5.x for most tasks."
+        },
+        "gpt-4.1-mini": {
+          "name": "GPT-4.1 Mini",
+          "description": "Budget option with 1M context",
+          "context_limit": 1047576,
+          "__comment_best_for": "When 1M context needed at low cost."
+        },
+        "gpt-4.1-nano": {
+          "name": "GPT-4.1 Nano",
+          "description": "Cheapest model with 1M context",
+          "context_limit": 1047576,
+          "__comment_best_for": "Cheapest option when massive context needed.",
+          "generation_params": {
+            "temperature": 0.1,
+            "top_p": 0.9,
+            "max_tokens": 2048
+          }
+        },
         "gpt-4o": {
           "name": "GPT-4o",
-          "description": "Latest flagship model with vision"
-        },
-        "gpt-4o-mini": {
-          "name": "GPT-4o Mini",
-          "description": "Fast and affordable for simple tasks"
-        },
-        "gpt-4-turbo": {
-          "name": "GPT-4 Turbo",
-          "description": "Previous generation with 128K context"
-        },
-        "o1": {
-          "name": "o1",
-          "description": "Advanced reasoning (limited: no streaming, no system prompts via Chat API)"
-        },
-        "o1-mini": {
-          "name": "o1 Mini",
-          "description": "Fast reasoning (limited: no streaming, no system prompts via Chat API)"
-        },
-        "o3-mini": {
-          "name": "o3 Mini",
-          "description": "Latest reasoning (limited: no streaming, no system prompts via Chat API)"
+          "description": "Previous generation multimodal model",
+          "__comment_best_for": "Legacy support. Consider GPT-5.x for new projects."
         },
         "o4-mini": {
           "name": "o4 Mini",
-          "description": "Newest reasoning model (limited: no streaming, no system prompts via Chat API)"
+          "description": "Latest reasoning model with improved tool use",
+          "context_limit": 200000,
+          "__comment_best_for": "Reasoning + tool calling. Best reasoning model for agentic tasks.",
+          "generation_params": {
+            "temperature": 1.0,
+            "max_tokens": 8192
+          },
+          "__comment_temperature": "o-series models require temperature=1.0"
+        },
+        "o3": {
+          "name": "o3",
+          "description": "Advanced reasoning model with Chain of Thought",
+          "context_limit": 200000,
+          "__comment_best_for": "Algorithm design, complex logic, math, deep analysis. No streaming.",
+          "generation_params": {
+            "temperature": 1.0,
+            "max_tokens": 16384
+          }
+        },
+        "o3-mini": {
+          "name": "o3 Mini",
+          "description": "Fast reasoning model, good cost/performance for logic tasks",
+          "context_limit": 200000,
+          "__comment_best_for": "Reasoning on a budget. No streaming, no system prompts via Chat API.",
+          "generation_params": {
+            "temperature": 1.0,
+            "max_tokens": 8192
+          }
         }
       },
       "pricing": {
+        "gpt-5.2": {"input": 1.75, "output": 14.00},
+        "gpt-5.2-pro": {"input": 21.00, "output": 168.00},
+        "gpt-5.1": {"input": 1.25, "output": 10.00},
+        "gpt-5.1-codex": {"input": 1.25, "output": 10.00},
+        "gpt-5.1-codex-mini": {"input": 0.25, "output": 2.00},
+        "gpt-5": {"input": 1.25, "output": 10.00},
+        "gpt-5-mini": {"input": 0.25, "output": 2.00},
+        "gpt-5-nano": {"input": 0.05, "output": 0.40},
+        "gpt-4.1": {"input": 2.00, "output": 8.00},
+        "gpt-4.1-mini": {"input": 0.40, "output": 1.60},
+        "gpt-4.1-nano": {"input": 0.10, "output": 0.40},
         "gpt-4o": {"input": 2.50, "output": 10.00},
-        "gpt-4o-mini": {"input": 0.15, "output": 0.60},
-        "gpt-4-turbo": {"input": 10.00, "output": 30.00},
-        "o1": {"input": 15.00, "output": 60.00},
-        "o1-mini": {"input": 3.00, "output": 12.00},
-        "o3-mini": {"input": 1.10, "output": 4.40},
-        "o4-mini": {"input": 1.10, "output": 4.40}
+        "o4-mini": {"input": 1.10, "output": 4.40},
+        "o3": {"input": 2.00, "output": 8.00},
+        "o3-mini": {"input": 1.10, "output": 4.40}
       },
       "capabilities": {
         "web_search": false,
@@ -236,12 +358,7 @@
         "weather": false,
         "realtime_info": false,
         "native_tool_calling": true,
-        "__comment_native_tool_calling": "OpenAI supports native function calling via tools parameter"
-      },
-      "__comment_web_search_override": "v1.13.4: Optional per-provider override for premium web search",
-      "web_search": {
-        "__comment": "Override global tools.web_search.preferred for this provider only",
-        "preferred": "gemini"
+        "__comment_native_tool_calling": "OpenAI supports native function calling via tools parameter. Codex models use Responses API."
       }
     },
     "openrouter": {
@@ -250,8 +367,9 @@
       "api_key_env": "OPENROUTER_API_KEY",
       "default_model": "anthropic/claude-sonnet-4",
       "coding_model": "anthropic/claude-sonnet-4",
+      "system_prompt": "You are an expert AI coding assistant. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
       "generation_params": {
-        "temperature": 0.3,
+        "temperature": 0.2,
         "top_p": 0.9,
         "frequency_penalty": 0.1
       },
@@ -268,21 +386,31 @@
           "name": "Claude Haiku",
           "description": "Fast and affordable Claude model"
         },
-        "google/gemini-2.0-flash-001": {
-          "name": "Gemini 2.0 Flash",
-          "description": "Google's fast multimodal model"
+        "deepseek/deepseek-r1": {
+          "name": "DeepSeek R1",
+          "description": "Reasoning model with Chain of Thought"
+        },
+        "meta-llama/llama-3.1-70b-instruct": {
+          "name": "Llama 3.1 70B",
+          "description": "Meta's open-weight model"
         },
         "meta-llama/llama-3.1-405b-instruct": {
           "name": "Llama 3.1 405B",
           "description": "Meta's largest open model"
+        },
+        "google/gemini-2.0-flash-001": {
+          "name": "Gemini 2.0 Flash",
+          "description": "Google's fast multimodal model"
         }
       },
       "pricing": {
         "anthropic/claude-sonnet-4": {"input": 3.00, "output": 15.00},
         "anthropic/claude-opus-4": {"input": 15.00, "output": 75.00},
         "anthropic/claude-haiku": {"input": 0.25, "output": 1.25},
-        "google/gemini-2.0-flash-001": {"input": 0.10, "output": 0.40},
-        "meta-llama/llama-3.1-405b-instruct": {"input": 3.00, "output": 3.00}
+        "deepseek/deepseek-r1": {"input": 0.55, "output": 2.19},
+        "meta-llama/llama-3.1-70b-instruct": {"input": 0.59, "output": 0.79},
+        "meta-llama/llama-3.1-405b-instruct": {"input": 3.00, "output": 3.00},
+        "google/gemini-2.0-flash-001": {"input": 0.10, "output": 0.40}
       },
       "capabilities": {
         "web_search": false,
@@ -294,6 +422,7 @@
       }
     },
     "local-vllm": {
+      "__comment": "Example vLLM config for self-hosted models",
       "name": "Local vLLM",
       "base_url": "http://localhost:8000/v1",
       "api_key_env": "LOCAL_API_KEY",
@@ -318,26 +447,19 @@
       }
     },
     "vllm-gpt-oss": {
-      "__comment": "Example vLLM config with native tool calling (requires --enable-auto-tool-choice)",
+      "__comment": "Example vLLM config with native tool calling (requires --enable-auto-tool-choice --tool-call-parser openai)",
       "name": "GPT-OSS 120B (vLLM)",
       "base_url": "http://vllm-gpt-oss:8000/v1",
       "api_key_env": "VLLM_API_KEY",
       "default_model": "openai/gpt-oss-120b",
       "coding_model": "openai/gpt-oss-120b",
       "system_prompt": "You are a helpful AI coding assistant. Be concise and direct. When executing tools, report only the essential results. Avoid lengthy explanations unless explicitly requested.",
-      "__comment_system_prompt": "Custom system prompt to reduce chattiness (v1.13.6+)",
       "generation_params": {
         "temperature": 0.3,
         "top_p": 0.9,
         "frequency_penalty": 0.1,
-        "presence_penalty": 0.0,
-        "__comment_temperature": "0.0-2.0: Lower = more deterministic, reduces hallucinations (recommended: 0.1-0.5)",
-        "__comment_top_p": "0.0-1.0: Nucleus sampling, controls diversity (recommended: 0.9)",
-        "__comment_frequency_penalty": "-2.0-2.0: Reduces repetition of tokens (recommended: 0.0-0.5)",
-        "__comment_presence_penalty": "-2.0-2.0: Encourages new topics (recommended: 0.0)",
-        "__comment_seed": "int: For reproducibility (if supported by provider)"
+        "presence_penalty": 0.0
       },
-      "__comment_generation_params": "v1.15.0: Generation params passed to API. Model-level overrides provider-level.",
       "models": {
         "openai/gpt-oss-120b": {
           "name": "GPT-OSS 120B",
@@ -345,14 +467,7 @@
           "context_limit": 131072,
           "__comment_context_limit": "vLLM requires power of 2. Model supports ~120K, rounded up to 2^17=131072",
           "max_tokens": 8192,
-          "__comment_max_tokens": "Max output tokens. Set explicitly to prevent truncated tool calls (v1.15.2+)",
-          "generation_params": {
-            "temperature": 0.3,
-            "top_p": 0.9,
-            "frequency_penalty": 0.1,
-            "presence_penalty": 0.0,
-            "__comment": "Model-level override (takes precedence over provider-level)"
-          }
+          "__comment_max_tokens": "Max output tokens. Set explicitly to prevent truncated tool calls (v1.15.2+)"
         }
       },
       "pricing": {
@@ -364,7 +479,7 @@
         "weather": false,
         "realtime_info": false,
         "native_tool_calling": true,
-        "__comment": "Native tool calling enabled - vLLM started with --enable-auto-tool-choice --tool-call-parser seed_oss"
+        "__comment": "Native tool calling enabled - vLLM started with --enable-auto-tool-choice --tool-call-parser openai"
       }
     },
     "ollama": {
@@ -374,7 +489,6 @@
       "__comment_api_key": "Ollama doesn't require auth, but OpenAI-compat API expects a key. Set OLLAMA_API_KEY=ollama in .env",
       "default_model": "qwen2.5-coder:3b",
       "coding_model": "qwen2.5-coder:3b",
-      "__comment_vram": "RTX 3050 6GB VRAM - only Qwen models with tool calling support listed",
       "__comment_benchmark": "Tested 2026-01-14: Only Qwen family supports tool calling. Others (deepseek, starcoder, codegemma, codellama) return errors.",
       "system_prompt": "You are an expert coding assistant running locally via Ollama. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
       "generation_params": {
@@ -421,13 +535,22 @@
     "__comment_overrides": "Tool description overrides - customize descriptions per provider/model for better accuracy (v1.13.10)",
     "overrides": {
       "__comment": "Global description overrides (apply to all providers/models)",
-      "search_files": "Find files by glob pattern (*.py, test*, *config*) - use when searching for files by NAME"
+      "search_files": "Find files by glob pattern (*.py, test*, *config*) - use when searching for files by NAME",
+      "read_file": "Read the complete contents of a file",
+      "write_file": "Create or overwrite a file with new content",
+      "edit_file": "Make precise edits to existing files using search/replace",
+      "list_directory": "List all files and directories in a path",
+      "shell": "Execute shell commands (bash/zsh/sh)"
     },
     "provider_overrides": {
       "__comment": "Provider-specific overrides (override global)",
       "ollama": {
         "list_directory": "Show all files in a folder",
-        "search_files": "Find files by pattern like *.py"
+        "search_files": "Find files by pattern like *.py",
+        "read_file": "Read file contents",
+        "write_file": "Create or update file",
+        "edit_file": "Change file contents",
+        "shell": "Run shell command"
       }
     },
     "model_overrides": {
@@ -442,7 +565,7 @@
       }
     },
     "shell": {
-      "timeout": 120,
+      "timeout": 300,
       "__comment_timeout": "Shell command timeout in seconds (default: 30). Increase for long-running commands like pip install.",
       "require_consent": true,
       "dangerous_commands": [
@@ -478,20 +601,31 @@
         "^\\s*>\\s*/dev/sda"
       ],
       "sandboxed_paths": [],
-      "interactive_commands": ["nano", "vim", "vi", "emacs", "less", "more", "top", "htop", "python", "python3", "node", "ssh", "telnet", "ftp", "sftp", "mysql", "psql", "bash", "zsh", "sh"],
+      "interactive_commands": [
+        "nano", "vim", "vi", "emacs", "pico", "joe",
+        "less", "more", "top", "htop", "btop",
+        "python", "python3", "ipython", "node", "irb", "ruby",
+        "ssh", "telnet", "ftp", "sftp",
+        "mysql", "psql", "mongo", "redis-cli",
+        "bash", "zsh", "sh", "fish", "csh", "tcsh"
+      ],
       "__comment_interactive_commands": "Commands blocked by default (need TTY). Override to customize. (v1.13.6+)",
-      "non_interactive_with_args": ["python", "python3", "node", "bash", "zsh", "sh", "ssh", "mysql", "psql"],
+      "non_interactive_with_args": [
+        "python", "python3", "ipython", "node", "irb", "ruby",
+        "bash", "zsh", "sh", "fish", "csh", "tcsh",
+        "ssh", "mysql", "psql"
+      ],
       "__comment_non_interactive_with_args": "Commands that become non-interactive when given arguments (v1.13.6+)"
     },
     "agent": {
       "__comment": "Agent mode configuration (v1.11.9+, v1.12.0 checkpoint features, v1.13.10 loop detection)",
-      "max_iterations": 10,
-      "__comment_max_iterations": "Maximum number of agent loop iterations (outer loop: full conversation turns)",
-      "max_tool_iterations": 15,
+      "max_iterations": 25,
+      "__comment_max_iterations": "Maximum number of agent loop iterations (outer loop: full conversation turns). Increase to 50 for exhaustive models like codex.",
+      "max_tool_iterations": 25,
       "__comment_max_tool_iterations": "Maximum tool calls per conversation turn (inner loop: tool chain limit)",
       "max_same_tool_calls": 3,
       "__comment_max_same_tool_calls": "Loop detection: max consecutive calls to same tool before forcing synthesis (0=disabled)",
-      "context_char_limit": 2000,
+      "context_char_limit": 4096,
       "__comment_context_char_limit": "Character limit for tool output display in verbose mode",
       "min_task_words": 3,
       "__comment_min_task_words": "Minimum words required for agent tasks (safety: reject vague tasks)",
@@ -540,48 +674,33 @@
       "get_weather": {
         "__comment": "Format-aware limits for weather tool - different truncation per format parameter",
         "short": 500,
-        "__comment_short": "One-line weather: 'Geneva: ☁️  +5°C' (~50 chars typical)",
         "detailed": 1500,
-        "__comment_detailed": "Current weather with wind, humidity, pressure (~200 chars typical)",
         "forecast": 5000,
-        "__comment_forecast": "Full 2-day forecast with hourly data (~4300 chars typical)",
-        "default": 2000
+        "default": 5000
       },
       "fetch_url": 5000,
-      "__comment_fetch_url": "Web page content can be long - higher limit for readability",
       "web_search": 3000,
-      "__comment_web_search": "Search results with multiple entries and snippets",
       "list_directory": 3000,
-      "__comment_list_directory": "Large directories with many files",
-      "read_file": 10000,
-      "__comment_read_file": "Code files can be long - highest limit for full visibility"
+      "read_file": 10000
     }
   },
   "visualization": {
     "__comment": "Data visualization settings for /show command (v1.15.0+)",
     "max_rows": 10000,
-    "__comment_max_rows": "Maximum rows to display in table views",
     "max_columns": 50,
-    "__comment_max_columns": "Maximum columns to display in table views",
     "page_size": 50,
-    "__comment_page_size": "Rows per page in paginated views",
     "tree_depth": 3,
-    "__comment_tree_depth": "Default tree expansion depth for JSON/YAML",
     "auto_detect": true,
-    "__comment_auto_detect": "Automatically detect file type for visualization",
     "csv_delimiter": "auto",
     "__comment_csv_delimiter": "CSV delimiter: 'auto', ',', ';', '\\t', '|'",
     "theme": "default"
   },
   "tui": {
     "__comment": "Textual TUI (ppxaide) settings (v1.15.0+)",
-    "theme": "standard",
-    "__comment_theme": "TUI theme: 'standard', 'catppuccin-mocha', 'dracula', 'tokyo-night', 'tron-legacy', 'matrix', etc.",
+    "theme": "catppuccin-mocha",
+    "__comment_theme": "TUI theme: 'catppuccin-mocha', 'dracula', 'tokyo-night', 'tron-legacy', 'matrix', 'textual-light', etc.",
     "show_version": true,
-    "__comment_show_version": "Show version in status bar",
     "show_cwd": true,
-    "__comment_show_cwd": "Show current working directory in status bar",
-    "show_datetime": false,
-    "__comment_show_datetime": "Show date/time in status bar"
+    "show_datetime": true
   }
 }

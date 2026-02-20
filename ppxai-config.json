@@ -128,6 +128,16 @@
         "top_p": 0.9
       },
       "models": {
+        "gemini-2.0-flash": {
+          "name": "Gemini 2.0 Flash",
+          "description": "Fast model with multimodal support",
+          "context_limit": 1000000
+        },
+        "gemini-2.0-flash-lite": {
+          "name": "Gemini 2.0 Flash Lite",
+          "description": "Cost-efficient for high-volume tasks",
+          "context_limit": 1000000
+        },
         "gemini-2.5-flash": {
           "name": "Gemini 2.5 Flash",
           "description": "Latest fast model, best price/performance. 71.4% code editing quality with aggressive hints.",
@@ -157,6 +167,14 @@
         }
       },
       "pricing": {
+        "gemini-2.0-flash": {
+          "input": 0.1,
+          "output": 0.4
+        },
+        "gemini-2.0-flash-lite": {
+          "input": 0.075,
+          "output": 0.3
+        },
         "gemini-2.5-flash": {
           "input": 0.15,
           "output": 0.6
@@ -636,8 +654,8 @@
       ]
     },
     "agent": {
-      "max_iterations": 25,
-      "max_tool_iterations": 25,
+      "max_iterations": 50,
+      "max_tool_iterations": 50,
       "max_same_tool_calls": 3,
       "context_char_limit": 4096,
       "min_task_words": 3,
