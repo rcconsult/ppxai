@@ -42,7 +42,45 @@ These changes modify the core tool loop in `chat.py` affecting **every provider 
 
 ---
 
-## Goal 1: Profile-Driven Tool Loop
+## Implementation Order
+
+Goals are ordered by dependency chain. Implement in this sequence:
+
+```
+Step 1: Provider Hierarchy    (no deps — simplifies everything after)
+   │
+Step 2: Profile-Driven Loop   (needs Step 1's clean interface)
+   │
+   ├─→ Step 3: Tool Messages  (needs Step 2's profile routing)
+   │      │
+   │      └─→ Step 4: Multi-Tool  (needs Step 3's message format)
+   │             │
+   │             └─→ Step 6: Grouped UI  (needs Step 4's multi-tool)
+   │
+   └─→ Step 5: Config Integration  (needs Step 2's profiles, independent of 3-4)
+
+Step 7: Benchmark v2          (independent — can run in parallel with any step)
+```
+
+---
+
+## Step 1: Provider Hierarchy Refactoring
+
+**Dependencies:** None — do first, it removes `hasattr` guards and simplifies Steps 2-4.
+
+`OpenAINativeProvider` and `GeminiProvider` are standalone classes with duck typing (`hasattr` guards). This works but is fragile.
+
+- [ ] **Shared ABC or Protocol** — `OpenAINativeProvider` and `GeminiProvider` inherit from `BaseProvider` or `ProviderProtocol` (3h)
+- [ ] **Eliminate duplicate methods** — move `needs_tool`, `get_model_profile`, `_format_error`, `_log_error_traceback` to base (2h)
+- [ ] **Remove `hasattr` guards** — replace `hasattr(provider, 'get_capabilities_for_model')` in `chat.py` with guaranteed interface (1h)
+- [ ] **`get_capabilities_for_model` → profile** — replace with `get_model_profile()` as single source of truth (2h)
+- [ ] **Tests** — all providers pass shared interface compliance test (2h)
+
+---
+
+## Step 2: Profile-Driven Tool Loop
+
+**Dependencies:** Step 1 (clean provider interface with guaranteed `get_model_profile()`)
 
 Replace the binary decision point in `chat.py:210`:
 
@@ -66,7 +104,9 @@ tc_mode = profile.tool_calling.mode
 
 ---
 
-## Goal 2: Proper Tool Message Format
+## Step 3: Proper Tool Message Format
+
+**Dependencies:** Step 2 (profile routing determines when to use `tool` role vs synthetic pairs)
 
 Replace synthetic message pairs with proper `tool` role messages:
 
@@ -90,7 +130,9 @@ ctx.session.add_message(Message("tool", result, tool_call_id=tc_id))
 
 ---
 
-## Goal 3: Multi-Tool Support
+## Step 4: Multi-Tool Support
+
+**Dependencies:** Step 3 (proper tool messages needed to send multiple tool results per iteration)
 
 Process all native tool calls when the profile allows it:
 
@@ -115,7 +157,9 @@ else:
 
 ---
 
-## Goal 4: Config Integration
+## Step 5: Config Integration
+
+**Dependencies:** Step 2 (profiles must exist before config can override them; independent of Steps 3-4)
 
 - [ ] **Config overrides** — `tool_calling` section in `ppxai-config.json` per model (2h)
 - [ ] **AGENTS.md influence** — model hints can set `tool_calling_mode: prompt_based` (2h)
@@ -124,19 +168,21 @@ else:
 
 ---
 
-## Goal 6: Provider Hierarchy Refactoring
+## Step 6: Grouped Tool Call UI
 
-`OpenAINativeProvider` and `GeminiProvider` are standalone classes with duck typing (`hasattr` guards). This works but is fragile.
+**Dependencies:** Step 4 (multi-tool support) — without processing all tool calls, there's nothing to group.
 
-- [ ] **Shared ABC or Protocol** — `OpenAINativeProvider` and `GeminiProvider` inherit from `BaseProvider` or `ProviderProtocol` (3h)
-- [ ] **Eliminate duplicate methods** — move `needs_tool`, `get_model_profile`, `_format_error`, `_log_error_traceback` to base (2h)
-- [ ] **Remove `hasattr` guards** — replace `hasattr(provider, 'get_capabilities_for_model')` in `chat.py` with guaranteed interface (1h)
-- [ ] **`get_capabilities_for_model` → profile** — replace with `get_model_profile()` as single source of truth (2h)
-- [ ] **Tests** — all providers pass shared interface compliance test (2h)
+- [ ] **Engine SSE events** — new `TOOL_GROUP_START` / `TOOL_GROUP_END` events wrapping multiple tool calls from a single iteration
+- [ ] **Web app** — render grouped tool calls in a single collapsible bubble (tool name + result per row)
+- [ ] **VSCode extension** — same grouped bubble in chat panel, collapsible with expand/collapse
+- [ ] **ppxaide TUI** — grouped tool calls in Textual Collapsible or vertical scroll
+- [ ] **ppxai Rich CLI** — compact grouped output with separator lines
 
 ---
 
-## Goal 7: Benchmark v2 — Remaining Items
+## Step 7: Benchmark v2 — Remaining Items
+
+**Dependencies:** None — can run in parallel with any step. Re-benchmark after Steps 2-4 to validate.
 
 Phase 1 (scoring distortions) is mostly done. Remaining:
 
@@ -156,18 +202,6 @@ Phase 1 (scoring distortions) is mostly done. Remaining:
 
 ### Validation
 - [ ] **Re-benchmark all models** — full v2 suite, validate ranking matches real-world matrix (manual)
-
----
-
-## Goal 9: Grouped Tool Call UI
-
-**Depends on:** Goal 3 (multi-tool support) — without processing all tool calls, there's nothing to group.
-
-- [ ] **Engine SSE events** — new `TOOL_GROUP_START` / `TOOL_GROUP_END` events wrapping multiple tool calls from a single iteration
-- [ ] **Web app** — render grouped tool calls in a single collapsible bubble (tool name + result per row)
-- [ ] **VSCode extension** — same grouped bubble in chat panel, collapsible with expand/collapse
-- [ ] **ppxaide TUI** — grouped tool calls in Textual Collapsible or vertical scroll
-- [ ] **ppxai Rich CLI** — compact grouped output with separator lines
 
 ---
 
@@ -208,15 +242,17 @@ Phase 1 (scoring distortions) is mostly done. Remaining:
 
 ## Success Criteria
 
-- [ ] Profile-driven routing replaces binary decision in `chat.py`
-- [ ] Proper `tool` role messages for native mode
-- [ ] Multi-tool support for models returning parallel calls
-- [ ] Config overrides for per-model `tool_calling` settings
-- [ ] `/model info` shows active profile
-- [x] `/ls` and `/tree` commands work in all clients
+- [ ] **Step 1:** Provider hierarchy — shared interface, no `hasattr` guards
+- [ ] **Step 2:** Profile-driven routing replaces binary decision in `chat.py`
+- [ ] **Step 3:** Proper `tool` role messages for native mode
+- [ ] **Step 4:** Multi-tool support for models returning parallel calls
+- [ ] **Step 5:** Config overrides for per-model `tool_calling` settings + `/model info`
+- [ ] **Step 6:** Grouped tool call UI in all clients
+- [ ] **Step 7:** Benchmark v2 agentic tests + efficiency metrics
 - [ ] No provider regressions (full benchmark suite)
 - [ ] Session migration from v1.15.x works seamlessly
 - [ ] All existing tests pass + 50+ new tests
+- [x] `/ls` and `/tree` commands work in all clients
 - [x] Session context reset on model switch (B1)
 - [x] Per-model iteration limit from ModelProfile (B2)
 - [x] Belt-and-suspenders prompt injection (B3)
@@ -225,10 +261,6 @@ Phase 1 (scoring distortions) is mostly done. Remaining:
 - [x] Partial credit scoring (A12/B9)
 - [x] Agent loop benchmarks: multi_file_review, claim_without_action, consecutive_tool_loop (B4-B6)
 - [x] time_to_first_tool_call benchmark (B8)
-- [ ] Benchmark v2: `patch_apply_verify` applies patches and verifies output
-- [ ] Benchmark v2: Phase 2 agentic tests (search_then_edit, test_fix_verify)
-- [ ] Benchmark v2: Efficiency metrics (tokens, cost)
-- [ ] Benchmark v2: Ranking matches real-world validation matrix
 
 ---
 
