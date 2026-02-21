@@ -57,7 +57,7 @@ ppxai-desktop
 **Linux Desktop Integration (v1.15.5):**
 Provides one-click launching of ppxai, ppxaide, and ppxai-desktop from your application menu (GNOME, KDE, etc.). Includes Ghostty terminal configuration for proper Ctrl+Enter support in ppxaide. See [desktop/README.md](desktop/README.md) for details.
 
-**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.15.5` (specific version), `-Uninstall`
+**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.15.6` (specific version), `-Uninstall`
 
 See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed installation options including Windows.
 
@@ -143,11 +143,11 @@ Asset cache busting (`?_t=<mtime>`) ensures CSS/JS/JSON changes are immediately 
 ### Multi-Provider Support
 - **Perplexity AI** - Real-time search with citations
 - **Google Gemini** - 3 Flash Preview (recommended), 2.5 Flash/Pro with 1M context, Google Search Grounding
-- **OpenAI** - GPT-4o, o1
+- **OpenAI** - GPT-5.x, GPT-4.1, Codex, o-series (dedicated `OpenAINativeProvider` with per-model routing)
 - **OpenRouter** - Claude, Llama, 100+ models
 - **Local** - Ollama, vLLM, llama.cpp
 
-Switch providers anytime: `/provider gemini` or `/model gpt-4o`
+Switch providers anytime: `/provider gemini` or `/model gpt-5.2`
 
 **Enhanced Gemini support (v1.12.5+):** Install `pip install ppxai[gemini]` for native Google Search Grounding with citations. **v1.13.3+:** Tools and grounding now work together—use file editing tools while keeping native web search with citations.
 
@@ -368,7 +368,8 @@ ppxai/
 │   │   ├── providers/          # AI provider implementations
 │   │   │   ├── base.py         # BaseProvider abstract class
 │   │   │   ├── perplexity.py   # Perplexity AI (native search)
-│   │   │   └── openai_compat.py# OpenAI-compatible (Gemini, OpenRouter, local)
+│   │   │   ├── openai_compat.py# OpenAI-compatible (Gemini, OpenRouter, local)
+│   │   │   └── openai_native.py# OpenAI dedicated (GPT-5.x, Codex, o-series)
 │   │   └── tools/              # AI tools system
 │   │       ├── manager.py      # ToolManager with provider filtering
 │   │       ├── base.py         # BaseTool abstract class
@@ -417,7 +418,7 @@ ppxai/
 │   ├── ppxai.png               # ppxai icon (CLI)
 │   ├── ppxaide-nobg.png        # ppxaide icon (TUI)
 │   └── [.ico|.icns files]      # Platform-specific icons
-├── tests/                      # 1236+ tests
+├── tests/                      # 1349+ tests
 │   ├── test_tui.py             # Textual TUI tests (180+ tests)
 │   ├── test_engine.py          # Engine layer tests
 │   ├── test_commands.py        # Command tests

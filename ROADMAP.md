@@ -488,7 +488,7 @@ ppxai/tui/                     # New module (Textual-based)
 | **highlight.js rebuild** | Added PowerShell, Dockerfile, DOS, AppleScript | ✅ Done |
 | **1,227 tests passing** | 34 preview + 16 SSL tests added | ✅ Done |
 
-**File Navigation:** Deferred to v1.16.0. See [TODO-v1.16.0.md](TODO-v1.16.0.md) for detailed spec.
+**File Navigation:** Deferred to v1.16.0. See [docs/TODO-v1.16.0.md](docs/TODO-v1.16.0.md) for detailed spec.
 
 ### v1.15.5 - Multi-Line Input & Escape Key Fix
 
@@ -567,7 +567,7 @@ ppxai/tui/                     # New module (Textual-based)
 
 **Status:** Planned
 **Effort:** 5 days
-**See:** `TODO-v1.16.0.md` Phase 1
+**See:** `docs/TODO-v1.16.0.md` Phase 1
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -580,7 +580,7 @@ ppxai/tui/                     # New module (Textual-based)
 
 **Status:** Planned
 **Effort:** 7 days
-**See:** `TODO-v1.16.0.md` Phase 2
+**See:** `docs/TODO-v1.16.0.md` Phase 2
 
 | Feature | Description | Status |
 |---------|-------------|--------|
