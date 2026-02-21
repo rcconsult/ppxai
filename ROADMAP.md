@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.15.6 (February 2026) | **Next**: v1.16.0 (Profile-Driven Tool Loop)
+> **Current Version**: v1.16.0-dev (February 2026) | Profile-Driven Tool Loop
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
