@@ -344,7 +344,8 @@ def save_session_usage(
     usage_by_model: Dict[str, Dict[str, Any]],
     total_cost: float,
     total_tokens: int,
-    message_count: int
+    message_count: int,
+    tool_calls: Dict[str, Dict[str, Any]] = None
 ):
     """Convenience function to save session usage."""
     get_usage_storage().save_session_usage(
@@ -354,7 +355,8 @@ def save_session_usage(
         usage_by_model=usage_by_model,
         total_cost=total_cost,
         total_tokens=total_tokens,
-        message_count=message_count
+        message_count=message_count,
+        tool_calls=tool_calls,
     )
 
 

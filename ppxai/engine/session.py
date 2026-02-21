@@ -218,6 +218,10 @@ class SessionManager:
         Used when switching models to prevent context pollution from
         the previous model's responses.
 
+        After stripping, validates message alternation to ensure the
+        resulting sequence is valid for APIs that require strict
+        user/assistant alternation (e.g., Perplexity).
+
         Returns:
             Count of removed messages.
         """
@@ -230,6 +234,13 @@ class SessionManager:
                 f"Model switch: removed {removed} assistant/tool messages, "
                 f"kept {len(self.messages)} user messages"
             )
+
+        # Fix alternation: stripping assistant messages leaves consecutive
+        # user messages which violates API requirements (e.g., Perplexity)
+        alternation_fixed = self.validate_and_fix_alternation()
+        if alternation_fixed:
+            removed += alternation_fixed
+
         return removed
 
     def clear(self):
@@ -282,7 +293,7 @@ class SessionManager:
             model_usage.total_tokens += usage.total_tokens
             model_usage.estimated_cost += usage.estimated_cost
 
-        # Merge tool usage
+        # Merge tool usage and add tool costs to session total (v1.16.0)
         for tool_name, tool_usage in usage.tool_calls.items():
             if tool_name not in self.usage.tool_calls:
                 from .types import ToolUsage
@@ -291,6 +302,8 @@ class SessionManager:
             self.usage.tool_calls[tool_name].tokens_in += tool_usage.tokens_in
             self.usage.tool_calls[tool_name].tokens_out += tool_usage.tokens_out
             self.usage.tool_calls[tool_name].estimated_cost += tool_usage.estimated_cost
+            # Tool costs contribute to session total
+            self.usage.estimated_cost += tool_usage.estimated_cost
 
     def get_usage(self) -> Dict[str, Any]:
         """Get usage statistics.
@@ -645,6 +658,17 @@ class SessionManager:
         except ValueError:
             started_at = datetime.now()
 
+        # Convert tool usage to dict format for persistence (v1.16.0)
+        tool_calls = {}
+        for tool_name, tool_usage in self.usage.tool_calls.items():
+            tool_calls[tool_name] = {
+                "call_count": tool_usage.call_count,
+                "tokens_in": tool_usage.tokens_in,
+                "tokens_out": tool_usage.tokens_out,
+                "estimated_cost": tool_usage.estimated_cost,
+                "provider": tool_usage.provider,
+            }
+
         save_session_usage(
             session_id=self.session_name,
             started_at=started_at,
@@ -652,7 +676,8 @@ class SessionManager:
             usage_by_model=usage_by_model,
             total_cost=self.usage.estimated_cost,
             total_tokens=self.usage.total_tokens,
-            message_count=len(self.messages)
+            message_count=len(self.messages),
+            tool_calls=tool_calls,
         )
 
     # =========================================================================

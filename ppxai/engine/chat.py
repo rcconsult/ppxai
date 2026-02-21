@@ -407,10 +407,21 @@ async def chat_with_tools(
                 result = await tool_task
 
                 # v1.15.2: Determine if tool succeeded based on result content
-                tool_success = not any(
-                    indicator in result.lower()
-                    for indicator in ['error:', 'not found', 'failed', 'does not exist', 'permission denied']
-                )
+                # Read-only tools: check for explicit tool error prefix only,
+                # because their result IS the file/directory content which may
+                # contain error-like strings in source code (e.g., error handling)
+                _READ_ONLY_TOOLS = {
+                    'read_file', 'display_file', 'list_directory',
+                    'search_files', 'get_working_directory',
+                }
+                if tool_name in _READ_ONLY_TOOLS:
+                    tool_success = not result.startswith(('Error:', 'Error '))
+                else:
+                    tool_success = not any(
+                        indicator in result.lower()
+                        for indicator in ['error:', 'not found', 'failed',
+                                          'does not exist', 'permission denied']
+                    )
 
                 # v1.15.2: Record tool call for validation
                 validator.record_tool_call(
@@ -609,9 +620,21 @@ async def chat_with_tools(
             if commit_hash:
                 yield Event(EventType.STATUS, f"✓ Changes committed: {commit_hash[:8]}")
 
+            # Transfer tool usage from context to accumulated_usage (v1.16.0)
+            if hasattr(ctx, '_current_tool_usage') and ctx._current_tool_usage:
+                for t_name, t_usage in ctx._current_tool_usage.items():
+                    if t_name not in accumulated_usage.tool_calls:
+                        accumulated_usage.tool_calls[t_name] = t_usage
+                    else:
+                        existing = accumulated_usage.tool_calls[t_name]
+                        existing.call_count += t_usage.call_count
+                        existing.tokens_in += t_usage.tokens_in
+                        existing.tokens_out += t_usage.tokens_out
+                        existing.estimated_cost += t_usage.estimated_cost
+
             # Calculate final cost
             metadata = None
-            if accumulated_usage.total_tokens > 0:
+            if accumulated_usage.total_tokens > 0 or accumulated_usage.tool_calls:
                 accumulated_usage.estimated_cost = calculate_cost(
                     accumulated_usage.prompt_tokens,
                     accumulated_usage.completion_tokens,
@@ -624,7 +647,27 @@ async def chat_with_tools(
             yield Event(EventType.STREAM_END, full_response, metadata)
             return
 
-    # Max iterations reached
+    # Max iterations reached — still persist usage collected so far (v1.16.0)
+    if hasattr(ctx, '_current_tool_usage') and ctx._current_tool_usage:
+        for t_name, t_usage in ctx._current_tool_usage.items():
+            if t_name not in accumulated_usage.tool_calls:
+                accumulated_usage.tool_calls[t_name] = t_usage
+            else:
+                existing = accumulated_usage.tool_calls[t_name]
+                existing.call_count += t_usage.call_count
+                existing.tokens_in += t_usage.tokens_in
+                existing.tokens_out += t_usage.tokens_out
+                existing.estimated_cost += t_usage.estimated_cost
+
+    if accumulated_usage.total_tokens > 0 or accumulated_usage.tool_calls:
+        accumulated_usage.estimated_cost = calculate_cost(
+            accumulated_usage.prompt_tokens,
+            accumulated_usage.completion_tokens,
+            ctx.model,
+            ctx.provider_name
+        )
+        ctx.session.update_usage(accumulated_usage, ctx.provider_name, ctx.model)
+
     yield Event(EventType.INFO, "Maximum tool iterations reached")
     ctx.session.add_message(Message(
         "assistant",

@@ -8,15 +8,60 @@ All tools check for user consent before modifying files.
 import difflib
 import os
 import re
+import sys
+import time
 import unicodedata
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Dict, Any
 
 from ..base import BaseTool
 
+
+def _atomic_replace(temp_path: Path, target_path: Path, max_retries: int = 3):
+    """Replace target with temp file, retrying on Windows file lock errors.
+
+    On Windows, os.replace() fails with [WinError 5] Access is denied when
+    the target file has an open handle (e.g., antivirus scanner, file watcher,
+    preview server). This helper retries with short backoff to handle
+    transient locks.
+
+    Args:
+        temp_path: Path to the temp file containing new content.
+        target_path: Path to the file to replace.
+        max_retries: Number of attempts before giving up.
+
+    Raises:
+        PermissionError: If all retries are exhausted.
+    """
+    for attempt in range(max_retries):
+        try:
+            temp_path.replace(target_path)
+            return
+        except PermissionError:
+            if sys.platform == 'win32' and attempt < max_retries - 1:
+                time.sleep(0.1 * (attempt + 1))  # 100ms, 200ms
+            else:
+                # Clean up orphaned temp file before re-raising
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+                raise
+
 if TYPE_CHECKING:
     from ...client import EngineClient
     from ..manager import ToolManager
+
+
+def _register_checkpoint_file(engine: 'EngineClient', path: Path):
+    """Register a file with the checkpoint manager before editing.
+
+    This ensures file-based checkpoints capture the original content
+    for undo/rollback support during agent mode.
+    """
+    mgr = getattr(engine, '_checkpoint_manager', None)
+    if mgr is not None:
+        mgr.register_file(path)
 
 
 class ApplyPatchTool(BaseTool):
@@ -95,8 +140,8 @@ class ApplyPatchTool(BaseTool):
             elif not path.is_file():
                 return f"Error: Not a file: {file_path}"
             else:
-                # Read current content
-                with open(path, 'r', encoding='utf-8') as f:
+                # Read current content (utf-8-sig strips BOM transparently)
+                with open(path, 'r', encoding='utf-8-sig') as f:
                     original_lines = f.readlines()
                 # Backup original content for rollback
                 backup_content = ''.join(original_lines)
@@ -119,13 +164,16 @@ class ApplyPatchTool(BaseTool):
                         f"Try using write_file tool to overwrite the file directly."
                     )
 
+                # Register with checkpoint manager before writing
+                _register_checkpoint_file(self.engine, path)
+
                 # Write atomically (write to temp, then rename)
                 temp_path = path.with_suffix(path.suffix + '.tmp')
                 with open(temp_path, 'w', encoding='utf-8') as f:
                     f.writelines(new_lines)
 
                 # Replace original file
-                temp_path.replace(path)
+                _atomic_replace(temp_path, path)
 
                 # Track edited file for agent auto-commit
                 self.engine._agent_edited_files.add(str(path))
@@ -223,8 +271,8 @@ class ReplaceBlockTool(BaseTool):
             if not path.is_file():
                 return f"Error: Not a file: {file_path}"
 
-            # Read current content
-            with open(path, 'r', encoding='utf-8') as f:
+            # Read current content (utf-8-sig strips BOM transparently)
+            with open(path, 'r', encoding='utf-8-sig') as f:
                 content = f.read()
 
             # Backup original
@@ -246,12 +294,15 @@ class ReplaceBlockTool(BaseTool):
                 # Perform replacement
                 new_content = content.replace(search, replace, 1)
 
+                # Register with checkpoint manager before writing
+                _register_checkpoint_file(self.engine, path)
+
                 # Write atomically
                 temp_path = path.with_suffix(path.suffix + '.tmp')
                 with open(temp_path, 'w', encoding='utf-8') as f:
                     f.write(new_content)
 
-                temp_path.replace(path)
+                _atomic_replace(temp_path, path)
 
                 lines_added = replace.count('\n') - search.count('\n')
                 # Track edited file for agent auto-commit
@@ -340,8 +391,8 @@ class InsertTextTool(BaseTool):
             elif not path.is_file():
                 return f"Error: Not a file: {file_path}"
             else:
-                # Read current content
-                with open(path, 'r', encoding='utf-8') as f:
+                # Read current content (utf-8-sig strips BOM transparently)
+                with open(path, 'r', encoding='utf-8-sig') as f:
                     lines = f.readlines()
                 # Backup original
                 backup_content = ''.join(lines)
@@ -361,12 +412,15 @@ class InsertTextTool(BaseTool):
                 # Insert text
                 lines.insert(insert_idx, text)
 
+                # Register with checkpoint manager before writing
+                _register_checkpoint_file(self.engine, path)
+
                 # Write atomically
                 temp_path = path.with_suffix(path.suffix + '.tmp')
                 with open(temp_path, 'w', encoding='utf-8') as f:
                     f.writelines(lines)
 
-                temp_path.replace(path)
+                _atomic_replace(temp_path, path)
 
                 num_lines = text.count('\n') + (0 if text.endswith('\n') else 1)
                 end_line = line_number + num_lines - 1
@@ -461,8 +515,8 @@ class DeleteLinesTool(BaseTool):
             if not path.is_file():
                 return f"Error: Not a file: {file_path}"
 
-            # Read current content
-            with open(path, 'r', encoding='utf-8') as f:
+            # Read current content (utf-8-sig strips BOM transparently)
+            with open(path, 'r', encoding='utf-8-sig') as f:
                 lines = f.readlines()
 
             # Backup original
@@ -486,12 +540,15 @@ class DeleteLinesTool(BaseTool):
                 # Delete lines
                 new_lines = lines[:start_idx] + lines[end_idx:]
 
+                # Register with checkpoint manager before writing
+                _register_checkpoint_file(self.engine, path)
+
                 # Write atomically
                 temp_path = path.with_suffix(path.suffix + '.tmp')
                 with open(temp_path, 'w', encoding='utf-8') as f:
                     f.writelines(new_lines)
 
-                temp_path.replace(path)
+                _atomic_replace(temp_path, path)
 
                 num_deleted = end_line - start_line + 1
                 preview = deleted_content[:100] + "..." if len(deleted_content) > 100 else deleted_content

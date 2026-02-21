@@ -118,6 +118,36 @@ class TestSuccessAfterFailure:
         error_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_CONTRADICTS_RESULT]
         assert len(error_warnings) >= 1
 
+    def test_no_false_positive_for_read_file_with_error_content(self):
+        """No contradiction when read_file returns source code with error-like strings.
+
+        Bug fix: read_file result IS file content. Source code containing
+        'Error:', 'not found', etc. in error handling must not be treated
+        as a tool failure.
+        """
+        validator = ResponseValidator()
+        # read_file succeeded - content happens to contain error-like strings
+        validator.record_tool_call(
+            tool_name="read_file",
+            arguments={"filepath": "script.js"},
+            result='class App {\n    console.error("Could not load:", error);\n    if (notFound) return;\n}',
+            success=True,  # With fix, read-only tools use prefix-based success
+            iteration=1
+        )
+        validator.record_tool_call(
+            tool_name="apply_patch",
+            arguments={"file_path": "script.js"},
+            result="✓ Successfully applied patch to script.js",
+            success=True,
+            iteration=2
+        )
+
+        response = "I've fixed the critical errors in script.js."
+        warnings = validator.validate_response(response)
+
+        contradiction_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_CONTRADICTS_RESULT]
+        assert len(contradiction_warnings) == 0
+
 
 class TestFileClaimsWithoutTools:
     """Tests for detecting file creation claims without tool calls."""
@@ -446,3 +476,163 @@ class TestGetSummary:
         assert "write_file" in summary
         assert "✓" in summary  # Success indicator
         assert "✗" in summary  # Failure indicator
+
+
+class TestPatchClaimsWithoutTools:
+    """Tests for detecting patch/update claims without tool calls (v1.16.0).
+
+    Reproduces the codex-mini hallucination pattern where the model says
+    "Applied patches to index.html and styles.css" without calling apply_patch.
+    """
+
+    def test_detects_applied_patches_claim(self):
+        """Model claims 'Applied patches to X' but no apply_patch was called."""
+        validator = ResponseValidator()
+        # Only read operations — no writes
+        validator.record_tool_call("read_file", {"filepath": "script.js"}, "content", True, 1)
+        validator.record_tool_call("read_file", {"filepath": "index.html"}, "content", True, 2)
+
+        response = "Applied patches to both `index.html` and `styles.css` to support the Matrix animation overlay."
+        warnings = validator.validate_response(response)
+
+        claim_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_WITHOUT_ACTION]
+        assert len(claim_warnings) >= 1
+        assert "modified" in claim_warnings[0].message.lower() or "write tool" in claim_warnings[0].details.lower()
+
+    def test_detects_updated_file_claim(self):
+        """Model claims 'I have updated script.js' but no write tool was called."""
+        validator = ResponseValidator()
+        validator.record_tool_call("read_file", {"filepath": "script.js"}, "content", True, 1)
+
+        response = "I have updated `script.js` so delete buttons are wired via JavaScript callbacks."
+        warnings = validator.validate_response(response)
+
+        claim_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_WITHOUT_ACTION]
+        assert len(claim_warnings) >= 1
+
+    def test_detects_modified_file_claim(self):
+        """Model claims to have modified a file without tools."""
+        validator = ResponseValidator()
+
+        response = "I've modified `styles.css` to fix the z-index issue."
+        warnings = validator.validate_response(response)
+
+        claim_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_WITHOUT_ACTION]
+        assert len(claim_warnings) >= 1
+
+    def test_detects_fixed_file_claim(self):
+        """Model claims to have fixed a file without tools."""
+        validator = ResponseValidator()
+
+        response = "Fixed `app.js` to handle the toggle correctly."
+        warnings = validator.validate_response(response)
+
+        claim_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_WITHOUT_ACTION]
+        assert len(claim_warnings) >= 1
+
+    def test_no_warning_when_apply_patch_was_called(self):
+        """No warning when apply_patch was actually called for the file."""
+        validator = ResponseValidator()
+        validator.record_tool_call(
+            "apply_patch",
+            {"file_path": "styles.css"},
+            "✓ Successfully applied patch to styles.css",
+            True,
+            iteration=1
+        )
+
+        response = "Applied patches to `styles.css` to fix the z-index."
+        warnings = validator.validate_response(response)
+
+        claim_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_WITHOUT_ACTION]
+        assert len(claim_warnings) == 0
+
+    def test_no_warning_when_write_file_was_called(self):
+        """No warning when write_file was called for the file."""
+        validator = ResponseValidator()
+        validator.record_tool_call(
+            "write_file",
+            {"file_path": "index.html"},
+            "✓ File written",
+            True,
+            iteration=1
+        )
+
+        response = "I've updated `index.html` with the new toggle button."
+        warnings = validator.validate_response(response)
+
+        claim_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_WITHOUT_ACTION]
+        assert len(claim_warnings) == 0
+
+    def test_no_false_positive_on_discussion(self):
+        """No warning when model discusses changes without claiming to have made them."""
+        validator = ResponseValidator()
+
+        response = "I can update `styles.css` to fix the z-index. Want me to proceed?"
+        warnings = validator.validate_response(response)
+
+        claim_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_WITHOUT_ACTION]
+        assert len(claim_warnings) == 0
+
+
+class TestWrongFileClaimDetection:
+    """Tests for detecting claims about a file that wasn't actually modified."""
+
+    def test_warns_when_wrong_file_claimed(self):
+        """Warning when model claims to have fixed file X but only wrote to file Y."""
+        validator = ResponseValidator()
+        validator.record_tool_call(
+            tool_name="apply_patch",
+            arguments={"file_path": "index.html"},
+            result="✓ Successfully applied patch to index.html",
+            success=True,
+            iteration=1
+        )
+
+        response = "I've fixed script.js to resolve the syntax errors."
+        warnings = validator.validate_response(response)
+
+        claim_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_WITHOUT_ACTION]
+        assert len(claim_warnings) >= 1
+        assert "script.js" in claim_warnings[0].message
+
+    def test_no_warning_when_correct_file_claimed(self):
+        """No warning when the claimed file matches the written file."""
+        validator = ResponseValidator()
+        validator.record_tool_call(
+            tool_name="apply_patch",
+            arguments={"file_path": "script.js"},
+            result="✓ Successfully applied patch to script.js",
+            success=True,
+            iteration=1
+        )
+
+        response = "I've fixed script.js to resolve the syntax errors."
+        warnings = validator.validate_response(response)
+
+        claim_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_WITHOUT_ACTION]
+        assert len(claim_warnings) == 0
+
+    def test_no_warning_when_multiple_files_written(self):
+        """No warning when the claimed file is among multiple written files."""
+        validator = ResponseValidator()
+        validator.record_tool_call(
+            tool_name="apply_patch",
+            arguments={"file_path": "index.html"},
+            result="✓ Successfully applied patch to index.html",
+            success=True,
+            iteration=1
+        )
+        validator.record_tool_call(
+            tool_name="replace_block",
+            arguments={"file_path": "script.js"},
+            result="✓ Successfully replaced block in script.js",
+            success=True,
+            iteration=2
+        )
+
+        response = "I've updated script.js with the Iron Man theme toggle."
+        warnings = validator.validate_response(response)
+
+        claim_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_WITHOUT_ACTION]
+        assert len(claim_warnings) == 0

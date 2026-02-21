@@ -1058,5 +1058,285 @@ class TestUnicodeWhitespaceNormalization:
             temp_path.unlink()
 
 
+class TestAtomicReplaceRetry:
+    """Tests for _atomic_replace retry logic on Windows file lock errors."""
+
+    def test_succeeds_on_first_attempt(self, tmp_path):
+        """Normal case: replace succeeds on first try."""
+        from ppxai.engine.tools.builtin.editor import _atomic_replace
+
+        target = tmp_path / "target.txt"
+        target.write_text("old content")
+
+        temp = tmp_path / "target.txt.tmp"
+        temp.write_text("new content")
+
+        _atomic_replace(temp, target)
+
+        assert target.read_text() == "new content"
+        assert not temp.exists()
+
+    def test_retries_on_permission_error(self, tmp_path):
+        """Retries on PermissionError and succeeds on subsequent attempt."""
+        from ppxai.engine.tools.builtin.editor import _atomic_replace
+
+        target = tmp_path / "target.txt"
+        target.write_text("old content")
+
+        temp = tmp_path / "target.txt.tmp"
+        temp.write_text("new content")
+
+        call_count = 0
+        original_replace = Path.replace
+
+        def mock_replace(self_path, target_path):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise PermissionError("[WinError 5] Access is denied")
+            return original_replace(self_path, target_path)
+
+        with patch.object(Path, 'replace', mock_replace):
+            with patch('ppxai.engine.tools.builtin.editor.sys') as mock_sys:
+                mock_sys.platform = 'win32'
+                _atomic_replace(temp, target)
+
+        assert target.read_text() == "new content"
+        assert call_count == 2
+
+    def test_raises_after_max_retries(self, tmp_path):
+        """Raises PermissionError after exhausting all retries."""
+        from ppxai.engine.tools.builtin.editor import _atomic_replace
+
+        target = tmp_path / "target.txt"
+        target.write_text("old content")
+
+        temp = tmp_path / "target.txt.tmp"
+        temp.write_text("new content")
+
+        def always_fail(self_path, target_path):
+            raise PermissionError("[WinError 5] Access is denied")
+
+        with patch.object(Path, 'replace', always_fail):
+            with patch('ppxai.engine.tools.builtin.editor.sys') as mock_sys:
+                mock_sys.platform = 'win32'
+                with pytest.raises(PermissionError):
+                    _atomic_replace(temp, target)
+
+        # Temp file should be cleaned up on failure
+        assert not temp.exists()
+
+    def test_no_retry_on_non_windows(self, tmp_path):
+        """On non-Windows, PermissionError is raised immediately without retry."""
+        from ppxai.engine.tools.builtin.editor import _atomic_replace
+
+        target = tmp_path / "target.txt"
+        target.write_text("old content")
+
+        temp = tmp_path / "target.txt.tmp"
+        temp.write_text("new content")
+
+        call_count = 0
+
+        def always_fail(self_path, target_path):
+            nonlocal call_count
+            call_count += 1
+            raise PermissionError("Permission denied")
+
+        with patch.object(Path, 'replace', always_fail):
+            with patch('ppxai.engine.tools.builtin.editor.sys') as mock_sys:
+                mock_sys.platform = 'linux'
+                with pytest.raises(PermissionError):
+                    _atomic_replace(temp, target)
+
+        assert call_count == 1  # No retry on Linux
+
+
+class TestBOMHandling:
+    """Tests for BOM (Byte Order Mark) handling in editor tools (v1.16.0).
+
+    PowerShell's Set-Content -Encoding UTF8 adds a BOM (\\ufeff) prefix.
+    Editor tools must strip BOM when reading so that search/replace
+    operations work without models having to account for invisible characters.
+    """
+
+    @pytest.fixture
+    def bom_file(self, tmp_path):
+        """Create a file with UTF-8 BOM prefix."""
+        path = tmp_path / "bom_test.css"
+        # Write with explicit BOM byte
+        path.write_bytes(b'\xef\xbb\xbf/* Spider-Man Theme */\nbody { color: red; }\n')
+        return path
+
+    @pytest.fixture
+    def engine(self):
+        """Create engine with auto-consent."""
+        engine = EngineClient(consent_callback=AsyncMock(return_value=(True, 'y')))
+        return engine
+
+    @pytest.mark.asyncio
+    async def test_replace_block_ignores_bom(self, bom_file, engine):
+        """replace_block should find text even when file has BOM prefix."""
+        engine._working_dir = str(bom_file.parent)
+        tool = ReplaceBlockTool(engine)
+        result = await tool.execute(
+            file_path=str(bom_file),
+            search="/* Spider-Man Theme */",
+            replace="/* Maverick Theme */",
+        )
+        assert "Successfully replaced" in result
+        # Verify BOM is NOT reintroduced in the output
+        content = bom_file.read_bytes()
+        assert not content.startswith(b'\xef\xbb\xbf')
+        assert b"Maverick Theme" in content
+
+    @pytest.mark.asyncio
+    async def test_apply_patch_ignores_bom(self, bom_file, engine):
+        """apply_patch should work on files with BOM prefix."""
+        engine._working_dir = str(bom_file.parent)
+        tool = ApplyPatchTool(engine)
+        diff = (
+            "*** Begin Patch ***\n"
+            "--- a/bom_test.css\n"
+            "+++ b/bom_test.css\n"
+            "@@ -1,2 +1,2 @@\n"
+            "-/* Spider-Man Theme */\n"
+            "+/* Top Gun Theme */\n"
+            " body { color: red; }\n"
+            "*** End Patch ***\n"
+        )
+        result = await tool.execute(file_path=str(bom_file), unified_diff=diff)
+        assert "Successfully applied" in result
+        content = bom_file.read_text(encoding='utf-8')
+        assert "Top Gun Theme" in content
+
+    @pytest.mark.asyncio
+    async def test_insert_text_ignores_bom(self, bom_file, engine):
+        """insert_text should work on files with BOM prefix."""
+        engine._working_dir = str(bom_file.parent)
+        tool = InsertTextTool(engine)
+        result = await tool.execute(
+            file_path=str(bom_file),
+            line_number=1,
+            text="/* Added line */\n",
+        )
+        assert "Successfully inserted" in result
+
+    @pytest.mark.asyncio
+    async def test_delete_lines_ignores_bom(self, bom_file, engine):
+        """delete_lines should work on files with BOM prefix."""
+        engine._working_dir = str(bom_file.parent)
+        tool = DeleteLinesTool(engine)
+        result = await tool.execute(
+            file_path=str(bom_file),
+            start_line=1,
+            end_line=1,
+        )
+        assert "Successfully deleted" in result
+        content = bom_file.read_text(encoding='utf-8')
+        assert "Spider-Man" not in content
+
+    @pytest.mark.asyncio
+    async def test_read_file_strips_bom(self, bom_file):
+        """read_file should return content without BOM character."""
+        from ppxai.engine.tools.builtin.filesystem import ReadFileTool
+        engine = EngineClient(consent_callback=AsyncMock(return_value=(True, 'y')))
+        engine._working_dir = str(bom_file.parent)
+        tool = ReadFileTool(engine)
+        result = await tool.execute(filepath=str(bom_file))
+        # BOM should NOT appear in returned content
+        assert not result.startswith('\ufeff')
+        assert result.startswith("/* Spider-Man Theme */")
+
+
+class TestCheckpointRegistration:
+    """Tests for checkpoint file registration from editor tools (v1.16.0).
+
+    Editor tools should call register_file() on the checkpoint manager
+    before writing, so file-based checkpoints capture original content.
+    """
+
+    @pytest.fixture
+    def engine_with_checkpoint(self, tmp_path):
+        """Create engine with a mock checkpoint manager."""
+        engine = EngineClient(consent_callback=AsyncMock(return_value=(True, 'y')))
+        engine._working_dir = str(tmp_path)
+
+        # Create mock checkpoint manager
+        mock_mgr = MagicMock()
+        mock_mgr.register_file = MagicMock()
+        engine._checkpoint_manager = mock_mgr
+        return engine, mock_mgr
+
+    @pytest.mark.asyncio
+    async def test_replace_block_registers_file(self, tmp_path, engine_with_checkpoint):
+        """replace_block calls register_file before writing."""
+        engine, mock_mgr = engine_with_checkpoint
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("hello world\n")
+
+        tool = ReplaceBlockTool(engine)
+        await tool.execute(file_path=str(test_file), search="hello", replace="goodbye")
+        mock_mgr.register_file.assert_called_once_with(test_file)
+
+    @pytest.mark.asyncio
+    async def test_apply_patch_registers_file(self, tmp_path, engine_with_checkpoint):
+        """apply_patch calls register_file before writing."""
+        engine, mock_mgr = engine_with_checkpoint
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("line 1\n")
+
+        tool = ApplyPatchTool(engine)
+        diff = (
+            "*** Begin Patch ***\n"
+            "--- a/test.txt\n"
+            "+++ b/test.txt\n"
+            "@@ -1 +1 @@\n"
+            "-line 1\n"
+            "+line 2\n"
+            "*** End Patch ***\n"
+        )
+        await tool.execute(file_path=str(test_file), unified_diff=diff)
+        mock_mgr.register_file.assert_called_once_with(test_file)
+
+    @pytest.mark.asyncio
+    async def test_insert_text_registers_file(self, tmp_path, engine_with_checkpoint):
+        """insert_text calls register_file before writing."""
+        engine, mock_mgr = engine_with_checkpoint
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("existing\n")
+
+        tool = InsertTextTool(engine)
+        await tool.execute(file_path=str(test_file), line_number=1, text="new line\n")
+        mock_mgr.register_file.assert_called_once_with(test_file)
+
+    @pytest.mark.asyncio
+    async def test_delete_lines_registers_file(self, tmp_path, engine_with_checkpoint):
+        """delete_lines calls register_file before writing."""
+        engine, mock_mgr = engine_with_checkpoint
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("line 1\nline 2\n")
+
+        tool = DeleteLinesTool(engine)
+        await tool.execute(file_path=str(test_file), start_line=1, end_line=1)
+        mock_mgr.register_file.assert_called_once_with(test_file)
+
+    @pytest.mark.asyncio
+    async def test_no_checkpoint_manager_no_error(self, tmp_path):
+        """Editor tools work fine when checkpoint manager is None."""
+        engine = EngineClient(consent_callback=AsyncMock(return_value=(True, 'y')))
+        engine._working_dir = str(tmp_path)
+        engine._checkpoint_manager = None
+
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("hello world\n")
+
+        tool = ReplaceBlockTool(engine)
+        result = await tool.execute(
+            file_path=str(test_file), search="hello", replace="goodbye"
+        )
+        assert "Successfully replaced" in result
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

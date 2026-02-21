@@ -202,7 +202,7 @@ class ResponseValidator:
         if contradiction_warning:
             warnings.append(contradiction_warning)
 
-        # Check for file creation claims without tool calls
+        # Check for file creation/modification claims without tool calls
         file_warning = self._check_file_claims_without_tools(response_text)
         if file_warning:
             warnings.append(file_warning)
@@ -267,18 +267,27 @@ class ResponseValidator:
         return None
 
     def _check_file_claims_without_tools(self, response: str) -> Optional[ValidationWarning]:
-        """Check if model claims to have created/written a file without using appropriate tools."""
-        # Pattern to detect file creation claims
-        file_creation_patterns = [
+        """Check if model claims to have created/written/patched a file without using appropriate tools."""
+        # Pattern to detect file creation or modification claims
+        file_modification_patterns = [
+            # Creation claims: "created styles.css", "written the file `app.js`"
             r"(?:created|written|saved|generated)\s+(?:the\s+)?(?:file\s+)?[`\"']?([^\s`\"']+\.\w{1,5})[`\"']?",
             r"[`\"']([^\s`\"']+\.\w{1,5})[`\"']?\s+(?:has been|is now|was)\s+(?:created|written|saved)",
             r"saved (?:to|as|in) [`\"']?([^\s`\"']+\.\w{1,5})[`\"']?",
+            # Patch/update claims: "Applied patches to index.html", "updated `script.js`"
+            r"(?:applied|patched|updated|modified|changed|fixed)\s+(?:patches?\s+to\s+)?(?:both\s+)?[`\"']?([^\s`\"',]+\.\w{1,5})[`\"']?",
+            r"I (?:have |'ve )?(?:applied|patched|updated|modified|changed|fixed)\s+[`\"']?([^\s`\"']+\.\w{1,5})[`\"']?",
+            r"[`\"']([^\s`\"']+\.\w{1,5})[`\"']?\s+(?:has been|is now|was)\s+(?:updated|patched|modified|fixed|changed)",
         ]
 
-        for pattern in file_creation_patterns:
+        for pattern in file_modification_patterns:
             match = re.search(pattern, response, re.IGNORECASE)
             if match:
                 claimed_file = match.group(1)
+
+                # Skip false positives from common non-file words
+                if claimed_file.lower() in ('the', 'a', 'an', 'to', 'in', 'on', 'is', 'it'):
+                    continue
 
                 # Check if any write tool was called for this file
                 if not self._was_file_written(claimed_file):
@@ -288,13 +297,22 @@ class ResponseValidator:
                         if r.tool_name in self.FILE_WRITE_TOOLS
                     ]
 
-                    if not write_tools_called:
+                    if write_tools_called:
+                        # Write tools were used, but not for this specific file
                         return ValidationWarning(
                             result=ValidationResult.CLAIM_WITHOUT_ACTION,
                             severity="warning",
-                            message=f"Model claims to have created '{claimed_file}' but no write tool was called",
-                            details="No file write operations were performed",
-                            suggested_action="Use write_file or apply_patch to actually create the file"
+                            message=f"Model claims to have modified '{claimed_file}' but no write tool targeted it",
+                            details="Write tools were used for other files",
+                            suggested_action="Verify the claimed file was actually modified"
+                        )
+                    else:
+                        return ValidationWarning(
+                            result=ValidationResult.CLAIM_WITHOUT_ACTION,
+                            severity="warning",
+                            message=f"Model claims to have modified '{claimed_file}' but no write tool was called",
+                            details="No file write operations (write_file, apply_patch) were performed",
+                            suggested_action="Use write_file or apply_patch to actually modify the file"
                         )
 
         return None

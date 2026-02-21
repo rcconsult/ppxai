@@ -276,3 +276,139 @@ class TestToolUsageIntegration:
 
         assert stats.tool_calls["web_search"].provider == "gemini"
         assert stats.tool_calls["web_search"].estimated_cost == pytest.approx(0.014)
+
+
+class TestSessionToolUsageIntegration:
+    """Tests for SessionManager.update_usage() with tool_calls (v1.16.0 fix)."""
+
+    def test_update_usage_merges_tool_calls_into_session(self, tmp_path):
+        """Test that tool_calls in UsageStats are merged into session totals."""
+        from ppxai.engine.session import SessionManager
+
+        session = SessionManager(sessions_dir=tmp_path / "sessions")
+
+        usage = UsageStats(
+            prompt_tokens=500,
+            completion_tokens=1000,
+            total_tokens=1500,
+            estimated_cost=0.02,
+        )
+        usage.tool_calls["web_search"] = ToolUsage(
+            call_count=1,
+            tokens_in=100,
+            tokens_out=200,
+            estimated_cost=0.0006,
+            provider="perplexity",
+        )
+
+        session.update_usage(usage, "gemini", "gemini-2.5-flash")
+
+        # Tool usage should be in session.usage.tool_calls
+        assert "web_search" in session.usage.tool_calls
+        assert session.usage.tool_calls["web_search"].call_count == 1
+        assert session.usage.tool_calls["web_search"].tokens_in == 100
+        assert session.usage.tool_calls["web_search"].estimated_cost == pytest.approx(0.0006)
+
+        # Tool cost should be added to session total
+        assert session.usage.estimated_cost == pytest.approx(0.02 + 0.0006)
+
+    def test_update_usage_accumulates_tool_calls_across_iterations(self, tmp_path):
+        """Test that multiple tool calls accumulate correctly."""
+        from ppxai.engine.session import SessionManager
+
+        session = SessionManager(sessions_dir=tmp_path / "sessions")
+
+        # First iteration: 1 web search
+        usage1 = UsageStats(prompt_tokens=500, completion_tokens=1000,
+                            total_tokens=1500, estimated_cost=0.02)
+        usage1.tool_calls["web_search"] = ToolUsage(
+            call_count=1, tokens_in=100, tokens_out=200,
+            estimated_cost=0.0006, provider="perplexity",
+        )
+        session.update_usage(usage1, "gemini", "gemini-2.5-flash")
+
+        # Second iteration: 2 more web searches
+        usage2 = UsageStats(prompt_tokens=300, completion_tokens=500,
+                            total_tokens=800, estimated_cost=0.01)
+        usage2.tool_calls["web_search"] = ToolUsage(
+            call_count=2, tokens_in=250, tokens_out=400,
+            estimated_cost=0.0013, provider="perplexity",
+        )
+        session.update_usage(usage2, "gemini", "gemini-2.5-flash")
+
+        # Accumulated: 3 calls, merged tokens/cost
+        ws = session.usage.tool_calls["web_search"]
+        assert ws.call_count == 3
+        assert ws.tokens_in == 350
+        assert ws.tokens_out == 600
+        assert ws.estimated_cost == pytest.approx(0.0019)
+
+        # Session total includes both model cost and tool cost
+        assert session.usage.estimated_cost == pytest.approx(0.02 + 0.0006 + 0.01 + 0.0013)
+
+    def test_save_usage_to_persistent_storage_includes_tool_calls(self, tmp_path):
+        """Test that save_usage_to_persistent_storage passes tool_calls."""
+        from ppxai.engine.session import SessionManager
+        from ppxai.usage import UsageStorage
+
+        session = SessionManager(sessions_dir=tmp_path / "sessions")
+        session.metadata["created_at"] = "2026-02-21T10:00:00"
+
+        # Add usage with tool calls
+        usage = UsageStats(
+            prompt_tokens=1000, completion_tokens=500,
+            total_tokens=1500, estimated_cost=0.05,
+        )
+        usage.tool_calls["web_search"] = ToolUsage(
+            call_count=2, tokens_in=200, tokens_out=400,
+            estimated_cost=0.001, provider="perplexity",
+        )
+        session.update_usage(usage, "gemini", "gemini-2.5-flash")
+
+        # Mock the global usage storage to use our temp dir
+        import ppxai.usage
+        usage_dir = tmp_path / "usage"
+        usage_dir.mkdir()
+        old_storage = ppxai.usage._storage
+        ppxai.usage._storage = UsageStorage(usage_dir=usage_dir)
+
+        try:
+            session.save_usage_to_persistent_storage()
+
+            # Verify tool_calls were persisted
+            storage = UsageStorage(usage_dir=usage_dir)
+            assert len(storage._data["sessions"]) == 1
+            saved = storage._data["sessions"][0]
+            assert "tool_calls" in saved
+            assert "web_search" in saved["tool_calls"]
+            assert saved["tool_calls"]["web_search"]["call_count"] == 2
+            assert saved["tool_calls"]["web_search"]["provider"] == "perplexity"
+            assert saved["tool_calls"]["web_search"]["estimated_cost"] == pytest.approx(0.001)
+        finally:
+            ppxai.usage._storage = old_storage
+
+    def test_get_usage_includes_tool_calls(self, tmp_path):
+        """Test that get_usage() exports tool_calls data."""
+        from ppxai.engine.session import SessionManager
+
+        session = SessionManager(sessions_dir=tmp_path / "sessions")
+
+        usage = UsageStats(
+            prompt_tokens=1000, completion_tokens=500,
+            total_tokens=1500, estimated_cost=0.05,
+        )
+        usage.tool_calls["web_search"] = ToolUsage(
+            call_count=3, tokens_in=300, tokens_out=600,
+            estimated_cost=0.002, provider="perplexity",
+        )
+        session.update_usage(usage, "openai", "gpt-5.2")
+
+        result = session.get_usage()
+
+        assert "tool_calls" in result
+        assert "web_search" in result["tool_calls"]
+        tc = result["tool_calls"]["web_search"]
+        assert tc["call_count"] == 3
+        assert tc["tokens_in"] == 300
+        assert tc["tokens_out"] == 600
+        assert tc["provider"] == "perplexity"

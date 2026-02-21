@@ -292,7 +292,7 @@ class ReadFileTool(BaseTool):
             if not path.is_file():
                 return f"Error: Not a file: {filepath}"
 
-            with open(path, 'r', encoding='utf-8') as f:
+            with open(path, 'r', encoding='utf-8-sig') as f:
                 lines = f.readlines()[:max_lines]
                 content = ''.join(lines)
 
@@ -344,7 +344,7 @@ def read_file(filepath: str, max_lines: int = 1000) -> str:
         if not path.is_file():
             return f"Error: Not a file: {filepath}"
 
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, 'r', encoding='utf-8-sig') as f:
             lines = f.readlines()[:max_lines]
             content = ''.join(lines)
 

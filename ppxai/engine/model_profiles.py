@@ -85,6 +85,16 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         max_tool_iterations=25,
         tier="S",
     ),
+    "gemini-2.5-flash-lite*": ModelProfile(
+        tool_calling=ToolCallingProfile(
+            mode="native",
+            fallback_on_empty=True,
+            fallback_on_failure=True,
+        ),
+        max_tokens=8_192,
+        max_tool_iterations=10,
+        tier="D",
+    ),
     "gemini-2.5-flash*": ModelProfile(
         tool_calling=ToolCallingProfile(mode="native"),
         max_tokens=65_536,

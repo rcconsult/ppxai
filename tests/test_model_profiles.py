@@ -356,3 +356,35 @@ class TestConvenienceFunctions:
         r1 = get_registry()
         r2 = get_registry()
         assert r1 is r2
+
+
+class TestFlashLiteProfile:
+    """Test gemini-2.5-flash-lite profile (v1.16.0).
+
+    Flash-lite is a weak agent — needs fallback hints and low iteration cap.
+    Must match BEFORE the general gemini-2.5-flash* pattern.
+    """
+
+    def test_flash_lite_matches_before_flash(self):
+        """flash-lite pattern takes priority over flash wildcard."""
+        registry = ModelProfileRegistry()
+        lite = registry.get("gemini-2.5-flash-lite")
+        flash = registry.get("gemini-2.5-flash")
+        assert lite.tier == "D"
+        assert flash.tier == "S"
+
+    def test_flash_lite_has_fallback_flags(self):
+        """flash-lite enables fallback_on_empty and fallback_on_failure."""
+        profile = get_profile("gemini-2.5-flash-lite")
+        assert profile.tool_calling.fallback_on_empty is True
+        assert profile.tool_calling.fallback_on_failure is True
+
+    def test_flash_lite_low_iteration_limit(self):
+        """flash-lite has a low max_tool_iterations to prevent runaway loops."""
+        profile = get_profile("gemini-2.5-flash-lite")
+        assert profile.max_tool_iterations == 10
+
+    def test_flash_lite_low_max_tokens(self):
+        """flash-lite has low max_tokens to prevent truncated patches."""
+        profile = get_profile("gemini-2.5-flash-lite")
+        assert profile.max_tokens == 8_192
