@@ -109,10 +109,10 @@
         }
       },
       "pricing": {
-        "sonar": {"input": 0.20, "output": 0.20},
+        "sonar": {"input": 1.00, "output": 1.00},
         "sonar-pro": {"input": 3.00, "output": 15.00},
-        "sonar-reasoning-pro": {"input": 5.00, "output": 15.00},
-        "sonar-deep-research": {"input": 5.00, "output": 15.00}
+        "sonar-reasoning-pro": {"input": 2.00, "output": 8.00},
+        "sonar-deep-research": {"input": 2.00, "output": 8.00}
       },
       "capabilities": {
         "web_search": true,
@@ -182,11 +182,11 @@
       "pricing": {
         "gemini-2.0-flash": {"input": 0.10, "output": 0.40},
         "gemini-2.0-flash-lite": {"input": 0.075, "output": 0.30},
-        "gemini-2.5-flash": {"input": 0.15, "output": 0.60},
+        "gemini-2.5-flash": {"input": 0.30, "output": 2.50},
         "gemini-2.5-flash-lite": {"input": 0.075, "output": 0.30},
-        "gemini-2.5-pro": {"input": 1.25, "output": 5.00},
-        "gemini-3-flash-preview": {"input": 0.15, "output": 0.60},
-        "gemini-3-pro-preview": {"input": 1.25, "output": 5.00}
+        "gemini-2.5-pro": {"input": 1.25, "output": 10.00},
+        "gemini-3-flash-preview": {"input": 0.50, "output": 3.00},
+        "gemini-3-pro-preview": {"input": 2.00, "output": 12.00}
       },
       "capabilities": {
         "web_search": true,
@@ -656,8 +656,8 @@
       "__comment_gemini_model": "Model for Gemini grounding searches",
       "pricing": {
         "perplexity": {
-          "input": 0.20,
-          "output": 0.20,
+          "input": 1.00,
+          "output": 1.00,
           "model": "per_token",
           "__comment": "Perplexity Sonar pricing per 1M tokens"
         },

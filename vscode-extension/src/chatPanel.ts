@@ -748,11 +748,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                             placeHolder: 'Select a model'
                         });
                         if (selected) {
-                            await this._backend.setModel((selected as any).id);
+                            const result = await this._backend.setModel((selected as any).id);
                             await this.updateStatus();
+                            let msg = `✓ Switched to model: ${selected.label}`;
+                            if (result.contextReset > 0) {
+                                msg += ` (${result.contextReset} messages cleared from context)`;
+                            }
                             this._view.webview.postMessage({
                                 type: 'systemMessage',
-                                content: `✓ Switched to model: ${selected.label}`
+                                content: msg
                             });
                         }
                     } else if (args[0] === 'list') {
@@ -767,12 +771,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                             content: `**Available Models:**\n${modelList}`
                         });
                     } else {
-                        const set = await this._backend.setModel(args[0]);
-                        if (set) {
+                        const result = await this._backend.setModel(args[0]);
+                        if (result.ok) {
                             await this.updateStatus();
+                            let msg = `✓ Switched to model: ${args[0]}`;
+                            if (result.contextReset > 0) {
+                                msg += ` (${result.contextReset} messages cleared from context)`;
+                            }
                             this._view.webview.postMessage({
                                 type: 'systemMessage',
-                                content: `✓ Switched to model: ${args[0]}`
+                                content: msg
                             });
                         } else {
                             this._view.webview.postMessage({
@@ -796,11 +804,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                             placeHolder: 'Select a provider'
                         });
                         if (selected) {
-                            await this._backend.setProvider((selected as any).id);
+                            const result = await this._backend.setProvider((selected as any).id);
                             await this.updateStatus();
+                            let msg = `✓ Switched to provider: ${selected.label}`;
+                            if (result.contextReset > 0) {
+                                msg += ` (${result.contextReset} messages cleared from context)`;
+                            }
                             this._view.webview.postMessage({
                                 type: 'systemMessage',
-                                content: `✓ Switched to provider: ${selected.label}`
+                                content: msg
                             });
                         }
                     } else if (args[0] === 'list') {
@@ -815,12 +827,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                             content: `**Available Providers:**\n${providerList}`
                         });
                     } else {
-                        const set = await this._backend.setProvider(args[0]);
-                        if (set) {
+                        const result = await this._backend.setProvider(args[0]);
+                        if (result.ok) {
                             await this.updateStatus();
+                            let msg = `✓ Switched to provider: ${args[0]}`;
+                            if (result.contextReset > 0) {
+                                msg += ` (${result.contextReset} messages cleared from context)`;
+                            }
                             this._view.webview.postMessage({
                                 type: 'systemMessage',
-                                content: `✓ Switched to provider: ${args[0]}`
+                                content: msg
                             });
                         } else {
                             this._view.webview.postMessage({

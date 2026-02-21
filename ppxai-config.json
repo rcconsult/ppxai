@@ -86,20 +86,20 @@
       },
       "pricing": {
         "sonar": {
-          "input": 0.2,
-          "output": 0.2
+          "input": 1.0,
+          "output": 1.0
         },
         "sonar-pro": {
           "input": 3.0,
           "output": 15.0
         },
         "sonar-reasoning-pro": {
-          "input": 5.0,
-          "output": 15.0
+          "input": 2.0,
+          "output": 8.0
         },
         "sonar-deep-research": {
-          "input": 5.0,
-          "output": 15.0
+          "input": 2.0,
+          "output": 8.0
         }
       },
       "capabilities": {
@@ -176,8 +176,8 @@
           "output": 0.3
         },
         "gemini-2.5-flash": {
-          "input": 0.15,
-          "output": 0.6
+          "input": 0.30,
+          "output": 2.50
         },
         "gemini-2.5-flash-lite": {
           "input": 0.075,
@@ -185,15 +185,15 @@
         },
         "gemini-2.5-pro": {
           "input": 1.25,
-          "output": 5.0
+          "output": 10.0
         },
         "gemini-3-flash-preview": {
-          "input": 0.15,
-          "output": 0.6
+          "input": 0.50,
+          "output": 3.0
         },
         "gemini-3-pro-preview": {
-          "input": 1.25,
-          "output": 5.0
+          "input": 2.0,
+          "output": 12.0
         }
       },
       "capabilities": {
@@ -594,8 +594,8 @@
       "gemini_model": "gemini-2.5-flash",
       "pricing": {
         "perplexity": {
-          "input": 0.2,
-          "output": 0.2,
+          "input": 1.0,
+          "output": 1.0,
           "model": "per_token"
         },
         "gemini_grounding": {

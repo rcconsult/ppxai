@@ -272,15 +272,20 @@ export class HttpClient {
     }
 
     /**
-     * Set active provider
+     * Set active provider.
+     * Returns the number of context messages cleared (0 if none).
      */
-    async setProvider(providerId: string, model?: string): Promise<boolean> {
+    async setProvider(providerId: string, model?: string): Promise<{ ok: boolean; contextReset: number }> {
         const response = await fetch(`${this.baseUrl}/providers`, {
             method: 'POST',
             headers: this.getHeaders(true),
             body: JSON.stringify({ provider: providerId, model })
         });
-        return response.ok;
+        if (!response.ok) {
+            return { ok: false, contextReset: 0 };
+        }
+        const data = await response.json() as { provider: string; model: string; context_reset?: number };
+        return { ok: true, contextReset: data.context_reset ?? 0 };
     }
 
     /**
@@ -298,15 +303,20 @@ export class HttpClient {
     }
 
     /**
-     * Set active model
+     * Set active model.
+     * Returns the number of context messages cleared (0 if none).
      */
-    async setModel(modelId: string): Promise<boolean> {
+    async setModel(modelId: string): Promise<{ ok: boolean; contextReset: number }> {
         const response = await fetch(`${this.baseUrl}/models`, {
             method: 'POST',
             headers: this.getHeaders(true),
             body: JSON.stringify({ model: modelId })
         });
-        return response.ok;
+        if (!response.ok) {
+            return { ok: false, contextReset: 0 };
+        }
+        const data = await response.json() as { model: string; provider: string; context_reset?: number };
+        return { ok: true, contextReset: data.context_reset ?? 0 };
     }
 
     /**

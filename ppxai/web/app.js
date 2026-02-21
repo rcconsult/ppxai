@@ -672,11 +672,12 @@ class PpxaiApp {
     async handleProviderChange() {
         const providerId = this.elements.providerSelect.value;
         try {
-            await fetch(`${this.serverUrl}/providers`, {
+            const resp = await fetch(`${this.serverUrl}/providers`, {
                 method: 'POST',
                 headers: this.getSessionHeaders(true),
                 body: JSON.stringify({ provider: providerId })
             });
+            const data = await resp.json();
             this.currentProvider = providerId;
             await this.loadModels();
 
@@ -688,7 +689,11 @@ class PpxaiApp {
             this.currentModel = status.model;
             this.elements.modelSelect.value = this.currentModel;
 
-            this.showSystemMessage(`Switched to provider: ${providerId}`);
+            let msg = `Switched to provider: ${providerId}`;
+            if (data.context_reset) {
+                msg += ` (${data.context_reset} messages cleared from context)`;
+            }
+            this.showSystemMessage(msg);
         } catch (error) {
             this.showError(`Failed to switch provider: ${error.message}`);
         }
@@ -697,13 +702,18 @@ class PpxaiApp {
     async handleModelChange() {
         const modelId = this.elements.modelSelect.value;
         try {
-            await fetch(`${this.serverUrl}/models`, {
+            const resp = await fetch(`${this.serverUrl}/models`, {
                 method: 'POST',
                 headers: this.getSessionHeaders(true),
                 body: JSON.stringify({ model: modelId })
             });
+            const data = await resp.json();
             this.currentModel = modelId;
-            this.showSystemMessage(`Switched to model: ${modelId}`);
+            let msg = `Switched to model: ${modelId}`;
+            if (data.context_reset) {
+                msg += ` (${data.context_reset} messages cleared from context)`;
+            }
+            this.showSystemMessage(msg);
         } catch (error) {
             this.showError(`Failed to switch model: ${error.message}`);
         }

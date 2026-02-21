@@ -103,8 +103,8 @@ class ApiClient {
         return this.get('/providers');
     }
 
-    async setProvider(providerId) {
-        return this.post('/providers', { provider: providerId });
+    async setProvider(providerId, resetContext = true) {
+        return this.post('/providers', { provider: providerId, reset_context: resetContext });
     }
 
     // === Models ===
@@ -113,8 +113,8 @@ class ApiClient {
         return this.get('/models');
     }
 
-    async setModel(modelId) {
-        return this.post('/models', { model: modelId });
+    async setModel(modelId, resetContext = true) {
+        return this.post('/models', { model: modelId, reset_context: resetContext });
     }
 
     // === Tools ===
