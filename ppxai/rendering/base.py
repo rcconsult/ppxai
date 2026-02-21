@@ -91,16 +91,24 @@ class Renderer:
         # Get the class's own registry (not inherited)
         own_registry = cls.__dict__.get('_registry', {})
 
-        # Get renderer function for this type
+        # Get renderer function for this type — walk MRO for subtype support
         if result_type not in own_registry:
-            # Fallback to TextResult renderer if available
-            if TextResult in own_registry:
-                result_type = TextResult
-            else:
-                raise KeyError(
-                    f"No renderer registered for {result_type.__name__} "
-                    f"in {cls.__name__}. Available types: {list(own_registry.keys())}"
-                )
+            # Walk MRO to find registered parent type (e.g., DirectoryListingResult → TableResult)
+            matched = False
+            for parent in type(result).__mro__[1:]:
+                if parent in own_registry:
+                    result_type = parent
+                    matched = True
+                    break
+            if not matched:
+                # Fallback to TextResult renderer if available
+                if TextResult in own_registry:
+                    result_type = TextResult
+                else:
+                    raise KeyError(
+                        f"No renderer registered for {type(result).__name__} "
+                        f"in {cls.__name__}. Available types: {list(own_registry.keys())}"
+                    )
 
         renderer_func = own_registry.get(result_type)
         if not renderer_func:
@@ -180,16 +188,24 @@ class AsyncRenderer(Renderer):
         # Get the class's own registry (not inherited)
         own_registry = cls.__dict__.get('_registry', {})
 
-        # Get renderer function for this type
+        # Get renderer function for this type — walk MRO for subtype support
         if result_type not in own_registry:
-            # Fallback to TextResult renderer if available
-            if TextResult in own_registry:
-                result_type = TextResult
-            else:
-                raise KeyError(
-                    f"No renderer registered for {result_type.__name__} "
-                    f"in {cls.__name__}. Available types: {list(own_registry.keys())}"
-                )
+            # Walk MRO to find registered parent type (e.g., DirectoryTreeResult → TreeResult)
+            matched = False
+            for parent in type(result).__mro__[1:]:
+                if parent in own_registry:
+                    result_type = parent
+                    matched = True
+                    break
+            if not matched:
+                # Fallback to TextResult renderer if available
+                if TextResult in own_registry:
+                    result_type = TextResult
+                else:
+                    raise KeyError(
+                        f"No renderer registered for {type(result).__name__} "
+                        f"in {cls.__name__}. Available types: {list(own_registry.keys())}"
+                    )
 
         renderer_func = own_registry.get(result_type)
         if not renderer_func:

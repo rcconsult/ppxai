@@ -43,7 +43,7 @@ from ppxai.config import PROVIDERS, get_default_provider, get_default_model, get
 # Command Factory integration (Phase 6.1.1 - Technical debt cleanup)
 from ppxai.commands import CommandFactory
 from ppxai.commands.protocol import CommandContext
-from ppxai.commands.results import CommandResult
+from ppxai.commands.results import CommandResult, DirectoryListingResult, DirectoryTreeResult
 from ppxai.rendering.textual_renderer import TextualRenderer
 
 
@@ -298,7 +298,7 @@ class PPXAIDEApp(App):
         # Set provider and model
         try:
             provider_ok = self._engine_client.set_provider(self._provider)
-            model_ok = self._engine_client.set_model(self._model)
+            model_ok = self._engine_client.set_model(self._model, reset_context=False)
 
             if not provider_ok:
                 self._log.error(f"Failed to set provider: {self._provider} (check API key in .env)")
@@ -660,7 +660,7 @@ class PPXAIDEApp(App):
 
         if stored_model:
             # Use strict mode to validate model exists (Rich TUI line 586)
-            if self._engine_client.set_model(stored_model, strict=True):
+            if self._engine_client.set_model(stored_model, strict=True, reset_context=False):
                 self._model = stored_model
                 status_bar.update_badge("model", stored_model)
                 self._log.info(f"Restored model: {stored_model}")
@@ -670,7 +670,7 @@ class PPXAIDEApp(App):
                 provider_name = self._engine_client.provider_name if self._engine_client.provider else self._provider
                 default_model = get_default_model(provider_name) if provider_name else None
                 if default_model:
-                    self._engine_client.set_model(default_model)
+                    self._engine_client.set_model(default_model, reset_context=False)
                     self._model = default_model
                     status_bar.update_badge("model", default_model)
                     self._log.warning(f"Model '{stored_model}' not available, using default: {default_model}")
@@ -794,6 +794,10 @@ class PPXAIDEApp(App):
             # Update status bar
             status_bar = self.query_one(StatusBar)
             status_bar.update_badge("model", model)
+            # Notify user if context was reset (A3)
+            reset_count = self._engine_client.last_model_switch_reset
+            if reset_count > 0:
+                self.notify(f"Cleared {reset_count} previous messages for clean context", severity="warning")
 
     def set_provider(self, provider: str) -> None:
         """Switch to specified provider (CommandContext protocol)."""
@@ -1535,6 +1539,15 @@ class PPXAIDEApp(App):
                 if result is not None:
                     renderer = TextualRenderer(self)
                     await renderer.render(result)
+
+                    # Emit event bus events for subscribable result types
+                    RESULT_EVENT_MAP = {
+                        DirectoryListingResult: Events.UI_DIRECTORY_LISTED,
+                        DirectoryTreeResult: Events.UI_TREE_LOADED,
+                    }
+                    bus_event = RESULT_EVENT_MAP.get(type(result))
+                    if bus_event:
+                        self._event_bus.emit(bus_event, data=result)
 
                 # Sync TUI state with engine client after command execution
                 if cmd in ("tools", "agent"):

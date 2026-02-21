@@ -209,6 +209,32 @@ class TreeResult(CommandResult):
 
 
 @dataclass
+class DirectoryListingResult(TableResult):
+    """Directory listing result — subscribable via event bus.
+
+    Subtype of TableResult for typed dispatch. Renderers that handle
+    TableResult automatically handle this. Event bus can map this type
+    to UI_DIRECTORY_LISTED for widget subscribers (e.g. file tree sidebar).
+
+    v1.16.0: File navigation commands
+    """
+    pass
+
+
+@dataclass
+class DirectoryTreeResult(TreeResult):
+    """Directory tree result — subscribable via event bus.
+
+    Subtype of TreeResult for typed dispatch. Renderers that handle
+    TreeResult automatically handle this. Event bus can map this type
+    to UI_TREE_LOADED for widget subscribers (e.g. file tree sidebar).
+
+    v1.16.0: File navigation commands
+    """
+    pass
+
+
+@dataclass
 class ListResult(CommandResult):
     """List of items with optional styling.
 

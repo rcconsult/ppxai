@@ -84,12 +84,17 @@ def handle_model(context: CommandContext, args: str) -> CommandResult:
                 context.set_model(model_id)
                 context.engine_client.set_model(model_id)
                 context.engine_client.session.set_model(model_id)
+                reset_count = context.engine_client.last_model_switch_reset
+                message = f"Switched to model: {model_id}"
+                if reset_count > 0:
+                    message += f" (cleared {reset_count} previous messages)"
                 return ConfirmationResult(
                     status=ResultStatus.SUCCESS,
-                    message=f"Switched to model: {model_id}",
+                    message=message,
                     details={
                         "provider": provider,
-                        "model": model_id
+                        "model": model_id,
+                        "context_reset": reset_count,
                     }
                 )
 
@@ -191,15 +196,21 @@ def handle_provider(context: CommandContext, args: str) -> CommandResult:
     context.engine_client.set_model(new_model)
     context.engine_client.session.set_model(new_model)
 
+    reset_count = context.engine_client.last_model_switch_reset
+    message = f"Switched to: {new_config['name']} (model: {new_model})"
+    if reset_count > 0:
+        message += f" (cleared {reset_count} previous messages)"
+
     details = {
         "provider": new_provider,
         "provider_name": new_config['name'],
-        "model": new_model
+        "model": new_model,
+        "context_reset": reset_count,
     }
 
     return ConfirmationResult(
         status=ResultStatus.SUCCESS,
-        message=f"Switched to: {new_config['name']} (model: {new_model})",
+        message=message,
         details=details
     )
 

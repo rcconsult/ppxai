@@ -463,3 +463,68 @@ class TestCommandsHandleQuit:
                 # Verify mark_clean was called
                 mock_session.mark_clean.assert_called_once()
                 assert result is True
+
+
+class TestResetForModelSwitch:
+    """Tests for session context reset on model switch (B1, v1.16.0)."""
+
+    def test_reset_preserves_user_messages(self, session_manager):
+        """User messages are kept after reset."""
+        from ppxai.engine.types import Message
+        session_manager.add_message(Message(role="user", content="Hello"))
+        session_manager.add_message(Message(role="assistant", content="Hi there"))
+        session_manager.add_message(Message(role="user", content="How are you?"))
+        session_manager.add_message(Message(role="assistant", content="I'm fine"))
+
+        session_manager.reset_for_model_switch()
+
+        assert len(session_manager.messages) == 2
+        assert session_manager.messages[0].content == "Hello"
+        assert session_manager.messages[1].content == "How are you?"
+
+    def test_reset_strips_assistant_messages(self, session_manager):
+        """Assistant messages are removed after reset."""
+        from ppxai.engine.types import Message
+        session_manager.add_message(Message(role="user", content="Q1"))
+        session_manager.add_message(Message(role="assistant", content="A1"))
+        session_manager.add_message(Message(role="user", content="Q2"))
+        session_manager.add_message(Message(role="assistant", content="A2"))
+
+        removed = session_manager.reset_for_model_switch()
+
+        assert removed == 2
+        assert all(m.role == "user" for m in session_manager.messages)
+
+    def test_reset_strips_tool_messages(self, session_manager):
+        """Tool role messages are removed after reset."""
+        from ppxai.engine.types import Message
+        session_manager.add_message(Message(role="user", content="Read file"))
+        session_manager.add_message(Message(role="assistant", content="Using tool..."))
+        session_manager.add_message(Message(role="tool", content='{"result": "ok"}'))
+        session_manager.add_message(Message(role="assistant", content="Done"))
+
+        removed = session_manager.reset_for_model_switch()
+
+        assert removed == 3
+        assert len(session_manager.messages) == 1
+        assert session_manager.messages[0].role == "user"
+
+    def test_reset_empty_session(self, session_manager):
+        """No-op on empty session, returns 0."""
+        removed = session_manager.reset_for_model_switch()
+
+        assert removed == 0
+        assert len(session_manager.messages) == 0
+
+    def test_reset_updates_metadata(self, session_manager):
+        """message_count metadata is updated after reset."""
+        from ppxai.engine.types import Message
+        session_manager.add_message(Message(role="user", content="Q"))
+        session_manager.add_message(Message(role="assistant", content="A"))
+        session_manager.add_message(Message(role="user", content="Q2"))
+
+        assert session_manager.metadata["message_count"] == 3
+
+        session_manager.reset_for_model_switch()
+
+        assert session_manager.metadata["message_count"] == 2

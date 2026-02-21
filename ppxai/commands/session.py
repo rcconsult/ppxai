@@ -97,7 +97,7 @@ def handle_load(context: CommandContext, args: str) -> CommandResult:
             loaded_model = context.engine_client.session.metadata.get("model")
             if loaded_model:
                 context.set_model(loaded_model)
-                context.engine_client.set_model(loaded_model)
+                context.engine_client.set_model(loaded_model, reset_context=False)
 
             # Return special result with loaded messages
             return ConfirmationResult(

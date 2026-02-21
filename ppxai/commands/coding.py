@@ -91,7 +91,7 @@ def _execute_ai_task(context: CommandContext, task_type: str, user_message: str,
 
         # Temporarily switch model if auto-routed
         if model != original_model:
-            context.engine_client.set_model(model)
+            context.engine_client.set_model(model, reset_context=False)
 
         try:
             async for event in context.engine_client.chat(full_message, stream=True):
@@ -105,7 +105,7 @@ def _execute_ai_task(context: CommandContext, task_type: str, user_message: str,
         finally:
             # Restore original model
             if model != original_model:
-                context.engine_client.set_model(original_model)
+                context.engine_client.set_model(original_model, reset_context=False)
 
         console.print()  # New line after streaming
         return content, None

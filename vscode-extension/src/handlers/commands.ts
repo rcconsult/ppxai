@@ -494,3 +494,89 @@ export async function handleCheckpointCommand(ctx: HandlerContext, args: string[
         });
     }
 }
+
+// ============================================================================
+// /ls Command Handler (v1.16.0)
+// ============================================================================
+
+function humanSize(bytes: number | null): string {
+    if (bytes == null) { return '-'; }
+    for (const unit of ['B', 'KB', 'MB', 'GB']) {
+        if (Math.abs(bytes) < 1024) { return unit === 'B' ? `${bytes} B` : `${bytes.toFixed(1)} ${unit}`; }
+        bytes /= 1024;
+    }
+    return `${bytes.toFixed(1)} TB`;
+}
+
+/**
+ * Handle /ls command - list directory contents
+ */
+export async function handleLsCommand(ctx: HandlerContext, args: string[]): Promise<void> {
+    try {
+        const showHidden = args.includes('-a');
+        const pathParts = args.filter(a => a !== '-a');
+        const targetPath = pathParts.length > 0 ? pathParts.join(' ') : undefined;
+
+        const data = await ctx.backend.listFiles(targetPath, showHidden);
+        const pad = (s: string, n: number) => s.padEnd(n);
+
+        const header = `${pad('Name', 40)} ${pad('Size', 10)} Modified`;
+        const sep = '-'.repeat(60);
+        const rows = data.files.map((f: any) => {
+            const size = humanSize(f.size);
+            const mod = f.modified ? f.modified.replace('T', ' ').slice(0, 16) : '?';
+            return `${pad(f.name, 40)} ${pad(size, 10)} ${mod}`;
+        });
+        const content = '```\n' + [data.path, '', header, sep, ...rows].join('\n') + '\n```';
+        ctx.postMessage({ type: 'systemMessage', content });
+    } catch (error) {
+        ctx.postMessage({
+            type: 'error',
+            content: `Failed to list directory: ${error}`
+        });
+    }
+}
+
+// ============================================================================
+// /tree Command Handler (v1.16.0)
+// ============================================================================
+
+/**
+ * Handle /tree command - show directory tree
+ */
+export async function handleTreeCommand(ctx: HandlerContext, args: string[]): Promise<void> {
+    try {
+        let targetPath: string | undefined;
+        let depth: number | undefined;
+        for (const part of args) {
+            if (/^\d+$/.test(part)) { depth = parseInt(part, 10); }
+            else { targetPath = part; }
+        }
+
+        const data = await ctx.backend.getFileTree(targetPath, depth);
+        const lines: string[] = [];
+        const renderNode = (node: any, prefix: string, isLast: boolean) => {
+            const connector = isLast ? '└── ' : '├── ';
+            lines.push(prefix + connector + node.label);
+            const children = node.children || [];
+            for (let i = 0; i < children.length; i++) {
+                const childPrefix = prefix + (isLast ? '    ' : '│   ');
+                renderNode(children[i], childPrefix, i === children.length - 1);
+            }
+        };
+
+        lines.push(data.tree.label);
+        const rootChildren = data.tree.children || [];
+        for (let i = 0; i < rootChildren.length; i++) {
+            renderNode(rootChildren[i], '', i === rootChildren.length - 1);
+        }
+        const stats = `${data.stats.dirs} directories, ${data.stats.files} files`;
+        const content = '```\n' + lines.join('\n') + '\n\n' + stats + '\n```';
+        ctx.postMessage({ type: 'systemMessage', content });
+    } catch (error) {
+        ctx.postMessage({
+            type: 'error',
+            content: `Failed to get directory tree: ${error}`
+        });
+    }
+}

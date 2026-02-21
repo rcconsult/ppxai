@@ -117,6 +117,10 @@ class EngineClient:
         # Verbose mode for tool output display (matches TUI behavior)
         self._tools_verbose: bool = False
 
+        # Track last model switch context reset (v1.16.0, A3)
+        # Set by set_model() when reset_context strips messages
+        self.last_model_switch_reset: int = 0
+
         # Event emitter for consent requests (Phase 1C: HTTP/SSE support)
         # This allows emitting events from within consent callback
         self._consent_event_queue: List[Event] = []
@@ -460,10 +464,11 @@ class EngineClient:
         self.tool_manager.set_provider(provider_name)
         self.session.set_provider(provider_name)
 
-        # Set default model for this provider
+        # Set default model for this provider (no context reset — provider switch
+        # resets via the user's explicit set_model call, not this internal default)
         default_model = provider_config.get("default_model")
         if default_model:
-            self.set_model(default_model)
+            self.set_model(default_model, reset_context=False)
 
         # Re-register tools when switching providers if tools are enabled
         # This ensures provider-aware tools (like web_search) are correctly filtered
@@ -524,12 +529,13 @@ class EngineClient:
 
     # === Model Management ===
 
-    def set_model(self, model_id: str, strict: bool = False) -> bool:
+    def set_model(self, model_id: str, strict: bool = False, reset_context: bool = True) -> bool:
         """Set the current model.
 
         Args:
             model_id: Model ID to use
             strict: If True, reject models not in provider's configured list (v1.13.10)
+            reset_context: If True, strip assistant/tool messages on model switch (v1.16.0)
 
         Returns:
             True if model was set successfully
@@ -537,12 +543,19 @@ class EngineClient:
         if not self.provider:
             return False
 
+        self.last_model_switch_reset = 0
+
         models = self.provider.list_models()
         model_exists = any(m.id == model_id for m in models)
 
         if model_exists:
             self.model = model_id
             self.session.set_model(model_id)
+            if reset_context and self.session.messages:
+                removed = self.session.reset_for_model_switch()
+                self.last_model_switch_reset = removed
+                if removed:
+                    logger.info(f"Reset context for model switch to {model_id}: removed {removed} messages")
             self._log_model_hints_transition(model_id)
             return True
 
@@ -553,6 +566,11 @@ class EngineClient:
         # Allow setting model even if not in list (for flexibility with custom endpoints)
         self.model = model_id
         self.session.set_model(model_id)
+        if reset_context and self.session.messages:
+            removed = self.session.reset_for_model_switch()
+            self.last_model_switch_reset = removed
+            if removed:
+                logger.info(f"Reset context for model switch to {model_id}: removed {removed} messages")
         self._log_model_hints_transition(model_id)
         return True
 

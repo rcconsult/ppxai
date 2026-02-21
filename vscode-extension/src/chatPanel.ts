@@ -33,6 +33,8 @@ import {
     HandlerContext,
     handleToolsCommand as toolsHandler,
     handleCheckpointCommand as checkpointHandler,
+    handleLsCommand as lsHandler,
+    handleTreeCommand as treeHandler,
     ChatEventBus,
     processStreamEvent,
     AgentStateMachine,
@@ -848,6 +850,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
                 case '/pwd':
                     await this.handlePwdCommand();
+                    break;
+
+                case '/ls':
+                    await this.handleLsCommand(args);
+                    break;
+
+                case '/tree':
+                    await this.handleTreeCommand(args);
                     break;
 
                 case '/preview':
@@ -2585,6 +2595,24 @@ Use \`/usage show <session|provider|model|off>\` to change.`;
                 content: `Failed to get working directory: ${error}`
             });
         }
+    }
+
+    /**
+     * Handle /ls command - delegates to extracted handler (v1.16.0)
+     */
+    private async handleLsCommand(args: string[]): Promise<void> {
+        const ctx = this.getHandlerContext();
+        if (!ctx) { return; }
+        await lsHandler(ctx, args);
+    }
+
+    /**
+     * Handle /tree command - delegates to extracted handler (v1.16.0)
+     */
+    private async handleTreeCommand(args: string[]): Promise<void> {
+        const ctx = this.getHandlerContext();
+        if (!ctx) { return; }
+        await treeHandler(ctx, args);
     }
 
     /**

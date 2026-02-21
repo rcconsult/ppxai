@@ -68,6 +68,7 @@ def create_mock_engine():
     # Mock set methods
     engine.set_provider.return_value = True
     engine.set_model.return_value = True
+    engine.last_model_switch_reset = 0
     engine.set_tool_config.return_value = True
     engine.enable_tools.return_value = True
     engine.disable_tools.return_value = True
@@ -219,7 +220,7 @@ class TestHttpServerModels:
         client, mock_engine = mock_client
         response = client.post("/models", json={"model": "sonar-pro"})
         assert response.status_code == 200
-        mock_engine.set_model.assert_called_with("sonar-pro")
+        mock_engine.set_model.assert_called_with("sonar-pro", reset_context=True)
 
     def test_set_invalid_model(self, mock_client):
         """Test POST /models with invalid model."""

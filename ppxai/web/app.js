@@ -1131,6 +1131,14 @@ class PpxaiApp {
                 await this.handlePwdCommand();
                 break;
 
+            case '/ls':
+                await this.handleLsCommand(args);
+                break;
+
+            case '/tree':
+                await this.handleTreeCommand(args);
+                break;
+
             case '/preview':
                 await this.handlePreviewCommand(args);
                 break;
@@ -2573,6 +2581,100 @@ class PpxaiApp {
             }
         } catch (error) {
             this.showError(`Failed to get working directory: ${error.message}`);
+        }
+    }
+
+    /**
+     * Handle /ls command - list directory contents (v1.16.0)
+     */
+    async handleLsCommand(args) {
+        try {
+            const params = new URLSearchParams();
+            if (args) {
+                const parts = args.trim().split(/\s+/);
+                const showHidden = parts.includes('-a');
+                const pathParts = parts.filter(p => p !== '-a');
+                if (pathParts.length > 0) params.set('path', pathParts.join(' '));
+                if (showHidden) params.set('a', 'true');
+            }
+            const response = await fetch(`${this.serverUrl}/files/list?${params}`, {
+                headers: this.getSessionHeaders()
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                // Format as monospace table
+                const pad = (s, n) => s.padEnd(n);
+                const header = `${pad('Name', 40)} ${pad('Size', 10)} Modified`;
+                const sep = '-'.repeat(60);
+                const rows = data.files.map(f => {
+                    const size = f.size != null ? this._humanSize(f.size) : '-';
+                    const mod = f.modified ? f.modified.replace('T', ' ').slice(0, 16) : '?';
+                    return `${pad(f.name, 40)} ${pad(size, 10)} ${mod}`;
+                });
+                const content = '```\n' + [data.path, '', header, sep, ...rows].join('\n') + '\n```';
+                this.showSystemMessage(content);
+            } else {
+                const err = await response.json();
+                this.showError(err.detail || 'Failed to list directory');
+            }
+        } catch (error) {
+            this.showError(`Failed to list directory: ${error.message}`);
+        }
+    }
+
+    _humanSize(bytes) {
+        for (const unit of ['B', 'KB', 'MB', 'GB']) {
+            if (Math.abs(bytes) < 1024) return unit === 'B' ? `${bytes} B` : `${bytes.toFixed(1)} ${unit}`;
+            bytes /= 1024;
+        }
+        return `${bytes.toFixed(1)} TB`;
+    }
+
+    /**
+     * Handle /tree command - show directory tree (v1.16.0)
+     */
+    async handleTreeCommand(args) {
+        try {
+            const params = new URLSearchParams();
+            if (args) {
+                const parts = args.trim().split(/\s+/);
+                for (const part of parts) {
+                    if (/^\d+$/.test(part)) params.set('depth', part);
+                    else params.set('path', part);
+                }
+            }
+            const response = await fetch(`${this.serverUrl}/files/tree?${params}`, {
+                headers: this.getSessionHeaders()
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const lines = [];
+                const renderNode = (node, prefix, isLast) => {
+                    const connector = isLast ? '└── ' : '├── ';
+                    lines.push(prefix + connector + node.label);
+                    const children = node.children || [];
+                    for (let i = 0; i < children.length; i++) {
+                        const childPrefix = prefix + (isLast ? '    ' : '│   ');
+                        renderNode(children[i], childPrefix, i === children.length - 1);
+                    }
+                };
+                // Root
+                lines.push(data.tree.label);
+                const rootChildren = data.tree.children || [];
+                for (let i = 0; i < rootChildren.length; i++) {
+                    renderNode(rootChildren[i], '', i === rootChildren.length - 1);
+                }
+                const stats = `${data.stats.dirs} directories, ${data.stats.files} files`;
+                const content = '```\n' + lines.join('\n') + '\n\n' + stats + '\n```';
+                this.showSystemMessage(content);
+            } else {
+                const err = await response.json();
+                this.showError(err.detail || 'Failed to get directory tree');
+            }
+        } catch (error) {
+            this.showError(`Failed to get directory tree: ${error.message}`);
         }
     }
 

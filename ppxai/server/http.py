@@ -267,11 +267,13 @@ class SetProviderRequest(BaseModel):
     """Set provider request body."""
     provider: str
     model: Optional[str] = None
+    reset_context: bool = True
 
 
 class SetModelRequest(BaseModel):
     """Set model request body."""
     model: str
+    reset_context: bool = True
 
 
 class ToolsRequest(BaseModel):
@@ -311,7 +313,7 @@ class ShellConsentRequest(BaseModel):
 
 # === SSE Streaming ===
 
-async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str = "default") -> AsyncGenerator[str, None]:
+async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str = "default", request: Request = None) -> AsyncGenerator[str, None]:
     """Generate SSE events from engine chat.
 
     SSE format: data: {json}\n\n
@@ -321,6 +323,7 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
     v1.13.10: Takes engine as parameter for session isolation.
     v1.13.9: Added explicit [DONE] termination for robust stream completion.
              Helps prevent aiohttp ClientPayloadError in downstream clients.
+    v1.16.0: B11 — Detects client disconnect and cancels background engine task.
     """
     if not engine:
         logger.error("SSE event generator called but engine not initialized")
@@ -331,6 +334,10 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
 
     try:
         async for event in engine.chat(prompt):
+            # B11: Check if client disconnected
+            if request and await request.is_disconnected():
+                logger.info(f"Client disconnected during SSE stream (session={session_id})")
+                break
             # Phase 1C: Check for pending consent requests before each event
             while engine._consent_event_queue:
                 consent_event = engine._consent_event_queue.pop(0)
@@ -666,6 +673,7 @@ async def list_active_sessions():
 @app.post("/chat")
 async def chat(
     request: ChatRequest,
+    raw_request: Request,
     x_session_id: Optional[str] = Header(None)
 ):
     """Chat endpoint with SSE streaming (v1.11.2: added logging, v1.12.0: added request locking).
@@ -693,12 +701,12 @@ async def chat(
             engine.set_provider(request.provider)
         if request.model:
             logger.info(f"Switching model to: {request.model}")
-            engine.set_model(request.model)
+            engine.set_model(request.model, reset_context=False)
 
         # Wrap generator to ensure lock is held during streaming
         async def locked_generator():
             """Generator that streams events while holding the lock."""
-            async for event in sse_event_generator(request.message, engine, session_id):
+            async for event in sse_event_generator(request.message, engine, session_id, request=raw_request):
                 yield event
             logger.info(f"Chat request completed for session {session_id} - releasing lock")
 
@@ -736,7 +744,7 @@ async def coding_task(
         if request.provider:
             engine.set_provider(request.provider)
         if request.model:
-            engine.set_model(request.model)
+            engine.set_model(request.model, reset_context=False)
 
         # Wrap generator to ensure lock is held during streaming
         async def locked_generator():
@@ -810,12 +818,15 @@ async def set_provider(
 
     # Optionally set model
     if request.model:
-        engine.set_model(request.model)
+        engine.set_model(request.model, reset_context=request.reset_context)
 
-    return {
+    result = {
         "provider": engine.provider_name,
         "model": engine.model,
     }
+    if engine.last_model_switch_reset > 0:
+        result["context_reset"] = engine.last_model_switch_reset
+    return result
 
 
 @app.get("/models")
@@ -858,14 +869,17 @@ async def set_model(
     # Reload config to pick up external changes before switching
     engine.reload_config()
 
-    success = engine.set_model(request.model)
+    success = engine.set_model(request.model, reset_context=request.reset_context)
     if not success:
         raise HTTPException(status_code=400, detail=f"Failed to set model: {request.model}")
 
-    return {
+    result = {
         "model": engine.model,
         "provider": engine.provider_name,
     }
+    if engine.last_model_switch_reset > 0:
+        result["context_reset"] = engine.last_model_switch_reset
+    return result
 
 
 # === Tools Management ===
@@ -1399,14 +1413,14 @@ async def load_session(
 
     if stored_model:
         # Use strict mode to validate model exists before restoring
-        if engine.set_model(stored_model, strict=True):
+        if engine.set_model(stored_model, strict=True, reset_context=False):
             logger.info(f"Session restore - model: {stored_model}")
         else:
             # Model not available - use provider's default model
             provider_name = engine.provider_name if engine.provider else stored_provider
             default_model = get_default_model(provider_name) if provider_name else None
             if default_model:
-                engine.set_model(default_model)
+                engine.set_model(default_model, reset_context=False)
                 logger.warning(f"Model '{stored_model}' not available, using default: {default_model}")
             else:
                 logger.error(f"Model '{stored_model}' not available and no default found for {provider_name}")
@@ -1512,14 +1526,14 @@ async def restore_last_session(x_session_id: Optional[str] = Header(None)):
 
     if stored_model:
         # Use strict mode to validate model exists before restoring
-        if engine.set_model(stored_model, strict=True):
+        if engine.set_model(stored_model, strict=True, reset_context=False):
             logger.info(f"Session restore - model: {stored_model}")
         else:
             # Model not available - use provider's default model
             provider_name = engine.provider_name if engine.provider else stored_provider
             default_model = get_default_model(provider_name) if provider_name else None
             if default_model:
-                engine.set_model(default_model)
+                engine.set_model(default_model, reset_context=False)
                 logger.warning(f"Model '{stored_model}' not available, using default: {default_model}")
             else:
                 logger.error(f"Model '{stored_model}' not available and no default found for {provider_name}")
@@ -1620,6 +1634,142 @@ async def search_files(
         special_refs = [ref for ref in special_refs if query in ref["name"].lower()]
 
     return {"files": special_refs + results}
+
+
+@app.get("/files/list")
+async def list_files(
+    path: Optional[str] = None,
+    a: bool = False,
+    x_session_id: Optional[str] = Header(None)
+):
+    """List directory contents (v1.16.0 - for /ls command).
+
+    Returns files and directories with metadata, sorted dirs-first then alphabetical.
+
+    Args:
+        path: Optional subpath relative to working directory
+        a: Include hidden files
+
+    Returns:
+        JSON: {"files": [...], "path": "/abs/path"}
+    """
+    import time
+
+    session_id, engine, _ = await get_or_create_session(x_session_id)
+
+    working_dir = Path(engine.get_working_dir() or os.getcwd())
+    target = working_dir / path if path else working_dir
+    target = target.resolve()
+
+    logger.info(f"HTTP GET /files/list - path: {target}")
+
+    if not target.is_dir():
+        raise HTTPException(status_code=404, detail=f"Not a directory: {path or '.'}")
+
+    try:
+        entries = list(target.iterdir())
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Permission denied")
+
+    filtered = []
+    for entry in entries:
+        name = entry.name
+        if not a and name.startswith('.'):
+            continue
+        if entry.is_dir() and name in IGNORE_DIRS:
+            continue
+        filtered.append(entry)
+
+    filtered.sort(key=lambda e: (not e.is_dir(), e.name.lower()))
+
+    files = []
+    for entry in filtered:
+        is_dir = entry.is_dir()
+        try:
+            stat = entry.stat()
+            files.append({
+                "name": entry.name + ('/' if is_dir else ''),
+                "size": stat.st_size if not is_dir else None,
+                "modified": time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime(stat.st_mtime)),
+                "is_dir": is_dir
+            })
+        except OSError:
+            files.append({
+                "name": entry.name + ('/' if is_dir else ''),
+                "size": None,
+                "modified": None,
+                "is_dir": is_dir
+            })
+
+    return {"files": files, "path": str(target)}
+
+
+@app.get("/files/tree")
+async def get_file_tree(
+    path: Optional[str] = None,
+    depth: int = 3,
+    x_session_id: Optional[str] = Header(None)
+):
+    """Get directory tree structure (v1.16.0 - for /tree command).
+
+    Returns recursive tree of files and directories.
+
+    Args:
+        path: Optional subpath relative to working directory
+        depth: Maximum depth (default 3, capped at 6)
+
+    Returns:
+        JSON: {"tree": {...}, "path": "/abs/path", "stats": {"dirs": N, "files": N}}
+    """
+    session_id, engine, _ = await get_or_create_session(x_session_id)
+
+    working_dir = Path(engine.get_working_dir() or os.getcwd())
+    target = working_dir / path if path else working_dir
+    target = target.resolve()
+    depth = min(depth, 6)
+
+    logger.info(f"HTTP GET /files/tree - path: {target}, depth: {depth}")
+
+    if not target.is_dir():
+        raise HTTPException(status_code=404, detail=f"Not a directory: {path or '.'}")
+
+    dir_count = 0
+    file_count = 0
+
+    def build_tree(directory: Path, current_depth: int) -> dict:
+        nonlocal dir_count, file_count
+        children = []
+        if current_depth >= depth:
+            return {"label": directory.name, "children": children}
+
+        try:
+            entries = sorted(directory.iterdir(), key=lambda e: (not e.is_dir(), e.name.lower()))
+        except PermissionError:
+            return {"label": directory.name + " [permission denied]", "children": []}
+
+        for entry in entries:
+            name = entry.name
+            if name.startswith('.'):
+                continue
+            if entry.is_dir():
+                if name in IGNORE_DIRS:
+                    continue
+                dir_count += 1
+                children.append(build_tree(entry, current_depth + 1))
+            else:
+                file_count += 1
+                children.append({"label": name, "children": []})
+
+        return {"label": directory.name + "/", "children": children}
+
+    tree = build_tree(target, 0)
+    tree["label"] = str(target) + "/"
+
+    return {
+        "tree": tree,
+        "path": str(target),
+        "stats": {"dirs": dir_count, "files": file_count}
+    }
 
 
 class FileWriteRequest(BaseModel):

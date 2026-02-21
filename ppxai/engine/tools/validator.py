@@ -27,6 +27,7 @@ class ValidationResult(Enum):
     CLAIM_CONTRADICTS_RESULT = "claim_contradicts_result"
     TOOL_JSON_IN_TEXT = "tool_json_in_text"
     FABRICATED_OUTPUT = "fabricated_output"
+    SESSION_POLLUTION = "session_pollution"
 
 
 @dataclass
@@ -459,3 +460,73 @@ def validate_response(
         )
 
     return validator.validate_response(response_text)
+
+
+def check_session_pollution(
+    response_text: str,
+    recent_assistant_messages: List[str],
+    threshold: float = 0.9,
+) -> Optional[ValidationWarning]:
+    """Detect session pollution after model switch (B7).
+
+    Compares the new model's response against recent assistant messages.
+    If similarity exceeds threshold, the new model may be parroting cached
+    context from the previous model instead of generating fresh output.
+
+    Args:
+        response_text: Current model's response
+        recent_assistant_messages: Last N assistant messages from session
+        threshold: Similarity threshold (0.0-1.0), default 0.9
+
+    Returns:
+        ValidationWarning if pollution detected, None otherwise
+    """
+    if not response_text or not recent_assistant_messages:
+        return None
+
+    response_clean = response_text.strip().lower()
+    if len(response_clean) < 50:
+        return None  # Too short to meaningfully compare
+
+    for prev_msg in recent_assistant_messages:
+        prev_clean = prev_msg.strip().lower()
+        if len(prev_clean) < 50:
+            continue
+
+        similarity = _text_similarity(response_clean, prev_clean)
+        if similarity >= threshold:
+            return ValidationWarning(
+                result=ValidationResult.SESSION_POLLUTION,
+                severity="warning",
+                message=f"Response is {similarity:.0%} similar to a previous model's output — possible session pollution",
+                details=f"New response ({len(response_text)} chars) closely matches prior assistant message ({len(prev_msg)} chars)",
+                suggested_action="Try /model <name> again or use /clear to start fresh",
+            )
+
+    return None
+
+
+def _text_similarity(a: str, b: str) -> float:
+    """Compute normalized text similarity using character-level overlap.
+
+    Uses a simple ratio of shared content to total content, optimized for
+    speed over precision. Good enough to detect near-identical responses.
+    """
+    if not a or not b:
+        return 0.0
+    if a == b:
+        return 1.0
+
+    # Use set-based bigram overlap (fast approximation of edit similarity)
+    def bigrams(s):
+        return set(s[i:i+2] for i in range(len(s) - 1))
+
+    a_bi = bigrams(a)
+    b_bi = bigrams(b)
+
+    if not a_bi or not b_bi:
+        return 0.0
+
+    intersection = len(a_bi & b_bi)
+    union = len(a_bi | b_bi)
+    return intersection / union if union > 0 else 0.0

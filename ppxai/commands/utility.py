@@ -9,6 +9,8 @@ v1.15.0: Migrated to type-based renderer dispatch
 """
 
 import os
+import time
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .factory import CommandFactory, CommandSpec
@@ -19,10 +21,16 @@ from .results import (
     ConfirmationResult,
     KeyValueResult,
     ErrorResult,
+    DirectoryListingResult,
+    DirectoryTreeResult,
     TreeResult,
     TextResult,
     FileViewResult,
 )
+
+# Directories to skip in file listings and tree views
+IGNORE_DIRS = {'.git', '__pycache__', 'node_modules', '.venv', 'venv',
+               '.pytest_cache', '.mypy_cache', 'dist', 'build', '.tox', '.eggs'}
 
 if TYPE_CHECKING:
     from .handler import CommandHandler
@@ -579,9 +587,211 @@ def handle_context(context: CommandContext, args: str) -> CommandResult:
     )
 
 
+def _human_size(size_bytes: int) -> str:
+    """Format byte count as human-readable size."""
+    for unit in ('B', 'KB', 'MB', 'GB'):
+        if abs(size_bytes) < 1024:
+            if unit == 'B':
+                return f"{size_bytes} B"
+            return f"{size_bytes:.1f} {unit}"
+        size_bytes /= 1024
+    return f"{size_bytes:.1f} TB"
+
+
+def _relative_time(mtime: float) -> str:
+    """Format modification time as relative string like '2h ago'."""
+    delta = time.time() - mtime
+    if delta < 60:
+        return "just now"
+    if delta < 3600:
+        m = int(delta / 60)
+        return f"{m}m ago"
+    if delta < 86400:
+        h = int(delta / 3600)
+        return f"{h}h ago"
+    if delta < 86400 * 30:
+        d = int(delta / 86400)
+        return f"{d}d ago"
+    if delta < 86400 * 365:
+        mo = int(delta / (86400 * 30))
+        return f"{mo}mo ago"
+    y = int(delta / (86400 * 365))
+    return f"{y}y ago"
+
+
+def handle_ls(context: CommandContext, args: str) -> CommandResult:
+    """Handle /ls command - list directory contents.
+
+    Args:
+        context: Command context providing access to engine client
+        args: Optional path and -a flag for hidden files
+
+    Returns:
+        TableResult with directory listing, or ErrorResult on failure
+    """
+    if not context.engine_client:
+        return ErrorResult(status=ResultStatus.ERROR, message="Engine client not available")
+
+    parts = args.strip().split() if args else []
+    show_hidden = '-a' in parts
+    if show_hidden:
+        parts.remove('-a')
+
+    working_dir = context.engine_client.get_working_dir() or os.getcwd()
+    target = Path(working_dir)
+    if parts:
+        candidate = Path(parts[0])
+        if candidate.is_absolute():
+            target = candidate
+        else:
+            target = target / parts[0]
+
+    target = target.resolve()
+    if not target.is_dir():
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=f"Not a directory: {target}",
+            suggestions=["Check the path and try again"]
+        )
+
+    try:
+        entries = list(target.iterdir())
+    except PermissionError:
+        return ErrorResult(status=ResultStatus.ERROR, message=f"Permission denied: {target}")
+
+    # Filter
+    filtered = []
+    for entry in entries:
+        name = entry.name
+        if not show_hidden and name.startswith('.'):
+            continue
+        if entry.is_dir() and name in IGNORE_DIRS:
+            continue
+        filtered.append(entry)
+
+    # Sort: dirs first, then alphabetical
+    filtered.sort(key=lambda e: (not e.is_dir(), e.name.lower()))
+
+    rows = []
+    for entry in filtered:
+        name = entry.name
+        if entry.is_dir():
+            name += '/'
+        elif entry.is_symlink():
+            name += '@'
+
+        try:
+            stat = entry.stat()
+            size = _human_size(stat.st_size) if entry.is_file() else '-'
+            modified = _relative_time(stat.st_mtime)
+        except OSError:
+            size = '?'
+            modified = '?'
+
+        rows.append([name, size, modified])
+
+    return DirectoryListingResult(
+        status=ResultStatus.SUCCESS,
+        message=f"{len(rows)} items in {target}",
+        columns=["Name", "Size", "Modified"],
+        rows=rows
+    )
+
+
+def handle_tree(context: CommandContext, args: str) -> CommandResult:
+    """Handle /tree command - show directory tree.
+
+    Args:
+        context: Command context providing access to engine client
+        args: Optional path and depth (default 3, max 6)
+
+    Returns:
+        TreeResult with directory tree, or ErrorResult on failure
+    """
+    if not context.engine_client:
+        return ErrorResult(status=ResultStatus.ERROR, message="Engine client not available")
+
+    parts = args.strip().split() if args else []
+    working_dir = context.engine_client.get_working_dir() or os.getcwd()
+    target = Path(working_dir)
+    depth = 3
+
+    for part in parts:
+        if part.isdigit():
+            depth = min(int(part), 6)
+        else:
+            candidate = Path(part)
+            if candidate.is_absolute():
+                target = candidate
+            else:
+                target = Path(working_dir) / part
+
+    target = target.resolve()
+    if not target.is_dir():
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=f"Not a directory: {target}",
+            suggestions=["Check the path and try again"]
+        )
+
+    dir_count = 0
+    file_count = 0
+
+    def build_tree(directory: Path, current_depth: int) -> dict:
+        nonlocal dir_count, file_count
+        children = []
+        if current_depth >= depth:
+            return {"label": directory.name, "children": children}
+
+        try:
+            entries = sorted(directory.iterdir(), key=lambda e: (not e.is_dir(), e.name.lower()))
+        except PermissionError:
+            return {"label": directory.name + " [permission denied]", "children": []}
+
+        for entry in entries:
+            name = entry.name
+            if name.startswith('.'):
+                continue
+            if entry.is_dir():
+                if name in IGNORE_DIRS:
+                    continue
+                dir_count += 1
+                children.append(build_tree(entry, current_depth + 1))
+            else:
+                file_count += 1
+                children.append({"label": name, "children": []})
+
+        return {"label": directory.name + "/", "children": children}
+
+    root = build_tree(target, 0)
+    root["label"] = str(target) + "/"
+
+    return DirectoryTreeResult(
+        status=ResultStatus.SUCCESS,
+        message=f"{dir_count} directories, {file_count} files",
+        root=root
+    )
+
+
 # =============================================================================
 # Command Registration
 # =============================================================================
+
+CommandFactory.register(CommandSpec(
+    name="ls",
+    description="List directory contents",
+    handler=handle_ls,
+    category="navigation",
+    usage="/ls [path] [-a]"
+))
+
+CommandFactory.register(CommandSpec(
+    name="tree",
+    description="Show directory tree",
+    handler=handle_tree,
+    category="navigation",
+    usage="/tree [path] [depth]"
+))
 
 CommandFactory.register(CommandSpec(
     name="cd",

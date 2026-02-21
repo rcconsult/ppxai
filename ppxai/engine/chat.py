@@ -19,7 +19,8 @@ from .types import Event, EventType, Message, UsageStats
 from .session import SessionManager
 from .tools.manager import ToolManager
 from .tools.parser import parse_tool_call, detect_truncated_tool_call, strip_tool_json_from_text
-from .tools.validator import ResponseValidator, ValidationResult
+from .tools.validator import ResponseValidator, ValidationResult, check_session_pollution
+from .model_profiles import get_profile
 from .providers.base import BaseProvider
 from ..config import get_system_prompt, get_system_prompt_mode, calculate_cost
 from ..common.logger import get_logger
@@ -188,6 +189,11 @@ async def chat_with_tools(
     iteration = 0
     max_iterations = ctx.tool_manager.max_iterations
 
+    # Override with per-model limit if profile specifies a higher value (B2)
+    profile = get_profile(ctx.model)
+    if profile.max_tool_iterations > 0:
+        max_iterations = max(max_iterations, profile.max_tool_iterations)
+
     # Reset tool call history for loop detection
     ctx.tool_manager.reset_tool_history()
 
@@ -287,15 +293,22 @@ async def chat_with_tools(
 
                 messages = [Message("system", final_prompt)] + messages
         else:
-            # Native tool calling — still inject bootstrap prompt (AGENTS.md hints)
-            # so provider/model-specific guidance is available for native tools too
+            # Native tool calling — inject bootstrap prompt (AGENTS.md hints)
+            # and belt-and-suspenders tool descriptions for fallback-capable models (B3)
             bootstrap_prompt = ctx.get_bootstrap_prompt()
-            if bootstrap_prompt:
-                system_prompt = get_system_prompt(ctx.provider_name)
-                if system_prompt:
-                    final_prompt = f"{bootstrap_prompt}\n\n---\n\n{system_prompt}"
-                else:
-                    final_prompt = bootstrap_prompt
+            system_prompt = get_system_prompt(ctx.provider_name)
+
+            # Belt-and-suspenders: inject tool descriptions into system prompt
+            # for models with fallback flags, so prompt-based parsing can work
+            # if native tool calling returns empty or fails
+            tool_hint = ""
+            tc = profile.tool_calling
+            if tc.fallback_on_empty or tc.fallback_on_failure:
+                tool_hint = ctx.tool_manager.get_tools_prompt(working_dir=ctx.get_working_dir())
+
+            parts = [p for p in [bootstrap_prompt, system_prompt, tool_hint] if p]
+            if parts:
+                final_prompt = "\n\n---\n\n".join(parts)
                 messages = [Message("system", final_prompt)] + messages
 
         # Get response from provider
@@ -571,6 +584,25 @@ async def chat_with_tools(
                     "details": warning.details,
                     "suggested_action": warning.suggested_action
                 })
+
+            # B7: Check for session pollution (response too similar to previous model's output)
+            if iteration == 1 and full_response:
+                recent_assistant = [
+                    m.content for m in ctx.session.messages[-10:]
+                    if m.role == "assistant" and m.content and m != ctx.session.messages[-1]
+                ]
+                pollution_warning = check_session_pollution(full_response, recent_assistant)
+                if pollution_warning:
+                    logger.warning(
+                        f"Session pollution detected: {pollution_warning.message}"
+                    )
+                    yield Event(EventType.WARNING, {
+                        "type": pollution_warning.result.value,
+                        "severity": pollution_warning.severity,
+                        "message": pollution_warning.message,
+                        "details": pollution_warning.details,
+                        "suggested_action": pollution_warning.suggested_action,
+                    })
 
             # Commit agent changes if needed
             commit_hash = ctx.commit_agent_changes_if_needed("Task completed")

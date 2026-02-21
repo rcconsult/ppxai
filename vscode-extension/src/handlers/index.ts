@@ -10,7 +10,7 @@
 
 // Phase 2: Command handlers with IoC pattern
 export { HandlerContext, HandlerResult, DialogCallbacks, CommandHandler } from './types';
-export { handleToolsCommand, handleCheckpointCommand } from './commands';
+export { handleToolsCommand, handleCheckpointCommand, handleLsCommand, handleTreeCommand } from './commands';
 
 // Phase 3b: Stream event processing
 export { processStreamEvent } from './stream';

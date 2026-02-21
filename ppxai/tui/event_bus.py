@@ -214,6 +214,8 @@ class Events:
     UI_CLEAR = "ui:clear"
     UI_STATUS_UPDATE = "ui:status_update"
     UI_THEME_CHANGED = "ui:theme_changed"
+    UI_DIRECTORY_LISTED = "ui:directory_listed"
+    UI_TREE_LOADED = "ui:tree_loaded"
 
     # Session events
     SESSION_LOADED = "session:loaded"

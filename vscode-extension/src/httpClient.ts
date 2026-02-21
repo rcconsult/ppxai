@@ -431,6 +431,40 @@ export class HttpClient {
     }
 
     /**
+     * List directory contents (v1.16.0)
+     */
+    async listFiles(path?: string, showHidden?: boolean): Promise<{ files: any[]; path: string }> {
+        const params = new URLSearchParams();
+        if (path) { params.set('path', path); }
+        if (showHidden) { params.set('a', 'true'); }
+        const response = await fetch(`${this.baseUrl}/files/list?${params}`, {
+            headers: this.getHeaders()
+        });
+        if (!response.ok) {
+            const err = await response.json() as { detail?: string };
+            throw new Error(err.detail || 'Failed to list directory');
+        }
+        return await response.json() as { files: any[]; path: string };
+    }
+
+    /**
+     * Get directory tree (v1.16.0)
+     */
+    async getFileTree(path?: string, depth?: number): Promise<{ tree: any; path: string; stats: { dirs: number; files: number } }> {
+        const params = new URLSearchParams();
+        if (path) { params.set('path', path); }
+        if (depth != null) { params.set('depth', String(depth)); }
+        const response = await fetch(`${this.baseUrl}/files/tree?${params}`, {
+            headers: this.getHeaders()
+        });
+        if (!response.ok) {
+            const err = await response.json() as { detail?: string };
+            throw new Error(err.detail || 'Failed to get directory tree');
+        }
+        return await response.json() as { tree: any; path: string; stats: { dirs: number; files: number } };
+    }
+
+    /**
      * Enable or disable automatic context injection
      */
     async setAutoInject(enabled: boolean): Promise<boolean> {

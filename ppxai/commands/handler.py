@@ -229,7 +229,7 @@ def send_coding_task(handler: 'CommandHandler', task_type: str, user_message: st
         # Temporarily switch model for coding task if auto-routed
         original_model = handler.engine_client.model
         if model != original_model:
-            handler.engine_client.set_model(model)
+            handler.engine_client.set_model(model, reset_context=False)
 
         try:
             async for event in handler.engine_client.chat(full_message, stream=True):
@@ -242,7 +242,7 @@ def send_coding_task(handler: 'CommandHandler', task_type: str, user_message: st
         finally:
             # Restore original model
             if model != original_model:
-                handler.engine_client.set_model(original_model)
+                handler.engine_client.set_model(original_model, reset_context=False)
 
         # Render final content with markdown
         if content:
@@ -304,7 +304,7 @@ class CommandHandler:
             shell_consent_callback=tui_shell_consent_handler
         )
         self.engine_client.set_provider(self.provider)
-        self.engine_client.set_model(self.current_model)
+        self.engine_client.set_model(self.current_model, reset_context=False)
         # Set working directory for context injection
         self.engine_client.set_working_dir(os.getcwd())
 

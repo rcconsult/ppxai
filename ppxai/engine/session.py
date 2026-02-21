@@ -212,6 +212,26 @@ class SessionManager:
 
         return removed_count
 
+    def reset_for_model_switch(self) -> int:
+        """Strip assistant and tool messages, keeping user messages only.
+
+        Used when switching models to prevent context pollution from
+        the previous model's responses.
+
+        Returns:
+            Count of removed messages.
+        """
+        original_count = len(self.messages)
+        self.messages = [m for m in self.messages if m.role == "user"]
+        self.metadata["message_count"] = len(self.messages)
+        removed = original_count - len(self.messages)
+        if removed:
+            logger.info(
+                f"Model switch: removed {removed} assistant/tool messages, "
+                f"kept {len(self.messages)} user messages"
+            )
+        return removed
+
     def clear(self):
         """Clear conversation history and reset consent state."""
         self.messages = []

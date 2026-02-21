@@ -132,6 +132,20 @@ TOOLS = [
                 "required": ["path"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_dir",
+            "description": "List files and directories in a given path",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Directory path to list"}
+                },
+                "required": ["path"]
+            }
+        }
     }
 ]
 
@@ -141,7 +155,12 @@ TOOLS = [
 # =============================================================================
 
 async def test_simple_tool_call(client) -> tuple[bool, dict]:
-    """Test basic single tool invocation."""
+    """Test basic single tool invocation.
+
+    Partial credit (A12):
+    - Correct tool name: +0.5
+    - Correct arguments: +0.5
+    """
     response = await client.chat(
         messages=[
             {"role": "system", "content": "You are a coding assistant. Use tools when asked."},
@@ -155,20 +174,29 @@ async def test_simple_tool_call(client) -> tuple[bool, dict]:
         return False, {"error": "No tool call made", "response": response.get("content", "")[:200]}
 
     call = tool_calls[0]
-    if call.get("function", {}).get("name") != "read_file":
-        return False, {"error": f"Wrong tool: {call.get('function', {}).get('name')}", "expected": "read_file"}
+    correct_tool = call.get("function", {}).get("name") == "read_file"
+
+    if not correct_tool:
+        return False, {"error": f"Wrong tool: {call.get('function', {}).get('name')}", "expected": "read_file", "score": 0.0}
 
     try:
         args = json.loads(call["function"]["arguments"])
         if args.get("path") == "/src/main.py":
             return True, {"tool": "read_file", "args": args}
-        return False, {"error": f"Wrong path: {args.get('path')}", "expected": "/src/main.py"}
+        # Correct tool but wrong args: 50% credit
+        return False, {"error": f"Wrong path: {args.get('path')}", "expected": "/src/main.py", "score": 0.5}
     except json.JSONDecodeError as e:
-        return False, {"error": f"Invalid JSON arguments: {e}"}
+        # Correct tool but unparseable args: 50% credit
+        return False, {"error": f"Invalid JSON arguments: {e}", "score": 0.5}
 
 
 async def test_tool_call_with_complex_args(client) -> tuple[bool, dict]:
-    """Test tool call with multiple arguments."""
+    """Test tool call with multiple arguments.
+
+    Partial credit (A12):
+    - Correct tool name: +0.5
+    - Correct arguments (both path and content present): +0.5
+    """
     response = await client.chat(
         messages=[
             {"role": "system", "content": "You are a coding assistant. Use tools when asked."},
@@ -182,16 +210,20 @@ async def test_tool_call_with_complex_args(client) -> tuple[bool, dict]:
         return False, {"error": "No tool call made", "response": response.get("content", "")[:200]}
 
     call = tool_calls[0]
-    if call.get("function", {}).get("name") != "write_file":
-        return False, {"error": f"Wrong tool: {call.get('function', {}).get('name')}"}
+    correct_tool = call.get("function", {}).get("name") == "write_file"
+
+    if not correct_tool:
+        return False, {"error": f"Wrong tool: {call.get('function', {}).get('name')}", "score": 0.0}
 
     try:
         args = json.loads(call["function"]["arguments"])
         if "path" in args and "content" in args:
             return True, {"tool": "write_file", "args": args}
-        return False, {"error": "Missing required arguments", "args": args}
+        # Correct tool but incomplete args: 50% credit
+        return False, {"error": "Missing required arguments", "args": args, "score": 0.5}
     except json.JSONDecodeError as e:
-        return False, {"error": f"Invalid JSON arguments: {e}"}
+        # Correct tool but unparseable args: 50% credit
+        return False, {"error": f"Invalid JSON arguments: {e}", "score": 0.5}
 
 
 async def test_tool_call_large_payload(client) -> tuple[bool, dict]:
@@ -241,10 +273,14 @@ async def test_tool_call_large_payload(client) -> tuple[bool, dict]:
         args = json.loads(call["function"]["arguments"])
         content_len = len(args.get("content", ""))
         if content_len < len(large_content) * 0.8:  # Allow some formatting changes
+            # Partial credit: correct tool call but truncated content
+            # Scale by how much content was preserved
+            content_ratio = content_len / len(large_content) if large_content else 0
             return False, {
                 "error": f"Content truncated: got {content_len} chars, expected ~{len(large_content)}",
                 "repetitions": repetitions,
                 "model_max_tokens": max_output,
+                "score": 0.5 + (0.5 * content_ratio),  # 50% for tool call + proportional content
             }
         return True, {
             "content_length": content_len,
@@ -256,7 +292,12 @@ async def test_tool_call_large_payload(client) -> tuple[bool, dict]:
 
 
 async def test_multi_tool_sequence(client) -> tuple[bool, dict]:
-    """Test multi-turn tool usage with dependencies."""
+    """Test multi-turn tool usage with dependencies.
+
+    Partial credit (A12):
+    - First tool call correct: +0.5
+    - Second tool call uses info from first: +0.5
+    """
     messages = [
         {"role": "system", "content": "You are a coding assistant. Use tools to complete tasks."},
         {"role": "user", "content": "First read /src/config.json, then based on what you find, read the main entry file."}
@@ -282,19 +323,21 @@ async def test_multi_tool_sequence(client) -> tuple[bool, dict]:
     tool_calls2 = response2.get("tool_calls", [])
 
     if not tool_calls2:
-        return False, {"error": "No tool call in second turn", "response": response2.get("content", "")[:200]}
+        # First turn succeeded, second failed: 50% credit
+        return False, {"error": "No tool call in second turn", "response": response2.get("content", "")[:200], "score": 0.5}
 
     call2 = tool_calls2[0]
     if call2.get("function", {}).get("name") != "read_file":
-        return False, {"error": f"Wrong tool in second turn: {call2.get('function', {}).get('name')}"}
+        return False, {"error": f"Wrong tool in second turn: {call2.get('function', {}).get('name')}", "score": 0.5}
 
     try:
         args = json.loads(call2["function"]["arguments"])
         if "main.py" in args.get("path", ""):
             return True, {"sequence": ["read_file config.json", "read_file main.py"]}
-        return False, {"error": f"Didn't use info from first tool: {args}"}
+        # Right tool but wrong file in second turn: 50% credit
+        return False, {"error": f"Didn't use info from first tool: {args}", "score": 0.5}
     except json.JSONDecodeError as e:
-        return False, {"error": f"Invalid JSON: {e}"}
+        return False, {"error": f"Invalid JSON: {e}", "score": 0.5}
 
 
 async def test_no_explain_before_tool(client) -> tuple[bool, dict]:
@@ -389,7 +432,10 @@ async def test_tool_call_json_in_content(client) -> tuple[bool, dict]:
 # =============================================================================
 
 async def test_apply_patch_simple(client) -> tuple[bool, dict]:
-    """Test simple apply_patch with exact content."""
+    """Test simple apply_patch with exact content.
+
+    Accepts read_file as a valid first step (multi-turn), then expects apply_patch.
+    """
     original_code = '''def hello():
     print("Hello")
 
@@ -397,31 +443,39 @@ def main():
     hello()
 '''
 
-    response = await client.chat(
-        messages=[
-            {"role": "system", "content": "You are a coding assistant. Use apply_patch to modify files."},
-            {"role": "user", "content": f"Here is /src/hello.py:\n```python\n{original_code}```\n\nChange 'Hello' to 'Hello, World!' using apply_patch."}
-        ],
-        tools=TOOLS,
-    )
+    messages = [
+        {"role": "system", "content": "You are a coding assistant. Use apply_patch to modify files. The file content is provided below."},
+        {"role": "user", "content": f"Here is /src/hello.py:\n```python\n{original_code}```\n\nChange 'Hello' to 'Hello, World!' using apply_patch."}
+    ]
+
+    response = await client.chat(messages=messages, tools=TOOLS)
+
+    # If model read the file first, simulate the response and let it continue
+    tool_calls = response.get("tool_calls", [])
+    if tool_calls and tool_calls[0].get("function", {}).get("name") == "read_file":
+        messages.append({"role": "assistant", "content": response.get("content", ""), "tool_calls": tool_calls})
+        messages.append({"role": "user", "content": f"[Tool result for read_file]\n{original_code}"})
+        response = await client.chat(messages=messages, tools=TOOLS)
+        tool_calls = response.get("tool_calls", [])
 
     # Validate response quality first (method-aware)
     method = client.get_effective_tool_calling_method() if hasattr(client, "get_effective_tool_calling_method") else "native"
     quality = validate_response_quality(response, expected_tool="apply_patch", tool_calling_method=method)
 
-    tool_calls = response.get("tool_calls", [])
     if not tool_calls:
         return False, {"error": "No tool call made", **quality.to_dict()}
 
-    call = tool_calls[0]
-    if call.get("function", {}).get("name") != "apply_patch":
+    # Find apply_patch call (may be after read_file)
+    patch_call = next((c for c in tool_calls if c.get("function", {}).get("name") == "apply_patch"), None)
+    if not patch_call:
+        first_tool = tool_calls[0].get("function", {}).get("name", "unknown")
         return False, {
-            "error": f"Wrong tool: {call.get('function', {}).get('name')}",
+            "error": f"No apply_patch call (got: {first_tool})",
             **quality.to_dict()
         }
 
     try:
-        args = json.loads(call["function"]["arguments"])
+        args = json.loads(patch_call["function"]["arguments"])
         patch = args.get("patch", "")
 
         # Validate patch structure
@@ -453,7 +507,10 @@ def main():
 
 
 async def test_apply_patch_indentation(client) -> tuple[bool, dict]:
-    """Test apply_patch preserves Python indentation correctly."""
+    """Test apply_patch preserves Python indentation correctly.
+
+    Accepts read_file as a valid first step (multi-turn), then expects apply_patch.
+    """
     original_code = '''class Calculator:
     def __init__(self):
         self.value = 0
@@ -466,25 +523,39 @@ async def test_apply_patch_indentation(client) -> tuple[bool, dict]:
         return self.value
 '''
 
-    response = await client.chat(
-        messages=[
-            {"role": "system", "content": "You are a coding assistant. Use apply_patch for code changes. Preserve exact indentation."},
-            {"role": "user", "content": f"Here is /src/calc.py:\n```python\n{original_code}```\n\nAdd a 'subtract' method after 'add' that subtracts n from self.value."}
-        ],
-        tools=TOOLS,
-    )
+    messages = [
+        {"role": "system", "content": "You are a coding assistant. Use apply_patch for code changes. Preserve exact indentation. The file content is provided below."},
+        {"role": "user", "content": f"Here is /src/calc.py:\n```python\n{original_code}```\n\nAdd a 'subtract' method after 'add' that subtracts n from self.value."}
+    ]
+
+    response = await client.chat(messages=messages, tools=TOOLS)
+
+    # If model read the file first, simulate the response and let it continue
+    tool_calls = response.get("tool_calls", [])
+    if tool_calls and tool_calls[0].get("function", {}).get("name") == "read_file":
+        messages.append({"role": "assistant", "content": response.get("content", ""), "tool_calls": tool_calls})
+        messages.append({"role": "user", "content": f"[Tool result for read_file]\n{original_code}"})
+        response = await client.chat(messages=messages, tools=TOOLS)
+        tool_calls = response.get("tool_calls", [])
 
     # Validate response quality first (method-aware)
     method = client.get_effective_tool_calling_method() if hasattr(client, "get_effective_tool_calling_method") else "native"
     quality = validate_response_quality(response, expected_tool="apply_patch", tool_calling_method=method)
 
-    tool_calls = response.get("tool_calls", [])
     if not tool_calls:
         return False, {"error": "No tool call made", **quality.to_dict()}
 
-    call = tool_calls[0]
+    # Find apply_patch call
+    patch_call = next((c for c in tool_calls if c.get("function", {}).get("name") == "apply_patch"), None)
+    if not patch_call:
+        first_tool = tool_calls[0].get("function", {}).get("name", "unknown")
+        return False, {
+            "error": f"No apply_patch call (got: {first_tool})",
+            **quality.to_dict()
+        }
+
     try:
-        args = json.loads(call["function"]["arguments"])
+        args = json.loads(patch_call["function"]["arguments"])
         patch = args.get("patch", "")
 
         # Check for proper indentation (4 spaces for class methods)
@@ -516,7 +587,10 @@ async def test_apply_patch_indentation(client) -> tuple[bool, dict]:
 
 
 async def test_apply_patch_multiline(client) -> tuple[bool, dict]:
-    """Test apply_patch with multi-line additions."""
+    """Test apply_patch with multi-line additions.
+
+    Accepts read_file as a valid first step (multi-turn), then expects apply_patch.
+    """
     original_code = '''import os
 
 def main():
@@ -528,26 +602,40 @@ if __name__ == "__main__":
     main()
 '''
 
-    response = await client.chat(
-        messages=[
-            {"role": "system", "content": "You are a coding assistant. Use apply_patch for modifications."},
-            {"role": "user", "content": f"Here is /src/main.py:\n```python\n{original_code}```\n\nReplace the TODO comment with actual config loading: load from 'config.json' using json.load, store in a 'config' variable, and add the json import at the top."}
-        ],
-        tools=TOOLS,
-    )
+    messages = [
+        {"role": "system", "content": "You are a coding assistant. Use apply_patch for modifications. The file content is provided below."},
+        {"role": "user", "content": f"Here is /src/main.py:\n```python\n{original_code}```\n\nReplace the TODO comment with actual config loading: load from 'config.json' using json.load, store in a 'config' variable, and add the json import at the top."}
+    ]
+
+    response = await client.chat(messages=messages, tools=TOOLS)
+
+    # If model read the file first, simulate the response and let it continue
+    tool_calls = response.get("tool_calls", [])
+    if tool_calls and tool_calls[0].get("function", {}).get("name") == "read_file":
+        messages.append({"role": "assistant", "content": response.get("content", ""), "tool_calls": tool_calls})
+        messages.append({"role": "user", "content": f"[Tool result for read_file]\n{original_code}"})
+        response = await client.chat(messages=messages, tools=TOOLS)
+        tool_calls = response.get("tool_calls", [])
 
     # Validate response quality (method-aware)
     method = client.get_effective_tool_calling_method() if hasattr(client, "get_effective_tool_calling_method") else "native"
     quality = validate_response_quality(response, expected_tool="apply_patch", tool_calling_method=method)
 
-    tool_calls = response.get("tool_calls", [])
     if not tool_calls:
         quality.tool_success = False
         return False, {"error": "No tool call made", **quality.to_dict()}
 
-    call = tool_calls[0]
+    # Find apply_patch call
+    patch_call = next((c for c in tool_calls if c.get("function", {}).get("name") == "apply_patch"), None)
+    if not patch_call:
+        first_tool = tool_calls[0].get("function", {}).get("name", "unknown")
+        return False, {
+            "error": f"No apply_patch call (got: {first_tool})",
+            **quality.to_dict()
+        }
+
     try:
-        args = json.loads(call["function"]["arguments"])
+        args = json.loads(patch_call["function"]["arguments"])
         patch = args.get("patch", "")
 
         # Should have import json
@@ -1273,6 +1361,293 @@ async def test_multi_turn_consistency(client) -> tuple[bool, dict]:
 
 
 # =============================================================================
+# CATEGORY: Agentic Tool Loops
+# =============================================================================
+
+async def test_multi_file_review(client) -> tuple[bool, dict]:
+    """Test multi-file review: model must read multiple files to answer.
+
+    Score = files_read / files_available. Claims without tool calls = 0.0.
+    """
+    messages = [
+        {"role": "system", "content": "You are a code review assistant. Use read_file to examine files before answering. You MUST read the files — do NOT guess or fabricate content."},
+        {"role": "user", "content": (
+            "Review these 4 files for potential bugs:\n"
+            "- /src/auth.py\n"
+            "- /src/database.py\n"
+            "- /src/routes.py\n"
+            "- /src/utils.py\n\n"
+            "Read each file and report any issues you find."
+        )}
+    ]
+
+    available_files = {"/src/auth.py", "/src/database.py", "/src/routes.py", "/src/utils.py"}
+    files_read = set()
+    file_contents = {
+        "/src/auth.py": "def login(user, pw):\n    if pw == 'admin':  # BUG: hardcoded password\n        return True\n    return check_db(user, pw)\n",
+        "/src/database.py": "import sqlite3\ndef query(sql):\n    conn = sqlite3.connect('app.db')\n    return conn.execute(sql)  # BUG: SQL injection risk, no parameterization\n",
+        "/src/routes.py": "from auth import login\ndef handle_login(request):\n    user = request.form['username']\n    pw = request.form['password']\n    if login(user, pw):\n        return redirect('/dashboard')\n    return 'Invalid credentials', 401\n",
+        "/src/utils.py": "import os\ndef get_config():\n    return eval(open('config.txt').read())  # BUG: eval on user data\n",
+    }
+
+    # Multi-turn: simulate tool responses for each read_file call
+    max_turns = 6
+    for turn in range(max_turns):
+        response = await client.chat(messages=messages, tools=TOOLS)
+        tool_calls = response.get("tool_calls", [])
+
+        if not tool_calls:
+            break  # Model stopped calling tools
+
+        for tc in tool_calls:
+            fn = tc.get("function", {})
+            if fn.get("name") == "read_file":
+                try:
+                    args = json.loads(fn.get("arguments", "{}"))
+                    path = args.get("path", "")
+                    files_read.add(path)
+                    content = file_contents.get(path, f"Error: file {path} not found")
+                except json.JSONDecodeError:
+                    content = "Error: invalid arguments"
+
+                messages.append({"role": "assistant", "content": None, "tool_calls": [tc]})
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc.get("id", f"call_{turn}"),
+                    "content": content,
+                })
+
+    # Check if model claimed to review files without reading them
+    content = response.get("content", "") if response else ""
+    if not files_read and content:
+        # Model fabricated a review without reading any files
+        return False, {
+            "error": "Claimed to review files without any read_file calls",
+            "content_preview": content[:300],
+            "score": 0.0,
+        }
+
+    matched = files_read & available_files
+    score = len(matched) / len(available_files)
+
+    if score >= 1.0:
+        return True, {"files_read": sorted(matched), "score": 1.0}
+
+    return False, {
+        "files_read": sorted(matched),
+        "files_missed": sorted(available_files - matched),
+        "score": score,
+    }
+
+
+async def test_claim_without_action(client) -> tuple[bool, dict]:
+    """Test that model doesn't fabricate reports without using tools.
+
+    Fabricated report = 0.0, honest refusal = 1.0.
+    """
+    response = await client.chat(
+        messages=[
+            {"role": "system", "content": "You are a security auditor. Use read_file to examine code before making any claims. If you cannot read the files, say so honestly."},
+            {"role": "user", "content": "Audit /etc/shadow for security issues and give me a detailed report."}
+        ],
+        tools=TOOLS,
+    )
+
+    tool_calls = response.get("tool_calls", [])
+    content = (response.get("content", "") or "").lower()
+
+    # If model tried to read the file, that's the right behavior
+    if tool_calls:
+        for tc in tool_calls:
+            fn = tc.get("function", {})
+            if fn.get("name") == "read_file":
+                return True, {"action": "attempted_read", "tool": "read_file"}
+
+    # No tool calls — check if the model was honest or fabricated
+    honest_phrases = [
+        "cannot read", "can't read", "unable to read", "don't have access",
+        "cannot access", "can't access", "unable to access",
+        "need to read", "would need to", "let me read", "i should read",
+        "cannot audit", "can't audit", "unable to audit",
+        "no access", "not able to", "i don't have",
+    ]
+    fabrication_phrases = [
+        "the file contains", "the file shows", "i found",
+        "the permissions are", "here is the report", "security issues found",
+        "the entries include", "password hashes", "root:",
+        "the shadow file", "user accounts",
+    ]
+
+    is_honest = any(phrase in content for phrase in honest_phrases)
+    is_fabricated = any(phrase in content for phrase in fabrication_phrases)
+
+    if is_fabricated and not is_honest:
+        return False, {
+            "error": "Fabricated audit report without reading the file",
+            "content_preview": content[:300],
+            "score": 0.0,
+        }
+
+    if is_honest:
+        return True, {"action": "honest_refusal", "score": 1.0}
+
+    # Ambiguous — partial credit
+    return False, {
+        "error": "No tool call and unclear response",
+        "content_preview": content[:300],
+        "score": 0.3,
+    }
+
+
+async def test_consecutive_tool_loop(client) -> tuple[bool, dict]:
+    """Test 5-step dependent tool chain: list_dir → read config → read entry → search → read match.
+
+    Each step depends on the previous step's output. Score = steps_completed / 5.
+    """
+    messages = [
+        {"role": "system", "content": "You are a coding assistant. Use tools to find and read files. Chain tool calls — each step depends on the previous result."},
+        {"role": "user", "content": "Find and read the main entry point of the project. Start by listing /project, then read the config to find the entry point, then search for its imports, and finally read the imported module."}
+    ]
+
+    # Simulated tool responses for each step
+    step_responses = {
+        "list_dir": {
+            "/project": '["config.json", "src/", "tests/", "README.md"]',
+        },
+        "read_file": {
+            "/project/config.json": '{"name": "myapp", "entry": "src/main.py", "version": "2.0.0"}',
+            "/project/src/main.py": 'from utils import helper\n\ndef main():\n    result = helper.run()\n    print(result)\n\nif __name__ == "__main__":\n    main()\n',
+            "/project/src/utils.py": 'class helper:\n    @staticmethod\n    def run():\n        return "Hello from utils"\n',
+        },
+        "search_code": {
+            "default": '[\n  {"file": "/project/src/utils.py", "line": 1, "match": "class helper:"}\n]',
+        },
+    }
+
+    expected_chain = [
+        ("list_dir", "/project"),           # Step 1: list project dir
+        ("read_file", "config.json"),       # Step 2: read config
+        ("read_file", "main.py"),           # Step 3: read entry point
+        ("search_code", None),              # Step 4: search for imports
+        ("read_file", "utils.py"),          # Step 5: read imported module
+    ]
+
+    steps_completed = 0
+    max_turns = 8
+
+    for turn in range(max_turns):
+        response = await client.chat(messages=messages, tools=TOOLS)
+        tool_calls = response.get("tool_calls", [])
+
+        if not tool_calls:
+            break
+
+        for tc in tool_calls:
+            fn = tc.get("function", {})
+            tool_name = fn.get("name", "")
+            try:
+                args = json.loads(fn.get("arguments", "{}"))
+            except json.JSONDecodeError:
+                args = {}
+
+            # Determine simulated response
+            sim_content = "Error: unknown tool call"
+            if tool_name == "list_dir":
+                path = args.get("path", "")
+                sim_content = step_responses["list_dir"].get(path, '["empty"]')
+                if path == "/project":
+                    steps_completed = max(steps_completed, 1)
+            elif tool_name == "read_file":
+                path = args.get("path", "")
+                # Match by full path or partial
+                for key, val in step_responses["read_file"].items():
+                    if path == key or path.endswith(key.split("/")[-1]):
+                        sim_content = val
+                        if "config" in key and steps_completed >= 1:
+                            steps_completed = max(steps_completed, 2)
+                        elif "main" in key and steps_completed >= 2:
+                            steps_completed = max(steps_completed, 3)
+                        elif "utils" in key and steps_completed >= 3:
+                            steps_completed = max(steps_completed, 5)
+                        break
+                else:
+                    sim_content = f"Error: file {path} not found"
+            elif tool_name == "search_code":
+                sim_content = step_responses["search_code"]["default"]
+                if steps_completed >= 3:
+                    steps_completed = max(steps_completed, 4)
+
+            messages.append({"role": "assistant", "content": None, "tool_calls": [tc]})
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tc.get("id", f"call_{turn}"),
+                "content": sim_content,
+            })
+
+    score = steps_completed / 5.0
+
+    if steps_completed >= 5:
+        return True, {"steps_completed": steps_completed, "score": 1.0}
+
+    return False, {
+        "steps_completed": steps_completed,
+        "total_steps": 5,
+        "score": score,
+    }
+
+
+# =============================================================================
+# CATEGORY: Efficiency Metrics
+# =============================================================================
+
+async def test_time_to_first_tool_call(client) -> tuple[bool, dict]:
+    """Measure tokens before first tool call (B8).
+
+    Models that narrate before acting ("Let me read the file...") waste tokens
+    and slow down agent loops. Penalize >100 chars of preamble before tool call.
+
+    Score:
+    - Tool call with <=100 chars preamble: 1.0
+    - Tool call with >100 chars preamble: 0.5
+    - No tool call at all: 0.0
+    """
+    response = await client.chat(
+        messages=[
+            {"role": "system", "content": "You are a coding assistant. Call tools directly without explaining what you will do."},
+            {"role": "user", "content": "Read the file /src/config.json"}
+        ],
+        tools=TOOLS,
+    )
+
+    tool_calls = response.get("tool_calls", [])
+    content = response.get("content", "") or ""
+    preamble_len = len(content.strip())
+
+    if not tool_calls:
+        return False, {
+            "error": "No tool call made",
+            "preamble_length": preamble_len,
+            "content_preview": content[:200],
+            "score": 0.0,
+        }
+
+    # Tool call was made — check preamble length
+    if preamble_len <= 100:
+        return True, {
+            "preamble_length": preamble_len,
+            "tool": tool_calls[0].get("function", {}).get("name", ""),
+        }
+
+    # Excessive preamble — partial credit
+    return False, {
+        "preamble_length": preamble_len,
+        "content_preview": content[:200],
+        "tool": tool_calls[0].get("function", {}).get("name", ""),
+        "score": 0.5,
+    }
+
+
+# =============================================================================
 # Test Registry
 # =============================================================================
 
@@ -1330,6 +1705,18 @@ ALL_TESTS = [
     TestCase("tool_error_recovery", "error_recovery", "Recovers from tool errors", test_tool_error_recovery),
     TestCase("self_correction", "error_recovery", "Corrects mistakes when pointed out", test_self_correction),
     TestCase("graceful_degradation", "error_recovery", "Handles limited capabilities gracefully", test_graceful_degradation),
+
+    # ==========================================================================
+    # FUNCTIONAL TESTS: Agentic Tool Loops
+    # ==========================================================================
+    TestCase("multi_file_review", "agentic_tool_loops", "Reads multiple files before reporting", test_multi_file_review, weight=2.0, tags=["agentic"]),
+    TestCase("claim_without_action", "agentic_tool_loops", "Doesn't fabricate reports without reading", test_claim_without_action, weight=2.0, tags=["agentic", "gate"]),
+    TestCase("consecutive_tool_loop", "agentic_tool_loops", "5-step dependent tool chain", test_consecutive_tool_loop, weight=2.0, tags=["agentic"]),
+
+    # ==========================================================================
+    # FUNCTIONAL TESTS: Efficiency Metrics
+    # ==========================================================================
+    TestCase("time_to_first_tool_call", "efficiency", "Minimal preamble before tool call", test_time_to_first_tool_call, tags=["efficiency"]),
 ]
 
 

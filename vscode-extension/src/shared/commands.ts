@@ -147,6 +147,16 @@ export const SLASH_COMMANDS: Record<string, CommandDefinition> = {
         usage: '/pwd',
         category: CommandCategory.FILE
     },
+    '/ls': {
+        description: 'List directory contents',
+        usage: '/ls [path] [-a]',
+        category: CommandCategory.FILE
+    },
+    '/tree': {
+        description: 'Show directory tree',
+        usage: '/tree [path] [depth]',
+        category: CommandCategory.FILE
+    },
     '/preview': {
         description: 'Open live-reloading HTML preview',
         usage: '/preview <file.html>',

@@ -54,6 +54,7 @@ class ModelProfile:
     Attributes:
         tool_calling: Tool calling behavior configuration
         max_tokens: Default max_tokens for this model (0 = use provider default)
+        max_tool_iterations: Max tool loop iterations for this model (0 = use default)
         supports_reasoning: Model supports reasoning/thinking tokens (o-series)
         restricted_params: Parameters that must NOT be sent to this model
             (e.g., temperature/top_p for o-series reasoning models)
@@ -61,6 +62,7 @@ class ModelProfile:
     """
     tool_calling: ToolCallingProfile = field(default_factory=ToolCallingProfile)
     max_tokens: int = 0
+    max_tool_iterations: int = 0
     supports_reasoning: bool = False
     restricted_params: List[str] = field(default_factory=list)
     tier: str = ""
@@ -80,11 +82,13 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
     "gemini-2.5-pro*": ModelProfile(
         tool_calling=ToolCallingProfile(mode="native"),
         max_tokens=65_536,
+        max_tool_iterations=25,
         tier="S",
     ),
     "gemini-2.5-flash*": ModelProfile(
         tool_calling=ToolCallingProfile(mode="native"),
         max_tokens=65_536,
+        max_tool_iterations=25,
         tier="S",
     ),
     "qwen3-coder*": ModelProfile(
@@ -92,6 +96,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
             mode="native",
             parallel_tool_calls=True,
         ),
+        max_tool_iterations=20,
         tier="S",
     ),
 
@@ -149,6 +154,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
             fallback_on_empty=True,
         ),
         max_tokens=128_000,
+        max_tool_iterations=20,
         restricted_params=["temperature", "top_p"],
         tier="B",
     ),
@@ -258,6 +264,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
             parallel_tool_calls=True,
         ),
         max_tokens=8_192,
+        max_tool_iterations=20,
         tier="S",
     ),
     # Qwen3-Coder-Next: newer coder variant (60.94%), uses qwen3_coder parser
@@ -342,6 +349,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
             strip_json_from_text=True,
         ),
         max_tokens=8_192,
+        max_tool_iterations=20,
         tier="A",
     ),
     "sonar*": ModelProfile(
@@ -350,6 +358,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
             strip_json_from_text=True,
         ),
         max_tokens=2_048,
+        max_tool_iterations=20,
         tier="B",
     ),
 
@@ -365,11 +374,13 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
     "gemini-3-flash*": ModelProfile(
         tool_calling=ToolCallingProfile(mode="native"),
         max_tokens=65_536,
+        max_tool_iterations=25,
         tier="S",
     ),
     "gemini-3-pro*": ModelProfile(
         tool_calling=ToolCallingProfile(mode="native"),
         max_tokens=65_536,
+        max_tool_iterations=25,
         tier="A",
     ),
 

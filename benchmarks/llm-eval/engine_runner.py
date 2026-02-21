@@ -755,13 +755,29 @@ class EngineBenchmarkRunner:
                 if attempt < self.retries - 1:
                     print("(retry)", end=" ", flush=True)
 
-            status = "PASS" if passed else "FAIL"
+            # Support partial credit: test can return float score in details
+            # True = 1.0, False = 0.0, or details["score"] = 0.0-1.0
+            if isinstance(passed, (int, float)) and not isinstance(passed, bool):
+                score = float(max(0.0, min(1.0, passed)))
+                passed = score > 0.0
+            elif passed:
+                score = float(details.get("score", 1.0))
+            else:
+                score = float(details.get("score", 0.0))
+
+            if score == 1.0:
+                status = "PASS"
+            elif score > 0.0:
+                status = f"PARTIAL ({score:.0%})"
+            else:
+                status = "FAIL"
             print(status)
 
             # Debug logging: Save test result
             if self.debug and self.debug_dir:
                 test_log["final_result"] = {
                     "passed": passed,
+                    "score": score,
                     "details": details,
                 }
                 with open(test_log_file, "w") as f:
@@ -776,6 +792,7 @@ class EngineBenchmarkRunner:
                 "name": test.name,
                 "category": test.category,
                 "passed": passed,
+                "score": score,
                 "details": details,
                 "weight": test.weight,
             })
@@ -783,18 +800,18 @@ class EngineBenchmarkRunner:
             # Track by category
             if test.category not in category_results:
                 category_results[test.category] = []
-            category_results[test.category].append((passed, test.weight))
+            category_results[test.category].append((score, test.weight))
 
-        # Calculate scores
+        # Calculate scores (supports partial credit via score field)
         total_weight = sum(t.weight for t in tests)
-        passed_weight = sum(r["weight"] for r in test_results if r["passed"])
-        overall_score = (passed_weight / total_weight * 100) if total_weight > 0 else 0
+        scored_weight = sum(r["score"] * r["weight"] for r in test_results)
+        overall_score = (scored_weight / total_weight * 100) if total_weight > 0 else 0
 
         category_scores = {}
         for category, results in category_results.items():
             cat_total = sum(w for _, w in results)
-            cat_passed = sum(w for p, w in results if p)
-            category_scores[category] = (cat_passed / cat_total * 100) if cat_total > 0 else 0
+            cat_scored = sum(s * w for s, w in results)
+            category_scores[category] = (cat_scored / cat_total * 100) if cat_total > 0 else 0
 
         duration = time.time() - start_time
 
