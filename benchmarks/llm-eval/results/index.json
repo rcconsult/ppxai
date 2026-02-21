@@ -102,6 +102,11 @@
         "filename": "gemini_gemini-2.5-pro_2026-02-19_981722aa.json",
         "timestamp": "2026-02-19T17:05:36.575896",
         "overall_score": 75.0
+      },
+      {
+        "filename": "gemini_gemini-2.5-pro_2026-02-21_f84b40d5.json",
+        "timestamp": "2026-02-21T21:38:57.616603",
+        "overall_score": 85.12820512820514
       }
     ],
     "gemini/gemini-3-flash-preview": [
@@ -119,6 +124,11 @@
         "filename": "gemini_gemini-3-flash-preview_2026-02-20_9894d207.json",
         "timestamp": "2026-02-20T21:45:00.195716",
         "overall_score": 65.8974358974359
+      },
+      {
+        "filename": "gemini_gemini-3-flash-preview_2026-02-21_591883de.json",
+        "timestamp": "2026-02-21T21:49:55.579341",
+        "overall_score": 68.2051282051282
       }
     ],
     "gemini/gemini-3-pro-preview": [
@@ -427,6 +437,13 @@
         "filename": "openai_gpt-5.1-codex-mini_2026-02-17_91f47beb.json",
         "timestamp": "2026-02-17T20:34:43.899199",
         "overall_score": 10.9375
+      }
+    ],
+    "gemini/gemini-2.5-flash-lite": [
+      {
+        "filename": "gemini_gemini-2.5-flash-lite_2026-02-21_84ea2190.json",
+        "timestamp": "2026-02-21T21:39:44.772778",
+        "overall_score": 86.15384615384616
       }
     ]
   },
@@ -772,6 +789,24 @@
       "filename": "gemini_gemini-3-pro-preview_2026-02-20_523640a8.json",
       "timestamp": "2026-02-20T22:21:27.023355",
       "overall_score": 76.15384615384615
+    },
+    {
+      "pair": "gemini/gemini-2.5-pro",
+      "filename": "gemini_gemini-2.5-pro_2026-02-21_f84b40d5.json",
+      "timestamp": "2026-02-21T21:38:57.616603",
+      "overall_score": 85.12820512820514
+    },
+    {
+      "pair": "gemini/gemini-2.5-flash-lite",
+      "filename": "gemini_gemini-2.5-flash-lite_2026-02-21_84ea2190.json",
+      "timestamp": "2026-02-21T21:39:44.772778",
+      "overall_score": 86.15384615384616
+    },
+    {
+      "pair": "gemini/gemini-3-flash-preview",
+      "filename": "gemini_gemini-3-flash-preview_2026-02-21_591883de.json",
+      "timestamp": "2026-02-21T21:49:55.579341",
+      "overall_score": 68.2051282051282
     }
   ]
 }
