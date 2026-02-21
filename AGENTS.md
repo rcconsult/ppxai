@@ -256,7 +256,8 @@ The web tools (`get_weather`, `fetch_url`, `web_search`) support corporate proxy
 
 - `CLAUDE.md` - Detailed project instructions for Claude Code
 - `ROADMAP.md` - Feature roadmap and version planning
-- `docs/RELEASE-PLAN-v1.15.6-v1.16.0.md` - Current release plan (v1.15.6 foundation + v1.16.0 breaking changes)
+- `docs/TODO-v1.16.0.md` - Current v1.16.0 task list (consolidated, single source of truth)
+- `docs/archive/RELEASE-PLAN-v1.15.6-v1.16.0.md` - Original release plan (archived, v1.15.6 history)
 
 ### Current Version: v1.15.6
 

@@ -31,7 +31,7 @@ Agent mode transforms the TUI from a turn-based chat assistant into an autonomou
 
 ### How It Works
 
-![Agent Flow Diagram](future-agentic-flow.png)
+![Agent Flow Diagram](archive/future-agentic-flow.png)
 
 1. You issue an `/agent <task>` command
 2. The agent enters an autonomous loop (max 10 iterations by default)

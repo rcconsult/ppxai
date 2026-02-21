@@ -734,7 +734,7 @@ The checkpoint system works identically in VSCode extension:
 - Same backend selection logic
 - Same checkpoint creation/restore behavior
 
-See [docs/VSCODE-CHECKPOINT-UI-SPEC.md](VSCODE-CHECKPOINT-UI-SPEC.md) for implementation details.
+See [docs/VSCODE-CHECKPOINT-UI-SPEC.md](archive/v1.15.2-completed/VSCODE-CHECKPOINT-UI-SPEC.md) for implementation details.
 
 ---
 

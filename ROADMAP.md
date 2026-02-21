@@ -189,7 +189,7 @@ ppxai provides:
 
 **Status**: v1.14.2 released. Series complete. Future v1.14.x releases will be bug fixes only (stabilization).
 
-**Detailed Plan**: [docs/RELEASE-PLAN-v1.14.x.md](docs/RELEASE-PLAN-v1.14.x.md)
+**Detailed Plan**: [docs/RELEASE-PLAN-v1.14.x.md](docs/archive/v1.15.1-completed/RELEASE-PLAN-v1.14.x.md)
 
 **Rich-based TUI**: Feature complete. The current TUI (`ppxai`) has reached its feature ceiling due to Rich framework limitations (no proper editor workflows, limited keyboard handling). New TUI features will be developed in ppxaide (v1.15.x).
 
@@ -507,7 +507,7 @@ ppxai/tui/                     # New module (Textual-based)
 **Status:** ✅ All items done, pre-release (pending merge)
 **Branch:** feature/benchmark-openai-models
 **Release Notes:** [docs/RELEASE-NOTES-v1.15.6.md](docs/RELEASE-NOTES-v1.15.6.md)
-**Debug Sessions:** [docs/ARCHIVE-v1.15.6-debug-sessions.md](docs/ARCHIVE-v1.15.6-debug-sessions.md)
+**Debug Sessions:** [docs/ARCHIVE-v1.15.6-debug-sessions.md](docs/archive/ARCHIVE-v1.15.6-debug-sessions.md)
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -529,23 +529,31 @@ ppxai/tui/                     # New module (Textual-based)
 
 ### v1.16.0 - Profile-Driven Tool Loop & File Navigation
 
-**Status:** Planned (after v1.15.6)
-**Branch:** feature/v1.16.0 (to be created from master after v1.15.6 merge)
-**Detailed Plan:** [docs/RELEASE-PLAN-v1.15.6-v1.16.0.md](docs/RELEASE-PLAN-v1.15.6-v1.16.0.md)
+**Status:** In Progress
+**Branch:** feature/v1.16.0
+**Detailed Plan:** [docs/TODO-v1.16.0.md](docs/TODO-v1.16.0.md) (single source of truth)
 
 **Why major version bump:** Changes to `chat.py` tool loop affect every provider and every client.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
+| **Session context reset** | Strip assistant/tool messages on model switch (B1) | ✅ Done |
+| **Per-model iteration limits** | `ModelProfile.max_tool_iterations` (B2) | ✅ Done |
+| **Belt-and-suspenders** | Tool hints injected for fallback-enabled native profiles (B3) | ✅ Done |
+| **Session pollution detection** | Bigram similarity check after model switch (B7) | ✅ Done |
+| **SSE disconnect detection** | Cancel background tasks on client disconnect (B11) | ✅ Done |
+| **`/ls` command** | List files with sizes, modified time, all 3 clients + HTTP | ✅ Done |
+| **`/tree` command** | Render directory tree, all 3 clients + HTTP | ✅ Done |
+| **Partial credit scoring** | Benchmark scoring 0.0-1.0 instead of binary (A12/B9) | ✅ Done |
+| **Agentic benchmark tests** | multi_file_review, claim_without_action, consecutive_tool_loop, time_to_first_tool_call (B4-B8) | ✅ Done |
 | **Profile-driven routing** | Replace binary `use_native_tools` with `ModelProfile` lookup in `chat.py` | ⏳ Planned |
-| **`strip_json_from_text`** | Profile-controlled response cleaning for leaky models | ⏳ Planned |
 | **`fallback_on_empty`** | Adaptive fallback: native → prompt-based mid-conversation | ⏳ Planned |
 | **Proper `tool` role messages** | Replace synthetic assistant/user pairs with `tool` role + `tool_call_id` | ⏳ Planned |
 | **Multi-tool support** | Process all native tool calls (not just first) when profile allows | ⏳ Planned |
+| **Grouped tool call UI** | `TOOL_GROUP_START/END` events, collapsible bubbles in all clients | ⏳ Planned |
 | **Config overrides** | `tool_calling` settings per model in ppxai-config.json | ⏳ Planned |
 | **`/model info`** | Show active profile for current model | ⏳ Planned |
-| **`/ls` command** | List files with sizes, permissions, gitignore | ⏳ Planned |
-| **`/tree` command** | Render directory tree structure | ⏳ Planned |
+| **Provider hierarchy** | Shared ABC for OpenAINative/Gemini, remove `hasattr` guards | ⏳ Planned |
 | **Session migration** | v1.15.x sessions load in v1.16.0 without data loss | ⏳ Planned |
 
 **Gaps addressed (from MODEL-BEHAVIOR-ANALYSIS.md):**
@@ -600,7 +608,7 @@ These are tracked but not prioritized:
 
 ### Multi-Model Orchestration (Research)
 
-**Reference:** [docs/2512.15943v1.pdf](docs/2512.15943v1.pdf) - "Small Language Models for Efficient Agentic Tool Calling" (AWS, Dec 2025)
+**Reference:** [docs/2512.15943v1.pdf](docs/archive/2512.15943v1.pdf) - "Small Language Models for Efficient Agentic Tool Calling" (AWS, Dec 2025)
 
 **Paper Summary:**
 - Fine-tuned `facebook/opt-350m` (350M params) on ToolBench dataset (187,542 examples, 16,000+ APIs)

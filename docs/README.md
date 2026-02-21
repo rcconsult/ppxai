@@ -34,10 +34,11 @@
 | [DGX Spark Setup](DGX-SPARK-SETUP.md) | vLLM + Ollama on NVIDIA DGX Spark |
 | [vLLM Tool Calling](vllm-tool-calling-guide.md) | Hermes vs Harmony, native vs prompt-based |
 | [Prompt-Based Tool Calling](prompt-based-tool-calling.md) | Developer guide for non-native tool calling |
+| [TODO v1.16.0](TODO-v1.16.0.md) | Current v1.16.0 task list (active, single source of truth) |
 | [Release Notes v1.15.6](RELEASE-NOTES-v1.15.6.md) | Native OpenAI provider, model profiles, benchmark analysis |
 | [Release Notes v1.15.5](RELEASE-NOTES-v1.15.5.md) | Multi-line input, Escape key fix, build fix |
 | [Release Notes v1.15.4](RELEASE-NOTES-v1.15.4.md) | Live preview, SSL fixes, debug logging |
-| [Release Plan v1.15.x](RELEASE-PLAN-v1.15.x.md) | Development plan for v1.15.x series |
+| [Release Plan v1.15.x](archive/RELEASE-PLAN-v1.15.x.md) | Development plan for v1.15.x series (archived) |
 
 ### Archived Documentation
 

@@ -27,7 +27,7 @@ This document explains which providers use which method and the implications for
 | **vLLM** | Native | ✅ Yes (with --enable-auto-tool-choice) | Uses standard `tools` parameter |
 | **Ollama** | Native | ✅ Yes (Qwen models only) | Uses standard `tools` parameter |
 
-**Note (v1.15.6):** The OpenAI provider now uses a dedicated `OpenAINativeProvider` that routes models to their optimal tool calling mode. Some models (o4-mini, gpt-4.1-mini) use prompt-based mode even though the provider supports native tool calling, because benchmarks showed significantly better results. See [MODEL-BEHAVIOR-ANALYSIS.md](MODEL-BEHAVIOR-ANALYSIS.md) for details.
+**Note (v1.15.6):** The OpenAI provider now uses a dedicated `OpenAINativeProvider` that routes models to their optimal tool calling mode. Some models (o4-mini, gpt-4.1-mini) use prompt-based mode even though the provider supports native tool calling, because benchmarks showed significantly better results. See [MODEL-BEHAVIOR-ANALYSIS.md](archive/MODEL-BEHAVIOR-ANALYSIS.md) for details.
 
 ---
 
@@ -200,17 +200,21 @@ Tool calling method affects benchmark scores:
 - **Native calling:** Direct API → tool execution (faster, more reliable)
 - **Prompt-based:** Prompt → LLM generation → parsing → tool execution (slower, may have errors)
 
-**Example from v1.15.3 benchmarks:**
+**Example from v1.15.6 benchmarks:**
 
 | Model | Method | Score | Notes |
 |-------|--------|-------|-------|
-| gemini-3-flash-preview | Native | 100% | Perfect tool execution |
-| sonar-pro | Prompt-Based | 28.6% | Works but requires hints |
+| gemini-2.5-pro | Native | 81.3% | Clean native, no workarounds |
+| Qwen3-Coder-30B FP8 | Native | 81.3% | Hermes parser, stable |
+| gpt-5.2 | Native | 70.3% | Best OpenAI model |
+| sonar | Prompt-Based | 75.0% | Excellent with AGENTS.md hints |
+| gpt-4.1-mini | Prompt-Based | 71.9% | Better prompt-based than native (60.9%) |
 
 The gap is due to:
 1. Parsing reliability
 2. Model training (native models trained specifically for tool calling)
 3. Response format consistency
+4. Per-model routing — some models score higher with prompt-based mode
 
 ### Benchmark Metadata
 
@@ -256,8 +260,9 @@ If using Perplexity or other prompt-based providers:
    ```
 
 2. **Use specific models:**
-   - `sonar-pro` (73.4% benchmark) - Best for coding
-   - Avoid `sonar-reasoning-pro` (poor tool calling: 50%)
+   - `sonar` (75.0% benchmark) - Best cost/utility ratio
+   - `sonar-pro` - More thorough but higher cost
+   - Avoid `sonar-reasoning-pro` (poor tool calling: 67.2%)
 
 3. **Check AGENTS.md exists** in your project for model-specific tuning
 
@@ -397,6 +402,18 @@ Check the `native_tool_calling` capability flag in `ppxai-config.json` or see th
   - Weather tool: 500/1500/5000 chars for short/detailed/forecast formats
   - Custom limits for web_search (3000), fetch_url (5000), read_file (10000)
   - 11 new tests in `tests/test_tool_display_limits.py`
+
+### v1.15.6 (2026-02-20)
+- ✅ **`OpenAINativeProvider`** — dedicated provider for OpenAI models with per-model routing
+  - Chat Completions API for GPT-4.1, GPT-5.x, o-series
+  - Responses API for Codex and Pro models
+  - 404 auto-fallback between API paths
+  - `PROMPT_BASED_MODEL_PREFIXES` routes o4-mini, gpt-4.1-mini to prompt-based mode
+- ✅ **Model profiles** — `ModelProfile` dataclass in `model_profiles.py` with 37 profiles
+  - Per-model `tool_calling.mode`, `fallback_on_empty`, `strip_json_from_text`
+  - `max_tool_iterations` per model (gemini: 25, sonar/codex-mini: 20)
+- ✅ **Codex native tool calling** — belt-and-suspenders: native API tools + tool hints in `instructions`
+- ✅ **43 unit tests** in `tests/test_openai_native.py`
 
 ### v1.15.4 (2026-02-13)
 - ✅ **Corporate SSL support** for web tools (`get_weather`, `fetch_url`, `web_search`)

@@ -156,8 +156,8 @@ The 27-model analysis identified 5 architectural gaps in `chat.py`:
 - `ppxai/engine/model_profiles.py` — Model profile system
 - `tests/test_openai_native.py` — OpenAI provider tests
 - `tests/test_model_profiles.py` — Model profile tests
-- `docs/MODEL-BEHAVIOR-ANALYSIS.md` — 27-model benchmark analysis
-- `docs/RELEASE-PLAN-v1.15.6-v1.16.0.md` — Phased release plan
+- `docs/archive/MODEL-BEHAVIOR-ANALYSIS.md` — 27-model benchmark analysis
+- `docs/archive/RELEASE-PLAN-v1.15.6-v1.16.0.md` — Phased release plan (archived)
 - `scripts/package-windows-zip.ps1` — Windows offline deployment packager
 - `benchmarks/llm-eval/results/*.json` — 54+ benchmark result files
 

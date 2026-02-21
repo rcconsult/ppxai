@@ -524,7 +524,7 @@ All phases below are part of v1.15.0. See [tui-side-panel-refactor.md](design/tu
 
 **Status:** All items done, pre-release (pending merge)
 **Branch:** feature/benchmark-openai-models
-**Detailed Plan:** [RELEASE-PLAN-v1.15.6-v1.16.0.md](RELEASE-PLAN-v1.15.6-v1.16.0.md)
+**Detailed Plan:** [RELEASE-PLAN-v1.15.6-v1.16.0.md](RELEASE-PLAN-v1.15.6-v1.16.0.md) (archived)
 **Release Notes:** [RELEASE-NOTES-v1.15.6.md](RELEASE-NOTES-v1.15.6.md)
 **Debug Sessions:** [ARCHIVE-v1.15.6-debug-sessions.md](ARCHIVE-v1.15.6-debug-sessions.md)
 

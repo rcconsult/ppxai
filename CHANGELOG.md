@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added - Benchmark System Improvements
 
 - **Benchmark results** for 27 model variants (54+ runs across 7 categories, 26 tests each)
-- **Model behavior analysis** (`docs/MODEL-BEHAVIOR-ANALYSIS.md`) — 5 behavior tiers (S/A/B/C/D), per-category scores, 5 architectural gap findings
+- **Model behavior analysis** (`docs/archive/MODEL-BEHAVIOR-ANALYSIS.md`) — 5 behavior tiers (S/A/B/C/D), per-category scores, 5 architectural gap findings
 - **`--tool-calling-method`** CLI flag — Force `native`, `prompt_based`, or `auto` mode per benchmark run
 - **`--debug`** flag — Saves per-request JSON to `debug/` with full AI response content, tool_calls, and errors
 - **Profile-aware benchmark runner** — Consults `ModelProfile` for native vs prompt-based routing
@@ -73,8 +73,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
-- **v1.15.6/v1.16.0 release plan** (`docs/RELEASE-PLAN-v1.15.6-v1.16.0.md`) — Phased release strategy, P0-P4 backlog, v1.16.0 breaking changes roadmap
-- **Debug session archive** (`docs/ARCHIVE-v1.15.6-debug-sessions.md`) — 5 debug sessions, 23 items (A0-A14, C1-C9), key discoveries
+- **v1.15.6/v1.16.0 release plan** (`docs/archive/RELEASE-PLAN-v1.15.6-v1.16.0.md`) — Phased release strategy, P0-P4 backlog, v1.16.0 breaking changes roadmap
+- **Debug session archive** (`docs/archive/ARCHIVE-v1.15.6-debug-sessions.md`) — 5 debug sessions, 23 items (A0-A14, C1-C9), key discoveries
 - **DGX Spark setup guide** — Sanitized, removed sensitive info and Ollama references
 
 ---
@@ -1140,7 +1140,7 @@ This release introduces a checkpoint system for atomic multi-file rollback and r
 
 #### Documentation
 - [CHECKPOINT_GUIDE.md](docs/CHECKPOINT_GUIDE.md) - Comprehensive checkpoint system guide
-- [RELEASE-NOTES-v1.12.0.md](docs/RELEASE-NOTES-v1.12.0.md) - Full release notes
+- [RELEASE-NOTES-v1.12.0.md](docs/archive/release-notes/RELEASE-NOTES-v1.12.0.md) - Full release notes
 
 #### Testing
 - 377+ tests passing (40 new checkpoint tests)
@@ -1499,7 +1499,7 @@ This release introduces two major improvements: a comprehensive shell command co
 
 #### Documentation
 - [docs/SHELL_CONSENT_GUIDE.md](docs/SHELL_CONSENT_GUIDE.md) - Complete security guide
-- [docs/RELEASE-NOTES-v1.11.2.md](docs/RELEASE-NOTES-v1.11.2.md) - Full release notes
+- [docs/RELEASE-NOTES-v1.11.2.md](docs/archive/release-notes/RELEASE-NOTES-v1.11.2.md) - Full release notes
 - Updated README.md with shell consent features
 - Updated CLAUDE.md with v1.11.2 summary
 

@@ -217,7 +217,7 @@ Consent responses were inconsistent across clients:
 - Manual conversion in each client was error-prone
 
 **Solution:**
-Created `normalize_consent_response()` function in [ppxai/common/consent.py](ppxai/common/consent.py) that accepts all variations:
+Created `normalize_consent_response()` function in [ppxai/common/consent.py](../ppxai/common/consent.py) that accepts all variations:
 
 ```python
 normalize_consent_response("yes") → "y"
