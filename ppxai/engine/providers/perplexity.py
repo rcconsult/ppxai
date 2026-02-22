@@ -62,26 +62,6 @@ class PerplexityProvider(BaseProvider):
         native_tool_calling=False  # Sonar models don't support native API tool_calls
     )
 
-    def _get_generation_params(self, model: str) -> Dict[str, Any]:
-        """Get generation parameters (temperature, top_p, etc.) from config.
-
-        v1.15.2: Allows setting temperature and other params to reduce hallucinations.
-        Lower temperature (0.0-0.5) produces more deterministic, factual responses.
-
-        Args:
-            model: Model ID to check
-
-        Returns:
-            Dict of generation params to pass to API (empty if none configured)
-        """
-        try:
-            from ...config import get_generation_params
-            # Use provider_id if set, otherwise fall back to class name
-            provider = self.provider_id or self.name
-            return get_generation_params(provider, model)
-        except (ImportError, AttributeError):
-            return {}  # No params configured
-
     async def chat(
         self,
         messages: List[Message],

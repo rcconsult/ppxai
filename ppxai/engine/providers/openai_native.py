@@ -24,8 +24,8 @@ import httpx
 from openai import OpenAI
 
 from ...common.logger import get_logger
-from ..model_profiles import ModelProfile, get_profile
-from ..types import Message, Event, EventType, ProviderCapabilities, ModelInfo, UsageStats
+from ..types import Message, Event, EventType, ProviderCapabilities, UsageStats
+from .base import BaseProvider
 
 
 logger = get_logger("openai_native")
@@ -49,7 +49,7 @@ PROMPT_BASED_MODEL_PREFIXES = ("o4-mini", "gpt-4.1-mini")
 RESTRICTED_GENERATION_PARAMS = ("temperature", "top_p", "frequency_penalty", "presence_penalty")
 
 
-class OpenAINativeProvider:
+class OpenAINativeProvider(BaseProvider):
     """Native provider for OpenAI API.
 
     Uses the OpenAI Python SDK directly for OpenAI-specific features:
@@ -57,6 +57,10 @@ class OpenAINativeProvider:
     - Responses API (Codex models, web search)
     - Native function calling with proper tool call streaming
     - Reasoning token extraction
+
+    Inherits from BaseProvider (v1.16.0) for shared interface: needs_tool(),
+    get_model_profile(), list_models(), validate_config(), _parse_usage(),
+    _convert_messages(), _get_generation_params(), _get_max_tokens().
     """
 
     name = "openai"
@@ -88,16 +92,11 @@ class OpenAINativeProvider:
             provider_id: Provider identifier (for config lookup)
             **kwargs: Additional options (base_url accepted for compat, ignored)
         """
-        self.api_key = api_key
-        self.models = models or {}
         self.enable_web_search = enable_web_search
-        self.provider_id = provider_id or "openai"
 
         # Set capabilities, enabling web_search if configured
-        if capabilities:
-            self.capabilities = capabilities
-        else:
-            self.capabilities = ProviderCapabilities(
+        if not capabilities:
+            capabilities = ProviderCapabilities(
                 web_search=enable_web_search,
                 web_fetch=enable_web_search,
                 weather=enable_web_search,
@@ -106,7 +105,20 @@ class OpenAINativeProvider:
                 native_tool_calling=True,
             )
 
-        # Initialize OpenAI client with SSL config
+        # Remove base_url from kwargs if passed for compat (we don't use it)
+        kwargs.pop("base_url", None)
+
+        # base_url=None skips OpenAI client creation in BaseProvider
+        super().__init__(
+            api_key=api_key,
+            base_url=None,
+            models=models,
+            capabilities=capabilities,
+            provider_id=provider_id or "openai",
+            **kwargs,
+        )
+
+        # Create our own OpenAI client (no base_url = api.openai.com default)
         ssl_verify_env = os.getenv("SSL_VERIFY", "true").lower()
         ssl_cert_file = os.getenv("SSL_CERT_FILE", "")
 
@@ -142,26 +154,6 @@ class OpenAINativeProvider:
     def _has_restricted_params(model: str) -> bool:
         """Check if model rejects temperature/top_p etc."""
         return model.lower().startswith(RESTRICTED_PARAM_PREFIXES)
-
-    # ------------------------------------------------------------------
-    # Config lookup helpers
-    # ------------------------------------------------------------------
-
-    def _get_generation_params(self, model: str) -> Dict[str, Any]:
-        """Get generation parameters from config."""
-        try:
-            from ...config import get_generation_params
-            return get_generation_params(self.provider_id, model)
-        except (ImportError, AttributeError):
-            return {}
-
-    def _get_max_tokens(self, model: str) -> Optional[int]:
-        """Get max_tokens for output generation from config."""
-        try:
-            from ...config import get_model_max_tokens
-            return get_model_max_tokens(self.provider_id, model)
-        except (ImportError, AttributeError):
-            return None
 
     # ------------------------------------------------------------------
     # Public interface
@@ -229,26 +221,6 @@ class OpenAINativeProvider:
         response = self.client.chat.completions.create(**request_kwargs)
         return response.choices[0].message.content or ""
 
-    def list_models(self) -> List[ModelInfo]:
-        """Return available models for this provider."""
-        return [
-            ModelInfo(
-                id=info.get("id", model_key),
-                name=info.get("name", info.get("id", model_key)),
-                description=info.get("description", ""),
-                context_length=info.get("context_length"),
-            )
-            for model_key, info in self.models.items()
-        ]
-
-    def validate_config(self) -> bool:
-        """Validate provider configuration."""
-        return bool(self.api_key)
-
-    def needs_tool(self, tool_category: str) -> bool:
-        """Check if provider needs a tool (doesn't have native capability)."""
-        return not getattr(self.capabilities, tool_category, False)
-
     def get_capabilities_for_model(self, model: str) -> ProviderCapabilities:
         """Get model-aware capabilities.
 
@@ -274,19 +246,6 @@ class OpenAINativeProvider:
                 native_tool_calling=False,
             )
         return self.capabilities
-
-    def get_model_profile(self, model: str) -> ModelProfile:
-        """Get the behavioral profile for a model.
-
-        Returns the ModelProfile from the built-in registry.
-
-        Args:
-            model: Model ID (e.g., "gpt-5.2", "o4-mini")
-
-        Returns:
-            ModelProfile for the model
-        """
-        return get_profile(model)
 
     # ------------------------------------------------------------------
     # Chat Completions API
@@ -698,11 +657,6 @@ class OpenAINativeProvider:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _convert_messages(messages: List[Message]) -> List[Dict[str, str]]:
-        """Convert Message objects to Chat Completions API format."""
-        return [{"role": m.role, "content": m.content} for m in messages]
-
-    @staticmethod
     def _convert_messages_for_responses(messages: List[Message]) -> tuple:
         """Convert Messages to Responses API format.
 
@@ -772,17 +726,6 @@ class OpenAINativeProvider:
     # ------------------------------------------------------------------
     # Usage parsing
     # ------------------------------------------------------------------
-
-    @staticmethod
-    def _parse_usage(usage) -> Optional[UsageStats]:
-        """Parse usage from Chat Completions API response."""
-        if not usage:
-            return None
-        return UsageStats(
-            prompt_tokens=getattr(usage, "prompt_tokens", 0) or 0,
-            completion_tokens=getattr(usage, "completion_tokens", 0) or 0,
-            total_tokens=getattr(usage, "total_tokens", 0) or 0,
-        )
 
     @staticmethod
     def _parse_responses_usage(usage) -> Optional[UsageStats]:

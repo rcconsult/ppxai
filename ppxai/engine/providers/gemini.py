@@ -22,8 +22,8 @@ import json
 import os
 from typing import List, AsyncIterator, Optional, Dict, Any
 from ...common.logger import get_logger
-from ..model_profiles import ModelProfile, get_profile
-from ..types import Message, Event, EventType, ProviderCapabilities, ModelInfo, UsageStats
+from ..types import Message, Event, EventType, ProviderCapabilities, UsageStats
+from .base import BaseProvider
 
 
 # Try to import google-genai package (optional dependency, v1.12.5+)
@@ -45,7 +45,7 @@ def is_available() -> bool:
     return _genai_available
 
 
-class GeminiProvider:
+class GeminiProvider(BaseProvider):
     """Native provider for Google Gemini API.
 
     Uses the google-genai SDK directly for Gemini-specific features:
@@ -58,6 +58,10 @@ class GeminiProvider:
     does NOT allow combining grounding with function calling - when ppxai
     tools are enabled, function calling takes priority and grounding is
     disabled for that request.
+
+    Inherits from BaseProvider (v1.16.0) for shared interface: needs_tool(),
+    get_model_profile(), list_models(), validate_config(), get_capabilities_for_model(),
+    _get_generation_params(), _get_max_tokens().
     """
 
     name = "gemini"
@@ -99,13 +103,22 @@ class GeminiProvider:
                 "Install with: pip install ppxai[gemini]"
             )
 
-        self.api_key = api_key
-        self.models = models or {}
-        self.capabilities = capabilities or self.default_capabilities
         self.enable_grounding = enable_grounding
         self.enable_thinking = enable_thinking
         self.thinking_budget = thinking_budget
-        self.provider_id = provider_id or "gemini"  # For config lookup
+
+        # Remove base_url from kwargs if passed for compat (we don't use it)
+        kwargs.pop("base_url", None)
+
+        # base_url=None skips OpenAI client creation in BaseProvider
+        super().__init__(
+            api_key=api_key,
+            base_url=None,
+            models=models,
+            capabilities=capabilities,
+            provider_id=provider_id or "gemini",
+            **kwargs,
+        )
 
         # Initialize the Gemini client with SSL configuration
         # Respects SSL_VERIFY and SSL_CERT_FILE env vars (consistent with BaseProvider)
@@ -124,24 +137,6 @@ class GeminiProvider:
             api_key=api_key,
             http_options=http_options
         )
-
-    def _get_generation_params(self, model: str) -> Dict[str, Any]:
-        """Get generation parameters (temperature, top_p, etc.) from config.
-
-        v1.15.2: Allows setting temperature and other params to reduce hallucinations.
-        Lower temperature (0.0-0.5) produces more deterministic, factual responses.
-
-        Args:
-            model: Model ID to check
-
-        Returns:
-            Dict of generation params to pass to API (empty if none configured)
-        """
-        try:
-            from ...config import get_generation_params
-            return get_generation_params(self.provider_id, model)
-        except (ImportError, AttributeError):
-            return {}  # No params configured
 
     def _filter_empty_parts(self, parts: List[Any], context: str = "") -> List[Any]:
         """Filter out empty parts to work around SDK v1.57.0+ regression.
@@ -430,54 +425,6 @@ class GeminiProvider:
                     content += part.text
 
         return content
-
-    def list_models(self) -> List[ModelInfo]:
-        """Return available models for this provider.
-
-        Returns:
-            List of ModelInfo objects
-        """
-        return [
-            ModelInfo(
-                id=info.get("id", model_key),
-                name=info.get("name", info.get("id", model_key)),
-                description=info.get("description", ""),
-                context_length=info.get("context_length")
-            )
-            for model_key, info in self.models.items()
-        ]
-
-    def validate_config(self) -> bool:
-        """Validate provider configuration.
-
-        Returns:
-            True if configuration is valid
-        """
-        return bool(self.api_key)
-
-    def needs_tool(self, tool_category: str) -> bool:
-        """Check if provider needs a tool (doesn't have native capability).
-
-        Args:
-            tool_category: Category like 'web_search', 'weather', etc.
-
-        Returns:
-            True if provider needs this tool (doesn't have native capability)
-        """
-        return not getattr(self.capabilities, tool_category, False)
-
-    def get_model_profile(self, model: str) -> ModelProfile:
-        """Get the behavioral profile for a model.
-
-        Returns the ModelProfile from the built-in registry.
-
-        Args:
-            model: Model ID (e.g., "gemini-2.5-pro", "gemini-3-flash-preview")
-
-        Returns:
-            ModelProfile for the model
-        """
-        return get_profile(model)
 
     def _convert_messages(self, messages: List[Message]) -> tuple:
         """Convert Message objects to Gemini format.

@@ -64,17 +64,17 @@ Step 7: Benchmark v2          (independent — can run in parallel with any step
 
 ---
 
-## Step 1: Provider Hierarchy Refactoring
+## Step 1: Provider Hierarchy Refactoring ✓
 
-**Dependencies:** None — do first, it removes `hasattr` guards and simplifies Steps 2-4.
+**Status:** Completed (2026-02-22)
 
-`OpenAINativeProvider` and `GeminiProvider` are standalone classes with duck typing (`hasattr` guards). This works but is fragile.
+All providers now inherit from `BaseProvider`. `hasattr` guards removed from `chat.py`. 61 new compliance tests.
 
-- [ ] **Shared ABC or Protocol** — `OpenAINativeProvider` and `GeminiProvider` inherit from `BaseProvider` or `ProviderProtocol` (3h)
-- [ ] **Eliminate duplicate methods** — move `needs_tool`, `get_model_profile`, `_format_error`, `_log_error_traceback` to base (2h)
-- [ ] **Remove `hasattr` guards** — replace `hasattr(provider, 'get_capabilities_for_model')` in `chat.py` with guaranteed interface (1h)
-- [ ] **`get_capabilities_for_model` → profile** — replace with `get_model_profile()` as single source of truth (2h)
-- [ ] **Tests** — all providers pass shared interface compliance test (2h)
+- [x] **Shared ABC** — `OpenAINativeProvider` and `GeminiProvider` inherit from `BaseProvider`
+- [x] **Eliminate duplicate methods** — `needs_tool`, `get_model_profile`, `list_models`, `validate_config`, `_parse_usage`, `_convert_messages`, `_get_generation_params`, `_get_max_tokens` moved to base
+- [x] **Remove `hasattr` guards** — `chat.py` uses `get_capabilities_for_model()` directly
+- [x] **`get_capabilities_for_model()`** — added to `BaseProvider` (returns `self.capabilities`); `OpenAINativeProvider` overrides for o4-mini/gpt-4.1-mini
+- [x] **Tests** — `test_provider_hierarchy.py` with 61 parametrized tests (inheritance, interface, capabilities, validate_config, base_url)
 
 ---
 
@@ -242,7 +242,7 @@ Phase 1 (scoring distortions) is mostly done. Remaining:
 
 ## Success Criteria
 
-- [ ] **Step 1:** Provider hierarchy — shared interface, no `hasattr` guards
+- [x] **Step 1:** Provider hierarchy — shared interface, no `hasattr` guards (1451 tests pass)
 - [ ] **Step 2:** Profile-driven routing replaces binary decision in `chat.py`
 - [ ] **Step 3:** Proper `tool` role messages for native mode
 - [ ] **Step 4:** Multi-tool support for models returning parallel calls

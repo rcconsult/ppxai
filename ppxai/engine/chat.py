@@ -204,15 +204,8 @@ async def chat_with_tools(
     accumulated_usage = UsageStats()
 
     # Check if provider supports native tool calling
-    # Use model-aware capabilities when available (e.g., codex models don't
-    # support native function calling via Responses API)
-    provider_caps = None
-    if ctx.provider:
-        if hasattr(ctx.provider, 'get_capabilities_for_model'):
-            provider_caps = ctx.provider.get_capabilities_for_model(ctx.model)
-        elif hasattr(ctx.provider, 'capabilities'):
-            provider_caps = ctx.provider.capabilities
-
+    # All providers now implement get_capabilities_for_model() via BaseProvider (v1.16.0)
+    provider_caps = ctx.provider.get_capabilities_for_model(ctx.model) if ctx.provider else None
     use_native_tools = bool(provider_caps and provider_caps.native_tool_calling)
 
     # Get tools in OpenAI format for native tool calling

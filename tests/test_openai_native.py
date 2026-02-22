@@ -168,13 +168,13 @@ class TestPromptBasedRouting:
 class TestMessageConversion:
     """Test message conversion for both APIs."""
 
-    def test_convert_messages_basic(self):
+    def test_convert_messages_basic(self, provider):
         messages = [
             Message(role="system", content="You are helpful."),
             Message(role="user", content="Hello"),
             Message(role="assistant", content="Hi there"),
         ]
-        result = OpenAINativeProvider._convert_messages(messages)
+        result = provider._convert_messages(messages)
         assert len(result) == 3
         assert result[0] == {"role": "system", "content": "You are helpful."}
         assert result[1] == {"role": "user", "content": "Hello"}
@@ -231,15 +231,15 @@ class TestMessageConversion:
 class TestUsageParsing:
     """Test usage parsing for both APIs."""
 
-    def test_parse_chat_completions_usage(self):
+    def test_parse_chat_completions_usage(self, provider):
         usage = SimpleNamespace(prompt_tokens=100, completion_tokens=50, total_tokens=150)
-        result = OpenAINativeProvider._parse_usage(usage)
+        result = provider._parse_usage(usage)
         assert result.prompt_tokens == 100
         assert result.completion_tokens == 50
         assert result.total_tokens == 150
 
-    def test_parse_usage_none(self):
-        assert OpenAINativeProvider._parse_usage(None) is None
+    def test_parse_usage_none(self, provider):
+        assert provider._parse_usage(None) is None
 
     def test_parse_responses_usage(self):
         usage = SimpleNamespace(input_tokens=200, output_tokens=80)

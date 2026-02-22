@@ -95,41 +95,12 @@ class OpenAICompatibleProvider(BaseProvider):
         model_lower = model.lower()
         return any(model_lower.startswith(p) for p in self.MAX_COMPLETION_TOKENS_PREFIXES)
 
-    def _get_max_tokens(self, model: str) -> Optional[int]:
-        """Get max_tokens for output generation.
+    def validate_config(self) -> bool:
+        """Validate provider configuration.
 
-        v1.13.10: This ensures vLLM and other backends generate complete responses
-        instead of using their often-too-small defaults (e.g., 2048).
-
-        Args:
-            model: Model ID to check
-
-        Returns:
-            max_tokens value or None to use provider default
+        OpenAI-compatible providers require both api_key and base_url.
         """
-        try:
-            from ...config import get_model_max_tokens
-            return get_model_max_tokens(self.provider_id, model)
-        except (ImportError, AttributeError):
-            return None  # Let provider use its default
-
-    def _get_generation_params(self, model: str) -> Dict[str, Any]:
-        """Get generation parameters (temperature, top_p, etc.) from config.
-
-        v1.15.0: Allows setting temperature and other params to reduce hallucinations.
-        Lower temperature (0.0-0.5) produces more deterministic, factual responses.
-
-        Args:
-            model: Model ID to check
-
-        Returns:
-            Dict of generation params to pass to API (empty if none configured)
-        """
-        try:
-            from ...config import get_generation_params
-            return get_generation_params(self.provider_id, model)
-        except (ImportError, AttributeError):
-            return {}  # No params configured
+        return bool(self.api_key and self.base_url)
 
     def _estimate_tokens(self, messages: List[Dict[str, Any]]) -> int:
         """Estimate token count for messages.

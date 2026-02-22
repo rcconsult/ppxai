@@ -18,6 +18,8 @@ class BaseProvider(ABC):
     """Abstract base class for all AI providers.
 
     Providers handle communication with AI APIs and emit events that clients consume.
+    Subclasses that don't use the OpenAI SDK (e.g., GeminiProvider) should pass
+    base_url=None and create their own client after calling super().__init__().
     """
 
     # Class attributes to be overridden
@@ -27,7 +29,7 @@ class BaseProvider(ABC):
     def __init__(
         self,
         api_key: str,
-        base_url: str,
+        base_url: Optional[str] = None,
         models: Optional[Dict[str, Dict[str, str]]] = None,
         capabilities: Optional[ProviderCapabilities] = None,
         provider_id: Optional[str] = None,
@@ -37,7 +39,7 @@ class BaseProvider(ABC):
 
         Args:
             api_key: API key for authentication
-            base_url: Base URL for the API
+            base_url: Base URL for the API (None skips OpenAI client creation)
             models: Dictionary of available models
             capabilities: Provider capabilities (native features)
             provider_id: Provider identifier (e.g., "openai", "custom") for config lookup
@@ -48,6 +50,11 @@ class BaseProvider(ABC):
         self.models = models or {}
         self.capabilities = capabilities or self.default_capabilities
         self.provider_id = provider_id  # Used by _get_generation_params(), _get_max_tokens()
+
+        # Skip OpenAI client creation when base_url is None
+        # (providers like GeminiProvider and OpenAINativeProvider create their own clients)
+        if base_url is None:
+            return
 
         # Check SSL configuration
         # SSL_VERIFY=false disables SSL verification entirely
@@ -145,10 +152,13 @@ class BaseProvider(ABC):
     def validate_config(self) -> bool:
         """Validate provider configuration.
 
+        Default: requires api_key. Providers that need base_url (e.g.,
+        OpenAICompatibleProvider) should override.
+
         Returns:
             True if configuration is valid
         """
-        return bool(self.api_key and self.base_url)
+        return bool(self.api_key)
 
     def needs_tool(self, tool_category: str) -> bool:
         """Check if provider needs a tool (doesn't have native capability).
@@ -175,6 +185,53 @@ class BaseProvider(ABC):
             ModelProfile for the model
         """
         return get_profile(model)
+
+    def get_capabilities_for_model(self, model: str) -> ProviderCapabilities:
+        """Get model-aware capabilities.
+
+        Returns the provider's capabilities, potentially adjusted for specific
+        models. The default returns self.capabilities unchanged. Providers like
+        OpenAINativeProvider override this to disable native_tool_calling for
+        models that perform better with prompt-based routing.
+
+        Args:
+            model: Model ID (e.g., "gpt-5.2", "o4-mini")
+
+        Returns:
+            ProviderCapabilities for the model
+        """
+        return self.capabilities
+
+    def _get_generation_params(self, model: str) -> Dict[str, Any]:
+        """Get generation parameters (temperature, top_p, etc.) from config.
+
+        Args:
+            model: Model ID to check
+
+        Returns:
+            Dict of generation params to pass to API (empty if none configured)
+        """
+        try:
+            from ...config import get_generation_params
+            provider = self.provider_id or self.name
+            return get_generation_params(provider, model)
+        except (ImportError, AttributeError):
+            return {}
+
+    def _get_max_tokens(self, model: str) -> Optional[int]:
+        """Get max_tokens for output generation from config.
+
+        Args:
+            model: Model ID to check
+
+        Returns:
+            max_tokens value or None to use provider default
+        """
+        try:
+            from ...config import get_model_max_tokens
+            return get_model_max_tokens(self.provider_id, model)
+        except (ImportError, AttributeError):
+            return None
 
     def _convert_messages(self, messages: List[Message]) -> List[Dict[str, str]]:
         """Convert Message objects to API format.

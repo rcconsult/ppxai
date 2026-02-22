@@ -4,11 +4,11 @@ Provider registry and factory.
 Providers are dynamically registered and can be retrieved by name.
 """
 
-from typing import Dict, Type, Optional, List, Union
+from typing import Dict, Type, Optional, List
 from .base import BaseProvider
 
-# Provider registry - supports both BaseProvider subclasses and native providers
-_providers: Dict[str, Type] = {}
+# Provider registry - all providers inherit from BaseProvider (v1.16.0)
+_providers: Dict[str, Type[BaseProvider]] = {}
 
 
 def register_provider(name: str, provider_class: Type):
@@ -21,7 +21,7 @@ def get_provider_class(name: str) -> Optional[Type]:
     return _providers.get(name)
 
 
-def create_provider(name: str, **kwargs) -> Optional[Union[BaseProvider, "GeminiProvider", "OpenAINativeProvider"]]:
+def create_provider(name: str, **kwargs) -> Optional[BaseProvider]:
     """Create an instance of a provider by name.
 
     Args:
