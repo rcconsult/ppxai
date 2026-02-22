@@ -5,8 +5,8 @@ v1.15.6: Foundation data structures and registry for model-specific behavior
 configuration. Profiles encode per-model tool calling strategy, API routing,
 and capability flags derived from benchmark analysis (27 models, 7 categories).
 
-These profiles are NOT yet consulted by chat.py — that integration happens
-in v1.16.0 when the profile-driven tool loop replaces the binary decision.
+v1.16.0 Step 2: Profiles are consulted by chat.py for tool calling mode
+resolution, fallback behavior, and strip_json decisions.
 
 This is a LEAF MODULE - no ppxai imports allowed (except types).
 """
@@ -329,44 +329,33 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
 
     # ── Generic fallbacks (least specific, matched last) ──────────────
 
-    # Perplexity Sonar models — web search is native, tool JSON leaks in content
+    # Perplexity Sonar models — prompt-based tool calling (Perplexity API has
+    # native_tool_calling=False). Parser extracts tool JSON from response text.
     # NOTE: sonar-reasoning-pro MUST come before sonar* to avoid glob shadowing
     "sonar-reasoning-pro*": ModelProfile(
-        tool_calling=ToolCallingProfile(
-            mode="native",
-            strip_json_from_text=True,
-        ),
+        tool_calling=ToolCallingProfile(mode="prompt_based"),
         max_tokens=12_288,
         supports_reasoning=True,
         tier="C",
     ),
     "sonar-deep-research*": ModelProfile(
-        tool_calling=ToolCallingProfile(mode="native"),
+        tool_calling=ToolCallingProfile(mode="prompt_based"),
         max_tokens=8_192,
         tier="C",
     ),
     "llama-3.1-sonar*": ModelProfile(
-        tool_calling=ToolCallingProfile(
-            mode="prompt_based",
-            strip_json_from_text=True,
-        ),
+        tool_calling=ToolCallingProfile(mode="prompt_based"),
         max_tokens=2_048,
         tier="D",
     ),
     "sonar-pro*": ModelProfile(
-        tool_calling=ToolCallingProfile(
-            mode="native",
-            strip_json_from_text=True,
-        ),
+        tool_calling=ToolCallingProfile(mode="prompt_based"),
         max_tokens=8_192,
         max_tool_iterations=20,
         tier="A",
     ),
     "sonar*": ModelProfile(
-        tool_calling=ToolCallingProfile(
-            mode="native",
-            strip_json_from_text=True,
-        ),
+        tool_calling=ToolCallingProfile(mode="prompt_based"),
         max_tokens=2_048,
         max_tool_iterations=20,
         tier="B",

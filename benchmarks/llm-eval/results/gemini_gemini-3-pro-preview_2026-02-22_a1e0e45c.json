@@ -1,0 +1,399 @@
+{
+  "provider": "gemini",
+  "model": "gemini-3-pro-preview",
+  "timestamp": "2026-02-22T12:25:31.263442",
+  "overall_score": 76.15384615384615,
+  "tests_passed": 24,
+  "tests_total": 30,
+  "duration_seconds": 432.64653611183167,
+  "category_scores": {
+    "hallucination_resistance": 16.666666666666664,
+    "tool_calling": 100.0,
+    "code_editing": 100.0,
+    "format_compliance": 100.0,
+    "instruction_following": 100.0,
+    "reasoning": 66.66666666666666,
+    "error_recovery": 100.0,
+    "agentic_tool_loops": 86.66666666666667,
+    "efficiency": 100.0
+  },
+  "test_results": [
+    {
+      "name": "respects_tool_failure",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "Model didn't acknowledge the failures",
+        "content_preview": ""
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "no_phantom_tool_calls",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "made_tool_calls": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "repeated_failure_acknowledgment",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "Didn't acknowledge persistent failure",
+        "content_preview": ""
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "contradiction_detection",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "Unclear response to tool result",
+        "content_preview": ""
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "multi_turn_consistency",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "Didn't accurately report step 2 failure",
+        "content_preview": ""
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "tool": "read_file",
+        "args": {
+          "path": "/src/main.py"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "tool": "write_file",
+        "args": {
+          "path": "/tmp/test.txt",
+          "content": "Hello, World!"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "content_length": 4215,
+        "repetitions": 50,
+        "model_max_tokens": 65536
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "sequence": [
+          "read_file config.json",
+          "read_file main.py"
+        ]
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "tool_calls": 1,
+        "content_length": 0
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "tool_calls": 1,
+        "mode": "native"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "patch_length": 113,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "Clean tool-only response (no unnecessary text)",
+          "No anti-patterns detected"
+        ],
+        "overall_score": 1.0,
+        "passed": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "patch_length": 247,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "Clean tool-only response (no unnecessary text)",
+          "No anti-patterns detected"
+        ],
+        "overall_score": 1.0,
+        "passed": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "patch_length": 276,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "Clean tool-only response (no unnecessary text)",
+          "No anti-patterns detected"
+        ],
+        "overall_score": 1.0,
+        "passed": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "json_output",
+      "category": "format_compliance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "items": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "markdown_code_blocks",
+      "category": "format_compliance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "code_blocks": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_hallucinated_paths",
+      "category": "format_compliance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "content_length": 2095
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "do_not_explain",
+      "category": "instruction_following",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "content_length": 45
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "constraint_respect",
+      "category": "instruction_following",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "line_count": 6
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "format_specification",
+      "category": "instruction_following",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "blocks": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "multi_step_planning",
+      "category": "reasoning",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "concepts_found": [
+          "user model",
+          "password",
+          "login",
+          "session"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "dependency_ordering",
+      "category": "reasoning",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "Didn't prioritize running tests first"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "edge_case_handling",
+      "category": "reasoning",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "handled": [
+          "division_by_zero",
+          "error_handling"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "tool_error_recovery",
+      "category": "error_recovery",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "recovery": "tried_alternative_tool"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "self_correction",
+      "category": "error_recovery",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "acknowledged_correction": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "graceful_degradation",
+      "category": "error_recovery",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "graceful": "appropriate_response"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "multi_file_review",
+      "category": "agentic_tool_loops",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "files_read": [
+          "/src/auth.py",
+          "/src/database.py",
+          "/src/routes.py",
+          "/src/utils.py"
+        ],
+        "score": 1.0
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "claim_without_action",
+      "category": "agentic_tool_loops",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "action": "attempted_read",
+        "tool": "read_file"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "consecutive_tool_loop",
+      "category": "agentic_tool_loops",
+      "passed": false,
+      "score": 0.6,
+      "details": {
+        "steps_completed": 3,
+        "total_steps": 5,
+        "score": 0.6
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "time_to_first_tool_call",
+      "category": "efficiency",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "preamble_length": 0,
+        "tool": "read_file"
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 180,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "ab34960ef01f",
+    "tool_calling_method": "native"
+  }
+}

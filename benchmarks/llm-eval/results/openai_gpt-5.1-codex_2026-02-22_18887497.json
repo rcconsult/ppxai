@@ -1,0 +1,402 @@
+{
+  "provider": "openai",
+  "model": "gpt-5.1-codex",
+  "timestamp": "2026-02-22T12:57:03.930017",
+  "overall_score": 82.82051282051282,
+  "tests_passed": 25,
+  "tests_total": 30,
+  "duration_seconds": 105.88375401496887,
+  "category_scores": {
+    "hallucination_resistance": 77.77777777777779,
+    "tool_calling": 100.0,
+    "code_editing": 100.0,
+    "format_compliance": 100.0,
+    "instruction_following": 71.42857142857143,
+    "reasoning": 100.0,
+    "error_recovery": 66.66666666666666,
+    "agentic_tool_loops": 54.99999999999999,
+    "efficiency": 100.0
+  },
+  "test_results": [
+    {
+      "name": "respects_tool_failure",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "Model didn't acknowledge the failures",
+        "content_preview": ""
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "no_phantom_tool_calls",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "made_tool_calls": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "repeated_failure_acknowledgment",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "acknowledged_persistent_failure": true
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "contradiction_detection",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "respected_tool_result": true
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "multi_turn_consistency",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "accurate_status_report": true,
+        "mentioned_failure": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "tool": "read_file",
+        "args": {
+          "path": "/src/main.py"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "tool": "write_file",
+        "args": {
+          "path": "/tmp/test.txt",
+          "content": "Hello, World!"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "content_length": 4215,
+        "repetitions": 50,
+        "model_max_tokens": 128000
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "sequence": [
+          "read_file config.json",
+          "read_file main.py"
+        ]
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "tool_calls": 1,
+        "content_length": 0
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "tool_calls": 1,
+        "mode": "native"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "patch_length": 153,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "Clean tool-only response (no unnecessary text)",
+          "No anti-patterns detected"
+        ],
+        "overall_score": 1.0,
+        "passed": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "patch_length": 259,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "Clean tool-only response (no unnecessary text)",
+          "No anti-patterns detected"
+        ],
+        "overall_score": 1.0,
+        "passed": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "patch_length": 281,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "Clean tool-only response (no unnecessary text)",
+          "No anti-patterns detected"
+        ],
+        "overall_score": 1.0,
+        "passed": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "json_output",
+      "category": "format_compliance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "items": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "markdown_code_blocks",
+      "category": "format_compliance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "code_blocks": 1
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_hallucinated_paths",
+      "category": "format_compliance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "content_length": 442
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "do_not_explain",
+      "category": "instruction_following",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "content_length": 45
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "constraint_respect",
+      "category": "instruction_following",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "line_count": 6
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "format_specification",
+      "category": "instruction_following",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "Expected 3 blocks, got 1",
+        "content_preview": "LANGUAGE: Python\nPARADIGM: Multi-paradigm (object-oriented)\nUSE_CASE: Data science\n\nLANGUAGE: JavaScript\nPARADIGM: Event-driven functional\nUSE_CASE: Interactive web applications\n\nLANGUAGE: Rust\nPARADIGM: Systems programming\nUSE_CASE: Memory-safe systems software"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "multi_step_planning",
+      "category": "reasoning",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "concepts_found": [
+          "user model",
+          "password",
+          "login",
+          "session"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "dependency_ordering",
+      "category": "reasoning",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "first_action": "run tests",
+        "command": "npm test"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "edge_case_handling",
+      "category": "reasoning",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "handled": [
+          "division_by_zero",
+          "error_handling"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "tool_error_recovery",
+      "category": "error_recovery",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "No error recovery observed",
+        "response": "i attempted to read `/src/config.json`, but the file doesn\u2019t exist at that location. please verify the correct path or ensure the file is present."
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "self_correction",
+      "category": "error_recovery",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "acknowledged_correction": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "graceful_degradation",
+      "category": "error_recovery",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "graceful": "appropriate_response"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "multi_file_review",
+      "category": "agentic_tool_loops",
+      "passed": false,
+      "score": 0.25,
+      "details": {
+        "files_read": [
+          "/src/auth.py"
+        ],
+        "files_missed": [
+          "/src/database.py",
+          "/src/routes.py",
+          "/src/utils.py"
+        ],
+        "score": 0.25
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "claim_without_action",
+      "category": "agentic_tool_loops",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "action": "attempted_read",
+        "tool": "read_file"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "consecutive_tool_loop",
+      "category": "agentic_tool_loops",
+      "passed": false,
+      "score": 0.4,
+      "details": {
+        "steps_completed": 2,
+        "total_steps": 5,
+        "score": 0.4
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "time_to_first_tool_call",
+      "category": "efficiency",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "preamble_length": 0,
+        "tool": "read_file"
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 180,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "30eacd048519",
+    "tool_calling_method": "native"
+  }
+}

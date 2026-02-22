@@ -169,15 +169,80 @@ async def chat_simple(
         return
 
 
+def _build_prompt_based_messages(ctx: ChatContext) -> List[Message]:
+    """Build message list with tool descriptions injected into system prompt.
+
+    Assembles: bootstrap prompt + system prompt + tool prompt into a single
+    system message, prepended to the conversation messages. Used for both
+    the primary prompt-based path and native-mode fallback retries.
+
+    Args:
+        ctx: Chat context with provider, session, tool_manager, etc.
+
+    Returns:
+        Message list with system prompt containing tool descriptions
+    """
+    messages = ctx.session.get_messages()
+    tool_prompt = ctx.tool_manager.get_tools_prompt(working_dir=ctx.get_working_dir())
+    if not tool_prompt:
+        return messages
+
+    # Add provider-specific guidance
+    has_native_search = ctx.provider and (
+        ctx.provider.capabilities.citations or ctx.provider.capabilities.web_search
+    )
+    has_search_tool = ctx.tool_manager.get_tool("web_search") is not None
+
+    if has_native_search and not has_search_tool:
+        tool_prompt += (
+            "\n\n## Native Web Search Capability\n"
+            "You have NATIVE web search capability built-in. For weather, current events, "
+            "web searches, or any real-time information: simply answer the question directly "
+            "using your native search - you do NOT need a tool for this."
+        )
+
+    if has_native_search or has_search_tool:
+        tool_prompt += (
+            "\n\nWhen citing sources or URLs from search results, format them as markdown links "
+            "like [Source Name](https://example.com) so they are clickable."
+        )
+
+    # Apply custom system prompt
+    system_prompt = get_system_prompt(ctx.provider_name)
+    prompt_mode = get_system_prompt_mode(ctx.provider_name)
+
+    # Get bootstrap prompt (v1.14.0)
+    bootstrap_prompt = ctx.get_bootstrap_prompt()
+
+    # Assemble final prompt:
+    # 1. Bootstrap (project context) - if present
+    # 2. System prompt (user config)
+    # 3. Tool prompt
+    # Note: prompt_mode affects system_prompt placement relative to tool_prompt
+    if prompt_mode == "replace":
+        final_prompt = system_prompt
+    elif prompt_mode == "append":
+        final_prompt = f"{tool_prompt}\n\n{system_prompt}"
+    else:  # "prepend" (default)
+        final_prompt = f"{system_prompt}\n\n{tool_prompt}"
+
+    # Prepend bootstrap prompt if present (always first)
+    if bootstrap_prompt:
+        final_prompt = f"{bootstrap_prompt}\n\n---\n\n{final_prompt}"
+
+    return [Message("system", final_prompt)] + messages
+
+
 async def chat_with_tools(
     ctx: ChatContext,
     stream: bool
 ) -> AsyncIterator[Event]:
     """Chat with tool support.
 
-    Supports two modes:
+    Supports three profile-driven modes:
     1. Native tool calling: Provider returns TOOL_CALL events
     2. Prompt-based: Parse tool calls from model's text response
+    3. Auto: Start native, fall back to prompt-based on empty/failure
 
     Args:
         ctx: Chat context with provider, session, tool_manager, etc.
@@ -203,16 +268,28 @@ async def chat_with_tools(
     # Track accumulated usage
     accumulated_usage = UsageStats()
 
-    # Check if provider supports native tool calling
-    # All providers now implement get_capabilities_for_model() via BaseProvider (v1.16.0)
+    # Profile-driven tool calling mode resolution (v1.16.0 Step 2)
+    # Replaces the binary native/prompt decision with profile-aware routing.
     provider_caps = ctx.provider.get_capabilities_for_model(ctx.model) if ctx.provider else None
-    use_native_tools = bool(provider_caps and provider_caps.native_tool_calling)
+    tc_profile = profile.tool_calling
 
-    # Get tools in OpenAI format for native tool calling
-    openai_tools = None
-    if use_native_tools:
-        openai_tools = ctx.tool_manager.get_tools_openai_format()
-    # For prompt-based mode: tools stay None — they're injected in the system prompt instead
+    # Mode resolution:
+    # 1. Profile mode takes precedence ("native", "prompt_based", "auto")
+    # 2. Provider capabilities gate native mode (provider must support it)
+    # 3. "auto" starts native if provider supports it
+    if tc_profile.mode == "prompt_based":
+        use_native_tools = False
+    elif tc_profile.mode == "native":
+        use_native_tools = bool(provider_caps and provider_caps.native_tool_calling)
+    else:  # "auto"
+        use_native_tools = bool(provider_caps and provider_caps.native_tool_calling)
+
+    openai_tools = ctx.tool_manager.get_tools_openai_format() if use_native_tools else None
+
+    logger.debug(
+        f"Tool mode: profile.mode={tc_profile.mode}, use_native={use_native_tools}, "
+        f"fallback_empty={tc_profile.fallback_on_empty}, fallback_fail={tc_profile.fallback_on_failure}"
+    )
 
     # Debug: log session state at start of chat_with_tools
     logger.debug(
@@ -223,6 +300,8 @@ async def chat_with_tools(
     yield Event(EventType.STREAM_START, {"model": ctx.model})
 
     empty_retry_count = 0
+    consecutive_truncation_retries = 0
+    MAX_TRUNCATION_RETRIES = 3
 
     while iteration < max_iterations:
         if ctx.is_interrupted:
@@ -237,54 +316,8 @@ async def chat_with_tools(
         messages = ctx.session.get_messages()
 
         if not use_native_tools:
-            # Prompt-based tool calling
-            # v1.15.2: Pass working directory so LLM knows current directory even after /cd
-            tool_prompt = ctx.tool_manager.get_tools_prompt(working_dir=ctx.get_working_dir())
-            if tool_prompt:
-                # Add provider-specific guidance
-                has_native_search = ctx.provider and (
-                    ctx.provider.capabilities.citations or ctx.provider.capabilities.web_search
-                )
-                has_search_tool = ctx.tool_manager.get_tool("web_search") is not None
-
-                if has_native_search and not has_search_tool:
-                    tool_prompt += (
-                        "\n\n## Native Web Search Capability\n"
-                        "You have NATIVE web search capability built-in. For weather, current events, "
-                        "web searches, or any real-time information: simply answer the question directly "
-                        "using your native search - you do NOT need a tool for this."
-                    )
-
-                if has_native_search or has_search_tool:
-                    tool_prompt += (
-                        "\n\nWhen citing sources or URLs from search results, format them as markdown links "
-                        "like [Source Name](https://example.com) so they are clickable."
-                    )
-
-                # Apply custom system prompt
-                system_prompt = get_system_prompt(ctx.provider_name)
-                prompt_mode = get_system_prompt_mode(ctx.provider_name)
-
-                # Get bootstrap prompt (v1.14.0)
-                bootstrap_prompt = ctx.get_bootstrap_prompt()
-
-                # Assemble final prompt:
-                # 1. Bootstrap (project context) - if present
-                # 2. System prompt (user config)
-                # 3. Tool prompt
-                # Note: prompt_mode affects system_prompt placement relative to tool_prompt
-                if prompt_mode == "replace":
-                    final_prompt = system_prompt
-                elif prompt_mode == "append":
-                    final_prompt = f"{tool_prompt}\n\n{system_prompt}"
-                else:  # "prepend" (default)
-                    final_prompt = f"{system_prompt}\n\n{tool_prompt}"
-
-                # Prepend bootstrap prompt if present (always first)
-                if bootstrap_prompt:
-                    final_prompt = f"{bootstrap_prompt}\n\n---\n\n{final_prompt}"
-
-                messages = [Message("system", final_prompt)] + messages
+            # Prompt-based tool calling — build messages with tool descriptions in system prompt
+            messages = _build_prompt_based_messages(ctx)
         else:
             # Native tool calling — inject bootstrap prompt (AGENTS.md hints)
             # and belt-and-suspenders tool descriptions for fallback-capable models (B3)
@@ -295,8 +328,7 @@ async def chat_with_tools(
             # for models with fallback flags, so prompt-based parsing can work
             # if native tool calling returns empty or fails
             tool_hint = ""
-            tc = profile.tool_calling
-            if tc.fallback_on_empty or tc.fallback_on_failure:
+            if tc_profile.fallback_on_empty or tc_profile.fallback_on_failure:
                 tool_hint = ctx.tool_manager.get_tools_prompt(working_dir=ctx.get_working_dir())
 
             parts = [p for p in [bootstrap_prompt, system_prompt, tool_hint] if p]
@@ -335,6 +367,24 @@ async def chat_with_tools(
             yield Event(EventType.ERROR, "Interrupted by user")
             return
 
+        # Fallback on empty: native mode returned nothing — retry with prompt-based
+        if use_native_tools and tc_profile.fallback_on_empty:
+            if not native_tool_calls and not full_response.strip():
+                logger.info(f"Native empty response, falling back to prompt-based (model={ctx.model})")
+                yield Event(EventType.INFO, "Native tool calling returned empty, retrying with prompt-based...")
+                fallback_messages = _build_prompt_based_messages(ctx)
+                async for event in ctx.provider.chat(fallback_messages, ctx.model, stream=False, tools=None):
+                    if event.type == EventType.ERROR:
+                        yield event
+                        return
+                    elif event.type == EventType.STREAM_END:
+                        full_response = event.data or ""
+                        if event.metadata and event.metadata.get("usage"):
+                            usage = event.metadata["usage"]
+                            accumulated_usage.prompt_tokens += usage.prompt_tokens
+                            accumulated_usage.completion_tokens += usage.completion_tokens
+                            accumulated_usage.total_tokens += usage.total_tokens
+
         # Determine tool call
         tool_call = None
         if native_tool_calls:
@@ -343,14 +393,23 @@ async def chat_with_tools(
             if isinstance(tool_args, dict) and "tool" in tool_args and "arguments" in tool_args:
                 tool_args = tool_args["arguments"]
             tool_call = {"tool": tc["tool"], "arguments": tool_args}
+            # Fallback on failure: native tool call has unknown tool — try prompt-based parser
+            # Must run BEFORE strip_tool_json so the parser can find JSON in response text
+            if tool_call and not ctx.tool_manager.get_tool(tool_call["tool"]):
+                if tc_profile.fallback_on_failure:
+                    logger.info(f"Native tool call unknown tool '{tool_call['tool']}', falling back to prompt-based parser")
+                    fallback_call = parse_tool_call(full_response, ctx.tool_manager.get_tool)
+                    if fallback_call:
+                        tool_call = fallback_call
             # v1.15.6 Gap 4: Strip duplicated tool call JSON from response text.
-            # Some models (gpt-5-mini, gpt-5, etc.) output tool calls both via
-            # native tool_calls AND as JSON text in the content. Remove the
-            # duplicate to prevent user confusion and context waste.
             if full_response:
                 full_response = strip_tool_json_from_text(full_response)
         else:
             tool_call = parse_tool_call(full_response, ctx.tool_manager.get_tool)
+
+        # Profile-driven strip_json: strip tool JSON from text even without native calls
+        if not native_tool_calls and tc_profile.strip_json_from_text and full_response:
+            full_response = strip_tool_json_from_text(full_response)
 
         if tool_call:
             tool_name = tool_call["tool"]
@@ -510,25 +569,65 @@ async def chat_with_tools(
         else:
             # No tool call - final response
             # v1.15.2: Check for truncated tool call attempts (GPT-OSS intermittent issue)
+            # v1.16.0: Extended with raw JSON detection, stuck-loop escalation, retry cap
             truncated = detect_truncated_tool_call(full_response)
             if truncated and iteration < max_iterations:
-                logger.info(f"Truncated tool call detected: {truncated['message']}")
-                yield Event(
-                    EventType.INFO,
-                    f"Truncated tool call: {truncated['reason']} - requesting retry"
+                consecutive_truncation_retries += 1
+                logger.info(
+                    f"Truncated tool call detected (attempt {consecutive_truncation_retries}): "
+                    f"{truncated['message']}"
                 )
-                # Add targeted feedback with [SYSTEM:] framing so models don't
-                # misinterpret this as conversational correction (A2: codex treated
-                # the old format as "I won't use that wording going forward")
-                recovery_msg = (
-                    f"[SYSTEM: Tool call failed. Your response contained text about using '{truncated['tool']}' "
-                    f"but no valid tool call was executed. "
-                    f"To use a tool, you MUST output ONLY the tool call — no surrounding text. "
-                    f"Retry the tool call now, or respond with your answer if you cannot use tools.]"
-                )
-                ctx.session.add_message(Message("assistant", full_response[:500] + "..." if len(full_response) > 500 else full_response))
-                ctx.session.add_message(Message("user", recovery_msg))
-                continue
+
+                # Cap: after MAX_TRUNCATION_RETRIES, stop retrying and warn user
+                if consecutive_truncation_retries > MAX_TRUNCATION_RETRIES:
+                    logger.warning(
+                        f"Truncation retry limit reached ({MAX_TRUNCATION_RETRIES}) "
+                        f"for tool '{truncated['tool']}'"
+                    )
+                    yield Event(EventType.WARNING, {
+                        "type": "stuck_tool_loop",
+                        "severity": "error",
+                        "message": (
+                            f"Model keeps attempting truncated {truncated['tool']} calls. "
+                            f"Try: switch to a model with higher token limits, or manually "
+                            f"break the task into smaller steps."
+                        ),
+                    })
+                    consecutive_truncation_retries = 0
+                    # Fall through to final response handling below
+                else:
+                    yield Event(
+                        EventType.INFO,
+                        f"Truncated tool call: {truncated['reason']} - requesting retry "
+                        f"({consecutive_truncation_retries}/{MAX_TRUNCATION_RETRIES})"
+                    )
+
+                    # Escalating recovery messages
+                    if consecutive_truncation_retries >= 2:
+                        # Model is stuck — force a different approach
+                        recovery_msg = (
+                            f"[SYSTEM: CRITICAL — your tool call for '{truncated['tool']}' has been "
+                            f"truncated {consecutive_truncation_retries} times. You MUST use a different approach. "
+                            f"Do NOT use {truncated['tool']} for large changes. Instead:\n"
+                            f"1. Break the work into multiple smaller tool calls\n"
+                            f"2. Edit specific sections rather than rewriting entire files\n"
+                            f"3. If you cannot complete the task with tools, respond with your answer in text.]"
+                        )
+                    else:
+                        recovery_msg = (
+                            f"[SYSTEM: Your previous response contained a truncated {truncated['tool']} "
+                            f"tool call ({truncated['reason']}). The tool was NOT executed. "
+                            f"To fix this: break the operation into smaller steps. "
+                            f"For apply_patch: use smaller, focused patches instead of rewriting entire files. "
+                            f"Do NOT repeat the same large tool call — it will be truncated again.]"
+                        )
+
+                    ctx.session.add_message(Message("assistant", full_response[:500] + "..." if len(full_response) > 500 else full_response))
+                    ctx.session.add_message(Message("user", recovery_msg))
+                    continue
+
+            # Reset truncation counter on successful non-truncated response
+            consecutive_truncation_retries = 0
 
             # Handle empty responses
             if iteration == 1 and not full_response.strip() and ctx.tool_manager.auto_retry_empty > 0:

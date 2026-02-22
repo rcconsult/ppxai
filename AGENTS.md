@@ -31,8 +31,9 @@ provider_hints:
     - "Use your native web search for current information - don't use web_search tool."
     - "Cite sources as markdown links inline."
     - "CRITICAL: Do NOT make duplicate calls for the same operation. Chain multiple DIFFERENT tool calls without stopping to narrate."
-    - "Do NOT output tool call JSON in your response - use native tool calling only."
-    - "Do NOT output code blocks when using apply_patch - the tool handles the code."
+    - "To call a tool, output ONLY the JSON object with 'tool' and 'arguments' keys — no surrounding text, no markdown code fences."
+    - "Keep tool calls small. For apply_patch: use focused patches on specific sections, NOT full file rewrites."
+    - "If a tool call fails or is truncated, try a DIFFERENT approach — do NOT repeat the same large call."
     - "Do NOT mention tools in your response that you didn't actually call."
   openai:
     - "You have native function calling - ALWAYS use the tools API to call tools. NEVER output tool call JSON like {\"tool\": \"...\", \"arguments\": {...}} in your response text."
@@ -168,8 +169,9 @@ model_hints:
     - "You have real-time web access - use it for current information."
     - "Always cite sources with markdown links."
     - "CRITICAL: Do NOT make 5-6 duplicate apply_patch calls for the same file. One patch per file, but chain calls across DIFFERENT files."
-    - "Do NOT output tool call JSON in your response text - use native tool calling only."
-    - "Do NOT output code blocks when using apply_patch - the tool contains the code."
+    - "To call a tool, output ONLY the JSON object — example: {\"tool\": \"read_file\", \"arguments\": {\"filepath\": \"path\"}}. No surrounding text, no markdown fences."
+    - "Keep apply_patch calls SMALL. Patch specific sections, NOT entire files. Large patches get truncated and fail."
+    - "If a tool call was truncated, do NOT repeat it. Break the work into smaller patches or use a different tool."
     - "Do NOT mention tools in your response that you didn't actually call."
     - "After calling a tool, provide minimal response - let the tool output speak for itself."
   "gemini-3-flash*":

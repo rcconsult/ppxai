@@ -1231,3 +1231,64 @@ class TestParseToolCallBraceCountingIntegration:
         assert result is not None
         assert result["tool"] == "apply_patch"
         assert "patch" in result["arguments"]
+
+
+class TestDetectTruncatedRawJson:
+    """Tests for raw JSON truncation detection without preamble (v1.16.0).
+
+    sonar-pro and similar models output raw tool JSON without "I'll use X tool"
+    text. The extended detect_truncated_tool_call must catch these.
+    """
+
+    def test_raw_truncated_json_no_preamble(self):
+        """Raw JSON with 'tool' key and unclosed braces detected as truncated."""
+        # Sonar-pro pattern: just outputs JSON directly, gets truncated
+        text = '{"tool": "apply_patch", "arguments": {"patch": "--- a/main.py\\n+++ b/main.py\\n@@ -1,100 +1,100 @@\\n-old line'
+        result = detect_truncated_tool_call(text)
+        assert result is not None
+        assert result["tool"] == "apply_patch"
+        assert result["reason"] == "truncated_json"
+
+    def test_raw_truncated_json_in_code_block(self):
+        """Truncated JSON inside a markdown code block without preamble."""
+        text = '```json\n{"tool": "apply_patch", "arguments": {"patch": "some long patch content...'
+        result = detect_truncated_tool_call(text)
+        assert result is not None
+        assert result["tool"] == "apply_patch"
+        assert result["reason"] == "truncated_json"
+
+    def test_raw_complete_json_not_flagged(self):
+        """Complete raw JSON without preamble should NOT be flagged as truncated."""
+        text = '{"tool": "read_file", "arguments": {"filepath": "test.py"}}'
+        result = detect_truncated_tool_call(text)
+        assert result is None
+
+    def test_raw_json_different_tools(self):
+        """Raw truncated JSON detected for various tool names."""
+        for tool in ["read_file", "web_search", "execute_shell_command"]:
+            text = f'{{"tool": "{tool}", "arguments": {{"key": "value'
+            result = detect_truncated_tool_call(text)
+            assert result is not None, f"Failed to detect truncation for {tool}"
+            assert result["tool"] == tool
+
+    def test_no_tool_key_not_detected(self):
+        """JSON without 'tool' key is not detected as truncated tool call."""
+        text = '{"name": "something", "data": {"nested": "value'
+        result = detect_truncated_tool_call(text)
+        assert result is None
+
+    def test_raw_json_with_surrounding_text(self):
+        """Raw truncated JSON with non-intent surrounding text still detected."""
+        text = 'Here is the change:\n{"tool": "apply_patch", "arguments": {"patch": "--- a.py\\n+++ b.py\\n'
+        result = detect_truncated_tool_call(text)
+        assert result is not None
+        assert result["tool"] == "apply_patch"
+
+    def test_preamble_pattern_still_takes_priority(self):
+        """If preamble pattern matches, Pattern 1 handles it (not Pattern 2)."""
+        text = "I'll use the apply_patch tool.\n{\"tool\": \"apply_patch\", \"arguments\": {\"patch\": \"incomplete..."
+        result = detect_truncated_tool_call(text)
+        assert result is not None
+        assert result["tool"] == "apply_patch"
+        # Pattern 1 detects it via the intent preamble
+        assert "attempted to call" in result["message"] or "truncated" in result["reason"]

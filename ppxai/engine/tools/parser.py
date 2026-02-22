@@ -442,7 +442,39 @@ def detect_truncated_tool_call(text: str) -> Optional[Dict[str, Any]]:
             break
 
     if not tool_name:
-        return None
+        # Pattern 2: Raw JSON with "tool" key but unclosed braces (no preamble).
+        # Catches sonar-pro style: just outputs {"tool": "apply_patch", "arguments": {...
+        # without any "I'll use X tool" text preceding it.
+        tool_match = re.search(r'\{\s*"tool"\s*:\s*"(\w+)"', text)
+        if tool_match:
+            json_start = tool_match.start()
+            open_braces = 0
+            in_string = False
+            escape_next = False
+            for char in text[json_start:]:
+                if escape_next:
+                    escape_next = False
+                    continue
+                if char == '\\' and in_string:
+                    escape_next = True
+                    continue
+                if char == '"' and not escape_next:
+                    in_string = not in_string
+                    continue
+                if in_string:
+                    continue
+                if char == '{':
+                    open_braces += 1
+                elif char == '}':
+                    open_braces -= 1
+            if open_braces > 0:  # Unclosed JSON
+                tool_name = tool_match.group(1)
+                return {
+                    "tool": tool_name,
+                    "reason": "truncated_json",
+                    "message": f"Tool call JSON for '{tool_name}' is truncated (unclosed braces: {open_braces})"
+                }
+        return None  # No truncation detected
 
     # Check for incomplete JSON after the tool mention
     # Look for opening brace without matching close
@@ -464,7 +496,7 @@ def detect_truncated_tool_call(text: str) -> Optional[Dict[str, Any]]:
         if escape_next:
             escape_next = False
             continue
-        if char == '\\':
+        if char == '\\' and in_string:
             escape_next = True
             continue
         if char == '"' and not escape_next:

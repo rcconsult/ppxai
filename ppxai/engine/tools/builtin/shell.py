@@ -122,13 +122,19 @@ class ShellExecuteTool(BaseTool):
             interactive_commands = shell_config.get("interactive_commands", [])
             non_interactive_with_args = shell_config.get("non_interactive_with_args", [])
 
+            # Check for shell operators - if present, skip cd/interactive
+            # handling and let subprocess.run(shell=True) handle natively
+            shell_operators = ('&&', '||', ';', '|')
+            has_shell_operators = any(op in command for op in shell_operators)
+
             # Extract the base command
             cmd_parts = command.strip().split()
             if cmd_parts:
                 base_cmd = os.path.basename(cmd_parts[0].lower())
 
                 # Handle cd command specially - update engine working directory (v1.13.8)
-                if base_cmd == "cd" and len(cmd_parts) >= 2:
+                # Skip if command has shell operators (e.g., "cd /path && python3 main.py")
+                if base_cmd == "cd" and len(cmd_parts) >= 2 and not has_shell_operators:
                     target_path = " ".join(cmd_parts[1:])  # Handle paths with spaces
                     # Expand ~ and resolve relative to current working dir
                     expanded = os.path.expanduser(target_path)
@@ -144,8 +150,8 @@ class ShellExecuteTool(BaseTool):
                     else:
                         return f"Error: Directory not found: {target_path}"
 
-                # Check if it's an interactive command
-                if base_cmd in interactive_commands:
+                # Check if it's an interactive command (skip for compound commands)
+                if base_cmd in interactive_commands and not has_shell_operators:
                     # Some commands are only interactive without arguments
                     if base_cmd in non_interactive_with_args and len(cmd_parts) > 1:
                         # Has arguments, likely not interactive (e.g., 'python script.py', 'ssh host cmd')

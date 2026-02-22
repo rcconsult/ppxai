@@ -78,29 +78,22 @@ All providers now inherit from `BaseProvider`. `hasattr` guards removed from `ch
 
 ---
 
-## Step 2: Profile-Driven Tool Loop
+## Step 2: Profile-Driven Tool Loop ✓
 
-**Dependencies:** Step 1 (clean provider interface with guaranteed `get_model_profile()`)
+**Status:** Completed (2026-02-22)
 
-Replace the binary decision point in `chat.py:210`:
+Profile-driven mode routing replaces the binary `native_tool_calling` decision. `ToolCallingProfile.mode` ("native", "prompt_based", "auto") drives routing with provider capability gating. Fallback on empty/failure, strip_json, and belt-and-suspenders all wired.
 
-```python
-# BEFORE:
-use_native_tools = bool(provider_caps and provider_caps.native_tool_calling)
-
-# AFTER:
-profile = ctx.provider.get_model_profile(ctx.model) or default_profile
-tc_mode = profile.tool_calling.mode
-```
-
-- [ ] **Replace binary decision** — `chat.py:210` uses profile lookup instead of capability check (2h)
-- [ ] **`strip_json_from_text`** — when profile says strip AND native tool calls present, clean response text (3h)
-- [ ] **`fallback_on_empty`** — when native returns empty, fall back to prompt-based parsing (3h)
-- [ ] **`auto` mode** — start native, switch to prompt-based on first empty/failure (2h)
-- [ ] **Backwards compat** — missing profile → default profile → current behavior (1h)
-- [ ] **Tests** — profile-driven routing unit tests with mock provider (4h)
-
-**Note:** Belt-and-suspenders (B3) already done — injects tool descriptions for fallback-enabled profiles.
+- [x] **Replace binary decision** — `chat.py` uses `tc_profile.mode` with provider capability gate
+- [x] **`strip_json_from_text`** — profile-driven stripping for both native and prompt-based modes
+- [x] **`fallback_on_empty`** — native empty → retry with `_build_prompt_based_messages()`
+- [x] **`fallback_on_failure`** — native unknown tool → prompt-based parser fallback
+- [x] **`auto` mode** — starts native if provider supports it, same as native with fallbacks
+- [x] **Backwards compat** — default profile = `mode="native"` → current behavior preserved
+- [x] **Truncation recovery** — raw JSON truncation detection, escalating recovery messages, stuck-loop detection (MAX_TRUNCATION_RETRIES=3)
+- [x] **Sonar profile fix** — all sonar profiles corrected to `mode="prompt_based"` (was `mode="native"` gated by capability)
+- [x] **AGENTS.md fix** — perplexity/sonar hints rewritten for prompt-based tool calling (was contradicting mechanism)
+- [x] **Tests** — 16 profile routing tests + 7 raw truncation tests + 4 stuck-loop tests = 27 new tests
 
 ---
 
@@ -243,7 +236,7 @@ Phase 1 (scoring distortions) is mostly done. Remaining:
 ## Success Criteria
 
 - [x] **Step 1:** Provider hierarchy — shared interface, no `hasattr` guards (1451 tests pass)
-- [ ] **Step 2:** Profile-driven routing replaces binary decision in `chat.py`
+- [x] **Step 2:** Profile-driven routing replaces binary decision in `chat.py` + truncation recovery + sonar profile/hint fixes
 - [ ] **Step 3:** Proper `tool` role messages for native mode
 - [ ] **Step 4:** Multi-tool support for models returning parallel calls
 - [ ] **Step 5:** Config overrides for per-model `tool_calling` settings + `/model info`

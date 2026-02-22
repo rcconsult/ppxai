@@ -5,6 +5,46 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.0] - Unreleased
+
+### Added - Profile-Driven Tool Loop (Step 2)
+
+- **Profile-driven mode routing** — `ToolCallingProfile.mode` ("native", "prompt_based", "auto") replaces binary `native_tool_calling` decision in `chat.py`; provider capabilities gate native mode
+- **`_build_prompt_based_messages()` helper** — shared message assembly for prompt-based path and native-mode fallback retries
+- **Fallback on empty** — `fallback_on_empty=True` retries with prompt-based messages when native returns empty
+- **Fallback on failure** — `fallback_on_failure=True` tries prompt-based parser when native tool call has unknown tool
+- **Belt-and-suspenders** — models with fallback flags get tool descriptions injected into system prompt even in native mode
+- **16 profile routing tests** (`test_chat_profile_routing.py`) — mode routing, fallback, strip_json, belt-and-suspenders
+
+### Added - Provider Hierarchy (Step 1)
+
+- **`BaseProvider` ABC** — all providers (`OpenAINativeProvider`, `GeminiProvider`, `OpenAICompatibleProvider`) inherit shared interface
+- **`get_capabilities_for_model()`** — guaranteed method on all providers; `OpenAINativeProvider` overrides for o4-mini/gpt-4.1-mini
+- **Eliminated `hasattr` guards** — `chat.py` uses typed interface instead of duck-typing
+- **61 provider hierarchy tests** (`test_provider_hierarchy.py`)
+
+### Added - Truncation Recovery (v1.16.0)
+
+- **Raw JSON truncation detection** — `detect_truncated_tool_call()` now catches truncated `{"tool": "...", "arguments": {...` without "I'll use X tool" preamble (Pattern 2)
+- **Stuck-loop detection** — `consecutive_truncation_retries` counter with escalating recovery messages after 2 retries
+- **`MAX_TRUNCATION_RETRIES` cap** — after 3 consecutive truncation retries, emits `stuck_tool_loop` WARNING event and stops retrying
+- **Improved recovery messages** — actionable suggestions (smaller patches, different tools) instead of generic retry instructions
+- **7 raw truncation parser tests** + **4 stuck-loop chat tests**
+
+### Changed
+
+- **Sonar model profiles** — all 5 sonar profiles changed from `mode="native"` to `mode="prompt_based"` (Perplexity API has `native_tool_calling=False`; profiles now match actual behavior)
+- **Sonar/Perplexity AGENTS.md hints** — removed contradictory "use native tool calling only" hints; replaced with prompt-based tool calling guidance (clean JSON output, small patches, truncation recovery)
+
+### Fixed
+
+- **Tool usage tracking** — accumulated usage now includes tool call costs in final STREAM_END metadata
+- **Provider pricing** — corrected pricing across all provider configs
+- **ppxaide binary** — fixed missing tree-sitter syntax highlighting in PyInstaller build
+- **Usage report** — fixed missing prompt/completion token breakdown
+
+---
+
 ## [1.15.6] - 2026-02-19
 
 ### Added - Native OpenAI Provider
