@@ -1,6 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
+import importlib
+from pathlib import Path
 
 block_cipher = None
+
+# Locate textual's tree-sitter highlight queries (.scm files)
+_textual_root = Path(importlib.import_module('textual').__file__).parent
+_highlights_src = str(_textual_root / 'tree-sitter' / 'highlights')
 
 a = Analysis(
     ['ppxaide.py'],
@@ -10,6 +16,7 @@ a = Analysis(
         ('.env.example', '.'),
         ('ppxai-config.example.json', '.'),
         ('ppxai/tui/themes', 'ppxai/tui/themes'),  # Include CSS themes
+        (_highlights_src, 'textual/tree-sitter/highlights'),  # Syntax highlight queries
     ],
     hiddenimports=[
         'textual',
@@ -29,6 +36,16 @@ a = Analysis(
         'ppxai.tui.themes.themes',
         'ppxai.common.preview',
         'ppxai.preview_server',
+        'tree_sitter',
+        'tree_sitter_python',
+        'tree_sitter_javascript',
+        'tree_sitter_json',
+        'tree_sitter_yaml',
+        'tree_sitter_toml',
+        'tree_sitter_html',
+        'tree_sitter_css',
+        'tree_sitter_markdown',
+        'tree_sitter_bash',
     ],
     hookspath=[],
     hooksconfig={},
