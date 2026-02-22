@@ -142,12 +142,12 @@ Asset cache busting (`?_t=<mtime>`) ensures CSS/JS/JSON changes are immediately 
 
 ### Multi-Provider Support
 - **Perplexity AI** - Real-time search with citations
-- **Google Gemini** - 3 Flash Preview (recommended), 2.5 Flash/Pro with 1M context, Google Search Grounding
-- **OpenAI** - GPT-5.x, GPT-4.1, Codex, o-series (dedicated `OpenAINativeProvider` with per-model routing)
+- **Google Gemini** - 2.5 Flash (default), 2.5 Pro, 3.1 Pro Preview with 1M context, Google Search Grounding
+- **OpenAI** - GPT-5 Mini (default), GPT-5.x, Codex, o-series (dedicated `OpenAINativeProvider` with per-model routing)
 - **OpenRouter** - Claude, Llama, 100+ models
 - **Local** - Ollama, vLLM, llama.cpp
 
-Switch providers anytime: `/provider gemini` or `/model gpt-5.2`
+Switch providers anytime: `/provider gemini` or `/model gemini-2.5-pro`
 
 **Enhanced Gemini support (v1.12.5+):** Install `pip install ppxai[gemini]` for native Google Search Grounding with citations. **v1.13.3+:** Tools and grounding now work together—use file editing tools while keeping native web search with citations.
 

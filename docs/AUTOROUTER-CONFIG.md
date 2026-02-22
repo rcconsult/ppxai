@@ -179,12 +179,12 @@ If you don't create a `ppxai-config.json`, these defaults are used:
 ```json
 {
   "perplexity": {
-    "default_model": "sonar-pro",
+    "default_model": "sonar",
     "coding_model": "sonar-pro"
   },
   "gemini": {
     "default_model": "gemini-2.5-flash",
-    "coding_model": "gemini-2.5-pro"
+    "coding_model": "gemini-2.5-flash"
   }
 }
 ```

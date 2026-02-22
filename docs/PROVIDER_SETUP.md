@@ -175,16 +175,16 @@ MODEL_PROVIDER=perplexity
       "name": "Perplexity AI",
       "base_url": "https://api.perplexity.ai",
       "api_key_env": "PERPLEXITY_API_KEY",
-      "default_model": "sonar-pro",
+      "default_model": "sonar",
       "coding_model": "sonar-pro",
       "models": {
         "sonar": {
           "name": "Sonar",
-          "description": "Lightweight search model"
+          "description": "Fast search model, low cost ($0.20/M tokens)"
         },
         "sonar-pro": {
           "name": "Sonar Pro",
-          "description": "Advanced search with citations"
+          "description": "Advanced search with citations (upgrade for complex queries)"
         },
         "sonar-reasoning-pro": {
           "name": "Sonar Reasoning Pro",
@@ -422,10 +422,10 @@ MODEL_PROVIDER=perplexity
       "name": "Perplexity AI",
       "base_url": "https://api.perplexity.ai",
       "api_key_env": "PERPLEXITY_API_KEY",
-      "default_model": "sonar-pro",
+      "default_model": "sonar",
       "coding_model": "sonar-pro",
       "models": {
-        "sonar": {"name": "Sonar", "description": "Lightweight search"},
+        "sonar": {"name": "Sonar", "description": "Fast search, low cost"},
         "sonar-pro": {"name": "Sonar Pro", "description": "Advanced search"}
       },
       "capabilities": {"web_search": true, "realtime_info": true}
@@ -434,11 +434,11 @@ MODEL_PROVIDER=perplexity
       "name": "OpenAI ChatGPT",
       "base_url": "https://api.openai.com/v1",
       "api_key_env": "OPENAI_API_KEY",
-      "default_model": "gpt-4o",
-      "coding_model": "gpt-4o",
+      "default_model": "gpt-5-mini",
+      "coding_model": "gpt-5.1-codex",
       "models": {
-        "gpt-4o": {"name": "GPT-4o", "description": "Latest flagship"},
-        "gpt-4o-mini": {"name": "GPT-4o Mini", "description": "Fast and affordable"}
+        "gpt-5-mini": {"name": "GPT-5 Mini", "description": "Balanced performance, low cost"},
+        "gpt-5.2": {"name": "GPT-5.2", "description": "Flagship model for complex tasks"}
       },
       "capabilities": {"web_search": false, "realtime_info": false}
     },

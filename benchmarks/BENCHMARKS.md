@@ -35,9 +35,9 @@ The ppxai benchmark suite evaluates AI models on capabilities critical for codin
 cd benchmarks/llm-eval
 
 # Benchmark any provider
-python benchmark.py --provider perplexity --model sonar-pro
-python benchmark.py --provider gemini --model gemini-3-flash-preview
-python benchmark.py --provider openai --model gpt-4o
+python benchmark.py --provider perplexity --model sonar
+python benchmark.py --provider gemini --model gemini-2.5-flash
+python benchmark.py --provider openai --model gpt-5-mini
 
 # Custom providers (vLLM, Ollama, etc.)
 python benchmark.py --provider custom --model openai/gpt-oss-120b
@@ -50,13 +50,13 @@ python benchmark.py --provider custom --model openai/gpt-oss-120b
 python benchmark.py --list-results
 
 # Compare two models
-python benchmark.py --compare perplexity/sonar-pro gemini/gemini-3-flash-preview
+python benchmark.py --compare perplexity/sonar gemini/gemini-2.5-flash
 
 # Show ranking
 python benchmark.py --ranking
 
 # Show history for a model
-python benchmark.py --history perplexity/sonar-pro
+python benchmark.py --history gemini/gemini-2.5-flash
 ```
 
 ---
@@ -409,7 +409,7 @@ Rank   Provider/Model                           Score   Runs
 ### Show History for a Model
 
 ```bash
-python benchmark.py --history perplexity/sonar-pro
+python benchmark.py --history gemini/gemini-2.5-flash
 ```
 
 Output:

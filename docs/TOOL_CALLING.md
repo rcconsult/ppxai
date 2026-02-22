@@ -206,7 +206,7 @@ Tool calling method affects benchmark scores:
 |-------|--------|-------|-------|
 | gemini-2.5-pro | Native | 81.3% | Clean native, no workarounds |
 | Qwen3-Coder-30B FP8 | Native | 81.3% | Hermes parser, stable |
-| gpt-5.2 | Native | 70.3% | Best OpenAI model |
+| gpt-5.2 | Native | 70.3% | OpenAI flagship (100% halluc. resist) |
 | sonar | Prompt-Based | 75.0% | Excellent with AGENTS.md hints |
 | gpt-4.1-mini | Prompt-Based | 71.9% | Better prompt-based than native (60.9%) |
 
