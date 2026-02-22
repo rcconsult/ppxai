@@ -207,6 +207,8 @@ class UsageStorage:
 
         # Aggregate totals
         total_tokens = 0
+        total_prompt_tokens = 0
+        total_completion_tokens = 0
         total_cost = 0.0
         by_provider: Dict[str, Dict[str, Any]] = {}
         by_model: Dict[str, Dict[str, Any]] = {}
@@ -226,11 +228,15 @@ class UsageStorage:
                         "estimated_cost": 0.0,
                         "session_count": 0
                     }
-                by_model[model_key]["prompt_tokens"] += usage.get("prompt_tokens", 0)
-                by_model[model_key]["completion_tokens"] += usage.get("completion_tokens", 0)
-                by_model[model_key]["total_tokens"] += usage.get("prompt_tokens", 0) + usage.get("completion_tokens", 0)
+                prompt = usage.get("prompt_tokens", 0)
+                completion = usage.get("completion_tokens", 0)
+                by_model[model_key]["prompt_tokens"] += prompt
+                by_model[model_key]["completion_tokens"] += completion
+                by_model[model_key]["total_tokens"] += prompt + completion
                 by_model[model_key]["estimated_cost"] += usage.get("estimated_cost", 0.0)
                 by_model[model_key]["session_count"] += 1
+                total_prompt_tokens += prompt
+                total_completion_tokens += completion
 
                 # Aggregate by provider
                 provider = model_key.split("/")[0] if "/" in model_key else model_key
@@ -281,7 +287,10 @@ class UsageStorage:
             "start_date": cutoff.strftime("%Y-%m-%d") if cutoff != datetime.min else None,
             "end_date": now.strftime("%Y-%m-%d"),
             "total_tokens": total_tokens,
+            "prompt_tokens": total_prompt_tokens,
+            "completion_tokens": total_completion_tokens,
             "total_cost": total_cost,
+            "estimated_cost": total_cost,  # Alias for web app compatibility
             "session_count": len(filtered_sessions),
             "by_provider": by_provider,
             "by_model": by_model,

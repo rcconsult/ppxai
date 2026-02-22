@@ -580,11 +580,20 @@ def _display_global_usage_report(context: CommandContext, period: str) -> Comman
                 f"${stats['estimated_cost']:.4f}"
             ])
 
+        # Add totals row
+        rows.append([
+            "TOTAL",
+            "",
+            f"{report.get('prompt_tokens', 0):,}",
+            f"{report.get('completion_tokens', 0):,}",
+            f"${report.get('total_cost', 0.0):.4f}"
+        ])
+
     # Build message with stats
     message = f"Usage Report: {period_labels.get(period, period)}"
     if report.get("start_date"):
         message += f" ({report['start_date']} to {report['end_date']})"
-    message += f" | {report.get('session_count', 0)} sessions | {report.get('total_tokens', 0):,} tokens | ${report.get('total_cost', 0.0):.4f}"
+    message += f" | {report.get('session_count', 0)} sessions | {report.get('total_tokens', 0):,} tokens ({report.get('prompt_tokens', 0):,}↓ / {report.get('completion_tokens', 0):,}↑) | ${report.get('total_cost', 0.0):.4f}"
 
     return TableResult(
         status=ResultStatus.SUCCESS,
