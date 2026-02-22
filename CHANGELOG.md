@@ -78,7 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added - Benchmark System Improvements
 
 - **Benchmark results** for 27 model variants (54+ runs across 7 categories, 26 tests each)
-- **Model behavior analysis** (`docs/archive/MODEL-BEHAVIOR-ANALYSIS.md`) — 5 behavior tiers (S/A/B/C/D), per-category scores, 5 architectural gap findings
+- **Model behavior analysis** (`docs/MODEL-BEHAVIOR-ANALYSIS.md`) — 5 behavior tiers (S/A/B/C/D), per-category scores, 5 architectural gap findings
 - **`--tool-calling-method`** CLI flag — Force `native`, `prompt_based`, or `auto` mode per benchmark run
 - **`--debug`** flag — Saves per-request JSON to `debug/` with full AI response content, tool_calls, and errors
 - **Profile-aware benchmark runner** — Consults `ModelProfile` for native vs prompt-based routing

@@ -1,8 +1,8 @@
 # Model Behavior Analysis & ppxai Architecture Recommendations
 
 **Created:** 2026-02-19
-**Branch:** feature/benchmark-openai-models
-**Status:** Analysis complete, v1.15.6 implementation done (profiles + native provider)
+**Last updated:** 2026-02-22
+**Status:** Living document — updated with each benchmark session
 
 ---
 
