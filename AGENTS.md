@@ -187,6 +187,22 @@ model_hints:
     - "Focus on precise tool selection - use specialized tools like apply_patch over generic ones."
     - "Generate complete unified diffs with proper context lines (3+ lines before/after)."
     - "When modifying code, always use apply_patch - never use read_file or write_file for edits."
+  "gemini-3.1-pro*customtools*":
+    - "You are optimized for custom tool usage and agentic workflows - leverage this strength."
+    - "Chain multiple DIFFERENT tool calls consecutively without stopping to narrate between them."
+    - "For code modifications, ALWAYS use apply_patch with complete unified diffs (3+ context lines)."
+    - "Call tools directly - do NOT explain what you'll do first."
+    - "Do NOT output tool call JSON in your response text - use native tool calling only."
+    - "Verify tool exists in available tools list before calling - don't hallucinate tool names."
+    - "When a tool returns an error, ACKNOWLEDGE the failure. After 2 failures, STOP and report."
+  "gemini-3.1-pro*":
+    - "You are an advanced reasoning model with 1M context - leverage it for complex multi-file analysis."
+    - "For code modifications, ALWAYS use apply_patch with complete unified diffs (3+ context lines)."
+    - "Focus on precise tool selection - use specialized tools like apply_patch over generic ones."
+    - "Call tools directly without explanation - don't say 'I'll use X tool'."
+    - "Do NOT output tool call JSON in your response text - use native tool calling only."
+    - "Chain multiple DIFFERENT tool calls without stopping to narrate between them."
+    - "When modifying code, always use apply_patch - never use read_file or write_file for edits."
   "gemini-2.5-flash*":
     - "CRITICAL: For file modifications, you MUST use apply_patch, not read_file or write_file."
     - "Generate patches immediately - don't explain what you'll do first, just call apply_patch."
