@@ -1,0 +1,391 @@
+{
+  "provider": "perplexity",
+  "model": "sonar-reasoning-pro",
+  "timestamp": "2026-02-22T13:54:41.681347",
+  "overall_score": 66.15384615384615,
+  "tests_passed": 20,
+  "tests_total": 30,
+  "duration_seconds": 203.71681475639343,
+  "category_scores": {
+    "hallucination_resistance": 38.88888888888889,
+    "tool_calling": 50.0,
+    "code_editing": 71.42857142857143,
+    "format_compliance": 100.0,
+    "instruction_following": 100.0,
+    "reasoning": 66.66666666666666,
+    "error_recovery": 66.66666666666666,
+    "agentic_tool_loops": 80.0,
+    "efficiency": 100.0
+  },
+  "test_results": [
+    {
+      "name": "respects_tool_failure",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "No tool call made",
+        "response": "I cannot run tests without additional information. To execute tests, I need to know:\n\n1. **Working directory**: Which project or directory contains the tests?\n2. **Test command**: What command should "
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "no_phantom_tool_calls",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "no_phantom_claims": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "repeated_failure_acknowledgment",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "No initial tool call"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "contradiction_detection",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "respected_tool_result": true
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "multi_turn_consistency",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "No tool call for step 1"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "No tool call made",
+        "response": "I appreciate the request, but I'm not able to execute file system operations or use the tools listed in your message. I'm Perplexity, a search assistant designed to synthesize information from provide"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "tool": "write_file",
+        "args": {
+          "path": "/tmp/test.txt",
+          "content": "Hello, World!"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "content_length": 818,
+        "repetitions": 10,
+        "model_max_tokens": 12288
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "No tool call in first turn"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "No tool call made",
+        "response": "I'm Perplexity, a search and synthesis assistant. I don't have the ability to read files from your system, execute commands, or use coding tools. Those capabilities don't align with my role as a searc"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "tool_calls": 1,
+        "mode": "prompt_based"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "No tool call made",
+        "tool_correctness": false,
+        "tool_success": true,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "Expected apply_patch but no tool was called",
+          "No anti-patterns detected"
+        ],
+        "overall_score": 0.0,
+        "passed": false
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "patch_length": 266,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "Clean tool-only response (no unnecessary text)",
+          "No anti-patterns detected"
+        ],
+        "overall_score": 1.0,
+        "passed": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "patch_length": 234,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "Clean tool-only response (no unnecessary text)",
+          "No anti-patterns detected"
+        ],
+        "overall_score": 1.0,
+        "passed": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "json_output",
+      "category": "format_compliance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "items": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "markdown_code_blocks",
+      "category": "format_compliance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "code_blocks": 4
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_hallucinated_paths",
+      "category": "format_compliance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "content_length": 1938
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "do_not_explain",
+      "category": "instruction_following",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "content_length": 45
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "constraint_respect",
+      "category": "instruction_following",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "line_count": 6
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "format_specification",
+      "category": "instruction_following",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "blocks": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "multi_step_planning",
+      "category": "reasoning",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "concepts_found": [
+          "user model",
+          "password",
+          "login",
+          "session"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "dependency_ordering",
+      "category": "reasoning",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "Didn't prioritize running tests first"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "edge_case_handling",
+      "category": "reasoning",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "handled": [
+          "division_by_zero",
+          "error_handling"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "tool_error_recovery",
+      "category": "error_recovery",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "No initial tool call"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "self_correction",
+      "category": "error_recovery",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "acknowledged_correction": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "graceful_degradation",
+      "category": "error_recovery",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "graceful": "explained_limitation"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "multi_file_review",
+      "category": "agentic_tool_loops",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "files_read": [
+          "/src/auth.py",
+          "/src/database.py",
+          "/src/routes.py",
+          "/src/utils.py"
+        ],
+        "score": 1.0
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "claim_without_action",
+      "category": "agentic_tool_loops",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "action": "honest_refusal",
+        "score": 1.0
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "consecutive_tool_loop",
+      "category": "agentic_tool_loops",
+      "passed": false,
+      "score": 0.4,
+      "details": {
+        "steps_completed": 2,
+        "total_steps": 5,
+        "score": 0.4
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "time_to_first_tool_call",
+      "category": "efficiency",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "preamble_length": 0,
+        "tool": "read_file"
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 180,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "506ddc850774",
+    "tool_calling_method": "prompt_based"
+  }
+}

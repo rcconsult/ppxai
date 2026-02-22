@@ -187,6 +187,11 @@
         "filename": "perplexity_sonar-reasoning-pro_2026-02-07_16b4589e.json",
         "timestamp": "2026-02-07T23:41:45.707931",
         "overall_score": 67.19
+      },
+      {
+        "filename": "perplexity_sonar-reasoning-pro_2026-02-22_6d77f4d6.json",
+        "timestamp": "2026-02-22T13:54:41.681347",
+        "overall_score": 66.15384615384615
       }
     ],
     "perplexity/sonar": [
@@ -873,6 +878,12 @@
       "filename": "openai_gpt-5.1-codex_2026-02-22_18887497.json",
       "timestamp": "2026-02-22T12:57:03.930017",
       "overall_score": 82.82051282051282
+    },
+    {
+      "pair": "perplexity/sonar-reasoning-pro",
+      "filename": "perplexity_sonar-reasoning-pro_2026-02-22_6d77f4d6.json",
+      "timestamp": "2026-02-22T13:54:41.681347",
+      "overall_score": 66.15384615384615
     }
   ]
 }

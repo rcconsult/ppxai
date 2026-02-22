@@ -431,3 +431,108 @@ The fix is the profile system, NOT reverting to `OpenAICompatibleProvider`. The 
 | **Error recovery** | All models handle this well (100%) | Even weak models get 100% here |
 
 The **single biggest differentiator** is clean native tool calling vs. leaky/prompt-based. The **hardest unsolved category** is hallucination resistance — `contradiction_detection` defeats every model tested against the full suite.
+
+---
+
+## Part 9: Feb 22 Update — v1.16.0 Step 2 Results
+
+**Date:** 2026-02-22
+**Branch:** feature/v1.16.0
+**Changes:** Profile-driven tool loop (Step 2), truncation recovery, sonar profile/hint fixes
+
+### Updated Rankings (Best Score Per Model, Most Recent Run)
+
+| # | Model | Best % | Tier | Provider | Date | Trend |
+|---|-------|-------:|------|----------|------|-------|
+| 1 | gpt-oss-120b | 89.1 | S | custom (vLLM) | Feb 5 | — |
+| 2 | gemini-2.5-flash-lite | 86.2 | S | Gemini | Feb 21 | NEW |
+| 3 | gemini-2.5-pro | 85.1 | S | Gemini | Feb 22 | +3.9 |
+| 4 | gpt-5.1-codex | 82.8 | S | OpenAI | Feb 22 | +10.9 |
+| 5 | gpt-5 | 82.7 | S | OpenAI | Feb 22 | +20.2 |
+| 6 | Qwen3-Coder-30B FP8 | 81.3 | S | DGX vLLM | Feb 7 | — |
+| 7 | gemini-2.5-flash | 81.3 | S | Gemini | Feb 5 | — |
+| 8 | sonar-pro | 76.7 | A | Perplexity | Feb 22 | +7.9 |
+| 9 | gemini-3-pro-preview | 76.2 | A | Gemini | Feb 20 | +5.9 |
+| 10 | sonar | 73.8 | A | Perplexity | Feb 22 | +3.5 |
+| 11 | gemini-3-flash-preview | 73.6 | A | Gemini | Feb 22 | +5.4 |
+| 12 | gpt-5.2 | 70.3 | B | OpenAI | Feb 17 | — |
+| 13 | sonar-reasoning-pro | 66.2 | B | Perplexity | Feb 22 | -1.0 |
+| 14 | gpt-4.1 | 67.2 | B | OpenAI | Feb 17 | — |
+| 15 | gpt-5-mini | 67.2 | B | OpenAI | Feb 17 | — |
+| 16 | Qwen3-Coder-Next FP8 | 60.9 | B | DGX vLLM | Feb 10 | — |
+| 17 | RedHat Qwen3-30B FP8 | 60.9 | B | DGX vLLM | Feb 6 | — |
+| 18 | gpt-4.1-nano | 57.8 | C | OpenAI | Feb 17 | — |
+| 19 | gpt-5.1-codex-mini | 40.6 | D | OpenAI | Feb 17 | — |
+| 20 | llama-3.1-sonar-large | 10.9 | D | Perplexity | Feb 7 | — |
+| 21 | gemini-2.0-flash-exp | 10.9 | D | Gemini | Feb 7 | — |
+
+*o4-mini (100%) and gpt-4.1-mini (100%) omitted — volatile, achieved 100% once after hint tuning but median ~62%.*
+
+### Notable Improvements Since Feb 19
+
+| Model | Feb 19 Best | Feb 22 | Delta | Cause |
+|-------|------------:|-------:|------:|-------|
+| gpt-5 | 62.5% | 82.7% | +20.2 | Partial credit scoring (A12) + AGENTS.md hints |
+| gpt-5.1-codex | 64.1% | 82.8% | +18.8 | Belt-and-suspenders hints + native Responses API |
+| sonar-pro | 68.8% | 76.7% | +7.9 | AGENTS.md hint fix (removed "use native" contradiction) |
+| gemini-3-flash | 57.8% | 73.6% | +15.8 | Steady improvement across 5 runs with hint tuning |
+
+### sonar-reasoning-pro Deep Dive (Feb 22)
+
+Re-benchmarked after v1.16.0 profile/hint fixes. Score essentially flat: 67.2% → 66.2% (-1.0%).
+
+| Category | Score | Notes |
+|----------|------:|-------|
+| format_compliance | 100% | Perfect |
+| instruction_following | 100% | Perfect |
+| efficiency | 100% | Perfect (time_to_first_tool_call) |
+| agentic_tool_loops | 80% | consecutive_tool_loop partial (40%), others pass |
+| code_editing | 71.4% | Major improvement (was 0% in Feb 7 run) |
+| error_recovery | 66.7% | tool_error_recovery fails |
+| reasoning | 66.7% | dependency_ordering fails |
+| tool_calling | 50% | 3/6 fail: simple_tool_call, multi_tool_sequence, no_explain_before_tool |
+| hallucination_resistance | 38.9% | Weakest: fails respects_tool_failure, repeated_failure_acknowledgment, multi_turn_consistency |
+
+### Benchmark vs Real-World Gap Analysis
+
+sonar-reasoning-pro exemplifies a critical gap in the current benchmark methodology:
+
+**In benchmarks (66.2%):**
+- Single-turn tests, no iterative feedback
+- 38.9% hallucination_resistance — claims success after tool failures
+- 50% tool_calling — can't reliably produce clean tool calls in isolation
+- But 100% format/instruction/efficiency — understands what to do, inconsistent at executing
+
+**In real-world use (observed: high effectiveness):**
+- Reasoning tokens plan multi-step approaches before acting
+- AGENTS.md hints + conversation history enable course-correction
+- Truncation recovery (v1.16.0) provides corrective feedback on failed tool calls
+- Chains tool calls across longer sessions with iterative feedback loops
+
+**Key insight:** The benchmark penalizes models that need a feedback loop to perform well. sonar-reasoning-pro's strength is reasoning through problems and adapting when given corrective signals — exactly what the truncation recovery and stuck-loop detection (added in this session) enables.
+
+This validates the need for **Step 7: Benchmark v2** — agentic multi-turn tests that measure iterative recovery, tool call chaining across turns, and response to `[SYSTEM: ...]` corrective messages. The current single-turn benchmark systematically underscores models with strong reasoning but weak single-shot tool execution.
+
+### Sonar Profile/Hint Corrections Applied
+
+**Problem discovered:** All sonar profiles had `mode="native"` but Perplexity API has `native_tool_calling=False`. AGENTS.md hints said "use native tool calling only" — directly contradicting the prompt-based mechanism these models actually use.
+
+**Fixes applied (this session):**
+1. All 5 sonar profiles changed to `mode="prompt_based"` in `model_profiles.py`
+2. Removed `strip_json_from_text=True` (parser needs the JSON in response text)
+3. Perplexity provider hints rewritten: "output ONLY the JSON object" instead of "use native tool calling"
+4. Sonar model hints rewritten: explicit JSON format example, small-patch guidance, truncation recovery hints
+
+### Tier Reassignment
+
+Based on Feb 22 results with partial credit scoring:
+
+| Model | Old Tier | New Tier | Justification |
+|-------|----------|----------|---------------|
+| gpt-5 | B (62.5%) | **S** (82.7%) | Partial credit + hints pushed past 80% |
+| gpt-5.1-codex | B (64.1%) | **S** (82.8%) | Steady improvement over 10 runs |
+| gemini-2.5-flash-lite | — | **S** (86.2%) | New model, strong first result |
+| sonar-pro | A (68.8%) | **A** (76.7%) | Improved but below S threshold |
+| sonar | B (70.3%) | **A** (73.8%) | Upgraded with consistent improvement |
+| gemini-3-flash-preview | B (57.8%) | **A** (73.6%) | Steady uptrend across 5 runs |
+| sonar-reasoning-pro | C (67.2%) | **B** (66.2%) | Flat score, but real-world effectiveness higher |
