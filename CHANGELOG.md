@@ -7,34 +7,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.16.0] - Unreleased
 
-### Added - Profile-Driven Tool Loop (Step 2)
+**Focus:** Profile-driven tool loop, multi-tool support, agent UI improvements, benchmark v2
 
-- **Profile-driven mode routing** — `ToolCallingProfile.mode` ("native", "prompt_based", "auto") replaces binary `native_tool_calling` decision in `chat.py`; provider capabilities gate native mode
-- **`_build_prompt_based_messages()` helper** — shared message assembly for prompt-based path and native-mode fallback retries
-- **Fallback on empty** — `fallback_on_empty=True` retries with prompt-based messages when native returns empty
-- **Fallback on failure** — `fallback_on_failure=True` tries prompt-based parser when native tool call has unknown tool
-- **Belt-and-suspenders** — models with fallback flags get tool descriptions injected into system prompt even in native mode
-- **16 profile routing tests** (`test_chat_profile_routing.py`) — mode routing, fallback, strip_json, belt-and-suspenders
+This release rewrites the core tool calling loop in `chat.py` with profile-driven routing,
+proper `tool` role messages, multi-tool support, and grouped tool call UI across all 4 clients.
+154 files changed, 30,400+ lines added. 1,536 tests passing.
 
 ### Added - Provider Hierarchy (Step 1)
 
-- **`BaseProvider` ABC** — all providers (`OpenAINativeProvider`, `GeminiProvider`, `OpenAICompatibleProvider`) inherit shared interface
-- **`get_capabilities_for_model()`** — guaranteed method on all providers; `OpenAINativeProvider` overrides for o4-mini/gpt-4.1-mini
-- **Eliminated `hasattr` guards** — `chat.py` uses typed interface instead of duck-typing
+- **`BaseProvider` ABC** — all providers inherit shared interface; `hasattr` guards eliminated
+- **`get_capabilities_for_model()`** — guaranteed method on all providers
 - **61 provider hierarchy tests** (`test_provider_hierarchy.py`)
 
-### Added - Truncation Recovery (v1.16.0)
+### Added - Profile-Driven Tool Loop (Step 2)
 
-- **Raw JSON truncation detection** — `detect_truncated_tool_call()` now catches truncated `{"tool": "...", "arguments": {...` without "I'll use X tool" preamble (Pattern 2)
-- **Stuck-loop detection** — `consecutive_truncation_retries` counter with escalating recovery messages after 2 retries
-- **`MAX_TRUNCATION_RETRIES` cap** — after 3 consecutive truncation retries, emits `stuck_tool_loop` WARNING event and stops retrying
-- **Improved recovery messages** — actionable suggestions (smaller patches, different tools) instead of generic retry instructions
-- **7 raw truncation parser tests** + **4 stuck-loop chat tests**
+- **Profile-driven mode routing** — `ToolCallingProfile.mode` ("native", "prompt_based", "auto") replaces binary `native_tool_calling` decision; provider capabilities gate native mode
+- **Fallback on empty/failure** — configurable retry with prompt-based messages when native returns empty or unknown tool
+- **Belt-and-suspenders** — models with fallback flags get tool descriptions injected into system prompt even in native mode
+- **Truncation recovery** — raw JSON truncation detection, escalating recovery messages, `MAX_TRUNCATION_RETRIES=3` cap with `stuck_tool_loop` WARNING event
+- **27 profile routing + truncation tests** (`test_chat_profile_routing.py`, `test_engine_tool_parsing.py`)
+
+### Added - Proper Tool Messages (Step 3)
+
+- **Native `tool` role messages** — `assistant` (with `tool_calls` field) + `tool` role result messages replace synthetic assistant/user pairs
+- **`Message` type extended** — `tool_calls` and `tool_call_id` fields on `Message` dataclass
+- **All 4 providers updated** — `_convert_messages()` handles `tool` role in base, openai_native, openai_compat, gemini
+- **Session serialization** — save/load handles new fields; v1.15.x sessions load via `None`-safe `.get()`
+- **28 tool message tests** (`test_tool_messages.py`)
+
+### Added - Multi-Tool Support (Step 4)
+
+- **All native tool calls processed** — `for tc in tool_calls_list` replaces `native_tool_calls[0]`
+- **`parallel_tool_calls` gating** — profile flag controls whether all or only first tool call is processed
+- **Sequential execution** — per-tool consent and loop detection for each call in a batch
+
+### Added - Agent UI Noise Reduction (Step 5)
+
+- **`TOOL_GROUP_START`/`TOOL_GROUP_END` events** — engine wraps each iteration's tool calls for client-side grouping
+- **`AGENT_COMPLETE` event** — emitted after tool loop with iteration count and commit hash
+- **Web app** — collapsible `.tool-group` containers, checkpoint bubble suppression, undo badge only on commits
+- **VSCode extension** — tool group forwarding and CSS styling
+- **ppxaide TUI** — non-verbose summary mode (one line per group); verbose mode unchanged
+- **ppxai Rich CLI** — dim separator lines with iteration number and status
+- **SSE event type dispatch fix** — side-channel events emit correct EventType (was all `consent_request`)
+- **Consent deadlock fix** — SSE generator uses racing poll pattern instead of `async for`
+
+### Added - Config Integration (Step 6)
+
+- **Per-model `tool_calling` overrides** — 3-layer precedence: built-in profile → AGENTS.md → ppxai-config.json
+- **AGENTS.md `tool_calling` YAML section** — glob-pattern matching for model-specific tool calling config
+- **`/model info` command** — shows effective profile with source attribution per field
+- **16 config + bootstrap + profile merging tests**
+
+### Added - Benchmark v2 (Step 7)
+
+- **36 tests across 9 categories** — hallucination_resistance, tool_calling, code_editing, format_compliance, instruction_following, reasoning, error_recovery, agentic_tool_loops, efficiency
+- **8 new agentic tests** — `patch_apply_verify`, `search_then_edit`, `fix_verify`, `information_gathering`, `error_recovery_chain`, `multi_file_review`, `claim_without_action`, `consecutive_tool_loop`
+- **Efficiency metrics** — `time_to_first_tool_call`, `tool_call_efficiency` scoring by redundant calls
+- **Partial credit scoring** — `score` field (0.0-1.0) with per-test weighting
+- **`_dedup_tool_call()` helper** — returns feedback for duplicate tool+args in multi-turn tests
+- **AGENTS.md delta testing** — `--agents-md both` mode runs suite twice and reports per-category delta
+- **Token/tool call tracking** — `total_tokens`, `total_tool_calls` in `BenchmarkResult.metadata`
+- **29 models ranked** across 100+ benchmark runs
+
+### Added - Commands
+
+- **`/ls` command** — directory listing in all 3 clients (ppxaide TUI, Web, Rich CLI)
+- **`/tree` command** — directory tree in all 3 clients
+- **`GET /files/list`** and **`GET /files/tree`** HTTP endpoints for IDE integration
+
+### Added - Session Management
+
+- **Session context reset on model switch** — `session.reset_for_model_switch()`
+- **Per-model iteration limits** — `ModelProfile.max_tool_iterations` field consulted by `chat.py`
+- **Session pollution detection** — bigram similarity >90% triggers WARNING after iteration 1
+- **SSE disconnect detection** — `request.is_disconnected()` in `sse_event_generator`
 
 ### Changed
 
-- **Sonar model profiles** — all 5 sonar profiles changed from `mode="native"` to `mode="prompt_based"` (Perplexity API has `native_tool_calling=False`; profiles now match actual behavior)
-- **Sonar/Perplexity AGENTS.md hints** — removed contradictory "use native tool calling only" hints; replaced with prompt-based tool calling guidance (clean JSON output, small patches, truncation recovery)
+- **Sonar model profiles** — all sonar profiles changed to `mode="prompt_based"` (matching Perplexity API capabilities)
+- **Sonar/Perplexity AGENTS.md hints** — rewritten for prompt-based tool calling
+- **Gemini 3.1 model profiles** — tier S→A, `max_tool_iterations` 25→20, `strip_json_from_text=True`
+- **Default models** — optimized for cost and new-user experience
+- **`contradiction_detection` test** — check acknowledgment patterns before contradictions (fixes negation false positives)
 
 ### Fixed
 
