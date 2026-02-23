@@ -85,6 +85,36 @@
         "filename": "gemini_gemini-2.5-flash_2026-02-05_309f76bb.json",
         "timestamp": "2026-02-05T14:26:50.262340",
         "overall_score": 81.25
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-02-22_17037280.json",
+        "timestamp": "2026-02-22T17:35:18.309470",
+        "overall_score": 71.45214521452145
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-02-22_e071e0cc.json",
+        "timestamp": "2026-02-22T17:39:58.545423",
+        "overall_score": 74.55445544554456
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-02-22_b5083bd1.json",
+        "timestamp": "2026-02-22T17:50:04.571280",
+        "overall_score": 73.76237623762376
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-02-22_8dfb21f5.json",
+        "timestamp": "2026-02-22T17:54:03.686242",
+        "overall_score": 72.24422442244226
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-02-22_127d8da2.json",
+        "timestamp": "2026-02-22T18:05:37.677369",
+        "overall_score": 70.79207920792079
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-02-22_1a5c2d18.json",
+        "timestamp": "2026-02-22T18:09:43.027986",
+        "overall_score": 68.61386138613864
       }
     ],
     "gemini/gemini-2.5-pro": [
@@ -241,6 +271,16 @@
         "filename": "openai_gpt-5.2_2026-02-19_d4b2d2c7.json",
         "timestamp": "2026-02-19T00:22:42.138143",
         "overall_score": 57.8125
+      },
+      {
+        "filename": "openai_gpt-5.2_2026-02-22_e7da1370.json",
+        "timestamp": "2026-02-22T20:43:51.997764",
+        "overall_score": 80.79207920792079
+      },
+      {
+        "filename": "openai_gpt-5.2_2026-02-22_9788b697.json",
+        "timestamp": "2026-02-22T20:47:08.306868",
+        "overall_score": 80.79207920792079
       }
     ],
     "openai/gpt-4.1": [
@@ -455,6 +495,36 @@
         "filename": "openai_gpt-5.1-codex_2026-02-22_18887497.json",
         "timestamp": "2026-02-22T12:57:03.930017",
         "overall_score": 82.82051282051282
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-22_86b60e69.json",
+        "timestamp": "2026-02-22T20:01:57.022526",
+        "overall_score": 74.1914191419142
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-22_f2961004.json",
+        "timestamp": "2026-02-22T20:06:04.561974",
+        "overall_score": 68.05280528052805
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-22_f6526230.json",
+        "timestamp": "2026-02-22T20:51:42.236601",
+        "overall_score": 73.56435643564356
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-22_b0a1403d.json",
+        "timestamp": "2026-02-22T20:55:10.795125",
+        "overall_score": 70.52805280528052
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-22_6cf5cca8.json",
+        "timestamp": "2026-02-22T21:10:38.110736",
+        "overall_score": 84.05940594059406
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-22_6d01f85a.json",
+        "timestamp": "2026-02-22T21:14:25.663353",
+        "overall_score": 79.04290429042904
       }
     ],
     "openai/gpt-5.1-codex-mini": [
@@ -479,6 +549,18 @@
         "filename": "gemini_gemini-2.5-flash-lite_2026-02-21_84ea2190.json",
         "timestamp": "2026-02-21T21:39:44.772778",
         "overall_score": 86.15384615384616
+      }
+    ],
+    "gemini/gemini-3.1-pro-preview-customtools": [
+      {
+        "filename": "gemini_gemini-3.1-pro-preview-customtools_2026-02-22_dc0cf6f9.json",
+        "timestamp": "2026-02-22T21:42:47.182199",
+        "overall_score": 81.48514851485149
+      },
+      {
+        "filename": "gemini_gemini-3.1-pro-preview-customtools_2026-02-22_b4ca0cbb.json",
+        "timestamp": "2026-02-22T23:21:26.304384",
+        "overall_score": 61.386138613861384
       }
     ]
   },
@@ -884,6 +966,102 @@
       "filename": "perplexity_sonar-reasoning-pro_2026-02-22_6d77f4d6.json",
       "timestamp": "2026-02-22T13:54:41.681347",
       "overall_score": 66.15384615384615
+    },
+    {
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-02-22_17037280.json",
+      "timestamp": "2026-02-22T17:35:18.309470",
+      "overall_score": 71.45214521452145
+    },
+    {
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-02-22_e071e0cc.json",
+      "timestamp": "2026-02-22T17:39:58.545423",
+      "overall_score": 74.55445544554456
+    },
+    {
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-02-22_b5083bd1.json",
+      "timestamp": "2026-02-22T17:50:04.571280",
+      "overall_score": 73.76237623762376
+    },
+    {
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-02-22_8dfb21f5.json",
+      "timestamp": "2026-02-22T17:54:03.686242",
+      "overall_score": 72.24422442244226
+    },
+    {
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-02-22_127d8da2.json",
+      "timestamp": "2026-02-22T18:05:37.677369",
+      "overall_score": 70.79207920792079
+    },
+    {
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-02-22_1a5c2d18.json",
+      "timestamp": "2026-02-22T18:09:43.027986",
+      "overall_score": 68.61386138613864
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-22_86b60e69.json",
+      "timestamp": "2026-02-22T20:01:57.022526",
+      "overall_score": 74.1914191419142
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-22_f2961004.json",
+      "timestamp": "2026-02-22T20:06:04.561974",
+      "overall_score": 68.05280528052805
+    },
+    {
+      "pair": "openai/gpt-5.2",
+      "filename": "openai_gpt-5.2_2026-02-22_e7da1370.json",
+      "timestamp": "2026-02-22T20:43:51.997764",
+      "overall_score": 80.79207920792079
+    },
+    {
+      "pair": "openai/gpt-5.2",
+      "filename": "openai_gpt-5.2_2026-02-22_9788b697.json",
+      "timestamp": "2026-02-22T20:47:08.306868",
+      "overall_score": 80.79207920792079
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-22_f6526230.json",
+      "timestamp": "2026-02-22T20:51:42.236601",
+      "overall_score": 73.56435643564356
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-22_b0a1403d.json",
+      "timestamp": "2026-02-22T20:55:10.795125",
+      "overall_score": 70.52805280528052
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-22_6cf5cca8.json",
+      "timestamp": "2026-02-22T21:10:38.110736",
+      "overall_score": 84.05940594059406
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-22_6d01f85a.json",
+      "timestamp": "2026-02-22T21:14:25.663353",
+      "overall_score": 79.04290429042904
+    },
+    {
+      "pair": "gemini/gemini-3.1-pro-preview-customtools",
+      "filename": "gemini_gemini-3.1-pro-preview-customtools_2026-02-22_dc0cf6f9.json",
+      "timestamp": "2026-02-22T21:42:47.182199",
+      "overall_score": 81.48514851485149
+    },
+    {
+      "pair": "gemini/gemini-3.1-pro-preview-customtools",
+      "filename": "gemini_gemini-3.1-pro-preview-customtools_2026-02-22_b4ca0cbb.json",
+      "timestamp": "2026-02-22T23:21:26.304384",
+      "overall_score": 61.386138613861384
     }
   ]
 }

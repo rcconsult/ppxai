@@ -177,6 +177,16 @@
           "name": "Gemini 3 Pro Preview",
           "description": "Most powerful agentic model with 1M context, code execution, and search grounding",
           "context_limit": 1000000
+        },
+        "gemini-3.1-pro-preview": {
+          "name": "Gemini 3.1 Pro Preview",
+          "description": "Advanced reasoning and agentic model with 1M context. SWE-Bench 80.6%, GPQA Diamond 94.3%.",
+          "context_limit": 1000000
+        },
+        "gemini-3.1-pro-preview-customtools": {
+          "name": "Gemini 3.1 Pro Preview (Custom Tools)",
+          "description": "Optimized for custom tool usage and agentic workflows with 1M context",
+          "context_limit": 1000000
         }
       },
       "pricing": {
@@ -186,7 +196,9 @@
         "gemini-2.5-flash-lite": {"input": 0.075, "output": 0.30},
         "gemini-2.5-pro": {"input": 1.25, "output": 10.00},
         "gemini-3-flash-preview": {"input": 0.50, "output": 3.00},
-        "gemini-3-pro-preview": {"input": 2.00, "output": 12.00}
+        "gemini-3-pro-preview": {"input": 2.00, "output": 12.00},
+        "gemini-3.1-pro-preview": {"input": 2.00, "output": 12.00},
+        "gemini-3.1-pro-preview-customtools": {"input": 2.00, "output": 12.00}
       },
       "capabilities": {
         "web_search": true,
@@ -429,10 +441,20 @@
       "api_key_env": "LOCAL_API_KEY",
       "default_model": "meta-llama/Llama-3-70b",
       "coding_model": "meta-llama/Llama-3-70b",
+      "tool_calling": {
+        "__comment": "Provider-level tool_calling defaults (v1.16.0). Per-model overrides go in models.<id>.tool_calling",
+        "mode": "prompt_based",
+        "__comment_mode": "Tool calling strategy: 'native', 'prompt_based', or 'auto'"
+      },
       "models": {
         "meta-llama/Llama-3-70b": {
           "name": "Llama 3 70B",
-          "description": "Self-hosted Llama 3 70B model"
+          "description": "Self-hosted Llama 3 70B model",
+          "tool_calling": {
+            "__comment": "Per-model overrides (highest priority). Keys: mode, fallback_on_empty, fallback_on_failure, strip_json_from_text, parallel_tool_calls, api_path",
+            "fallback_on_empty": true,
+            "strip_json_from_text": true
+          }
         }
       },
       "pricing": {
@@ -461,6 +483,15 @@
         "frequency_penalty": 0.1,
         "presence_penalty": 0.0
       },
+      "tool_calling": {
+        "__comment": "Provider-level tool calling defaults (v1.16.0). Overrides built-in model profiles.",
+        "mode": "native",
+        "__comment_mode": "native: use OpenAI-style function calling. prompt_based: inject tool schema into prompt. auto: try native first, fall back.",
+        "fallback_on_empty": true,
+        "__comment_fallback_on_empty": "If native returns empty, retry with prompt-based. Recommended for vLLM Harmony parser (intermittent failures).",
+        "strip_json_from_text": true,
+        "__comment_strip_json_from_text": "Remove duplicate tool JSON from response text when native tool_calls are present"
+      },
       "models": {
         "openai/gpt-oss-120b": {
           "name": "GPT-OSS 120B",
@@ -468,7 +499,12 @@
           "context_limit": 131072,
           "__comment_context_limit": "vLLM requires power of 2. Model supports ~120K, rounded up to 2^17=131072",
           "max_tokens": 8192,
-          "__comment_max_tokens": "Max output tokens. Set explicitly to prevent truncated tool calls (v1.15.2+)"
+          "__comment_max_tokens": "Max output tokens. Set explicitly to prevent truncated tool calls (v1.15.2+)",
+          "tool_calling": {
+            "__comment": "Per-model tool_calling overrides (v1.16.0). Highest priority — overrides provider-level and built-in profiles.",
+            "fallback_on_failure": true,
+            "__comment_fallback_on_failure": "If native tool call fails to parse (HarmonyError), retry with prompt-based"
+          }
         }
       },
       "pricing": {

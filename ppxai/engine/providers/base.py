@@ -4,14 +4,20 @@ Base provider abstract class.
 All AI providers must implement this interface.
 """
 
+import asyncio
+import re
+import traceback
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, AsyncIterator, Optional
 import os
 import httpx
+import openai
 from openai import OpenAI
 
 from ..model_profiles import ModelProfile, get_profile
 from ..types import Message, Event, EventType, ProviderCapabilities, ModelInfo, UsageStats
+from ...config import get_generation_params, get_model_max_tokens
+from ...common.logger import get_logger
 
 
 class BaseProvider(ABC):
@@ -122,7 +128,6 @@ class BaseProvider(ABC):
         Returns:
             List of Event objects
         """
-        import asyncio
         events = []
 
         async def collect():
@@ -212,10 +217,9 @@ class BaseProvider(ABC):
             Dict of generation params to pass to API (empty if none configured)
         """
         try:
-            from ...config import get_generation_params
             provider = self.provider_id or self.name
             return get_generation_params(provider, model)
-        except (ImportError, AttributeError):
+        except AttributeError:
             return {}
 
     def _get_max_tokens(self, model: str) -> Optional[int]:
@@ -228,21 +232,28 @@ class BaseProvider(ABC):
             max_tokens value or None to use provider default
         """
         try:
-            from ...config import get_model_max_tokens
             return get_model_max_tokens(self.provider_id, model)
-        except (ImportError, AttributeError):
+        except AttributeError:
             return None
 
-    def _convert_messages(self, messages: List[Message]) -> List[Dict[str, str]]:
+    def _convert_messages(self, messages: List[Message]) -> List[Dict[str, Any]]:
         """Convert Message objects to API format.
 
         Args:
             messages: List of Message objects
 
         Returns:
-            List of dicts with 'role' and 'content' keys
+            List of dicts with 'role', 'content', and optional tool fields
         """
-        return [{"role": m.role, "content": m.content} for m in messages]
+        result = []
+        for m in messages:
+            msg: Dict[str, Any] = {"role": m.role, "content": m.content}
+            if m.tool_calls:
+                msg["tool_calls"] = m.tool_calls
+            if m.tool_call_id:
+                msg["tool_call_id"] = m.tool_call_id
+            result.append(msg)
+        return result
 
     def _parse_usage(self, usage) -> Optional[UsageStats]:
         """Parse usage from API response.
@@ -273,8 +284,6 @@ class BaseProvider(ABC):
         Returns:
             User-friendly error message
         """
-        import openai
-
         error_type = type(e).__name__
         error_str = str(e)
 
@@ -322,7 +331,6 @@ class BaseProvider(ABC):
         if isinstance(e, openai.BadRequestError):
             # Extract just the error message, not the full JSON
             if "'message':" in error_str:
-                import re
                 match = re.search(r"'message':\s*'([^']+)'", error_str)
                 if match:
                     return f"Invalid request: {match.group(1)}"
@@ -348,12 +356,10 @@ class BaseProvider(ABC):
         Args:
             e: The exception to log
         """
-        import traceback
         try:
-            from ppxai.common.logger import get_logger
             logger = get_logger("tui")
             if logger.enabled:
                 logger.error(f"Provider error: {type(e).__name__}: {e}")
                 logger.debug(f"Full traceback:\n{traceback.format_exc()}")
-        except ImportError:
+        except Exception:
             pass  # Logger not available, skip

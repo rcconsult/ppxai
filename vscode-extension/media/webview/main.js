@@ -596,6 +596,14 @@ window.addEventListener('message', (event) => {
             isSending = false;
             break;
 
+        case 'toolGroupStart':
+            onToolGroupStart(message.data);
+            break;
+
+        case 'toolGroupEnd':
+            onToolGroupEnd(message.data);
+            break;
+
         case 'toolCall':
             typingIndicator.textContent = 'Using tool: ' + message.tool + '...';
             typingIndicator.classList.add('visible');
@@ -1116,6 +1124,54 @@ function closeReasoningSection(messageEl) {
     }
 }
 
+// v1.16.0: Tool group state
+let currentToolGroup = null;
+
+function onToolGroupStart(data) {
+    const iteration = data?.iteration || 0;
+    const count = data?.count || 0;
+    const groupEl = document.createElement('div');
+    groupEl.className = 'tool-group collapsed';
+
+    const header = document.createElement('div');
+    header.className = 'tool-group-header';
+    header.innerHTML = '<span class="tool-group-toggle">&#9654;</span>' +
+        '<span class="tool-group-label">Iteration ' + iteration + ': ' + count + ' tool' + (count !== 1 ? 's' : '') + '</span>' +
+        '<span class="tool-group-status"></span>';
+    header.addEventListener('click', function() {
+        groupEl.classList.toggle('collapsed');
+    });
+    groupEl.appendChild(header);
+
+    const body = document.createElement('div');
+    body.className = 'tool-group-body';
+    groupEl.appendChild(body);
+
+    messagesContainer.insertBefore(groupEl, typingIndicator);
+    currentToolGroup = groupEl;
+    scrollToBottom();
+}
+
+function onToolGroupEnd(data) {
+    if (!currentToolGroup) return;
+    const allOk = data?.all_succeeded !== false;
+    const tools = data?.tools || [];
+    const status = allOk ? '\u2713' : '\u2717';
+    const statusClass = allOk ? 'success' : 'failure';
+
+    const label = currentToolGroup.querySelector('.tool-group-label');
+    const statusEl = currentToolGroup.querySelector('.tool-group-status');
+    if (label && tools.length) {
+        label.textContent = 'Iteration ' + (data?.iteration || 0) + ': ' + tools.join(', ');
+    }
+    if (statusEl) {
+        statusEl.textContent = status;
+        statusEl.className = 'tool-group-status ' + statusClass;
+    }
+    currentToolGroup = null;
+    scrollToBottom();
+}
+
 // v1.12.0: Add tool message with collapsible details
 function addToolMessage(role, title, details, verbose) {
     const now = new Date();
@@ -1154,7 +1210,12 @@ function addToolMessage(role, title, details, verbose) {
         });
     }
 
-    messagesContainer.insertBefore(el, typingIndicator);
+    // v1.16.0: Insert into tool group body if active
+    if (currentToolGroup) {
+        currentToolGroup.querySelector('.tool-group-body').appendChild(el);
+    } else {
+        messagesContainer.insertBefore(el, typingIndicator);
+    }
     scrollToBottom();
     return el;
 }

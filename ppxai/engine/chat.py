@@ -13,16 +13,18 @@ Architecture:
 import asyncio
 import json
 from dataclasses import asdict
+from pathlib import Path
 from typing import AsyncIterator, Dict, Any, List, Optional, Protocol, Callable
 
 from .types import Event, EventType, Message, UsageStats
 from .session import SessionManager
 from .tools.manager import ToolManager
+from .tools.builtin import web_premium
 from .tools.parser import parse_tool_call, detect_truncated_tool_call, strip_tool_json_from_text
 from .tools.validator import ResponseValidator, ValidationResult, check_session_pollution
-from .model_profiles import get_profile
+from .model_profiles import get_profile, ModelProfile, ToolCallingProfile
 from .providers.base import BaseProvider
-from ..config import get_system_prompt, get_system_prompt_mode, calculate_cost
+from ..config import get_system_prompt, get_system_prompt_mode, calculate_cost, get_tool_calling_config
 from ..common.logger import get_logger
 
 logger = get_logger("chat")
@@ -84,6 +86,85 @@ class ChatContext(Protocol):
     def get_working_dir(self) -> Optional[str]:
         """Get current working directory (v1.15.2)."""
         ...
+
+
+def _get_effective_profile(model: str, provider: str, ctx: ChatContext) -> ModelProfile:
+    """Get model profile with config and bootstrap overrides applied.
+
+    Precedence (highest wins per field):
+    1. ppxai-config.json per-model tool_calling
+    2. AGENTS.md tool_calling overrides (project-level)
+    3. Built-in profile (model_profiles.py)
+
+    Args:
+        model: Model ID
+        provider: Provider name
+        ctx: Chat context (for bootstrap access)
+
+    Returns:
+        ModelProfile with all overrides merged
+    """
+    profile = get_profile(model)
+
+    # Collect override layers (lowest priority first, so later layers win)
+    layers: list = []
+
+    # Layer 1: AGENTS.md tool_calling overrides
+    bootstrap_overrides = _get_bootstrap_tool_calling(ctx, model)
+    if bootstrap_overrides:
+        layers.append(bootstrap_overrides)
+
+    # Layer 2: Config overrides (highest priority)
+    config_overrides = get_tool_calling_config(provider, model)
+    if config_overrides:
+        layers.append(config_overrides)
+
+    if not layers:
+        return profile
+
+    # Merge all override layers on top of built-in profile
+    tc = profile.tool_calling
+    merged: dict = {}
+    for layer in layers:
+        merged.update(layer)
+
+    merged_tc = ToolCallingProfile(
+        mode=merged.get("mode", tc.mode),
+        fallback_on_empty=merged.get("fallback_on_empty", tc.fallback_on_empty),
+        fallback_on_failure=merged.get("fallback_on_failure", tc.fallback_on_failure),
+        strip_json_from_text=merged.get("strip_json_from_text", tc.strip_json_from_text),
+        parallel_tool_calls=merged.get("parallel_tool_calls", tc.parallel_tool_calls),
+        api_path=merged.get("api_path", tc.api_path),
+    )
+    return ModelProfile(
+        tool_calling=merged_tc,
+        max_tokens=merged.get("max_tokens", profile.max_tokens),
+        max_tool_iterations=merged.get("max_tool_iterations", profile.max_tool_iterations),
+        supports_reasoning=profile.supports_reasoning,
+        restricted_params=profile.restricted_params,
+        tier=profile.tier,
+    )
+
+
+def _get_bootstrap_tool_calling(ctx: ChatContext, model: str) -> dict:
+    """Extract tool_calling overrides from bootstrap context for a model.
+
+    Args:
+        ctx: Chat context (accesses bootstrap via get_bootstrap_prompt side)
+        model: Model ID to match against glob patterns
+
+    Returns:
+        Dict of tool_calling overrides, or empty dict
+    """
+    try:
+        # Access the engine client's bootstrap context through the protocol
+        # EngineClient stores _bootstrap_context; we access via attribute
+        bootstrap = getattr(ctx, "_bootstrap_context", None)
+        if bootstrap is None:
+            return {}
+        return bootstrap.get_tool_calling_overrides(model)
+    except (AttributeError, TypeError):
+        return {}
 
 
 async def chat_simple(
@@ -233,6 +314,128 @@ def _build_prompt_based_messages(ctx: ChatContext) -> List[Message]:
     return [Message("system", final_prompt)] + messages
 
 
+async def _execute_single_tool(
+    ctx: ChatContext,
+    tool_name: str,
+    tool_args: Dict[str, Any],
+    validator: 'ResponseValidator',
+    iteration: int
+) -> tuple:
+    """Execute one tool call and collect events.
+
+    Returns:
+        (result_text, success, events_to_yield)
+        On exception: (error_msg, False, events_to_yield)
+    """
+    events = []
+    try:
+        tool_task = asyncio.create_task(
+            ctx.tool_manager.execute_tool(tool_name, **tool_args)
+        )
+
+        # Wait for tool completion, checking for interrupt.
+        # NOTE: Consent events are NOT drained here — they stay in
+        # ctx._consent_event_queue for the SSE generator to poll and
+        # deliver to the client. Draining them into a local list caused
+        # a deadlock: the events were trapped here while the SSE generator
+        # never saw them (v1.16.0 fix).
+        while not tool_task.done():
+            if ctx.is_interrupted:
+                tool_task.cancel()
+                try:
+                    await tool_task
+                except asyncio.CancelledError:
+                    pass
+                return None, False, [Event(EventType.ERROR, "Interrupted by user")]
+            await asyncio.sleep(0.05)
+
+        result = await tool_task
+
+        # Determine if tool succeeded based on result content
+        _READ_ONLY_TOOLS = {
+            'read_file', 'display_file', 'list_directory',
+            'search_files', 'get_working_directory',
+        }
+        if tool_name in _READ_ONLY_TOOLS:
+            tool_success = not result.startswith(('Error:', 'Error '))
+        else:
+            tool_success = not any(
+                indicator in result.lower()
+                for indicator in ['error:', 'not found', 'failed',
+                                  'does not exist', 'permission denied']
+            )
+
+        # Record tool call for validation
+        validator.record_tool_call(
+            tool_name=tool_name,
+            arguments=tool_args,
+            result=result,
+            success=tool_success,
+            iteration=iteration
+        )
+
+        # Track tool usage for premium search
+        if tool_name == "web_search":
+            try:
+                tool_usage = web_premium.get_last_tool_usage()
+                if tool_usage:
+                    ctx.track_tool_usage(tool_name, tool_usage)
+            except Exception:
+                pass
+
+        # Emit DISPLAY_FILE event for display_file tool
+        if tool_name == "display_file" and "filepath" in tool_args:
+            filepath = tool_args["filepath"]
+            try:
+                working_dir_str = ctx.get_working_dir() if hasattr(ctx, 'get_working_dir') else None
+                working_dir = Path(working_dir_str) if working_dir_str else Path.cwd()
+                path = Path(filepath).expanduser()
+                if not path.is_absolute():
+                    path = working_dir / filepath
+                path = path.resolve()
+
+                if path.exists() and path.is_file():
+                    logger.debug(f"[display_file] Emitting DISPLAY_FILE event for: {path}")
+                    events.append(Event(EventType.DISPLAY_FILE, {
+                        "filepath": str(path)
+                    }))
+                else:
+                    logger.debug(f"[display_file] Path validation failed: exists={path.exists()}, is_file={path.is_file() if path.exists() else 'N/A'}")
+            except Exception as e:
+                logger.debug(f"[display_file] Exception during event emission: {e}")
+                pass
+
+        # Truncated result for display
+        display_limit = ctx.tool_manager.get_tool_display_limit(tool_name, tool_args)
+        truncated_result = result[:display_limit] + "..." if len(result) > display_limit else result
+
+        events.append(Event(EventType.TOOL_RESULT, {
+            "tool": tool_name,
+            "result": truncated_result
+        }))
+
+        return result, tool_success, events
+
+    except Exception as e:
+        error_msg = str(e)
+
+        # Record failed tool call for validation
+        validator.record_tool_call(
+            tool_name=tool_name,
+            arguments=tool_args,
+            result=f"Error: {error_msg}",
+            success=False,
+            iteration=iteration
+        )
+
+        events.append(Event(EventType.TOOL_ERROR, {
+            "tool": tool_name,
+            "error": error_msg
+        }))
+
+        return f"Error: {error_msg}", False, events
+
+
 async def chat_with_tools(
     ctx: ChatContext,
     stream: bool
@@ -255,7 +458,8 @@ async def chat_with_tools(
     max_iterations = ctx.tool_manager.max_iterations
 
     # Override with per-model limit if profile specifies a higher value (B2)
-    profile = get_profile(ctx.model)
+    # v1.16.0 Step 5: Apply config + bootstrap overrides on top of built-in profile
+    profile = _get_effective_profile(ctx.model, ctx.provider_name, ctx)
     if profile.max_tool_iterations > 0:
         max_iterations = max(max_iterations, profile.max_tool_iterations)
 
@@ -385,184 +589,161 @@ async def chat_with_tools(
                             accumulated_usage.completion_tokens += usage.completion_tokens
                             accumulated_usage.total_tokens += usage.total_tokens
 
-        # Determine tool call
-        tool_call = None
+        # Build list of parsed tool calls
+        tool_calls_list = []
         if native_tool_calls:
-            tc = native_tool_calls[0]
-            tool_args = tc.get("arguments", {})
-            if isinstance(tool_args, dict) and "tool" in tool_args and "arguments" in tool_args:
-                tool_args = tool_args["arguments"]
-            tool_call = {"tool": tc["tool"], "arguments": tool_args}
-            # Fallback on failure: native tool call has unknown tool — try prompt-based parser
+            parsed_calls = []
+            for tc in native_tool_calls:
+                tool_args = tc.get("arguments", {})
+                if isinstance(tool_args, dict) and "tool" in tool_args and "arguments" in tool_args:
+                    tool_args = tool_args["arguments"]
+                parsed_calls.append({
+                    "tool": tc["tool"],
+                    "arguments": tool_args,
+                    "tool_call_id": tc.get("tool_call_id"),
+                })
+
+            # Limit to first call unless parallel_tool_calls enabled
+            if not tc_profile.parallel_tool_calls:
+                parsed_calls = parsed_calls[:1]
+
+            # Fallback on failure: first tool call has unknown tool — try prompt-based parser
             # Must run BEFORE strip_tool_json so the parser can find JSON in response text
-            if tool_call and not ctx.tool_manager.get_tool(tool_call["tool"]):
+            if parsed_calls and not ctx.tool_manager.get_tool(parsed_calls[0]["tool"]):
                 if tc_profile.fallback_on_failure:
-                    logger.info(f"Native tool call unknown tool '{tool_call['tool']}', falling back to prompt-based parser")
+                    logger.info(f"Native tool call unknown tool '{parsed_calls[0]['tool']}', falling back to prompt-based parser")
                     fallback_call = parse_tool_call(full_response, ctx.tool_manager.get_tool)
                     if fallback_call:
-                        tool_call = fallback_call
+                        parsed_calls = [fallback_call]
+
             # v1.15.6 Gap 4: Strip duplicated tool call JSON from response text.
             if full_response:
                 full_response = strip_tool_json_from_text(full_response)
+
+            tool_calls_list = parsed_calls
         else:
-            tool_call = parse_tool_call(full_response, ctx.tool_manager.get_tool)
+            single = parse_tool_call(full_response, ctx.tool_manager.get_tool)
+            if single:
+                tool_calls_list = [single]
 
         # Profile-driven strip_json: strip tool JSON from text even without native calls
         if not native_tool_calls and tc_profile.strip_json_from_text and full_response:
             full_response = strip_tool_json_from_text(full_response)
 
-        if tool_call:
-            tool_name = tool_call["tool"]
-            tool_args = tool_call.get("arguments", {})
-
-            # Check for tool loop
-            if ctx.tool_manager.is_tool_loop_detected(tool_name, tool_args):
-                yield Event(
-                    EventType.INFO,
-                    f"Loop detected: '{tool_name}' called {ctx.tool_manager.max_same_tool_calls}x with same args"
-                )
-                loop_msg = ctx.tool_manager.get_loop_message(tool_name)
-                ctx.session.add_message(Message("user", loop_msg))
-                continue
-
-            ctx.tool_manager.record_tool_call(tool_name, tool_args)
-
-            yield Event(EventType.TOOL_CALL, {
-                "tool": tool_name,
-                "arguments": tool_args
+        if tool_calls_list:
+            # v1.16.0: Emit group start for UI noise reduction
+            yield Event(EventType.TOOL_GROUP_START, {
+                "iteration": iteration,
+                "count": len(tool_calls_list)
             })
 
-            # Execute tool
-            try:
-                tool_task = asyncio.create_task(
-                    ctx.tool_manager.execute_tool(tool_name, **tool_args)
-                )
+            # Execute each tool call sequentially, collecting results
+            results = []  # list of (tool_call_dict, result_text, success)
+            interrupted = False
 
-                # Yield consent events while tool runs, check for interrupt
-                while not tool_task.done():
-                    if ctx.is_interrupted:
-                        tool_task.cancel()
-                        try:
-                            await tool_task
-                        except asyncio.CancelledError:
-                            pass
-                        yield Event(EventType.ERROR, "Interrupted by user")
-                        return
-                    for consent_event in ctx.get_consent_events():
-                        yield consent_event
-                    await asyncio.sleep(0.05)
+            for tc in tool_calls_list:
+                tool_name = tc["tool"]
+                tool_args = tc.get("arguments", {})
 
-                # Drain remaining consent events
-                for consent_event in ctx.get_consent_events():
-                    yield consent_event
-
-                result = await tool_task
-
-                # v1.15.2: Determine if tool succeeded based on result content
-                # Read-only tools: check for explicit tool error prefix only,
-                # because their result IS the file/directory content which may
-                # contain error-like strings in source code (e.g., error handling)
-                _READ_ONLY_TOOLS = {
-                    'read_file', 'display_file', 'list_directory',
-                    'search_files', 'get_working_directory',
-                }
-                if tool_name in _READ_ONLY_TOOLS:
-                    tool_success = not result.startswith(('Error:', 'Error '))
-                else:
-                    tool_success = not any(
-                        indicator in result.lower()
-                        for indicator in ['error:', 'not found', 'failed',
-                                          'does not exist', 'permission denied']
+                # Check for tool loop (per tool)
+                if ctx.tool_manager.is_tool_loop_detected(tool_name, tool_args):
+                    yield Event(
+                        EventType.INFO,
+                        f"Loop detected: '{tool_name}' called {ctx.tool_manager.max_same_tool_calls}x with same args"
                     )
+                    loop_msg = ctx.tool_manager.get_loop_message(tool_name)
+                    ctx.session.add_message(Message("user", loop_msg))
+                    interrupted = True  # Stop processing remaining tools
+                    break
 
-                # v1.15.2: Record tool call for validation
-                validator.record_tool_call(
-                    tool_name=tool_name,
-                    arguments=tool_args,
-                    result=result,
-                    success=tool_success,
-                    iteration=iteration
-                )
+                ctx.tool_manager.record_tool_call(tool_name, tool_args)
 
-                # Track tool usage for premium search
-                if tool_name == "web_search":
-                    try:
-                        from .tools.builtin import web_premium
-                        tool_usage = web_premium.get_last_tool_usage()
-                        if tool_usage:
-                            ctx.track_tool_usage(tool_name, tool_usage)
-                    except Exception:
-                        pass
-
-                # Emit DISPLAY_FILE event for display_file tool (v1.15.1)
-                logger.debug(f"[display_file] Tool executed: {tool_name}, args: {list(tool_args.keys())}")
-                if tool_name == "display_file" and "filepath" in tool_args:
-                    from pathlib import Path
-                    filepath = tool_args["filepath"]
-                    try:
-                        working_dir_str = ctx.get_working_dir() if hasattr(ctx, 'get_working_dir') else None
-                        working_dir = Path(working_dir_str) if working_dir_str else Path.cwd()
-                        path = Path(filepath).expanduser()
-                        if not path.is_absolute():
-                            path = working_dir / filepath
-                        path = path.resolve()
-
-                        if path.exists() and path.is_file():
-                            logger.debug(f"[display_file] Emitting DISPLAY_FILE event for: {path}")
-                            yield Event(EventType.DISPLAY_FILE, {
-                                "filepath": str(path)
-                            })
-                        else:
-                            logger.debug(f"[display_file] Path validation failed: exists={path.exists()}, is_file={path.is_file() if path.exists() else 'N/A'}")
-                    except Exception as e:
-                        # Log exception for debugging
-                        logger.debug(f"[display_file] Exception during event emission: {e}")
-                        pass
-
-                # v1.15.3: Use configurable, format-aware display limits
-                display_limit = ctx.tool_manager.get_tool_display_limit(tool_name, tool_args)
-                truncated_result = result[:display_limit] + "..." if len(result) > display_limit else result
-
-                yield Event(EventType.TOOL_RESULT, {
+                yield Event(EventType.TOOL_CALL, {
                     "tool": tool_name,
-                    "result": truncated_result
+                    "arguments": tool_args
                 })
 
-                ctx.session.add_message(Message(
-                    "assistant",
-                    f"I'll use the {tool_name} tool.\n```json\n{json.dumps(tool_call, indent=2)}\n```"
-                ))
-                ctx.session.add_message(Message(
-                    "user",
-                    f"The {tool_name} tool returned:\n\n{result}\n\nNow respond to the user based on this result."
-                ))
-
-            except Exception as e:
-                error_msg = str(e)
-
-                # v1.15.2: Record failed tool call for validation
-                validator.record_tool_call(
-                    tool_name=tool_name,
-                    arguments=tool_args,
-                    result=f"Error: {error_msg}",
-                    success=False,
-                    iteration=iteration
+                result, success, extra_events = await _execute_single_tool(
+                    ctx, tool_name, tool_args, validator, iteration
                 )
+                for ev in extra_events:
+                    yield ev
 
-                yield Event(EventType.TOOL_ERROR, {
-                    "tool": tool_name,
-                    "error": error_msg
+                # Check for interrupt (signaled by None result)
+                if result is None:
+                    return
+
+                results.append((tc, result, success))
+
+            if interrupted:
+                # v1.16.0: Close group even on interruption
+                yield Event(EventType.TOOL_GROUP_END, {
+                    "iteration": iteration,
+                    "count": len(results),
+                    "all_succeeded": False
                 })
+                continue  # Loop detection fired — go to next iteration
 
+            # Add session messages for all executed tool calls
+            if use_native_tools and all(tc.get("tool_call_id") for tc in tool_calls_list if tc in [r[0] for r in results]):
+                # One assistant message with ALL tool_calls
+                executed_calls = [r[0] for r in results]
                 ctx.session.add_message(Message(
-                    "assistant",
-                    f"I'll use the {tool_name} tool.\n```json\n{json.dumps(tool_call, indent=2)}\n```"
+                    "assistant", "",
+                    tool_calls=[{
+                        "id": tc["tool_call_id"],
+                        "type": "function",
+                        "function": {
+                            "name": tc["tool"],
+                            "arguments": json.dumps(tc.get("arguments", {}))
+                        }
+                    } for tc in executed_calls]
                 ))
-                ctx.session.add_message(Message(
-                    "user",
-                    f"The {tool_name} tool failed with error: {error_msg}\n\n"
-                    "Please provide an answer without using that tool, or try a different approach."
-                ))
+                # N tool result messages
+                for tc, result, success in results:
+                    error_suffix = ""
+                    if not success and result.startswith("Error:"):
+                        error_suffix = (
+                            "\n\nPlease provide an answer without using that tool, "
+                            "or try a different approach."
+                        )
+                    ctx.session.add_message(Message(
+                        "tool", result + error_suffix,
+                        tool_call_id=tc["tool_call_id"]
+                    ))
+            else:
+                # Prompt-based / no tool_call_id — synthetic pairs for each tool
+                for tc, result, success in results:
+                    tool_name = tc["tool"]
+                    if success:
+                        ctx.session.add_message(Message(
+                            "assistant",
+                            f"I'll use the {tool_name} tool.\n```json\n{json.dumps(tc, indent=2)}\n```"
+                        ))
+                        ctx.session.add_message(Message(
+                            "user",
+                            f"The {tool_name} tool returned:\n\n{result}\n\nNow respond to the user based on this result."
+                        ))
+                    else:
+                        ctx.session.add_message(Message(
+                            "assistant",
+                            f"I'll use the {tool_name} tool.\n```json\n{json.dumps(tc, indent=2)}\n```"
+                        ))
+                        ctx.session.add_message(Message(
+                            "user",
+                            f"The {tool_name} tool failed with error: {result}\n\n"
+                            "Please provide an answer without using that tool, or try a different approach."
+                        ))
+
+            # v1.16.0: Emit group end after all tool calls processed
+            all_succeeded = all(success for _, _, success in results)
+            tool_names = [tc["tool"] for tc, _, _ in results]
+            yield Event(EventType.TOOL_GROUP_END, {
+                "iteration": iteration,
+                "count": len(results),
+                "all_succeeded": all_succeeded,
+                "tools": tool_names
+            })
 
             continue
 
@@ -712,6 +893,14 @@ async def chat_with_tools(
             if commit_hash:
                 yield Event(EventType.STATUS, f"✓ Changes committed: {commit_hash[:8]}")
 
+            # Signal agent task completion (v1.16.0)
+            # Enables clients to show undo badge, update status, etc.
+            if ctx.agent_mode:
+                yield Event(EventType.AGENT_COMPLETE, {
+                    "iterations": iteration,
+                    "commit": commit_hash[:8] if commit_hash else None,
+                })
+
             # Transfer tool usage from context to accumulated_usage (v1.16.0)
             if hasattr(ctx, '_current_tool_usage') and ctx._current_tool_usage:
                 for t_name, t_usage in ctx._current_tool_usage.items():
@@ -761,6 +950,20 @@ async def chat_with_tools(
         ctx.session.update_usage(accumulated_usage, ctx.provider_name, ctx.model)
 
     yield Event(EventType.INFO, "Maximum tool iterations reached")
+
+    # Commit any pending agent changes before signaling completion
+    commit_hash = ctx.commit_agent_changes_if_needed("Max iterations reached")
+    if commit_hash:
+        yield Event(EventType.STATUS, f"✓ Changes committed: {commit_hash[:8]}")
+
+    # Signal agent task completion even on max iterations (v1.16.0)
+    if ctx.agent_mode:
+        yield Event(EventType.AGENT_COMPLETE, {
+            "iterations": max_iterations,
+            "commit": commit_hash[:8] if commit_hash else None,
+            "max_iterations_reached": True,
+        })
+
     ctx.session.add_message(Message(
         "assistant",
         "[Tool iterations limit reached. Please try again with a simpler query.]"

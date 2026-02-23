@@ -56,6 +56,7 @@ class EngineClientWrapper:
         debug: bool = False,
         debug_dir: Optional[Path] = None,
         tool_calling_method: str = "auto",
+        skip_agents_md: bool = False,
     ):
         self.provider = provider
         self.model = model
@@ -63,10 +64,17 @@ class EngineClientWrapper:
         self.debug = debug
         self.debug_dir = debug_dir
         self.tool_calling_method = tool_calling_method
+        self.skip_agents_md = skip_agents_md
         self._client: Optional[EngineClient] = None
         self._initialized = False
         self._request_count = 0
         self._response_samples = []  # For model fingerprinting
+        # Per-chat() call counters, reset each call
+        self._turn_tokens = 0
+        self._turn_tool_calls = 0
+        # Cumulative counters across all chat() calls
+        self.total_tokens = 0
+        self.total_tool_calls = 0
 
     def get_effective_tool_calling_method(self) -> str:
         """Return the resolved tool calling method ("native" or "prompt_based").
@@ -109,21 +117,26 @@ class EngineClientWrapper:
 
             # Load AGENTS.md from all scopes (global ~/.ppxai/, project root, cwd)
             # Use the same merged loading as the real ppxai client (v1.14.2)
+            # Skip when running in "without AGENTS.md" mode for delta testing.
             project_root = Path(__file__).parent.parent.parent
             self._client.context_injector.working_dir = str(project_root)
-            try:
-                loaded = self._client.load_bootstrap_context()
-                if loaded and self.verbose:
-                    status = self._client.get_bootstrap_status()
-                    source_count = len(status.get("sources", []))
-                    hints = self._client._bootstrap_context.get_active_hints_for(self.provider, self.model)
-                    hint_count = len(hints.get("provider_hints", [])) + len(hints.get("model_hints", []))
-                    if hint_count > 0:
-                        scopes = [s["scope"] for s in status.get("sources", [])]
-                        print(f"  [INFO] Loaded {hint_count} hints from {source_count} AGENTS.md file(s) ({', '.join(scopes)})")
-            except Exception as e:
+            if self.skip_agents_md:
                 if self.verbose:
-                    print(f"  [WARN] Failed to load AGENTS.md: {e}")
+                    print("  [INFO] Skipping AGENTS.md loading (--agents-md without)")
+            else:
+                try:
+                    loaded = self._client.load_bootstrap_context()
+                    if loaded and self.verbose:
+                        status = self._client.get_bootstrap_status()
+                        source_count = len(status.get("sources", []))
+                        hints = self._client._bootstrap_context.get_active_hints_for(self.provider, self.model)
+                        hint_count = len(hints.get("provider_hints", [])) + len(hints.get("model_hints", []))
+                        if hint_count > 0:
+                            scopes = [s["scope"] for s in status.get("sources", [])]
+                            print(f"  [INFO] Loaded {hint_count} hints from {source_count} AGENTS.md file(s) ({', '.join(scopes)})")
+                except Exception as e:
+                    if self.verbose:
+                        print(f"  [WARN] Failed to load AGENTS.md: {e}")
 
             # Set provider
             if not self._client.set_provider(self.provider):
@@ -172,6 +185,10 @@ class EngineClientWrapper:
             if not await self.initialize():
                 return {"content": "", "tool_calls": [], "error": "Client not initialized"}
 
+        # Reset per-turn counters
+        self._turn_tokens = 0
+        self._turn_tool_calls = 0
+
         # Build message list from benchmark format
         use_native = self._use_native_tools()
 
@@ -192,19 +209,43 @@ class EngineClientWrapper:
         if system_content:
             provider_messages.append(Message(role="system", content=system_content))
 
-        # Add conversation history (excluding last message)
-        for msg in user_messages[:-1] if user_messages else []:
+        # Add conversation history (excluding last message).
+        # Collapse assistant(tool_calls) + tool(result) pairs into a single
+        # user message "Tool result: ..." to maintain strict user/assistant
+        # alternation required by Perplexity and other providers.
+        history = user_messages[:-1] if user_messages else []
+        i = 0
+        while i < len(history):
+            msg = history[i]
             role = msg["role"]
             content = msg.get("content") or ""
 
-            if role == "tool":
-                # Tool results — present as assistant context
-                provider_messages.append(Message(role="assistant", content=f"Tool result: {content}"))
-            elif role == "assistant" and msg.get("tool_calls"):
+            if role == "assistant" and msg.get("tool_calls"):
+                # Assistant made tool call(s) — collect the following tool result(s)
+                tool_results = []
                 if content:
-                    provider_messages.append(Message(role="assistant", content=content))
+                    tool_results.append(content)
+                j = i + 1
+                while j < len(history) and history[j]["role"] == "tool":
+                    tool_results.append(f"[Tool result]: {history[j].get('content', '')}")
+                    j += 1
+                # Present as assistant action + user-role tool results
+                if tool_results:
+                    # The assistant's action (tool call) is implicit.
+                    # Present tool results as a user message so alternation holds.
+                    provider_messages.append(Message(
+                        role="user",
+                        content="\n\n".join(tool_results),
+                    ))
+                i = j
+                continue
+
+            if role == "tool":
+                # Orphan tool result (no preceding assistant) — wrap as user
+                provider_messages.append(Message(role="user", content=f"[Tool result]: {content}"))
             else:
                 provider_messages.append(Message(role=role, content=content))
+            i += 1
 
         # Get the last user message
         last_message = ""
@@ -214,8 +255,7 @@ class EngineClientWrapper:
                 last_message = last_msg["content"]
             elif last_msg["role"] == "tool":
                 tool_result = last_msg.get("content", "")
-                provider_messages.append(Message(role="assistant", content=f"Tool result: {tool_result}"))
-                last_message = "Please continue based on the tool result."
+                last_message = f"[Tool result]: {tool_result}\n\nContinue based on the tool result above."
             else:
                 last_message = last_msg.get("content", "")
 
@@ -230,6 +270,18 @@ class EngineClientWrapper:
             last_message = f"{tool_prompt}\n\nUser request: {last_message}"
 
         provider_messages.append(Message(role="user", content=last_message))
+
+        # Deduplicate consecutive same-role messages (merge into one).
+        # Run AFTER all messages are built (including the last user message)
+        # to ensure no consecutive same-role messages slip through.
+        if provider_messages:
+            merged = [provider_messages[0]]
+            for pm in provider_messages[1:]:
+                if pm.role == merged[-1].role:
+                    merged[-1] = Message(role=pm.role, content=merged[-1].content + "\n\n" + pm.content)
+                else:
+                    merged.append(pm)
+            provider_messages = merged
 
         # Prepare native tools for the provider (if supported)
         native_tools = tools if (tools and use_native) else None
@@ -270,6 +322,7 @@ class EngineClientWrapper:
                     result["content"] += event.data or ""
 
                 elif event.type == EventType.TOOL_CALL:
+                    self._turn_tool_calls += 1
                     # Provider detected a native tool call — capture it, don't execute
                     tool_data = event.data
                     if isinstance(tool_data, dict):
@@ -297,6 +350,21 @@ class EngineClientWrapper:
                     # Strip extracted tool JSON from content so downstream
                     # validators don't penalize expected prompt-based behavior
                     result["content"] = self._strip_tool_json_from_content(result["content"])
+
+            # Also count tool calls extracted from content (prompt-based)
+            if result["tool_calls"]:
+                # Native tool calls already counted via TOOL_CALL events.
+                # For prompt-based extraction, count if _turn_tool_calls is still 0.
+                if self._turn_tool_calls == 0:
+                    self._turn_tool_calls = len(result["tool_calls"])
+
+            # Update cumulative counters
+            self.total_tokens += self._turn_tokens
+            self.total_tool_calls += self._turn_tool_calls
+
+            # Attach per-turn stats to result
+            result["tokens_used"] = self._turn_tokens
+            result["tool_calls_made"] = self._turn_tool_calls
 
             # Collect response samples for model fingerprinting (first 3 only)
             if len(self._response_samples) < 3 and result["content"]:
@@ -562,6 +630,7 @@ class EngineBenchmarkRunner:
         verbose: bool = False,
         debug: bool = False,
         tool_calling_method: str = "auto",
+        skip_agents_md: bool = False,
     ):
         self.provider = provider
         self.model = model
@@ -570,6 +639,7 @@ class EngineBenchmarkRunner:
         self.verbose = verbose
         self.debug = debug
         self.tool_calling_method = tool_calling_method
+        self.skip_agents_md = skip_agents_md
 
         # Setup debug logging directory
         self.debug_dir = None
@@ -603,6 +673,7 @@ class EngineBenchmarkRunner:
             debug=debug,
             debug_dir=self.debug_dir,
             tool_calling_method=tool_calling_method,
+            skip_agents_md=skip_agents_md,
         )
 
     def _get_sdk_versions(self) -> dict:
@@ -864,5 +935,7 @@ class EngineBenchmarkRunner:
                 "sdk_versions": sdk_versions,
                 "model_fingerprint": model_fingerprint,
                 "tool_calling_method": self._detect_tool_calling_method(),
+                "total_tokens": self.client.total_tokens,
+                "total_tool_calls": self.client.total_tool_calls,
             },
         )

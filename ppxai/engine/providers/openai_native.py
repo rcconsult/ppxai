@@ -669,12 +669,18 @@ class OpenAINativeProvider(BaseProvider):
         for m in messages:
             if m.role == "system":
                 instructions_parts.append(m.content)
+            elif m.role == "tool":
+                # Tool result — include tool_call_id for proper linking
+                item: Dict[str, Any] = {"role": "tool", "content": m.content}
+                if m.tool_call_id:
+                    item["tool_call_id"] = m.tool_call_id
+                input_items.append(item)
             else:
                 role = "assistant" if m.role == "assistant" else "user"
-                input_items.append({
-                    "role": role,
-                    "content": m.content,
-                })
+                item = {"role": role, "content": m.content}
+                if m.tool_calls:
+                    item["tool_calls"] = m.tool_calls
+                input_items.append(item)
 
         instructions = "\n\n".join(instructions_parts) if instructions_parts else None
         return instructions, input_items

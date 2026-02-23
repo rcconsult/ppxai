@@ -5,15 +5,21 @@ This module provides the CommandHandler class which handles all slash commands
 in the TUI application (/help, /model, /save, /load, etc.).
 """
 
+import fnmatch
+import inspect
 import os
 import asyncio
+import re
+import warnings
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 from rich.console import Console
 from prompt_toolkit import prompt as pt_prompt
 from prompt_toolkit.validation import Validator, ValidationError
 
+from ..common.consent import normalize_consent_response
 from ..config import (
     CODING_MODEL,
     PROVIDERS,
@@ -30,7 +36,10 @@ from ..config import (
 )
 from ..engine import EngineClient
 from ..engine.tools.builtin import web_premium
+from ..engine.types import EventType
 from ..prompts import CODING_PROMPTS
+from ..rendering.rich_renderer import RichRenderer
+from ..rich.markdown_tables import render_markdown_with_tables
 from ..rich.utils import read_file_content
 from ..rich.ui import (
     console,
@@ -52,7 +61,9 @@ from ..version import __version__
 from ..constants import ConsentResponse, ConsentDecision, ShellRiskLevel
 
 # Import command modules to trigger self-registration
+from .context import RichCommandContext
 from .factory import CommandFactory
+from .results import CommandResult
 from . import session  # noqa: F401 - imported for side-effect (registration)
 from . import provider  # noqa: F401 - imported for side-effect (registration)
 from . import system  # noqa: F401 - imported for side-effect (registration)
@@ -100,8 +111,6 @@ async def tui_consent_handler(file_path: str) -> tuple[bool, str]:
     Returns:
         tuple: (approved: bool, response: str) - response is normalized to ConsentResponse enum
     """
-    from ppxai.common.consent import normalize_consent_response
-
     console.print(f"\n[bold yellow]⚠️  File Edit Request[/bold yellow]")
     console.print(f"[cyan]AI wants to edit:[/cyan] {file_path}")
     console.print("[dim]Options: y (yes), n (no), always (all files), never (block all)[/dim]")
@@ -219,11 +228,6 @@ def send_coding_task(handler: 'CommandHandler', task_type: str, user_message: st
     system_prompt = CODING_PROMPTS[task_type]
     full_message = f"{system_prompt}\n\n{user_message}"
 
-    # Use engine client for coding tasks
-    import asyncio
-    from ..engine.types import EventType
-    from ..rich.markdown_tables import render_markdown_with_tables
-
     async def run_coding_task():
         content = ""
         # Temporarily switch model for coding task if auto-routed
@@ -279,7 +283,6 @@ class CommandHandler:
         else:
             # Legacy signature: (client, api_key, current_model, base_url, provider)
             # client is ignored
-            import warnings
             warnings.warn(
                 "Passing client object to CommandHandler is deprecated. "
                 "Use CommandHandler(api_key, model, base_url, provider) instead. "
@@ -360,9 +363,6 @@ class CommandHandler:
 
     def _search_files(self, query: str, max_results: int = 10) -> list:
         """Search for files matching query in engine's working directory."""
-        from pathlib import Path
-        import fnmatch
-
         # Remove @ prefix if present
         query = query.lstrip('@').strip()
 
@@ -433,9 +433,6 @@ class CommandHandler:
         Returns:
             tuple: (augmented_message, list of {name, path} dicts for resolved files)
         """
-        import re
-        from pathlib import Path
-
         # Match @filename patterns (word characters, dots, hyphens, slashes)
         ref_pattern = r'@([\w.\-/]+)'
         matches = list(re.finditer(ref_pattern, content))
@@ -511,10 +508,6 @@ class CommandHandler:
         # All commands are now handled by CommandFactory
         if CommandFactory.get(cmd_name):
             try:
-                # v1.15.0: Support both old and new command signatures
-                import inspect
-                from .protocol import CommandContext
-
                 spec = CommandFactory.get(cmd_name)
                 sig = inspect.signature(spec.handler)
                 first_param = list(sig.parameters.values())[0]
@@ -527,7 +520,6 @@ class CommandHandler:
 
                 if is_new_style:
                     # New-style command: wrap handler in context adapter
-                    from .context import RichCommandContext
                     context = RichCommandContext(self)
                     result = spec.handler(context, args)
                 else:
@@ -536,9 +528,6 @@ class CommandHandler:
 
                 # v1.15.0: Handle typed results with RichRenderer
                 if result is not None:
-                    from .results import CommandResult
-                    from ..rendering.rich_renderer import RichRenderer
-
                     if isinstance(result, CommandResult):
                         # New-style command returning typed result
                         RichRenderer.render(result)

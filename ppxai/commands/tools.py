@@ -9,6 +9,9 @@ v1.15.0: Migrated to type-based renderer dispatch
 
 from typing import TYPE_CHECKING, List
 
+from ..config import get_model_context_limit, get_max_injection_size
+from ..engine.tools.builtin import web_premium
+from ..usage import get_usage_report
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
@@ -101,7 +104,6 @@ def _enable_tools(context: CommandContext) -> CommandResult:
 
     # Get context limit info
     try:
-        from ..config import get_model_context_limit, get_max_injection_size
         provider = context.get_provider()
         model = context.get_model()
         context_limit = get_model_context_limit(provider, model)
@@ -179,8 +181,6 @@ def _list_tools(context: CommandContext) -> CommandResult:
 
 def _tools_status(context: CommandContext) -> CommandResult:
     """Show tools status."""
-    from ..engine.tools.builtin import web_premium
-
     if context.engine_client and context.engine_client.tools_enabled:
         # Get tool count from engine
         tool_count = 0
@@ -550,8 +550,6 @@ def _display_global_usage_report(context: CommandContext, period: str) -> Comman
     Returns:
         TableResult with usage breakdown
     """
-    from ..usage import get_usage_report
-
     report = get_usage_report(period)
 
     # Header with period info

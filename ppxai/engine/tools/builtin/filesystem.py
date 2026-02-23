@@ -4,9 +4,20 @@ Filesystem tools: read_file, search_files, list_directory, set_working_directory
 
 import glob as glob_module
 import os
+import stat
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+try:
+    import pwd
+except ImportError:
+    pwd = None
+
+try:
+    import grp
+except ImportError:
+    grp = None
 
 from ..base import BaseTool
 
@@ -129,9 +140,6 @@ class ListDirectoryTool(BaseTool):
         Returns:
             Directory listing
         """
-        import stat
-        from datetime import datetime
-
         try:
             # Resolve path relative to engine's working directory
             if path == "." or not path:
@@ -162,14 +170,12 @@ class ListDirectoryTool(BaseTool):
                         nlink = stats.st_nlink
 
                         try:
-                            import pwd
-                            owner = pwd.getpwuid(stats.st_uid).pw_name
+                            owner = pwd.getpwuid(stats.st_uid).pw_name if pwd else str(stats.st_uid)
                         except Exception:
                             owner = str(stats.st_uid)
 
                         try:
-                            import grp
-                            group = grp.getgrgid(stats.st_gid).gr_name
+                            group = grp.getgrgid(stats.st_gid).gr_name if grp else str(stats.st_gid)
                         except Exception:
                             group = str(stats.st_gid)
 
@@ -366,9 +372,6 @@ def list_directory(path: str = ".", format: str = "simple") -> str:
     Returns:
         Directory listing
     """
-    import stat
-    from datetime import datetime
-
     try:
         dir_path = Path(path).expanduser().resolve()
         if not dir_path.exists():
@@ -387,14 +390,12 @@ def list_directory(path: str = ".", format: str = "simple") -> str:
                     nlink = stats.st_nlink
 
                     try:
-                        import pwd
-                        owner = pwd.getpwuid(stats.st_uid).pw_name
+                        owner = pwd.getpwuid(stats.st_uid).pw_name if pwd else str(stats.st_uid)
                     except Exception:
                         owner = str(stats.st_uid)
 
                     try:
-                        import grp
-                        group = grp.getgrgid(stats.st_gid).gr_name
+                        group = grp.getgrgid(stats.st_gid).gr_name if grp else str(stats.st_gid)
                     except Exception:
                         group = str(stats.st_gid)
 

@@ -37,6 +37,14 @@ export function processStreamEvent(event: StreamEvent, eventBus: ChatEventBus): 
             eventBus.emit('stream:chunk', event.content);
             break;
 
+        case 'tool_group_start':
+            eventBus.emit('stream:tool_group_start', event.content);
+            break;
+
+        case 'tool_group_end':
+            eventBus.emit('stream:tool_group_end', event.content);
+            break;
+
         case 'tool_call':
             processToolCall(event.content, eventBus);
             break;

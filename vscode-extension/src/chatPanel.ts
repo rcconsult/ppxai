@@ -172,6 +172,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             postMessage({ type: 'reasoning_chunk', content });
         });
 
+        this._eventBus.on('stream:tool_group_start', (data) => {
+            postMessage({ type: 'toolGroupStart', data });
+        });
+
+        this._eventBus.on('stream:tool_group_end', (data) => {
+            postMessage({ type: 'toolGroupEnd', data });
+        });
+
         this._eventBus.on('stream:tool_call', (data) => {
             postMessage({
                 type: 'toolCall',

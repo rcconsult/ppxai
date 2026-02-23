@@ -7,6 +7,7 @@ including OpenAI, OpenRouter, Gemini (via compatibility layer), local models, et
 
 import json
 from typing import List, AsyncIterator, Optional, Dict, Any
+from ...config import get_model_context_limit, get_default_provider, get_context_warn_percent
 from ..types import Message, Event, EventType, ProviderCapabilities
 from .base import BaseProvider
 
@@ -67,9 +68,8 @@ class OpenAICompatibleProvider(BaseProvider):
             Context limit in tokens
         """
         try:
-            from ...config import get_model_context_limit, get_default_provider
             return get_model_context_limit(get_default_provider(), model)
-        except ImportError:
+        except AttributeError:
             return 128_000  # Default fallback
 
     def _get_warn_percent(self) -> int:
@@ -79,9 +79,8 @@ class OpenAICompatibleProvider(BaseProvider):
             Warning threshold (0-100, 0 = disabled)
         """
         try:
-            from ...config import get_context_warn_percent
             return get_context_warn_percent()
-        except ImportError:
+        except AttributeError:
             return 80  # Default
 
     def _needs_max_completion_tokens(self, model: str) -> bool:

@@ -170,7 +170,7 @@ class TestProviderConfig:
     def test_get_default_model_perplexity(self):
         """Test get_default_model for perplexity."""
         model = get_default_model("perplexity")
-        assert model == "sonar-pro"
+        assert model == "sonar"
 
     @patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key-123"})
     def test_get_api_key_perplexity(self):
@@ -1012,4 +1012,106 @@ class TestContextConfig:
                 percent = get_context_warn_percent()
                 assert percent == 0
 
+        os.unlink(f.name)
+
+
+class TestToolCallingConfig:
+    """Tests for get_tool_calling_config (v1.16.0 Step 5)."""
+
+    def test_empty_when_no_config(self, restore_config):
+        """Returns empty dict when no tool_calling section exists."""
+        from ppxai.config import get_tool_calling_config
+        result = get_tool_calling_config("perplexity", "sonar-pro")
+        assert result == {}
+
+    def test_provider_level_defaults(self, restore_config):
+        """Provider-level tool_calling acts as default for all models."""
+        from ppxai.config import get_tool_calling_config
+        config_data = {
+            "providers": {
+                "custom": {
+                    "name": "Custom",
+                    "base_url": "http://localhost:8000/v1",
+                    "api_key_env": "CUSTOM_KEY",
+                    "tool_calling": {
+                        "mode": "prompt_based",
+                        "fallback_on_empty": True
+                    },
+                    "models": {"my-model": {"name": "My Model"}}
+                }
+            }
+        }
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump(config_data, f)
+            f.flush()
+            with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": f.name}):
+                reload_config()
+                result = get_tool_calling_config("custom", "my-model")
+                assert result["mode"] == "prompt_based"
+                assert result["fallback_on_empty"] is True
+        os.unlink(f.name)
+
+    def test_model_level_overrides_provider(self, restore_config):
+        """Model-level tool_calling overrides provider defaults."""
+        from ppxai.config import get_tool_calling_config
+        config_data = {
+            "providers": {
+                "custom": {
+                    "name": "Custom",
+                    "base_url": "http://localhost:8000/v1",
+                    "api_key_env": "CUSTOM_KEY",
+                    "tool_calling": {
+                        "mode": "prompt_based",
+                        "fallback_on_empty": False
+                    },
+                    "models": {
+                        "my-model": {
+                            "name": "My Model",
+                            "tool_calling": {
+                                "mode": "native",
+                                "strip_json_from_text": True
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump(config_data, f)
+            f.flush()
+            with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": f.name}):
+                reload_config()
+                result = get_tool_calling_config("custom", "my-model")
+                # Model overrides provider
+                assert result["mode"] == "native"
+                assert result["strip_json_from_text"] is True
+                # Provider default inherited
+                assert result["fallback_on_empty"] is False
+        os.unlink(f.name)
+
+    def test_comment_keys_filtered(self, restore_config):
+        """Comment keys (__comment_*) are filtered out."""
+        from ppxai.config import get_tool_calling_config
+        config_data = {
+            "providers": {
+                "custom": {
+                    "name": "Custom",
+                    "base_url": "http://localhost:8000/v1",
+                    "api_key_env": "CUSTOM_KEY",
+                    "tool_calling": {
+                        "mode": "prompt_based",
+                        "__comment_mode": "Use prompt-based for this provider"
+                    },
+                    "models": {}
+                }
+            }
+        }
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump(config_data, f)
+            f.flush()
+            with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": f.name}):
+                reload_config()
+                result = get_tool_calling_config("custom", "nonexistent")
+                assert "mode" in result
+                assert "__comment_mode" not in result
         os.unlink(f.name)

@@ -132,6 +132,10 @@ class MockChatContext:
     def track_tool_usage(self, tool_name, usage):
         pass
 
+    @property
+    def agent_mode(self):
+        return False
+
     def commit_agent_changes_if_needed(self, message):
         return None
 

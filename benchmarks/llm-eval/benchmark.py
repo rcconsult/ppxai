@@ -100,6 +100,13 @@ Examples:
         help="Force tool calling method: native (API function calling), "
              "prompt_based (inject tools in prompt), auto (detect from provider caps)"
     )
+    run_group.add_argument(
+        "--agents-md", type=str,
+        choices=["with", "without", "both"],
+        default="with",
+        help="AGENTS.md mode: 'with' (default, load bootstrap context), "
+             "'without' (skip AGENTS.md), 'both' (run twice, report delta)"
+    )
 
     # Analysis mode
     analysis_group = parser.add_argument_group("Analysis")
@@ -133,33 +140,80 @@ def run_benchmark(args: argparse.Namespace) -> int:
     if args.categories:
         categories = [c.strip() for c in args.categories.split(",")]
 
-    # Use ppxai Engine-based runner (handles tools automatically)
-    runner = EngineBenchmarkRunner(
-        provider=args.provider,
-        model=args.model,
-        timeout=args.timeout,
-        retries=args.retries,
-        verbose=args.verbose,
-        debug=args.debug,
-        tool_calling_method=getattr(args, 'tool_calling_method', 'auto'),
-    )
+    agents_md_mode = getattr(args, 'agents_md', 'with')
+    runs_to_do = []  # list of (label, skip_agents_md)
+    if agents_md_mode == "both":
+        runs_to_do = [("WITH AGENTS.md", False), ("WITHOUT AGENTS.md", True)]
+    elif agents_md_mode == "without":
+        runs_to_do = [("WITHOUT AGENTS.md", True)]
+    else:
+        runs_to_do = [("WITH AGENTS.md", False)]
 
-    print(f"\n{'='*60}")
-    print(f"LLM Agentic Coding Assistant Benchmark")
-    print(f"{'='*60}")
-    print(f"Provider: {args.provider}")
-    print(f"Model:    {args.model}")
-    print(f"Timeout:  {args.timeout}s per test")
-    print(f"{'='*60}\n")
+    results = []
+    for label, skip_agents in runs_to_do:
+        runner = EngineBenchmarkRunner(
+            provider=args.provider,
+            model=args.model,
+            timeout=args.timeout,
+            retries=args.retries,
+            verbose=args.verbose,
+            debug=args.debug,
+            tool_calling_method=getattr(args, 'tool_calling_method', 'auto'),
+            skip_agents_md=skip_agents,
+        )
 
-    # Run benchmark
-    result = runner.run(categories=categories)
+        print(f"\n{'='*60}")
+        print(f"LLM Agentic Coding Assistant Benchmark — {label}")
+        print(f"{'='*60}")
+        print(f"Provider: {args.provider}")
+        print(f"Model:    {args.model}")
+        print(f"Timeout:  {args.timeout}s per test")
+        print(f"{'='*60}\n")
 
-    # Store result
-    store.save(result)
+        result = runner.run(categories=categories)
+        result.metadata["agents_md_mode"] = "without" if skip_agents else "with"
+        results.append(result)
 
-    # Display results
-    print_result(result, args.format, args.verbose)
+        # Store result
+        store.save(result)
+
+        # Display results
+        print_result(result, args.format, args.verbose)
+
+    # If "both" mode, show delta comparison
+    if agents_md_mode == "both" and len(results) == 2:
+        result_with, result_without = results[0], results[1]
+        print(f"\n{'='*60}")
+        print("AGENTS.md Delta Comparison")
+        print(f"{'='*60}")
+        delta = result_with.overall_score - result_without.overall_score
+        direction = "+" if delta >= 0 else ""
+        print(f"  With AGENTS.md:    {result_with.overall_score:.1f}%")
+        print(f"  Without AGENTS.md: {result_without.overall_score:.1f}%")
+        print(f"  Delta:             {direction}{delta:.1f}%")
+        print()
+        print("  Per-category delta:")
+        all_cats = sorted(set(list(result_with.category_scores.keys()) + list(result_without.category_scores.keys())))
+        for cat in all_cats:
+            s_with = result_with.category_scores.get(cat, 0)
+            s_without = result_without.category_scores.get(cat, 0)
+            cat_delta = s_with - s_without
+            d = "+" if cat_delta >= 0 else ""
+            print(f"    {cat:<30} {d}{cat_delta:.1f}%")
+
+        # Store delta in the "with" result metadata
+        result_with.metadata["agents_md_delta"] = {
+            "overall": delta,
+            "categories": {
+                cat: result_with.category_scores.get(cat, 0) - result_without.category_scores.get(cat, 0)
+                for cat in all_cats
+            },
+        }
+
+        # Use the "with" result as the primary result for history/ranking
+        result = result_with
+    else:
+        result = results[0]
 
     # Show comparison with previous runs
     pair_key = f"{args.provider}/{args.model}"

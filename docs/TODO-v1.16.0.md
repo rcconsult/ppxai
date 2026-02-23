@@ -47,19 +47,19 @@ These changes modify the core tool loop in `chat.py` affecting **every provider 
 Goals are ordered by dependency chain. Implement in this sequence:
 
 ```
-Step 1: Provider Hierarchy    (no deps — simplifies everything after)
+Step 1: Provider Hierarchy ✅  (no deps — simplifies everything after)
    │
-Step 2: Profile-Driven Loop   (needs Step 1's clean interface)
+Step 2: Profile-Driven Loop ✅ (needs Step 1's clean interface)
    │
-   ├─→ Step 3: Tool Messages  (needs Step 2's profile routing)
+   ├─→ Step 3: Tool Messages ✅ (needs Step 2's profile routing)
    │      │
-   │      └─→ Step 4: Multi-Tool  (needs Step 3's message format)
+   │      └─→ Step 4: Multi-Tool ✅ (needs Step 3's message format)
    │             │
-   │             └─→ Step 6: Grouped UI  (needs Step 4's multi-tool)
+   │             └─→ Step 5: Agent UI Noise Reduction  (needs Step 4's multi-tool)
    │
-   └─→ Step 5: Config Integration  (needs Step 2's profiles, independent of 3-4)
+   └─→ Step 6: Config Integration ✅ (needs Step 2's profiles, independent of 3-4)
 
-Step 7: Benchmark v2          (independent — can run in parallel with any step)
+Step 7: Benchmark v2 ✅       (independent — 37 tests done, re-benchmark in progress)
 ```
 
 ---
@@ -97,104 +97,100 @@ Profile-driven mode routing replaces the binary `native_tool_calling` decision. 
 
 ---
 
-## Step 3: Proper Tool Message Format
+## Step 3: Proper Tool Message Format ✓
 
-**Dependencies:** Step 2 (profile routing determines when to use `tool` role vs synthetic pairs)
+**Status:** Completed (2026-02-22)
 
-Replace synthetic message pairs with proper `tool` role messages:
+Native mode now uses proper `tool` role messages. Prompt-based mode keeps synthetic pairs.
 
-```python
-# BEFORE (chat.py:437-444):
-ctx.session.add_message(Message("assistant", f"I'll use the {tool_name} tool..."))
-ctx.session.add_message(Message("user", f"The {tool_name} tool returned..."))
-
-# AFTER (native mode):
-ctx.session.add_message(Message("assistant", "", tool_calls=[...]))
-ctx.session.add_message(Message("tool", result, tool_call_id=tc_id))
-```
-
-- [ ] **Extend `Message` type** — add `tool_calls` and `tool_call_id` fields to `Message` dataclass (1h)
-- [ ] **Native mode messages** — use proper `assistant` (with tool_calls) + `tool` role messages (3h)
-- [ ] **Prompt-based unchanged** — keep synthetic pairs for prompt-based mode (0h)
-- [ ] **Provider message conversion** — all providers handle `tool` role in `_convert_messages()` (4h)
-- [ ] **Session serialization** — save/load handles new message fields (2h)
-- [ ] **Migration** — v1.15.x sessions with old format still load correctly (2h)
-- [ ] **Tests** — message format, session serialization, provider conversion (4h)
+- [x] **`Message` type extended** — `tool_calls` and `tool_call_id` fields added to `Message` dataclass (`types.py:51-52`)
+- [x] **Native mode messages** — `assistant` (with `tool_calls`) + `tool` role messages (`chat.py:677-702`)
+- [x] **Prompt-based unchanged** — synthetic pairs for prompt-based mode (`chat.py:703-725`)
+- [x] **Provider message conversion** — all 4 providers handle `tool` role in `_convert_messages()` (`base.py:251-254`, `openai_native.py:673-682`, `openai_compat.py:356-373`, `gemini.py:261-388`)
+- [x] **Session serialization** — save/load handles `tool_calls`/`tool_call_id` (`session.py:115-128`)
+- [x] **Migration** — v1.15.x sessions load via `m.get("tool_calls")` / `m.get("tool_call_id")` (None-safe)
+- [x] **Session validation** — `_validate_message_order()` allows `tool` messages after `assistant(tool_calls)` (`session.py:151-202`)
 
 ---
 
-## Step 4: Multi-Tool Support
+## Step 4: Multi-Tool Support ✓
 
-**Dependencies:** Step 3 (proper tool messages needed to send multiple tool results per iteration)
+**Status:** Completed (2026-02-22)
 
-Process all native tool calls when the profile allows it:
+All native tool calls processed when `parallel_tool_calls` profile flag is set. Sequential execution with per-tool consent and loop detection.
 
-```python
-# BEFORE (chat.py:331):
-tc = native_tool_calls[0]  # Only first tool call
-
-# AFTER:
-if profile.tool_calling.parallel_tool_calls:
-    for tc in native_tool_calls:
-        # Execute each tool, collect results
-else:
-    tc = native_tool_calls[0]
-```
-
-- [ ] **Sequential tool execution** — process all native tool calls in sequence (not parallel — safety) (3h)
-- [ ] **Multi-result events** — emit multiple `TOOL_CALL`/`TOOL_RESULT` events per iteration (2h)
-- [ ] **Session messages** — add all tool call/result message pairs (1h)
-- [ ] **Consent handling** — each tool call still requires individual consent (2h)
-- [ ] **Loop detection** — update tool loop detection for multi-tool iterations (1h)
-- [ ] **Tests** — multi-tool extraction, execution, message format (3h)
+- [x] **Sequential tool execution** — `for tc in tool_calls_list` processes all calls in sequence (`chat.py:639-671`)
+- [x] **Profile gating** — `parallel_tool_calls` flag limits to first call when false (`chat.py:607-609`)
+- [x] **Multi-result events** — emit `TOOL_CALL`/`TOOL_RESULT` per tool (`chat.py:656-665`)
+- [x] **Session messages** — one `assistant` message with ALL `tool_calls`, N `tool` result messages (`chat.py:677-702`)
+- [x] **Consent handling** — each tool gets individual consent via `_execute_single_tool()` (`chat.py:661`)
+- [x] **Loop detection** — per-tool loop detection with early break (`chat.py:644-652`)
 
 ---
 
-## Step 5: Config Integration
+## Step 5: Agent UI Noise Reduction
 
-**Dependencies:** Step 2 (profiles must exist before config can override them; independent of Steps 3-4)
+**Dependencies:** Step 4 (multi-tool support provides the engine-side batching; this step fixes the UI side)
 
-- [ ] **Config overrides** — `tool_calling` section in `ppxai-config.json` per model (2h)
-- [ ] **AGENTS.md influence** — model hints can set `tool_calling_mode: prompt_based` (2h)
-- [ ] **`/model info` command** — show active profile for current model (2h)
-- [ ] **Documentation** — config format, profile precedence, migration guide (3h)
+**Status:** Completed (2026-02-23)
+
+### Issue A: Checkpoint Bubble Spam — N/A
+
+After code review, this is **not a real problem** in current code. `create_checkpoint()` only fires from `commit_agent_changes_if_needed()` AFTER the tool loop exits (chat.py:871). During the loop, `_register_checkpoint_file()` only registers files — no events. The STATUS event is queued but only delivered on the next tool execution's poll loop, which won't happen since the loop has ended.
+
+### Issue B: Grouped Tool Call Display ✓
+
+Each iteration's tool calls are now wrapped with `TOOL_GROUP_START`/`TOOL_GROUP_END` events. All 4 clients render them as collapsible groups.
+
+- [x] **Engine SSE events** — `TOOL_GROUP_START` / `TOOL_GROUP_END` EventTypes in `types.py`, emitted wrapping tool execution loop in `chat.py`
+- [x] **`AGENT_COMPLETE` emission** — engine now yields `AGENT_COMPLETE` event after tool loop (both normal completion and max-iterations), with `iterations` count and `commit` hash
+- [x] **SSE event type dispatch fix** — side-channel queue events now emit using their actual EventType (STATUS, WORKING_DIR_CHANGED, etc.) instead of all being sent as `consent_request`. Fixes checkpoint events triggering false consent dialogs.
+- [x] **Web app** — collapsible `.tool-group` container with header showing iteration, tool names, and success/failure status. Checkpoint bubble suppression (enriches commit message with count). Undo badge only shown when `agent_complete` includes a commit.
+- [x] **VSCode extension** — `stream.ts` → `chatPanel.ts` → `main.js` forwarding + `.tool-group` CSS styling
+- [x] **ppxaide TUI** — non-verbose mode suppresses individual tool bubbles, shows one summary line per group at group end; verbose mode unchanged. Tool group events logged at INFO level.
+- [x] **ppxai Rich CLI** — dim separator lines wrapping tool groups with iteration number and status
+- [x] **Consent deadlock fix** — SSE generator replaced `async for` with racing poll pattern (`asyncio.ensure_future` + 100ms polling). Removed consent event draining from `_execute_single_tool()` that was trapping events.
 
 ---
 
-## Step 6: Grouped Tool Call UI
+## Step 6: Config Integration ✓
 
-**Dependencies:** Step 4 (multi-tool support) — without processing all tool calls, there's nothing to group.
+**Status:** Completed (2026-02-22)
 
-- [ ] **Engine SSE events** — new `TOOL_GROUP_START` / `TOOL_GROUP_END` events wrapping multiple tool calls from a single iteration
-- [ ] **Web app** — render grouped tool calls in a single collapsible bubble (tool name + result per row)
-- [ ] **VSCode extension** — same grouped bubble in chat panel, collapsible with expand/collapse
-- [ ] **ppxaide TUI** — grouped tool calls in Textual Collapsible or vertical scroll
-- [ ] **ppxai Rich CLI** — compact grouped output with separator lines
+Per-model tool calling config overrides with 3-layer precedence: built-in profile → AGENTS.md → ppxai-config.json.
+
+- [x] **Config overrides** — `get_tool_calling_config(provider, model)` reads `tool_calling` section from provider-level and model-level config (`config/__init__.py`)
+- [x] **AGENTS.md influence** — `tool_calling` YAML front matter section with glob-pattern matching (`bootstrap.py:_parse_tool_calling_section`, `get_tool_calling_overrides`)
+- [x] **Effective profile merging** — `_get_effective_profile()` in `chat.py` merges 3 layers
+- [x] **Context merging** — `tool_calling_overrides` merged across scopes in `context.py`
+- [x] **`/model info` command** — shows effective profile with source attribution (`provider.py:handle_model_info`)
+- [x] **Config example** — `ppxai-config.example.json` updated with `tool_calling` examples for local-vllm and vllm-gpt-oss
+- [x] **Tests** — 4 config tests + 6 bootstrap tests + 6 profile merging tests = 16 new tests
 
 ---
 
-## Step 7: Benchmark v2 — Remaining Items
+## Step 7: Benchmark v2 ✓ (Phase 1-3 tests done, re-benchmark in progress)
 
-**Dependencies:** None — can run in parallel with any step. Re-benchmark after Steps 2-4 to validate.
+**Status:** All 37 tests implemented across 8 categories. Re-benchmark runs in progress (2026-02-22).
 
-Phase 1 (scoring distortions) is mostly done. Remaining:
+### Phase 1: Scoring Distortions ✓
+- [x] **Partial credit scoring** — `score` field (0.0-1.0) in `engine_runner.py`, tool calling +50% name +50% args
+- [x] **`patch_apply_verify`** — model generates patch, applies with `_replace_hunk()`, verifies output. Supports unified diff and search-replace formats. Score: 0.0/0.5/0.7/1.0. weight=2.0 (`test_cases.py:704`)
 
-### Phase 1 (remaining)
-- [ ] **`patch_apply_verify`** — model generates patch, actually apply with `_replace_hunk`, verify output (4h)
+### Phase 2: Agentic Patterns ✓
+- [x] **`search_then_edit`** — search_code → read_file → apply_patch/write_file. score=steps/3, up to 6 turns, dedup detection. weight=2.0 (`test_cases.py:1751`)
+- [x] **`fix_verify`** — write → test failure → fix → retest → pass. score=steps/4, up to 8 turns. weight=2.0 (`test_cases.py:1849`)
+- [x] **`information_gathering`** — find and read 3 auth files (auth.py, middleware.py, auth_config.yaml). score=files_found/3. weight=2.0 (`test_cases.py:1951`)
+- [x] **`error_recovery_chain`** — read → not found → search → find real path → read → apply_patch with permission denied. score=steps/4. weight=2.0 (`test_cases.py:2043`)
 
-### Phase 2: Agentic Patterns
-- [ ] **`search_then_edit`** — search_code → read_file → apply_patch without given path (4h)
-- [ ] **`test_fix_verify`** — write code → test failure → fix → re-test → pass (5h)
-- [ ] **`information_gathering`** — find and read 3 auth files spread across project (4h)
-- [ ] **`error_recovery_chain`** — read → not found → search → read → edit → permission denied (3h)
-
-### Phase 3: Efficiency & Hints
-- [ ] **Token/cost metrics** — `prompt_tokens`, `completion_tokens`, `total_cost` per test (3h)
-- [ ] **With/without AGENTS.md** — run suite twice per model, report delta (3h)
-- [ ] **Tool call efficiency** — total calls vs minimum required (2h)
+### Phase 3: Efficiency & Hints ✓ (mostly)
+- [x] **Token/tool_call tracking** — `total_tokens` and `total_tool_calls` in `EngineClientWrapper`, reported in `BenchmarkResult.metadata`
+- [x] **With/without AGENTS.md** — `--agents-md both` mode in `benchmark.py`, reports per-category delta
+- [x] **`tool_call_efficiency`** — 5-step chain, score by extra calls: ≤5=1.0, 6-7=0.8, 8-10=0.5, >10=0.3. weight=1.5 (`test_cases.py:2199`)
+- [ ] **Per-test USD cost** — tokens counted but not priced (no `prompt_tokens`/`completion_tokens` split or provider pricing)
 
 ### Validation
-- [ ] **Re-benchmark all models** — full v2 suite, validate ranking matches real-world matrix (manual)
+- [ ] **Re-benchmark all models** — in progress (2026-02-22 runs for gemini-2.5-flash, gpt-5.1-codex, gpt-5.2, sonar, gemini-3.1-pro-preview)
 
 ---
 
@@ -237,14 +233,14 @@ Phase 1 (scoring distortions) is mostly done. Remaining:
 
 - [x] **Step 1:** Provider hierarchy — shared interface, no `hasattr` guards (1451 tests pass)
 - [x] **Step 2:** Profile-driven routing replaces binary decision in `chat.py` + truncation recovery + sonar profile/hint fixes
-- [ ] **Step 3:** Proper `tool` role messages for native mode
-- [ ] **Step 4:** Multi-tool support for models returning parallel calls
-- [ ] **Step 5:** Config overrides for per-model `tool_calling` settings + `/model info`
-- [ ] **Step 6:** Grouped tool call UI in all clients
-- [ ] **Step 7:** Benchmark v2 agentic tests + efficiency metrics
+- [x] **Step 3:** Proper `tool` role messages for native mode — `Message(tool_calls=, tool_call_id=)`, all providers, session serialization
+- [x] **Step 4:** Multi-tool support — `parallel_tool_calls` gating, sequential execution, per-tool consent/loop detection
+- [x] **Step 5:** Agent UI noise reduction — Issue A N/A (no real problem) + Issue B grouped tool call display ✓
+- [x] **Step 6:** Config overrides for per-model `tool_calling` settings + `/model info` + AGENTS.md `tool_calling` YAML
+- [x] **Step 7:** Benchmark v2 — 37 tests across 8 categories (Phase 1-3 done, per-test USD cost remaining)
 - [ ] No provider regressions (full benchmark suite)
-- [ ] Session migration from v1.15.x works seamlessly
-- [ ] All existing tests pass + 50+ new tests
+- [x] Session migration from v1.15.x works seamlessly (None-safe `.get()` for new fields)
+- [ ] All existing tests pass + 50+ new tests (currently 1505 tests, all passing)
 - [x] `/ls` and `/tree` commands work in all clients
 - [x] Session context reset on model switch (B1)
 - [x] Per-model iteration limit from ModelProfile (B2)
@@ -261,13 +257,16 @@ Phase 1 (scoring distortions) is mostly done. Remaining:
 
 | Area | File | Key |
 |------|------|-----|
-| Tool loop (binary decision) | `ppxai/engine/chat.py` | Line 210 (`use_native_tools`) |
-| Tool loop (main while) | `ppxai/engine/chat.py` | Lines 229-586 |
-| Single tool extraction | `ppxai/engine/chat.py` | Line 331 (`native_tool_calls[0]`) |
-| Synthetic message pairs | `ppxai/engine/chat.py` | Lines 437-444 |
-| Truncation retry | `ppxai/engine/chat.py` | Lines 504-509 |
-| Belt-and-suspenders | `ppxai/engine/chat.py` | Lines 296-312 |
-| Pollution check | `ppxai/engine/chat.py` | Lines 591-605 |
+| Effective profile merging | `ppxai/engine/chat.py` | `_get_effective_profile()` (3-layer merge) |
+| Tool mode resolution | `ppxai/engine/chat.py` | `tc_profile.mode` routing (~line 470) |
+| Multi-tool gating | `ppxai/engine/chat.py` | `parallel_tool_calls` flag (~line 607) |
+| Native tool messages | `ppxai/engine/chat.py` | `assistant(tool_calls)` + `tool` role (~line 677) |
+| Prompt-based messages | `ppxai/engine/chat.py` | Synthetic pairs (~line 703) |
+| Truncation retry | `ppxai/engine/chat.py` | Escalating recovery + stuck-loop cap |
+| Belt-and-suspenders | `ppxai/engine/chat.py` | Tool hints injected when fallback flags set |
+| Pollution check | `ppxai/engine/chat.py` | `check_session_pollution()` after iteration 1 |
+| Config overrides | `ppxai/config/__init__.py` | `get_tool_calling_config()` |
+| AGENTS.md overrides | `ppxai/engine/bootstrap.py` | `tool_calling_overrides`, `get_tool_calling_overrides()` |
 | Validator | `ppxai/engine/tools/validator.py` | Lines 52-462 |
 | Session reset | `ppxai/engine/session.py` | Line 215 (`reset_for_model_switch`) |
 | Model profiles | `ppxai/engine/model_profiles.py` | 1-488 (37 profiles) |

@@ -738,3 +738,98 @@ class TestScopePrecedence:
             # Or no file if the directory structure doesn't match
             # Just verify no error occurs
             assert isinstance(result, list)
+
+
+class TestToolCallingOverrides:
+    """Tests for tool_calling YAML front matter parsing (v1.16.0 Step 5)."""
+
+    def test_parse_tool_calling_section(self):
+        """Parse tool_calling section from YAML front matter."""
+        content = """---
+tool_calling:
+  "qwen*":
+    mode: "prompt_based"
+  "gpt-oss*":
+    fallback_on_empty: true
+    strip_json_from_text: true
+---
+
+# Instructions
+"""
+        ctx = BootstrapContext.from_content(content, "test.md")
+        assert "qwen*" in ctx.tool_calling_overrides
+        assert ctx.tool_calling_overrides["qwen*"]["mode"] == "prompt_based"
+        assert "gpt-oss*" in ctx.tool_calling_overrides
+        assert ctx.tool_calling_overrides["gpt-oss*"]["fallback_on_empty"] is True
+        assert ctx.tool_calling_overrides["gpt-oss*"]["strip_json_from_text"] is True
+
+    def test_get_tool_calling_overrides_glob_match(self):
+        """get_tool_calling_overrides matches glob patterns."""
+        content = """---
+tool_calling:
+  "qwen*":
+    mode: "prompt_based"
+    fallback_on_empty: true
+---
+"""
+        ctx = BootstrapContext.from_content(content, "test.md")
+        result = ctx.get_tool_calling_overrides("qwen2.5-coder:3b")
+        assert result["mode"] == "prompt_based"
+        assert result["fallback_on_empty"] is True
+
+    def test_get_tool_calling_overrides_no_match(self):
+        """get_tool_calling_overrides returns empty for non-matching model."""
+        content = """---
+tool_calling:
+  "qwen*":
+    mode: "prompt_based"
+---
+"""
+        ctx = BootstrapContext.from_content(content, "test.md")
+        result = ctx.get_tool_calling_overrides("gpt-5.2")
+        assert result == {}
+
+    def test_get_tool_calling_overrides_multiple_matches_merge(self):
+        """Multiple matching patterns merge (later wins)."""
+        content = """---
+tool_calling:
+  "*":
+    fallback_on_empty: true
+  "qwen*":
+    mode: "prompt_based"
+---
+"""
+        ctx = BootstrapContext.from_content(content, "test.md")
+        result = ctx.get_tool_calling_overrides("qwen2.5:3b")
+        assert result["fallback_on_empty"] is True
+        assert result["mode"] == "prompt_based"
+
+    def test_empty_tool_calling_overrides_by_default(self):
+        """No tool_calling section means empty overrides."""
+        content = """---
+provider_hints:
+  local:
+    - "test hint"
+---
+"""
+        ctx = BootstrapContext.from_content(content, "test.md")
+        assert ctx.tool_calling_overrides == {}
+        assert ctx.get_tool_calling_overrides("any-model") == {}
+
+    def test_coerce_yaml_values(self):
+        """YAML values are coerced to correct Python types."""
+        content = """---
+tool_calling:
+  "test*":
+    mode: native
+    fallback_on_empty: true
+    fallback_on_failure: false
+    max_tool_iterations: 25
+---
+"""
+        ctx = BootstrapContext.from_content(content, "test.md")
+        tc = ctx.tool_calling_overrides["test*"]
+        assert tc["mode"] == "native"
+        assert tc["fallback_on_empty"] is True
+        assert tc["fallback_on_failure"] is False
+        assert tc["max_tool_iterations"] == 25

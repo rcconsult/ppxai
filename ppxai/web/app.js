@@ -942,6 +942,14 @@ class PpxaiApp {
                 }
                 break;
 
+            case 'tool_group_start':
+                this.onToolGroupStart(event.data);
+                break;
+
+            case 'tool_group_end':
+                this.onToolGroupEnd(event.data);
+                break;
+
             case 'tool_call':
                 this.showToolCall(event.data);
                 break;
@@ -966,7 +974,19 @@ class PpxaiApp {
                 break;
 
             case 'status':
-                this.showSystemMessage(event.data);
+                // v1.16.0: Suppress individual checkpoint/snapshot bubbles — the
+                // final "Changes committed: <hash>" message provides sufficient context.
+                if (typeof event.data === 'string' && (event.data.startsWith('✓ Checkpoint created:') || event.data.startsWith('✓ Snapshot saved:'))) {
+                    this._checkpointCount = (this._checkpointCount || 0) + 1;
+                } else {
+                    let msg = event.data;
+                    // Enrich commit message with checkpoint count
+                    if (this._checkpointCount > 0 && typeof msg === 'string' && msg.startsWith('✓ Changes committed:')) {
+                        msg += ` (${this._checkpointCount} file${this._checkpointCount !== 1 ? 's' : ''} checkpointed)`;
+                        this._checkpointCount = 0;
+                    }
+                    this.showSystemMessage(msg);
+                }
                 break;
 
             case 'working_dir_changed':
@@ -983,8 +1003,10 @@ class PpxaiApp {
 
             case 'agent_complete':
                 this.showSystemMessage('✅ Task completed!');
-                // Update undo badge
-                this.elements.undoBadge.classList.remove('hidden');
+                // Only show undo badge if a commit was made (checkpoint exists)
+                if (event.data && event.data.commit) {
+                    this.elements.undoBadge.classList.remove('hidden');
+                }
                 break;
 
             case 'agent_max_iterations':
@@ -2102,6 +2124,60 @@ class PpxaiApp {
         console.warn('[Validation Warning]', data);
     }
 
+    onToolGroupStart(data) {
+        const iteration = data?.iteration || 0;
+        const count = data?.count || 0;
+        const groupEl = document.createElement('div');
+        groupEl.className = 'tool-group collapsed';
+
+        const header = document.createElement('div');
+        header.className = 'tool-group-header';
+        header.innerHTML = `
+            <span class="tool-group-toggle">▶</span>
+            <span class="tool-group-label">Iteration ${iteration}: ${count} tool${count !== 1 ? 's' : ''}</span>
+            <span class="tool-group-status"></span>
+        `;
+        header.addEventListener('click', () => {
+            groupEl.classList.toggle('collapsed');
+        });
+        groupEl.appendChild(header);
+
+        const body = document.createElement('div');
+        body.className = 'tool-group-body';
+        groupEl.appendChild(body);
+
+        // Insert before current assistant message
+        if (this.currentAssistantMessage) {
+            this.elements.messagesContainer.insertBefore(groupEl, this.currentAssistantMessage);
+        } else {
+            this.elements.messagesContainer.appendChild(groupEl);
+        }
+        this._currentToolGroup = groupEl;
+        this.scrollToBottom();
+    }
+
+    onToolGroupEnd(data) {
+        if (!this._currentToolGroup) return;
+        const allOk = data?.all_succeeded !== false;
+        const tools = data?.tools || [];
+        const status = allOk ? '✓' : '✗';
+        const statusClass = allOk ? 'success' : 'failure';
+
+        // Update header with tool names and status
+        const label = this._currentToolGroup.querySelector('.tool-group-label');
+        const statusEl = this._currentToolGroup.querySelector('.tool-group-status');
+        if (label && tools.length) {
+            label.textContent = `Iteration ${data?.iteration || 0}: ${tools.join(', ')}`;
+        }
+        if (statusEl) {
+            statusEl.textContent = status;
+            statusEl.className = `tool-group-status ${statusClass}`;
+        }
+
+        this._currentToolGroup = null;
+        this.scrollToBottom();
+    }
+
     showToolCall(data) {
         const msgEl = document.createElement('div');
         msgEl.className = 'message tool-message';
@@ -2120,8 +2196,10 @@ class PpxaiApp {
 
         msgEl.innerHTML = content;
 
-        // Insert before current assistant message to show tool calls before the answer
-        if (this.currentAssistantMessage) {
+        // v1.16.0: Append inside tool group if active, otherwise insert before assistant message
+        if (this._currentToolGroup) {
+            this._currentToolGroup.querySelector('.tool-group-body').appendChild(msgEl);
+        } else if (this.currentAssistantMessage) {
             this.elements.messagesContainer.insertBefore(msgEl, this.currentAssistantMessage);
         } else {
             this.elements.messagesContainer.appendChild(msgEl);
@@ -2148,8 +2226,10 @@ class PpxaiApp {
 
         msgEl.innerHTML = content;
 
-        // Insert before current assistant message
-        if (this.currentAssistantMessage) {
+        // v1.16.0: Append inside tool group if active
+        if (this._currentToolGroup) {
+            this._currentToolGroup.querySelector('.tool-group-body').appendChild(msgEl);
+        } else if (this.currentAssistantMessage) {
             this.elements.messagesContainer.insertBefore(msgEl, this.currentAssistantMessage);
         } else {
             this.elements.messagesContainer.appendChild(msgEl);

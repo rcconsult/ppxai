@@ -8,10 +8,19 @@ v1.13.10: Migrated to Command Factory pattern
 v1.15.0: Migrated to type-based renderer dispatch
 """
 
+import asyncio
 import os
+import re
+from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
+from ..common.async_compat import is_event_loop_running
+from ..config import get_coding_model
+from ..engine.types import EventType
+from ..rich.ui import console
+from ..rich.utils import read_file_content
 from .factory import CommandFactory, CommandSpec
+from .handler import CODING_PROMPTS
 from .protocol import CommandContext
 from .results import (
     ResultStatus,
@@ -46,21 +55,11 @@ def _execute_ai_task(context: CommandContext, task_type: str, user_message: str,
     Returns:
         AIResponseResult with complete content and extracted code blocks
     """
-    from ..rich.ui import console
-    from ..config import get_coding_model
-    import asyncio
-    from ..engine.types import EventType
-    import re
-    from ..common.async_compat import is_event_loop_running
-
     if not context.engine_client:
         return ErrorResult(
             status=ResultStatus.ERROR,
             message="Engine client not available"
         )
-
-    # Get coding prompts
-    from .handler import CODING_PROMPTS
 
     if task_type not in CODING_PROMPTS:
         return ErrorResult(
@@ -114,7 +113,6 @@ def _execute_ai_task(context: CommandContext, task_type: str, user_message: str,
     if is_event_loop_running():
         # Textual TUI context - event loop already running
         # Run async code in separate thread with its own event loop
-        from concurrent.futures import ThreadPoolExecutor
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(lambda: asyncio.run(run_task()))
             content, error = future.result()
@@ -183,8 +181,6 @@ def handle_test(context: CommandContext, args: str) -> CommandResult:
     Returns:
         AIResponseResult with generated tests
     """
-    from ..rich.utils import read_file_content
-
     if not args:
         return ErrorResult(
             status=ResultStatus.ERROR,
@@ -214,8 +210,6 @@ def handle_docs(context: CommandContext, args: str) -> CommandResult:
     Returns:
         AIResponseResult with generated documentation
     """
-    from ..rich.utils import read_file_content
-
     if not args:
         return ErrorResult(
             status=ResultStatus.ERROR,
@@ -291,8 +285,6 @@ def handle_explain(context: CommandContext, args: str) -> CommandResult:
     Returns:
         AIResponseResult with code explanation
     """
-    from ..rich.utils import read_file_content
-
     if not args:
         return ErrorResult(
             status=ResultStatus.ERROR,
@@ -322,8 +314,6 @@ def handle_convert(context: CommandContext, args: str) -> CommandResult:
     Returns:
         AIResponseResult with converted code
     """
-    from ..rich.utils import read_file_content
-
     if not args:
         return ErrorResult(
             status=ResultStatus.ERROR,

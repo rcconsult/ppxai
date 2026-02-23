@@ -26,6 +26,8 @@ class EventType(Enum):
     STATUS = "status"  # Status/notification messages (v1.12.0 - checkpoints, etc.)
     WORKING_DIR_CHANGED = "working_dir_changed"  # Working directory changed (v1.13.2)
     DISPLAY_FILE = "display_file"  # Display file in viewer (v1.15.1)
+    TOOL_GROUP_START = "tool_group_start"  # Start of tool calls in one iteration (v1.16.0)
+    TOOL_GROUP_END = "tool_group_end"  # End of tool calls in one iteration (v1.16.0)
     WARNING = "warning"  # Validation warning (v1.15.2 - hallucination detection)
     ERROR = "error"
     INFO = "info"
@@ -46,8 +48,10 @@ class Event:
 @dataclass
 class Message:
     """A conversation message."""
-    role: str  # 'user', 'assistant', 'system'
+    role: str  # 'user', 'assistant', 'system', 'tool'
     content: str
+    tool_calls: Optional[List[Dict[str, Any]]] = None   # For assistant messages with native calls
+    tool_call_id: Optional[str] = None                    # For tool role messages
 
 
 @dataclass

@@ -1031,6 +1031,68 @@ body {
     word-break: break-all;
 }
 
+/* Tool group (v1.16.0) */
+.tool-group {
+    border-left: 2px solid var(--info-color);
+    margin: 4px 0;
+    border-radius: 4px;
+    background: var(--bg-secondary);
+}
+
+.tool-group-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-muted);
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.tool-group-header:hover {
+    color: var(--text-primary);
+}
+
+.tool-group-toggle {
+    font-size: 10px;
+    transition: transform 0.2s;
+}
+
+.tool-group:not(.collapsed) .tool-group-toggle {
+    transform: rotate(90deg);
+}
+
+.tool-group-label {
+    font-weight: 500;
+}
+
+.tool-group-status {
+    margin-left: auto;
+}
+
+.tool-group-status.success {
+    color: var(--success-color);
+}
+
+.tool-group-status.failure {
+    color: var(--error-color);
+}
+
+.tool-group-body {
+    padding: 0 8px 6px;
+}
+
+.tool-group.collapsed .tool-group-body {
+    display: none;
+}
+
+.tool-group-body .message.tool-message {
+    margin: 2px 0;
+    border-left: none;
+}
+
 /* Context message */
 .context-badge {
     display: flex;

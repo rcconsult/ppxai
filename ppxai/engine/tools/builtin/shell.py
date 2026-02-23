@@ -9,6 +9,7 @@ import subprocess
 import platform
 from typing import TYPE_CHECKING, List
 
+from ....config import get_shell_config
 from ..base import BaseTool
 
 if TYPE_CHECKING:
@@ -23,9 +24,8 @@ def _get_shell_config() -> dict:
         Shell config dict with timeout, interactive_commands, etc.
     """
     try:
-        from ....config import get_shell_config
         return get_shell_config()
-    except ImportError:
+    except AttributeError:
         # Fallback defaults if config not available
         return {
             "timeout": 30,

@@ -174,6 +174,7 @@ class BootstrapContext:
     base_instructions: str = ""
     provider_hints: Dict[str, List[str]] = field(default_factory=dict)
     model_hints: Dict[str, List[str]] = field(default_factory=dict)
+    tool_calling_overrides: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     raw_content: str = ""
 
     # Include directive settings (v1.14.2)
@@ -302,6 +303,11 @@ class BootstrapContext:
         model_section = self._extract_section(yaml_content, "model_hints")
         if model_section:
             self.model_hints = self._parse_hints_section(model_section)
+
+        # Parse tool_calling section (v1.16.0 Step 5)
+        tool_calling_section = self._extract_section(yaml_content, "tool_calling")
+        if tool_calling_section:
+            self.tool_calling_overrides = self._parse_tool_calling_section(tool_calling_section)
 
     def _extract_section(self, yaml_content: str, section_name: str) -> Optional[str]:
         """Extract a section from YAML content.
@@ -453,6 +459,88 @@ class BootstrapContext:
                 continue
 
         return hints
+
+    def _parse_tool_calling_section(self, section: str) -> Dict[str, Dict[str, Any]]:
+        """Parse tool_calling section into dict of pattern -> overrides.
+
+        Expects format:
+          "pattern*":
+            mode: "prompt_based"
+            fallback_on_empty: true
+        """
+        result: Dict[str, Dict[str, Any]] = {}
+        current_key: Optional[str] = None
+        current_overrides: Dict[str, Any] = {}
+
+        for line in section.split('\n'):
+            stripped = line.strip()
+            if not stripped or stripped.startswith('#'):
+                continue
+
+            # Check for model pattern key (e.g., "qwen*": or gpt-oss*:)
+            key_match = re.match(r'^[\s]*["\']?([^"\':\s]+\*?)["\']?\s*:\s*$', line)
+            if key_match and not stripped.startswith('-'):
+                if current_key is not None:
+                    result[current_key] = current_overrides
+                current_key = key_match.group(1)
+                current_overrides = {}
+                continue
+
+            # Check for key: value pair under current pattern
+            kv_match = re.match(r'^\s+(\w+)\s*:\s*(.+)$', line)
+            if kv_match and current_key is not None:
+                key = kv_match.group(1)
+                raw_value = kv_match.group(2).strip().strip('"\'')
+                current_overrides[key] = self._coerce_yaml_value(raw_value)
+
+        if current_key is not None:
+            result[current_key] = current_overrides
+
+        return result
+
+    @staticmethod
+    def _coerce_yaml_value(value: str) -> Any:
+        """Coerce a YAML string value to the appropriate Python type."""
+        lower = value.lower()
+        if lower == "true":
+            return True
+        if lower == "false":
+            return False
+        try:
+            return int(value)
+        except ValueError:
+            pass
+        try:
+            return float(value)
+        except ValueError:
+            pass
+        return value
+
+    def get_tool_calling_overrides(self, model: str) -> Dict[str, Any]:
+        """Get merged tool_calling overrides for a model.
+
+        Matches model against glob patterns in tool_calling_overrides.
+        All matching patterns are merged (later matches override earlier).
+
+        Args:
+            model: Model ID to match
+
+        Returns:
+            Merged dict of tool_calling overrides, or empty dict
+        """
+        if not self.tool_calling_overrides:
+            return {}
+
+        merged: Dict[str, Any] = {}
+        for pattern, overrides in self.tool_calling_overrides.items():
+            regex = pattern.replace("*", ".*")
+            try:
+                if re.match(regex, model, re.IGNORECASE):
+                    merged.update(overrides)
+            except re.error:
+                continue
+
+        return merged
 
     def get_active_hints_for(self, provider: str, model: str) -> Dict[str, Any]:
         """Get detailed breakdown of active hints for provider/model.

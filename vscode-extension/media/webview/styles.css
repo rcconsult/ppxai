@@ -503,6 +503,67 @@ body {
     overflow-y: auto;
 }
 
+/* v1.16.0: Tool group */
+.tool-group {
+    border-left: 2px solid var(--vscode-editorInfo-foreground, #007acc);
+    margin: 4px 0;
+    border-radius: 4px;
+    background: var(--vscode-textBlockQuote-background, rgba(127, 127, 127, 0.05));
+}
+
+.tool-group-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+    user-select: none;
+}
+
+.tool-group-header:hover {
+    color: var(--vscode-foreground);
+}
+
+.tool-group-toggle {
+    font-size: 9px;
+    transition: transform 0.2s;
+}
+
+.tool-group:not(.collapsed) .tool-group-toggle {
+    transform: rotate(90deg);
+}
+
+.tool-group-label {
+    font-weight: 500;
+}
+
+.tool-group-status {
+    margin-left: auto;
+}
+
+.tool-group-status.success {
+    color: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.tool-group-status.failure {
+    color: var(--vscode-testing-iconFailed, #f14c4c);
+}
+
+.tool-group-body {
+    padding: 0 6px 4px;
+}
+
+.tool-group.collapsed .tool-group-body {
+    display: none;
+}
+
+.tool-group-body .message {
+    margin: 2px 0;
+    border-left: none;
+}
+
 /* v1.13.9: Reasoning section for DeepSeek R1, GPT-OSS 120B */
 .reasoning-section {
     margin-bottom: 12px;

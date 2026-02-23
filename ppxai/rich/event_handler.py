@@ -336,6 +336,26 @@ class TUIEventHandler(EventHandler):
                         self.console.print(f"[red]Error displaying file: {e}[/red]")
                         return True
 
+        # v1.16.0: Tool group start/end for visual grouping
+        elif event.type == EventType.TOOL_GROUP_START:
+            iteration = event.data.get("iteration", 0) if isinstance(event.data, dict) else 0
+            count = event.data.get("count", 0) if isinstance(event.data, dict) else 0
+            self.console.print(f"[dim]─── Iteration {iteration} ({count} tool{'s' if count != 1 else ''}) ───[/dim]")
+            return True
+
+        elif event.type == EventType.TOOL_GROUP_END:
+            if isinstance(event.data, dict):
+                all_ok = event.data.get("all_succeeded", True)
+                tools = event.data.get("tools", [])
+                tool_list = ", ".join(tools) if tools else ""
+            else:
+                all_ok = True
+                tool_list = ""
+            status = "[green]✓[/green]" if all_ok else "[red]✗[/red]"
+            suffix = f" {tool_list}" if tool_list else ""
+            self.console.print(f"[dim]───{suffix} {status} ───[/dim]")
+            return True
+
         # Delegate to parent for all other event types
         return await super().handle_event(event)
 

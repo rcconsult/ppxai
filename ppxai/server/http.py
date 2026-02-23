@@ -333,23 +333,68 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
     logger.log_user_message(prompt)
 
     try:
-        async for event in engine.chat(prompt):
-            # B11: Check if client disconnected
-            if request and await request.is_disconnected():
-                logger.info(f"Client disconnected during SSE stream (session={session_id})")
+        # v1.16.0: Use racing iterator to poll consent queue while engine is blocked.
+        # The engine generator suspends during consent (await Future), so `async for`
+        # never advances and the old inline poll never ran — causing a deadlock.
+        engine_iter = engine.chat(prompt).__aiter__()
+        engine_done = False
+        pending_next = None  # asyncio.Task for the next engine event
+
+        while not engine_done:
+            # Start fetching next engine event if not already in flight
+            if pending_next is None:
+                pending_next = asyncio.ensure_future(engine_iter.__anext__())
+
+            # Poll: race between engine event and consent queue (100ms ticks)
+            while not pending_next.done():
+                # Drain side-channel event queue while waiting for engine
+                # v1.16.0: Dispatch by actual event type — only CONSENT_REQUEST
+                # events are consent dialogs. STATUS, WORKING_DIR_CHANGED, etc.
+                # use their own SSE event type for proper client handling.
+                while engine._consent_event_queue:
+                    queued_event = engine._consent_event_queue.pop(0)
+                    event_data = {
+                        "type": queued_event.type.value,
+                        "data": queued_event.data,
+                    }
+                    if queued_event.metadata:
+                        event_data["metadata"] = queued_event.metadata
+                    logger.log_sse_event(queued_event.type.value, str(queued_event.data)[:100])
+                    yield f"data: {json.dumps(event_data)}\n\n"
+                    await asyncio.sleep(0)
+
+                # B11: Check if client disconnected
+                if request and await request.is_disconnected():
+                    logger.info(f"Client disconnected during SSE stream (session={session_id})")
+                    pending_next.cancel()
+                    engine_done = True
+                    break
+
+                # Yield control briefly then re-check
+                await asyncio.sleep(0.1)
+
+            if engine_done:
                 break
-            # Phase 1C: Check for pending consent requests before each event
+
+            # Retrieve the engine event
+            try:
+                event = pending_next.result()
+                pending_next = None
+            except StopAsyncIteration:
+                engine_done = True
+                break
+
+            # Drain side-channel queue one more time (event may have been queued just before yield)
             while engine._consent_event_queue:
-                consent_event = engine._consent_event_queue.pop(0)
-                logger.log_event("CONSENT_REQUEST", str(consent_event.data))
-                consent_data = {
-                    "type": consent_event.type.value,
-                    "data": consent_event.data,
+                queued_event = engine._consent_event_queue.pop(0)
+                event_data = {
+                    "type": queued_event.type.value,
+                    "data": queued_event.data,
                 }
-                if consent_event.metadata:
-                    consent_data["metadata"] = consent_event.metadata
-                logger.log_sse_event("consent_request", str(consent_event.data)[:100])
-                yield f"data: {json.dumps(consent_data)}\n\n"
+                if queued_event.metadata:
+                    event_data["metadata"] = queued_event.metadata
+                logger.log_sse_event(queued_event.type.value, str(queued_event.data)[:100])
+                yield f"data: {json.dumps(event_data)}\n\n"
                 await asyncio.sleep(0)
 
             # Log specific event types
@@ -1653,8 +1698,6 @@ async def list_files(
     Returns:
         JSON: {"files": [...], "path": "/abs/path"}
     """
-    import time
-
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
     working_dir = Path(engine.get_working_dir() or os.getcwd())

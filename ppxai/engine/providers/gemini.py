@@ -19,8 +19,13 @@ Requires: pip install ppxai[gemini]
 """
 
 import json
+import logging
 import os
+import traceback
 from typing import List, AsyncIterator, Optional, Dict, Any
+
+import httpx
+
 from ...common.logger import get_logger
 from ..types import Message, Event, EventType, ProviderCapabilities, UsageStats
 from .base import BaseProvider
@@ -127,7 +132,6 @@ class GeminiProvider(BaseProvider):
 
         http_options = None
         if ssl_verify_env == "false" or ssl_cert_file:
-            import httpx
             verify = False if ssl_verify_env == "false" else ssl_cert_file
             http_options = genai_types.HttpOptions(
                 httpx_client=httpx.Client(verify=verify)
@@ -718,7 +722,5 @@ class GeminiProvider(BaseProvider):
         Args:
             e: The exception to log
         """
-        import traceback
-        import logging
         logger = logging.getLogger(__name__)
         logger.debug(f"Gemini error traceback:\n{traceback.format_exc()}")

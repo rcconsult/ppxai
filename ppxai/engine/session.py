@@ -100,13 +100,33 @@ class SessionManager:
         """
         return self.messages.copy()
 
-    def get_messages_as_dicts(self) -> List[Dict[str, str]]:
+    def get_messages_as_dicts(self) -> List[Dict[str, Any]]:
         """Get conversation history as dictionaries.
 
         Returns:
-            List of dicts with 'role' and 'content' keys
+            List of dicts with 'role', 'content', and optional tool fields
         """
-        return [{"role": m.role, "content": m.content} for m in self.messages]
+        return [self._serialize_message(m) for m in self.messages]
+
+    @staticmethod
+    def _serialize_message(m: Message) -> Dict[str, Any]:
+        """Serialize a Message to a dict for JSON storage/API use."""
+        msg: Dict[str, Any] = {"role": m.role, "content": m.content}
+        if m.tool_calls:
+            msg["tool_calls"] = m.tool_calls
+        if m.tool_call_id:
+            msg["tool_call_id"] = m.tool_call_id
+        return msg
+
+    @staticmethod
+    def _deserialize_message(m: Dict[str, Any]) -> Message:
+        """Deserialize a dict to a Message (backward compatible with old format)."""
+        return Message(
+            role=m["role"],
+            content=m["content"],
+            tool_calls=m.get("tool_calls"),
+            tool_call_id=m.get("tool_call_id"),
+        )
 
     def remove_last_message(self) -> bool:
         """Remove the last message from conversation history.
@@ -126,8 +146,12 @@ class SessionManager:
     def validate_and_fix_alternation(self) -> int:
         """Validate and fix message alternation issues.
 
-        Ensures messages alternate between user and assistant roles.
-        Removes orphan messages that break alternation (consecutive same-role messages).
+        Ensures messages follow valid sequences:
+        - Basic: user → assistant → user → assistant → ...
+        - With tools: user → assistant(tool_calls) → tool → ... → assistant → user → ...
+
+        Tool role messages are allowed after assistant messages that have tool_calls.
+        Multiple consecutive tool messages are valid (for multi-tool support).
 
         Also ensures session starts with user message (not assistant), because
         when tools are enabled a system prompt is prepended, and APIs require
@@ -144,18 +168,17 @@ class SessionManager:
 
         removed_count = 0
 
-        # Remove leading assistant messages (they break alternation when system prompt is prepended)
-        # This can happen when a tool-use session is restored after an interruption
-        while self.messages and self.messages[0].role == "assistant":
+        # Remove leading assistant/tool messages (they break alternation when system prompt is prepended)
+        while self.messages and self.messages[0].role in ("assistant", "tool"):
             removed = self.messages.pop(0)
             removed_count += 1
             logger.warning(
-                f"Session alternation fix: removed leading assistant message "
+                f"Session alternation fix: removed leading {removed.role} message "
                 f"(len={len(removed.content)})"
             )
 
         if not self.messages:
-            # All messages were assistant messages
+            # All messages were assistant/tool messages
             self.metadata["message_count"] = 0
             if removed_count > 0:
                 logger.info(
@@ -170,14 +193,35 @@ class SessionManager:
             if not fixed_messages:
                 # First message - always keep (already ensured it's user)
                 fixed_messages.append(msg)
-            elif fixed_messages[-1].role != msg.role:
+                continue
+
+            prev = fixed_messages[-1]
+
+            # Tool messages are valid after assistant(tool_calls) or after another tool message
+            if msg.role == "tool":
+                if prev.role == "assistant" and prev.tool_calls:
+                    fixed_messages.append(msg)
+                elif prev.role == "tool":
+                    fixed_messages.append(msg)
+                else:
+                    # Orphan tool message — drop it
+                    removed_count += 1
+                    logger.warning(
+                        f"Session alternation fix: removed orphan tool message "
+                        f"(len={len(msg.content)}) at position {i}"
+                    )
+                continue
+
+            if prev.role != msg.role:
                 # Proper alternation - keep
+                fixed_messages.append(msg)
+            elif prev.role == "tool":
+                # Non-tool message after tool — valid (assistant responding to tool results)
                 fixed_messages.append(msg)
             else:
                 # Same role as previous - this breaks alternation
                 # Strategy: keep the one with more content (likely more valuable)
                 # But prefer assistant messages over user messages
-                prev = fixed_messages[-1]
                 if msg.role == "assistant":
                     # Two assistant messages in a row - keep longer one
                     if len(msg.content) > len(prev.content):
@@ -194,11 +238,12 @@ class SessionManager:
         # Also ensure session ends with assistant message (not orphan user)
         # A trailing user message without assistant response will cause alternation
         # errors when the next message is sent
-        if fixed_messages and fixed_messages[-1].role == "user":
+        # Tool messages at the end are also problematic — they need a following assistant
+        while fixed_messages and fixed_messages[-1].role in ("user", "tool"):
             removed = fixed_messages.pop()
             removed_count += 1
             logger.warning(
-                f"Session alternation fix: removed trailing user message "
+                f"Session alternation fix: removed trailing {removed.role} message "
                 f"(len={len(removed.content)})"
             )
 
@@ -474,7 +519,7 @@ class SessionManager:
         session_data = {
             "session_name": self.session_name,
             "metadata": self.metadata,
-            "messages": [{"role": m.role, "content": m.content} for m in self.messages],
+            "messages": [self._serialize_message(m) for m in self.messages],
             "usage": self.get_usage(),
             "saved_at": datetime.now().isoformat(),
             # Include persistence fields
@@ -511,7 +556,7 @@ class SessionManager:
             self.session_name = data.get("session_name", name)
             self.metadata = data.get("metadata", {})
             self.messages = [
-                Message(role=m["role"], content=m["content"])
+                self._deserialize_message(m)
                 for m in data.get("messages", [])
             ]
 
@@ -746,7 +791,7 @@ class SessionManager:
         session_data = {
             "session_name": self.session_name,
             "metadata": self.metadata,
-            "messages": [{"role": m.role, "content": m.content} for m in self.messages],
+            "messages": [self._serialize_message(m) for m in self.messages],
             "usage": self.get_usage(),
             "saved_at": datetime.now().isoformat(),
             # New fields
@@ -835,7 +880,7 @@ class SessionManager:
             self.session_name = data.get("session_name", name)
             self.metadata = data.get("metadata", {})
             self.messages = [
-                Message(role=m["role"], content=m["content"])
+                self._deserialize_message(m)
                 for m in data.get("messages", [])
             ]
 

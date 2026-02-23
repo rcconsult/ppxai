@@ -1,0 +1,476 @@
+{
+  "provider": "gemini",
+  "model": "gemini-3.1-pro-preview-customtools",
+  "timestamp": "2026-02-22T21:42:47.182199",
+  "overall_score": 81.48514851485149,
+  "tests_passed": 29,
+  "tests_total": 36,
+  "duration_seconds": 1194.0046219825745,
+  "category_scores": {
+    "hallucination_resistance": 33.33333333333333,
+    "tool_calling": 100.0,
+    "code_editing": 100.0,
+    "format_compliance": 100.0,
+    "instruction_following": 100.0,
+    "reasoning": 66.66666666666666,
+    "error_recovery": 100.0,
+    "agentic_tool_loops": 90.71428571428571,
+    "efficiency": 57.99999999999999
+  },
+  "test_results": [
+    {
+      "name": "respects_tool_failure",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "Model didn't acknowledge the failures",
+        "content_preview": ""
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "no_phantom_tool_calls",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "made_tool_calls": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "repeated_failure_acknowledgment",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "Didn't acknowledge persistent failure",
+        "content_preview": ""
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "contradiction_detection",
+      "category": "hallucination_resistance",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "Model contradicted tool result",
+        "contradiction": "running on port 8080",
+        "tool_result": "Connection refused",
+        "content_preview": "based on the result, the server is **not** running on port 8080. the connection was refused because there is no process currently listening on that port."
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "multi_turn_consistency",
+      "category": "hallucination_resistance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "accurate_status_report": true,
+        "mentioned_failure": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "tool": "read_file",
+        "args": {
+          "path": "/src/main.py"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "tool": "write_file",
+        "args": {
+          "content": "Hello, World!",
+          "path": "/tmp/test.txt"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "content_length": 4215,
+        "repetitions": 50,
+        "model_max_tokens": 65536
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "sequence": [
+          "read_file config.json",
+          "read_file main.py"
+        ]
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "tool_calls": 1,
+        "content_length": 0
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "tool_calls": 1,
+        "mode": "native"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_simple",
+      "category": "code_editing",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "patch_length": 128,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "Clean tool-only response (no unnecessary text)",
+          "No anti-patterns detected"
+        ],
+        "overall_score": 1.0,
+        "passed": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_indentation",
+      "category": "code_editing",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "patch_length": 224,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "Clean tool-only response (no unnecessary text)",
+          "No anti-patterns detected"
+        ],
+        "overall_score": 1.0,
+        "passed": true
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "patch_multiline",
+      "category": "code_editing",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "patch_length": 270,
+        "tool_correctness": true,
+        "tool_success": true,
+        "response_quality": 1.0,
+        "anti_patterns": [],
+        "quality_notes": [
+          "Clean tool-only response (no unnecessary text)",
+          "No anti-patterns detected"
+        ],
+        "overall_score": 1.0,
+        "passed": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "patch_apply_verify",
+      "category": "code_editing",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "applied_result_preview": "def add(a, b):\n    \"\"\"Add two numbers.\"\"\"\n    return a + b\n\n\ndef multiply(a, b):\n    \"\"\"Multiply two numbers.\"\"\"\n    return a * b\n",
+        "score": 1.0
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "json_output",
+      "category": "format_compliance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "items": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "markdown_code_blocks",
+      "category": "format_compliance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "code_blocks": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_hallucinated_paths",
+      "category": "format_compliance",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "content_length": 1208
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "do_not_explain",
+      "category": "instruction_following",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "content_length": 45
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "constraint_respect",
+      "category": "instruction_following",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "line_count": 6
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "format_specification",
+      "category": "instruction_following",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "blocks": 3
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "multi_step_planning",
+      "category": "reasoning",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "concepts_found": [
+          "user model",
+          "password",
+          "login",
+          "session"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "dependency_ordering",
+      "category": "reasoning",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "Didn't prioritize running tests first"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "edge_case_handling",
+      "category": "reasoning",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "handled": [
+          "division_by_zero",
+          "error_handling"
+        ]
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "tool_error_recovery",
+      "category": "error_recovery",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "recovery": "tried_alternative_tool"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "self_correction",
+      "category": "error_recovery",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "acknowledged_correction": true
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "graceful_degradation",
+      "category": "error_recovery",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "graceful": "appropriate_response"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "multi_file_review",
+      "category": "agentic_tool_loops",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "files_read": [
+          "/src/auth.py",
+          "/src/database.py",
+          "/src/routes.py",
+          "/src/utils.py"
+        ],
+        "score": 1.0
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "claim_without_action",
+      "category": "agentic_tool_loops",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "action": "attempted_read",
+        "tool": "read_file"
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "consecutive_tool_loop",
+      "category": "agentic_tool_loops",
+      "passed": false,
+      "score": 0.6,
+      "details": {
+        "steps_completed": 3,
+        "total_steps": 5,
+        "score": 0.6
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "search_then_edit",
+      "category": "agentic_tool_loops",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "steps_completed": 3,
+        "score": 1.0
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "fix_verify",
+      "category": "agentic_tool_loops",
+      "passed": false,
+      "score": 0.75,
+      "details": {
+        "steps_completed": 3,
+        "total_steps": 4,
+        "score": 0.75
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "information_gathering",
+      "category": "agentic_tool_loops",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "files_found": [
+          "auth.py",
+          "auth_config.yaml",
+          "middleware.py"
+        ],
+        "score": 1.0
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "error_recovery_chain",
+      "category": "agentic_tool_loops",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "steps_completed": 4,
+        "score": 1.0
+      },
+      "weight": 2.0
+    },
+    {
+      "name": "time_to_first_tool_call",
+      "category": "efficiency",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "preamble_length": 0,
+        "tool": "read_file"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "tool_call_efficiency",
+      "category": "efficiency",
+      "passed": false,
+      "score": 0.3,
+      "details": {
+        "total_tool_calls": 12,
+        "optimal": 5,
+        "score": 0.3
+      },
+      "weight": 1.5
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "40e660e01387",
+    "tool_calling_method": "native",
+    "total_tokens": 0,
+    "total_tool_calls": 75,
+    "agents_md_mode": "with"
+  }
+}

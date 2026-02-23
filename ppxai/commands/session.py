@@ -10,6 +10,8 @@ v1.15.0: Migrated to type-based renderer dispatch
 from datetime import datetime
 from typing import TYPE_CHECKING, Union
 
+import pyperclip
+
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
@@ -251,15 +253,6 @@ def handle_copy(context: CommandContext, args: str) -> CommandResult:
     Returns:
         ConfirmationResult on success, ErrorResult/NotificationResult on failure
     """
-    try:
-        import pyperclip
-    except ImportError:
-        return ErrorResult(
-            status=ResultStatus.ERROR,
-            message="Clipboard not available: install pyperclip",
-            suggestions=["Run: pip install pyperclip"]
-        )
-
     try:
         # Parse optional argument for which message to copy
         offset = 1  # Default: last assistant message

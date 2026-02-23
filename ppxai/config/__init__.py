@@ -805,6 +805,52 @@ def get_generation_params(provider: str = None, model: str = None) -> Dict[str, 
     return {k: v for k, v in params.items() if not k.startswith("__comment")}
 
 
+def get_tool_calling_config(provider: str = None, model: str = None) -> Dict[str, Any]:
+    """Get tool calling configuration overrides for a model.
+
+    Reads per-provider and per-model tool_calling sections from ppxai-config.json.
+    Model-level settings override provider-level defaults (same merge pattern
+    as get_generation_params).
+
+    Supported keys (mirror ToolCallingProfile fields):
+        mode, fallback_on_empty, fallback_on_failure, strip_json_from_text,
+        parallel_tool_calls, api_path, max_tokens, max_tool_iterations
+
+    Args:
+        provider: Provider name (uses default if not specified)
+        model: Model name (uses default if not specified)
+
+    Returns:
+        Merged dict of tool calling overrides, or empty dict if none configured
+    """
+    if provider is None:
+        provider = get_default_provider()
+
+    if model is None:
+        model = get_default_model(provider)
+
+    result: Dict[str, Any] = {}
+
+    config_path = find_config_file()
+    if config_path:
+        json_config = _load_json_config(config_path)
+        provider_config = json_config.get("providers", {}).get(provider, {})
+
+        # Provider-level tool_calling defaults
+        if "tool_calling" in provider_config:
+            tc = provider_config["tool_calling"]
+            result.update({k: v for k, v in tc.items() if not k.startswith("__comment")})
+
+        # Model-level tool_calling overrides (highest priority)
+        models = provider_config.get("models", {})
+        model_config = models.get(model, {})
+        if "tool_calling" in model_config:
+            tc = model_config["tool_calling"]
+            result.update({k: v for k, v in tc.items() if not k.startswith("__comment")})
+
+    return result
+
+
 # =============================================================================
 # Public API Exports
 # =============================================================================
@@ -886,6 +932,8 @@ __all__ = [
     "get_context_warn_percent",
     "get_model_context_limit",
     "get_model_max_tokens",
+    # Tool calling config (v1.16.0)
+    "get_tool_calling_config",
     # Bootstrap functions (v1.14.0)
     "DEFAULT_BOOTSTRAP_FILES",
     "get_bootstrap_config",

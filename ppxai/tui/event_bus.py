@@ -200,6 +200,8 @@ class Events:
     ENGINE_TOOL_CALL = "engine:tool_call"
     ENGINE_TOOL_RESULT = "engine:tool_result"
     ENGINE_TOOL_ERROR = "engine:tool_error"
+    ENGINE_TOOL_GROUP_START = "engine:tool_group_start"  # v1.16.0
+    ENGINE_TOOL_GROUP_END = "engine:tool_group_end"  # v1.16.0
     ENGINE_CONTEXT_INJECTED = "engine:context_injected"
     ENGINE_CONSENT_FILE = "engine:consent_file"
     ENGINE_CONSENT_SHELL = "engine:consent_shell"

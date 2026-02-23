@@ -13,6 +13,8 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from ..common.logger import Logger, get_logger
+from ..config import find_config_file, reload_config
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
@@ -38,8 +40,6 @@ if TYPE_CHECKING:
 
 def _show_active_hints(handler: "CommandHandler", console) -> None:
     """Display active bootstrap hints for current provider/model (v1.14.0)."""
-    from pathlib import Path
-
     hints_info = handler.engine_client.get_active_hints()
 
     if not hints_info["loaded"]:
@@ -99,8 +99,6 @@ def _show_active_hints(handler: "CommandHandler", console) -> None:
 
 def _show_bootstrap_hierarchy(handler: "CommandHandler", console) -> None:
     """Display bootstrap context hierarchy with scope information (v1.14.2)."""
-    from pathlib import Path
-
     status = handler.engine_client.get_bootstrap_status()
 
     if not status["loaded"]:
@@ -253,8 +251,6 @@ def handle_config(context: CommandContext, args: str) -> CommandResult:
     Returns:
         KeyValueResult for path/help, ConfirmationResult for reload, ErrorResult on failure
     """
-    from ..config import find_config_file, reload_config
-
     parts = args.strip().split() if args else []
 
     if not parts:
@@ -321,9 +317,6 @@ def handle_debug_log(context: CommandContext, args: str) -> CommandResult:
     Returns:
         Appropriate CommandResult based on subcommand
     """
-    from pathlib import Path
-    from ..common.logger import get_logger
-
     logger = get_logger("tui")
     log_file = Path.home() / '.ppxai' / 'logs' / 'tui-debug.log'
 
@@ -349,7 +342,6 @@ def handle_debug_log(context: CommandContext, args: str) -> CommandResult:
     cmd = args.strip().lower()
 
     if cmd in ["on", "enable", "1", "true", "yes"]:
-        from ..common.logger import Logger
         Logger.enable_all()
         return ConfirmationResult(
             status=ResultStatus.SUCCESS,
@@ -357,7 +349,6 @@ def handle_debug_log(context: CommandContext, args: str) -> CommandResult:
             details={"log_file": str(log_file), "enabled": True}
         )
     elif cmd in ["off", "disable", "0", "false", "no"]:
-        from ..common.logger import Logger
         Logger.disable_all()
         return ConfirmationResult(
             status=ResultStatus.SUCCESS,
@@ -420,8 +411,6 @@ def handle_context(context: CommandContext, args: str) -> CommandResult:
     Returns:
         Appropriate CommandResult based on subcommand
     """
-    from pathlib import Path
-
     if not context.engine_client:
         return ErrorResult(status=ResultStatus.ERROR, message="Engine client not available")
 

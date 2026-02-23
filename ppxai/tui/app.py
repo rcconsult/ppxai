@@ -10,8 +10,12 @@ This is the core application class that manages:
 """
 
 import asyncio
+import inspect
 import os
+import time
 import threading
+import traceback
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -22,23 +26,32 @@ from textual.css.query import NoMatches
 from textual.message import Message
 from textual.widgets import Header, Footer, Static, Input, RichLog
 
+from ppxai.common.consent import normalize_consent_response
+from ppxai.common.logger import Logger, get_logger
+from ppxai.constants import ConsentResponse
 from ppxai.tui.widgets.status_bar import StatusBar
 from ppxai.tui.widgets.footer_status import FooterStatus
 from ppxai.tui.widgets.chat_view import ChatView
 from ppxai.tui.widgets.input_box import InputBox
 from ppxai.tui.widgets.side_panel import SidePanel
 from ppxai.tui.widgets.code_editor import CodeEditor, get_syntax_theme_for_app_theme
+from ppxai.tui.widgets.dialog import ConsentDialog
+from ppxai.tui.widgets.message_box import MessageBox
 from ppxai.tui.themes.themes import CUSTOM_THEMES, DEFAULT_THEME, CYCLE_THEMES
 from ppxai.tui.clipboard import copy_to_clipboard, paste_from_clipboard, is_clipboard_available
 from ppxai.tui import commands as local_commands
 from ppxai.tui.completer import TextualCompleter
 from ppxai.tui.event_bus import EventBus, Events
-from ppxai.common.logger import Logger
 
 # Engine integration (Phase 6.1)
 from ppxai.engine import EngineClient
 from ppxai.engine.types import Event, EventType
-from ppxai.config import PROVIDERS, get_default_provider, get_default_model, get_api_key, initialize
+from ppxai.engine.session import SessionManager
+from ppxai.config import (
+    PROVIDERS, get_default_provider, get_default_model, get_api_key, initialize,
+    get_tui_config, get_auto_restore_mode, get_auto_save_interval,
+)
+from ppxai.version import __version__
 
 # Command Factory integration (Phase 6.1.1 - Technical debt cleanup)
 from ppxai.commands import CommandFactory
@@ -81,7 +94,6 @@ class PPXAIDEApp(App):
     def __init__(self, debug_logging: bool = False, trace_logging: bool = False):
         super().__init__()
         # Use ppxai's logger instead of Textual's self.log (which doesn't write to our log file)
-        from ppxai.common.logger import get_logger
         self._log = get_logger("tui")
 
         # Debug mode controls event bus logging and handler verbosity
@@ -99,6 +111,8 @@ class PPXAIDEApp(App):
         self._model = "sonar"
         self._tools_enabled = False
         self._tools_verbose = False  # Tool output verbosity (controlled via /tools verbose on/off)
+        self._tool_group_active = False  # v1.16.0: Track active tool group for noise reduction
+        self._tool_group_tools = []  # v1.16.0: Tool names in current group
         self._working_dir = os.getcwd()
         self._split_index = self.DEFAULT_SPLIT_INDEX  # Current split ratio index
 
@@ -185,10 +199,6 @@ class PPXAIDEApp(App):
                     self._log.info(f"Bootstrap context loaded: {scope_text}")
 
         # Add optional status bar badges based on config (Phase 1.2)
-        from ppxai.config import get_tui_config
-        from ppxai.version import __version__
-        from datetime import datetime
-
         tui_config = get_tui_config()
 
         # Version badge
@@ -287,6 +297,8 @@ class PPXAIDEApp(App):
         self._event_bus.on(Events.ENGINE_TOOL_CALL, self._on_tool_call)
         self._event_bus.on(Events.ENGINE_TOOL_RESULT, self._on_tool_result)
         self._event_bus.on(Events.ENGINE_TOOL_ERROR, self._on_tool_error)
+        self._event_bus.on(Events.ENGINE_TOOL_GROUP_START, self._on_tool_group_start)
+        self._event_bus.on(Events.ENGINE_TOOL_GROUP_END, self._on_tool_group_end)
         self._event_bus.on(Events.ENGINE_DISPLAY_FILE, self._on_display_file)
         self._event_bus.on(Events.ENGINE_CONSENT_FILE, self._on_consent_request)
         self._event_bus.on(Events.ENGINE_ERROR, self._on_engine_error)
@@ -394,10 +406,6 @@ class PPXAIDEApp(App):
         Returns:
             tuple: (approved: bool, response: str) - response is normalized to ConsentResponse enum
         """
-        import threading
-        from ppxai.common.consent import normalize_consent_response
-        from ppxai.constants import ConsentResponse
-
         self._log.info(f"Showing consent dialog: {title}")
 
         # Create threading event and result container for cross-thread communication
@@ -406,8 +414,6 @@ class PPXAIDEApp(App):
 
         def show_dialog_in_main_thread():
             """Show dialog in main Textual thread."""
-            from ppxai.tui.widgets.dialog import ConsentDialog
-
             def on_dialog_dismiss(response: str) -> None:
                 """Callback when dialog is dismissed."""
                 self._log.info(f"Dialog dismissed with response: {response}")
@@ -451,9 +457,6 @@ class PPXAIDEApp(App):
 
     def _update_datetime(self) -> None:
         """Update datetime badge every minute (Phase 1.2)."""
-        from datetime import datetime
-        from ppxai.config import get_tui_config
-
         tui_config = get_tui_config()
         if tui_config.get("show_datetime", False):
             status_bar = self.query_one(StatusBar)
@@ -514,10 +517,6 @@ class PPXAIDEApp(App):
                 self._log.debug("No engine client, skipping session restoration")
                 return
 
-            from ppxai.config import get_auto_restore_mode
-            from ppxai.engine.session import SessionManager
-            from ppxai.tui.widgets.dialog import ConsentDialog
-
             # Get last session state
             last_state = SessionManager.get_last_session_state()
             if not last_state:
@@ -569,7 +568,6 @@ class PPXAIDEApp(App):
                     return
                 else:
                     # Clear dirty flag if user declines recovery
-                    from ppxai.engine.session import SessionManager
                     SessionManager.clear_state_file()
                     self._log.info("User declined crash recovery, cleared state file")
                     return
@@ -666,7 +664,6 @@ class PPXAIDEApp(App):
                 self._log.info(f"Restored model: {stored_model}")
             else:
                 # Model not available - use provider's default (Rich TUI lines 589-594)
-                from ppxai.config import get_default_model
                 provider_name = self._engine_client.provider_name if self._engine_client.provider else self._provider
                 default_model = get_default_model(provider_name) if provider_name else None
                 if default_model:
@@ -710,7 +707,6 @@ class PPXAIDEApp(App):
                     input_box._completer.update_working_dir(Path(working_dir))
 
                 # Update status bar cwd badge
-                from ppxai.config import get_tui_config
                 tui_config = get_tui_config()
                 if tui_config.get("show_cwd", True):
                     status_bar = self.query_one(StatusBar)
@@ -917,7 +913,6 @@ class PPXAIDEApp(App):
             self._reasoning_message = None
 
             # Track timing
-            import time
             self._response_start_time = time.time()
 
             # Show streaming indicator in footer
@@ -1002,8 +997,6 @@ class PPXAIDEApp(App):
             event_data: Event data
         """
         # Convert to Event object and emit via event bus
-        from ppxai.engine.types import EventType, Event
-
         event = Event(type=EventType[event_type], data=event_data)
 
         # Emit via event bus (same as before, but now in main thread)
@@ -1015,6 +1008,8 @@ class PPXAIDEApp(App):
             EventType.TOOL_CALL: Events.ENGINE_TOOL_CALL,
             EventType.TOOL_RESULT: Events.ENGINE_TOOL_RESULT,
             EventType.TOOL_ERROR: Events.ENGINE_TOOL_ERROR,
+            EventType.TOOL_GROUP_START: Events.ENGINE_TOOL_GROUP_START,
+            EventType.TOOL_GROUP_END: Events.ENGINE_TOOL_GROUP_END,
             EventType.ERROR: Events.ENGINE_ERROR,
             EventType.WARNING: Events.ENGINE_WARNING,
             EventType.INFO: Events.ENGINE_INFO,
@@ -1085,6 +1080,8 @@ class PPXAIDEApp(App):
             EventType.TOOL_CALL: Events.ENGINE_TOOL_CALL,
             EventType.TOOL_RESULT: Events.ENGINE_TOOL_RESULT,
             EventType.TOOL_ERROR: Events.ENGINE_TOOL_ERROR,
+            EventType.TOOL_GROUP_START: Events.ENGINE_TOOL_GROUP_START,
+            EventType.TOOL_GROUP_END: Events.ENGINE_TOOL_GROUP_END,
             EventType.ERROR: Events.ENGINE_ERROR,
             EventType.WARNING: Events.ENGINE_WARNING,
             EventType.INFO: Events.ENGINE_INFO,
@@ -1153,8 +1150,6 @@ class PPXAIDEApp(App):
         Shows reasoning with italic styling (without dim for better visibility).
         Throttles updates to 100ms intervals when not in debug mode.
         """
-        from ppxai.tui.widgets.message_box import MessageBox
-
         chat_view = self.query_one("#chat-view", ChatView)
 
         # Create reasoning message on first chunk
@@ -1250,7 +1245,6 @@ class PPXAIDEApp(App):
                     self._log.debug(f"Finalized reasoning message: {len(self._reasoning_content)} chars")
 
             # Calculate response time
-            import time
             response_time = time.time() - self._response_start_time if hasattr(self, '_response_start_time') else 0.0
 
             # Render markdown once with full content (like Rich TUI)
@@ -1269,7 +1263,6 @@ class PPXAIDEApp(App):
         self._update_usage_display()
 
         # Auto-save session after each message pair (Phase 2.1)
-        from ppxai.config import get_auto_save_interval
         save_interval = get_auto_save_interval()
         message_count = len(self._engine_client.session.messages)
         if message_count > 0 and (save_interval == 0 or message_count % max(1, save_interval) == 0):
@@ -1290,6 +1283,15 @@ class PPXAIDEApp(App):
         tool_name = data.get("tool", "unknown")
         tool_args = data.get("arguments", {})
         self._log.debug(f"[Event] Tool call: {tool_name} with {len(tool_args)} args")
+
+        # v1.16.0: Track tool name for group summary
+        if self._tool_group_active:
+            self._tool_group_tools.append(tool_name)
+
+        # v1.16.0: In non-verbose grouped mode, suppress individual tool bubbles
+        # (summary will be shown at group end)
+        if self._tool_group_active and not self._tools_verbose:
+            return
 
         # Always show tool name; only show args if verbose mode enabled
         if self._tools_verbose and tool_args:
@@ -1329,6 +1331,10 @@ class PPXAIDEApp(App):
         if self._trace_logging:
             self._log.debug(f"[Event] Tool result from {tool_name}: {len(result_str)} chars")
 
+        # v1.16.0: In non-verbose grouped mode, suppress individual result bubbles
+        if self._tool_group_active and not self._tools_verbose:
+            return
+
         # Only show full result if verbose mode enabled
         if self._tools_verbose:
             # Show full result (scrollable bubble will handle long content)
@@ -1351,6 +1357,50 @@ class PPXAIDEApp(App):
         self._log.error(f"[Event] Tool error from {tool_name}: {error_msg}")
 
         chat_view.add_tool_message(f"{tool_name} [red]ERROR[/red]", f"[red]{error_msg}[/red]")
+
+    async def _on_tool_group_start(self, sender, data, **kwargs) -> None:
+        """Handle TOOL_GROUP_START event (v1.16.0).
+
+        In non-verbose mode, suppress individual tool bubbles and show a summary at group end.
+        In verbose mode, render individual tool bubbles as before.
+        """
+        self._tool_group_active = True
+        self._tool_group_tools = []
+        iteration = data.get("iteration", 0) if isinstance(data, dict) else 0
+        count = data.get("count", 0) if isinstance(data, dict) else 0
+        self._log.info(f"TOOL_GROUP_START: iteration={iteration}, count={count}")
+
+    async def _on_tool_group_end(self, sender, data, **kwargs) -> None:
+        """Handle TOOL_GROUP_END event (v1.16.0).
+
+        In non-verbose mode, emit one summary system message for all tool calls in the group.
+        """
+        self._tool_group_active = False
+        if isinstance(data, dict):
+            all_succeeded = data.get("all_succeeded", True)
+            tools = data.get("tools", self._tool_group_tools)
+            iteration = data.get("iteration", 0)
+        else:
+            all_succeeded = True
+            tools = self._tool_group_tools
+            iteration = 0
+
+        status_str = "✓" if all_succeeded else "✗"
+        tool_list = ", ".join(tools) if tools else "none"
+        self._log.info(f"TOOL_GROUP_END: iteration={iteration}, tools=[{tool_list}] {status_str}")
+
+        # In non-verbose mode, show summary (individual messages were suppressed)
+        if not self._tools_verbose and tools:
+            try:
+                chat_view = self.query_one("#chat-view", ChatView)
+            except NoMatches:
+                return
+            status = "[green]✓[/green]" if all_succeeded else "[red]✗[/red]"
+            chat_view.add_system_message(
+                f"[dim]  Iteration {iteration}: {tool_list} ({len(tools)} tool{'s' if len(tools) != 1 else ''}) {status}[/dim]"
+            )
+
+        self._tool_group_tools = []
 
     async def _on_display_file(self, sender, data, **kwargs) -> None:
         """Handle DISPLAY_FILE event - AI-triggered file display.
@@ -1441,7 +1491,6 @@ class PPXAIDEApp(App):
                 input_box._completer.update_working_dir(Path(path))
 
             # Update status bar cwd badge if visible
-            from ppxai.config import get_tui_config
             tui_config = get_tui_config()
             if tui_config.get("show_cwd", True):
                 status_bar = self.query_one(StatusBar)
@@ -1529,7 +1578,6 @@ class PPXAIDEApp(App):
                     self._log.debug(f"Handler returned: {type(result).__name__}")
 
                 # Check if result is a coroutine (async handler)
-                import inspect
                 if inspect.iscoroutine(result):
                     if self._debug_logging:
                         self._log.debug(f"Handler returned coroutine, awaiting it")
@@ -1582,10 +1630,6 @@ class PPXAIDEApp(App):
 
                 # Handle status bar toggle commands (Phase 1.2)
                 if cmd == "status" and args and args.split()[0] in ("version", "cwd", "datetime"):
-                    from ppxai.config import get_tui_config
-                    from ppxai.version import __version__
-                    from datetime import datetime
-
                     subcommand = args.split()[0]
                     tui_config = get_tui_config()
                     status_bar = self.query_one(StatusBar)
@@ -1615,9 +1659,6 @@ class PPXAIDEApp(App):
                             status_bar.remove_badge("datetime")
 
             except RuntimeError as e:
-                import os
-                import traceback
-
                 # Always log full traceback
                 self._log.error(f"RuntimeError in command '{cmd}': {e}", exc_info=True)
 
@@ -1646,9 +1687,6 @@ class PPXAIDEApp(App):
 
                     chat_view.add_system_message(error_msg)
             except Exception as e:
-                import os
-                import traceback
-
                 # Always log full traceback
                 self._log.error(f"Exception in command '{cmd}': {e}", exc_info=True)
 
@@ -1880,8 +1918,6 @@ class PPXAIDEApp(App):
 
         If streaming is active, first Ctrl+C cancels the stream instead of showing quit warning.
         """
-        import time
-
         now = time.time()
         time_since_last = now - self._last_ctrl_c_time
 

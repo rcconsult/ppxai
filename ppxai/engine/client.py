@@ -40,6 +40,7 @@ from ..config import (
     get_model_context_limit,
     get_shell_config,
     get_agent_config,
+    reload_config as _reload_config,
     PROVIDERS,
     EXPORTS_DIR,
 )
@@ -151,7 +152,6 @@ class EngineClient:
         Reloads the ConfigStore from disk, which also updates module-level
         PROVIDERS/MODELS in-place. Then refreshes shell and agent configs.
         """
-        from ..config import reload_config as _reload_config
         _reload_config()  # Updates PROVIDERS/MODELS in place via initialize()
         self._shell_config = get_shell_config()
         self._agent_config = get_agent_config()
@@ -163,7 +163,6 @@ class EngineClient:
         No caching - reads fresh PROVIDERS dict which is updated in-place
         by config.reload_config() -> initialize().
         """
-        from ..config import PROVIDERS
         return PROVIDERS
 
     # === Context Injection ===

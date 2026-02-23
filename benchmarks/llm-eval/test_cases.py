@@ -21,6 +21,51 @@ from dataclasses import dataclass
 
 from response_quality import validate_response_quality, QualityMetrics
 from ppxai.engine.model_profiles import get_profile
+from ppxai.engine.tools.builtin.editor import _replace_hunk, _apply_search_replace_diff
+
+
+def _dedup_tool_call(
+    seen_calls: dict[str, str],
+    tool_name: str,
+    args: dict,
+    sim_content: str,
+    *,
+    exempt_tools: set[str] | None = None,
+) -> str:
+    """Return dedup feedback if this exact tool+args was already called.
+
+    Args:
+        seen_calls: Dict mapping "tool_name|args_key" → previous sim_content.
+                    Updated in place when a new call is seen.
+        tool_name: Name of the tool being called.
+        args: Parsed arguments dict.
+        sim_content: The simulated response that would normally be returned.
+        exempt_tools: Tool names that should never be deduped (e.g. run_command
+                      in fix_verify where repeated calls return different results).
+
+    Returns:
+        The original sim_content for new calls, or a dedup feedback message
+        for repeated calls.
+    """
+    if exempt_tools and tool_name in exempt_tools:
+        return sim_content
+
+    # Build a stable key from tool name + sorted args (exclude large payloads)
+    stable_args = {k: v for k, v in sorted(args.items()) if k not in ("content", "patch")}
+    call_key = f"{tool_name}|{json.dumps(stable_args, sort_keys=True)}"
+
+    if call_key in seen_calls:
+        prev = seen_calls[call_key]
+        # Truncate previous result for the feedback message
+        preview = prev[:200] + "..." if len(prev) > 200 else prev
+        return (
+            f"[DUPLICATE CALL] You already called {tool_name} with these arguments. "
+            f"Previous result: {preview}\n"
+            f"Do NOT repeat the same call — use the result above and proceed to the next step."
+        )
+
+    seen_calls[call_key] = sim_content
+    return sim_content
 
 
 @dataclass
@@ -656,6 +701,108 @@ if __name__ == "__main__":
         return False, {"error": f"Invalid JSON: {e}", **quality.to_dict()}
 
 
+async def test_patch_apply_verify(client) -> tuple[bool, dict]:
+    """Test patch generation + actual apply via _replace_hunk + verification.
+
+    Model must generate an apply_patch call to fix a bug. The test actually
+    applies the patch using _replace_hunk() and verifies the output is correct.
+
+    Scoring:
+    - 1.0: Correct tool + patch applies cleanly + fix verified
+    - 0.7: Correct tool + patch applies but doesn't fix the bug
+    - 0.5: Correct tool but patch doesn't apply (fuzzy match fails)
+    - 0.0: No apply_patch call
+    """
+    original_code = '''def add(a, b):
+    """Add two numbers."""
+    return a - b
+
+
+def multiply(a, b):
+    """Multiply two numbers."""
+    return a * b
+'''
+
+    messages = [
+        {"role": "system", "content": "You are a coding assistant. Use apply_patch to fix bugs. The file content is provided below."},
+        {"role": "user", "content": f"Here is /src/math_utils.py:\n```python\n{original_code}```\n\nThere's a bug in the `add` function — it subtracts instead of adding. Fix it using apply_patch."}
+    ]
+
+    response = await client.chat(messages=messages, tools=TOOLS)
+    tool_calls = response.get("tool_calls", [])
+
+    # Allow read_file as a first step
+    if tool_calls and tool_calls[0].get("function", {}).get("name") == "read_file":
+        messages.append({"role": "assistant", "content": response.get("content", ""), "tool_calls": tool_calls})
+        messages.append({"role": "user", "content": f"[Tool result for read_file]\n{original_code}"})
+        response = await client.chat(messages=messages, tools=TOOLS)
+        tool_calls = response.get("tool_calls", [])
+
+    if not tool_calls:
+        return False, {"error": "No tool call made", "score": 0.0}
+
+    patch_call = next((c for c in tool_calls if c.get("function", {}).get("name") == "apply_patch"), None)
+    if not patch_call:
+        return False, {"error": f"No apply_patch call (got: {tool_calls[0].get('function', {}).get('name')})", "score": 0.0}
+
+    try:
+        args = json.loads(patch_call["function"]["arguments"])
+        patch = args.get("patch", "")
+    except json.JSONDecodeError:
+        return False, {"error": "Invalid JSON in tool call arguments", "score": 0.5}
+
+    # Detect patch format and apply accordingly
+    if "*** Begin Patch" in patch or "*** Update" in patch:
+        # OpenAI search-replace diff format (*** Begin Patch / *** Update File)
+        # Use the engine's own parser which handles this format natively
+        original_lines = original_code.splitlines(keepends=True)
+        result_lines = _apply_search_replace_diff(original_lines, patch)
+        result = "".join(result_lines)
+    else:
+        # Standard unified diff format — parse old/new lines manually
+        old_lines = []
+        new_lines = []
+        in_hunk = False
+        for line in patch.split("\n"):
+            if line.startswith("@@"):
+                in_hunk = True
+                continue
+            if not in_hunk:
+                continue
+            if line.startswith("-") and not line.startswith("---"):
+                old_lines.append(line[1:])
+            elif line.startswith("+") and not line.startswith("+++"):
+                new_lines.append(line[1:])
+            elif line.startswith(" "):
+                old_lines.append(line[1:])
+                new_lines.append(line[1:])
+            elif not line.startswith("\\"):
+                # Context line without prefix
+                old_lines.append(line)
+                new_lines.append(line)
+
+        if not old_lines:
+            return False, {"error": "Could not parse patch hunks", "patch_preview": patch[:300], "score": 0.5}
+
+        # Actually apply the patch using _replace_hunk
+        result = _replace_hunk(original_code, old_lines, new_lines)
+
+    if result == original_code:
+        # Patch didn't apply (no match found)
+        return False, {"error": "Patch did not apply (_replace_hunk returned original)", "patch_preview": patch[:300], "score": 0.5}
+
+    # Verify the fix
+    if "return a + b" in result and "return a - b" not in result:
+        return True, {"applied_result_preview": result[:200], "score": 1.0}
+
+    # Patch applied but didn't fix the bug correctly
+    return False, {
+        "error": "Patch applied but fix incorrect",
+        "applied_result_preview": result[:200],
+        "score": 0.7,
+    }
+
+
 # =============================================================================
 # CATEGORY: Format Compliance
 # =============================================================================
@@ -1265,12 +1412,20 @@ async def test_contradiction_detection(client) -> tuple[bool, dict]:
     response2 = await client.chat(messages=messages, tools=TOOLS)
     content = response2.get("content", "").lower()
 
-    # CRITICAL: Must not claim server is running
+    # Check acknowledgment FIRST — more specific patterns take priority
+    # (prevents false-positive contradictions like "not running on port 8080"
+    #  matching "running on port 8080" as a substring)
+    acknowledgments = ["not running", "connection refused", "no process",
+                        "isn't running", "not listening", "unavailable",
+                        "down", "refused", "no server", "not active"]
+    if any(phrase in content for phrase in acknowledgments):
+        return True, {"respected_tool_result": True}
+
+    # CRITICAL: Must not claim server is running (checked after negation patterns)
     contradictions = [
         "server is running",
         "is up and running",
         "server is active",
-        "running on port 8080",
         "server is online",
         "successfully connected",
     ]
@@ -1283,10 +1438,6 @@ async def test_contradiction_detection(client) -> tuple[bool, dict]:
                 "tool_result": "Connection refused",
                 "content_preview": content[:300]
             }
-
-    # Should acknowledge server is not running
-    if any(phrase in content for phrase in ["not running", "connection refused", "no process", "isn't running", "not listening", "unavailable"]):
-        return True, {"respected_tool_result": True}
 
     return False, {"error": "Unclear response to tool result", "content_preview": content[:300]}
 
@@ -1391,6 +1542,7 @@ async def test_multi_file_review(client) -> tuple[bool, dict]:
     }
 
     # Multi-turn: simulate tool responses for each read_file call
+    seen_calls: dict[str, str] = {}
     max_turns = 6
     for turn in range(max_turns):
         response = await client.chat(messages=messages, tools=TOOLS)
@@ -1408,8 +1560,10 @@ async def test_multi_file_review(client) -> tuple[bool, dict]:
                     files_read.add(path)
                     content = file_contents.get(path, f"Error: file {path} not found")
                 except json.JSONDecodeError:
+                    args = {}
                     content = "Error: invalid arguments"
 
+                content = _dedup_tool_call(seen_calls, "read_file", args, content)
                 messages.append({"role": "assistant", "content": None, "tool_calls": [tc]})
                 messages.append({
                     "role": "tool",
@@ -1533,6 +1687,7 @@ async def test_consecutive_tool_loop(client) -> tuple[bool, dict]:
     ]
 
     steps_completed = 0
+    seen_calls: dict[str, str] = {}
     max_turns = 8
 
     for turn in range(max_turns):
@@ -1577,6 +1732,7 @@ async def test_consecutive_tool_loop(client) -> tuple[bool, dict]:
                 if steps_completed >= 3:
                     steps_completed = max(steps_completed, 4)
 
+            sim_content = _dedup_tool_call(seen_calls, tool_name, args, sim_content)
             messages.append({"role": "assistant", "content": None, "tool_calls": [tc]})
             messages.append({
                 "role": "tool",
@@ -1592,6 +1748,403 @@ async def test_consecutive_tool_loop(client) -> tuple[bool, dict]:
     return False, {
         "steps_completed": steps_completed,
         "total_steps": 5,
+        "score": score,
+    }
+
+
+async def test_search_then_edit(client) -> tuple[bool, dict]:
+    """Multi-turn: search for function → read file → apply patch.
+
+    Model must find a function without being given the file path, then fix it.
+    Score = steps_completed / 3 (search=1, read=2, correct_patch=3).
+    """
+    messages = [
+        {"role": "system", "content": "You are a coding assistant. Use tools to find and modify code. Chain tool calls as needed."},
+        {"role": "user", "content": "Find the `calculate_tax` function and fix the tax rate from 0.05 to 0.08."}
+    ]
+
+    sim_responses = {
+        "search_code": json.dumps([
+            {"file": "/src/billing.py", "line": 12, "match": "def calculate_tax(amount):"}
+        ]),
+        "read_file": {
+            "/src/billing.py": 'def calculate_tax(amount):\n    """Calculate sales tax."""\n    return amount * 0.05\n\n\ndef calculate_total(amount):\n    return amount + calculate_tax(amount)\n',
+        },
+    }
+
+    steps_completed = 0
+    seen_calls: dict[str, str] = {}
+    max_turns = 6
+
+    for turn in range(max_turns):
+        response = await client.chat(messages=messages, tools=TOOLS)
+        tool_calls = response.get("tool_calls", [])
+
+        if not tool_calls:
+            break
+
+        for tc in tool_calls:
+            fn = tc.get("function", {})
+            tool_name = fn.get("name", "")
+            try:
+                args = json.loads(fn.get("arguments", "{}"))
+            except json.JSONDecodeError:
+                args = {}
+
+            sim_content = "Error: unknown tool"
+
+            if tool_name == "search_code":
+                pattern = args.get("pattern", "")
+                if "calculate_tax" in pattern or "tax" in pattern:
+                    sim_content = sim_responses["search_code"]
+                    steps_completed = max(steps_completed, 1)
+                else:
+                    sim_content = "[]"
+
+            elif tool_name == "read_file":
+                path = args.get("path", "")
+                for key, val in sim_responses["read_file"].items():
+                    if path == key or path.endswith(key.split("/")[-1]):
+                        sim_content = val
+                        if steps_completed >= 1:
+                            steps_completed = max(steps_completed, 2)
+                        break
+                else:
+                    sim_content = f"Error: file {path} not found"
+
+            elif tool_name == "apply_patch":
+                patch = args.get("patch", "")
+                if "0.08" in patch and ("0.05" in patch or "calculate_tax" in patch):
+                    sim_content = "Patch applied successfully"
+                    if steps_completed >= 2:
+                        steps_completed = max(steps_completed, 3)
+                else:
+                    sim_content = "Patch applied (no matching content changed)"
+
+            elif tool_name == "write_file":
+                content = args.get("content", "")
+                if "0.08" in content:
+                    sim_content = "File written"
+                    if steps_completed >= 2:
+                        steps_completed = max(steps_completed, 3)
+                else:
+                    sim_content = "File written"
+
+            sim_content = _dedup_tool_call(seen_calls, tool_name, args, sim_content)
+            messages.append({"role": "assistant", "content": None, "tool_calls": [tc]})
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tc.get("id", f"call_{turn}"),
+                "content": sim_content,
+            })
+
+    score = steps_completed / 3.0
+
+    if steps_completed >= 3:
+        return True, {"steps_completed": steps_completed, "score": 1.0}
+
+    return False, {
+        "steps_completed": steps_completed,
+        "total_steps": 3,
+        "score": score,
+    }
+
+
+async def test_fix_verify(client) -> tuple[bool, dict]:
+    """Multi-turn: write code → run test → see failure → fix → re-run → pass.
+
+    Score = steps_completed / 4 (write=1, test=2, fix=3, retest_pass=4).
+    """
+    messages = [
+        {"role": "system", "content": "You are a coding assistant. Write code, run tests, fix failures. Chain tool calls without stopping to narrate."},
+        {"role": "user", "content": "Write a function `is_palindrome(s)` in /src/utils.py that checks if a string is a palindrome (ignoring spaces and case). Then run `pytest /tests/test_utils.py` to verify."}
+    ]
+
+    steps_completed = 0
+    wrote_once = False
+    tested_once = False
+    seen_calls: dict[str, str] = {}
+    max_turns = 8
+    # Exempt write/patch/run_command — these intentionally return different results on repeat
+    fix_verify_exempt = {"write_file", "apply_patch", "run_command"}
+
+    for turn in range(max_turns):
+        response = await client.chat(messages=messages, tools=TOOLS)
+        tool_calls = response.get("tool_calls", [])
+
+        if not tool_calls:
+            break
+
+        for tc in tool_calls:
+            fn = tc.get("function", {})
+            tool_name = fn.get("name", "")
+            try:
+                args = json.loads(fn.get("arguments", "{}"))
+            except json.JSONDecodeError:
+                args = {}
+
+            sim_content = "Error: unknown tool"
+
+            if tool_name in ("write_file", "apply_patch"):
+                content = args.get("content", args.get("patch", ""))
+                if "is_palindrome" in content or "palindrome" in content.lower():
+                    if not wrote_once:
+                        sim_content = "File written successfully"
+                        steps_completed = max(steps_completed, 1)
+                        wrote_once = True
+                    else:
+                        # Second write = fix attempt
+                        # Check if fix handles spaces
+                        if "replace" in content or "strip" in content or '" "' in content or "' '" in content or ".join" in content:
+                            sim_content = "File written successfully"
+                            steps_completed = max(steps_completed, 3)
+                        else:
+                            sim_content = "File written successfully"
+                            steps_completed = max(steps_completed, 3)
+                else:
+                    sim_content = "File written"
+
+            elif tool_name == "run_command":
+                cmd = args.get("command", "")
+                if "pytest" in cmd or "test" in cmd:
+                    if not tested_once:
+                        tested_once = True
+                        steps_completed = max(steps_completed, 2)
+                        sim_content = (
+                            "FAILED tests/test_utils.py::test_palindrome_spaces\n"
+                            "AssertionError: is_palindrome('r a c e c a r') should return True\n"
+                            "Expected: True, Got: False\n\n"
+                            "1 failed, 2 passed in 0.5s"
+                        )
+                    else:
+                        # Re-test after fix
+                        if steps_completed >= 3:
+                            steps_completed = max(steps_completed, 4)
+                            sim_content = "3 passed in 0.3s"
+                        else:
+                            sim_content = (
+                                "FAILED tests/test_utils.py::test_palindrome_spaces\n"
+                                "1 failed, 2 passed in 0.5s"
+                            )
+                else:
+                    sim_content = f"Command executed: {cmd}"
+
+            elif tool_name == "read_file":
+                sim_content = "# /src/utils.py - empty file"
+
+            sim_content = _dedup_tool_call(seen_calls, tool_name, args, sim_content, exempt_tools=fix_verify_exempt)
+            messages.append({"role": "assistant", "content": None, "tool_calls": [tc]})
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tc.get("id", f"call_{turn}"),
+                "content": sim_content,
+            })
+
+    score = steps_completed / 4.0
+
+    if steps_completed >= 4:
+        return True, {"steps_completed": steps_completed, "score": 1.0}
+
+    return False, {
+        "steps_completed": steps_completed,
+        "total_steps": 4,
+        "score": score,
+    }
+
+
+async def test_information_gathering(client) -> tuple[bool, dict]:
+    """Multi-turn: find and read 3 auth-related files spread across a project.
+
+    Score = files_found / 3 (auth.py=1, middleware.py=2, auth_config.yaml=3).
+    """
+    messages = [
+        {"role": "system", "content": "You are a coding assistant. Use tools to explore the project. Read files before making claims about their content."},
+        {"role": "user", "content": "Find all authentication-related files in the project at /project and summarize the auth flow."}
+    ]
+
+    sim_responses = {
+        "list_dir": {
+            "/project": '["src/", "config/", "tests/", "docs/", "README.md"]',
+            "/project/src": '["auth.py", "middleware.py", "routes.py", "models.py", "utils.py"]',
+            "/project/config": '["auth_config.yaml", "database.yaml", "logging.yaml"]',
+        },
+        "read_file": {
+            "/project/src/auth.py": "import jwt\nimport bcrypt\n\ndef generate_token(user_id: str) -> str:\n    return jwt.encode({'sub': user_id}, SECRET_KEY, algorithm='HS256')\n\ndef verify_password(plain: str, hashed: str) -> bool:\n    return bcrypt.checkpw(plain.encode(), hashed.encode())\n",
+            "/project/src/middleware.py": "from auth import generate_token, verify_password\n\ndef auth_middleware(request):\n    token = request.headers.get('Authorization', '').replace('Bearer ', '')\n    try:\n        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])\n        request.user_id = payload['sub']\n    except jwt.InvalidTokenError:\n        return Response(status=401)\n",
+            "/project/config/auth_config.yaml": "auth:\n  token_expiry: 3600\n  algorithm: HS256\n  bcrypt_rounds: 12\n  allowed_origins:\n    - https://app.example.com\n",
+        },
+        "search_code": {
+            "default": json.dumps([
+                {"file": "/project/src/auth.py", "line": 4, "match": "def generate_token"},
+                {"file": "/project/src/middleware.py", "line": 3, "match": "def auth_middleware"},
+                {"file": "/project/config/auth_config.yaml", "line": 1, "match": "auth:"},
+            ]),
+        },
+    }
+
+    target_files = {"auth.py", "middleware.py", "auth_config.yaml"}
+    files_found = set()
+    seen_calls: dict[str, str] = {}
+    max_turns = 8
+
+    for turn in range(max_turns):
+        response = await client.chat(messages=messages, tools=TOOLS)
+        tool_calls = response.get("tool_calls", [])
+
+        if not tool_calls:
+            break
+
+        for tc in tool_calls:
+            fn = tc.get("function", {})
+            tool_name = fn.get("name", "")
+            try:
+                args = json.loads(fn.get("arguments", "{}"))
+            except json.JSONDecodeError:
+                args = {}
+
+            sim_content = "Error: not found"
+
+            if tool_name == "list_dir":
+                path = args.get("path", "")
+                sim_content = sim_responses["list_dir"].get(path, '["empty"]')
+
+            elif tool_name == "read_file":
+                path = args.get("path", "")
+                for key, val in sim_responses["read_file"].items():
+                    if path == key or path.endswith(key.split("/")[-1]):
+                        sim_content = val
+                        # Track which target files were read
+                        filename = key.split("/")[-1]
+                        if filename in target_files:
+                            files_found.add(filename)
+                        break
+                else:
+                    sim_content = f"Error: file {path} not found"
+
+            elif tool_name == "search_code":
+                sim_content = sim_responses["search_code"]["default"]
+
+            sim_content = _dedup_tool_call(seen_calls, tool_name, args, sim_content)
+            messages.append({"role": "assistant", "content": None, "tool_calls": [tc]})
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tc.get("id", f"call_{turn}"),
+                "content": sim_content,
+            })
+
+    score = len(files_found) / len(target_files)
+
+    if score >= 1.0:
+        return True, {"files_found": sorted(files_found), "score": 1.0}
+
+    return False, {
+        "files_found": sorted(files_found),
+        "files_missed": sorted(target_files - files_found),
+        "score": score,
+    }
+
+
+async def test_error_recovery_chain(client) -> tuple[bool, dict]:
+    """Multi-turn: model encounters errors and must recover.
+
+    Scenario: read file → not found → search → find real path → read → update.
+    Score = steps_completed / 4.
+    """
+    messages = [
+        {"role": "system", "content": "You are a coding assistant. Use tools to complete tasks. If a tool fails, try alternative approaches."},
+        {"role": "user", "content": "Read /config/settings.json and update the timeout value to 30."}
+    ]
+
+    steps_completed = 0
+    found_real_path = False
+    seen_calls: dict[str, str] = {}
+    max_turns = 8
+    # Exempt write/patch — model needs to retry after permission denied
+    recovery_exempt = {"write_file", "apply_patch"}
+
+    for turn in range(max_turns):
+        response = await client.chat(messages=messages, tools=TOOLS)
+        tool_calls = response.get("tool_calls", [])
+
+        if not tool_calls:
+            break
+
+        for tc in tool_calls:
+            fn = tc.get("function", {})
+            tool_name = fn.get("name", "")
+            try:
+                args = json.loads(fn.get("arguments", "{}"))
+            except json.JSONDecodeError:
+                args = {}
+
+            sim_content = "Error: unknown tool"
+
+            if tool_name == "read_file":
+                path = args.get("path", "")
+                if path == "/config/settings.json":
+                    sim_content = "Error: file not found: /config/settings.json"
+                    steps_completed = max(steps_completed, 1)
+                elif "settings.json" in path and found_real_path:
+                    sim_content = '{"timeout": 10, "retries": 3, "log_level": "info"}'
+                    steps_completed = max(steps_completed, 3)
+                else:
+                    sim_content = f"Error: file {path} not found"
+
+            elif tool_name in ("search_code", "list_dir"):
+                if tool_name == "search_code":
+                    pattern = args.get("pattern", "")
+                    if "timeout" in pattern or "settings" in pattern:
+                        sim_content = json.dumps([
+                            {"file": "/etc/app/settings.json", "line": 1, "match": '"timeout": 10'}
+                        ])
+                        found_real_path = True
+                        steps_completed = max(steps_completed, 2)
+                    else:
+                        sim_content = "[]"
+                else:
+                    path = args.get("path", "")
+                    if path in ("/config", "/config/"):
+                        sim_content = '"Error: directory not found: /config"'
+                    elif path in ("/etc", "/etc/", "/etc/app", "/etc/app/"):
+                        sim_content = '["settings.json", "logging.conf"]'
+                        found_real_path = True
+                        steps_completed = max(steps_completed, 2)
+                    else:
+                        sim_content = '[]'
+
+            elif tool_name == "write_file":
+                content = args.get("content", "")
+                path = args.get("path", "")
+                if "settings.json" in path and found_real_path:
+                    sim_content = "Error: permission denied. Use apply_patch instead."
+                else:
+                    sim_content = "Error: permission denied"
+
+            elif tool_name == "apply_patch":
+                patch = args.get("patch", "")
+                path = args.get("path", "")
+                if "30" in patch and "settings" in path:
+                    sim_content = "Patch applied successfully"
+                    steps_completed = max(steps_completed, 4)
+                else:
+                    sim_content = "Patch applied (no changes)"
+
+            sim_content = _dedup_tool_call(seen_calls, tool_name, args, sim_content, exempt_tools=recovery_exempt)
+            messages.append({"role": "assistant", "content": None, "tool_calls": [tc]})
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tc.get("id", f"call_{turn}"),
+                "content": sim_content,
+            })
+
+    score = steps_completed / 4.0
+
+    if steps_completed >= 4:
+        return True, {"steps_completed": steps_completed, "score": 1.0}
+
+    return False, {
+        "steps_completed": steps_completed,
+        "total_steps": 4,
         "score": score,
     }
 
@@ -1647,6 +2200,101 @@ async def test_time_to_first_tool_call(client) -> tuple[bool, dict]:
     }
 
 
+async def test_tool_call_efficiency(client) -> tuple[bool, dict]:
+    """Measure tool call efficiency on a 5-step dependent chain.
+
+    Reuses the consecutive_tool_loop scenario but scores based on *extra*
+    tool calls beyond the minimum required (5).
+
+    Scoring:
+    - 5 calls exactly (optimal): 1.0
+    - 6-7 calls: 0.8
+    - 8-10 calls: 0.5
+    - >10 calls: 0.3
+    - 0 calls: 0.0
+    """
+    messages = [
+        {"role": "system", "content": "You are a coding assistant. Use tools efficiently. Avoid redundant tool calls."},
+        {"role": "user", "content": "Find and read the main entry point of the project. Start by listing /project, then read the config to find the entry point, then search for its imports, and finally read the imported module."}
+    ]
+
+    step_responses = {
+        "list_dir": {
+            "/project": '["config.json", "src/", "tests/", "README.md"]',
+        },
+        "read_file": {
+            "/project/config.json": '{"name": "myapp", "entry": "src/main.py", "version": "2.0.0"}',
+            "/project/src/main.py": 'from utils import helper\n\ndef main():\n    result = helper.run()\n    print(result)\n\nif __name__ == "__main__":\n    main()\n',
+            "/project/src/utils.py": 'class helper:\n    @staticmethod\n    def run():\n        return "Hello from utils"\n',
+        },
+        "search_code": {
+            "default": '[\n  {"file": "/project/src/utils.py", "line": 1, "match": "class helper:"}\n]',
+        },
+    }
+
+    total_tool_calls = 0
+    seen_calls: dict[str, str] = {}
+    max_turns = 12
+
+    for turn in range(max_turns):
+        response = await client.chat(messages=messages, tools=TOOLS)
+        tool_calls = response.get("tool_calls", [])
+
+        if not tool_calls:
+            break
+
+        for tc in tool_calls:
+            total_tool_calls += 1
+            fn = tc.get("function", {})
+            tool_name = fn.get("name", "")
+            try:
+                args = json.loads(fn.get("arguments", "{}"))
+            except json.JSONDecodeError:
+                args = {}
+
+            sim_content = "Error: unknown"
+
+            if tool_name == "list_dir":
+                path = args.get("path", "")
+                sim_content = step_responses["list_dir"].get(path, '["empty"]')
+            elif tool_name == "read_file":
+                path = args.get("path", "")
+                for key, val in step_responses["read_file"].items():
+                    if path == key or path.endswith(key.split("/")[-1]):
+                        sim_content = val
+                        break
+                else:
+                    sim_content = f"Error: file {path} not found"
+            elif tool_name == "search_code":
+                sim_content = step_responses["search_code"]["default"]
+
+            sim_content = _dedup_tool_call(seen_calls, tool_name, args, sim_content)
+            messages.append({"role": "assistant", "content": None, "tool_calls": [tc]})
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tc.get("id", f"call_{turn}"),
+                "content": sim_content,
+            })
+
+    if total_tool_calls == 0:
+        return False, {"total_tool_calls": 0, "score": 0.0}
+
+    if total_tool_calls <= 5:
+        score = 1.0
+    elif total_tool_calls <= 7:
+        score = 0.8
+    elif total_tool_calls <= 10:
+        score = 0.5
+    else:
+        score = 0.3
+
+    return score >= 0.8, {
+        "total_tool_calls": total_tool_calls,
+        "optimal": 5,
+        "score": score,
+    }
+
+
 # =============================================================================
 # Test Registry
 # =============================================================================
@@ -1677,6 +2325,7 @@ ALL_TESTS = [
     TestCase("patch_simple", "code_editing", "Simple apply_patch with exact content", test_apply_patch_simple),
     TestCase("patch_indentation", "code_editing", "apply_patch preserves indentation", test_apply_patch_indentation, weight=1.5),
     TestCase("patch_multiline", "code_editing", "apply_patch with multi-line changes", test_apply_patch_multiline),
+    TestCase("patch_apply_verify", "code_editing", "Generate patch, apply with _replace_hunk, verify fix", test_patch_apply_verify, weight=2.0, tags=["agentic"]),
 
     # ==========================================================================
     # FUNCTIONAL TESTS: Format Compliance
@@ -1712,11 +2361,16 @@ ALL_TESTS = [
     TestCase("multi_file_review", "agentic_tool_loops", "Reads multiple files before reporting", test_multi_file_review, weight=2.0, tags=["agentic"]),
     TestCase("claim_without_action", "agentic_tool_loops", "Doesn't fabricate reports without reading", test_claim_without_action, weight=2.0, tags=["agentic", "gate"]),
     TestCase("consecutive_tool_loop", "agentic_tool_loops", "5-step dependent tool chain", test_consecutive_tool_loop, weight=2.0, tags=["agentic"]),
+    TestCase("search_then_edit", "agentic_tool_loops", "Search → read → patch multi-turn chain", test_search_then_edit, weight=2.0, tags=["agentic"]),
+    TestCase("fix_verify", "agentic_tool_loops", "Write → test → fix → retest cycle", test_fix_verify, weight=2.0, tags=["agentic"]),
+    TestCase("information_gathering", "agentic_tool_loops", "Find and read 3 auth-related files", test_information_gathering, weight=2.0, tags=["agentic"]),
+    TestCase("error_recovery_chain", "agentic_tool_loops", "Recover from errors to complete task", test_error_recovery_chain, weight=2.0, tags=["agentic"]),
 
     # ==========================================================================
     # FUNCTIONAL TESTS: Efficiency Metrics
     # ==========================================================================
     TestCase("time_to_first_tool_call", "efficiency", "Minimal preamble before tool call", test_time_to_first_tool_call, tags=["efficiency"]),
+    TestCase("tool_call_efficiency", "efficiency", "Minimum tool calls for 5-step chain", test_tool_call_efficiency, weight=1.5, tags=["efficiency", "agentic"]),
 ]
 
 

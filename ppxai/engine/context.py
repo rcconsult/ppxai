@@ -309,9 +309,10 @@ class ContextInjector:
         if not parsed_contexts:
             return None, []
 
-        # Merge provider_hints and model_hints (additive)
+        # Merge provider_hints, model_hints, and tool_calling_overrides (additive)
         merged_provider_hints: Dict[str, List[str]] = {}
         merged_model_hints: Dict[str, List[str]] = {}
+        merged_tc_overrides: Dict[str, Dict] = {}
 
         # Combine base instructions with source markers
         instruction_parts: List[str] = []
@@ -329,6 +330,12 @@ class ContextInjector:
                     merged_model_hints[pattern] = []
                 merged_model_hints[pattern].extend(hints)
 
+            # Add tool_calling overrides (merge dicts, later scopes override)
+            for pattern, overrides in ctx.tool_calling_overrides.items():
+                if pattern not in merged_tc_overrides:
+                    merged_tc_overrides[pattern] = {}
+                merged_tc_overrides[pattern].update(overrides)
+
             # Add base instructions with source marker
             if ctx.base_instructions:
                 marker = f"<!-- Source: {source.path} [{source.scope}] -->"
@@ -343,6 +350,7 @@ class ContextInjector:
             base_instructions=merged_instructions,
             provider_hints=merged_provider_hints,
             model_hints=merged_model_hints,
+            tool_calling_overrides=merged_tc_overrides,
             raw_content=merged_instructions,
         )
 

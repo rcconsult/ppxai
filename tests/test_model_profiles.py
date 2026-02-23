@@ -388,3 +388,101 @@ class TestFlashLiteProfile:
         """flash-lite has low max_tokens to prevent truncated patches."""
         profile = get_profile("gemini-2.5-flash-lite")
         assert profile.max_tokens == 8_192
+
+
+class TestGetEffectiveProfile:
+    """Tests for _get_effective_profile merging (v1.16.0 Step 5)."""
+
+    def test_no_overrides_returns_builtin(self):
+        """Without any overrides, returns the built-in profile unchanged."""
+        from unittest.mock import patch, MagicMock
+        from ppxai.engine.chat import _get_effective_profile
+
+        ctx = MagicMock()
+        ctx._bootstrap_context = None
+
+        with patch("ppxai.engine.chat.get_tool_calling_config", return_value={}):
+            profile = _get_effective_profile("gpt-5.2", "openai", ctx)
+        builtin = get_profile("gpt-5.2")
+        assert profile.tool_calling.mode == builtin.tool_calling.mode
+        assert profile.tier == builtin.tier
+
+    def test_config_overrides_builtin(self):
+        """Config overrides take precedence over built-in profile."""
+        from unittest.mock import patch, MagicMock
+        from ppxai.engine.chat import _get_effective_profile
+
+        ctx = MagicMock()
+        ctx._bootstrap_context = None
+
+        overrides = {"mode": "prompt_based", "fallback_on_empty": True}
+        with patch("ppxai.engine.chat.get_tool_calling_config", return_value=overrides):
+            profile = _get_effective_profile("gpt-5.2", "openai", ctx)
+        assert profile.tool_calling.mode == "prompt_based"
+        assert profile.tool_calling.fallback_on_empty is True
+        # Non-overridden fields preserved from built-in
+        builtin = get_profile("gpt-5.2")
+        assert profile.tool_calling.strip_json_from_text == builtin.tool_calling.strip_json_from_text
+
+    def test_bootstrap_overrides_builtin(self):
+        """Bootstrap overrides take precedence over built-in profile."""
+        from unittest.mock import patch, MagicMock
+        from ppxai.engine.chat import _get_effective_profile
+
+        bootstrap = MagicMock()
+        bootstrap.get_tool_calling_overrides.return_value = {"mode": "auto"}
+
+        ctx = MagicMock()
+        ctx._bootstrap_context = bootstrap
+
+        with patch("ppxai.engine.chat.get_tool_calling_config", return_value={}):
+            profile = _get_effective_profile("gpt-5.2", "openai", ctx)
+        assert profile.tool_calling.mode == "auto"
+
+    def test_config_overrides_bootstrap(self):
+        """Config overrides take precedence over bootstrap overrides."""
+        from unittest.mock import patch, MagicMock
+        from ppxai.engine.chat import _get_effective_profile
+
+        bootstrap = MagicMock()
+        bootstrap.get_tool_calling_overrides.return_value = {"mode": "auto", "fallback_on_empty": True}
+
+        ctx = MagicMock()
+        ctx._bootstrap_context = bootstrap
+
+        config_overrides = {"mode": "prompt_based"}
+        with patch("ppxai.engine.chat.get_tool_calling_config", return_value=config_overrides):
+            profile = _get_effective_profile("gpt-5.2", "openai", ctx)
+        # Config wins for mode
+        assert profile.tool_calling.mode == "prompt_based"
+        # Bootstrap wins for fallback_on_empty (config didn't set it)
+        assert profile.tool_calling.fallback_on_empty is True
+
+    def test_max_tokens_override(self):
+        """max_tokens can be overridden via config."""
+        from unittest.mock import patch, MagicMock
+        from ppxai.engine.chat import _get_effective_profile
+
+        ctx = MagicMock()
+        ctx._bootstrap_context = None
+
+        overrides = {"max_tokens": 32768}
+        with patch("ppxai.engine.chat.get_tool_calling_config", return_value=overrides):
+            profile = _get_effective_profile("gpt-5.2", "openai", ctx)
+        assert profile.max_tokens == 32768
+
+    def test_preserves_non_tc_fields(self):
+        """Non-tool-calling fields (tier, supports_reasoning) are preserved."""
+        from unittest.mock import patch, MagicMock
+        from ppxai.engine.chat import _get_effective_profile
+
+        ctx = MagicMock()
+        ctx._bootstrap_context = None
+
+        overrides = {"mode": "prompt_based"}
+        with patch("ppxai.engine.chat.get_tool_calling_config", return_value=overrides):
+            profile = _get_effective_profile("gpt-5.2", "openai", ctx)
+        builtin = get_profile("gpt-5.2")
+        assert profile.tier == builtin.tier
+        assert profile.supports_reasoning == builtin.supports_reasoning
+        assert profile.restricted_params == builtin.restricted_params
