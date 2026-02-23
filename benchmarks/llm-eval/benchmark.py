@@ -114,6 +114,7 @@ Examples:
     analysis_group.add_argument("--compare", nargs=2, metavar=("PAIR1", "PAIR2"), help="Compare two provider/model pairs")
     analysis_group.add_argument("--ranking", action="store_true", help="Show ranking across all models")
     analysis_group.add_argument("--history", type=str, metavar="PAIR", help="Show history for a provider/model pair")
+    analysis_group.add_argument("--rebuild-index", action="store_true", help="Rebuild index from result files (backfills agents_md_mode)")
 
     # Output options
     output_group = parser.add_argument_group("Output")
@@ -359,13 +360,40 @@ def compare_pairs(args: argparse.Namespace) -> int:
 
 
 def show_ranking(args: argparse.Namespace) -> int:
-    """Show ranking across all models."""
+    """Show ranking across all models, split by AGENTS.md mode."""
     results_dir = Path(args.results_dir) if args.results_dir else Path(__file__).parent / "results"
     store = ResultsStore(results_dir)
 
-    ranking = store.get_ranking()
-    print("\nOverall Ranking (Best Score per Provider/Model)")
-    print_ranking(ranking)
+    ranking_with = store.get_ranking(agents_md_mode="with")
+    ranking_without = store.get_ranking(agents_md_mode="without")
+
+    if ranking_with:
+        print("\nOverall Ranking — WITH AGENTS.md (Best Score per Provider/Model)")
+        print_ranking(ranking_with)
+
+    if ranking_without:
+        print("\nOverall Ranking — WITHOUT AGENTS.md (Best Score per Provider/Model)")
+        print_ranking(ranking_without)
+
+    if ranking_with and ranking_without:
+        # Show delta for models that have both modes
+        with_map = {pair: score for pair, score, _ in ranking_with}
+        without_map = {pair: score for pair, score, _ in ranking_without}
+        common = sorted(set(with_map) & set(without_map), key=lambda p: with_map[p], reverse=True)
+        if common:
+            print(f"\nAGENTS.md Impact (Delta = WITH - WITHOUT)")
+            print(f"\n{'Provider/Model':<40} {'With':>8} {'Without':>8} {'Delta':>8}")
+            print("-" * 66)
+            for pair in common:
+                delta = with_map[pair] - without_map[pair]
+                sign = "+" if delta > 0 else "" if delta < 0 else " "
+                print(f"{pair:<40} {with_map[pair]:>7.1f}% {without_map[pair]:>7.1f}% {sign}{delta:>6.1f}%")
+
+    if not ranking_with and not ranking_without:
+        # Fallback: index has no agents_md_mode data yet
+        ranking = store.get_ranking()
+        print("\nOverall Ranking (Best Score per Provider/Model)")
+        print_ranking(ranking)
 
     return 0
 
@@ -395,7 +423,15 @@ def main():
     args = parser.parse_args()
 
     # Determine mode
-    if args.list_results:
+    if getattr(args, 'rebuild_index', False):
+        results_dir = Path(args.results_dir) if args.results_dir else Path(__file__).parent / "results"
+        store = ResultsStore(results_dir)
+        store.rebuild_index()
+        pairs = len(store.index["pairs"])
+        runs = len(store.index["runs"])
+        print(f"Index rebuilt: {pairs} models, {runs} runs")
+        return 0
+    elif args.list_results:
         return list_results(args)
     elif args.compare:
         return compare_pairs(args)

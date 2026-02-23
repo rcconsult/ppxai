@@ -40,7 +40,7 @@ export interface EventMetadata {
 }
 
 export interface StreamEvent {
-    type: 'thinking' | 'started' | 'reasoning_chunk' | 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'context_injected' | 'display_file' | 'consent_request' | 'status' | 'agent_iteration' | 'agent_complete' | 'agent_max_iterations' | 'working_dir_changed';
+    type: 'thinking' | 'started' | 'reasoning_chunk' | 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'context_injected' | 'display_file' | 'consent_request' | 'status' | 'agent_iteration' | 'agent_complete' | 'agent_max_iterations' | 'working_dir_changed' | 'tool_group_start' | 'tool_group_end';
     content: string;
     metadata?: EventMetadata;
 }

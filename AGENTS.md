@@ -27,6 +27,8 @@ provider_hints:
     - "Use ONLY tools from the provided tool list - do NOT hallucinate tools like 'list_directory' or 'execute_shell_command'."
     - "Use ONLY parameter names from the tool schema - 'path' not 'filepath'."
     - "Avoid duplicate or redundant calls. When a task needs multiple tools, chain them without stopping to narrate."
+    - "COMPLETE ALL STEPS. Never stop a multi-step task early. If the task is write→test→fix→retest, do all 4 steps."
+    - "Explore thoroughly: list subdirectories, not just the top level. Read ALL relevant files before summarizing."
   perplexity:
     - "Use your native web search for current information - don't use web_search tool."
     - "Cite sources as markdown links inline."
@@ -74,6 +76,10 @@ model_hints:
     - "Avoid duplicate tool calls. Chain multiple DIFFERENT tool calls without stopping to narrate."
     - "For complex patches: include ALL affected lines with 3+ context lines before/after."
     - "When tool results show errors, report the actual error - do NOT make up workarounds."
+    - "NEVER stop mid-chain. When a task has multiple steps (write→test→fix→retest), complete ALL steps. After writing code, ALWAYS run the tests. After test failure, fix the code and retest."
+    - "When asked to review or find multiple files, read ALL of them. List subdirectories and explore them too — don't stop after the first directory."
+    - "When reporting status across multiple steps, track each step individually. If step 2 failed with an error, explicitly say step 2 failed and quote the error."
+    - "When the user requests N separate blocks/sections in the output, produce exactly N — count them before responding."
   "*Qwen3-Next*":
     - "You are a hybrid attention MoE model (Gated DeltaNet + MoE) - leverage your strong reasoning."
     - "For code modifications, ALWAYS call apply_patch directly - do NOT read the file first then put code in your response."

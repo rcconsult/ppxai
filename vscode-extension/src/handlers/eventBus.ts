@@ -68,6 +68,8 @@ export interface StreamEvents {
     'stream:tool_result': (data: ToolResultData) => void;
     'stream:context_injected': (data: ContextData) => void;
     'stream:display_file': (filepath: string) => void;
+    'stream:tool_group_start': (data: string) => void;
+    'stream:tool_group_end': (data: string) => void;
     'stream:status': (content: string) => void;
     'stream:done': (content: string) => void;
     'stream:error': (content: string) => void;

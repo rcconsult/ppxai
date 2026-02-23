@@ -86,10 +86,13 @@ class ResultsStore:
         if pair_key not in self.index["pairs"]:
             self.index["pairs"][pair_key] = []
 
+        agents_md_mode = result.metadata.get("agents_md_mode", "with")
+
         self.index["pairs"][pair_key].append({
             "filename": filename,
             "timestamp": result.timestamp,
             "overall_score": result.overall_score,
+            "agents_md_mode": agents_md_mode,
         })
 
         self.index["runs"].append({
@@ -97,6 +100,7 @@ class ResultsStore:
             "filename": filename,
             "timestamp": result.timestamp,
             "overall_score": result.overall_score,
+            "agents_md_mode": agents_md_mode,
         })
 
         self._save_index()
@@ -127,14 +131,18 @@ class ResultsStore:
         """List all provider/model pairs with results."""
         return list(self.index["pairs"].keys())
 
-    def get_ranking(self) -> list[tuple[str, float, int]]:
+    def get_ranking(self, agents_md_mode: Optional[str] = None) -> list[tuple[str, float, int]]:
         """
         Get ranking of all provider/model pairs by best score.
+        Args:
+            agents_md_mode: Filter by 'with', 'without', or None for all.
         Returns list of (pair_key, best_score, num_runs).
         """
         ranking = []
         for pair_key in self.index["pairs"]:
             entries = self.index["pairs"][pair_key]
+            if agents_md_mode:
+                entries = [e for e in entries if e.get("agents_md_mode", "with") == agents_md_mode]
             if entries:
                 best_score = max(e["overall_score"] for e in entries)
                 ranking.append((pair_key, best_score, len(entries)))
@@ -161,6 +169,35 @@ class ResultsStore:
         """Get all runs sorted by timestamp (most recent first)."""
         runs = sorted(self.index["runs"], key=lambda r: r["timestamp"], reverse=True)
         return runs[:limit]
+
+    def rebuild_index(self):
+        """Rebuild index from result files, backfilling agents_md_mode."""
+        new_index = {"pairs": {}, "runs": []}
+
+        for filepath in sorted(self.results_dir.glob("*.json")):
+            if filepath.name == "index.json":
+                continue
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                result = BenchmarkResult.from_dict(data)
+                pair_key = result.pair_key
+                agents_md_mode = result.metadata.get("agents_md_mode", "with")
+                entry = {
+                    "filename": filepath.name,
+                    "timestamp": result.timestamp,
+                    "overall_score": result.overall_score,
+                    "agents_md_mode": agents_md_mode,
+                }
+                if pair_key not in new_index["pairs"]:
+                    new_index["pairs"][pair_key] = []
+                new_index["pairs"][pair_key].append(entry)
+                new_index["runs"].append({"pair": pair_key, **entry})
+            except (json.JSONDecodeError, TypeError, KeyError):
+                continue
+
+        self.index = new_index
+        self._save_index()
 
     def delete_pair(self, pair_key: str) -> bool:
         """Delete all results for a provider/model pair."""

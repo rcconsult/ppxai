@@ -4,1064 +4,1792 @@
       {
         "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-07_e21de04b.json",
         "timestamp": "2026-02-07T00:44:19.998895",
-        "overall_score": 81.25
+        "overall_score": 81.25,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_6414c54a.json",
+        "timestamp": "2026-02-23T13:10:32.757580",
+        "overall_score": 8.118811881188117,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_7a361f1c.json",
+        "timestamp": "2026-02-23T14:15:22.658119",
+        "overall_score": 79.83498349834984,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_7cbcf5f1.json",
+        "timestamp": "2026-02-23T14:59:53.341756",
+        "overall_score": 81.81518151815183,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_09efb741.json",
+        "timestamp": "2026-02-23T15:03:16.127923",
+        "overall_score": 84.78547854785478,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_112891c0.json",
+        "timestamp": "2026-02-23T15:57:30.036717",
+        "overall_score": 81.81518151815183,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_ba1071b5.json",
+        "timestamp": "2026-02-23T16:00:44.699957",
+        "overall_score": 81.81518151815183,
+        "agents_md_mode": "without"
       }
     ],
     "asusai-vllm/Qwen/Qwen3-Coder-Next-FP8": [
       {
         "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-10_cee37b05.json",
         "timestamp": "2026-02-10T13:25:33.321635",
-        "overall_score": 60.94
-      },
-      {
-        "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-12_aec09c1b.json",
-        "timestamp": "2026-02-12T12:33:11.439010",
-        "overall_score": 57.8125
+        "overall_score": 60.9375,
+        "agents_md_mode": "with"
       },
       {
         "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-12_9334c773.json",
         "timestamp": "2026-02-12T13:52:38.299008",
-        "overall_score": 54.6875
+        "overall_score": 54.6875,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-12_aec09c1b.json",
+        "timestamp": "2026-02-12T12:33:11.439010",
+        "overall_score": 57.8125,
+        "agents_md_mode": "with"
       }
     ],
     "asusai-vllm/Qwen/Qwen3-Next-80B-A3B-Instruct-FP8": [
       {
         "filename": "asusai-vllm_Qwen_Qwen3-Next-80B-A3B-Instruct-FP8_2026-02-10_f717e85a.json",
         "timestamp": "2026-02-10T12:43:52.346871",
-        "overall_score": 54.69
+        "overall_score": 54.6875,
+        "agents_md_mode": "with"
       }
     ],
     "asusai-vllm/Qwen/Qwen3-Next-80B-A3B-Thinking-FP8": [
       {
         "filename": "asusai-vllm_Qwen_Qwen3-Next-80B-A3B-Thinking-FP8_2026-02-10_d205a445.json",
         "timestamp": "2026-02-10T17:26:00.064258",
-        "overall_score": 57.81
+        "overall_score": 57.8125,
+        "agents_md_mode": "with"
       }
     ],
     "asusai-vllm/RedHatAI/Qwen3-30B-A3B-FP8-dynamic": [
       {
         "filename": "asusai-vllm_RedHatAI_Qwen3-30B-A3B-FP8-dynamic_2026-02-06_9d46e1f4.json",
         "timestamp": "2026-02-06T20:25:47.159534",
-        "overall_score": 60.94
+        "overall_score": 60.9375,
+        "agents_md_mode": "with"
       }
     ],
     "asusai/qwen2.5-coder:32b-64k": [
       {
         "filename": "asusai_qwen2.5-coder_32b-64k_2026-02-06_2e0c1914.json",
         "timestamp": "2026-02-06T18:41:34.871171",
-        "overall_score": 57.81
+        "overall_score": 57.8125,
+        "agents_md_mode": "with"
       }
     ],
     "asusai/qwen2.5-coder:32b": [
       {
         "filename": "asusai_qwen2.5-coder_32b_2026-02-06_8d69e30a.json",
         "timestamp": "2026-02-06T17:46:41.473399",
-        "overall_score": 51.56
+        "overall_score": 51.5625,
+        "agents_md_mode": "with"
       }
     ],
     "asusai/qwen3:30b-a3b": [
       {
         "filename": "asusai_qwen3_30b-a3b_2026-02-06_b428bb08.json",
         "timestamp": "2026-02-06T18:25:47.778980",
-        "overall_score": 46.88
+        "overall_score": 46.875,
+        "agents_md_mode": "with"
       }
     ],
     "custom/openai/gpt-oss-120b": [
       {
         "filename": "custom_openai_gpt-oss-120b_2026-02-05_eed66e22.json",
         "timestamp": "2026-02-05T13:53:31.366561",
-        "overall_score": 89.13
+        "overall_score": 89.13043478260869,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "custom_openai_gpt-oss-120b_2026-02-23_20311c98.json",
+        "timestamp": "2026-02-23T13:07:39.107785",
+        "overall_score": 78.94389438943894,
+        "agents_md_mode": "with"
       }
     ],
     "gemini/gemini-2.0-flash-exp": [
       {
         "filename": "gemini_gemini-2.0-flash-exp_2026-02-07_867361b9.json",
         "timestamp": "2026-02-07T23:00:49.075667",
-        "overall_score": 10.94
-      }
-    ],
-    "gemini/gemini-2.5-flash": [
-      {
-        "filename": "gemini_gemini-2.5-flash_2026-02-05_309f76bb.json",
-        "timestamp": "2026-02-05T14:26:50.262340",
-        "overall_score": 81.25
-      },
-      {
-        "filename": "gemini_gemini-2.5-flash_2026-02-22_17037280.json",
-        "timestamp": "2026-02-22T17:35:18.309470",
-        "overall_score": 71.45214521452145
-      },
-      {
-        "filename": "gemini_gemini-2.5-flash_2026-02-22_e071e0cc.json",
-        "timestamp": "2026-02-22T17:39:58.545423",
-        "overall_score": 74.55445544554456
-      },
-      {
-        "filename": "gemini_gemini-2.5-flash_2026-02-22_b5083bd1.json",
-        "timestamp": "2026-02-22T17:50:04.571280",
-        "overall_score": 73.76237623762376
-      },
-      {
-        "filename": "gemini_gemini-2.5-flash_2026-02-22_8dfb21f5.json",
-        "timestamp": "2026-02-22T17:54:03.686242",
-        "overall_score": 72.24422442244226
-      },
-      {
-        "filename": "gemini_gemini-2.5-flash_2026-02-22_127d8da2.json",
-        "timestamp": "2026-02-22T18:05:37.677369",
-        "overall_score": 70.79207920792079
-      },
-      {
-        "filename": "gemini_gemini-2.5-flash_2026-02-22_1a5c2d18.json",
-        "timestamp": "2026-02-22T18:09:43.027986",
-        "overall_score": 68.61386138613864
-      }
-    ],
-    "gemini/gemini-2.5-pro": [
-      {
-        "filename": "gemini_gemini-2.5-pro_2026-02-07_6e1eb727.json",
-        "timestamp": "2026-02-07T23:57:29.052605",
-        "overall_score": 64.29
-      },
-      {
-        "filename": "gemini_gemini-2.5-pro_2026-02-19_ad2deaaa.json",
-        "timestamp": "2026-02-19T00:26:40.529208",
-        "overall_score": 81.25
-      },
-      {
-        "filename": "gemini_gemini-2.5-pro_2026-02-19_981722aa.json",
-        "timestamp": "2026-02-19T17:05:36.575896",
-        "overall_score": 75.0
-      },
-      {
-        "filename": "gemini_gemini-2.5-pro_2026-02-21_f84b40d5.json",
-        "timestamp": "2026-02-21T21:38:57.616603",
-        "overall_score": 85.12820512820514
-      },
-      {
-        "filename": "gemini_gemini-2.5-pro_2026-02-22_12a4ec41.json",
-        "timestamp": "2026-02-22T12:16:19.440526",
-        "overall_score": 85.12820512820514
-      }
-    ],
-    "gemini/gemini-3-flash-preview": [
-      {
-        "filename": "gemini_gemini-3-flash-preview_2026-02-08_b517fadc.json",
-        "timestamp": "2026-02-08T17:29:31.639744",
-        "overall_score": 100.0
-      },
-      {
-        "filename": "gemini_gemini-3-flash-preview_2026-02-19_a113e6d6.json",
-        "timestamp": "2026-02-19T17:09:42.077978",
-        "overall_score": 57.8125
-      },
-      {
-        "filename": "gemini_gemini-3-flash-preview_2026-02-20_9894d207.json",
-        "timestamp": "2026-02-20T21:45:00.195716",
-        "overall_score": 65.8974358974359
-      },
-      {
-        "filename": "gemini_gemini-3-flash-preview_2026-02-21_591883de.json",
-        "timestamp": "2026-02-21T21:49:55.579341",
-        "overall_score": 68.2051282051282
-      },
-      {
-        "filename": "gemini_gemini-3-flash-preview_2026-02-22_646ce516.json",
-        "timestamp": "2026-02-22T12:32:49.827072",
-        "overall_score": 73.58974358974358
-      }
-    ],
-    "gemini/gemini-3-pro-preview": [
-      {
-        "filename": "gemini_gemini-3-pro-preview_2026-02-05_6d5eef49.json",
-        "timestamp": "2026-02-05T15:03:35.876530",
-        "overall_score": 70.31
-      },
-      {
-        "filename": "gemini_gemini-3-pro-preview_2026-02-19_746a4f48.json",
-        "timestamp": "2026-02-19T17:32:38.839496",
-        "overall_score": 62.5
-      },
-      {
-        "filename": "gemini_gemini-3-pro-preview_2026-02-20_523640a8.json",
-        "timestamp": "2026-02-20T22:21:27.023355",
-        "overall_score": 76.15384615384615
-      }
-    ],
-    "perplexity/llama-3.1-sonar-large-128k-online": [
-      {
-        "filename": "perplexity_llama-3.1-sonar-large-128k-online_2026-02-07_28a73d34.json",
-        "timestamp": "2026-02-07T23:00:40.776443",
-        "overall_score": 10.94
-      }
-    ],
-    "perplexity/sonar-pro": [
-      {
-        "filename": "perplexity_sonar-pro_2026-02-08_a755ae49.json",
-        "timestamp": "2026-02-08T17:49:00.698529",
-        "overall_score": 100.0
-      },
-      {
-        "filename": "perplexity_sonar-pro_2026-02-19_5e057581.json",
-        "timestamp": "2026-02-19T17:01:09.462596",
-        "overall_score": 68.75
-      },
-      {
-        "filename": "perplexity_sonar-pro_2026-02-22_ebe09d2c.json",
-        "timestamp": "2026-02-22T12:02:08.457276",
-        "overall_score": 76.66666666666666
-      }
-    ],
-    "perplexity/sonar-reasoning-pro": [
-      {
-        "filename": "perplexity_sonar-reasoning-pro_2026-02-07_16b4589e.json",
-        "timestamp": "2026-02-07T23:41:45.707931",
-        "overall_score": 67.19
-      },
-      {
-        "filename": "perplexity_sonar-reasoning-pro_2026-02-22_6d77f4d6.json",
-        "timestamp": "2026-02-22T13:54:41.681347",
-        "overall_score": 66.15384615384615
-      }
-    ],
-    "perplexity/sonar": [
-      {
-        "filename": "perplexity_sonar_2026-02-08_7676e2a0.json",
-        "timestamp": "2026-02-08T13:44:16.236968",
-        "overall_score": 75.0
-      },
-      {
-        "filename": "perplexity_sonar_2026-02-19_e0ff5a0d.json",
-        "timestamp": "2026-02-19T00:22:59.377786",
-        "overall_score": 48.4375
-      },
-      {
-        "filename": "perplexity_sonar_2026-02-19_0ea71109.json",
-        "timestamp": "2026-02-19T16:59:04.703362",
-        "overall_score": 70.3125
-      },
-      {
-        "filename": "perplexity_sonar_2026-02-22_5fdc12aa.json",
-        "timestamp": "2026-02-22T12:06:26.303300",
-        "overall_score": 73.84615384615385
-      }
-    ],
-    "openai/gpt-5.2": [
-      {
-        "filename": "openai_gpt-5.2_2026-02-17_9fa402e8.json",
-        "timestamp": "2026-02-17T20:40:51.392879",
-        "overall_score": 67.1875
-      },
-      {
-        "filename": "openai_gpt-5.2_2026-02-17_c9564eca.json",
-        "timestamp": "2026-02-17T22:12:07.161439",
-        "overall_score": 70.3125
-      },
-      {
-        "filename": "openai_gpt-5.2_2026-02-17_ac633924.json",
-        "timestamp": "2026-02-17T23:12:20.943835",
-        "overall_score": 70.3125
-      },
-      {
-        "filename": "openai_gpt-5.2_2026-02-17_dd8ce3c5.json",
-        "timestamp": "2026-02-17T20:58:07.743492",
-        "overall_score": 57.8125
-      },
-      {
-        "filename": "openai_gpt-5.2_2026-02-19_d4b2d2c7.json",
-        "timestamp": "2026-02-19T00:22:42.138143",
-        "overall_score": 57.8125
-      },
-      {
-        "filename": "openai_gpt-5.2_2026-02-22_e7da1370.json",
-        "timestamp": "2026-02-22T20:43:51.997764",
-        "overall_score": 80.79207920792079
-      },
-      {
-        "filename": "openai_gpt-5.2_2026-02-22_9788b697.json",
-        "timestamp": "2026-02-22T20:47:08.306868",
-        "overall_score": 80.79207920792079
-      }
-    ],
-    "openai/gpt-4.1": [
-      {
-        "filename": "openai_gpt-4.1_2026-02-17_daad9e8a.json",
-        "timestamp": "2026-02-17T20:46:47.677107",
-        "overall_score": 62.5
-      },
-      {
-        "filename": "openai_gpt-4.1_2026-02-17_2008bda0.json",
-        "timestamp": "2026-02-17T22:04:35.355931",
-        "overall_score": 48.4375
-      },
-      {
-        "filename": "openai_gpt-4.1_2026-02-17_5c9de5af.json",
-        "timestamp": "2026-02-17T23:03:49.768058",
-        "overall_score": 67.1875
-      },
-      {
-        "filename": "openai_gpt-4.1_2026-02-17_27db9f38.json",
-        "timestamp": "2026-02-17T23:07:13.990562",
-        "overall_score": 54.6875
-      }
-    ],
-    "openai/o4-mini": [
-      {
-        "filename": "openai_o4-mini_2026-02-17_a3ef1abf.json",
-        "timestamp": "2026-02-17T20:52:11.270809",
-        "overall_score": 10.9375
-      },
-      {
-        "filename": "openai_o4-mini_2026-02-17_eecc507b.json",
-        "timestamp": "2026-02-17T22:45:27.309881",
-        "overall_score": 10.9375
-      },
-      {
-        "filename": "openai_o4-mini_2026-02-17_988bd548.json",
-        "timestamp": "2026-02-17T23:44:03.725102",
-        "overall_score": 10.9375
-      },
-      {
-        "filename": "openai_o4-mini_2026-02-17_c46cbed6.json",
-        "timestamp": "2026-02-17T20:59:06.596352",
-        "overall_score": 62.5
-      },
-      {
-        "filename": "openai_o4-mini_2026-02-19_63ba60bf.json",
-        "timestamp": "2026-02-19T15:20:25.526670",
-        "overall_score": 62.5
-      },
-      {
-        "filename": "openai_o4-mini_2026-02-19_de008a6a.json",
-        "timestamp": "2026-02-19T15:34:29.940394",
-        "overall_score": 73.4375
-      },
-      {
-        "filename": "openai_o4-mini_2026-02-19_3328c6f1.json",
-        "timestamp": "2026-02-19T15:57:43.418159",
-        "overall_score": 100.0
-      }
-    ],
-    "openai/gpt-5": [
-      {
-        "filename": "openai_gpt-5_2026-02-17_2dafe4bf.json",
-        "timestamp": "2026-02-17T21:10:38.359647",
-        "overall_score": 48.4375
-      },
-      {
-        "filename": "openai_gpt-5_2026-02-17_9ebef178.json",
-        "timestamp": "2026-02-17T22:37:43.044687",
-        "overall_score": 62.5
-      },
-      {
-        "filename": "openai_gpt-5_2026-02-17_807fc47c.json",
-        "timestamp": "2026-02-17T23:31:34.756713",
-        "overall_score": 62.5
-      },
-      {
-        "filename": "openai_gpt-5_2026-02-17_04b44af2.json",
-        "timestamp": "2026-02-17T20:52:06.150591",
-        "overall_score": 10.9375
-      },
-      {
-        "filename": "openai_gpt-5_2026-02-17_f262fc9e.json",
-        "timestamp": "2026-02-17T20:41:19.546911",
-        "overall_score": 10.9375
-      },
-      {
-        "filename": "openai_gpt-5_2026-02-22_32bf7d33.json",
-        "timestamp": "2026-02-22T12:51:51.218020",
-        "overall_score": 82.6923076923077
-      }
-    ],
-    "openai/gpt-4.1-mini": [
-      {
-        "filename": "openai_gpt-4.1-mini_2026-02-17_3b59b622.json",
-        "timestamp": "2026-02-17T22:06:50.400728",
-        "overall_score": 60.9375
-      },
-      {
-        "filename": "openai_gpt-4.1-mini_2026-02-17_6026f0f4.json",
-        "timestamp": "2026-02-17T23:09:18.313608",
-        "overall_score": 60.9375
-      },
-      {
-        "filename": "openai_gpt-4.1-mini_2026-02-17_a0a7d44e.json",
-        "timestamp": "2026-02-17T20:42:50.137327",
-        "overall_score": 71.875
-      },
-      {
-        "filename": "openai_gpt-4.1-mini_2026-02-19_2ab31d8d.json",
-        "timestamp": "2026-02-19T15:35:51.058690",
-        "overall_score": 71.875
-      },
-      {
-        "filename": "openai_gpt-4.1-mini_2026-02-19_16184614.json",
-        "timestamp": "2026-02-19T15:58:10.447464",
-        "overall_score": 100.0
-      }
-    ],
-    "openai/gpt-4.1-nano": [
-      {
-        "filename": "openai_gpt-4.1-nano_2026-02-17_84c27934.json",
-        "timestamp": "2026-02-17T22:09:23.201150",
-        "overall_score": 46.875
-      },
-      {
-        "filename": "openai_gpt-4.1-nano_2026-02-17_386b021d.json",
-        "timestamp": "2026-02-17T23:43:48.358790",
-        "overall_score": 50.0
-      },
-      {
-        "filename": "openai_gpt-4.1-nano_2026-02-17_8a1c09d9.json",
-        "timestamp": "2026-02-17T20:41:55.766385",
-        "overall_score": 57.8125
-      }
-    ],
-    "openai/gpt-5-mini": [
-      {
-        "filename": "openai_gpt-5-mini_2026-02-17_d6cfeccd.json",
-        "timestamp": "2026-02-17T22:45:13.380479",
-        "overall_score": 57.8125
-      },
-      {
-        "filename": "openai_gpt-5-mini_2026-02-17_b0aa8771.json",
-        "timestamp": "2026-02-17T23:40:59.802576",
-        "overall_score": 67.1875
-      },
-      {
-        "filename": "openai_gpt-5-mini_2026-02-17_39c2ef5e.json",
-        "timestamp": "2026-02-17T20:52:08.391266",
-        "overall_score": 10.9375
-      },
-      {
-        "filename": "openai_gpt-5-mini_2026-02-17_612ddadd.json",
-        "timestamp": "2026-02-17T20:41:20.277401",
-        "overall_score": 10.9375
-      },
-      {
-        "filename": "openai_gpt-5-mini_2026-02-17_89d73bc8.json",
-        "timestamp": "2026-02-17T21:02:26.569315",
-        "overall_score": 65.625
-      }
-    ],
-    "openai/gpt-5.1-codex": [
-      {
-        "filename": "openai_gpt-5.1-codex_2026-02-17_dfb84283.json",
-        "timestamp": "2026-02-17T22:48:21.521623",
-        "overall_score": 40.625
-      },
-      {
-        "filename": "openai_gpt-5.1-codex_2026-02-17_84da61f8.json",
-        "timestamp": "2026-02-17T23:47:01.441015",
-        "overall_score": 37.5
-      },
-      {
-        "filename": "openai_gpt-5.1-codex_2026-02-18_5bb807ba.json",
-        "timestamp": "2026-02-18T21:13:04.860259",
-        "overall_score": 37.5
-      },
-      {
-        "filename": "openai_gpt-5.1-codex_2026-02-18_088dd440.json",
-        "timestamp": "2026-02-18T21:59:57.298362",
-        "overall_score": 57.8125
-      },
-      {
-        "filename": "openai_gpt-5.1-codex_2026-02-18_27c06eac.json",
-        "timestamp": "2026-02-18T22:42:41.003254",
-        "overall_score": 40.625
-      },
-      {
-        "filename": "openai_gpt-5.1-codex_2026-02-18_5395595c.json",
-        "timestamp": "2026-02-18T23:15:46.464906",
-        "overall_score": 53.125
-      },
-      {
-        "filename": "openai_gpt-5.1-codex_2026-02-19_2b86f072.json",
-        "timestamp": "2026-02-19T00:01:33.500214",
-        "overall_score": 64.0625
-      },
-      {
-        "filename": "openai_gpt-5.1-codex_2026-02-17_00e60298.json",
-        "timestamp": "2026-02-17T20:34:42.657807",
-        "overall_score": 10.9375
-      },
-      {
-        "filename": "openai_gpt-5.1-codex_2026-02-20_93708eb6.json",
-        "timestamp": "2026-02-20T21:30:37.213554",
-        "overall_score": 71.92307692307692
-      },
-      {
-        "filename": "openai_gpt-5.1-codex_2026-02-22_18887497.json",
-        "timestamp": "2026-02-22T12:57:03.930017",
-        "overall_score": 82.82051282051282
-      },
-      {
-        "filename": "openai_gpt-5.1-codex_2026-02-22_86b60e69.json",
-        "timestamp": "2026-02-22T20:01:57.022526",
-        "overall_score": 74.1914191419142
-      },
-      {
-        "filename": "openai_gpt-5.1-codex_2026-02-22_f2961004.json",
-        "timestamp": "2026-02-22T20:06:04.561974",
-        "overall_score": 68.05280528052805
-      },
-      {
-        "filename": "openai_gpt-5.1-codex_2026-02-22_f6526230.json",
-        "timestamp": "2026-02-22T20:51:42.236601",
-        "overall_score": 73.56435643564356
-      },
-      {
-        "filename": "openai_gpt-5.1-codex_2026-02-22_b0a1403d.json",
-        "timestamp": "2026-02-22T20:55:10.795125",
-        "overall_score": 70.52805280528052
-      },
-      {
-        "filename": "openai_gpt-5.1-codex_2026-02-22_6cf5cca8.json",
-        "timestamp": "2026-02-22T21:10:38.110736",
-        "overall_score": 84.05940594059406
-      },
-      {
-        "filename": "openai_gpt-5.1-codex_2026-02-22_6d01f85a.json",
-        "timestamp": "2026-02-22T21:14:25.663353",
-        "overall_score": 79.04290429042904
-      }
-    ],
-    "openai/gpt-5.1-codex-mini": [
-      {
-        "filename": "openai_gpt-5.1-codex-mini_2026-02-17_50b5bba2.json",
-        "timestamp": "2026-02-17T22:50:13.582790",
-        "overall_score": 40.625
-      },
-      {
-        "filename": "openai_gpt-5.1-codex-mini_2026-02-17_042e54ec.json",
-        "timestamp": "2026-02-17T23:49:11.804796",
-        "overall_score": 40.625
-      },
-      {
-        "filename": "openai_gpt-5.1-codex-mini_2026-02-17_91f47beb.json",
-        "timestamp": "2026-02-17T20:34:43.899199",
-        "overall_score": 10.9375
+        "overall_score": 10.9375,
+        "agents_md_mode": "with"
       }
     ],
     "gemini/gemini-2.5-flash-lite": [
       {
         "filename": "gemini_gemini-2.5-flash-lite_2026-02-21_84ea2190.json",
         "timestamp": "2026-02-21T21:39:44.772778",
-        "overall_score": 86.15384615384616
+        "overall_score": 86.15384615384616,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash-lite_2026-02-22_1d880e25.json",
+        "timestamp": "2026-02-22T12:08:51.005848",
+        "overall_score": 83.58974358974359,
+        "agents_md_mode": "with"
+      }
+    ],
+    "gemini/gemini-2.5-flash": [
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-02-05_309f76bb.json",
+        "timestamp": "2026-02-05T14:26:50.262340",
+        "overall_score": 81.25,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-02-22_127d8da2.json",
+        "timestamp": "2026-02-22T18:05:37.677369",
+        "overall_score": 70.79207920792079,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-02-22_17037280.json",
+        "timestamp": "2026-02-22T17:35:18.309470",
+        "overall_score": 71.45214521452145,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-02-22_1a5c2d18.json",
+        "timestamp": "2026-02-22T18:09:43.027986",
+        "overall_score": 68.61386138613864,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-02-22_4d837a59.json",
+        "timestamp": "2026-02-22T12:10:43.454112",
+        "overall_score": 76.41025641025642,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-02-22_8dfb21f5.json",
+        "timestamp": "2026-02-22T17:54:03.686242",
+        "overall_score": 72.24422442244226,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-02-22_b5083bd1.json",
+        "timestamp": "2026-02-22T17:50:04.571280",
+        "overall_score": 73.76237623762376,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-02-22_e071e0cc.json",
+        "timestamp": "2026-02-22T17:39:58.545423",
+        "overall_score": 74.55445544554456,
+        "agents_md_mode": "without"
+      }
+    ],
+    "gemini/gemini-2.5-pro": [
+      {
+        "filename": "gemini_gemini-2.5-pro_2026-02-07_6e1eb727.json",
+        "timestamp": "2026-02-07T23:57:29.052605",
+        "overall_score": 64.28571428571429,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-2.5-pro_2026-02-19_981722aa.json",
+        "timestamp": "2026-02-19T17:05:36.575896",
+        "overall_score": 75.0,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-2.5-pro_2026-02-19_ad2deaaa.json",
+        "timestamp": "2026-02-19T00:26:40.529208",
+        "overall_score": 81.25,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-2.5-pro_2026-02-20_3e3a38fb.json",
+        "timestamp": "2026-02-20T21:40:44.804499",
+        "overall_score": 77.43589743589745,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-2.5-pro_2026-02-21_f84b40d5.json",
+        "timestamp": "2026-02-21T21:38:57.616603",
+        "overall_score": 85.12820512820514,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-2.5-pro_2026-02-22_12a4ec41.json",
+        "timestamp": "2026-02-22T12:16:19.440526",
+        "overall_score": 85.12820512820514,
+        "agents_md_mode": "with"
+      }
+    ],
+    "gemini/gemini-3-flash-preview": [
+      {
+        "filename": "gemini_gemini-3-flash-preview_2026-02-08_b517fadc.json",
+        "timestamp": "2026-02-08T17:29:31.639744",
+        "overall_score": 100.0,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-3-flash-preview_2026-02-19_a113e6d6.json",
+        "timestamp": "2026-02-19T17:09:42.077978",
+        "overall_score": 57.8125,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-3-flash-preview_2026-02-20_9894d207.json",
+        "timestamp": "2026-02-20T21:45:00.195716",
+        "overall_score": 65.8974358974359,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-3-flash-preview_2026-02-21_591883de.json",
+        "timestamp": "2026-02-21T21:49:55.579341",
+        "overall_score": 68.2051282051282,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-3-flash-preview_2026-02-22_646ce516.json",
+        "timestamp": "2026-02-22T12:32:49.827072",
+        "overall_score": 73.58974358974358,
+        "agents_md_mode": "with"
+      }
+    ],
+    "gemini/gemini-3-pro-preview": [
+      {
+        "filename": "gemini_gemini-3-pro-preview_2026-02-05_6d5eef49.json",
+        "timestamp": "2026-02-05T15:03:35.876530",
+        "overall_score": 70.3125,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-3-pro-preview_2026-02-19_746a4f48.json",
+        "timestamp": "2026-02-19T17:32:38.839496",
+        "overall_score": 62.5,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-3-pro-preview_2026-02-20_523640a8.json",
+        "timestamp": "2026-02-20T22:21:27.023355",
+        "overall_score": 76.15384615384615,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-3-pro-preview_2026-02-20_bb2f2a2a.json",
+        "timestamp": "2026-02-20T21:41:29.714530",
+        "overall_score": 69.1025641025641,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-3-pro-preview_2026-02-22_a1e0e45c.json",
+        "timestamp": "2026-02-22T12:25:31.263442",
+        "overall_score": 76.15384615384615,
+        "agents_md_mode": "with"
       }
     ],
     "gemini/gemini-3.1-pro-preview-customtools": [
       {
-        "filename": "gemini_gemini-3.1-pro-preview-customtools_2026-02-22_dc0cf6f9.json",
-        "timestamp": "2026-02-22T21:42:47.182199",
-        "overall_score": 81.48514851485149
-      },
-      {
         "filename": "gemini_gemini-3.1-pro-preview-customtools_2026-02-22_b4ca0cbb.json",
         "timestamp": "2026-02-22T23:21:26.304384",
-        "overall_score": 61.386138613861384
+        "overall_score": 61.386138613861384,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "gemini_gemini-3.1-pro-preview-customtools_2026-02-22_dc0cf6f9.json",
+        "timestamp": "2026-02-22T21:42:47.182199",
+        "overall_score": 81.48514851485149,
+        "agents_md_mode": "with"
+      }
+    ],
+    "openai/gpt-4.1-mini": [
+      {
+        "filename": "openai_gpt-4.1-mini_2026-02-17_3b59b622.json",
+        "timestamp": "2026-02-17T22:06:50.400728",
+        "overall_score": 60.9375,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-4.1-mini_2026-02-17_6026f0f4.json",
+        "timestamp": "2026-02-17T23:09:18.313608",
+        "overall_score": 60.9375,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-4.1-mini_2026-02-17_a0a7d44e.json",
+        "timestamp": "2026-02-17T20:42:50.137327",
+        "overall_score": 71.875,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-4.1-mini_2026-02-19_16184614.json",
+        "timestamp": "2026-02-19T15:58:10.447464",
+        "overall_score": 100.0,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-4.1-mini_2026-02-19_2ab31d8d.json",
+        "timestamp": "2026-02-19T15:35:51.058690",
+        "overall_score": 71.875,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-4.1-mini_2026-02-19_2e457fe0.json",
+        "timestamp": "2026-02-19T15:18:52.307632",
+        "overall_score": 57.8125,
+        "agents_md_mode": "with"
+      }
+    ],
+    "openai/gpt-4.1-nano": [
+      {
+        "filename": "openai_gpt-4.1-nano_2026-02-17_386b021d.json",
+        "timestamp": "2026-02-17T23:43:48.358790",
+        "overall_score": 50.0,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-4.1-nano_2026-02-17_84c27934.json",
+        "timestamp": "2026-02-17T22:09:23.201150",
+        "overall_score": 46.875,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-4.1-nano_2026-02-17_8a1c09d9.json",
+        "timestamp": "2026-02-17T20:41:55.766385",
+        "overall_score": 57.8125,
+        "agents_md_mode": "with"
+      }
+    ],
+    "openai/gpt-4.1": [
+      {
+        "filename": "openai_gpt-4.1_2026-02-17_2008bda0.json",
+        "timestamp": "2026-02-17T22:04:35.355931",
+        "overall_score": 48.4375,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-4.1_2026-02-17_27db9f38.json",
+        "timestamp": "2026-02-17T23:07:13.990562",
+        "overall_score": 54.6875,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-4.1_2026-02-17_5c9de5af.json",
+        "timestamp": "2026-02-17T23:03:49.768058",
+        "overall_score": 67.1875,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-4.1_2026-02-17_daad9e8a.json",
+        "timestamp": "2026-02-17T20:46:47.677107",
+        "overall_score": 62.5,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-4.1_2026-02-20_bc833a97.json",
+        "timestamp": "2026-02-20T21:30:15.833305",
+        "overall_score": 84.61538461538461,
+        "agents_md_mode": "with"
+      }
+    ],
+    "openai/gpt-5-mini": [
+      {
+        "filename": "openai_gpt-5-mini_2026-02-17_39c2ef5e.json",
+        "timestamp": "2026-02-17T20:52:08.391266",
+        "overall_score": 10.9375,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5-mini_2026-02-17_612ddadd.json",
+        "timestamp": "2026-02-17T20:41:20.277401",
+        "overall_score": 10.9375,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5-mini_2026-02-17_89d73bc8.json",
+        "timestamp": "2026-02-17T21:02:26.569315",
+        "overall_score": 65.625,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5-mini_2026-02-17_b0aa8771.json",
+        "timestamp": "2026-02-17T23:40:59.802576",
+        "overall_score": 67.1875,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5-mini_2026-02-17_d6cfeccd.json",
+        "timestamp": "2026-02-17T22:45:13.380479",
+        "overall_score": 57.8125,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5-mini_2026-02-22_7a4d6d12.json",
+        "timestamp": "2026-02-22T12:47:42.075486",
+        "overall_score": 87.82051282051282,
+        "agents_md_mode": "with"
+      }
+    ],
+    "openai/gpt-5-nano": [
+      {
+        "filename": "openai_gpt-5-nano_2026-02-22_eae3ebee.json",
+        "timestamp": "2026-02-22T12:49:07.169956",
+        "overall_score": 76.7948717948718,
+        "agents_md_mode": "with"
+      }
+    ],
+    "openai/gpt-5.1-codex-mini": [
+      {
+        "filename": "openai_gpt-5.1-codex-mini_2026-02-17_042e54ec.json",
+        "timestamp": "2026-02-17T23:49:11.804796",
+        "overall_score": 40.625,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex-mini_2026-02-17_50b5bba2.json",
+        "timestamp": "2026-02-17T22:50:13.582790",
+        "overall_score": 40.625,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex-mini_2026-02-17_91f47beb.json",
+        "timestamp": "2026-02-17T20:34:43.899199",
+        "overall_score": 10.9375,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex-mini_2026-02-20_89d4997a.json",
+        "timestamp": "2026-02-20T21:29:21.501329",
+        "overall_score": 75.3846153846154,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex-mini_2026-02-22_20e8944e.json",
+        "timestamp": "2026-02-22T12:56:56.833963",
+        "overall_score": 68.58974358974359,
+        "agents_md_mode": "with"
+      }
+    ],
+    "openai/gpt-5.1-codex": [
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-17_00e60298.json",
+        "timestamp": "2026-02-17T20:34:42.657807",
+        "overall_score": 10.9375,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-17_84da61f8.json",
+        "timestamp": "2026-02-17T23:47:01.441015",
+        "overall_score": 37.5,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-17_dfb84283.json",
+        "timestamp": "2026-02-17T22:48:21.521623",
+        "overall_score": 40.625,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-18_088dd440.json",
+        "timestamp": "2026-02-18T21:59:57.298362",
+        "overall_score": 57.8125,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-18_27c06eac.json",
+        "timestamp": "2026-02-18T22:42:41.003254",
+        "overall_score": 40.625,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-18_5395595c.json",
+        "timestamp": "2026-02-18T23:15:46.464906",
+        "overall_score": 53.125,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-18_5bb807ba.json",
+        "timestamp": "2026-02-18T21:13:04.860259",
+        "overall_score": 37.5,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-19_2b86f072.json",
+        "timestamp": "2026-02-19T00:01:33.500214",
+        "overall_score": 64.0625,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-20_93708eb6.json",
+        "timestamp": "2026-02-20T21:30:37.213554",
+        "overall_score": 71.92307692307692,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-22_0cb26019.json",
+        "timestamp": "2026-02-22T20:46:05.164446",
+        "overall_score": 73.1023102310231,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-22_18887497.json",
+        "timestamp": "2026-02-22T12:57:03.930017",
+        "overall_score": 82.82051282051282,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-22_6cf5cca8.json",
+        "timestamp": "2026-02-22T21:10:38.110736",
+        "overall_score": 84.05940594059406,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-22_6d01f85a.json",
+        "timestamp": "2026-02-22T21:14:25.663353",
+        "overall_score": 79.04290429042904,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-22_86b60e69.json",
+        "timestamp": "2026-02-22T20:01:57.022526",
+        "overall_score": 74.1914191419142,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-22_b0a1403d.json",
+        "timestamp": "2026-02-22T20:55:10.795125",
+        "overall_score": 70.52805280528052,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-22_bbf0c65f.json",
+        "timestamp": "2026-02-22T20:43:23.427477",
+        "overall_score": 72.01320132013201,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-22_f2961004.json",
+        "timestamp": "2026-02-22T20:06:04.561974",
+        "overall_score": 68.05280528052805,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "openai_gpt-5.1-codex_2026-02-22_f6526230.json",
+        "timestamp": "2026-02-22T20:51:42.236601",
+        "overall_score": 73.56435643564356,
+        "agents_md_mode": "with"
+      }
+    ],
+    "openai/gpt-5.2": [
+      {
+        "filename": "openai_gpt-5.2_2026-02-17_9fa402e8.json",
+        "timestamp": "2026-02-17T20:40:51.392879",
+        "overall_score": 67.1875,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.2_2026-02-17_ac633924.json",
+        "timestamp": "2026-02-17T23:12:20.943835",
+        "overall_score": 70.3125,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.2_2026-02-17_c9564eca.json",
+        "timestamp": "2026-02-17T22:12:07.161439",
+        "overall_score": 70.3125,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.2_2026-02-17_dd8ce3c5.json",
+        "timestamp": "2026-02-17T20:58:07.743492",
+        "overall_score": 57.8125,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.2_2026-02-19_d4b2d2c7.json",
+        "timestamp": "2026-02-19T00:22:42.138143",
+        "overall_score": 57.8125,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.2_2026-02-20_e8e854fd.json",
+        "timestamp": "2026-02-20T21:29:31.615896",
+        "overall_score": 80.76923076923077,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.2_2026-02-22_00e9b999.json",
+        "timestamp": "2026-02-22T20:03:48.159308",
+        "overall_score": 74.65346534653466,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "openai_gpt-5.2_2026-02-22_4010d211.json",
+        "timestamp": "2026-02-22T20:00:47.640661",
+        "overall_score": 80.79207920792079,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.2_2026-02-22_9788b697.json",
+        "timestamp": "2026-02-22T20:47:08.306868",
+        "overall_score": 80.79207920792079,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "openai_gpt-5.2_2026-02-22_be231b6c.json",
+        "timestamp": "2026-02-22T12:44:11.809081",
+        "overall_score": 75.64102564102564,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.2_2026-02-22_e7da1370.json",
+        "timestamp": "2026-02-22T20:43:51.997764",
+        "overall_score": 80.79207920792079,
+        "agents_md_mode": "with"
+      }
+    ],
+    "openai/gpt-5": [
+      {
+        "filename": "openai_gpt-5_2026-02-17_04b44af2.json",
+        "timestamp": "2026-02-17T20:52:06.150591",
+        "overall_score": 10.9375,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5_2026-02-17_2dafe4bf.json",
+        "timestamp": "2026-02-17T21:10:38.359647",
+        "overall_score": 48.4375,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5_2026-02-17_807fc47c.json",
+        "timestamp": "2026-02-17T23:31:34.756713",
+        "overall_score": 62.5,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5_2026-02-17_9ebef178.json",
+        "timestamp": "2026-02-17T22:37:43.044687",
+        "overall_score": 62.5,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5_2026-02-17_f262fc9e.json",
+        "timestamp": "2026-02-17T20:41:19.546911",
+        "overall_score": 10.9375,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5_2026-02-22_32bf7d33.json",
+        "timestamp": "2026-02-22T12:51:51.218020",
+        "overall_score": 82.6923076923077,
+        "agents_md_mode": "with"
+      }
+    ],
+    "openai/o4-mini": [
+      {
+        "filename": "openai_o4-mini_2026-02-17_988bd548.json",
+        "timestamp": "2026-02-17T23:44:03.725102",
+        "overall_score": 10.9375,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_o4-mini_2026-02-17_a3ef1abf.json",
+        "timestamp": "2026-02-17T20:52:11.270809",
+        "overall_score": 10.9375,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_o4-mini_2026-02-17_c46cbed6.json",
+        "timestamp": "2026-02-17T20:59:06.596352",
+        "overall_score": 62.5,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_o4-mini_2026-02-17_eecc507b.json",
+        "timestamp": "2026-02-17T22:45:27.309881",
+        "overall_score": 10.9375,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_o4-mini_2026-02-19_3328c6f1.json",
+        "timestamp": "2026-02-19T15:57:43.418159",
+        "overall_score": 100.0,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_o4-mini_2026-02-19_63ba60bf.json",
+        "timestamp": "2026-02-19T15:20:25.526670",
+        "overall_score": 62.5,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_o4-mini_2026-02-19_de008a6a.json",
+        "timestamp": "2026-02-19T15:34:29.940394",
+        "overall_score": 73.4375,
+        "agents_md_mode": "with"
+      }
+    ],
+    "perplexity/llama-3.1-sonar-large-128k-online": [
+      {
+        "filename": "perplexity_llama-3.1-sonar-large-128k-online_2026-02-07_28a73d34.json",
+        "timestamp": "2026-02-07T23:00:40.776443",
+        "overall_score": 10.9375,
+        "agents_md_mode": "with"
+      }
+    ],
+    "perplexity/sonar-pro": [
+      {
+        "filename": "perplexity_sonar-pro_2026-02-08_a755ae49.json",
+        "timestamp": "2026-02-08T17:49:00.698529",
+        "overall_score": 100.0,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "perplexity_sonar-pro_2026-02-19_5e057581.json",
+        "timestamp": "2026-02-19T17:01:09.462596",
+        "overall_score": 68.75,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "perplexity_sonar-pro_2026-02-20_843e7dfb.json",
+        "timestamp": "2026-02-20T21:36:46.899223",
+        "overall_score": 71.28205128205128,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "perplexity_sonar-pro_2026-02-22_ebe09d2c.json",
+        "timestamp": "2026-02-22T12:02:08.457276",
+        "overall_score": 76.66666666666666,
+        "agents_md_mode": "with"
+      }
+    ],
+    "perplexity/sonar-reasoning-pro": [
+      {
+        "filename": "perplexity_sonar-reasoning-pro_2026-02-07_16b4589e.json",
+        "timestamp": "2026-02-07T23:41:45.707931",
+        "overall_score": 67.1875,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "perplexity_sonar-reasoning-pro_2026-02-22_6d77f4d6.json",
+        "timestamp": "2026-02-22T13:54:41.681347",
+        "overall_score": 66.15384615384615,
+        "agents_md_mode": "with"
+      }
+    ],
+    "perplexity/sonar": [
+      {
+        "filename": "perplexity_sonar_2026-02-08_7676e2a0.json",
+        "timestamp": "2026-02-08T13:44:16.236968",
+        "overall_score": 75.0,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "perplexity_sonar_2026-02-19_0ea71109.json",
+        "timestamp": "2026-02-19T16:59:04.703362",
+        "overall_score": 70.3125,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "perplexity_sonar_2026-02-19_e0ff5a0d.json",
+        "timestamp": "2026-02-19T00:22:59.377786",
+        "overall_score": 48.4375,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "perplexity_sonar_2026-02-20_2aba8afd.json",
+        "timestamp": "2026-02-20T21:37:01.643843",
+        "overall_score": 67.94871794871796,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "perplexity_sonar_2026-02-22_4401feaf.json",
+        "timestamp": "2026-02-22T17:47:24.320134",
+        "overall_score": 63.99339933993399,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "perplexity_sonar_2026-02-22_5ab0603e.json",
+        "timestamp": "2026-02-22T17:33:04.048276",
+        "overall_score": 69.27392739273928,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "perplexity_sonar_2026-02-22_5fdc12aa.json",
+        "timestamp": "2026-02-22T12:06:26.303300",
+        "overall_score": 73.84615384615385,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "perplexity_sonar_2026-02-22_627d8eb0.json",
+        "timestamp": "2026-02-22T18:06:40.071932",
+        "overall_score": 76.23762376237624,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "perplexity_sonar_2026-02-22_9a8642fd.json",
+        "timestamp": "2026-02-22T17:34:55.610981",
+        "overall_score": 73.53135313531352,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "perplexity_sonar_2026-02-22_9d76be59.json",
+        "timestamp": "2026-02-22T18:04:03.567081",
+        "overall_score": 77.22772277227723,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "perplexity_sonar_2026-02-22_c75233f7.json",
+        "timestamp": "2026-02-22T17:48:53.322930",
+        "overall_score": 63.00330033003301,
+        "agents_md_mode": "without"
       }
     ]
   },
   "runs": [
     {
+      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-07_e21de04b.json",
+      "timestamp": "2026-02-07T00:44:19.998895",
+      "overall_score": 81.25,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_6414c54a.json",
+      "timestamp": "2026-02-23T13:10:32.757580",
+      "overall_score": 8.118811881188117,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_7a361f1c.json",
+      "timestamp": "2026-02-23T14:15:22.658119",
+      "overall_score": 79.83498349834984,
+      "agents_md_mode": "with"
+    },
+    {
       "pair": "asusai-vllm/Qwen/Qwen3-Coder-Next-FP8",
-      "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-12_aec09c1b.json",
-      "timestamp": "2026-02-12T12:33:11.439010",
-      "overall_score": 57.8125
+      "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-10_cee37b05.json",
+      "timestamp": "2026-02-10T13:25:33.321635",
+      "overall_score": 60.9375,
+      "agents_md_mode": "with"
     },
     {
       "pair": "asusai-vllm/Qwen/Qwen3-Coder-Next-FP8",
       "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-12_9334c773.json",
       "timestamp": "2026-02-12T13:52:38.299008",
-      "overall_score": 54.6875
+      "overall_score": 54.6875,
+      "agents_md_mode": "with"
     },
     {
-      "pair": "openai/gpt-5.2",
-      "filename": "openai_gpt-5.2_2026-02-17_9fa402e8.json",
-      "timestamp": "2026-02-17T20:40:51.392879",
-      "overall_score": 67.1875
+      "pair": "asusai-vllm/Qwen/Qwen3-Coder-Next-FP8",
+      "filename": "asusai-vllm_Qwen_Qwen3-Coder-Next-FP8_2026-02-12_aec09c1b.json",
+      "timestamp": "2026-02-12T12:33:11.439010",
+      "overall_score": 57.8125,
+      "agents_md_mode": "with"
     },
     {
-      "pair": "openai/gpt-4.1",
-      "filename": "openai_gpt-4.1_2026-02-17_daad9e8a.json",
-      "timestamp": "2026-02-17T20:46:47.677107",
-      "overall_score": 62.5
+      "pair": "asusai-vllm/Qwen/Qwen3-Next-80B-A3B-Instruct-FP8",
+      "filename": "asusai-vllm_Qwen_Qwen3-Next-80B-A3B-Instruct-FP8_2026-02-10_f717e85a.json",
+      "timestamp": "2026-02-10T12:43:52.346871",
+      "overall_score": 54.6875,
+      "agents_md_mode": "with"
     },
     {
-      "pair": "openai/o4-mini",
-      "filename": "openai_o4-mini_2026-02-17_a3ef1abf.json",
-      "timestamp": "2026-02-17T20:52:11.270809",
-      "overall_score": 10.9375
+      "pair": "asusai-vllm/Qwen/Qwen3-Next-80B-A3B-Thinking-FP8",
+      "filename": "asusai-vllm_Qwen_Qwen3-Next-80B-A3B-Thinking-FP8_2026-02-10_d205a445.json",
+      "timestamp": "2026-02-10T17:26:00.064258",
+      "overall_score": 57.8125,
+      "agents_md_mode": "with"
     },
     {
-      "pair": "openai/gpt-5",
-      "filename": "openai_gpt-5_2026-02-17_2dafe4bf.json",
-      "timestamp": "2026-02-17T21:10:38.359647",
-      "overall_score": 48.4375
+      "pair": "asusai-vllm/RedHatAI/Qwen3-30B-A3B-FP8-dynamic",
+      "filename": "asusai-vllm_RedHatAI_Qwen3-30B-A3B-FP8-dynamic_2026-02-06_9d46e1f4.json",
+      "timestamp": "2026-02-06T20:25:47.159534",
+      "overall_score": 60.9375,
+      "agents_md_mode": "with"
     },
     {
-      "pair": "openai/gpt-4.1",
-      "filename": "openai_gpt-4.1_2026-02-17_2008bda0.json",
-      "timestamp": "2026-02-17T22:04:35.355931",
-      "overall_score": 48.4375
+      "pair": "asusai/qwen2.5-coder:32b-64k",
+      "filename": "asusai_qwen2.5-coder_32b-64k_2026-02-06_2e0c1914.json",
+      "timestamp": "2026-02-06T18:41:34.871171",
+      "overall_score": 57.8125,
+      "agents_md_mode": "with"
     },
     {
-      "pair": "openai/gpt-4.1-mini",
-      "filename": "openai_gpt-4.1-mini_2026-02-17_3b59b622.json",
-      "timestamp": "2026-02-17T22:06:50.400728",
-      "overall_score": 60.9375
+      "pair": "asusai/qwen2.5-coder:32b",
+      "filename": "asusai_qwen2.5-coder_32b_2026-02-06_8d69e30a.json",
+      "timestamp": "2026-02-06T17:46:41.473399",
+      "overall_score": 51.5625,
+      "agents_md_mode": "with"
     },
     {
-      "pair": "openai/gpt-4.1-nano",
-      "filename": "openai_gpt-4.1-nano_2026-02-17_84c27934.json",
-      "timestamp": "2026-02-17T22:09:23.201150",
-      "overall_score": 46.875
+      "pair": "asusai/qwen3:30b-a3b",
+      "filename": "asusai_qwen3_30b-a3b_2026-02-06_b428bb08.json",
+      "timestamp": "2026-02-06T18:25:47.778980",
+      "overall_score": 46.875,
+      "agents_md_mode": "with"
     },
     {
-      "pair": "openai/gpt-5.2",
-      "filename": "openai_gpt-5.2_2026-02-17_c9564eca.json",
-      "timestamp": "2026-02-17T22:12:07.161439",
-      "overall_score": 70.3125
+      "pair": "custom/openai/gpt-oss-120b",
+      "filename": "custom_openai_gpt-oss-120b_2026-02-05_eed66e22.json",
+      "timestamp": "2026-02-05T13:53:31.366561",
+      "overall_score": 89.13043478260869,
+      "agents_md_mode": "with"
     },
     {
-      "pair": "openai/gpt-5",
-      "filename": "openai_gpt-5_2026-02-17_9ebef178.json",
-      "timestamp": "2026-02-17T22:37:43.044687",
-      "overall_score": 62.5
+      "pair": "custom/openai/gpt-oss-120b",
+      "filename": "custom_openai_gpt-oss-120b_2026-02-23_20311c98.json",
+      "timestamp": "2026-02-23T13:07:39.107785",
+      "overall_score": 78.94389438943894,
+      "agents_md_mode": "with"
     },
     {
-      "pair": "openai/gpt-5-mini",
-      "filename": "openai_gpt-5-mini_2026-02-17_d6cfeccd.json",
-      "timestamp": "2026-02-17T22:45:13.380479",
-      "overall_score": 57.8125
-    },
-    {
-      "pair": "openai/o4-mini",
-      "filename": "openai_o4-mini_2026-02-17_eecc507b.json",
-      "timestamp": "2026-02-17T22:45:27.309881",
-      "overall_score": 10.9375
-    },
-    {
-      "pair": "openai/gpt-5.1-codex",
-      "filename": "openai_gpt-5.1-codex_2026-02-17_dfb84283.json",
-      "timestamp": "2026-02-17T22:48:21.521623",
-      "overall_score": 40.625
-    },
-    {
-      "pair": "openai/gpt-5.1-codex-mini",
-      "filename": "openai_gpt-5.1-codex-mini_2026-02-17_50b5bba2.json",
-      "timestamp": "2026-02-17T22:50:13.582790",
-      "overall_score": 40.625
-    },
-    {
-      "pair": "openai/gpt-4.1",
-      "filename": "openai_gpt-4.1_2026-02-17_5c9de5af.json",
-      "timestamp": "2026-02-17T23:03:49.768058",
-      "overall_score": 67.1875
-    },
-    {
-      "pair": "openai/gpt-4.1",
-      "filename": "openai_gpt-4.1_2026-02-17_27db9f38.json",
-      "timestamp": "2026-02-17T23:07:13.990562",
-      "overall_score": 54.6875
-    },
-    {
-      "pair": "openai/gpt-4.1-mini",
-      "filename": "openai_gpt-4.1-mini_2026-02-17_6026f0f4.json",
-      "timestamp": "2026-02-17T23:09:18.313608",
-      "overall_score": 60.9375
-    },
-    {
-      "pair": "openai/gpt-5.2",
-      "filename": "openai_gpt-5.2_2026-02-17_ac633924.json",
-      "timestamp": "2026-02-17T23:12:20.943835",
-      "overall_score": 70.3125
-    },
-    {
-      "pair": "openai/gpt-5",
-      "filename": "openai_gpt-5_2026-02-17_807fc47c.json",
-      "timestamp": "2026-02-17T23:31:34.756713",
-      "overall_score": 62.5
-    },
-    {
-      "pair": "openai/gpt-5-mini",
-      "filename": "openai_gpt-5-mini_2026-02-17_b0aa8771.json",
-      "timestamp": "2026-02-17T23:40:59.802576",
-      "overall_score": 67.1875
-    },
-    {
-      "pair": "openai/gpt-4.1-nano",
-      "filename": "openai_gpt-4.1-nano_2026-02-17_386b021d.json",
-      "timestamp": "2026-02-17T23:43:48.358790",
-      "overall_score": 50.0
-    },
-    {
-      "pair": "openai/o4-mini",
-      "filename": "openai_o4-mini_2026-02-17_988bd548.json",
-      "timestamp": "2026-02-17T23:44:03.725102",
-      "overall_score": 10.9375
-    },
-    {
-      "pair": "openai/gpt-5.1-codex",
-      "filename": "openai_gpt-5.1-codex_2026-02-17_84da61f8.json",
-      "timestamp": "2026-02-17T23:47:01.441015",
-      "overall_score": 37.5
-    },
-    {
-      "pair": "openai/gpt-5.1-codex-mini",
-      "filename": "openai_gpt-5.1-codex-mini_2026-02-17_042e54ec.json",
-      "timestamp": "2026-02-17T23:49:11.804796",
-      "overall_score": 40.625
-    },
-    {
-      "pair": "openai/gpt-5.1-codex",
-      "filename": "openai_gpt-5.1-codex_2026-02-18_5bb807ba.json",
-      "timestamp": "2026-02-18T21:13:04.860259",
-      "overall_score": 37.5
-    },
-    {
-      "pair": "openai/gpt-5.1-codex",
-      "filename": "openai_gpt-5.1-codex_2026-02-18_088dd440.json",
-      "timestamp": "2026-02-18T21:59:57.298362",
-      "overall_score": 57.8125
-    },
-    {
-      "pair": "openai/gpt-5.1-codex",
-      "filename": "openai_gpt-5.1-codex_2026-02-18_27c06eac.json",
-      "timestamp": "2026-02-18T22:42:41.003254",
-      "overall_score": 40.625
-    },
-    {
-      "pair": "openai/gpt-5.1-codex",
-      "filename": "openai_gpt-5.1-codex_2026-02-18_5395595c.json",
-      "timestamp": "2026-02-18T23:15:46.464906",
-      "overall_score": 53.125
-    },
-    {
-      "pair": "openai/gpt-5.1-codex",
-      "filename": "openai_gpt-5.1-codex_2026-02-19_2b86f072.json",
-      "timestamp": "2026-02-19T00:01:33.500214",
-      "overall_score": 64.0625
-    },
-    {
-      "pair": "gemini/gemini-2.5-pro",
-      "filename": "gemini_gemini-2.5-pro_2026-02-19_ad2deaaa.json",
-      "timestamp": "2026-02-19T00:26:40.529208",
-      "overall_score": 81.25
-    },
-    {
-      "pair": "openai/gpt-4.1-mini",
-      "filename": "openai_gpt-4.1-mini_2026-02-17_a0a7d44e.json",
-      "timestamp": "2026-02-17T20:42:50.137327",
-      "overall_score": 71.875
-    },
-    {
-      "pair": "openai/gpt-4.1-nano",
-      "filename": "openai_gpt-4.1-nano_2026-02-17_8a1c09d9.json",
-      "timestamp": "2026-02-17T20:41:55.766385",
-      "overall_score": 57.8125
-    },
-    {
-      "pair": "openai/gpt-5-mini",
-      "filename": "openai_gpt-5-mini_2026-02-17_39c2ef5e.json",
-      "timestamp": "2026-02-17T20:52:08.391266",
-      "overall_score": 10.9375
-    },
-    {
-      "pair": "openai/gpt-5-mini",
-      "filename": "openai_gpt-5-mini_2026-02-17_612ddadd.json",
-      "timestamp": "2026-02-17T20:41:20.277401",
-      "overall_score": 10.9375
-    },
-    {
-      "pair": "openai/gpt-5-mini",
-      "filename": "openai_gpt-5-mini_2026-02-17_89d73bc8.json",
-      "timestamp": "2026-02-17T21:02:26.569315",
-      "overall_score": 65.625
-    },
-    {
-      "pair": "openai/gpt-5.1-codex-mini",
-      "filename": "openai_gpt-5.1-codex-mini_2026-02-17_91f47beb.json",
-      "timestamp": "2026-02-17T20:34:43.899199",
-      "overall_score": 10.9375
-    },
-    {
-      "pair": "openai/gpt-5.1-codex",
-      "filename": "openai_gpt-5.1-codex_2026-02-17_00e60298.json",
-      "timestamp": "2026-02-17T20:34:42.657807",
-      "overall_score": 10.9375
-    },
-    {
-      "pair": "openai/gpt-5.2",
-      "filename": "openai_gpt-5.2_2026-02-17_dd8ce3c5.json",
-      "timestamp": "2026-02-17T20:58:07.743492",
-      "overall_score": 57.8125
-    },
-    {
-      "pair": "openai/gpt-5.2",
-      "filename": "openai_gpt-5.2_2026-02-19_d4b2d2c7.json",
-      "timestamp": "2026-02-19T00:22:42.138143",
-      "overall_score": 57.8125
-    },
-    {
-      "pair": "openai/gpt-5",
-      "filename": "openai_gpt-5_2026-02-17_04b44af2.json",
-      "timestamp": "2026-02-17T20:52:06.150591",
-      "overall_score": 10.9375
-    },
-    {
-      "pair": "openai/gpt-5",
-      "filename": "openai_gpt-5_2026-02-17_f262fc9e.json",
-      "timestamp": "2026-02-17T20:41:19.546911",
-      "overall_score": 10.9375
-    },
-    {
-      "pair": "openai/o4-mini",
-      "filename": "openai_o4-mini_2026-02-17_c46cbed6.json",
-      "timestamp": "2026-02-17T20:59:06.596352",
-      "overall_score": 62.5
-    },
-    {
-      "pair": "perplexity/sonar",
-      "filename": "perplexity_sonar_2026-02-19_e0ff5a0d.json",
-      "timestamp": "2026-02-19T00:22:59.377786",
-      "overall_score": 48.4375
-    },
-    {
-      "pair": "openai/o4-mini",
-      "filename": "openai_o4-mini_2026-02-19_63ba60bf.json",
-      "timestamp": "2026-02-19T15:20:25.526670",
-      "overall_score": 62.5
-    },
-    {
-      "pair": "openai/o4-mini",
-      "filename": "openai_o4-mini_2026-02-19_de008a6a.json",
-      "timestamp": "2026-02-19T15:34:29.940394",
-      "overall_score": 73.4375
-    },
-    {
-      "pair": "openai/gpt-4.1-mini",
-      "filename": "openai_gpt-4.1-mini_2026-02-19_2ab31d8d.json",
-      "timestamp": "2026-02-19T15:35:51.058690",
-      "overall_score": 71.875
-    },
-    {
-      "pair": "openai/o4-mini",
-      "filename": "openai_o4-mini_2026-02-19_3328c6f1.json",
-      "timestamp": "2026-02-19T15:57:43.418159",
-      "overall_score": 100.0
-    },
-    {
-      "pair": "openai/gpt-4.1-mini",
-      "filename": "openai_gpt-4.1-mini_2026-02-19_16184614.json",
-      "timestamp": "2026-02-19T15:58:10.447464",
-      "overall_score": 100.0
-    },
-    {
-      "pair": "perplexity/sonar",
-      "filename": "perplexity_sonar_2026-02-19_0ea71109.json",
-      "timestamp": "2026-02-19T16:59:04.703362",
-      "overall_score": 70.3125
-    },
-    {
-      "pair": "perplexity/sonar-pro",
-      "filename": "perplexity_sonar-pro_2026-02-19_5e057581.json",
-      "timestamp": "2026-02-19T17:01:09.462596",
-      "overall_score": 68.75
-    },
-    {
-      "pair": "gemini/gemini-2.5-pro",
-      "filename": "gemini_gemini-2.5-pro_2026-02-19_981722aa.json",
-      "timestamp": "2026-02-19T17:05:36.575896",
-      "overall_score": 75.0
-    },
-    {
-      "pair": "gemini/gemini-3-flash-preview",
-      "filename": "gemini_gemini-3-flash-preview_2026-02-19_a113e6d6.json",
-      "timestamp": "2026-02-19T17:09:42.077978",
-      "overall_score": 57.8125
-    },
-    {
-      "pair": "gemini/gemini-3-pro-preview",
-      "filename": "gemini_gemini-3-pro-preview_2026-02-19_746a4f48.json",
-      "timestamp": "2026-02-19T17:32:38.839496",
-      "overall_score": 62.5
-    },
-    {
-      "pair": "openai/gpt-5.1-codex",
-      "filename": "openai_gpt-5.1-codex_2026-02-20_93708eb6.json",
-      "timestamp": "2026-02-20T21:30:37.213554",
-      "overall_score": 71.92307692307692
-    },
-    {
-      "pair": "gemini/gemini-3-flash-preview",
-      "filename": "gemini_gemini-3-flash-preview_2026-02-20_9894d207.json",
-      "timestamp": "2026-02-20T21:45:00.195716",
-      "overall_score": 65.8974358974359
-    },
-    {
-      "pair": "gemini/gemini-3-pro-preview",
-      "filename": "gemini_gemini-3-pro-preview_2026-02-20_523640a8.json",
-      "timestamp": "2026-02-20T22:21:27.023355",
-      "overall_score": 76.15384615384615
-    },
-    {
-      "pair": "gemini/gemini-2.5-pro",
-      "filename": "gemini_gemini-2.5-pro_2026-02-21_f84b40d5.json",
-      "timestamp": "2026-02-21T21:38:57.616603",
-      "overall_score": 85.12820512820514
+      "pair": "gemini/gemini-2.0-flash-exp",
+      "filename": "gemini_gemini-2.0-flash-exp_2026-02-07_867361b9.json",
+      "timestamp": "2026-02-07T23:00:49.075667",
+      "overall_score": 10.9375,
+      "agents_md_mode": "with"
     },
     {
       "pair": "gemini/gemini-2.5-flash-lite",
       "filename": "gemini_gemini-2.5-flash-lite_2026-02-21_84ea2190.json",
       "timestamp": "2026-02-21T21:39:44.772778",
-      "overall_score": 86.15384615384616
+      "overall_score": 86.15384615384616,
+      "agents_md_mode": "with"
     },
     {
-      "pair": "gemini/gemini-3-flash-preview",
-      "filename": "gemini_gemini-3-flash-preview_2026-02-21_591883de.json",
-      "timestamp": "2026-02-21T21:49:55.579341",
-      "overall_score": 68.2051282051282
-    },
-    {
-      "pair": "perplexity/sonar-pro",
-      "filename": "perplexity_sonar-pro_2026-02-22_ebe09d2c.json",
-      "timestamp": "2026-02-22T12:02:08.457276",
-      "overall_score": 76.66666666666666
-    },
-    {
-      "pair": "perplexity/sonar",
-      "filename": "perplexity_sonar_2026-02-22_5fdc12aa.json",
-      "timestamp": "2026-02-22T12:06:26.303300",
-      "overall_score": 73.84615384615385
-    },
-    {
-      "pair": "gemini/gemini-2.5-pro",
-      "filename": "gemini_gemini-2.5-pro_2026-02-22_12a4ec41.json",
-      "timestamp": "2026-02-22T12:16:19.440526",
-      "overall_score": 85.12820512820514
-    },
-    {
-      "pair": "gemini/gemini-3-flash-preview",
-      "filename": "gemini_gemini-3-flash-preview_2026-02-22_646ce516.json",
-      "timestamp": "2026-02-22T12:32:49.827072",
-      "overall_score": 73.58974358974358
-    },
-    {
-      "pair": "openai/gpt-5",
-      "filename": "openai_gpt-5_2026-02-22_32bf7d33.json",
-      "timestamp": "2026-02-22T12:51:51.218020",
-      "overall_score": 82.6923076923077
-    },
-    {
-      "pair": "openai/gpt-5.1-codex",
-      "filename": "openai_gpt-5.1-codex_2026-02-22_18887497.json",
-      "timestamp": "2026-02-22T12:57:03.930017",
-      "overall_score": 82.82051282051282
-    },
-    {
-      "pair": "perplexity/sonar-reasoning-pro",
-      "filename": "perplexity_sonar-reasoning-pro_2026-02-22_6d77f4d6.json",
-      "timestamp": "2026-02-22T13:54:41.681347",
-      "overall_score": 66.15384615384615
+      "pair": "gemini/gemini-2.5-flash-lite",
+      "filename": "gemini_gemini-2.5-flash-lite_2026-02-22_1d880e25.json",
+      "timestamp": "2026-02-22T12:08:51.005848",
+      "overall_score": 83.58974358974359,
+      "agents_md_mode": "with"
     },
     {
       "pair": "gemini/gemini-2.5-flash",
-      "filename": "gemini_gemini-2.5-flash_2026-02-22_17037280.json",
-      "timestamp": "2026-02-22T17:35:18.309470",
-      "overall_score": 71.45214521452145
-    },
-    {
-      "pair": "gemini/gemini-2.5-flash",
-      "filename": "gemini_gemini-2.5-flash_2026-02-22_e071e0cc.json",
-      "timestamp": "2026-02-22T17:39:58.545423",
-      "overall_score": 74.55445544554456
-    },
-    {
-      "pair": "gemini/gemini-2.5-flash",
-      "filename": "gemini_gemini-2.5-flash_2026-02-22_b5083bd1.json",
-      "timestamp": "2026-02-22T17:50:04.571280",
-      "overall_score": 73.76237623762376
-    },
-    {
-      "pair": "gemini/gemini-2.5-flash",
-      "filename": "gemini_gemini-2.5-flash_2026-02-22_8dfb21f5.json",
-      "timestamp": "2026-02-22T17:54:03.686242",
-      "overall_score": 72.24422442244226
+      "filename": "gemini_gemini-2.5-flash_2026-02-05_309f76bb.json",
+      "timestamp": "2026-02-05T14:26:50.262340",
+      "overall_score": 81.25,
+      "agents_md_mode": "with"
     },
     {
       "pair": "gemini/gemini-2.5-flash",
       "filename": "gemini_gemini-2.5-flash_2026-02-22_127d8da2.json",
       "timestamp": "2026-02-22T18:05:37.677369",
-      "overall_score": 70.79207920792079
+      "overall_score": 70.79207920792079,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-02-22_17037280.json",
+      "timestamp": "2026-02-22T17:35:18.309470",
+      "overall_score": 71.45214521452145,
+      "agents_md_mode": "with"
     },
     {
       "pair": "gemini/gemini-2.5-flash",
       "filename": "gemini_gemini-2.5-flash_2026-02-22_1a5c2d18.json",
       "timestamp": "2026-02-22T18:09:43.027986",
-      "overall_score": 68.61386138613864
+      "overall_score": 68.61386138613864,
+      "agents_md_mode": "without"
     },
     {
-      "pair": "openai/gpt-5.1-codex",
-      "filename": "openai_gpt-5.1-codex_2026-02-22_86b60e69.json",
-      "timestamp": "2026-02-22T20:01:57.022526",
-      "overall_score": 74.1914191419142
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-02-22_4d837a59.json",
+      "timestamp": "2026-02-22T12:10:43.454112",
+      "overall_score": 76.41025641025642,
+      "agents_md_mode": "with"
     },
     {
-      "pair": "openai/gpt-5.1-codex",
-      "filename": "openai_gpt-5.1-codex_2026-02-22_f2961004.json",
-      "timestamp": "2026-02-22T20:06:04.561974",
-      "overall_score": 68.05280528052805
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-02-22_8dfb21f5.json",
+      "timestamp": "2026-02-22T17:54:03.686242",
+      "overall_score": 72.24422442244226,
+      "agents_md_mode": "without"
     },
     {
-      "pair": "openai/gpt-5.2",
-      "filename": "openai_gpt-5.2_2026-02-22_e7da1370.json",
-      "timestamp": "2026-02-22T20:43:51.997764",
-      "overall_score": 80.79207920792079
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-02-22_b5083bd1.json",
+      "timestamp": "2026-02-22T17:50:04.571280",
+      "overall_score": 73.76237623762376,
+      "agents_md_mode": "with"
     },
     {
-      "pair": "openai/gpt-5.2",
-      "filename": "openai_gpt-5.2_2026-02-22_9788b697.json",
-      "timestamp": "2026-02-22T20:47:08.306868",
-      "overall_score": 80.79207920792079
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-02-22_e071e0cc.json",
+      "timestamp": "2026-02-22T17:39:58.545423",
+      "overall_score": 74.55445544554456,
+      "agents_md_mode": "without"
     },
     {
-      "pair": "openai/gpt-5.1-codex",
-      "filename": "openai_gpt-5.1-codex_2026-02-22_f6526230.json",
-      "timestamp": "2026-02-22T20:51:42.236601",
-      "overall_score": 73.56435643564356
+      "pair": "gemini/gemini-2.5-pro",
+      "filename": "gemini_gemini-2.5-pro_2026-02-07_6e1eb727.json",
+      "timestamp": "2026-02-07T23:57:29.052605",
+      "overall_score": 64.28571428571429,
+      "agents_md_mode": "with"
     },
     {
-      "pair": "openai/gpt-5.1-codex",
-      "filename": "openai_gpt-5.1-codex_2026-02-22_b0a1403d.json",
-      "timestamp": "2026-02-22T20:55:10.795125",
-      "overall_score": 70.52805280528052
+      "pair": "gemini/gemini-2.5-pro",
+      "filename": "gemini_gemini-2.5-pro_2026-02-19_981722aa.json",
+      "timestamp": "2026-02-19T17:05:36.575896",
+      "overall_score": 75.0,
+      "agents_md_mode": "with"
     },
     {
-      "pair": "openai/gpt-5.1-codex",
-      "filename": "openai_gpt-5.1-codex_2026-02-22_6cf5cca8.json",
-      "timestamp": "2026-02-22T21:10:38.110736",
-      "overall_score": 84.05940594059406
+      "pair": "gemini/gemini-2.5-pro",
+      "filename": "gemini_gemini-2.5-pro_2026-02-19_ad2deaaa.json",
+      "timestamp": "2026-02-19T00:26:40.529208",
+      "overall_score": 81.25,
+      "agents_md_mode": "with"
     },
     {
-      "pair": "openai/gpt-5.1-codex",
-      "filename": "openai_gpt-5.1-codex_2026-02-22_6d01f85a.json",
-      "timestamp": "2026-02-22T21:14:25.663353",
-      "overall_score": 79.04290429042904
+      "pair": "gemini/gemini-2.5-pro",
+      "filename": "gemini_gemini-2.5-pro_2026-02-20_3e3a38fb.json",
+      "timestamp": "2026-02-20T21:40:44.804499",
+      "overall_score": 77.43589743589745,
+      "agents_md_mode": "with"
     },
     {
-      "pair": "gemini/gemini-3.1-pro-preview-customtools",
-      "filename": "gemini_gemini-3.1-pro-preview-customtools_2026-02-22_dc0cf6f9.json",
-      "timestamp": "2026-02-22T21:42:47.182199",
-      "overall_score": 81.48514851485149
+      "pair": "gemini/gemini-2.5-pro",
+      "filename": "gemini_gemini-2.5-pro_2026-02-21_f84b40d5.json",
+      "timestamp": "2026-02-21T21:38:57.616603",
+      "overall_score": 85.12820512820514,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-2.5-pro",
+      "filename": "gemini_gemini-2.5-pro_2026-02-22_12a4ec41.json",
+      "timestamp": "2026-02-22T12:16:19.440526",
+      "overall_score": 85.12820512820514,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-3-flash-preview",
+      "filename": "gemini_gemini-3-flash-preview_2026-02-08_b517fadc.json",
+      "timestamp": "2026-02-08T17:29:31.639744",
+      "overall_score": 100.0,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-3-flash-preview",
+      "filename": "gemini_gemini-3-flash-preview_2026-02-19_a113e6d6.json",
+      "timestamp": "2026-02-19T17:09:42.077978",
+      "overall_score": 57.8125,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-3-flash-preview",
+      "filename": "gemini_gemini-3-flash-preview_2026-02-20_9894d207.json",
+      "timestamp": "2026-02-20T21:45:00.195716",
+      "overall_score": 65.8974358974359,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-3-flash-preview",
+      "filename": "gemini_gemini-3-flash-preview_2026-02-21_591883de.json",
+      "timestamp": "2026-02-21T21:49:55.579341",
+      "overall_score": 68.2051282051282,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-3-flash-preview",
+      "filename": "gemini_gemini-3-flash-preview_2026-02-22_646ce516.json",
+      "timestamp": "2026-02-22T12:32:49.827072",
+      "overall_score": 73.58974358974358,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-3-pro-preview",
+      "filename": "gemini_gemini-3-pro-preview_2026-02-05_6d5eef49.json",
+      "timestamp": "2026-02-05T15:03:35.876530",
+      "overall_score": 70.3125,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-3-pro-preview",
+      "filename": "gemini_gemini-3-pro-preview_2026-02-19_746a4f48.json",
+      "timestamp": "2026-02-19T17:32:38.839496",
+      "overall_score": 62.5,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-3-pro-preview",
+      "filename": "gemini_gemini-3-pro-preview_2026-02-20_523640a8.json",
+      "timestamp": "2026-02-20T22:21:27.023355",
+      "overall_score": 76.15384615384615,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-3-pro-preview",
+      "filename": "gemini_gemini-3-pro-preview_2026-02-20_bb2f2a2a.json",
+      "timestamp": "2026-02-20T21:41:29.714530",
+      "overall_score": 69.1025641025641,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-3-pro-preview",
+      "filename": "gemini_gemini-3-pro-preview_2026-02-22_a1e0e45c.json",
+      "timestamp": "2026-02-22T12:25:31.263442",
+      "overall_score": 76.15384615384615,
+      "agents_md_mode": "with"
     },
     {
       "pair": "gemini/gemini-3.1-pro-preview-customtools",
       "filename": "gemini_gemini-3.1-pro-preview-customtools_2026-02-22_b4ca0cbb.json",
       "timestamp": "2026-02-22T23:21:26.304384",
-      "overall_score": 61.386138613861384
+      "overall_score": 61.386138613861384,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "gemini/gemini-3.1-pro-preview-customtools",
+      "filename": "gemini_gemini-3.1-pro-preview-customtools_2026-02-22_dc0cf6f9.json",
+      "timestamp": "2026-02-22T21:42:47.182199",
+      "overall_score": 81.48514851485149,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-4.1-mini",
+      "filename": "openai_gpt-4.1-mini_2026-02-17_3b59b622.json",
+      "timestamp": "2026-02-17T22:06:50.400728",
+      "overall_score": 60.9375,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-4.1-mini",
+      "filename": "openai_gpt-4.1-mini_2026-02-17_6026f0f4.json",
+      "timestamp": "2026-02-17T23:09:18.313608",
+      "overall_score": 60.9375,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-4.1-mini",
+      "filename": "openai_gpt-4.1-mini_2026-02-17_a0a7d44e.json",
+      "timestamp": "2026-02-17T20:42:50.137327",
+      "overall_score": 71.875,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-4.1-mini",
+      "filename": "openai_gpt-4.1-mini_2026-02-19_16184614.json",
+      "timestamp": "2026-02-19T15:58:10.447464",
+      "overall_score": 100.0,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-4.1-mini",
+      "filename": "openai_gpt-4.1-mini_2026-02-19_2ab31d8d.json",
+      "timestamp": "2026-02-19T15:35:51.058690",
+      "overall_score": 71.875,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-4.1-mini",
+      "filename": "openai_gpt-4.1-mini_2026-02-19_2e457fe0.json",
+      "timestamp": "2026-02-19T15:18:52.307632",
+      "overall_score": 57.8125,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-4.1-nano",
+      "filename": "openai_gpt-4.1-nano_2026-02-17_386b021d.json",
+      "timestamp": "2026-02-17T23:43:48.358790",
+      "overall_score": 50.0,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-4.1-nano",
+      "filename": "openai_gpt-4.1-nano_2026-02-17_84c27934.json",
+      "timestamp": "2026-02-17T22:09:23.201150",
+      "overall_score": 46.875,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-4.1-nano",
+      "filename": "openai_gpt-4.1-nano_2026-02-17_8a1c09d9.json",
+      "timestamp": "2026-02-17T20:41:55.766385",
+      "overall_score": 57.8125,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-4.1",
+      "filename": "openai_gpt-4.1_2026-02-17_2008bda0.json",
+      "timestamp": "2026-02-17T22:04:35.355931",
+      "overall_score": 48.4375,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-4.1",
+      "filename": "openai_gpt-4.1_2026-02-17_27db9f38.json",
+      "timestamp": "2026-02-17T23:07:13.990562",
+      "overall_score": 54.6875,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-4.1",
+      "filename": "openai_gpt-4.1_2026-02-17_5c9de5af.json",
+      "timestamp": "2026-02-17T23:03:49.768058",
+      "overall_score": 67.1875,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-4.1",
+      "filename": "openai_gpt-4.1_2026-02-17_daad9e8a.json",
+      "timestamp": "2026-02-17T20:46:47.677107",
+      "overall_score": 62.5,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-4.1",
+      "filename": "openai_gpt-4.1_2026-02-20_bc833a97.json",
+      "timestamp": "2026-02-20T21:30:15.833305",
+      "overall_score": 84.61538461538461,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5-mini",
+      "filename": "openai_gpt-5-mini_2026-02-17_39c2ef5e.json",
+      "timestamp": "2026-02-17T20:52:08.391266",
+      "overall_score": 10.9375,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5-mini",
+      "filename": "openai_gpt-5-mini_2026-02-17_612ddadd.json",
+      "timestamp": "2026-02-17T20:41:20.277401",
+      "overall_score": 10.9375,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5-mini",
+      "filename": "openai_gpt-5-mini_2026-02-17_89d73bc8.json",
+      "timestamp": "2026-02-17T21:02:26.569315",
+      "overall_score": 65.625,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5-mini",
+      "filename": "openai_gpt-5-mini_2026-02-17_b0aa8771.json",
+      "timestamp": "2026-02-17T23:40:59.802576",
+      "overall_score": 67.1875,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5-mini",
+      "filename": "openai_gpt-5-mini_2026-02-17_d6cfeccd.json",
+      "timestamp": "2026-02-17T22:45:13.380479",
+      "overall_score": 57.8125,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5-mini",
+      "filename": "openai_gpt-5-mini_2026-02-22_7a4d6d12.json",
+      "timestamp": "2026-02-22T12:47:42.075486",
+      "overall_score": 87.82051282051282,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5-nano",
+      "filename": "openai_gpt-5-nano_2026-02-22_eae3ebee.json",
+      "timestamp": "2026-02-22T12:49:07.169956",
+      "overall_score": 76.7948717948718,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex-mini",
+      "filename": "openai_gpt-5.1-codex-mini_2026-02-17_042e54ec.json",
+      "timestamp": "2026-02-17T23:49:11.804796",
+      "overall_score": 40.625,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex-mini",
+      "filename": "openai_gpt-5.1-codex-mini_2026-02-17_50b5bba2.json",
+      "timestamp": "2026-02-17T22:50:13.582790",
+      "overall_score": 40.625,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex-mini",
+      "filename": "openai_gpt-5.1-codex-mini_2026-02-17_91f47beb.json",
+      "timestamp": "2026-02-17T20:34:43.899199",
+      "overall_score": 10.9375,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex-mini",
+      "filename": "openai_gpt-5.1-codex-mini_2026-02-20_89d4997a.json",
+      "timestamp": "2026-02-20T21:29:21.501329",
+      "overall_score": 75.3846153846154,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex-mini",
+      "filename": "openai_gpt-5.1-codex-mini_2026-02-22_20e8944e.json",
+      "timestamp": "2026-02-22T12:56:56.833963",
+      "overall_score": 68.58974358974359,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-17_00e60298.json",
+      "timestamp": "2026-02-17T20:34:42.657807",
+      "overall_score": 10.9375,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-17_84da61f8.json",
+      "timestamp": "2026-02-17T23:47:01.441015",
+      "overall_score": 37.5,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-17_dfb84283.json",
+      "timestamp": "2026-02-17T22:48:21.521623",
+      "overall_score": 40.625,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-18_088dd440.json",
+      "timestamp": "2026-02-18T21:59:57.298362",
+      "overall_score": 57.8125,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-18_27c06eac.json",
+      "timestamp": "2026-02-18T22:42:41.003254",
+      "overall_score": 40.625,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-18_5395595c.json",
+      "timestamp": "2026-02-18T23:15:46.464906",
+      "overall_score": 53.125,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-18_5bb807ba.json",
+      "timestamp": "2026-02-18T21:13:04.860259",
+      "overall_score": 37.5,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-19_2b86f072.json",
+      "timestamp": "2026-02-19T00:01:33.500214",
+      "overall_score": 64.0625,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-20_93708eb6.json",
+      "timestamp": "2026-02-20T21:30:37.213554",
+      "overall_score": 71.92307692307692,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-22_0cb26019.json",
+      "timestamp": "2026-02-22T20:46:05.164446",
+      "overall_score": 73.1023102310231,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-22_18887497.json",
+      "timestamp": "2026-02-22T12:57:03.930017",
+      "overall_score": 82.82051282051282,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-22_6cf5cca8.json",
+      "timestamp": "2026-02-22T21:10:38.110736",
+      "overall_score": 84.05940594059406,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-22_6d01f85a.json",
+      "timestamp": "2026-02-22T21:14:25.663353",
+      "overall_score": 79.04290429042904,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-22_86b60e69.json",
+      "timestamp": "2026-02-22T20:01:57.022526",
+      "overall_score": 74.1914191419142,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-22_b0a1403d.json",
+      "timestamp": "2026-02-22T20:55:10.795125",
+      "overall_score": 70.52805280528052,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-22_bbf0c65f.json",
+      "timestamp": "2026-02-22T20:43:23.427477",
+      "overall_score": 72.01320132013201,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-22_f2961004.json",
+      "timestamp": "2026-02-22T20:06:04.561974",
+      "overall_score": 68.05280528052805,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "openai/gpt-5.1-codex",
+      "filename": "openai_gpt-5.1-codex_2026-02-22_f6526230.json",
+      "timestamp": "2026-02-22T20:51:42.236601",
+      "overall_score": 73.56435643564356,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.2",
+      "filename": "openai_gpt-5.2_2026-02-17_9fa402e8.json",
+      "timestamp": "2026-02-17T20:40:51.392879",
+      "overall_score": 67.1875,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.2",
+      "filename": "openai_gpt-5.2_2026-02-17_ac633924.json",
+      "timestamp": "2026-02-17T23:12:20.943835",
+      "overall_score": 70.3125,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.2",
+      "filename": "openai_gpt-5.2_2026-02-17_c9564eca.json",
+      "timestamp": "2026-02-17T22:12:07.161439",
+      "overall_score": 70.3125,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.2",
+      "filename": "openai_gpt-5.2_2026-02-17_dd8ce3c5.json",
+      "timestamp": "2026-02-17T20:58:07.743492",
+      "overall_score": 57.8125,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.2",
+      "filename": "openai_gpt-5.2_2026-02-19_d4b2d2c7.json",
+      "timestamp": "2026-02-19T00:22:42.138143",
+      "overall_score": 57.8125,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.2",
+      "filename": "openai_gpt-5.2_2026-02-20_e8e854fd.json",
+      "timestamp": "2026-02-20T21:29:31.615896",
+      "overall_score": 80.76923076923077,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.2",
+      "filename": "openai_gpt-5.2_2026-02-22_00e9b999.json",
+      "timestamp": "2026-02-22T20:03:48.159308",
+      "overall_score": 74.65346534653466,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "openai/gpt-5.2",
+      "filename": "openai_gpt-5.2_2026-02-22_4010d211.json",
+      "timestamp": "2026-02-22T20:00:47.640661",
+      "overall_score": 80.79207920792079,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.2",
+      "filename": "openai_gpt-5.2_2026-02-22_9788b697.json",
+      "timestamp": "2026-02-22T20:47:08.306868",
+      "overall_score": 80.79207920792079,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "openai/gpt-5.2",
+      "filename": "openai_gpt-5.2_2026-02-22_be231b6c.json",
+      "timestamp": "2026-02-22T12:44:11.809081",
+      "overall_score": 75.64102564102564,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.2",
+      "filename": "openai_gpt-5.2_2026-02-22_e7da1370.json",
+      "timestamp": "2026-02-22T20:43:51.997764",
+      "overall_score": 80.79207920792079,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5",
+      "filename": "openai_gpt-5_2026-02-17_04b44af2.json",
+      "timestamp": "2026-02-17T20:52:06.150591",
+      "overall_score": 10.9375,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5",
+      "filename": "openai_gpt-5_2026-02-17_2dafe4bf.json",
+      "timestamp": "2026-02-17T21:10:38.359647",
+      "overall_score": 48.4375,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5",
+      "filename": "openai_gpt-5_2026-02-17_807fc47c.json",
+      "timestamp": "2026-02-17T23:31:34.756713",
+      "overall_score": 62.5,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5",
+      "filename": "openai_gpt-5_2026-02-17_9ebef178.json",
+      "timestamp": "2026-02-17T22:37:43.044687",
+      "overall_score": 62.5,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5",
+      "filename": "openai_gpt-5_2026-02-17_f262fc9e.json",
+      "timestamp": "2026-02-17T20:41:19.546911",
+      "overall_score": 10.9375,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5",
+      "filename": "openai_gpt-5_2026-02-22_32bf7d33.json",
+      "timestamp": "2026-02-22T12:51:51.218020",
+      "overall_score": 82.6923076923077,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/o4-mini",
+      "filename": "openai_o4-mini_2026-02-17_988bd548.json",
+      "timestamp": "2026-02-17T23:44:03.725102",
+      "overall_score": 10.9375,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/o4-mini",
+      "filename": "openai_o4-mini_2026-02-17_a3ef1abf.json",
+      "timestamp": "2026-02-17T20:52:11.270809",
+      "overall_score": 10.9375,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/o4-mini",
+      "filename": "openai_o4-mini_2026-02-17_c46cbed6.json",
+      "timestamp": "2026-02-17T20:59:06.596352",
+      "overall_score": 62.5,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/o4-mini",
+      "filename": "openai_o4-mini_2026-02-17_eecc507b.json",
+      "timestamp": "2026-02-17T22:45:27.309881",
+      "overall_score": 10.9375,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/o4-mini",
+      "filename": "openai_o4-mini_2026-02-19_3328c6f1.json",
+      "timestamp": "2026-02-19T15:57:43.418159",
+      "overall_score": 100.0,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/o4-mini",
+      "filename": "openai_o4-mini_2026-02-19_63ba60bf.json",
+      "timestamp": "2026-02-19T15:20:25.526670",
+      "overall_score": 62.5,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/o4-mini",
+      "filename": "openai_o4-mini_2026-02-19_de008a6a.json",
+      "timestamp": "2026-02-19T15:34:29.940394",
+      "overall_score": 73.4375,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "perplexity/llama-3.1-sonar-large-128k-online",
+      "filename": "perplexity_llama-3.1-sonar-large-128k-online_2026-02-07_28a73d34.json",
+      "timestamp": "2026-02-07T23:00:40.776443",
+      "overall_score": 10.9375,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "perplexity/sonar-pro",
+      "filename": "perplexity_sonar-pro_2026-02-08_a755ae49.json",
+      "timestamp": "2026-02-08T17:49:00.698529",
+      "overall_score": 100.0,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "perplexity/sonar-pro",
+      "filename": "perplexity_sonar-pro_2026-02-19_5e057581.json",
+      "timestamp": "2026-02-19T17:01:09.462596",
+      "overall_score": 68.75,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "perplexity/sonar-pro",
+      "filename": "perplexity_sonar-pro_2026-02-20_843e7dfb.json",
+      "timestamp": "2026-02-20T21:36:46.899223",
+      "overall_score": 71.28205128205128,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "perplexity/sonar-pro",
+      "filename": "perplexity_sonar-pro_2026-02-22_ebe09d2c.json",
+      "timestamp": "2026-02-22T12:02:08.457276",
+      "overall_score": 76.66666666666666,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "perplexity/sonar-reasoning-pro",
+      "filename": "perplexity_sonar-reasoning-pro_2026-02-07_16b4589e.json",
+      "timestamp": "2026-02-07T23:41:45.707931",
+      "overall_score": 67.1875,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "perplexity/sonar-reasoning-pro",
+      "filename": "perplexity_sonar-reasoning-pro_2026-02-22_6d77f4d6.json",
+      "timestamp": "2026-02-22T13:54:41.681347",
+      "overall_score": 66.15384615384615,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "perplexity/sonar",
+      "filename": "perplexity_sonar_2026-02-08_7676e2a0.json",
+      "timestamp": "2026-02-08T13:44:16.236968",
+      "overall_score": 75.0,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "perplexity/sonar",
+      "filename": "perplexity_sonar_2026-02-19_0ea71109.json",
+      "timestamp": "2026-02-19T16:59:04.703362",
+      "overall_score": 70.3125,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "perplexity/sonar",
+      "filename": "perplexity_sonar_2026-02-19_e0ff5a0d.json",
+      "timestamp": "2026-02-19T00:22:59.377786",
+      "overall_score": 48.4375,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "perplexity/sonar",
+      "filename": "perplexity_sonar_2026-02-20_2aba8afd.json",
+      "timestamp": "2026-02-20T21:37:01.643843",
+      "overall_score": 67.94871794871796,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "perplexity/sonar",
+      "filename": "perplexity_sonar_2026-02-22_4401feaf.json",
+      "timestamp": "2026-02-22T17:47:24.320134",
+      "overall_score": 63.99339933993399,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "perplexity/sonar",
+      "filename": "perplexity_sonar_2026-02-22_5ab0603e.json",
+      "timestamp": "2026-02-22T17:33:04.048276",
+      "overall_score": 69.27392739273928,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "perplexity/sonar",
+      "filename": "perplexity_sonar_2026-02-22_5fdc12aa.json",
+      "timestamp": "2026-02-22T12:06:26.303300",
+      "overall_score": 73.84615384615385,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "perplexity/sonar",
+      "filename": "perplexity_sonar_2026-02-22_627d8eb0.json",
+      "timestamp": "2026-02-22T18:06:40.071932",
+      "overall_score": 76.23762376237624,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "perplexity/sonar",
+      "filename": "perplexity_sonar_2026-02-22_9a8642fd.json",
+      "timestamp": "2026-02-22T17:34:55.610981",
+      "overall_score": 73.53135313531352,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "perplexity/sonar",
+      "filename": "perplexity_sonar_2026-02-22_9d76be59.json",
+      "timestamp": "2026-02-22T18:04:03.567081",
+      "overall_score": 77.22772277227723,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "perplexity/sonar",
+      "filename": "perplexity_sonar_2026-02-22_c75233f7.json",
+      "timestamp": "2026-02-22T17:48:53.322930",
+      "overall_score": 63.00330033003301,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_7cbcf5f1.json",
+      "timestamp": "2026-02-23T14:59:53.341756",
+      "overall_score": 81.81518151815183,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_09efb741.json",
+      "timestamp": "2026-02-23T15:03:16.127923",
+      "overall_score": 84.78547854785478,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_112891c0.json",
+      "timestamp": "2026-02-23T15:57:30.036717",
+      "overall_score": 81.81518151815183,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_ba1071b5.json",
+      "timestamp": "2026-02-23T16:00:44.699957",
+      "overall_score": 81.81518151815183,
+      "agents_md_mode": "without"
     }
   ]
 }
