@@ -45,6 +45,19 @@ export interface ContextData {
     truncated?: boolean;
 }
 
+/** Tool group start data (v1.16.0) */
+export interface ToolGroupStartData {
+    iteration?: number;
+    count?: number;
+}
+
+/** Tool group end data (v1.16.0) */
+export interface ToolGroupEndData {
+    iteration?: number;
+    tools?: string[];
+    all_succeeded?: boolean;
+}
+
 /** Consent resolution event data (for 'consent:resolved') */
 export interface ConsentResolvedData {
     filepath?: string;
@@ -68,8 +81,8 @@ export interface StreamEvents {
     'stream:tool_result': (data: ToolResultData) => void;
     'stream:context_injected': (data: ContextData) => void;
     'stream:display_file': (filepath: string) => void;
-    'stream:tool_group_start': (data: string) => void;
-    'stream:tool_group_end': (data: string) => void;
+    'stream:tool_group_start': (data: ToolGroupStartData) => void;
+    'stream:tool_group_end': (data: ToolGroupEndData) => void;
     'stream:status': (content: string) => void;
     'stream:done': (content: string) => void;
     'stream:error': (content: string) => void;

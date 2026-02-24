@@ -1023,6 +1023,18 @@ export class HttpClient {
                     content: '',
                     metadata: event.data  // Contains {filepath: string}
                 };
+            case 'tool_group_start':
+                // v1.16.0: Start of a tool iteration group
+                return {
+                    type: 'tool_group_start',
+                    content: typeof event.data === 'object' ? JSON.stringify(event.data) : (event.data || '')
+                };
+            case 'tool_group_end':
+                // v1.16.0: End of a tool iteration group
+                return {
+                    type: 'tool_group_end',
+                    content: typeof event.data === 'object' ? JSON.stringify(event.data) : (event.data || '')
+                };
             case 'error':
                 return { type: 'error', content: event.data || 'Unknown error' };
             case 'info':

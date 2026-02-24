@@ -38,11 +38,11 @@ export function processStreamEvent(event: StreamEvent, eventBus: ChatEventBus): 
             break;
 
         case 'tool_group_start':
-            eventBus.emit('stream:tool_group_start', event.content);
+            processToolGroupStart(event.content, eventBus);
             break;
 
         case 'tool_group_end':
-            eventBus.emit('stream:tool_group_end', event.content);
+            processToolGroupEnd(event.content, eventBus);
             break;
 
         case 'tool_call':
@@ -130,6 +130,34 @@ function processToolResult(content: string, eventBus: ChatEventBus): void {
         });
     } catch {
         console.warn('Failed to parse tool_result event:', content);
+    }
+}
+
+/**
+ * Parse and emit tool group start event.
+ */
+function processToolGroupStart(content: string, eventBus: ChatEventBus): void {
+    try {
+        const data = JSON.parse(content);
+        eventBus.emit('stream:tool_group_start', data);
+    } catch {
+        console.warn('Failed to parse tool_group_start event:', content);
+        // Fallback: emit empty object to prevent crashes
+        eventBus.emit('stream:tool_group_start', {});
+    }
+}
+
+/**
+ * Parse and emit tool group end event.
+ */
+function processToolGroupEnd(content: string, eventBus: ChatEventBus): void {
+    try {
+        const data = JSON.parse(content);
+        eventBus.emit('stream:tool_group_end', data);
+    } catch {
+        console.warn('Failed to parse tool_group_end event:', content);
+        // Fallback: emit empty object to prevent crashes
+        eventBus.emit('stream:tool_group_end', {});
     }
 }
 
