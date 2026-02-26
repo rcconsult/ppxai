@@ -98,8 +98,9 @@ jobs:
           git fetch origin gh-pages:gh-pages --force || true
 
           # Remove stale "(Latest)" from previous version titles
+          # mike list output format varies; strip quotes and brackets to extract clean version
           mike list 2>/dev/null | grep "(Latest)" | grep -v "$VERSION" | while read -r line; do
-            OLD_VER=$(echo "$line" | awk '{print $1}')
+            OLD_VER=$(echo "$line" | awk '{print $1}' | tr -d '"' | tr -d '[' | tr -d ']')
             if [ -n "$OLD_VER" ] && [ "$OLD_VER" != "$VERSION" ]; then
               echo "Retitling $OLD_VER to remove stale (Latest) label"
               mike retitle --push "$OLD_VER" "$OLD_VER"
