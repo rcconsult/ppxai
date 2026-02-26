@@ -525,36 +525,35 @@ ppxai/tui/                     # New module (Textual-based)
 
 ---
 
-## Planned (v1.16.x)
+## Completed (v1.16.x)
 
-### v1.16.0 - Profile-Driven Tool Loop & File Navigation
+### v1.16.0 - Profile-Driven Tool Loop
 
-**Status:** In Progress
+**Status:** ✅ Released (2026-02-26)
 **Branch:** feature/v1.16.0
-**Detailed Plan:** [docs/TODO-v1.16.0.md](docs/TODO-v1.16.0.md) (single source of truth)
+**Release Notes:** [docs/RELEASE-NOTES-v1.16.0.md](docs/RELEASE-NOTES-v1.16.0.md)
 
 **Why major version bump:** Changes to `chat.py` tool loop affect every provider and every client.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **Session context reset** | Strip assistant/tool messages on model switch (B1) | ✅ Done |
-| **Per-model iteration limits** | `ModelProfile.max_tool_iterations` (B2) | ✅ Done |
-| **Belt-and-suspenders** | Tool hints injected for fallback-enabled native profiles (B3) | ✅ Done |
-| **Session pollution detection** | Bigram similarity check after model switch (B7) | ✅ Done |
-| **SSE disconnect detection** | Cancel background tasks on client disconnect (B11) | ✅ Done |
-| **`/ls` command** | List files with sizes, modified time, all 3 clients + HTTP | ✅ Done |
-| **`/tree` command** | Render directory tree, all 3 clients + HTTP | ✅ Done |
-| **Partial credit scoring** | Benchmark scoring 0.0-1.0 instead of binary (A12/B9) | ✅ Done |
-| **Agentic benchmark tests** | multi_file_review, claim_without_action, consecutive_tool_loop, time_to_first_tool_call (B4-B8) | ✅ Done |
-| **Profile-driven routing** | Replace binary `use_native_tools` with `ModelProfile` lookup in `chat.py` | ⏳ Planned |
-| **`fallback_on_empty`** | Adaptive fallback: native → prompt-based mid-conversation | ⏳ Planned |
-| **Proper `tool` role messages** | Replace synthetic assistant/user pairs with `tool` role + `tool_call_id` | ⏳ Planned |
-| **Multi-tool support** | Process all native tool calls (not just first) when profile allows | ⏳ Planned |
-| **Grouped tool call UI** | `TOOL_GROUP_START/END` events, collapsible bubbles in all clients | ⏳ Planned |
-| **Config overrides** | `tool_calling` settings per model in ppxai-config.json | ⏳ Planned |
-| **`/model info`** | Show active profile for current model | ⏳ Planned |
-| **Provider hierarchy** | Shared ABC for OpenAINative/Gemini, remove `hasattr` guards | ⏳ Planned |
-| **Session migration** | v1.15.x sessions load in v1.16.0 without data loss | ⏳ Planned |
+| **Provider hierarchy** | `BaseProvider` ABC for OpenAINative/Gemini, remove `hasattr` guards | ✅ Done |
+| **Profile-driven routing** | Replace binary `use_native_tools` with `ModelProfile` lookup in `chat.py` | ✅ Done |
+| **`fallback_on_empty`** | Adaptive fallback: native → prompt-based mid-conversation | ✅ Done |
+| **Proper `tool` role messages** | Replace synthetic assistant/user pairs with `tool` role + `tool_call_id` | ✅ Done |
+| **Multi-tool support** | Process all native tool calls (not just first) when profile allows | ✅ Done |
+| **Grouped tool call UI** | `TOOL_GROUP_START/END` events, collapsible bubbles in all clients | ✅ Done |
+| **Config overrides** | `tool_calling` settings per model in ppxai-config.json + AGENTS.md | ✅ Done |
+| **`/model info`** | Show active profile for current model with source attribution | ✅ Done |
+| **Session migration** | v1.15.x sessions load in v1.16.0 without data loss | ✅ Done |
+| **Session context reset** | Strip assistant/tool messages on model switch | ✅ Done |
+| **Per-model iteration limits** | `ModelProfile.max_tool_iterations` | ✅ Done |
+| **Belt-and-suspenders** | Tool hints injected for fallback-enabled native profiles | ✅ Done |
+| **Session pollution detection** | Bigram similarity check after model switch | ✅ Done |
+| **SSE disconnect detection** | Cancel background tasks on client disconnect | ✅ Done |
+| **`/ls` and `/tree` commands** | Directory listing and tree in all 3 clients + HTTP | ✅ Done |
+| **Benchmark v2** | 36 tests/9 categories, AGENTS.md delta testing, partial credit | ✅ Done |
+| **1,536 tests passing** | 187 new tests (provider hierarchy, routing, tool messages, config) | ✅ Done |
 
 **Gaps addressed (from MODEL-BEHAVIOR-ANALYSIS.md):**
 1. Binary decision at wrong layer → Profile-driven routing
@@ -563,11 +562,14 @@ ppxai/tui/                     # New module (Textual-based)
 4. No response deduplication → JSON stripping
 5. Static provider capabilities → Adaptive profiles with fallback
 
+---
+
+## Planned (v1.16.1+)
+
 ### v1.16.1 - ppxaide Interactive File Tree
 
 **Status:** Planned
 **Effort:** 5 days
-**See:** `docs/TODO-v1.16.0.md` Phase 1
 
 | Feature | Description | Status |
 |---------|-------------|--------|

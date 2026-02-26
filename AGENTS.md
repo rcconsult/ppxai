@@ -296,13 +296,23 @@ The web tools (`get_weather`, `fetch_url`, `web_search`) support corporate proxy
 
 ### Current Version: v1.16.0
 
+**v1.16.0 Features:**
+- **NEW:** Profile-driven tool loop — `ToolCallingProfile.mode` replaces binary `native_tool_calling` decision
+- **NEW:** Proper `tool` role messages — native mode uses `tool` role + `tool_call_id` instead of synthetic pairs
+- **NEW:** Multi-tool support — all native tool calls processed per iteration (profile-gated)
+- **NEW:** Agent UI noise reduction — `TOOL_GROUP_START/END` events, collapsible groups in all 4 clients
+- **NEW:** Per-model `tool_calling` config overrides (3-layer: built-in → AGENTS.md → ppxai-config.json)
+- **NEW:** `/model info` command — shows effective profile with source attribution
+- **NEW:** `/ls` and `/tree` commands — directory listing in all 3 clients + HTTP endpoints
+- **NEW:** Benchmark v2 — 36 tests across 9 categories, AGENTS.md delta testing, partial credit scoring
+- **NEW:** `BaseProvider` ABC — all providers inherit shared interface, `hasattr` guards eliminated
+- **FIX:** SSE event type dispatch — side-channel events emit correct EventType
+- **FIX:** Consent deadlock — SSE generator uses racing poll pattern
+
 **v1.15.6 Features:**
 - **NEW:** Native OpenAI provider (`openai_native.py`) — Chat Completions + Responses API routing
-- **NEW:** Model profile system — 37 built-in profiles for 27 models (tool calling strategy, API routing, benchmark tier)
+- **NEW:** Model profile system — 37 built-in profiles for 27 models
 - **NEW:** Brace-counting JSON parser — handles nested braces in apply_patch diffs
-- **FIX:** Codex models use native function calling via Responses API with belt-and-suspenders fallback
-- **FIX:** AGENTS.md hints injected for native tool calling mode (was prompt-based only)
-- **FIX:** Benchmark runner bypasses engine tool pipeline for accurate scoring
 
 **v1.15.5 Features:**
 - **CHANGE:** Multi-line chat input — Enter inserts newlines, Ctrl+Enter submits

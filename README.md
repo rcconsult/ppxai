@@ -1,6 +1,6 @@
 # ppxai - Multi-LLM Interface for Developers
 
-![Version](https://img.shields.io/badge/version-1.16.0--dev-blue) ![Tests](https://img.shields.io/badge/tests-1349%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
+![Version](https://img.shields.io/badge/version-1.16.0-blue) ![Tests](https://img.shields.io/badge/tests-1536%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
 
 **Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
 
@@ -57,7 +57,7 @@ ppxai-desktop
 **Linux Desktop Integration (v1.15.5):**
 Provides one-click launching of ppxai, ppxaide, and ppxai-desktop from your application menu (GNOME, KDE, etc.). Includes Ghostty terminal configuration for proper Ctrl+Enter support in ppxaide. See [desktop/README.md](desktop/README.md) for details.
 
-**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.15.6` (specific version), `-Uninstall`
+**Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.16.0` (specific version), `-Uninstall`
 
 See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed installation options including Windows.
 
@@ -142,8 +142,8 @@ Asset cache busting (`?_t=<mtime>`) ensures CSS/JS/JSON changes are immediately 
 
 ### Multi-Provider Support
 - **Perplexity AI** - Real-time search with citations
-- **Google Gemini** - 2.5 Flash (default), 2.5 Pro, 3.1 Pro Preview with 1M context, Google Search Grounding
-- **OpenAI** - GPT-5 Mini (default), GPT-5.x, Codex, o-series (dedicated `OpenAINativeProvider` with per-model routing)
+- **Google Gemini** - 2.5 Flash (default), 2.5 Pro, 3-Flash/Pro Preview, 3.1 Pro Preview with 1M context, Google Search Grounding
+- **OpenAI** - GPT-5 Mini (default), GPT-5.x, GPT-5.1-codex, o-series (dedicated `OpenAINativeProvider` with profile-driven routing)
 - **OpenRouter** - Claude, Llama, 100+ models
 - **Local** - Ollama, vLLM, llama.cpp
 
@@ -341,8 +341,8 @@ No telemetry. No tracking. Data only goes to the LLM provider you choose.
 | [Specifications](SPECIFICATIONS.md) | Code generation templates |
 | [Architecture](docs/ARCHITECTURE.md) | Type-based renderer design (v1.15.0) |
 | [Tool Calling](docs/TOOL_CALLING.md) | Native vs prompt-based tool calling |
+| [Release Notes v1.16.0](docs/RELEASE-NOTES-v1.16.0.md) | Profile-driven tool loop, multi-tool support, agent UI, benchmark v2 |
 | [Release Notes v1.15.6](docs/RELEASE-NOTES-v1.15.6.md) | Native OpenAI provider, model profiles, benchmark analysis |
-| [Release Notes v1.15.5](docs/RELEASE-NOTES-v1.15.5.md) | Multi-line input, Escape key fix, build fix |
 
 ## Project Structure
 
@@ -418,7 +418,7 @@ ppxai/
 │   ├── ppxai.png               # ppxai icon (CLI)
 │   ├── ppxaide-nobg.png        # ppxaide icon (TUI)
 │   └── [.ico|.icns files]      # Platform-specific icons
-├── tests/                      # 1349+ tests
+├── tests/                      # 1536+ tests
 │   ├── test_tui.py             # Textual TUI tests (180+ tests)
 │   ├── test_engine.py          # Engine layer tests
 │   ├── test_commands.py        # Command tests
