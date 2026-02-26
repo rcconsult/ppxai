@@ -1,0 +1,1861 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.16.0/archive/v1.15.1-completed/COMMAND-REFACTORING-SUMMARY/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+    
+    
+      
+        <title>TUI Command Refactoring - Executive Summary - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#tui-command-refactoring-executive-summary" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              TUI Command Refactoring - Executive Summary
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../INSTALLATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../PROVIDER_SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../AGENT_MODE_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CONTEXT-INJECTION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CHECKPOINT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../FILE_EDITING_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../AUTOROUTER-CONFIG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-big-idea" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Big Idea
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture Overview
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture Overview">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-result-type-hierarchy-17-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Result Type Hierarchy (17 Types)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-renderer-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Renderer Pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-command-example-beforeafter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Command Example (Before/After)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#file-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command-result-type-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command → Result Type Mapping
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tool-execution-workflow-multi-artifact-display" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool Execution Workflow (Multi-Artifact Display)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tool Execution Workflow (Multi-Artifact Display)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#artifactpanel-widget" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ArtifactPanel Widget
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#benefits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benefits
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Benefits">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-formal-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Formal Protocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-mechanical-ui-bindings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Mechanical UI Bindings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-testable-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Testable Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-extensible" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Extensible
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration Plan
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Migration Plan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-infrastructure-completed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Infrastructure (COMPLETED ✅)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-4-refactor-commands-6-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2-4: Refactor Commands (6 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-5-update-tuis-2-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5: Update TUIs (2 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-6-cleanup-testing-1-day" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 6: Cleanup &amp; Testing (1 day)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-decisions-made" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Decisions Made
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Decisions Made">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-result-type-completeness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Result Type Completeness ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-async-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Async Strategy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-timeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Timeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-complete-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Complete Flow
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#risks-mitigation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risks &amp; Mitigation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#success-criteria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Success Criteria
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-1-status-complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1 Status: ✅ COMPLETE
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="tui-command-refactoring-executive-summary">TUI Command Refactoring - Executive Summary<a class="headerlink" href="#tui-command-refactoring-executive-summary" title="Permanent link">&para;</a></h1>
+<p><strong>Version:</strong> v1.15.0
+<strong>Pattern:</strong> Type-Based Renderer Dispatch (Mechanical UI Bindings)</p>
+<hr />
+<h2 id="the-big-idea">The Big Idea<a class="headerlink" href="#the-big-idea" title="Permanent link">&para;</a></h2>
+<p><strong>Problem:</strong> Commands are tightly coupled to Rich console - can't reuse in Textual TUI.</p>
+<p><strong>Solution:</strong> Commands return <strong>typed result objects</strong>. Each TUI framework registers <strong>renderers</strong> for each type. Dispatch is <strong>mechanical</strong> - zero conditional logic.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Command returns typed result</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">handle_sessions</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TableResult</span><span class="p">:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">sessions</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">engine_client</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">list_sessions</span><span class="p">()</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="k">return</span> <span class="n">TableResult</span><span class="p">(</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        <span class="n">status</span><span class="o">=</span><span class="n">ResultStatus</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">sessions</span><span class="p">)</span><span class="si">}</span><span class="s2"> sessions&quot;</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Name&quot;</span><span class="p">,</span> <span class="s2">&quot;Created&quot;</span><span class="p">,</span> <span class="s2">&quot;Provider&quot;</span><span class="p">],</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>        <span class="n">rows</span><span class="o">=</span><span class="p">[[</span><span class="n">s</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">created</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">provider</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sessions</span><span class="p">]</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="p">)</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="c1"># TUI frameworks dispatch mechanically</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="n">result</span> <span class="o">=</span> <span class="n">handle_sessions</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="n">RichRenderer</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>      <span class="c1"># → Rich Table widget</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="n">TextualRenderer</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>   <span class="c1"># → Textual DataTable widget</span>
+</span></code></pre></div>
+<p><strong>Result:</strong> Commands work in any TUI. Adding new UI = just write renderers.</p>
+<hr />
+<h2 id="architecture-overview">Architecture Overview<a class="headerlink" href="#architecture-overview" title="Permanent link">&para;</a></h2>
+<h3 id="1-result-type-hierarchy-17-types">1. Result Type Hierarchy (17 Types)<a class="headerlink" href="#1-result-type-hierarchy-17-types" title="Permanent link">&para;</a></h3>
+<p><strong>Display Results (User Notifications):</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>├── NotificationResult (success/info/warning toasts)
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── ErrorResult (structured errors with suggestions)
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>├── ConfirmationResult (action confirmations)
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>└── AIResponseResult (AI-generated content with markdown)
+</span></code></pre></div></p>
+<p><strong>Structured Data Results:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>├── TableResult (tabular data - sessions, tools, stats)
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>├── TreeResult (hierarchical trees - context, file trees)
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>├── ListResult (bulleted lists - providers, models)
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>└── KeyValueResult (config/status pairs)
+</span></code></pre></div></p>
+<p><strong>File &amp; Media Results:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>├── FileViewResult (code with syntax highlighting)
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>└── ImageResult (plots/charts/images from tools)
+</span></code></pre></div></p>
+<p><strong>Operations Results:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>├── ProgressResult (long-running operations)
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>└── DiffResult (before/after changes)
+</span></code></pre></div></p>
+<p><strong>Interactive Results (Phase 2):</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>├── ConsentResult (user consent requests)
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>└── PromptResult (text input prompts)
+</span></code></pre></div></p>
+<p><strong>Composite Results (Multi-Artifact Display):</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>├── CompositeResult (multiple outputs container)
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>├── ToolExecutionResult (tool execution with artifacts)
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>└── TextResult (generic fallback - &lt;1% usage)
+</span></code></pre></div></p>
+<p><strong>Each type = formal contract</strong>. Commands emit data, renderers consume data.</p>
+<h3 id="2-renderer-pattern">2. Renderer Pattern<a class="headerlink" href="#2-renderer-pattern" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Renderer</span><span class="p">:</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="n">_registry</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Type</span><span class="p">[</span><span class="n">CommandResult</span><span class="p">],</span> <span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="nd">@classmethod</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">register</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">result_type</span><span class="p">):</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Decorator - register renderer for type.&quot;&quot;&quot;</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>        <span class="k">def</span><span class="w"> </span><span class="nf">decorator</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>            <span class="bp">cls</span><span class="o">.</span><span class="n">_registry</span><span class="p">[</span><span class="n">result_type</span><span class="p">]</span> <span class="o">=</span> <span class="n">func</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>            <span class="k">return</span> <span class="n">func</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>        <span class="k">return</span> <span class="n">decorator</span>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>    <span class="nd">@classmethod</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">result</span><span class="p">):</span>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;MECHANICAL dispatch - type lookup.&quot;&quot;&quot;</span>
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>        <span class="n">result_type</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>        <span class="n">renderer_func</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_registry</span><span class="p">[</span><span class="n">result_type</span><span class="p">]</span>
+</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>        <span class="k">return</span> <span class="n">renderer_func</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>  <span class="c1"># No if/else!</span>
+</span></code></pre></div>
+<p><strong>Rich TUI:</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nd">@RichRenderer</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">TableResult</span><span class="p">)</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">render_table</span><span class="p">(</span><span class="n">result</span><span class="p">):</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="n">table</span> <span class="o">=</span> <span class="n">Table</span><span class="p">()</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span> <span class="n">table</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">rows</span><span class="p">:</span> <span class="n">table</span><span class="o">.</span><span class="n">add_row</span><span class="p">(</span><span class="o">*</span><span class="n">row</span><span class="p">)</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+</span></code></pre></div></p>
+<p><strong>Textual TUI:</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nd">@TextualRenderer</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">TableResult</span><span class="p">)</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">render_table</span><span class="p">(</span><span class="n">renderer</span><span class="p">,</span> <span class="n">result</span><span class="p">):</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="n">table</span> <span class="o">=</span> <span class="n">DataTable</span><span class="p">()</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="n">table</span><span class="o">.</span><span class="n">add_columns</span><span class="p">(</span><span class="o">*</span><span class="n">result</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">rows</span><span class="p">:</span> <span class="n">table</span><span class="o">.</span><span class="n">add_row</span><span class="p">(</span><span class="o">*</span><span class="n">row</span><span class="p">)</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>    <span class="k">await</span> <span class="n">renderer</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">show_widget_in_panel</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+</span></code></pre></div></p>
+<h3 id="3-command-example-beforeafter">3. Command Example (Before/After)<a class="headerlink" href="#3-command-example-beforeafter" title="Permanent link">&para;</a></h3>
+<p><strong>BEFORE (UI-coupled):</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">handle_sessions</span><span class="p">(</span><span class="n">handler</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="n">sessions</span> <span class="o">=</span> <span class="n">handler</span><span class="o">.</span><span class="n">engine_client</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">list_sessions</span><span class="p">()</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">rich.table</span><span class="w"> </span><span class="kn">import</span> <span class="n">Table</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    <span class="n">table</span> <span class="o">=</span> <span class="n">Table</span><span class="p">()</span>  <span class="c1"># ❌ Rich-specific</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="n">table</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="s2">&quot;Name&quot;</span><span class="p">)</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sessions</span><span class="p">:</span> <span class="n">table</span><span class="o">.</span><span class="n">add_row</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    <span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>  <span class="c1"># ❌ Direct rendering</span>
+</span></code></pre></div></p>
+<p><strong>AFTER (UI-agnostic):</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">handle_sessions</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TableResult</span><span class="p">:</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="n">sessions</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">engine_client</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">list_sessions</span><span class="p">()</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    <span class="k">return</span> <span class="n">TableResult</span><span class="p">(</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>        <span class="n">status</span><span class="o">=</span><span class="n">ResultStatus</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">,</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>        <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">sessions</span><span class="p">)</span><span class="si">}</span><span class="s2"> sessions&quot;</span><span class="p">,</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>        <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Name&quot;</span><span class="p">,</span> <span class="s2">&quot;Created&quot;</span><span class="p">,</span> <span class="s2">&quot;Provider&quot;</span><span class="p">,</span> <span class="s2">&quot;Model&quot;</span><span class="p">],</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>        <span class="n">rows</span><span class="o">=</span><span class="p">[[</span><span class="n">s</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">created</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">provider</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">model</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sessions</span><span class="p">]</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>    <span class="p">)</span>  <span class="c1"># ✅ Just data</span>
+</span></code></pre></div></p>
+<hr />
+<h2 id="file-structure">File Structure<a class="headerlink" href="#file-structure" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>ppxai/
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>├── commands/
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>│   ├── results.py (NEW)         # Result type hierarchy
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>│   ├── protocol.py (NEW)        # CommandContext protocol
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>│   ├── context.py (NEW)         # Context adapters
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>│   ├── session.py (REFACTOR)    # Returns TableResult/TextResult
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>│   ├── provider.py (REFACTOR)   # Returns ListResult/TextResult
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>│   ├── ...32 commands (REFACTOR)
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>│   └── factory.py (UPDATE)      # Add clients filter + dispatch
+</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>│
+</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>├── rendering/ (NEW)
+</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>│   ├── base.py                  # Renderer + AsyncRenderer
+</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>│   ├── rich_renderer.py         # @RichRenderer.register(...)
+</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>│   └── textual_renderer.py      # @TextualRenderer.register(...)
+</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>│
+</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>├── rich/
+</span><span id="__span-12-17"><a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>│   └── main.py (UPDATE)         # Use RichRenderer.render()
+</span><span id="__span-12-18"><a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>│
+</span><span id="__span-12-19"><a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>└── tui/
+</span><span id="__span-12-20"><a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>    └── app.py (UPDATE)          # Use TextualRenderer.render()
+</span></code></pre></div>
+<p><strong>Total:</strong> 6 new files, ~37 files refactored</p>
+<hr />
+<h2 id="command-result-type-mapping">Command → Result Type Mapping<a class="headerlink" href="#command-result-type-mapping" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Returns</th>
+<th>Why This Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/save</code>, <code>/load</code></td>
+<td><code>TextResult</code></td>
+<td>Simple success/error message</td>
+</tr>
+<tr>
+<td><code>/sessions</code></td>
+<td><code>TableResult</code></td>
+<td>List of sessions with columns</td>
+</tr>
+<tr>
+<td><code>/tools list</code></td>
+<td><code>TableResult</code></td>
+<td>Tool name, description, category</td>
+</tr>
+<tr>
+<td><code>/provider list</code></td>
+<td><code>ListResult</code></td>
+<td>Provider names with icons</td>
+</tr>
+<tr>
+<td><code>/context show</code></td>
+<td><code>TreeResult</code></td>
+<td>Hierarchical context sources</td>
+</tr>
+<tr>
+<td><code>/version</code></td>
+<td><code>KeyValueResult</code></td>
+<td>Version, Python, Platform pairs</td>
+</tr>
+<tr>
+<td><code>/show file.py</code></td>
+<td><code>FileViewResult</code></td>
+<td>Code with syntax highlighting</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="tool-execution-workflow-multi-artifact-display">Tool Execution Workflow (Multi-Artifact Display)<a class="headerlink" href="#tool-execution-workflow-multi-artifact-display" title="Permanent link">&para;</a></h2>
+<p><strong>Use Case:</strong> Running a pandas script that generates plots, tables, and logs.</p>
+<h3 id="flow">Flow<a class="headerlink" href="#flow" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># 1. Tool executes</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="n">tool_result</span> <span class="o">=</span> <span class="n">execute_tool</span><span class="p">(</span><span class="s2">&quot;run_python&quot;</span><span class="p">,</span> <span class="s2">&quot;analyze_data.py&quot;</span><span class="p">)</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># 2. Tool generates artifacts</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="n">artifacts</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>    <span class="n">ImageResult</span><span class="p">(</span>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>        <span class="n">filepath</span><span class="o">=</span><span class="s2">&quot;/tmp/plot.png&quot;</span><span class="p">,</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>        <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;png&quot;</span><span class="p">,</span>
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>        <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;width&quot;</span><span class="p">:</span> <span class="mi">800</span><span class="p">,</span> <span class="s2">&quot;height&quot;</span><span class="p">:</span> <span class="mi">600</span><span class="p">}</span>
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>    <span class="p">),</span>
+</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>    <span class="n">TableResult</span><span class="p">(</span>
+</span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>        <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Summary Statistics&quot;</span><span class="p">,</span>
+</span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a>        <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Metric&quot;</span><span class="p">,</span> <span class="s2">&quot;Value&quot;</span><span class="p">],</span>
+</span><span id="__span-13-14"><a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>        <span class="n">rows</span><span class="o">=</span><span class="p">[[</span><span class="s2">&quot;Mean&quot;</span><span class="p">,</span> <span class="s2">&quot;42.5&quot;</span><span class="p">],</span> <span class="p">[</span><span class="s2">&quot;Median&quot;</span><span class="p">,</span> <span class="s2">&quot;40.0&quot;</span><span class="p">]]</span>
+</span><span id="__span-13-15"><a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a>    <span class="p">),</span>
+</span><span id="__span-13-16"><a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a>    <span class="n">TextResult</span><span class="p">(</span>
+</span><span id="__span-13-17"><a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a>        <span class="n">status</span><span class="o">=</span><span class="n">ResultStatus</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">,</span>
+</span><span id="__span-13-18"><a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a>        <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Processing complete&quot;</span>
+</span><span id="__span-13-19"><a id="__codelineno-13-19" name="__codelineno-13-19" href="#__codelineno-13-19"></a>    <span class="p">)</span>
+</span><span id="__span-13-20"><a id="__codelineno-13-20" name="__codelineno-13-20" href="#__codelineno-13-20"></a><span class="p">]</span>
+</span><span id="__span-13-21"><a id="__codelineno-13-21" name="__codelineno-13-21" href="#__codelineno-13-21"></a>
+</span><span id="__span-13-22"><a id="__codelineno-13-22" name="__codelineno-13-22" href="#__codelineno-13-22"></a><span class="c1"># 3. Wrap in ToolExecutionResult</span>
+</span><span id="__span-13-23"><a id="__codelineno-13-23" name="__codelineno-13-23" href="#__codelineno-13-23"></a><span class="n">result</span> <span class="o">=</span> <span class="n">ToolExecutionResult</span><span class="p">(</span>
+</span><span id="__span-13-24"><a id="__codelineno-13-24" name="__codelineno-13-24" href="#__codelineno-13-24"></a>    <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Analysis complete&quot;</span><span class="p">,</span>
+</span><span id="__span-13-25"><a id="__codelineno-13-25" name="__codelineno-13-25" href="#__codelineno-13-25"></a>    <span class="n">tool_name</span><span class="o">=</span><span class="s2">&quot;run_python&quot;</span><span class="p">,</span>
+</span><span id="__span-13-26"><a id="__codelineno-13-26" name="__codelineno-13-26" href="#__codelineno-13-26"></a>    <span class="n">duration</span><span class="o">=</span><span class="mf">1.23</span><span class="p">,</span>
+</span><span id="__span-13-27"><a id="__codelineno-13-27" name="__codelineno-13-27" href="#__codelineno-13-27"></a>    <span class="n">stdout</span><span class="o">=</span><span class="s2">&quot;Processing 1000 rows...</span><span class="se">\n</span><span class="s2">Done.&quot;</span><span class="p">,</span>
+</span><span id="__span-13-28"><a id="__codelineno-13-28" name="__codelineno-13-28" href="#__codelineno-13-28"></a>    <span class="n">exit_code</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-13-29"><a id="__codelineno-13-29" name="__codelineno-13-29" href="#__codelineno-13-29"></a>    <span class="n">artifacts</span><span class="o">=</span><span class="n">artifacts</span>
+</span><span id="__span-13-30"><a id="__codelineno-13-30" name="__codelineno-13-30" href="#__codelineno-13-30"></a><span class="p">)</span>
+</span><span id="__span-13-31"><a id="__codelineno-13-31" name="__codelineno-13-31" href="#__codelineno-13-31"></a>
+</span><span id="__span-13-32"><a id="__codelineno-13-32" name="__codelineno-13-32" href="#__codelineno-13-32"></a><span class="c1"># 4. Renderer displays in tabbed panel</span>
+</span><span id="__span-13-33"><a id="__codelineno-13-33" name="__codelineno-13-33" href="#__codelineno-13-33"></a><span class="k">await</span> <span class="n">TextualRenderer</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</span><span id="__span-13-34"><a id="__codelineno-13-34" name="__codelineno-13-34" href="#__codelineno-13-34"></a><span class="c1"># → Creates ArtifactPanel with 3 tabs:</span>
+</span><span id="__span-13-35"><a id="__codelineno-13-35" name="__codelineno-13-35" href="#__codelineno-13-35"></a><span class="c1">#    📊 Image 1 (plot.png)</span>
+</span><span id="__span-13-36"><a id="__codelineno-13-36" name="__codelineno-13-36" href="#__codelineno-13-36"></a><span class="c1">#    📋 Table 1 (summary stats)</span>
+</span><span id="__span-13-37"><a id="__codelineno-13-37" name="__codelineno-13-37" href="#__codelineno-13-37"></a><span class="c1">#    📄 Output 1 (processing log)</span>
+</span></code></pre></div>
+<h3 id="artifactpanel-widget">ArtifactPanel Widget<a class="headerlink" href="#artifactpanel-widget" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">ArtifactPanel</span><span class="p">(</span><span class="n">TabbedContent</span><span class="p">):</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Tabbed panel for multi-artifact display.&quot;&quot;&quot;</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">add_artifact</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">widget</span><span class="p">:</span> <span class="n">Widget</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">icon</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Add artifact as new tab.&quot;&quot;&quot;</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">show_artifacts</span><span class="p">(</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>        <span class="bp">self</span><span class="p">,</span>
+</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>        <span class="n">results</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">CommandResult</span><span class="p">],</span>
+</span><span id="__span-14-10"><a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a>        <span class="n">renderer</span><span class="p">:</span> <span class="n">TextualRenderer</span>
+</span><span id="__span-14-11"><a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-14-12"><a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Render multiple results as tabs.&quot;&quot;&quot;</span>
+</span></code></pre></div>
+<p><strong>Features:</strong>
+- Tab per artifact (image, table, code, etc.)
+- Keyboard shortcuts: Ctrl+1/2/3/4/5/6/7/8/9
+- Auto-labels with icons
+- Hybrid layout: Phase 1 tabbed, Phase 2 optional tiling</p>
+<hr />
+<h2 id="benefits">Benefits<a class="headerlink" href="#benefits" title="Permanent link">&para;</a></h2>
+<h3 id="1-formal-protocol">1. Formal Protocol<a class="headerlink" href="#1-formal-protocol" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Result types = contract between commands and UIs</li>
+<li>Type-safe (mypy validates structure)</li>
+<li>Self-documenting (dataclass fields show what's available)</li>
+</ul>
+<h3 id="2-mechanical-ui-bindings">2. Mechanical UI Bindings<a class="headerlink" href="#2-mechanical-ui-bindings" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Zero conditional logic: <code>renderer.render(result)</code></li>
+<li>Type dispatch handles routing automatically</li>
+<li>Add new result type → add renderers → all commands work</li>
+</ul>
+<h3 id="3-testable-commands">3. Testable Commands<a class="headerlink" href="#3-testable-commands" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_sessions_command</span><span class="p">():</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>    <span class="n">context</span> <span class="o">=</span> <span class="n">MockContext</span><span class="p">()</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">handle_sessions</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">TableResult</span><span class="p">)</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>    <span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">ResultStatus</span><span class="o">.</span><span class="n">SUCCESS</span>
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">rows</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span>
+</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>    <span class="c1"># No UI framework needed!</span>
+</span></code></pre></div>
+<h3 id="4-extensible">4. Extensible<a class="headerlink" href="#4-extensible" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Add web UI? Write <code>WebRenderer</code> with HTML/JSON renderers</li>
+<li>Add SSH server? Write <code>SSHRenderer</code> with ANSI renderers</li>
+<li>Commands don't change</li>
+</ul>
+<hr />
+<h2 id="migration-plan">Migration Plan<a class="headerlink" href="#migration-plan" title="Permanent link">&para;</a></h2>
+<h3 id="phase-1-infrastructure-completed">Phase 1: Infrastructure (COMPLETED ✅)<a class="headerlink" href="#phase-1-infrastructure-completed" title="Permanent link">&para;</a></h3>
+<p>Created new files with 17 result types and complete renderer infrastructure:
+- ✅ <code>ppxai/commands/results.py</code> (17 result types, 500 lines)
+- ✅ <code>ppxai/commands/protocol.py</code> (CommandContext protocol, 150 lines)
+- ✅ <code>ppxai/commands/context.py</code> (Context adapters, 200 lines)
+- ✅ <code>ppxai/rendering/__init__.py</code> (Package init, 30 lines)
+- ✅ <code>ppxai/rendering/base.py</code> (Renderer base classes, 150 lines)
+- ✅ <code>ppxai/rendering/rich_renderer.py</code> (17 handlers, 450 lines)
+- ✅ <code>ppxai/rendering/textual_renderer.py</code> (17 async handlers, 550 lines)
+- ✅ <code>ppxai/tui/widgets/artifact_panel.py</code> (Tabbed panel, 250 lines)
+- ✅ <code>tests/commands/test_results.py</code> (Comprehensive tests, 550 lines)
+- ✅ <code>tests/rendering/test_base.py</code> (Registry + dispatch tests, 350 lines)</p>
+<h3 id="phase-2-4-refactor-commands-6-days">Phase 2-4: Refactor Commands (6 days)<a class="headerlink" href="#phase-2-4-refactor-commands-6-days" title="Permanent link">&para;</a></h3>
+<p>One category at a time, test after each:
+- Session commands (5 commands) → return TextResult/TableResult
+- Provider commands (3 commands) → return ListResult/TextResult
+- Remaining 24 commands → various result types</p>
+<h3 id="phase-5-update-tuis-2-days">Phase 5: Update TUIs (2 days)<a class="headerlink" href="#phase-5-update-tuis-2-days" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Rich TUI: <code>RichRenderer.render(result)</code></li>
+<li>Textual TUI: <code>await TextualRenderer.render(result)</code></li>
+</ul>
+<h3 id="phase-6-cleanup-testing-1-day">Phase 6: Cleanup &amp; Testing (1 day)<a class="headerlink" href="#phase-6-cleanup-testing-1-day" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Integration tests</li>
+<li>Update documentation</li>
+<li>Remove old code</li>
+</ul>
+<p><strong>Total: ~10 days</strong> (conservative estimate with thorough testing)</p>
+<hr />
+<h2 id="key-decisions-made">Key Decisions Made<a class="headerlink" href="#key-decisions-made" title="Permanent link">&para;</a></h2>
+<h3 id="1-result-type-completeness">1. Result Type Completeness ✅<a class="headerlink" href="#1-result-type-completeness" title="Permanent link">&para;</a></h3>
+<p><strong>Decision:</strong> 17 result types implemented, covering all use cases:
+- <strong>Display Results:</strong> NotificationResult, ErrorResult, ConfirmationResult, AIResponseResult
+- <strong>Structured Data:</strong> TableResult, TreeResult, ListResult, KeyValueResult
+- <strong>File &amp; Media:</strong> FileViewResult, ImageResult
+- <strong>Operations:</strong> ProgressResult, DiffResult
+- <strong>Interactive:</strong> ConsentResult, PromptResult (Phase 2)
+- <strong>Composite:</strong> CompositeResult, ToolExecutionResult, TextResult (fallback)</p>
+<p><strong>Rationale:</strong> Covers all 54 commands + tool execution multi-artifact scenarios.</p>
+<h3 id="2-async-strategy">2. Async Strategy<a class="headerlink" href="#2-async-strategy" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Option A:</strong> All commands async (cleaner but bigger change)</li>
+<li><strong>Option B:</strong> Sync commands + async renderers (proposed - less risk)</li>
+</ul>
+<h3 id="3-timeline">3. Timeline<a class="headerlink" href="#3-timeline" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Conservative:</strong> 10 days (one category per day, thorough tests)</li>
+<li><strong>Aggressive:</strong> 5 days (batch refactoring, basic tests)</li>
+</ul>
+<hr />
+<h2 id="example-complete-flow">Example: Complete Flow<a class="headerlink" href="#example-complete-flow" title="Permanent link">&para;</a></h2>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># 1. User types: /sessions</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="c1"># 2. TUI dispatches command</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="n">result</span> <span class="o">=</span> <span class="n">CommandFactory</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="s2">&quot;sessions&quot;</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="c1"># 3. Command returns typed result</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="k">return</span> <span class="n">TableResult</span><span class="p">(</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>    <span class="n">status</span><span class="o">=</span><span class="n">ResultStatus</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">,</span>
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>    <span class="n">message</span><span class="o">=</span><span class="s2">&quot;3 sessions found&quot;</span><span class="p">,</span>
+</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>    <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Name&quot;</span><span class="p">,</span> <span class="s2">&quot;Created&quot;</span><span class="p">,</span> <span class="s2">&quot;Provider&quot;</span><span class="p">],</span>
+</span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>    <span class="n">rows</span><span class="o">=</span><span class="p">[</span>
+</span><span id="__span-16-12"><a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a>        <span class="p">[</span><span class="s2">&quot;session1&quot;</span><span class="p">,</span> <span class="s2">&quot;2024-01-20&quot;</span><span class="p">,</span> <span class="s2">&quot;perplexity&quot;</span><span class="p">],</span>
+</span><span id="__span-16-13"><a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a>        <span class="p">[</span><span class="s2">&quot;session2&quot;</span><span class="p">,</span> <span class="s2">&quot;2024-01-21&quot;</span><span class="p">,</span> <span class="s2">&quot;openai&quot;</span><span class="p">],</span>
+</span><span id="__span-16-14"><a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a>        <span class="p">[</span><span class="s2">&quot;session3&quot;</span><span class="p">,</span> <span class="s2">&quot;2024-01-22&quot;</span><span class="p">,</span> <span class="s2">&quot;gemini&quot;</span><span class="p">]</span>
+</span><span id="__span-16-15"><a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a>    <span class="p">]</span>
+</span><span id="__span-16-16"><a id="__codelineno-16-16" name="__codelineno-16-16" href="#__codelineno-16-16"></a><span class="p">)</span>
+</span><span id="__span-16-17"><a id="__codelineno-16-17" name="__codelineno-16-17" href="#__codelineno-16-17"></a>
+</span><span id="__span-16-18"><a id="__codelineno-16-18" name="__codelineno-16-18" href="#__codelineno-16-18"></a><span class="c1"># 4. TUI renders mechanically</span>
+</span><span id="__span-16-19"><a id="__codelineno-16-19" name="__codelineno-16-19" href="#__codelineno-16-19"></a><span class="c1"># Rich TUI:</span>
+</span><span id="__span-16-20"><a id="__codelineno-16-20" name="__codelineno-16-20" href="#__codelineno-16-20"></a><span class="n">RichRenderer</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</span><span id="__span-16-21"><a id="__codelineno-16-21" name="__codelineno-16-21" href="#__codelineno-16-21"></a><span class="c1"># → Looks up TableResult in registry</span>
+</span><span id="__span-16-22"><a id="__codelineno-16-22" name="__codelineno-16-22" href="#__codelineno-16-22"></a><span class="c1"># → Calls render_table(result)</span>
+</span><span id="__span-16-23"><a id="__codelineno-16-23" name="__codelineno-16-23" href="#__codelineno-16-23"></a><span class="c1"># → Creates Rich Table widget</span>
+</span><span id="__span-16-24"><a id="__codelineno-16-24" name="__codelineno-16-24" href="#__codelineno-16-24"></a><span class="c1"># → console.print(table)</span>
+</span><span id="__span-16-25"><a id="__codelineno-16-25" name="__codelineno-16-25" href="#__codelineno-16-25"></a>
+</span><span id="__span-16-26"><a id="__codelineno-16-26" name="__codelineno-16-26" href="#__codelineno-16-26"></a><span class="c1"># Textual TUI:</span>
+</span><span id="__span-16-27"><a id="__codelineno-16-27" name="__codelineno-16-27" href="#__codelineno-16-27"></a><span class="k">await</span> <span class="n">TextualRenderer</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</span><span id="__span-16-28"><a id="__codelineno-16-28" name="__codelineno-16-28" href="#__codelineno-16-28"></a><span class="c1"># → Looks up TableResult in registry</span>
+</span><span id="__span-16-29"><a id="__codelineno-16-29" name="__codelineno-16-29" href="#__codelineno-16-29"></a><span class="c1"># → Calls render_table(renderer, result)</span>
+</span><span id="__span-16-30"><a id="__codelineno-16-30" name="__codelineno-16-30" href="#__codelineno-16-30"></a><span class="c1"># → Creates DataTable widget</span>
+</span><span id="__span-16-31"><a id="__codelineno-16-31" name="__codelineno-16-31" href="#__codelineno-16-31"></a><span class="c1"># → Opens in side panel</span>
+</span></code></pre></div>
+<p><strong>Zero conditional logic. Pure type dispatch. Mechanical bindings.</strong></p>
+<hr />
+<h2 id="risks-mitigation">Risks &amp; Mitigation<a class="headerlink" href="#risks-mitigation" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Mitigation</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Breaking Rich TUI</td>
+<td>Test after each phase, keep old code until new proven</td>
+<td>⏳ Pending Phase 2-4</td>
+</tr>
+<tr>
+<td>Async/sync boundary bugs</td>
+<td>Comprehensive executor tests, gradual rollout</td>
+<td>✅ Tests complete</td>
+</tr>
+<tr>
+<td>Missing result types</td>
+<td>Started with 17 types covering all scenarios</td>
+<td>✅ Complete</td>
+</tr>
+<tr>
+<td>Timeline overrun</td>
+<td>Conservative estimates, phase-by-phase approval</td>
+<td>✅ Phase 1 on schedule</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="success-criteria">Success Criteria<a class="headerlink" href="#success-criteria" title="Permanent link">&para;</a></h2>
+<p><strong>Phase 1 (Infrastructure):</strong>
+- [x] 17 result types implemented with formal contracts
+- [x] Renderer base classes with type-based dispatch
+- [x] RichRenderer with 17 handlers
+- [x] TextualRenderer with 17 async handlers
+- [x] ArtifactPanel for multi-artifact display
+- [x] Comprehensive test coverage (900+ lines of tests)
+- [x] Zero breaking changes to existing code</p>
+<p><strong>Phase 2-4 (Command Refactoring):</strong>
+- [ ] All 54 commands return typed results
+- [ ] Rich TUI uses <code>RichRenderer.render()</code> (mechanical)
+- [ ] Textual TUI uses <code>TextualRenderer.render()</code> (mechanical)
+- [ ] Commands have zero UI dependencies (testable without framework)
+- [ ] All existing tests passing
+- [ ] Clean architecture: commands → results → renderers → UI</p>
+<hr />
+<h2 id="phase-1-status-complete">Phase 1 Status: ✅ COMPLETE<a class="headerlink" href="#phase-1-status-complete" title="Permanent link">&para;</a></h2>
+<p><strong>Completed Work:</strong>
+- 11 files created (3,680 lines of new code)
+- 17 result types covering all command scenarios
+- Complete renderer infrastructure (sync + async)
+- Multi-artifact display support (ArtifactPanel)
+- Comprehensive test coverage (900+ lines)
+- Zero breaking changes to existing code</p>
+<p><strong>Key Achievements:</strong>
+1. <strong>Type-Based Dispatch Working:</strong> Registry pattern tested and validated
+2. <strong>Async Support Proven:</strong> AsyncRenderer handles Textual widget operations
+3. <strong>Tool Execution Ready:</strong> ToolExecutionResult + ArtifactPanel for multi-output scenarios
+4. <strong>Test Coverage:</strong> All result types and renderer infrastructure fully tested</p>
+<hr />
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<p><strong>Phase 2-4: Command Refactoring</strong></p>
+<p>Start refactoring commands by category:
+1. Session commands (5 commands) → TableResult/NotificationResult
+2. Provider commands (3 commands) → ListResult/ConfirmationResult
+3. Tool commands (7 commands) → TableResult/ToolExecutionResult
+4. Remaining commands (39 commands) → Various result types</p>
+<p><strong>Approach:</strong>
+- One category at a time
+- Test after each category
+- Keep old code until new proven
+- Gradual rollout to minimize risk</p>
+<p><strong>Estimated Timeline:</strong> 6-8 days for all command refactoring</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

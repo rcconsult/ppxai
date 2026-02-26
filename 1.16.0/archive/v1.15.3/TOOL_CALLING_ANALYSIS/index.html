@@ -1,0 +1,1744 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.16.0/archive/v1.15.3/TOOL_CALLING_ANALYSIS/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+    
+    
+      
+        <title>Tool Calling API Verification - Analysis & Action Items - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#tool-calling-api-verification-analysis-action-items" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Tool Calling API Verification - Analysis &amp; Action Items
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../INSTALLATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../PROVIDER_SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../AGENT_MODE_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CONTEXT-INJECTION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CHECKPOINT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../FILE_EDITING_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../AUTOROUTER-CONFIG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Test Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-perplexity-api-direct-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Perplexity API (Direct Tests)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-gemini-api-direct-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Gemini API (Direct Test)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-ppxai-engine-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. ppxai Engine Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#root-cause-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Root Cause Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Root Cause Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-ppxai-tool-calling-actually-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How ppxai Tool Calling Actually Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implications-for-benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implications for Benchmarks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implications for Benchmarks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#current-benchmark-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current Benchmark Behavior
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-scores-are-misleading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Scores Are Misleading
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommended-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended Actions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recommended Actions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#immediate-high-priority" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IMMEDIATE (High Priority)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="IMMEDIATE (High Priority)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-clarify-provider-capabilities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Clarify Provider Capabilities
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-update-perplexity-provider-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Update Perplexity Provider Documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-fix-benchmark-classification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Fix Benchmark Classification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-update-gemini-provider-to-new-sdk-already-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. ~~Update Gemini Provider to New SDK~~ ✅ ALREADY DONE
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#medium-priority" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MEDIUM PRIORITY
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MEDIUM PRIORITY">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#5-add-capability-detection-to-benchmarks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Add Capability Detection to Benchmarks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-document-the-distinction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Document the Distinction
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#low-priority-nice-to-have" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LOW PRIORITY (Nice to Have)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LOW PRIORITY (Nice to Have)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#7-add-runtime-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Add Runtime Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#updated-understanding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Updated Understanding
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Updated Understanding">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#perplexity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Perplexity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gemini" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gemini
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Evidence
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Test Evidence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#perplexity-direct-api-response" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Perplexity Direct API Response
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ppxai-engine-response" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ppxai Engine Response
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conclusion
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="tool-calling-api-verification-analysis-action-items">Tool Calling API Verification - Analysis &amp; Action Items<a class="headerlink" href="#tool-calling-api-verification-analysis-action-items" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-02-08 (Updated with corrections)
+<strong>Test Results:</strong> <code>debug/api_tool_calling_test_results.json</code></p>
+<blockquote>
+<p><strong>⚠️ CORRECTION (2026-02-08):</strong> This document initially incorrectly stated that ppxai was using the deprecated <code>google-generativeai</code> SDK. This was an ERROR. We have ALWAYS been using the correct <code>google-genai</code> SDK (v1.56.0+). All references to "deprecated SDK" have been corrected below.</p>
+</blockquote>
+<hr />
+<h2 id="executive-summary">Executive Summary<a class="headerlink" href="#executive-summary" title="Permanent link">&para;</a></h2>
+<p><strong>Critical Finding:</strong> ppxai uses <strong>PROMPT-BASED tool calling</strong>, NOT <strong>NATIVE tool calling</strong> for most providers.</p>
+<p>This means:
+- ✅ Tools work through prompt injection + JSON parsing
+- ❌ NOT using provider's native <code>tool_calls</code> API responses
+- ⚠️ Benchmark scores are misleading (testing prompt-based, not native calling)</p>
+<hr />
+<h2 id="test-results">Test Results<a class="headerlink" href="#test-results" title="Permanent link">&para;</a></h2>
+<h3 id="1-perplexity-api-direct-tests">1. Perplexity API (Direct Tests)<a class="headerlink" href="#1-perplexity-api-direct-tests" title="Permanent link">&para;</a></h3>
+<p><strong>sonar-pro:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Status: IGNORED ⚠️
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>- API accepts `tools` parameter (no error)
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>- Response contains NO tool_calls
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>- Model explains it &quot;cannot read files&quot; instead of calling tools
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>- Behavior: Treats request as regular chat
+</span></code></pre></div></p>
+<p><strong>sonar-reasoning-pro:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Status: IGNORED ⚠️
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>- Same as sonar-pro
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>- Explicitly states: &quot;I cannot directly access or read files&quot;
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>- No tool calls in response
+</span></code></pre></div></p>
+<p><strong>Conclusion:</strong> Perplexity Sonar models do <strong>NOT</strong> support native function calling.</p>
+<hr />
+<h3 id="2-gemini-api-direct-test">2. Gemini API (Direct Test)<a class="headerlink" href="#2-gemini-api-direct-test" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Status: NATIVE SUPPORT ✅
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>- Uses google-genai SDK (current, NOT deprecated)
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>- Implements native function calling via function_declarations
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>- Checks for function_call attribute in response parts
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>- v1.15.2+ native tool calling enabled by default
+</span></code></pre></div>
+<p><strong>Note:</strong> Gemini provider correctly uses the NEW <code>google-genai</code> SDK (v1.56.0+), not the deprecated <code>google-generativeai</code> package. Native function calling works via API <code>function_call</code> responses.</p>
+<hr />
+<h3 id="3-ppxai-engine-tests">3. ppxai Engine Tests<a class="headerlink" href="#3-ppxai-engine-tests" title="Permanent link">&para;</a></h3>
+<p><strong>Perplexity through Engine:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Status: WORKS ✅
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>- TOOL_CALL events detected:
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>  - read_file with filepath argument
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>  - list_directory with path argument
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>- Engine is parsing JSON from text responses
+</span></code></pre></div></p>
+<p><strong>Gemini through Engine:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>Status: INCONSISTENT ⚠️
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>- Run 1: TOOL_CALL event detected
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>- Run 2: No TOOL_CALL events
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>- Suggests intermittent parsing or model variance
+</span></code></pre></div></p>
+<hr />
+<h2 id="root-cause-analysis">Root Cause Analysis<a class="headerlink" href="#root-cause-analysis" title="Permanent link">&para;</a></h2>
+<h3 id="how-ppxai-tool-calling-actually-works">How ppxai Tool Calling Actually Works<a class="headerlink" href="#how-ppxai-tool-calling-actually-works" title="Permanent link">&para;</a></h3>
+<p>Looking at <code>engine_runner.py</code> and provider code:</p>
+<ol>
+<li>
+<p><strong>Prompt Injection</strong> (line 159 in engine_runner.py):
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">tool_prompt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_tool_prompt</span><span class="p">(</span><span class="n">tools</span><span class="p">)</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">last_message</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">tool_prompt</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">User request: </span><span class="si">{</span><span class="n">last_message</span><span class="si">}</span><span class="s2">&quot;</span>
+</span></code></pre></div></p>
+</li>
+<li>
+<p><strong>JSON Parsing from Text</strong> (line 204):
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">if</span> <span class="ow">not</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;tool_calls&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;content&quot;</span><span class="p">]:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="n">extracted</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_tool_calls_from_content</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;content&quot;</span><span class="p">],</span> <span class="n">tools</span><span class="p">)</span>
+</span></code></pre></div></p>
+</li>
+<li>
+<p><strong>Pattern Matching</strong> (lines 261-278):
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Pattern 1: {&quot;tool&quot;: &quot;name&quot;, &quot;arguments&quot;: {...}}</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">pattern1</span> <span class="o">=</span> <span class="sa">r</span><span class="s1">&#39;\{\s*&quot;tool&quot;\s*:\s*&quot;([^&quot;]+)&quot;\s*,\s*&quot;arguments&quot;\s*:\s*(\{[^}]+\})\s*\}&#39;</span>
+</span></code></pre></div></p>
+</li>
+</ol>
+<p><strong>This is NOT native tool calling!</strong> This is:
+- Prompt engineering
+- Response parsing
+- Format conversion</p>
+<hr />
+<h2 id="implications-for-benchmarks">Implications for Benchmarks<a class="headerlink" href="#implications-for-benchmarks" title="Permanent link">&para;</a></h2>
+<h3 id="current-benchmark-behavior">Current Benchmark Behavior<a class="headerlink" href="#current-benchmark-behavior" title="Permanent link">&para;</a></h3>
+<p><strong>What we think we're testing:</strong>
+- Native function calling APIs
+- Provider-specific tool support</p>
+<p><strong>What we're actually testing:</strong>
+- Model ability to follow JSON format instructions
+- Prompt-based tool calling
+- Text parsing reliability</p>
+<h3 id="why-scores-are-misleading">Why Scores Are Misleading<a class="headerlink" href="#why-scores-are-misleading" title="Permanent link">&para;</a></h3>
+<p><strong>Perplexity 64-86% on tool calling:</strong>
+- ❌ NOT testing native API (doesn't exist)
+- ✅ Testing if model outputs JSON when prompted
+- ⚠️ Passes because prompt-based parsing works sometimes</p>
+<p><strong>Gemini scores:</strong>
+- May be testing native OR prompt-based (unclear which code path)
+- Need to verify which method our Gemini provider uses</p>
+<hr />
+<h2 id="recommended-actions">Recommended Actions<a class="headerlink" href="#recommended-actions" title="Permanent link">&para;</a></h2>
+<h3 id="immediate-high-priority">IMMEDIATE (High Priority)<a class="headerlink" href="#immediate-high-priority" title="Permanent link">&para;</a></h3>
+<h4 id="1-clarify-provider-capabilities">1. Clarify Provider Capabilities<a class="headerlink" href="#1-clarify-provider-capabilities" title="Permanent link">&para;</a></h4>
+<p><strong>File:</strong> <code>ppxai/engine/providers/base.py</code></p>
+<p>Add capability flag:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">ProviderCapabilities</span><span class="p">:</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="n">native_tool_calling</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># Uses API tool_calls response</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="n">prompt_based_tools</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>   <span class="c1"># Uses JSON parsing from text</span>
+</span></code></pre></div></p>
+<p><strong>Update providers:</strong></p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># perplexity.py</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">default_capabilities</span> <span class="o">=</span> <span class="n">ProviderCapabilities</span><span class="p">(</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="n">native_tool_calling</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># ← Confirmed by tests</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="n">prompt_based_tools</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>     <span class="c1"># ← How it actually works</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="n">web_search</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>    <span class="o">...</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="p">)</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="c1"># gemini.py</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="n">default_capabilities</span> <span class="o">=</span> <span class="n">ProviderCapabilities</span><span class="p">(</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>    <span class="n">native_tool_calling</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>   <span class="c1"># ← API supports it</span>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>    <span class="n">prompt_based_tools</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>     <span class="c1"># ← Fallback mode</span>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>    <span class="o">...</span>
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="p">)</span>
+</span></code></pre></div>
+<hr />
+<h4 id="2-update-perplexity-provider-documentation">2. Update Perplexity Provider Documentation<a class="headerlink" href="#2-update-perplexity-provider-documentation" title="Permanent link">&para;</a></h4>
+<p><strong>File:</strong> <code>ppxai/engine/providers/perplexity.py</code></p>
+<p><strong>Current (line 97):</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="n">tools</span><span class="p">:</span> <span class="n">Ignored</span> <span class="o">-</span> <span class="n">Perplexity</span> <span class="n">uses</span> <span class="n">native</span> <span class="n">search</span><span class="p">,</span> <span class="ow">not</span> <span class="n">tools</span>
+</span></code></pre></div></p>
+<p><strong>Update to:</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">tools</span><span class="p">:</span> <span class="n">Converted</span> <span class="n">to</span> <span class="n">prompt</span><span class="o">-</span><span class="n">based</span> <span class="n">tool</span> <span class="n">calling</span> <span class="p">(</span><span class="n">Sonar</span> <span class="n">models</span> <span class="n">don</span><span class="s1">&#39;t support</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>       <span class="n">native</span> <span class="n">function</span> <span class="n">calling</span> <span class="n">API</span><span class="p">)</span><span class="o">.</span> <span class="n">Tool</span> <span class="n">definitions</span> <span class="n">are</span> <span class="n">injected</span> <span class="n">into</span> <span class="n">the</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>       <span class="n">system</span> <span class="n">prompt</span> <span class="ow">and</span> <span class="n">responses</span> <span class="n">are</span> <span class="n">parsed</span> <span class="k">for</span> <span class="n">JSON</span> <span class="n">tool</span> <span class="n">call</span> <span class="nb">format</span><span class="o">.</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>       <span class="n">See</span><span class="p">:</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">docs</span><span class="o">.</span><span class="n">perplexity</span><span class="o">.</span><span class="n">ai</span><span class="o">/</span><span class="n">docs</span><span class="o">/</span><span class="n">agentic</span><span class="o">-</span><span class="n">research</span><span class="o">/</span><span class="n">tools</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>       <span class="n">Note</span><span class="p">:</span> <span class="n">Agentic</span> <span class="n">Research</span> <span class="n">API</span> <span class="n">supports</span> <span class="n">tools</span> <span class="n">but</span> <span class="n">requires</span> <span class="n">third</span><span class="o">-</span><span class="n">party</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>       <span class="n">models</span> <span class="p">(</span><span class="n">openai</span><span class="o">/</span><span class="n">gpt</span><span class="o">-</span><span class="mf">5.2</span><span class="p">,</span> <span class="n">etc</span><span class="o">.</span><span class="p">)</span><span class="o">.</span> <span class="n">Sonar</span> <span class="n">models</span> <span class="n">use</span> <span class="n">prompt</span><span class="o">-</span><span class="n">based</span> <span class="n">method</span><span class="o">.</span>
+</span></code></pre></div></p>
+<hr />
+<h4 id="3-fix-benchmark-classification">3. Fix Benchmark Classification<a class="headerlink" href="#3-fix-benchmark-classification" title="Permanent link">&para;</a></h4>
+<p><strong>File:</strong> <code>benchmarks/llm-eval/test_cases.py</code></p>
+<p>Add test metadata:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nd">@dataclass</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">TestCase</span><span class="p">:</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>    <span class="n">category</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    <span class="n">weight</span><span class="p">:</span> <span class="nb">float</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    <span class="n">run</span><span class="p">:</span> <span class="n">Callable</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>    <span class="n">requires_native_tools</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># ← NEW: Skip for prompt-based only</span>
+</span></code></pre></div></p>
+<p><strong>File:</strong> <code>benchmarks/llm-eval/engine_runner.py</code></p>
+<p>Skip tests appropriately:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run_async</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">categories</span><span class="p">):</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    <span class="n">provider_config</span> <span class="o">=</span> <span class="n">get_provider_config</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">provider</span><span class="p">)</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="n">capabilities</span> <span class="o">=</span> <span class="n">provider_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;capabilities&quot;</span><span class="p">,</span> <span class="p">{})</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    <span class="k">for</span> <span class="n">test</span> <span class="ow">in</span> <span class="n">tests</span><span class="p">:</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>        <span class="c1"># Skip native-only tests if provider uses prompt-based</span>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>        <span class="k">if</span> <span class="n">test</span><span class="o">.</span><span class="n">requires_native_tools</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">capabilities</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;native_tool_calling&quot;</span><span class="p">):</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[SKIP] </span><span class="si">{</span><span class="n">test</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (requires native tool calling)&quot;</span><span class="p">)</span>
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>            <span class="k">continue</span>
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>
+</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>        <span class="c1"># Run test...</span>
+</span></code></pre></div></p>
+<hr />
+<h4 id="4-update-gemini-provider-to-new-sdk-already-done">4. ~~Update Gemini Provider to New SDK~~ ✅ ALREADY DONE<a class="headerlink" href="#4-update-gemini-provider-to-new-sdk-already-done" title="Permanent link">&para;</a></h4>
+<p><strong>File:</strong> <code>ppxai/engine/providers/gemini.py</code></p>
+<p><strong>Status:</strong> ✅ CORRECT - Already using <code>google-genai</code> (NOT deprecated)</p>
+<p><strong>Verification:</strong>
+- pyproject.toml line 71: <code>"google-genai&gt;=1.0.0"</code>
+- gemini.py lines 28-29: <code>from google import genai</code> (NEW SDK)
+- Currently installed: google-genai 1.56.0 (can upgrade to 1.62.0 for minor improvements)</p>
+<p><strong>Reference:</strong> https://github.com/googleapis/python-genai (current SDK)</p>
+<p><strong>CORRECTION:</strong> The earlier analysis incorrectly stated we were using the deprecated SDK. We have ALWAYS been using the correct new SDK.</p>
+<hr />
+<h3 id="medium-priority">MEDIUM PRIORITY<a class="headerlink" href="#medium-priority" title="Permanent link">&para;</a></h3>
+<h4 id="5-add-capability-detection-to-benchmarks">5. Add Capability Detection to Benchmarks<a class="headerlink" href="#5-add-capability-detection-to-benchmarks" title="Permanent link">&para;</a></h4>
+<p>Create separate benchmark categories:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># benchmarks/llm-eval/test_cases.py</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="n">NATIVE_TOOL_CALLING_TESTS</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>    <span class="c1"># Tests that verify native API tool_calls response</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>    <span class="n">test_native_function_call</span><span class="p">,</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>    <span class="n">test_parallel_tool_calls</span><span class="p">,</span>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>    <span class="n">test_tool_choice_parameter</span><span class="p">,</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="p">]</span>
+</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>
+</span><span id="__span-14-10"><a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="n">PROMPT_BASED_TOOL_TESTS</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-14-11"><a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>    <span class="c1"># Tests that verify JSON parsing from text</span>
+</span><span id="__span-14-12"><a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a>    <span class="n">test_json_format_compliance</span><span class="p">,</span>
+</span><span id="__span-14-13"><a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a>    <span class="n">test_tool_json_in_content</span><span class="p">,</span>
+</span><span id="__span-14-14"><a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a>    <span class="n">test_instruction_following</span><span class="p">,</span>
+</span><span id="__span-14-15"><a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a><span class="p">]</span>
+</span></code></pre></div>
+<p>Run different suites based on capabilities:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Test native tool calling (Gemini, OpenAI, etc.)</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>python<span class="w"> </span>benchmark.py<span class="w"> </span>--provider<span class="w"> </span>gemini<span class="w"> </span>--categories<span class="w"> </span>native_tools
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># Test prompt-based tools (Perplexity, etc.)</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>python<span class="w"> </span>benchmark.py<span class="w"> </span>--provider<span class="w"> </span>perplexity<span class="w"> </span>--categories<span class="w"> </span>prompt_tools
+</span></code></pre></div></p>
+<hr />
+<h4 id="6-document-the-distinction">6. Document the Distinction<a class="headerlink" href="#6-document-the-distinction" title="Permanent link">&para;</a></h4>
+<p><strong>File:</strong> <code>docs/TOOL_CALLING.md</code> (NEW)</p>
+<p>Create comprehensive doc explaining:
+- Native vs prompt-based tool calling
+- Which providers use which method
+- Trade-offs and reliability differences
+- How to configure each type</p>
+<hr />
+<h3 id="low-priority-nice-to-have">LOW PRIORITY (Nice to Have)<a class="headerlink" href="#low-priority-nice-to-have" title="Permanent link">&para;</a></h3>
+<h4 id="7-add-runtime-detection">7. Add Runtime Detection<a class="headerlink" href="#7-add-runtime-detection" title="Permanent link">&para;</a></h4>
+<p>Check if provider actually uses native tools:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># ppxai/engine/client.py</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="k">def</span><span class="w"> </span><span class="nf">_detect_tool_calling_method</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">response</span><span class="p">):</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Detect if response used native or prompt-based tools.&quot;&quot;&quot;</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">response</span><span class="p">,</span> <span class="s1">&#39;tool_calls&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">response</span><span class="o">.</span><span class="n">tool_calls</span><span class="p">:</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>        <span class="k">return</span> <span class="s2">&quot;native&quot;</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>    <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tool_calls_in_text</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">content</span><span class="p">):</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>        <span class="k">return</span> <span class="s2">&quot;prompt_based&quot;</span>
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>    <span class="k">return</span> <span class="s2">&quot;none&quot;</span>
+</span></code></pre></div>
+<p>Log this in debug mode for visibility.</p>
+<hr />
+<h2 id="updated-understanding">Updated Understanding<a class="headerlink" href="#updated-understanding" title="Permanent link">&para;</a></h2>
+<h3 id="perplexity">Perplexity<a class="headerlink" href="#perplexity" title="Permanent link">&para;</a></h3>
+<p><strong>Official API Support:</strong>
+- ✅ Agentic Research API supports function calling
+- ❌ BUT requires third-party models (e.g., <code>openai/gpt-5.2</code>)
+- ❌ Sonar models do NOT support native function calling
+- ✅ ppxai works around this with prompt-based parsing</p>
+<p><strong>ppxai Implementation:</strong>
+- Method: Prompt injection + JSON parsing ✅
+- Works: Yes (intermittently) ⚠️
+- Correct approach: Yes (only option) ✅</p>
+<hr />
+<h3 id="gemini">Gemini<a class="headerlink" href="#gemini" title="Permanent link">&para;</a></h3>
+<p><strong>Official API Support:</strong>
+- ✅ Full native function calling support
+- ✅ gemini-2.5-flash and gemini-2.5-pro both support it
+- ✅ Parallel and compositional calling</p>
+<p><strong>ppxai Implementation:</strong>
+- Method: Uses native <code>function_declarations</code> ✅
+- SDK: google-genai 1.56.0 (NEW SDK, not deprecated) ✅
+- Code: Checks for <code>part.function_call</code> in responses ✅
+- Status: CORRECTLY IMPLEMENTED ✅</p>
+<hr />
+<h2 id="test-evidence">Test Evidence<a class="headerlink" href="#test-evidence" title="Permanent link">&para;</a></h2>
+<h3 id="perplexity-direct-api-response">Perplexity Direct API Response<a class="headerlink" href="#perplexity-direct-api-response" title="Permanent link">&para;</a></h3>
+<p><strong>Without tools:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>finish_reason: stop
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>content: &quot;To read the `/src/config.json` file in Node.js, use the built-in...&quot;
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>tool_calls: None
+</span></code></pre></div></p>
+<p><strong>With tools:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>finish_reason: stop
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>content: &quot;To read the JSON file at `/src/config.json` in Node.js, use...&quot;
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>tool_calls: None
+</span></code></pre></div></p>
+<p><strong>Conclusion:</strong> Tools parameter has NO EFFECT on Sonar models.</p>
+<hr />
+<h3 id="ppxai-engine-response">ppxai Engine Response<a class="headerlink" href="#ppxai-engine-response" title="Permanent link">&para;</a></h3>
+<p><strong>Perplexity via Engine:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>TOOL_CALL events:
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>- {&#39;tool&#39;: &#39;read_file&#39;, &#39;arguments&#39;: {&#39;filepath&#39;: &#39;/src/config.json&#39;}}
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>- {&#39;tool&#39;: &#39;list_directory&#39;, &#39;arguments&#39;: {&#39;path&#39;: &#39;/src&#39;, &#39;format&#39;: &#39;long&#39;}}
+</span></code></pre></div></p>
+<p><strong>Conclusion:</strong> Engine successfully extracts tool calls from text via pattern matching.</p>
+<hr />
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ol>
+<li>✅ <strong>Verify findings</strong> - Tests completed</li>
+<li>✅ <strong>Gemini SDK verification</strong> - ALREADY using correct SDK (google-genai 1.56.0)</li>
+<li>⏳ <strong>Update capability flags</strong> - perplexity.py already has <code>native_tool_calling=False</code></li>
+<li>⏳ <strong>Update benchmarks</strong> - Add native vs prompt-based distinction to metadata</li>
+<li>⏳ <strong>Document behavior</strong> - Create TOOL_CALLING.md explaining both methods</li>
+<li>⏳ <strong>Consider SDK upgrade</strong> - google-genai 1.56.0 → 1.62.0 (minor improvements only)</li>
+</ol>
+<hr />
+<h2 id="conclusion">Conclusion<a class="headerlink" href="#conclusion" title="Permanent link">&para;</a></h2>
+<p>The tool calling situation is <strong>well-implemented</strong> but needs better documentation:</p>
+<ul>
+<li>❌ Perplexity does NOT support native tool calling (confirmed by tests)</li>
+<li>✅ ppxai's prompt-based workaround is the CORRECT approach for Perplexity</li>
+<li>✅ Gemini provider CORRECTLY uses native function calling via google-genai SDK</li>
+<li>⚠️ Benchmarks test BOTH methods but don't distinguish in metadata</li>
+<li>✅ Both methods are properly implemented in ppxai</li>
+</ul>
+<p><strong>Key Takeaway:</strong> ppxai correctly implements both native and prompt-based tool calling. The earlier analysis <strong>incorrectly stated</strong> Gemini was using a deprecated SDK - this was an error. We are using the correct <code>google-genai</code> package (NOT the deprecated <code>google-generativeai</code>). The main improvement needed is to make the distinction between methods explicit in benchmark metadata and documentation.</p>
+<p><strong>CORRECTION SUMMARY:</strong>
+- ❌ WRONG: "Gemini uses deprecated SDK" - This was incorrect
+- ✅ CORRECT: Gemini uses google-genai 1.56.0 (current SDK)
+- ✅ CORRECT: Perplexity uses prompt-based tool calling
+- ✅ CORRECT: ppxai implements both methods appropriately</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
