@@ -86,6 +86,30 @@ def validate_release(version: str) -> bool:
             "pattern": r"Version:\s+v{version}",
             "critical": True,
         },
+        # logger.py has version in banner
+        {
+            "file": "ppxai/common/logger.py",
+            "pattern": r"Version:\s+v{version}",
+            "critical": True,
+        },
+        # AGENTS.md current version
+        {
+            "file": "AGENTS.md",
+            "pattern": r"### Current Version: v{version}",
+            "critical": True,
+        },
+        # docs/README.md current version
+        {
+            "file": "docs/README.md",
+            "pattern": r"\*\*Current Version\*\*:\s+v{version}",
+            "critical": True,
+        },
+        # README.md version badge
+        {
+            "file": "README.md",
+            "pattern": r"badge/version-{version}-blue",
+            "critical": True,
+        },
     ]
 
     project_root = Path(__file__).parent.parent

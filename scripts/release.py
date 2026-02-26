@@ -61,7 +61,11 @@ VERSION_FILES = {
         "replacement": '"version": "{version}"',
         "json_key": "version",
     },
-    "ppxai/common/event_handler.py": {
+    "ppxai/rich/event_handler.py": {
+        "pattern": r'Version: v[\d.]+',
+        "replacement": 'Version: v{version}',
+    },
+    "ppxai/common/logger.py": {
         "pattern": r'Version: v[\d.]+',
         "replacement": 'Version: v{version}',
     },
@@ -111,7 +115,7 @@ def run_command(cmd: str, capture: bool = True, check: bool = True) -> subproces
 
 def get_gh_token() -> str | None:
     """Get GH_TOKEN from the token file. Returns the token string or None."""
-    token_file = PROJECT_ROOT / ".github/gh-token.env"
+    token_file = PROJECT_ROOT / ".github/gh-tokenv.env"
     if token_file.exists():
         # Read token directly instead of using source
         content = token_file.read_text(encoding='utf-8')
@@ -280,6 +284,79 @@ def update_claude_md(version: str, date: str):
     print(f"  ✅ Updated: CLAUDE.md")
 
 
+def update_readme_badges(version: str, test_count: int | None = None):
+    """Update README.md version badge, test count badge, and project tree count."""
+    filepath = PROJECT_ROOT / "README.md"
+    if not filepath.exists():
+        return
+
+    content = filepath.read_text(encoding='utf-8')
+
+    # Update version badge: badge/version-X.Y.Z-blue
+    content = re.sub(
+        r'badge/version-[\d.]+-blue',
+        f'badge/version-{version}-blue',
+        content
+    )
+
+    # Update test count badge if provided: badge/tests-NNNN%20passing-green
+    if test_count is not None:
+        content = re.sub(
+            r'badge/tests-\d+%20passing-green',
+            f'badge/tests-{test_count}%20passing-green',
+            content
+        )
+
+    filepath.write_text(content, encoding='utf-8')
+    print(f"  ✅ Updated: README.md (badges)")
+
+
+def update_agents_md(version: str):
+    """Update AGENTS.md current version line."""
+    filepath = PROJECT_ROOT / "AGENTS.md"
+    if not filepath.exists():
+        return
+
+    content = filepath.read_text(encoding='utf-8')
+    new_content = re.sub(
+        r'### Current Version: v[\d.]+',
+        f'### Current Version: v{version}',
+        content
+    )
+
+    if content != new_content:
+        filepath.write_text(new_content, encoding='utf-8')
+        print(f"  ✅ Updated: AGENTS.md")
+    else:
+        print(f"  ⏭️  No change needed: AGENTS.md")
+
+
+def update_docs_readme(version: str, date: str):
+    """Update docs/README.md current version and last updated date."""
+    filepath = PROJECT_ROOT / "docs/README.md"
+    if not filepath.exists():
+        return
+
+    content = filepath.read_text(encoding='utf-8')
+
+    # Update: **Current Version**: vX.Y.Z
+    content = re.sub(
+        r'\*\*Current Version\*\*: v[\d.]+',
+        f'**Current Version**: v{version}',
+        content
+    )
+
+    # Update: **Last Updated**: YYYY-MM-DD
+    content = re.sub(
+        r'\*\*Last Updated\*\*: [\d-]+',
+        f'**Last Updated**: {date}',
+        content
+    )
+
+    filepath.write_text(content, encoding='utf-8')
+    print(f"  ✅ Updated: docs/README.md")
+
+
 def create_release_notes(version: str, date: str):
     """Create release notes file if it doesn't exist."""
     notes_file = PROJECT_ROOT / f"docs/RELEASE-NOTES-v{version}.md"
@@ -405,8 +482,8 @@ def run_typescript_lint() -> bool:
         return False
 
 
-def run_tests() -> bool:
-    """Run pytest and return success status."""
+def run_tests() -> tuple[bool, int]:
+    """Run pytest and return (success, test_count) tuple."""
     print("\n📋 Running tests...")
 
     # Detect uv command
@@ -423,17 +500,19 @@ def run_tests() -> bool:
         result = run_command(cmd, check=False)
         if result.returncode == 0:
             # Extract test count from output
+            test_count = 0
             match = re.search(r'(\d+) passed', result.stdout)
             if match:
-                print(f"  ✅ {match.group(1)} tests passed")
-            return True
+                test_count = int(match.group(1))
+                print(f"  ✅ {test_count} tests passed")
+            return True, test_count
         elif "command not found" not in result.stderr and "No module named" not in result.stderr:
             print(f"  ❌ Tests failed!")
             print(result.stdout[-2000:] if len(result.stdout) > 2000 else result.stdout)
-            return False
+            return False, 0
 
     print("  ⚠️  Could not find pytest runner")
-    return False
+    return False, 0
 
 
 def run_validation(version: str) -> bool:
@@ -941,6 +1020,8 @@ def main():
             print(f"       - {filepath} (vsix refs)")
         print(f"       - CLAUDE.md")
         print(f"       - ROADMAP.md")
+        print(f"       - AGENTS.md")
+        print(f"       - docs/README.md")
         print(f"       - vscode-extension/package-lock.json")
 
         # Validation
@@ -1011,6 +1092,15 @@ def main():
     # Update CLAUDE.md
     update_claude_md(version, date)
 
+    # Update README.md badges (version only, test count updated after tests pass)
+    update_readme_badges(version)
+
+    # Update AGENTS.md
+    update_agents_md(version)
+
+    # Update docs/README.md
+    update_docs_readme(version, date)
+
     # Update ROADMAP.md current version
     roadmap_path = PROJECT_ROOT / "ROADMAP.md"
     if roadmap_path.exists():
@@ -1053,9 +1143,13 @@ def main():
     if not args.skip_tests:
         step += 1
         print_step(step, total_steps, "Running Tests")
-        if not run_tests():
+        tests_passed, test_count = run_tests()
+        if not tests_passed:
             print(f"\n❌ Tests failed. Fix issues and try again.")
             sys.exit(1)
+        # Update README badges with actual test count
+        if test_count > 0:
+            update_readme_badges(version, test_count)
         record_step("Tests")
 
     # Step 8: Create commit

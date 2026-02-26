@@ -354,11 +354,14 @@ powershell -File scripts/copy-beta.ps1 -TargetDir "I:\Software\ppxai"
 | `ppxai/__init__.py` | `__version__ = "X.Y.Z"` |
 | `vscode-extension/package.json` | `"version": "X.Y.Z"` |
 | `vscode-extension/package-lock.json` | `"version": "X.Y.Z"` |
-| `ppxai/common/event_handler.py` | `Version: vX.Y.Z` |
-| `README.md` | `ppxai-X.Y.Z.vsix` |
+| `ppxai/rich/event_handler.py` | `Version: vX.Y.Z` |
+| `ppxai/common/logger.py` | `Version: vX.Y.Z` |
+| `README.md` | `ppxai-X.Y.Z.vsix` + version/test badges |
 | `vscode-extension/README.md` | `ppxai-X.Y.Z.vsix` |
 | `CLAUDE.md` | `**Current Version:** vX.Y.Z` |
 | `ROADMAP.md` | `**Current Version**: vX.Y.Z` |
+| `AGENTS.md` | `### Current Version: vX.Y.Z` |
+| `docs/README.md` | `**Current Version**: vX.Y.Z` + `**Last Updated**` |
 
 ### Pre-Release Checklist
 
