@@ -216,5 +216,5 @@ A: Type `@filename`, `@git`, or `@tree` in your messages. See [Context Injection
 
 ---
 
-**Current Version**: v1.15.6
-**Last Updated**: 2026-02-20
+**Current Version**: v1.16.0
+**Last Updated**: 2026-02-26

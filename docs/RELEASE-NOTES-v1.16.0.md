@@ -1,6 +1,6 @@
 # Release Notes: v1.16.0
 
-**Release Date:** 2026-02-23
+**Release Date:** 2026-02-26
 **Branch:** feature/v1.16.0
 **Focus:** Profile-driven tool loop, multi-tool support, agent UI, benchmark v2
 

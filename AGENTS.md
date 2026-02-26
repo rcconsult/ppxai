@@ -294,7 +294,7 @@ The web tools (`get_weather`, `fetch_url`, `web_search`) support corporate proxy
 - `docs/TODO-v1.16.0.md` - Current v1.16.0 task list (consolidated, single source of truth)
 - `docs/archive/RELEASE-PLAN-v1.15.6-v1.16.0.md` - Original release plan (archived, v1.15.6 history)
 
-### Current Version: v1.15.6
+### Current Version: v1.16.0
 
 **v1.15.6 Features:**
 - **NEW:** Native OpenAI provider (`openai_native.py`) — Chat Completions + Responses API routing

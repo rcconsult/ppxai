@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.16.0-dev
+**Current Version:** v1.16.0
 
 **v1.15.5 highlights:**
 - **CHANGE:** Multi-line chat input — Enter inserts newlines, Ctrl+Enter submits (TextArea replaces Input widget)
@@ -91,9 +91,9 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - `local` provider inheritance - ollama, vllm, lmstudio inherit from `local` hints
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.16.0.dev0
+- Python package (pyproject.toml): v1.16.0
 - VSCode extension (package.json): v1.16.0
-- Last release tag: v1.15.6
+- Last release tag: v1.16.0
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
 
