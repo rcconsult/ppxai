@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
     
     
       
@@ -1430,7 +1430,7 @@ Consent responses were inconsistent across clients:
 - Case sensitivity issues ("YES" vs "yes" vs "Yes")
 - Manual conversion in each client was error-prone</p>
 <p><strong>Solution:</strong>
-Created <code>normalize_consent_response()</code> function in <a href="ppxai/common/consent.py">ppxai/common/consent.py</a> that accepts all variations:</p>
+Created <code>normalize_consent_response()</code> function in <a href="../ppxai/common/consent.py">ppxai/common/consent.py</a> that accepts all variations:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">normalize_consent_response</span><span class="p">(</span><span class="s2">&quot;yes&quot;</span><span class="p">)</span> <span class="err">→</span> <span class="s2">&quot;y&quot;</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">normalize_consent_response</span><span class="p">(</span><span class="s2">&quot;YES&quot;</span><span class="p">)</span> <span class="err">→</span> <span class="s2">&quot;y&quot;</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">normalize_consent_response</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">)</span> <span class="err">→</span> <span class="s2">&quot;y&quot;</span>

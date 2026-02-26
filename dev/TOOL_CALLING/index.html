@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
     
     
       
@@ -1446,6 +1446,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#v1156-2026-02-20" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.15.6 (2026-02-20)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#v1154-2026-02-13" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1667,7 +1678,7 @@
 <li><strong>Native calling:</strong> Direct API → tool execution (faster, more reliable)</li>
 <li><strong>Prompt-based:</strong> Prompt → LLM generation → parsing → tool execution (slower, may have errors)</li>
 </ul>
-<p><strong>Example from v1.15.3 benchmarks:</strong></p>
+<p><strong>Example from v1.15.6 benchmarks:</strong></p>
 <table>
 <thead>
 <tr>
@@ -1679,23 +1690,42 @@
 </thead>
 <tbody>
 <tr>
-<td>gemini-3-flash-preview</td>
+<td>gemini-2.5-pro</td>
 <td>Native</td>
-<td>100%</td>
-<td>Perfect tool execution</td>
+<td>81.3%</td>
+<td>Clean native, no workarounds</td>
 </tr>
 <tr>
-<td>sonar-pro</td>
+<td>Qwen3-Coder-30B FP8</td>
+<td>Native</td>
+<td>81.3%</td>
+<td>Hermes parser, stable</td>
+</tr>
+<tr>
+<td>gpt-5.2</td>
+<td>Native</td>
+<td>70.3%</td>
+<td>OpenAI flagship (100% halluc. resist)</td>
+</tr>
+<tr>
+<td>sonar</td>
 <td>Prompt-Based</td>
-<td>28.6%</td>
-<td>Works but requires hints</td>
+<td>75.0%</td>
+<td>Excellent with AGENTS.md hints</td>
+</tr>
+<tr>
+<td>gpt-4.1-mini</td>
+<td>Prompt-Based</td>
+<td>71.9%</td>
+<td>Better prompt-based than native (60.9%)</td>
 </tr>
 </tbody>
 </table>
 <p>The gap is due to:
 1. Parsing reliability
 2. Model training (native models trained specifically for tool calling)
-3. Response format consistency</p>
+3. Response format consistency
+4. Per-model routing — some models score higher with prompt-based mode</p>
 <h3 id="benchmark-metadata">Benchmark Metadata<a class="headerlink" href="#benchmark-metadata" title="Permanent link">&para;</a></h3>
 <p>Starting with v1.15.3, benchmark results include tool calling method metadata:</p>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span>
@@ -1731,9 +1761,10 @@
 <li>
 <p><strong>Use specific models:</strong></p>
 </li>
-<li><code>sonar-pro</code> (73.4% benchmark) - Best for coding</li>
+<li><code>sonar</code> (75.0% benchmark) - Best cost/utility ratio</li>
+<li><code>sonar-pro</code> - More thorough but higher cost</li>
 <li>
-<p>Avoid <code>sonar-reasoning-pro</code> (poor tool calling: 50%)</p>
+<p>Avoid <code>sonar-reasoning-pro</code> (poor tool calling: 67.2%)</p>
 </li>
 <li>
 <p><strong>Check AGENTS.md exists</strong> in your project for model-specific tuning</p>
@@ -1866,6 +1897,19 @@
 <li>Weather tool: 500/1500/5000 chars for short/detailed/forecast formats</li>
 <li>Custom limits for web_search (3000), fetch_url (5000), read_file (10000)</li>
 <li>11 new tests in <code>tests/test_tool_display_limits.py</code></li>
+</ul>
+<h3 id="v1156-2026-02-20">v1.15.6 (2026-02-20)<a class="headerlink" href="#v1156-2026-02-20" title="Permanent link">&para;</a></h3>
+<ul>
+<li>✅ <strong><code>OpenAINativeProvider</code></strong> — dedicated provider for OpenAI models with per-model routing</li>
+<li>Chat Completions API for GPT-4.1, GPT-5.x, o-series</li>
+<li>Responses API for Codex and Pro models</li>
+<li>404 auto-fallback between API paths</li>
+<li><code>PROMPT_BASED_MODEL_PREFIXES</code> routes o4-mini, gpt-4.1-mini to prompt-based mode</li>
+<li>✅ <strong>Model profiles</strong> — <code>ModelProfile</code> dataclass in <code>model_profiles.py</code> with 37 profiles</li>
+<li>Per-model <code>tool_calling.mode</code>, <code>fallback_on_empty</code>, <code>strip_json_from_text</code></li>
+<li><code>max_tool_iterations</code> per model (gemini: 25, sonar/codex-mini: 20)</li>
+<li>✅ <strong>Codex native tool calling</strong> — belt-and-suspenders: native API tools + tool hints in <code>instructions</code></li>
+<li>✅ <strong>43 unit tests</strong> in <code>tests/test_openai_native.py</code></li>
 </ul>
 <h3 id="v1154-2026-02-13">v1.15.4 (2026-02-13)<a class="headerlink" href="#v1154-2026-02-13" title="Permanent link">&para;</a></h3>
 <ul>

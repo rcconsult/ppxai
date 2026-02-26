@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
     
     
       
@@ -973,10 +973,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#p1" class="md-nav__link">
+  <a href="#why-v1160-not-v1157" class="md-nav__link">
     <span class="md-ellipsis">
       
-        P1
+        Why v1.16.0 (Not v1.15.7)
       
     </span>
   </a>
@@ -984,10 +984,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#p2" class="md-nav__link">
+  <a href="#completed-macos-session-2026-02-20" class="md-nav__link">
     <span class="md-ellipsis">
       
-        P2
+        Completed (macOS session, 2026-02-20)
       
     </span>
   </a>
@@ -995,10 +995,237 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#p3" class="md-nav__link">
+  <a href="#implementation-order" class="md-nav__link">
     <span class="md-ellipsis">
       
-        P3
+        Implementation Order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-1-provider-hierarchy-refactoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Provider Hierarchy Refactoring ✓
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-2-profile-driven-tool-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Profile-Driven Tool Loop ✓
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-3-proper-tool-message-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Proper Tool Message Format ✓
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-4-multi-tool-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Multi-Tool Support ✓
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-5-agent-ui-noise-reduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: Agent UI Noise Reduction
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 5: Agent UI Noise Reduction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#issue-a-checkpoint-bubble-spam-na" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue A: Checkpoint Bubble Spam — N/A
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issue-b-grouped-tool-call-display" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issue B: Grouped Tool Call Display ✓
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-6-config-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6: Config Integration ✓
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-7-benchmark-v2-phase-1-3-tests-done-re-benchmark-in-progress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7: Benchmark v2 ✓ (Phase 1-3 tests done, re-benchmark in progress)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 7: Benchmark v2 ✓ (Phase 1-3 tests done, re-benchmark in progress)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-scoring-distortions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Scoring Distortions ✓
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-agentic-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Agentic Patterns ✓
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-efficiency-hints-mostly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Efficiency &amp; Hints ✓ (mostly)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deferred-v1161" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deferred (v1.16.1+)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Deferred (v1.16.1+)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#goal-10-interactive-file-navigation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal 10: Interactive File Navigation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#goal-11-genaiscript-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal 11: GenAIScript Integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#risk-mitigation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk Mitigation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-not-to-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What NOT to Change
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#success-criteria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Success Criteria
       
     </span>
   </a>
@@ -1037,31 +1264,244 @@
 
 
 <h1 id="todo-v1160-profile-driven-tool-loop">TODO: v1.16.0 — Profile-Driven Tool Loop<a class="headerlink" href="#todo-v1160-profile-driven-tool-loop" title="Permanent link">&para;</a></h1>
-<p><strong>Branch:</strong> TBD (after v1.15.6 merge to master)
-<strong>Previous:</strong> <a href="../ARCHIVE-v1.15.6-debug-sessions/">ARCHIVE-v1.15.6-debug-sessions.md</a>
-<strong>Release Plan:</strong> <a href="../RELEASE-PLAN-v1.15.6-v1.16.0/">RELEASE-PLAN-v1.15.6-v1.16.0.md</a></p>
+<p><strong>Branch:</strong> feature/v1.16.0
+<strong>Previous:</strong> v1.15.6 (released, tagged) — <a href="../archive/RELEASE-PLAN-v1.15.6-v1.16.0/">RELEASE-PLAN-v1.15.6-v1.16.0.md</a>
+<strong>Debug Sessions:</strong> <a href="../archive/ARCHIVE-v1.15.6-debug-sessions/">ARCHIVE-v1.15.6-debug-sessions.md</a></p>
 <hr />
-<h2 id="p1">P1<a class="headerlink" href="#p1" title="Permanent link">&para;</a></h2>
+<h2 id="why-v1160-not-v1157">Why v1.16.0 (Not v1.15.7)<a class="headerlink" href="#why-v1160-not-v1157" title="Permanent link">&para;</a></h2>
+<p>These changes modify the core tool loop in <code>chat.py</code> affecting <strong>every provider and every client</strong>:</p>
+<ol>
+<li><strong>Profile-driven routing</strong> — replaces the binary <code>native_tool_calling: bool</code> decision</li>
+<li><strong>Tool result message format</strong> — from synthetic <code>assistant</code>/<code>user</code> pairs to proper <code>tool</code> role messages</li>
+<li><strong>Multi-tool processing</strong> — from <code>native_tool_calls[0]</code> to processing all calls</li>
+<li><strong>Adaptive fallback</strong> — tool mode can change mid-conversation</li>
+</ol>
+<hr />
+<h2 id="completed-macos-session-2026-02-20">Completed (macOS session, 2026-02-20)<a class="headerlink" href="#completed-macos-session-2026-02-20" title="Permanent link">&para;</a></h2>
+<details>
+<summary>P1-P3 foundation work — all done</summary>
+
+- [x] **B1** Session context reset on model switch — `session.reset_for_model_switch()`, `client.set_model(reset_context=)`, HTTP endpoints. All session restore paths pass `reset_context=False`.
+- [x] **B2** Per-model iteration limit — `ModelProfile.max_tool_iterations` field. sonar(20), gemini(25), codex-mini(20), qwen3-coder(20). `chat.py` uses `max(manager.max_iterations, profile.max_tool_iterations)`.
+- [x] **B3** Belt-and-suspenders prompt injection — `chat.py` native mode injects `get_tools_prompt()` when profile has `fallback_on_empty` or `fallback_on_failure`.
+- [x] **B7** Session pollution detection — `check_session_pollution()` bigram similarity >90% → WARNING. Wired into `chat.py` after first iteration.
+- [x] **B11** SSE disconnect detection — `request.is_disconnected()` in `sse_event_generator`, `raw_request: Request` on `/chat`.
+- [x] **A3** Model switch warning — `client.last_model_switch_reset`, commands show cleared count.
+- [x] **A12** Partial credit scoring — `score` (0.0-1.0), tool calling +50% name +50% args.
+- [x] **B4** `multi_file_review` benchmark — score = files_read / files_available.
+- [x] **B5** `claim_without_action` benchmark — fabricated report = 0.0, honest refusal = 1.0.
+- [x] **B6** `consecutive_tool_loop` benchmark — 5-step dependent chain, score = steps/5.
+- [x] **B8** `time_to_first_tool_call` benchmark — penalize >100 chars preamble.
+- [x] **B9** Partial credit scoring — merged into A12.
+- [x] **Goal 5** `/ls` and `/tree` commands — `DirectoryListingResult`, `DirectoryTreeResult`, HTTP `/files/list` + `/files/tree`, all 3 clients.
+- [x] 6 new session tests for `reset_for_model_switch`
+- [x] 10 new benchmark result files
+
+</details>
+
+<hr />
+<h2 id="implementation-order">Implementation Order<a class="headerlink" href="#implementation-order" title="Permanent link">&para;</a></h2>
+<p>Goals are ordered by dependency chain. Implement in this sequence:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Step 1: Provider Hierarchy ✅  (no deps — simplifies everything after)
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>   │
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>Step 2: Profile-Driven Loop ✅ (needs Step 1&#39;s clean interface)
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>   │
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>   ├─→ Step 3: Tool Messages ✅ (needs Step 2&#39;s profile routing)
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>   │      │
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>   │      └─→ Step 4: Multi-Tool ✅ (needs Step 3&#39;s message format)
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>   │             │
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>   │             └─→ Step 5: Agent UI Noise Reduction  (needs Step 4&#39;s multi-tool)
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>   │
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>   └─→ Step 6: Config Integration ✅ (needs Step 2&#39;s profiles, independent of 3-4)
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>Step 7: Benchmark v2 ✅       (independent — 37 tests done, re-benchmark in progress)
+</span></code></pre></div>
+<hr />
+<h2 id="step-1-provider-hierarchy-refactoring">Step 1: Provider Hierarchy Refactoring ✓<a class="headerlink" href="#step-1-provider-hierarchy-refactoring" title="Permanent link">&para;</a></h2>
+<p><strong>Status:</strong> Completed (2026-02-22)</p>
+<p>All providers now inherit from <code>BaseProvider</code>. <code>hasattr</code> guards removed from <code>chat.py</code>. 61 new compliance tests.</p>
 <ul>
-<li>[ ] <strong>B1</strong> Session context reset on model switch — strip assistant/tool messages, keep user messages. <code>session.py</code> new <code>reset_for_model_switch()</code>, <code>client.py</code> call on switch, <code>http.py</code> add <code>reset_context</code> option. Foundation for B7. <strong>Validated critical by Session 2:</strong> codex-mini worked clean, broke with polluted context.</li>
+<li>[x] <strong>Shared ABC</strong> — <code>OpenAINativeProvider</code> and <code>GeminiProvider</code> inherit from <code>BaseProvider</code></li>
+<li>[x] <strong>Eliminate duplicate methods</strong> — <code>needs_tool</code>, <code>get_model_profile</code>, <code>list_models</code>, <code>validate_config</code>, <code>_parse_usage</code>, <code>_convert_messages</code>, <code>_get_generation_params</code>, <code>_get_max_tokens</code> moved to base</li>
+<li>[x] <strong>Remove <code>hasattr</code> guards</strong> — <code>chat.py</code> uses <code>get_capabilities_for_model()</code> directly</li>
+<li>[x] <strong><code>get_capabilities_for_model()</code></strong> — added to <code>BaseProvider</code> (returns <code>self.capabilities</code>); <code>OpenAINativeProvider</code> overrides for o4-mini/gpt-4.1-mini</li>
+<li>[x] <strong>Tests</strong> — <code>test_provider_hierarchy.py</code> with 61 parametrized tests (inheritance, interface, capabilities, validate_config, base_url)</li>
 </ul>
-<h2 id="p2">P2<a class="headerlink" href="#p2" title="Permanent link">&para;</a></h2>
+<hr />
+<h2 id="step-2-profile-driven-tool-loop">Step 2: Profile-Driven Tool Loop ✓<a class="headerlink" href="#step-2-profile-driven-tool-loop" title="Permanent link">&para;</a></h2>
+<p><strong>Status:</strong> Completed (2026-02-22)</p>
+<p>Profile-driven mode routing replaces the binary <code>native_tool_calling</code> decision. <code>ToolCallingProfile.mode</code> ("native", "prompt_based", "auto") drives routing with provider capability gating. Fallback on empty/failure, strip_json, and belt-and-suspenders all wired.</p>
 <ul>
-<li>[ ] <strong>A3</strong> (from v1.15.6) Emit warning on model switch when session has messages</li>
-<li>[ ] <strong>A12</strong> (from v1.15.6) Benchmark test design review — binary scoring doesn't test agent loops</li>
-<li>[ ] <strong>B2</strong> Per-model iteration limit — add <code>max_tool_iterations</code> to <code>ModelProfile</code> (sonar→20, gemini→25, codex-mini→20, qwen3-coder→20). Use <code>max(tool_manager.max_iterations, profile.max_tool_iterations)</code> in <code>chat.py</code>.</li>
-<li>[ ] <strong>B3</strong> Belt-and-suspenders prompt injection — inject <code>get_tools_prompt()</code> into system prompt for native mode when profile has fallback flags. Generalize codex A8 pattern.</li>
-<li>[ ] <strong>B4</strong> <code>multi_file_review</code> benchmark — score = files_read / files_available. Claims without tool calls = 0.0.</li>
-<li>[ ] <strong>B5</strong> <code>claim_without_action</code> benchmark — fabricated report = 0.0, honest refusal = 1.0. Builds on A1 validator.</li>
-<li>[ ] <strong>B6</strong> <code>consecutive_tool_loop</code> benchmark — 5-step dependent chain: list_dir → read config → read entry → search → read match.</li>
-<li>[ ] <strong>B9</strong> Partial credit scoring — correct tool name +50%, correct args +50%.</li>
-<li>[ ] <strong>B11</strong> SSE disconnect detection — <code>request.is_disconnected()</code> in <code>sse_event_generator</code> to cancel background task.</li>
-<li>[ ] <strong>B12</strong> GenAIScript integration — Phase 1-2 agent loop tests as <code>.genai.mts</code> scripts.</li>
+<li>[x] <strong>Replace binary decision</strong> — <code>chat.py</code> uses <code>tc_profile.mode</code> with provider capability gate</li>
+<li>[x] <strong><code>strip_json_from_text</code></strong> — profile-driven stripping for both native and prompt-based modes</li>
+<li>[x] <strong><code>fallback_on_empty</code></strong> — native empty → retry with <code>_build_prompt_based_messages()</code></li>
+<li>[x] <strong><code>fallback_on_failure</code></strong> — native unknown tool → prompt-based parser fallback</li>
+<li>[x] <strong><code>auto</code> mode</strong> — starts native if provider supports it, same as native with fallbacks</li>
+<li>[x] <strong>Backwards compat</strong> — default profile = <code>mode="native"</code> → current behavior preserved</li>
+<li>[x] <strong>Truncation recovery</strong> — raw JSON truncation detection, escalating recovery messages, stuck-loop detection (MAX_TRUNCATION_RETRIES=3)</li>
+<li>[x] <strong>Sonar profile fix</strong> — all sonar profiles corrected to <code>mode="prompt_based"</code> (was <code>mode="native"</code> gated by capability)</li>
+<li>[x] <strong>AGENTS.md fix</strong> — perplexity/sonar hints rewritten for prompt-based tool calling (was contradicting mechanism)</li>
+<li>[x] <strong>Tests</strong> — 16 profile routing tests + 7 raw truncation tests + 4 stuck-loop tests = 27 new tests</li>
 </ul>
-<h2 id="p3">P3<a class="headerlink" href="#p3" title="Permanent link">&para;</a></h2>
+<hr />
+<h2 id="step-3-proper-tool-message-format">Step 3: Proper Tool Message Format ✓<a class="headerlink" href="#step-3-proper-tool-message-format" title="Permanent link">&para;</a></h2>
+<p><strong>Status:</strong> Completed (2026-02-22)</p>
+<p>Native mode now uses proper <code>tool</code> role messages. Prompt-based mode keeps synthetic pairs.</p>
 <ul>
-<li>[ ] <strong>B7</strong> Session pollution detection — &gt;90% response similarity to previous model → WARNING. Depends on B1.</li>
-<li>[ ] <strong>B8</strong> <code>time_to_first_tool_call</code> metric — penalize &gt;100 tokens before first tool call.</li>
+<li>[x] <strong><code>Message</code> type extended</strong> — <code>tool_calls</code> and <code>tool_call_id</code> fields added to <code>Message</code> dataclass (<code>types.py:51-52</code>)</li>
+<li>[x] <strong>Native mode messages</strong> — <code>assistant</code> (with <code>tool_calls</code>) + <code>tool</code> role messages (<code>chat.py:677-702</code>)</li>
+<li>[x] <strong>Prompt-based unchanged</strong> — synthetic pairs for prompt-based mode (<code>chat.py:703-725</code>)</li>
+<li>[x] <strong>Provider message conversion</strong> — all 4 providers handle <code>tool</code> role in <code>_convert_messages()</code> (<code>base.py:251-254</code>, <code>openai_native.py:673-682</code>, <code>openai_compat.py:356-373</code>, <code>gemini.py:261-388</code>)</li>
+<li>[x] <strong>Session serialization</strong> — save/load handles <code>tool_calls</code>/<code>tool_call_id</code> (<code>session.py:115-128</code>)</li>
+<li>[x] <strong>Migration</strong> — v1.15.x sessions load via <code>m.get("tool_calls")</code> / <code>m.get("tool_call_id")</code> (None-safe)</li>
+<li>[x] <strong>Session validation</strong> — <code>_validate_message_order()</code> allows <code>tool</code> messages after <code>assistant(tool_calls)</code> (<code>session.py:151-202</code>)</li>
+</ul>
+<hr />
+<h2 id="step-4-multi-tool-support">Step 4: Multi-Tool Support ✓<a class="headerlink" href="#step-4-multi-tool-support" title="Permanent link">&para;</a></h2>
+<p><strong>Status:</strong> Completed (2026-02-22)</p>
+<p>All native tool calls processed when <code>parallel_tool_calls</code> profile flag is set. Sequential execution with per-tool consent and loop detection.</p>
+<ul>
+<li>[x] <strong>Sequential tool execution</strong> — <code>for tc in tool_calls_list</code> processes all calls in sequence (<code>chat.py:639-671</code>)</li>
+<li>[x] <strong>Profile gating</strong> — <code>parallel_tool_calls</code> flag limits to first call when false (<code>chat.py:607-609</code>)</li>
+<li>[x] <strong>Multi-result events</strong> — emit <code>TOOL_CALL</code>/<code>TOOL_RESULT</code> per tool (<code>chat.py:656-665</code>)</li>
+<li>[x] <strong>Session messages</strong> — one <code>assistant</code> message with ALL <code>tool_calls</code>, N <code>tool</code> result messages (<code>chat.py:677-702</code>)</li>
+<li>[x] <strong>Consent handling</strong> — each tool gets individual consent via <code>_execute_single_tool()</code> (<code>chat.py:661</code>)</li>
+<li>[x] <strong>Loop detection</strong> — per-tool loop detection with early break (<code>chat.py:644-652</code>)</li>
+</ul>
+<hr />
+<h2 id="step-5-agent-ui-noise-reduction">Step 5: Agent UI Noise Reduction<a class="headerlink" href="#step-5-agent-ui-noise-reduction" title="Permanent link">&para;</a></h2>
+<p><strong>Dependencies:</strong> Step 4 (multi-tool support provides the engine-side batching; this step fixes the UI side)</p>
+<p><strong>Status:</strong> Completed (2026-02-23)</p>
+<h3 id="issue-a-checkpoint-bubble-spam-na">Issue A: Checkpoint Bubble Spam — N/A<a class="headerlink" href="#issue-a-checkpoint-bubble-spam-na" title="Permanent link">&para;</a></h3>
+<p>After code review, this is <strong>not a real problem</strong> in current code. <code>create_checkpoint()</code> only fires from <code>commit_agent_changes_if_needed()</code> AFTER the tool loop exits (chat.py:871). During the loop, <code>_register_checkpoint_file()</code> only registers files — no events. The STATUS event is queued but only delivered on the next tool execution's poll loop, which won't happen since the loop has ended.</p>
+<h3 id="issue-b-grouped-tool-call-display">Issue B: Grouped Tool Call Display ✓<a class="headerlink" href="#issue-b-grouped-tool-call-display" title="Permanent link">&para;</a></h3>
+<p>Each iteration's tool calls are now wrapped with <code>TOOL_GROUP_START</code>/<code>TOOL_GROUP_END</code> events. All 4 clients render them as collapsible groups.</p>
+<ul>
+<li>[x] <strong>Engine SSE events</strong> — <code>TOOL_GROUP_START</code> / <code>TOOL_GROUP_END</code> EventTypes in <code>types.py</code>, emitted wrapping tool execution loop in <code>chat.py</code></li>
+<li>[x] <strong><code>AGENT_COMPLETE</code> emission</strong> — engine now yields <code>AGENT_COMPLETE</code> event after tool loop (both normal completion and max-iterations), with <code>iterations</code> count and <code>commit</code> hash</li>
+<li>[x] <strong>SSE event type dispatch fix</strong> — side-channel queue events now emit using their actual EventType (STATUS, WORKING_DIR_CHANGED, etc.) instead of all being sent as <code>consent_request</code>. Fixes checkpoint events triggering false consent dialogs.</li>
+<li>[x] <strong>Web app</strong> — collapsible <code>.tool-group</code> container with header showing iteration, tool names, and success/failure status. Checkpoint bubble suppression (enriches commit message with count). Undo badge only shown when <code>agent_complete</code> includes a commit.</li>
+<li>[x] <strong>VSCode extension</strong> — <code>stream.ts</code> → <code>chatPanel.ts</code> → <code>main.js</code> forwarding + <code>.tool-group</code> CSS styling</li>
+<li>[x] <strong>ppxaide TUI</strong> — non-verbose mode suppresses individual tool bubbles, shows one summary line per group at group end; verbose mode unchanged. Tool group events logged at INFO level.</li>
+<li>[x] <strong>ppxai Rich CLI</strong> — dim separator lines wrapping tool groups with iteration number and status</li>
+<li>[x] <strong>Consent deadlock fix</strong> — SSE generator replaced <code>async for</code> with racing poll pattern (<code>asyncio.ensure_future</code> + 100ms polling). Removed consent event draining from <code>_execute_single_tool()</code> that was trapping events.</li>
+</ul>
+<hr />
+<h2 id="step-6-config-integration">Step 6: Config Integration ✓<a class="headerlink" href="#step-6-config-integration" title="Permanent link">&para;</a></h2>
+<p><strong>Status:</strong> Completed (2026-02-22)</p>
+<p>Per-model tool calling config overrides with 3-layer precedence: built-in profile → AGENTS.md → ppxai-config.json.</p>
+<ul>
+<li>[x] <strong>Config overrides</strong> — <code>get_tool_calling_config(provider, model)</code> reads <code>tool_calling</code> section from provider-level and model-level config (<code>config/__init__.py</code>)</li>
+<li>[x] <strong>AGENTS.md influence</strong> — <code>tool_calling</code> YAML front matter section with glob-pattern matching (<code>bootstrap.py:_parse_tool_calling_section</code>, <code>get_tool_calling_overrides</code>)</li>
+<li>[x] <strong>Effective profile merging</strong> — <code>_get_effective_profile()</code> in <code>chat.py</code> merges 3 layers</li>
+<li>[x] <strong>Context merging</strong> — <code>tool_calling_overrides</code> merged across scopes in <code>context.py</code></li>
+<li>[x] <strong><code>/model info</code> command</strong> — shows effective profile with source attribution (<code>provider.py:handle_model_info</code>)</li>
+<li>[x] <strong>Config example</strong> — <code>ppxai-config.example.json</code> updated with <code>tool_calling</code> examples for local-vllm and vllm-gpt-oss</li>
+<li>[x] <strong>Tests</strong> — 4 config tests + 6 bootstrap tests + 6 profile merging tests = 16 new tests</li>
+</ul>
+<hr />
+<h2 id="step-7-benchmark-v2-phase-1-3-tests-done-re-benchmark-in-progress">Step 7: Benchmark v2 ✓ (Phase 1-3 tests done, re-benchmark in progress)<a class="headerlink" href="#step-7-benchmark-v2-phase-1-3-tests-done-re-benchmark-in-progress" title="Permanent link">&para;</a></h2>
+<p><strong>Status:</strong> All 37 tests implemented across 8 categories. Re-benchmark runs in progress (2026-02-22).</p>
+<h3 id="phase-1-scoring-distortions">Phase 1: Scoring Distortions ✓<a class="headerlink" href="#phase-1-scoring-distortions" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] <strong>Partial credit scoring</strong> — <code>score</code> field (0.0-1.0) in <code>engine_runner.py</code>, tool calling +50% name +50% args</li>
+<li>[x] <strong><code>patch_apply_verify</code></strong> — model generates patch, applies with <code>_replace_hunk()</code>, verifies output. Supports unified diff and search-replace formats. Score: 0.0/0.5/0.7/1.0. weight=2.0 (<code>test_cases.py:704</code>)</li>
+</ul>
+<h3 id="phase-2-agentic-patterns">Phase 2: Agentic Patterns ✓<a class="headerlink" href="#phase-2-agentic-patterns" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] <strong><code>search_then_edit</code></strong> — search_code → read_file → apply_patch/write_file. score=steps/3, up to 6 turns, dedup detection. weight=2.0 (<code>test_cases.py:1751</code>)</li>
+<li>[x] <strong><code>fix_verify</code></strong> — write → test failure → fix → retest → pass. score=steps/4, up to 8 turns. weight=2.0 (<code>test_cases.py:1849</code>)</li>
+<li>[x] <strong><code>information_gathering</code></strong> — find and read 3 auth files (auth.py, middleware.py, auth_config.yaml). score=files_found/3. weight=2.0 (<code>test_cases.py:1951</code>)</li>
+<li>[x] <strong><code>error_recovery_chain</code></strong> — read → not found → search → find real path → read → apply_patch with permission denied. score=steps/4. weight=2.0 (<code>test_cases.py:2043</code>)</li>
+</ul>
+<h3 id="phase-3-efficiency-hints-mostly">Phase 3: Efficiency &amp; Hints ✓ (mostly)<a class="headerlink" href="#phase-3-efficiency-hints-mostly" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] <strong>Token/tool_call tracking</strong> — <code>total_tokens</code> and <code>total_tool_calls</code> in <code>EngineClientWrapper</code>, reported in <code>BenchmarkResult.metadata</code></li>
+<li>[x] <strong>With/without AGENTS.md</strong> — <code>--agents-md both</code> mode in <code>benchmark.py</code>, reports per-category delta</li>
+<li>[x] <strong><code>tool_call_efficiency</code></strong> — 5-step chain, score by extra calls: ≤5=1.0, 6-7=0.8, 8-10=0.5, &gt;10=0.3. weight=1.5 (<code>test_cases.py:2199</code>)</li>
+<li>[ ] <strong>Per-test USD cost</strong> — tokens counted but not priced (no <code>prompt_tokens</code>/<code>completion_tokens</code> split or provider pricing)</li>
+</ul>
+<h3 id="validation">Validation<a class="headerlink" href="#validation" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] <strong>Re-benchmark all models</strong> — in progress (2026-02-22 runs for gemini-2.5-flash, gpt-5.1-codex, gpt-5.2, sonar, gemini-3.1-pro-preview)</li>
+</ul>
+<hr />
+<h2 id="deferred-v1161">Deferred (v1.16.1+)<a class="headerlink" href="#deferred-v1161" title="Permanent link">&para;</a></h2>
+<h3 id="goal-10-interactive-file-navigation">Goal 10: Interactive File Navigation<a class="headerlink" href="#goal-10-interactive-file-navigation" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Clickable file names in <code>/ls</code> → open in preview</li>
+<li>[ ] Clickable directories in <code>/ls</code> → drill-down re-list</li>
+<li>[ ] Clickable entries in <code>/tree</code> → files preview, dirs expand</li>
+<li>[ ] All 4 clients (ppxaide TUI, Web, VSCode, ppxai Rich CLI)</li>
+</ul>
+<h3 id="goal-11-genaiscript-integration">Goal 11: GenAIScript Integration<a class="headerlink" href="#goal-11-genaiscript-integration" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Agent loop tests as <code>.genai.mts</code> scripts with <code>defTool()</code> simulated tools</li>
+<li>[ ] Multi-model comparison runner — <code>npx genaiscript eval</code> across all configured models</li>
+<li>[ ] Rubric-based code editing eval — LLM-as-judge for <code>apply_patch</code> quality</li>
+<li>[ ] CI integration — <code>npm run benchmark:genaiscript</code> in <code>benchmarks/genaiscript/</code></li>
+</ul>
+<hr />
+<h2 id="risk-mitigation">Risk Mitigation<a class="headerlink" href="#risk-mitigation" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Message format breaks local models</td>
+<td>Keep synthetic pairs for prompt-based; only native mode uses <code>tool</code> messages</td>
+</tr>
+<tr>
+<td>Multi-tool breaks consent flow</td>
+<td>Execute sequentially; each tool gets individual consent</td>
+</tr>
+<tr>
+<td>Profile mismatch causes regressions</td>
+<td>Default profile = current behavior; explicit opt-in</td>
+</tr>
+<tr>
+<td>Session format incompatible</td>
+<td>Migration layer reads old format, writes new</td>
+</tr>
+<tr>
+<td>Benchmark scores drop</td>
+<td>Re-benchmark before/after; block release if &gt;5% regression</td>
+</tr>
+</tbody>
+</table>
+<h2 id="what-not-to-change">What NOT to Change<a class="headerlink" href="#what-not-to-change" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Don't try to fix Tier D models — o4-mini (native), gemini-2.0-flash-exp are fundamentally broken</li>
+<li>Don't over-engineer profiles — start with existing fields, expand only when benchmarks prove need</li>
+<li>Don't break <code>OpenAICompatibleProvider</code> — must work unchanged with default profiles</li>
+<li>Don't break <code>GeminiProvider</code> — must work unchanged with default profiles</li>
+</ol>
+<hr />
+<h2 id="success-criteria">Success Criteria<a class="headerlink" href="#success-criteria" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] <strong>Step 1:</strong> Provider hierarchy — shared interface, no <code>hasattr</code> guards (1451 tests pass)</li>
+<li>[x] <strong>Step 2:</strong> Profile-driven routing replaces binary decision in <code>chat.py</code> + truncation recovery + sonar profile/hint fixes</li>
+<li>[x] <strong>Step 3:</strong> Proper <code>tool</code> role messages for native mode — <code>Message(tool_calls=, tool_call_id=)</code>, all providers, session serialization</li>
+<li>[x] <strong>Step 4:</strong> Multi-tool support — <code>parallel_tool_calls</code> gating, sequential execution, per-tool consent/loop detection</li>
+<li>[x] <strong>Step 5:</strong> Agent UI noise reduction — Issue A N/A (no real problem) + Issue B grouped tool call display ✓</li>
+<li>[x] <strong>Step 6:</strong> Config overrides for per-model <code>tool_calling</code> settings + <code>/model info</code> + AGENTS.md <code>tool_calling</code> YAML</li>
+<li>[x] <strong>Step 7:</strong> Benchmark v2 — 37 tests across 8 categories (Phase 1-3 done, per-test USD cost remaining)</li>
+<li>[ ] No provider regressions (full benchmark suite)</li>
+<li>[x] Session migration from v1.15.x works seamlessly (None-safe <code>.get()</code> for new fields)</li>
+<li>[ ] All existing tests pass + 50+ new tests (currently 1505 tests, all passing)</li>
+<li>[x] <code>/ls</code> and <code>/tree</code> commands work in all clients</li>
+<li>[x] Session context reset on model switch (B1)</li>
+<li>[x] Per-model iteration limit from ModelProfile (B2)</li>
+<li>[x] Belt-and-suspenders prompt injection (B3)</li>
+<li>[x] SSE disconnect detection (B11)</li>
+<li>[x] Session pollution detection (B7)</li>
+<li>[x] Partial credit scoring (A12/B9)</li>
+<li>[x] Agent loop benchmarks: multi_file_review, claim_without_action, consecutive_tool_loop (B4-B6)</li>
+<li>[x] time_to_first_tool_call benchmark (B8)</li>
 </ul>
 <hr />
 <h2 id="key-code-locations">Key Code Locations<a class="headerlink" href="#key-code-locations" title="Permanent link">&para;</a></h2>
@@ -1070,74 +1510,144 @@
 <tr>
 <th>Area</th>
 <th>File</th>
-<th>Lines</th>
+<th>Key</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Tool loop</td>
+<td>Effective profile merging</td>
 <td><code>ppxai/engine/chat.py</code></td>
-<td>229-586 (main while loop)</td>
+<td><code>_get_effective_profile()</code> (3-layer merge)</td>
+</tr>
+<tr>
+<td>Tool mode resolution</td>
+<td><code>ppxai/engine/chat.py</code></td>
+<td><code>tc_profile.mode</code> routing (~line 470)</td>
+</tr>
+<tr>
+<td>Multi-tool gating</td>
+<td><code>ppxai/engine/chat.py</code></td>
+<td><code>parallel_tool_calls</code> flag (~line 607)</td>
+</tr>
+<tr>
+<td>Native tool messages</td>
+<td><code>ppxai/engine/chat.py</code></td>
+<td><code>assistant(tool_calls)</code> + <code>tool</code> role (~line 677)</td>
+</tr>
+<tr>
+<td>Prompt-based messages</td>
+<td><code>ppxai/engine/chat.py</code></td>
+<td>Synthetic pairs (~line 703)</td>
 </tr>
 <tr>
 <td>Truncation retry</td>
 <td><code>ppxai/engine/chat.py</code></td>
-<td>504-509</td>
+<td>Escalating recovery + stuck-loop cap</td>
+</tr>
+<tr>
+<td>Belt-and-suspenders</td>
+<td><code>ppxai/engine/chat.py</code></td>
+<td>Tool hints injected when fallback flags set</td>
+</tr>
+<tr>
+<td>Pollution check</td>
+<td><code>ppxai/engine/chat.py</code></td>
+<td><code>check_session_pollution()</code> after iteration 1</td>
+</tr>
+<tr>
+<td>Config overrides</td>
+<td><code>ppxai/config/__init__.py</code></td>
+<td><code>get_tool_calling_config()</code></td>
+</tr>
+<tr>
+<td>AGENTS.md overrides</td>
+<td><code>ppxai/engine/bootstrap.py</code></td>
+<td><code>tool_calling_overrides</code>, <code>get_tool_calling_overrides()</code></td>
 </tr>
 <tr>
 <td>Validator</td>
 <td><code>ppxai/engine/tools/validator.py</code></td>
-<td>52-462</td>
+<td>Lines 52-462</td>
 </tr>
 <tr>
-<td>Validator invocation</td>
-<td><code>ppxai/engine/chat.py</code></td>
-<td>547-559</td>
+<td>Session reset</td>
+<td><code>ppxai/engine/session.py</code></td>
+<td>Line 215 (<code>reset_for_model_switch</code>)</td>
 </tr>
 <tr>
 <td>Model profiles</td>
 <td><code>ppxai/engine/model_profiles.py</code></td>
-<td>1-488</td>
+<td>1-488 (37 profiles)</td>
 </tr>
 <tr>
-<td>PROMPT_BASED_MODEL_PREFIXES</td>
+<td>Provider caps</td>
 <td><code>ppxai/engine/providers/openai_native.py</code></td>
-<td>46, 266</td>
+<td><code>get_capabilities_for_model()</code></td>
 </tr>
 <tr>
 <td>Max iterations</td>
 <td><code>ppxai/engine/tools/manager.py</code></td>
-<td>25 (default: 15)</td>
+<td>Line 25 (default: 15)</td>
 </tr>
 <tr>
 <td>Provider switch</td>
 <td><code>ppxai/engine/client.py</code></td>
-<td>414-491</td>
+<td>Lines 414-491</td>
 </tr>
 <tr>
 <td>Model switch</td>
 <td><code>ppxai/engine/client.py</code></td>
-<td>527-557</td>
+<td>Lines 527-557</td>
 </tr>
 <tr>
-<td>Session messages</td>
-<td><code>ppxai/engine/session.py</code></td>
-<td>86 (add), 215 (clear)</td>
+<td>Message type</td>
+<td><code>ppxai/engine/types.py</code></td>
+<td><code>Message</code> dataclass</td>
 </tr>
 <tr>
-<td>HTTP endpoints</td>
+<td>HTTP /chat</td>
 <td><code>ppxai/server/http.py</code></td>
-<td>793 (provider), 847 (model)</td>
+<td>Line 673</td>
 </tr>
 <tr>
-<td>Truncation detect</td>
-<td><code>ppxai/engine/tools/parser.py</code></td>
-<td>413-492</td>
+<td>HTTP /provider</td>
+<td><code>ppxai/server/http.py</code></td>
+<td>Line 793</td>
 </tr>
 <tr>
-<td>ppxaide debug-log</td>
-<td><code>ppxai/tui/app.py</code></td>
-<td>1505 (intercept), 2012 (toggle)</td>
+<td>HTTP /model</td>
+<td><code>ppxai/server/http.py</code></td>
+<td>Line 847</td>
+</tr>
+<tr>
+<td>HTTP /files/list</td>
+<td><code>ppxai/server/http.py</code></td>
+<td>Line 1639</td>
+</tr>
+<tr>
+<td>HTTP /files/tree</td>
+<td><code>ppxai/server/http.py</code></td>
+<td>Line 1707</td>
+</tr>
+<tr>
+<td>/ls command</td>
+<td><code>ppxai/commands/utility.py</code></td>
+<td>Line 622</td>
+</tr>
+<tr>
+<td>/tree command</td>
+<td><code>ppxai/commands/utility.py</code></td>
+<td>Line 701</td>
+</tr>
+<tr>
+<td>Benchmark tests</td>
+<td><code>benchmarks/llm-eval/test_cases.py</code></td>
+<td>Line 1367+ (agentic)</td>
+</tr>
+<tr>
+<td>Benchmark runner</td>
+<td><code>benchmarks/llm-eval/engine_runner.py</code></td>
+<td>Partial credit scoring</td>
 </tr>
 </tbody>
 </table>

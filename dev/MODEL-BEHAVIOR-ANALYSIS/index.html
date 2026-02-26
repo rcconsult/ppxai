@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
     
     
       
@@ -1426,6 +1426,89 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#part-9-feb-22-update-v1160-step-2-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Part 9: Feb 22 Update — v1.16.0 Step 2 Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Part 9: Feb 22 Update — v1.16.0 Step 2 Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#updated-rankings-best-score-per-model-most-recent-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Updated Rankings (Best Score Per Model, Most Recent Run)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notable-improvements-since-feb-19" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notable Improvements Since Feb 19
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sonar-reasoning-pro-deep-dive-feb-22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sonar-reasoning-pro Deep Dive (Feb 22)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#benchmark-vs-real-world-gap-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benchmark vs Real-World Gap Analysis
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sonar-profilehint-corrections-applied" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sonar Profile/Hint Corrections Applied
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-reassignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier Reassignment
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1448,8 +1531,8 @@
 
 <h1 id="model-behavior-analysis-ppxai-architecture-recommendations">Model Behavior Analysis &amp; ppxai Architecture Recommendations<a class="headerlink" href="#model-behavior-analysis-ppxai-architecture-recommendations" title="Permanent link">&para;</a></h1>
 <p><strong>Created:</strong> 2026-02-19
-<strong>Branch:</strong> feature/benchmark-openai-models
-<strong>Status:</strong> Analysis complete, v1.15.6 implementation done (profiles + native provider)</p>
+<strong>Last updated:</strong> 2026-02-22
+<strong>Status:</strong> Living document — updated with each benchmark session</p>
 <hr />
 <h2 id="part-1-model-behavior-taxonomy">Part 1: Model Behavior Taxonomy<a class="headerlink" href="#part-1-model-behavior-taxonomy" title="Permanent link">&para;</a></h2>
 <p>Based on 49+ benchmark runs across 27 unique models, we identify <strong>5 distinct behavior archetypes</strong> — not just the binary native/prompt-based split.</p>
@@ -2263,6 +2346,394 @@
 </tbody>
 </table>
 <p>The <strong>single biggest differentiator</strong> is clean native tool calling vs. leaky/prompt-based. The <strong>hardest unsolved category</strong> is hallucination resistance — <code>contradiction_detection</code> defeats every model tested against the full suite.</p>
+<hr />
+<h2 id="part-9-feb-22-update-v1160-step-2-results">Part 9: Feb 22 Update — v1.16.0 Step 2 Results<a class="headerlink" href="#part-9-feb-22-update-v1160-step-2-results" title="Permanent link">&para;</a></h2>
+<p><strong>Date:</strong> 2026-02-22
+<strong>Branch:</strong> feature/v1.16.0
+<strong>Changes:</strong> Profile-driven tool loop (Step 2), truncation recovery, sonar profile/hint fixes</p>
+<h3 id="updated-rankings-best-score-per-model-most-recent-run">Updated Rankings (Best Score Per Model, Most Recent Run)<a class="headerlink" href="#updated-rankings-best-score-per-model-most-recent-run" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Model</th>
+<th style="text-align: right;">Best %</th>
+<th>Tier</th>
+<th>Provider</th>
+<th>Date</th>
+<th>Trend</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>gpt-oss-120b</td>
+<td style="text-align: right;">89.1</td>
+<td>S</td>
+<td>custom (vLLM)</td>
+<td>Feb 5</td>
+<td>—</td>
+</tr>
+<tr>
+<td>2</td>
+<td>gemini-2.5-flash-lite</td>
+<td style="text-align: right;">86.2</td>
+<td>S</td>
+<td>Gemini</td>
+<td>Feb 21</td>
+<td>NEW</td>
+</tr>
+<tr>
+<td>3</td>
+<td>gemini-2.5-pro</td>
+<td style="text-align: right;">85.1</td>
+<td>S</td>
+<td>Gemini</td>
+<td>Feb 22</td>
+<td>+3.9</td>
+</tr>
+<tr>
+<td>4</td>
+<td>gpt-5.1-codex</td>
+<td style="text-align: right;">82.8</td>
+<td>S</td>
+<td>OpenAI</td>
+<td>Feb 22</td>
+<td>+10.9</td>
+</tr>
+<tr>
+<td>5</td>
+<td>gpt-5</td>
+<td style="text-align: right;">82.7</td>
+<td>S</td>
+<td>OpenAI</td>
+<td>Feb 22</td>
+<td>+20.2</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Qwen3-Coder-30B FP8</td>
+<td style="text-align: right;">81.3</td>
+<td>S</td>
+<td>DGX vLLM</td>
+<td>Feb 7</td>
+<td>—</td>
+</tr>
+<tr>
+<td>7</td>
+<td>gemini-2.5-flash</td>
+<td style="text-align: right;">81.3</td>
+<td>S</td>
+<td>Gemini</td>
+<td>Feb 5</td>
+<td>—</td>
+</tr>
+<tr>
+<td>8</td>
+<td>sonar-pro</td>
+<td style="text-align: right;">76.7</td>
+<td>A</td>
+<td>Perplexity</td>
+<td>Feb 22</td>
+<td>+7.9</td>
+</tr>
+<tr>
+<td>9</td>
+<td>gemini-3-pro-preview</td>
+<td style="text-align: right;">76.2</td>
+<td>A</td>
+<td>Gemini</td>
+<td>Feb 20</td>
+<td>+5.9</td>
+</tr>
+<tr>
+<td>10</td>
+<td>sonar</td>
+<td style="text-align: right;">73.8</td>
+<td>A</td>
+<td>Perplexity</td>
+<td>Feb 22</td>
+<td>+3.5</td>
+</tr>
+<tr>
+<td>11</td>
+<td>gemini-3-flash-preview</td>
+<td style="text-align: right;">73.6</td>
+<td>A</td>
+<td>Gemini</td>
+<td>Feb 22</td>
+<td>+5.4</td>
+</tr>
+<tr>
+<td>12</td>
+<td>gpt-5.2</td>
+<td style="text-align: right;">70.3</td>
+<td>B</td>
+<td>OpenAI</td>
+<td>Feb 17</td>
+<td>—</td>
+</tr>
+<tr>
+<td>13</td>
+<td>sonar-reasoning-pro</td>
+<td style="text-align: right;">66.2</td>
+<td>B</td>
+<td>Perplexity</td>
+<td>Feb 22</td>
+<td>-1.0</td>
+</tr>
+<tr>
+<td>14</td>
+<td>gpt-4.1</td>
+<td style="text-align: right;">67.2</td>
+<td>B</td>
+<td>OpenAI</td>
+<td>Feb 17</td>
+<td>—</td>
+</tr>
+<tr>
+<td>15</td>
+<td>gpt-5-mini</td>
+<td style="text-align: right;">67.2</td>
+<td>B</td>
+<td>OpenAI</td>
+<td>Feb 17</td>
+<td>—</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Qwen3-Coder-Next FP8</td>
+<td style="text-align: right;">60.9</td>
+<td>B</td>
+<td>DGX vLLM</td>
+<td>Feb 10</td>
+<td>—</td>
+</tr>
+<tr>
+<td>17</td>
+<td>RedHat Qwen3-30B FP8</td>
+<td style="text-align: right;">60.9</td>
+<td>B</td>
+<td>DGX vLLM</td>
+<td>Feb 6</td>
+<td>—</td>
+</tr>
+<tr>
+<td>18</td>
+<td>gpt-4.1-nano</td>
+<td style="text-align: right;">57.8</td>
+<td>C</td>
+<td>OpenAI</td>
+<td>Feb 17</td>
+<td>—</td>
+</tr>
+<tr>
+<td>19</td>
+<td>gpt-5.1-codex-mini</td>
+<td style="text-align: right;">40.6</td>
+<td>D</td>
+<td>OpenAI</td>
+<td>Feb 17</td>
+<td>—</td>
+</tr>
+<tr>
+<td>20</td>
+<td>llama-3.1-sonar-large</td>
+<td style="text-align: right;">10.9</td>
+<td>D</td>
+<td>Perplexity</td>
+<td>Feb 7</td>
+<td>—</td>
+</tr>
+<tr>
+<td>21</td>
+<td>gemini-2.0-flash-exp</td>
+<td style="text-align: right;">10.9</td>
+<td>D</td>
+<td>Gemini</td>
+<td>Feb 7</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><em>o4-mini (100%) and gpt-4.1-mini (100%) omitted — volatile, achieved 100% once after hint tuning but median ~62%.</em></p>
+<h3 id="notable-improvements-since-feb-19">Notable Improvements Since Feb 19<a class="headerlink" href="#notable-improvements-since-feb-19" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th style="text-align: right;">Feb 19 Best</th>
+<th style="text-align: right;">Feb 22</th>
+<th style="text-align: right;">Delta</th>
+<th>Cause</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gpt-5</td>
+<td style="text-align: right;">62.5%</td>
+<td style="text-align: right;">82.7%</td>
+<td style="text-align: right;">+20.2</td>
+<td>Partial credit scoring (A12) + AGENTS.md hints</td>
+</tr>
+<tr>
+<td>gpt-5.1-codex</td>
+<td style="text-align: right;">64.1%</td>
+<td style="text-align: right;">82.8%</td>
+<td style="text-align: right;">+18.8</td>
+<td>Belt-and-suspenders hints + native Responses API</td>
+</tr>
+<tr>
+<td>sonar-pro</td>
+<td style="text-align: right;">68.8%</td>
+<td style="text-align: right;">76.7%</td>
+<td style="text-align: right;">+7.9</td>
+<td>AGENTS.md hint fix (removed "use native" contradiction)</td>
+</tr>
+<tr>
+<td>gemini-3-flash</td>
+<td style="text-align: right;">57.8%</td>
+<td style="text-align: right;">73.6%</td>
+<td style="text-align: right;">+15.8</td>
+<td>Steady improvement across 5 runs with hint tuning</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sonar-reasoning-pro-deep-dive-feb-22">sonar-reasoning-pro Deep Dive (Feb 22)<a class="headerlink" href="#sonar-reasoning-pro-deep-dive-feb-22" title="Permanent link">&para;</a></h3>
+<p>Re-benchmarked after v1.16.0 profile/hint fixes. Score essentially flat: 67.2% → 66.2% (-1.0%).</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th style="text-align: right;">Score</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>format_compliance</td>
+<td style="text-align: right;">100%</td>
+<td>Perfect</td>
+</tr>
+<tr>
+<td>instruction_following</td>
+<td style="text-align: right;">100%</td>
+<td>Perfect</td>
+</tr>
+<tr>
+<td>efficiency</td>
+<td style="text-align: right;">100%</td>
+<td>Perfect (time_to_first_tool_call)</td>
+</tr>
+<tr>
+<td>agentic_tool_loops</td>
+<td style="text-align: right;">80%</td>
+<td>consecutive_tool_loop partial (40%), others pass</td>
+</tr>
+<tr>
+<td>code_editing</td>
+<td style="text-align: right;">71.4%</td>
+<td>Major improvement (was 0% in Feb 7 run)</td>
+</tr>
+<tr>
+<td>error_recovery</td>
+<td style="text-align: right;">66.7%</td>
+<td>tool_error_recovery fails</td>
+</tr>
+<tr>
+<td>reasoning</td>
+<td style="text-align: right;">66.7%</td>
+<td>dependency_ordering fails</td>
+</tr>
+<tr>
+<td>tool_calling</td>
+<td style="text-align: right;">50%</td>
+<td>3/6 fail: simple_tool_call, multi_tool_sequence, no_explain_before_tool</td>
+</tr>
+<tr>
+<td>hallucination_resistance</td>
+<td style="text-align: right;">38.9%</td>
+<td>Weakest: fails respects_tool_failure, repeated_failure_acknowledgment, multi_turn_consistency</td>
+</tr>
+</tbody>
+</table>
+<h3 id="benchmark-vs-real-world-gap-analysis">Benchmark vs Real-World Gap Analysis<a class="headerlink" href="#benchmark-vs-real-world-gap-analysis" title="Permanent link">&para;</a></h3>
+<p>sonar-reasoning-pro exemplifies a critical gap in the current benchmark methodology:</p>
+<p><strong>In benchmarks (66.2%):</strong>
+- Single-turn tests, no iterative feedback
+- 38.9% hallucination_resistance — claims success after tool failures
+- 50% tool_calling — can't reliably produce clean tool calls in isolation
+- But 100% format/instruction/efficiency — understands what to do, inconsistent at executing</p>
+<p><strong>In real-world use (observed: high effectiveness):</strong>
+- Reasoning tokens plan multi-step approaches before acting
+- AGENTS.md hints + conversation history enable course-correction
+- Truncation recovery (v1.16.0) provides corrective feedback on failed tool calls
+- Chains tool calls across longer sessions with iterative feedback loops</p>
+<p><strong>Key insight:</strong> The benchmark penalizes models that need a feedback loop to perform well. sonar-reasoning-pro's strength is reasoning through problems and adapting when given corrective signals — exactly what the truncation recovery and stuck-loop detection (added in this session) enables.</p>
+<p>This validates the need for <strong>Step 7: Benchmark v2</strong> — agentic multi-turn tests that measure iterative recovery, tool call chaining across turns, and response to <code>[SYSTEM: ...]</code> corrective messages. The current single-turn benchmark systematically underscores models with strong reasoning but weak single-shot tool execution.</p>
+<h3 id="sonar-profilehint-corrections-applied">Sonar Profile/Hint Corrections Applied<a class="headerlink" href="#sonar-profilehint-corrections-applied" title="Permanent link">&para;</a></h3>
+<p><strong>Problem discovered:</strong> All sonar profiles had <code>mode="native"</code> but Perplexity API has <code>native_tool_calling=False</code>. AGENTS.md hints said "use native tool calling only" — directly contradicting the prompt-based mechanism these models actually use.</p>
+<p><strong>Fixes applied (this session):</strong>
+1. All 5 sonar profiles changed to <code>mode="prompt_based"</code> in <code>model_profiles.py</code>
+2. Removed <code>strip_json_from_text=True</code> (parser needs the JSON in response text)
+3. Perplexity provider hints rewritten: "output ONLY the JSON object" instead of "use native tool calling"
+4. Sonar model hints rewritten: explicit JSON format example, small-patch guidance, truncation recovery hints</p>
+<h3 id="tier-reassignment">Tier Reassignment<a class="headerlink" href="#tier-reassignment" title="Permanent link">&para;</a></h3>
+<p>Based on Feb 22 results with partial credit scoring:</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Old Tier</th>
+<th>New Tier</th>
+<th>Justification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gpt-5</td>
+<td>B (62.5%)</td>
+<td><strong>S</strong> (82.7%)</td>
+<td>Partial credit + hints pushed past 80%</td>
+</tr>
+<tr>
+<td>gpt-5.1-codex</td>
+<td>B (64.1%)</td>
+<td><strong>S</strong> (82.8%)</td>
+<td>Steady improvement over 10 runs</td>
+</tr>
+<tr>
+<td>gemini-2.5-flash-lite</td>
+<td>—</td>
+<td><strong>S</strong> (86.2%)</td>
+<td>New model, strong first result</td>
+</tr>
+<tr>
+<td>sonar-pro</td>
+<td>A (68.8%)</td>
+<td><strong>A</strong> (76.7%)</td>
+<td>Improved but below S threshold</td>
+</tr>
+<tr>
+<td>sonar</td>
+<td>B (70.3%)</td>
+<td><strong>A</strong> (73.8%)</td>
+<td>Upgraded with consistent improvement</td>
+</tr>
+<tr>
+<td>gemini-3-flash-preview</td>
+<td>B (57.8%)</td>
+<td><strong>A</strong> (73.6%)</td>
+<td>Steady uptrend across 5 runs</td>
+</tr>
+<tr>
+<td>sonar-reasoning-pro</td>
+<td>C (67.2%)</td>
+<td><strong>B</strong> (66.2%)</td>
+<td>Flat score, but real-world effectiveness higher</td>
+</tr>
+</tbody>
+</table>
 
 
 
