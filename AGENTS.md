@@ -191,10 +191,6 @@ model_hints:
     - "Let the patch contain all code changes - your response can briefly confirm the action taken."
     - "For complex patches (indentation, multiline): Include ALL affected lines with proper context (3+ lines before/after)."
     - "replace_block requires ALL 3 parameters: file_path, search, replace — NEVER omit search."
-  "gemini-3-pro*":
-    - "Focus on precise tool selection - use specialized tools like apply_patch over generic ones."
-    - "Generate complete unified diffs with proper context lines (3+ lines before/after)."
-    - "When modifying code, always use apply_patch - never use read_file or write_file for edits."
   "gemini-3.1-pro*customtools*":
     - "You are optimized for custom tool usage and agentic workflows - leverage this strength."
     - "Chain multiple DIFFERENT tool calls consecutively without stopping to narrate between them."

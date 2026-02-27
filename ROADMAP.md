@@ -566,10 +566,31 @@ ppxai/tui/                     # New module (Textual-based)
 
 ## Planned (v1.16.1+)
 
-### v1.16.1 - ppxaide Interactive File Tree
+### v1.16.1 - Gemini 3 Model Updates + ppxaide Interactive File Tree
 
 **Status:** Planned
 **Effort:** 5 days
+
+#### Gemini 3 Model Updates (Priority: High — deadline close)
+
+**Reference:** https://ai.google.dev/gemini-api/docs/gemini-3
+
+| Task | Description | Status |
+|------|-------------|--------|
+| **Add gemini-3.1-pro-preview to config** | Model entry + pricing ($2/$12 per 1M, <200K ctx) in `ppxai-config.json` | ⏳ Planned |
+| **Add gemini-3.1-pro-preview-customtools** | Variant entry for custom tool workflows | ⏳ Planned |
+| **Update benchmark comment** | Reflect v1.16.0 results: gemini-3-flash-preview 100% Tier S | ⏳ Planned |
+| **thinking_budget param** | Test `thinking_budget` generation param (maps to minimal/low/medium/high) | ⏳ Planned |
+| **model_profiles.py context limits** | Verify 1M input / 64K output for all gemini-3.x profiles | ⏳ Planned |
+
+**Pricing from official docs:**
+| Model | Input | Output | Notes |
+|-------|-------|--------|-------|
+| gemini-3.1-pro-preview | $2.00 | $12.00 | Per 1M tokens, ≤200K ctx |
+| gemini-3.1-pro-preview | $4.00 | $18.00 | Per 1M tokens, >200K ctx |
+| gemini-3-flash-preview | $0.50 | $3.00 | Per 1M tokens |
+
+#### ppxaide Interactive File Tree
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -712,6 +733,40 @@ Current: Vanilla JavaScript (`DataTableViewer`, `DataTreeViewer`) - lightweight,
 - Need for data export (CSV, Excel) from preview
 
 **Current vanilla JS is sufficient for v1.13.x preview use case.**
+
+### Gemini 3 API Features (Research)
+
+**Reference:** https://ai.google.dev/gemini-api/docs/gemini-3
+
+#### New Models
+| Model | Context | Pricing (input/output) |
+|-------|---------|------------------------|
+| **Gemini 3.1 Pro Preview** | 1M / 64K tokens | $2/$12 per 1M (<200K ctx); $4/$18 (>200K) |
+| **Gemini 3 Flash Preview** | 1M / 64K tokens | $0.50/$3 per 1M |
+| **Gemini 3.1 Flash Image** | — | $0.25 text in / $0.067 image out |
+| **Gemini 3 Pro Image** | — | $2 text in / $0.134 image out |
+
+#### Key New Capabilities to Evaluate
+
+- **Thinking level parameter** — `minimal/low/medium/high`; default `high`. Consider exposing in ppxai config or via `/model` hints
+- **Thought signatures** — encrypted reasoning context maintained across calls; critical for function calling chains; may affect session serialization
+- **Multimodal function responses** — tool results can include images (extends existing tool system)
+- **Structured outputs + tools** — native combo of schema-constrained responses with Google Search / Code Execution / Function Calling
+- **Image generation** — 4K images with text rendering, grounded via Google Search, conversational editing across turns
+
+#### Migration Notes
+- Temperature: keep at default `1.0`; changing may degrade complex reasoning
+- Image segmentation **not supported** in Gemini 3 series
+- Model profiles for gemini-3.1-pro-preview and gemini-3-flash-preview already in `model_profiles.py`
+
+#### Action Items
+- [ ] Add gemini-3.1-pro-preview and gemini-3-flash-preview pricing to `ppxai-config.json`
+- [ ] Test `thinking_budget` parameter via generation params (maps to thinking level)
+- [ ] Evaluate thought signatures impact on session serialization / multi-turn tool calls
+- [ ] Assess multimodal tool responses — can ppxai pass image bytes back as tool results?
+- [ ] Update model profiles with correct context limits (1M/64K) and tier assignments
+
+**Status:** Research phase. Models already benchmarked; pricing + new API params not yet integrated.
 
 ### Jupyter Kernel Tool (Data Science Workflow)
 

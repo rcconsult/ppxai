@@ -376,13 +376,6 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         max_tool_iterations=25,
         tier="S",
     ),
-    "gemini-3-pro*": ModelProfile(
-        tool_calling=ToolCallingProfile(mode="native"),
-        max_tokens=65_536,
-        max_tool_iterations=25,
-        tier="A",
-    ),
-
     # ── Gemini 3.1 models ───────────────────────────────────────────
 
     "gemini-3.1-pro*customtools*": ModelProfile(

@@ -45,7 +45,7 @@ You can customize which model is used for coding tasks by editing your `ppxai-co
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
       "api_key_env": "GEMINI_API_KEY",
       "default_model": "gemini-2.5-flash",
-      "coding_model": "gemini-3-pro-preview",  // Changed from gemini-2.5-pro
+      "coding_model": "gemini-3.1-pro-preview",  // Changed from gemini-2.5-pro
       "models": {
         // ... model definitions ...
       }

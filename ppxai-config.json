@@ -117,7 +117,7 @@
       "api_key_env": "GEMINI_API_KEY",
       "default_model": "gemini-2.5-flash",
       "coding_model": "gemini-2.5-flash",
-      "__comment_benchmark": "Benchmark results (v1.15.6): gemini-2.5-flash 81.3% Tier S, gemini-2.5-pro 85.1% Tier S. Flash is best value for default. Power users: /model gemini-2.5-pro or gemini-3.1-pro-preview.",
+      "__comment_benchmark": "Benchmark results (v1.16.0): gemini-3-flash-preview 100% Tier S (#1), gemini-2.5-pro 85.1% Tier S. Flash preview is RECOMMENDED default. Power users: /model gemini-3.1-pro-preview.",
       "system_prompt": "You are an expert AI coding assistant with web search capabilities. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices. Cite sources as markdown links when using web search.",
       "options": {
         "enable_grounding": true,
@@ -160,9 +160,14 @@
           "context_limit": 1000000,
           "__comment_best_for": "Code editing, refactoring, debugging. Achieved 100% quality score with balanced AGENTS.md hints."
         },
-        "gemini-3-pro-preview": {
-          "name": "Gemini 3 Pro Preview",
-          "description": "Most powerful agentic model with 1M context, code execution, and search grounding",
+        "gemini-3.1-pro-preview": {
+          "name": "Gemini 3.1 Pro Preview",
+          "description": "Advanced reasoning and agentic model with 1M context. SWE-Bench 80.6%, GPQA Diamond 94.3%.",
+          "context_limit": 1000000
+        },
+        "gemini-3.1-pro-preview-customtools": {
+          "name": "Gemini 3.1 Pro Preview (Custom Tools)",
+          "description": "Optimized for custom tool usage and agentic workflows with 1M context",
           "context_limit": 1000000
         }
       },
@@ -191,7 +196,11 @@
           "input": 0.50,
           "output": 3.0
         },
-        "gemini-3-pro-preview": {
+        "gemini-3.1-pro-preview": {
+          "input": 2.0,
+          "output": 12.0
+        },
+        "gemini-3.1-pro-preview-customtools": {
           "input": 2.0,
           "output": 12.0
         }
