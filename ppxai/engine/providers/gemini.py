@@ -86,7 +86,7 @@ class GeminiProvider(BaseProvider):
         capabilities: Optional[ProviderCapabilities] = None,
         enable_grounding: bool = True,
         enable_thinking: bool = True,
-        thinking_budget: Optional[int] = None,
+        thinking_level: Optional[str] = None,
         provider_id: Optional[str] = None,
         **kwargs
     ):
@@ -98,7 +98,8 @@ class GeminiProvider(BaseProvider):
             capabilities: Provider capabilities
             enable_grounding: Whether to enable Google Search Grounding (default: True)
             enable_thinking: Whether to include thinking summaries (default: True)
-            thinking_budget: Token budget for thinking (None = dynamic, 0 = disabled)
+            thinking_level: Reasoning depth — "minimal", "low", "medium", "high"
+                (None = model default, which is "high" for Gemini 3.x)
             provider_id: Provider identifier (for config lookup consistency)
             **kwargs: Additional options (ignored for compatibility)
         """
@@ -110,7 +111,7 @@ class GeminiProvider(BaseProvider):
 
         self.enable_grounding = enable_grounding
         self.enable_thinking = enable_thinking
-        self.thinking_budget = thinking_budget
+        self.thinking_level = thinking_level
 
         # Remove base_url from kwargs if passed for compat (we don't use it)
         kwargs.pop("base_url", None)
@@ -514,8 +515,8 @@ class GeminiProvider(BaseProvider):
         # include_thoughts=True returns thinking summaries in response parts
         if self.enable_thinking:
             thinking_config = {"include_thoughts": True}
-            if self.thinking_budget is not None:
-                thinking_config["thinking_budget"] = self.thinking_budget
+            if self.thinking_level is not None:
+                thinking_config["thinking_level"] = self.thinking_level
             config_kwargs["thinking_config"] = thinking_config
 
         # Add generation parameters from config (v1.15.2)

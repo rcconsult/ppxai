@@ -580,8 +580,8 @@ ppxai/tui/                     # New module (Textual-based)
 | **Add gemini-3.1-pro-preview to config** | Model entry + pricing ($2/$12 per 1M, <200K ctx) in `ppxai-config.json` | ⏳ Planned |
 | **Add gemini-3.1-pro-preview-customtools** | Variant entry for custom tool workflows | ⏳ Planned |
 | **Update benchmark comment** | Reflect v1.16.0 results: gemini-3-flash-preview 100% Tier S | ⏳ Planned |
-| **thinking_budget param** | Test `thinking_budget` generation param (maps to minimal/low/medium/high) | ⏳ Planned |
-| **model_profiles.py context limits** | Verify 1M input / 64K output for all gemini-3.x profiles | ⏳ Planned |
+| **thinking_level param** | Replace deprecated `thinking_budget` with `thinking_level` ("minimal"/"low"/"medium"/"high") in GeminiProvider | ✅ Done |
+| **model_profiles.py context limits** | Verify 1M input / 64K output for all gemini-3.x profiles — `max_tokens=65_536` correct (64K), `context_limit=1000000` in config | ✅ Done |
 
 **Pricing from official docs:**
 | Model | Input | Output | Notes |
