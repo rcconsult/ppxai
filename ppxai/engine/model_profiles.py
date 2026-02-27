@@ -221,12 +221,6 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
 
     # ── Tier D: <40% success ──────────────────────────────────────────
 
-    "gemini-2.0-flash-exp*": ModelProfile(
-        tool_calling=ToolCallingProfile(mode="prompt_based"),
-        max_tokens=8_192,
-        tier="D",
-    ),
-
     # ── Reasoning models (o-series) ──────────────────────────────────
 
     "o3-pro*": ModelProfile(
