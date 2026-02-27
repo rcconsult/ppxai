@@ -68,8 +68,11 @@ search = [
 ]
 
 # Native Gemini provider (v1.12.5+)
+# FROZEN at <1.57.0 — SDK 1.57.0+ regression breaks code editing (0% score).
+# Before upgrading, verify fix for: https://github.com/googleapis/python-genai/issues/1789
+# See docs/KNOWN-ISSUES.md for full context and upgrade verification steps.
 gemini = [
-    "google-genai>=1.0.0",
+    "google-genai>=1.0.0,<1.57.0",
 ]
 
 # Data visualization support (v1.13.8)
@@ -128,8 +131,8 @@ dev = [
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
     "sse-starlette>=1.6.0",
-    # Gemini native SDK
-    "google-genai>=1.0.0",
+    # Gemini native SDK — FROZEN at <1.57.0 (see docs/KNOWN-ISSUES.md)
+    "google-genai>=1.0.0,<1.57.0",
     # Web search (ddgs - renamed from duckduckgo-search)
     "ddgs>=9.0.0",
     # Interactive shell

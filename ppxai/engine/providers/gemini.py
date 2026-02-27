@@ -146,6 +146,10 @@ class GeminiProvider(BaseProvider):
     def _filter_empty_parts(self, parts: List[Any], context: str = "") -> List[Any]:
         """Filter out empty parts to work around SDK v1.57.0+ regression.
 
+        SDK is pinned to <1.57.0 in pyproject.toml. This workaround is kept as
+        a defensive layer in case the pin is ever relaxed. See docs/KNOWN-ISSUES.md
+        for full context, affected versions, and upgrade verification steps.
+
         Issue: https://github.com/googleapis/python-genai/issues/1789
         SDK versions 1.57.0+ removed validation on empty text parts, causing
         incomplete responses (e.g., patches missing imports) to pass through.
