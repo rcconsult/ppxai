@@ -1536,95 +1536,53 @@ class PpxaiApp {
     }
 
     async handleUsageCommand(args) {
-        const parts = args.trim().split(/\s+/);
-        const subCmd = parts[0];
-
-        // Check for subcommands first
-        if (subCmd === 'show') {
-            const mode = parts[1];
-            if (mode && ['session', 'provider', 'model', 'off'].includes(mode)) {
-                try {
-                    await fetch(`${this.serverUrl}/usage/display`, {
-                        method: 'POST',
-                        headers: this.getSessionHeaders(true),
-                        body: JSON.stringify({ mode })
-                    });
-                    this.showSystemMessage(`Usage display mode set to: ${mode}`);
-                } catch (error) {
-                    this.showError(`Failed to set usage display mode: ${error.message}`);
-                }
-            } else {
-                this.addMessage('system', '**Usage Display Mode**\n\nUsage: `/usage show <mode>`\n\nModes:\n- `session`: Show session totals\n- `provider`: Show by provider\n- `model`: Show by model\n- `off`: Hide usage display');
-            }
-            return;
-        }
-
-        if (subCmd === 'reset') {
-            try {
-                await fetch(`${this.serverUrl}/usage/reset`, {
-                    method: 'POST',
-                    headers: this.getSessionHeaders(true)
-                });
-                this.showSystemMessage('Usage counters reset.');
-            } catch (error) {
-                this.showError(`Failed to reset usage: ${error.message}`);
-            }
-            return;
-        }
-
-        // Period-based report (24h, week, month, year, all) or no args
+        // v1.16.1: Delegate to shared command handler via POST /command/usage
         try {
-            const period = ['24h', 'week', 'month', 'year', 'all'].includes(subCmd) ? subCmd : null;
-            const endpoint = period ? `/usage/report?period=${period}` : '/usage';
-            const response = await fetch(`${this.serverUrl}${endpoint}`, {
-                headers: this.getSessionHeaders()
+            const response = await fetch(`${this.serverUrl}/command/usage`, {
+                method: 'POST',
+                headers: this.getSessionHeaders(true),
+                body: JSON.stringify({ args: args.trim() })
             });
-            const data = await response.json();
-
-            let text = '**Usage Statistics:**\n\n';
-
-            if (period) {
-                text += `**Period:** ${data.period}\n`;
-                text += `**Sessions:** ${data.session_count}\n\n`;
+            if (!response.ok) {
+                const detail = await response.text();
+                this.showError(`Usage command failed (${response.status}): ${detail}`);
+                return;
             }
-
-            // Summary stats as list
-            text += `- Total tokens: ${(data.total_tokens || 0).toLocaleString()} (${(data.prompt_tokens || 0).toLocaleString()}↓ / ${(data.completion_tokens || 0).toLocaleString()}↑)\n`;
-            text += `- Estimated cost: $${(data.estimated_cost || data.total_cost || 0).toFixed(4)}\n`;
-
-            // Per-model breakdown as table (matching VSCode extension format)
-            if (data.by_model && Object.keys(data.by_model).length > 0) {
-                text += '\n**Usage by Model:**\n\n';
-                text += '| Provider | Model | In | Out | Cost |\n';
-                text += '|:---------|:------|---:|----:|-----:|\n';
-                Object.entries(data.by_model).sort().forEach(([key, stats]) => {
-                    const [provider, model] = key.includes('/') ? key.split('/', 2) : ['', key];
-                    text += `| ${provider} | ${model} | ${stats.prompt_tokens?.toLocaleString() || 0} | ${stats.completion_tokens?.toLocaleString() || 0} | $${stats.estimated_cost?.toFixed(4) || '0.0000'} |\n`;
-                });
-                // Totals row
-                text += `| **TOTAL** | | **${(data.prompt_tokens || 0).toLocaleString()}** | **${(data.completion_tokens || 0).toLocaleString()}** | **$${(data.estimated_cost || 0).toFixed(4)}** |\n`;
-            }
-
-            // Premium web search / tool usage (v1.15.2)
-            if (data.tool_calls && Object.keys(data.tool_calls).length > 0) {
-                text += '\n**Premium Tool Usage:**\n\n';
-                text += '| Tool | Provider | Calls | Tokens (In/Out) | Cost |\n';
-                text += '|:-----|:---------|------:|----------------:|-----:|\n';
-                let totalToolCost = 0;
-                Object.entries(data.tool_calls).sort().forEach(([toolName, stats]) => {
-                    const tokenInfo = `${stats.tokens_in?.toLocaleString() || 0}/${stats.tokens_out?.toLocaleString() || 0}`;
-                    const cost = stats.estimated_cost || 0;
-                    totalToolCost += cost;
-                    text += `| ${toolName} | ${stats.provider || '-'} | ${stats.call_count || 0} | ${tokenInfo} | $${cost.toFixed(4)} |\n`;
-                });
-                if (Object.keys(data.tool_calls).length > 1) {
-                    text += `| **TOTAL** | | | | **$${totalToolCost.toFixed(4)}** |\n`;
-                }
-            }
-
-            this.addMessage('system', text);
+            const result = await response.json();
+            this.renderCommandResult(result);
         } catch (error) {
             this.showError(`Failed to get usage: ${error.message}`);
+        }
+    }
+
+    /**
+     * Render a server-side CommandResult as markdown in the chat.
+     *
+     * Generic dispatcher for all command result types returned by
+     * POST /command/{name}. Works for any command, not just /usage.
+     *
+     * v1.16.1: Added for CommandFactory server-side execution.
+     */
+    renderCommandResult(result) {
+        switch (result.type) {
+            case 'TableResult':
+            case 'DirectoryListingResult':
+                this.addMessage('system', window.SharedFormatters.formatTableResult(result));
+                break;
+            case 'ConfirmationResult':
+            case 'NotificationResult':
+                this.showSystemMessage(result.message);
+                break;
+            case 'ErrorResult':
+                this.showError(result.message +
+                    (result.suggestions && result.suggestions.length
+                        ? '\n' + result.suggestions.join('\n') : ''));
+                break;
+            case 'KeyValueResult':
+                this.addMessage('system', window.SharedFormatters.formatKeyValueResult(result));
+                break;
+            default:
+                this.showSystemMessage(result.message);
         }
     }
 

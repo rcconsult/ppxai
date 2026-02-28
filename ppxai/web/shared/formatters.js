@@ -143,7 +143,7 @@ Usage: \`/checkpoint backend <git|file|auto|none>\`
 }
 
 /**
- * Format usage statistics response
+ * Format usage statistics response (legacy — kept for backward compatibility)
  */
 function formatUsageStats(data, period = null) {
     let text = '**Usage Statistics:**\n\n';
@@ -165,6 +165,105 @@ function formatUsageStats(data, period = null) {
         });
     }
 
+    return text;
+}
+
+// ============================================================================
+// Generic CommandResult Formatters (v1.16.1)
+// Used by renderCommandResult() to display server-side command results.
+// These work for ANY command, not just /usage.
+// ============================================================================
+
+/**
+ * Format a TableResult as markdown table.
+ *
+ * When metadata contains usage report fields (report_type, total_tokens, etc.),
+ * renders a rich summary with bullet points above the table — matching the
+ * VSCode extension's formatUsageStats() style.
+ */
+function formatTableResult(result) {
+    const meta = result.metadata || {};
+
+    // Usage report: render rich summary + table
+    if (meta.report_type) {
+        return _formatUsageTableResult(result, meta);
+    }
+
+    // Generic table
+    let text = `**${result.message}**\n\n`;
+    text += _renderMarkdownTable(result.columns, result.rows);
+    return text;
+}
+
+/**
+ * Format a usage-specific TableResult with bullet-point summary.
+ */
+function _formatUsageTableResult(result, meta) {
+    let text = `**${meta.title || result.message}**\n\n`;
+
+    // Period report header
+    if (meta.report_type === 'period') {
+        if (meta.period) {
+            text += `**Period:** ${meta.period}  \n`;
+        }
+        if (meta.start_date && meta.end_date) {
+            text += `**Range:** ${meta.start_date} to ${meta.end_date}  \n`;
+        }
+        if (meta.session_count !== undefined) {
+            text += `**Sessions:** ${meta.session_count}  \n`;
+        }
+        text += '\n';
+    }
+
+    // Token summary bullets
+    const totalTokens = meta.total_tokens || 0;
+    const promptTokens = meta.prompt_tokens || 0;
+    const completionTokens = meta.completion_tokens || 0;
+    const cost = meta.estimated_cost || 0;
+
+    text += `• Total tokens: ${totalTokens.toLocaleString()} (${promptTokens.toLocaleString()}↓ / ${completionTokens.toLocaleString()}↑)  \n`;
+    text += `• Estimated cost: $${cost.toFixed(4)}  \n`;
+
+    // Display mode (session reports only)
+    if (meta.display_mode) {
+        text += `• Display mode: \`${meta.display_mode}\`  \n`;
+        text += `• Use \`/usage show <session|provider|model|off>\` to change.  \n`;
+    }
+
+    // Table
+    if (result.rows && result.rows.length > 0) {
+        text += '\n**Usage by Model:**\n\n';
+        text += _renderMarkdownTable(result.columns, result.rows);
+    }
+
+    return text;
+}
+
+/**
+ * Render columns + rows as a markdown table string.
+ */
+function _renderMarkdownTable(columns, rows) {
+    if (!columns || columns.length === 0 || !rows || rows.length === 0) {
+        return '';
+    }
+    let text = '| ' + columns.join(' | ') + ' |\n';
+    text += '|' + columns.map(() => '---').join('|') + '|\n';
+    rows.forEach(row => {
+        text += '| ' + row.join(' | ') + ' |\n';
+    });
+    return text;
+}
+
+/**
+ * Format a KeyValueResult as markdown list
+ */
+function formatKeyValueResult(result) {
+    let text = `**${result.message}**\n\n`;
+    if (result.pairs) {
+        Object.entries(result.pairs).forEach(([k, v]) => {
+            text += `- ${k}: \`${v}\`\n`;
+        });
+    }
     return text;
 }
 
@@ -287,7 +386,9 @@ if (typeof window !== 'undefined') {
         formatSessionsList,
         formatFileContents,
         formatError,
-        formatSuccess
+        formatSuccess,
+        formatTableResult,
+        formatKeyValueResult
     };
 }
 
@@ -311,6 +412,8 @@ if (typeof module !== 'undefined' && module.exports) {
         formatSessionsList,
         formatFileContents,
         formatError,
-        formatSuccess
+        formatSuccess,
+        formatTableResult,
+        formatKeyValueResult
     };
 }

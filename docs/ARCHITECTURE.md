@@ -25,9 +25,14 @@ ppxai/
 │   └── client.py      # Facade (uses bootstrap.py)
 ├── server/            # HTTP server
 │   └── http.py        # Uses engine, config
-├── commands/          # Command handlers (v1.13.10 factory pattern)
-│   ├── factory.py     # CommandFactory and CommandSpec
+├── commands/          # UI-agnostic command layer (v1.15.0 factory + protocol)
+│   ├── protocol.py    # CommandContext protocol (interface)
+│   ├── factory.py     # CommandFactory + CommandSpec registry
+│   ├── context.py     # Adapters: RichCommandContext, TextualCommandContext
+│   ├── results.py     # 17 CommandResult types (v1.15.0)
 │   ├── system.py      # /help, /status, /theme
+│   ├── provider.py    # /provider, /model
+│   ├── agent.py       # /agent (agent loop)
 │   └── utility.py     # /context, /debug-log
 └── main.py            # Entry point
 ```
@@ -67,16 +72,16 @@ engine/providers/, engine/tools/manager.py
            ↓
 engine/client.py
            ↓
-commands.py, server/http.py
+commands/  (protocol, factory, handlers, adapters)
            ↓
-main.py (entry point)
+rich/, tui/, server/  (client layer)
+           ↓
+main.py (entry points)
 ```
 
 **Rule**: Each module only imports from modules "below" it in the hierarchy.
-No circular dependencies exist in the current codebase.
-
-**Verified**: `commands.py` uses top-level imports for all dependencies
-including `EngineClient`, `web_premium`, and config functions
+No circular dependencies exist. The `commands/` layer uses `TYPE_CHECKING`
+for forward references to client types (CommandHandler, PPXAIDEApp).
 
 ### 3. Clean Leaf Modules
 
@@ -120,11 +125,11 @@ ppxai/engine/bootstrap.py
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    Entry Points                      │
-│              main.py, server/http.py                 │
+│                   Client Layer                       │
+│  rich/ (ppxai)  │  tui/ (ppxaide)  │  server/ (HTTP) │
 ├─────────────────────────────────────────────────────┤
 │                   Command Layer                      │
-│                    commands.py                       │
+│  commands/ (protocol, factory, handlers, adapters)   │
 ├─────────────────────────────────────────────────────┤
 │                   Engine Layer                       │
 │     client.py, session.py, providers/, tools/        │
@@ -135,6 +140,127 @@ ppxai/engine/bootstrap.py
 ```
 
 **Rule**: Lower layers should NOT import from higher layers.
+
+## Runtime Object Diagrams (v1.16.1)
+
+The two TUI clients — **ppxai** (Rich) and **ppxaide** (Textual) — share the same
+engine but have fundamentally different runtime architectures.
+
+### ppxai (Rich TUI)
+
+```
+main() → CommandHandler [singleton]
+  ├── engine_client: EngineClient [singleton]
+  │     ├── provider: BaseProvider          (replaced on /provider switch)
+  │     ├── tool_manager: ToolManager
+  │     │     ├── tools: dict[str, Tool]
+  │     │     └── validator: ResponseValidator
+  │     ├── session_manager: SessionManager
+  │     ├── context_injector: ContextInjector
+  │     ├── checkpoint_manager: CheckpointManager
+  │     └── bootstrap_context: BootstrapContext
+  ├── prompt_session: PromptSession         (prompt_toolkit)
+  │     ├── history: InMemoryHistory
+  │     └── completer: PPXAICompleter → CommandHandler (back-ref)
+  ├── provider: str          ─┐
+  ├── current_model: str      │ public attributes
+  ├── auto_route: bool        │ (read by RichCommandContext)
+  ├── tools_available: bool   │
+  └── tools_verbose: bool    ─┘
+
+  [Per-command dispatch]
+  handle_command(user_input)
+    → RichCommandContext(self)     [ephemeral, created per call]
+        → spec.handler(context, args) → CommandResult
+        → RichRenderer.render(result) [static, type-dispatch registry]
+```
+
+### ppxaide (Textual TUI)
+
+```
+main() → PPXAIDEApp [singleton, IS its own CommandContext]
+  ├── _event_bus: EventBus                  (blinker signals)
+  ├── _engine_client: EngineClient [singleton]  ← same structure as Rich
+  ├── _provider: str           ─┐
+  ├── _model: str               │ private state
+  ├── _auto_route: bool         │ (exposed via public properties/methods)
+  ├── _tools_verbose: bool     ─┘
+  │
+  ├── Widget tree (from compose()):
+  │     ├── Header
+  │     ├── StatusBar → BadgeTransaction    (transactional updates)
+  │     ├── Horizontal split:
+  │     │     ├── FileTree                  (DirectoryTree extension, toggleable)
+  │     │     ├── Vertical:
+  │     │     │     ├── ChatView → MessageBox[] → Markdown/Static/Button
+  │     │     │     └── InputBox → ChatTextArea
+  │     │     └── SidePanel → CodeEditor | Markdown | DataViewer
+  │     │                       | TreeViewer | ImageViewer
+  │     ├── Footer
+  │     └── FooterStatus                    (timer-driven)
+  │
+  └── [Per-command dispatch]
+      _handle_command(user_input)
+        → spec.handler(self, args) → CommandResult  [self IS the context]
+        → TextualRenderer(self).render(result)      [async, per-instance dispatch]
+```
+
+### Key Architectural Differences
+
+| Aspect | ppxai (Rich) | ppxaide (Textual) |
+|--------|-------------|-------------------|
+| Context | `RichCommandContext(handler)` adapter | `PPXAIDEApp` directly (implements protocol) |
+| Renderer | `RichRenderer.render()` — static | `TextualRenderer(app).render()` — async, per-instance |
+| UI updates | Direct `console.print()` | EventBus signals → widget subscribers |
+| State | Public attributes on CommandHandler | Private attrs + public property/method API |
+| Widget tree | None (prompt_toolkit only) | Full Textual `compose()` tree |
+
+### Command Dispatch Flow
+
+Both clients share the same 38 commands via `CommandFactory`. Commands are UI-agnostic
+— they receive `CommandContext` (protocol) and return typed `CommandResult` objects.
+
+```
+                  ┌──────────────────────┐
+                  │   CommandFactory      │  Shared registry
+                  │   38 CommandSpec      │  (self-registered at import)
+                  └─────────┬────────────┘
+                            │ spec.handler(context, args)
+              ┌─────────────┴─────────────┐
+              │                           │
+    ┌─────────┴──────────┐    ┌───────────┴────────────┐
+    │  RichCommandContext │    │  PPXAIDEApp             │
+    │  (adapter)          │    │  (implements protocol   │
+    │  wraps Handler      │    │   directly)             │
+    └─────────┬──────────┘    └───────────┬────────────┘
+              │                           │
+    ┌─────────┴──────────┐    ┌───────────┴────────────┐
+    │  RichRenderer       │    │  TextualRenderer        │
+    │  .render(result)    │    │  .render(result)        │
+    │  static dispatch    │    │  async dispatch         │
+    └────────────────────┘    └────────────────────────┘
+```
+
+### DAG Dependency Rule (v1.16.1)
+
+The `commands/` layer is **shared** between both clients. It must NOT import from
+or know the internals of either `rich/` or `tui/`.
+
+```
+engine/          ← No UI, no commands
+  ↑
+commands/        ← UI-agnostic: protocol + factory + handlers + adapters
+  ↑
+rich/            ← Rich TUI client (imports commands/, engine/)
+tui/             ← Textual TUI client (imports commands/, engine/)
+server/          ← HTTP server (imports commands/, engine/)
+```
+
+**Context adapters** (`commands/context.py`) bridge the gap:
+- `RichCommandContext` wraps `CommandHandler` — calls **public methods only**
+- `TextualCommandContext` wraps `PPXAIDEApp` — calls **public methods only**
+- Each client owns its full-stack logic (engine + UI updates)
+- Adapters never access private attributes (`_engine_client`, `_model`, etc.)
 
 ## Adding New Modules
 

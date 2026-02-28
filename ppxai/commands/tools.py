@@ -537,7 +537,16 @@ def _display_usage_report(context: CommandContext) -> CommandResult:
         status=ResultStatus.SUCCESS,
         message=" | ".join(message_parts),
         columns=["Provider", "Model", "In", "Out", "Cost"],
-        rows=rows
+        rows=rows,
+        metadata={
+            "report_type": "session",
+            "title": "Session Usage Statistics",
+            "total_tokens": usage['total_tokens'],
+            "prompt_tokens": usage['prompt_tokens'],
+            "completion_tokens": usage['completion_tokens'],
+            "estimated_cost": total_cost,
+            "display_mode": display_mode,
+        }
     )
 
 
@@ -597,7 +606,19 @@ def _display_global_usage_report(context: CommandContext, period: str) -> Comman
         status=ResultStatus.SUCCESS,
         message=message,
         columns=["Provider", "Model", "In", "Out", "Cost"],
-        rows=rows
+        rows=rows,
+        metadata={
+            "report_type": "period",
+            "title": f"Usage Report: {period_labels.get(period, period)}",
+            "period": period_labels.get(period, period),
+            "session_count": report.get("session_count", 0),
+            "total_tokens": report.get("total_tokens", 0),
+            "prompt_tokens": report.get("prompt_tokens", 0),
+            "completion_tokens": report.get("completion_tokens", 0),
+            "estimated_cost": report.get("total_cost", 0.0),
+            "start_date": report.get("start_date"),
+            "end_date": report.get("end_date"),
+        }
     )
 
 

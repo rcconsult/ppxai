@@ -29,6 +29,8 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from ..commands.context import ServerCommandContext
+from ..commands.factory import CommandFactory
 from ..common.logger import get_logger
 from ..common.preview import inject_reload_script, resolve_preview_path, rewrite_asset_paths
 from ..engine import EngineClient, EventType
@@ -1162,6 +1164,39 @@ async def get_usage_sessions(limit: int = 20, offset: int = 0):
         "limit": limit,
         "offset": offset,
     }
+
+
+# === Command Execution (v1.16.1) ===
+# Generic endpoint that dispatches commands through CommandFactory.
+# All clients (web app, VSCode) call this instead of bespoke endpoints.
+
+
+class CommandRequest(BaseModel):
+    """Request body for command execution."""
+    args: str = ""
+
+
+@app.post("/command/{name}")
+async def execute_command(
+    name: str,
+    request: CommandRequest,
+    x_session_id: Optional[str] = Header(None)
+):
+    """Execute a slash command server-side via CommandFactory.
+
+    Returns the CommandResult as JSON. No per-command logic here —
+    the factory does the lookup, the handler does the work.
+
+    v1.16.1: POC with /usage, generalizable to all commands.
+    """
+    spec = CommandFactory.get(name)
+    if not spec:
+        raise HTTPException(status_code=404, detail=f"Unknown command: /{name}")
+
+    session_id, engine, _ = await get_or_create_session(x_session_id)
+    context = ServerCommandContext(engine)
+    result = spec.handler(context, request.args)
+    return result.to_dict()
 
 
 # === Context Settings ===
@@ -2634,7 +2669,10 @@ async def serve_shared(filename: str):
             '.json': 'application/json',
         }
         media_type = content_types.get(suffix, 'application/octet-stream')
-        return FileResponse(file_path, media_type=media_type)
+        return FileResponse(
+            file_path, media_type=media_type,
+            headers={"Cache-Control": "no-cache, must-revalidate"}
+        )
     raise HTTPException(status_code=404, detail=f"Shared file not found: {filename}")
 
 

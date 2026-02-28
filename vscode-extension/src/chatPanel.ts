@@ -25,7 +25,10 @@ import {
     formatStatus,
     formatProvidersList,
     formatModelsList,
-    formatSessionsList
+    formatSessionsList,
+    formatTableResult,
+    formatKeyValueResult,
+    CommandResultData
 } from './shared/formatters';
 
 // Import extracted handlers (Phase 2-4 refactoring)
@@ -2111,174 +2114,50 @@ Review your previous actions and continue. If the task is complete, respond with
     private async handleUsageCommand(args: string[]) {
         if (!this._view) { return; }
 
-        const subCommand = args[0]?.toLowerCase();
-
-        // Time-based period arguments (v1.12.3)
-        const timePeriods = ['24h', 'week', 'month', 'year', 'all'];
-        if (subCommand && timePeriods.includes(subCommand)) {
-            await this.handleGlobalUsageReport(subCommand);
-            return;
-        }
-
-        if (!subCommand) {
-            // Default: show session usage with per-model breakdown
-            const usage = await this._backend.getUsage();
-            let content = `**Session Usage Statistics:**
-
-- Total tokens: ${usage.total_tokens.toLocaleString()} (${usage.prompt_tokens.toLocaleString()}↓ / ${usage.completion_tokens.toLocaleString()}↑)
-- Estimated cost: $${usage.estimated_cost.toFixed(4)}`;
-
-            // Add per-model breakdown as table if available
-            if (usage.by_model && Object.keys(usage.by_model).length > 0) {
-                content += '\n\n**Usage by Model:**\n\n';
-                content += '| Provider | Model | In | Out | Cost |\n';
-                content += '|:---------|:------|---:|----:|-----:|\n';
-                for (const [key, stats] of Object.entries(usage.by_model).sort()) {
-                    const [provider, model] = key.split('/', 2);
-                    content += `| ${provider} | ${model} | ${stats.prompt_tokens.toLocaleString()} | ${stats.completion_tokens.toLocaleString()} | $${stats.estimated_cost.toFixed(4)} |\n`;
-                }
-                // Add totals row
-                content += `| **TOTAL** | | **${usage.prompt_tokens.toLocaleString()}** | **${usage.completion_tokens.toLocaleString()}** | **$${usage.estimated_cost.toFixed(4)}** |\n`;
-            }
-
-            // Show current display mode
-            content += `\nDisplay mode: \`${usage.display_mode || 'session'}\`
-Use \`/usage show <session|provider|model|off>\` to change.`;
-
-            this._view.webview.postMessage({ type: 'systemMessage', content });
-            return;
-        }
-
-        if (subCommand === 'show') {
-            const mode = args[1]?.toLowerCase();
-            const validModes = ['session', 'provider', 'model', 'off'];
-
-            if (!mode) {
-                const currentMode = await this._backend.getUsageDisplayMode();
-                this._view.webview.postMessage({
-                    type: 'systemMessage',
-                    content: `Usage: \`/usage show <session|provider|model|off>\`\nCurrent mode: \`${currentMode.mode}\``
-                });
-                return;
-            }
-
-            if (!validModes.includes(mode)) {
-                this._view.webview.postMessage({
-                    type: 'systemMessage',
-                    content: `Invalid mode: \`${mode}\`\nValid modes: ${validModes.join(', ')}`
-                });
-                return;
-            }
-
-            try {
-                await this._backend.setUsageDisplayMode(mode);
-                const modeDescriptions: Record<string, string> = {
-                    'session': 'session totals',
-                    'provider': 'current provider totals',
-                    'model': 'current model totals',
-                    'off': 'hidden'
-                };
-                this._view.webview.postMessage({
-                    type: 'systemMessage',
-                    content: `Usage display set to: **${modeDescriptions[mode]}**`
-                });
-            } catch (error) {
-                this._view.webview.postMessage({
-                    type: 'systemMessage',
-                    content: `Failed to set display mode: ${error}`
-                });
-            }
-            return;
-        }
-
-        if (subCommand === 'reset') {
-            try {
-                await this._backend.resetUsage();
-                this._view.webview.postMessage({
-                    type: 'systemMessage',
-                    content: 'Usage counters reset to zero.'
-                });
-            } catch (error) {
-                this._view.webview.postMessage({
-                    type: 'systemMessage',
-                    content: `Failed to reset usage: ${error}`
-                });
-            }
-            return;
-        }
-
-        // Unknown sub-command
-        this._view.webview.postMessage({
-            type: 'systemMessage',
-            content: `Unknown sub-command: \`${subCommand}\`\nAvailable: \`24h\`, \`week\`, \`month\`, \`year\`, \`all\`, \`show\`, \`reset\``
-        });
-    }
-
-    /**
-     * Display global usage report for a time period (v1.12.3)
-     */
-    private async handleGlobalUsageReport(period: string) {
-        if (!this._view) { return; }
-
-        const periodLabels: Record<string, string> = {
-            '24h': 'Last 24 Hours',
-            'week': 'Last 7 Days',
-            'month': 'Last 30 Days',
-            'year': 'Last 365 Days',
-            'all': 'All Time'
-        };
-
+        // v1.16.1: Delegate to shared command handler via POST /command/usage
         try {
-            const report = await this._backend.getUsageReport(period);
-
-            let content = `**Usage Report: ${periodLabels[period] || period}**\n`;
-            if (report.start_date) {
-                content += `*Period: ${report.start_date} to ${report.end_date}*\n\n`;
-            } else {
-                content += `*Period: All recorded sessions*\n\n`;
-            }
-
-            content += `• Sessions: ${report.session_count}\n`;
-            content += `• Total tokens: ${report.total_tokens.toLocaleString()}\n`;
-            content += `• Estimated cost: $${report.total_cost.toFixed(4)}\n`;
-
-            // By provider breakdown
-            if (report.by_provider && Object.keys(report.by_provider).length > 0) {
-                content += '\n**By Provider:**\n\n';
-                content += '| Provider | Tokens | Cost | Sessions |\n';
-                content += '|:---------|-------:|-----:|---------:|\n';
-                for (const [provider, stats] of Object.entries(report.by_provider).sort()) {
-                    content += `| ${provider} | ${stats.total_tokens.toLocaleString()} | $${stats.estimated_cost.toFixed(4)} | ${stats.session_count} |\n`;
-                }
-            }
-
-            // By model breakdown
-            if (report.by_model && Object.keys(report.by_model).length > 0) {
-                content += '\n**By Model:**\n\n';
-                content += '| Provider | Model | In | Out | Cost |\n';
-                content += '|:---------|:------|---:|----:|-----:|\n';
-                for (const [key, stats] of Object.entries(report.by_model).sort()) {
-                    const [provider, model] = key.split('/', 2);
-                    content += `| ${provider} | ${model || key} | ${stats.prompt_tokens.toLocaleString()} | ${stats.completion_tokens.toLocaleString()} | $${stats.estimated_cost.toFixed(4)} |\n`;
-                }
-            }
-
-            // Recent sessions (limit to 5)
-            if (report.sessions && report.sessions.length > 0) {
-                content += '\n**Recent Sessions:**\n';
-                for (const session of report.sessions.slice(0, 5)) {
-                    const ended = session.ended_at?.substring(0, 16).replace('T', ' ') || 'unknown';
-                    content += `• ${ended} - ${session.total_tokens.toLocaleString()} tokens, $${session.total_cost.toFixed(4)}\n`;
-                }
-            }
-
-            this._view.webview.postMessage({ type: 'systemMessage', content });
+            const result = await this._backend.executeCommand('usage', args.join(' '));
+            this.renderCommandResult(result);
         } catch (error) {
             this._view.webview.postMessage({
                 type: 'systemMessage',
-                content: `Failed to get usage report: ${error}`
+                content: `Failed to get usage: ${error}`
             });
         }
+    }
+
+    /**
+     * Render a server-side CommandResult in the webview.
+     *
+     * Generic dispatcher for all command result types returned by
+     * POST /command/{name}. Works for any command, not just /usage.
+     *
+     * v1.16.1: Added for CommandFactory server-side execution.
+     */
+    private renderCommandResult(result: CommandResultData) {
+        if (!this._view) { return; }
+
+        let content: string;
+        switch (result.type) {
+            case 'TableResult':
+            case 'DirectoryListingResult':
+                content = formatTableResult(result);
+                break;
+            case 'KeyValueResult':
+                content = formatKeyValueResult(result);
+                break;
+            case 'ErrorResult': {
+                const suggestions = result.suggestions || [];
+                content = result.message +
+                    (suggestions.length ? '\n' + suggestions.join('\n') : '');
+                break;
+            }
+            case 'ConfirmationResult':
+            case 'NotificationResult':
+            default:
+                content = result.message;
+        }
+        this._view.webview.postMessage({ type: 'systemMessage', content });
     }
 
     private async handleShowCommand(args: string[]) {

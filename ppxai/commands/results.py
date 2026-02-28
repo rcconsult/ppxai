@@ -60,6 +60,19 @@ class CommandResult(ABC):
         """Check if result indicates failure."""
         return self.status == ResultStatus.ERROR
 
+    def to_dict(self) -> dict:
+        """Serialize result for HTTP/JSON transport.
+
+        Used by POST /command/{name} endpoint to return CommandResult as JSON.
+        Subclasses override to add their specific fields.
+        """
+        return {
+            "type": type(self).__name__,
+            "status": self.status.value,
+            "message": self.message,
+            "metadata": self.metadata,
+        }
+
 
 # ============================================================================
 # Display Result Types - User Communication
@@ -108,6 +121,12 @@ class ErrorResult(CommandResult):
     error_details: Optional[str] = None
     suggestions: List[str] = field(default_factory=list)
 
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        d["error_details"] = self.error_details
+        d["suggestions"] = self.suggestions
+        return d
+
 
 @dataclass
 class ConfirmationResult(CommandResult):
@@ -128,6 +147,11 @@ class ConfirmationResult(CommandResult):
         )
     """
     details: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        d["details"] = self.details
+        return d
 
 
 @dataclass
@@ -180,6 +204,12 @@ class TableResult(CommandResult):
     """
     columns: List[str] = field(default_factory=list)
     rows: List[List[str]] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        d["columns"] = self.columns
+        d["rows"] = self.rows
+        return d
 
 
 @dataclass
@@ -279,6 +309,11 @@ class KeyValueResult(CommandResult):
         )
     """
     pairs: Dict[str, str] = field(default_factory=dict)
+
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        d["pairs"] = self.pairs
+        return d
 
 
 # ============================================================================

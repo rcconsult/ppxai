@@ -1276,6 +1276,51 @@ export class HttpClient {
         }>;
     }
 
+    // === Generic Command Execution (v1.16.1) ===
+
+    /**
+     * Execute a slash command server-side via CommandFactory.
+     *
+     * Returns the CommandResult as JSON. The server dispatches through the
+     * shared command handler — same code path as TUI clients.
+     *
+     * @param name - Command name without slash (e.g., "usage", "tools")
+     * @param args - Command arguments string
+     */
+    async executeCommand(name: string, args: string = ''): Promise<{
+        type: string;
+        status: string;
+        message: string;
+        metadata?: Record<string, unknown>;
+        columns?: string[];
+        rows?: string[][];
+        pairs?: Record<string, string>;
+        details?: Record<string, unknown>;
+        suggestions?: string[];
+        error_details?: string | null;
+    }> {
+        const response = await fetch(`${this.baseUrl}/command/${encodeURIComponent(name)}`, {
+            method: 'POST',
+            headers: this.getHeaders(true),
+            body: JSON.stringify({ args })
+        });
+        if (!response.ok) {
+            throw new Error(`Command /${name} failed: ${response.statusText}`);
+        }
+        return response.json() as Promise<{
+            type: string;
+            status: string;
+            message: string;
+            metadata?: Record<string, unknown>;
+            columns?: string[];
+            rows?: string[][];
+            pairs?: Record<string, string>;
+            details?: Record<string, unknown>;
+            suggestions?: string[];
+            error_details?: string | null;
+        }>;
+    }
+
     /**
      * Get debug log status (v1.11.2)
      */

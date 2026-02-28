@@ -181,8 +181,85 @@ class TextualCommandContext:
             self._app.set_config_value(key, value)
 
 
+class ServerCommandContext:
+    """CommandContext adapter for HTTP server.
+
+    Wraps EngineClient directly — no UI state.
+    Used by POST /command/{name} endpoint to execute shared command handlers.
+    """
+
+    def __init__(self, engine: "EngineClient"):
+        self._engine = engine
+
+    # -- Properties --
+
+    @property
+    def engine_client(self) -> "EngineClient":
+        return self._engine
+
+    @property
+    def session(self) -> "Session":
+        return self._engine.session
+
+    @property
+    def working_dir(self) -> str:
+        return self._engine.get_working_dir() or ""
+
+    @property
+    def current_model(self) -> str:
+        return self._engine.get_current_model() or ""
+
+    @property
+    def provider(self) -> str:
+        return self._engine.get_current_provider() or ""
+
+    @property
+    def tools_enabled(self) -> bool:
+        return self._engine.tools_enabled
+
+    @property
+    def autoroute_enabled(self) -> bool:
+        return False
+
+    # -- Mutations --
+
+    def set_model(self, model: str) -> None:
+        self._engine.set_model(model)
+
+    def set_provider(self, provider: str) -> None:
+        self._engine.set_provider(provider)
+
+    def get_provider(self) -> str:
+        return self._engine.get_current_provider() or ""
+
+    def get_model(self) -> str:
+        return self._engine.get_current_model() or ""
+
+    def get_auto_route(self) -> bool:
+        return False
+
+    def set_auto_route(self, enabled: bool) -> None:
+        pass  # No auto-route in server context
+
+    def get_tools_available(self) -> bool:
+        return self._engine.tools_enabled
+
+    def get_tools_verbose(self) -> bool:
+        return False
+
+    def set_tools_verbose(self, verbose: bool) -> None:
+        pass  # No verbose in server context
+
+    def get_config_value(self, key: str, default: Optional[str] = None) -> Optional[str]:
+        return default
+
+    def set_config_value(self, key: str, value: str) -> None:
+        pass
+
+
 # Export context adapters
 __all__ = [
     "RichCommandContext",
     "TextualCommandContext",
+    "ServerCommandContext",
 ]
