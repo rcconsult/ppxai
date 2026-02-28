@@ -511,3 +511,131 @@ Tests compare table row values against raw `session.get_usage()` data.
 - Create / rename / delete from tree
 - Git status markers (modified / untracked files)
 - Bookmarks / pinned directories
+
+---
+
+## Phase 8 — Pre-Release Technical Debt: Shared/Common Codebase
+
+**Goal:** Fix confirmed bugs, remove dead code, and eliminate duplication in the shared engine/commands/rendering layer before touching any client. All items tested before moving to client passes.
+
+---
+
+### 8.1 — Fix duplicate checkpoint manager init in `set_working_dir()`
+
+**Severity:** 🔴 High (bug — checkpoint ID restore is silently skipped)
+**File:** `ppxai/engine/client.py:211-218`
+**Effort:** ~5 min
+
+`set_working_dir()` calls `self._init_checkpoint_manager(path)` on line 209, then immediately re-executes the identical 8-line block inline (lines 211-218), overwriting the checkpoint manager without running the checkpoint-ID-restore logic from `_init_checkpoint_manager`. The inline block is dead duplication.
+
+**Fix:** Delete lines 211-218 (the inline block). The method call on line 209 is correct.
+
+**Status:** ⏳ Pending
+
+---
+
+### 8.2 — Fix duplicate model-switch context-reset in `set_model()`
+
+**Severity:** 🟡 Medium (duplication, not a bug — both branches are correct, just verbose)
+**File:** `ppxai/engine/client.py:557-561 and 572-576`
+**Effort:** ~10 min
+
+The 5-line block:
+```python
+if reset_context and self.session.messages:
+    removed = self.session.reset_for_model_switch()
+    self.last_model_switch_reset = removed
+    if removed:
+        logger.info(f"Reset context for model switch to {model_id}: removed {removed} messages")
+```
+appears verbatim twice — once for models in the list (lines 557-561) and once for the flexible fallback (lines 572-576). Both branches then call `self._log_model_hints_transition(model_id)` and `return True`.
+
+**Fix:** Extract the repeated block + final two lines into `_apply_model_switch(model_id, reset_context)`, call from both branches. Reduces `set_model()` by ~12 lines.
+
+**Status:** ⏳ Pending
+
+---
+
+### 8.3 — Remove unused `asdict` import in `client.py`
+
+**Severity:** 🟢 Low
+**File:** `ppxai/engine/client.py:12`
+**Effort:** ~1 min
+
+`from dataclasses import asdict` — imported but never called anywhere in the file.
+
+**Fix:** Delete the import line.
+
+**Status:** ⏳ Pending
+
+---
+
+### 8.4 — Standardise `set_*` vs `switch_*` method naming
+
+**Severity:** 🟡 Medium (API inconsistency, causes adapter boilerplate)
+**Files:** `ppxai/commands/handler.py`, `ppxai/commands/context.py`
+**Effort:** ~30 min
+
+`CommandHandler` uses `switch_provider()` / `switch_model()`, while `EngineClient` and `CommandContext` protocol use `set_provider()` / `set_model()`. The `RichCommandContext` adapter (context.py lines 71-72) exists solely to bridge this mismatch.
+
+**Fix:** Rename `CommandHandler.switch_provider()` → `set_provider()` and `switch_model()` → `set_model()` throughout `handler.py`. Remove the bridging aliases from `context.py`.
+
+**Status:** ⏳ Pending
+
+---
+
+### 8.5 — Remove redundant session alternation validation in `_save_with_extras()`
+
+**Severity:** 🟢 Low (double-validation, no bug)
+**File:** `ppxai/engine/session.py`
+**Effort:** ~5 min
+
+`_save_with_extras()` calls `validate_and_fix_alternation()` before saving (line ~800), but `_save_with_extras` is always called via `save()` which also calls it (line ~516). Validation runs twice.
+
+**Fix:** Remove the `validate_and_fix_alternation()` call from `_save_with_extras()`. Validation in `save()` is sufficient.
+
+**Status:** ⏳ Pending
+
+---
+
+### 8.6 — Rich renderer: complete `ConsentResult` and `PromptResult`
+
+**Severity:** 🟡 Medium (feature gap — interactive prompts fall back to placeholder text)
+**File:** `ppxai/rendering/rich_renderer.py`
+**Effort:** ~1h
+
+Two renderers have TODO placeholders:
+- `ConsentResult` renderer: shows options as text instead of interactive prompt
+- `PromptResult` renderer: prints "not yet implemented"
+
+**Fix:** Implement both using `prompt_toolkit` or Rich's `Prompt.ask()`.
+
+**Status:** ⏳ Pending
+
+---
+
+### 8.7 — Client passes (sequential, after 8.1–8.6 tested)
+
+Each client analysed in order. Each pass:
+1. Scan for tech debt (TODOs, dead code, duplication, config issues)
+2. Write implementation plan in this document
+3. Implement + test
+4. Commit before moving to next client
+
+| Order | Client | Status |
+|-------|--------|--------|
+| 1 | **ppxai** (Rich TUI — `ppxai/rich/`) | ⏳ Not started |
+| 2 | **ppxaide** (Textual TUI — `ppxai/tui/`) | ⏳ Not started |
+| 3 | **server** (`ppxai/server/` — incl. CommandFactory generalisation) | ⏳ Not started |
+| 4 | **web app** (`ppxai/web/`) | ⏳ Not started |
+| 5 | **VSCode extension** (`vscode-extension/`) | ⏳ Not started |
+
+---
+
+### Testing gate between phases
+
+After 8.1–8.6 are done:
+```bash
+uv run pytest tests/ -x -q   # must be 0 failures before client passes begin
+```
+
