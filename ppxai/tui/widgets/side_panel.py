@@ -112,8 +112,32 @@ class SidePanel(Widget):
         else:
             lang_badge.update("")
 
-        # Clear and rebuild content - must await removal before mounting new widgets
         content_container = self.query_one("#panel-content", Vertical)
+
+        # Fast path: reuse existing CodeEditor for code-to-code transitions
+        # Avoids expensive remove_children() + mount() + tree-sitter re-init
+        if mode == "code":
+            try:
+                editor = content_container.query_one("#panel-editor", CodeEditor)
+                # Existing code editor — update text and language in-place
+                text_area = editor.query_one("#code-text-area")
+                new_lang = lang if lang else None
+                if text_area.language != new_lang:
+                    text_area.language = new_lang
+                text_area.load_text(content)
+                editor._read_only = read_only
+                text_area.read_only = read_only
+                # Focus the text area
+                self.call_after_refresh(lambda: text_area.focus())
+                # Ensure panel is visible
+                self.add_class("visible")
+                self.is_open = True
+                self.post_message(self.Opened())
+                return
+            except NoMatches:
+                pass  # No existing editor, fall through to full mount
+
+        # Clear and rebuild content - must await removal before mounting new widgets
         await content_container.remove_children()
 
         # Add appropriate viewer/editor based on mode

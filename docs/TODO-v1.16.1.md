@@ -38,7 +38,7 @@ the left, with the existing chat + side panel on the right.
 | `F6` / `Ctrl+Tab` | Cycle focus: input → file tree → side panel → input |
 | `↑↓` (in file tree) | Navigate files/dirs (free from Textual DirectoryTree) |
 | `→` / `←` (in file tree) | Expand / collapse directory |
-| `Ctrl+[` / `Ctrl+]` | Resize panes (extended to include file tree) |
+| `-` / `=` | Resize panes (file tree when focused, or chat/panel split) |
 
 ---
 
@@ -287,26 +287,26 @@ def inject_text(self, text: str) -> None:
 
 ### Step 4.1 — FileTree header with current directory
 
-Show truncated cwd path at top of file tree pane:
-```css
-#file-tree-header {
-    height: 1;
-    background: $panel;
-    color: $text-muted;
-    padding: 0 1;
-    dock: top;
-}
-```
+Root node label shows truncated cwd (last 2 path components) via `_short_path()`.
+`update_root_path()` method syncs label when working directory changes.
+`app.py:_on_working_dir_changed()` calls `file_tree.update_root_path()`.
 
-**Status:** ⏳ Pending
+**Status:** ✅ Done
 
-### Step 4.2 — Ctrl+[/] resize for file tree
+### Step 4.2 — Resize keys for file tree and side panel
 
-Extend `action_resize_panel()` to also resize file tree when focused:
-- When focus is in file tree: Ctrl+[ shrinks tree, Ctrl+] grows tree
-- Current behavior (resize chat vs side panel) when focus is elsewhere
+Primary keys: `-` (shrink) / `=` (grow) — work in all terminals.
+Ctrl+[/] kept as fallback but unreliable (Ctrl+[ = ESC in most terminals).
+`action_resize_panel()` detects focus in file tree and resizes tree width.
+`TREE_WIDTHS = [15, 20, 25, 30, 35]` with default index 2 (25%).
+`_apply_tree_width()` sets CSS width on file tree.
+`_apply_split_ratio()` uses dynamic `TREE_WIDTHS[index]` instead of hardcoded 25%.
 
-**Status:** ⏳ Pending
+**Side panel fast path:** `side_panel.show_file()` reuses existing CodeEditor
+for code-to-code transitions via `load_text()` instead of destroy+remount.
+Avoids tree-sitter re-initialization overhead when browsing files.
+
+**Status:** ✅ Done
 
 ### Step 4.3 — Theme auto-sync
 

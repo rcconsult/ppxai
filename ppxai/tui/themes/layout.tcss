@@ -68,7 +68,8 @@ FileTree.hidden {
     display: none;
 }
 
-FileTree DirectoryTree {
+/* Root label acts as header showing truncated cwd */
+FileTree > .tree--guides {
     background: $surface;
     scrollbar-background: $surface;
     scrollbar-color: $panel;

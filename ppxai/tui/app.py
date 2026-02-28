@@ -84,7 +84,12 @@ class PPXAIDEApp(App):
         Binding("ctrl+tab", "toggle_focus", "Switch Pane", show=False),
         Binding("escape", "cancel", "Cancel", show=False),
         Binding("q", "hide_help_panel", "Close Help", show=False),  # Close help panel with 'q'
-        # Split resize bindings (use ctrl+[ and ctrl+] to avoid conflict with text navigation)
+        # Split resize bindings
+        # Note: ctrl+[ sends ESC in most terminals, ctrl+] sends GS — both unreliable.
+        # Use minus/equals as primary resize keys (works in all terminals).
+        Binding("minus", "resize_panel('left')", "Shrink", show=False),
+        Binding("equals", "resize_panel('right')", "Grow", show=False),
+        # Keep ctrl+[/] as fallback for terminals that support them (e.g. Ghostty/Kitty)
         Binding("ctrl+left_square_bracket", "resize_panel('left')", "Shrink Panel", show=False),
         Binding("ctrl+right_square_bracket", "resize_panel('right')", "Grow Panel", show=False),
     ]
@@ -92,6 +97,10 @@ class PPXAIDEApp(App):
     # Split ratio presets (chat% : panel%)
     SPLIT_RATIOS = [30, 40, 50, 60, 70]
     DEFAULT_SPLIT_INDEX = 2  # 50%
+
+    # File tree width presets (percentage of total width)
+    TREE_WIDTHS = [15, 20, 25, 30, 35]
+    DEFAULT_TREE_WIDTH_INDEX = 2  # 25%
 
     def __init__(self, debug_logging: bool = False, trace_logging: bool = False):
         super().__init__()
@@ -117,6 +126,7 @@ class PPXAIDEApp(App):
         self._tool_group_tools = []  # v1.16.0: Tool names in current group
         self._working_dir = os.getcwd()
         self._split_index = self.DEFAULT_SPLIT_INDEX  # Current split ratio index
+        self._tree_width_index = self.DEFAULT_TREE_WIDTH_INDEX  # File tree width index
         self._file_tree_visible: bool = True
 
         # Streaming state (Phase 6.1)
@@ -1472,6 +1482,13 @@ class PPXAIDEApp(App):
             if input_box._completer:
                 input_box._completer.update_working_dir(Path(path))
 
+            # Update file tree root label to reflect new cwd
+            try:
+                file_tree = self.query_one("#file-tree", FileTree)
+                file_tree.update_root_path(Path(path))
+            except Exception:
+                pass
+
             # Update status bar cwd badge if visible
             tui_config = get_tui_config()
             if tui_config.get("show_cwd", True):
@@ -2064,39 +2081,79 @@ class PPXAIDEApp(App):
             input_box.focus()
 
     def action_resize_panel(self, direction: str) -> None:
-        """Resize the split panel (Ctrl+[/]).
+        """Resize panes (Ctrl+[/]).
+
+        When focus is in file tree: resize the tree width.
+        Otherwise: resize the chat/side-panel split.
 
         Args:
-            direction: 'left' to move divider left (grow chat, shrink panel)
-                      'right' to move divider right (shrink chat, grow panel)
+            direction: 'left' to shrink, 'right' to grow the focused pane
         """
+        # Check if focus is in the file tree
+        focused = self.focused
+        try:
+            file_tree = self.query_one("#file-tree", FileTree)
+            in_file_tree = (
+                self._file_tree_visible
+                and focused
+                and file_tree in focused.ancestors_with_self
+            )
+        except Exception:
+            in_file_tree = False
+
+        if in_file_tree:
+            # Resize file tree width
+            # Ctrl+[ → shrink tree, Ctrl+] → grow tree
+            if direction == "left" and self._tree_width_index > 0:
+                self._tree_width_index -= 1
+            elif direction == "right" and self._tree_width_index < len(self.TREE_WIDTHS) - 1:
+                self._tree_width_index += 1
+            else:
+                return
+            self._apply_tree_width()
+            tree_pct = self.TREE_WIDTHS[self._tree_width_index]
+            self.notify(f"Tree: {tree_pct}%", title="Resize")
+            # Recompute side panel if open
+            side_panel = self.query_one("#side-panel", SidePanel)
+            if side_panel.is_open:
+                self._apply_split_ratio()
+            return
+
+        # Default: resize chat/side-panel split
         side_panel = self.query_one("#side-panel", SidePanel)
         if not side_panel.is_open:
             return
 
-        # Adjust split index
-        # Ctrl+[ (left) → move divider left → decrease chat% (shrink panel)
-        # Ctrl+] (right) → move divider right → increase chat% (grow panel)
+        # Ctrl+[ (left) → shrink panel, Ctrl+] (right) → grow panel
         if direction == "left" and self._split_index > 0:
-            self._split_index -= 1  # Less chat, more panel (divider moves left)
+            self._split_index -= 1
         elif direction == "right" and self._split_index < len(self.SPLIT_RATIOS) - 1:
-            self._split_index += 1  # More chat, less panel (divider moves right)
+            self._split_index += 1
         else:
-            return  # At limit
+            return
 
         self._apply_split_ratio()
         chat_pct = self.SPLIT_RATIOS[self._split_index]
         self.notify(f"Split: {chat_pct}% / {100 - chat_pct}%", title="Resize")
 
+    def _apply_tree_width(self) -> None:
+        """Apply the current tree width to the file tree pane."""
+        try:
+            file_tree = self.query_one("#file-tree", FileTree)
+            tree_pct = self.TREE_WIDTHS[self._tree_width_index]
+            file_tree.styles.width = f"{tree_pct}%"
+        except Exception:
+            pass
+
     def _apply_split_ratio(self) -> None:
         """Apply the current split ratio to chat and panel panes.
 
         Chat pane uses width: 1fr in CSS and fills whatever space remains after
-        the file tree (25% when visible) and the side panel (explicit %).
+        the file tree and the side panel (explicit %).
         We only need to set the side panel's explicit width here.
         """
-        file_tree_pct = 25 if self._file_tree_visible else 0
-        available_pct = 100 - file_tree_pct  # 75 when tree visible, 100 when hidden
+        file_tree_pct = self.TREE_WIDTHS[self._tree_width_index] if self._file_tree_visible else 0
+        available_pct = 100 - file_tree_pct
 
         chat_ratio = self.SPLIT_RATIOS[self._split_index] / 100.0
         panel_ratio = 1.0 - chat_ratio

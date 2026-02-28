@@ -13,6 +13,12 @@ from textual.message import Message
 from textual.widgets import DirectoryTree
 
 
+def _short_path(path: Path) -> str:
+    """Return last 2 path components for display, e.g. 'projects/myapp'."""
+    parts = path.parts
+    return str(Path(*parts[-2:])) if len(parts) >= 2 else str(path)
+
+
 class FileTree(DirectoryTree):
     """File system browser widget.
 
@@ -26,6 +32,18 @@ class FileTree(DirectoryTree):
         Binding("space", "inject", "@file", show=True),
         Binding("escape", "dismiss_tree", "Back", show=True),
     ]
+
+    def __init__(self, path: Path, **kwargs) -> None:
+        super().__init__(path, **kwargs)
+        # Show truncated cwd as root label instead of full absolute path
+        self.guide_depth = 3
+        self.root.set_label(_short_path(path))
+
+    def update_root_path(self, path: Path) -> None:
+        """Update the root label when working directory changes."""
+        self.path = path
+        self.root.set_label(_short_path(path))
+        self.reload()
 
     class FilePreview(Message):
         """Posted when user selects a file for read-only preview (Enter)."""
