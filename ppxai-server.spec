@@ -162,8 +162,6 @@ a = Analysis(
         'pytest',
         'pytest_asyncio',
         'ruff',
-        # Exclude TUI-only packages (not needed for server)
-        'prompt_toolkit',
         # Exclude tkinter (not needed for server)
         'tkinter',
         '_tkinter',
