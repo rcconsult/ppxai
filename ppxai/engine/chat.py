@@ -180,6 +180,17 @@ async def chat_simple(
     Yields:
         Event objects for stream chunks and final response
     """
+    # Pre-flight: fix alternation violations in history before sending to provider.
+    # Pop the trailing user message first so the fix doesn't remove it, then re-insert.
+    trailing_user = None
+    if ctx.session.messages and ctx.session.messages[-1].role == "user":
+        trailing_user = ctx.session.messages.pop()
+    preflight_fixed = ctx.session.validate_and_fix_alternation()
+    if trailing_user is not None:
+        ctx.session.messages.append(trailing_user)
+    if preflight_fixed:
+        logger.info(f"Pre-flight alternation fix: removed {preflight_fixed} messages")
+
     # Auto-retry loop for empty responses
     max_retries = ctx.tool_manager.auto_retry_empty
     retry_count = 0
@@ -502,6 +513,17 @@ async def chat_with_tools(
         f"chat_with_tools start: messages={len(ctx.session.messages)}, "
         f"roles={[m.role for m in ctx.session.messages[-5:]]}"  # Last 5 message roles
     )
+
+    # Pre-flight: fix alternation violations in history before sending to provider.
+    # Pop the trailing user message first so the fix doesn't remove it, then re-insert.
+    trailing_user = None
+    if ctx.session.messages and ctx.session.messages[-1].role == "user":
+        trailing_user = ctx.session.messages.pop()
+    preflight_fixed = ctx.session.validate_and_fix_alternation()
+    if trailing_user is not None:
+        ctx.session.messages.append(trailing_user)
+    if preflight_fixed:
+        logger.info(f"Pre-flight alternation fix: removed {preflight_fixed} messages")
 
     yield Event(EventType.STREAM_START, {"model": ctx.model})
 

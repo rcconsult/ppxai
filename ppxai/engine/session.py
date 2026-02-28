@@ -16,6 +16,7 @@ from typing import List, Dict, Any, Optional
 from .types import Message, UsageStats, SessionInfo
 from ..common.logger import get_logger
 from ..constants import ConsentMode
+from ..usage import save_session_usage
 
 logger = get_logger("session")
 
@@ -688,9 +689,6 @@ class SessionManager:
         Called when session ends (exit, /clear, etc.) to persist usage data
         across sessions for time-based analytics.
         """
-        from datetime import datetime
-        from ..usage import save_session_usage
-
         # Skip if no usage
         if self.usage.total_tokens == 0 and self.usage.estimated_cost == 0.0:
             return
