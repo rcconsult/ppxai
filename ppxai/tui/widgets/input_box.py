@@ -2,6 +2,8 @@
 InputBox widget - Multi-line input with history.
 """
 
+from pathlib import Path
+
 from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.css.query import NoMatches
@@ -38,7 +40,6 @@ class ChatTextArea(TextArea):
         # Log key events when debug logging is enabled (/debug-log on)
         try:
             if getattr(self.app, "_debug_logging", False):
-                from pathlib import Path
                 log_path = Path.home() / ".ppxai" / "logs" / "keys.log"
                 log_path.parent.mkdir(parents=True, exist_ok=True)
                 k = repr(event.key)

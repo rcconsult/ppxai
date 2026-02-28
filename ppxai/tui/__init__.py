@@ -10,6 +10,15 @@ This module provides a modern terminal UI with:
 Entry point: ppxaide command
 """
 
+import argparse
+import logging
+import os
+import signal
+import sys
+
+from ppxai import __version__
+from ppxai.common.logger import get_logger
+from ppxai.config import initialize
 from ppxai.tui.app import PPXAIDEApp
 
 __all__ = ["PPXAIDEApp", "main"]
@@ -17,11 +26,6 @@ __all__ = ["PPXAIDEApp", "main"]
 
 def main():
     """Entry point for ppxaide command."""
-    import argparse
-    import signal
-    import sys
-    from ppxai.common.logger import get_logger
-    from ppxai import __version__
 
     # Parse CLI arguments
     parser = argparse.ArgumentParser(description="ppxaide - Textual TUI for ppxai")
@@ -48,7 +52,6 @@ def main():
         logger.enable()
         # If --debug specified, also log to stderr for immediate visibility
         if args.debug:
-            import logging
             stderr_handler = logging.StreamHandler(sys.stderr)
             stderr_handler.setFormatter(logging.Formatter(
                 '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -56,12 +59,10 @@ def main():
             logger._logger.addHandler(stderr_handler)
 
     # Store trace flag globally for exception handlers
-    import os
     if args.trace:
         os.environ['PPXAIDE_TRACE'] = '1'
 
     # Initialize config and load .env BEFORE starting event loop (matches Rich TUI)
-    from ppxai.config import initialize
     initialize()
 
     # Create app instance

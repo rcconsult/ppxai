@@ -43,6 +43,7 @@ from ppxai.tui.clipboard import copy_to_clipboard, paste_from_clipboard, is_clip
 from ppxai.tui import commands as local_commands
 from ppxai.tui.completer import TextualCompleter
 from ppxai.tui.event_bus import EventBus, Events
+from ppxai.tui.terminal import can_display_images
 
 # Engine integration (Phase 6.1)
 from ppxai.engine import EngineClient
@@ -137,6 +138,7 @@ class PPXAIDEApp(App):
         # Ctrl+C double-press tracking (v1.15.2)
         self._last_ctrl_c_time: float = 0.0
         self._CTRL_C_TIMEOUT = 2.0  # seconds to press Ctrl+C again
+        self._response_start_time: float = 0.0
         # Reasoning token state (DeepSeek R1, GPT-OSS thinking)
         self._reasoning_started = False
         self._reasoning_content = ""
@@ -1244,7 +1246,7 @@ class PPXAIDEApp(App):
                     self._log.debug(f"Finalized reasoning message: {len(self._reasoning_content)} chars")
 
             # Calculate response time
-            response_time = time.time() - self._response_start_time if hasattr(self, '_response_start_time') else 0.0
+            response_time = time.time() - self._response_start_time
 
             # Render markdown once with full content (like Rich TUI)
             chat_view.add_assistant_message(final_response, response_time=response_time)
@@ -2217,7 +2219,6 @@ class PPXAIDEApp(App):
         image_formats = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.ico', '.tiff', '.tif'}
 
         if ext in image_formats:
-            from ppxai.tui.terminal import can_display_images
             if can_display_images():
                 await self.show_file_in_panel(path, "", mode="image", read_only=True)
             else:

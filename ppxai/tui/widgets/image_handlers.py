@@ -6,6 +6,8 @@ Provides different handlers based on library availability and terminal capabilit
 - FallbackHandler: Shows file info when images can't be displayed
 """
 
+import logging
+import os
 from pathlib import Path
 from typing import Optional, Protocol, Tuple
 
@@ -15,7 +17,13 @@ from textual.widget import Widget
 from textual.widgets import Static
 
 from ppxai.tui.images import get_image_size
-from ppxai.tui.terminal import can_display_images, get_image_protocol_name
+from ppxai.tui.terminal import (
+    ImageProtocol,
+    can_display_images,
+    get_image_protocol_name,
+    get_user_protocol_override,
+    get_user_terminal_override,
+)
 from ppxai.tui.validation import format_file_size
 
 
@@ -63,9 +71,6 @@ def _get_image_widget_class():
     Returns:
         The appropriate image widget class
     """
-    import os
-    from ppxai.tui.terminal import ImageProtocol, get_user_protocol_override, get_user_terminal_override
-
     # Check for user protocol override first
     protocol_override = get_user_protocol_override()
     if protocol_override is not None:
@@ -172,8 +177,6 @@ class FullImageHandler:
             self._viewer = ImageWidgetClass(path)
         except Exception as e:
             # Failed to create viewer - will fall back to None
-            # Log the error for debugging
-            import logging
             logging.error(f"Failed to create TextualImage widget: {e}")
             self._viewer = None
 
@@ -227,7 +230,6 @@ class FullImageHandler:
             self._path = path
             return True
         except Exception as e:
-            import logging
             logging.error(f"Failed to load image: {e}")
             return False
 
