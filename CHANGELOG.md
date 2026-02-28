@@ -5,6 +5,34 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.1] - 2026-03-01
+
+**Focus:** FileTree browser, CommandFactory server pattern, unified session restore, pre-release tech debt
+
+### Added
+
+- **FileTree widget** (`ppxai/tui/widgets/file_tree.py`) — Norton Commander-style file browser in ppxaide; `Ctrl+B` toggle, `Enter` preview, `Ctrl+Enter` edit, `Space` injects `@file:path` into chat input; 28 unit tests
+- **CommandFactory server pattern** — `POST /command` HTTP endpoint routes to same `CommandFactory` used by TUI/CLI; `/usage` unified across TUI, VSCode, and Web clients
+- **`EngineClient.restore_session()`** — single authoritative session restore covering provider, model, tools, and working_dir; fixes JSON-RPC client never restoring provider/model
+
+### Fixed
+
+- `TypeError: 'bool' object is not iterable` in Codex Responses API (`_non_stream_responses` iterated `item.content` which can be `True`)
+- SSE exception handlers now log full traceback unconditionally; `sse_coding_task_generator` had no exception logging at all
+- Pre-flight `validate_and_fix_alternation()` before provider call — prevents recurring 400 errors from Perplexity and other strict providers on malformed session history
+- `ppxai-server` binary crash on startup (`prompt_toolkit` was incorrectly excluded from PyInstaller spec)
+- Side panel silently discarded unsaved edits on close — now prompts to save
+- `Ctrl+Enter` in FileTree blocked by app-level priority submit binding
+- Duplicate provider/model switch log entries
+- `STREAM_START` event missing in some `chat_simple` code paths
+- `GeminiProvider` deprecated `thinking_budget` → `thinking_level`
+
+### Changed
+
+- Lazy imports eliminated from `engine/context.py`, `engine/session.py`, `server/http.py`, `server/jsonrpc.py`, and Rich TUI client modules (DAG-style imports throughout)
+- 6 regex patterns replaced with more robust alternatives: filename detection handles dotfiles + multi-dot names; markdown link parser uses bracket/paren depth counting; success-claim detection uses keyword set + proximity window; tool JSON detection uses `_find_json_objects()`; Rich markup stripping preserves citation markers `[1]`/`[2]`; inline formatter uses linear pass (code > bold > italic priority)
+- `RichRenderer` gains `ConsentResult` and `PromptResult` renderers (were silently missing)
+
 ## [1.16.0] - 2026-02-26
 
 **Focus:** Profile-driven tool loop, multi-tool support, agent UI improvements, benchmark v2
