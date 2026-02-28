@@ -22,6 +22,7 @@ import signal
 import subprocess
 import sys
 import threading
+import traceback
 import time
 import webbrowser
 from contextlib import asynccontextmanager
@@ -450,7 +451,9 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
             # Force event loop to flush the response immediately
             await asyncio.sleep(0)
     except Exception as e:
-        logger.error(f"Exception in SSE event generator: {e}")
+        logger.error(
+            f"Exception in SSE event generator: {e}\n{traceback.format_exc()}"
+        )
         error_str = str(e)
         yield f"data: {json.dumps({'type': 'error', 'data': error_str})}\n\n"
 
@@ -512,6 +515,9 @@ async def sse_coding_task_generator(
             # Force event loop to flush the response immediately
             await asyncio.sleep(0)
     except Exception as e:
+        logger.error(
+            f"Exception in SSE coding task generator: {e}\n{traceback.format_exc()}"
+        )
         error_str = str(e)
         yield f"data: {json.dumps({'type': 'error', 'data': error_str})}\n\n"
 

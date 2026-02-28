@@ -844,7 +844,7 @@ except Exception as e:
 
 Note: `import traceback` should move to module top (no-lazy-imports rule).
 
-**Status:** ⬜ Pending
+**Status:** ✅ Done — `traceback` imported at module top; both `sse_event_generator` and `sse_coding_task_generator` now log full tracebacks on exception
 
 ---
 
