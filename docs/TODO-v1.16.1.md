@@ -530,7 +530,7 @@ Tests compare table row values against raw `session.get_usage()` data.
 
 **Fix:** Delete lines 211-218 (the inline block). The method call on line 209 is correct.
 
-**Status:** ⏳ Pending
+**Status:** ✅ Done (c47dd61)
 
 ---
 
@@ -552,7 +552,7 @@ appears verbatim twice — once for models in the list (lines 557-561) and once 
 
 **Fix:** Extract the repeated block + final two lines into `_apply_model_switch(model_id, reset_context)`, call from both branches. Reduces `set_model()` by ~12 lines.
 
-**Status:** ⏳ Pending
+**Status:** ✅ Done (c47dd61)
 
 ---
 
@@ -566,7 +566,7 @@ appears verbatim twice — once for models in the list (lines 557-561) and once 
 
 **Fix:** Delete the import line.
 
-**Status:** ⏳ Pending
+**Status:** ✅ Done (c47dd61)
 
 ---
 
@@ -580,7 +580,7 @@ appears verbatim twice — once for models in the list (lines 557-561) and once 
 
 **Fix:** Rename `CommandHandler.switch_provider()` → `set_provider()` and `switch_model()` → `set_model()` throughout `handler.py`. Remove the bridging aliases from `context.py`.
 
-**Status:** ⏳ Pending
+**Status:** ✅ Done (c47dd61)
 
 ---
 
@@ -594,7 +594,7 @@ appears verbatim twice — once for models in the list (lines 557-561) and once 
 
 **Fix:** Remove the `validate_and_fix_alternation()` call from `_save_with_extras()`. Validation in `save()` is sufficient.
 
-**Status:** ⏳ Pending
+**Status:** ✅ Done (c47dd61)
 
 ---
 
