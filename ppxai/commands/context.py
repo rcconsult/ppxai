@@ -77,12 +77,14 @@ class RichCommandContext:
         return getattr(self._handler, 'autoroute_enabled', False)
 
     def set_model(self, model: str) -> None:
-        """Switch to specified model."""
+        """Switch to specified model (updates both UI state and engine)."""
         self._handler.current_model = model
+        self._handler.engine_client.set_model(model)
 
     def set_provider(self, provider: str) -> None:
-        """Switch to specified provider."""
+        """Switch to specified provider (updates both UI state and engine)."""
         self._handler.provider = provider
+        self._handler.engine_client.set_provider(provider)
 
     def get_provider(self) -> str:
         """Get currently selected provider."""
@@ -192,15 +194,19 @@ class TextualCommandContext:
         return getattr(self._app, '_autoroute_enabled', False)
 
     def set_model(self, model: str) -> None:
-        """Switch to specified model."""
+        """Switch to specified model (updates both UI state and engine)."""
         self._app._model = model
+        if self._app._engine_client:
+            self._app._engine_client.set_model(model)
         # Update status bar if available
         if hasattr(self._app, '_update_status_bar'):
             self._app._update_status_bar()
 
     def set_provider(self, provider: str) -> None:
-        """Switch to specified provider."""
+        """Switch to specified provider (updates both UI state and engine)."""
         self._app._provider = provider
+        if self._app._engine_client:
+            self._app._engine_client.set_provider(provider)
         # Update status bar if available
         if hasattr(self._app, '_update_status_bar'):
             self._app._update_status_bar()
