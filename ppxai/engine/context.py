@@ -11,15 +11,30 @@ v1.14.2: Hierarchical context scopes (global, project, subdir)
 """
 
 import hashlib
-import re
 import os
-from pathlib import Path
-from typing import List, Tuple, Optional, Set, Dict, TYPE_CHECKING
-
+import re
+import subprocess
 from dataclasses import dataclass
+from pathlib import Path
+from typing import List, Tuple, Optional, Set, Dict
 
-if TYPE_CHECKING:
-    from .bootstrap import BootstrapContext, ContextScope
+from .bootstrap import BootstrapContext, find_bootstrap_files_by_scope
+from ..config import get_bootstrap_files, get_max_injection_size, is_bootstrap_enabled
+
+try:
+    import httpx
+except ImportError:
+    httpx = None  # type: ignore[assignment]
+
+try:
+    import pyperclip
+except ImportError:
+    pyperclip = None  # type: ignore[assignment]
+
+try:
+    import trafilatura
+except ImportError:
+    trafilatura = None  # type: ignore[assignment]
 
 
 @dataclass
@@ -61,9 +76,8 @@ def _get_max_injection_size() -> int:
         Max injection size in characters.
     """
     try:
-        from ...config import get_max_injection_size
         return get_max_injection_size()
-    except ImportError:
+    except Exception:
         return 100_000  # Default fallback
 
 
@@ -181,9 +195,8 @@ class ContextInjector:
             return self._bootstrap_files
         # Load from config if not explicitly set
         try:
-            from ..config import get_bootstrap_files
             return get_bootstrap_files()
-        except ImportError:
+        except Exception:
             return self.DEFAULT_BOOTSTRAP_FILES
 
     def find_bootstrap_files(self) -> List[Path]:
@@ -200,10 +213,9 @@ class ContextInjector:
         """
         # Check if bootstrap is enabled
         try:
-            from ..config import is_bootstrap_enabled
             if not is_bootstrap_enabled():
                 return []
-        except ImportError:
+        except Exception:
             pass
 
         aliases = self.bootstrap_files
@@ -235,13 +247,10 @@ class ContextInjector:
         """
         # Check if bootstrap is enabled
         try:
-            from ..config import is_bootstrap_enabled
             if not is_bootstrap_enabled():
                 return []
-        except ImportError:
+        except Exception:
             pass
-
-        from .bootstrap import find_bootstrap_files_by_scope
 
         work_dir = Path(self.working_dir)
         if not work_dir.exists() or not work_dir.is_dir():
@@ -263,14 +272,12 @@ class ContextInjector:
 
         return results
 
-    def load_bootstrap_context(self) -> Optional["BootstrapContext"]:
+    def load_bootstrap_context(self) -> Optional[BootstrapContext]:
         """Load and parse bootstrap context from working directory.
 
         Returns:
             BootstrapContext if found, None otherwise
         """
-        from .bootstrap import BootstrapContext
-
         files = self.find_bootstrap_files()
         if not files:
             return None
@@ -280,7 +287,7 @@ class ContextInjector:
         except Exception:
             return None
 
-    def load_bootstrap_context_merged(self) -> Tuple[Optional["BootstrapContext"], List[ScopedBootstrapSource]]:
+    def load_bootstrap_context_merged(self) -> Tuple[Optional[BootstrapContext], List[ScopedBootstrapSource]]:
         """Load and merge bootstrap context from all scopes (v1.14.2).
 
         Merges files from global → project → subdir:
@@ -290,8 +297,6 @@ class ContextInjector:
         Returns:
             Tuple of (merged BootstrapContext, list of ScopedBootstrapSource)
         """
-        from .bootstrap import BootstrapContext
-
         sources = self.find_bootstrap_files_with_scopes()
         if not sources:
             return None, []
@@ -491,8 +496,6 @@ class ContextInjector:
         Returns:
             InjectedContext with git diff or None if not in git repo
         """
-        import subprocess
-
         work_dir = working_dir or self.working_dir
 
         try:
@@ -639,12 +642,11 @@ class ContextInjector:
         Returns:
             InjectedContext with clipboard content or None if empty/unavailable
         """
-        try:
-            import pyperclip
-            content = pyperclip.paste()
-        except ImportError:
-            # pyperclip not installed
+        if pyperclip is None:
             return None
+
+        try:
+            content = pyperclip.paste()
         except Exception:
             # Clipboard access failed (no display, etc.)
             return None
@@ -709,7 +711,14 @@ class ContextInjector:
         Returns:
             InjectedContext with page content or None on error
         """
-        import httpx
+        if httpx is None:
+            return InjectedContext(
+                source=url,
+                content="Error fetching URL: httpx is not installed",
+                language="text",
+                truncated=False,
+                size=0
+            )
 
         try:
             # Fetch with reasonable timeout and headers
@@ -770,16 +779,11 @@ class ContextInjector:
         Returns:
             Plain text content
         """
-        import re
-
         # Try trafilatura if available (better extraction)
-        try:
-            import trafilatura
+        if trafilatura is not None:
             text = trafilatura.extract(html)
             if text:
                 return text
-        except ImportError:
-            pass
 
         # Fallback: simple regex-based extraction
         # Remove script and style elements
