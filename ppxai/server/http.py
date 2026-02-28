@@ -15,25 +15,43 @@ Usage:
 
 import argparse
 import asyncio
+import base64
 import json
 import os
+import signal
+import subprocess
 import sys
+import threading
 import time
+import webbrowser
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path, PurePosixPath
 from typing import AsyncGenerator, Optional
+from urllib.parse import parse_qs, urlparse
 
+import uvicorn
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from ..commands.context import ServerCommandContext
 from ..commands.factory import CommandFactory
+from ..common.consent import normalize_consent_response
 from ..common.logger import get_logger
 from ..common.preview import inject_reload_script, resolve_preview_path, rewrite_asset_paths
+from ..config import (
+    find_config_file,
+    get_available_providers,
+    get_idle_timeout,
+    get_paths_config as _get_paths_config,
+    initialize,
+    reload_config,
+)
 from ..engine import EngineClient, EventType
+from ..engine.session import SessionManager as EngineSessionManager
+from ..usage import get_usage_report as get_report, get_usage_storage
 from ..version import __version__
 from .session_manager import SessionManager
 
@@ -51,6 +69,31 @@ _shutdown_event: asyncio.Event = None
 
 # Server start time for uptime tracking (v1.13.10)
 _server_start_time: float = 0
+
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 54320
+
+# MIME types for binary file serving (images + PDF)
+MIME_TYPES = {
+    '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
+    '.bmp': 'image/bmp', '.ico': 'image/x-icon', '.pdf': 'application/pdf',
+}
+
+
+def is_path_allowed(target: Path, base: Path) -> bool:
+    """Check if target is within base's tree (parent or child)."""
+    try:
+        target.relative_to(base)
+        return True
+    except ValueError:
+        pass
+    try:
+        base.relative_to(target)
+        return True
+    except ValueError:
+        pass
+    return False
 
 
 async def get_or_create_session(session_id: Optional[str]) -> tuple[str, EngineClient, asyncio.Lock]:
@@ -93,17 +136,6 @@ def update_activity():
     global session_manager
     if session_manager:
         session_manager.update_activity()
-
-
-async def check_idle_shutdown():
-    """Background task to check for idle shutdown (v1.13.10).
-
-    Note: v1.13.10 - This function is now a no-op as idle shutdown
-    is handled by SessionManager.start_idle_monitor().
-    Kept for backward compatibility.
-    """
-    # Idle shutdown is now managed by SessionManager
-    pass
 
 
 async def http_consent_handler(file_path: str) -> tuple[bool, str]:
@@ -172,7 +204,6 @@ async def lifespan(app: FastAPI):
 
     # Start idle shutdown monitor (v1.13.10)
     # Pass shutdown callback for graceful shutdown instead of os._exit
-    from ..config import get_idle_timeout
     idle_timeout = get_idle_timeout()
 
     def idle_shutdown_callback():
@@ -186,7 +217,6 @@ async def lifespan(app: FastAPI):
     _server_start_time = time.time()
 
     # Log startup with timestamp
-    from datetime import datetime
     start_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     logger.info(f"Server started at {start_timestamp} (startup took {startup_time:.2f}s)")
     print(f"ppxai HTTP server started ({startup_time:.2f}s)")
@@ -521,7 +551,6 @@ async def health_check():
     v1.13.10: Updated to use SessionManager and enhanced for Kubernetes.
     """
     global session_manager
-    from ..config import get_idle_timeout
     idle_timeout = get_idle_timeout()
 
     last_activity = session_manager.last_activity if session_manager else 0
@@ -565,7 +594,6 @@ async def readiness_check():
         )
 
     # Get available providers
-    from ..config import get_available_providers
     providers = get_available_providers()
 
     return {
@@ -608,7 +636,6 @@ async def shutdown_server():
             _shutdown_event.set()
         else:
             # Fallback for edge cases where event wasn't initialized
-            import signal
             signal.raise_signal(signal.SIGTERM)
 
     asyncio.create_task(delayed_shutdown())
@@ -627,7 +654,6 @@ async def get_paths_config():
         bin_search_paths: List of directories to search for binaries
         data_dir: Directory for sessions, exports, usage data
     """
-    from ..config import get_paths_config as _get_paths_config
     return _get_paths_config()
 
 
@@ -638,8 +664,6 @@ async def get_config_path():
     Returns:
         path: Path to the config file, or null if not found
     """
-    from ..config import find_config_file
-
     config_path = find_config_file()
     return {"path": str(config_path) if config_path else None}
 
@@ -661,8 +685,6 @@ async def reload_config_endpoint():
         message: Status message
         config_path: Path to loaded config file
     """
-    from ..config import reload_config, find_config_file
-
     try:
         reload_config()  # Updates PROVIDERS/MODELS in place via initialize()
         config_path = find_config_file()
@@ -1124,8 +1146,6 @@ async def get_usage_report(period: str = "all"):
         - by_model: Usage breakdown by model
         - sessions: Recent session summaries
     """
-    from ..usage import get_usage_report as get_report
-
     valid_periods = {"24h", "week", "month", "year", "all"}
     if period not in valid_periods:
         raise HTTPException(
@@ -1148,8 +1168,6 @@ async def get_usage_sessions(limit: int = 20, offset: int = 0):
         sessions: List of session records (newest first)
         total: Total number of recorded sessions
     """
-    from ..usage import get_usage_storage
-
     # Clamp limit to reasonable range
     limit = max(1, min(100, limit))
     offset = max(0, offset)
@@ -1209,7 +1227,6 @@ async def get_working_dir(x_session_id: Optional[str] = Header(None)):
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    import os
     path = engine.get_working_dir() or os.getcwd()
     return {"path": path, "session_id": session_id}
 
@@ -1226,7 +1243,6 @@ async def set_working_dir(
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    import os
     # Expand tilde and resolve to absolute path
     path = os.path.expanduser(request.path)
 
@@ -1504,9 +1520,7 @@ async def get_last_session(x_session_id: Optional[str] = Header(None)):
     Returns:
         JSON with last session info or null if no state file exists
     """
-    from ..engine.session import SessionManager
-
-    state = SessionManager.get_last_session_state()
+    state = EngineSessionManager.get_last_session_state()
     if not state:
         return {"last_session": None}
 
@@ -1533,11 +1547,9 @@ async def restore_last_session(x_session_id: Optional[str] = Header(None)):
     Returns:
         JSON with restored session info
     """
-    from ..engine.session import SessionManager
-
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    state = SessionManager.get_last_session_state()
+    state = EngineSessionManager.get_last_session_state()
     if not state or not state.get("name"):
         raise HTTPException(status_code=404, detail="No last session found")
 
@@ -1590,9 +1602,6 @@ async def search_files(
         JSON: {"files": [{"name": "file.py", "path": "src/file.py"}, ...]}
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
-
-    from pathlib import Path
-    import os
 
     logger.info(f"HTTP POST /files/search - query: {request.query}")
 
@@ -1820,20 +1829,6 @@ async def write_file(
     working_dir = Path(engine.get_working_dir() or os.getcwd()).resolve()
     home_dir = Path.home().resolve()
 
-    def is_path_allowed(target: Path, base: Path) -> bool:
-        """Check if target is within base's tree (parent or child)."""
-        try:
-            target.relative_to(base)
-            return True
-        except ValueError:
-            pass
-        try:
-            base.relative_to(target)
-            return True
-        except ValueError:
-            pass
-        return False
-
     # Allow files in working directory tree or home directory tree
     if not (is_path_allowed(path, working_dir) or str(path).startswith(str(home_dir))):
         logger.warning(f"  Access denied: {path} not in {working_dir} tree or {home_dir}")
@@ -1879,7 +1874,6 @@ def _extract_session_from_referer(request: Request) -> Optional[str]:
     """
     referer = request.headers.get('referer', '')
     if 'session=' in referer:
-        from urllib.parse import urlparse, parse_qs
         qs = parse_qs(urlparse(referer).query)
         ids = qs.get('session', [])
         if ids:
@@ -2049,9 +2043,6 @@ async def read_file(
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    from pathlib import Path
-    import os
-
     logger.info(f"HTTP POST /files/read - path: {request.path}")
     logger.debug(f"  Working directory: {engine.get_working_dir()}")
 
@@ -2100,25 +2091,6 @@ async def read_file(
     working_dir = Path(engine.get_working_dir() or os.getcwd()).resolve()
     home_dir = Path.home().resolve()
 
-    # Find common ancestor - allow any path that shares a common root with working_dir
-    # This allows accessing parent directories (e.g., ../sample.yaml from temp/)
-    # as long as they're within the same project tree
-    def is_path_allowed(target: Path, base: Path) -> bool:
-        """Check if target is within base's tree (parent or child)."""
-        try:
-            # Check if target is a child of base
-            target.relative_to(base)
-            return True
-        except ValueError:
-            pass
-        try:
-            # Check if base is a child of target (target is parent)
-            base.relative_to(target)
-            return True
-        except ValueError:
-            pass
-        return False
-
     # Allow files in working directory tree (parent or child) or home directory tree
     if not (is_path_allowed(path, working_dir) or str(path).startswith(str(home_dir))):
         logger.warning(f"  Access denied: {path} not in {working_dir} tree or {home_dir}")
@@ -2143,18 +2115,12 @@ async def read_file(
 
     if ext in image_extensions or ext == '.pdf':
         # Return base64-encoded binary for preview
-        import base64
         try:
             content_bytes = path.read_bytes()
             content_b64 = base64.b64encode(content_bytes).decode('ascii')
 
             # Determine MIME type and file type
-            mime_types = {
-                '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-                '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
-                '.bmp': 'image/bmp', '.ico': 'image/x-icon', '.pdf': 'application/pdf'
-            }
-            mime_type = mime_types.get(ext, 'application/octet-stream')
+            mime_type = MIME_TYPES.get(ext, 'application/octet-stream')
             file_type = 'pdf' if ext == '.pdf' else 'image'
 
             return {
@@ -2229,8 +2195,6 @@ async def respond_to_consent(
     # Determine session ID (use default if not provided)
     session_id = x_session_id or "default"
 
-    from ppxai.common.consent import normalize_consent_response
-
     file_path = request.file_path
 
     # Normalize response to standard enum value (handles yes/Yes/YES/y/etc.)
@@ -2276,8 +2240,6 @@ async def respond_to_shell_consent(
 
     # Determine session ID (use default if not provided)
     session_id = x_session_id or "default"
-
-    from ppxai.common.consent import normalize_consent_response
 
     command = request.command
 
@@ -2414,7 +2376,6 @@ async def undo_last_checkpoint(x_session_id: Optional[str] = Header(None)):
 
     # Check for uncommitted changes before undo (git revert requires clean working tree)
     if status.get("backend") == "git":
-        import subprocess
         try:
             result = subprocess.run(
                 ["git", "status", "--porcelain"],
@@ -2733,8 +2694,6 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
         port: Port to bind to
         log_level: Logging level
     """
-    import uvicorn
-    import signal
     global _shutdown_event, session_manager
 
     config = uvicorn.Config(
@@ -2783,18 +2742,15 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
 
 def run_server():
     """Run the HTTP server (CLI entry point)."""
-    import uvicorn
-
     parser = argparse.ArgumentParser(description="ppxai HTTP Server")
     parser.add_argument("--version", "-v", action="version", version=f"ppxai-server {__version__}")
-    parser.add_argument("--host", default="127.0.0.1", help="Host to bind to")
-    parser.add_argument("--port", type=int, default=54320, help="Port to bind to")
+    parser.add_argument("--host", default=DEFAULT_HOST, help="Host to bind to")
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="Port to bind to")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
 
     args = parser.parse_args()
 
     # Initialize configuration system (v1.13.10: explicit initialization)
-    from ..config import initialize
     initialize()
 
     print(f"Starting ppxai HTTP server on http://{args.host}:{args.port}")
@@ -2861,15 +2817,10 @@ def run_desktop():
         uv run ppxai-desktop        # Development
         ./ppxai-desktop             # Production binary
     """
-    import webbrowser
-    import threading
-    import time
-    import uvicorn
-
     parser = argparse.ArgumentParser(description="ppxai Desktop Web App")
     parser.add_argument("--version", "-v", action="version", version=f"ppxai-desktop {__version__}")
-    parser.add_argument("--host", default="127.0.0.1", help="Host to bind to")
-    parser.add_argument("--port", type=int, default=54320, help="Port to bind to")
+    parser.add_argument("--host", default=DEFAULT_HOST, help="Host to bind to")
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="Port to bind to")
     parser.add_argument("--no-browser", action="store_true", help="Don't open browser")
 
     args = parser.parse_args()

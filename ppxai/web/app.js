@@ -43,7 +43,7 @@ class PpxaiApp {
         // Each browser tab/window gets its own session ID
         this.sessionId = sessionStorage.getItem('ppxai-session-id');
         if (!this.sessionId) {
-            this.sessionId = `webapp-${this.generateUUID()}`;
+            this.sessionId = `webapp-${generateUUID()}`;
             sessionStorage.setItem('ppxai-session-id', this.sessionId);
         }
         console.log(`[PpxaiApp] Session ID: ${this.sessionId}`);
@@ -2039,7 +2039,7 @@ class PpxaiApp {
         const msgEl = document.createElement('div');
         msgEl.className = 'message error-message';
         msgEl.innerHTML = `
-            <div class="message-content">${this.escapeHtml(message)}</div>
+            <div class="message-content">${escapeHtml(message)}</div>
         `;
         this.elements.messagesContainer.appendChild(msgEl);
         this.scrollToBottom();
@@ -2061,17 +2061,17 @@ class PpxaiApp {
 
         let content = `<div class="warning-header">
             <span class="warning-icon">${warningIcon}</span>
-            <span class="warning-type">${this.escapeHtml(data.type || 'validation_warning')}</span>
+            <span class="warning-type">${escapeHtml(data.type || 'validation_warning')}</span>
         </div>`;
 
-        content += `<div class="warning-message-text">${this.escapeHtml(data.message || 'Validation warning')}</div>`;
+        content += `<div class="warning-message-text">${escapeHtml(data.message || 'Validation warning')}</div>`;
 
         if (data.details) {
-            content += `<div class="warning-details">${this.escapeHtml(data.details)}</div>`;
+            content += `<div class="warning-details">${escapeHtml(data.details)}</div>`;
         }
 
         if (data.suggested_action) {
-            content += `<div class="warning-action"><strong>Suggestion:</strong> ${this.escapeHtml(data.suggested_action)}</div>`;
+            content += `<div class="warning-action"><strong>Suggestion:</strong> ${escapeHtml(data.suggested_action)}</div>`;
         }
 
         msgEl.innerHTML = content;
@@ -2142,13 +2142,13 @@ class PpxaiApp {
 
         let content = `<div class="tool-header" onclick="this.parentElement.classList.toggle('expanded')">
             <span class="tool-icon">🔧</span>
-            <span class="tool-name">${this.escapeHtml(data.tool || 'Unknown tool')}</span>
+            <span class="tool-name">${escapeHtml(data.tool || 'Unknown tool')}</span>
             <span class="tool-expand">▶</span>
         </div>`;
 
         if (this.verbose && data.arguments) {
             content += `<div class="tool-details">
-                <pre>${this.escapeHtml(typeof data.arguments === 'string' ? data.arguments : JSON.stringify(data.arguments, null, 2))}</pre>
+                <pre>${escapeHtml(typeof data.arguments === 'string' ? data.arguments : JSON.stringify(data.arguments, null, 2))}</pre>
             </div>`;
         }
 
@@ -2171,14 +2171,14 @@ class PpxaiApp {
 
         let content = `<div class="tool-header" onclick="this.parentElement.classList.toggle('expanded')">
             <span class="tool-icon">📋</span>
-            <span class="tool-name">${this.escapeHtml(data.tool || 'Result')}</span>
+            <span class="tool-name">${escapeHtml(data.tool || 'Result')}</span>
             <span class="tool-expand">▶</span>
         </div>`;
 
         if (this.verbose && data.result) {
             const result = typeof data.result === 'string' ? data.result : JSON.stringify(data.result, null, 2);
             content += `<div class="tool-details">
-                <pre>${this.escapeHtml(result.slice(0, 2000))}${result.length > 2000 ? '\n...(truncated)' : ''}</pre>
+                <pre>${escapeHtml(result.slice(0, 2000))}${result.length > 2000 ? '\n...(truncated)' : ''}</pre>
             </div>`;
         }
 
@@ -2201,7 +2201,7 @@ class PpxaiApp {
         msgEl.innerHTML = `
             <div class="context-badge">
                 <span class="context-icon">📎</span>
-                <span class="context-source">${this.escapeHtml(data.source || 'Context')}</span>
+                <span class="context-source">${escapeHtml(data.source || 'Context')}</span>
                 ${data.language ? `<span class="context-lang">${data.language}</span>` : ''}
                 ${data.size ? `<span class="context-size">${data.size} chars</span>` : ''}
                 ${data.truncated ? '<span class="context-truncated">(truncated)</span>' : ''}
@@ -2440,8 +2440,8 @@ class PpxaiApp {
         this.elements.autocompleteDropdown.innerHTML = this.autocompleteItems.map((item, i) => `
             <div class="autocomplete-item ${i === this.autocompleteIndex ? 'selected' : ''}"
                  data-index="${i}">
-                <span class="autocomplete-label">${this.escapeHtml(item.label)}</span>
-                <span class="autocomplete-desc">${this.escapeHtml(item.description)}</span>
+                <span class="autocomplete-label">${escapeHtml(item.label)}</span>
+                <span class="autocomplete-desc">${escapeHtml(item.description)}</span>
             </div>
         `).join('');
 
@@ -3661,7 +3661,7 @@ class PpxaiApp {
                     container.innerHTML = '<div class="error">Tree viewer not loaded</div>';
                 }
             } catch (e) {
-                container.innerHTML = `<div class="error">Parse error: ${this.escapeHtml(e.message)}</div>`;
+                container.innerHTML = `<div class="error">Parse error: ${escapeHtml(e.message)}</div>`;
             }
         }
     }
@@ -4136,27 +4136,10 @@ class PpxaiApp {
             try {
                 return marked.parse(text);
             } catch (e) {
-                return this.escapeHtml(text);
+                return escapeHtml(text);
             }
         }
-        return this.escapeHtml(text);
-    }
-
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    /**
-     * Generate a UUID v4 (v1.14.0)
-     */
-    generateUUID() {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-            const r = Math.random() * 16 | 0;
-            const v = c === 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
+        return escapeHtml(text);
     }
 
     /**

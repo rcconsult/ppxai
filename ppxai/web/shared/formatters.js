@@ -11,6 +11,19 @@
  */
 
 /**
+ * Escape HTML special characters to prevent XSS.
+ * Browser-only (uses DOM). Used by app.js and component classes.
+ * @param {*} str - Value to escape (null/undefined returns '')
+ * @returns {string} HTML-escaped string
+ */
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = String(str);
+    return div.innerHTML;
+}
+
+/**
  * Format tools status response
  */
 function formatToolsStatus(data) {

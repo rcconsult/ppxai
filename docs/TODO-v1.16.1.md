@@ -626,9 +626,9 @@ Each client analysed in order. Each pass:
 |-------|--------|--------|
 | 1 | **ppxai** (Rich TUI — `ppxai/rich/`) | ✅ Done (450b69a) — 8 fixes: 7 lazy imports→top, unused _render_markdown field, unused CODING_MODEL+web_premium imports, lazy normalize_consent_response, dead unreachable guard, no-op while loop |
 | 2 | **ppxaide** (Textual TUI — `ppxai/tui/`) | ✅ Done (2bbdd10) — 5 files: 7 lazy imports in __init__.py main(), can_display_images in app.py, Path in input_box on_key(), os/logging/terminal symbols in image_handlers |
-| 3 | **server** (`ppxai/server/` — incl. CommandFactory generalisation) | ⏳ Not started |
-| 4 | **web app** (`ppxai/web/`) | ⏳ Not started |
-| 5 | **VSCode extension** (`vscode-extension/`) | ⏳ Not started |
+| 3 | **server** (`ppxai/server/` — incl. CommandFactory generalisation) | ✅ Done — http.py: removed StaticFiles, moved 28 lazy imports to top, extracted is_path_allowed()+MIME_TYPES+DEFAULT_HOST/PORT to module level, removed dead check_idle_shutdown(); session_manager.py: moved EngineClient+get_available_providers+os to module top, removed TYPE_CHECKING guard |
+| 4 | **web app** (`ppxai/web/`) | ✅ Done — removed duplicate `generateUUID()` method from app.js (global from api-client.js used instead); extracted `escapeHtml()` to shared/formatters.js (removed from app.js, table-viewer.js, tree-viewer.js); updated test harness HTMLs to load formatters.js before components; 83 Playwright tests pass |
+| 5 | **VSCode extension** (`vscode-extension/`) | ✅ Done — deleted dead backend.ts + aiClient.ts (735 lines, never imported); replaced hand-rolled generateUUID() in httpClient.ts with crypto.randomUUID() (Node.js stdlib); TS compile clean |
 
 ---
 

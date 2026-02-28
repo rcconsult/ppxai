@@ -93,7 +93,7 @@ class DataTreeViewer {
                         <input type="text"
                                class="tree-search"
                                placeholder="${this.getSearchPlaceholder()}"
-                               value="${this.escapeHtml(this.searchText)}">
+                               value="${escapeHtml(this.searchText)}">
                         <button type="button" class="tree-btn search-regex-btn ${this.searchRegex ? 'active' : ''}" title="Regex mode">.*</button>
                         <button type="button" class="tree-btn search-jq-btn ${this.searchJq ? 'active' : ''}" title="jq expression mode">.jq</button>
                         <button type="button" class="tree-btn search-help-btn" title="Search help">?</button>
@@ -127,7 +127,7 @@ class DataTreeViewer {
         const expanded = this.expandedPaths.has(path);
         const isMatch = this.searchMatches.has(path);
 
-        let html = `<div class="tree-node ${isMatch ? 'search-match' : ''}" data-path="${this.escapeHtml(path)}" data-depth="${depth}">`;
+        let html = `<div class="tree-node ${isMatch ? 'search-match' : ''}" data-path="${escapeHtml(path)}" data-depth="${depth}">`;
 
         // Toggle indicator
         if (hasChildren) {
@@ -137,7 +137,7 @@ class DataTreeViewer {
         }
 
         // Key
-        html += `<span class="tree-key" title="Click to copy path">${this.escapeHtml(node.key)}</span>`;
+        html += `<span class="tree-key" title="Click to copy path">${escapeHtml(node.key)}</span>`;
 
         if (hasChildren) {
             // Object/Array indicator
@@ -188,7 +188,7 @@ class DataTreeViewer {
             items.push('...');
         }
 
-        return `<span class="tree-preview">${this.escapeHtml(items.join(', '))}</span>`;
+        return `<span class="tree-preview">${escapeHtml(items.join(', '))}</span>`;
     }
 
     /**
@@ -218,7 +218,7 @@ class DataTreeViewer {
                 displayValue = String(value);
         }
 
-        return `<span class="${className}">${this.escapeHtml(displayValue)}</span>`;
+        return `<span class="${className}">${escapeHtml(displayValue)}</span>`;
     }
 
     /**
@@ -644,18 +644,6 @@ class DataTreeViewer {
         }).catch(err => {
             console.error('Failed to copy path:', err);
         });
-    }
-
-    /**
-     * Escape HTML special characters
-     * @param {string} str - String to escape
-     * @returns {string} Escaped string
-     */
-    escapeHtml(str) {
-        if (str === null || str === undefined) return '';
-        const div = document.createElement('div');
-        div.textContent = String(str);
-        return div.innerHTML;
     }
 
     /**

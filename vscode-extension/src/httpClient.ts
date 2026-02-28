@@ -5,6 +5,7 @@
  * Provides a compatible interface with PythonBackend for easy migration.
  */
 
+import * as crypto from 'crypto';
 import * as vscode from 'vscode';
 
 // === Types matching PythonBackend interface ===
@@ -115,20 +116,9 @@ export class HttpClient {
     constructor(baseUrl: string = 'http://127.0.0.1:54320', sessionId?: string) {
         this.baseUrl = baseUrl;
         // v1.14.0: Generate unique session ID for this client instance
-        this._sessionId = sessionId || `vscode-${this.generateUUID()}`;
+        this._sessionId = sessionId || `vscode-${crypto.randomUUID()}`;
         this.outputChannel = vscode.window.createOutputChannel('ppxai HTTP');
         this.outputChannel.appendLine(`[Session] ID: ${this._sessionId}`);
-    }
-
-    /**
-     * Generate a UUID v4 (v1.14.0)
-     */
-    private generateUUID(): string {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-            const r = Math.random() * 16 | 0;
-            const v = c === 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
     }
 
     /**

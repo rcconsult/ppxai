@@ -9,15 +9,15 @@ v1.13.10: Initial implementation (refactored from http.py globals)
 """
 
 import asyncio
+import os
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Optional, Callable, Awaitable, TYPE_CHECKING
+from typing import Optional, Callable, Awaitable
 
 from ..common.logger import get_logger
-
-if TYPE_CHECKING:
-    from ..engine import EngineClient
+from ..config import get_available_providers
+from ..engine import EngineClient
 
 logger = get_logger("session_manager")
 
@@ -25,7 +25,7 @@ logger = get_logger("session_manager")
 @dataclass
 class Session:
     """Individual session data."""
-    engine: 'EngineClient'
+    engine: EngineClient
     created_at: float
     last_used: float
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -133,9 +133,6 @@ class SessionManager:
             consent_callback: Callback for file edit consent (default engine)
             shell_consent_callback: Callback for shell command consent (default engine)
         """
-        from ..engine import EngineClient
-        from ..config import get_available_providers
-
         # Create default engine
         self._default_engine = EngineClient(
             consent_callback=consent_callback,
@@ -253,9 +250,6 @@ class SessionManager:
 
     async def _create_session(self, session_id: str) -> Session:
         """Create a new session with its own engine."""
-        from ..engine import EngineClient
-        from ..config import get_available_providers
-
         # Create engine with session-specific consent handlers
         engine = EngineClient(
             consent_callback=lambda fp: self._handle_consent(session_id, fp),
@@ -373,7 +367,6 @@ class SessionManager:
                 if shutdown_callback:
                     shutdown_callback()
                 else:
-                    import os
                     os._exit(0)
 
     # =========================================================================

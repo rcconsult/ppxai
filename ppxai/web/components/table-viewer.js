@@ -79,7 +79,7 @@ class DataTableViewer {
         // Build column options
         const columnOptions = this.data.headers.map((header, i) => {
             const selected = this.filterColumn === i ? 'selected' : '';
-            return `<option value="${i}" ${selected}>${this.escapeHtml(header)}</option>`;
+            return `<option value="${i}" ${selected}>${escapeHtml(header)}</option>`;
         }).join('');
 
         return `
@@ -88,7 +88,7 @@ class DataTableViewer {
                     <option value="-1" ${this.filterColumn === -1 ? 'selected' : ''}>All columns</option>
                     ${columnOptions}
                 </select>
-                <input type="text" class="data-table-search" placeholder="${placeholder}" value="${this.escapeHtml(this.filterText)}">
+                <input type="text" class="data-table-search" placeholder="${placeholder}" value="${escapeHtml(this.filterText)}">
                 <button type="button" class="filter-regex-btn ${regexActive}">.*</button>
                 <button type="button" class="filter-help-btn">?</button>
                 <button type="button" class="filter-btn">Filter</button>
@@ -115,7 +115,7 @@ class DataTableViewer {
             const sortableClass = this.options.sortable ? 'sortable' : '';
 
             html += `<th data-col="${i}" class="${sortableClass} ${sortClass}">
-                ${this.escapeHtml(header)}
+                ${escapeHtml(header)}
                 ${this.options.sortable ? '<span class="sort-indicator"></span>' : ''}
             </th>`;
         });
@@ -146,7 +146,7 @@ class DataTableViewer {
             }
 
             row.forEach(cell => {
-                html += `<td>${this.escapeHtml(cell)}</td>`;
+                html += `<td>${escapeHtml(cell)}</td>`;
             });
 
             html += '</tr>';
@@ -478,18 +478,6 @@ class DataTableViewer {
         if (filterCount) {
             filterCount.textContent = `${this.filteredRows.length} rows`;
         }
-    }
-
-    /**
-     * Escape HTML special characters
-     * @param {string} str - String to escape
-     * @returns {string} Escaped string
-     */
-    escapeHtml(str) {
-        if (str === null || str === undefined) return '';
-        const div = document.createElement('div');
-        div.textContent = String(str);
-        return div.innerHTML;
     }
 
     /**
