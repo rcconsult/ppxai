@@ -610,7 +610,7 @@ Two renderers have TODO placeholders:
 
 **Fix:** Implement both using `prompt_toolkit` or Rich's `Prompt.ask()`.
 
-**Status:** ⏳ Pending
+**Status:** ✅ Done (3d1a57f) — 18 tests in tests/rendering/test_rich_interactive.py
 
 ---
 
