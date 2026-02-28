@@ -465,10 +465,13 @@ class EngineClient:
         self.session.set_provider(provider_name)
 
         # Set default model for this provider (no context reset — provider switch
-        # resets via the user's explicit set_model call, not this internal default)
+        # resets via the user's explicit set_model call, not this internal default).
+        # Suppress hint logging here — the caller's set_model() will log the final model.
         default_model = provider_config.get("default_model")
         if default_model:
+            self._suppress_hint_log = True
             self.set_model(default_model, reset_context=False)
+            self._suppress_hint_log = False
 
         # Re-register tools when switching providers if tools are enabled
         # This ensures provider-aware tools (like web_search) are correctly filtered
@@ -576,7 +579,7 @@ class EngineClient:
 
     def _log_model_hints_transition(self, model_id: str) -> None:
         """Log hints transition when model changes (v1.14.0)."""
-        if not self._bootstrap_context:
+        if not self._bootstrap_context or getattr(self, '_suppress_hint_log', False):
             return
 
         hints_info = self.get_active_hints()

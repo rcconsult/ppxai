@@ -97,7 +97,6 @@ def handle_model(context: CommandContext, args: str) -> CommandResult:
             if model_id == args:
                 context.set_model(model_id)
                 context.engine_client.set_model(model_id)
-                context.engine_client.session.set_model(model_id)
                 reset_count = context.engine_client.last_model_switch_reset
                 message = f"Switched to model: {model_id}"
                 if reset_count > 0:
@@ -200,15 +199,15 @@ def handle_provider(context: CommandContext, args: str) -> CommandResult:
     new_config = get_provider_config(new_provider)
 
     # Update context and engine client
+    # set_provider() internally sets session and default model;
+    # set_model() internally sets session — no need for separate session calls.
     context.set_provider(new_provider)
     context.engine_client.set_provider(new_provider)
-    context.engine_client.session.set_provider(new_provider)
 
     # Auto-select default model for new provider
     new_model = new_config.get("default_model", "")
     context.set_model(new_model)
     context.engine_client.set_model(new_model)
-    context.engine_client.session.set_model(new_model)
 
     reset_count = context.engine_client.last_model_switch_reset
     message = f"Switched to: {new_config['name']} (model: {new_model})"

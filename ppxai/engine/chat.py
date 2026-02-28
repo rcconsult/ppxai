@@ -218,6 +218,8 @@ async def chat_simple(
             elif event.type == EventType.STREAM_END:
                 full_response = event.data or ""
                 response_metadata = event.metadata
+            elif event.type == EventType.STREAM_START:
+                yield event
             elif event.type == EventType.STREAM_CHUNK:
                 yield event
 
