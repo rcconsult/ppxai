@@ -91,6 +91,8 @@ Key behaviors:
 - Arrow/expand/collapse are native DirectoryTree behavior (no custom code)
 - Root path: `Path(os.getcwd())` — passed at construction from `app.py`
 
+**Status:** ✅ Done (0e032fa)
+
 ### Step 1.2 — Unit tests (`tests/test_file_tree.py`)
 
 ```python
@@ -99,6 +101,8 @@ Key behaviors:
 # Test FileInject message emitted on Space
 # Test action_dismiss focuses InputBox
 # Test _selected_path updated on file selection
+# Test filter_paths excludes _HIDDEN_DIRS
+# Test _get_cursor_file_path handles DirEntry and Path
 ```
 
 **Status:** ⏳ Pending
@@ -197,7 +201,7 @@ def _apply_split_ratio(self) -> None:
     side_panel.styles.width = f"{panel_pct}%"
 ```
 
-**Status:** ⏳ Pending
+**Status:** ✅ Done (0e032fa)
 
 ---
 
@@ -275,7 +279,7 @@ def inject_text(self, text: str) -> None:
     text_area.focus()
 ```
 
-**Status:** ⏳ Pending
+**Status:** ✅ Done (0e032fa)
 
 ---
 
@@ -294,22 +298,28 @@ Show truncated cwd path at top of file tree pane:
 }
 ```
 
+**Status:** ⏳ Pending
+
 ### Step 4.2 — Ctrl+[/] resize for file tree
 
 Extend `action_resize_panel()` to also resize file tree when focused:
 - When focus is in file tree: Ctrl+[ shrinks tree, Ctrl+] grows tree
 - Current behavior (resize chat vs side panel) when focus is elsewhere
 
+**Status:** ⏳ Pending
+
 ### Step 4.3 — Theme auto-sync
 
 `DirectoryTree` uses Textual's CSS variable system (`$surface`, `$primary`, etc.)
 so it auto-syncs with app theme changes. No extra `watch_theme()` needed.
 
+**Status:** ✅ Done (inherits from DirectoryTree CSS variables)
+
 ### Step 4.4 — Footer binding display
 
 Add `Ctrl+B` to the visible footer bindings list.
 
-**Status:** ⏳ Pending
+**Status:** ✅ Done (0e032fa) — `show=True` in binding
 
 ---
 
@@ -326,9 +336,67 @@ Add `Ctrl+B` to the visible footer bindings list.
 # Test: F6 cycle: input → tree → panel → input
 ```
 
+**Status:** ⏳ Pending
+
 ### Step 5.2 — Update ROADMAP.md
 
 Mark v1.16.1 file tree tasks as done as each phase completes.
+
+**Status:** ⏳ Pending
+
+---
+
+## Phase 6 — Bug Fixes and Improvements
+
+Items discovered during code review and test runs.
+
+### Step 6.1 — Fix 4 failing tests
+
+**Severity:** High | **Effort:** ~1h
+
+- 2 Perplexity model config tests (`tests/test_config.py:165-173`): tests expect
+  `sonar-pro` for coding model and `sonar` for default, but getters return wrong values
+- 2 shell tool output capture tests (`tests/test_shell_tool.py:70-80`): Python with
+  arguments returns generic success message instead of actual stdout
+
+**Status:** ⏳ Pending
+
+### Step 6.2 — Side panel save prompt
+
+**Severity:** Medium | **Effort:** ~2h
+
+TODO at `ppxai/tui/widgets/side_panel.py:243` — when closing side panel in edit
+mode, prompt user to save unsaved changes instead of silently discarding.
+
+**Status:** ⏳ Pending
+
+### Step 6.3 — Textual renderer artifact tabs
+
+**Severity:** Medium | **Effort:** ~3h
+
+TODO at `ppxai/rendering/textual_renderer.py:502` — use `ArtifactPanel` with tabs
+for composite results containing multiple sub-results, instead of rendering them
+sequentially.
+
+**Status:** ⏳ Pending
+
+### Step 6.4 — Print to logger migration
+
+**Severity:** Low | **Effort:** ~30m
+
+2 consent error `print()` calls in `ppxai/engine/client.py` should use `logger.error()`
+instead of printing to stdout.
+
+**Status:** ⏳ Pending
+
+### Step 6.5 — Gemini 3 action items cleanup
+
+**Severity:** Low | **Effort:** ~1h
+
+Research and document (in ROADMAP.md) the following Gemini 3 API features:
+- Thought signatures impact on session serialization / multi-turn tool calls
+- Multimodal tool responses — can ppxai pass image bytes back as tool results?
+- Update action items checklist to reflect what's done vs deferred
 
 **Status:** ⏳ Pending
 
@@ -342,8 +410,11 @@ Mark v1.16.1 file tree tasks as done as each phase completes.
 | `ppxai/tui/app.py` | compose(), bindings, focus, event handlers |
 | `ppxai/tui/themes/layout.tcss` | FileTree CSS, split ratio updates |
 | `ppxai/tui/widgets/input_box.py` | Add `inject_text()` method |
-| `ppxai/tui/widgets/side_panel.py` | No changes — reuse `show_file()` as-is |
+| `ppxai/tui/widgets/side_panel.py` | Save prompt on close (Step 6.2) |
+| `ppxai/rendering/textual_renderer.py` | Artifact tabs (Step 6.3) |
+| `ppxai/engine/client.py` | Print → logger (Step 6.4) |
 | `tests/test_file_tree.py` | **CREATE** — unit tests |
+| `tests/test_file_tree_integration.py` | **CREATE** — integration tests |
 
 ## Reused Infrastructure (No Changes Needed)
 
