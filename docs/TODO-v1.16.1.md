@@ -885,7 +885,7 @@ from ..usage import save_session_usage  # lazy
 `datetime` is already imported at module level (line 12) — the lazy import is redundant.
 `save_session_usage` should be imported at module top.
 
-**Status:** ⬜ Pending
+**Status:** ✅ Done — commit `704ba1c`
 
 ---
 
@@ -909,5 +909,6 @@ if fixed:
     messages = ctx.session.get_messages()  # re-fetch after fix
 ```
 
-**Status:** ⬜ Pending
+**Status:** ✅ Done — commit `704ba1c` (also applied to `chat_simple`; trailing user message
+is popped before fix and re-inserted after, so the current request is never removed)
 
