@@ -320,6 +320,17 @@ class InputBox(Static):
         text_area.insert(text)
         text_area.move_cursor_relative(columns=len(text))
 
+    def inject_text(self, text: str) -> None:
+        """Insert text at the current cursor position and focus the input.
+
+        Used by FileTree to inject @file references into the chat input.
+
+        Args:
+            text: Text to insert (e.g. "@file:path/to/file.py ")
+        """
+        self.insert_text(text)
+        self.focus()
+
     def set_completer(self, completer) -> None:
         """Set the completer for tab-based autocomplete.
 

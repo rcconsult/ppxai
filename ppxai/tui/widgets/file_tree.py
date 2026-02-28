@@ -1,0 +1,100 @@
+"""
+FileTree widget - Norton Commander-style file browser.
+
+Provides a directory tree for browsing and opening files
+in the side panel or injecting @file references into chat.
+"""
+
+from pathlib import Path
+from typing import Iterable, Optional
+
+from textual.binding import Binding
+from textual.message import Message
+from textual.widgets import DirectoryTree
+
+
+class FileTree(DirectoryTree):
+    """File system browser widget.
+
+    Opens files in the side panel on Enter (read-only) or Ctrl+Enter (editable).
+    Space injects an @file reference into the chat input.
+    Escape returns focus to the chat input.
+    """
+
+    BINDINGS = [
+        Binding("ctrl+enter", "edit", "Edit", show=True),
+        Binding("space", "inject", "@file", show=True),
+        Binding("escape", "dismiss_tree", "Back", show=True),
+    ]
+
+    class FilePreview(Message):
+        """Posted when user selects a file for read-only preview (Enter)."""
+
+        def __init__(self, path: Path) -> None:
+            super().__init__()
+            self.path = path
+
+    class FileEdit(Message):
+        """Posted when user selects a file for editing (Ctrl+Enter)."""
+
+        def __init__(self, path: Path) -> None:
+            super().__init__()
+            self.path = path
+
+    class FileInject(Message):
+        """Posted when user wants to inject an @file reference (Space)."""
+
+        def __init__(self, path: Path) -> None:
+            super().__init__()
+            self.path = path
+
+    # Directories to hide — keep the tree navigable in large Python projects
+    _HIDDEN_DIRS = frozenset({
+        ".git", ".svn", ".hg",
+        ".venv", "venv", "env", ".env",
+        "__pycache__", ".mypy_cache", ".pytest_cache", ".ruff_cache",
+        "node_modules", ".next", "dist", "build",
+        ".tox", ".nox",
+    })
+
+    def filter_paths(self, paths: Iterable[Path]) -> Iterable[Path]:
+        """Exclude noisy directories that would bloat the tree."""
+        return [p for p in paths if p.name not in self._HIDDEN_DIRS]
+
+    def on_directory_tree_file_selected(
+        self, event: DirectoryTree.FileSelected
+    ) -> None:
+        """Intercept file selection (Enter on a file node) to preview instead of open."""
+        event.stop()
+        self.post_message(self.FilePreview(event.path))
+
+    def _get_cursor_file_path(self) -> Optional[Path]:
+        """Return the file Path at the current cursor position, or None if not a file."""
+        node = self.cursor_node
+        if node is None or node.data is None:
+            return None
+        data = node.data
+        # DirectoryTree node data is DirEntry (has .path); handle both DirEntry and raw Path
+        path = data.path if hasattr(data, "path") else data
+        if isinstance(path, Path) and path.is_file():
+            return path
+        return None
+
+    def action_edit(self) -> None:
+        """Edit the file at the current cursor position (Ctrl+Enter)."""
+        path = self._get_cursor_file_path()
+        if path:
+            self.post_message(self.FileEdit(path))
+
+    def action_inject(self) -> None:
+        """Inject an @file reference for the cursor file into the chat input (Space)."""
+        path = self._get_cursor_file_path()
+        if path:
+            self.post_message(self.FileInject(path))
+
+    def action_dismiss_tree(self) -> None:
+        """Return focus to the chat input box (Escape)."""
+        try:
+            self.app.query_one("#input-box").focus()
+        except Exception:
+            pass

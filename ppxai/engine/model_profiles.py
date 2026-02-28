@@ -365,7 +365,11 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
     # ── Gemini 3 models ─────────────────────────────────────────────
 
     "gemini-3-flash*": ModelProfile(
-        tool_calling=ToolCallingProfile(mode="native"),
+        tool_calling=ToolCallingProfile(
+            mode="native",
+            strip_json_from_text=True,
+            fallback_on_empty=True,
+        ),
         max_tokens=65_536,
         max_tool_iterations=25,
         tier="S",

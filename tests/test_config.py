@@ -1102,7 +1102,9 @@ class TestToolCallingConfig:
                         "mode": "prompt_based",
                         "__comment_mode": "Use prompt-based for this provider"
                     },
-                    "models": {}
+                    "models": {
+                        "test-model": {}
+                    }
                 }
             }
         }

@@ -13,6 +13,7 @@ Architecture:
 v1.15.0: Type-based renderer dispatch refactoring
 """
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 from textual.widgets import DataTable, Tree, Static, Markdown as TextualMarkdown
 from textual.containers import VerticalScroll
@@ -151,8 +152,10 @@ async def render_confirmation(renderer: TextualRenderer, result: ConfirmationRes
         # Show confirmation at the end
         session_name = result.details.get("session_name", "unknown")
         message_count = result.details.get("message_count", 0)
+        tools_enabled = result.details.get("tools_enabled", False)
+        tools_info = "ON" if tools_enabled else "OFF"
         chat_view.add_system_message(
-            f"✓ [green]Session restored:[/green] {session_name} ({message_count} messages)"
+            f"✓ [green]Session restored:[/green] {session_name} ({message_count} messages, Tools: {tools_info})"
         )
     elif result.details and result.details.get("action") == "clear_session":
         # Clear chat view for /clear command
@@ -198,7 +201,6 @@ async def render_ai_response(renderer: TextualRenderer, result: AIResponseResult
 @TextualRenderer.register(TableResult)
 async def render_table(renderer: TextualRenderer, result: TableResult) -> None:
     """Render table with TableViewer widget in side panel (supports Ctrl+V toggle)."""
-    from pathlib import Path
 
     chat_view = renderer._get_chat_view()
 
@@ -233,7 +235,6 @@ async def render_table(renderer: TextualRenderer, result: TableResult) -> None:
 @TextualRenderer.register(TreeResult)
 async def render_tree(renderer: TextualRenderer, result: TreeResult) -> None:
     """Render tree with DataViewer widget in side panel (supports Ctrl+V toggle)."""
-    from pathlib import Path
 
     chat_view = renderer._get_chat_view()
 
@@ -324,7 +325,6 @@ async def render_key_value(renderer: TextualRenderer, result: KeyValueResult) ->
 @TextualRenderer.register(FileViewResult)
 async def render_file_view(renderer: TextualRenderer, result: FileViewResult) -> None:
     """Render file in CodeEditor widget."""
-    from pathlib import Path
 
     chat_view = renderer._get_chat_view()
 
@@ -347,7 +347,6 @@ async def render_file_view(renderer: TextualRenderer, result: FileViewResult) ->
 @TextualRenderer.register(MarkdownResult)
 async def render_markdown(renderer: TextualRenderer, result: MarkdownResult) -> None:
     """Render markdown in Markdown widget in side panel."""
-    from pathlib import Path
 
     chat_view = renderer._get_chat_view()
 
@@ -369,7 +368,6 @@ async def render_markdown(renderer: TextualRenderer, result: MarkdownResult) -> 
 @TextualRenderer.register(ImageResult)
 async def render_image(renderer: TextualRenderer, result: ImageResult) -> None:
     """Render image in ImageViewer widget."""
-    from pathlib import Path
 
     chat_view = renderer._get_chat_view()
 

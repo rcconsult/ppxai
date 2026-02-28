@@ -2,11 +2,16 @@
 ChatView widget - Scrollable container for chat messages.
 """
 
-from textual.app import ComposeResult
+import re
+
 from textual.containers import VerticalScroll
-from textual.widgets import Static
 
 from ppxai.tui.widgets.message_box import MessageBox
+
+
+def _strip_rich_markup(text: str) -> str:
+    """Remove Rich markup tags (e.g. [bold cyan], [/red]) leaving plain text."""
+    return re.sub(r'\[/?[^\]]*\]', '', text)
 
 
 class ChatView(VerticalScroll):
@@ -40,7 +45,9 @@ class ChatView(VerticalScroll):
 
     def add_tool_message(self, tool_name: str, content: str) -> None:
         """Add a tool call result message."""
-        self.add_message(f"[bold cyan]{tool_name}[/bold cyan]\n{content}", role="tool")
+        clean_name = _strip_rich_markup(tool_name)
+        clean_content = _strip_rich_markup(content)
+        self.add_message(f"**{clean_name}**\n\n{clean_content}", role="tool")
 
     def clear(self) -> None:
         """Clear all messages."""

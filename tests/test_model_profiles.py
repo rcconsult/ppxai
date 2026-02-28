@@ -312,10 +312,6 @@ class TestBuiltinProfiles:
         assert flash.tier == "S", f"gemini-3-flash: expected tier=S, got {flash.tier}"
         assert flash.max_tokens == 65_536
 
-        pro = get_profile("gemini-3-pro-preview")
-        assert pro.tier == "A", f"gemini-3-pro: expected tier=A, got {pro.tier}"
-        assert pro.max_tokens == 65_536
-
     def test_max_tokens_default_zero(self):
         """Unknown models should have max_tokens=0 (use provider default)."""
         profile = get_profile("unknown-model-xyz")

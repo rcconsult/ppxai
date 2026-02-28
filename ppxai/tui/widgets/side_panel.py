@@ -211,8 +211,8 @@ class SidePanel(Widget):
         await content_container.remove_children()
         await content_container.mount(widget)
 
-        # Focus the widget
-        self.call_after_refresh(lambda: widget.focus())
+        # Focus the widget (guard against widget being unmounted if panel is replaced rapidly)
+        self.call_after_refresh(lambda: widget.is_mounted and widget.focus())
 
         # Show the panel
         self.add_class("visible")

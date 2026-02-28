@@ -1406,7 +1406,7 @@ requires-dist = [
     { name = "ddgs", marker = "extra == 'search'", specifier = ">=9.0.0" },
     { name = "fastapi", marker = "extra == 'server'", specifier = ">=0.104.0" },
     { name = "filetype", specifier = ">=1.2.0" },
-    { name = "google-genai", marker = "extra == 'gemini'", specifier = ">=1.0.0" },
+    { name = "google-genai", marker = "extra == 'gemini'", specifier = ">=1.0.0,<1.57.0" },
     { name = "httpx", specifier = ">=0.24.0" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=0.1.0" },
     { name = "openai", specifier = ">=1.0.0" },
@@ -1448,7 +1448,7 @@ provides-extras = ["server", "mcp", "search", "gemini", "data", "tui", "dev", "b
 dev = [
     { name = "ddgs", specifier = ">=9.0.0" },
     { name = "fastapi", specifier = ">=0.104.0" },
-    { name = "google-genai", specifier = ">=1.0.0" },
+    { name = "google-genai", specifier = ">=1.0.0,<1.57.0" },
     { name = "ipython", specifier = ">=8.37.0" },
     { name = "pyinstaller", specifier = ">=6.0.0" },
     { name = "pytest", specifier = ">=7.0.0" },

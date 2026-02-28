@@ -66,15 +66,14 @@ class MessageBox(Static):
             # Header row with role label (no button - moved to footer)
             yield Static(f"{icon} [bold]{label}[/bold] {timestamp_display}", classes="role-label")
 
-            # Tool messages get scrollable content for long outputs
             if self.role == "tool":
+                # Tool output uses Markdown (safe — Rich markup stripped by chat_view)
                 with VerticalScroll(classes="content-scroll"):
-                    yield Static(self.content, classes="content", markup=True)
+                    yield Markdown(self.content, classes="content")
             elif self.role in ("assistant", "user"):
-                # Use Markdown widget for proper rendering with clickable URLs
                 yield Markdown(self.content, classes="content")
             else:
-                # System messages use Rich markup
+                # System messages use Rich markup for colored status indicators
                 yield Static(self.content, classes="content", markup=True)
 
             # Footer with copy button (v1.15.1 - moved from header to match VSCode)
@@ -86,14 +85,10 @@ class MessageBox(Static):
     def watch_content(self, content: str) -> None:
         """Update content when it changes (for streaming)."""
         try:
-            # Try Markdown widget first (assistant/user messages)
-            content_widget = self.query_one(".content", Markdown)
-            content_widget.update(content)
+            self.query_one(".content", Markdown).update(content)
         except NoMatches:
             try:
-                # Fall back to Static widget (system/tool messages)
-                content_widget = self.query_one(".content", Static)
-                content_widget.update(content)
+                self.query_one(".content", Static).update(content)
             except NoMatches:
                 pass  # Widget not yet composed
 

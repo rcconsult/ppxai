@@ -56,15 +56,29 @@ StatusBar .context-badge {
     width: 100%;
 }
 
-/* Chat pane (left side) */
-#chat-pane {
-    width: 100%;
+/* File tree (leftmost pane, Norton Commander style) */
+FileTree {
+    width: 25%;
     height: 100%;
+    border-right: solid $surface-lighten-1;
+    background: $surface;
 }
 
-/* When side panel is visible, chat pane shrinks */
-#chat-pane.split-active {
-    width: 50%;
+FileTree.hidden {
+    display: none;
+}
+
+FileTree DirectoryTree {
+    background: $surface;
+    scrollbar-background: $surface;
+    scrollbar-color: $panel;
+    scrollbar-color-hover: $primary;
+}
+
+/* Chat pane (fills remaining space after file tree and side panel) */
+#chat-pane {
+    width: 1fr;
+    height: 100%;
 }
 
 /* Chat view */

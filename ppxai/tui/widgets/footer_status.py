@@ -61,8 +61,8 @@ class FooterStatus(Static):
         self.status_message = "⏳ Thinking..."
         self._start_time = time.time()
         self.elapsed_time = 0.0
-        # Update timer every 200ms (sufficient precision, reduces overhead)
-        self._timer = self.set_interval(0.2, self._update_timer)
+        # Update timer every 500ms (2 updates/sec is sufficient for elapsed display)
+        self._timer = self.set_interval(0.5, self._update_timer)
 
     def set_streaming(self) -> None:
         """Show 'Streaming...' indicator (keep timer running)."""
