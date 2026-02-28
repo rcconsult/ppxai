@@ -660,7 +660,7 @@ These are all common in real tool results, so false negatives are frequent.
 2. Fall back to action-verb proximity scan (detect word near "saved"/"created"/etc.)
 3. Validate candidates against filesystem if working_dir is available
 
-**Status:** ⬜ Pending
+**Status:** ✅ Done — commit `8937c33`
 
 ---
 
@@ -679,7 +679,7 @@ Patterns `([^\]]+)` and `([^)]+)` break on:
 `_find_json_objects()` in `parser.py`): scan forward tracking bracket/paren depth,
 stop at the matching close character. This handles all valid markdown link syntax.
 
-**Status:** ⬜ Pending
+**Status:** ✅ Done — commit `8937c33`
 
 ---
 
@@ -702,7 +702,7 @@ CLAIM_SIGNALS = {"i've", "i have", "successfully", "has been", "was", "were"}
 ```
 Faster, tunable without regex knowledge, and separable from capability statements.
 
-**Status:** ⬜ Pending
+**Status:** ✅ Done — commit `8937c33`
 
 ---
 
@@ -722,7 +722,7 @@ This fails for any tool call with nested arguments (common). `_find_json_objects
 **Fix:** Import and call `_find_json_objects()` instead. The validator and parser are both
 in `ppxai/engine/tools/` so no circular dependency.
 
-**Status:** ⬜ Pending
+**Status:** ✅ Done — commit `8937c33`
 
 ---
 
@@ -744,7 +744,7 @@ re.compile(r'\[/?[a-zA-Z][a-zA-Z0-9_\- ]*(?:=[^\]]+)?\]')
 ```
 Preserves `[1]`, `[2]`, `[DONE]` since they don't match identifier syntax.
 
-**Status:** ⬜ Pending
+**Status:** ✅ Done — commit `8937c33`
 
 ---
 
@@ -763,7 +763,7 @@ The multi-alternation pattern for bold/italic/code formatting can't handle:
 priority, no nesting), then bold, then italic. Each consumes its markers so the
 others can't re-match.
 
-**Status:** ⬜ Pending
+**Status:** ✅ Done — commit `8937c33`
 
 ---
 
