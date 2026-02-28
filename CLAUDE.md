@@ -8,87 +8,18 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current Version:** v1.16.1-dev
 
-**v1.15.5 highlights:**
-- **CHANGE:** Multi-line chat input — Enter inserts newlines, Ctrl+Enter submits (TextArea replaces Input widget)
-- **FIX:** Escape key priority-based dismissal — help panel > modal screens > side panel
-- **FIX:** PyInstaller build — added missing `blinker` hiddenimport for EventBus
-- **NEW:** `tool_calling_method` metadata in benchmark results (native vs prompt-based)
-- **NEW:** Comprehensive BENCHMARKS.md guide (700+ lines, 7 categories, 28 tests)
-- **TESTS:** 15 new multi-line input tests (ChatTextArea, bindings, submission, history)
+**v1.16.0 highlights:**
+- **NEW:** Provider hierarchy — `BaseProvider` ABC, profile-driven tool loop
+- **NEW:** Multi-tool native mode — proper `tool` role messages, grouped tool calls in UI
+- **NEW:** Config integration — per-model `tool_calling` overrides
+- **NEW:** Benchmark v2 — 36 tests across 9 categories
+- **NEW:** `EngineClient.restore_session()` — unified session restore across all clients (fixes JSON-RPC provider/model bug)
 
-**v1.15.4 highlights:**
-- **NEW:** `/preview` command — live-reloading HTML preview across TUI (stdlib server), Web App (iframe), and VSCode (WebviewPanel)
-- **NEW:** `PreviewServer` — stdlib HTTP server with mtime polling, auto-reload, static asset serving
-- **NEW:** `rewrite_asset_paths()` with cache-buster support for reliable CSS/JS/JSON live-reload
-- **NEW:** FastAPI `/preview/{path}` endpoints with session-scoped working directory
-- **FIX:** Browser cache busting — asset URLs get `?_t=<mtime>` to force re-fetch on changes
-- **FIX:** Preview iframe `fetch()` for non-HTML files (JSON data files now served correctly)
-- **FIX:** VSCode FileSystemWatcher expanded to all sibling assets (CSS/JS/JSON/SVG/PNG/JPG)
-- **TESTS:** 34 new preview tests covering utilities, server, cache-busting, and data file serving
-
-**v1.15.3 highlights:**
-- **FIX:** Stale config cache - `/model` and `/provider` commands now auto-reload config from disk before listing
-- **FIX:** Provider switch using wrong model - switching providers no longer uses stale model from previous provider
-- **FIX:** Session restore with outdated config - all 3 clients (Textual, Rich, HTTP server) reload config before restoring sessions
-- **FIX:** `/config reload` now also refreshes EngineClient's cached provider list (previously only refreshed ConfigStore)
-- **FIX:** Web tools SSL/corporate proxy support - `_create_ssl_context()` respects `SSL_VERIFY` and `SSL_CERT_FILE` env vars
-- **FIX:** `get_weather` HTTP fallback - tries HTTPS first, falls back to HTTP when corporate proxy stalls HTTPS
-- **FIX:** `/debug-log on` now enables all logger instances (tui, chat, session, validator, etc.), not just "tui"
-- **NEW:** `EngineClient.reload_config()` method - single entry point to reload ConfigStore + refresh all cached config data
-- **NEW:** Configurable web tool timeouts via `tools.<name>.timeout` in ppxai-config.json (default 15s)
-- **NEW:** `Logger.enable_all()` / `Logger.disable_all()` class methods for centralized log control
-- **DOCS:** DGX Spark setup guide renamed and expanded (vLLM + Ollama, model testing log, benchmark results)
-
-**v1.15.2 highlights:**
-- **NEW:** Response validation system - detects LLM hallucinations and tool result contradictions
-- **NEW:** `ResponseValidator` class in `engine/tools/validator.py` - tracks tool calls and validates claims
-- **NEW:** WARNING SSE events - real-time alerts when model claims contradict tool results
-- **NEW:** Web app warning display - styled warnings show detected issues with suggested actions
-- **NEW:** Enhanced system prompt - instructs models to verify tool results before claiming success
-- **NEW:** `/terminal` command - shows terminal detection and image protocol config help
-- **NEW:** `PPXAI_TERMINAL` and `PPXAI_IMAGE_PROTOCOL` env vars for multi-terminal setups
-- **NEW:** Double Ctrl+C to quit pattern in ppxaide (prevents accidental exits)
-- **FIX:** Unicode whitespace normalization in `apply_patch` - NBSP (`\xa0`), NNBSP (`\u202f`), Thin Space now match regular spaces
-- **FIX:** 5-level fuzzy matching in `_replace_hunk()`: exact → CRLF → Unicode normalize → strip+normalize → collapse
-- **FIX:** Truncated tool call detection - detects "I'll use X tool" with incomplete JSON and provides recovery feedback
-- **FIX:** GPT-OSS intermittent tool calling issue - auto-retry with targeted guidance when vLLM Harmony parser fails
-- **FIX:** Autocomplete preserves command prefix for subcommands (`/provider ` + TAB works)
-- **FIX:** `/status` shows terminal override indicators when env vars are set
-- **FIX:** Config loader now includes all config sections (`server`, `session`, `tui`, `paths`, etc.)
-- **FIX:** `server.idle_timeout` config now properly read (was always using 300s default)
-- **FIX:** Web app `/context reload` shows correct message instead of false "not found"
-- **FIX:** Web app clipboard button now uses correct global reference (`window.ppxai`)
-- **FIX:** Web app `display_file` event now handled properly (opens split preview)
-- **TESTS:** 20 new tests for Unicode whitespace normalization and truncated tool call detection
-- **DOCS:** Comprehensive terminal image display guide in INSTALLATION.md
-- **DOCS:** GPT-OSS "explain before calling" tool issue and `max_tokens` mitigation
-
-**v1.15.0 highlights:**
-- **NEW:** Type-based renderer dispatch - commands return typed result objects
-- **NEW:** 17 CommandResult types for UI-agnostic command architecture
-- **NEW:** RichRenderer and TextualRenderer with mechanical type dispatch
-- **CHANGE:** All 32 Rich TUI commands migrated to return typed results
-- **CHANGE:** Commands are now testable without UI framework dependencies
-- **CLEANUP:** Removed all v2 naming artifacts (~1,698 lines of legacy code)
-
-**v1.14.2 highlights:**
-- **NEW:** Hierarchical context scopes - global (`~/.ppxai/`), project (git root), subdir (cwd)
-- **NEW:** `/context show` command - displays bootstrap sources with scope labels
-- **NEW:** `@clipboard` and `@url` context providers - inject clipboard text or web content
-- **NEW:** Include directive - `<!-- include: ./file.md -->` for modular AGENTS.md
-- **NEW:** Hint templates - reusable hints in `~/.ppxai/hint-templates.yaml`
-- **CHANGE:** Gemini recommended model updated to `gemini-2.5-flash` (81.3% Tier S, best value default)
-- **CHANGE:** Provider/model hints from all scopes merge additively
-
-**v1.14.1 highlights:**
-- `/edit` command for VSCode - opens files in native editor with line:col support
-- `/edit` command for Web App - Monaco-style editor with syntax highlighting
-- `/context reload` command - refresh AGENTS.md without restarting session
-
-**v1.14.0 highlights:**
-- AGENTS.md/CLAUDE.md bootstrap context support - project-specific instructions loaded on startup
-- YAML front matter for provider/model-specific hints (dynamic prompt assembly)
-- `local` provider inheritance - ollama, vllm, lmstudio inherit from `local` hints
+**v1.16.1-dev highlights:**
+- **NEW:** FileTree widget — Norton Commander-style browser (Ctrl+B), `@file` injection, Enter/Ctrl+Enter preview/edit
+- **NEW:** CommandFactory server pattern — `/usage` unified across TUI, VSCode, Web via `POST /command`
+- **FIX:** Session restore centralised — `restore_session()` covers provider/model/tools/working_dir
+- **FIX:** Tool messages rendered via Markdown (Rich markup stripped), side panel save prompt on close
 
 **Version Alignment:**
 - Python package (pyproject.toml): v1.16.1.dev0
@@ -97,7 +28,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
 
-## Codebase Statistics (v1.14.0)
+## Codebase Statistics (v1.16.0, approximate)
 
 | Language | Files | Lines |
 |----------|------:|------:|
@@ -281,13 +212,16 @@ Layered architecture with clear separation of concerns:
 ```
 ppxai/
 ├── engine/              # Core business logic (no UI)
-│   ├── client.py        # EngineClient facade
+│   ├── client.py        # EngineClient facade (restore_session() is canonical session restore)
 │   ├── types.py         # Message, Event, UsageStats
 │   ├── session.py       # Session management
-│   ├── providers/       # Perplexity, OpenAI-compat
+│   ├── providers/       # Perplexity, OpenAI-compat (BaseProvider ABC)
 │   └── tools/           # Tool system + builtins
 ├── server/              # HTTP/SSE server for IDE
-│   └── http.py          # FastAPI endpoints
+│   └── http.py          # FastAPI endpoints (POST /command — CommandFactory server pattern)
+├── tui/
+│   └── widgets/
+│       └── file_tree.py # FileTree widget — Norton Commander browser (Ctrl+B, @file inject)
 ├── main.py              # TUI entry point
 ├── commands.py          # Slash command handlers
 └── config.py            # Configuration system
@@ -317,21 +251,30 @@ vscode-extension/        # TypeScript VSCode extension
 
 ```bash
 # Run application
-.uv/uv run ppxai                    # TUI
-.uv/uv run ppxai-server             # HTTP server
-.uv/uv run ppxai-desktop            # Desktop web app
+uv run ppxai                    # Rich TUI
+uv run ppxaide                  # Textual TUI (syntax highlighting, file tree)
+uv run ppxai-server             # HTTP server for VSCode
+uv run ppxai-desktop            # Desktop web app
 
 # Testing
-.uv/uv run pytest tests/ -v
+uv run pytest tests/ -v
+
+# Build binaries (macOS/Linux)
+uv run pyinstaller ppxai.spec --noconfirm
+uv run pyinstaller ppxaide.spec --noconfirm
+uv run pyinstaller ppxai-server.spec --noconfirm
+uv run pyinstaller ppxai-desktop.spec --noconfirm
 
 # Build binaries (Windows with corporate proxy)
-set UV_NATIVE_TLS=true && .uv/uv run python -m PyInstaller ppxai.spec --noconfirm
+set UV_NATIVE_TLS=true && uv run pyinstaller ppxai.spec --noconfirm
 
 # Build VSCode extension
 cd vscode-extension && npm run compile && npx vsce package --allow-missing-repository
 
+# Create macOS DMG
+bash scripts/create-macos-app.sh
+
 # Copy beta binaries to external drive (Windows)
-# Will prompt for destination if not provided
 powershell -File scripts/copy-beta.ps1 -TargetDir "I:\Software\ppxai"
 ```
 
@@ -477,9 +420,9 @@ async def switch_provider(new_provider: str, new_model: str):
 ### Implementation Status
 
 - ✅ StatusBar badge management (`ppxai/tui/widgets/status_bar.py`)
-- ⏳ Provider/model switching (planned for Phase 6)
+- ✅ Provider/model switching (badge updates in `_restore_session`, `handle_load`)
+- ✅ Session state management (`EngineClient.restore_session()` — atomic restore)
 - ⏳ Context injection (planned)
-- ⏳ Session state management (planned)
 
 **Rule:** Any operation that modifies multiple related pieces of state MUST use this pattern.
 
@@ -595,14 +538,21 @@ The `TextArea` widget has its own internal rendering engine with hardcoded color
 
 ### Key Bindings
 
-- `Ctrl+Enter` - Submit message (multi-line input: plain Enter inserts newlines)
+- `Ctrl+Enter` - Submit message (plain Enter inserts newlines)
+- `Ctrl+B` - Toggle file tree browser (Norton Commander style)
 - `Ctrl+T` - Cycle through 8 curated themes
 - `Ctrl+P` - Command palette (all 17+ themes)
 - `Ctrl+[` / `Ctrl+]` - Resize split panes (macOS compatible)
 - `Ctrl+W` - Close side panel
 - `Ctrl+S` - Save side panel content
 - `Escape` - Close help panel / modal screen / side panel (priority order)
-- `F6` / `Ctrl+Tab` - Toggle focus between panes
+- `F6` / `Ctrl+Tab` - Cycle focus: input → file tree → side panel → input
+
+**File tree bindings (when file tree focused):**
+- `Enter` - Preview file read-only in side panel
+- `Ctrl+Enter` - Open file for editing in side panel
+- `Space` - Inject `@file:path ` at cursor in chat input
+- `Escape` - Return focus to chat input
 
 ### DO NOT BREAK
 
