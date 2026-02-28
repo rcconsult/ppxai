@@ -66,10 +66,10 @@ class RichCommandContext:
     # -- Mutations (delegate to public methods) --
 
     def set_model(self, model: str) -> None:
-        self._handler.switch_model(model)
+        self._handler.set_model(model)
 
     def set_provider(self, provider: str) -> None:
-        self._handler.switch_provider(provider)
+        self._handler.set_provider(provider)
 
     def get_provider(self) -> str:
         return self._handler.provider

@@ -789,16 +789,11 @@ class SessionManager:
         """Save session with command history and working directory.
 
         Internal method that saves the full session data including
-        the new v1.13.9 fields.
-
-        v1.14.1: Validates and fixes message alternation before saving.
+        command_history, working_dir, and tools_enabled fields.
 
         Returns:
             Session name
         """
-        # Validate and fix alternation issues before saving (v1.14.1)
-        self.validate_and_fix_alternation()
-
         filepath = self.sessions_dir / f"{self.session_name}.json"
 
         session_data = {

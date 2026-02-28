@@ -10,7 +10,6 @@ import hashlib
 import json
 import os
 import re
-from dataclasses import asdict
 from datetime import datetime
 from typing import List, AsyncIterator, Optional, Dict, Any
 from pathlib import Path
@@ -207,15 +206,6 @@ class EngineClient:
         self.context_injector.set_working_dir(path)
         self.session.set_working_dir(path)  # Also update session for persistence
         self._init_checkpoint_manager(path)
-
-        # Initialize checkpoint manager for this working directory (v1.12.0)
-        checkpoint_backend = self.config.get("tools", {}).get("agent", {}).get("checkpoint_backend", "auto")
-        session_id = self.session.session_name or "default"
-        self._checkpoint_manager = CheckpointManager(
-            working_dir=path,
-            session_id=session_id,
-            backend=checkpoint_backend
-        )
 
         # Emit working directory change event only if directory actually changed (v1.13.2, v1.15.3)
         # This event will be picked up by SSE stream and sent to clients
@@ -552,21 +542,17 @@ class EngineClient:
         model_exists = any(m.id == model_id for m in models)
 
         if model_exists:
-            self.model = model_id
-            self.session.set_model(model_id)
-            if reset_context and self.session.messages:
-                removed = self.session.reset_for_model_switch()
-                self.last_model_switch_reset = removed
-                if removed:
-                    logger.info(f"Reset context for model switch to {model_id}: removed {removed} messages")
-            self._log_model_hints_transition(model_id)
-            return True
+            return self._apply_model_switch(model_id, reset_context)
 
         if strict:
             # Strict mode - reject unavailable models (used for session restore)
             return False
 
         # Allow setting model even if not in list (for flexibility with custom endpoints)
+        return self._apply_model_switch(model_id, reset_context)
+
+    def _apply_model_switch(self, model_id: str, reset_context: bool) -> bool:
+        """Apply a confirmed model switch: update state, optionally reset context."""
         self.model = model_id
         self.session.set_model(model_id)
         if reset_context and self.session.messages:

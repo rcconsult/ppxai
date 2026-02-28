@@ -359,13 +359,13 @@ class CommandHandler:
         """Check if auto-routing is enabled."""
         return self.auto_route
 
-    def switch_provider(self, provider: str) -> None:
-        """Switch provider — updates handler state and engine."""
+    def set_provider(self, provider: str) -> None:
+        """Set provider — updates handler state and engine."""
         self.provider = provider
         self.engine_client.set_provider(provider)
 
-    def switch_model(self, model: str) -> None:
-        """Switch model — updates handler state and engine."""
+    def set_model(self, model: str) -> None:
+        """Set model — updates handler state and engine."""
         self.current_model = model
         self.engine_client.set_model(model)
 
