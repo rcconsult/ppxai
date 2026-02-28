@@ -107,25 +107,60 @@ The `AppData\Local\ppxai` path exists only as a **search path** for finding bina
 - Use `Set-Content -Encoding UTF8` or write files via Python with `encoding='utf-8'`
 - The config loader uses `utf-8-sig` to handle BOM gracefully when reading
 
+### uv Resolution (all platforms)
+
+Always resolve `uv` the same way: use the system-installed binary if available,
+otherwise bootstrap `.uv/uv` via the project script and use that.
+
+**macOS / Linux:**
+```bash
+# One-time: resolve uv
+command -v uv >/dev/null 2>&1 || python scripts/bootstrap.py --all
+export UV=$(command -v uv 2>/dev/null || echo ".uv/uv")
+
+# All subsequent commands use $UV:
+$UV sync --all-extras
+$UV run ppxai
+$UV run pytest tests/ -v
+```
+
+**Windows (cmd):**
+```cmd
+where uv >nul 2>&1 && set UV=uv || (python scripts\bootstrap.py --all && set UV=.uv\uv)
+%UV% sync --all-extras
+%UV% run ppxai
+```
+
+**Windows (PowerShell):**
+```powershell
+if (Get-Command uv -ErrorAction SilentlyContinue) { $UV = "uv" } else { python scripts\bootstrap.py --all; $UV = ".uv\uv" }
+& $UV sync --all-extras
+& $UV run ppxai
+```
+
+Once `$UV` (or `%UV%`) is set, all `uv` commands below use the same variable.
+
 ### Quick Start with uv (recommended)
 
 ```bash
-# First-time setup
-python scripts/bootstrap.py --all
+# Step 1: resolve uv (system or bootstrapped)
+command -v uv >/dev/null 2>&1 || python scripts/bootstrap.py --all
+export UV=$(command -v uv 2>/dev/null || echo ".uv/uv")
 
-# Or manual setup (creates .uv/uv bootstrapped installation)
-.uv/uv sync --all-extras
+# Step 2: set up project
+$UV sync --all-extras
 
-# Configure API keys
+# Step 3: configure API keys
 cp .env.example .env
 # Edit .env and add your API keys
 
-# Run
-.uv/uv run ppxai           # TUI
-.uv/uv run ppxai-server    # HTTP server for VSCode
+# Step 4: run
+$UV run ppxai           # Rich TUI
+$UV run ppxaide         # Textual TUI
+$UV run ppxai-server    # HTTP server for VSCode
 
-# Test
-.uv/uv run pytest tests/ -v
+# Step 5: test
+$UV run pytest tests/ -v
 ```
 
 ### Alternative: pip
@@ -141,22 +176,22 @@ python ppxai.py
 
 **Problem:** Windows Store Python prevents uv from creating temporary virtualenvs (Error 1920: "The file cannot be accessed by the system")
 
-### Using Existing venv with `.uv/uv run`
+### Using Existing venv with `$UV run`
 ```bash
 # ✅ Use --no-sync to skip package rebuild
-.uv/uv run --no-sync python -m <command>
+$UV run --no-sync python -m <command>
 
 # ❌ Without --no-sync triggers temp virtualenv creation (fails on Windows Store Python)
-.uv/uv run python -m <command>
+$UV run python -m <command>
 ```
 
 ### Checking venv/lock Status
 ```bash
 # Check if lock file is up to date
-.uv/uv lock --check
+$UV lock --check
 
 # Check installed package version
-.uv/uv pip list | grep ppxai
+$UV pip list | grep ppxai
 
 # Verify runtime version
 .venv/Scripts/python.exe -c "import ppxai; print(ppxai.__version__)"
@@ -169,8 +204,8 @@ set UV_NATIVE_TLS=true   # cmd
 $env:UV_NATIVE_TLS="true"  # PowerShell
 
 # Then all uv commands work without SSL_CERT_FILE:
-.uv/uv run python -m PyInstaller ppxai.spec --noconfirm
-.uv/uv pip install hatchling editables
+$UV run python -m PyInstaller ppxai.spec --noconfirm
+$UV pip install hatchling editables
 ```
 **Why:** `UV_NATIVE_TLS=true` tells uv to use the OS native TLS stack (Windows SChannel) instead of bundled rustls. This automatically trusts certificates from the Windows certificate store (including corporate proxy CAs). No need for `SSL_CERT_FILE`.
 
@@ -179,19 +214,19 @@ When version numbers change in source but venv metadata is stale:
 
 ```bash
 # 1. Install build dependencies in venv
-.uv/uv pip install hatchling editables
+$UV pip install hatchling editables
 
 # 2. Reinstall package with --no-build-isolation
-.uv/uv pip install --no-build-isolation --reinstall --no-deps -e .
+$UV pip install --no-build-isolation --reinstall --no-deps -e .
 
 # 3. Verify metadata updated
-.uv/uv pip list | grep ppxai  # Should show new version
+$UV pip list | grep ppxai  # Should show new version
 ```
 
 ### Building Binaries with PyInstaller
 ```bash
 # ✅ Preferred: use UV_NATIVE_TLS for corporate proxy environments
-set UV_NATIVE_TLS=true && .uv/uv run python -m PyInstaller ppxai.spec --noconfirm
+set UV_NATIVE_TLS=true && %UV% run python -m PyInstaller ppxai.spec --noconfirm
 
 # Alternative: use venv's Python directly
 .venv/Scripts/python.exe -m PyInstaller ppxai.spec --noconfirm
@@ -250,23 +285,27 @@ vscode-extension/        # TypeScript VSCode extension
 ## Common Commands
 
 ```bash
+# Resolve uv first (see "uv Resolution" section above)
+export UV=$(command -v uv 2>/dev/null || echo ".uv/uv")   # macOS/Linux
+# set UV=uv || set UV=.uv\uv                               # Windows cmd
+
 # Run application
-uv run ppxai                    # Rich TUI
-uv run ppxaide                  # Textual TUI (syntax highlighting, file tree)
-uv run ppxai-server             # HTTP server for VSCode
-uv run ppxai-desktop            # Desktop web app
+$UV run ppxai                    # Rich TUI
+$UV run ppxaide                  # Textual TUI (syntax highlighting, file tree)
+$UV run ppxai-server             # HTTP server for VSCode
+$UV run ppxai-desktop            # Desktop web app
 
 # Testing
-uv run pytest tests/ -v
+$UV run pytest tests/ -v
 
-# Build binaries (macOS/Linux)
-uv run pyinstaller ppxai.spec --noconfirm
-uv run pyinstaller ppxaide.spec --noconfirm
-uv run pyinstaller ppxai-server.spec --noconfirm
-uv run pyinstaller ppxai-desktop.spec --noconfirm
+# Build binaries (macOS/Linux — all four in parallel)
+$UV run pyinstaller ppxai.spec --noconfirm
+$UV run pyinstaller ppxaide.spec --noconfirm
+$UV run pyinstaller ppxai-server.spec --noconfirm
+$UV run pyinstaller ppxai-desktop.spec --noconfirm
 
 # Build binaries (Windows with corporate proxy)
-set UV_NATIVE_TLS=true && uv run pyinstaller ppxai.spec --noconfirm
+set UV_NATIVE_TLS=true && %UV% run pyinstaller ppxai.spec --noconfirm
 
 # Build VSCode extension
 cd vscode-extension && npm run compile && npx vsce package --allow-missing-repository
