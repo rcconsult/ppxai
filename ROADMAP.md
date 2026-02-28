@@ -566,38 +566,50 @@ ppxai/tui/                     # New module (Textual-based)
 
 ## Planned (v1.16.1+)
 
-### v1.16.1 - Gemini 3 Model Updates + ppxaide Interactive File Tree
+### v1.16.1 - Gemini 3 Model Updates + File Tree + CommandFactory Server Pattern
 
-**Status:** Planned
+**Status:** In Progress
 **Effort:** 5 days
 
-#### Gemini 3 Model Updates (Priority: High — deadline close)
+#### Gemini 3 Model Updates (Priority: High)
 
 **Reference:** https://ai.google.dev/gemini-api/docs/gemini-3
 
 | Task | Description | Status |
 |------|-------------|--------|
-| **Add gemini-3.1-pro-preview to config** | Model entry + pricing ($2/$12 per 1M, <200K ctx) in `ppxai-config.json` | ⏳ Planned |
-| **Add gemini-3.1-pro-preview-customtools** | Variant entry for custom tool workflows | ⏳ Planned |
-| **Update benchmark comment** | Reflect v1.16.0 results: gemini-3-flash-preview 100% Tier S | ⏳ Planned |
-| **thinking_level param** | Replace deprecated `thinking_budget` with `thinking_level` ("minimal"/"low"/"medium"/"high") in GeminiProvider | ✅ Done |
-| **model_profiles.py context limits** | Verify 1M input / 64K output for all gemini-3.x profiles — `max_tokens=65_536` correct (64K), `context_limit=1000000` in config | ✅ Done |
-
-**Pricing from official docs:**
-| Model | Input | Output | Notes |
-|-------|-------|--------|-------|
-| gemini-3.1-pro-preview | $2.00 | $12.00 | Per 1M tokens, ≤200K ctx |
-| gemini-3.1-pro-preview | $4.00 | $18.00 | Per 1M tokens, >200K ctx |
-| gemini-3-flash-preview | $0.50 | $3.00 | Per 1M tokens |
+| **Add gemini-3.1-pro-preview to config** | Model entry + pricing ($2/$12 per 1M, <200K ctx) in `ppxai-config.json` | ✅ Done |
+| **Remove deprecated gemini-2.0-flash** | Shutting down June 1, 2026 | ✅ Done |
+| **thinking_level param** | Replace deprecated `thinking_budget` with `thinking_level` in GeminiProvider | ✅ Done |
+| **model_profiles.py context limits** | 1M input / 64K output for all gemini-3.x profiles | ✅ Done |
+| **google-genai SDK pin** | `<1.57.0` due to code editing regression (KI-001) | ✅ Done |
 
 #### ppxaide Interactive File Tree
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **Interactive file explorer** | Left sidebar with expandable directory tree (NvChad-inspired) | ⏳ Planned |
-| **Keyboard navigation** | Arrow keys, Enter to open, Space to expand/collapse | ⏳ Planned |
-| **`@file` injection** | Ctrl+Enter on selected file injects reference into input | ⏳ Planned |
-| **File preview** | Click to open in side panel (read-only view) | ⏳ Planned |
+| **FileTree widget** | Norton Commander style left sidebar (DirectoryTree extension) | ✅ Done |
+| **Layout integration** | 3-pane layout, Ctrl+B toggle, CSS split ratios | ✅ Done |
+| **Key bindings** | Enter=preview, Ctrl+Enter=edit, Space=@file inject, Escape=dismiss | ✅ Done |
+| **Resize keys** | `-`/`=` resize file tree and side panel | ✅ Done |
+
+#### CommandFactory Server Pattern (POC: /usage)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **`to_dict()` serialization** | CommandResult types serialize to JSON for HTTP transport | ✅ Done |
+| **`ServerCommandContext`** | Adapter wrapping EngineClient for server-side commands | ✅ Done |
+| **`POST /command/{name}`** | Generic 10-line endpoint dispatching any command via CommandFactory | ✅ Done |
+| **Web app migration** | `handleUsageCommand()` → server call + `renderCommandResult()` | ✅ Done |
+| **VSCode migration** | `handleUsageCommand()` → `executeCommand()` + `renderCommandResult()` | ✅ Done |
+| **Shared formatters** | `formatTableResult()` with usage-aware bullet summary + table | ✅ Done |
+| **Integration tests** | 18 tests validating counter values across 3 real providers | ✅ Done |
+
+#### Session Restore Refactor
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **`EngineClient.restore_session()`** | Single entry point for all session restoration | ✅ Done |
+| **All clients migrated** | Rich, Textual, HTTP, JSON-RPC delegate to centralized method | ✅ Done |
 
 ### v1.17.0 - Web App File Tree Sidebar
 
@@ -760,13 +772,15 @@ Current: Vanilla JavaScript (`DataTableViewer`, `DataTreeViewer`) - lightweight,
 - Model profiles for gemini-3.1-pro-preview and gemini-3-flash-preview already in `model_profiles.py`
 
 #### Action Items
-- [ ] Add gemini-3.1-pro-preview and gemini-3-flash-preview pricing to `ppxai-config.json`
-- [ ] Test `thinking_budget` parameter via generation params (maps to thinking level)
-- [ ] Evaluate thought signatures impact on session serialization / multi-turn tool calls
-- [ ] Assess multimodal tool responses — can ppxai pass image bytes back as tool results?
-- [ ] Update model profiles with correct context limits (1M/64K) and tier assignments
+- [x] Add gemini-3.1-pro-preview and gemini-3-flash-preview pricing to `ppxai-config.json` (v1.16.1)
+- [x] Replace deprecated `thinking_budget` with `thinking_level` parameter in GeminiProvider (v1.16.1)
+- [x] Update model profiles with correct context limits (1M/64K) and tier assignments (v1.16.1)
+- [x] Remove deprecated gemini-2.0-flash and gemini-3-pro-preview models (v1.16.1)
+- [x] Pin google-genai SDK `<1.57.0` due to code editing regression KI-001 (v1.16.1)
+- [ ] Evaluate thought signatures impact on session serialization — currently transparent; google-genai SDK handles signature propagation automatically in multi-turn. No ppxai changes needed unless custom session serialization strips opaque fields.
+- [ ] Multimodal tool responses — ppxai's tool result pipeline is text-only (`str` results). Supporting image bytes requires extending `ToolResult` type + base64 encoding. Deferred to v1.17.0+ when a concrete use case arises.
 
-**Status:** Research phase. Models already benchmarked; pricing + new API params not yet integrated.
+**Status:** Core integration done (v1.16.1). Thought signatures and multimodal responses are future items.
 
 ### Jupyter Kernel Tool (Data Science Workflow)
 

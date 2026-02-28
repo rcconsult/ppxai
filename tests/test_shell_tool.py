@@ -1,10 +1,14 @@
 """Tests for ShellExecuteTool — compound commands, cd handling, interactive guards."""
 
 import os
+import sys
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from ppxai.engine.tools.builtin.shell import ShellExecuteTool
+
+# Windows cmd.exe doesn't support single quotes in arguments
+_Q = '"' if sys.platform == 'win32' else "'"
 
 
 @pytest.fixture
@@ -69,13 +73,13 @@ class TestInteractiveGuard:
     @pytest.mark.asyncio
     async def test_python_with_args_allowed(self, shell_tool):
         """python3 -c 'print(1)' should run (has args)."""
-        result = await shell_tool.execute("python3 -c 'print(42)'")
+        result = await shell_tool.execute(f"python3 -c {_Q}print(42){_Q}")
         assert "42" in result
 
     @pytest.mark.asyncio
     async def test_python_in_compound_not_blocked(self, shell_tool):
         """python3 in a compound command should not be blocked."""
-        result = await shell_tool.execute("echo start && python3 -c 'print(99)'")
+        result = await shell_tool.execute(f"echo start && python3 -c {_Q}print(99){_Q}")
         assert "interactive" not in result.lower()
         assert "99" in result
 

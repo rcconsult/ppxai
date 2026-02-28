@@ -493,14 +493,16 @@ async def render_prompt(renderer: TextualRenderer, result: PromptResult) -> None
 
 @TextualRenderer.register(CompositeResult)
 async def render_composite(renderer: TextualRenderer, result: CompositeResult) -> None:
-    """Render multiple artifacts (future: tabbed panel)."""
+    """Render multiple artifacts sequentially.
+
+    Note: ArtifactPanel with tabs is available but no command currently
+    produces CompositeResult. When one does, wire up tabbed display here.
+    """
     chat_view = renderer._get_chat_view()
 
     if result.message:
         chat_view.add_system_message(f"[bold cyan]{result.message}[/bold cyan]")
 
-    # TODO: Use ArtifactPanel with tabs
-    # For Phase 1, render sequentially
     for sub_result in result.results:
         await renderer.render(sub_result)
 

@@ -1007,7 +1007,7 @@ class EngineClient:
         except Exception as e:
             # If consent callback fails, deny for safety
             logger.debug(f"Consent: callback EXCEPTION: {type(e).__name__}: {e}")
-            print(f"Consent callback error: {e}")
+            logger.error(f"Consent callback error: {e}")
             return False
 
     def _classify_shell_command(self, command: str) -> str:
@@ -1106,7 +1106,7 @@ class EngineClient:
 
         except Exception as e:
             # If consent callback fails, deny for safety
-            print(f"Shell consent callback error: {e}")
+            logger.error(f"Shell consent callback error: {e}")
             return False
 
     def list_tools(self) -> List[Dict[str, Any]]:

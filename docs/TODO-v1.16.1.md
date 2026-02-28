@@ -1,10 +1,12 @@
-# TODO — v1.16.1: Norton Commander File Tree
+# TODO — v1.16.1: Norton Commander File Tree + CommandFactory Server Pattern
 
 ## Overview
 
 Transform ppxaide from a two-pane layout (chat | optional side panel) into a
 Norton Commander style: a permanently visible (Ctrl+B togglable) file tree on
 the left, with the existing chat + side panel on the right.
+
+Also: unify command execution across all clients via CommandFactory server pattern.
 
 **Reference:** [ROADMAP.md — v1.16.1](../ROADMAP.md)
 
@@ -326,26 +328,13 @@ Add `Ctrl+B` to the visible footer bindings list.
 
 ---
 
-## Phase 5 — Tests and Docs
+## Phase 5 — Docs
 
-### Step 5.1 — Integration tests
-
-```python
-# tests/test_file_tree_integration.py
-# Test: Enter on file → SidePanel.show_file called with read_only=True
-# Test: Ctrl+Enter → SidePanel.show_file called with read_only=False
-# Test: Space → InputBox contains "@file:path"
-# Test: Ctrl+B → file tree hidden/shown
-# Test: F6 cycle: input → tree → panel → input
-```
-
-**Status:** ⏳ Pending
-
-### Step 5.2 — Update ROADMAP.md
+### Step 5.1 — Update ROADMAP.md
 
 Mark v1.16.1 file tree tasks as done as each phase completes.
 
-**Status:** ⏳ Pending
+**Status:** ✅ Done
 
 ---
 
@@ -355,53 +344,57 @@ Items discovered during code review and test runs.
 
 ### Step 6.1 — Fix 4 failing tests
 
-**Severity:** High | **Effort:** ~1h
+**Severity:** High | **Effort:** ~30m
 
-- 2 Perplexity model config tests (`tests/test_config.py:165-173`): tests expect
-  `sonar-pro` for coding model and `sonar` for default, but getters return wrong values
-- 2 shell tool output capture tests (`tests/test_shell_tool.py:70-80`): Python with
-  arguments returns generic success message instead of actual stdout
+- 2 Perplexity model config tests: swapped coding_model/default_model expectations
+  to match v1.14.2 config change (sonar-pro is now default, sonar is coding)
+- 2 shell tool tests: Windows `cmd.exe` doesn't support single quotes in arguments;
+  use platform-aware quoting (`_Q` helper)
 
-**Status:** ⏳ Pending
+**Status:** ✅ Done (d29333a+)
 
 ### Step 6.2 — Side panel save prompt
 
-**Severity:** Medium | **Effort:** ~2h
+**Severity:** Medium | **Effort:** ~15m
 
-TODO at `ppxai/tui/widgets/side_panel.py:243` — when closing side panel in edit
-mode, prompt user to save unsaved changes instead of silently discarding.
+Reuses existing `ConfirmCloseScreen` from `screens/editor.py`.
+`close()` now shows Y/N/Esc dialog when `_modified` is True.
+`_do_close()` extracted for the actual close logic.
 
-**Status:** ⏳ Pending
+**File:** `ppxai/tui/widgets/side_panel.py`
+**Status:** ✅ Done
 
 ### Step 6.3 — Textual renderer artifact tabs
 
-**Severity:** Medium | **Effort:** ~3h
+**Severity:** Medium | **Effort:** N/A (deferred)
 
-TODO at `ppxai/rendering/textual_renderer.py:502` — use `ArtifactPanel` with tabs
-for composite results containing multiple sub-results, instead of rendering them
-sequentially.
+`CompositeResult` is never instantiated by any command — no real usage exists.
+`ArtifactPanel` widget is ready; wiring deferred until a command produces composite output.
+Removed TODO comment from renderer, added note explaining the situation.
 
-**Status:** ⏳ Pending
+**File:** `ppxai/rendering/textual_renderer.py`
+**Status:** ✅ Done (deferred — no real usage)
 
 ### Step 6.4 — Print to logger migration
 
-**Severity:** Low | **Effort:** ~30m
+**Severity:** Low | **Effort:** ~5m
 
-2 consent error `print()` calls in `ppxai/engine/client.py` should use `logger.error()`
-instead of printing to stdout.
+2 consent error `print()` calls → `logger.error()`.
 
-**Status:** ⏳ Pending
+**File:** `ppxai/engine/client.py`
+**Status:** ✅ Done
 
 ### Step 6.5 — Gemini 3 action items cleanup
 
-**Severity:** Low | **Effort:** ~1h
+**Severity:** Low | **Effort:** ~15m
 
-Research and document (in ROADMAP.md) the following Gemini 3 API features:
-- Thought signatures impact on session serialization / multi-turn tool calls
-- Multimodal tool responses — can ppxai pass image bytes back as tool results?
-- Update action items checklist to reflect what's done vs deferred
+Updated ROADMAP.md action items: 5 items marked done (pricing, thinking_level,
+model profiles, deprecations, SDK pin). 2 items assessed and deferred:
+- Thought signatures: transparent; SDK handles propagation. No ppxai changes needed.
+- Multimodal tool responses: text-only pipeline; deferred to v1.17.0+.
 
-**Status:** ⏳ Pending
+**File:** `ROADMAP.md`
+**Status:** ✅ Done
 
 ---
 
@@ -425,6 +418,92 @@ Research and document (in ROADMAP.md) the following Gemini 3 API features:
 - `_apply_split_ratio()` — extended, not rewritten
 - `action_toggle_focus()` / `action_cancel()` — extended with FileTree branch
 - `Ctrl+[/]` resize — extended for file tree resize
+
+## Phase 7 — CommandFactory Server Pattern (POC: /usage)
+
+**Goal:** Single command implementation serves all clients. Only rendering differs.
+
+### Architecture
+
+```
+User: /usage [args]
+        │
+        ▼
+  handle_usage(context, args) → CommandResult   ← SINGLE implementation
+        │           │           │           │
+    ppxai(Rich)  ppxaide     server       web/vscode
+    RichRenderer TextualRenderer to_dict()  formatTableResult()
+```
+
+### Step 7.1 — Add `to_dict()` to CommandResult types
+
+Serialization for HTTP/JSON transport on `TableResult`, `ConfirmationResult`,
+`KeyValueResult`, `ErrorResult`.
+
+**File:** `ppxai/commands/results.py`
+**Status:** ✅ Done (d29333a)
+
+### Step 7.2 — Add `ServerCommandContext` adapter
+
+Wraps `EngineClient` for server-side command execution. Uses public methods only.
+
+**File:** `ppxai/commands/context.py`
+**Status:** ✅ Done (f2b2171, d29333a)
+
+### Step 7.3 — Add generic command execution endpoint
+
+`POST /command/{name}` — 10-line generic dispatcher via CommandFactory.
+
+**File:** `ppxai/server/http.py`
+**Status:** ✅ Done (d29333a)
+
+### Step 7.4 — Replace web app `handleUsageCommand()` with server call
+
+Single `fetch()` + `renderCommandResult()` dispatcher.
+
+**File:** `ppxai/web/app.js`
+**Status:** ✅ Done (d29333a)
+
+### Step 7.5 — Add shared formatters for CommandResult types
+
+`formatTableResult()` with usage-aware rich rendering (bullet summary + table).
+`formatKeyValueResult()` for key-value pairs.
+No-cache headers on `/shared/` route.
+
+**Files:** `ppxai/web/shared/formatters.js`, `vscode-extension/src/shared/formatters.ts`
+**Status:** ✅ Done (d29333a)
+
+### Step 7.6 — Replace VSCode `handleUsageCommand()` with server call
+
+`executeCommand()` in httpClient.ts + `renderCommandResult()` in chatPanel.ts.
+
+**Files:** `vscode-extension/src/httpClient.ts`, `vscode-extension/src/chatPanel.ts`
+**Status:** ✅ Done (d29333a)
+
+### Step 7.7 — Structured metadata for rich rendering
+
+Usage `TableResult` includes structured metadata (total_tokens, prompt_tokens, etc.)
+so formatters can render bullet-point summaries above the table.
+
+**File:** `ppxai/commands/tools.py`
+**Status:** ✅ Done (d29333a)
+
+### Step 7.8 — Integration tests
+
+18 tests validating counter values across 3 real providers (Perplexity, Gemini, OpenAI).
+Tests compare table row values against raw `session.get_usage()` data.
+
+**File:** `tests/test_usage_integration.py`
+**Status:** ✅ Done (d29333a)
+
+### Future: Generalize to all commands
+
+`POST /command/{name}` already works for ANY registered command. Next steps:
+- Migrate `/provider`, `/model`, `/tools`, `/status` to use same pattern
+- Remove bespoke server endpoints as clients migrate
+- Web app and VSCode switch statements shrink to just `renderCommandResult()`
+
+---
 
 ## Out of Scope (v1.17.0+)
 

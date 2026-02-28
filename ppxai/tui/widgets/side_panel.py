@@ -258,19 +258,37 @@ class SidePanel(Widget):
             pass  # Editor not mounted yet
 
     def close(self) -> None:
-        """Close the panel."""
+        """Close the panel, prompting to save if there are unsaved changes."""
         if not self.is_open:
             return
 
-        # Check for unsaved changes in edit mode
-        if not self._read_only and self._modified:
-            # TODO: Prompt to save
-            pass
+        # Prompt to save unsaved changes in edit mode
+        if not self._read_only and self._modified and self._path:
+            from ..screens.editor import ConfirmCloseScreen
+            self.app.push_screen(
+                ConfirmCloseScreen(self._path.name),
+                self._handle_close_response,
+            )
+            return
 
+        self._do_close()
+
+    def _handle_close_response(self, save: bool | None) -> None:
+        """Handle response from close confirmation dialog."""
+        if save is True:
+            self.save()
+            self._do_close()
+        elif save is False:
+            self._do_close()
+        # None = cancelled, stay open
+
+    def _do_close(self) -> None:
+        """Actually close the panel (no prompts)."""
         self.remove_class("visible")
         self.is_open = False
         self._path = None
         self._content = ""
+        self._modified = False
         self.post_message(self.Closed())
 
     def action_close_panel(self) -> None:
