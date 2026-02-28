@@ -866,7 +866,7 @@ Lazy imports found:
 **Fix:** Move all to module top. Guard optional deps (`pyperclip`, `trafilatura`, `httpx`)
 with try/except at module level and check for `None` at call sites.
 
-**Status:** ⬜ Pending
+**Status:** ✅ Done — commit `d16ea8a`
 
 ---
 
