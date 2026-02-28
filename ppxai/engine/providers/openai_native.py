@@ -617,9 +617,19 @@ class OpenAINativeProvider(BaseProvider):
                 item_type = getattr(item, "type", None)
 
                 if item_type == "message":
-                    for part in getattr(item, "content", []):
-                        if getattr(part, "type", None) == "output_text":
-                            content += getattr(part, "text", "")
+                    item_content = getattr(item, "content", None)
+                    if isinstance(item_content, list):
+                        for part in item_content:
+                            if getattr(part, "type", None) == "output_text":
+                                content += getattr(part, "text", "")
+                    elif isinstance(item_content, str):
+                        content += item_content
+                    elif item_content is not None:
+                        logger.warning(
+                            f"Unexpected item.content type in Responses API output: "
+                            f"{type(item_content).__name__!r} (value={item_content!r}), "
+                            f"item_type={item_type!r} — skipping"
+                        )
 
                 elif item_type == "function_call":
                     call_id = getattr(item, "call_id", "") or getattr(item, "id", "")

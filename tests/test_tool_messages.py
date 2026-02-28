@@ -276,6 +276,89 @@ class TestOpenAINativeConvertMessagesForResponses:
 
 
 # ---------------------------------------------------------------------------
+# _non_stream_responses content extraction tests (issue 9.1)
+# ---------------------------------------------------------------------------
+
+class TestNonStreamResponsesContentExtraction:
+    """Test _non_stream_responses handles various item.content shapes.
+
+    The Responses API can return item.content as a list of parts (normal),
+    a plain string (shorthand), or a bool True (observed on some Codex
+    model variants). The last case previously raised TypeError.
+    """
+
+    def _run(self, output_items, output_text=None):
+        """Drive _non_stream_responses with mocked client.responses.create."""
+        import asyncio
+        from unittest.mock import MagicMock, patch
+        from ppxai.engine.providers.openai_native import OpenAINativeProvider
+        from ppxai.engine.types import EventType
+
+        response = MagicMock()
+        response.output = output_items
+        response.output_text = output_text
+        response.usage = None
+
+        with patch("ppxai.engine.providers.openai_native.OpenAI") as mock_openai:
+            provider = OpenAINativeProvider(api_key="test-key")
+            provider.client.responses.create.return_value = response
+
+            async def _drain():
+                return [ev async for ev in provider._non_stream_responses({"model": "test"})]
+
+            events = asyncio.run(_drain())
+
+        return next(e for e in events if e.type == EventType.STREAM_END)
+
+    @staticmethod
+    def _text_part(text):
+        from unittest.mock import MagicMock
+        part = MagicMock()
+        part.type = "output_text"
+        part.text = text
+        return part
+
+    @staticmethod
+    def _message_item(content):
+        from unittest.mock import MagicMock
+        item = MagicMock()
+        item.type = "message"
+        item.content = content
+        return item
+
+    def test_content_as_list_of_parts(self):
+        """Normal case: content is a list of output_text parts."""
+        item = self._message_item([self._text_part("hello world")])
+        ev = self._run([item])
+        assert ev.data == "hello world"
+
+    def test_content_as_string(self):
+        """Shorthand: content is a plain string."""
+        item = self._message_item("direct string content")
+        ev = self._run([item])
+        assert ev.data == "direct string content"
+
+    def test_content_as_bool_does_not_raise(self):
+        """Bug 9.1: content=True (bool) must not raise TypeError and logs a warning."""
+        from unittest.mock import patch
+        item = self._message_item(True)  # ← the bad value seen in production
+        with patch("ppxai.engine.providers.openai_native.logger") as mock_logger:
+            # Must not raise TypeError: 'bool' object is not iterable
+            ev = self._run([item])
+            assert ev.data == ""  # unexpected content type silently skipped
+            mock_logger.warning.assert_called_once()
+            warning_msg = mock_logger.warning.call_args[0][0]
+            assert "bool" in warning_msg
+            assert "Unexpected" in warning_msg
+
+    def test_content_none_falls_through_to_output_text(self):
+        """content=None: falls through to output_text fallback."""
+        item = self._message_item(None)
+        ev = self._run([item], output_text="fallback text")
+        assert ev.data == "fallback text"
+
+
+# ---------------------------------------------------------------------------
 # validate_and_fix_alternation() tests
 # ---------------------------------------------------------------------------
 

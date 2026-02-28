@@ -632,10 +632,282 @@ Each client analysed in order. Each pass:
 
 ---
 
+## Phase 10 — Regex Audit: Replace Fragile Patterns with Robust Parsers
+
+**Background:** The codebase already contains a proven hand-written JSON subset parser
+(`_find_json_objects()` in `parser.py`) after regex was found insufficient for nested
+tool call structures. This phase applies the same principle across the remaining regex
+usage: identify instances where regex is doing work that a proper parser would do more
+reliably.
+
+---
+
+### 10.1 — Fix file modification claims detection in `validator.py`
+
+**Severity:** 🔴 High (false negatives in hallucination detection)
+**File:** `ppxai/engine/tools/validator.py:272-281`
+**Effort:** ~30 min
+
+Pattern `[^\s\`\"']+\.\w{1,5}` fails on:
+- Multi-dot filenames: `config.backup.json` → captures only `json`
+- Dot-only names: `.env`, `.gitignore` (no name part before the dot)
+- Long-ish extensions: `.backup`, `.min.js`
+
+These are all common in real tool results, so false negatives are frequent.
+
+**Fix:** Replace with two-pass extraction:
+1. Extract quoted/backtick-delimited filenames first (highest confidence)
+2. Fall back to action-verb proximity scan (detect word near "saved"/"created"/etc.)
+3. Validate candidates against filesystem if working_dir is available
+
+**Status:** ⬜ Pending
+
+---
+
+### 10.2 — Replace regex markdown link parsing with bracket-counting parser
+
+**Severity:** 🔴 High (silently drops valid links in rendered output)
+**File:** `ppxai/rendering/markdown_tables.py:54-90`
+**Effort:** ~45 min
+
+Patterns `([^\]]+)` and `([^)]+)` break on:
+- Link text with nested brackets: `[API [v2]](url)` → misparses entirely
+- URLs with parentheses: `[docs](https://example.com/func(v2))` → truncates URL
+- Escaped chars inside either component
+
+**Fix:** Replace both patterns with a character-level state machine (same approach as
+`_find_json_objects()` in `parser.py`): scan forward tracking bracket/paren depth,
+stop at the matching close character. This handles all valid markdown link syntax.
+
+**Status:** ⬜ Pending
+
+---
+
+### 10.3 — Simplify success-claim detection in `validator.py`
+
+**Severity:** 🟡 Medium (performance + false positives)
+**File:** `ppxai/engine/tools/validator.py:74-85`
+**Effort:** ~20 min
+
+The current 10-alternation regex `(created|written|saved|modified|updated|...)` is:
+- Slow on every validation call
+- Matches capability statements: "I can create files" (not a claim)
+- Misses natural variants: "file generation completed", "write operation succeeded"
+
+**Fix:** Replace regex alternation with keyword set + 50-char proximity window:
+```python
+SUCCESS_VERBS = {'created', 'written', 'saved', 'modified', 'updated', 'completed', 'generated', 'deleted'}
+CLAIM_SIGNALS = {"i've", "i have", "successfully", "has been", "was", "were"}
+# Claim = SUCCESS_VERB within 50 chars of a CLAIM_SIGNAL in lowercased text
+```
+Faster, tunable without regex knowledge, and separable from capability statements.
+
+**Status:** ⬜ Pending
+
+---
+
+### 10.4 — Use `_find_json_objects()` for tool JSON detection in `validator.py`
+
+**Severity:** 🟡 Medium (duplication — robust parser exists but isn't used here)
+**File:** `ppxai/engine/tools/validator.py:101-105`
+**Effort:** ~15 min
+
+The validator uses regex to detect tool call JSON in response text:
+```python
+re.search(r'\{[^{}]*"tool"[^{}]*\}', text)
+```
+This fails for any tool call with nested arguments (common). `_find_json_objects()` in
+`parser.py` already handles full nested JSON correctly.
+
+**Fix:** Import and call `_find_json_objects()` instead. The validator and parser are both
+in `ppxai/engine/tools/` so no circular dependency.
+
+**Status:** ⬜ Pending
+
+---
+
+### 10.5 — Tighten Rich markup stripping in `chat_view.py`
+
+**Severity:** 🟡 Medium (strips user content like `[1]` citation markers)
+**File:** `ppxai/tui/widgets/chat_view.py:14`
+**Effort:** ~20 min
+
+Pattern `[/?[^\]]*]` strips every `[...]` token including:
+- `[1]`, `[2]` — inline citation markers from Perplexity responses
+- `[DONE]` — visible to users if it leaks
+- Any bracketed user text
+
+**Fix:** Match only valid Rich tag syntax (tag names are identifiers, optionally with
+`/` prefix and `=value` suffix):
+```python
+re.compile(r'\[/?[a-zA-Z][a-zA-Z0-9_\- ]*(?:=[^\]]+)?\]')
+```
+Preserves `[1]`, `[2]`, `[DONE]` since they don't match identifier syntax.
+
+**Status:** ⬜ Pending
+
+---
+
+### 10.6 — Replace inline markdown formatting regex with linear pass
+
+**Severity:** 🟢 Low (edge cases only, main use cases work)
+**File:** `ppxai/rendering/markdown_tables.py:116-152`
+**Effort:** ~30 min
+
+The multi-alternation pattern for bold/italic/code formatting can't handle:
+- Overlapping spans: `**bold _and italic_**`
+- Adjacent same-type spans: `**a** **b**`
+- Escaped markers: `\*not italic\*`
+
+**Fix:** Single linear pass with explicit priority order: code spans first (highest
+priority, no nesting), then bold, then italic. Each consumes its markers so the
+others can't re-match.
+
+**Status:** ⬜ Pending
+
+---
+
+### Testing
+
+Each fix should include edge-case tests covering the failure patterns documented above.
+Key test cases:
+- `.env`, `config.backup.json`, `styles.min.css` for 10.1
+- `[API [v2]](url)`, `[docs](https://example.com/func(v2))` for 10.2
+- `"I can create files"` (should NOT match) for 10.3
+- Nested tool call JSON for 10.4
+
+---
+
 ### Testing gate between phases
 
 After 8.1–8.6 are done:
 ```bash
 uv run pytest tests/ -x -q   # must be 0 failures before client passes begin
 ```
+
+---
+
+## Phase 9 — Bug Fixes from Web Debug Log Review
+
+Items found by analysing `~/.ppxai/logs/server-debug.log` from a live web session.
+
+---
+
+### 9.1 — Fix `TypeError: 'bool' object is not iterable` in Codex/Responses API
+
+**Severity:** 🔴 Critical (complete chat failure for gpt-5.1-codex and gpt-5.1-codex-mini)
+**File:** `ppxai/engine/providers/openai_native.py:620`
+**Effort:** ~10 min
+
+`_non_stream_responses()` iterates `getattr(item, "content", [])` for Responses API
+message output items. When `item.content` exists but holds a bool `True` (seen on some
+Codex model variants), the fallback `[]` is never used and iterating a bool raises
+`TypeError: 'bool' object is not iterable`.
+
+```python
+# BEFORE (line 620):
+for part in getattr(item, "content", []):
+
+# AFTER:
+item_content = getattr(item, "content", None)
+if isinstance(item_content, list):
+    for part in item_content:
+        if getattr(part, "type", None) == "output_text":
+            content += getattr(part, "text", "")
+elif isinstance(item_content, str):
+    content += item_content
+```
+
+**Status:** ✅ Done — `isinstance` guard on `item_content`; 4 regression tests in `test_tool_messages.py::TestNonStreamResponsesContentExtraction`
+
+---
+
+### 9.2 — Add traceback logging to SSE event generator exception handler
+
+**Severity:** 🟡 Medium (diagnostic quality — errors surface as bare messages with no stack)
+**File:** `ppxai/server/http.py:452-453`
+**Effort:** ~5 min
+
+The SSE `except Exception as e:` handler only logs `str(e)`. Without the traceback
+the root cause of errors like the `datetime` NameError (now fixed) took hours to trace.
+
+```python
+# BEFORE:
+except Exception as e:
+    logger.error(f"Exception in SSE event generator: {e}")
+
+# AFTER:
+except Exception as e:
+    import traceback
+    logger.error(f"Exception in SSE event generator: {e}\n{traceback.format_exc()}")
+```
+
+Note: `import traceback` should move to module top (no-lazy-imports rule).
+
+**Status:** ⬜ Pending
+
+---
+
+### 9.3 — Fix lazy imports in `context.py`
+
+**Severity:** 🟡 Medium (violates no-lazy-imports rule — 8 inline imports inside methods)
+**File:** `ppxai/engine/context.py`
+**Effort:** ~20 min
+
+Lazy imports found:
+- `import subprocess` inside `inject_git_context()` (line ~494)
+- `import pyperclip` inside `inject_clipboard_context()` (line ~643)
+- `import httpx` inside `inject_url_context()` (line ~712)
+- `import re` inside `inject_url_context()` (line ~773)
+- `import trafilatura` inside `inject_url_context()` (line ~777)
+- `from ...config import get_max_injection_size` inside `_get_max_injection_size()` (line ~64)
+- Several `from .bootstrap import ...` inside instance methods
+
+**Fix:** Move all to module top. Guard optional deps (`pyperclip`, `trafilatura`, `httpx`)
+with try/except at module level and check for `None` at call sites.
+
+**Status:** ⬜ Pending
+
+---
+
+### 9.4 — Fix lazy imports in `session.py`
+
+**Severity:** 🟡 Medium (violates no-lazy-imports rule)
+**File:** `ppxai/engine/session.py:691-692`
+**Effort:** ~5 min
+
+`save_usage_to_persistent_storage()` contains:
+```python
+from datetime import datetime        # already imported at line 12 — duplicate
+from ..usage import save_session_usage  # lazy
+```
+
+`datetime` is already imported at module level (line 12) — the lazy import is redundant.
+`save_session_usage` should be imported at module top.
+
+**Status:** ⬜ Pending
+
+---
+
+### 9.5 — Validate message alternation before sending to provider
+
+**Severity:** 🟡 Medium (prevents recurring 400 errors from Perplexity and other strict providers)
+**File:** `ppxai/engine/chat.py`
+**Effort:** ~30 min
+
+Message alternation violations occur 6+ times in the log (400 from Perplexity `sonar`).
+The existing `validate_and_fix_alternation()` in session.py is called on *save* (after the
+error). It should also run *before* messages are sent to the provider at the start of each
+`chat_with_tools` iteration.
+
+```python
+# In chat_with_tools(), before: async for event in ctx.provider.chat(...)
+messages = ctx.session.get_messages()
+fixed = ctx.session.validate_and_fix_alternation()
+if fixed:
+    logger.info(f"Pre-flight alternation fix: removed {fixed} messages")
+    messages = ctx.session.get_messages()  # re-fetch after fix
+```
+
+**Status:** ⬜ Pending
 
