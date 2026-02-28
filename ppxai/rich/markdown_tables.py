@@ -17,6 +17,62 @@ from rich.console import Console, RenderableType
 from rich.text import Text
 
 
+def _extract_markdown_links(text: str) -> List[Tuple[int, int, str, str]]:
+    """Find all [text](url) links using bracket/paren depth counting.
+
+    Handles edge cases that defeat simple regex:
+    - Nested brackets in link text: [API [v2]](url)
+    - Parentheses in URLs:          [docs](https://example.com/func(v2))
+
+    Returns:
+        List of (start, end, link_text, url) tuples.
+        start/end are byte offsets into text (end is exclusive).
+    """
+    results: List[Tuple[int, int, str, str]] = []
+    i = 0
+    n = len(text)
+    while i < n:
+        if text[i] != '[':
+            i += 1
+            continue
+
+        # Scan for matching ']' counting bracket depth
+        depth = 1
+        j = i + 1
+        while j < n and depth > 0:
+            if text[j] == '[':
+                depth += 1
+            elif text[j] == ']':
+                depth -= 1
+            j += 1
+
+        if depth != 0 or j >= n or text[j] != '(':
+            i += 1
+            continue
+
+        # j points at '(' — scan for matching ')' counting paren depth
+        url_start = j + 1
+        depth = 1
+        k = url_start
+        while k < n and depth > 0:
+            if text[k] == '(':
+                depth += 1
+            elif text[k] == ')':
+                depth -= 1
+            k += 1
+
+        if depth != 0:
+            i = j
+            continue
+
+        link_text = text[i + 1:j - 1]   # content between [ and ]
+        url = text[url_start:k - 1]       # content between ( and )
+        results.append((i, k, link_text, url))
+        i = k
+
+    return results
+
+
 def convert_markdown_links_to_rich(content: str, working_dir: str = None) -> str:
     """
     Convert markdown links to Rich markup for clickable terminal links.
@@ -27,6 +83,10 @@ def convert_markdown_links_to_rich(content: str, working_dir: str = None) -> str
 
     For local file paths (relative or absolute), converts to file:// URIs
     so they're clickable in the terminal.
+
+    Uses bracket/paren depth counting (not regex) to correctly handle:
+    - Nested brackets in link text: [API [v2]](url)
+    - Parentheses in URLs:          [docs](https://en.wikipedia.org/wiki/Foo_(bar))
 
     Args:
         content: Markdown content with links like [Source](https://example.com)
@@ -51,55 +111,51 @@ def convert_markdown_links_to_rich(content: str, working_dir: str = None) -> str
     if working_dir is None:
         working_dir = os.getcwd()
 
-    # Pattern to match markdown links: [text](url)
-    # Match text that doesn't contain ] and url that doesn't contain )
-    link_pattern = r'\[([^\]]+)\]\(([^)]+)\)'
+    links = _extract_markdown_links(content)
+    if not links:
+        return content
 
-    def replace_link(match):
-        text = match.group(1)
-        url = match.group(2)
+    parts: List[str] = []
+    prev_end = 0
+    for start, end, link_text, url in links:
+        parts.append(content[prev_end:start])
 
-        # Check if it's a web URL (http/https) or already a file:// URI
         if url.startswith(('http://', 'https://', 'file://')):
             final_url = url
-            display_text = text
+            display_text = link_text
         else:
-            # It's a local file path - convert to file:// URI
-            # Handle relative paths (./file, ../file, file)
             if url.startswith('./') or url.startswith('../') or not url.startswith('/'):
-                # Relative path - resolve against working directory
-                abs_path = Path(working_dir) / url
-                abs_path = abs_path.resolve()
+                abs_path = (Path(working_dir) / url).resolve()
             else:
-                # Already absolute path
                 abs_path = Path(url)
-
-            # Convert to file:// URI for clicking
             final_url = f"file://{abs_path}"
-
-            # For display, use just the filename (not ./path or full path)
-            # Unless the link text is explicitly different from the path
-            if text == url or text.endswith(url) or url.endswith(text):
-                display_text = abs_path.name  # Just the filename
+            if link_text == url or link_text.endswith(url) or url.endswith(link_text):
+                display_text = abs_path.name
             else:
-                display_text = text  # Keep custom text
+                display_text = link_text
 
-        # Use bold cyan style for visibility + link for clickability
-        return f'[link={final_url}][bold cyan]{display_text}[/bold cyan][/link]'
+        parts.append(f'[link={final_url}][bold cyan]{display_text}[/bold cyan][/link]')
+        prev_end = end
 
-    return re.sub(link_pattern, replace_link, content)
+    parts.append(content[prev_end:])
+    return ''.join(parts)
 
 
 def parse_inline_markdown(text: str) -> Text:
     """
     Parse inline markdown elements in text and return Rich Text with styling.
 
-    Currently supports:
-    - Inline code: `code` -> cyan monospace on grey background
-    - Bold: **text** or __text__ -> bold style
-    - Italic: *text* or _text_ -> italic style
+    Supports:
+    - Inline code: `code`      → cyan monospace on grey background (highest priority)
+    - Bold:        **text**    → bold style
+    - Bold:        __text__    → bold style
+    - Italic:      *text*      → italic style
+    - Italic:      _text_      → italic style
 
-    Note: Standard markdown does not support underline. Use bold or italic instead.
+    Uses a single linear pass with explicit priority ordering so that:
+    - Code spans are never broken by bold/italic markers inside them
+    - Adjacent spans like **a** **b** are both correctly formatted
+    - Bold is recognised before italic (double marker beats single)
 
     Args:
         text: Text potentially containing inline markdown
@@ -109,45 +165,41 @@ def parse_inline_markdown(text: str) -> Text:
     """
     result = Text()
     pos = 0
+    n = len(text)
 
-    # Pattern to match inline code (backticks), bold, and italic
-    # Order matters: longer patterns first to avoid partial matches
-    # Use non-greedy matching (.+?) to handle nested or adjacent formatting
-    inline_pattern = r'(`[^`]+`)|(\*\*(.+?)\*\*)|(__(.+?)__)|(\*([^*]+?)\*)|(_([^_]+?)_)'
+    while pos < n:
+        c = text[pos]
 
-    for match in re.finditer(inline_pattern, text):
-        # Add text before match
-        if match.start() > pos:
-            result.append(text[pos:match.start()])
+        # 1. Code span: `code`  (highest priority — consumes until next backtick)
+        if c == '`':
+            end = text.find('`', pos + 1)
+            if end != -1:
+                result.append(text[pos + 1:end], style="bold cyan on grey23")
+                pos = end + 1
+                continue
 
-        matched_text = match.group(0)
+        # 2. Bold: **text** or __text__  (double marker — check before italic)
+        if c in ('*', '_') and pos + 1 < n and text[pos + 1] == c:
+            marker = c + c
+            end = text.find(marker, pos + 2)
+            if end != -1:
+                result.append(text[pos + 2:end], style="bold")
+                pos = end + 2
+                continue
 
-        if matched_text.startswith('`') and matched_text.endswith('`'):
-            # Inline code
-            code_text = matched_text[1:-1]  # Remove backticks
-            result.append(code_text, style="bold cyan on grey23")
-        elif matched_text.startswith('**'):
-            # Bold (double asterisk)
-            bold_text = matched_text[2:-2]
-            result.append(bold_text, style="bold")
-        elif matched_text.startswith('__'):
-            # Bold (double underscore)
-            bold_text = matched_text[2:-2]
-            result.append(bold_text, style="bold")
-        elif matched_text.startswith('*'):
-            # Italic (single asterisk)
-            italic_text = matched_text[1:-1]
-            result.append(italic_text, style="italic")
-        elif matched_text.startswith('_'):
-            # Italic (single underscore)
-            italic_text = matched_text[1:-1]
-            result.append(italic_text, style="italic")
+        # 3. Italic: *text* or _text_  (single marker not followed by same char)
+        if c in ('*', '_'):
+            end = text.find(c, pos + 1)
+            # Require the closing char NOT to be immediately followed by the same
+            # char (which would make it a bold opener, not an italic closer)
+            if end != -1 and (end + 1 >= n or text[end + 1] != c):
+                result.append(text[pos + 1:end], style="italic")
+                pos = end + 1
+                continue
 
-        pos = match.end()
-
-    # Add remaining text
-    if pos < len(text):
-        result.append(text[pos:])
+        # No formatting — literal character
+        result.append(c)
+        pos += 1
 
     return result
 
@@ -327,8 +379,7 @@ def render_markdown_with_tables(
         else:
             if block_content.strip():
                 # Check if content has any markdown links (web URLs or local files)
-                # Pattern: [text](url) - matches both http(s) URLs and local file paths
-                has_links = re.search(r'\[[^\]]+\]\([^)]+\)', block_content)
+                has_links = _extract_markdown_links(block_content)
 
                 if has_links:
                     # Convert markdown links to Rich clickable links, then render

@@ -10,8 +10,12 @@ from ppxai.tui.widgets.message_box import MessageBox
 
 
 def _strip_rich_markup(text: str) -> str:
-    """Remove Rich markup tags (e.g. [bold cyan], [/red]) leaving plain text."""
-    return re.sub(r'\[/?[^\]]*\]', '', text)
+    """Remove Rich markup tags (e.g. [bold cyan], [/red]) leaving plain text.
+
+    Matches only valid Rich tag syntax (identifier-based names), so citation
+    markers like [1], [2] and tokens like [DONE] are preserved.
+    """
+    return re.sub(r'\[/?[a-zA-Z][a-zA-Z0-9_\- ]*(?:=[^\]]+)?\]', '', text)
 
 
 class ChatView(VerticalScroll):

@@ -636,3 +636,74 @@ class TestWrongFileClaimDetection:
 
         claim_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_WITHOUT_ACTION]
         assert len(claim_warnings) == 0
+
+
+class TestFileClaimsEdgeCases:
+    """Edge-case tests for the improved filename detection (TODO 10.1)."""
+
+    def test_dotfile_detected(self):
+        """Model claims to have saved .env without writing it."""
+        validator = ResponseValidator()
+        warnings = validator.validate_response("I've saved .env with your API keys.")
+        claim_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_WITHOUT_ACTION]
+        assert len(claim_warnings) >= 1
+        assert ".env" in claim_warnings[0].message
+
+    def test_multi_dot_filename_detected(self):
+        """config.backup.json (multi-dot) is recognised as a filename."""
+        validator = ResponseValidator()
+        warnings = validator.validate_response("I created config.backup.json with the backup data.")
+        claim_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_WITHOUT_ACTION]
+        assert len(claim_warnings) >= 1
+
+    def test_long_extension_detected(self):
+        """styles.min.css (double extension) is recognised as a filename."""
+        validator = ResponseValidator()
+        warnings = validator.validate_response("I've saved styles.min.css with the compiled styles.")
+        claim_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_WITHOUT_ACTION]
+        assert len(claim_warnings) >= 1
+
+
+class TestToolJsonEdgeCases:
+    """Edge-case tests for nested tool JSON detection (TODO 10.4)."""
+
+    def test_nested_json_in_tool_call_detected(self):
+        """Tool call JSON with nested arguments (like apply_patch diffs) is detected."""
+        response = (
+            "I'll apply the patch now.\n"
+            "```json\n"
+            '{"tool": "apply_patch", "arguments": {"file_path": "app.py", "patch": "--- a\\n+++ b\\n@@ -1 +1 @@\\n-old\\n+new"}}\n'
+            "```"
+        )
+        validator = ResponseValidator()
+        warnings = validator.validate_response(response)
+        json_warnings = [w for w in warnings if w.result == ValidationResult.TOOL_JSON_IN_TEXT]
+        assert len(json_warnings) >= 1
+        assert "apply_patch" in json_warnings[0].message
+
+    def test_deeply_nested_json_detected(self):
+        """Nested braces inside string values don't confuse the parser."""
+        response = '{"tool": "write_file", "arguments": {"content": "func() { return {key: val}; }"}}'
+        validator = ResponseValidator()
+        warnings = validator.validate_response(response)
+        json_warnings = [w for w in warnings if w.result == ValidationResult.TOOL_JSON_IN_TEXT]
+        assert len(json_warnings) >= 1
+
+
+class TestSuccessClaimFalsePositives:
+    """False-positive tests for the keyword-set success-claim detection (TODO 10.3)."""
+
+    def test_capability_statement_not_flagged(self):
+        """'I can create files' is a capability statement, not a success claim."""
+        validator = ResponseValidator()
+        validator.record_tool_call(
+            tool_name="write_file",
+            arguments={"file_path": "test.txt"},
+            result="Error: Disk full",
+            success=False,
+            iteration=1
+        )
+        response = "I can create files for you if you provide the content."
+        warnings = validator.validate_response(response)
+        contradiction_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_CONTRADICTS_RESULT]
+        assert len(contradiction_warnings) == 0, "Capability statement incorrectly flagged"

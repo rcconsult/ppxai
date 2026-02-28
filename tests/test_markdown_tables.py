@@ -552,3 +552,109 @@ class TestEmojiConversion:
         assert "Success" in output
         assert "Warning" in output
         assert "Error" in output
+
+
+from ppxai.rich.markdown_tables import (
+    _extract_markdown_links,
+    convert_markdown_links_to_rich,
+    parse_inline_markdown,
+)
+
+
+class TestMarkdownLinkExtraction:
+    """Edge-case tests for the bracket-counting link parser (TODO 10.2)."""
+
+    def test_simple_link(self):
+        links = _extract_markdown_links("See [Google](https://google.com) today.")
+        assert len(links) == 1
+        start, end, text, url = links[0]
+        assert text == "Google"
+        assert url == "https://google.com"
+
+    def test_nested_brackets_in_text(self):
+        """[API [v2]](url) — brackets inside link text."""
+        links = _extract_markdown_links("[API [v2]](https://example.com)")
+        assert len(links) == 1
+        _, _, text, url = links[0]
+        assert text == "API [v2]"
+        assert url == "https://example.com"
+
+    def test_parens_in_url(self):
+        """[docs](https://example.com/func(v2)) — parens inside URL."""
+        links = _extract_markdown_links("[docs](https://example.com/func(v2))")
+        assert len(links) == 1
+        _, _, text, url = links[0]
+        assert text == "docs"
+        assert url == "https://example.com/func(v2)"
+
+    def test_multiple_links(self):
+        links = _extract_markdown_links("[a](url1) and [b](url2)")
+        assert len(links) == 2
+        assert links[0][2] == "a"
+        assert links[1][2] == "b"
+
+    def test_no_links(self):
+        assert _extract_markdown_links("plain text [not a link]") == []
+
+    def test_citation_marker_not_a_link(self):
+        """[1] without (url) is not a link."""
+        assert _extract_markdown_links("See reference [1] for details.") == []
+
+    def test_convert_with_paren_url(self):
+        """convert_markdown_links_to_rich handles URL with parens."""
+        result = convert_markdown_links_to_rich(
+            "[Wikipedia](https://en.wikipedia.org/wiki/Foo_(bar))"
+        )
+        assert "Foo_(bar)" in result
+        assert "[link=" in result
+
+
+class TestInlineMarkdownLinearPass:
+    """Edge-case tests for the linear-pass inline formatter (TODO 10.6)."""
+
+    def _plain(self, text: str) -> str:
+        """Extract plain string from Rich Text."""
+        return parse_inline_markdown(text).plain
+
+    def _spans(self, text: str):
+        """Return list of (start, end, style) from Rich Text spans."""
+        rt = parse_inline_markdown(text)
+        return [(s.start, s.end, s.style) for s in rt._spans]
+
+    def test_code_span(self):
+        rt = parse_inline_markdown("Use `print()` here.")
+        assert rt.plain == "Use print() here."
+        spans = [(s.start, s.end, str(s.style)) for s in rt._spans]
+        assert any("cyan" in style for _, _, style in spans)
+
+    def test_bold_double_asterisk(self):
+        rt = parse_inline_markdown("**bold** text")
+        assert rt.plain == "bold text"
+        assert any("bold" in str(s.style) for s in rt._spans)
+
+    def test_bold_double_underscore(self):
+        rt = parse_inline_markdown("__bold__ text")
+        assert rt.plain == "bold text"
+
+    def test_italic_single_asterisk(self):
+        rt = parse_inline_markdown("*italic* text")
+        assert rt.plain == "italic text"
+        assert any("italic" in str(s.style) for s in rt._spans)
+
+    def test_adjacent_bold_spans(self):
+        """**a** **b** — both get bold style."""
+        rt = parse_inline_markdown("**a** **b**")
+        assert rt.plain == "a b"
+        bold_spans = [s for s in rt._spans if "bold" in str(s.style)]
+        assert len(bold_spans) == 2
+
+    def test_code_wins_over_italic(self):
+        """Backtick span takes priority: `*not italic*` stays as code."""
+        rt = parse_inline_markdown("`*not italic*`")
+        assert rt.plain == "*not italic*"
+        assert any("cyan" in str(s.style) for s in rt._spans)
+
+    def test_plain_text_unchanged(self):
+        rt = parse_inline_markdown("no formatting here")
+        assert rt.plain == "no formatting here"
+        assert rt._spans == []

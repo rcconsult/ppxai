@@ -16,6 +16,7 @@ from enum import Enum
 from typing import Optional, List, Dict, Any, Set
 
 from ...common.logger import get_logger
+from .parser import _find_json_objects
 
 logger = get_logger("validator")
 
@@ -70,19 +71,22 @@ class ResponseValidator:
         validator.reset()
     """
 
-    # Patterns indicating the model claims to have performed an action
-    SUCCESS_CLAIM_PATTERNS = [
-        r"I'?ve (created|written|saved|opened|generated|made|updated|fixed|modified)",
-        r"I have (created|written|saved|opened|generated|made|updated|fixed|modified)",
-        r"I (created|wrote|saved|opened|generated|made|updated|fixed|modified)",
-        r"The file[s]? (?:has|have) been (created|written|saved|opened|generated)",
-        r"The file[s]? (?:is|are) now (created|open|available|ready|saved)",
-        r"Successfully (created|written|saved|opened|generated|updated|fixed)",
-        r"(?:is|are) now (?:open|available|ready|created|saved) in (?:the )?viewer",
-        r"You can (?:now )?(?:see|view|open|scroll through|find)",
-        r"has been (?:fully )?(?:created|written|saved|generated|updated|fixed)",
-        r"(?:changes|content|data) (?:has|have) been saved",
-    ]
+    # Keyword-set approach for success-claim detection (replaces regex alternation).
+    # Claim = SUCCESS_VERB found within PROXIMITY_WINDOW chars of a CLAIM_SIGNAL.
+    # This avoids false positives like "I can create files" (present tense capability).
+    SUCCESS_VERBS = frozenset({
+        'created', 'written', 'saved', 'modified', 'updated', 'completed',
+        'generated', 'deleted', 'wrote', 'made', 'fixed', 'opened', 'applied',
+        'see', 'view',  # for "you can now see/view" display claims
+    })
+    # CLAIM_SIGNALS: phrases that introduce a past-action claim.
+    # "i " catches "I created/wrote/saved" while NOT matching "I can create"
+    # because SUCCESS_VERBS only contains past-tense forms.
+    CLAIM_SIGNALS = frozenset({
+        "i've", "i have", "i ", "successfully", "has been", "have been",
+        "was ", "were ", "is now", "are now", "you can now", "you can see",
+    })
+    CLAIM_PROXIMITY = 60  # chars to scan around each signal
 
     # Tool results that indicate failure
     FAILURE_PATTERNS = [
@@ -97,12 +101,7 @@ class ResponseValidator:
         r"Unable to",
     ]
 
-    # Patterns for tool JSON appearing in text (should have been a tool call)
-    TOOL_JSON_PATTERNS = [
-        r'```json\s*\n?\s*\{\s*"tool"\s*:\s*"(\w+)"',
-        r'\{\s*"tool"\s*:\s*"(\w+)"\s*,\s*"arguments"\s*:',
-        r'```\s*\n?\s*\{\s*"tool"\s*:\s*"(\w+)"',
-    ]
+    # (Tool JSON detection now uses _find_json_objects from parser.py — see _check_tool_json_in_text)
 
     # Fabricated output patterns (looks like tool output but no tool was called)
     FABRICATED_OUTPUT_PATTERNS = [
@@ -225,11 +224,14 @@ class ResponseValidator:
         return warnings
 
     def _check_tool_json_in_text(self, response: str) -> Optional[ValidationWarning]:
-        """Check if response contains tool call JSON that should have been a tool call."""
-        for pattern in self.TOOL_JSON_PATTERNS:
-            match = re.search(pattern, response, re.IGNORECASE | re.MULTILINE)
-            if match:
-                tool_name = match.group(1)
+        """Check if response contains tool call JSON that should have been a tool call.
+
+        Uses the brace-counting JSON parser from parser.py to correctly handle nested
+        arguments (e.g. apply_patch diffs with {}) that would defeat a regex approach.
+        """
+        for obj in _find_json_objects(response):
+            if isinstance(obj.get("tool"), str):
+                tool_name = obj["tool"]
                 return ValidationWarning(
                     result=ValidationResult.TOOL_JSON_IN_TEXT,
                     severity="warning",
@@ -239,13 +241,28 @@ class ResponseValidator:
                 )
         return None
 
+    def _claims_success(self, text: str) -> bool:
+        """Return True if text contains a success claim.
+
+        Uses keyword-set + proximity window rather than regex alternation to
+        avoid false positives like "I can create files" (capability statements).
+        """
+        lower = text.lower()
+        for signal in self.CLAIM_SIGNALS:
+            pos = lower.find(signal)
+            while pos != -1:
+                window_start = max(0, pos - self.CLAIM_PROXIMITY)
+                window_end = min(len(lower), pos + len(signal) + self.CLAIM_PROXIMITY)
+                window = lower[window_start:window_end]
+                if any(verb in window for verb in self.SUCCESS_VERBS):
+                    return True
+                pos = lower.find(signal, pos + 1)
+        return False
+
     def _check_success_after_failure(self, response: str) -> Optional[ValidationWarning]:
         """Check if model claims success but a tool failed."""
         # Check if response claims success
-        claims_success = any(
-            re.search(pattern, response, re.IGNORECASE)
-            for pattern in self.SUCCESS_CLAIM_PATTERNS
-        )
+        claims_success = self._claims_success(response)
 
         if not claims_success:
             return None
@@ -266,18 +283,25 @@ class ResponseValidator:
 
         return None
 
+    # Filename pattern that handles:
+    #   - dotfiles:           .env, .gitignore
+    #   - multi-dot names:    config.backup.json, styles.min.css
+    #   - long extensions:    README.backup (>5 chars)
+    # Pattern: optional leading dot, name chars, then one-or-more .ext segments.
+    _FILENAME_PAT = r'(?:\.[\w\-]+|[^\s`"\']*\w(?:\.\w+)+)'
+
     def _check_file_claims_without_tools(self, response: str) -> Optional[ValidationWarning]:
         """Check if model claims to have created/written/patched a file without using appropriate tools."""
-        # Pattern to detect file creation or modification claims
+        fp = self._FILENAME_PAT
         file_modification_patterns = [
             # Creation claims: "created styles.css", "written the file `app.js`"
-            r"(?:created|written|saved|generated)\s+(?:the\s+)?(?:file\s+)?[`\"']?([^\s`\"']+\.\w{1,5})[`\"']?",
-            r"[`\"']([^\s`\"']+\.\w{1,5})[`\"']?\s+(?:has been|is now|was)\s+(?:created|written|saved)",
-            r"saved (?:to|as|in) [`\"']?([^\s`\"']+\.\w{1,5})[`\"']?",
+            rf"(?:created|written|saved|generated)\s+(?:the\s+)?(?:file\s+)?[`\"']?({fp})[`\"']?",
+            rf"[`\"']({fp})[`\"']?\s+(?:has been|is now|was)\s+(?:created|written|saved)",
+            rf"saved (?:to|as|in) [`\"']?({fp})[`\"']?",
             # Patch/update claims: "Applied patches to index.html", "updated `script.js`"
-            r"(?:applied|patched|updated|modified|changed|fixed)\s+(?:patches?\s+to\s+)?(?:both\s+)?[`\"']?([^\s`\"',]+\.\w{1,5})[`\"']?",
-            r"I (?:have |'ve )?(?:applied|patched|updated|modified|changed|fixed)\s+[`\"']?([^\s`\"']+\.\w{1,5})[`\"']?",
-            r"[`\"']([^\s`\"']+\.\w{1,5})[`\"']?\s+(?:has been|is now|was)\s+(?:updated|patched|modified|fixed|changed)",
+            rf"(?:applied|patched|updated|modified|changed|fixed)\s+(?:patches?\s+to\s+)?(?:both\s+)?[`\"']?({fp})[`\"']?",
+            rf"I (?:have |'ve )?(?:applied|patched|updated|modified|changed|fixed)\s+[`\"']?({fp})[`\"']?",
+            rf"[`\"']({fp})[`\"']?\s+(?:has been|is now|was)\s+(?:updated|patched|modified|fixed|changed)",
         ]
 
         for pattern in file_modification_patterns:
