@@ -73,7 +73,7 @@ class PPXAIDEApp(App):
     CSS_PATH = ["themes/layout.tcss", "themes/dialog.tcss"]
 
     BINDINGS = [
-        Binding("ctrl+enter", "", "Send", show=True, priority=True),  # Display Ctrl+Enter (works in Ghostty/Kitty/WezTerm) - handled by ChatTextArea.on_key()
+        Binding("ctrl+enter", "", "Send", show=True),  # Display only — actual handling in ChatTextArea.on_key() and FileTree.action_edit()
         Binding("ctrl+c", "quit", "Quit", show=True),
         Binding("ctrl+b", "toggle_file_tree", "Files", show=True),
         Binding("ctrl+l", "clear", "Clear", show=True),

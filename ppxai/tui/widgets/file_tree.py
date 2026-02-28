@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 from textual.binding import Binding
+from textual.events import Click
 from textual.message import Message
 from textual.widgets import DirectoryTree
 
@@ -122,3 +123,11 @@ class FileTree(DirectoryTree):
             self.app.query_one("#input-box").focus()
         except Exception:
             pass
+
+    def on_click(self, event: Click) -> None:
+        """Ctrl+Click opens the file for editing (same as Ctrl+Enter)."""
+        if event.ctrl:
+            path = self._get_cursor_file_path()
+            if path:
+                event.stop()
+                self.post_message(self.FileEdit(path))
