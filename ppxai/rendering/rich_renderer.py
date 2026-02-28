@@ -18,6 +18,7 @@ from rich.tree import Tree
 from rich.syntax import Syntax
 from rich.panel import Panel
 from rich.markdown import Markdown
+from rich.prompt import Prompt
 
 from .base import Renderer
 from ..preview_server import PreviewServer
@@ -374,30 +375,52 @@ def render_diff(result: DiffResult) -> None:
 
 @RichRenderer.register(ConsentResult)
 def render_consent(result: ConsentResult) -> None:
-    """Render consent request (interactive prompt)."""
-    console.print(f"[bold yellow]{result.message}[/bold yellow]")
-    console.print(f"{result.question}")
+    """Render consent request as interactive numbered-choice prompt."""
+    console.print(f"\n[bold yellow]{result.message}[/bold yellow]")
+    if result.question:
+        console.print(result.question)
 
     if result.context:
-        console.print(f"[dim]Context: {result.context}[/dim]")
+        for key, value in result.context.items():
+            console.print(f"  [dim]{key}:[/dim] {value}")
 
-    # TODO: Implement actual interactive prompt
-    # For now, just show the options
-    console.print(f"Options: {', '.join(result.options)}")
-    console.print(f"[dim](Interactive consent not yet implemented in Phase 1)[/dim]")
+    # Present numbered choices so multi-word options (e.g. "Always Allow") work cleanly
+    for i, option in enumerate(result.options, 1):
+        marker = " [dim](default)[/dim]" if option == result.default else ""
+        console.print(f"  [cyan]{i}[/cyan]. {option}{marker}")
+
+    choices = [str(i) for i in range(1, len(result.options) + 1)]
+    default_idx = str(result.options.index(result.default) + 1) if result.default in result.options else choices[0]
+
+    choice = Prompt.ask(
+        "\n[bold]Choose[/bold]",
+        choices=choices,
+        default=default_idx,
+        console=console,
+    )
+    result.user_response = result.options[int(choice) - 1]
 
 
 @RichRenderer.register(PromptResult)
 def render_prompt(result: PromptResult) -> None:
-    """Render text input prompt (interactive)."""
-    console.print(f"[bold]{result.message}[/bold]")
-    console.print(result.prompt)
+    """Render text input request as interactive console prompt."""
+    import re
 
+    console.print(f"\n[bold]{result.message}[/bold]")
+
+    prompt_text = result.prompt or result.message
     if result.placeholder:
-        console.print(f"[dim]Example: {result.placeholder}[/dim]")
+        prompt_text = f"{prompt_text} [dim](e.g. {result.placeholder})[/dim]"
 
-    # TODO: Implement actual input prompt
-    console.print(f"[dim](Interactive prompt not yet implemented in Phase 1)[/dim]")
+    while True:
+        value = Prompt.ask(prompt_text, default=result.default or "", console=console)
+        if result.validation and value:
+            if not re.fullmatch(result.validation, value):
+                console.print(f"[red]Invalid input — must match: {result.validation}[/red]")
+                continue
+        break
+
+    result.user_input = value
 
 
 # ============================================================================
