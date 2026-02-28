@@ -15,6 +15,12 @@ Version: v1.16.1-dev
 from datetime import datetime
 from typing import AsyncIterator, Callable, Optional, Any, Dict
 from ppxai.engine.types import Event, EventType
+from ppxai.rich.markdown_tables import render_markdown_with_tables
+from ppxai.rich.themes import get_theme, DEFAULT_THEME
+from ppxai.rich.ui_components import render_message
+from ppxai.config import get_tui_theme
+from ppxai.commands.factory import CommandFactory
+from ppxai.rendering.rich_renderer import RichRenderer
 
 
 class EventHandler:
@@ -213,24 +219,17 @@ class TUIEventHandler(EventHandler):
             emoji_mode: Whether to show original emojis (True) or convert to text symbols (False)
             engine_client: Engine client instance (for DISPLAY_FILE event handler)
         """
-        from ppxai.rich.markdown_tables import render_markdown_with_tables
-        from ppxai.rich.themes import get_theme, DEFAULT_THEME
-        from ppxai.config import get_tui_theme
-
         self.console = console
         self.logger = logger
         self.verbose = verbose
         self.emoji_mode = emoji_mode  # emoji rendering mode
         self.engine_client = engine_client  # for /show command in DISPLAY_FILE handler
-        self._render_markdown = render_markdown_with_tables
 
         # Get theme (from arg, config, or default)
         if theme_name:
             self.theme = get_theme(theme_name)
             self.theme_name = theme_name
         else:
-            # Use Rich CLI default theme (not TUI theme which has different theme names)
-            from ppxai.rich.themes import DEFAULT_THEME
             self.theme_name = DEFAULT_THEME
             self.theme = get_theme(self.theme_name)
 
@@ -313,9 +312,6 @@ class TUIEventHandler(EventHandler):
             filepath = event.data.get("filepath") if isinstance(event.data, dict) else None
             if filepath:
                 # Execute /show command via command handler
-                from ppxai.commands.factory import CommandFactory
-                from ppxai.rendering.rich_renderer import RichRenderer
-
                 spec = CommandFactory.get('show')
                 if spec:
                     try:
@@ -396,9 +392,6 @@ class TUIEventHandler(EventHandler):
 
     def _on_stream_end(self, response: str):
         """Handle stream end for TUI with themed panel."""
-        from datetime import datetime
-        from ppxai.rich.ui_components import render_message
-
         # Clear thinking indicator if still showing (v1.15.0)
         if self._thinking_shown:
             self.console.print(" " * 20, end="\r")

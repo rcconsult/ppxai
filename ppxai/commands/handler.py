@@ -21,7 +21,6 @@ from prompt_toolkit.validation import Validator, ValidationError
 
 from ..common.consent import normalize_consent_response
 from ..config import (
-    CODING_MODEL,
     PROVIDERS,
     find_config_file,
     get_api_key,
@@ -35,7 +34,6 @@ from ..config import (
     set_tui_config,
 )
 from ..engine import EngineClient
-from ..engine.tools.builtin import web_premium
 from ..engine.types import EventType
 from ..prompts import CODING_PROMPTS
 from ..rendering.rich_renderer import RichRenderer
@@ -165,8 +163,6 @@ async def tui_shell_consent_handler(command: str, working_dir: str, risk_level: 
     Returns:
         tuple: (approved: bool, response: str) - response is normalized to ConsentResponse enum
     """
-    from ppxai.common.consent import normalize_consent_response
-
     # Determine risk color
     risk_color = {
         ShellRiskLevel.NEVER: "red",

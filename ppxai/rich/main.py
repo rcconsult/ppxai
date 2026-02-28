@@ -731,12 +731,6 @@ def main():
                         engine_client=handler.engine_client
                     )
 
-                    # Check for pending consent requests before streaming
-                    while handler.engine_client._consent_event_queue:
-                        consent_event = handler.engine_client._consent_event_queue.pop(0)
-                        # Consent is handled inline by engine during tool execution
-                        pass
-
                     # Process events using shared handler
                     # Pass user_input directly - EngineClient.chat() handles context injection
                     async for event in handler.engine_client.chat(user_input, stream=True):
@@ -747,12 +741,6 @@ def main():
                     return event_handler.get_response()
 
                 response = asyncio.run(stream_engine_response())
-
-            # EngineClient is REQUIRED - no fallback
-            if not handler.engine_client:
-                console.print("[red]Error: EngineClient not available. This is a critical error.[/red]")
-                console.print("[yellow]Please report this issue: https://github.com/rcconsult/ppxai/issues[/yellow]")
-                continue
 
             # Update session metadata (v1.12.0: use engine session as source of truth)
             if response and handler.engine_client:
