@@ -94,30 +94,26 @@ def handle_load(context: CommandContext, args: str) -> CommandResult:
         )
 
     try:
-        if context.engine_client.session.load(args.strip()):
-            # Update model from session metadata
-            loaded_model = context.engine_client.session.metadata.get("model")
-            if loaded_model:
-                context.set_model(loaded_model)
-                context.engine_client.set_model(loaded_model, reset_context=False)
-
-            # Return special result with loaded messages
-            return ConfirmationResult(
-                status=ResultStatus.SUCCESS,
-                message=f"Session loaded: {context.engine_client.session.session_name}",
-                details={
-                    "session_name": context.engine_client.session.session_name,
-                    "message_count": len(context.engine_client.session.messages),
-                    "messages": context.engine_client.session.messages,  # Pass messages for TUI rendering
-                    "action": "load_session"  # Signal to TUI to render messages
-                }
-            )
-        else:
+        restore_result = context.engine_client.restore_session(args.strip())
+        if not restore_result["success"]:
             return ErrorResult(
                 status=ResultStatus.ERROR,
-                message=f"Session not found: {args.strip()}",
+                message=restore_result.get("error", f"Session not found: {args.strip()}"),
                 suggestions=["Use /sessions to see available sessions"]
             )
+
+        tools_enabled = restore_result["tools_enabled"]
+        return ConfirmationResult(
+            status=ResultStatus.SUCCESS,
+            message=f"Session loaded: {context.engine_client.session.session_name}",
+            details={
+                "session_name": context.engine_client.session.session_name,
+                "message_count": len(context.engine_client.session.messages),
+                "messages": context.engine_client.session.messages,
+                "action": "load_session",
+                "tools_enabled": tools_enabled,
+            }
+        )
     except Exception as e:
         return ErrorResult(
             status=ResultStatus.ERROR,
@@ -127,15 +123,20 @@ def handle_load(context: CommandContext, args: str) -> CommandResult:
 
 
 def handle_sessions(context: CommandContext, args: str) -> CommandResult:
-    """Handle /sessions command - lists saved sessions.
+    """Handle /sessions command - lists saved sessions, or loads one with 'load <name>'.
 
     Args:
         context: Command context providing access to engine client
-        args: Command arguments (unused)
+        args: Optional subcommand, e.g. 'load <session_name>'
 
     Returns:
-        TableResult with session list, or NotificationResult if no sessions
+        TableResult with session list, ConfirmationResult on load, or ErrorResult
     """
+    # Support '/sessions load <name>' as alias for '/load <name>'
+    if args.strip().startswith("load "):
+        session_name = args.strip()[len("load "):].strip()
+        return handle_load(context, session_name)
+
     sessions = context.engine_client.session.list_sessions()
 
     if not sessions:

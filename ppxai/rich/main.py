@@ -571,53 +571,23 @@ def restore_session_to_handler(handler: CommandHandler, session_state: dict) -> 
     if not session_name:
         return False
 
-    # Reload config from disk to pick up any external changes since last run
-    handler.engine_client.reload_config()
-
-    # Load the session
-    if not handler.engine_client.session.load_with_extras(session_name):
+    result = handler.engine_client.restore_session(session_name)
+    if not result["success"]:
         console.print(f"[red]Failed to load session: {session_name}[/red]")
         return False
 
-    # Restore provider/model if available
-    stored_provider = session_state.get("provider")
-    stored_model = session_state.get("model")
+    handler.provider = result["provider"] or handler.provider
+    handler.current_model = result["model"] or handler.current_model
 
-    if stored_provider and stored_provider in PROVIDERS:
-        try:
-            handler.engine_client.set_provider(stored_provider)
-            handler.provider = stored_provider
-        except Exception as e:
-            logger.debug(f"Failed to restore provider '{stored_provider}': {e}")
-
-    if stored_model:
-        # Use strict mode to validate model exists before restoring
-        if handler.engine_client.set_model(stored_model, strict=True, reset_context=False):
-            handler.current_model = stored_model
-        else:
-            # Model not available - use provider's default model
-            default_model = get_default_model(handler.engine_client.provider_name) if handler.engine_client.provider else None
-            if default_model:
-                handler.engine_client.set_model(default_model, reset_context=False)
-                handler.current_model = default_model
-                console.print(f"[yellow]⚠ Model '{stored_model}' not available, using default: {default_model}[/yellow]")
-
-    # Restore working directory - prefer session file over state file
-    # Session file is more authoritative (updated on every save)
-    working_dir = handler.engine_client.session.working_dir or session_state.get("working_dir")
+    # Restore working directory
+    working_dir = result["working_dir"]
     if working_dir and os.path.isdir(working_dir):
         try:
             os.chdir(working_dir)
-            handler.engine_client.set_working_dir(working_dir)
         except Exception:
             pass
 
-    # Restore tools state - prefer session file over state file
-    tools_enabled = handler.engine_client.session.tools_enabled or session_state.get("tools_enabled", False)
-    if tools_enabled:
-        handler.engine_client.enable_tools()
-
-    console.print(f"[green]✓ Session restored:[/green] {session_name} ({len(handler.engine_client.session.messages)} messages)")
+    console.print(f"[green]✓ Session restored:[/green] {session_name} ({result['message_count']} messages)")
     return True
 
 

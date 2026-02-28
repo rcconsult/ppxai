@@ -82,6 +82,7 @@ class SessionManager:
         self.working_dir: str = os.getcwd()  # Working directory for this session
         self.tools_enabled: bool = False  # Whether tools were enabled
         self._dirty: bool = False  # True if session has unsaved changes
+        self._was_dirty: bool = False  # True if save_dirty() was ever called this session
 
     def add_message(self, message: Message):
         """Add a message to the conversation history.
@@ -531,6 +532,13 @@ class SessionManager:
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(session_data, f, indent=2)
 
+        # Only update the state pointer when this session has actual messages.
+        # An empty-session save (e.g. /save right after startup) must not clobber
+        # the pointer to the previous meaningful session so it can still be restored.
+        if self.messages:
+            self._update_state_file(dirty=False)
+            self._dirty = False
+
         return self.session_name
 
     def load(self, name: str) -> bool:
@@ -568,7 +576,7 @@ class SessionManager:
                 estimated_cost=usage_data.get("estimated_cost", 0.0)
             )
 
-            # Load persistence fields (same as load_with_extras)
+            # Load persistence fields
             self.command_history = data.get("command_history", [])
             self.working_dir = data.get("working_dir", os.getcwd())
             self.tools_enabled = data.get("tools_enabled", False)
@@ -761,6 +769,7 @@ class SessionManager:
         self._update_state_file(dirty=True)
 
         self._dirty = True
+        self._was_dirty = True
         return self.session_name
 
     def mark_clean(self):
@@ -768,9 +777,13 @@ class SessionManager:
 
         Called when the application exits gracefully to indicate
         the session was properly saved.
+        Updates the state file only when this session has messages OR was
+        previously marked dirty — otherwise the previous meaningful session's
+        pointer is preserved.
         """
-        self._update_state_file(dirty=False)
         self._dirty = False
+        if self.messages or self._was_dirty:
+            self._update_state_file(dirty=False)
 
     def _save_with_extras(self) -> str:
         """Save session with command history and working directory.
@@ -857,54 +870,3 @@ class SessionManager:
         if SESSION_STATE_FILE.exists():
             SESSION_STATE_FILE.unlink()
 
-    def load_with_extras(self, name: str) -> bool:
-        """Load a saved session including command history and working directory.
-
-        Args:
-            name: Session name to load
-
-        Returns:
-            True if loaded successfully
-
-        v1.14.1: Validates and fixes message alternation after loading.
-        """
-        filepath = self.sessions_dir / f"{name}.json"
-
-        if not filepath.exists():
-            return False
-
-        try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-
-            self.session_name = data.get("session_name", name)
-            self.metadata = data.get("metadata", {})
-            self.messages = [
-                self._deserialize_message(m)
-                for m in data.get("messages", [])
-            ]
-
-            usage_data = data.get("usage", {})
-            self.usage = UsageStats(
-                total_tokens=usage_data.get("total_tokens", 0),
-                prompt_tokens=usage_data.get("prompt_tokens", 0),
-                completion_tokens=usage_data.get("completion_tokens", 0),
-                estimated_cost=usage_data.get("estimated_cost", 0.0)
-            )
-
-            # Load new fields
-            self.command_history = data.get("command_history", [])
-            self.working_dir = data.get("working_dir", os.getcwd())
-            self.tools_enabled = data.get("tools_enabled", False)
-
-            # Validate and fix alternation issues after loading (v1.14.1)
-            fixed_count = self.validate_and_fix_alternation()
-            if fixed_count > 0:
-                logger.warning(
-                    f"Loaded session '{name}' had {fixed_count} message alternation issues - auto-fixed"
-                )
-
-            return True
-
-        except Exception:
-            return False

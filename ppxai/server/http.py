@@ -1433,56 +1433,18 @@ async def load_session(
     """
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    # Reload config from disk to pick up any external changes (v1.15.3)
-    engine.reload_config()
-
-    success = engine.session.load(name)
-    if not success:
-        raise HTTPException(status_code=404, detail=f"Session not found: {name}")
-
-    # Apply restored session state to engine
-    # Session.load() now loads working_dir and tools_enabled
-
-    # Restore provider/model from session metadata (v1.15.3)
-    # Matches TUI (tui/app.py:644-677) and Rich (rich/main.py:583-603)
-    from ppxai.config import PROVIDERS, get_default_model
-    stored_provider = engine.session.metadata.get("provider")
-    stored_model = engine.session.metadata.get("model")
-
-    if stored_provider and stored_provider in PROVIDERS:
-        try:
-            engine.set_provider(stored_provider)
-            logger.info(f"Session restore - provider: {stored_provider}")
-        except Exception as e:
-            logger.debug(f"Failed to restore provider '{stored_provider}': {e}")
-
-    if stored_model:
-        # Use strict mode to validate model exists before restoring
-        if engine.set_model(stored_model, strict=True, reset_context=False):
-            logger.info(f"Session restore - model: {stored_model}")
-        else:
-            # Model not available - use provider's default model
-            provider_name = engine.provider_name if engine.provider else stored_provider
-            default_model = get_default_model(provider_name) if provider_name else None
-            if default_model:
-                engine.set_model(default_model, reset_context=False)
-                logger.warning(f"Model '{stored_model}' not available, using default: {default_model}")
-            else:
-                logger.error(f"Model '{stored_model}' not available and no default found for {provider_name}")
-
-    if engine.session.working_dir and os.path.isdir(engine.session.working_dir):
-        engine.set_working_dir(engine.session.working_dir)
-    if engine.session.tools_enabled:
-        engine.enable_tools()
+    result = engine.restore_session(name)
+    if not result["success"]:
+        raise HTTPException(status_code=404, detail=result.get("error", f"Session not found: {name}"))
 
     return {
         "name": name,
         "loaded": True,
-        "provider": engine.provider_name if engine.provider else None,
-        "model": engine.model,
-        "working_dir": engine.get_working_dir(),
-        "tools_enabled": engine.tools_enabled,
-        "message_count": len(engine.session.messages)
+        "provider": result["provider"],
+        "model": result["model"],
+        "working_dir": result["working_dir"],
+        "tools_enabled": result["tools_enabled"],
+        "message_count": result["message_count"],
     }
 
 
@@ -1546,56 +1508,18 @@ async def restore_last_session(x_session_id: Optional[str] = Header(None)):
 
     session_name = state["name"]
 
-    # Reload config from disk to pick up any external changes since last run
-    engine.reload_config()
-
-    # Load the session
-    success = engine.session.load(session_name)
-    if not success:
-        raise HTTPException(status_code=404, detail=f"Session not found: {session_name}")
-
-    # Apply restored session state to engine
-
-    # Restore provider/model from session metadata (v1.15.3)
-    # Matches TUI (tui/app.py:644-677) and Rich (rich/main.py:583-603)
-    from ppxai.config import PROVIDERS, get_default_model
-    stored_provider = engine.session.metadata.get("provider")
-    stored_model = engine.session.metadata.get("model")
-
-    if stored_provider and stored_provider in PROVIDERS:
-        try:
-            engine.set_provider(stored_provider)
-            logger.info(f"Session restore - provider: {stored_provider}")
-        except Exception as e:
-            logger.debug(f"Failed to restore provider '{stored_provider}': {e}")
-
-    if stored_model:
-        # Use strict mode to validate model exists before restoring
-        if engine.set_model(stored_model, strict=True, reset_context=False):
-            logger.info(f"Session restore - model: {stored_model}")
-        else:
-            # Model not available - use provider's default model
-            provider_name = engine.provider_name if engine.provider else stored_provider
-            default_model = get_default_model(provider_name) if provider_name else None
-            if default_model:
-                engine.set_model(default_model, reset_context=False)
-                logger.warning(f"Model '{stored_model}' not available, using default: {default_model}")
-            else:
-                logger.error(f"Model '{stored_model}' not available and no default found for {provider_name}")
-
-    if engine.session.working_dir and os.path.isdir(engine.session.working_dir):
-        engine.set_working_dir(engine.session.working_dir)
-    if engine.session.tools_enabled:
-        engine.enable_tools()
+    result = engine.restore_session(session_name)
+    if not result["success"]:
+        raise HTTPException(status_code=404, detail=result.get("error", f"Session not found: {session_name}"))
 
     return {
         "name": session_name,
         "restored": True,
-        "provider": engine.provider_name if engine.provider else None,
-        "model": engine.model,
-        "working_dir": engine.get_working_dir(),
-        "tools_enabled": engine.tools_enabled,
-        "message_count": len(engine.session.messages)
+        "provider": result["provider"],
+        "model": result["model"],
+        "working_dir": result["working_dir"],
+        "tools_enabled": result["tools_enabled"],
+        "message_count": result["message_count"],
     }
 
 

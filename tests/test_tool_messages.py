@@ -158,7 +158,7 @@ class TestSessionToolMessageSerialization:
         assert session.messages[0].tool_call_id is None
 
     def test_load_with_extras_roundtrip(self, tmp_path):
-        """load_with_extras also preserves tool message fields."""
+        """load() preserves tool message fields."""
         session = SessionManager(sessions_dir=tmp_path, exports_dir=tmp_path / "exports")
         session.add_message(Message("user", "test"))
         session.add_message(Message("assistant", "", tool_calls=[{
@@ -170,7 +170,7 @@ class TestSessionToolMessageSerialization:
         session.save_dirty()
 
         session2 = SessionManager(sessions_dir=tmp_path, exports_dir=tmp_path / "exports")
-        assert session2.load_with_extras(session.session_name)
+        assert session2.load(session.session_name)
         assert session2.messages[1].tool_calls is not None
         assert session2.messages[2].tool_call_id == "call_x"
 

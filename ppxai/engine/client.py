@@ -8,6 +8,7 @@ It has no UI dependencies and communicates via events.
 import asyncio
 import hashlib
 import json
+import os
 import re
 from dataclasses import asdict
 from datetime import datetime
@@ -1381,11 +1382,53 @@ class EngineClient:
             yield event
 
     # === Session Management ===
-    # Note: For session operations, use engine.session directly:
-    # - engine.session.save(name)
-    # - engine.session.load(name)
-    # - engine.session.list_sessions()
-    # - engine.session.clear()
+
+    def restore_session(self, name: str) -> dict:
+        """Load session file and restore all engine state.
+
+        Reloads config, loads session, restores provider/model/tools/working_dir.
+
+        Returns:
+            dict with keys: success, provider, model, tools_enabled, working_dir,
+            message_count, error
+        """
+        self.reload_config()
+
+        if not self.session.load(name):
+            return {"success": False, "error": f"Session not found: {name}"}
+
+        stored_provider = self.session.metadata.get("provider")
+        if stored_provider:
+            try:
+                self.set_provider(stored_provider)
+            except Exception:
+                pass
+
+        stored_model = self.session.metadata.get("model")
+        if stored_model:
+            if not self.set_model(stored_model, strict=True, reset_context=False):
+                provider_name = self.provider_name if self.provider else stored_provider
+                default = get_default_model(provider_name) if provider_name else None
+                if default:
+                    self.set_model(default, reset_context=False)
+
+        if self.session.tools_enabled:
+            self.enable_tools()
+        else:
+            self.disable_tools()
+
+        wd = self.session.working_dir
+        if wd and os.path.isdir(wd):
+            self.set_working_dir(wd)
+
+        return {
+            "success": True,
+            "provider": self.provider_name,
+            "model": self.model,
+            "tools_enabled": self.tools_enabled,
+            "working_dir": self.get_working_dir(),
+            "message_count": len(self.session.messages),
+        }
 
     def get_history(self) -> List[Dict[str, str]]:
         """Get conversation history as dicts.

@@ -241,7 +241,7 @@ class TestSessionLoadWithExtras:
 
         # Create a new session manager and load
         new_manager = SessionManager(sessions_dir=temp_sessions_dir)
-        result = new_manager.load_with_extras(saved_name)
+        result = new_manager.load(saved_name)
 
         assert result is True
         assert new_manager.command_history == ["test command 1", "test command 2"]
@@ -261,7 +261,7 @@ class TestSessionLoadWithExtras:
             json.dump(old_session, f)
 
         # Load should succeed with defaults
-        result = session_manager.load_with_extras("old_session")
+        result = session_manager.load("old_session")
 
         assert result is True
         assert session_manager.command_history == []
@@ -392,7 +392,7 @@ class TestSessionFullFlow:
 
         # Restore to new manager
         restored = SessionManager(sessions_dir=sessions_dir)
-        assert restored.load_with_extras(session_name)
+        assert restored.load(session_name)
 
         # Verify all data restored
         assert restored.session_name == session_name

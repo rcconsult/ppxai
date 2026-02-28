@@ -34,6 +34,7 @@ from ppxai.tui.widgets.footer_status import FooterStatus
 from ppxai.tui.widgets.chat_view import ChatView
 from ppxai.tui.widgets.input_box import InputBox
 from ppxai.tui.widgets.side_panel import SidePanel
+from ppxai.tui.widgets.file_tree import FileTree
 from ppxai.tui.widgets.code_editor import CodeEditor, get_syntax_theme_for_app_theme
 from ppxai.tui.widgets.dialog import ConsentDialog
 from ppxai.tui.widgets.message_box import MessageBox
@@ -74,6 +75,7 @@ class PPXAIDEApp(App):
     BINDINGS = [
         Binding("ctrl+enter", "", "Send", show=True, priority=True),  # Display Ctrl+Enter (works in Ghostty/Kitty/WezTerm) - handled by ChatTextArea.on_key()
         Binding("ctrl+c", "quit", "Quit", show=True),
+        Binding("ctrl+b", "toggle_file_tree", "Files", show=True),
         Binding("ctrl+l", "clear", "Clear", show=True),
         Binding("ctrl+t", "cycle_theme", "Theme", show=True),
         Binding("ctrl+w", "close_panel", "Close", show=False),
@@ -115,6 +117,7 @@ class PPXAIDEApp(App):
         self._tool_group_tools = []  # v1.16.0: Tool names in current group
         self._working_dir = os.getcwd()
         self._split_index = self.DEFAULT_SPLIT_INDEX  # Current split ratio index
+        self._file_tree_visible: bool = True
 
         # Streaming state (Phase 6.1)
         self._current_message_content = ""
@@ -131,6 +134,12 @@ class PPXAIDEApp(App):
         self._reasoning_update_pending = False  # Throttling flag
         self._reasoning_update_timer = None  # Timer for throttled updates
 
+        # Cached widget references — set in on_mount, avoids repeated DOM traversal
+        self._chat_view: Optional["ChatView"] = None
+        self._status_bar: Optional["StatusBar"] = None
+        self._footer_status: Optional["FooterStatus"] = None
+        self._input_box: Optional["InputBox"] = None
+
     def compose(self) -> ComposeResult:
         """Compose the application layout with split view support."""
         yield Header()
@@ -139,9 +148,11 @@ class PPXAIDEApp(App):
             model=self._model,
             tools_enabled=self._tools_enabled,
         )
-        # Main content area: horizontal split (chat left, panel right)
+        # Main content area: file tree + chat + side panel
         with Horizontal(id="main-content"):
-            # Left pane: chat + input
+            # Leftmost pane: file tree browser (Norton Commander style)
+            yield FileTree(Path(self._working_dir), id="file-tree")
+            # Center pane: chat + input
             with Vertical(id="chat-pane"):
                 yield ChatView(id="chat-view")
                 yield InputBox(id="input-box")
@@ -153,6 +164,13 @@ class PPXAIDEApp(App):
     async def on_mount(self) -> None:
         """Called when the app is mounted."""
         self._log.info("=== on_mount() START ===")
+
+        # Cache frequently accessed widgets to avoid repeated DOM traversal
+        self._chat_view = self.query_one("#chat-view", ChatView)
+        self._status_bar = self.query_one(StatusBar)
+        self._footer_status = self.query_one(FooterStatus)
+        self._input_box = self.query_one("#input-box", InputBox)
+
         # Initialize config system (v1.15.3: DAG-based init)
         initialize()
         # Initialize engine client (Phase 6.1)
@@ -175,7 +193,7 @@ class PPXAIDEApp(App):
         self.theme = DEFAULT_THEME
 
         # Update status bar with engine state (Phase 6.1)
-        status_bar = self.query_one(StatusBar)
+        status_bar = self._status_bar
         if self._provider:
             status_bar.update_badge("provider", self._provider)
         else:
@@ -225,7 +243,7 @@ class PPXAIDEApp(App):
             self._update_checkpoint_badge(status_bar)
 
         # Focus the input box and set up autocomplete
-        input_box = self.query_one("#input-box", InputBox)
+        input_box = self._input_box
 
         # Initialize autocomplete completer (Phase 1.1)
         completer = TextualCompleter(
@@ -237,7 +255,7 @@ class PPXAIDEApp(App):
         input_box.focus()
 
         # Add welcome message with bootstrap status (Phase 6.3)
-        chat_view = self.query_one("#chat-view", ChatView)
+        chat_view = self._chat_view
 
         if self._provider and self._model:
             welcome_msg = f"Welcome to ppxaide! Connected to {self._provider}/{self._model}\n"
@@ -459,7 +477,7 @@ class PPXAIDEApp(App):
         """Update datetime badge every minute (Phase 1.2)."""
         tui_config = get_tui_config()
         if tui_config.get("show_datetime", False):
-            status_bar = self.query_one(StatusBar)
+            status_bar = self._status_bar
             now = datetime.now().strftime("%Y-%m-%d %H:%M")
             status_bar.update_badge("datetime", now)
 
@@ -533,9 +551,17 @@ class PPXAIDEApp(App):
                 self._log.debug("Skipping session with 0 messages")
                 return
 
-            chat_view = self.query_one("#chat-view", ChatView)
+            chat_view = self._chat_view
             provider_info = last_state.get("provider", "unknown")
             tools_info = "ON" if last_state.get("tools_enabled") else "OFF"
+
+            # Check if session file actually exists before showing any dialog
+            sessions_dir = Path.home() / ".ppxai" / "sessions"
+            session_file = sessions_dir / f"{session_name}.json"
+            if not session_file.exists():
+                self._log.warning(f"Session file missing for '{session_name}', clearing stale state")
+                SessionManager.clear_state_file()
+                return
 
             # Check if session was dirty (crash recovery) - Phase 2.2
             is_dirty = last_state.get("dirty", False)
@@ -565,6 +591,10 @@ class PPXAIDEApp(App):
                             f"[dim]Provider: {provider_info}, Tools: {tools_info}[/dim]"
                         )
                         self._log.info(f"User chose to recover crash session: {session_name}")
+                    else:
+                        # Restore failed — clear stale state to prevent repeat dialog
+                        SessionManager.clear_state_file()
+                        self._log.warning(f"Session restore failed for '{session_name}', cleared state file")
                     return
                 else:
                     # Clear dirty flag if user declines recovery
@@ -584,6 +614,9 @@ class PPXAIDEApp(App):
                         f"[dim]Provider: {provider_info}, Tools: {tools_info}[/dim]"
                     )
                     self._log.info(f"Auto-restored session: {session_name}")
+                else:
+                    SessionManager.clear_state_file()
+                    self._log.warning(f"Auto-restore failed for '{session_name}', cleared state file")
                 return
 
             # Show interactive prompt for "prompt" mode
@@ -607,6 +640,9 @@ class PPXAIDEApp(App):
                             f"[dim]Provider: {provider_info}, Tools: {tools_info}[/dim]"
                         )
                         self._log.info(f"User chose to restore session: {session_name}")
+                    else:
+                        SessionManager.clear_state_file()
+                        self._log.warning(f"Restore failed for '{session_name}', cleared state file")
                 else:
                     self._log.info("User declined session restoration")
 
@@ -627,89 +663,43 @@ class PPXAIDEApp(App):
             self._log.error("Restoration failed: No engine client")
             return False
 
-        # Reload config from disk to pick up any external changes since last run
-        # This ensures model validation uses the latest provider/model definitions
-        self._engine_client.reload_config()
-
-        # Load the session
         self._log.info(f"Loading session: {session_name}")
-        if not self._engine_client.session.load(session_name):
-            self._log.error(f"Restoration failed: session.load() returned False for {session_name}")
+        result = self._engine_client.restore_session(session_name)
+        if not result["success"]:
+            self._log.error(f"Restoration failed: {result.get('error')}")
             return False
 
-        self._log.info(f"Session loaded successfully: {len(self._engine_client.session.messages)} messages")
+        self._log.info(f"Session loaded successfully: {result['message_count']} messages")
 
-        # Restore provider/model - matches Rich TUI behavior (lines 573-594 of rich/main.py)
-        # session.load() already set session.metadata from the session file
-        status_bar = self.query_one(StatusBar)
-        stored_provider = self._engine_client.session.metadata.get("provider")
-        stored_model = self._engine_client.session.metadata.get("model")
+        status_bar = self._status_bar
 
-        if stored_provider:
-            if stored_provider in PROVIDERS:
-                try:
-                    # Don't check return value - just try to set it (Rich TUI line 579)
-                    self._engine_client.set_provider(stored_provider)
-                    self._provider = stored_provider
-                    status_bar.update_badge("provider", stored_provider)
-                    self._log.info(f"Restored provider: {stored_provider}")
-                except Exception as e:
-                    self._log.debug(f"Failed to restore provider '{stored_provider}': {e}")
+        if result["provider"]:
+            self._provider = result["provider"]
+            status_bar.update_badge("provider", self._provider)
+            self._log.info(f"Restored provider: {self._provider}")
 
-        if stored_model:
-            # Use strict mode to validate model exists (Rich TUI line 586)
-            if self._engine_client.set_model(stored_model, strict=True, reset_context=False):
-                self._model = stored_model
-                status_bar.update_badge("model", stored_model)
-                self._log.info(f"Restored model: {stored_model}")
-            else:
-                # Model not available - use provider's default (Rich TUI lines 589-594)
-                provider_name = self._engine_client.provider_name if self._engine_client.provider else self._provider
-                default_model = get_default_model(provider_name) if provider_name else None
-                if default_model:
-                    self._engine_client.set_model(default_model, reset_context=False)
-                    self._model = default_model
-                    status_bar.update_badge("model", default_model)
-                    self._log.warning(f"Model '{stored_model}' not available, using default: {default_model}")
-                else:
-                    # No valid model found - show error
-                    self._log.error(f"Model '{stored_model}' not available and no default found for {provider_name}")
-                    status_bar.update_badge("model", "[red]invalid[/red]")
+        if result["model"]:
+            self._model = result["model"]
+            status_bar.update_badge("model", self._model)
+            self._log.info(f"Restored model: {self._model}")
 
-        # Restore tools state from loaded session (not session_state parameter)
-        # session.load() already set session.tools_enabled from the session file
-        tools_enabled = self._engine_client.session.tools_enabled
-        if tools_enabled:
-            self._engine_client.enable_tools()
-            self._tools_enabled = True
-            status_bar = self.query_one(StatusBar)
-            status_bar.update_badge("tools", "ON")
-        else:
-            # Ensure tools are disabled if they were disabled in session
-            self._engine_client.tools_enabled = False
-            self._tools_enabled = False
-            status_bar = self.query_one(StatusBar)
-            status_bar.update_badge("tools", "OFF")
+        self._tools_enabled = result["tools_enabled"]
+        status_bar.update_badge("tools", "ON" if self._tools_enabled else "OFF")
 
-        # Restore working directory from loaded session
-        # session.load() already set session.working_dir from the session file
-        working_dir = self._engine_client.session.working_dir
+        # Restore working directory (TUI-specific: os.chdir + completer + cwd badge)
+        working_dir = result["working_dir"]
         if working_dir and os.path.isdir(working_dir):
             try:
                 os.chdir(working_dir)
-                self._engine_client.set_working_dir(working_dir)
                 self._working_dir = working_dir
                 self._log.info(f"Restored working directory: {working_dir}")
 
-                # Update completer's working directory for file completions
-                input_box = self.query_one("#input-box", InputBox)
+                input_box = self._input_box
                 if input_box._completer:
                     input_box._completer.update_working_dir(Path(working_dir))
 
-                # Update status bar cwd badge
                 tui_config = get_tui_config()
                 if tui_config.get("show_cwd", True):
-                    status_bar = self.query_one(StatusBar)
                     cwd_display = self._format_cwd_display(working_dir)
                     status_bar.update_badge("cwd", cwd_display)
                     self._log.info(f"Updated cwd badge to: {cwd_display}")
@@ -717,7 +707,7 @@ class PPXAIDEApp(App):
                 self._log.warning(f"Failed to restore working directory: {e}")
 
         # Render loaded messages into ChatView (like /load command does)
-        chat_view = self.query_one("#chat-view", ChatView)
+        chat_view = self._chat_view
         chat_view.clear()
 
         messages = self._engine_client.session.messages
@@ -741,7 +731,7 @@ class PPXAIDEApp(App):
             self._log.info(f"Updated subtitle: {self.sub_title}")
 
         # Restore command history to InputBox (matches Rich TUI behavior)
-        input_box = self.query_one("#input-box", InputBox)
+        input_box = self._input_box
         command_history = self._engine_client.session.command_history
         if command_history:
             input_box.set_history(command_history)
@@ -788,7 +778,7 @@ class PPXAIDEApp(App):
             self._engine_client.set_model(model)
             self._model = model
             # Update status bar
-            status_bar = self.query_one(StatusBar)
+            status_bar = self._status_bar
             status_bar.update_badge("model", model)
             # Notify user if context was reset (A3)
             reset_count = self._engine_client.last_model_switch_reset
@@ -801,7 +791,7 @@ class PPXAIDEApp(App):
             self._engine_client.set_provider(provider)
             self._provider = provider
             # Update status bar
-            status_bar = self.query_one(StatusBar)
+            status_bar = self._status_bar
             status_bar.update_badge("provider", provider)
 
     def get_provider(self) -> str:
@@ -891,7 +881,7 @@ class PPXAIDEApp(App):
         if self._engine_client:
             self._engine_client.session.add_to_history(message)
 
-        chat_view = self.query_one("#chat-view", ChatView)
+        chat_view = self._chat_view
 
         # Handle commands
         if message.startswith("/"):
@@ -904,7 +894,7 @@ class PPXAIDEApp(App):
         # Stream response from engine using Textual's call_from_thread()
         if self._engine_client:
             # Setup in main thread (UI-safe)
-            status_bar = self.query_one(StatusBar)
+            status_bar = self._status_bar
             self._current_message_content = ""
             self._is_streaming = True
             self._cancel_requested = False  # Reset cancellation flag (v1.15.2)
@@ -916,7 +906,7 @@ class PPXAIDEApp(App):
             self._response_start_time = time.time()
 
             # Show streaming indicator in footer
-            footer_status = self.query_one(FooterStatus)
+            footer_status = self._footer_status
             footer_status.set_thinking()
 
             self._log.info("Stream setup complete, starting worker thread")
@@ -956,7 +946,7 @@ class PPXAIDEApp(App):
     def _handle_stream_end(self) -> None:
         """Handle stream completion (called via call_from_thread)."""
         # Cleanup: clear footer status, reset state
-        footer_status = self.query_one(FooterStatus)
+        footer_status = self._footer_status
         footer_status.clear()
         self._is_streaming = False
         self._cancel_requested = False  # Reset cancellation flag (v1.15.2)
@@ -967,24 +957,24 @@ class PPXAIDEApp(App):
 
         Added in v1.15.2 for graceful Ctrl+C handling during streaming.
         """
-        chat_view = self.query_one("#chat-view", ChatView)
+        chat_view = self._chat_view
         chat_view.add_system_message("[yellow]⚠ Stream cancelled[/yellow]")
         self._log.info("Stream cancelled by user")
 
         # Cleanup: clear footer status, reset state
-        footer_status = self.query_one(FooterStatus)
+        footer_status = self._footer_status
         footer_status.clear()
         self._is_streaming = False
         self._cancel_requested = False  # Reset flag
 
     def _handle_stream_error(self, error_msg: str) -> None:
         """Handle stream error (called via call_from_thread)."""
-        chat_view = self.query_one("#chat-view", ChatView)
+        chat_view = self._chat_view
         chat_view.add_system_message(f"[red]Stream error:[/red] {error_msg}")
         self._log.error(f"Stream error from thread: {error_msg}")
 
         # Cleanup: clear footer status, reset state
-        footer_status = self.query_one(FooterStatus)
+        footer_status = self._footer_status
         footer_status.clear()
         self._is_streaming = False
         self._cancel_requested = False  # Reset flag (v1.15.2)
@@ -1049,7 +1039,8 @@ class PPXAIDEApp(App):
                     return
 
                 event_count += 1
-                self._log.debug(f"Thread: Event #{event_count}: {event.type.name}")
+                if self._debug_logging:
+                    self._log.debug(f"Thread: Event #{event_count}: {event.type.name}")
 
                 # Use call_from_thread to handle event in main thread (thread-safe)
                 self.call_from_thread(self._handle_stream_event, event.type.name, event.data)
@@ -1135,7 +1126,7 @@ class PPXAIDEApp(App):
         Called when content or reasoning starts arriving.
         """
         try:
-            footer_status = self.query_one(FooterStatus)
+            footer_status = self._footer_status
             footer_status.set_streaming()  # Change from "Thinking..." to "Streaming..."
             if self._trace_logging:
                 self._log.debug("[Event] Changed footer status to streaming")
@@ -1150,7 +1141,7 @@ class PPXAIDEApp(App):
         Shows reasoning with italic styling (without dim for better visibility).
         Throttles updates to 100ms intervals when not in debug mode.
         """
-        chat_view = self.query_one("#chat-view", ChatView)
+        chat_view = self._chat_view
 
         # Create reasoning message on first chunk
         if not self._reasoning_started:
@@ -1168,8 +1159,6 @@ class PPXAIDEApp(App):
             chat_view.mount(self._reasoning_message)
             # Scroll without animation to avoid blocking user input
             chat_view.scroll_end(animate=False)
-            # Force refresh so reasoning bubble appears immediately
-            chat_view.refresh()
             if self._trace_logging:
                 self._log.debug("[Event] Reasoning started")
 
@@ -1185,10 +1174,10 @@ class PPXAIDEApp(App):
             # Debug mode: immediate updates for visibility
             self._update_reasoning_display()
         else:
-            # Production mode: throttle to 20 updates/sec max (smoother than 10/sec)
+            # Production mode: throttle to 10 updates/sec (100ms batching)
             if not self._reasoning_update_pending:
                 self._reasoning_update_pending = True
-                self.set_timer(0.05, self._update_reasoning_display)
+                self.set_timer(0.1, self._update_reasoning_display)
 
     def _update_reasoning_display(self) -> None:
         """Update reasoning bubble display with accumulated content.
@@ -1206,7 +1195,7 @@ class PPXAIDEApp(App):
         # Clear thinking indicator if still present (non-streaming providers)
         self._clear_thinking_indicator()
 
-        chat_view = self.query_one("#chat-view", ChatView)
+        chat_view = self._chat_view
 
         # Debug: Log what we actually received
         self._log.debug(f"STREAM_END: data type={type(data).__name__}")
@@ -1274,11 +1263,10 @@ class PPXAIDEApp(App):
 
     async def _on_tool_call(self, sender, data, **kwargs) -> None:
         """Handle TOOL_CALL event."""
-        try:
-            chat_view = self.query_one("#chat-view", ChatView)
-        except NoMatches:
-            self._log.warning("[Event] Chat view not mounted, skipping tool call display")
+        if self._chat_view is None:
+            self._log.warning("[Event] Chat view not ready, skipping tool call display")
             return
+        chat_view = self._chat_view
 
         tool_name = data.get("tool", "unknown")
         tool_args = data.get("arguments", {})
@@ -1319,11 +1307,10 @@ class PPXAIDEApp(App):
 
     async def _on_tool_result(self, sender, data, **kwargs) -> None:
         """Handle TOOL_RESULT event."""
-        try:
-            chat_view = self.query_one("#chat-view", ChatView)
-        except NoMatches:
-            self._log.warning("[Event] Chat view not mounted, skipping tool result display")
+        if self._chat_view is None:
+            self._log.warning("[Event] Chat view not ready, skipping tool result display")
             return
+        chat_view = self._chat_view
 
         tool_name = data.get("tool", "unknown")
         result = data.get("result", "")
@@ -1346,11 +1333,10 @@ class PPXAIDEApp(App):
 
     async def _on_tool_error(self, sender, data, **kwargs) -> None:
         """Handle TOOL_ERROR event."""
-        try:
-            chat_view = self.query_one("#chat-view", ChatView)
-        except NoMatches:
-            self._log.warning("[Event] Chat view not mounted, skipping tool error display")
+        if self._chat_view is None:
+            self._log.warning("[Event] Chat view not ready, skipping tool error display")
             return
+        chat_view = self._chat_view
 
         tool_name = data.get("tool", "unknown") if isinstance(data, dict) else "unknown"
         error_msg = data.get("error", str(data)) if isinstance(data, dict) else str(data)
@@ -1391,10 +1377,9 @@ class PPXAIDEApp(App):
 
         # In non-verbose mode, show summary (individual messages were suppressed)
         if not self._tools_verbose and tools:
-            try:
-                chat_view = self.query_one("#chat-view", ChatView)
-            except NoMatches:
+            if self._chat_view is None:
                 return
+            chat_view = self._chat_view
             status = "[green]✓[/green]" if all_succeeded else "[red]✗[/red]"
             chat_view.add_system_message(
                 f"[dim]  Iteration {iteration}: {tool_list} ({len(tools)} tool{'s' if len(tools) != 1 else ''}) {status}[/dim]"
@@ -1434,22 +1419,20 @@ class PPXAIDEApp(App):
 
     async def _on_engine_error(self, sender, data, **kwargs) -> None:
         """Handle ENGINE_ERROR event."""
-        try:
-            chat_view = self.query_one("#chat-view", ChatView)
-        except NoMatches:
-            self._log.error(f"[Event] Engine error (chat view not mounted): {data}")
+        if self._chat_view is None:
+            self._log.error(f"[Event] Engine error (chat view not ready): {data}")
             return
+        chat_view = self._chat_view
 
         self._log.error(f"[Event] Engine error: {data}")
         chat_view.add_system_message(f"[red]Error:[/red] {data}")
 
     async def _on_engine_warning(self, sender, data, **kwargs) -> None:
         """Handle ENGINE_WARNING event (hallucination detection, v1.15.3)."""
-        try:
-            chat_view = self.query_one("#chat-view", ChatView)
-        except NoMatches:
-            self._log.warning(f"[Event] Engine warning (chat view not mounted): {data}")
+        if self._chat_view is None:
+            self._log.warning(f"[Event] Engine warning (chat view not ready): {data}")
             return
+        chat_view = self._chat_view
 
         if data and isinstance(data, str):
             self._log.warning(f"[Event] Engine warning: {data}")
@@ -1458,12 +1441,11 @@ class PPXAIDEApp(App):
 
     async def _on_engine_info(self, sender, data, **kwargs) -> None:
         """Handle ENGINE_INFO event."""
-        try:
-            chat_view = self.query_one("#chat-view", ChatView)
-        except NoMatches:
+        if self._chat_view is None:
             if self._trace_logging:
-                self._log.debug(f"[Event] Engine info (chat view not mounted): {data}")
+                self._log.debug(f"[Event] Engine info (chat view not ready): {data}")
             return
+        chat_view = self._chat_view
 
         if self._trace_logging:
             self._log.debug(f"[Event] Engine info: {data}")
@@ -1486,18 +1468,18 @@ class PPXAIDEApp(App):
             self._working_dir = path
 
             # Update completer's working directory for file completions
-            input_box = self.query_one("#input-box", InputBox)
+            input_box = self._input_box
             if input_box._completer:
                 input_box._completer.update_working_dir(Path(path))
 
             # Update status bar cwd badge if visible
             tui_config = get_tui_config()
             if tui_config.get("show_cwd", True):
-                status_bar = self.query_one(StatusBar)
+                status_bar = self._status_bar
                 status_bar.update_badge("cwd", self._format_cwd_display(path))
 
             # Show notification in chat
-            chat_view = self.query_one("#chat-view", ChatView)
+            chat_view = self._chat_view
             chat_view.add_system_message(f"[cyan]📁 Working directory: {path}[/cyan]")
 
     def _update_usage_display(self) -> None:
@@ -1517,13 +1499,13 @@ class PPXAIDEApp(App):
 
         if not usage_display:
             # Display mode is "off" - remove badges if they exist
-            status_bar = self.query_one(StatusBar)
+            status_bar = self._status_bar
             status_bar.remove_badge("tokens")
             status_bar.remove_badge("cost")
             return
 
         # Update status bar with usage stats
-        status_bar = self.query_one(StatusBar)
+        status_bar = self._status_bar
 
         # Format tokens badge
         total_tokens = usage_display.get("total_tokens", 0)
@@ -1545,7 +1527,7 @@ class PPXAIDEApp(App):
 
     async def _handle_command(self, command: str) -> None:
         """Handle slash commands using Command Factory pattern."""
-        chat_view = self.query_one("#chat-view", ChatView)
+        chat_view = self._chat_view
         parts = command[1:].split(maxsplit=1)
         cmd = parts[0].lower()
         args = parts[1] if len(parts) > 1 else ""
@@ -1598,11 +1580,25 @@ class PPXAIDEApp(App):
                         self._event_bus.emit(bus_event, data=result)
 
                 # Sync TUI state with engine client after command execution
+                if cmd in ("load", "l", "sessions") and self._engine_client:
+                    # Sync provider/model/tools badges after session load
+                    status_bar = self._status_bar
+                    new_provider = self._engine_client.provider_name
+                    new_model = self._engine_client.model
+                    if new_provider:
+                        self._provider = new_provider
+                        status_bar.update_badge("provider", new_provider)
+                    if new_model:
+                        self._model = new_model
+                        status_bar.update_badge("model", new_model)
+                    self._tools_enabled = self._engine_client.tools_enabled
+                    status_bar.update_badge("tools", "ON" if self._tools_enabled else "OFF")
+
                 if cmd in ("tools", "agent"):
                     # Update tools enabled state
                     if self._engine_client:
                         self._tools_enabled = self._engine_client.tools_enabled
-                        status_bar = self.query_one(StatusBar)
+                        status_bar = self._status_bar
                         status_bar.update_badge("tools", "ON" if self._tools_enabled else "OFF")
 
                     # Update agent mode badge (Phase 1.3)
@@ -1624,7 +1620,7 @@ class PPXAIDEApp(App):
                         self._log.info(f"Working directory synced: {engine_working_dir}")
 
                         # Update completer working directory for file completions
-                        input_box = self.query_one("#input-box", InputBox)
+                        input_box = self._input_box
                         if input_box._completer:
                             input_box._completer.update_working_dir(Path(engine_working_dir))
 
@@ -1632,7 +1628,7 @@ class PPXAIDEApp(App):
                 if cmd == "status" and args and args.split()[0] in ("version", "cwd", "datetime"):
                     subcommand = args.split()[0]
                     tui_config = get_tui_config()
-                    status_bar = self.query_one(StatusBar)
+                    status_bar = self._status_bar
 
                     # Update badge based on new config value
                     if subcommand == "version":
@@ -1724,7 +1720,7 @@ class PPXAIDEApp(App):
             # Paste from clipboard into input
             text = paste_from_clipboard()
             if text:
-                input_box = self.query_one("#input-box", InputBox)
+                input_box = self._input_box
                 input_box.insert_text(text)
             else:
                 chat_view.add_system_message(
@@ -1748,7 +1744,7 @@ class PPXAIDEApp(App):
             /debug-log off  - Disable event bus and handler logging
             /debug-log      - Show current status
         """
-        chat_view = self.query_one("#chat-view", ChatView)
+        chat_view = self._chat_view
         args = args.strip().lower()
 
         if not args:
@@ -1787,8 +1783,8 @@ class PPXAIDEApp(App):
             /badge show <id>
             /badge list
         """
-        chat_view = self.query_one("#chat-view", ChatView)
-        status_bar = self.query_one(StatusBar)
+        chat_view = self._chat_view
+        status_bar = self._status_bar
 
         parts = args.split(maxsplit=1)
         if not parts:
@@ -1955,7 +1951,7 @@ class PPXAIDEApp(App):
 
     def action_clear(self) -> None:
         """Clear the chat view."""
-        chat_view = self.query_one("#chat-view", ChatView)
+        chat_view = self._chat_view
         chat_view.clear()
 
 
@@ -1985,10 +1981,36 @@ class PPXAIDEApp(App):
             self.pop_screen()
             return
 
+        # If focus is in the file tree, return to input (don't close tree)
+        focused = self.focused
+        try:
+            file_tree = self.query_one("#file-tree", FileTree)
+            if focused and file_tree in focused.ancestors_with_self:
+                self.query_one("#input-box", InputBox).focus()
+                return
+        except Exception:
+            pass
+
         # Check if side panel is open
         side_panel = self.query_one("#side-panel", SidePanel)
         if side_panel.is_open:
             side_panel.close()
+
+    def action_toggle_file_tree(self) -> None:
+        """Show or hide the file tree browser (Ctrl+B)."""
+        try:
+            file_tree = self.query_one("#file-tree", FileTree)
+        except Exception:
+            return
+        self._file_tree_visible = not self._file_tree_visible
+        if self._file_tree_visible:
+            file_tree.remove_class("hidden")
+        else:
+            file_tree.add_class("hidden")
+        # If side panel is open, recompute its width for the new layout
+        side_panel = self.query_one("#side-panel", SidePanel)
+        if side_panel.is_open:
+            self._apply_split_ratio()
 
     def action_close_panel(self) -> None:
         """Close the side panel (Ctrl+W)."""
@@ -2003,23 +2025,43 @@ class PPXAIDEApp(App):
             side_panel.save()
 
     def action_toggle_focus(self) -> None:
-        """Toggle focus between chat input and side panel (F6 / Ctrl+Tab)."""
+        """Cycle focus: input → file tree (if visible) → side panel (if open) → input.
+
+        F6 / Ctrl+Tab.
+        """
         side_panel = self.query_one("#side-panel", SidePanel)
-        input_box = self.query_one("#input-box", InputBox)
-
-        if not side_panel.is_open:
-            # No panel open, keep focus on input
-            input_box.focus()
-            return
-
-        # Check if side panel has focus (or any of its children)
+        input_box = self._input_box
         focused = self.focused
-        if focused and side_panel in focused.ancestors_with_self:
-            # Focus is in side panel, move to input
+
+        # Determine where focus currently is
+        in_input = focused and input_box in focused.ancestors_with_self
+        in_side_panel = side_panel.is_open and focused and side_panel in focused.ancestors_with_self
+
+        try:
+            file_tree = self.query_one("#file-tree", FileTree)
+            in_file_tree = self._file_tree_visible and focused and file_tree in focused.ancestors_with_self
+        except Exception:
+            file_tree = None
+            in_file_tree = False
+
+        if in_input:
+            # From input: go to file tree (if visible), else side panel (if open), else stay
+            if file_tree and self._file_tree_visible:
+                file_tree.focus()
+            elif side_panel.is_open:
+                side_panel.focus()
+        elif in_file_tree:
+            # From file tree: go to side panel (if open), else input
+            if side_panel.is_open:
+                side_panel.focus()
+            else:
+                input_box.focus()
+        elif in_side_panel:
+            # From side panel: go back to input
             input_box.focus()
         else:
-            # Focus is elsewhere, move to side panel
-            side_panel.focus()
+            # Focus is elsewhere: return to input
+            input_box.focus()
 
     def action_resize_panel(self, direction: str) -> None:
         """Resize the split panel (Ctrl+[/]).
@@ -2047,16 +2089,21 @@ class PPXAIDEApp(App):
         self.notify(f"Split: {chat_pct}% / {100 - chat_pct}%", title="Resize")
 
     def _apply_split_ratio(self) -> None:
-        """Apply the current split ratio to chat and panel panes."""
-        chat_pct = self.SPLIT_RATIOS[self._split_index]
-        panel_pct = 100 - chat_pct
+        """Apply the current split ratio to chat and panel panes.
 
-        chat_pane = self.query_one("#chat-pane")
+        Chat pane uses width: 1fr in CSS and fills whatever space remains after
+        the file tree (25% when visible) and the side panel (explicit %).
+        We only need to set the side panel's explicit width here.
+        """
+        file_tree_pct = 25 if self._file_tree_visible else 0
+        available_pct = 100 - file_tree_pct  # 75 when tree visible, 100 when hidden
+
+        chat_ratio = self.SPLIT_RATIOS[self._split_index] / 100.0
+        panel_ratio = 1.0 - chat_ratio
+        panel_pct = panel_ratio * available_pct
+
         side_panel = self.query_one("#side-panel", SidePanel)
-
-        # Update widths dynamically
-        chat_pane.styles.width = f"{chat_pct}%"
-        side_panel.styles.width = f"{panel_pct}%"
+        side_panel.styles.width = f"{panel_pct:.1f}%"
 
     def toggle_debug_logging(self, enabled: bool) -> None:
         """Toggle debug logging for event bus and handlers.
@@ -2083,7 +2130,7 @@ class PPXAIDEApp(App):
             # Apply current split ratio
             self._apply_split_ratio()
             # Make input box taller when split view is active
-            input_box = self.query_one("#input-box", InputBox)
+            input_box = self._input_box
             input_box.add_class("split-mode")
         except Exception:
             # In test mode or special screens, widgets might not exist
@@ -2092,12 +2139,12 @@ class PPXAIDEApp(App):
     def on_side_panel_closed(self, event: SidePanel.Closed) -> None:
         """Handle side panel closed - restore layout."""
         try:
-            # Restore chat pane to full width
+            # Restore chat pane to fill remaining space (file tree may still be visible)
             chat_pane = self.query_one("#chat-pane")
             chat_pane.remove_class("split-active")
-            chat_pane.styles.width = "100%"
+            chat_pane.styles.width = "1fr"
             # Restore input box height
-            input_box = self.query_one("#input-box", InputBox)
+            input_box = self._input_box
             input_box.remove_class("split-mode")
             # Refocus input after closing panel
             input_box.focus()
@@ -2106,6 +2153,59 @@ class PPXAIDEApp(App):
         except Exception:
             # In test mode or special screens, widgets might not exist
             pass
+
+    async def _open_file_from_tree(self, path: Path, read_only: bool) -> None:
+        """Read a file and display it in the side panel (called by FileTree handlers)."""
+        ext = path.suffix.lower()
+        image_formats = {'.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.ico', '.tiff', '.tif'}
+
+        if ext in image_formats:
+            from ppxai.tui.terminal import can_display_images
+            if can_display_images():
+                await self.show_file_in_panel(path, "", mode="image", read_only=True)
+            else:
+                self.notify(f"Terminal does not support image display", title=path.name, severity="warning")
+            return
+
+        try:
+            content = path.read_text(encoding='utf-8')
+        except UnicodeDecodeError:
+            self.notify(f"Cannot read binary file: {path.name}", severity="error")
+            return
+        except Exception as e:
+            self.notify(f"Error reading file: {e}", severity="error")
+            return
+
+        data_formats = {'.json', '.yaml', '.yml', '.toml'}
+        tabular_formats = {'.csv', '.tsv'}
+        if ext in data_formats:
+            mode = "tree"
+        elif ext in tabular_formats:
+            mode = "table"
+        elif ext in ('.md', '.markdown'):
+            mode = "markdown"
+        else:
+            mode = "code"
+
+        await self.show_file_in_panel(path, content, mode=mode, read_only=read_only)
+
+    async def on_file_tree_file_preview(self, event: FileTree.FilePreview) -> None:
+        """Handle file tree Enter — open file read-only in the side panel."""
+        await self._open_file_from_tree(event.path, read_only=True)
+
+    async def on_file_tree_file_edit(self, event: FileTree.FileEdit) -> None:
+        """Handle file tree Ctrl+Enter — open file editable in the side panel."""
+        await self._open_file_from_tree(event.path, read_only=False)
+
+    def on_file_tree_file_inject(self, event: FileTree.FileInject) -> None:
+        """Handle file tree Space — inject @file reference into the chat input."""
+        try:
+            rel_path = event.path.relative_to(Path(self._working_dir))
+        except ValueError:
+            rel_path = event.path
+        input_box = self._input_box
+        input_box.inject_text(f"@file:{rel_path} ")
+        self.notify(f"Injected @file:{rel_path}", title="File injected")
 
     async def show_file_in_panel(
         self,

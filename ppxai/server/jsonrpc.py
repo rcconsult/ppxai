@@ -263,17 +263,10 @@ class JsonRpcServer:
     def load_session(self, session_name: str) -> bool:
         """Load a saved session.
 
-        v1.13.9: Apply restored working_dir and tools_enabled state.
+        Restores provider, model, tools, and working_dir via engine.restore_session().
         """
-        import os
-        success = self.engine.session.load(session_name)
-        if success:
-            # Apply restored session state to engine
-            if self.engine.session.working_dir and os.path.isdir(self.engine.session.working_dir):
-                self.engine.set_working_dir(self.engine.session.working_dir)
-            if self.engine.session.tools_enabled:
-                self.engine.enable_tools()
-        return success
+        result = self.engine.restore_session(session_name)
+        return result["success"]
 
     def save_session(self) -> str:
         """Save current session."""
