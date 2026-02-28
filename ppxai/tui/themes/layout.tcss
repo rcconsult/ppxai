@@ -406,6 +406,7 @@ ViewerScreen, EditorScreen {
 /* Full-screen TreeViewer in ViewerScreen */
 ViewerScreen TreeViewer {
     height: 1fr;
+    max-height: 100%;
     border: none;
 }
 
@@ -490,6 +491,7 @@ SidePanel CodeEditor {
 
 SidePanel TreeViewer {
     height: 1fr;
+    max-height: 100%;
     border: none;
 }
 
@@ -565,6 +567,7 @@ DataViewer #source-view {
 
 DataViewer TreeViewer {
     height: 1fr;
+    max-height: 100%;
     border: none;
 }
 
