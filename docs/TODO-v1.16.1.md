@@ -624,7 +624,7 @@ Each client analysed in order. Each pass:
 
 | Order | Client | Status |
 |-------|--------|--------|
-| 1 | **ppxai** (Rich TUI — `ppxai/rich/`) | ⏳ Not started |
+| 1 | **ppxai** (Rich TUI — `ppxai/rich/`) | ✅ Done (450b69a) — 8 fixes: 7 lazy imports→top, unused _render_markdown field, unused CODING_MODEL+web_premium imports, lazy normalize_consent_response, dead unreachable guard, no-op while loop |
 | 2 | **ppxaide** (Textual TUI — `ppxai/tui/`) | ⏳ Not started |
 | 3 | **server** (`ppxai/server/` — incl. CommandFactory generalisation) | ⏳ Not started |
 | 4 | **web app** (`ppxai/web/`) | ⏳ Not started |
