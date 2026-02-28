@@ -105,7 +105,7 @@ Key behaviors:
 # Test _get_cursor_file_path handles DirEntry and Path
 ```
 
-**Status:** ⏳ Pending
+**Status:** ✅ Done (6d86194) — 28 tests: messages, bindings, filter_paths, mount, _get_cursor_file_path, FilePreview/Edit/Inject actions, dismiss
 
 ---
 
@@ -413,7 +413,7 @@ Research and document (in ROADMAP.md) the following Gemini 3 API features:
 | `ppxai/tui/widgets/side_panel.py` | Save prompt on close (Step 6.2) |
 | `ppxai/rendering/textual_renderer.py` | Artifact tabs (Step 6.3) |
 | `ppxai/engine/client.py` | Print → logger (Step 6.4) |
-| `tests/test_file_tree.py` | **CREATE** — unit tests |
+| `tests/test_file_tree.py` | ✅ Done — 28 unit tests |
 | `tests/test_file_tree_integration.py` | **CREATE** — integration tests |
 
 ## Reused Infrastructure (No Changes Needed)
