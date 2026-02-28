@@ -1033,12 +1033,12 @@ class TestMultiLineInput:
         assert msg.value.count("\n") == 2
 
     def test_ctrl_enter_binding_is_priority(self):
-        """Ctrl+Enter binding must be priority — display-only, ChatTextArea.on_key() handles it."""
+        """Ctrl+Enter app binding must be non-priority — ChatTextArea.on_key() handles it first."""
         from ppxai.tui.app import PPXAIDEApp
 
         ctrl_enter = [b for b in PPXAIDEApp.BINDINGS if b.key == "ctrl+enter"]
         assert len(ctrl_enter) == 1
-        assert ctrl_enter[0].priority is True
+        assert ctrl_enter[0].priority is False
 
     def test_ctrl_enter_binding_is_visible(self):
         """Ctrl+Enter binding should be visible in footer for discoverability."""

@@ -165,12 +165,12 @@ class TestProviderConfig:
     def test_get_coding_model_perplexity(self):
         """Test get_coding_model for perplexity."""
         model = get_coding_model("perplexity")
-        assert model == "sonar"
+        assert model == "sonar-pro"
 
     def test_get_default_model_perplexity(self):
         """Test get_default_model for perplexity."""
         model = get_default_model("perplexity")
-        assert model == "sonar-pro"
+        assert model == "sonar"
 
     @patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key-123"})
     def test_get_api_key_perplexity(self):
