@@ -28,14 +28,14 @@ if TYPE_CHECKING:
 
 
 def _handle_agent_interrupt(
-    handler: "CommandHandler",
+    context,
     checkpoint_id: Optional[str],
     checkpoint_backend: Optional[str]
 ) -> None:
     """Handle agent interruption and offer automatic rollback.
 
     Args:
-        handler: CommandHandler instance
+        context: CommandContext instance (provides engine_client)
         checkpoint_id: Checkpoint ID if one was created
         checkpoint_backend: Backend type ('git' or 'file')
     """
@@ -72,7 +72,7 @@ def _handle_agent_interrupt(
 
     # Perform rollback
     console.print("\n[dim]Rolling back changes...[/dim]")
-    success = handler.engine_client.undo_last_checkpoint()
+    success = context.engine_client.undo_last_checkpoint()
 
     if success:
         console.print("[green]✓ Checkpoint reverted successfully[/green]\n")
@@ -631,8 +631,8 @@ def handle_agent(context: CommandContext, args: str) -> CommandResult:
             # Run chat with event handling
             event_handler = TUIEventHandler(
                 console, context.engine_client.logger,
-                verbose=getattr(context, '_handler', None) and getattr(context._handler, 'tools_verbose', False),
-                emoji_mode=getattr(context, '_handler', None) and getattr(context._handler, 'emoji_mode', False),
+                verbose=context.get_tools_verbose(),
+                emoji_mode=getattr(context, 'emoji_mode', False),
                 engine_client=context.engine_client
             )
 
@@ -674,9 +674,9 @@ def handle_agent(context: CommandContext, args: str) -> CommandResult:
         )
 
     except KeyboardInterrupt:
-        # Handle interrupt
+        # Handle interrupt — context satisfies the engine_client interface
         _handle_agent_interrupt(
-            getattr(context, '_handler', None) or context,
+            context,
             checkpoint_id,
             checkpoint_backend
         )

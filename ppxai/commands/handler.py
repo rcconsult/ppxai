@@ -6,7 +6,7 @@ in the TUI application (/help, /model, /save, /load, etc.).
 """
 
 import fnmatch
-import inspect
+
 import os
 import asyncio
 import re
@@ -335,6 +335,40 @@ class CommandHandler:
         # Initialize logger for agent mode event handling
         self.logger = get_logger("tui")
 
+    # ========================================================================
+    # Public Interface (used by RichCommandContext adapter)
+    # ========================================================================
+
+    @property
+    def session(self):
+        """Access to current session."""
+        return self.engine_client.session
+
+    @property
+    def working_dir(self) -> str:
+        """Current working directory."""
+        return self.engine_client.get_working_dir() or ""
+
+    @property
+    def tools_enabled(self) -> bool:
+        """Check if tools are enabled."""
+        return self.engine_client.tools_enabled if self.engine_client else False
+
+    @property
+    def autoroute_enabled(self) -> bool:
+        """Check if auto-routing is enabled."""
+        return self.auto_route
+
+    def switch_provider(self, provider: str) -> None:
+        """Switch provider — updates handler state and engine."""
+        self.provider = provider
+        self.engine_client.set_provider(provider)
+
+    def switch_model(self, model: str) -> None:
+        """Switch model — updates handler state and engine."""
+        self.current_model = model
+        self.engine_client.set_model(model)
+
     def handle_quit(self) -> bool:
         """Handle /quit or /exit command. Returns True if should exit."""
         if self.engine_client.session.messages:
@@ -505,32 +539,15 @@ class CommandHandler:
             args = cmd_name
             cmd_name = "help"
 
-        # All commands are now handled by CommandFactory
-        if CommandFactory.get(cmd_name):
+        # All commands use CommandFactory + CommandContext protocol
+        spec = CommandFactory.get(cmd_name)
+        if spec:
             try:
-                spec = CommandFactory.get(cmd_name)
-                sig = inspect.signature(spec.handler)
-                first_param = list(sig.parameters.values())[0]
+                context = RichCommandContext(self)
+                result = spec.handler(context, args)
 
-                # Check if handler expects CommandContext (new style)
-                is_new_style = (
-                    first_param.annotation != inspect.Parameter.empty and
-                    (first_param.annotation.__name__ == 'CommandContext' if hasattr(first_param.annotation, '__name__') else str(first_param.annotation).endswith('CommandContext'))
-                )
-
-                if is_new_style:
-                    # New-style command: wrap handler in context adapter
-                    context = RichCommandContext(self)
-                    result = spec.handler(context, args)
-                else:
-                    # Old-style command: pass handler directly
-                    result = spec.handler(self, args)
-
-                # v1.15.0: Handle typed results with RichRenderer
-                if result is not None:
-                    if isinstance(result, CommandResult):
-                        # New-style command returning typed result
-                        RichRenderer.render(result)
+                if result is not None and isinstance(result, CommandResult):
+                    RichRenderer.render(result)
 
                 return False
             except Exception as e:
