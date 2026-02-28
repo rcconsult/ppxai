@@ -1,0 +1,34 @@
+# =============================================================================
+# ppxai Slim Environment — Custom + DGX Spark providers only
+# =============================================================================
+# Copy to ~/.ppxai/.env and fill in your values.
+# NEVER commit this file with real keys/URLs.
+
+# -----------------------------------------------------------------------------
+# CUSTOM PROVIDER (Internal Code AI / GPT-OSS via vLLM)
+# -----------------------------------------------------------------------------
+# API key for your internal vLLM endpoint.
+# Set any value if your endpoint doesn't validate keys.
+#
+CUSTOM_API_KEY=your-api-key-here
+
+# -----------------------------------------------------------------------------
+# VLLM / DGX SPARK (ASUS DGX Spark with Qwen3-Coder)
+# -----------------------------------------------------------------------------
+# API key for vLLM. vLLM doesn't validate keys by default,
+# so any non-empty value works.
+#
+VLLM_API_KEY=dummy
+
+# -----------------------------------------------------------------------------
+# SSL Configuration (Corporate Proxies)
+# -----------------------------------------------------------------------------
+# Uncomment if behind a corporate proxy with SSL inspection:
+#
+# SSL_VERIFY=false
+# SSL_CERT_FILE=/path/to/corporate-ca-bundle.pem
+
+# -----------------------------------------------------------------------------
+# Optional: Override default provider
+# -----------------------------------------------------------------------------
+# DEFAULT_PROVIDER=custom

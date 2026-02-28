@@ -287,10 +287,10 @@ The web tools (`get_weather`, `fetch_url`, `web_search`) support corporate proxy
 
 - `CLAUDE.md` - Detailed project instructions for Claude Code
 - `ROADMAP.md` - Feature roadmap and version planning
-- `docs/TODO-v1.16.0.md` - Current v1.16.0 task list (consolidated, single source of truth)
-- `docs/archive/RELEASE-PLAN-v1.15.6-v1.16.0.md` - Original release plan (archived, v1.15.6 history)
+- `docs/TODO-v1.16.1.md` - Current v1.16.1 task list (FileTree + TUI polish)
+- `docs/KNOWN-ISSUES.md` - Known issues tracker (KI-001: google-genai SDK pin)
 
-### Current Version: v1.16.0
+### Current Version: v1.16.1-dev
 
 **v1.16.0 Features:**
 - **NEW:** Profile-driven tool loop — `ToolCallingProfile.mode` replaces binary `native_tool_calling` decision

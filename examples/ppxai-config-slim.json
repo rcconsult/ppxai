@@ -1,0 +1,159 @@
+{
+  "version": "1.3",
+  "default_provider": "custom",
+  "system_prompt": "You are a helpful AI assistant. Be concise and direct. Report tool results briefly.",
+  "system_prompt_mode": "prepend",
+  "server": {
+    "idle_timeout": 7200,
+    "port": 54320
+  },
+  "session": {
+    "auto_restore": "prompt",
+    "auto_save_interval": 1
+  },
+  "context": {
+    "max_injection_size": 100000,
+    "default_context_limit": 128000,
+    "warn_at_percent": 80
+  },
+  "paths": {
+    "bin_search_paths": [
+      "{home}/.ppxai/bin",
+      "{home}/.local/bin",
+      "{home}/bin",
+      "/usr/local/bin"
+    ],
+    "data_dir": "{home}/.ppxai"
+  },
+  "providers": {
+    "custom": {
+      "name": "Internal Code AI",
+      "base_url": "https://your-vllm-endpoint.example.com/v1",
+      "api_key_env": "CUSTOM_API_KEY",
+      "default_model": "openai/gpt-oss-120b",
+      "coding_model": "openai/gpt-oss-120b",
+      "system_prompt": "You are a helpful AI coding assistant. Be concise and direct.\n\nCRITICAL TOOL RULES:\n1. NEVER say 'I'll use the X tool' and then output JSON - just call the tool directly\n2. Do NOT output tool calls as JSON in your response - use native tool calling\n3. If you need a tool, call it immediately without explanation\n4. Only explain AFTER the tool returns its result\n5. After display_file: confirm 'File opened: <filename>'\n6. For pip/npm: warn 'May take time (timeout: 120s)'\n7. Prefer read_file over cat/type commands\n8. Use replace_block/insert_text/apply_patch for editing\n\nOn Windows: Use PowerShell syntax. Bash heredocs (<<EOF) and $() don't work.",
+      "generation_params": {
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "frequency_penalty": 0.1,
+        "presence_penalty": 0.05
+      },
+      "tool_calling": {
+        "mode": "native",
+        "fallback_on_empty": true,
+        "strip_json_from_text": true
+      },
+      "models": {
+        "openai/gpt-oss-120b": {
+          "name": "GPT OSS 120B",
+          "description": "Internal self-hosted GPT model with native tool calling via vLLM",
+          "context_limit": 131072,
+          "max_tokens": 8192,
+          "generation_params": {
+            "temperature": 0.2,
+            "top_p": 0.9,
+            "frequency_penalty": 0.1,
+            "presence_penalty": 0.05
+          },
+          "tool_calling": {
+            "fallback_on_failure": true
+          }
+        }
+      },
+      "pricing": {
+        "openai/gpt-oss-120b": { "input": 0.0, "output": 0.0 }
+      },
+      "capabilities": {
+        "web_search": true,
+        "web_fetch": true,
+        "weather": true,
+        "realtime_info": true,
+        "native_tool_calling": true
+      }
+    },
+    "asusai-vllm": {
+      "name": "ASUS DGX Spark vLLM (GB10)",
+      "base_url": "http://your-dgx-spark-ip:8000/v1",
+      "api_key_env": "VLLM_API_KEY",
+      "default_model": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "coding_model": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "__comment_hw": "ASUS DGX Spark - Community vLLM 0.16.0rc1 (hellohal2064/vllm-dgx-spark-gb10), FP8/NVFP4 Blackwell tensor cores",
+      "__comment_runtime": "docker run -d --gpus all -p 8000:8000 --restart unless-stopped -v /opt/hf/cache:/root/.cache/huggingface --entrypoint vllm hellohal2064/vllm-dgx-spark-gb10:latest serve Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8 --tool-call-parser qwen3_coder --enable-auto-tool-choice --max-model-len 131072",
+      "system_prompt": "You are an expert coding assistant running on a local NVIDIA GB10 GPU via vLLM. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
+      "generation_params": {
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "frequency_penalty": 0.0
+      },
+      "tool_calling": {
+        "mode": "native",
+        "fallback_on_empty": true,
+        "strip_json_from_text": true
+      },
+      "models": {
+        "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8": {
+          "name": "Qwen3 Coder 30B-A3B FP8 (MoE)",
+          "description": "Code-specialized MoE: 30.5B total / 3.3B active, FP8, native tool calling via qwen3_coder parser, 820K token KV cache",
+          "context_limit": 131072,
+          "max_tokens": 8192
+        },
+        "Qwen/Qwen3-Coder-Next-FP8": {
+          "name": "Qwen3-Coder-Next FP8 (Hybrid MoE)",
+          "description": "Code-specialized hybrid MoE: 80B total / 3B active, FP8, Gated DeltaNet + MoE, 256K native context, qwen3_coder parser",
+          "context_limit": 131072,
+          "max_tokens": 8192
+        },
+        "Qwen/Qwen3-Next-80B-A3B-Instruct-FP8": {
+          "name": "Qwen3-Next 80B-A3B FP8 (Hybrid MoE)",
+          "description": "Hybrid attention MoE: 80B total / 3.9B active, FP8, Gated DeltaNet + MoE, 262K native context, hermes parser",
+          "context_limit": 32768,
+          "max_tokens": 8192
+        }
+      },
+      "pricing": {
+        "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8": { "input": 0.0, "output": 0.0 },
+        "Qwen/Qwen3-Coder-Next-FP8": { "input": 0.0, "output": 0.0 },
+        "Qwen/Qwen3-Next-80B-A3B-Instruct-FP8": { "input": 0.0, "output": 0.0 }
+      },
+      "capabilities": {
+        "web_search": true,
+        "web_fetch": true,
+        "weather": true,
+        "realtime_info": true,
+        "native_tool_calling": true
+      }
+    }
+  },
+  "tools": {
+    "shell": {
+      "timeout": 120,
+      "require_consent": true,
+      "dangerous_commands": [
+        "^rm\\s+", "^mv\\s+", "^dd\\s+", "^chmod\\s+", "^chown\\s+",
+        "^sudo\\s+", "^curl.*\\|.*bash", "^wget.*\\|.*bash",
+        ">\\s*/dev/", "^kill\\s+", "^pkill\\s+", "^killall\\s+"
+      ],
+      "allowed_commands": [
+        "^ls\\s+", "^cat\\s+(?!.*[><])", "^grep\\s+", "^echo\\s+(?!.*>)",
+        "^pwd$", "^which\\s+", "^whoami$", "^date$", "^uname\\s+"
+      ],
+      "never_allow": [
+        "rm\\s+-rf\\s+/", "dd\\s+.*of=/dev/", ":\\(\\)\\{\\s*:\\|:&\\s*\\};:",
+        "mkfs\\.", "^\\s*>\\s*/dev/sda"
+      ]
+    },
+    "agent": {
+      "max_iterations": 75,
+      "max_tool_iterations": 75,
+      "context_char_limit": 4096,
+      "min_task_words": 3,
+      "checkpoint_backend": "auto",
+      "max_same_tool_calls": 3
+    }
+  },
+  "bootstrap": {
+    "enabled": true,
+    "files": ["AGENTS.md", "CLAUDE.md", "INSTRUCTIONS.md"]
+  }
+}
