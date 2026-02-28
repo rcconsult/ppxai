@@ -151,7 +151,7 @@ async def cmd_show(app: "PPXAIDEApp", args: str) -> None:
         # Use TableViewer for tabular data (CSV/TSV) in side panel
         await app.show_file_in_panel(path, content, mode="table", read_only=True)
         chat_view.add_system_message(
-            f"[dim]Opened {path.name} ({size_kb:.1f} KB, {lines} lines) in table viewer. Ctrl+V toggle view, Ctrl+W to close.[/dim]"
+            f"[dim]Opened {path.name} ({size_kb:.1f} KB, {lines} lines) in table viewer. V toggle view, Ctrl+W to close.[/dim]"
         )
 
     elif ext in ('.md', '.markdown'):

@@ -142,7 +142,7 @@ class SidePanel(Widget):
 
         # Add appropriate viewer/editor based on mode
         if mode == "tree":
-            # Use DataViewer for structured data (has tree/source toggle with Ctrl+V)
+            # Use DataViewer for structured data (has tree/source toggle with V)
             viewer = DataViewer(id="panel-viewer")
             await content_container.mount(viewer)
             ext = path.suffix.lower()
@@ -172,7 +172,7 @@ class SidePanel(Widget):
             self.call_after_refresh(lambda: viewer.focus())
 
         elif mode == "table":
-            # Use TableViewer for CSV/TSV files (has table/source toggle with Ctrl+V)
+            # Use TableViewer for CSV/TSV files (has table/source toggle with V)
             viewer = TableViewer(id="panel-table-viewer")
             await content_container.mount(viewer)
             viewer.load_auto(content, path.name)

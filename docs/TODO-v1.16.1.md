@@ -39,6 +39,9 @@ the left, with the existing chat + side panel on the right.
 | `↑↓` (in file tree) | Navigate files/dirs (free from Textual DirectoryTree) |
 | `→` / `←` (in file tree) | Expand / collapse directory |
 | `-` / `=` | Resize panes (file tree when focused, or chat/panel split) |
+| `V` (in DataViewer/TableViewer) | Toggle tree/table ↔ source view |
+| `E` (in DataViewer) | Expand all tree nodes |
+| `C` (in DataViewer) | Collapse all tree nodes |
 
 ---
 

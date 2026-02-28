@@ -35,15 +35,21 @@ class FileTree(DirectoryTree):
 
     def __init__(self, path: Path, **kwargs) -> None:
         super().__init__(path, **kwargs)
-        # Show truncated cwd as root label instead of full absolute path
         self.guide_depth = 3
-        self.root.set_label(_short_path(path))
+
+    async def watch_path(self) -> None:
+        """Override DirectoryTree.watch_path to show truncated cwd as root label.
+
+        The parent's watch_path calls reset_node(root, str(self.path), ...) which
+        sets the root label to the full absolute path. We call super() first, then
+        override the label with our short version.
+        """
+        await super().watch_path()
+        self.root.set_label(_short_path(self.path))
 
     def update_root_path(self, path: Path) -> None:
-        """Update the root label when working directory changes."""
-        self.path = path
-        self.root.set_label(_short_path(path))
-        self.reload()
+        """Update the tree root when working directory changes."""
+        self.path = path  # Triggers watch_path which sets short label
 
     class FilePreview(Message):
         """Posted when user selects a file for read-only preview (Enter)."""

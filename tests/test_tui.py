@@ -1368,11 +1368,11 @@ class TestDataViewer:
         assert viewer.view_mode == "tree"
 
     def test_data_viewer_has_bindings(self):
-        """DataViewer should have Ctrl+V binding."""
+        """DataViewer should have V binding for toggle."""
         from ppxai.tui.widgets.data_viewer import DataViewer
 
         binding_keys = [b.key for b in DataViewer.BINDINGS]
-        assert "ctrl+v" in binding_keys
+        assert "v" in binding_keys
 
     def test_data_viewer_load_json(self):
         """DataViewer should load JSON data."""
@@ -1886,13 +1886,13 @@ class TestTableViewer:
         assert viewer.filename == "data.csv"
 
     def test_table_viewer_has_bindings(self):
-        """TableViewer should have Ctrl+V binding for toggle."""
+        """TableViewer should have V binding for toggle."""
         from ppxai.tui.widgets.table_viewer import TableViewer
 
         viewer = TableViewer()
         binding_keys = [b.key for b in viewer.BINDINGS]
 
-        assert "ctrl+v" in binding_keys
+        assert "v" in binding_keys
 
     def test_table_viewer_view_mode_toggle(self):
         """TableViewer should toggle between table and source view."""
@@ -3245,8 +3245,8 @@ class TestKeyboardNavigation:
         import asyncio
         asyncio.run(run_test())
 
-    def test_ctrl_v_toggles_data_viewer(self):
-        """Ctrl+V should toggle DataViewer between tree and source."""
+    def test_v_toggles_data_viewer(self):
+        """V should toggle DataViewer between tree and source."""
         from ppxai.tui.widgets import DataViewer
         from textual.app import App
 
@@ -3264,15 +3264,15 @@ class TestKeyboardNavigation:
                 # Should start in tree mode
                 assert viewer.view_mode == "tree"
 
-                # Press Ctrl+V
-                await pilot.press("ctrl+v")
+                # Press V
+                await pilot.press("v")
                 await pilot.pause()
 
                 # Should toggle to source
                 assert viewer.view_mode == "source"
 
-                # Press Ctrl+V again
-                await pilot.press("ctrl+v")
+                # Press V again
+                await pilot.press("v")
                 await pilot.pause()
 
                 # Should toggle back to tree
@@ -3281,8 +3281,8 @@ class TestKeyboardNavigation:
         import asyncio
         asyncio.run(run_test())
 
-    def test_ctrl_v_toggles_table_viewer(self):
-        """Ctrl+V should toggle TableViewer between table and source."""
+    def test_v_toggles_table_viewer(self):
+        """V should toggle TableViewer between table and source."""
         from ppxai.tui.widgets import TableViewer
         from textual.app import App
 
@@ -3572,8 +3572,8 @@ class TestKeyboardNavigation:
                     await panel.show_file(temp_path, '{"test": "data"}', mode="tree", read_only=True)
                     await pilot.pause()
 
-                    # Ctrl+V should toggle DataViewer (not conflict with SidePanel bindings)
-                    await pilot.press("ctrl+v")
+                    # V should toggle DataViewer (not conflict with SidePanel bindings)
+                    await pilot.press("v")
                     await pilot.pause()
 
                     # Escape should close panel (SidePanel binding)

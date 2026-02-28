@@ -2,7 +2,7 @@
 DataViewer widget - Structured data viewer with tree/source toggle.
 
 Combines TreeViewer (hierarchical display) and CodeEditor (source view)
-with Ctrl+V toggle between modes. Supports JSON, YAML, and TOML formats.
+with V toggle between modes. Supports JSON, YAML, and TOML formats.
 """
 
 import json
@@ -29,7 +29,7 @@ ViewMode = Literal["tree", "source"]
 class DataViewer(Widget):
     """A widget for viewing structured data with tree/source toggle.
 
-    Supports JSON, YAML, and TOML files. Press Ctrl+V to toggle
+    Supports JSON, YAML, and TOML files. Press V to toggle
     between tree view and source (code) view.
 
     Tree view shows hierarchical data with expand/collapse.
@@ -42,7 +42,7 @@ class DataViewer(Widget):
     # CSS is in layout.tcss
 
     BINDINGS = [
-        Binding("ctrl+v", "toggle_view", "Toggle View", show=True, priority=True),
+        Binding("v", "toggle_view", "Toggle View", show=True),
         Binding("e", "expand_all", "Expand All", show=False),
         Binding("c", "collapse_all", "Collapse All", show=False),
     ]
@@ -93,7 +93,7 @@ class DataViewer(Widget):
     def compose(self) -> ComposeResult:
         """Compose the data viewer layout."""
         # Header with filename and mode indicator
-        mode_hint = "[Ctrl+V: source]" if self.view_mode == "tree" else "[Ctrl+V: tree]"
+        mode_hint = "[V: source]" if self.view_mode == "tree" else "[V: tree]"
         header_text = f" [bold]{self._filename}[/bold] [dim]({self.view_mode})[/dim]  [dim]{mode_hint}[/dim]"
         yield Static(header_text, classes="data-viewer-header", id="data-viewer-header")
 
@@ -148,7 +148,7 @@ class DataViewer(Widget):
         """Update the header with current mode."""
         try:
             header = self.query_one("#data-viewer-header", Static)
-            mode_hint = "[Ctrl+V: source]" if self.view_mode == "tree" else "[Ctrl+V: tree]"
+            mode_hint = "[V: source]" if self.view_mode == "tree" else "[V: tree]"
             header_text = f" [bold]{self._filename}[/bold] [dim]({self.view_mode})[/dim]  [dim]{mode_hint}[/dim]"
             header.update(header_text)
         except NoMatches:
@@ -175,7 +175,7 @@ class DataViewer(Widget):
             self.call_after_refresh(focus_editor)
 
     def action_toggle_view(self) -> None:
-        """Toggle between tree and source view (Ctrl+V)."""
+        """Toggle between tree and source view (V)."""
         self.view_mode = "source" if self.view_mode == "tree" else "tree"
 
     def action_expand_all(self) -> None:

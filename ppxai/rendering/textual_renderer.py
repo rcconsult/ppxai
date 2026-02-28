@@ -200,7 +200,7 @@ async def render_ai_response(renderer: TextualRenderer, result: AIResponseResult
 
 @TextualRenderer.register(TableResult)
 async def render_table(renderer: TextualRenderer, result: TableResult) -> None:
-    """Render table with TableViewer widget in side panel (supports Ctrl+V toggle)."""
+    """Render table with TableViewer widget in side panel (supports V toggle)."""
 
     chat_view = renderer._get_chat_view()
 
@@ -213,7 +213,7 @@ async def render_table(renderer: TextualRenderer, result: TableResult) -> None:
     content = result.metadata.get("content", "") if result.metadata else ""
 
     # If we have filepath and content, use show_file_in_panel which uses TableViewer
-    # TableViewer has Ctrl+V toggle between table and source view
+    # TableViewer has V toggle between table and source view
     if content:
         await renderer.app.show_file_in_panel(
             Path(filepath),
@@ -229,12 +229,12 @@ async def render_table(renderer: TextualRenderer, result: TableResult) -> None:
             table.add_row(*[str(cell) for cell in row])
         await renderer.app.show_widget_in_panel(table, title=result.message)
 
-    chat_view.add_system_message(f"[dim]{result.message} (opened in side panel, Ctrl+V for source)[/dim]")
+    chat_view.add_system_message(f"[dim]{result.message} (opened in side panel, V for source)[/dim]")
 
 
 @TextualRenderer.register(TreeResult)
 async def render_tree(renderer: TextualRenderer, result: TreeResult) -> None:
-    """Render tree with DataViewer widget in side panel (supports Ctrl+V toggle)."""
+    """Render tree with DataViewer widget in side panel (supports V toggle)."""
 
     chat_view = renderer._get_chat_view()
 
@@ -247,7 +247,7 @@ async def render_tree(renderer: TextualRenderer, result: TreeResult) -> None:
     content = result.metadata.get("content", "") if result.metadata else ""
 
     # If we have filepath and content, use show_file_in_panel which uses DataViewer
-    # DataViewer has Ctrl+V toggle between tree and source view
+    # DataViewer has V toggle between tree and source view
     if content:
         await renderer.app.show_file_in_panel(
             Path(filepath),
@@ -268,7 +268,7 @@ async def render_tree(renderer: TextualRenderer, result: TreeResult) -> None:
         add_children(tree.root, result.root)
         await renderer.app.show_widget_in_panel(tree, title=result.message)
 
-    chat_view.add_system_message(f"[dim]{result.message} (opened in side panel, Ctrl+V for source)[/dim]")
+    chat_view.add_system_message(f"[dim]{result.message} (opened in side panel, V for source)[/dim]")
 
 
 @TextualRenderer.register(ListResult)

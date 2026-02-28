@@ -142,19 +142,19 @@ class TableViewer(Widget):
     Features:
     - Table view using DataTable
     - Source view using CodeEditor
-    - Ctrl+V toggles between views
+    - V toggles between views
     - Automatic delimiter detection
     - Header detection
 
     Keybindings:
-        Ctrl+V : Toggle between table and source view
+        V : Toggle between table and source view
     """
 
     can_focus = True
     can_focus_children = True
 
     BINDINGS = [
-        Binding("ctrl+v", "toggle_view", "Toggle View", show=True, priority=True),
+        Binding("v", "toggle_view", "Toggle View", show=True),
     ]
 
     # Reactive view mode
@@ -190,7 +190,7 @@ class TableViewer(Widget):
         # Header showing filename, format, and current view
         delim_name = DELIMITERS.get(self._delimiter, "Unknown")
         view_label = "Table" if self.view_mode == "table" else "Source"
-        header_text = f" [bold]{self._filename}[/bold] [dim]({delim_name})[/dim] [{view_label}] [dim]Ctrl+V toggle[/dim]"
+        header_text = f" [bold]{self._filename}[/bold] [dim]({delim_name})[/dim] [{view_label}] [dim]V toggle[/dim]"
         yield Static(header_text, classes="table-viewer-header", id="table-header")
 
         # Content switcher for table/source views
@@ -252,7 +252,7 @@ class TableViewer(Widget):
             header = self.query_one("#table-header", Static)
             delim_name = DELIMITERS.get(self._delimiter, "Unknown")
             view_label = "Table" if mode == "table" else "Source"
-            header.update(f" [bold]{self._filename}[/bold] [dim]({delim_name})[/dim] [{view_label}] [dim]Ctrl+V toggle[/dim]")
+            header.update(f" [bold]{self._filename}[/bold] [dim]({delim_name})[/dim] [{view_label}] [dim]V toggle[/dim]")
         except Exception:
             pass
 
@@ -291,7 +291,7 @@ class TableViewer(Widget):
             self.call_after_refresh(focus_editor)
 
     def action_toggle_view(self) -> None:
-        """Toggle between table and source view (Ctrl+V)."""
+        """Toggle between table and source view (V)."""
         self.view_mode = "source" if self.view_mode == "table" else "table"
 
     def load_csv(self, content: str, filename: str = "data.csv") -> bool:
@@ -367,7 +367,7 @@ class TableViewer(Widget):
                 delim_name = DELIMITERS.get(self._delimiter, "Unknown")
                 view_label = "Table" if self.view_mode == "table" else "Source"
                 row_info = f"{self._displayed_rows}/{self._total_rows} rows" if self._total_rows > MAX_INITIAL_ROWS else f"{self._total_rows} rows"
-                header.update(f" [bold]{self._filename}[/bold] [dim]({delim_name}, {row_info})[/dim] [{view_label}] [dim]Ctrl+V toggle[/dim]")
+                header.update(f" [bold]{self._filename}[/bold] [dim]({delim_name}, {row_info})[/dim] [{view_label}] [dim]V toggle[/dim]")
             except Exception:
                 pass
 
