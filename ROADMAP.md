@@ -564,12 +564,13 @@ ppxai/tui/                     # New module (Textual-based)
 
 ---
 
-## Planned (v1.16.1+)
+## Completed (v1.16.1)
 
 ### v1.16.1 - Gemini 3 Model Updates + File Tree + CommandFactory Server Pattern
 
-**Status:** In Progress
-**Effort:** 5 days
+**Status:** ✅ Complete (2026-03-01)
+**Branch:** feature/v1.16.1
+**Release Notes:** [docs/RELEASE-NOTES-v1.16.1.md](docs/RELEASE-NOTES-v1.16.1.md)
 
 #### Gemini 3 Model Updates (Priority: High)
 
@@ -610,6 +611,12 @@ ppxai/tui/                     # New module (Textual-based)
 |---------|-------------|--------|
 | **`EngineClient.restore_session()`** | Single entry point for all session restoration | ✅ Done |
 | **All clients migrated** | Rich, Textual, HTTP, JSON-RPC delegate to centralized method | ✅ Done |
+
+| **1,624 tests passing** | 88 new tests (+28 FileTree, +20 regex/parsing, +40 other) | ✅ Done |
+
+---
+
+## Planned (v1.17.0+)
 
 ### v1.17.0 - Web App File Tree Sidebar
 
@@ -826,7 +833,7 @@ ppxai is **not** trying to be:
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ```bash
-uv run pytest tests/ -v       # Run tests (1227 passing)
+uv run pytest tests/ -v       # Run tests (1624 passing)
 uv run ppxai-server           # Start server for VSCode dev
 ```
 
@@ -843,4 +850,4 @@ For archived planning documents:
 
 ---
 
-**Last Updated**: February 19, 2026
+**Last Updated**: March 1, 2026

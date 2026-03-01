@@ -53,6 +53,10 @@ nav:
     - vLLM Tool Calling: vllm-tool-calling-guide.md
     - Container Tools: CONTAINER_TOOLS_GUIDE.md
     - Autorouter Config: AUTOROUTER-CONFIG.md
+  - Release Notes:
+    - v1.16.1: RELEASE-NOTES-v1.16.1.md
+    - v1.16.0: RELEASE-NOTES-v1.16.0.md
+    - v1.15.6: RELEASE-NOTES-v1.15.6.md
 
 plugins:
   - search

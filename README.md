@@ -1,6 +1,6 @@
 # ppxai - Multi-LLM Interface for Developers
 
-![Version](https://img.shields.io/badge/version-1.16.0-blue) ![Tests](https://img.shields.io/badge/tests-1536%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
+![Version](https://img.shields.io/badge/version-1.16.1-blue) ![Tests](https://img.shields.io/badge/tests-1624%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
 
 **Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
 
@@ -341,6 +341,7 @@ No telemetry. No tracking. Data only goes to the LLM provider you choose.
 | [Specifications](SPECIFICATIONS.md) | Code generation templates |
 | [Architecture](docs/ARCHITECTURE.md) | Type-based renderer design (v1.15.0) |
 | [Tool Calling](docs/TOOL_CALLING.md) | Native vs prompt-based tool calling |
+| [Release Notes v1.16.1](docs/RELEASE-NOTES-v1.16.1.md) | FileTree widget, CommandFactory server pattern, unified session restore |
 | [Release Notes v1.16.0](docs/RELEASE-NOTES-v1.16.0.md) | Profile-driven tool loop, multi-tool support, agent UI, benchmark v2 |
 | [Release Notes v1.15.6](docs/RELEASE-NOTES-v1.15.6.md) | Native OpenAI provider, model profiles, benchmark analysis |
 
@@ -418,7 +419,7 @@ ppxai/
 │   ├── ppxai.png               # ppxai icon (CLI)
 │   ├── ppxaide-nobg.png        # ppxaide icon (TUI)
 │   └── [.ico|.icns files]      # Platform-specific icons
-├── tests/                      # 1536+ tests
+├── tests/                      # 1624+ tests
 │   ├── test_tui.py             # Textual TUI tests (180+ tests)
 │   ├── test_engine.py          # Engine layer tests
 │   ├── test_commands.py        # Command tests
