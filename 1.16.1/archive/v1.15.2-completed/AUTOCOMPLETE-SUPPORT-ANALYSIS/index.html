@@ -1,0 +1,2805 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.16.1/archive/v1.15.2-completed/AUTOCOMPLETE-SUPPORT-ANALYSIS/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+    
+    
+      
+        <title>Autocomplete Support Analysis Across All Clients - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#autocomplete-support-analysis-across-all-clients" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Autocomplete Support Analysis Across All Clients
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../INSTALLATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../PROVIDER_SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../AGENT_MODE_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CONTEXT-INJECTION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CHECKPOINT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../FILE_EDITING_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../AUTOROUTER-CONFIG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../RELEASE-NOTES-v1.16.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#detailed-feature-breakdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Feature Breakdown
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Detailed Feature Breakdown">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-slash-command-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Slash Command Autocomplete
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Slash Command Autocomplete">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shared-command-list-vscodeweb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared Command List (VScode/Web)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rich-tui-command-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rich TUI Command List
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#textual-tui-command-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Textual TUI Command List
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-subcommand-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Subcommand Autocomplete
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Subcommand Autocomplete">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rich-tui-subcommands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rich TUI Subcommands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#textual-tui-subcommands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Textual TUI Subcommands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vscodeweb-subcommands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VSCode/Web Subcommands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-file-reference-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. @file Reference Autocomplete
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. @file Reference Autocomplete">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rich-tui-file-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rich TUI @file Autocomplete
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#textual-tui-file-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Textual TUI @file Autocomplete
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vscode-file-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VSCode @file Autocomplete
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#web-app-file-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web App @file Autocomplete
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#35-file-command-arguments-textual-tui-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.5. File Command Arguments (Textual TUI Only) ✅
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3.5. File Command Arguments (Textual TUI Only) ✅">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#textual-tui-file-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Textual TUI File Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-model-name-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Model Name Autocomplete
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Model Name Autocomplete">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#textual-tui-model-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Textual TUI Model Autocomplete ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#richvscodeweb-model-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rich/VSCode/Web Model Autocomplete ❌
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-provider-name-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Provider Name Autocomplete
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Provider Name Autocomplete">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#textual-tui-provider-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Textual TUI Provider Autocomplete ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#richvscodeweb-provider-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rich/VSCode/Web Provider Autocomplete ❌
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-theme-name-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Theme Name Autocomplete
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Theme Name Autocomplete">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#textual-tui-theme-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Textual TUI Theme Autocomplete ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rich-tui-theme-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rich TUI Theme Autocomplete ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vscodeweb-theme-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VSCode/Web Theme Autocomplete ❌
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-tool-name-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Tool Name Autocomplete
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Tool Name Autocomplete">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rich-tui-tool-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rich TUI Tool Autocomplete ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#textualvscodeweb-tool-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Textual/VSCode/Web Tool Autocomplete ❌
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#file-search-implementation-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File Search Implementation Comparison
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="File Search Implementation Comparison">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rich-tui-local-recursive-search" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rich TUI - Local Recursive Search
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#textual-tui-local-recursive-search-enhanced" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Textual TUI - Local Recursive Search (Enhanced)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vscode-native-workspace-search" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VSCode - Native Workspace Search
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#web-server-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web - Server Endpoint
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#autocomplete-trigger-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Autocomplete Trigger Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#autocomplete-ux-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Autocomplete UX Patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Autocomplete UX Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rich-tui-prompt_toolkit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rich TUI (prompt_toolkit)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#textual-tui-custom-widget" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Textual TUI (Custom Widget)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vscode-webview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VSCode (Webview)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#web-custom-javascript" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web (Custom JavaScript)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feature-parity-gaps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Parity Gaps
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Feature Parity Gaps">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#high-priority-gaps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        High Priority Gaps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#medium-priority-gaps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Medium Priority Gaps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#low-priority-gaps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Low Priority Gaps
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommendations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommendations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recommendations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#for-v1152-quick-wins" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        For v1.15.2 (Quick Wins)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#for-v1160-feature-parity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        For v1.16.0 (Feature Parity)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#for-v1170-advanced-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        For v1.17.0 (Advanced Features)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing Checklist
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing Checklist">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#slash-command-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slash Command Autocomplete
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subcommand-autocomplete-richtextual-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Subcommand Autocomplete (Rich/Textual only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-autocomplete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        @file Autocomplete
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modelprovider-autocomplete-textual-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model/Provider Autocomplete (Textual only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#theme-autocomplete-tuis-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Theme Autocomplete (TUIs only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tool-autocomplete-rich-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool Autocomplete (Rich only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related Documents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conclusion
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="autocomplete-support-analysis-across-all-clients">Autocomplete Support Analysis Across All Clients<a class="headerlink" href="#autocomplete-support-analysis-across-all-clients" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-01-29
+<strong>Version:</strong> v1.15.1
+<strong>Purpose:</strong> Document current autocomplete feature parity across Rich TUI, Textual TUI, VSCode, and Web clients</p>
+<hr />
+<h2 id="executive-summary">Executive Summary<a class="headerlink" href="#executive-summary" title="Permanent link">&para;</a></h2>
+<p>All 4 clients have <strong>autocomplete support</strong>, but with varying levels of sophistication:</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Rich TUI</th>
+<th>Textual TUI</th>
+<th>VSCode</th>
+<th>Web App</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Slash Commands</strong></td>
+<td>✅ Full</td>
+<td>✅ <strong>Full (Tab-based)</strong></td>
+<td>✅ Full</td>
+<td>✅ Full</td>
+</tr>
+<tr>
+<td><strong>Subcommands</strong></td>
+<td>✅ 6 types</td>
+<td>✅ <strong>8 types (Tab-based)</strong></td>
+<td>❌ None</td>
+<td>❌ None</td>
+</tr>
+<tr>
+<td><strong>@file References</strong></td>
+<td>⚠️ Files only</td>
+<td>✅ <strong>Full (Tab-based)</strong></td>
+<td>✅ Files + @git/@tree</td>
+<td>✅ Files + @git/@tree</td>
+</tr>
+<tr>
+<td><strong>File Commands</strong></td>
+<td>❌ None</td>
+<td>✅ <strong>/show, /edit, /cat</strong></td>
+<td>❌ None</td>
+<td>❌ None</td>
+</tr>
+<tr>
+<td><strong>Model Names</strong></td>
+<td>❌ None</td>
+<td>✅ <strong>Dynamic (Tab-based)</strong></td>
+<td>❌ None</td>
+<td>❌ None</td>
+</tr>
+<tr>
+<td><strong>Provider Names</strong></td>
+<td>❌ None</td>
+<td>✅ <strong>Dynamic (Tab-based)</strong></td>
+<td>❌ None</td>
+<td>❌ None</td>
+</tr>
+<tr>
+<td><strong>Theme Names</strong></td>
+<td>✅ Yes</td>
+<td>✅ <strong>Yes (Tab-based)</strong></td>
+<td>❌ N/A</td>
+<td>❌ N/A</td>
+</tr>
+<tr>
+<td><strong>Tool Names</strong></td>
+<td>✅ Yes (/tools help)</td>
+<td>✅ <strong>Yes (Tab-based)</strong></td>
+<td>❌ None</td>
+<td>❌ None</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key Findings:</strong>
+- <strong>Textual TUI autocomplete RE-ENABLED (v1.15.2)</strong> - Tab-based completion with full feature parity
+- <strong>Textual TUI</strong> now has the <strong>MOST COMPLETE</strong> autocomplete (8/8 features, including file commands)
+- <strong>Rich TUI</strong> has good working autocomplete (4/7 features functional)
+- <strong>VSCode/Web</strong> have basic autocomplete but no subcommand support
+- <strong>File search</strong> differs: VSCode/Web use server endpoint, TUIs use local cache</p>
+<hr />
+<h2 id="detailed-feature-breakdown">Detailed Feature Breakdown<a class="headerlink" href="#detailed-feature-breakdown" title="Permanent link">&para;</a></h2>
+<h3 id="1-slash-command-autocomplete">1. Slash Command Autocomplete<a class="headerlink" href="#1-slash-command-autocomplete" title="Permanent link">&para;</a></h3>
+<p>All clients autocomplete slash commands when user types <code>/</code>.</p>
+<h4 id="shared-command-list-vscodeweb">Shared Command List (VScode/Web)<a class="headerlink" href="#shared-command-list-vscodeweb" title="Permanent link">&para;</a></h4>
+<p><strong>Source:</strong> <a href="../ppxai/web/shared/commands.js">ppxai/web/shared/commands.js</a></p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Category</th>
+<th>Subcommands</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/help</code></td>
+<td>Session</td>
+<td>-</td>
+<td>Show available commands</td>
+</tr>
+<tr>
+<td><code>/clear</code></td>
+<td>Session</td>
+<td>-</td>
+<td>Clear conversation history</td>
+</tr>
+<tr>
+<td><code>/save</code></td>
+<td>Session</td>
+<td>-</td>
+<td>Save session to JSON</td>
+</tr>
+<tr>
+<td><code>/export</code></td>
+<td>Session</td>
+<td>-</td>
+<td>Export last answer to markdown</td>
+</tr>
+<tr>
+<td><code>/load</code></td>
+<td>Session</td>
+<td>-</td>
+<td>Load a saved session</td>
+</tr>
+<tr>
+<td><code>/sessions</code></td>
+<td>Session</td>
+<td>-</td>
+<td>List saved sessions</td>
+</tr>
+<tr>
+<td><code>/provider</code></td>
+<td>Provider</td>
+<td>list</td>
+<td>Switch provider or list providers</td>
+</tr>
+<tr>
+<td><code>/model</code></td>
+<td>Provider</td>
+<td>list</td>
+<td>Switch model or list models</td>
+</tr>
+<tr>
+<td><code>/tools</code></td>
+<td>Tools</td>
+<td>enable, disable, status, list, config, set, agent, help</td>
+<td>Manage AI tools</td>
+</tr>
+<tr>
+<td><code>/agent</code></td>
+<td>Tools</td>
+<td>on, off</td>
+<td>Run autonomous agent task</td>
+</tr>
+<tr>
+<td><code>/checkpoint</code></td>
+<td>Checkpoint</td>
+<td>status, list, undo, backend, clear, info</td>
+<td>Manage checkpoints</td>
+</tr>
+<tr>
+<td><code>/usage</code></td>
+<td>Usage</td>
+<td>24h, week, month, year, all, show, reset</td>
+<td>Show token usage stats</td>
+</tr>
+<tr>
+<td><code>/status</code></td>
+<td>Usage</td>
+<td>-</td>
+<td>Show current status</td>
+</tr>
+<tr>
+<td><code>/show</code></td>
+<td>File</td>
+<td>-</td>
+<td>Display file contents (no LLM)</td>
+</tr>
+<tr>
+<td><code>/cat</code></td>
+<td>File</td>
+<td>-</td>
+<td>Alias for /show</td>
+</tr>
+<tr>
+<td><code>/cd</code></td>
+<td>File</td>
+<td>-</td>
+<td>Change working directory</td>
+</tr>
+<tr>
+<td><code>/pwd</code></td>
+<td>File</td>
+<td>-</td>
+<td>Print working directory</td>
+</tr>
+<tr>
+<td><code>/generate</code></td>
+<td>Coding</td>
+<td>-</td>
+<td>Generate code from description</td>
+</tr>
+<tr>
+<td><code>/explain</code></td>
+<td>Coding</td>
+<td>-</td>
+<td>Explain code or concept</td>
+</tr>
+<tr>
+<td><code>/test</code></td>
+<td>Coding</td>
+<td>-</td>
+<td>Generate tests for code</td>
+</tr>
+<tr>
+<td><code>/docs</code></td>
+<td>Coding</td>
+<td>-</td>
+<td>Generate documentation</td>
+</tr>
+<tr>
+<td><code>/debug</code></td>
+<td>Coding</td>
+<td>-</td>
+<td>Debug an error message</td>
+</tr>
+<tr>
+<td><code>/implement</code></td>
+<td>Coding</td>
+<td>-</td>
+<td>Implement from description</td>
+</tr>
+<tr>
+<td><code>/convert</code></td>
+<td>Coding</td>
+<td>api, cli, lib, algo, ui</td>
+<td>Convert code between languages</td>
+</tr>
+<tr>
+<td><code>/spec</code></td>
+<td>Coding</td>
+<td>-</td>
+<td>Show specification templates</td>
+</tr>
+<tr>
+<td><code>/theme</code></td>
+<td>Other</td>
+<td>dark, light</td>
+<td>Switch theme</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total:</strong> 26 commands</p>
+<h4 id="rich-tui-command-list">Rich TUI Command List<a class="headerlink" href="#rich-tui-command-list" title="Permanent link">&para;</a></h4>
+<p><strong>Source:</strong> <a href="../ppxai/rich/main.py:170-198">ppxai/rich/main.py:170-198</a></p>
+<p>Same 26 commands as Web/VSCode, defined in <code>PPXAICompleter.COMMANDS</code>.</p>
+<p><strong>Additional Rich TUI Commands:</strong>
+- <code>/new</code> - Start new session (in list but not in shared commands)
+- <code>/history</code> - Show conversation history (in list but not in shared commands)
+- <code>/copy</code> - Copy last response to clipboard (in list but not in shared commands)
+- <code>/review</code>, <code>/optimize</code> - Coding tasks (in list but not in shared commands)
+- <code>/undo</code> - Revert last agent task (in list but not in shared commands)</p>
+<p><strong>Total:</strong> ~31 commands</p>
+<h4 id="textual-tui-command-list">Textual TUI Command List<a class="headerlink" href="#textual-tui-command-list" title="Permanent link">&para;</a></h4>
+<p><strong>Source:</strong> <a href="../ppxai/tui/completer.py:202-210">ppxai/tui/completer.py:202-210</a></p>
+<p>Uses dynamic command discovery via <code>CommandFactory.list_all()</code>, ensuring it always has the latest commands.</p>
+<p><strong>Status:</strong> ✅ Most robust - automatically synced with command factory</p>
+<hr />
+<h3 id="2-subcommand-autocomplete">2. Subcommand Autocomplete<a class="headerlink" href="#2-subcommand-autocomplete" title="Permanent link">&para;</a></h3>
+<p>Autocomplete for arguments after the main command (e.g., <code>/tools enable</code>, <code>/checkpoint status</code>).</p>
+<h4 id="rich-tui-subcommands">Rich TUI Subcommands<a class="headerlink" href="#rich-tui-subcommands" title="Permanent link">&para;</a></h4>
+<p><strong>Source:</strong> <a href="../ppxai/rich/main.py:337-459">ppxai/rich/main.py:337-459</a></p>
+<table>
+<thead>
+<tr>
+<th>Parent Command</th>
+<th>Subcommands Autocompleted</th>
+<th>Implementation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/tools</code></td>
+<td>enable, disable, list, status, help, set, config, agent</td>
+<td>Lines 338-360</td>
+</tr>
+<tr>
+<td><code>/tools help &lt;tool&gt;</code></td>
+<td>calculator, get_datetime, list_directory, read_file, execute_shell_command, apply_patch, replace_block, insert_text, delete_lines, web_search, fetch_url</td>
+<td>Lines 350-359</td>
+</tr>
+<tr>
+<td><code>/theme</code></td>
+<td>list, standard, tron-legacy, matrix, nord</td>
+<td>Lines 362-395</td>
+</tr>
+<tr>
+<td><code>/theme emoji</code></td>
+<td>on, off</td>
+<td>Lines 385-394</td>
+</tr>
+<tr>
+<td><code>/usage</code></td>
+<td>show, reset</td>
+<td>Lines 397-420</td>
+</tr>
+<tr>
+<td><code>/usage show</code></td>
+<td>session, provider, model, off</td>
+<td>Lines 410-419</td>
+</tr>
+<tr>
+<td><code>/checkpoint</code></td>
+<td>status, list, undo, backend, clear, info</td>
+<td>Lines 422-445</td>
+</tr>
+<tr>
+<td><code>/checkpoint backend</code></td>
+<td>git, file, auto, none</td>
+<td>Lines 435-444</td>
+</tr>
+<tr>
+<td><code>/status</code></td>
+<td>version, cwd, datetime</td>
+<td>Lines 447-459</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total:</strong> 9 subcommand types (including nested levels)</p>
+<h4 id="textual-tui-subcommands">Textual TUI Subcommands<a class="headerlink" href="#textual-tui-subcommands" title="Permanent link">&para;</a></h4>
+<p><strong>Source:</strong> <a href="../ppxai/tui/completer.py:193-240">ppxai/tui/completer.py:193-240</a></p>
+<p><strong>Status:</strong> ✅ <strong>FULLY FUNCTIONAL (v1.15.2)</strong></p>
+<p>Tab-based autocomplete with 8 subcommand types (most comprehensive of all clients):</p>
+<table>
+<thead>
+<tr>
+<th>Parent Command</th>
+<th>Subcommands</th>
+<th>Implementation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/tools</code></td>
+<td>on, off, enable, disable, list, status, help, set, config, agent</td>
+<td>Lines 33-44</td>
+</tr>
+<tr>
+<td><code>/usage</code></td>
+<td>show, session, provider, off, reset</td>
+<td>Lines 46-52</td>
+</tr>
+<tr>
+<td><code>/checkpoint</code></td>
+<td>status, list, backend, clear, info, undo</td>
+<td>Lines 54-61</td>
+</tr>
+<tr>
+<td><code>/checkpoint backend</code></td>
+<td>git, file, auto, none</td>
+<td>Lines 63-68</td>
+</tr>
+<tr>
+<td><code>/status</code></td>
+<td>version, cwd, datetime</td>
+<td>Lines 70-74</td>
+</tr>
+<tr>
+<td><code>/theme</code></td>
+<td>list + 13 theme names</td>
+<td>Lines 271-303</td>
+</tr>
+<tr>
+<td><code>/model &lt;model_name&gt;</code></td>
+<td>Dynamic from current provider's models</td>
+<td>Lines 224-250</td>
+</tr>
+<tr>
+<td><code>/provider &lt;provider_id&gt;</code></td>
+<td>Dynamic from config (perplexity, gemini, openai, etc.)</td>
+<td>Lines 252-269</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total:</strong> 8 subcommand types (6 static + 2 dynamic) - <strong>ALL FUNCTIONAL via Tab completion</strong></p>
+<p><strong>How to use:</strong> Type command + space + Tab (e.g., <code>/tools</code> then Tab shows all subcommands)</p>
+<h4 id="vscodeweb-subcommands">VSCode/Web Subcommands<a class="headerlink" href="#vscodeweb-subcommands" title="Permanent link">&para;</a></h4>
+<p><strong>Status:</strong> ❌ None</p>
+<p>VSCode and Web apps do <strong>not</strong> autocomplete subcommands. They only autocomplete the main slash commands.</p>
+<p><strong>Example:</strong>
+- Rich/Textual TUI: <code>/tools &lt;tab&gt;</code> → shows <code>enable</code>, <code>disable</code>, <code>list</code>, etc.
+- VSCode/Web: <code>/tools &lt;tab&gt;</code> → no suggestions</p>
+<hr />
+<h3 id="3-file-reference-autocomplete">3. @file Reference Autocomplete<a class="headerlink" href="#3-file-reference-autocomplete" title="Permanent link">&para;</a></h3>
+<p>Autocomplete for <code>@file</code> references (context injection).</p>
+<h4 id="rich-tui-file-autocomplete">Rich TUI @file Autocomplete<a class="headerlink" href="#rich-tui-file-autocomplete" title="Permanent link">&para;</a></h4>
+<p><strong>Source:</strong> <a href="../ppxai/rich/main.py:314-331">ppxai/rich/main.py:314-331</a></p>
+<p><strong>Trigger:</strong> Type <code>@</code> anywhere in message
+<strong>Behavior:</strong>
+- Shows <strong>files only</strong> (no special providers like <code>@git</code>, <code>@tree</code>)
+- Searches working directory recursively (<code>rglob</code>)
+- Filters by filename or relative path match
+- Caches results for 5 seconds
+- Ignores: <code>.git</code>, <code>node_modules</code>, <code>__pycache__</code>, <code>.venv</code>, <code>venv</code>, <code>.tox</code>, <code>dist</code>, <code>build</code>, <code>.eggs</code>, <code>.mypy_cache</code>
+- Max results: 100 files</p>
+<p><strong>Display:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>@README.md          ./README.md
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>@config.py          ./ppxai/config.py
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>@main.py            ./ppxai/rich/main.py
+</span></code></pre></div></p>
+<p><strong>Missing:</strong> No <code>@git</code>, <code>@tree</code>, <code>@clipboard</code>, <code>@url</code> suggestions</p>
+<h4 id="textual-tui-file-autocomplete">Textual TUI @file Autocomplete<a class="headerlink" href="#textual-tui-file-autocomplete" title="Permanent link">&para;</a></h4>
+<p><strong>Source:</strong> <a href="../ppxai/tui/completer.py:114-146">ppxai/tui/completer.py:114-146</a></p>
+<p><strong>Trigger:</strong> Type <code>@</code> anywhere in message
+<strong>Behavior:</strong>
+- Shows <strong>special providers first</strong>: <code>@file</code>, <code>@clipboard</code>, <code>@url</code>
+- Then shows <strong>file completions</strong> for partial matches
+- File caching: 5 seconds
+- Priority files (shown first): <code>AGENTS.md</code>, <code>CLAUDE.md</code>, <code>README.md</code>, <code>.env</code>, <code>pyproject.toml</code>, <code>package.json</code>
+- Max results: 100 files (20 shown in autocomplete)</p>
+<p><strong>Display:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>@file               Include file contents
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>@clipboard          Include clipboard contents
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>@url                Fetch and include URL contents
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>@file:README.md     ./README.md
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>@file:config.py     ./ppxai/config.py
+</span></code></pre></div></p>
+<p><strong>Advantage:</strong> Shows context providers as distinct options</p>
+<h4 id="vscode-file-autocomplete">VSCode @file Autocomplete<a class="headerlink" href="#vscode-file-autocomplete" title="Permanent link">&para;</a></h4>
+<p><strong>Source:</strong> <a href="../vscode-extension/src/chatPanel.ts:340-375">vscode-extension/src/chatPanel.ts:340-375</a></p>
+<p><strong>Trigger:</strong> Type <code>@</code> anywhere in message
+<strong>Behavior:</strong>
+- Sends query to server endpoint: <code>POST /files/search</code> (lines 344)
+- Shows <strong>special providers first</strong>: <code>@git</code>, <code>@tree</code>
+- Then shows workspace file matches
+- Uses VSCode's workspace search API (<code>vscode.workspace.findFiles</code>)
+- Filters special refs by query
+- Max results: 10 files</p>
+<p><strong>Display:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>@git                Include git diff
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>@tree               Include project structure
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>README.md           ./README.md
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>config.py           src/config.py
+</span></code></pre></div></p>
+<p><strong>Advantage:</strong> Uses VSCode's native search (fast, respects .gitignore)</p>
+<h4 id="web-app-file-autocomplete">Web App @file Autocomplete<a class="headerlink" href="#web-app-file-autocomplete" title="Permanent link">&para;</a></h4>
+<p><strong>Source:</strong> <a href="../ppxai/web/app.js:2177-2226">ppxai/web/app.js:2177-2226</a></p>
+<p><strong>Trigger:</strong> Type <code>@</code> anywhere in message
+<strong>Behavior:</strong>
+- Sends query to server endpoint: <code>POST /files/search</code>
+- Fallback to <code>@git</code>, <code>@tree</code> if server unavailable
+- Max results: 20 files</p>
+<p><strong>Display:</strong> Same as VSCode</p>
+<p><strong>Advantage:</strong> Server-side search (consistent with VSCode)
+<strong>Limitation:</strong> Requires server connection, otherwise only shows <code>@git</code>/<code>@tree</code></p>
+<hr />
+<h3 id="35-file-command-arguments-textual-tui-only">3.5. File Command Arguments (Textual TUI Only) ✅<a class="headerlink" href="#35-file-command-arguments-textual-tui-only" title="Permanent link">&para;</a></h3>
+<p><strong>NEW in v1.15.2</strong> - Terminal-like file completion for <code>/show</code>, <code>/edit</code>, <code>/cat</code> commands.</p>
+<h4 id="textual-tui-file-commands">Textual TUI File Commands<a class="headerlink" href="#textual-tui-file-commands" title="Permanent link">&para;</a></h4>
+<p><strong>Source:</strong> <a href="../ppxai/tui/completer.py:155-191">ppxai/tui/completer.py:155-191</a></p>
+<p><strong>Trigger:</strong> Type <code>/show</code>, <code>/edit</code>, or <code>/cat</code> then Tab
+<strong>Behavior:</strong>
+- Returns plain filenames (no <code>@</code> prefix) for terminal-like UX
+- Searches working directory recursively
+- Filters by partial filename match
+- Max results: 20 files
+- Updates after <code>/cd</code> command</p>
+<p><strong>Examples:</strong>
+- <code>/show</code> + Tab → shows all files
+- <code>/show RE</code> + Tab → completes to <code>/show README.md</code>
+- <code>/edit src/m</code> + Tab → completes to <code>/edit src/main.py</code>
+- <code>/cat</code> + Tab + Tab → cycles through files</p>
+<p><strong>Design Rationale:</strong>
+This matches standard terminal UX where commands take bare filenames:
+- File commands: <code>/show README.md</code> (plain filename)
+- Context injection: <code>@file:README.md</code> (@ prefix for message context)</p>
+<p><strong>Status:</strong>
+- ✅ Rich TUI: <strong>None</strong> (uses manual file paths only)
+- ✅ Textual TUI: <strong>Full support</strong>
+- ✅ VSCode: <strong>None</strong> (uses manual file paths only)
+- ✅ Web: <strong>None</strong> (uses manual file paths only)</p>
+<hr />
+<h3 id="4-model-name-autocomplete">4. Model Name Autocomplete<a class="headerlink" href="#4-model-name-autocomplete" title="Permanent link">&para;</a></h3>
+<p>Autocomplete for <code>/model &lt;model_name&gt;</code> command.</p>
+<h4 id="textual-tui-model-autocomplete">Textual TUI Model Autocomplete ✅<a class="headerlink" href="#textual-tui-model-autocomplete" title="Permanent link">&para;</a></h4>
+<p><strong>Source:</strong> <a href="../ppxai/tui/completer.py:224-250">ppxai/tui/completer.py:224-250</a></p>
+<p><strong>Trigger:</strong> Type <code>/model</code> (with space after command)
+<strong>Behavior:</strong>
+- Gets current provider from <code>engine_client.provider</code>
+- Loads models from config for that provider
+- Filters by model ID or model name
+- Returns: <code>[(model_id, model_name)]</code></p>
+<p><strong>Example:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>User types: /model so
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>Suggestions:
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>sonar-pro               Sonar Pro (32k context)
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>sonar                   Sonar (Perplexity)
+</span></code></pre></div></p>
+<h4 id="richvscodeweb-model-autocomplete">Rich/VSCode/Web Model Autocomplete ❌<a class="headerlink" href="#richvscodeweb-model-autocomplete" title="Permanent link">&para;</a></h4>
+<p><strong>Status:</strong> Not implemented</p>
+<p>Users must manually type model names or use <code>/model list</code> to see options.</p>
+<hr />
+<h3 id="5-provider-name-autocomplete">5. Provider Name Autocomplete<a class="headerlink" href="#5-provider-name-autocomplete" title="Permanent link">&para;</a></h3>
+<p>Autocomplete for <code>/provider &lt;provider_id&gt;</code> command.</p>
+<h4 id="textual-tui-provider-autocomplete">Textual TUI Provider Autocomplete ✅<a class="headerlink" href="#textual-tui-provider-autocomplete" title="Permanent link">&para;</a></h4>
+<p><strong>Source:</strong> <a href="../ppxai/tui/completer.py:252-269">ppxai/tui/completer.py:252-269</a></p>
+<p><strong>Trigger:</strong> Type <code>/provider</code> (with space after command)
+<strong>Behavior:</strong>
+- Loads all providers from <code>PROVIDERS</code> config
+- Filters by provider ID or provider name
+- Returns: <code>[(provider_id, provider_name)]</code></p>
+<p><strong>Example:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>User types: /provider per
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>Suggestions:
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>perplexity              Perplexity AI
+</span></code></pre></div></p>
+<h4 id="richvscodeweb-provider-autocomplete">Rich/VSCode/Web Provider Autocomplete ❌<a class="headerlink" href="#richvscodeweb-provider-autocomplete" title="Permanent link">&para;</a></h4>
+<p><strong>Status:</strong> Not implemented</p>
+<p>Users must manually type provider IDs or use <code>/provider list</code>.</p>
+<hr />
+<h3 id="6-theme-name-autocomplete">6. Theme Name Autocomplete<a class="headerlink" href="#6-theme-name-autocomplete" title="Permanent link">&para;</a></h3>
+<p>Autocomplete for <code>/theme &lt;theme_name&gt;</code> command.</p>
+<h4 id="textual-tui-theme-autocomplete">Textual TUI Theme Autocomplete ✅<a class="headerlink" href="#textual-tui-theme-autocomplete" title="Permanent link">&para;</a></h4>
+<p><strong>Source:</strong> <a href="../ppxai/tui/completer.py:271-303">ppxai/tui/completer.py:271-303</a></p>
+<p><strong>Behavior:</strong>
+- Shows <code>list</code> subcommand first
+- Then shows 13 theme names:
+  - catppuccin-mocha, dracula, tokyo-night, nord, gruvbox
+  - solarized-dark, solarized-light, monokai, material
+  - textual-dark, textual-light, tron-legacy, matrix</p>
+<h4 id="rich-tui-theme-autocomplete">Rich TUI Theme Autocomplete ✅<a class="headerlink" href="#rich-tui-theme-autocomplete" title="Permanent link">&para;</a></h4>
+<p><strong>Source:</strong> <a href="../ppxai/rich/main.py:213-219">ppxai/rich/main.py:213-219, 362-395</a></p>
+<p><strong>Behavior:</strong>
+- Shows <code>list</code> subcommand
+- Shows theme names: standard, tron-legacy, matrix, nord
+- Also shows <code>/theme emoji</code> with <code>on</code>/<code>off</code> subcommands</p>
+<h4 id="vscodeweb-theme-autocomplete">VSCode/Web Theme Autocomplete ❌<a class="headerlink" href="#vscodeweb-theme-autocomplete" title="Permanent link">&para;</a></h4>
+<p><strong>Status:</strong> N/A (no theme support in these clients)</p>
+<hr />
+<h3 id="7-tool-name-autocomplete">7. Tool Name Autocomplete<a class="headerlink" href="#7-tool-name-autocomplete" title="Permanent link">&para;</a></h3>
+<p>Autocomplete for tool names in <code>/tools help &lt;tool_name&gt;</code> command.</p>
+<h4 id="rich-tui-tool-autocomplete">Rich TUI Tool Autocomplete ✅<a class="headerlink" href="#rich-tui-tool-autocomplete" title="Permanent link">&para;</a></h4>
+<p><strong>Source:</strong> <a href="../ppxai/rich/main.py:350-359">ppxai/rich/main.py:350-359, 471-495</a></p>
+<p><strong>Trigger:</strong> Type <code>/tools help</code> (with space after help)
+<strong>Behavior:</strong>
+- Gets tools from <code>engine.tool_manager.list_tools()</code> if available
+- Fallback to static list if tools not enabled:
+  - calculator, get_datetime, list_directory, read_file, execute_shell_command
+  - apply_patch, replace_block, insert_text, delete_lines, web_search, fetch_url</p>
+<p><strong>Example:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>User types: /tools help cal
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>Suggestions:
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>calculator              Evaluate mathematical expressions
+</span></code></pre></div></p>
+<h4 id="textualvscodeweb-tool-autocomplete">Textual/VSCode/Web Tool Autocomplete ❌<a class="headerlink" href="#textualvscodeweb-tool-autocomplete" title="Permanent link">&para;</a></h4>
+<p><strong>Status:</strong> Not implemented</p>
+<p>Users must use <code>/tools list</code> to see available tools.</p>
+<hr />
+<h2 id="file-search-implementation-comparison">File Search Implementation Comparison<a class="headerlink" href="#file-search-implementation-comparison" title="Permanent link">&para;</a></h2>
+<h3 id="rich-tui-local-recursive-search">Rich TUI - Local Recursive Search<a class="headerlink" href="#rich-tui-local-recursive-search" title="Permanent link">&para;</a></h3>
+<p><strong>Method:</strong> Python <code>Path.rglob('*')</code> with caching
+<strong>Pros:</strong>
+- Fast after first cache
+- No server dependency
+- Works offline</p>
+<p><strong>Cons:</strong>
+- Must scan entire directory tree
+- No .gitignore respect
+- Can be slow on first run for large repos</p>
+<p><strong>Cache:</strong> 5 seconds, invalidated on directory change</p>
+<h3 id="textual-tui-local-recursive-search-enhanced">Textual TUI - Local Recursive Search (Enhanced)<a class="headerlink" href="#textual-tui-local-recursive-search-enhanced" title="Permanent link">&para;</a></h3>
+<p><strong>Method:</strong> Same as Rich TUI but with priority files
+<strong>Pros:</strong>
+- Same as Rich TUI
+- Priority files shown first (AGENTS.md, CLAUDE.md, README.md, etc.)</p>
+<p><strong>Cons:</strong> Same as Rich TUI</p>
+<p><strong>Cache:</strong> 5 seconds</p>
+<h3 id="vscode-native-workspace-search">VSCode - Native Workspace Search<a class="headerlink" href="#vscode-native-workspace-search" title="Permanent link">&para;</a></h3>
+<p><strong>Method:</strong> <code>vscode.workspace.findFiles()</code> via extension API
+<strong>Pros:</strong>
+- Uses VSCode's native search (very fast)
+- Respects .gitignore automatically
+- Searches all workspace folders
+- No file tree traversal needed</p>
+<p><strong>Cons:</strong>
+- Only works in VSCode
+- Requires extension API access</p>
+<p><strong>Cache:</strong> None (VSCode handles caching internally)</p>
+<h3 id="web-server-endpoint">Web - Server Endpoint<a class="headerlink" href="#web-server-endpoint" title="Permanent link">&para;</a></h3>
+<p><strong>Method:</strong> <code>POST /files/search</code> to ppxai-server
+<strong>Pros:</strong>
+- Centralized search logic
+- Can use optimized server-side indexing
+- Consistent with VSCode</p>
+<p><strong>Cons:</strong>
+- Requires server connection
+- Network latency
+- Fallback to <code>@git</code>/<code>@tree</code> only if server down</p>
+<p><strong>Cache:</strong> Server-side (implementation dependent)</p>
+<hr />
+<h2 id="autocomplete-trigger-summary">Autocomplete Trigger Summary<a class="headerlink" href="#autocomplete-trigger-summary" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Client</th>
+<th>Slash Command</th>
+<th>Subcommand</th>
+<th>@file</th>
+<th>Model</th>
+<th>Provider</th>
+<th>Theme</th>
+<th>Tool</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Rich TUI</strong></td>
+<td><code>/</code> at start</td>
+<td>After <code>/tools</code>, <code>/theme</code>, <code>/usage</code>, <code>/checkpoint</code>, <code>/status</code></td>
+<td><code>@</code> anywhere</td>
+<td>❌</td>
+<td>❌</td>
+<td><code>/theme</code></td>
+<td><code>/tools help</code></td>
+</tr>
+<tr>
+<td><strong>Textual TUI</strong></td>
+<td><code>/</code> at start</td>
+<td>After <code>/tools</code>, <code>/usage</code>, <code>/checkpoint</code>, <code>/status</code>, <code>/theme</code></td>
+<td><code>@</code> anywhere</td>
+<td><code>/model</code></td>
+<td><code>/provider</code></td>
+<td><code>/theme</code></td>
+<td>❌</td>
+</tr>
+<tr>
+<td><strong>VSCode</strong></td>
+<td><code>/</code> at start</td>
+<td>❌ None</td>
+<td><code>@</code> anywhere</td>
+<td>❌</td>
+<td>❌</td>
+<td>N/A</td>
+<td>❌</td>
+</tr>
+<tr>
+<td><strong>Web</strong></td>
+<td><code>/</code> at start</td>
+<td>❌ None</td>
+<td><code>@</code> anywhere</td>
+<td>❌</td>
+<td>❌</td>
+<td>N/A</td>
+<td>❌</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="autocomplete-ux-patterns">Autocomplete UX Patterns<a class="headerlink" href="#autocomplete-ux-patterns" title="Permanent link">&para;</a></h2>
+<h3 id="rich-tui-prompt_toolkit">Rich TUI (prompt_toolkit)<a class="headerlink" href="#rich-tui-prompt_toolkit" title="Permanent link">&para;</a></h3>
+<p><strong>Library:</strong> <code>prompt_toolkit.completion.Completer</code>
+<strong>Display:</strong> Dropdown below input with <code>display_meta</code> descriptions
+<strong>Navigation:</strong> <code>Tab</code> to cycle, <code>Enter</code> to select
+<strong>Cancellation:</strong> Continue typing or <code>Esc</code></p>
+<p><strong>Code:</strong> <a href="../ppxai/rich/main.py:167-495">ppxai/rich/main.py:167-495</a></p>
+<h3 id="textual-tui-custom-widget">Textual TUI (Custom Widget)<a class="headerlink" href="#textual-tui-custom-widget" title="Permanent link">&para;</a></h3>
+<p><strong>Library:</strong> Textual Input + custom dropdown
+<strong>Display:</strong> Dropdown overlaid on UI
+<strong>Navigation:</strong> <code>↑</code>/<code>↓</code> to navigate, <code>Tab</code>/<code>Enter</code> to select
+<strong>Cancellation:</strong> Continue typing or <code>Esc</code></p>
+<p><strong>Code:</strong> <a href="../ppxai/tui/completer.py">ppxai/tui/completer.py</a></p>
+<h3 id="vscode-webview">VSCode (Webview)<a class="headerlink" href="#vscode-webview" title="Permanent link">&para;</a></h3>
+<p><strong>Library:</strong> Custom JavaScript in webview
+<strong>Display:</strong> Dropdown below input in chat panel
+<strong>Navigation:</strong> Mouse click or keyboard navigation
+<strong>Cancellation:</strong> Click away or continue typing</p>
+<p><strong>Code:</strong> <a href="../vscode-extension/src/chatPanel.ts">vscode-extension/src/chatPanel.ts</a></p>
+<h3 id="web-custom-javascript">Web (Custom JavaScript)<a class="headerlink" href="#web-custom-javascript" title="Permanent link">&para;</a></h3>
+<p><strong>Library:</strong> Vanilla JavaScript DOM manipulation
+<strong>Display:</strong> Dropdown positioned below input
+<strong>Navigation:</strong> <code>↑</code>/<code>↓</code> arrows, <code>Tab</code>/<code>Enter</code> to select
+<strong>Cancellation:</strong> Click away or continue typing</p>
+<p><strong>Code:</strong> <a href="../ppxai/web/app.js:2092-2280">ppxai/web/app.js:2092-2280</a></p>
+<hr />
+<h2 id="feature-parity-gaps">Feature Parity Gaps<a class="headerlink" href="#feature-parity-gaps" title="Permanent link">&para;</a></h2>
+<h3 id="high-priority-gaps">High Priority Gaps<a class="headerlink" href="#high-priority-gaps" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>VSCode/Web: No Subcommand Autocomplete</strong></li>
+<li>Impact: Users must memorize subcommands or check help</li>
+<li>Examples: <code>/tools enable</code>, <code>/checkpoint status</code>, <code>/usage show session</code></li>
+<li>
+<p>Fix complexity: Medium (requires parsing command arguments)</p>
+</li>
+<li>
+<p><strong>Rich TUI: Missing @git/@tree/@clipboard/@url in Autocomplete</strong></p>
+</li>
+<li>Impact: Users don't discover special context providers</li>
+<li>Fix complexity: Low (add to autocomplete list)</li>
+<li>
+<p>See: <a href="../TODO-v1.15.2-CONTEXT-INJECTOR-PARITY/">TODO-v1.15.2-CONTEXT-INJECTOR-PARITY.md</a></p>
+</li>
+<li>
+<p><strong>VSCode/Web: Missing @clipboard/@url in Autocomplete</strong></p>
+</li>
+<li>Impact: v1.14.2 features hidden from users</li>
+<li>Fix complexity: Low (add to special refs list)</li>
+<li>See: <a href="../TODO-v1.15.2-CONTEXT-INJECTOR-PARITY/">TODO-v1.15.2-CONTEXT-INJECTOR-PARITY.md</a></li>
+</ol>
+<h3 id="medium-priority-gaps">Medium Priority Gaps<a class="headerlink" href="#medium-priority-gaps" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Rich/VSCode/Web: No Model Autocomplete</strong></li>
+<li>Impact: Users must type model IDs exactly or use <code>/model list</code></li>
+<li>Fix complexity: Medium (requires provider config access)</li>
+<li>
+<p>Workaround: <code>/model list</code> shows all models</p>
+</li>
+<li>
+<p><strong>Rich/VSCode/Web: No Provider Autocomplete</strong></p>
+</li>
+<li>Impact: Users must type provider IDs exactly</li>
+<li>Fix complexity: Medium (requires config access)</li>
+<li>Workaround: <code>/provider list</code> shows all providers</li>
+</ol>
+<h3 id="low-priority-gaps">Low Priority Gaps<a class="headerlink" href="#low-priority-gaps" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Textual/VSCode/Web: No Tool Name Autocomplete</strong></li>
+<li>Impact: Must use <code>/tools list</code> to discover tools</li>
+<li>Fix complexity: Low (requires tool manager access)</li>
+<li>
+<p>Note: Only Rich TUI has this</p>
+</li>
+<li>
+<p><strong>Theme Autocomplete Variations</strong></p>
+</li>
+<li>Rich TUI: 4 themes + emoji subcommand</li>
+<li>Textual TUI: 13 themes</li>
+<li>Fix: Standardize theme list or sync with available themes</li>
+</ol>
+<hr />
+<h2 id="recommendations">Recommendations<a class="headerlink" href="#recommendations" title="Permanent link">&para;</a></h2>
+<h3 id="for-v1152-quick-wins">For v1.15.2 (Quick Wins)<a class="headerlink" href="#for-v1152-quick-wins" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Fix Context Injector Autocomplete</strong> (Already planned in TODO document)</li>
+<li>Add <code>@git</code>, <code>@tree</code> to Textual TUI</li>
+<li>Add <code>@git</code>, <code>@tree</code>, <code>@clipboard</code>, <code>@url</code> to Rich TUI</li>
+<li>
+<p>Add <code>@clipboard</code>, <code>@url</code> to VSCode/Web</p>
+</li>
+<li>
+<p><strong>Standardize File Search Behavior</strong></p>
+</li>
+<li>Document expected file search patterns</li>
+<li>Ensure consistent ignore patterns across clients</li>
+<li>Consider priority file list for VSCode/Web</li>
+</ol>
+<h3 id="for-v1160-feature-parity">For v1.16.0 (Feature Parity)<a class="headerlink" href="#for-v1160-feature-parity" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Add Subcommand Autocomplete to VSCode/Web</strong></li>
+<li>Parse command arguments in autocomplete handler</li>
+<li>Show subcommand suggestions after recognized commands</li>
+<li>
+<p>Use shared command definitions for consistency</p>
+</li>
+<li>
+<p><strong>Add Model/Provider Autocomplete to Rich TUI</strong></p>
+</li>
+<li>Access engine client for current provider</li>
+<li>Load models from config</li>
+<li>
+<p>Show in dropdown with descriptions</p>
+</li>
+<li>
+<p><strong>Add Model/Provider Autocomplete to VSCode/Web</strong></p>
+</li>
+<li>Server endpoint: <code>GET /providers/list</code> and <code>GET /models/list?provider=&lt;id&gt;</code></li>
+<li>Client-side autocomplete rendering</li>
+<li>Use shared command definitions</li>
+</ol>
+<h3 id="for-v1170-advanced-features">For v1.17.0 (Advanced Features)<a class="headerlink" href="#for-v1170-advanced-features" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Fuzzy Matching for File Autocomplete</strong></li>
+<li>Current: Substring match only</li>
+<li>Proposed: Fuzzy match algorithm (like VSCode's Ctrl+P)</li>
+<li>
+<p>Example: <code>@conf</code> matches <code>ppxai-config.json</code></p>
+</li>
+<li>
+<p><strong>Context-Aware Autocomplete</strong></p>
+</li>
+<li>Example: After <code>/model</code>, only show models for current provider</li>
+<li>
+<p>Example: After <code>/checkpoint backend</code>, show only valid backends</p>
+</li>
+<li>
+<p><strong>Autocomplete Performance Optimization</strong></p>
+</li>
+<li>Debounce file search requests</li>
+<li>Incremental search results</li>
+<li>Better caching strategies</li>
+</ol>
+<hr />
+<h2 id="testing-checklist">Testing Checklist<a class="headerlink" href="#testing-checklist" title="Permanent link">&para;</a></h2>
+<p>For each client:</p>
+<h3 id="slash-command-autocomplete">Slash Command Autocomplete<a class="headerlink" href="#slash-command-autocomplete" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Type <code>/</code> → Shows all commands</li>
+<li>[ ] Type <code>/to</code> → Shows <code>/tools</code></li>
+<li>[ ] Type <code>/mod</code> → Shows <code>/model</code></li>
+<li>[ ] Tab completion works</li>
+<li>[ ] Enter selects command</li>
+</ul>
+<h3 id="subcommand-autocomplete-richtextual-only">Subcommand Autocomplete (Rich/Textual only)<a class="headerlink" href="#subcommand-autocomplete-richtextual-only" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Type <code>/tools</code> → Shows subcommands</li>
+<li>[ ] Type <code>/checkpoint</code> → Shows subcommands</li>
+<li>[ ] Type <code>/checkpoint backend</code> → Shows backends</li>
+<li>[ ] Type <code>/usage show</code> → Shows display modes</li>
+</ul>
+<h3 id="file-autocomplete">@file Autocomplete<a class="headerlink" href="#file-autocomplete" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Type <code>@</code> → Shows context providers or files</li>
+<li>[ ] Type <code>@REA</code> → Shows README.md</li>
+<li>[ ] Type <code>@git</code> → Shows git diff option (if supported)</li>
+<li>[ ] Type <code>@clipboard</code> → Shows clipboard option (if supported)</li>
+<li>[ ] Autocomplete updates as typing continues</li>
+</ul>
+<h3 id="modelprovider-autocomplete-textual-only">Model/Provider Autocomplete (Textual only)<a class="headerlink" href="#modelprovider-autocomplete-textual-only" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Type <code>/model</code> → Shows models for current provider</li>
+<li>[ ] Type <code>/provider</code> → Shows all providers</li>
+<li>[ ] Filtering works (type partial name)</li>
+</ul>
+<h3 id="theme-autocomplete-tuis-only">Theme Autocomplete (TUIs only)<a class="headerlink" href="#theme-autocomplete-tuis-only" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Type <code>/theme</code> → Shows themes</li>
+<li>[ ] Type <code>/theme</code> → Shows <code>list</code> subcommand</li>
+</ul>
+<h3 id="tool-autocomplete-rich-only">Tool Autocomplete (Rich only)<a class="headerlink" href="#tool-autocomplete-rich-only" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Type <code>/tools help</code> → Shows tool names</li>
+<li>[ ] Type <code>/tools help cal</code> → Shows <code>calculator</code></li>
+</ul>
+<hr />
+<h2 id="related-documents">Related Documents<a class="headerlink" href="#related-documents" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../TODO-v1.15.2-CONTEXT-INJECTOR-PARITY/">TODO-v1.15.2-CONTEXT-INJECTOR-PARITY.md</a> - Context injector autocomplete fixes</li>
+<li><a href="CONTEXT-INJECTION.md">CONTEXT-INJECTION.md</a> - Context injection user guide</li>
+<li><a href="../ppxai/web/shared/commands.js">ppxai/web/shared/commands.js</a> - Shared command definitions</li>
+<li><a href="../vscode-extension/src/shared/commands.ts">vscode-extension/src/shared/commands.ts</a> - VSCode command definitions</li>
+</ul>
+<hr />
+<h2 id="conclusion">Conclusion<a class="headerlink" href="#conclusion" title="Permanent link">&para;</a></h2>
+<p>All clients have <strong>functional autocomplete</strong>, but <strong>Textual TUI</strong> is the most feature-complete with 7/7 features implemented.</p>
+<p><strong>Biggest gaps:</strong>
+1. VSCode/Web lack subcommand autocomplete (users must memorize)
+2. Context provider autocomplete inconsistent (see TODO document)
+3. Model/Provider autocomplete only in Textual TUI</p>
+<p><strong>Recommendation:</strong> Prioritize subcommand autocomplete for VSCode/Web in v1.16.0 to achieve parity with TUIs.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
