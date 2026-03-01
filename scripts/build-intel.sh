@@ -174,6 +174,16 @@ if [ -n "$VERSION" ]; then
     echo "========================================"
     bash "$SCRIPT_DIR/create-macos-app.sh" "$VERSION"
 
+    # Upload the DMG (strip leading 'v' for filename match)
+    VERSION_NUM="${VERSION#v}"
+    DMG_PATH="dist/ppxai-${VERSION_NUM}-macos-intel.dmg"
+    if [ -f "$DMG_PATH" ]; then
+        gh release upload "$VERSION" "$DMG_PATH" --clobber
+        echo "DMG uploaded: $DMG_PATH"
+    else
+        echo "Warning: DMG not found at $DMG_PATH — skipping upload"
+    fi
+
     echo ""
     echo "Upload complete!"
     echo "View release: gh release view $VERSION"

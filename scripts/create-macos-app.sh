@@ -59,6 +59,9 @@ if [ -z "$VERSION" ]; then
     VERSION=$(grep 'version = ' pyproject.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
 fi
 
+# Strip leading 'v' so DMG filename is ppxai-1.16.1-macos-intel.dmg (not ppxai-v1.16.1-...)
+VERSION="${VERSION#v}"
+
 echo "========================================"
 echo "Creating macOS App Bundle"
 echo "========================================"
