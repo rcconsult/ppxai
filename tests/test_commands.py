@@ -1157,3 +1157,72 @@ class TestCommandsWithToolUsage:
         output = captured.out
         # Should show web search status
         assert "search" in output.lower() or "Web" in output or "DuckDuckGo" in output
+
+
+# ==============================================================================
+# Bug 4: Redundant set_model calls on /provider switch
+# ==============================================================================
+
+class TestHandleProviderCallCount:
+    """Verify that /provider X triggers exactly one context.set_model call.
+
+    Before fix (77b0c44): handle_provider called both context.set_model() AND
+    context.engine_client.set_model() directly, causing double logging in the TUI.
+    After fix: only context.set_model() is called — the context adapter is
+    responsible for delegating to engine_client.
+    """
+
+    @pytest.fixture
+    def mock_context(self):
+        ctx = Mock()
+        ctx.get_provider.return_value = "perplexity"
+        ctx.get_model.return_value = "sonar-pro"
+        ctx.engine_client = Mock()
+        ctx.engine_client.last_model_switch_reset = 0
+        ctx.engine_client.reload_config = Mock()
+        ctx.set_provider = Mock()
+        ctx.set_model = Mock()
+        return ctx
+
+    @patch('ppxai.commands.provider.PROVIDERS', {
+        'perplexity': {'name': 'Perplexity', 'api_key_env': 'PERPLEXITY_API_KEY',
+                       'default_model': 'sonar-pro'},
+        'gemini': {'name': 'Google Gemini', 'api_key_env': 'GEMINI_API_KEY',
+                   'default_model': 'gemini-2.5-flash'},
+    })
+    @patch('ppxai.commands.provider.get_api_key', return_value='test-key')
+    @patch('ppxai.commands.provider.get_base_url', return_value='https://api.example.com')
+    @patch('ppxai.commands.provider.get_provider_config', return_value={
+        'name': 'Google Gemini',
+        'api_key_env': 'GEMINI_API_KEY',
+        'default_model': 'gemini-2.5-flash',
+    })
+    def test_provider_switch_calls_set_model_once(
+        self, mock_get_config, mock_get_base_url, mock_get_api_key, mock_context
+    ):
+        """handle_provider calls context.set_model exactly once (not twice)."""
+        from ppxai.commands.provider import handle_provider
+
+        handle_provider(mock_context, 'gemini')
+
+        mock_context.set_provider.assert_called_once_with('gemini')
+        mock_context.set_model.assert_called_once_with('gemini-2.5-flash')
+        # engine_client.set_model must NOT be called directly from the handler —
+        # only through context.set_model (the context adapter delegates).
+        mock_context.engine_client.set_model.assert_not_called()
+
+    @patch('ppxai.commands.provider.PROVIDERS', {
+        'perplexity': {'name': 'Perplexity', 'api_key_env': 'PERPLEXITY_API_KEY',
+                       'default_model': 'sonar-pro'},
+        'gemini': {'name': 'Google Gemini', 'api_key_env': 'GEMINI_API_KEY',
+                   'default_model': 'gemini-2.5-flash'},
+    })
+    def test_same_provider_no_set_model_call(self, mock_context):
+        """Switching to the current provider is a no-op (no set_provider/set_model)."""
+        from ppxai.commands.provider import handle_provider
+
+        # current provider is 'perplexity', switching to 'perplexity' again
+        handle_provider(mock_context, 'perplexity')
+
+        mock_context.set_provider.assert_not_called()
+        mock_context.set_model.assert_not_called()

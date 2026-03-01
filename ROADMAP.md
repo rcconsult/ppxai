@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.16.1-dev (February 2026) | Norton Commander File Tree
+> **Current Version**: v1.16.2-dev (February 2026) | Norton Commander File Tree
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---

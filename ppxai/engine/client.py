@@ -122,6 +122,13 @@ class EngineClient:
         # Set by set_model() when reset_context strips messages
         self.last_model_switch_reset: int = 0
 
+        # Suppress hint logging during internal set_model calls from set_provider()
+        # Initialized here so the flag always exists on the instance (not just on first
+        # set_provider call).  _log_model_hints_transition reads it via getattr so a
+        # missing attribute would fall back to False (unsuppressed), but explicit
+        # initialization makes the intent clear and avoids any early-call edge cases.
+        self._suppress_hint_log: bool = False
+
         # Event emitter for consent requests (Phase 1C: HTTP/SSE support)
         # This allows emitting events from within consent callback
         self._consent_event_queue: List[Event] = []

@@ -176,6 +176,11 @@ class PpxaiApp {
             sendBtn: document.getElementById('sendBtn'),
             autocompleteDropdown: document.getElementById('autocompleteDropdown'),
 
+            // File sidebar
+            fileSidebar: document.getElementById('fileSidebar'),
+            sidebarToggleBtn: document.getElementById('sidebarToggleBtn'),
+            sidebarResizeHandle: document.getElementById('sidebarResizeHandle'),
+
             // Preview panel
             previewPanel: document.getElementById('previewPanel'),
             previewFilename: document.getElementById('previewFilename'),
@@ -260,6 +265,11 @@ class PpxaiApp {
             this.connectToServer();
         });
 
+        // File sidebar toggle button
+        if (this.elements.sidebarToggleBtn) {
+            this.elements.sidebarToggleBtn.addEventListener('click', () => this.toggleFileSidebar());
+        }
+
         // Preview panel close button
         this.elements.previewClose.addEventListener('click', () => this.hidePreviewPanel());
 
@@ -270,6 +280,9 @@ class PpxaiApp {
 
         // Preview panel resize handle
         this.initResizeHandle();
+
+        // Sidebar resize handle
+        this.initSidebarResizeHandle();
 
         // Quick commands - use event delegation on container
         this.elements.messagesContainer.addEventListener('click', (e) => {
@@ -993,6 +1006,10 @@ class PpxaiApp {
                 // Update folder badge when working directory changes (v1.13.2)
                 if (event.data && event.data.path) {
                     this.updateFolderBadge(event.data.path);
+                    // Refresh file tree if open
+                    if (this._fileTree) {
+                        this._fileTree.refresh();
+                    }
                 }
                 break;
 
@@ -3945,6 +3962,87 @@ class PpxaiApp {
         this.previewFilename = null;
         this.previewDataFormat = null;
         this.previewViewMode = 'rendered';
+    }
+
+    // === File Sidebar (v1.16.2) ===
+
+    toggleFileSidebar() {
+        const sidebar = this.elements.fileSidebar;
+        const btn = this.elements.sidebarToggleBtn;
+        const handle = this.elements.sidebarResizeHandle;
+
+        const isHidden = sidebar.classList.contains('hidden');
+        if (isHidden) {
+            sidebar.classList.remove('hidden');
+            handle.classList.remove('hidden');
+            btn.classList.add('active');
+            // Lazy-init FileTreeComponent on first open
+            if (!this._fileTree) {
+                this._fileTree = new FileTreeComponent(sidebar, {
+                    serverUrl: this.serverUrl,
+                    getHeaders: () => this.getSessionHeaders(),
+                    onFileClick: (relPath) => this.displayFileFromEvent(relPath),
+                    onFileInject: (relPath) => this._injectFileRef(relPath),
+                });
+            } else {
+                this._fileTree.refresh();
+            }
+        } else {
+            sidebar.classList.add('hidden');
+            handle.classList.add('hidden');
+            btn.classList.remove('active');
+        }
+    }
+
+    _injectFileRef(relPath) {
+        const input = this.elements.messageInput;
+        const ref = `@file:${relPath} `;
+        const pos = input.selectionStart || input.value.length;
+        input.value = input.value.slice(0, pos) + ref + input.value.slice(pos);
+        input.selectionStart = input.selectionEnd = pos + ref.length;
+        input.focus();
+        // Trigger autocomplete/resize handlers
+        input.dispatchEvent(new Event('input'));
+    }
+
+    /**
+     * Initialize drag-to-resize for sidebar panel
+     */
+    initSidebarResizeHandle() {
+        const handle = this.elements.sidebarResizeHandle;
+        const panel = this.elements.fileSidebar;
+        if (!handle || !panel) return;
+
+        let isDragging = false;
+        let startX = 0;
+        let startWidth = 0;
+
+        handle.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX;
+            startWidth = panel.offsetWidth;
+            handle.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const deltaX = e.clientX - startX;  // Moving right increases width
+            let newWidth = startWidth + deltaX;
+            newWidth = Math.max(140, Math.min(400, newWidth));
+            panel.style.width = newWidth + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                handle.classList.remove('dragging');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+        });
     }
 
     /**

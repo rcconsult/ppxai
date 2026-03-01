@@ -290,7 +290,7 @@ The web tools (`get_weather`, `fetch_url`, `web_search`) support corporate proxy
 - `docs/TODO-v1.16.1.md` - Current v1.16.1 task list (FileTree + TUI polish)
 - `docs/KNOWN-ISSUES.md` - Known issues tracker (KI-001: google-genai SDK pin)
 
-### Current Version: v1.16.1-dev
+### Current Version: v1.16.2-dev
 
 **v1.16.0 Features:**
 - **NEW:** Profile-driven tool loop — `ToolCallingProfile.mode` replaces binary `native_tool_calling` decision

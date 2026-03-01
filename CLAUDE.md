@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.16.1
+**Current Version:** v1.16.2
 
 **v1.16.0 highlights:**
 - **NEW:** Provider hierarchy — `BaseProvider` ABC, profile-driven tool loop
@@ -22,8 +22,8 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **FIX:** Tool messages rendered via Markdown (Rich markup stripped), side panel save prompt on close
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.16.1.dev0
-- VSCode extension (package.json): v1.16.1
+- Python package (pyproject.toml): v1.16.2.dev0
+- VSCode extension (package.json): v1.16.2
 - Last release tag: v1.16.0
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
@@ -297,6 +297,9 @@ $UV run ppxai-desktop            # Desktop web app
 
 # Testing
 $UV run pytest tests/ -v
+# Some tests import ppxai.tui which requires blinker (not always installed).
+# If collection fails with "No module named 'blinker'", exclude TUI tests:
+$UV run pytest tests/ -q $(python3 -c "import subprocess; r=subprocess.run(['grep','-rl','from ppxai.tui','tests/'],capture_output=True,text=True); files=r.stdout.strip().split('\n'); print(' '.join(['--ignore='+f for f in files if f]))")
 
 # Build binaries (macOS/Linux — all four in parallel)
 $UV run pyinstaller ppxai.spec --noconfirm

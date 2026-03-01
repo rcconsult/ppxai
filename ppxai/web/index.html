@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="lib/highlight-github-dark.css">
     <link rel="stylesheet" href="styles/data-viewers.css">
+    <link rel="stylesheet" href="styles/file-tree.css">
     <script src="lib/marked.min.js"></script>
     <script src="lib/highlight.min.js"></script>
     <script src="lib/js-yaml.min.js"></script>
@@ -28,6 +29,7 @@
                     <span class="server-indicator"></span>
                     <span id="serverStatus">Connected</span>
                 </button>
+                <button class="header-btn sidebar-toggle-btn" id="sidebarToggleBtn" title="Toggle file tree">🗂</button>
                 <button class="folder-badge" id="folderBadge" title="Click to change working directory">
                     <span class="badge-icon">📁</span>
                     <span id="folderPath">No folder</span>
@@ -88,6 +90,11 @@
 
         <!-- Main Content Area (split layout) -->
         <div class="main-content" id="mainContent">
+            <!-- File Sidebar -->
+            <div class="file-sidebar hidden" id="fileSidebar"></div>
+            <!-- Sidebar Resize Handle -->
+            <div class="sidebar-resize-handle hidden" id="sidebarResizeHandle"></div>
+
             <!-- Messages Container -->
             <main class="messages" id="messagesContainer">
                 <div class="welcome-message">
@@ -204,6 +211,7 @@
     <script src="shared/api-client.js"></script>
     <script src="components/table-viewer.js"></script>
     <script src="components/tree-viewer.js"></script>
+    <script src="components/file-tree.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
