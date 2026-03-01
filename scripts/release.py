@@ -1101,6 +1101,19 @@ def main():
     # Update docs/README.md
     update_docs_readme(version, date)
 
+    # Update docs/index.md version badge
+    index_path = PROJECT_ROOT / "docs/index.md"
+    if index_path.exists():
+        content = index_path.read_text(encoding='utf-8')
+        new_content = re.sub(
+            r'(img\.shields\.io/badge/version-)[\d.]+(-blue)',
+            rf'\g<1>{version}\2',
+            content
+        )
+        if new_content != content:
+            index_path.write_text(new_content, encoding='utf-8')
+            print(f"  ✅ Updated: docs/index.md")
+
     # Update ROADMAP.md current version
     roadmap_path = PROJECT_ROOT / "ROADMAP.md"
     if roadmap_path.exists():
