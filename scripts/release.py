@@ -45,15 +45,15 @@ PROJECT_ROOT = Path(__file__).parent.parent
 # Files that need version updates
 VERSION_FILES = {
     "pyproject.toml": {
-        "pattern": r'version = "[\d.]+"',
+        "pattern": r'version = "[\d.]+(?:\.\w+)*"',
         "replacement": 'version = "{version}"',
     },
     "ppxai/__init__.py": {
-        "pattern": r'__version__ = "[\d.]+"',
+        "pattern": r'__version__ = "[\d.]+(?:\.\w+)*"',
         "replacement": '__version__ = "{version}"',
     },
     "ppxai/version.py": {
-        "pattern": r'__version__ = "[\d.]+"',
+        "pattern": r'__version__ = "[\d.]+(?:\.\w+)*"',
         "replacement": '__version__ = "{version}"',
     },
     "vscode-extension/package.json": {
