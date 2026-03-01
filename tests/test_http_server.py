@@ -757,3 +757,54 @@ class TestFileWritePathValidation:
                 os.remove(expanded_path)
             if os.path.exists(expanded_dir):
                 os.rmdir(expanded_dir)
+
+
+class TestFileReadRelativePath:
+    """Test /files/read returns relative path in 'filename' field (bugfix/1.16.2).
+
+    The 'filename' field must be the path relative to the working directory, not
+    just the basename.  Without this fix, the web editor loses the directory
+    prefix and saves to the working directory root on save.
+    """
+
+    def test_file_in_subdir_returns_relative_filename(self, mock_client, tmp_path):
+        """filename field must be 'subdir/file.py', not 'file.py'."""
+        client, mock_engine = mock_client
+        mock_engine.get_working_dir.return_value = str(tmp_path)
+
+        subdir = tmp_path / "outlook_agent"
+        subdir.mkdir()
+        (subdir / "main.py").write_text("# hello", encoding="utf-8")
+
+        response = client.post("/files/read", json={"path": "outlook_agent/main.py"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["filename"] == "outlook_agent/main.py", (
+            f"Expected 'outlook_agent/main.py', got '{data['filename']}'"
+        )
+
+    def test_file_in_root_returns_basename(self, mock_client, tmp_path):
+        """For a top-level file the relative path equals the basename."""
+        client, mock_engine = mock_client
+        mock_engine.get_working_dir.return_value = str(tmp_path)
+
+        (tmp_path / "README.md").write_text("# readme", encoding="utf-8")
+
+        response = client.post("/files/read", json={"path": "README.md"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["filename"] == "README.md"
+
+    def test_deeply_nested_file_returns_full_relative_path(self, mock_client, tmp_path):
+        """Deeply nested files return the full relative path."""
+        client, mock_engine = mock_client
+        mock_engine.get_working_dir.return_value = str(tmp_path)
+
+        nested = tmp_path / "a" / "b" / "c"
+        nested.mkdir(parents=True)
+        (nested / "deep.txt").write_text("deep", encoding="utf-8")
+
+        response = client.post("/files/read", json={"path": "a/b/c/deep.txt"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["filename"] == "a/b/c/deep.txt"

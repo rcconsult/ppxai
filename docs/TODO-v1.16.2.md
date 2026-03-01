@@ -135,5 +135,5 @@ whether the 60-char proximity window is too wide, catching adjacent sentences.
 
 | # | Bug | Status |
 |---|-----|--------|
-| 1 | Web app saves to wrong path (`path.name` vs relative path) | ⏳ Pending |
-| 2 | Validator false positive on apology/acknowledgement | ⏳ Pending |
+| 1 | Web app saves to wrong path (`path.name` vs relative path) | ✅ Fixed |
+| 2 | Validator false positive on apology/acknowledgement | ✅ Fixed |

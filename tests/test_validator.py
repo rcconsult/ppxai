@@ -707,3 +707,44 @@ class TestSuccessClaimFalsePositives:
         warnings = validator.validate_response(response)
         contradiction_warnings = [w for w in warnings if w.result == ValidationResult.CLAIM_CONTRADICTS_RESULT]
         assert len(contradiction_warnings) == 0, "Capability statement incorrectly flagged"
+
+
+class TestApologyFalsePositives:
+    """Apology/acknowledgement responses must not trigger claim_without_action (bugfix/1.16.2)."""
+
+    def test_apology_with_missed_file_not_flagged(self):
+        """'You are right, I missed the uv.lock file. Let's correct that.' should not fire."""
+        validator = ResponseValidator()
+        response = (
+            "You are absolutely right. My apologies. I missed the `uv.lock` file "
+            "in the directory listing. Thank you for pointing that out. "
+            "Let's correct our approach and use uv instead."
+        )
+        assert not validator._claims_success(response)
+
+    def test_apologising_about_wrong_tool_not_flagged(self):
+        """Self-correction without file claim should not fire."""
+        validator = ResponseValidator()
+        response = (
+            "I'm sorry, I should have noticed the pyproject.toml earlier. "
+            "Let me fix the approach and use uv for package management."
+        )
+        assert not validator._claims_success(response)
+
+    def test_i_was_wrong_not_flagged(self):
+        """Explicit error admission should not fire."""
+        validator = ResponseValidator()
+        response = "I was wrong about the path. Let's start over with the correct directory."
+        assert not validator._claims_success(response)
+
+    def test_genuine_success_claim_still_fires(self):
+        """Real success claims must still be detected."""
+        validator = ResponseValidator()
+        response = "I have successfully created the file `outlook_agent/main.py`."
+        assert validator._claims_success(response)
+
+    def test_genuine_update_claim_still_fires(self):
+        """'I updated config.json' without apology must still be detected."""
+        validator = ResponseValidator()
+        response = "I've updated the configuration in `config.json` with the new settings."
+        assert validator._claims_success(response)

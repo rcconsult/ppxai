@@ -241,13 +241,32 @@ class ResponseValidator:
                 )
         return None
 
+    # Phrases that indicate the model is apologising / correcting itself rather
+    # than claiming a completed action.  If any of these appear within
+    # APOLOGY_PROXIMITY chars of a claim signal we suppress the false positive.
+    APOLOGY_SIGNALS = frozenset({
+        "apologi", "i'm sorry", "i am sorry", "my apolog", "my bad",
+        "you are right", "you're right", "i missed", "i was wrong",
+        "i should have", "let me correct", "let's correct", "let me fix",
+        "i made a mistake", "oversight",
+    })
+    APOLOGY_PROXIMITY = 120  # wider window — apology may be in previous sentence
+
     def _claims_success(self, text: str) -> bool:
         """Return True if text contains a success claim.
 
         Uses keyword-set + proximity window rather than regex alternation to
         avoid false positives like "I can create files" (capability statements).
+        Suppresses matches where the model is apologising or correcting itself.
         """
         lower = text.lower()
+
+        # If the response contains an apology signal nearby any claim signal,
+        # treat the whole response as an acknowledgement, not a success claim.
+        for apology in self.APOLOGY_SIGNALS:
+            if apology in lower:
+                return False
+
         for signal in self.CLAIM_SIGNALS:
             pos = lower.find(signal)
             while pos != -1:

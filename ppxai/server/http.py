@@ -2129,8 +2129,15 @@ async def read_file(
             mime_type = MIME_TYPES.get(ext, 'application/octet-stream')
             file_type = 'pdf' if ext == '.pdf' else 'image'
 
+            # Return relative path from working_dir so the web editor saves to the
+            # correct location (not just the basename in the working directory root).
+            try:
+                rel_name = str(path.relative_to(working_dir))
+            except ValueError:
+                rel_name = path.name
+
             return {
-                "filename": path.name,
+                "filename": rel_name,
                 "path": str(path),
                 "type": file_type,
                 "mime_type": mime_type,
@@ -2144,8 +2151,15 @@ async def read_file(
         content = path.read_text(encoding='utf-8')
         lines = content.count('\n') + 1
 
+        # Return relative path from working_dir so the web editor saves to the
+        # correct location (not just the basename in the working directory root).
+        try:
+            rel_name = str(path.relative_to(working_dir))
+        except ValueError:
+            rel_name = path.name
+
         return {
-            "filename": path.name,
+            "filename": rel_name,
             "path": str(path),
             "type": "text",
             "content": content,
