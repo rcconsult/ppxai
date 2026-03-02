@@ -365,9 +365,9 @@ After items 5–8: `app.js` drops from ~4,264 to ~1,800 lines.
 | 2 | Validator false positive on apology/acknowledgement | ✅ Fixed |
 | 3 | Web app file tree sidebar | ✅ Done |
 | 4 | Redundant `set_model` calls on `/provider` switch | ✅ Fixed |
-| 5 | Route fetches through `api-client.js` | 🔲 Open |
-| 6 | Extract `CommandDispatcher` | 🔲 Open |
-| 7 | Extract `StreamHandler` | 🔲 Open |
-| 8 | Extract `EditorController` | 🔲 Open |
+| 5 | Route fetches through `api-client.js` | ✅ Done |
+| 6 | Extract `CommandDispatcher` | ✅ Done |
+| 7 | Extract `StreamHandler` | ✅ Done |
+| 8 | Extract `EditorController` | ✅ Done |
 | 9 | Centralize state (`AppState`) | 🔲 Open |
 | 10 | Virtual scroll for messages | 🔲 Open |
