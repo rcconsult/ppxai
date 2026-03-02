@@ -126,8 +126,16 @@ class FileTree(DirectoryTree):
 
     def on_click(self, event: Click) -> None:
         """Ctrl+Click opens the file for editing (same as Ctrl+Enter)."""
-        if event.ctrl:
-            path = self._get_cursor_file_path()
-            if path:
-                event.stop()
-                self.post_message(self.FileEdit(path))
+        if not event.ctrl:
+            return
+        # Tree._on_click is async so cursor_node hasn't updated yet — read the
+        # clicked node directly from the style metadata instead.
+        meta = event.style.meta
+        if "line" in meta:
+            node = self.get_node_at_line(meta["line"])
+            if node is not None and node.data is not None:
+                data = node.data
+                path = data.path if hasattr(data, "path") else data
+                if isinstance(path, Path) and path.is_file():
+                    event.stop()
+                    self.post_message(self.FileEdit(path))
