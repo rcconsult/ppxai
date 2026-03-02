@@ -29,7 +29,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "tzdata>=2024.1",
     "pyperclip>=1.8.0",
-    "filetype>=1.2.0",  # Pure Python file type detection (replaces python-magic)
+    "filetype>=1.2.0", # Pure Python file type detection (replaces python-magic)
     "tree-sitter>=0.23",
     # Tree-sitter language packages for syntax highlighting (all 15 supported languages)
     "tree-sitter-python>=0.25.0",
@@ -47,6 +47,7 @@ dependencies = [
     "tree-sitter-sql>=0.3.0",
     "tree-sitter-xml>=0.7.0",
     "tree-sitter-regex>=0.25.0",
+    "blinker>=1.9.0",
 ]
 
 [project.optional-dependencies]

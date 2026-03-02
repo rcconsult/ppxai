@@ -32,7 +32,9 @@ a = Analysis(
         'rich.syntax',
         'openai',
         'dotenv',
-        'blinker',  # EventBus dependency
+        'blinker',          # EventBus dependency
+        'blinker.base',
+        'blinker._utilities',
         'ppxai.tui.themes.themes',
         'ppxai.common.preview',
         'ppxai.preview_server',
