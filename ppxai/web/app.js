@@ -48,6 +48,9 @@ class PpxaiApp {
         }
         console.log(`[PpxaiApp] Session ID: ${this.sessionId}`);
 
+        // Shared API client — wraps all HTTP calls to the server (v1.16.2)
+        this.apiClient = new ApiClient(this.serverUrl, this.sessionId);
+
         // State
         this.currentProvider = '';
         this.currentModel = '';
@@ -261,6 +264,7 @@ class PpxaiApp {
         });
         this.elements.serverUrlSetting.addEventListener('change', () => {
             this.serverUrl = this.elements.serverUrlSetting.value;
+            this.apiClient.setServerUrl(this.serverUrl);
             localStorage.setItem('ppxai-server-url', this.serverUrl);
             this.connectToServer();
         });
@@ -403,11 +407,7 @@ class PpxaiApp {
             this.updateServerStatus('connecting');
             this.elements.serverStatus.textContent = 'Stopping...';
 
-            await fetch(`${this.serverUrl}/shutdown`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(),
-                signal: AbortSignal.timeout(5000)
-            });
+            await this.apiClient.shutdown();
         } catch (error) {
             // Expected - server shuts down before responding
             console.log('Server shutdown (connection closed as expected)');
@@ -426,16 +426,8 @@ class PpxaiApp {
      */
     async reloadConfig() {
         try {
-            const resp = await fetch(`${this.serverUrl}/config/reload`, {
-                method: 'POST',
-                headers: this.getSessionHeaders()
-            });
-            if (resp.ok) {
-                const result = await resp.json();
-                this.showSystemMessage(`Configuration reloaded from ${result.config_path || 'defaults'}`);
-            } else {
-                this.showSystemMessage('Failed to reload configuration', 'error');
-            }
+            const result = await this.apiClient.reloadConfig();
+            this.showSystemMessage(`Configuration reloaded from ${result.config_path || 'defaults'}`);
         } catch (error) {
             console.error('Failed to reload config:', error);
             this.showSystemMessage('Failed to reload configuration', 'error');
@@ -452,13 +444,8 @@ class PpxaiApp {
 
     async loadWorkingDir() {
         try {
-            const resp = await fetch(`${this.serverUrl}/context/working_dir`, {
-                headers: this.getSessionHeaders()
-            });
-            if (resp.ok) {
-                const data = await resp.json();
-                this.updateFolderBadge(data.path);
-            }
+            const data = await this.apiClient.getWorkingDir();
+            this.updateFolderBadge(data.path);
         } catch (e) {
             console.error('Failed to load working directory:', e);
         }
@@ -466,19 +453,9 @@ class PpxaiApp {
 
     async setWorkingDir(path) {
         try {
-            const resp = await fetch(`${this.serverUrl}/context/working_dir`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true),
-                body: JSON.stringify({ path })
-            });
-            if (resp.ok) {
-                const data = await resp.json();
-                this.updateFolderBadge(data.path);
-                this.showSystemMessage(`Working directory set to: ${data.path}`);
-            } else {
-                const error = await resp.json();
-                this.showError(`Failed to set working directory: ${error.detail}`);
-            }
+            const data = await this.apiClient.setWorkingDir(path);
+            this.updateFolderBadge(data.path);
+            this.showSystemMessage(`Working directory set to: ${data.path}`);
         } catch (e) {
             this.showError(`Failed to set working directory: ${e.message}`);
         }
@@ -499,17 +476,11 @@ class PpxaiApp {
     async loadInitialState() {
         try {
             // Load providers
-            const providersResp = await fetch(`${this.serverUrl}/providers`, {
-                headers: this.getSessionHeaders()
-            });
-            const providersData = await providersResp.json();
+            const providersData = await this.apiClient.getProviders();
             this.populateProviders(providersData.providers);
 
             // Load status
-            const statusResp = await fetch(`${this.serverUrl}/status`, {
-                headers: this.getSessionHeaders()
-            });
-            const status = await statusResp.json();
+            const status = await this.apiClient.getStatus();
             this.currentProvider = status.provider;
             this.currentModel = status.model;
             this.toolsEnabled = status.tools_enabled;
@@ -526,18 +497,12 @@ class PpxaiApp {
             await this.loadWorkingDir();
 
             // Load tools status
-            const toolsResp = await fetch(`${this.serverUrl}/tools`, {
-                headers: this.getSessionHeaders()
-            });
-            const toolsData = await toolsResp.json();
+            const toolsData = await this.apiClient.getTools();
             this.verbose = toolsData.verbose || false;
 
             // Load agent status
             try {
-                const agentResp = await fetch(`${this.serverUrl}/agent/status`, {
-                    headers: this.getSessionHeaders()
-                });
-                const agentData = await agentResp.json();
+                const agentData = await this.apiClient.getAgentStatus();
                 this.agentMode = agentData.agent_mode;
                 this.updateAgentBadge();
 
@@ -557,10 +522,7 @@ class PpxaiApp {
 
             // Load debug log status
             try {
-                const debugResp = await fetch(`${this.serverUrl}/debug-log`, {
-                    headers: this.getSessionHeaders()
-                });
-                const debugData = await debugResp.json();
+                const debugData = await this.apiClient.getDebugLogStatus();
                 this.debugLogEnabled = debugData.enabled;
                 this.updateDebugIndicator();
             } catch {}
@@ -578,10 +540,7 @@ class PpxaiApp {
      */
     async checkSessionRestore() {
         try {
-            const response = await fetch(`${this.serverUrl}/sessions/last`, {
-                headers: this.getSessionHeaders()
-            });
-            const data = await response.json();
+            const data = await this.apiClient.getLastSession();
 
             if (data.last_session && data.last_session.name) {
                 const session = data.last_session;
@@ -607,44 +566,34 @@ class PpxaiApp {
      */
     async restoreLastSession() {
         try {
-            const response = await fetch(`${this.serverUrl}/sessions/restore`, {
-                method: 'POST',
-                headers: this.getSessionHeaders()
-            });
+            const data = await this.apiClient.restoreSession();
+            this.showSystemMessage(`✓ Session restored: ${data.name} (${data.message_count} messages)`);
 
-            if (response.ok) {
-                const data = await response.json();
-                this.showSystemMessage(`✓ Session restored: ${data.name} (${data.message_count} messages)`);
-
-                // Update state from restored session
-                if (data.working_dir) {
-                    this.elements.folderPath.textContent = data.working_dir;
-                }
-                if (data.tools_enabled) {
-                    this.toolsEnabled = true;
-                    this.updateToolsBadge();
-                }
-
-                // Restore provider and model (v1.15.3)
-                if (data.provider) {
-                    this.currentProvider = data.provider;
-                    this.elements.providerSelect.value = data.provider;
-                    console.log(`[PpxaiApp] Restored provider: ${data.provider}`);
-                }
-                if (data.model) {
-                    this.currentModel = data.model;
-                    // Reload models for the restored provider
-                    await this.loadModels();
-                    this.elements.modelSelect.value = data.model;
-                    console.log(`[PpxaiApp] Restored model: ${data.model}`);
-                }
-
-                // Reload working dir badge
-                await this.loadWorkingDir();
-            } else {
-                const error = await response.json();
-                this.showSystemMessage(`Failed to restore session: ${error.detail}`, 'error');
+            // Update state from restored session
+            if (data.working_dir) {
+                this.elements.folderPath.textContent = data.working_dir;
             }
+            if (data.tools_enabled) {
+                this.toolsEnabled = true;
+                this.updateToolsBadge();
+            }
+
+            // Restore provider and model (v1.15.3)
+            if (data.provider) {
+                this.currentProvider = data.provider;
+                this.elements.providerSelect.value = data.provider;
+                console.log(`[PpxaiApp] Restored provider: ${data.provider}`);
+            }
+            if (data.model) {
+                this.currentModel = data.model;
+                // Reload models for the restored provider
+                await this.loadModels();
+                this.elements.modelSelect.value = data.model;
+                console.log(`[PpxaiApp] Restored model: ${data.model}`);
+            }
+
+            // Reload working dir badge
+            await this.loadWorkingDir();
         } catch (error) {
             console.error('[PpxaiApp] Failed to restore session:', error);
             this.showSystemMessage('Failed to restore session', 'error');
@@ -664,10 +613,7 @@ class PpxaiApp {
 
     async loadModels() {
         try {
-            const response = await fetch(`${this.serverUrl}/models`, {
-                headers: this.getSessionHeaders()
-            });
-            const data = await response.json();
+            const data = await this.apiClient.getModels();
 
             this.elements.modelSelect.innerHTML = '';
             data.models.forEach(m => {
@@ -685,20 +631,12 @@ class PpxaiApp {
     async handleProviderChange() {
         const providerId = this.elements.providerSelect.value;
         try {
-            const resp = await fetch(`${this.serverUrl}/providers`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true),
-                body: JSON.stringify({ provider: providerId })
-            });
-            const data = await resp.json();
+            const data = await this.apiClient.setProvider(providerId);
             this.currentProvider = providerId;
             await this.loadModels();
 
             // Get new default model
-            const statusResp = await fetch(`${this.serverUrl}/status`, {
-                headers: this.getSessionHeaders()
-            });
-            const status = await statusResp.json();
+            const status = await this.apiClient.getStatus();
             this.currentModel = status.model;
             this.elements.modelSelect.value = this.currentModel;
 
@@ -715,12 +653,7 @@ class PpxaiApp {
     async handleModelChange() {
         const modelId = this.elements.modelSelect.value;
         try {
-            const resp = await fetch(`${this.serverUrl}/models`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true),
-                body: JSON.stringify({ model: modelId })
-            });
-            const data = await resp.json();
+            const data = await this.apiClient.setModel(modelId);
             this.currentModel = modelId;
             let msg = `Switched to model: ${modelId}`;
             if (data.context_reset) {
@@ -737,11 +670,7 @@ class PpxaiApp {
     async toggleTools() {
         try {
             const newState = !this.toolsEnabled;
-            await fetch(`${this.serverUrl}/tools`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true),
-                body: JSON.stringify({ enabled: newState })
-            });
+            await this.apiClient.setToolsEnabled(newState);
             this.toolsEnabled = newState;
             this.updateToolsBadge();
             this.showSystemMessage(`Tools ${newState ? 'enabled' : 'disabled'}`);
@@ -758,21 +687,12 @@ class PpxaiApp {
     async toggleAgent() {
         try {
             const newState = !this.agentMode;
-            const endpoint = newState ? '/agent/enable' : '/agent/disable';
-
-            const response = await fetch(`${this.serverUrl}${endpoint}`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true)
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                this.agentMode = data.agent_mode;
-                this.toolsEnabled = data.tools_enabled || this.toolsEnabled;
-                this.updateAgentBadge();
-                this.updateToolsBadge();
-                this.showSystemMessage(`Agent mode ${this.agentMode ? 'enabled' : 'disabled'}`);
-            }
+            const data = await (newState ? this.apiClient.enableAgent() : this.apiClient.disableAgent());
+            this.agentMode = data.agent_mode;
+            this.toolsEnabled = data.tools_enabled || this.toolsEnabled;
+            this.updateAgentBadge();
+            this.updateToolsBadge();
+            this.showSystemMessage(`Agent mode ${this.agentMode ? 'enabled' : 'disabled'}`);
         } catch (error) {
             this.showError(`Failed to toggle agent: ${error.message}`);
         }
@@ -785,22 +705,12 @@ class PpxaiApp {
 
     async undoCheckpoint() {
         try {
-            const response = await fetch(`${this.serverUrl}/checkpoint/undo`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true)
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                this.showSystemMessage(data.message || 'Checkpoint restored');
-                this.elements.undoBadge.classList.add('hidden');
-                this.lastCheckpoint = null;
-            } else {
-                const error = await response.text();
-                this.showError(`Undo failed: ${error}`);
-            }
+            const data = await this.apiClient.undoCheckpoint();
+            this.showSystemMessage(data.message || 'Checkpoint restored');
+            this.elements.undoBadge.classList.add('hidden');
+            this.lastCheckpoint = null;
         } catch (error) {
-            this.showError(`Failed to undo: ${error.message}`);
+            this.showError(`Undo failed: ${error.message}`);
         }
     }
 
@@ -1242,10 +1152,7 @@ class PpxaiApp {
     async handleModelCommand(args) {
         if (!args || args === 'list') {
             try {
-                const response = await fetch(`${this.serverUrl}/models`, {
-                    headers: this.getSessionHeaders()
-                });
-                const data = await response.json();
+                const data = await this.apiClient.getModels();
                 let text = '**Available Models:**\n\n';
                 data.models.forEach(m => {
                     const current = m.id === this.currentModel ? ' *(current)*' : '';
@@ -1264,10 +1171,7 @@ class PpxaiApp {
     async handleProviderCommand(args) {
         if (!args || args === 'list') {
             try {
-                const response = await fetch(`${this.serverUrl}/providers`, {
-                    headers: this.getSessionHeaders()
-                });
-                const data = await response.json();
+                const data = await this.apiClient.getProviders();
                 let text = '**Available Providers:**\n\n';
                 data.providers.forEach(p => {
                     const current = p.id === this.currentProvider ? ' *(current)*' : '';
@@ -1301,10 +1205,7 @@ class PpxaiApp {
             case 'status':
             case '':
                 try {
-                    const response = await fetch(`${this.serverUrl}/tools`, {
-                        headers: this.getSessionHeaders()
-                    });
-                    const data = await response.json();
+                    const data = await this.apiClient.getTools();
                     let text = '**Tools Status:**\n\n';
                     text += `- Enabled: ${data.enabled ? 'yes' : 'no'}\n`;
                     text += `- Tool count: ${data.tools.length}\n`;
@@ -1317,10 +1218,7 @@ class PpxaiApp {
 
             case 'list':
                 try {
-                    const response = await fetch(`${this.serverUrl}/tools`, {
-                        headers: this.getSessionHeaders()
-                    });
-                    const data = await response.json();
+                    const data = await this.apiClient.getTools();
                     let text = '**Available Tools:**\n\n';
                     data.tools.forEach(t => {
                         text += `- \`${t.name}\` - ${t.description}\n`;
@@ -1336,11 +1234,7 @@ class PpxaiApp {
                 if (setParts[0] === 'verbose') {
                     const value = setParts[1] === 'on' || setParts[1] === 'true';
                     try {
-                        await fetch(`${this.serverUrl}/tools/config`, {
-                            method: 'POST',
-                            headers: this.getSessionHeaders(true),
-                            body: JSON.stringify({ setting: 'verbose', value: value ? 'on' : 'off' })
-                        });
+                        await this.apiClient.setToolConfig('verbose', value ? 'on' : 'off');
                         this.verbose = value;
                         this.showSystemMessage(`Verbose mode ${value ? 'enabled' : 'disabled'}`);
                     } catch (error) {
@@ -1353,10 +1247,7 @@ class PpxaiApp {
 
             case 'config':
                 try {
-                    const response = await fetch(`${this.serverUrl}/tools`, {
-                        headers: this.getSessionHeaders()
-                    });
-                    const data = await response.json();
+                    const data = await this.apiClient.getTools();
                     let text = '**Tool Configuration:**\n\n';
                     text += `- Enabled: ${data.enabled ? 'yes' : 'no'}\n`;
                     text += `- Max iterations: ${data.max_iterations || 15}\n`;
@@ -1387,15 +1278,7 @@ class PpxaiApp {
                 const toolName = args.split(/\s+/)[1];
                 if (toolName) {
                     try {
-                        const response = await fetch(`${this.serverUrl}/tools/help/${encodeURIComponent(toolName)}`, {
-                            headers: this.getSessionHeaders()
-                        });
-                        if (!response.ok) {
-                            const err = await response.json();
-                            this.showError(err.detail || `Tool not found: ${toolName}`);
-                            return;
-                        }
-                        const data = await response.json();
+                        const data = await this.apiClient.getToolHelp(toolName);
                         let text = `**Tool: ${data.name}**\n\n`;
                         text += `${data.description}\n\n`;
                         if (data.parameters && data.parameters.properties) {
@@ -1426,10 +1309,7 @@ class PpxaiApp {
             case 'status':
             case '':
                 try {
-                    const response = await fetch(`${this.serverUrl}/agent/status`, {
-                        headers: this.getSessionHeaders()
-                    });
-                    const data = await response.json();
+                    const data = await this.apiClient.getAgentStatus();
                     let text = '**Checkpoint Status:**\n\n';
                     if (data.checkpoint) {
                         text += `- Backend: ${data.checkpoint.backend}\n`;
@@ -1450,10 +1330,7 @@ class PpxaiApp {
 
             case 'list':
                 try {
-                    const response = await fetch(`${this.serverUrl}/checkpoint/list`, {
-                        headers: this.getSessionHeaders()
-                    });
-                    const data = await response.json();
+                    const data = await this.apiClient.listCheckpoints();
                     let text = '**Recent Checkpoints:**\n\n';
                     if (data.checkpoints.length === 0) {
                         text += 'No checkpoints found.\n';
@@ -1481,17 +1358,7 @@ class PpxaiApp {
                         return;
                     }
                     try {
-                        const response = await fetch(`${this.serverUrl}/checkpoint/backend`, {
-                            method: 'POST',
-                            headers: this.getSessionHeaders(true),
-                            body: JSON.stringify({ backend: backendArg })
-                        });
-                        if (!response.ok) {
-                            const err = await response.json();
-                            this.showError(err.detail || 'Failed to set backend');
-                            return;
-                        }
-                        const data = await response.json();
+                        const data = await this.apiClient.setCheckpointBackend(backendArg);
                         this.showSystemMessage(`Checkpoint backend set to: ${data.backend}`);
                     } catch (error) {
                         this.showError(`Failed to set backend: ${error.message}`);
@@ -1503,17 +1370,7 @@ class PpxaiApp {
 
             case 'clear':
                 try {
-                    const response = await fetch(`${this.serverUrl}/checkpoint/clear`, {
-                        method: 'POST',
-                        headers: this.getSessionHeaders(true),
-                        body: JSON.stringify({ keep_last: 0 })
-                    });
-                    if (!response.ok) {
-                        const err = await response.json();
-                        this.showError(err.detail || 'Failed to clear checkpoints');
-                        return;
-                    }
-                    const data = await response.json();
+                    const data = await this.apiClient.clearCheckpoints(0);
                     this.showSystemMessage(data.message || `Cleared ${data.removed} checkpoint(s)`);
                 } catch (error) {
                     this.showError(`Failed to clear checkpoints: ${error.message}`);
@@ -1524,15 +1381,7 @@ class PpxaiApp {
                 const checkpointId = args.split(/\s+/)[1];
                 if (checkpointId) {
                     try {
-                        const response = await fetch(`${this.serverUrl}/checkpoint/info/${encodeURIComponent(checkpointId)}`, {
-                            headers: this.getSessionHeaders()
-                        });
-                        if (!response.ok) {
-                            const err = await response.json();
-                            this.showError(err.detail || `Checkpoint not found: ${checkpointId}`);
-                            return;
-                        }
-                        const data = await response.json();
+                        const data = await this.apiClient.getCheckpointInfo(checkpointId);
                         let text = '**Checkpoint Details:**\n\n';
                         text += `- ID: \`${data.id}\`\n`;
                         text += `- Description: ${data.description}\n`;
@@ -1555,17 +1404,7 @@ class PpxaiApp {
     async handleUsageCommand(args) {
         // v1.16.1: Delegate to shared command handler via POST /command/usage
         try {
-            const response = await fetch(`${this.serverUrl}/command/usage`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true),
-                body: JSON.stringify({ args: args.trim() })
-            });
-            if (!response.ok) {
-                const detail = await response.text();
-                this.showError(`Usage command failed (${response.status}): ${detail}`);
-                return;
-            }
-            const result = await response.json();
+            const result = await this.apiClient.executeCommand('usage', args.trim());
             this.renderCommandResult(result);
         } catch (error) {
             this.showError(`Failed to get usage: ${error.message}`);
@@ -1613,11 +1452,7 @@ class PpxaiApp {
         try {
             if (subCmd === 'clear') {
                 // Clear injected contexts
-                const response = await fetch(`${this.serverUrl}/context/clear`, {
-                    method: 'POST',
-                    headers: this.getSessionHeaders(true)
-                });
-                const data = await response.json();
+                const data = await this.apiClient.clearContextInjections();
 
                 if (data.removed_count > 0) {
                     this.showSystemMessage(`Cleared ${data.removed_count} injected context(s) from conversation.`);
@@ -1628,11 +1463,7 @@ class PpxaiApp {
                 await this.updateContextInfo();
             } else if (subCmd === 'reload') {
                 // Reload bootstrap context (v1.14.1)
-                const response = await fetch(`${this.serverUrl}/context/reload`, {
-                    method: 'POST',
-                    headers: this.getSessionHeaders(true)
-                });
-                const data = await response.json();
+                const data = await this.apiClient.reloadContext();
 
                 if (data.success) {
                     // v1.15.2: Server returns flat structure, not nested under 'status'
@@ -1655,19 +1486,13 @@ class PpxaiApp {
                 }
             } else if (subCmd === 'hints') {
                 // Show active bootstrap hints (v1.14.0)
-                const response = await fetch(`${this.serverUrl}/context/hints`, {
-                    headers: this.getSessionHeaders()
-                });
-                const hints = await response.json();
+                const hints = await this.apiClient.getContextHints();
 
                 if (!hints.loaded) {
                     // Get working directory for context
                     let workingDir = 'unknown';
                     try {
-                        const wdResp = await fetch(`${this.serverUrl}/context/working_dir`, {
-                            headers: this.getSessionHeaders()
-                        });
-                        const wdData = await wdResp.json();
+                        const wdData = await this.apiClient.getWorkingDir();
                         workingDir = wdData.path || 'unknown';
                     } catch (e) { /* ignore */ }
 
@@ -1722,18 +1547,12 @@ class PpxaiApp {
                 this.addMessage('system', msg);
             } else if (subCmd === 'show') {
                 // Show bootstrap context hierarchy (v1.14.2)
-                const response = await fetch(`${this.serverUrl}/context/bootstrap`, {
-                    headers: this.getSessionHeaders()
-                });
-                const status = await response.json();
+                const status = await this.apiClient.getBootstrapContext();
 
                 if (!status.loaded) {
                     let workingDir = 'unknown';
                     try {
-                        const wdResp = await fetch(`${this.serverUrl}/context/working_dir`, {
-                            headers: this.getSessionHeaders()
-                        });
-                        const wdData = await wdResp.json();
+                        const wdData = await this.apiClient.getWorkingDir();
                         workingDir = wdData.path || 'unknown';
                     } catch (e) { /* ignore */ }
 
@@ -1788,10 +1607,7 @@ class PpxaiApp {
                 this.addMessage('system', msg);
             } else {
                 // Show context usage info
-                const response = await fetch(`${this.serverUrl}/context/info`, {
-                    headers: this.getSessionHeaders()
-                });
-                const info = await response.json();
+                const info = await this.apiClient.getContextInfo();
 
                 // Build progress bar
                 const percent = info.usage_percent || 0;
@@ -1839,10 +1655,7 @@ class PpxaiApp {
 
     async showStatus() {
         try {
-            const response = await fetch(`${this.serverUrl}/status`, {
-                headers: this.getSessionHeaders()
-            });
-            const data = await response.json();
+            const data = await this.apiClient.getStatus();
 
             let text = '**Current Status:**\n\n';
             text += `- Provider: ${data.provider}\n`;
@@ -2276,11 +2089,7 @@ class PpxaiApp {
 
     async sendFileConsent(filePath, response) {
         try {
-            await fetch(`${this.serverUrl}/consent`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true),
-                body: JSON.stringify({ file_path: filePath, response })
-            });
+            await this.apiClient.submitConsent(filePath, response);
         } catch (error) {
             this.showError(`Failed to send consent: ${error.message}`);
         }
@@ -2288,11 +2097,7 @@ class PpxaiApp {
 
     async sendShellConsent(command, workingDir, response) {
         try {
-            await fetch(`${this.serverUrl}/shell-consent`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true),
-                body: JSON.stringify({ command, working_dir: workingDir, response })
-            });
+            await this.apiClient.submitShellConsent(command, workingDir, response);
         } catch (error) {
             this.showError(`Failed to send consent: ${error.message}`);
         }
@@ -2389,44 +2194,23 @@ class PpxaiApp {
     async searchFilesForAutocomplete(query) {
         // v1.13.8: Use server endpoint for file search
         this.autocompleteType = 'file';
+        const fallback = [
+            { label: '@git', description: 'Include git diff', value: '@git' },
+            { label: '@tree', description: 'Include project structure', value: '@tree' },
+        ];
 
         try {
-            const response = await fetch(`${this.serverUrl}/files/search`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true),
-                body: JSON.stringify({ query: query || '', max_results: 20 })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                this.autocompleteItems = data.files.map(file => ({
-                    label: file.name.startsWith('@') ? file.name : `@${file.name}`,
-                    description: file.path,
-                    value: file.name.startsWith('@') ? file.name : `@${file.name}`
-                }));
-            } else {
-                // Fallback to special refs only
-                this.autocompleteItems = [
-                    { label: '@git', description: 'Include git diff', value: '@git' },
-                    { label: '@tree', description: 'Include project structure', value: '@tree' },
-                ];
-                if (query) {
-                    this.autocompleteItems = this.autocompleteItems.filter(item =>
-                        item.label.toLowerCase().includes(query.toLowerCase())
-                    );
-                }
-            }
+            const data = await this.apiClient.searchFiles(query || '', 20);
+            this.autocompleteItems = data.files.map(file => ({
+                label: file.name.startsWith('@') ? file.name : `@${file.name}`,
+                description: file.path,
+                value: file.name.startsWith('@') ? file.name : `@${file.name}`
+            }));
         } catch (error) {
             // Fallback to special refs on error
-            this.autocompleteItems = [
-                { label: '@git', description: 'Include git diff', value: '@git' },
-                { label: '@tree', description: 'Include project structure', value: '@tree' },
-            ];
-            if (query) {
-                this.autocompleteItems = this.autocompleteItems.filter(item =>
-                    item.label.toLowerCase().includes(query.toLowerCase())
-                );
-            }
+            this.autocompleteItems = query
+                ? fallback.filter(item => item.label.toLowerCase().includes(query.toLowerCase()))
+                : fallback;
         }
 
         this.autocompleteIndex = 0;
@@ -2495,10 +2279,7 @@ class PpxaiApp {
 
     async clearConversation() {
         try {
-            await fetch(`${this.serverUrl}/sessions/clear`, {
-                method: 'POST',
-                headers: this.getSessionHeaders()
-            });
+            await this.apiClient.clearSession();
             this.elements.messagesContainer.innerHTML = `
                 <div class="welcome-message">
                     <h2>Welcome to ppxai</h2>
@@ -2520,12 +2301,7 @@ class PpxaiApp {
 
     async saveSession(name) {
         try {
-            const response = await fetch(`${this.serverUrl}/sessions/save`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true),
-                body: name ? JSON.stringify({ name }) : '{}'
-            });
-            const data = await response.json();
+            const data = await this.apiClient.post('/sessions/save', name ? { name } : {});
             this.showSystemMessage(`Session saved: ${data.name}`);
         } catch (error) {
             this.showError(`Failed to save session: ${error.message}`);
@@ -2534,12 +2310,7 @@ class PpxaiApp {
 
     async exportAnswer(filename) {
         try {
-            const response = await fetch(`${this.serverUrl}/export`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true),
-                body: filename ? JSON.stringify({ filename }) : '{}'
-            });
-            const data = await response.json();
+            const data = await this.apiClient.post('/export', filename ? { filename } : {});
             this.showSystemMessage(`Exported to: ${data.filepath}`);
         } catch (error) {
             this.showError(`Failed to export: ${error.message}`);
@@ -2554,21 +2325,10 @@ class PpxaiApp {
         }
 
         try {
-            const sessionName = encodeURIComponent(name.trim());
-            const response = await fetch(`${this.serverUrl}/sessions/load/${sessionName}`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true)
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                this.showSystemMessage(`Session loaded: ${data.name}`);
-                // Refresh model/provider status after loading
-                await this.loadInitialState();
-            } else {
-                const error = await response.json();
-                this.showError(`Failed to load session: ${error.detail || 'Session not found'}`);
-            }
+            const data = await this.apiClient.loadSession(name.trim());
+            this.showSystemMessage(`Session loaded: ${data.name}`);
+            // Refresh model/provider status after loading
+            await this.loadInitialState();
         } catch (error) {
             this.showError(`Failed to load session: ${error.message}`);
         }
@@ -2576,10 +2336,7 @@ class PpxaiApp {
 
     async listSessions() {
         try {
-            const response = await fetch(`${this.serverUrl}/sessions`, {
-                headers: this.getSessionHeaders()
-            });
-            const data = await response.json();
+            const data = await this.apiClient.getSessions();
 
             if (!data.sessions || data.sessions.length === 0) {
                 this.showSystemMessage('No saved sessions found.');
@@ -2612,21 +2369,10 @@ class PpxaiApp {
         const targetPath = args.trim();
 
         try {
-            const response = await fetch(`${this.serverUrl}/context/working_dir`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true),
-                body: JSON.stringify({ path: targetPath })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                this.showSystemMessage(`Working directory changed to: \`${data.path}\``);
-                // Update the folder badge
-                this.updateFolderBadge(data.path);
-            } else {
-                const error = await response.json();
-                this.showError(`Failed to change directory: ${error.detail || 'Unknown error'}`);
-            }
+            const data = await this.apiClient.setWorkingDir(targetPath);
+            this.showSystemMessage(`Working directory changed to: \`${data.path}\``);
+            // Update the folder badge
+            this.updateFolderBadge(data.path);
         } catch (error) {
             this.showError(`Failed to change directory: ${error.message}`);
         }
@@ -2634,16 +2380,8 @@ class PpxaiApp {
 
     async handlePwdCommand() {
         try {
-            const response = await fetch(`${this.serverUrl}/context/working_dir`, {
-                headers: this.getSessionHeaders()
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                this.showSystemMessage(`Current working directory: \`${data.path}\``);
-            } else {
-                this.showError('Failed to get working directory');
-            }
+            const data = await this.apiClient.getWorkingDir();
+            this.showSystemMessage(`Current working directory: \`${data.path}\``);
         } catch (error) {
             this.showError(`Failed to get working directory: ${error.message}`);
         }
@@ -2662,27 +2400,18 @@ class PpxaiApp {
                 if (pathParts.length > 0) params.set('path', pathParts.join(' '));
                 if (showHidden) params.set('a', 'true');
             }
-            const response = await fetch(`${this.serverUrl}/files/list?${params}`, {
-                headers: this.getSessionHeaders()
+            const data = await this.apiClient.listFiles(params.toString());
+            // Format as monospace table
+            const pad = (s, n) => s.padEnd(n);
+            const header = `${pad('Name', 40)} ${pad('Size', 10)} Modified`;
+            const sep = '-'.repeat(60);
+            const rows = data.files.map(f => {
+                const size = f.size != null ? this._humanSize(f.size) : '-';
+                const mod = f.modified ? f.modified.replace('T', ' ').slice(0, 16) : '?';
+                return `${pad(f.name, 40)} ${pad(size, 10)} ${mod}`;
             });
-
-            if (response.ok) {
-                const data = await response.json();
-                // Format as monospace table
-                const pad = (s, n) => s.padEnd(n);
-                const header = `${pad('Name', 40)} ${pad('Size', 10)} Modified`;
-                const sep = '-'.repeat(60);
-                const rows = data.files.map(f => {
-                    const size = f.size != null ? this._humanSize(f.size) : '-';
-                    const mod = f.modified ? f.modified.replace('T', ' ').slice(0, 16) : '?';
-                    return `${pad(f.name, 40)} ${pad(size, 10)} ${mod}`;
-                });
-                const content = '```\n' + [data.path, '', header, sep, ...rows].join('\n') + '\n```';
-                this.showSystemMessage(content);
-            } else {
-                const err = await response.json();
-                this.showError(err.detail || 'Failed to list directory');
-            }
+            const content = '```\n' + [data.path, '', header, sep, ...rows].join('\n') + '\n```';
+            this.showSystemMessage(content);
         } catch (error) {
             this.showError(`Failed to list directory: ${error.message}`);
         }
@@ -2709,35 +2438,26 @@ class PpxaiApp {
                     else params.set('path', part);
                 }
             }
-            const response = await fetch(`${this.serverUrl}/files/tree?${params}`, {
-                headers: this.getSessionHeaders()
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                const lines = [];
-                const renderNode = (node, prefix, isLast) => {
-                    const connector = isLast ? '└── ' : '├── ';
-                    lines.push(prefix + connector + node.label);
-                    const children = node.children || [];
-                    for (let i = 0; i < children.length; i++) {
-                        const childPrefix = prefix + (isLast ? '    ' : '│   ');
-                        renderNode(children[i], childPrefix, i === children.length - 1);
-                    }
-                };
-                // Root
-                lines.push(data.tree.label);
-                const rootChildren = data.tree.children || [];
-                for (let i = 0; i < rootChildren.length; i++) {
-                    renderNode(rootChildren[i], '', i === rootChildren.length - 1);
+            const data = await this.apiClient.getFileTree(params.toString());
+            const lines = [];
+            const renderNode = (node, prefix, isLast) => {
+                const connector = isLast ? '└── ' : '├── ';
+                lines.push(prefix + connector + node.label);
+                const children = node.children || [];
+                for (let i = 0; i < children.length; i++) {
+                    const childPrefix = prefix + (isLast ? '    ' : '│   ');
+                    renderNode(children[i], childPrefix, i === children.length - 1);
                 }
-                const stats = `${data.stats.dirs} directories, ${data.stats.files} files`;
-                const content = '```\n' + lines.join('\n') + '\n\n' + stats + '\n```';
-                this.showSystemMessage(content);
-            } else {
-                const err = await response.json();
-                this.showError(err.detail || 'Failed to get directory tree');
+            };
+            // Root
+            lines.push(data.tree.label);
+            const rootChildren = data.tree.children || [];
+            for (let i = 0; i < rootChildren.length; i++) {
+                renderNode(rootChildren[i], '', i === rootChildren.length - 1);
             }
+            const stats = `${data.stats.dirs} directories, ${data.stats.files} files`;
+            const content = '```\n' + lines.join('\n') + '\n\n' + stats + '\n```';
+            this.showSystemMessage(content);
         } catch (error) {
             this.showError(`Failed to get directory tree: ${error.message}`);
         }
@@ -2754,15 +2474,8 @@ class PpxaiApp {
             await this.reloadConfig();
         } else if (subCmd === 'path') {
             try {
-                const response = await fetch(`${this.serverUrl}/config/path`, {
-                    headers: this.getSessionHeaders()
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    this.showSystemMessage(`**Config file:** \`${data.path || 'Not found'}\``);
-                } else {
-                    this.showError('Failed to get config path');
-                }
+                const data = await this.apiClient.getConfigPath();
+                this.showSystemMessage(`**Config file:** \`${data.path || 'Not found'}\``);
             } catch (error) {
                 this.showError(`Failed to get config path: ${error.message}`);
             }
@@ -2800,33 +2513,28 @@ class PpxaiApp {
         }
 
         try {
-            const response = await fetch(`${this.serverUrl}/files/read`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true),
-                body: JSON.stringify({ path: filepath })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-
-                // Don't allow editing binary files
-                if (data.type === 'image' || data.type === 'pdf') {
-                    this.showError(`Cannot edit binary file: ${filepath}`);
-                    return;
-                }
-
-                // Show editor panel
-                this.showEditorPanel(data.filename || filepath, data.content, line, col);
-            } else {
+            let data;
+            try {
+                data = await this.apiClient.readFile(filepath);
+            } catch (readError) {
                 // File doesn't exist - create new file
-                const error = await response.json();
-                if (response.status === 404) {
-                    // Create new empty file
+                if (readError.message.includes('Not Found') || readError.message.includes('not found') ||
+                    readError.message.includes('does not exist') || readError.message === 'HTTP 404') {
                     this.showEditorPanel(filepath, '', line, col, true);
                 } else {
-                    this.showError(`Failed to read file: ${error.detail || 'Unknown error'}`);
+                    this.showError(`Failed to read file: ${readError.message}`);
                 }
+                return;
             }
+
+            // Don't allow editing binary files
+            if (data.type === 'image' || data.type === 'pdf') {
+                this.showError(`Cannot edit binary file: ${filepath}`);
+                return;
+            }
+
+            // Show editor panel
+            this.showEditorPanel(data.filename || filepath, data.content, line, col);
         } catch (error) {
             this.showError(`Failed to open file: ${error.message}`);
         }
@@ -3062,34 +2770,19 @@ class PpxaiApp {
         try {
             if (statusEl) statusEl.textContent = 'Saving...';
 
-            const response = await fetch(`${this.serverUrl}/files/write`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true),
-                body: JSON.stringify({
-                    path: this.editorFilename,
-                    content: content
-                })
-            });
+            const data = await this.apiClient.writeFile(this.editorFilename, content);
+            this.editorOriginalContent = content;
+            this.editorIsNewFile = false;
 
-            if (response.ok) {
-                const data = await response.json();
-                this.editorOriginalContent = content;
-                this.editorIsNewFile = false;
+            // Update header
+            this.elements.previewFilename.textContent = this.editorFilename;
 
-                // Update header
-                this.elements.previewFilename.textContent = this.editorFilename;
-
-                if (statusEl) {
-                    statusEl.textContent = data.created ? '✓ Created' : '✓ Saved';
-                    setTimeout(() => { statusEl.textContent = ''; }, 2000);
-                }
-
-                this.showSystemMessage(`✓ Saved: ${this.editorFilename}`);
-            } else {
-                const error = await response.json();
-                if (statusEl) statusEl.textContent = '✗ Error';
-                this.showError(`Failed to save: ${error.detail || 'Unknown error'}`);
+            if (statusEl) {
+                statusEl.textContent = data.created ? '✓ Created' : '✓ Saved';
+                setTimeout(() => { statusEl.textContent = ''; }, 2000);
             }
+
+            this.showSystemMessage(`✓ Saved: ${this.editorFilename}`);
         } catch (error) {
             if (statusEl) statusEl.textContent = '✗ Error';
             this.showError(`Failed to save: ${error.message}`);
@@ -3111,37 +2804,22 @@ class PpxaiApp {
         try {
             if (statusEl) statusEl.textContent = 'Saving...';
 
-            const response = await fetch(`${this.serverUrl}/files/write`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true),
-                body: JSON.stringify({
-                    path: newPath.trim(),
-                    content: content
-                })
-            });
+            const data = await this.apiClient.writeFile(newPath.trim(), content);
 
-            if (response.ok) {
-                const data = await response.json();
+            // Update current file to new path
+            this.editorFilename = newPath.trim();
+            this.editorOriginalContent = content;
+            this.editorIsNewFile = false;
 
-                // Update current file to new path
-                this.editorFilename = newPath.trim();
-                this.editorOriginalContent = content;
-                this.editorIsNewFile = false;
+            // Update header
+            this.elements.previewFilename.textContent = this.editorFilename;
 
-                // Update header
-                this.elements.previewFilename.textContent = this.editorFilename;
-
-                if (statusEl) {
-                    statusEl.textContent = data.created ? '✓ Created' : '✓ Saved';
-                    setTimeout(() => { statusEl.textContent = ''; }, 2000);
-                }
-
-                this.showSystemMessage(`✓ Saved as: ${this.editorFilename}`);
-            } else {
-                const error = await response.json();
-                if (statusEl) statusEl.textContent = '✗ Error';
-                this.showError(`Failed to save: ${error.detail || 'Unknown error'}`);
+            if (statusEl) {
+                statusEl.textContent = data.created ? '✓ Created' : '✓ Saved';
+                setTimeout(() => { statusEl.textContent = ''; }, 2000);
             }
+
+            this.showSystemMessage(`✓ Saved as: ${this.editorFilename}`);
         } catch (error) {
             if (statusEl) statusEl.textContent = '✗ Error';
             this.showError(`Failed to save: ${error.message}`);
@@ -3374,27 +3052,16 @@ class PpxaiApp {
         const filepath = args.trim();
 
         try {
-            const response = await fetch(`${this.serverUrl}/files/read`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true),
-                body: JSON.stringify({ path: filepath })
-            });
+            const data = await this.apiClient.readFile(filepath);
 
-            if (response.ok) {
-                const data = await response.json();
-
-                // v1.13.10: Handle image and PDF files
-                if (data.type === 'image') {
-                    this.showImagePreview(data.filename || filepath, data.content, data.mime_type, data.size);
-                } else if (data.type === 'pdf') {
-                    this.showPdfPreview(data.filename || filepath, data.content, data.size);
-                } else {
-                    // Show text in preview panel
-                    this.showPreviewPanel(data.filename || filepath, data.content, data.size, data.lines);
-                }
+            // v1.13.10: Handle image and PDF files
+            if (data.type === 'image') {
+                this.showImagePreview(data.filename || filepath, data.content, data.mime_type, data.size);
+            } else if (data.type === 'pdf') {
+                this.showPdfPreview(data.filename || filepath, data.content, data.size);
             } else {
-                const error = await response.json();
-                this.showError(`Failed to read file: ${error.detail || 'File not found'}`);
+                // Show text in preview panel
+                this.showPreviewPanel(data.filename || filepath, data.content, data.size, data.lines);
             }
         } catch (error) {
             this.showError(`Failed to read file: ${error.message}`);
@@ -3407,29 +3074,19 @@ class PpxaiApp {
      */
     async displayFileFromEvent(filepath) {
         try {
-            const response = await fetch(`${this.serverUrl}/files/read`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true),
-                body: JSON.stringify({ path: filepath })
-            });
+            const data = await this.apiClient.readFile(filepath);
 
-            if (response.ok) {
-                const data = await response.json();
-
-                // Handle different file types
-                if (data.type === 'image') {
-                    this.showImagePreview(data.filename || filepath, data.content, data.mime_type, data.size);
-                } else if (data.type === 'pdf') {
-                    this.showPdfPreview(data.filename || filepath, data.content, data.size);
-                } else {
-                    // Show text in preview panel
-                    this.showPreviewPanel(data.filename || filepath, data.content, data.size, data.lines);
-                }
+            // Handle different file types
+            if (data.type === 'image') {
+                this.showImagePreview(data.filename || filepath, data.content, data.mime_type, data.size);
+            } else if (data.type === 'pdf') {
+                this.showPdfPreview(data.filename || filepath, data.content, data.size);
             } else {
-                // Don't show error to user - the AI tool already reports status
-                console.error(`Failed to display file: ${filepath}`);
+                // Show text in preview panel
+                this.showPreviewPanel(data.filename || filepath, data.content, data.size, data.lines);
             }
         } catch (error) {
+            // Don't show error to user - the AI tool already reports status
             console.error(`Failed to display file: ${error.message}`);
         }
     }
@@ -4097,12 +3754,7 @@ class PpxaiApp {
     async toggleDebugLog() {
         try {
             const newState = !this.debugLogEnabled;
-            const response = await fetch(`${this.serverUrl}/debug-log`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true),
-                body: JSON.stringify({ enabled: newState })
-            });
-            const data = await response.json();
+            const data = await this.apiClient.setDebugLog(newState);
             this.debugLogEnabled = data.enabled;
             this.updateDebugIndicator();
             this.showSystemMessage(`Debug logging ${data.enabled ? 'enabled' : 'disabled'}${data.log_file ? `: ${data.log_file}` : ''}`);
@@ -4119,10 +3771,7 @@ class PpxaiApp {
 
     async updateUsage() {
         try {
-            const response = await fetch(`${this.serverUrl}/usage`, {
-                headers: this.getSessionHeaders()
-            });
-            const data = await response.json();
+            const data = await this.apiClient.getUsage();
 
             const prompt = data.prompt_tokens || 0;
             const completion = data.completion_tokens || 0;
@@ -4141,10 +3790,7 @@ class PpxaiApp {
 
     async updateContextInfo() {
         try {
-            const response = await fetch(`${this.serverUrl}/context/info`, {
-                headers: this.getSessionHeaders()
-            });
-            const data = await response.json();
+            const data = await this.apiClient.getContextInfo();
 
             const percent = data.usage_percent || 0;
             const tokens = data.estimated_tokens || 0;
@@ -4174,11 +3820,7 @@ class PpxaiApp {
 
     async clearContextInjections() {
         try {
-            const response = await fetch(`${this.serverUrl}/context/clear`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true)
-            });
-            const data = await response.json();
+            const data = await this.apiClient.clearContextInjections();
 
             if (data.removed_count > 0) {
                 this.showSystemMessage(`Cleared ${data.removed_count} injected context(s) from conversation.`);

@@ -271,6 +271,74 @@ class ApiClient {
         return this.post('/interrupt');
     }
 
+    // === Config ===
+
+    async reloadConfig() {
+        return this.post('/config/reload');
+    }
+
+    async getConfigPath() {
+        return this.get('/config/path');
+    }
+
+    async shutdown() {
+        return this.post('/shutdown');
+    }
+
+    // === Sessions (extended) ===
+
+    async getLastSession() {
+        return this.get('/sessions/last');
+    }
+
+    async restoreSession() {
+        return this.post('/sessions/restore');
+    }
+
+    // === Context (extended) ===
+
+    async reloadContext() {
+        return this.post('/context/reload');
+    }
+
+    async getContextHints() {
+        return this.get('/context/hints');
+    }
+
+    async getBootstrapContext() {
+        return this.get('/context/bootstrap');
+    }
+
+    // === Files (extended) ===
+
+    async listFiles(queryString = '') {
+        return this.get(`/files/list${queryString ? '?' + queryString : ''}`);
+    }
+
+    async getFileTree(queryString = '') {
+        return this.get(`/files/tree${queryString ? '?' + queryString : ''}`);
+    }
+
+    async writeFile(path, content) {
+        return this.post('/files/write', { path, content });
+    }
+
+    // === Commands ===
+
+    async executeCommand(name, args = '') {
+        return this.post(`/command/${encodeURIComponent(name)}`, { args });
+    }
+
+    // === Consent ===
+
+    async submitConsent(filePath, consentResponse) {
+        return this.post('/consent', { file_path: filePath, response: consentResponse });
+    }
+
+    async submitShellConsent(command, workingDir, consentResponse) {
+        return this.post('/shell-consent', { command, working_dir: workingDir, response: consentResponse });
+    }
+
     // === Debug Log ===
 
     async getDebugLogStatus() {
