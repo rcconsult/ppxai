@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AppState Test Harness</title>
+    <style>
+        :root {
+            --bg-primary: #1e1e1e;
+            --text-primary: #cccccc;
+            --accent-color: #0078d4;
+        }
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px;
+            margin: 0;
+        }
+        #status { color: var(--accent-color); }
+    </style>
+</head>
+<body>
+    <h1>AppState Test Harness</h1>
+    <div id="status">Loaded</div>
+
+    <script src="../../ppxai/web/shared/app-state.js"></script>
+    <script>
+        // Expose helpers for Playwright page.evaluate() calls
+        window.testHelpers = {
+            /** Create a fresh AppState with the given initial values. */
+            createState(initial) {
+                return new AppState(initial);
+            },
+
+            /** Full read/write + observer round-trip test.
+             *  Returns { readBack, callCount, lastValue } */
+            testObserver(initial, key, newValue) {
+                const state = new AppState(initial);
+                let callCount = 0;
+                let lastValue;
+                state.on(key, v => { callCount++; lastValue = v; });
+                state[key] = newValue;
+                return { readBack: state[key], callCount, lastValue };
+            },
+
+            /** Write the same value twice; observer should fire only once. */
+            testNoop(initial, key, value) {
+                const state = new AppState(initial);
+                let callCount = 0;
+                state.on(key, () => callCount++);
+                state[key] = value;
+                state[key] = value;  // identical — should be no-op
+                return callCount;
+            },
+
+            /** snapshot() returns a plain object copy. */
+            testSnapshot(initial) {
+                const state = new AppState(initial);
+                return state.snapshot();
+            },
+
+            /** Multiple observers on the same key all fire. */
+            testMultiObserver(initial, key, value) {
+                const state = new AppState(initial);
+                const calls = [];
+                state.on(key, v => calls.push('a:' + v));
+                state.on(key, v => calls.push('b:' + v));
+                state[key] = value;
+                return calls;
+            },
+
+            /** on() chaining returns the proxy (truthy). */
+            testChaining(initial, key) {
+                const state = new AppState(initial);
+                const ret = state.on(key, () => {});
+                return ret === state;
+            }
+        };
+
+        document.getElementById('status').textContent = 'Ready';
+    </script>
+</body>
+</html>

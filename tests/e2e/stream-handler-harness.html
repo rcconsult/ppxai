@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamHandler Test Harness</title>
+    <style>
+        :root {
+            --bg-primary: #1e1e1e;
+            --text-primary: #cccccc;
+            --accent-color: #0078d4;
+        }
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px;
+            margin: 0;
+        }
+        #status { color: var(--accent-color); }
+    </style>
+</head>
+<body>
+    <h1>StreamHandler Test Harness</h1>
+    <div id="status">Loaded</div>
+
+    <script src="../../ppxai/web/shared/stream-handler.js"></script>
+    <script>
+        /**
+         * Build a fake ReadableStream from an array of SSE line strings.
+         * Each element is encoded as a UTF-8 chunk.
+         */
+        function makeStream(lines) {
+            const encoder = new TextEncoder();
+            const chunks = lines.map(l => encoder.encode(l + '\n'));
+            let i = 0;
+            return new ReadableStream({
+                pull(controller) {
+                    if (i < chunks.length) {
+                        controller.enqueue(chunks[i++]);
+                    } else {
+                        controller.close();
+                    }
+                }
+            });
+        }
+
+        /**
+         * Install a fake global fetch that returns an SSE-style response.
+         * @param {string[]} lines  - Raw SSE lines (e.g. ['data: {"type":"chunk"}'])
+         * @param {boolean}  ok     - Whether response.ok should be true
+         * @param {string}   statusText
+         */
+        function mockFetch(lines, ok = true, statusText = 'OK') {
+            window.fetch = async (_url, _opts) => ({
+                ok,
+                statusText,
+                body: makeStream(lines)
+            });
+        }
+
+        /** Remove mock fetch (restore undefined so tests don't bleed). */
+        function clearFetch() {
+            window.fetch = undefined;
+        }
+
+        /**
+         * Collect all events emitted by StreamHandler.stream() into an array.
+         * @param {string[]} lines  - SSE lines to feed
+         * @param {string}   [url]
+         * @returns {Promise<object[]>}
+         */
+        async function collectEvents(lines, url = 'http://test') {
+            mockFetch(lines);
+            const handler = new StreamHandler({
+                serverUrl: url,
+                getHeaders: () => ({})
+            });
+            const events = [];
+            for await (const evt of handler.stream('hello')) {
+                events.push(evt);
+            }
+            clearFetch();
+            return events;
+        }
+
+        window.testHelpers = {
+            mockFetch,
+            clearFetch,
+            collectEvents,
+
+            /** Constructor stores serverUrl and getHeaders. */
+            testConstructor() {
+                let capturedHeaders;
+                const getHeaders = (ct) => { capturedHeaders = ct; return { 'X-Test': '1' }; };
+                const h = new StreamHandler({ serverUrl: 'http://s', getHeaders });
+                return { serverUrl: h.serverUrl, headersAreFn: typeof h.getHeaders === 'function' };
+            },
+
+            /** setServerUrl() updates the stored URL. */
+            testSetServerUrl() {
+                const h = new StreamHandler({ serverUrl: 'http://old', getHeaders: () => ({}) });
+                h.setServerUrl('http://new');
+                return h.serverUrl;
+            },
+
+            /** Non-ok response throws. */
+            async testErrorResponse() {
+                window.fetch = async () => ({ ok: false, statusText: 'Internal Server Error', body: null });
+                const h = new StreamHandler({ serverUrl: 'http://test', getHeaders: () => ({}) });
+                try {
+                    for await (const _ of h.stream('x')) { /* empty */ }
+                    return { threw: false };
+                } catch (e) {
+                    return { threw: true, message: e.message };
+                } finally {
+                    clearFetch();
+                }
+            },
+
+            /** Malformed JSON lines are silently skipped; valid lines pass through. */
+            async testMalformedJson() {
+                return collectEvents([
+                    'data: {"type":"good"}',
+                    'data: NOT_JSON',
+                    'data: {"type":"also_good"}'
+                ]);
+            },
+
+            /** Lines not starting with "data: " are ignored. */
+            async testNonDataLines() {
+                return collectEvents([
+                    ': comment line',
+                    'event: custom',
+                    'data: {"type":"only_this"}',
+                    ''
+                ]);
+            },
+
+            /** Multi-chunk: JSON payload split across two separate stream chunks. */
+            async testSplitChunk() {
+                const encoder = new TextEncoder();
+                // Split 'data: {"type":"split"}\n' into two chunks
+                const full = 'data: {"type":"split"}\n';
+                const mid = Math.floor(full.length / 2);
+                const chunk1 = encoder.encode(full.slice(0, mid));
+                const chunk2 = encoder.encode(full.slice(mid));
+                let i = 0;
+                const chunks = [chunk1, chunk2];
+                window.fetch = async () => ({
+                    ok: true,
+                    statusText: 'OK',
+                    body: new ReadableStream({
+                        pull(controller) {
+                            if (i < chunks.length) controller.enqueue(chunks[i++]);
+                            else controller.close();
+                        }
+                    })
+                });
+                const h = new StreamHandler({ serverUrl: 'http://test', getHeaders: () => ({}) });
+                const events = [];
+                for await (const evt of h.stream('x')) events.push(evt);
+                clearFetch();
+                return events;
+            },
+
+            /** AbortSignal cancels the stream (throws AbortError). */
+            async testAbort() {
+                const encoder = new TextEncoder();
+                // Return a stream that never ends unless aborted
+                window.fetch = async (_url, opts) => {
+                    // Honour the signal: if already aborted, throw immediately
+                    if (opts && opts.signal && opts.signal.aborted) {
+                        const err = new DOMException('Aborted', 'AbortError');
+                        throw err;
+                    }
+                    return {
+                        ok: true,
+                        statusText: 'OK',
+                        body: new ReadableStream({
+                            start(controller) {
+                                // Emit one event then block
+                                controller.enqueue(encoder.encode('data: {"type":"first"}\n'));
+                            }
+                        })
+                    };
+                };
+                const controller = new AbortController();
+                controller.abort();   // abort before even starting
+                const h = new StreamHandler({ serverUrl: 'http://test', getHeaders: () => ({}) });
+                try {
+                    for await (const _ of h.stream('x', controller.signal)) { /* empty */ }
+                    return { threw: false };
+                } catch (e) {
+                    return { threw: true, name: e.name };
+                } finally {
+                    clearFetch();
+                }
+            },
+
+            /** StreamHandler class is available as window.StreamHandler. */
+            testGlobal() {
+                return typeof window.StreamHandler === 'function';
+            }
+        };
+
+        document.getElementById('status').textContent = 'Ready';
+    </script>
+</body>
+</html>
