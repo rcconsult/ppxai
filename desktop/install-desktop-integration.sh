@@ -29,55 +29,61 @@ echo "  ✓ Icons installed to $ICONS_DIR"
 echo
 echo "Generating .desktop files..."
 
-# ppxai.desktop
+# Detect best available terminal emulator (shared by ppxai and ppxaide)
+# Usage: make_exec <binary> → sets TERM_EXEC and TERM_TERMINAL
+make_exec() {
+    local bin="$1"
+    if command -v ghostty &> /dev/null; then
+        TERM_EXEC="ghostty -e $bin"
+        TERM_TERMINAL=false
+    elif command -v gnome-terminal &> /dev/null; then
+        TERM_EXEC="gnome-terminal -- $bin"
+        TERM_TERMINAL=false
+    elif command -v konsole &> /dev/null; then
+        TERM_EXEC="konsole -e $bin"
+        TERM_TERMINAL=false
+    elif command -v xfce4-terminal &> /dev/null; then
+        TERM_EXEC="xfce4-terminal -e $bin"
+        TERM_TERMINAL=false
+    elif command -v alacritty &> /dev/null; then
+        TERM_EXEC="alacritty -e $bin"
+        TERM_TERMINAL=false
+    elif command -v kitty &> /dev/null; then
+        TERM_EXEC="kitty $bin"
+        TERM_TERMINAL=false
+    else
+        TERM_EXEC="$bin"
+        TERM_TERMINAL=true
+    fi
+}
+
+# ppxai.desktop — detect best available terminal emulator
+make_exec "$HOME/.local/bin/ppxai"
 cat > "$APPLICATIONS_DIR/ppxai.desktop" << EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
 Name=ppxai
 Comment=Terminal-based AI chat interface (Rich CLI)
-Exec=$HOME/.local/bin/ppxai
+Exec=$TERM_EXEC
 Icon=$ICONS_DIR/ppxai.png
-Terminal=true
+Terminal=$TERM_TERMINAL
 Categories=Development;Utility;
 Keywords=ai;chat;terminal;cli;
 StartupNotify=false
 EOF
 
 # ppxaide.desktop — detect best available terminal emulator
-PPXAIDE_BIN="$HOME/.local/bin/ppxaide"
-if command -v ghostty &> /dev/null; then
-    PPXAIDE_EXEC="ghostty -e $PPXAIDE_BIN"
-    PPXAIDE_TERMINAL=false
-elif command -v gnome-terminal &> /dev/null; then
-    PPXAIDE_EXEC="gnome-terminal -- $PPXAIDE_BIN"
-    PPXAIDE_TERMINAL=false
-elif command -v konsole &> /dev/null; then
-    PPXAIDE_EXEC="konsole -e $PPXAIDE_BIN"
-    PPXAIDE_TERMINAL=false
-elif command -v xfce4-terminal &> /dev/null; then
-    PPXAIDE_EXEC="xfce4-terminal -e $PPXAIDE_BIN"
-    PPXAIDE_TERMINAL=false
-elif command -v alacritty &> /dev/null; then
-    PPXAIDE_EXEC="alacritty -e $PPXAIDE_BIN"
-    PPXAIDE_TERMINAL=false
-elif command -v kitty &> /dev/null; then
-    PPXAIDE_EXEC="kitty $PPXAIDE_BIN"
-    PPXAIDE_TERMINAL=false
-else
-    PPXAIDE_EXEC="$PPXAIDE_BIN"
-    PPXAIDE_TERMINAL=true
-fi
-
+make_exec "$HOME/.local/bin/ppxaide"
 cat > "$APPLICATIONS_DIR/ppxaide.desktop" << EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
 Name=ppxaide
 Comment=Textual TUI for ppxai with syntax highlighting
-Exec=$PPXAIDE_EXEC
+Exec=$TERM_EXEC
 Icon=$ICONS_DIR/ppxaide.png
-Terminal=$PPXAIDE_TERMINAL
+Terminal=$TERM_TERMINAL
 Categories=Development;Utility;
 Keywords=ai;chat;terminal;tui;textual;
 StartupNotify=false
