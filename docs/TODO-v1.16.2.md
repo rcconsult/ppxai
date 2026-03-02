@@ -369,5 +369,5 @@ After items 5–8: `app.js` drops from ~4,264 to ~1,800 lines.
 | 6 | Extract `CommandDispatcher` | ✅ Done |
 | 7 | Extract `StreamHandler` | ✅ Done |
 | 8 | Extract `EditorController` | ✅ Done |
-| 9 | Centralize state (`AppState`) | 🔲 Open |
-| 10 | Virtual scroll for messages | 🔲 Open |
+| 9 | Centralize state (`AppState`) | ✅ Done |
+| 10 | Virtual scroll for messages | ✅ Done |
