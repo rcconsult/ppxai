@@ -51,6 +51,12 @@ class PpxaiApp {
         // Shared API client — wraps all HTTP calls to the server (v1.16.2)
         this.apiClient = new ApiClient(this.serverUrl, this.sessionId);
 
+        // Stream handler — SSE client for /chat (v1.16.2)
+        this.streamHandler = new StreamHandler({
+            serverUrl:  this.serverUrl,
+            getHeaders: (ct) => this.getSessionHeaders(ct)
+        });
+
         // Editor controller — instantiated after DOM setup in init()
         this.editorController = null;
 
@@ -289,6 +295,7 @@ class PpxaiApp {
         this.elements.serverUrlSetting.addEventListener('change', () => {
             this.serverUrl = this.elements.serverUrlSetting.value;
             this.apiClient.setServerUrl(this.serverUrl);
+            this.streamHandler.setServerUrl(this.serverUrl);
             localStorage.setItem('ppxai-server-url', this.serverUrl);
             this.connectToServer();
         });
@@ -795,39 +802,9 @@ class PpxaiApp {
         this.currentAssistantMessage = msgEl;
 
         try {
-            const response = await fetch(`${this.serverUrl}/chat`, {
-                method: 'POST',
-                headers: this.getSessionHeaders(true),
-                body: JSON.stringify({ message }),
-                signal: this.currentAbortController.signal
-            });
-
-            if (!response.ok) {
-                throw new Error(`Server error: ${response.statusText}`);
-            }
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = '';
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop() || '';
-
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        try {
-                            const event = JSON.parse(line.slice(6));
-                            fullContent = this.handleStreamEvent(event, contentEl, fullContent);
-                        } catch (e) {
-                            if (!(e instanceof SyntaxError)) throw e;
-                        }
-                    }
-                }
+            // v1.16.2: Delegate SSE fetch + line-buffering to StreamHandler
+            for await (const event of this.streamHandler.stream(message, this.currentAbortController.signal)) {
+                fullContent = this.handleStreamEvent(event, contentEl, fullContent);
             }
 
             // Final render
