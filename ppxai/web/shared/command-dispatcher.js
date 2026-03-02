@@ -18,11 +18,11 @@ class CommandDispatcher {
 
     async dispatch(input) {
         // Prevent recursive/repeated calls
-        if (this.app.isHandlingCommand) {
+        if (this.app.state.isHandlingCommand) {
             console.warn('handleSlashCommand called while already handling:', input);
             return;
         }
-        this.app.isHandlingCommand = true;
+        this.app.state.isHandlingCommand = true;
 
         try {
             const parts = input.trim().split(/\s+/);
@@ -70,15 +70,15 @@ class CommandDispatcher {
 
             case '/agent':
                 if (args === 'on') {
-                    if (!this.app.agentMode) await this.app.toggleAgent();
+                    if (!this.app.state.agentMode) await this.app.toggleAgent();
                 } else if (args === 'off') {
-                    if (this.app.agentMode) await this.app.toggleAgent();
+                    if (this.app.state.agentMode) await this.app.toggleAgent();
                 } else if (args) {
                     // Run agent task
                     this.app.addMessage('user', input);
                     await this.app.streamChat(`/agent ${args}`);
                 } else {
-                    this.app.showSystemMessage(`Agent mode: ${this.app.agentMode ? 'on' : 'off'}`);
+                    this.app.showSystemMessage(`Agent mode: ${this.app.state.agentMode ? 'on' : 'off'}`);
                 }
                 break;
 
@@ -152,7 +152,7 @@ class CommandDispatcher {
                 this.app.showError(`Unknown command: ${cmd}. Type /help for available commands.`);
         }
         } finally {
-            this.app.isHandlingCommand = false;
+            this.app.state.isHandlingCommand = false;
         }
     }
 
@@ -184,7 +184,7 @@ class CommandDispatcher {
                 const data = await this.app.apiClient.getModels();
                 let text = '**Available Models:**\n\n';
                 data.models.forEach(m => {
-                    const current = m.id === this.app.currentModel ? ' *(current)*' : '';
+                    const current = m.id === this.app.state.currentModel ? ' *(current)*' : '';
                     text += `- \`${m.id}\`${current} - ${m.name}\n`;
                 });
                 this.app.addMessage('system', text);
@@ -203,7 +203,7 @@ class CommandDispatcher {
                 const data = await this.app.apiClient.getProviders();
                 let text = '**Available Providers:**\n\n';
                 data.providers.forEach(p => {
-                    const current = p.id === this.app.currentProvider ? ' *(current)*' : '';
+                    const current = p.id === this.app.state.currentProvider ? ' *(current)*' : '';
                     const status = p.has_api_key ? '✓' : '✗';
                     text += `- \`${p.id}\`${current} [${status}] - ${p.name}\n`;
                 });
@@ -223,12 +223,12 @@ class CommandDispatcher {
         switch (subCmd) {
             case 'enable':
             case 'on':
-                if (!this.app.toolsEnabled) await this.app.toggleTools();
+                if (!this.app.state.toolsEnabled) await this.app.toggleTools();
                 break;
 
             case 'disable':
             case 'off':
-                if (this.app.toolsEnabled) await this.app.toggleTools();
+                if (this.app.state.toolsEnabled) await this.app.toggleTools();
                 break;
 
             case 'status':
@@ -264,7 +264,7 @@ class CommandDispatcher {
                     const value = setParts[1] === 'on' || setParts[1] === 'true';
                     try {
                         await this.app.apiClient.setToolConfig('verbose', value ? 'on' : 'off');
-                        this.app.verbose = value;
+                        this.app.state.verbose = value;
                         this.app.showSystemMessage(`Verbose mode ${value ? 'enabled' : 'disabled'}`);
                     } catch (error) {
                         this.app.showError(`Failed to set verbose: ${error.message}`);
@@ -292,13 +292,13 @@ class CommandDispatcher {
             case 'agent':
                 const agentArg = args.split(/\s+/)[1];
                 if (agentArg === 'on' || agentArg === 'enable') {
-                    if (!this.app.agentMode) await this.app.toggleAgent();
+                    if (!this.app.state.agentMode) await this.app.toggleAgent();
                     this.app.showSystemMessage('Agent mode enabled. Tools auto-enabled.');
                 } else if (agentArg === 'off' || agentArg === 'disable') {
-                    if (this.app.agentMode) await this.app.toggleAgent();
+                    if (this.app.state.agentMode) await this.app.toggleAgent();
                     this.app.showSystemMessage('Agent mode disabled.');
                 } else {
-                    const status = this.app.agentMode ? 'ON' : 'OFF';
+                    const status = this.app.state.agentMode ? 'ON' : 'OFF';
                     this.app.addMessage('system', `**Agent Mode:** ${status}\n\nUsage: \`/tools agent on|off\`\nOr use \`/agent <task>\` to run an autonomous task.`);
                 }
                 break;
@@ -700,12 +700,12 @@ class CommandDispatcher {
 
     handleThemeCommand(args) {
         if (!args) {
-            this.app.showSystemMessage(`Current theme: ${this.app.theme}`);
+            this.app.showSystemMessage(`Current theme: ${this.app.state.theme}`);
         } else if (['dark', 'light', 'system'].includes(args)) {
-            this.app.theme = args;
+            this.app.state.theme = args;
             this.app.applyTheme();
-            localStorage.setItem('ppxai-theme', this.app.theme);
-            this.app.showSystemMessage(`Theme set to: ${this.app.theme}`);
+            localStorage.setItem('ppxai-theme', this.app.state.theme);
+            this.app.showSystemMessage(`Theme set to: ${this.app.state.theme}`);
         } else {
             this.app.showError(`Unknown theme: ${args}. Available: dark, light, system`);
         }

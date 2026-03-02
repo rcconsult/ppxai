@@ -37,7 +37,6 @@ class PpxaiApp {
         const pageOrigin = window.location.origin;
         const usePageOrigin = pageOrigin && !pageOrigin.startsWith('file:') && pageOrigin !== 'null';
         this.serverUrl = usePageOrigin ? pageOrigin : (localStorage.getItem('ppxai-server-url') || 'http://127.0.0.1:54320');
-        this.theme = localStorage.getItem('ppxai-theme') || 'dark';
 
         // Session ID for server session isolation (v1.14.0)
         // Each browser tab/window gets its own session ID
@@ -63,43 +62,59 @@ class PpxaiApp {
         // Editor controller — instantiated after DOM setup in init()
         this.editorController = null;
 
-        // State
-        this.currentProvider = '';
-        this.currentModel = '';
-        this.toolsEnabled = false;
-        this.agentMode = false;
-        this.isStreaming = false;
-        this.currentAbortController = null;
-        this.commandHistory = JSON.parse(localStorage.getItem('ppxai-history') || '[]');
-        this.historyIndex = -1;
-        this.debugLogEnabled = false;
-        this.verbose = false;
-        this.lastCheckpoint = null;
+        // State — all mutable state is managed via AppState (observable Proxy)
+        this.state = new AppState({
+            // Provider / model
+            currentProvider: '',
+            currentModel:    '',
 
-        // Preview panel state (v1.13.8)
-        this.previewViewMode = 'rendered';  // 'rendered' or 'source'
-        this.previewContent = null;         // Raw file content
-        this.previewFilename = null;        // Current filename
-        this.previewDataFormat = null;      // Detected data format
-        this.currentDataViewer = null;      // Current viewer instance
+            // Feature toggles
+            toolsEnabled: false,
+            agentMode:    false,
 
-        // Track current assistant message for correct ordering
-        this.currentAssistantMessage = null;
+            // UI theme
+            theme: localStorage.getItem('ppxai-theme') || 'dark',
 
-        // Debounce flag for message sending
-        this.isSending = false;
+            // Streaming / flow control
+            isStreaming:             false,
+            isSending:               false,
+            isHandlingCommand:       false,
+            currentAbortController:  null,
+            currentAssistantMessage: null,
 
-        // Guard for slash command handling
-        this.isHandlingCommand = false;
+            // Command history (restored from localStorage)
+            commandHistory: JSON.parse(localStorage.getItem('ppxai-history') || '[]'),
+            historyIndex:   -1,
 
-        // Usage tracking
-        this.usage = { prompt: 0, completion: 0, cost: 0 };
+            // Debug
+            debugLogEnabled: false,
+            verbose:         false,
 
-        // Autocomplete state
-        this.autocompleteVisible = false;
-        this.autocompleteItems = [];
-        this.autocompleteIndex = 0;
-        this.autocompleteType = null; // 'command' or 'file'
+            // Checkpoints
+            lastCheckpoint:  null,
+            checkpointCount: 0,
+            usage: { prompt: 0, completion: 0, cost: 0 },
+
+            // Preview panel
+            previewViewMode:   'rendered',
+            previewContent:    null,
+            previewFilename:   null,
+            previewDataFormat: null,
+
+            // Autocomplete
+            autocompleteVisible: false,
+            autocompleteItems:   [],
+            autocompleteIndex:   0,
+            autocompleteType:    null,
+
+            // HTML preview
+            htmlPreviewActive:   false,
+            htmlPreviewFilepath: null,
+        });
+
+        // Non-state instance data
+        this.currentDataViewer = null;      // Current viewer instance (not reactive state)
+        this._domMessageCount = 0;          // DOM message count for virtual scroll (item 10)
 
         // DOM elements
         this.elements = {};
@@ -145,6 +160,12 @@ class PpxaiApp {
 
     async init() {
         this.cacheElements();
+
+        // v1.16.2: Virtual scroll sentinel — grows to replace trimmed messages
+        this._scrollSpacer = document.createElement('div');
+        this._scrollSpacer.className = 'message-spacer';
+        this.elements.messagesContainer.prepend(this._scrollSpacer);
+
         this._initEditorController();
         this.setupEventListeners();
         this.applyTheme();
@@ -166,7 +187,7 @@ class PpxaiApp {
                 markdown:    el.previewMarkdown,
                 dataViewer:  el.previewDataViewer,
             },
-            getTheme: () => this.theme,
+            getTheme: () => this.state.theme,
             onMessage: (msg) => this.showSystemMessage(msg),
             onError:   (msg) => this.showError(msg),
         });
@@ -291,9 +312,9 @@ class PpxaiApp {
             if (e.target === this.elements.settingsModal) this.hideSettings();
         });
         this.elements.themeSetting.addEventListener('change', () => {
-            this.theme = this.elements.themeSetting.value;
+            this.state.theme = this.elements.themeSetting.value;
             this.applyTheme();
-            localStorage.setItem('ppxai-theme', this.theme);
+            localStorage.setItem('ppxai-theme', this.state.theme);
         });
         this.elements.serverUrlSetting.addEventListener('change', () => {
             this.serverUrl = this.elements.serverUrlSetting.value;
@@ -336,7 +357,7 @@ class PpxaiApp {
         document.addEventListener('keydown', (e) => {
             // Escape to stop streaming or close modals
             if (e.key === 'Escape') {
-                if (this.isStreaming) {
+                if (this.state.isStreaming) {
                     this.interrupt();
                 } else if (!this.elements.consentModal.classList.contains('hidden')) {
                     // Don't close consent modal with Escape
@@ -515,14 +536,14 @@ class PpxaiApp {
 
             // Load status
             const status = await this.apiClient.getStatus();
-            this.currentProvider = status.provider;
-            this.currentModel = status.model;
-            this.toolsEnabled = status.tools_enabled;
+            this.state.currentProvider = status.provider;
+            this.state.currentModel = status.model;
+            this.state.toolsEnabled = status.tools_enabled;
 
             // Select current provider/model
-            this.elements.providerSelect.value = this.currentProvider;
+            this.elements.providerSelect.value = this.state.currentProvider;
             await this.loadModels();
-            this.elements.modelSelect.value = this.currentModel;
+            this.elements.modelSelect.value = this.state.currentModel;
 
             // Update badges
             this.updateToolsBadge();
@@ -532,17 +553,17 @@ class PpxaiApp {
 
             // Load tools status
             const toolsData = await this.apiClient.getTools();
-            this.verbose = toolsData.verbose || false;
+            this.state.verbose = toolsData.verbose || false;
 
             // Load agent status
             try {
                 const agentData = await this.apiClient.getAgentStatus();
-                this.agentMode = agentData.agent_mode;
+                this.state.agentMode = agentData.agent_mode;
                 this.updateAgentBadge();
 
                 // Update undo badge
                 if (agentData.checkpoint && agentData.checkpoint.last_checkpoint) {
-                    this.lastCheckpoint = agentData.checkpoint.last_checkpoint;
+                    this.state.lastCheckpoint = agentData.checkpoint.last_checkpoint;
                     this.elements.undoBadge.classList.remove('hidden');
                     this.elements.undoBadge.disabled = !agentData.checkpoint.is_valid;
                 } else {
@@ -557,7 +578,7 @@ class PpxaiApp {
             // Load debug log status
             try {
                 const debugData = await this.apiClient.getDebugLogStatus();
-                this.debugLogEnabled = debugData.enabled;
+                this.state.debugLogEnabled = debugData.enabled;
                 this.updateDebugIndicator();
             } catch {}
 
@@ -608,18 +629,18 @@ class PpxaiApp {
                 this.elements.folderPath.textContent = data.working_dir;
             }
             if (data.tools_enabled) {
-                this.toolsEnabled = true;
+                this.state.toolsEnabled = true;
                 this.updateToolsBadge();
             }
 
             // Restore provider and model (v1.15.3)
             if (data.provider) {
-                this.currentProvider = data.provider;
+                this.state.currentProvider = data.provider;
                 this.elements.providerSelect.value = data.provider;
                 console.log(`[PpxaiApp] Restored provider: ${data.provider}`);
             }
             if (data.model) {
-                this.currentModel = data.model;
+                this.state.currentModel = data.model;
                 // Reload models for the restored provider
                 await this.loadModels();
                 this.elements.modelSelect.value = data.model;
@@ -666,13 +687,13 @@ class PpxaiApp {
         const providerId = this.elements.providerSelect.value;
         try {
             const data = await this.apiClient.setProvider(providerId);
-            this.currentProvider = providerId;
+            this.state.currentProvider = providerId;
             await this.loadModels();
 
             // Get new default model
             const status = await this.apiClient.getStatus();
-            this.currentModel = status.model;
-            this.elements.modelSelect.value = this.currentModel;
+            this.state.currentModel = status.model;
+            this.elements.modelSelect.value = this.state.currentModel;
 
             let msg = `Switched to provider: ${providerId}`;
             if (data.context_reset) {
@@ -688,7 +709,7 @@ class PpxaiApp {
         const modelId = this.elements.modelSelect.value;
         try {
             const data = await this.apiClient.setModel(modelId);
-            this.currentModel = modelId;
+            this.state.currentModel = modelId;
             let msg = `Switched to model: ${modelId}`;
             if (data.context_reset) {
                 msg += ` (${data.context_reset} messages cleared from context)`;
@@ -703,9 +724,9 @@ class PpxaiApp {
 
     async toggleTools() {
         try {
-            const newState = !this.toolsEnabled;
+            const newState = !this.state.toolsEnabled;
             await this.apiClient.setToolsEnabled(newState);
-            this.toolsEnabled = newState;
+            this.state.toolsEnabled = newState;
             this.updateToolsBadge();
             this.showSystemMessage(`Tools ${newState ? 'enabled' : 'disabled'}`);
         } catch (error) {
@@ -714,27 +735,27 @@ class PpxaiApp {
     }
 
     updateToolsBadge() {
-        this.elements.toolsStatus.textContent = `Tools: ${this.toolsEnabled ? 'on' : 'off'}`;
-        this.elements.toolsBadge.classList.toggle('enabled', this.toolsEnabled);
+        this.elements.toolsStatus.textContent = `Tools: ${this.state.toolsEnabled ? 'on' : 'off'}`;
+        this.elements.toolsBadge.classList.toggle('enabled', this.state.toolsEnabled);
     }
 
     async toggleAgent() {
         try {
-            const newState = !this.agentMode;
+            const newState = !this.state.agentMode;
             const data = await (newState ? this.apiClient.enableAgent() : this.apiClient.disableAgent());
-            this.agentMode = data.agent_mode;
-            this.toolsEnabled = data.tools_enabled || this.toolsEnabled;
+            this.state.agentMode = data.agent_mode;
+            this.state.toolsEnabled = data.tools_enabled || this.state.toolsEnabled;
             this.updateAgentBadge();
             this.updateToolsBadge();
-            this.showSystemMessage(`Agent mode ${this.agentMode ? 'enabled' : 'disabled'}`);
+            this.showSystemMessage(`Agent mode ${this.state.agentMode ? 'enabled' : 'disabled'}`);
         } catch (error) {
             this.showError(`Failed to toggle agent: ${error.message}`);
         }
     }
 
     updateAgentBadge() {
-        this.elements.agentStatus.textContent = `Agent: ${this.agentMode ? 'on' : 'off'}`;
-        this.elements.agentBadge.classList.toggle('enabled', this.agentMode);
+        this.elements.agentStatus.textContent = `Agent: ${this.state.agentMode ? 'on' : 'off'}`;
+        this.elements.agentBadge.classList.toggle('enabled', this.state.agentMode);
     }
 
     async undoCheckpoint() {
@@ -742,7 +763,7 @@ class PpxaiApp {
             const data = await this.apiClient.undoCheckpoint();
             this.showSystemMessage(data.message || 'Checkpoint restored');
             this.elements.undoBadge.classList.add('hidden');
-            this.lastCheckpoint = null;
+            this.state.lastCheckpoint = null;
         } catch (error) {
             this.showError(`Undo failed: ${error.message}`);
         }
@@ -752,18 +773,18 @@ class PpxaiApp {
 
     async sendMessage() {
         const content = this.elements.messageInput.value.trim();
-        if (!content || this.isStreaming || this.isSending) return;
+        if (!content || this.state.isStreaming || this.state.isSending) return;
 
         // Debounce guard to prevent rapid-fire
-        this.isSending = true;
+        this.state.isSending = true;
 
         // Save to history
-        if (content !== this.commandHistory[0]) {
-            this.commandHistory.unshift(content);
-            if (this.commandHistory.length > 100) this.commandHistory.pop();
-            localStorage.setItem('ppxai-history', JSON.stringify(this.commandHistory));
+        if (content !== this.state.commandHistory[0]) {
+            this.state.commandHistory.unshift(content);
+            if (this.state.commandHistory.length > 100) this.state.commandHistory.pop();
+            localStorage.setItem('ppxai-history', JSON.stringify(this.state.commandHistory));
         }
-        this.historyIndex = -1;
+        this.state.historyIndex = -1;
 
         // Clear input
         this.elements.messageInput.value = '';
@@ -779,7 +800,7 @@ class PpxaiApp {
             try {
                 await this.handleSlashCommand(content);
             } finally {
-                this.isSending = false;
+                this.state.isSending = false;
             }
             return;
         }
@@ -792,9 +813,9 @@ class PpxaiApp {
     }
 
     async streamChat(message) {
-        this.isStreaming = true;
+        this.state.isStreaming = true;
         this.elements.streamingBadge.classList.remove('hidden');
-        this.currentAbortController = new AbortController();
+        this.state.currentAbortController = new AbortController();
 
         // Create assistant message container
         const msgEl = this.addMessage('assistant', '', true);
@@ -802,11 +823,11 @@ class PpxaiApp {
         let fullContent = '';
 
         // Track this as the current assistant message for correct tool call ordering
-        this.currentAssistantMessage = msgEl;
+        this.state.currentAssistantMessage = msgEl;
 
         try {
             // v1.16.2: Delegate SSE fetch + line-buffering to StreamHandler
-            for await (const event of this.streamHandler.stream(message, this.currentAbortController.signal)) {
+            for await (const event of this.streamHandler.stream(message, this.state.currentAbortController.signal)) {
                 fullContent = this.handleStreamEvent(event, contentEl, fullContent);
             }
 
@@ -822,11 +843,11 @@ class PpxaiApp {
                 this.showError(`Chat error: ${error.message}`);
             }
         } finally {
-            this.isStreaming = false;
-            this.isSending = false;
+            this.state.isStreaming = false;
+            this.state.isSending = false;
             this.elements.streamingBadge.classList.add('hidden');
-            this.currentAbortController = null;
-            this.currentAssistantMessage = null;
+            this.state.currentAbortController = null;
+            this.state.currentAssistantMessage = null;
             await this.updateUsage();
             await this.updateContextInfo();
             this.scrollToBottom();
@@ -904,13 +925,13 @@ class PpxaiApp {
                 // v1.16.0: Suppress individual checkpoint/snapshot bubbles — the
                 // final "Changes committed: <hash>" message provides sufficient context.
                 if (typeof event.data === 'string' && (event.data.startsWith('✓ Checkpoint created:') || event.data.startsWith('✓ Snapshot saved:'))) {
-                    this._checkpointCount = (this._checkpointCount || 0) + 1;
+                    this.state.checkpointCount = (this.state.checkpointCount || 0) + 1;
                 } else {
                     let msg = event.data;
                     // Enrich commit message with checkpoint count
-                    if (this._checkpointCount > 0 && typeof msg === 'string' && msg.startsWith('✓ Changes committed:')) {
-                        msg += ` (${this._checkpointCount} file${this._checkpointCount !== 1 ? 's' : ''} checkpointed)`;
-                        this._checkpointCount = 0;
+                    if (this.state.checkpointCount > 0 && typeof msg === 'string' && msg.startsWith('✓ Changes committed:')) {
+                        msg += ` (${this.state.checkpointCount} file${this.state.checkpointCount !== 1 ? 's' : ''} checkpointed)`;
+                        this.state.checkpointCount = 0;
                     }
                     this.showSystemMessage(msg);
                 }
@@ -984,8 +1005,8 @@ class PpxaiApp {
             });
         } catch {}
 
-        if (this.currentAbortController) {
-            this.currentAbortController.abort();
+        if (this.state.currentAbortController) {
+            this.state.currentAbortController.abort();
         }
     }
 
@@ -1028,6 +1049,19 @@ class PpxaiApp {
 
         this.elements.messagesContainer.appendChild(msgEl);
         this.scrollToBottom();
+
+        // v1.16.2: Virtual scroll — trim oldest message when DOM cap is exceeded
+        this._domMessageCount++;
+        const MAX_DOM_MESSAGES = 150;
+        if (this._domMessageCount > MAX_DOM_MESSAGES) {
+            const oldest = this.elements.messagesContainer.querySelector('.message');
+            if (oldest) {
+                this._scrollSpacer.style.height =
+                    (this._scrollSpacer.offsetHeight + oldest.offsetHeight) + 'px';
+                oldest.remove();
+                this._domMessageCount--;
+            }
+        }
 
         return msgEl;
     }
@@ -1252,8 +1286,8 @@ class PpxaiApp {
         groupEl.appendChild(body);
 
         // Insert before current assistant message
-        if (this.currentAssistantMessage) {
-            this.elements.messagesContainer.insertBefore(groupEl, this.currentAssistantMessage);
+        if (this.state.currentAssistantMessage) {
+            this.elements.messagesContainer.insertBefore(groupEl, this.state.currentAssistantMessage);
         } else {
             this.elements.messagesContainer.appendChild(groupEl);
         }
@@ -1293,7 +1327,7 @@ class PpxaiApp {
             <span class="tool-expand">▶</span>
         </div>`;
 
-        if (this.verbose && data.arguments) {
+        if (this.state.verbose && data.arguments) {
             content += `<div class="tool-details">
                 <pre>${escapeHtml(typeof data.arguments === 'string' ? data.arguments : JSON.stringify(data.arguments, null, 2))}</pre>
             </div>`;
@@ -1304,8 +1338,8 @@ class PpxaiApp {
         // v1.16.0: Append inside tool group if active, otherwise insert before assistant message
         if (this._currentToolGroup) {
             this._currentToolGroup.querySelector('.tool-group-body').appendChild(msgEl);
-        } else if (this.currentAssistantMessage) {
-            this.elements.messagesContainer.insertBefore(msgEl, this.currentAssistantMessage);
+        } else if (this.state.currentAssistantMessage) {
+            this.elements.messagesContainer.insertBefore(msgEl, this.state.currentAssistantMessage);
         } else {
             this.elements.messagesContainer.appendChild(msgEl);
         }
@@ -1322,7 +1356,7 @@ class PpxaiApp {
             <span class="tool-expand">▶</span>
         </div>`;
 
-        if (this.verbose && data.result) {
+        if (this.state.verbose && data.result) {
             const result = typeof data.result === 'string' ? data.result : JSON.stringify(data.result, null, 2);
             content += `<div class="tool-details">
                 <pre>${escapeHtml(result.slice(0, 2000))}${result.length > 2000 ? '\n...(truncated)' : ''}</pre>
@@ -1334,8 +1368,8 @@ class PpxaiApp {
         // v1.16.0: Append inside tool group if active
         if (this._currentToolGroup) {
             this._currentToolGroup.querySelector('.tool-group-body').appendChild(msgEl);
-        } else if (this.currentAssistantMessage) {
-            this.elements.messagesContainer.insertBefore(msgEl, this.currentAssistantMessage);
+        } else if (this.state.currentAssistantMessage) {
+            this.elements.messagesContainer.insertBefore(msgEl, this.state.currentAssistantMessage);
         } else {
             this.elements.messagesContainer.appendChild(msgEl);
         }
@@ -1356,8 +1390,8 @@ class PpxaiApp {
         `;
 
         // Insert before current assistant message
-        if (this.currentAssistantMessage) {
-            this.elements.messagesContainer.insertBefore(msgEl, this.currentAssistantMessage);
+        if (this.state.currentAssistantMessage) {
+            this.elements.messagesContainer.insertBefore(msgEl, this.state.currentAssistantMessage);
         } else {
             this.elements.messagesContainer.appendChild(msgEl);
         }
@@ -1424,21 +1458,21 @@ class PpxaiApp {
 
     handleInputKeydown(e) {
         // Handle autocomplete navigation
-        if (this.autocompleteVisible) {
+        if (this.state.autocompleteVisible) {
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
-                this.autocompleteIndex = Math.min(this.autocompleteIndex + 1, this.autocompleteItems.length - 1);
+                this.state.autocompleteIndex = Math.min(this.state.autocompleteIndex + 1, this.state.autocompleteItems.length - 1);
                 this.renderAutocomplete();
                 return;
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
-                this.autocompleteIndex = Math.max(this.autocompleteIndex - 1, 0);
+                this.state.autocompleteIndex = Math.max(this.state.autocompleteIndex - 1, 0);
                 this.renderAutocomplete();
                 return;
             } else if (e.key === 'Tab' || e.key === 'Enter') {
-                if (this.autocompleteItems.length > 0) {
+                if (this.state.autocompleteItems.length > 0) {
                     e.preventDefault();
-                    this.selectAutocompleteItem(this.autocompleteIndex);
+                    this.selectAutocompleteItem(this.state.autocompleteIndex);
                     return;
                 }
             } else if (e.key === 'Escape') {
@@ -1448,29 +1482,29 @@ class PpxaiApp {
         }
 
         // Command history
-        if (e.key === 'ArrowUp' && !this.autocompleteVisible) {
+        if (e.key === 'ArrowUp' && !this.state.autocompleteVisible) {
             if (this.elements.messageInput.selectionStart === 0) {
                 e.preventDefault();
-                if (this.historyIndex < this.commandHistory.length - 1) {
-                    this.historyIndex++;
-                    this.elements.messageInput.value = this.commandHistory[this.historyIndex];
+                if (this.state.historyIndex < this.state.commandHistory.length - 1) {
+                    this.state.historyIndex++;
+                    this.elements.messageInput.value = this.state.commandHistory[this.state.historyIndex];
                 }
             }
-        } else if (e.key === 'ArrowDown' && !this.autocompleteVisible) {
+        } else if (e.key === 'ArrowDown' && !this.state.autocompleteVisible) {
             if (this.elements.messageInput.selectionStart === this.elements.messageInput.value.length) {
                 e.preventDefault();
-                if (this.historyIndex > 0) {
-                    this.historyIndex--;
-                    this.elements.messageInput.value = this.commandHistory[this.historyIndex];
-                } else if (this.historyIndex === 0) {
-                    this.historyIndex = -1;
+                if (this.state.historyIndex > 0) {
+                    this.state.historyIndex--;
+                    this.elements.messageInput.value = this.state.commandHistory[this.state.historyIndex];
+                } else if (this.state.historyIndex === 0) {
+                    this.state.historyIndex = -1;
                     this.elements.messageInput.value = '';
                 }
             }
         }
 
         // Send on Enter (but allow Shift+Enter for newlines)
-        if (e.key === 'Enter' && !e.shiftKey && !this.autocompleteVisible) {
+        if (e.key === 'Enter' && !e.shiftKey && !this.state.autocompleteVisible) {
             e.preventDefault();
             this.sendMessage();
         }
@@ -1483,15 +1517,15 @@ class PpxaiApp {
         // Check for slash command autocomplete
         if (value.startsWith('/') && !value.includes(' ')) {
             const query = value.toLowerCase();
-            this.autocompleteItems = Object.keys(this.slashCommands)
+            this.state.autocompleteItems = Object.keys(this.slashCommands)
                 .filter(cmd => cmd.startsWith(query))
                 .map(cmd => ({
                     label: cmd,
                     description: this.slashCommands[cmd].description,
                     value: cmd
                 }));
-            this.autocompleteType = 'command';
-            this.autocompleteIndex = 0;
+            this.state.autocompleteType = 'command';
+            this.state.autocompleteIndex = 0;
             this.showAutocomplete();
             return;
         }
@@ -1510,7 +1544,7 @@ class PpxaiApp {
 
     async searchFilesForAutocomplete(query) {
         // v1.13.8: Use server endpoint for file search
-        this.autocompleteType = 'file';
+        this.state.autocompleteType = 'file';
         const fallback = [
             { label: '@git', description: 'Include git diff', value: '@git' },
             { label: '@tree', description: 'Include project structure', value: '@tree' },
@@ -1518,19 +1552,19 @@ class PpxaiApp {
 
         try {
             const data = await this.apiClient.searchFiles(query || '', 20);
-            this.autocompleteItems = data.files.map(file => ({
+            this.state.autocompleteItems = data.files.map(file => ({
                 label: file.name.startsWith('@') ? file.name : `@${file.name}`,
                 description: file.path,
                 value: file.name.startsWith('@') ? file.name : `@${file.name}`
             }));
         } catch (error) {
             // Fallback to special refs on error
-            this.autocompleteItems = query
+            this.state.autocompleteItems = query
                 ? fallback.filter(item => item.label.toLowerCase().includes(query.toLowerCase()))
                 : fallback;
         }
 
-        this.autocompleteIndex = 0;
+        this.state.autocompleteIndex = 0;
         // v1.13.8: Don't show if input was cleared (message sent during async request)
         if (!this.elements.messageInput.value.includes('@')) {
             return;
@@ -1539,24 +1573,24 @@ class PpxaiApp {
     }
 
     showAutocomplete() {
-        if (this.autocompleteItems.length === 0) {
+        if (this.state.autocompleteItems.length === 0) {
             this.hideAutocomplete();
             return;
         }
 
-        this.autocompleteVisible = true;
+        this.state.autocompleteVisible = true;
         this.renderAutocomplete();
         this.elements.autocompleteDropdown.classList.remove('hidden');
     }
 
     hideAutocomplete() {
-        this.autocompleteVisible = false;
+        this.state.autocompleteVisible = false;
         this.elements.autocompleteDropdown.classList.add('hidden');
     }
 
     renderAutocomplete() {
-        this.elements.autocompleteDropdown.innerHTML = this.autocompleteItems.map((item, i) => `
-            <div class="autocomplete-item ${i === this.autocompleteIndex ? 'selected' : ''}"
+        this.elements.autocompleteDropdown.innerHTML = this.state.autocompleteItems.map((item, i) => `
+            <div class="autocomplete-item ${i === this.state.autocompleteIndex ? 'selected' : ''}"
                  data-index="${i}">
                 <span class="autocomplete-label">${escapeHtml(item.label)}</span>
                 <span class="autocomplete-desc">${escapeHtml(item.description)}</span>
@@ -1572,15 +1606,15 @@ class PpxaiApp {
     }
 
     selectAutocompleteItem(index) {
-        const item = this.autocompleteItems[index];
+        const item = this.state.autocompleteItems[index];
         if (!item) return;
 
         const input = this.elements.messageInput;
         const value = input.value;
 
-        if (this.autocompleteType === 'command') {
+        if (this.state.autocompleteType === 'command') {
             input.value = item.value + ' ';
-        } else if (this.autocompleteType === 'file') {
+        } else if (this.state.autocompleteType === 'file') {
             // Replace @query with @filename
             const beforeCursor = value.slice(0, input.selectionStart);
             const afterCursor = value.slice(input.selectionStart);
@@ -1609,6 +1643,10 @@ class PpxaiApp {
                     </div>
                 </div>
             `;
+            // Re-prepend spacer (lost when innerHTML was replaced) and reset counter
+            this._scrollSpacer.style.height = '0';
+            this.elements.messagesContainer.prepend(this._scrollSpacer);
+            this._domMessageCount = 0;
             // Quick command handlers use event delegation, no need to re-attach
             this.showSystemMessage('Conversation cleared');
         } catch (error) {
@@ -1737,12 +1775,12 @@ class PpxaiApp {
         this.elements.resizeHandle.classList.remove('hidden');
 
         // Track state
-        this._htmlPreviewActive = true;
-        this._htmlPreviewFilepath = filepath;
+        this.state.htmlPreviewActive = true;
+        this.state.htmlPreviewFilepath = filepath;
     }
 
     closeHtmlPreview() {
-        if (!this._htmlPreviewActive) {
+        if (!this.state.htmlPreviewActive) {
             this.showSystemMessage('No active preview');
             return;
         }
@@ -1759,8 +1797,8 @@ class PpxaiApp {
         }
 
         this.hidePreviewPanel();
-        this._htmlPreviewActive = false;
-        this._htmlPreviewFilepath = null;
+        this.state.htmlPreviewActive = false;
+        this.state.htmlPreviewFilepath = null;
     }
 
     /**
@@ -1788,8 +1826,8 @@ class PpxaiApp {
 
     showPreviewPanel(filename, content, size, lines) {
         // Store content for view toggle (v1.13.8)
-        this.previewContent = content;
-        this.previewFilename = filename;
+        this.state.previewContent = content;
+        this.state.previewFilename = filename;
 
         // Update filename
         this.elements.previewFilename.textContent = filename;
@@ -1809,11 +1847,11 @@ class PpxaiApp {
             'json': 'tree', 'yaml': 'tree', 'yml': 'tree',
             'toml': 'tree', 'hcl': 'tree', 'tf': 'tree', 'tfvars': 'tree'
         };
-        this.previewDataFormat = dataFormats[ext] || null;
+        this.state.previewDataFormat = dataFormats[ext] || null;
 
         // Show/hide view toggle based on whether this is a data file
         if (this.elements.previewViewToggle) {
-            if (this.previewDataFormat) {
+            if (this.state.previewDataFormat) {
                 this.elements.previewViewToggle.classList.remove('hidden');
                 this.updateViewToggleUI();
             } else {
@@ -1890,9 +1928,9 @@ class PpxaiApp {
         this.elements.previewPanel.classList.remove('hidden');
 
         // Clear text preview state
-        this.previewContent = null;
-        this.previewFilename = filename;
-        this.previewDataFormat = null;
+        this.state.previewContent = null;
+        this.state.previewFilename = filename;
+        this.state.previewDataFormat = null;
     }
 
     /**
@@ -1946,17 +1984,17 @@ class PpxaiApp {
         this.elements.previewPanel.classList.remove('hidden');
 
         // Clear text preview state
-        this.previewContent = null;
-        this.previewFilename = filename;
-        this.previewDataFormat = null;
+        this.state.previewContent = null;
+        this.state.previewFilename = filename;
+        this.state.previewDataFormat = null;
     }
 
     /**
      * Render preview content based on current view mode (v1.13.8)
      */
     renderPreviewContent() {
-        const content = this.previewContent;
-        const filename = this.previewFilename;
+        const content = this.state.previewContent;
+        const filename = this.state.previewFilename;
         const ext = filename.split('.').pop().toLowerCase() || '';
 
         // Clean up previous data viewer
@@ -1980,8 +2018,8 @@ class PpxaiApp {
         const hasDataViewer = this.elements.previewDataViewer !== null;
 
         // Determine what to render
-        const isDataFile = this.previewDataFormat !== null;
-        const showRendered = isDataFile && this.previewViewMode === 'rendered';
+        const isDataFile = this.state.previewDataFormat !== null;
+        const showRendered = isDataFile && this.state.previewViewMode === 'rendered';
 
         if (showRendered && hasDataViewer) {
             // Show data viewer (v1.13.8)
@@ -2004,7 +2042,7 @@ class PpxaiApp {
     renderDataViewer(content, ext) {
         const container = this.elements.previewDataViewer;
 
-        if (this.previewDataFormat === 'table') {
+        if (this.state.previewDataFormat === 'table') {
             // CSV/TSV - parse and show table
             const delimiter = ext === 'tsv' || ext === 'tab' ? '\t' : this.detectCSVDelimiter(content);
             const data = this.parseCSV(content, delimiter);
@@ -2017,7 +2055,7 @@ class PpxaiApp {
             } else {
                 container.innerHTML = '<div class="error">Table viewer not loaded</div>';
             }
-        } else if (this.previewDataFormat === 'tree') {
+        } else if (this.state.previewDataFormat === 'tree') {
             // JSON/YAML/TOML/HCL - parse and show tree
             try {
                 const tree = this.parseStructuredData(content, ext);
@@ -2105,7 +2143,7 @@ class PpxaiApp {
      * Toggle between rendered and source view (v1.13.8)
      */
     togglePreviewViewMode() {
-        this.previewViewMode = this.previewViewMode === 'rendered' ? 'source' : 'rendered';
+        this.state.previewViewMode = this.state.previewViewMode === 'rendered' ? 'source' : 'rendered';
         this.updateViewToggleUI();
         this.renderPreviewContent();
     }
@@ -2119,7 +2157,7 @@ class PpxaiApp {
         const renderedSpan = this.elements.previewViewToggle.querySelector('.toggle-rendered');
         const sourceSpan = this.elements.previewViewToggle.querySelector('.toggle-source');
 
-        if (this.previewViewMode === 'rendered') {
+        if (this.state.previewViewMode === 'rendered') {
             renderedSpan?.classList.add('active');
             sourceSpan?.classList.remove('active');
         } else {
@@ -2310,10 +2348,10 @@ class PpxaiApp {
             this.currentDataViewer = null;
         }
         // Reset state
-        this.previewContent = null;
-        this.previewFilename = null;
-        this.previewDataFormat = null;
-        this.previewViewMode = 'rendered';
+        this.state.previewContent = null;
+        this.state.previewFilename = null;
+        this.state.previewDataFormat = null;
+        this.state.previewViewMode = 'rendered';
     }
 
     // === File Sidebar (v1.16.2) ===
@@ -2448,9 +2486,9 @@ class PpxaiApp {
 
     async toggleDebugLog() {
         try {
-            const newState = !this.debugLogEnabled;
+            const newState = !this.state.debugLogEnabled;
             const data = await this.apiClient.setDebugLog(newState);
-            this.debugLogEnabled = data.enabled;
+            this.state.debugLogEnabled = data.enabled;
             this.updateDebugIndicator();
             this.showSystemMessage(`Debug logging ${data.enabled ? 'enabled' : 'disabled'}${data.log_file ? `: ${data.log_file}` : ''}`);
         } catch (error) {
@@ -2459,7 +2497,7 @@ class PpxaiApp {
     }
 
     updateDebugIndicator() {
-        this.elements.debugIndicator.className = `menu-indicator ${this.debugLogEnabled ? 'active' : ''}`;
+        this.elements.debugIndicator.className = `menu-indicator ${this.state.debugLogEnabled ? 'active' : ''}`;
     }
 
     // === Usage ===
@@ -2472,7 +2510,7 @@ class PpxaiApp {
             const completion = data.completion_tokens || 0;
             const cost = data.estimated_cost || 0;
 
-            this.usage = { prompt, completion, cost };
+            this.state.usage = { prompt, completion, cost };
 
             // Format badge
             const formatTokens = (n) => n >= 1000 ? `${(n/1000).toFixed(1)}K` : n;
@@ -2533,30 +2571,30 @@ class PpxaiApp {
     // === Theme ===
 
     applyTheme() {
-        if (this.theme === 'system') {
+        if (this.state.theme === 'system') {
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             document.body.dataset.theme = prefersDark ? 'dark' : 'light';
         } else {
-            document.body.dataset.theme = this.theme;
+            document.body.dataset.theme = this.state.theme;
         }
 
-        this.elements.themeBtn.textContent = this.theme === 'dark' ? '🌙' : '☀️';
-        this.elements.themeSetting.value = this.theme;
+        this.elements.themeBtn.textContent = this.state.theme === 'dark' ? '🌙' : '☀️';
+        this.elements.themeSetting.value = this.state.theme;
     }
 
     cycleTheme() {
         const themes = ['dark', 'light'];
-        const currentIndex = themes.indexOf(this.theme);
-        this.theme = themes[(currentIndex + 1) % themes.length];
+        const currentIndex = themes.indexOf(this.state.theme);
+        this.state.theme = themes[(currentIndex + 1) % themes.length];
         this.applyTheme();
-        localStorage.setItem('ppxai-theme', this.theme);
+        localStorage.setItem('ppxai-theme', this.state.theme);
     }
 
     // === Settings ===
 
     showSettings() {
         this.elements.serverUrlSetting.value = this.serverUrl;
-        this.elements.themeSetting.value = this.theme;
+        this.elements.themeSetting.value = this.state.theme;
         this.elements.settingsModal.classList.remove('hidden');
     }
 
