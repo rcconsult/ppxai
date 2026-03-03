@@ -38,3 +38,9 @@ Key binding management in ppxaide is inconsistent and fragile:
 ### Priority
 
 Low — current state works, just messy. Address in v1.17.0 polish pass.
+
+---
+
+## Web App: Right Panel View Framework (`RightPanelFrame`)
+
+**Moved to v1.16.2** — see `docs/TODO-v1.16.2.md` Feature 11.

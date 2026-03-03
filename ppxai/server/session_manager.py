@@ -13,6 +13,7 @@ import os
 import threading
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Optional, Callable, Awaitable
 
 from ..common.logger import get_logger
@@ -140,6 +141,10 @@ class SessionManager:
         )
         self._default_lock = asyncio.Lock()
 
+        # Default working dir to home so /ls, /pwd work sensibly when server
+        # starts from a binary (whose CWD is the install dir, not the user's home).
+        self._default_engine.set_working_dir(str(Path.home()))
+
         # Set default provider
         providers = get_available_providers()
         if providers:
@@ -255,6 +260,9 @@ class SessionManager:
             consent_callback=lambda fp: self._handle_consent(session_id, fp),
             shell_consent_callback=lambda cmd, wd, rl: self._handle_shell_consent(session_id, cmd, wd, rl)
         )
+
+        # Default working dir to home (binary CWD may be the install dir)
+        engine.set_working_dir(str(Path.home()))
 
         # Set default provider
         providers = get_available_providers()

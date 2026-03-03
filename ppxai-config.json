@@ -39,7 +39,7 @@
       "name": "Perplexity AI",
       "base_url": "https://api.perplexity.ai",
       "api_key_env": "PERPLEXITY_API_KEY",
-      "default_model": "sonar",
+      "default_model": "sonar-pro",
       "coding_model": "sonar-pro",
       "system_prompt": "You have two capabilities: (1) NATIVE WEB SEARCH for research, facts, and current information - use this automatically for questions and cite sources as markdown links. (2) EXTERNAL TOOLS for file operations, shell commands, and editing - when tools are available and the user asks to DO something (cd, ls, edit, fix, run, create, analyze), execute the appropriate tool immediately instead of explaining how. For actions: act first, report results briefly. For questions: search and cite. Never tell the user to do manually what a tool can do.",
       "generation_params": {
@@ -115,8 +115,8 @@
       "name": "Google Gemini",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
       "api_key_env": "GEMINI_API_KEY",
-      "default_model": "gemini-2.5-flash",
-      "coding_model": "gemini-2.5-flash",
+      "default_model": "gemini-3-flash-preview",
+      "coding_model": "gemini-3-flash-preview",
       "__comment_benchmark": "Benchmark results (v1.16.0): gemini-3-flash-preview 100% Tier S (#1), gemini-2.5-pro 85.1% Tier S. Flash preview is RECOMMENDED default. Power users: /model gemini-3.1-pro-preview.",
       "system_prompt": "You are an expert AI coding assistant with web search capabilities. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices. Cite sources as markdown links when using web search.",
       "options": {
@@ -201,8 +201,8 @@
       "name": "OpenAI",
       "base_url": "https://api.openai.com/v1",
       "api_key_env": "OPENAI_API_KEY",
-      "default_model": "gpt-5-mini",
-      "coding_model": "gpt-5.1-codex",
+      "default_model": "gpt-4.1-mini",
+      "coding_model": "gpt-5.1-codex-mini",
       "system_prompt": "You are an expert AI coding assistant. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
       "generation_params": {
         "temperature": 0.2,

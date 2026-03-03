@@ -1530,6 +1530,14 @@ async def get_last_session(x_session_id: Optional[str] = Header(None)):
     if not state:
         return {"last_session": None}
 
+    # Verify the session file still exists; clear stale pointer if not.
+    session_name = state.get("name")
+    if session_name:
+        sessions_dir = Path.home() / ".ppxai" / "sessions"
+        if not (sessions_dir / f"{session_name}.json").exists():
+            EngineSessionManager.clear_state_file()
+            return {"last_session": None}
+
     return {
         "last_session": {
             "name": state.get("name"),
@@ -1675,7 +1683,11 @@ async def list_files(
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
     working_dir = Path(engine.get_working_dir() or os.getcwd())
-    target = working_dir / path if path else working_dir
+    if path:
+        path_obj = Path(path).expanduser()
+        target = path_obj if path_obj.is_absolute() else working_dir / path_obj
+    else:
+        target = working_dir
     target = target.resolve()
 
     logger.info(f"HTTP GET /files/list - path: {target}")
@@ -1741,7 +1753,11 @@ async def get_file_tree(
     session_id, engine, _ = await get_or_create_session(x_session_id)
 
     working_dir = Path(engine.get_working_dir() or os.getcwd())
-    target = working_dir / path if path else working_dir
+    if path:
+        path_obj = Path(path).expanduser()
+        target = path_obj if path_obj.is_absolute() else working_dir / path_obj
+    else:
+        target = working_dir
     target = target.resolve()
     depth = min(depth, 6)
 
