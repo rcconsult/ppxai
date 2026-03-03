@@ -164,7 +164,7 @@ class InputBox(Static):
         # ============================================================
         # TAB COMPLETION
         # ============================================================
-        if event.key == "tab" and not event.ctrl:
+        if event.key == "tab":
             text_area = self.query_one("#chat-input", ChatTextArea)
 
             # Only handle if input is focused

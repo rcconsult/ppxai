@@ -2088,6 +2088,7 @@ class PpxaiApp {
     initResizeHandle() {
         const handle = this.elements.resizeHandle;
         const panel = this.elements.rpfFrame;
+        if (!handle || !panel) return;
         const container = panel.parentElement;  // .main-content
 
         let isDragging = false;

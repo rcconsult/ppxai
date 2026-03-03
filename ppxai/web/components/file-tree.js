@@ -97,6 +97,11 @@ class FileTreeComponent {
             if (!resp.ok) {
                 const err = await resp.json().catch(() => ({ detail: resp.statusText }));
                 this.errors.set(relPath, err.detail || 'Error');
+                // Prune stale paths (404) — path doesn't exist in current working dir
+                if (resp.status === 404 && relPath) {
+                    this.expandedDirs.delete(relPath);
+                    this._persistExpanded();
+                }
             } else {
                 const data = await resp.json();
                 this.dirContents.set(relPath, data.files || []);
