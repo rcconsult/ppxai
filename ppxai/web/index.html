@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="lib/highlight-github-dark.css">
     <link rel="stylesheet" href="styles/data-viewers.css">
     <link rel="stylesheet" href="styles/file-tree.css">
+    <link rel="stylesheet" href="styles/right-panel-frame.css">
     <script src="lib/marked.min.js"></script>
     <script src="lib/highlight.min.js"></script>
     <script src="lib/js-yaml.min.js"></script>
@@ -112,23 +113,27 @@
             <!-- Resize Handle -->
             <div class="resize-handle hidden" id="resizeHandle"></div>
 
-            <!-- File Preview Panel -->
-            <aside class="preview-panel hidden" id="previewPanel">
-                <div class="preview-header">
-                    <span class="preview-filename" id="previewFilename">filename.ext</span>
-                    <span class="preview-info" id="previewInfo"></span>
-                    <button class="view-toggle hidden" id="previewViewToggle" title="Toggle Rendered/Source">
-                        <span class="toggle-rendered active">Rendered</span>
-                        <span class="toggle-sep">|</span>
-                        <span class="toggle-source">Source</span>
-                    </button>
-                    <button class="preview-close" id="previewClose" title="Close preview">&times;</button>
+            <!-- Right Panel Frame -->
+            <aside class="rpf-frame hidden" id="rpfFrame">
+                <div class="rpf-chrome">
+                    <div class="rpf-chrome-left">
+                        <button class="rpf-nav-btn" id="rpfBack" title="Back (Cmd/Alt+←)" disabled>‹</button>
+                        <button class="rpf-nav-btn" id="rpfFwd" title="Forward (Cmd/Alt+→)" disabled>›</button>
+                    </div>
+                    <div class="rpf-chrome-title">
+                        <span class="rpf-title-text" id="rpfTitle">—</span>
+                        <span class="rpf-dirty hidden" id="rpfDirty" title="Unsaved changes">●</span>
+                    </div>
+                    <div class="rpf-chrome-right">
+                        <span class="rpf-position" id="rpfPosition"></span>
+                        <div class="rpf-stack-menu-container">
+                            <button class="rpf-nav-btn" id="rpfStackMenuBtn" title="View stack">▾</button>
+                            <div class="rpf-stack-dropdown hidden" id="rpfStackDropdown"></div>
+                        </div>
+                        <button class="rpf-nav-btn rpf-close-btn" id="rpfClose" title="Close panel">×</button>
+                    </div>
                 </div>
-                <div class="preview-content" id="previewContent">
-                    <pre><code id="previewCode"></code></pre>
-                    <div class="markdown-preview hidden" id="previewMarkdown"></div>
-                    <div class="data-viewer hidden" id="previewDataViewer"></div>
-                </div>
+                <div class="rpf-viewport" id="rpfViewport"></div>
             </aside>
         </div>
 
@@ -215,7 +220,13 @@
     <script src="components/table-viewer.js"></script>
     <script src="components/tree-viewer.js"></script>
     <script src="components/file-tree.js"></script>
-    <script src="components/editor-controller.js"></script>
+    <script src="components/views/base-view.js"></script>
+    <script src="components/views/code-editor-view.js"></script>
+    <script src="components/views/image-file-view.js"></script>
+    <script src="components/views/pdf-file-view.js"></script>
+    <script src="components/views/markdown-file-view.js"></script>
+    <script src="components/views/data-file-view.js"></script>
+    <script src="components/right-panel-frame.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

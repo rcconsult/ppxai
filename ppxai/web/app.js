@@ -59,9 +59,6 @@ class PpxaiApp {
         // Command dispatcher — handles all slash commands (v1.16.2)
         this.commandDispatcher = new CommandDispatcher(this);
 
-        // Editor controller — instantiated after DOM setup in init()
-        this.editorController = null;
-
         // State — all mutable state is managed via AppState (observable Proxy)
         this.state = new AppState({
             // Provider / model
@@ -110,6 +107,16 @@ class PpxaiApp {
             // HTML preview
             htmlPreviewActive:   false,
             htmlPreviewFilepath: null,
+
+            // RightPanelFrame config (overridden from GET /config web_ui section)
+            rpfStackSize: 10,
+            rpfDedup:     true,
+            rpfPersist:   false,
+
+            // RightPanelFrame runtime state (written by RightPanelFrame._notifyChange)
+            rpfStackDepth:  0,
+            rpfActiveTitle: null,
+            rpfActiveDirty: false,
         });
 
         // Non-state instance data
@@ -166,31 +173,122 @@ class PpxaiApp {
         this._scrollSpacer.className = 'message-spacer';
         this.elements.messagesContainer.prepend(this._scrollSpacer);
 
-        this._initEditorController();
+        this._initRightPanelFrame();
+        this._restoreRpfStack();    // Phase 4: re-open files from previous session
         this.setupEventListeners();
         this.applyTheme();
         this.setupMarkdown();
         await this.connectToServer();
     }
 
-    _initEditorController() {
+    _initRightPanelFrame() {
         const el = this.elements;
-        this.editorController = new EditorController({
-            apiClient: this.apiClient,
-            panels: {
-                panel:       el.previewPanel,
-                resizeHandle: el.resizeHandle,
-                filename:    el.previewFilename,
-                info:        el.previewInfo,
-                viewToggle:  el.previewViewToggle,
-                codeWrapper: el.previewCode?.parentElement,
-                markdown:    el.previewMarkdown,
-                dataViewer:  el.previewDataViewer,
-            },
-            getTheme: () => this.state.theme,
-            onMessage: (msg) => this.showSystemMessage(msg),
-            onError:   (msg) => this.showError(msg),
+        if (!el.rpfFrame) return;
+
+        // Phase 4: Read RPF config from localStorage (user preferences)
+        const savedSize = parseInt(localStorage.getItem('ppxai-rpf-stack-size'), 10);
+        if (savedSize > 0 && savedSize <= 50) this.state.rpfStackSize = savedSize;
+        const savedPersist = localStorage.getItem('ppxai-rpf-persist');
+        if (savedPersist !== null) this.state.rpfPersist = savedPersist === 'true';
+
+        // Expose apiClient on state so view types can access it without extra args
+        this.state.apiClient = this.apiClient;
+
+        // Frame uses #rpfViewport as its content area
+        this.rightPanelFrame = new RightPanelFrame(el.rpfFrame, this.state);
+        this.rightPanelFrame._viewportEl = el.rpfViewport;
+
+        // AppState observers → update chrome and persist stack on change
+        this.state.on('rpfActiveTitle', () => this._updateFrameChrome());
+        this.state.on('rpfActiveDirty', () => this._updateFrameChrome());
+        this.state.on('rpfStackDepth',  () => { this._updateFrameChrome(); this._saveRpfStack(); });
+
+        // Chrome button wiring
+        el.rpfClose.addEventListener('click', () => this.rightPanelFrame.hideFrame());
+        el.rpfBack.addEventListener('click',  () => this.rightPanelFrame.back());
+        el.rpfFwd.addEventListener('click',   () => this.rightPanelFrame.forward());
+
+        // Stack dropdown toggle
+        el.rpfStackMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this._toggleRpfDropdown();
         });
+
+        // Close dropdown on outside click
+        document.addEventListener('click', () => {
+            el.rpfStackDropdown?.classList.add('hidden');
+        });
+
+        // Keyboard routing — capture phase so view keydown fires before bubbling
+        el.rpfFrame.addEventListener('keydown', (e) => {
+            this.rightPanelFrame.handleKeyDown(e);
+        }, true);
+    }
+
+    /** Update frame chrome elements from current AppState values. */
+    _updateFrameChrome() {
+        const el    = this.elements;
+        const frame = this.rightPanelFrame;
+        if (!frame || !el.rpfTitle) return;
+
+        el.rpfTitle.textContent = this.state.rpfActiveTitle ?? '—';
+        el.rpfDirty?.classList.toggle('hidden', !this.state.rpfActiveDirty);
+
+        const depth = this.state.rpfStackDepth ?? 0;
+        el.rpfPosition.textContent = depth > 1 ? `${depth}` : '';
+        el.rpfBack.disabled = depth < 2;
+        el.rpfFwd.disabled  = depth < 2;
+    }
+
+    /** Build and toggle the stack dropdown. */
+    _toggleRpfDropdown() {
+        const el    = this.elements;
+        const frame = this.rightPanelFrame;
+        const dd    = el.rpfStackDropdown;
+        if (!dd || !frame) return;
+
+        if (!dd.classList.contains('hidden')) {
+            dd.classList.add('hidden');
+            return;
+        }
+
+        // Build dropdown from current stack info
+        const items = frame.getStackInfo();
+        dd.innerHTML = items.map(item => `
+            <div class="rpf-stack-item${item.isActive ? ' rpf-active' : ''}"
+                 data-stack-index="${item.stackIndex}">
+                <span class="rpf-stack-item-icon">${item.icon}</span>
+                <span class="rpf-stack-item-title">${_rpfEsc(item.title)}</span>
+                ${item.isDirty ? '<span class="rpf-stack-item-dirty">●</span>' : ''}
+                <button class="rpf-pin-btn${item.isPinned ? ' pinned' : ''}"
+                        data-stack-index="${item.stackIndex}"
+                        title="${item.isPinned ? 'Unpin' : 'Pin to stack'}">📌</button>
+            </div>
+        `).join('');
+
+        dd.querySelectorAll('.rpf-stack-item').forEach(row => {
+            row.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const idx = parseInt(row.dataset.stackIndex, 10);
+                frame.activateByIndex(idx);
+                dd.classList.add('hidden');
+            });
+        });
+
+        // Pin toggle — stops propagation so it doesn't also activate the view
+        dd.querySelectorAll('.rpf-pin-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const idx  = parseInt(btn.dataset.stackIndex, 10);
+                const view = frame._stack[idx];
+                if (!view) return;
+                if (view.isPinned()) view.unpin(); else view.pin();
+                btn.classList.toggle('pinned', view.isPinned());
+                btn.title = view.isPinned() ? 'Unpin' : 'Pin to stack';
+            });
+        });
+
+        dd.classList.remove('hidden');
     }
 
     cacheElements() {
@@ -238,16 +336,18 @@ class PpxaiApp {
             sidebarToggleBtn: document.getElementById('sidebarToggleBtn'),
             sidebarResizeHandle: document.getElementById('sidebarResizeHandle'),
 
-            // Preview panel
-            previewPanel: document.getElementById('previewPanel'),
-            previewFilename: document.getElementById('previewFilename'),
-            previewInfo: document.getElementById('previewInfo'),
-            previewClose: document.getElementById('previewClose'),
-            previewCode: document.getElementById('previewCode'),
-            previewMarkdown: document.getElementById('previewMarkdown'),
-            previewDataViewer: document.getElementById('previewDataViewer'),
-            previewViewToggle: document.getElementById('previewViewToggle'),
-            resizeHandle: document.getElementById('resizeHandle'),
+            // Right Panel Frame
+            rpfFrame:        document.getElementById('rpfFrame'),
+            rpfViewport:     document.getElementById('rpfViewport'),
+            rpfTitle:        document.getElementById('rpfTitle'),
+            rpfDirty:        document.getElementById('rpfDirty'),
+            rpfPosition:     document.getElementById('rpfPosition'),
+            rpfBack:         document.getElementById('rpfBack'),
+            rpfFwd:          document.getElementById('rpfFwd'),
+            rpfClose:        document.getElementById('rpfClose'),
+            rpfStackMenuBtn: document.getElementById('rpfStackMenuBtn'),
+            rpfStackDropdown: document.getElementById('rpfStackDropdown'),
+            resizeHandle:    document.getElementById('resizeHandle'),
 
             // Modals
             consentModal: document.getElementById('consentModal'),
@@ -329,15 +429,7 @@ class PpxaiApp {
             this.elements.sidebarToggleBtn.addEventListener('click', () => this.toggleFileSidebar());
         }
 
-        // Preview panel close button
-        this.elements.previewClose.addEventListener('click', () => this.hidePreviewPanel());
-
-        // Preview panel view toggle (v1.13.8)
-        if (this.elements.previewViewToggle) {
-            this.elements.previewViewToggle.addEventListener('click', () => this.togglePreviewViewMode());
-        }
-
-        // Preview panel resize handle
+        // Right panel frame resize handle
         this.initResizeHandle();
 
         // Sidebar resize handle
@@ -1720,84 +1812,55 @@ class PpxaiApp {
      * v1.16.2: Delegates to EditorController
      */
     async handleEditCommand(args) {
-        await this.editorController.open(args);
+        // Route through RightPanelFrame (v1.16.2)
+        // args format: "filepath" or "filepath:line:col"
+        if (this.rightPanelFrame) {
+            const parts  = (args || '').trim().split(':');
+            const relPath = parts[0];
+            const line    = parts.length > 1 ? parseInt(parts[1], 10) || 1 : 1;
+            const col     = parts.length > 2 ? parseInt(parts[2], 10) || 1 : 1;
+            this.rightPanelFrame.push(new CodeEditorView(relPath, this.state, { mode: 'edit', line, col }));
+            this.elements.resizeHandle.classList.remove('hidden');
+            return;
+        }
+        // Legacy no-op (editorController removed in v1.16.2)
     }
 
     // === /preview Command (v1.15.4) ===
 
     openHtmlPreview(filepath) {
-        const panel = this.elements.previewPanel;
-        const contentEl = document.getElementById('previewContent');
-        if (!panel || !contentEl) {
-            this.showError('Preview panel not available');
+        // Route through RightPanelFrame (v1.16.2): push an inline iframe view
+        if (this.rightPanelFrame) {
+            // Inline minimal BaseView subclass for live HTML preview
+            const iframeView = Object.assign(Object.create(BaseView.prototype), {
+                getTitle()   { return filepath.split('/').pop(); },
+                getPath()    { return filepath; },
+                getIcon()    { return '🌐'; },
+                mount(container) {
+                    const src = `${this._serverUrl}/preview/${encodeURIComponent(filepath)}?session=${encodeURIComponent(this._sessionId)}`;
+                    container.innerHTML = `<iframe src="${src}" sandbox="allow-scripts allow-same-origin" style="width:100%;height:100%;border:none;background:#fff;" class="rpf-html-iframe"></iframe>`;
+                },
+                unmount() { if (this._container) { this._container.innerHTML = ''; this._container = null; } },
+                focus()     {},
+                onKeyDown() { return false; },
+            });
+            iframeView._serverUrl  = this.serverUrl;
+            iframeView._sessionId  = this.sessionId;
+            iframeView._container  = null;
+            this.rightPanelFrame.push(iframeView);
+            this.elements.resizeHandle.classList.remove('hidden');
+            this.state.htmlPreviewActive  = true;
+            this.state.htmlPreviewFilepath = filepath;
             return;
         }
-
-        // Set filename header
-        this.elements.previewFilename.textContent = filepath;
-        this.elements.previewInfo.textContent = 'Live Preview';
-
-        // Hide view toggle (not applicable for iframe preview)
-        if (this.elements.previewViewToggle) {
-            this.elements.previewViewToggle.classList.add('hidden');
-        }
-
-        // Hide code/markdown/data viewers
-        if (this.elements.previewCode && this.elements.previewCode.parentElement) {
-            this.elements.previewCode.parentElement.classList.add('hidden');
-        }
-        if (this.elements.previewMarkdown) {
-            this.elements.previewMarkdown.classList.add('hidden');
-        }
-        const dataViewer = document.getElementById('previewDataViewer');
-        if (dataViewer) dataViewer.classList.add('hidden');
-
-        // Hide image and PDF containers
-        const imageContainer = panel.querySelector('.preview-image-container');
-        if (imageContainer) imageContainer.classList.add('hidden');
-        const pdfContainer = panel.querySelector('.preview-pdf-container');
-        if (pdfContainer) pdfContainer.classList.add('hidden');
-
-        // Remove existing preview iframe if any
-        let iframe = contentEl.querySelector('.preview-iframe');
-        if (iframe) iframe.remove();
-
-        // Create iframe pointing to server preview endpoint
-        iframe = document.createElement('iframe');
-        iframe.className = 'preview-iframe';
-        iframe.src = `${this.serverUrl}/preview/${encodeURIComponent(filepath)}?session=${encodeURIComponent(this.sessionId)}`;
-        iframe.sandbox = 'allow-scripts allow-same-origin';
-        iframe.style.cssText = 'width:100%;height:100%;border:none;background:#fff;';
-        contentEl.appendChild(iframe);
-
-        // Show panel
-        panel.classList.remove('hidden');
-        this.elements.resizeHandle.classList.remove('hidden');
-
-        // Track state
-        this.state.htmlPreviewActive = true;
-        this.state.htmlPreviewFilepath = filepath;
+        // Legacy fallback — no-op (previewPanel removed in v1.16.2)
     }
 
     closeHtmlPreview() {
-        if (!this.state.htmlPreviewActive) {
-            this.showSystemMessage('No active preview');
-            return;
+        if (this.rightPanelFrame && this.state.htmlPreviewActive) {
+            this.rightPanelFrame.pop();
         }
-
-        const contentEl = document.getElementById('previewContent');
-        if (contentEl) {
-            const iframe = contentEl.querySelector('.preview-iframe');
-            if (iframe) iframe.remove();
-        }
-
-        // Restore code viewer visibility
-        if (this.elements.previewCode && this.elements.previewCode.parentElement) {
-            this.elements.previewCode.parentElement.classList.remove('hidden');
-        }
-
-        this.hidePreviewPanel();
-        this.state.htmlPreviewActive = false;
+        this.state.htmlPreviewActive  = false;
         this.state.htmlPreviewFilepath = null;
     }
 
@@ -1806,552 +1869,130 @@ class PpxaiApp {
      * Called when AI uses the display_file tool
      */
     async displayFileFromEvent(filepath) {
-        try {
-            const data = await this.apiClient.readFile(filepath);
-
-            // Handle different file types
-            if (data.type === 'image') {
-                this.showImagePreview(data.filename || filepath, data.content, data.mime_type, data.size);
-            } else if (data.type === 'pdf') {
-                this.showPdfPreview(data.filename || filepath, data.content, data.size);
-            } else {
-                // Show text in preview panel
-                this.showPreviewPanel(data.filename || filepath, data.content, data.size, data.lines);
-            }
-        } catch (error) {
-            // Don't show error to user - the AI tool already reports status
-            console.error(`Failed to display file: ${error.message}`);
+        if (!this.rightPanelFrame) return;
+        // Route to the appropriate view type by extension (v1.16.2 Phase 3)
+        const ext = filepath.split('.').pop().toLowerCase();
+        const imageExts = new Set(['png','jpg','jpeg','gif','svg','webp','bmp','ico','tiff']);
+        const dataExts  = new Set(['json','yaml','yml','toml','hcl','tf','tfvars','csv','tsv','tab']);
+        const mdExts    = new Set(['md','markdown']);
+        let view;
+        if (imageExts.has(ext)) {
+            view = new ImageFileView(filepath, this.state);
+        } else if (ext === 'pdf') {
+            view = new PdfFileView(filepath, this.state);
+        } else if (mdExts.has(ext)) {
+            view = new MarkdownFileView(filepath, this.state);
+        } else if (dataExts.has(ext)) {
+            view = new DataFileView(filepath, this.state);
+        } else {
+            view = new CodeEditorView(filepath, this.state, { mode: 'view' });
         }
+        this.rightPanelFrame.push(view);
+        this.elements.resizeHandle.classList.remove('hidden');
     }
 
-    showPreviewPanel(filename, content, size, lines) {
-        // Store content for view toggle (v1.13.8)
-        this.state.previewContent = content;
-        this.state.previewFilename = filename;
-
-        // Update filename
-        this.elements.previewFilename.textContent = filename;
-
-        // Update info
-        let info = '';
-        if (lines) info += `${lines} lines`;
-        if (size) info += info ? ` • ${(size / 1024).toFixed(1)} KB` : `${(size / 1024).toFixed(1)} KB`;
-        this.elements.previewInfo.textContent = info;
-
-        // Determine file extension
-        const ext = filename.split('.').pop().toLowerCase() || '';
-
-        // Detect data format (v1.13.8)
-        const dataFormats = {
-            'csv': 'table', 'tsv': 'table', 'tab': 'table',
-            'json': 'tree', 'yaml': 'tree', 'yml': 'tree',
-            'toml': 'tree', 'hcl': 'tree', 'tf': 'tree', 'tfvars': 'tree'
-        };
-        this.state.previewDataFormat = dataFormats[ext] || null;
-
-        // Show/hide view toggle based on whether this is a data file
-        if (this.elements.previewViewToggle) {
-            if (this.state.previewDataFormat) {
-                this.elements.previewViewToggle.classList.remove('hidden');
-                this.updateViewToggleUI();
-            } else {
-                this.elements.previewViewToggle.classList.add('hidden');
-            }
+    showPreviewPanel(filename, _content, _size, _lines) {
+        // Route through RightPanelFrame (v1.16.2); view fetches its own data
+        if (this.rightPanelFrame) {
+            this.displayFileFromEvent(filename);
         }
-
-        // v1.13.10: Hide image and PDF containers when showing text
-        const imageContainer = this.elements.previewPanel.querySelector('.preview-image-container');
-        if (imageContainer) {
-            imageContainer.classList.add('hidden');
-        }
-        const pdfContainer = this.elements.previewPanel.querySelector('.preview-pdf-container');
-        if (pdfContainer) {
-            pdfContainer.classList.add('hidden');
-        }
-
-        // Render based on view mode
-        this.renderPreviewContent();
-
-        // Show the panel and resize handle
-        this.elements.resizeHandle.classList.remove('hidden');
-        this.elements.previewPanel.classList.remove('hidden');
     }
 
     /**
      * Show image preview (v1.13.10)
      */
-    showImagePreview(filename, base64Content, mimeType, size) {
-        // Update filename
-        this.elements.previewFilename.textContent = filename;
-
-        // Update info
-        const sizeKB = (size / 1024).toFixed(1);
-        const sizeMB = (size / 1024 / 1024).toFixed(2);
-        const sizeStr = size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
-        this.elements.previewInfo.textContent = `Image • ${sizeStr}`;
-
-        // Hide view toggle (not applicable for images)
-        if (this.elements.previewViewToggle) {
-            this.elements.previewViewToggle.classList.add('hidden');
+    showImagePreview(filename, _base64Content, _mimeType, _size) {
+        // Route through RightPanelFrame (v1.16.2)
+        if (this.rightPanelFrame) {
+            this.rightPanelFrame.push(new ImageFileView(filename, this.state));
+            this.elements.resizeHandle.classList.remove('hidden');
         }
-
-        // Hide all other preview containers
-        this.elements.previewCode.parentElement.classList.add('hidden');
-        if (this.elements.previewMarkdown) {
-            this.elements.previewMarkdown.classList.add('hidden');
-        }
-        if (this.elements.previewDataViewer) {
-            this.elements.previewDataViewer.classList.add('hidden');
-        }
-        const pdfContainer = this.elements.previewPanel.querySelector('.preview-pdf-container');
-        if (pdfContainer) {
-            pdfContainer.classList.add('hidden');
-        }
-
-        // Create or reuse image container (append to preview-content div)
-        const previewContentEl = this.elements.previewCode.parentElement.parentElement;
-        let imageContainer = previewContentEl.querySelector('.preview-image-container');
-        if (!imageContainer) {
-            imageContainer = document.createElement('div');
-            imageContainer.className = 'preview-image-container';
-            imageContainer.style.cssText = 'padding: 1rem; text-align: center; overflow: auto; height: 100%;';
-            previewContentEl.appendChild(imageContainer);
-        }
-        imageContainer.classList.remove('hidden');
-
-        // Create image element
-        const dataUrl = `data:${mimeType};base64,${base64Content}`;
-        imageContainer.innerHTML = `<img src="${dataUrl}" alt="${filename}" style="max-width: 100%; max-height: calc(100vh - 200px); object-fit: contain; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">`;
-
-        // Show the panel and resize handle
-        this.elements.resizeHandle.classList.remove('hidden');
-        this.elements.previewPanel.classList.remove('hidden');
-
-        // Clear text preview state
-        this.state.previewContent = null;
-        this.state.previewFilename = filename;
-        this.state.previewDataFormat = null;
     }
 
     /**
      * Show PDF preview (v1.13.10)
      */
-    showPdfPreview(filename, base64Content, size) {
-        // Update filename
-        this.elements.previewFilename.textContent = filename;
-
-        // Update info
-        const sizeMB = (size / 1024 / 1024).toFixed(2);
-        const sizeKB = (size / 1024).toFixed(1);
-        const sizeStr = size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
-        this.elements.previewInfo.textContent = `PDF • ${sizeStr}`;
-
-        // Hide view toggle (not applicable for PDFs)
-        if (this.elements.previewViewToggle) {
-            this.elements.previewViewToggle.classList.add('hidden');
+    showPdfPreview(filename, _base64Content, _size) {
+        // Route through RightPanelFrame (v1.16.2)
+        if (this.rightPanelFrame) {
+            this.rightPanelFrame.push(new PdfFileView(filename, this.state));
+            this.elements.resizeHandle.classList.remove('hidden');
+            return;
         }
-
-        // Hide all other preview containers
-        this.elements.previewCode.parentElement.classList.add('hidden');
-        if (this.elements.previewMarkdown) {
-            this.elements.previewMarkdown.classList.add('hidden');
-        }
-        if (this.elements.previewDataViewer) {
-            this.elements.previewDataViewer.classList.add('hidden');
-        }
-        const imageContainer = this.elements.previewPanel.querySelector('.preview-image-container');
-        if (imageContainer) {
-            imageContainer.classList.add('hidden');
-        }
-
-        // Create or reuse PDF container
-        const previewContentEl = this.elements.previewCode.parentElement.parentElement;
-        let pdfContainer = previewContentEl.querySelector('.preview-pdf-container');
-        if (!pdfContainer) {
-            pdfContainer = document.createElement('div');
-            pdfContainer.className = 'preview-pdf-container';
-            pdfContainer.style.cssText = 'height: 100%; width: 100%;';
-            previewContentEl.appendChild(pdfContainer);
-        }
-        pdfContainer.classList.remove('hidden');
-
-        // Create PDF embed using data URL
-        const dataUrl = `data:application/pdf;base64,${base64Content}`;
-        pdfContainer.innerHTML = `<embed src="${dataUrl}" type="application/pdf" width="100%" height="100%" style="border: none;">`;
-
-        // Show the panel and resize handle
-        this.elements.resizeHandle.classList.remove('hidden');
-        this.elements.previewPanel.classList.remove('hidden');
-
-        // Clear text preview state
-        this.state.previewContent = null;
-        this.state.previewFilename = filename;
-        this.state.previewDataFormat = null;
+        // Legacy fallback — no-op (previewPanel removed in v1.16.2)
     }
 
-    /**
-     * Render preview content based on current view mode (v1.13.8)
-     */
-    renderPreviewContent() {
-        const content = this.state.previewContent;
-        const filename = this.state.previewFilename;
-        const ext = filename.split('.').pop().toLowerCase() || '';
-
-        // Clean up previous data viewer
-        if (this.currentDataViewer) {
-            this.currentDataViewer.destroy();
-            this.currentDataViewer = null;
-        }
-
-        // Hide all preview containers
-        this.elements.previewCode.parentElement.classList.add('hidden');
-        if (this.elements.previewMarkdown) {
-            this.elements.previewMarkdown.classList.add('hidden');
-        }
-        if (this.elements.previewDataViewer) {
-            this.elements.previewDataViewer.classList.add('hidden');
-            this.elements.previewDataViewer.innerHTML = '';
-        }
-
-        // Check if markdown preview element exists
-        const hasMarkdownPreview = this.elements.previewMarkdown !== null;
-        const hasDataViewer = this.elements.previewDataViewer !== null;
-
-        // Determine what to render
-        const isDataFile = this.state.previewDataFormat !== null;
-        const showRendered = isDataFile && this.state.previewViewMode === 'rendered';
-
-        if (showRendered && hasDataViewer) {
-            // Show data viewer (v1.13.8)
-            this.elements.previewDataViewer.classList.remove('hidden');
-            this.renderDataViewer(content, ext);
-        } else if ((ext === 'md' || ext === 'markdown') && hasMarkdownPreview) {
-            // Render markdown
-            this.elements.previewMarkdown.classList.remove('hidden');
-            this.renderMarkdownPreview(content, filename);
-        } else {
-            // Show code with syntax highlighting
-            this.elements.previewCode.parentElement.classList.remove('hidden');
-            this.renderCodePreview(content, ext);
-        }
-    }
-
-    /**
-     * Render data viewer for CSV/JSON/YAML/etc (v1.13.8)
-     */
-    renderDataViewer(content, ext) {
-        const container = this.elements.previewDataViewer;
-
-        if (this.state.previewDataFormat === 'table') {
-            // CSV/TSV - parse and show table
-            const delimiter = ext === 'tsv' || ext === 'tab' ? '\t' : this.detectCSVDelimiter(content);
-            const data = this.parseCSV(content, delimiter);
-
-            if (typeof DataTableViewer !== 'undefined') {
-                this.currentDataViewer = new DataTableViewer(container, data, {
-                    pageSize: 100,
-                    maxHeight: '500px'
-                });
-            } else {
-                container.innerHTML = '<div class="error">Table viewer not loaded</div>';
-            }
-        } else if (this.state.previewDataFormat === 'tree') {
-            // JSON/YAML/TOML/HCL - parse and show tree
-            try {
-                const tree = this.parseStructuredData(content, ext);
-
-                if (typeof DataTreeViewer !== 'undefined') {
-                    this.currentDataViewer = new DataTreeViewer(container, tree, {
-                        initialExpandDepth: 2
-                    });
-                } else {
-                    container.innerHTML = '<div class="error">Tree viewer not loaded</div>';
-                }
-            } catch (e) {
-                container.innerHTML = `<div class="error">Parse error: ${escapeHtml(e.message)}</div>`;
-            }
-        }
-    }
-
-    /**
-     * Render markdown preview
-     */
-    renderMarkdownPreview(content, filename) {
-        if (typeof marked !== 'undefined') {
-            marked.setOptions({
-                gfm: true,
-                breaks: true,
-                headerIds: true,
-                mangle: false
-            });
-
-            let html = marked.parse(content);
-            this.elements.previewMarkdown.innerHTML = html;
-
-            // Apply syntax highlighting to code blocks
-            if (typeof hljs !== 'undefined') {
-                this.elements.previewMarkdown.querySelectorAll('pre code').forEach(block => {
-                    hljs.highlightElement(block);
-                });
-            }
-
-            // Intercept relative link clicks
-            this.elements.previewMarkdown.querySelectorAll('a').forEach(link => {
-                const href = link.getAttribute('href');
-                if (href && !href.startsWith('http') && !href.startsWith('mailto:') && !href.startsWith('#')) {
-                    link.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        const currentDir = filename.includes('/') ? filename.substring(0, filename.lastIndexOf('/')) : '';
-                        const resolvedPath = currentDir ? `${currentDir}/${href}` : href;
-                        this.handleShowCommand(resolvedPath);
-                    });
-                }
-            });
-        } else {
-            this.elements.previewMarkdown.textContent = content;
-        }
-    }
-
-    /**
-     * Render code preview with syntax highlighting
-     */
-    renderCodePreview(content, ext) {
-        const langMap = {
-            'py': 'python', 'js': 'javascript', 'ts': 'typescript', 'tsx': 'typescript',
-            'json': 'json', 'yaml': 'yaml', 'yml': 'yaml',
-            'html': 'html', 'css': 'css',
-            'sh': 'bash', 'bash': 'bash', 'rs': 'rust', 'go': 'go',
-            'java': 'java', 'cpp': 'cpp', 'c': 'c', 'h': 'c',
-            'rb': 'ruby', 'php': 'php', 'sql': 'sql', 'xml': 'xml',
-            'csv': 'text', 'tsv': 'text', 'toml': 'toml', 'hcl': 'hcl', 'tf': 'hcl'
-        };
-        const lang = langMap[ext] || '';
-
-        this.elements.previewCode.textContent = content;
-        this.elements.previewCode.className = lang ? `language-${lang}` : '';
-
-        if (typeof hljs !== 'undefined' && lang) {
-            try {
-                hljs.highlightElement(this.elements.previewCode);
-            } catch (e) {
-                // Highlighting failed, show plain text
-            }
-        }
-    }
-
-    /**
-     * Toggle between rendered and source view (v1.13.8)
-     */
-    togglePreviewViewMode() {
-        this.state.previewViewMode = this.state.previewViewMode === 'rendered' ? 'source' : 'rendered';
-        this.updateViewToggleUI();
-        this.renderPreviewContent();
-    }
-
-    /**
-     * Update view toggle button UI (v1.13.8)
-     */
-    updateViewToggleUI() {
-        if (!this.elements.previewViewToggle) return;
-
-        const renderedSpan = this.elements.previewViewToggle.querySelector('.toggle-rendered');
-        const sourceSpan = this.elements.previewViewToggle.querySelector('.toggle-source');
-
-        if (this.state.previewViewMode === 'rendered') {
-            renderedSpan?.classList.add('active');
-            sourceSpan?.classList.remove('active');
-        } else {
-            renderedSpan?.classList.remove('active');
-            sourceSpan?.classList.add('active');
-        }
-    }
-
-    /**
-     * Parse CSV/TSV content (v1.13.8)
-     */
-    parseCSV(content, delimiter = ',') {
-        const lines = content.split('\n');
-        const headers = [];
-        const rows = [];
-
-        lines.forEach((line, i) => {
-            if (!line.trim()) return;
-
-            const cells = this.parseCSVLine(line, delimiter);
-
-            if (i === 0) {
-                cells.forEach((cell, j) => {
-                    headers.push(cell.trim() || `Column ${j + 1}`);
-                });
-            } else {
-                // Pad row to match headers
-                while (cells.length < headers.length) {
-                    cells.push('');
-                }
-                rows.push(cells);
-            }
-        });
-
-        return {
-            headers,
-            rows,
-            rowCount: rows.length,
-            columnCount: headers.length
-        };
-    }
-
-    /**
-     * Parse a single CSV line handling quoted fields
-     */
-    parseCSVLine(line, delimiter) {
-        const cells = [];
-        let current = '';
-        let inQuotes = false;
-
-        for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            const nextChar = line[i + 1];
-
-            if (inQuotes) {
-                if (char === '"' && nextChar === '"') {
-                    current += '"';
-                    i++; // Skip next quote
-                } else if (char === '"') {
-                    inQuotes = false;
-                } else {
-                    current += char;
-                }
-            } else {
-                if (char === '"') {
-                    inQuotes = true;
-                } else if (char === delimiter) {
-                    cells.push(current);
-                    current = '';
-                } else {
-                    current += char;
-                }
-            }
-        }
-        cells.push(current);
-        return cells;
-    }
-
-    /**
-     * Detect CSV delimiter (v1.13.8)
-     */
-    detectCSVDelimiter(content) {
-        const lines = content.split('\n').slice(0, 10);
-        const candidates = [',', '\t', ';', '|'];
-        const scores = {};
-
-        candidates.forEach(delim => {
-            const counts = lines.filter(l => l.trim()).map(l => (l.match(new RegExp(delim === '|' ? '\\|' : delim, 'g')) || []).length);
-            if (counts.length > 0) {
-                const unique = new Set(counts);
-                if (unique.size === 1 && counts[0] > 0) {
-                    scores[delim] = counts[0] * 10;
-                } else {
-                    const avg = counts.reduce((a, b) => a + b, 0) / counts.length;
-                    scores[delim] = avg;
-                }
-            }
-        });
-
-        return Object.keys(scores).reduce((a, b) => scores[a] > scores[b] ? a : b, ',');
-    }
-
-    /**
-     * Parse structured data (JSON/YAML/TOML) into tree format (v1.13.8)
-     */
-    parseStructuredData(content, ext) {
-        let data;
-
-        if (ext === 'json') {
-            data = JSON.parse(content);
-        } else if (ext === 'yaml' || ext === 'yml') {
-            // Use js-yaml library for YAML parsing (v1.13.11)
-            if (typeof jsyaml !== 'undefined') {
-                data = jsyaml.load(content);
-            } else if (content.trim().startsWith('{') || content.trim().startsWith('[')) {
-                // Fallback: treat JSON-like YAML as JSON
-                data = JSON.parse(content);
-            } else {
-                throw new Error('YAML parsing requires js-yaml library. Showing source view.');
-            }
-        } else if (ext === 'toml') {
-            // Use smol-toml library for TOML 1.0 parsing (v1.13.11)
-            if (typeof smolToml !== 'undefined') {
-                data = smolToml.parse(content);
-            } else {
-                throw new Error('TOML parsing requires smol-toml library. Showing source view.');
-            }
-        } else if (ext === 'hcl' || ext === 'tf' || ext === 'tfvars') {
-            // Use hcl2-parser library for HCL/Terraform parsing (v1.13.11)
-            if (typeof hcl2 !== 'undefined' && hcl2.parseToObject) {
-                const result = hcl2.parseToObject(content);
-                // parseToObject returns [object, error] - check for error
-                if (result[1]) {
-                    throw new Error(`HCL parse error: ${result[1]}`);
-                }
-                data = result[0];
-            } else {
-                throw new Error('HCL parsing requires hcl2-parser library. Showing source view.');
-            }
-        } else {
-            data = JSON.parse(content);
-        }
-
-        return this.buildTreeNode('root', data, 0);
-    }
-
-    /**
-     * Build tree node from data (v1.13.8)
-     */
-    buildTreeNode(key, value, depth) {
-        const node = {
-            key: key,
-            value: null,
-            node_type: 'null',
-            children: [],
-            depth: depth
-        };
-
-        if (value === null) {
-            node.node_type = 'null';
-            node.value = null;
-        } else if (typeof value === 'boolean') {
-            node.node_type = 'boolean';
-            node.value = value;
-        } else if (typeof value === 'number') {
-            node.node_type = 'number';
-            node.value = value;
-        } else if (typeof value === 'string') {
-            node.node_type = 'string';
-            node.value = value;
-        } else if (Array.isArray(value)) {
-            node.node_type = 'array';
-            node.children = value.map((item, i) => this.buildTreeNode(`[${i}]`, item, depth + 1));
-        } else if (typeof value === 'object') {
-            node.node_type = 'object';
-            node.children = Object.keys(value).map(k => this.buildTreeNode(k, value[k], depth + 1));
-        }
-
-        return node;
-    }
+    // (renderPreviewContent, renderDataViewer, renderMarkdownPreview, renderCodePreview,
+    //  togglePreviewViewMode, updateViewToggleUI, parseCSV, parseCSVLine,
+    //  detectCSVDelimiter, parseStructuredData, buildTreeNode removed in v1.16.2 Phase 5 —
+    //  all functionality moved to DataFileView / MarkdownFileView / CodeEditorView)
 
     hidePreviewPanel() {
-        this.elements.previewPanel.classList.add('hidden');
-        this.elements.resizeHandle.classList.add('hidden');
-        // Clean up data viewer
-        if (this.currentDataViewer) {
-            this.currentDataViewer.destroy();
-            this.currentDataViewer = null;
+        // Route through RightPanelFrame (v1.16.2)
+        if (this.rightPanelFrame) {
+            this.rightPanelFrame.hideFrame();
+            this.elements.resizeHandle.classList.add('hidden');
+            return;
         }
-        // Reset state
-        this.state.previewContent = null;
-        this.state.previewFilename = null;
-        this.state.previewDataFormat = null;
-        this.state.previewViewMode = 'rendered';
+        // Legacy fallback — no-op (previewPanel removed in v1.16.2)
+    }
+
+    // === RightPanelFrame Stack Persistence (v1.16.2 Phase 4) ================
+
+    /**
+     * Persist the current open-file stack to sessionStorage.
+     * Only runs when rpfPersist is true (opt-in, off by default).
+     * Dirty views are skipped — they cannot be restored with their unsaved content.
+     */
+    _saveRpfStack() {
+        if (!this.state.rpfPersist || !this.rightPanelFrame) return;
+        const entries = [];
+        for (const view of this.rightPanelFrame._stack) {
+            const path = view.getPath();
+            if (!path) continue;      // non-file views (HTML iframe) not persisted
+            if (view.isDirty()) continue;  // skip views with unsaved changes
+            let viewType = 'code';
+            if (view instanceof MarkdownFileView) viewType = 'markdown';
+            else if (view instanceof DataFileView)  viewType = 'data';
+            else if (view instanceof ImageFileView) viewType = 'image';
+            else if (view instanceof PdfFileView)   viewType = 'pdf';
+            entries.push({ path, viewType });
+        }
+        try {
+            sessionStorage.setItem(`ppxai-rpf-stack-${this.sessionId}`, JSON.stringify(entries));
+        } catch {}
+    }
+
+    /**
+     * Restore the view stack from a previous session.
+     * Only runs when rpfPersist is true. Views are pushed in bottom-first order
+     * so the last push (previously active view) ends up on top.
+     */
+    _restoreRpfStack() {
+        if (!this.state.rpfPersist || !this.rightPanelFrame) return;
+        let entries;
+        try {
+            const raw = sessionStorage.getItem(`ppxai-rpf-stack-${this.sessionId}`);
+            if (!raw) return;
+            entries = JSON.parse(raw);
+        } catch { return; }
+        if (!Array.isArray(entries) || entries.length === 0) return;
+
+        for (const entry of entries) {
+            if (!entry.path) continue;
+            let view;
+            switch (entry.viewType) {
+                case 'markdown': view = new MarkdownFileView(entry.path, this.state); break;
+                case 'data':     view = new DataFileView(entry.path, this.state);     break;
+                case 'image':    view = new ImageFileView(entry.path, this.state);    break;
+                case 'pdf':      view = new PdfFileView(entry.path, this.state);      break;
+                default:         view = new CodeEditorView(entry.path, this.state, { mode: 'view' }); break;
+            }
+            this.rightPanelFrame.push(view);
+        }
+        if (this.rightPanelFrame.stackSize > 0) {
+            this.elements.resizeHandle.classList.remove('hidden');
+        }
     }
 
     // === File Sidebar (v1.16.2) ===
@@ -2372,6 +2013,12 @@ class PpxaiApp {
                     serverUrl: this.serverUrl,
                     getHeaders: () => this.getSessionHeaders(),
                     onFileClick: (relPath) => this.displayFileFromEvent(relPath),
+                    onFileEdit:  (relPath) => {
+                        if (this.rightPanelFrame) {
+                            this.rightPanelFrame.push(new CodeEditorView(relPath, this.state, { mode: 'edit' }));
+                            this.elements.resizeHandle.classList.remove('hidden');
+                        }
+                    },
                     onFileInject: (relPath) => this._injectFileRef(relPath),
                 });
             } else {
@@ -2440,7 +2087,7 @@ class PpxaiApp {
      */
     initResizeHandle() {
         const handle = this.elements.resizeHandle;
-        const panel = this.elements.previewPanel;
+        const panel = this.elements.rpfFrame;
         const container = panel.parentElement;  // .main-content
 
         let isDragging = false;
@@ -2631,6 +2278,17 @@ class PpxaiApp {
     scrollToBottom() {
         this.elements.messagesContainer.scrollTop = this.elements.messagesContainer.scrollHeight;
     }
+}
+
+// ── RightPanelFrame helpers ───────────────────────────────────────────────────
+
+/**
+ * HTML-escape helper used in rpf dropdown template literals.
+ * @param {*} str
+ * @returns {string}
+ */
+function _rpfEsc(str) {
+    return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 // Initialize app when DOM is ready

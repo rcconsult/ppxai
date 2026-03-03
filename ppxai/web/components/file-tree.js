@@ -5,7 +5,8 @@
  * - Lazy-loads directory contents via /files/list
  * - Expand/collapse directories
  * - Persists expanded state to localStorage
- * - Left-click file → preview/edit callback
+ * - Left-click file → preview callback (read-only)
+ * - Double-click file → edit callback (editable)
  * - Right-click file → inject @file:path into chat
  * - Refresh button to reload current view
  *
@@ -18,7 +19,8 @@ class FileTreeComponent {
      * @param {Object} options
      * @param {string} options.serverUrl - Base server URL
      * @param {Function} options.getHeaders - Returns headers object for fetch calls
-     * @param {Function} options.onFileClick - Called with relative path on left-click
+     * @param {Function} options.onFileClick - Called with relative path on left-click (preview)
+     * @param {Function} options.onFileEdit - Called with relative path on double-click (edit)
      * @param {Function} options.onFileInject - Called with relative path on right-click
      */
     constructor(container, options = {}) {
@@ -26,7 +28,9 @@ class FileTreeComponent {
         this.serverUrl = options.serverUrl || '';
         this.getHeaders = options.getHeaders || (() => ({}));
         this.onFileClick = options.onFileClick || (() => {});
+        this.onFileEdit = options.onFileEdit || (() => {});
         this.onFileInject = options.onFileInject || (() => {});
+        this._clickTimer = null;
 
         // Expanded dirs: Set of relative paths ('' = root is always loaded)
         this.expandedDirs = new Set(this._loadState('ftExpandedDirs', []));
@@ -190,7 +194,19 @@ class FileTreeComponent {
                 if (isDir) {
                     this._toggleDir(path);
                 } else {
-                    this.onFileClick(path);
+                    // Delay single-click so a following dblclick can cancel it.
+                    clearTimeout(this._clickTimer);
+                    this._clickTimer = setTimeout(() => this.onFileClick(path), 220);
+                }
+            });
+
+            node.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                clearTimeout(this._clickTimer);  // cancel pending single-click
+                const path = node.dataset.path;
+                if (node.dataset.isDir !== '1') {
+                    this.onFileEdit(path);
                 }
             });
 

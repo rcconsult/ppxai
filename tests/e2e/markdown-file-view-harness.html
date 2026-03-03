@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarkdownFileView Test Harness</title>
+    <link rel="stylesheet" href="../../ppxai/web/styles/right-panel-frame.css">
+    <style>
+        :root {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252526;
+            --text-primary: #cccccc;
+            --text-secondary: #858585;
+            --accent-color: #0078d4;
+            --border-color: #3c3c3c;
+        }
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px;
+            margin: 0;
+        }
+        #status { color: var(--accent-color); }
+        .hidden { display: none !important; }
+        #view-container { min-height: 300px; width: 800px; }
+    </style>
+</head>
+<body>
+    <h1>MarkdownFileView Test Harness</h1>
+    <div id="status">Loaded</div>
+    <div id="view-container"></div>
+
+    <script src="../../ppxai/web/components/views/base-view.js"></script>
+    <script src="../../ppxai/web/components/views/markdown-file-view.js"></script>
+    <script>
+        // Default mock content
+        window._mockContent  = '# Hello\n\nThis is **markdown** with `code`.\n\n- item 1\n- item 2\n';
+        window._lastSaved    = null;
+        window._saveError    = null;
+
+        window.appState = {
+            theme: 'dark',
+            apiClient: {
+                async readFile(path) {
+                    return {
+                        content: window._mockContent,
+                        lines:   window._mockContent.split('\n').length,
+                    };
+                },
+                async writeFile(path, content) {
+                    if (window._saveError) throw new Error(window._saveError);
+                    window._lastSaved = { path, content };
+                    return {};
+                }
+            }
+        };
+
+        window.testHelpers = {
+            setContent(md) { window._mockContent = md; },
+            setSaveError(msg) { window._saveError = msg; },
+
+            async mountView(path) {
+                const container = document.getElementById('view-container');
+                container.innerHTML = '';
+                const view = new MarkdownFileView(path || 'README.md', window.appState);
+                window._currentView = view;
+                await view.mount(container);
+                return { path: view.getPath(), title: view.getTitle(), icon: view.getIcon() };
+            },
+
+            isDirty() { return window._currentView?.isDirty() ?? false; },
+
+            async save() {
+                await window._currentView?.save();
+                return window._lastSaved;
+            },
+
+            lastSaved() { return window._lastSaved; },
+
+            getState() { return window._currentView?.getState() ?? {}; },
+
+            setState(s) { window._currentView?.setState(s); },
+
+            // Simulate typing in the fallback textarea (edit mode)
+            editContent(text) {
+                const ta = document.querySelector('#view-container textarea.ev-fallback');
+                if (ta) {
+                    ta.value = text;
+                    // Update the editor shim's doc
+                    if (window._currentView?._editor) {
+                        const orig = window._currentView._editor;
+                        orig.state.doc = { toString: () => text };
+                    }
+                }
+            }
+        };
+
+        document.getElementById('status').textContent = 'Ready';
+    </script>
+</body>
+</html>

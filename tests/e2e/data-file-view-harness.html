@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DataFileView Test Harness</title>
+    <link rel="stylesheet" href="../../ppxai/web/styles/data-viewers.css">
+    <link rel="stylesheet" href="../../ppxai/web/styles/right-panel-frame.css">
+    <style>
+        :root {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252526;
+            --text-primary: #cccccc;
+            --text-secondary: #858585;
+            --accent-color: #0078d4;
+            --border-color: #3c3c3c;
+        }
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px;
+            margin: 0;
+        }
+        #status { color: var(--accent-color); }
+        .hidden { display: none !important; }
+        #view-container { min-height: 300px; width: 100%; }
+    </style>
+</head>
+<body>
+    <h1>DataFileView Test Harness</h1>
+    <div id="status">Loaded</div>
+    <div id="view-container"></div>
+
+    <script src="../../ppxai/web/shared/formatters.js"></script>
+    <script src="../../ppxai/web/components/table-viewer.js"></script>
+    <script src="../../ppxai/web/components/tree-viewer.js"></script>
+    <script src="../../ppxai/web/components/views/base-view.js"></script>
+    <script src="../../ppxai/web/components/views/data-file-view.js"></script>
+    <script>
+        // Mock app state with configurable readFile responses
+        window._mockFiles = {
+            'test.json': '{"name":"Alice","age":30,"active":true,"score":null}',
+            'test.csv':  'Name,Age,City\nAlice,30,NYC\nBob,25,LA\n',
+            'data.yaml': 'name: test\nversion: 1\n',  // won't parse without jsyaml
+        };
+        window._lastSaved = null;
+
+        window.appState = {
+            theme: 'dark',
+            apiClient: {
+                async readFile(path) {
+                    const content = window._mockFiles[path] ?? '{}';
+                    return { content, lines: content.split('\n').length, size: content.length };
+                },
+                async writeFile(path, content) {
+                    window._lastSaved = { path, content };
+                    return {};
+                }
+            }
+        };
+
+        window.testHelpers = {
+            // Parser helpers (exposed directly since they're global functions from the script)
+            formatFromExt: (ext) => _dfvFormatFromExt(ext),
+            detectDelimiter: (content) => _dfvDetectDelimiter(content),
+            parseCSV: (content, delim) => _dfvParseCSV(content, delim || ','),
+            parseCSVLine: (line, delim) => _dfvParseCSVLine(line, delim || ','),
+            buildTree: (key, value, depth) => _dfvBuildTree(key, value, depth || 0),
+            esc: (str) => _dfvEsc(str),
+            extToHljsLang: (ext) => _dfvExtToHljsLang(ext),
+
+            // Mount a DataFileView and wait for DOM to settle
+            async mountView(path) {
+                const container = document.getElementById('view-container');
+                container.innerHTML = '';
+                const view = new DataFileView(path, window.appState);
+                window._currentView = view;
+                await view.mount(container);
+                return { path: view.getPath(), title: view.getTitle(), icon: view.getIcon() };
+            },
+
+            isDirty() { return window._currentView?.isDirty() ?? false; },
+
+            getState() { return window._currentView?.getState() ?? {}; },
+
+            async save() {
+                await window._currentView?.save();
+                return window._lastSaved;
+            },
+
+            lastSaved() { return window._lastSaved; },
+
+            setMockFile(path, content) { window._mockFiles[path] = content; },
+        };
+
+        document.getElementById('status').textContent = 'Ready';
+    </script>
+</body>
+</html>

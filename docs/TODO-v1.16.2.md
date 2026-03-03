@@ -357,6 +357,194 @@ After items 5–8: `app.js` drops from ~4,264 to ~1,800 lines.
 
 ---
 
+---
+
+## Feature 11 — Web App: Right Panel View Framework (`RightPanelFrame`)
+
+### Context
+
+The file tree sidebar (item 3) exposed the gap in the right panel: clicking a file shows a
+basic `<pre>` preview or opens a raw CodeMirror editor, but there is no view stack, no
+navigation, no dirty-state guard, and no routing per file type. The current split-view bug
+(both preview `<pre>` and editor rendered simultaneously) was patched with a 220ms
+single-click debounce, but the real fix is a proper view layer that replaces both.
+
+### Desired State
+
+A `RightPanelFrame` class manages a view stack:
+- Configurable stack depth (default 10, via `ppxai-config.json`)
+- LRU eviction (least-recently-used view dropped, not oldest-created)
+- Deduplication: opening an already-stacked file bumps it to top without duplicating
+- `×` (close frame) **hides the container** — stack stays intact; re-opening reveals it
+- Back/forward navigation buttons + dropdown menu listing stack entries
+- Position indicator (`3/7` style)
+- Dirty state indicator (`●` in title when file has unsaved changes)
+- Keyboard routing: only the active (top) view receives keyboard events
+- Optional stack persistence across page reload (off by default)
+- Pinning: pinned views are exempt from LRU eviction
+
+### Architecture Decisions
+
+**No framework:** No new external JS dependency (no Lit/Alpine/Vue CDN). A `BaseView` base
+class in `base-view.js` gives identical structural benefit — clean protocol, easy per-type
+extension — with zero footprint and no CDN risk.
+
+**EditView from scratch:** `EditView` is a clean CodeMirror 6 implementation, not an adapter
+over the existing `EditorController`. The web app refactor (items 5–10) already did the hard
+structural work; this is the right moment for a clean-slate view implementation that owns its
+full lifecycle. `EditorController` is deleted in Phase 5 once `EditView` is proven.
+
+**Config/headers via AppState:** `RightPanelFrame` and all view types access `serverUrl`,
+session headers, and UI config through the existing `AppState` singleton rather than
+constructor args. A new `ui.rightPanel` sub-section of `AppState` holds frame-specific
+settings (stack size, dedup, persist). Views read `appState.get('serverUrl')` and
+`appState.get('sessionHeaders')` directly.
+
+**Keyboard shortcuts — platform-aware:**
+- macOS: `Cmd+←` / `Cmd+→` (back / forward) — avoids Alt conflict with Option key
+- Windows / Linux: `Alt+←` / `Alt+→`
+- Detection: `const isMac = navigator.platform.includes('Mac')`
+- Guard: `(e.metaKey && isMac) || (e.altKey && !isMac)` + `e.key === 'ArrowLeft'/'ArrowRight'`
+- Escape: closes frame (all platforms)
+
+### Component Hierarchy
+
+```
+RightPanelFrame         ppxai/web/components/right-panel-frame.js
+│
+├── BaseView            ppxai/web/components/views/base-view.js
+│   ├── CodeEditorView  ppxai/web/components/views/code-editor-view.js
+│   │     Unified view/edit — single CodeMirror instance, readOnly toggled by View↔Edit button.
+│   │     Replaces separate CodeFileView + EditView (eliminates the preview/editor race condition).
+│   ├── MarkdownFileView ppxai/web/components/views/markdown-file-view.js
+│   │     Modes: [Rendered] ↔ [View Source (read-only CM)] ↔ [Edit Source (editable CM)]
+│   ├── DataFileView    ppxai/web/components/views/data-file-view.js
+│   │     Modes: [Table/Tree] ↔ [View Source] ↔ [Edit Source]
+│   │     Supports CSV, JSON, YAML, TOML, HCL. Tree view reloads after save.
+│   ├── PdfFileView     ppxai/web/components/views/pdf-file-view.js
+│   │     Mode: [Embedded iframe] — view only.
+│   └── ImageFileView   ppxai/web/components/views/image-file-view.js
+│         Mode: [<img> + zoom] — view only.
+│
+└── ViewStack           (internal to RightPanelFrame)
+```
+
+### `BaseView` Protocol Interface
+
+```javascript
+class BaseView {
+    // Required — subclasses MUST implement:
+    getTitle()         // → string: display name for dropdown/tab
+    getPath()          // → string|null: file path (null for non-file views)
+    mount(container)   // render into DOM container; called once on push
+    unmount()          // clean up DOM; called on eviction
+    focus()            // focus the primary interactive element
+    onKeyDown(e)       // handle keyboard event; return true if consumed
+
+    // State for persistence and dirty tracking:
+    isDirty()          // → bool: unsaved changes exist
+    getState()         // → object: serializable state snapshot
+    setState(obj)      // restore from snapshot
+
+    // Optional hooks:
+    onActivate()       // called when view becomes top of stack
+    onDeactivate()     // called when another view is pushed on top
+    getIcon()          // → string emoji/icon for dropdown
+    isPinned()         // → bool: exempt from LRU eviction
+    pin() / unpin()    // toggle pin
+}
+```
+
+### File Type → View Routing
+
+| Extension | View Class | Initial mode | Toggle |
+|---|---|---|---|
+| `.md`, `.rst` | `MarkdownFileView` | Rendered | Rendered ↔ View Source ↔ Edit Source |
+| `.pdf` | `PdfFileView` | Embedded iframe | — (view only) |
+| `.png`, `.jpg`, `.gif`, `.svg`, `.webp` | `ImageFileView` | Image + zoom | — (view only) |
+| `.csv`, `.tsv` | `DataFileView` | Table | Table ↔ View Source ↔ Edit Source |
+| `.json`, `.yaml`, `.toml`, `.hcl` | `DataFileView` | Tree | Tree ↔ View Source ↔ Edit Source |
+| everything else, either intent | `CodeEditorView` | view or edit | View ↔ Edit (same CM instance) |
+
+Intent (`preview` → `view` mode, `edit` → `edit` mode) is passed from `FileTreeComponent` callbacks:
+`onFileClick` → `CodeEditorView(path, state, { mode:'view' })`,
+`onFileEdit`  → `CodeEditorView(path, state, { mode:'edit' })`.
+
+### `RightPanelFrame` API
+
+```javascript
+class RightPanelFrame {
+    push(view)          // push view; dedup if same path; LRU evict if full
+    pop()               // close active view
+    back() / forward()  // navigate stack history
+    showFrame()         // make container visible (stack preserved)
+    hideFrame()         // make container invisible (stack preserved)
+    toggleFrame()
+
+    get activeView()    // current top-of-stack view
+    get stackSize()
+}
+```
+
+### Config Additions
+
+```json
+{
+  "web_ui": {
+    "view_stack_size": 10,
+    "view_stack_dedup": true,
+    "view_stack_persist": false
+  }
+}
+```
+
+Served via existing `GET /config`.
+
+### Phased Implementation
+
+#### Phase 1 — `BaseView` + Routing Infrastructure (additive only) ✅ Done
+- `ppxai/web/components/views/base-view.js` — `BaseView` class with full protocol + default no-ops
+- `ppxai/web/components/views/code-editor-view.js` — **unified view/edit** — single CodeMirror 6
+  instance, `readOnly` toggled by View↔Edit button; no re-fetch, cursor/scroll preserved on toggle
+- `ppxai/web/components/right-panel-frame.js` — `ViewStack` (LRU, dedup) + `RightPanelFrame` shell;
+  reads `rpfStackSize`/`rpfDedup`/`rpfPersist` from AppState; `handleKeyDown()` with platform-aware
+  nav shortcuts; `_notifyChange()` writes `rpfStackDepth`/`rpfActiveTitle`/`rpfActiveDirty`
+- `ppxai/web/index.html` — script tags added for all Phase 1 files (load order: base → views → frame → app)
+- `ppxai/web/app.js` — AppState keys added; `_initRightPanelFrame()` called after DOM setup;
+  `apiClient` exposed on state for views; `rightPanelFrame` instance on `PpxaiApp`
+- **Risk:** Low — new files only; existing preview/editor paths unchanged until Phase 2
+
+#### Phase 2 — Frame Navigation UI ✅ Done
+- `ppxai/web/index.html` — replaced `#previewPanel` with `#rpfFrame` chrome + `#rpfViewport`
+- `ppxai/web/styles/right-panel-frame.css` — all frame + shared view styles
+- `ppxai/web/components/views/image-file-view.js` — `ImageFileView` (click-to-zoom)
+- `ppxai/web/components/views/pdf-file-view.js` — `PdfFileView` (`<embed>`)
+- `ppxai/web/app.js` — `_initRightPanelFrame()`, `_updateFrameChrome()`, `_toggleRpfDropdown()`, `_rpfEsc()`; all preview/edit entry points routed through frame
+- `ppxai/web/app.js` — `handleEditCommand()`, `toggleFileSidebar.onFileEdit` wired to `CodeEditorView`
+- `ppxai/web/app.js` — `openHtmlPreview()` / `closeHtmlPreview()` use inline iframe BaseView subclass
+- **Risk:** Medium — replaces `#previewPanel` DOM; existing preview/editor wiring removed
+
+#### Phase 3 — Remaining View Types ✅ Done
+- `ppxai/web/components/views/markdown-file-view.js` — `MarkdownFileView` (rendered/source/edit; relative link nav via `window.ppxai.displayFileFromEvent`)
+- `ppxai/web/components/views/data-file-view.js` — `DataFileView` (table/tree rendered; source/edit; standalone CSV+YAML+JSON+TOML+HCL parsers)
+- `ppxai/web/styles/right-panel-frame.css` — `.mfv-markdown-body` styles, `.mfv-content`, `.dfv-content`
+- `ppxai/web/app.js` — `displayFileFromEvent()` routes `.md`/`.markdown` → `MarkdownFileView`, data exts → `DataFileView`; `showPreviewPanel()` delegates to `displayFileFromEvent()`
+- **Risk:** Low
+
+#### Phase 4 — Config + State Persistence
+- Read `view_stack_size` from `GET /config`
+- `getState()`/`setState()` for scroll position, cursor in `CodeEditorView`
+- Optional `localStorage` stack persistence
+- Pinning UI (📌 in dropdown)
+- **Risk:** Low
+
+#### Phase 5 — `EditorController` Removal
+- Delete `ppxai/web/components/editor-controller.js`
+- Consolidate save logic into `EditView.save()`
+- **Risk:** Medium
+
+---
+
 ## Status
 
 | # | Item | Status |
@@ -371,3 +559,8 @@ After items 5–8: `app.js` drops from ~4,264 to ~1,800 lines.
 | 8 | Extract `EditorController` | ✅ Done |
 | 9 | Centralize state (`AppState`) | ✅ Done |
 | 10 | Virtual scroll for messages | ✅ Done |
+| 11 — RightPanelFrame Phase 1 | BaseView + routing infra | ✅ Done |
+| 11 — RightPanelFrame Phase 2 | Frame navigation UI | ✅ Done |
+| 11 — RightPanelFrame Phase 3 | Remaining view types | ✅ Done |
+| 11 — RightPanelFrame Phase 4 | Config + persistence | ✅ Done |
+| 11 — RightPanelFrame Phase 5 | EditorController removal | ✅ Done |

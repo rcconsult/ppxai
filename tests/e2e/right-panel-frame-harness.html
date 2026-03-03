@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RightPanelFrame Test Harness</title>
+    <style>
+        :root {
+            --bg-primary: #1e1e1e;
+            --text-primary: #cccccc;
+            --accent-color: #0078d4;
+        }
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px;
+            margin: 0;
+        }
+        #status { color: var(--accent-color); }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <h1>RightPanelFrame Test Harness</h1>
+    <div id="status">Loaded</div>
+
+    <div id="rpf-container" class="hidden"></div>
+    <div id="rpf-viewport"></div>
+
+    <script src="../../ppxai/web/components/views/base-view.js"></script>
+    <script src="../../ppxai/web/components/right-panel-frame.js"></script>
+    <script>
+        /**
+         * MockView — lightweight BaseView subclass for testing RightPanelFrame.
+         *
+         * Tracks call counts for mount/unmount/activate/deactivate so specs can
+         * assert on lifecycle behaviour without touching real DOM.
+         */
+        class MockView extends BaseView {
+            constructor(path, title, opts = {}) {
+                super();
+                this._path   = path;
+                this._title  = title;
+                this._pinned = opts.pinned || false;
+                this._dirty  = opts.dirty  || false;
+
+                // Lifecycle counters
+                this.mountCount      = 0;
+                this.unmountCount    = 0;
+                this.activateCount   = 0;
+                this.deactivateCount = 0;
+
+                // State persistence
+                this._savedState  = null;
+                this._keyHandler  = null;
+
+                // Recorded snapshot: what _pendingState was at the moment mount() ran
+                this._pendingStateWhenMounted = null;
+
+                // Element reference set during mount
+                this._mountedEl = null;
+            }
+
+            // ── Required interface ──────────────────────────────────────────
+
+            getTitle()  { return this._title; }
+            getPath()   { return this._path; }
+            getIcon()   { return '📄'; }
+
+            mount(el) {
+                this.mountCount++;
+                this._mountedEl = el;
+
+                // Record what _pendingState was BEFORE we apply it
+                this._pendingStateWhenMounted = this._pendingState;
+
+                el.innerHTML = `<div class="mock-view-content" data-path="${this._path}"></div>`;
+
+                // Apply pending state if present (clear BEFORE calling setState to
+                // prevent re-entrant recursion via _applyPendingState)
+                if (this._pendingState) {
+                    const pending = this._pendingState;
+                    this._pendingState = null;
+                    this.setState(pending);
+                }
+            }
+
+            unmount() {
+                this.unmountCount++;
+            }
+
+            focus() { /* no-op */ }
+
+            onKeyDown(e) {
+                return this._keyHandler ? this._keyHandler(e) : false;
+            }
+
+            // ── State ───────────────────────────────────────────────────────
+
+            isDirty()        { return this._dirty; }
+            getState()       { return this._savedState || {}; }
+            setState(s)      { this._savedState = s; }
+
+            // ── Lifecycle ───────────────────────────────────────────────────
+
+            onActivate()   { this.activateCount++; }
+            onDeactivate() { this.deactivateCount++; }
+
+            // ── Pin ─────────────────────────────────────────────────────────
+
+            isPinned() { return this._pinned; }
+            pin()      { this._pinned = true; }
+            unpin()    { this._pinned = false; }
+        }
+
+        // ── Test helpers exposed to Playwright evaluate() calls ─────────────────
+
+        window.testHelpers = {
+            /**
+             * Create a fresh RightPanelFrame and reset the views registry.
+             * Must be called at the start of every test (from beforeEach).
+             */
+            setup(opts = {}) {
+                const container = document.getElementById('rpf-container');
+                container.innerHTML = '';
+                container.className = 'hidden';
+                document.getElementById('rpf-viewport').innerHTML = '';
+
+                const appState = {
+                    rpfStackSize: opts.stackSize || 10,
+                    rpfDedup:     opts.dedup !== false,
+                    rpfPersist:   false,
+                };
+
+                const frame = new RightPanelFrame(container, appState);
+                frame._viewportEl = document.getElementById('rpf-viewport');
+
+                window._frame = frame;
+                window._views = {};
+                return true;
+            },
+
+            /**
+             * Instantiate a MockView and register it by path so other helpers can
+             * reference it without the caller having to pass object handles across
+             * the evaluate() boundary.
+             */
+            makeView(path, title, opts = {}) {
+                const v = new MockView(path, title, opts);
+                window._views[path] = v;
+                return path;   // return path as a stable handle
+            },
+
+            /**
+             * Push a registered view (or an ad-hoc one if not pre-registered).
+             * @returns {number} stackSize after push
+             */
+            push(path) {
+                const v = window._views[path] || new MockView(path, path, {});
+                if (!window._views[path]) window._views[path] = v;
+                window._frame.push(v);
+                return window._frame.stackSize;
+            },
+
+            /** @returns {number} stackSize after pop */
+            async pop() {
+                await window._frame.pop();
+                return window._frame.stackSize;
+            },
+
+            /** Navigate back. @returns {string|null} path of newly active view */
+            back() {
+                window._frame.back();
+                return window._frame.activeView?.getPath() ?? null;
+            },
+
+            /** Navigate forward. @returns {string|null} path of newly active view */
+            forward() {
+                window._frame.forward();
+                return window._frame.activeView?.getPath() ?? null;
+            },
+
+            stackSize()  { return window._frame.stackSize; },
+            activeView() { return window._frame.activeView?.getPath() ?? null; },
+            isVisible()  { return window._frame._visible; },
+            isContainerHidden() {
+                return document.getElementById('rpf-container').classList.contains('hidden');
+            },
+
+            /**
+             * Return a serialisable summary of the full stack info.
+             */
+            getStackInfo() {
+                return window._frame.getStackInfo().map(i => ({
+                    title:      i.title,
+                    isDirty:    i.isDirty,
+                    isPinned:   i.isPinned,
+                    isActive:   i.isActive,
+                    stackIndex: i.stackIndex,
+                }));
+            },
+
+            /**
+             * Read a numeric lifecycle counter on a registered view.
+             * @param {string} path
+             * @param {string} stat  e.g. 'mountCount', 'activateCount'
+             */
+            viewStat(path, stat) { return window._views[path]?.[stat] ?? 0; },
+
+            pinView(path)           { window._views[path].pin(); },
+            setDirty(path, val)     { window._views[path]._dirty = val; },
+
+            /** @returns {boolean} _visible after show */
+            showFrame()   { window._frame.showFrame();   return window._frame._visible; },
+            /** @returns {boolean} _visible after hide */
+            hideFrame()   { window._frame.hideFrame();   return window._frame._visible; },
+            /** @returns {boolean} _visible after toggle */
+            toggleFrame() { window._frame.toggleFrame(); return window._frame._visible; },
+
+            /**
+             * Promote the view at the given raw stack index to the top.
+             * @returns {string|null} path of newly active view
+             */
+            activateByIndex(i) {
+                window._frame.activateByIndex(i);
+                return window._frame.activeView?.getPath() ?? null;
+            },
+
+            /**
+             * Synthesise a KeyboardEvent and route it through handleKeyDown().
+             * @returns {boolean} consumed flag returned by the frame
+             */
+            handleKey(key, meta = false, ctrl = false, alt = false) {
+                const e = new KeyboardEvent('keydown', {
+                    key,
+                    metaKey:  meta,
+                    ctrlKey:  ctrl,
+                    altKey:   alt,
+                    bubbles:  true,
+                });
+                return window._frame.handleKeyDown(e);
+            },
+
+            /** Whether we are running on macOS (affects modifier key for back/forward). */
+            isMac() { return navigator.platform.includes('Mac'); },
+
+            /**
+             * Return what _pendingState was at the moment the view's mount() ran.
+             * Non-null means the frame correctly injected saved state before mounting.
+             */
+            pendingStateWhenMounted(path) {
+                return window._views[path]?._pendingStateWhenMounted ?? null;
+            },
+
+            /** Expose the raw _savedStates Map size for white-box assertions. */
+            savedStatesSize() {
+                return window._frame._savedStates.size;
+            },
+        };
+
+        document.getElementById('status').textContent = 'Ready';
+    </script>
+</body>
+</html>
