@@ -857,6 +857,44 @@
         "overall_score": 63.00330033003301,
         "agents_md_mode": "without"
       }
+    ],
+    "local/Qwen3-4B-quantized.w4a16": [
+      {
+        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_6aad0683.json",
+        "timestamp": "2026-03-03T14:49:06.216144",
+        "overall_score": 75.74257425742574,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_9c8c3514.json",
+        "timestamp": "2026-03-03T15:11:39.994003",
+        "overall_score": 80.6930693069307,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_91fd63b1.json",
+        "timestamp": "2026-03-03T15:33:33.350566",
+        "overall_score": 65.41254125412541,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_6860364d.json",
+        "timestamp": "2026-03-03T15:35:46.044207",
+        "overall_score": 69.37293729372936,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_ec07c992.json",
+        "timestamp": "2026-03-03T16:06:34.386684",
+        "overall_score": 70.29702970297029,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_81ef1693.json",
+        "timestamp": "2026-03-03T16:31:33.075579",
+        "overall_score": 71.38613861386138,
+        "agents_md_mode": "without"
+      }
     ]
   },
   "runs": [
@@ -1789,6 +1827,48 @@
       "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_ba1071b5.json",
       "timestamp": "2026-02-23T16:00:44.699957",
       "overall_score": 81.81518151815183,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "local/Qwen3-4B-quantized.w4a16",
+      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_6aad0683.json",
+      "timestamp": "2026-03-03T14:49:06.216144",
+      "overall_score": 75.74257425742574,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "local/Qwen3-4B-quantized.w4a16",
+      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_9c8c3514.json",
+      "timestamp": "2026-03-03T15:11:39.994003",
+      "overall_score": 80.6930693069307,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "local/Qwen3-4B-quantized.w4a16",
+      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_91fd63b1.json",
+      "timestamp": "2026-03-03T15:33:33.350566",
+      "overall_score": 65.41254125412541,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "local/Qwen3-4B-quantized.w4a16",
+      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_6860364d.json",
+      "timestamp": "2026-03-03T15:35:46.044207",
+      "overall_score": 69.37293729372936,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "local/Qwen3-4B-quantized.w4a16",
+      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_ec07c992.json",
+      "timestamp": "2026-03-03T16:06:34.386684",
+      "overall_score": 70.29702970297029,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "local/Qwen3-4B-quantized.w4a16",
+      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_81ef1693.json",
+      "timestamp": "2026-03-03T16:31:33.075579",
+      "overall_score": 71.38613861386138,
       "agents_md_mode": "without"
     }
   ]

@@ -6,6 +6,7 @@ including OpenAI, OpenRouter, Gemini (via compatibility layer), local models, et
 """
 
 import json
+import re
 from typing import List, AsyncIterator, Optional, Dict, Any
 from ...config import get_model_context_limit, get_default_provider, get_context_warn_percent
 from ..types import Message, Event, EventType, ProviderCapabilities
@@ -263,6 +264,7 @@ class OpenAICompatibleProvider(BaseProvider):
                 tool_calls = []
                 current_tool_call = None
                 usage = None
+                _in_think = False  # State for inline <think>...</think> parsing (Qwen3, Hermes via vLLM)
 
                 for chunk in response_stream:
                     # Check for usage in final chunk (when include_usage is True)
@@ -304,10 +306,38 @@ class OpenAICompatibleProvider(BaseProvider):
                         yield Event(EventType.REASONING_CHUNK, reasoning_content)
 
                     # Process content chunks
+                    # v1.16.2: Parse inline <think>...</think> blocks (Qwen3, Hermes via vLLM without
+                    # reasoning parser). Route them as REASONING_CHUNK so TUI/web handle them like
+                    # DeepSeek R1 — clean final content, collapsible thinking section.
                     if delta.content:
-                        content = delta.content
-                        full_response.append(content)
-                        yield Event(EventType.STREAM_CHUNK, content)
+                        remaining = delta.content
+                        while remaining:
+                            if not _in_think:
+                                think_start = remaining.find('<think>')
+                                if think_start == -1:
+                                    full_response.append(remaining)
+                                    yield Event(EventType.STREAM_CHUNK, remaining)
+                                    remaining = ''
+                                else:
+                                    if think_start > 0:
+                                        pre = remaining[:think_start]
+                                        full_response.append(pre)
+                                        yield Event(EventType.STREAM_CHUNK, pre)
+                                    _in_think = True
+                                    remaining = remaining[think_start + 7:]  # len('<think>') == 7
+                            else:
+                                think_end = remaining.find('</think>')
+                                if think_end == -1:
+                                    reasoning_response.append(remaining)
+                                    yield Event(EventType.REASONING_CHUNK, remaining)
+                                    remaining = ''
+                                else:
+                                    if think_end > 0:
+                                        reason = remaining[:think_end]
+                                        reasoning_response.append(reason)
+                                        yield Event(EventType.REASONING_CHUNK, reason)
+                                    _in_think = False
+                                    remaining = remaining[think_end + 8:]  # len('</think>') == 8
 
                 # If we got tool calls, emit them as TOOL_CALL events
                 if tool_calls:
@@ -351,6 +381,13 @@ class OpenAICompatibleProvider(BaseProvider):
                 # DeepSeek R1, GPT-OSS: reasoning_content field
                 # OpenRouter: reasoning field
                 reasoning_content = getattr(message, 'reasoning_content', None) or getattr(message, 'reasoning', None)
+
+                # v1.16.2: Strip inline <think>...</think> blocks (Qwen3, Hermes via vLLM)
+                if not reasoning_content and '<think>' in content:
+                    think_blocks = re.findall(r'<think>(.*?)</think>', content, re.DOTALL)
+                    if think_blocks:
+                        reasoning_content = '\n'.join(think_blocks)
+                        content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
 
                 # Handle native tool calls
                 if hasattr(message, 'tool_calls') and message.tool_calls:

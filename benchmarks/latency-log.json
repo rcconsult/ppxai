@@ -515,6 +515,459 @@
           "iteration": 3
         }
       ]
+    },
+    {
+      "timestamp": "2026-03-03T15:04:33.464299",
+      "version": "1.16.2",
+      "git_commit": "16d8ca9",
+      "git_branch": "bugfix/1.16.2",
+      "provider": "local",
+      "model": "sonar",
+      "summary": {
+        "error": "No valid results"
+      },
+      "detailed_results": [
+        {
+          "prompt_type": "simple",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 2,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 3,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 4,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 5,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 2,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 3,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 4,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 5,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 2,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 3,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 4,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 5,
+          "error": "API Error: No provider configured"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-03-03T15:08:28.560125",
+      "version": "1.16.2",
+      "git_commit": "16d8ca9",
+      "git_branch": "bugfix/1.16.2",
+      "provider": "local",
+      "model": "Qwen3-4B-quantized.w4a16",
+      "summary": {
+        "error": "No valid results"
+      },
+      "detailed_results": [
+        {
+          "prompt_type": "simple",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 2,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 3,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 4,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 5,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 2,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 3,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 4,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 5,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 2,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 3,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 4,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 5,
+          "error": "API Error: No provider configured"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-03-03T15:13:37.560235",
+      "version": "1.16.2",
+      "git_commit": "16d8ca9",
+      "git_branch": "bugfix/1.16.2",
+      "provider": "local",
+      "model": "Qwen3-4B-quantized.w4a16",
+      "summary": {
+        "error": "No valid results"
+      },
+      "detailed_results": [
+        {
+          "prompt_type": "simple",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 2,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 3,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 4,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "simple",
+          "iteration": 5,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 2,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 3,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 4,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "medium",
+          "iteration": 5,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 1,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 2,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 3,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 4,
+          "error": "API Error: No provider configured"
+        },
+        {
+          "prompt_type": "complex",
+          "iteration": 5,
+          "error": "API Error: No provider configured"
+        }
+      ]
+    },
+    {
+      "timestamp": "2026-03-03T15:23:54.577456",
+      "version": "1.16.2",
+      "git_commit": "16d8ca9",
+      "git_branch": "bugfix/1.16.2",
+      "provider": "local",
+      "model": "Qwen3-4B-quantized.w4a16",
+      "summary": {
+        "total_runs": 15,
+        "successful_runs": 15,
+        "failed_runs": 0,
+        "ttft_ms": {
+          "mean": 42.71,
+          "min": 27.15,
+          "max": 235.15,
+          "stdev": 53.27
+        },
+        "total_ms": {
+          "mean": 26810.14,
+          "min": 5895.68,
+          "max": 77428.4,
+          "stdev": 27261.55
+        },
+        "tokens_per_sec": {
+          "mean": 46.52,
+          "min": 42.48,
+          "max": 49.89
+        },
+        "tokens": {
+          "prompt_total": 0,
+          "completion_total": 0,
+          "total": 0,
+          "prompt_mean": 0,
+          "completion_mean": 0
+        }
+      },
+      "detailed_results": [
+        {
+          "ttft_ms": 235.15,
+          "total_ms": 9887.39,
+          "tokens": 454,
+          "tokens_per_sec": 45.92,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 28.64,
+          "total_ms": 8625.5,
+          "tokens": 398,
+          "tokens_per_sec": 46.14,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 28.84,
+          "total_ms": 14354.59,
+          "tokens": 682,
+          "tokens_per_sec": 47.51,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 31.6,
+          "total_ms": 13412.99,
+          "tokens": 632,
+          "tokens_per_sec": 47.12,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 4
+        },
+        {
+          "ttft_ms": 28.57,
+          "total_ms": 7870.17,
+          "tokens": 377,
+          "tokens_per_sec": 47.9,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "simple",
+          "iteration": 5
+        },
+        {
+          "ttft_ms": 32.77,
+          "total_ms": 6476.09,
+          "tokens": 323,
+          "tokens_per_sec": 49.88,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 28.69,
+          "total_ms": 6834.87,
+          "tokens": 341,
+          "tokens_per_sec": 49.89,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 28.75,
+          "total_ms": 5895.68,
+          "tokens": 294,
+          "tokens_per_sec": 49.87,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 27.19,
+          "total_ms": 6958.8,
+          "tokens": 347,
+          "tokens_per_sec": 49.86,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 4
+        },
+        {
+          "ttft_ms": 27.32,
+          "total_ms": 7383.5,
+          "tokens": 368,
+          "tokens_per_sec": 49.84,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "medium",
+          "iteration": 5
+        },
+        {
+          "ttft_ms": 32.95,
+          "total_ms": 49410.46,
+          "tokens": 2112,
+          "tokens_per_sec": 42.74,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 1
+        },
+        {
+          "ttft_ms": 27.48,
+          "total_ms": 60030.2,
+          "tokens": 2578,
+          "tokens_per_sec": 42.95,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 2
+        },
+        {
+          "ttft_ms": 28.27,
+          "total_ms": 77428.4,
+          "tokens": 3289,
+          "tokens_per_sec": 42.48,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 3
+        },
+        {
+          "ttft_ms": 27.31,
+          "total_ms": 72766.31,
+          "tokens": 3108,
+          "tokens_per_sec": 42.71,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 4
+        },
+        {
+          "ttft_ms": 27.15,
+          "total_ms": 54817.09,
+          "tokens": 2354,
+          "tokens_per_sec": 42.94,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_type": "complex",
+          "iteration": 5
+        }
+      ]
     }
   ]
 }
