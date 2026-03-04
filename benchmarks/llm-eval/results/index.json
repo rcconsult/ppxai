@@ -894,6 +894,18 @@
         "timestamp": "2026-03-03T16:31:33.075579",
         "overall_score": 71.38613861386138,
         "agents_md_mode": "without"
+      },
+      {
+        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-04_118d0c6d.json",
+        "timestamp": "2026-03-04T11:51:23.343060",
+        "overall_score": 81.48514851485147,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-04_b134a336.json",
+        "timestamp": "2026-03-04T12:37:56.009823",
+        "overall_score": 74.81848184818482,
+        "agents_md_mode": "with"
       }
     ]
   },
@@ -1870,6 +1882,20 @@
       "timestamp": "2026-03-03T16:31:33.075579",
       "overall_score": 71.38613861386138,
       "agents_md_mode": "without"
+    },
+    {
+      "pair": "local/Qwen3-4B-quantized.w4a16",
+      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-04_118d0c6d.json",
+      "timestamp": "2026-03-04T11:51:23.343060",
+      "overall_score": 81.48514851485147,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "local/Qwen3-4B-quantized.w4a16",
+      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-04_b134a336.json",
+      "timestamp": "2026-03-04T12:37:56.009823",
+      "overall_score": 74.81848184818482,
+      "agents_md_mode": "with"
     }
   ]
 }
