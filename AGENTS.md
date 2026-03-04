@@ -209,10 +209,6 @@ model_hints:
     - "Let the patch contain all code changes - your response can briefly confirm the action taken."
     - "For complex patches (indentation, multiline): Include ALL affected lines with proper context (3+ lines before/after)."
     - "replace_block requires ALL 3 parameters: file_path, search, replace — NEVER omit search."
-  "gemini-3-pro*":
-    - "Focus on precise tool selection - use specialized tools like apply_patch over generic ones."
-    - "Generate complete unified diffs with proper context lines (3+ lines before/after)."
-    - "When modifying code, always use apply_patch - never use read_file or write_file for edits."
   "gemini-3.1-pro*customtools*":
     - "You are optimized for custom tool usage and agentic workflows - leverage this strength."
     - "Chain multiple DIFFERENT tool calls consecutively without stopping to narrate between them."
@@ -238,6 +234,10 @@ model_hints:
     - "NEVER call the same tool with the same arguments twice — use the cached result and move on."
     - "When asked to run tests, use run_command directly. Do NOT read test files instead of executing them."
     - "Write-test-fix cycle: write code → run tests → if fail, fix → re-run tests. Always re-run tests after fixing."
+  "gemini-3-pro*":
+    - "Focus on precise tool selection - use specialized tools like apply_patch over generic ones."
+    - "Generate complete unified diffs with proper context lines (3+ lines before/after)."
+    - "When modifying code, always use apply_patch - never use read_file or write_file for edits."
   "gemini-2.5-flash*":
     - "CRITICAL: For file modifications, you MUST use apply_patch, not read_file or write_file."
     - "Generate patches immediately - don't explain what you'll do first, just call apply_patch."
@@ -254,9 +254,7 @@ model_hints:
     - "Verify each tool call succeeded before proceeding to the next step."
 ---
 
-## Project: ppxai
-
-ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, Gemini, local models via Ollama/vLLM).
+## Global Preferences
 
 ### Code Style
 
@@ -264,6 +262,17 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - Use dataclasses for data structures
 - Async/await for I/O operations
 - pytest for testing
+
+### Tool Usage
+
+- Prefer `edit_file` / `apply_patch` over `write_file` for existing files
+- Use `read_file` instead of `cat` / `type` shell commands
+- Execute tools directly - don't explain what you're about to do
+- Report results briefly after tool execution
+
+## Project: ppxai
+
+ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, Gemini, local models via Ollama/vLLM).
 
 ### Architecture
 
@@ -309,35 +318,26 @@ The web tools (`get_weather`, `fetch_url`, `web_search`) support corporate proxy
 
 - `CLAUDE.md` - Detailed project instructions for Claude Code
 - `ROADMAP.md` - Feature roadmap and version planning
-- `docs/TODO-v1.16.1.md` - Current v1.16.1 task list (FileTree + TUI polish)
+- `docs/TODO-v1.16.2.md` - Current task list
 - `docs/KNOWN-ISSUES.md` - Known issues tracker (KI-001: google-genai SDK pin)
 
-### Current Version: v1.16.2-dev
+### Current Version: v1.16.2
+
+**v1.16.2 Fixes:**
+- **FIX:** Inline `<think>` block parsing — Qwen3 via vLLM routed to REASONING_CHUNK
+- **FIX:** Three post-release bugs — Key.ctrl removed, initResizeHandle null crash, stale file tree paths
+- **FIX:** Stale session pointer, absolute paths, default working dir; update model defaults
+
+**v1.16.1 Features:**
+- **NEW:** FileTree widget — Norton Commander style file browser (Ctrl+B)
+- **NEW:** CommandFactory server pattern — POST /command unified across TUI/VSCode/Web
+- **NEW:** `EngineClient.restore_session()` — centralised session restore for all clients
 
 **v1.16.0 Features:**
 - **NEW:** Profile-driven tool loop — `ToolCallingProfile.mode` replaces binary `native_tool_calling` decision
-- **NEW:** Proper `tool` role messages — native mode uses `tool` role + `tool_call_id` instead of synthetic pairs
+- **NEW:** Proper `tool` role messages — native mode uses `tool` role + `tool_call_id`
 - **NEW:** Multi-tool support — all native tool calls processed per iteration (profile-gated)
 - **NEW:** Agent UI noise reduction — `TOOL_GROUP_START/END` events, collapsible groups in all 4 clients
-- **NEW:** Per-model `tool_calling` config overrides (3-layer: built-in → AGENTS.md → ppxai-config.json)
-- **NEW:** `/model info` command — shows effective profile with source attribution
 - **NEW:** `/ls` and `/tree` commands — directory listing in all 3 clients + HTTP endpoints
 - **NEW:** Benchmark v2 — 36 tests across 9 categories, AGENTS.md delta testing, partial credit scoring
-- **NEW:** `BaseProvider` ABC — all providers inherit shared interface, `hasattr` guards eliminated
-- **FIX:** SSE event type dispatch — side-channel events emit correct EventType
-- **FIX:** Consent deadlock — SSE generator uses racing poll pattern
-
-**v1.15.6 Features:**
-- **NEW:** Native OpenAI provider (`openai_native.py`) — Chat Completions + Responses API routing
-- **NEW:** Model profile system — 37 built-in profiles for 27 models
-- **NEW:** Brace-counting JSON parser — handles nested braces in apply_patch diffs
-
-**v1.15.5 Features:**
-- **CHANGE:** Multi-line chat input — Enter inserts newlines, Ctrl+Enter submits
-- **FIX:** Escape key priority-based dismissal — help panel > modal screens > side panel
-- **FIX:** PyInstaller build — added missing `blinker` hiddenimport for EventBus
-
-**v1.15.4 Features:**
-- **NEW:** `/preview` command — live-reloading HTML preview across TUI, Web App, VSCode
-- **FIX:** Browser cache busting for CSS/JS/JSON assets in preview
-- **FIX:** Corporate SSL support with `_create_ssl_context()` and HTTP fallback
+- **NEW:** `BaseProvider` ABC — all providers inherit shared interface
