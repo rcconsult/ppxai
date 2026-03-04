@@ -1,9 +1,17 @@
 ---
 provider_hints:
   local:
-    - "Complete tasks fully without stopping on empty responses."
-    - "Use tools proactively - don't ask permission for read-only operations."
-    - "When editing files, make all changes in a single edit_file call."
+    - "You are Qwen3-4B running locally via vLLM on an RTX 3050."
+    - "ALWAYS write a visible response — after every tool call or failure, output at least one sentence."
+    - "When a tool fails, explicitly acknowledge it: 'The tool failed: <reason>.' Then try an alternative."
+    - "Use tools proactively — don't ask permission for read-only operations like read_file or list_directory."
+    - "When searching for files, try multiple strategies: exact name, partial name (*auth*), then by extension (*.yaml). Do not stop after one failed search."
+    - "When editing files, make all changes in a single apply_patch call."
+    - "For apply+verify tasks: first call apply_patch, then call read_file to confirm the result."
+    - "Do NOT re-read a file you already read in this session unless instructed."
+    - "Prefer apply_patch over write_file for existing files."
+    - "Do NOT mention tool names (apply_patch, read_file, etc.) in your response text — just call the tool."
+    - "Output the complete, correct solution — do not truncate code or omit required content."
   ollama:
     - "Keep responses concise - Ollama has limited context."
     - "Prefer smaller, focused tool calls over complex multi-step operations."
@@ -94,6 +102,16 @@ model_hints:
     - "When asked for JSON output, return a flat JSON array [...], not a nested object like {key: [...]}."
     - "Read ALL constraints in the user request before writing code. Follow function names, forbidden operations, and format requirements EXACTLY as specified."
     - "For read_file: parameter name is EXACTLY 'path' - NEVER use 'filepath'."
+  "Qwen3-4B*":
+    - "Always output a visible text response — never be silent after a tool call or failure."
+    - "When a tool fails, say so explicitly, then try a different approach."
+    - "For code tasks: output the complete, correct solution — do not truncate or summarize."
+    - "Call tools immediately — do NOT describe what you are about to do."
+    - "Do NOT mention tool names in your response text when calling them."
+    - "Use apply_patch for file edits, read_file for reading. Never use shell for file I/O."
+    - "Make ONE tool call per step — never duplicate or retry without acknowledging the failure."
+    - "Do NOT re-read files you already read — use the cached content."
+    - "After a tool call, give a brief confirmation only — do not repeat the tool output."
   "qwen2.5-coder*":
     - "Focus on code quality and correctness."
     - "Use edit_file for surgical changes, write_file only for new files."
@@ -191,6 +209,10 @@ model_hints:
     - "Let the patch contain all code changes - your response can briefly confirm the action taken."
     - "For complex patches (indentation, multiline): Include ALL affected lines with proper context (3+ lines before/after)."
     - "replace_block requires ALL 3 parameters: file_path, search, replace — NEVER omit search."
+  "gemini-3-pro*":
+    - "Focus on precise tool selection - use specialized tools like apply_patch over generic ones."
+    - "Generate complete unified diffs with proper context lines (3+ lines before/after)."
+    - "When modifying code, always use apply_patch - never use read_file or write_file for edits."
   "gemini-3.1-pro*customtools*":
     - "You are optimized for custom tool usage and agentic workflows - leverage this strength."
     - "Chain multiple DIFFERENT tool calls consecutively without stopping to narrate between them."
