@@ -86,20 +86,20 @@
       },
       "pricing": {
         "sonar": {
-          "input": 1.0,
-          "output": 1.0
+          "input": 0.2,
+          "output": 0.2
         },
         "sonar-pro": {
           "input": 3.0,
           "output": 15.0
         },
         "sonar-reasoning-pro": {
-          "input": 2.0,
-          "output": 8.0
+          "input": 5.0,
+          "output": 15.0
         },
         "sonar-deep-research": {
-          "input": 2.0,
-          "output": 8.0
+          "input": 5.0,
+          "output": 15.0
         }
       },
       "capabilities": {
@@ -453,13 +453,12 @@
       "api_key_env": "OLLAMA_API_KEY",
       "default_model": "Qwen3-4B-quantized.w4a16",
       "coding_model": "Qwen3-4B-quantized.w4a16",
-      "__comment_hw": "RTX 3050 6GB, RedHatAI Qwen3-4B INT4 w4a16 quantized, vLLM, prompt-based tools",
-      "__comment_thinking": "Qwen3 thinking mode is ON — <think> blocks are routed as REASONING_CHUNK by the engine (v1.16.2 fix)",
-      "system_prompt": "You are a coding assistant running locally as Qwen3-4B on an RTX 3050 via vLLM.\n\nRules:\n1. For code tasks: output the complete, correct solution — do not truncate\n2. For tool calls: call the tool immediately, explain briefly after the result\n3. Prefer apply_patch over write_file for existing files\n4. Use read_file instead of cat/shell commands for reading\n5. Be concise but complete — do not omit required content",
+      "__comment_hw": "RTX 3050 6GB, INT4 w4a16 quantized, vLLM 0.16.0, compressed-tensors",
+      "__comment_thinking": "Qwen3 supports thinking mode via <think> tags. Use /no_think in message or enable_thinking=false to suppress.",
+      "system_prompt": "You are a coding assistant running locally as Qwen3-4B on an RTX 3050 via vLLM.\n\nRules:\n1. ALWAYS output a visible text response — never reply with silence. After every tool call or failure, write at least one sentence.\n2. When a tool fails or returns an error, explicitly say so: 'The tool failed: <reason>. I will try X instead.'\n3. For code tasks: output the complete, correct solution — do not truncate\n4. For apply+verify tasks: call apply_patch first, then read_file to confirm the change was applied\n5. Prefer apply_patch over write_file for existing files\n6. Use read_file instead of cat/shell commands for reading\n7. Do NOT re-read a file you already read unless the content changed",
       "generation_params": {
-        "temperature": 0.2,
+        "temperature": 0.1,
         "top_p": 0.9,
-        "frequency_penalty": 0.1,
         "max_tokens": 4096
       },
       "models": {
@@ -481,7 +480,8 @@
         "web_fetch": false,
         "weather": false,
         "realtime_info": false,
-        "native_tool_calling": false
+        "native_tool_calling": false,
+        "__comment_native_tool_calling": "vLLM server not started with --enable-auto-tool-choice --tool-call-parser hermes; using prompt-based tools"
       }
     }
   },
