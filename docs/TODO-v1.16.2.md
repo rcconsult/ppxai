@@ -564,3 +564,4 @@ Served via existing `GET /config`.
 | 11 — RightPanelFrame Phase 3 | Remaining view types | ✅ Done |
 | 11 — RightPanelFrame Phase 4 | Config + persistence | ✅ Done |
 | 11 — RightPanelFrame Phase 5 | EditorController removal | ✅ Done |
+| 12 | Inline image preview in web app chat bubbles | ✅ Done |

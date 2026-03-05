@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.16.2-dev (February 2026) | Norton Commander File Tree
+> **Current Version**: v1.16.2 (March 2026) | RightPanelFrame + Web App Refactor
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
@@ -616,29 +616,49 @@ ppxai/tui/                     # New module (Textual-based)
 
 ---
 
-## Planned (v1.17.0+)
+## Completed (v1.16.2)
 
-### v1.17.0 - Web App File Tree Sidebar
+### v1.16.2 - Web App Refactor + RightPanelFrame + AGENTS.md Tuning
 
-**Status:** Planned
-**Effort:** 7 days
-**See:** `docs/TODO-v1.16.0.md` Phase 2
+**Status:** ✅ Complete (2026-03-05)
+**Branch:** bugfix/1.16.2
+**TODO:** [docs/TODO-v1.16.2.md](docs/TODO-v1.16.2.md)
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **Collapsible sidebar** | VSCode-style file tree with server endpoint `/files/list` | ⏳ Planned |
-| **Persistent state** | Remember expanded folders via localStorage | ⏳ Planned |
-| **Context menu** | Right-click for `@file` injection | ⏳ Planned |
+| **Bug fixes** | Wrong save path, validator false positive, redundant set_model, server stale session | ✅ Done |
+| **Web app file tree** | Collapsible sidebar with @file injection, drag-resize | ✅ Done |
+| **Web app refactor** | app.js 4,264→1,800 lines: ApiClient, CommandDispatcher, StreamHandler, AppState | ✅ Done |
+| **RightPanelFrame** | View stack navigator with 5 view types, LRU eviction, back/forward nav | ✅ Done |
+| **Virtual scroll** | Buffer-based message virtualization for long sessions | ✅ Done |
+| **Inline `<think>` routing** | Qwen3/vLLM reasoning blocks routed as REASONING_CHUNK | ✅ Done |
+| **AGENTS.md tuning** | Qwen3-4B model hints, benchmark runs (76-82%), anti-pattern fix | ✅ Done |
+| **Inline chat images** | Web app: `GET /files/image/{path}` + markdown injection in chat bubbles | ✅ Done |
+| **Server fixes** | Stale session pointer, absolute paths, default working dir | ✅ Done |
+| **1,628 tests passing** | +4 from v1.16.1, 6 known TUI keyboard nav failures | ✅ Done |
 
-**NOT Planned:**
-- ❌ Interactive file tree for ppxai (Rich CLI) - architecturally inappropriate (use ppxaide)
+---
+
+## Planned (v1.17.0+)
+
+### v1.17.0 - ppxaide Key Bindings Cleanup
+
+**Status:** Planned (low priority)
+**See:** `docs/TODO-v1.17.0.md`
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Centralized key routing** | One place decides which widget handles what key | ⏳ Planned |
+| **Audit `event.stop()` calls** | Remove unnecessary event consumption in InputBox, ChatTextArea, FileTree | ⏳ Planned |
+| **`/keys` command** | Show effective binding table at runtime | ⏳ Planned |
+| **Kitty protocol negotiation** | Replace per-user terminal config workarounds for Ctrl+Enter, Ctrl+Tab | ⏳ Planned |
 
 ---
 
 ## Future Considerations
 
 These are tracked but not prioritized:
-- **libghostty SDK** - Watch for stable C API (expected 2026)
+- **libghostty SDK** - `libghostty-vt` (zero-dep VT parser + state) Zig API available for testing; C API in progress, tagged release expected within ~6 months (mid-2026). Supports SIMD parsing, Kitty Graphics Protocol, tmux control mode. Future: input handling, GPU rendering (OpenGL/Metal), GTK/Swift frameworks. See [mitchellh.com/writing/libghostty-is-coming](https://mitchellh.com/writing/libghostty-is-coming)
 - ~~**Per-provider tool config**~~ - ⏳ Partially addressed by Model Profile System (v1.15.6/v1.16.0)
 - **Custom tools** - User-defined tools in `~/.ppxai/tools/`
 - ~~**Provider-aware tool guidance**~~ - ✅ Implemented in v1.13.3
@@ -647,6 +667,7 @@ These are tracked but not prioritized:
 - ~~**Standardized error handling**~~ - ✅ All providers now have detailed traceback logging
 - **`/rewind` browser** - Interactive checkpoint history viewer
 - **`/agent --dry-run`** - Preview changes without applying
+- **Cross-session search** - Semantic search over `~/.ppxai/sessions/`. Watch: [microsoft/typeagent-py](https://github.com/microsoft/typeagent-py) (MIT, v0.4.0-dev) — Structured RAG with 6 parallel indexes (semantic, property, temporal, thread-scoped). Interesting architecture but too heavy today (azure-identity, numpy, pydantic-ai, Python 3.12+). Revisit when ppxai needs session search or typeagent reaches 1.0 with lighter deps
 
 ### Multi-Model Orchestration (Research)
 
@@ -802,12 +823,27 @@ Enable AI to execute cells in a running JupyterLab kernel with real-time output 
 
 **Use case:** Data developer asks AI to "run this notebook cell by cell" and watches output appear in JupyterLab UI in real-time.
 
-### Image Preview in Chat Panel
+### Inline Image Preview in Chat Bubbles
 
-Current `/show` command opens files in VSCode text editor. Need image preview for:
-- **Formats:** PNG, JPG, JPEG, GIF, SVG, WebP
-- **Display:** Inline in chat panel or split pane preview
-- **Use case:** AI generates chart (e.g., matplotlib), user wants to see it without leaving chat
+**Current state:** Images render in side panels only (ppxaide ImageViewer, web app ImageFileView in RightPanelFrame). ppxai Rich TUI already renders images inline via terminal escape sequences (iTerm2/Sixel/Kitty).
+
+**Goal:** Show images directly inside chat message bubbles when AI calls `display_file` on an image.
+
+**Web app (cheapest win):**
+1. Add `GET /files/image/{path}` endpoint to `http.py` — serves raw binary with correct `Content-Type`
+2. Stream handler rewrites `display_file` events for image files to inject `![filename](/files/image/path)` into the assistant message markdown
+3. `marked.parse()` renders it as an inline `<img>` automatically — no new rendering code needed
+
+**ppxaide:** Textual's `Markdown` widget can't render pixel images inline (only shows clickable placeholder). Would require a custom widget that embeds terminal image escape sequences inside the chat scroll. Deferred until Textual adds image support or libghostty provides embeddable rendering.
+
+**VSCode:** Could inject `<img src="data:...;base64,...">` into webview HTML. Medium effort — needs base64 fetch + webview content security policy update.
+
+| Client | Inline today | Effort to add |
+|--------|-------------|---------------|
+| ppxai (Rich) | ✅ Yes | — |
+| Web app | ✅ Yes (v1.16.2) | — |
+| ppxaide | ❌ Side panel | High — Textual limitation |
+| VSCode | ❌ Native editor | Medium — CSP + base64 |
 
 ---
 
@@ -833,7 +869,7 @@ ppxai is **not** trying to be:
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ```bash
-uv run pytest tests/ -v       # Run tests (1624 passing)
+uv run pytest tests/ -v       # Run tests (1628 passing)
 uv run ppxai-server           # Start server for VSCode dev
 ```
 
@@ -850,4 +886,4 @@ For archived planning documents:
 
 ---
 
-**Last Updated**: March 1, 2026
+**Last Updated**: March 5, 2026

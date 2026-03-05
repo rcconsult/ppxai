@@ -2045,6 +2045,41 @@ async def preview_html(
     return HTMLResponse(content=html)
 
 
+@app.get("/files/image/{filepath:path}")
+async def serve_image(
+    filepath: str,
+    x_session_id: Optional[str] = Header(None)
+):
+    """Serve raw image file for inline display in chat bubbles (v1.16.2).
+
+    Returns the image binary with correct Content-Type header.
+    Used by marked.js ![alt](/files/image/path) in chat messages.
+    """
+    session_id, engine, _ = await get_or_create_session(x_session_id)
+
+    path = Path(filepath)
+    if not path.is_absolute():
+        working_dir = Path(engine.get_working_dir() or os.getcwd())
+        path = working_dir / filepath
+    path = path.resolve()
+
+    # Security: same checks as /files/read
+    working_dir = Path(engine.get_working_dir() or os.getcwd()).resolve()
+    home_dir = Path.home().resolve()
+    if not (is_path_allowed(path, working_dir) or str(path).startswith(str(home_dir))):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    if not path.exists() or not path.is_file():
+        raise HTTPException(status_code=404, detail=f"Not found: {filepath}")
+
+    ext = path.suffix.lower()
+    mime_type = MIME_TYPES.get(ext)
+    if not mime_type or not mime_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail=f"Not an image: {filepath}")
+
+    return FileResponse(path, media_type=mime_type)
+
+
 @app.post("/files/read")
 async def read_file(
     request: FileReadRequest,
@@ -2148,7 +2183,7 @@ async def read_file(
             # Return relative path from working_dir so the web editor saves to the
             # correct location (not just the basename in the working directory root).
             try:
-                rel_name = str(path.relative_to(working_dir))
+                rel_name = path.relative_to(working_dir).as_posix()
             except ValueError:
                 rel_name = path.name
 
@@ -2170,7 +2205,7 @@ async def read_file(
         # Return relative path from working_dir so the web editor saves to the
         # correct location (not just the basename in the working directory root).
         try:
-            rel_name = str(path.relative_to(working_dir))
+            rel_name = path.relative_to(working_dir).as_posix()
         except ValueError:
             rel_name = path.name
 

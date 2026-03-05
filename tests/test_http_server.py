@@ -808,3 +808,85 @@ class TestFileReadRelativePath:
         assert response.status_code == 200
         data = response.json()
         assert data["filename"] == "a/b/c/deep.txt"
+
+
+class TestServeImage:
+    """Test GET /files/image/{path} endpoint (v1.16.2).
+
+    Serves raw image binary with correct Content-Type for inline display
+    in web app chat bubbles via marked.js ![alt](url) rendering.
+    """
+
+    def _create_png(self, path):
+        """Create a minimal 1x1 PNG file."""
+        # Minimal valid PNG: 1x1 pixel, 8-bit RGBA
+        import struct
+        import zlib
+
+        def _chunk(chunk_type, data):
+            c = chunk_type + data
+            crc = struct.pack('>I', zlib.crc32(c) & 0xFFFFFFFF)
+            return struct.pack('>I', len(data)) + c + crc
+
+        signature = b'\x89PNG\r\n\x1a\n'
+        ihdr = _chunk(b'IHDR', struct.pack('>IIBBBBB', 1, 1, 8, 2, 0, 0, 0))
+        raw_data = b'\x00\xff\x00\x00'  # filter byte + RGB
+        idat = _chunk(b'IDAT', zlib.compress(raw_data))
+        iend = _chunk(b'IEND', b'')
+        png_bytes = signature + ihdr + idat + iend
+        path.write_bytes(png_bytes)
+        return png_bytes
+
+    def test_serves_png_with_correct_content_type(self, mock_client, tmp_path):
+        """PNG file served with image/png content type."""
+        client, mock_engine = mock_client
+        mock_engine.get_working_dir.return_value = str(tmp_path)
+
+        png_bytes = self._create_png(tmp_path / "chart.png")
+
+        response = client.get("/files/image/chart.png")
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("image/png")
+        assert response.content == png_bytes
+
+    def test_serves_jpg(self, mock_client, tmp_path):
+        """JPEG file served with image/jpeg content type."""
+        client, mock_engine = mock_client
+        mock_engine.get_working_dir.return_value = str(tmp_path)
+
+        (tmp_path / "photo.jpg").write_bytes(b'\xff\xd8\xff\xe0' + b'\x00' * 100)
+
+        response = client.get("/files/image/photo.jpg")
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("image/jpeg")
+
+    def test_rejects_non_image_file(self, mock_client, tmp_path):
+        """Non-image files return 400."""
+        client, mock_engine = mock_client
+        mock_engine.get_working_dir.return_value = str(tmp_path)
+
+        (tmp_path / "data.json").write_text('{"key": "value"}', encoding="utf-8")
+
+        response = client.get("/files/image/data.json")
+        assert response.status_code == 400
+
+    def test_404_for_missing_file(self, mock_client, tmp_path):
+        """Missing file returns 404."""
+        client, mock_engine = mock_client
+        mock_engine.get_working_dir.return_value = str(tmp_path)
+
+        response = client.get("/files/image/nonexistent.png")
+        assert response.status_code == 404
+
+    def test_serves_image_in_subdirectory(self, mock_client, tmp_path):
+        """Images in subdirectories are accessible via path."""
+        client, mock_engine = mock_client
+        mock_engine.get_working_dir.return_value = str(tmp_path)
+
+        subdir = tmp_path / "output" / "plots"
+        subdir.mkdir(parents=True)
+        self._create_png(subdir / "result.png")
+
+        response = client.get("/files/image/output/plots/result.png")
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("image/png")

@@ -1073,7 +1073,26 @@ class PpxaiApp {
             case 'display_file':
                 // v1.15.2: Handle display_file event from AI tool
                 if (event.data && event.data.filepath) {
-                    this.displayFileFromEvent(event.data.filepath);
+                    const fp = event.data.filepath;
+                    // v1.16.2: Inject inline image into chat bubble for image files
+                    const imgExt = fp.split('.').pop().toLowerCase();
+                    const inlineImageExts = new Set(['png','jpg','jpeg','gif','svg','webp','bmp','ico']);
+                    if (inlineImageExts.has(imgExt)) {
+                        const imgUrl = `${this.apiClient.serverUrl}/files/image/${encodeURIComponent(fp)}`;
+                        const basename = fp.split('/').pop().split('\\').pop();
+                        fullContent += `\n\n![${basename}](${imgUrl})\n`;
+                        contentEl.innerHTML = this.renderMarkdown(fullContent);
+                        // Click inline image → zoom overlay (lightbox)
+                        const img = contentEl.querySelector(`img[src="${imgUrl}"]`);
+                        if (img) {
+                            img.title = 'Click to zoom';
+                            img.addEventListener('click', () => this._showImageOverlay(imgUrl, basename));
+                        }
+                        this.scrollToBottom();
+                    } else {
+                        // Non-image files → open in RightPanelFrame
+                        this.displayFileFromEvent(fp);
+                    }
                 }
                 break;
 
@@ -1896,6 +1915,24 @@ class PpxaiApp {
         if (this.rightPanelFrame) {
             this.displayFileFromEvent(filename);
         }
+    }
+
+    /**
+     * Show lightbox zoom overlay for inline chat images (v1.16.2).
+     * Click overlay or press Escape to close.
+     */
+    _showImageOverlay(src, title) {
+        const overlay = document.createElement('div');
+        overlay.className = 'image-overlay';
+        overlay.innerHTML = `
+            <div class="image-overlay-title">${title}</div>
+            <img src="${src}" alt="${title}" />
+        `;
+        const close = () => overlay.remove();
+        overlay.addEventListener('click', close);
+        const onKey = (e) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); } };
+        document.addEventListener('keydown', onKey);
+        document.body.appendChild(overlay);
     }
 
     /**
