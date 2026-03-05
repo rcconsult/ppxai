@@ -109,7 +109,7 @@ model_hints:
     - "Call tools immediately — do NOT describe what you are about to do."
     - "Do NOT mention tool names in your response text when calling them."
     - "Use apply_patch for file edits, read_file for reading. Never use shell for file I/O."
-    - "Make ONE tool call per step — never duplicate or retry without acknowledging the failure."
+    - "Avoid duplicate tool calls. Chain multiple DIFFERENT tool calls for multi-step tasks without stopping to narrate."
     - "Do NOT re-read files you already read — use the cached content."
     - "After a tool call, give a brief confirmation only — do not repeat the tool output."
   "qwen2.5-coder*":
