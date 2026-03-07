@@ -45,13 +45,13 @@ Warning: Taking root:admin ownership of some socket_vmnet paths:
 ==> Successfully started `socket_vmnet`
 ```
 
-### 1b. Copy the binary to the path Lima expects
+### 1b. Copy the binary to both paths
 
-Lima requires the binary to be at `/opt/socket_vmnet/bin/socket_vmnet` with **no symlinks**
-in the path (security requirement — prevents privilege escalation via symlink replacement).
-Homebrew installs to `/usr/local/Cellar/...` which has symlinks in the path, so we copy:
+Lima and colima use **different binary paths** — both must exist with no symlinks
+(security requirement: prevents privilege escalation via symlink replacement).
 
 ```bash
+# Lima's expected path
 sudo mkdir -p /opt/socket_vmnet/bin
 sudo install -o root -m 755 \
     /usr/local/Cellar/socket_vmnet/1.2.2/bin/socket_vmnet \
@@ -59,32 +59,59 @@ sudo install -o root -m 755 \
 sudo install -o root -m 755 \
     /usr/local/Cellar/socket_vmnet/1.2.2/bin/socket_vmnet_client \
     /opt/socket_vmnet/bin/socket_vmnet_client
+
+# Colima's expected path (different from Lima's)
+sudo mkdir -p /opt/colima/bin
+sudo install -o root -m 755 \
+    /usr/local/Cellar/socket_vmnet/1.2.2/bin/socket_vmnet \
+    /opt/colima/bin/socket_vmnet
+sudo install -o root -m 755 \
+    /usr/local/Cellar/socket_vmnet/1.2.2/bin/socket_vmnet_client \
+    /opt/colima/bin/socket_vmnet_client
 ```
 
 > **Note:** Update `1.2.2` to the actual installed version (`brew list --versions socket_vmnet`).
 
 ### 1c. Install the Lima sudoers rule
 
-This allows Lima/colima to start the socket_vmnet daemon without requiring a password
-every time:
+Covers `limactl`-managed socket_vmnet operations (bridged/shared/host networks):
 
 ```bash
 limactl sudoers | sudo tee /private/etc/sudoers.d/lima
 ```
 
-Verify the file was created and contains the socket_vmnet commands:
+### 1d. Install the Colima sudoers rule (eliminates interactive prompt)
+
+Colima manages its own sudoers file at `/etc/sudoers.d/colima`. On startup with
+`--network-address`, it writes that file and starts the socket_vmnet daemon — both require
+sudo. Pre-authorising these commands removes the interactive terminal requirement:
 
 ```bash
-cat /private/etc/sudoers.d/lima
+sudo tee /private/etc/sudoers.d/colima-init << 'EOF'
+# Pre-authorise colima network setup — eliminates interactive sudo prompt
+# Allows colima to write its own sudoers file (/etc/sudoers.d/colima)
+%staff ALL=(root:wheel) NOPASSWD:NOSETENV: /bin/sh -c cat > /etc/sudoers.d/colima
+# Allows colima to start/stop the socket_vmnet daemon
+%staff ALL=(root:wheel) NOPASSWD:NOSETENV: /opt/colima/bin/socket_vmnet *
+%staff ALL=(root:wheel) NOPASSWD:NOSETENV: /usr/bin/pkill -F /private/var/run/lima/shared_socket_vmnet.pid
+%staff ALL=(root:wheel) NOPASSWD:NOSETENV: /usr/bin/pkill -F /private/var/run/lima/bridged_socket_vmnet.pid
+EOF
+sudo chmod 440 /private/etc/sudoers.d/colima-init
+
+# Validate syntax before applying
+sudo visudo -c -f /private/etc/sudoers.d/colima-init
 ```
+
+**How it works:** On first successful `colima start --network-address`, colima writes
+`/etc/sudoers.d/colima` with its generated content. On all subsequent starts, colima
+detects the content is unchanged and skips the write — so after the first run the
+pre-auth rule above is no longer needed (but harmless to leave in place).
 
 ---
 
 ## Step 2 — Start Colima with Kubernetes
 
-**Important:** Run this command in an **interactive terminal** (not via a script or CI).
-Colima needs to verify the sudoers setup with an interactive sudo prompt on the first run
-with `--network-address`.
+With the sudoers rules in place, colima can now start non-interactively:
 
 ```bash
 colima start \
@@ -101,8 +128,6 @@ starting colima
 runtime: docker+k3s
 preparing network ...
 setting up reachable IP address
-sudo password may be required
-[sudo prompt — enter your password]
 starting ... context=vm
 ...
 provisioning ... context=kubernetes
@@ -110,9 +135,11 @@ starting ... context=kubernetes
 done
 ```
 
-> If you see `"error setting up reachable IP address"` and colima falls back to QEMU NAT,
-> it means the sudo step failed. This always happens when running colima from a
-> non-interactive shell (no TTY). Always start colima from your terminal directly.
+No sudo password prompt should appear. If you still see
+`"error setting up reachable IP address"`, check:
+1. `/opt/colima/bin/socket_vmnet` exists and is owned by root
+2. `/private/etc/sudoers.d/colima-init` is mode `440` and passes `visudo -c`
+3. Your user is in the `staff` group: `id | grep staff`
 
 ---
 
@@ -196,8 +223,13 @@ colima delete
 
 ### "error setting up reachable IP address" / VM falls back to NAT
 
-- **Cause:** colima ran from a non-interactive shell (no TTY for sudo)
-- **Fix:** Run `colima start` directly in your terminal, not via a script
+- **Cause:** colima's sudo commands lack NOPASSWD rules, or `/opt/colima/bin/socket_vmnet` is missing
+- **Fix checklist:**
+  1. `/opt/colima/bin/socket_vmnet` exists, owned by root: `ls -la /opt/colima/bin/`
+  2. `/private/etc/sudoers.d/colima-init` is mode 440: `ls -la /private/etc/sudoers.d/`
+  3. Sudoers syntax is valid: `sudo visudo -c -f /private/etc/sudoers.d/colima-init`
+  4. User is in `staff` group: `id | grep staff`
+- **Fallback:** Run `colima start --network-address` once from an interactive terminal to bootstrap
 
 ### TCP connections to ppxai.local time out
 
@@ -222,12 +254,23 @@ After `brew upgrade socket_vmnet`, repeat Step 1b with the new version number:
 
 ```bash
 NEW_VER=$(brew list --versions socket_vmnet | awk '{print $2}')
+
+# Lima's path
 sudo install -o root -m 755 \
     /usr/local/Cellar/socket_vmnet/${NEW_VER}/bin/socket_vmnet \
     /opt/socket_vmnet/bin/socket_vmnet
 sudo install -o root -m 755 \
     /usr/local/Cellar/socket_vmnet/${NEW_VER}/bin/socket_vmnet_client \
     /opt/socket_vmnet/bin/socket_vmnet_client
+
+# Colima's path
+sudo install -o root -m 755 \
+    /usr/local/Cellar/socket_vmnet/${NEW_VER}/bin/socket_vmnet \
+    /opt/colima/bin/socket_vmnet
+sudo install -o root -m 755 \
+    /usr/local/Cellar/socket_vmnet/${NEW_VER}/bin/socket_vmnet_client \
+    /opt/colima/bin/socket_vmnet_client
+
 limactl sudoers | sudo tee /private/etc/sudoers.d/lima
 ```
 
