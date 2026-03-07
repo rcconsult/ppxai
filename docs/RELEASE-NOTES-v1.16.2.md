@@ -136,6 +136,24 @@ within the assistant message. These were previously passed through as raw text.
 to `REASONING_CHUNK` events (same path as DeepSeek R1 reasoning tokens), so they render in the
 collapsible thinking panel rather than polluting the response text.
 
+### Shell: Configurable Shell Binary and Login Mode
+
+New `tools.shell` config keys in `ppxai-config.json`:
+
+```json
+"shell": {
+  "shell_bin": "/bin/zsh",
+  "login_shell": true
+}
+```
+
+- `shell_bin` — path to the shell binary (`/bin/bash`, `/bin/zsh`, `/bin/sh`, etc.)
+  When set, ppxai invokes commands as `[shell_bin, -c, command]` instead of relying on Python's default system shell.
+- `login_shell` — when `true`, adds the `-l` flag (`[shell_bin, -l, -c, command]`), causing the shell to source the user's login profile (`~/.zprofile`, `~/.bash_profile`, etc.).
+  This gives the subprocess the same PATH and environment as an interactive terminal session, making tools like `uv`, `nvm`, `pyenv`, `conda`, etc. available without requiring system-wide installation.
+
+Both default to `null`/`false` for backwards compatibility — existing behaviour is unchanged.
+
 ### Three Post-Release Bugs
 
 | Bug | Fix |

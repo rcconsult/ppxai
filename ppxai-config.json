@@ -516,6 +516,8 @@
     },
     "shell": {
       "timeout": 300,
+      "shell_bin": null,
+      "login_shell": false,
       "require_consent": true,
       "dangerous_commands": [
         "^rm\\s+",

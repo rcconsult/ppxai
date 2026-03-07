@@ -27,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Absolute/home paths in file API** — `/files/list` and `/files/tree` accept absolute paths and `~`-prefixed paths
 - **Default working dir** — engine working dir now initialised to `Path.home()` on session creation (fixes binary CWD being `/`)
 - **Redundant `set_model` calls** — `/provider` switch no longer triggers 3–4 redundant `set_model` calls
+- **File tree refresh storm** — `working_dir_changed` events debounced (300ms); session restore no longer triggers multiple `/files/list` calls
+- **Validator false positive: success-after-retries** — `_check_success_after_failure` now only flags when the *most recent* tool call failed; earlier failures in a retry sequence no longer cause false `claim_contradicts_result` errors
+- **Shell: configurable shell binary and login mode** — new `tools.shell.shell_bin` (e.g. `"/bin/zsh"`) and `tools.shell.login_shell` (bool) config keys; setting `login_shell: true` invokes the shell with `-l` so the full user environment (PATH, nvm, pyenv, etc.) is sourced, matching the user's interactive terminal
 
 ### Changed
 

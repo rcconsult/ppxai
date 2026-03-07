@@ -39,18 +39,11 @@ a failure).
 
 ---
 
-## Bug: Server Shell PATH Missing ~/.local/bin (uv Not Found in Shell Tool)
+## ~~Bug: Server Shell PATH Missing ~/.local/bin~~ — Fixed in v1.16.2
 
-**Symptom:** When the AI uses the `shell` tool to run `uv run pytest` or similar, the server's
-subprocess shell cannot find `uv` because `~/.local/bin` is not in its PATH.
-
-**Root cause:** The server launches shell subprocesses without sourcing the user's shell profile
-(`~/.bashrc`, `~/.zshrc`), so `~/.local/bin` is absent from PATH. This works fine in the
-terminal TUI because the user's shell already has the right PATH.
-
-**Fix (proposed):** In `run_command` / shell tool execution, prepend `~/.local/bin` and
-`~/.ppxai/bin` to the subprocess PATH so common tools (uv, pipx-installed binaries) are
-discoverable without requiring the user to install them system-wide.
+**Fix:** Added `tools.shell.shell_bin` and `tools.shell.login_shell` config keys.
+Set `"shell_bin": "/bin/zsh"` and `"login_shell": true` to run commands through your
+login shell, sourcing the full user environment (PATH, nvm, pyenv, uv, etc.).
 
 ---
 

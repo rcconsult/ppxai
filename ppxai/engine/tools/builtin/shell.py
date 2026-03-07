@@ -29,6 +29,8 @@ def _get_shell_config() -> dict:
         # Fallback defaults if config not available
         return {
             "timeout": 30,
+            "shell_bin": None,       # e.g. "/bin/bash" or "/bin/zsh"; None = system default
+            "login_shell": False,    # True = invoke with -l (sources profile, full PATH)
             "interactive_commands": [
                 'nano', 'vim', 'vi', 'emacs', 'pico', 'joe',
                 'less', 'more',
@@ -180,30 +182,40 @@ class ShellExecuteTool(BaseTool):
                 os.chdir(working_dir)
 
             try:
-                # Build env with augmented PATH so user-local tools (uv, pipx, etc.)
-                # are discoverable even when the server was launched without a login shell.
-                env = os.environ.copy()
-                if not is_windows:
-                    extra_bins = [
-                        os.path.expanduser('~/.local/bin'),
-                        os.path.expanduser('~/.ppxai/bin'),
-                    ]
-                    current_path = env.get('PATH', '')
-                    additions = [p for p in extra_bins if p not in current_path]
-                    if additions:
-                        env['PATH'] = os.pathsep.join(additions) + os.pathsep + current_path
+                # Resolve shell binary and login mode from config.
+                # shell_bin: path to shell (e.g. /bin/zsh). Defaults to system default.
+                # login_shell: invoke as login shell (-l) so shell profile is sourced,
+                #   giving the subprocess the same PATH and env as an interactive terminal.
+                shell_bin = shell_config.get("shell_bin") if not is_windows else None
+                login_shell = shell_config.get("login_shell", False) and not is_windows
 
-                # Execute command with shell (timeout configurable via config, v1.15.2)
-                result = subprocess.run(
-                    command,
-                    shell=True,
-                    capture_output=True,
-                    text=True,
-                    timeout=timeout,
-                    encoding='utf-8' if not is_windows else None,
-                    errors='replace',
-                    env=env,
-                )
+                if shell_bin:
+                    # Explicit shell: run as [shell_bin, (-l,) -c, command]
+                    cmd_list = [shell_bin]
+                    if login_shell:
+                        cmd_list.append('-l')
+                    cmd_list.extend(['-c', command])
+                    result = subprocess.run(
+                        cmd_list,
+                        shell=False,
+                        capture_output=True,
+                        text=True,
+                        timeout=timeout,
+                        errors='replace',
+                        cwd=working_dir if working_dir else None,
+                    )
+                else:
+                    # Default: let Python pick the system shell (/bin/sh on Unix)
+                    result = subprocess.run(
+                        command,
+                        shell=True,
+                        capture_output=True,
+                        text=True,
+                        timeout=timeout,
+                        encoding='utf-8' if not is_windows else None,
+                        errors='replace',
+                        cwd=working_dir if working_dir else None,
+                    )
 
                 # Combine stdout and stderr
                 output = ""
