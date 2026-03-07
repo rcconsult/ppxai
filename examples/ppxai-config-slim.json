@@ -128,6 +128,8 @@
   "tools": {
     "shell": {
       "timeout": 120,
+      "shell_bin": null,
+      "login_shell": false,
       "require_consent": true,
       "dangerous_commands": [
         "^rm\\s+", "^mv\\s+", "^dd\\s+", "^chmod\\s+", "^chown\\s+",
