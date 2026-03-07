@@ -5,4 +5,4 @@ so it can be safely imported by the server without triggering
 TUI dependencies like prompt_toolkit.
 """
 
-__version__ = "1.16.2"
+__version__ = "1.17.0.dev0"
