@@ -16,7 +16,10 @@ import webbrowser
 from pathlib import Path
 
 # Version - keep in sync with ppxai/__init__.py
-__version__ = "1.15.6"
+try:
+    from ppxai.version import __version__
+except ImportError:
+    __version__ = "1.16.2"  # fallback when running as frozen binary without ppxai package
 
 
 def get_resource_path(relative_path: str) -> Path:
