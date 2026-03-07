@@ -154,13 +154,18 @@ New `tools.shell` config keys in `ppxai-config.json`:
 
 Both default to `null`/`false` for backwards compatibility — existing behaviour is unchanged.
 
-### Three Post-Release Bugs
+### Post-Release Bug Fixes
 
 | Bug | Fix |
 |-----|-----|
 | `Key.ctrl` binding removed (Textual deprecation) | Replaced with `ctrl+` string bindings |
 | `initResizeHandle` null crash when sidebar absent | Added null guard before accessing element |
 | Stale file tree paths after working dir change | Tree now re-roots on `working_dir_changed` event |
+| Inline image disappears after `stream_end` | `stream_end` now appends inline image markdown instead of overwriting `fullContent` |
+| Redundant `display_file` tool result bubble | `showToolResult` skips bubble when `data.tool === 'display_file'`; image/file already visible |
+| Stale `expandedDirs` after cd | `refresh(clearExpanded=true)` collapses old subpaths on working dir change; fixes 404 storms |
+| File tree flickers on every chat send | `working_dir_changed` debounce skips refresh when path unchanged (session restore replays same cwd) |
+| AI text inserted above inline image | `stream_end` renders image before text, matching the order shown during streaming |
 
 ### Server: Stale Session Pointer
 
