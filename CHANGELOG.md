@@ -5,6 +5,34 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.2] - 2026-03-07
+
+**Focus:** Web app RightPanelFrame, file tree sidebar, inline images, web refactor, server fixes
+
+### Added
+
+- **Web app: RightPanelFrame** — view stack navigator with LRU eviction, dedup, back/forward navigation, pin, and position indicator; full Playwright coverage (34 tests)
+- **Web app: view types** — `CodeEditorView` (unified view/edit with CodeMirror 6), `MarkdownFileView` (rendered/source/edit), `DataFileView` (table/tree for CSV/JSON/YAML/TOML/HCL), `ImageFileView` (click-to-zoom), `PdfFileView` (embedded iframe)
+- **Web app: collapsible file tree sidebar** — VSCode-style browser; lazy-load via `/files/list`, drag-to-resize, left-click preview, right-click `@file` inject, `localStorage` state persistence
+- **Web app: inline image preview** — images in chat bubbles render inline; click to open lightbox zoom overlay
+- **Web app refactor** — `ApiClient` for all fetch calls, `CommandDispatcher` (slash command routing), `StreamHandler` (proper buffer/RAF rendering), `AppState` (centralised state), virtual scroll (60-message window)
+
+### Fixed
+
+- **Web app: side panel saves to wrong path** — `/files/read` returned `path.name` (basename); now returns relative path from working dir; `app.js` prefers original `filepath` over `data.filename` in editor
+- **Validator false positive on apology** — `_claims_success()` now returns `False` immediately when response contains apology phrases ("apologies", "you are right", "I missed", etc.)
+- **Inline `<think>` block parsing** — Qwen3 via vLLM: inline thinking blocks now routed to `REASONING_CHUNK` events instead of leaking into response text
+- **Three post-release bugs** — `Key.ctrl` binding removed (Textual deprecation), `initResizeHandle` null crash when sidebar element missing, stale file tree paths after working dir change
+- **Stale session pointer** — last-session pointer now cleared if session file has been deleted
+- **Absolute/home paths in file API** — `/files/list` and `/files/tree` accept absolute paths and `~`-prefixed paths
+- **Default working dir** — engine working dir now initialised to `Path.home()` on session creation (fixes binary CWD being `/`)
+- **Redundant `set_model` calls** — `/provider` switch no longer triggers 3–4 redundant `set_model` calls
+
+### Changed
+
+- **Default models updated** — `ppxai-config.json`: sonar-pro (Perplexity), gemini-3-flash-preview (Gemini), gpt-4.1-mini (OpenAI default), gpt-5.1-codex-mini (OpenAI coding)
+- **AGENTS.md** — Qwen3-4B model hints added; provider hints expanded for `local`, `asusai-vllm`, `openai`, `gemini`; global preferences reorganized
+
 ## [1.16.1] - 2026-03-01
 
 **Focus:** FileTree browser, CommandFactory server pattern, unified session restore, pre-release tech debt
