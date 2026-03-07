@@ -91,8 +91,14 @@ class FileTreeComponent {
 
     /**
      * Reload root (and any already-expanded subdirs).
+     * @param {boolean} [clearExpanded=false] - When true, collapse all expanded dirs
+     *   first (used when working directory changes to avoid stale 404 paths).
      */
-    async refresh() {
+    async refresh(clearExpanded = false) {
+        if (clearExpanded) {
+            this.expandedDirs.clear();
+            this._persistExpanded();
+        }
         this.dirContents.clear();
         this.errors.clear();
         await this._loadDir('');

@@ -913,6 +913,8 @@ class PpxaiApp {
         const msgEl = this.addMessage('assistant', '', true);
         const contentEl = msgEl.querySelector('.message-content');
         let fullContent = '';
+        // Track inline image markdown appended during streaming so stream_end doesn't lose it
+        this._streamInlineImages = '';
 
         // Track this as the current assistant message for correct tool call ordering
         this.state.currentAssistantMessage = msgEl;
@@ -972,9 +974,11 @@ class PpxaiApp {
             case 'stream_end':
                 // v1.13.2: Clear thinking indicator on stream end
                 this.clearThinkingIndicator(contentEl);
-                // Full response (especially when tools are used)
+                // Full response (especially when tools are used).
+                // Append any inline image markdown that was injected during streaming —
+                // stream_end carries the canonical text-only response from the server.
                 if (event.data && event.data.trim()) {
-                    fullContent = event.data;
+                    fullContent = event.data + (this._streamInlineImages || '');
                     contentEl.innerHTML = this.renderMarkdown(fullContent);
                 } else if (!fullContent) {
                     // v1.13.2: Handle empty responses from AI (common with GPT-OSS 120B after tool iterations)
@@ -1037,7 +1041,7 @@ class PpxaiApp {
                     // working_dir_changed events in quick succession; only refresh once.
                     if (this._fileTree) {
                         clearTimeout(this._fileTreeRefreshTimer);
-                        this._fileTreeRefreshTimer = setTimeout(() => this._fileTree.refresh(), 300);
+                        this._fileTreeRefreshTimer = setTimeout(() => this._fileTree.refresh(true), 300);
                     }
                 }
                 break;
@@ -1082,7 +1086,11 @@ class PpxaiApp {
                     if (inlineImageExts.has(imgExt)) {
                         const imgUrl = `${this.apiClient.serverUrl}/files/image/${encodeURIComponent(fp)}`;
                         const basename = fp.split('/').pop().split('\\').pop();
-                        fullContent += `\n\n![${basename}](${imgUrl})\n`;
+                        const inlineImgMd = `\n\n![${basename}](${imgUrl})\n`;
+                        fullContent += inlineImgMd;
+                        // Keep a separate copy so stream_end can re-append it (stream_end
+                        // overwrites fullContent with the server's text-only response).
+                        this._streamInlineImages = (this._streamInlineImages || '') + inlineImgMd;
                         contentEl.innerHTML = this.renderMarkdown(fullContent);
                         // Click inline image → zoom overlay (lightbox)
                         const img = contentEl.querySelector(`img[src="${imgUrl}"]`);
@@ -1460,6 +1468,10 @@ class PpxaiApp {
     }
 
     showToolResult(data) {
+        // display_file results are already handled inline (image in chat bubble or
+        // file opened in RightPanelFrame) — no separate tool result bubble needed.
+        if (data && data.tool === 'display_file') return;
+
         const msgEl = document.createElement('div');
         msgEl.className = 'message tool-message tool-result';
 
