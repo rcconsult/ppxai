@@ -89,9 +89,10 @@ sudo. Pre-authorising these commands removes the interactive terminal requiremen
 ```bash
 sudo tee /private/etc/sudoers.d/colima-init << 'EOF'
 # Pre-authorise colima network setup — eliminates interactive sudo prompt
-# Allows colima to write its own sudoers file (/etc/sudoers.d/colima)
+# Allow colima to write /etc/sudoers.d/colima (tried via sh -c and tee)
 %staff ALL=(root:wheel) NOPASSWD:NOSETENV: /bin/sh -c cat > /etc/sudoers.d/colima
-# Allows colima to start/stop the socket_vmnet daemon
+%staff ALL=(root:wheel) NOPASSWD:NOSETENV: /usr/bin/tee /private/etc/sudoers.d/colima
+# Allow colima to start/stop the socket_vmnet daemon
 %staff ALL=(root:wheel) NOPASSWD:NOSETENV: /opt/colima/bin/socket_vmnet *
 %staff ALL=(root:wheel) NOPASSWD:NOSETENV: /usr/bin/pkill -F /private/var/run/lima/shared_socket_vmnet.pid
 %staff ALL=(root:wheel) NOPASSWD:NOSETENV: /usr/bin/pkill -F /private/var/run/lima/bridged_socket_vmnet.pid
