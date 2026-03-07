@@ -30,6 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **File tree refresh storm** — `working_dir_changed` events debounced (300ms); session restore no longer triggers multiple `/files/list` calls
 - **Validator false positive: success-after-retries** — `_check_success_after_failure` now only flags when the *most recent* tool call failed; earlier failures in a retry sequence no longer cause false `claim_contradicts_result` errors
 - **Shell: configurable shell binary and login mode** — new `tools.shell.shell_bin` (e.g. `"/bin/zsh"`) and `tools.shell.login_shell` (bool) config keys; setting `login_shell: true` invokes the shell with `-l` so the full user environment (PATH, nvm, pyenv, etc.) is sourced, matching the user's interactive terminal
+- **Inline image disappears after stream_end** — `stream_end` now appends inline image markdown to the server's text response rather than overwriting `fullContent`
+- **Redundant display_file tool result bubble** — `showToolResult` now skips the bubble when `data.tool === 'display_file'`; image is already visible inline and non-image files open in RightPanelFrame
+- **Stale expandedDirs after cd** — `FileTreeComponent.refresh(clearExpanded=true)` collapses old subpaths on working dir change, eliminating 404 storms and doubled path segments
+- **File tree flickers on every chat send** — `working_dir_changed` debounce now skips refresh when path hasn't changed; session restore replays the same cwd causing needless `refresh(true)` calls
+- **AI text inserted above inline image** — `stream_end` now renders inline images before the AI text response, matching the order shown during streaming
 
 ### Changed
 

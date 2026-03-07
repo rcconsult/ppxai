@@ -2,7 +2,40 @@
 
 This document describes the high-level architecture and import patterns used in the ppxai codebase.
 
-## Module Hierarchy
+## Full Stack Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Clients                                                        │
+│  ┌────────────┐  ┌────────────────┐  ┌─────────────────────┐   │
+│  │ ppxai (TUI)│  │ ppxaide (TUI)  │  │ Web App / VSCode     │   │
+│  │ Rich-based │  │ Textual-based  │  │ ppxai-desktop binary │   │
+│  └─────┬──────┘  └───────┬────────┘  └────────┬────────────┘   │
+│        │  direct          │  direct            │  HTTP/SSE      │
+└────────┼──────────────────┼────────────────────┼────────────────┘
+         │                  │                    │
+         ▼                  ▼                    ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  ppxai/server/http.py   (FastAPI, REST + SSE)                   │
+│  POST /chat  GET /stream  GET /files/list  POST /command  …     │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  ppxai/engine/client.py   (EngineClient facade)                 │
+│  restore_session()  chat()  chat_with_tools()  set_provider()   │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+              ┌──────────────┼──────────────┐
+              ▼              ▼              ▼
+      providers/       tools/          session/
+      BaseProvider    manager.py      session.py
+      GeminiProvider  builtin/        checkpoint
+      OpenAIProvider  validator.py
+      PerplexityProv
+```
+
+## Python Module Hierarchy
 
 ```
 ppxai/
@@ -485,10 +518,92 @@ def test_exception_safety():
 
 This pattern should be applied to:
 - ✅ StatusBar badge management (implemented)
-- ⏳ EngineClient provider/model switching (planned)
+- ✅ Session state management — `EngineClient.restore_session()` (v1.16.1)
 - ⏳ Context injection (`@file`, `@git`, etc.) (planned)
-- ⏳ Session state management (planned)
 - ⏳ File operations with undo (planned)
 - ⏳ Multi-step tool execution (planned)
 
 **Rule:** Any operation that modifies multiple related pieces of state should use this pattern.
+
+---
+
+## Web App Architecture (v1.16.x)
+
+The web app (`ppxai/web/`) serves as the UI for `ppxai-desktop` and the browser-based client. It communicates with `ppxai/server/http.py` via REST + SSE.
+
+### File Structure
+
+```
+ppxai/web/
+├── index.html                          # Single-page app shell
+├── app.js                              # PpxaiApp root class (~2,100 lines after v1.16.2 refactor)
+├── shared/                             # Framework-level modules
+│   ├── api-client.js                   # ApiClient — all fetch() calls, timeout, error shape
+│   ├── app-state.js                    # AppState — centralised state with listener notifications
+│   ├── stream-handler.js               # StreamHandler — SSE buffer, RAF rendering, typed events
+│   └── command-dispatcher.js           # CommandDispatcher — slash command routing
+│       commands/                       # Per-group command handlers
+│       ├── file-commands.js            # /show, /edit, /ls, /tree, /cd, /pwd, /preview
+│       ├── session-commands.js         # /save, /load, /sessions, /clear, /export
+│       ├── model-commands.js           # /provider, /model, /tools, /agent
+│       └── …
+├── components/
+│   ├── file-tree.js                    # FileTreeComponent — collapsible sidebar (v1.16.2)
+│   ├── right-panel-frame.js            # RightPanelFrame — LRU view stack navigator (v1.16.2)
+│   └── views/
+│       ├── base-view.js                # BaseView ABC — mount/unmount/getState/setState protocol
+│       ├── code-editor-view.js         # CodeEditorView — CodeMirror 6, unified view/edit
+│       ├── markdown-file-view.js       # MarkdownFileView — rendered / source / edit modes
+│       ├── data-file-view.js           # DataFileView — table/tree for CSV/JSON/YAML/TOML/HCL
+│       ├── image-file-view.js          # ImageFileView — <img> + click-to-zoom
+│       └── pdf-file-view.js            # PdfFileView — <embed> iframe
+└── styles/
+    ├── main.css                        # Global styles
+    ├── file-tree.css                   # Sidebar styles
+    └── right-panel-frame.css           # Frame chrome + view styles
+```
+
+### Module Dependency Graph (Web)
+
+```
+app-state.js          (no deps — leaf)
+api-client.js         (no deps — leaf)
+         ↓
+stream-handler.js     (uses api-client)
+command-dispatcher.js (uses api-client, app-state)
+         ↓
+base-view.js          (uses api-client, app-state)
+         ↓
+*-view.js             (extend BaseView)
+         ↓
+right-panel-frame.js  (uses views, app-state)
+file-tree.js          (uses api-client — standalone, no app-state dep)
+         ↓
+app.js                (PpxaiApp — orchestrates all modules)
+```
+
+### Key Patterns
+
+**AppState** — centralised key-value store with per-key listeners. Views access `serverUrl`, `sessionHeaders`, and config via `appState.get(key)`. No direct import of app-level globals.
+
+**RightPanelFrame** — LRU view stack. `push(view)` deduplicates by path, evicts oldest non-pinned view when full (default depth 10). Back/forward navigation with `Cmd+←/→` (macOS) or `Alt+←/→`. `getState()`/`setState()` on views preserve scroll position and editor cursor across nav.
+
+**FileTreeComponent** — standalone (no AppState). Lazy-loads directory contents via `GET /files/list`. `refresh(clearExpanded=true)` collapses all expanded dirs when working directory changes (prevents stale 404 paths). `onDirCd` callback fires for `..`, double-click, and right-click on directories.
+
+**StreamHandler** — wraps the SSE fetch with a proper line buffer and `requestAnimationFrame`-gated rendering. Exposes an async iterator; `handleStreamEvent()` in app.js dispatches on `event.type`.
+
+**Inline image flow** — when `display_file` SSE fires for an image extension: (1) inline `<img>` injected into chat bubble via `/files/image/{path}` endpoint, tracked in `_streamInlineImages`; (2) `stream_end` prepends `_streamInlineImages` to the server's text response to preserve order; (3) `showToolResult` skips the bubble for `display_file` events.
+
+### Server ↔ Web API (key endpoints)
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/chat` | POST | Stream chat; returns SSE events |
+| `/files/list` | GET | Directory listing (`at_fs_root` flag) |
+| `/files/read` | POST | Read file (returns relative path from working dir) |
+| `/files/write` | POST | Write file |
+| `/files/image/{path}` | GET | Serve image binary for inline display |
+| `/command` | POST | CommandFactory server pattern (unified `/usage`, `/status`, etc.) |
+| `/set_working_dir` | POST | Change working directory (REST, no SSE emitted) |
+| `/interrupt` | POST | Abort current streaming response |
+| `/checkpoint/undo` | POST | Undo last agent operation |

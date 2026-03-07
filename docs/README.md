@@ -34,7 +34,7 @@
 | [DGX Spark Setup](DGX-SPARK-SETUP.md) | vLLM + Ollama on NVIDIA DGX Spark |
 | [vLLM Tool Calling](vllm-tool-calling-guide.md) | Hermes vs Harmony, native vs prompt-based |
 | [Prompt-Based Tool Calling](prompt-based-tool-calling.md) | Developer guide for non-native tool calling |
-| [TODO v1.16.1](TODO-v1.16.1.md) | v1.16.1 task list (complete) |
+| [Release Notes v1.16.2](RELEASE-NOTES-v1.16.2.md) | RightPanelFrame, file tree sidebar, inline images, web refactor, shell config |
 | [Release Notes v1.16.1](RELEASE-NOTES-v1.16.1.md) | FileTree widget, CommandFactory server pattern, unified session restore |
 | [Release Notes v1.15.6](RELEASE-NOTES-v1.15.6.md) | Native OpenAI provider, model profiles, benchmark analysis |
 | [Release Notes v1.15.5](RELEASE-NOTES-v1.15.5.md) | Multi-line input, Escape key fix, build fix |
@@ -217,5 +217,5 @@ A: Type `@filename`, `@git`, or `@tree` in your messages. See [Context Injection
 
 ---
 
-**Current Version**: v1.16.2-dev
+**Current Version**: v1.16.2
 **Last Updated**: 2026-03-07

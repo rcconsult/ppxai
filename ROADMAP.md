@@ -618,24 +618,26 @@ ppxai/tui/                     # New module (Textual-based)
 
 ## Completed (v1.16.2)
 
-### v1.16.2 - Web App Refactor + RightPanelFrame + AGENTS.md Tuning
+### v1.16.2 - Web App Refactor + RightPanelFrame + File Tree + Inline Images
 
-**Status:** ✅ Complete (2026-03-05)
+**Status:** ✅ Complete (2026-03-07)
 **Branch:** bugfix/1.16.2
-**TODO:** [docs/TODO-v1.16.2.md](docs/TODO-v1.16.2.md)
+**Release Notes:** [docs/RELEASE-NOTES-v1.16.2.md](docs/RELEASE-NOTES-v1.16.2.md)
 
 | Feature | Description | Status |
 |---------|-------------|--------|
 | **Bug fixes** | Wrong save path, validator false positive, redundant set_model, server stale session | ✅ Done |
-| **Web app file tree** | Collapsible sidebar with @file injection, drag-resize | ✅ Done |
-| **Web app refactor** | app.js 4,264→1,800 lines: ApiClient, CommandDispatcher, StreamHandler, AppState | ✅ Done |
-| **RightPanelFrame** | View stack navigator with 5 view types, LRU eviction, back/forward nav | ✅ Done |
-| **Virtual scroll** | Buffer-based message virtualization for long sessions | ✅ Done |
+| **Web app file tree** | Collapsible sidebar with @file injection, drag-resize, `..` parent nav, `at_fs_root` | ✅ Done |
+| **Web app refactor** | app.js 4,264→~2,100 lines: ApiClient, CommandDispatcher, StreamHandler, AppState | ✅ Done |
+| **RightPanelFrame** | View stack navigator with 5 view types, LRU eviction, back/forward nav, pin | ✅ Done |
+| **Virtual scroll** | Buffer-based message virtualization (60-message DOM window) | ✅ Done |
 | **Inline `<think>` routing** | Qwen3/vLLM reasoning blocks routed as REASONING_CHUNK | ✅ Done |
 | **AGENTS.md tuning** | Qwen3-4B model hints, benchmark runs (76-82%), anti-pattern fix | ✅ Done |
-| **Inline chat images** | Web app: `GET /files/image/{path}` + markdown injection in chat bubbles | ✅ Done |
-| **Server fixes** | Stale session pointer, absolute paths, default working dir | ✅ Done |
-| **1,628 tests passing** | +4 from v1.16.1, 6 known TUI keyboard nav failures | ✅ Done |
+| **Inline chat images** | Web app: images from `display_file` render inline in chat; lightbox zoom | ✅ Done |
+| **Shell config** | `tools.shell.shell_bin` + `login_shell` — configurable shell and login mode | ✅ Done |
+| **Server fixes** | Stale session pointer, absolute/home paths in file API, default working dir | ✅ Done |
+| **Web app UX fixes** | File tree flicker on chat send, image ordering, stale expandedDirs after cd | ✅ Done |
+| **1,639 unit tests** | 200 Playwright E2E tests (up from ~115); +85 new web tests | ✅ Done |
 
 ---
 

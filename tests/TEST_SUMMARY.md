@@ -3,11 +3,14 @@
 ## Overview
 Comprehensive test suite for all ppxai commands with **both providers** (Perplexity and Custom).
 
-## Test Statistics
-- **Total Command Tests**: 62
-- **Test Classes**: 5
+> **Note:** This file documents the command test classes. For overall suite totals see below.
+
+## Test Statistics (v1.16.2)
+- **Total pytest tests**: 1,639 (up from 62 command tests at time of writing)
+- **Playwright E2E tests**: 200
+- **Command Test Classes**: 5 (documented in detail below)
 - **Providers Tested**: 2 (Perplexity AI + Custom Self-Hosted)
-- **Status**: ✅ All 62 tests passing
+- **Status**: ✅ All tests passing
 
 ## Test Coverage
 
