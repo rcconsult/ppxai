@@ -72,6 +72,18 @@ VSCode-style file browser in the web app (left of chat):
 - Drag right edge of sidebar to resize
 - Auto-refreshes when working directory changes
 
+**Directory navigation (cd) interactions:**
+
+| Action | Dirs | Files | `..` entry |
+|--------|------|-------|-----------|
+| Single-click | Expand / collapse | Preview (right panel) | cd to parent |
+| Double-click | **cd into dir** (new working dir root) | Open for editing | — |
+| Right-click | **cd here** (same as dbl-click) | Inject `@file:path` | — |
+
+- `..` entry at top of tree lets you navigate up to the parent directory
+- `..` is hidden when the server reports `at_fs_root: true` (filesystem root)
+- cd actions fire `handleCdCommand` → server `setWorkingDir` → `working_dir_changed` SSE → folder badge + tree both update
+
 ### Web App: Inline Image Preview + Lightbox
 
 Images served by the AI (via `display_file` or tool results) now render inline in chat bubbles:

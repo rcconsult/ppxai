@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Web app: RightPanelFrame** — view stack navigator with LRU eviction, dedup, back/forward navigation, pin, and position indicator; full Playwright coverage (34 tests)
 - **Web app: view types** — `CodeEditorView` (unified view/edit with CodeMirror 6), `MarkdownFileView` (rendered/source/edit), `DataFileView` (table/tree for CSV/JSON/YAML/TOML/HCL), `ImageFileView` (click-to-zoom), `PdfFileView` (embedded iframe)
-- **Web app: collapsible file tree sidebar** — VSCode-style browser; lazy-load via `/files/list`, drag-to-resize, left-click preview, right-click `@file` inject, `localStorage` state persistence
+- **Web app: collapsible file tree sidebar** — VSCode-style browser; lazy-load via `/files/list`, drag-to-resize, left-click preview, right-click `@file` inject, `localStorage` state persistence; `..` parent entry at top, double-click dir to cd into it, right-click dir to cd here; `/files/list` response includes `at_fs_root` flag
 - **Web app: inline image preview** — images in chat bubbles render inline; click to open lightbox zoom overlay
 - **Web app refactor** — `ApiClient` for all fetch calls, `CommandDispatcher` (slash command routing), `StreamHandler` (proper buffer/RAF rendering), `AppState` (centralised state), virtual scroll (60-message window)
 
