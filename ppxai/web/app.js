@@ -978,7 +978,9 @@ class PpxaiApp {
                 // Append any inline image markdown that was injected during streaming —
                 // stream_end carries the canonical text-only response from the server.
                 if (event.data && event.data.trim()) {
-                    fullContent = event.data + (this._streamInlineImages || '');
+                    // Inline images precede the AI text — preserves the order shown
+                    // during streaming (display_file fires before the final response).
+                    fullContent = (this._streamInlineImages || '') + event.data;
                     contentEl.innerHTML = this.renderMarkdown(fullContent);
                 } else if (!fullContent) {
                     // v1.13.2: Handle empty responses from AI (common with GPT-OSS 120B after tool iterations)
@@ -1039,9 +1041,17 @@ class PpxaiApp {
                     this.updateFolderBadge(event.data.path);
                     // Debounce file tree refresh — session restore fires multiple
                     // working_dir_changed events in quick succession; only refresh once.
+                    // Also skip the refresh if cwd hasn't actually changed (avoids flicker
+                    // on every chat send when session restore replays the same cwd).
                     if (this._fileTree) {
+                        const newPath = event.data.path;
                         clearTimeout(this._fileTreeRefreshTimer);
-                        this._fileTreeRefreshTimer = setTimeout(() => this._fileTree.refresh(true), 300);
+                        this._fileTreeRefreshTimer = setTimeout(() => {
+                            if (newPath !== this._fileTreeCurrentPath) {
+                                this._fileTreeCurrentPath = newPath;
+                                this._fileTree.refresh(true);
+                            }
+                        }, 300);
                     }
                 }
                 break;

@@ -728,7 +728,10 @@ class CommandDispatcher {
             // Refresh file tree immediately — setWorkingDir is a REST call,
             // not a chat stream, so no working_dir_changed SSE event is emitted.
             if (this.app._fileTree) {
-                // Clear expanded dirs — old subpaths are invalid in the new working dir
+                // Clear expanded dirs — old subpaths are invalid in the new working dir.
+                // Also sync _fileTreeCurrentPath so working_dir_changed debounce won't
+                // fire a redundant refresh if SSE replays this same path later.
+                this.app._fileTreeCurrentPath = data.path;
                 this.app._fileTree.refresh(true);
             }
         } catch (error) {
