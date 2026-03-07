@@ -1246,10 +1246,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#three-post-release-bugs" class="md-nav__link">
+  <a href="#post-release-bug-fixes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Three Post-Release Bugs
+        Post-Release Bug Fixes
       
     </span>
   </a>
@@ -1560,7 +1560,7 @@ collapsible thinking panel rather than polluting the response text.</p>
   This gives the subprocess the same PATH and environment as an interactive terminal session, making tools like <code>uv</code>, <code>nvm</code>, <code>pyenv</code>, <code>conda</code>, etc. available without requiring system-wide installation.</li>
 </ul>
 <p>Both default to <code>null</code>/<code>false</code> for backwards compatibility — existing behaviour is unchanged.</p>
-<h3 id="three-post-release-bugs">Three Post-Release Bugs<a class="headerlink" href="#three-post-release-bugs" title="Permanent link">&para;</a></h3>
+<h3 id="post-release-bug-fixes">Post-Release Bug Fixes<a class="headerlink" href="#post-release-bug-fixes" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
@@ -1580,6 +1580,26 @@ collapsible thinking panel rather than polluting the response text.</p>
 <tr>
 <td>Stale file tree paths after working dir change</td>
 <td>Tree now re-roots on <code>working_dir_changed</code> event</td>
+</tr>
+<tr>
+<td>Inline image disappears after <code>stream_end</code></td>
+<td><code>stream_end</code> now appends inline image markdown instead of overwriting <code>fullContent</code></td>
+</tr>
+<tr>
+<td>Redundant <code>display_file</code> tool result bubble</td>
+<td><code>showToolResult</code> skips bubble when <code>data.tool === 'display_file'</code>; image/file already visible</td>
+</tr>
+<tr>
+<td>Stale <code>expandedDirs</code> after cd</td>
+<td><code>refresh(clearExpanded=true)</code> collapses old subpaths on working dir change; fixes 404 storms</td>
+</tr>
+<tr>
+<td>File tree flickers on every chat send</td>
+<td><code>working_dir_changed</code> debounce skips refresh when path unchanged (session restore replays same cwd)</td>
+</tr>
+<tr>
+<td>AI text inserted above inline image</td>
+<td><code>stream_end</code> renders image before text, matching the order shown during streaming</td>
 </tr>
 </tbody>
 </table>
