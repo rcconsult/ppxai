@@ -1033,9 +1033,11 @@ class PpxaiApp {
                 // Update folder badge when working directory changes (v1.13.2)
                 if (event.data && event.data.path) {
                     this.updateFolderBadge(event.data.path);
-                    // Refresh file tree if open
+                    // Debounce file tree refresh — session restore fires multiple
+                    // working_dir_changed events in quick succession; only refresh once.
                     if (this._fileTree) {
-                        this._fileTree.refresh();
+                        clearTimeout(this._fileTreeRefreshTimer);
+                        this._fileTreeRefreshTimer = setTimeout(() => this._fileTree.refresh(), 300);
                     }
                 }
                 break;

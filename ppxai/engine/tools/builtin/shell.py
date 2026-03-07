@@ -180,6 +180,19 @@ class ShellExecuteTool(BaseTool):
                 os.chdir(working_dir)
 
             try:
+                # Build env with augmented PATH so user-local tools (uv, pipx, etc.)
+                # are discoverable even when the server was launched without a login shell.
+                env = os.environ.copy()
+                if not is_windows:
+                    extra_bins = [
+                        os.path.expanduser('~/.local/bin'),
+                        os.path.expanduser('~/.ppxai/bin'),
+                    ]
+                    current_path = env.get('PATH', '')
+                    additions = [p for p in extra_bins if p not in current_path]
+                    if additions:
+                        env['PATH'] = os.pathsep.join(additions) + os.pathsep + current_path
+
                 # Execute command with shell (timeout configurable via config, v1.15.2)
                 result = subprocess.run(
                     command,
@@ -188,7 +201,8 @@ class ShellExecuteTool(BaseTool):
                     text=True,
                     timeout=timeout,
                     encoding='utf-8' if not is_windows else None,
-                    errors='replace'
+                    errors='replace',
+                    env=env,
                 )
 
                 # Combine stdout and stderr

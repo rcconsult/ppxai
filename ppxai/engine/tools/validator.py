@@ -279,26 +279,30 @@ class ResponseValidator:
         return False
 
     def _check_success_after_failure(self, response: str) -> Optional[ValidationWarning]:
-        """Check if model claims success but a tool failed."""
-        # Check if response claims success
-        claims_success = self._claims_success(response)
+        """Check if model claims success but the most recent tool call failed.
 
-        if not claims_success:
+        Only checks the last tool call — if the most recent call succeeded, any
+        earlier failures are part of a valid retry sequence and the success claim
+        is correct (success-after-retries pattern).
+        """
+        if not self._claims_success(response):
             return None
 
-        # Check recent tool results for failures
-        for record in reversed(self._tool_calls[-5:]):  # Check last 5 calls
-            if not record.success:
-                # Check if the failure is relevant to what's being claimed
-                result_lower = record.result.lower()
-                if any(re.search(p, result_lower, re.IGNORECASE) for p in self.FAILURE_PATTERNS):
-                    return ValidationWarning(
-                        result=ValidationResult.CLAIM_CONTRADICTS_RESULT,
-                        severity="error",
-                        message=f"Model claims success but {record.tool_name} returned an error",
-                        details=f"Tool result: {record.result[:200]}",
-                        suggested_action="Acknowledge the error and retry or use a different approach"
-                    )
+        if not self._tool_calls:
+            return None
+
+        # Only examine the most recent call: success after retries is valid.
+        last = self._tool_calls[-1]
+        if not last.success:
+            result_lower = last.result.lower()
+            if any(re.search(p, result_lower, re.IGNORECASE) for p in self.FAILURE_PATTERNS):
+                return ValidationWarning(
+                    result=ValidationResult.CLAIM_CONTRADICTS_RESULT,
+                    severity="error",
+                    message=f"Model claims success but {last.tool_name} returned an error",
+                    details=f"Tool result: {last.result[:200]}",
+                    suggested_action="Acknowledge the error and retry or use a different approach"
+                )
 
         return None
 
