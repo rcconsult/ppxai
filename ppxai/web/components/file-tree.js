@@ -3,14 +3,29 @@
  *
  * Features:
  * - Lazy-loads directory contents via /files/list
- * - Expand/collapse directories
+ * - Expand/collapse directories (single-click)
+ * - Double-click directory → cd into it (new working dir root)
+ * - Right-click directory → "cd here" context action
+ * - ".." parent entry at tree top → cd to parent directory
  * - Persists expanded state to localStorage
  * - Left-click file → preview callback (read-only)
  * - Double-click file → edit callback (editable)
  * - Right-click file → inject @file:path into chat
  * - Refresh button to reload current view
  *
- * @version 1.16.2
+ * Interaction model:
+ *   Folders:
+ *     single-click   → expand / collapse
+ *     double-click   → cd into directory (becomes new working dir root)
+ *     right-click    → cd here (same as double-click, for discoverability)
+ *   Files:
+ *     single-click   → preview (read-only in right panel)
+ *     double-click   → open for editing
+ *     right-click    → inject @file:path into chat input
+ *   ".." entry:
+ *     single-click   → cd to parent directory
+ *
+ * @version 1.16.3
  */
 
 class FileTreeComponent {
@@ -21,7 +36,8 @@ class FileTreeComponent {
      * @param {Function} options.getHeaders - Returns headers object for fetch calls
      * @param {Function} options.onFileClick - Called with relative path on left-click (preview)
      * @param {Function} options.onFileEdit - Called with relative path on double-click (edit)
-     * @param {Function} options.onFileInject - Called with relative path on right-click
+     * @param {Function} options.onFileInject - Called with relative path on right-click (files)
+     * @param {Function} options.onDirCd - Called with target path string when user cds into a dir
      */
     constructor(container, options = {}) {
         this.container = container;
@@ -30,6 +46,7 @@ class FileTreeComponent {
         this.onFileClick = options.onFileClick || (() => {});
         this.onFileEdit = options.onFileEdit || (() => {});
         this.onFileInject = options.onFileInject || (() => {});
+        this.onDirCd = options.onDirCd || (() => {});
         this._clickTimer = null;
 
         // Expanded dirs: Set of relative paths ('' = root is always loaded)
@@ -40,6 +57,8 @@ class FileTreeComponent {
         this.loadingDirs = new Set();
         // Error per path
         this.errors = new Map();
+        // Whether cwd is filesystem root (no ".." available)
+        this._atFsRoot = false;
 
         this._render();
         this.refresh();
@@ -106,6 +125,10 @@ class FileTreeComponent {
                 const data = await resp.json();
                 this.dirContents.set(relPath, data.files || []);
                 this.errors.delete(relPath);
+                // Detect whether we're at filesystem root by checking if parent exists
+                if (relPath === '') {
+                    this._atFsRoot = data.at_fs_root === true;
+                }
             }
         } catch (e) {
             this.errors.set(relPath, e.message);
@@ -131,7 +154,19 @@ class FileTreeComponent {
 
     _renderTree() {
         if (!this._treeEl) return;
-        this._treeEl.innerHTML = this._renderDir('', 0);
+        let html = '';
+        // ".." parent entry — always first, unless we're at filesystem root
+        if (!this._atFsRoot) {
+            html += `
+                <div class="ft-node ft-parent-dir" data-path=".." data-is-dir="1" data-is-parent="1"
+                     style="padding-left:8px" title="Go to parent directory">
+                    <span class="ft-chevron" style="visibility:hidden">▸</span>
+                    <span class="ft-icon">📁</span>
+                    <span class="ft-name ft-parent-label">..</span>
+                </div>`;
+        }
+        html += this._renderDir('', 0);
+        this._treeEl.innerHTML = html;
         this._attachListeners(this._treeEl);
     }
 
@@ -166,7 +201,7 @@ class FileTreeComponent {
                      data-path="${_ftEscHtml(entryRelPath)}"
                      data-is-dir="1"
                      style="padding-left:${indent}px"
-                     title="${_ftEscHtml(entryRelPath)}">
+                     title="Click: expand  |  Dbl-click: cd here  |  ${_ftEscHtml(entryRelPath)}">
                     <span class="ft-chevron">${chevron}</span>
                     <span class="ft-icon">📁</span>
                     <span class="ft-name">${_ftEscHtml(name)}</span>
@@ -191,15 +226,21 @@ class FileTreeComponent {
 
     _attachListeners(treeEl) {
         treeEl.querySelectorAll('.ft-node').forEach(node => {
+            const path = node.dataset.path;
+            const isDir = node.dataset.isDir === '1';
+            const isParent = node.dataset.isParent === '1';
+
             node.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                const path = node.dataset.path;
-                const isDir = node.dataset.isDir === '1';
-                if (isDir) {
+                if (isParent) {
+                    // ".." — always cd to parent
+                    this.onDirCd('..');
+                } else if (isDir) {
+                    // Regular dir: single-click = expand/collapse
                     this._toggleDir(path);
                 } else {
-                    // Delay single-click so a following dblclick can cancel it.
+                    // File: delay single-click so dblclick can cancel it
                     clearTimeout(this._clickTimer);
                     this._clickTimer = setTimeout(() => this.onFileClick(path), 220);
                 }
@@ -208,18 +249,23 @@ class FileTreeComponent {
             node.addEventListener('dblclick', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                clearTimeout(this._clickTimer);  // cancel pending single-click
-                const path = node.dataset.path;
-                if (node.dataset.isDir !== '1') {
+                clearTimeout(this._clickTimer);
+                if (isDir && !isParent) {
+                    // Double-click dir → cd into it (becomes new working dir root)
+                    this.onDirCd(path);
+                } else if (!isDir) {
+                    // Double-click file → open for editing
                     this.onFileEdit(path);
                 }
             });
 
             node.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
-                const path = node.dataset.path;
-                const isDir = node.dataset.isDir === '1';
-                if (!isDir) {
+                if (isDir && !isParent) {
+                    // Right-click dir → cd here
+                    this.onDirCd(path);
+                } else if (!isDir) {
+                    // Right-click file → inject @file ref
                     this.onFileInject(path);
                 }
             });

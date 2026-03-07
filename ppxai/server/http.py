@@ -1730,7 +1730,8 @@ async def list_files(
                 "is_dir": is_dir
             })
 
-    return {"files": files, "path": str(target)}
+    at_fs_root = target.parent == target  # True when cwd is filesystem root (e.g. /)
+    return {"files": files, "path": str(target), "at_fs_root": at_fs_root}
 
 
 @app.get("/files/tree")

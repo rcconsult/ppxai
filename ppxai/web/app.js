@@ -2057,6 +2057,7 @@ class PpxaiApp {
                         }
                     },
                     onFileInject: (relPath) => this._injectFileRef(relPath),
+                    onDirCd: (path) => this.commandDispatcher.handleCdCommand(path),
                 });
             } else {
                 this._fileTree.refresh();
