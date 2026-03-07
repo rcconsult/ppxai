@@ -242,7 +242,7 @@ class FileTreeComponent {
                 } else {
                     // File: delay single-click so dblclick can cancel it
                     clearTimeout(this._clickTimer);
-                    this._clickTimer = setTimeout(() => this.onFileClick(path), 220);
+                    this._clickTimer = setTimeout(() => this.onFileClick(path), 150);
                 }
             });
 
