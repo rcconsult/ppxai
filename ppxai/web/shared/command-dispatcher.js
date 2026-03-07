@@ -725,6 +725,11 @@ class CommandDispatcher {
             this.app.showSystemMessage(`Working directory changed to: \`${data.path}\``);
             // Update the folder badge
             this.app.updateFolderBadge(data.path);
+            // Refresh file tree immediately — setWorkingDir is a REST call,
+            // not a chat stream, so no working_dir_changed SSE event is emitted.
+            if (this.app._fileTree) {
+                this.app._fileTree.refresh();
+            }
         } catch (error) {
             this.app.showError(`Failed to change directory: ${error.message}`);
         }
