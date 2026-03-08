@@ -153,19 +153,19 @@ colima list
 Output:
 ```
 PROFILE    STATUS    ARCH     CPUS  MEMORY  DISK   RUNTIME      ADDRESS
-default    Running   x86_64   4     8GiB    60GiB  docker+k3s   192.168.105.x
+default    Running   x86_64   4     8GiB    60GiB  docker+k3s   192.168.106.2
 ```
 
 The `ADDRESS` column shows the routable VM IP. With QEMU NAT (fallback) it shows empty.
-With `--network-address` it shows a real `192.168.105.x` IP.
+With `--network-address` it shows a real IP on the `192.168.106.x` subnet (host network).
 
 ---
 
 ## Step 4 — Update /etc/hosts
 
 ```bash
-# Replace 192.168.105.x with the actual IP from `colima list`
-echo "192.168.105.x    ppxai.local" | sudo tee -a /etc/hosts
+# Replace 192.168.106.x with the actual IP from `colima list`
+echo "192.168.106.x    ppxai.local" | sudo tee -a /etc/hosts
 ```
 
 Verify TCP reachability (ping uses ICMP which is blocked by QEMU NAT; use curl instead):
@@ -188,7 +188,7 @@ kubectl get pods -A
 Expected:
 ```
 NAME     STATUS   ROLES           AGE   VERSION        INTERNAL-IP      ADDRESS
-colima   Ready    control-plane   ...   v1.35.0+k3s1   192.168.105.x   ...
+colima   Ready    control-plane   ...   v1.35.0+k3s1   192.168.106.x   ...
 
 NAMESPACE     NAME                                      READY   STATUS
 kube-system   coredns-...                               1/1     Running
@@ -236,7 +236,7 @@ colima delete
 
 - **Cause:** The VM has the QEMU NAT IP (`192.168.5.1`) instead of a real IP
 - **Fix:** Stop colima, run `colima start --network-address` from an interactive terminal
-- **Verify:** `colima list` — the ADDRESS column must show `192.168.105.x`, not empty
+- **Verify:** `colima list` — the ADDRESS column must show `192.168.106.x`, not empty
 
 ### ping ppxai.local fails but curl works
 
@@ -289,10 +289,10 @@ colima kubernetes reset
 
 ```
 macOS host
-  └── /etc/hosts: 192.168.105.x  ppxai.local
+  └── /etc/hosts: 192.168.106.x  ppxai.local
         │
         ▼ (vmnet shared network — routable)
-  colima VM (192.168.105.x)
+  colima VM (192.168.106.x)
     ├── k3s control plane
     ├── containerd (not Docker — k3s uses containerd for pods)
     ├── Docker daemon (for `docker build` from host)
