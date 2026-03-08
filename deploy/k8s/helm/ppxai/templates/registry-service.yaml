@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry
+  namespace: ppxai-system
+  labels:
+    app.kubernetes.io/name: ppxai
+    app.kubernetes.io/component: registry
+spec:
+  selector:
+    app: registry
+  ports:
+    - port: 5000
+      targetPort: 5000
+  type: ClusterIP

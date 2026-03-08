@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ppxai
+description: ppxai multi-user AI assistant — Kubernetes deployment
+type: application
+version: 0.1.0
+appVersion: "1.17.0"

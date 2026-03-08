@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry
+  namespace: ppxai-system
+  labels:
+    app.kubernetes.io/name: ppxai
+    app.kubernetes.io/component: registry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: registry
+  template:
+    metadata:
+      labels:
+        app: registry
+    spec:
+      containers:
+        - name: registry
+          image: registry:2
+          ports:
+            - containerPort: 5000
+          env:
+            - name: REGISTRY_STORAGE_DELETE_ENABLED
+              value: "true"
+          volumeMounts:
+            - name: registry-data
+              mountPath: /var/lib/registry
+      volumes:
+        - name: registry-data
+          emptyDir: {}

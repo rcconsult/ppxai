@@ -1,0 +1,29 @@
+# ppxai Helm chart values
+# All configurable parameters with sensible POC defaults
+
+ingress:
+  host: ppxai.local
+
+session:
+  maxSessions: 3
+  ttlMinutes: 10
+
+storage:
+  workspaceSize: 5Gi
+  tempSize: 2Gi
+
+registry:
+  storageSize: 1Gi
+
+image:
+  server: registry.ppxai-system.svc:5000/ppxai-server
+  webapp: registry.ppxai-system.svc:5000/ppxai-webapp
+  tag: latest
+  pullPolicy: Always
+
+# Provider API keys — override with --set or a secrets file (never commit real values)
+apiKeys:
+  perplexityApiKey: ""
+  openaiApiKey: ""
+  customApiKey: ""
+  customBaseUrl: ""

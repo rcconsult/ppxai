@@ -1,0 +1,31 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: build-ppxai-server
+  namespace: ppxai-system
+  labels:
+    app.kubernetes.io/name: ppxai
+    app.kubernetes.io/component: build
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: kaniko
+          image: gcr.io/kaniko-project/executor:latest
+          args:
+            - --dockerfile=/workspace/deploy/k8s/docker/Dockerfile.server
+            - --context=dir:///workspace
+            - --destination=registry.ppxai-system.svc:5000/ppxai-server:latest
+            - --insecure
+            - --skip-tls-verify
+            - --cache=false
+          volumeMounts:
+            - name: source
+              mountPath: /workspace
+      volumes:
+        - name: source
+          hostPath:
+            path: /Users/rado/git/utils/ppxai
+            type: Directory

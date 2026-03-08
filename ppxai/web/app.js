@@ -32,11 +32,14 @@
 class PpxaiApp {
     constructor() {
         // Configuration
-        // Use current page origin as server URL (since server serves the web UI)
+        // Use current page origin as server URL (since server serves the web UI).
+        // When deployed under a path prefix (e.g. /s/alice/), include the prefix
+        // so API calls route through the ingress to the correct per-user backend.
         // Fall back to localStorage or default only if origin is file:// or about:
         const pageOrigin = window.location.origin;
         const usePageOrigin = pageOrigin && !pageOrigin.startsWith('file:') && pageOrigin !== 'null';
-        this.serverUrl = usePageOrigin ? pageOrigin : (localStorage.getItem('ppxai-server-url') || 'http://127.0.0.1:54320');
+        const pathPrefix = window.location.pathname.match(/^(\/s\/[^/]+)/)?.[1] || '';
+        this.serverUrl = usePageOrigin ? (pageOrigin + pathPrefix) : (localStorage.getItem('ppxai-server-url') || 'http://127.0.0.1:54320');
 
         // Session ID for server session isolation (v1.14.0)
         // Each browser tab/window gets its own session ID
