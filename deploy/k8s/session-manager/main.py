@@ -1,0 +1,545 @@
+"""ppxai Session Manager — Kubernetes multi-user session lifecycle management.
+
+Endpoints:
+  POST   /sessions                    Create session (or return existing)
+  DELETE /sessions/{username}         Tear down session
+  POST   /sessions/{username}/heartbeat  Reset idle TTL
+  GET    /sessions                    List active sessions
+  GET    /health                      Health check
+
+Registry: per-user JSON at /registry/<username>/meta.json (on PVC).
+Resources per session: workspace PVC (Retain), temp PVC (Delete), Pod, Service, Ingress rule.
+"""
+
+import asyncio
+import json
+import logging
+import os
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Optional
+
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import Response
+from kubernetes import client as k8s, config as k8s_config
+from pydantic import BaseModel
+
+# ---------------------------------------------------------------------------
+# Config
+# ---------------------------------------------------------------------------
+
+NAMESPACE = os.getenv("NAMESPACE", "ppxai-system")
+REGISTRY_DIR = Path(os.getenv("REGISTRY_DIR", "/registry"))
+MAX_SESSIONS = int(os.getenv("MAX_SESSIONS", "3"))
+TTL_MINUTES = int(os.getenv("TTL_MINUTES", "10"))
+SERVER_IMAGE = os.getenv("SERVER_IMAGE", "registry.ppxai-system.svc:5000/ppxai-server:latest")
+WORKSPACE_SIZE = os.getenv("WORKSPACE_SIZE", "5Gi")
+TEMP_SIZE = os.getenv("TEMP_SIZE", "2Gi")
+INGRESS_NAME = os.getenv("INGRESS_NAME", "ppxai-sessions-ingress")
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+log = logging.getLogger("session-manager")
+
+# ---------------------------------------------------------------------------
+# Kubernetes clients
+# ---------------------------------------------------------------------------
+
+try:
+    k8s_config.load_incluster_config()
+except k8s_config.ConfigException:
+    k8s_config.load_kube_config()
+
+core = k8s.CoreV1Api()
+net = k8s.NetworkingV1Api()
+
+# ---------------------------------------------------------------------------
+# Registry helpers
+# ---------------------------------------------------------------------------
+
+
+class SessionMeta:
+    def __init__(
+        self,
+        username: str,
+        pod_name: str,
+        svc_name: str,
+        workspace_pvc: str,
+        temp_pvc: str,
+        created_at: str,
+        last_heartbeat: str,
+    ):
+        self.username = username
+        self.pod_name = pod_name
+        self.svc_name = svc_name
+        self.workspace_pvc = workspace_pvc
+        self.temp_pvc = temp_pvc
+        self.created_at = created_at
+        self.last_heartbeat = last_heartbeat
+
+    def to_dict(self) -> dict:
+        return self.__dict__.copy()
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "SessionMeta":
+        return cls(**d)
+
+
+def _meta_path(username: str) -> Path:
+    return REGISTRY_DIR / username / "meta.json"
+
+
+def _load_meta(username: str) -> Optional[SessionMeta]:
+    path = _meta_path(username)
+    if not path.exists():
+        return None
+    try:
+        return SessionMeta.from_dict(json.loads(path.read_text()))
+    except Exception as e:
+        log.warning(f"Corrupt meta for {username}: {e}")
+        return None
+
+
+def _save_meta(meta: SessionMeta) -> None:
+    path = _meta_path(meta.username)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(meta.to_dict(), indent=2))
+
+
+def _delete_meta(username: str) -> None:
+    path = _meta_path(username)
+    if path.exists():
+        path.unlink()
+    try:
+        path.parent.rmdir()
+    except OSError:
+        pass
+
+
+def _list_sessions() -> list[SessionMeta]:
+    sessions = []
+    if not REGISTRY_DIR.exists():
+        return sessions
+    for user_dir in REGISTRY_DIR.iterdir():
+        if user_dir.is_dir():
+            meta = _load_meta(user_dir.name)
+            if meta:
+                sessions.append(meta)
+    return sessions
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _slug(username: str) -> str:
+    """Convert username to a k8s-safe DNS label (lowercase, hyphenated, max 32 chars)."""
+    import re
+    slug = re.sub(r"[^a-z0-9-]", "-", username.lower())
+    slug = re.sub(r"-+", "-", slug).strip("-")
+    return slug[:32]
+
+
+# ---------------------------------------------------------------------------
+# Kubernetes resource helpers
+# ---------------------------------------------------------------------------
+
+
+def _create_workspace_pvc(username: str) -> str:
+    slug = _slug(username)
+    name = f"ppxai-ws-{slug}"
+    try:
+        core.read_namespaced_persistent_volume_claim(name, NAMESPACE)
+        log.info(f"Workspace PVC {name} already exists — reusing")
+        return name
+    except k8s.ApiException as e:
+        if e.status != 404:
+            raise
+    pvc = k8s.V1PersistentVolumeClaim(
+        metadata=k8s.V1ObjectMeta(name=name, namespace=NAMESPACE),
+        spec=k8s.V1PersistentVolumeClaimSpec(
+            access_modes=["ReadWriteOnce"],
+            storage_class_name="ppxai-workspace",
+            resources=k8s.V1ResourceRequirements(requests={"storage": WORKSPACE_SIZE}),
+        ),
+    )
+    core.create_namespaced_persistent_volume_claim(NAMESPACE, pvc)
+    log.info(f"Created workspace PVC {name}")
+    return name
+
+
+def _create_temp_pvc(username: str) -> str:
+    slug = _slug(username)
+    name = f"ppxai-tmp-{slug}"
+    # Delete stale temp PVC if present (session restart)
+    try:
+        core.delete_namespaced_persistent_volume_claim(name, NAMESPACE, body=k8s.V1DeleteOptions())
+        log.info(f"Deleted stale temp PVC {name}")
+    except k8s.ApiException:
+        pass
+    pvc = k8s.V1PersistentVolumeClaim(
+        metadata=k8s.V1ObjectMeta(name=name, namespace=NAMESPACE),
+        spec=k8s.V1PersistentVolumeClaimSpec(
+            access_modes=["ReadWriteOnce"],
+            storage_class_name="ppxai-ephemeral",
+            resources=k8s.V1ResourceRequirements(requests={"storage": TEMP_SIZE}),
+        ),
+    )
+    core.create_namespaced_persistent_volume_claim(NAMESPACE, pvc)
+    log.info(f"Created temp PVC {name}")
+    return name
+
+
+def _create_server_pod(username: str, workspace_pvc: str, temp_pvc: str) -> str:
+    slug = _slug(username)
+    name = f"ppxai-server-{slug}"
+    # Remove stale pod if present
+    try:
+        core.delete_namespaced_pod(
+            name, NAMESPACE, body=k8s.V1DeleteOptions(grace_period_seconds=0)
+        )
+        log.info(f"Deleted stale pod {name}")
+    except k8s.ApiException:
+        pass
+
+    def _secret_env(env_name: str, secret_key: str) -> k8s.V1EnvVar:
+        return k8s.V1EnvVar(
+            name=env_name,
+            value_from=k8s.V1EnvVarSource(
+                secret_key_ref=k8s.V1SecretKeySelector(
+                    name="ppxai-api-keys", key=secret_key, optional=True
+                )
+            ),
+        )
+
+    pod = k8s.V1Pod(
+        metadata=k8s.V1ObjectMeta(
+            name=name,
+            namespace=NAMESPACE,
+            labels={"app": "ppxai-server", "ppxai/user": slug},
+        ),
+        spec=k8s.V1PodSpec(
+            restart_policy="Always",
+            containers=[
+                k8s.V1Container(
+                    name="server",
+                    image=SERVER_IMAGE,
+                    image_pull_policy="Always",
+                    ports=[k8s.V1ContainerPort(container_port=54320)],
+                    env=[
+                        k8s.V1EnvVar(name="PPXAI_WORKING_DIR", value="/workspace"),
+                        k8s.V1EnvVar(name="PPXAI_DATA_DIR", value="/tmp/session"),
+                        k8s.V1EnvVar(name="PPXAI_USERNAME", value=username),
+                        _secret_env("PERPLEXITY_API_KEY", "PERPLEXITY_API_KEY"),
+                        _secret_env("OPENAI_API_KEY", "OPENAI_API_KEY"),
+                        _secret_env("GEMINI_API_KEY", "GEMINI_API_KEY"),
+                        _secret_env("CUSTOM_API_KEY", "CUSTOM_API_KEY"),
+                        _secret_env("CUSTOM_BASE_URL", "CUSTOM_BASE_URL"),
+                    ],
+                    volume_mounts=[
+                        k8s.V1VolumeMount(name="workspace", mount_path="/workspace"),
+                        k8s.V1VolumeMount(name="temp", mount_path="/tmp/session"),
+                        k8s.V1VolumeMount(
+                            name="server-config",
+                            mount_path="/root/.ppxai/ppxai-config.json",
+                            sub_path="ppxai-config.json",
+                        ),
+                    ],
+                    liveness_probe=k8s.V1Probe(
+                        http_get=k8s.V1HTTPGetAction(path="/health", port=54320),
+                        initial_delay_seconds=15,
+                        period_seconds=15,
+                        failure_threshold=3,
+                    ),
+                )
+            ],
+            volumes=[
+                k8s.V1Volume(
+                    name="workspace",
+                    persistent_volume_claim=k8s.V1PersistentVolumeClaimVolumeSource(
+                        claim_name=workspace_pvc
+                    ),
+                ),
+                k8s.V1Volume(
+                    name="temp",
+                    persistent_volume_claim=k8s.V1PersistentVolumeClaimVolumeSource(
+                        claim_name=temp_pvc
+                    ),
+                ),
+                k8s.V1Volume(
+                    name="server-config",
+                    config_map=k8s.V1ConfigMapVolumeSource(name="ppxai-server-config"),
+                ),
+            ],
+        ),
+    )
+    core.create_namespaced_pod(NAMESPACE, pod)
+    log.info(f"Created pod {name}")
+    return name
+
+
+def _create_server_service(username: str) -> str:
+    slug = _slug(username)
+    name = f"ppxai-svc-{slug}"
+    try:
+        core.delete_namespaced_service(name, NAMESPACE)
+    except k8s.ApiException:
+        pass
+    svc = k8s.V1Service(
+        metadata=k8s.V1ObjectMeta(name=name, namespace=NAMESPACE),
+        spec=k8s.V1ServiceSpec(
+            selector={"app": "ppxai-server", "ppxai/user": slug},
+            ports=[k8s.V1ServicePort(port=54320, target_port=54320)],
+        ),
+    )
+    core.create_namespaced_service(NAMESPACE, svc)
+    log.info(f"Created service {name}")
+    return name
+
+
+def _create_sessions_ingress(host: str, first_path: k8s.V1HTTPIngressPath) -> None:
+    """Create the sessions Ingress with the first user path (k8s requires at least one path)."""
+    ingress = k8s.V1Ingress(
+        metadata=k8s.V1ObjectMeta(
+            name=INGRESS_NAME,
+            namespace=NAMESPACE,
+            annotations={
+                "nginx.ingress.kubernetes.io/rewrite-target": "/$2",
+                "nginx.ingress.kubernetes.io/use-regex": "true",
+                "nginx.ingress.kubernetes.io/proxy-read-timeout": "3600",
+                "nginx.ingress.kubernetes.io/proxy-send-timeout": "3600",
+                "nginx.ingress.kubernetes.io/proxy-buffering": "off",
+                "nginx.ingress.kubernetes.io/proxy-http-version": "1.1",
+            },
+        ),
+        spec=k8s.V1IngressSpec(
+            ingress_class_name="nginx",
+            rules=[
+                k8s.V1IngressRule(
+                    host=host,
+                    http=k8s.V1HTTPIngressRuleValue(paths=[first_path]),
+                )
+            ],
+        ),
+    )
+    net.create_namespaced_ingress(NAMESPACE, ingress)
+    log.info(f"Created sessions Ingress {INGRESS_NAME}")
+
+
+def _ingress_path_rule(slug: str, svc_name: str) -> k8s.V1HTTPIngressPath:
+    return k8s.V1HTTPIngressPath(
+        path=f"/s/{slug}(/|$)(.*)",
+        path_type="ImplementationSpecific",
+        backend=k8s.V1IngressBackend(
+            service=k8s.V1IngressServiceBackend(
+                name=svc_name,
+                port=k8s.V1ServiceBackendPort(number=54320),
+            )
+        ),
+    )
+
+
+def _patch_ingress_add(username: str, svc_name: str) -> None:
+    slug = _slug(username)
+    path_rule = _ingress_path_rule(slug, svc_name)
+    try:
+        ingress = net.read_namespaced_ingress(INGRESS_NAME, NAMESPACE)
+    except k8s.ApiException as e:
+        if e.status == 404:
+            # First session — create the sessions ingress with this path
+            _create_sessions_ingress(INGRESS_HOST, path_rule)
+            log.info(f"Ingress created with /s/{slug}")
+            return
+        raise
+    paths = ingress.spec.rules[0].http.paths or []
+    # Remove any existing rule for this user
+    paths = [p for p in paths if slug not in (p.path or "")]
+    # Insert user path at front (nginx matches in order; more specific first)
+    paths.insert(0, path_rule)
+    ingress.spec.rules[0].http.paths = paths
+    net.replace_namespaced_ingress(INGRESS_NAME, NAMESPACE, ingress)
+    log.info(f"Ingress patched: added /s/{slug}")
+
+
+def _patch_ingress_remove(username: str) -> None:
+    slug = _slug(username)
+    try:
+        ingress = net.read_namespaced_ingress(INGRESS_NAME, NAMESPACE)
+    except k8s.ApiException as e:
+        if e.status == 404:
+            return
+        raise
+    paths = ingress.spec.rules[0].http.paths or []
+    paths = [p for p in paths if slug not in (p.path or "")]
+    if not paths:
+        # Last session removed — delete the ingress rather than leaving empty paths
+        net.delete_namespaced_ingress(INGRESS_NAME, NAMESPACE)
+        log.info(f"Ingress deleted (no sessions remaining)")
+        return
+    ingress.spec.rules[0].http.paths = paths
+    net.replace_namespaced_ingress(INGRESS_NAME, NAMESPACE, ingress)
+    log.info(f"Ingress patched: removed /s/{slug}")
+
+
+def _teardown_session(meta: SessionMeta) -> None:
+    """Delete pod, service, temp PVC, ingress rule. Keep workspace PVC."""
+    def _try_delete(fn, *args, **kwargs):
+        try:
+            fn(*args, **kwargs)
+        except k8s.ApiException as e:
+            if e.status != 404:
+                log.warning(f"Error in {fn.__name__}: {e}")
+
+    _try_delete(
+        core.delete_namespaced_pod,
+        meta.pod_name, NAMESPACE, body=k8s.V1DeleteOptions(grace_period_seconds=5),
+    )
+    log.info(f"Deleted pod {meta.pod_name}")
+
+    _try_delete(core.delete_namespaced_service, meta.svc_name, NAMESPACE)
+    log.info(f"Deleted service {meta.svc_name}")
+
+    _try_delete(
+        core.delete_namespaced_persistent_volume_claim,
+        meta.temp_pvc, NAMESPACE, body=k8s.V1DeleteOptions(),
+    )
+    log.info(f"Deleted temp PVC {meta.temp_pvc}")
+
+    _patch_ingress_remove(meta.username)
+    _delete_meta(meta.username)
+    log.info(f"Session {meta.username} torn down")
+
+
+# ---------------------------------------------------------------------------
+# FastAPI app
+# ---------------------------------------------------------------------------
+
+app = FastAPI(title="ppxai Session Manager")
+
+
+class CreateSessionRequest(BaseModel):
+    username: str
+
+
+@app.post("/sessions", status_code=201)
+def create_session(req: CreateSessionRequest):
+    import re
+    username = req.username.strip()
+    if not username or not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_.-]{0,31}", username):
+        raise HTTPException(400, "Invalid username — use letters, digits, dots, hyphens, underscores")
+
+    # Return existing session instead of creating duplicate
+    existing = _load_meta(username)
+    if existing:
+        existing.last_heartbeat = _now_iso()
+        _save_meta(existing)
+        slug = _slug(username)
+        return {"status": "existing", "username": username, "path": f"/s/{slug}/"}
+
+    active = _list_sessions()
+    if len(active) >= MAX_SESSIONS:
+        raise HTTPException(503, f"Max sessions ({MAX_SESSIONS}) reached — try again later")
+
+    workspace_pvc = _create_workspace_pvc(username)
+    temp_pvc = _create_temp_pvc(username)
+    pod_name = _create_server_pod(username, workspace_pvc, temp_pvc)
+    svc_name = _create_server_service(username)
+    _patch_ingress_add(username, svc_name)
+
+    now = _now_iso()
+    meta = SessionMeta(
+        username=username,
+        pod_name=pod_name,
+        svc_name=svc_name,
+        workspace_pvc=workspace_pvc,
+        temp_pvc=temp_pvc,
+        created_at=now,
+        last_heartbeat=now,
+    )
+    _save_meta(meta)
+    log.info(f"Session created for {username}")
+    slug = _slug(username)
+    return {"status": "created", "username": username, "path": f"/s/{slug}/"}
+
+
+@app.delete("/sessions/{username}", status_code=204)
+def delete_session(username: str):
+    meta = _load_meta(username)
+    if not meta:
+        raise HTTPException(404, "Session not found")
+    _teardown_session(meta)
+    return Response(status_code=204)
+
+
+@app.post("/sessions/{username}/heartbeat")
+def heartbeat(username: str):
+    meta = _load_meta(username)
+    if not meta:
+        raise HTTPException(404, "Session not found")
+    meta.last_heartbeat = _now_iso()
+    _save_meta(meta)
+    return {"ok": True}
+
+
+@app.get("/sessions")
+def list_sessions():
+    sessions = _list_sessions()
+    return {
+        "count": len(sessions),
+        "max": MAX_SESSIONS,
+        "sessions": [s.to_dict() for s in sessions],
+    }
+
+
+@app.get("/health")
+def health():
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# TTL watchdog
+# ---------------------------------------------------------------------------
+
+
+def _check_ttl() -> None:
+    ttl = timedelta(minutes=TTL_MINUTES)
+    now = datetime.now(timezone.utc)
+    for meta in _list_sessions():
+        try:
+            last = datetime.fromisoformat(meta.last_heartbeat)
+            if (now - last) > ttl:
+                log.info(f"Session {meta.username} idle for {now - last} — expiring")
+                _teardown_session(meta)
+        except Exception as e:
+            log.error(f"TTL watchdog error for {meta.username}: {e}")
+
+
+async def _ttl_watchdog() -> None:
+    while True:
+        await asyncio.sleep(60)
+        try:
+            _check_ttl()
+        except Exception as e:
+            log.error(f"TTL watchdog loop error: {e}")
+
+
+INGRESS_HOST = os.getenv("INGRESS_HOST", "ppxai.local")
+
+
+@app.on_event("startup")
+async def startup() -> None:
+    REGISTRY_DIR.mkdir(parents=True, exist_ok=True)
+    _reconcile_ingress()
+    asyncio.create_task(_ttl_watchdog())
+    log.info(f"Session manager ready (max={MAX_SESSIONS}, ttl={TTL_MINUTES}m, namespace={NAMESPACE})")
+
+
+def _reconcile_ingress() -> None:
+    """Re-add all registry sessions to the sessions Ingress (recovers from helm upgrades)."""
+    sessions = _list_sessions()
+    if not sessions:
+        return
+    for meta in sessions:
+        try:
+            _patch_ingress_add(meta.username, meta.svc_name)
+        except Exception as e:
+            log.warning(f"Reconcile ingress for {meta.username}: {e}")

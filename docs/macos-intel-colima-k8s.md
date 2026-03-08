@@ -285,6 +285,60 @@ colima kubernetes reset
 
 ---
 
+## In-Cluster Registry: Enabling Docker to Pull Kubernetes Images
+
+Colima's k3s uses **Docker** as the container runtime (via `cri-dockerd`). When k3s pulls
+images for pods, it calls Docker — not containerd. Docker runs in the VM's host network
+namespace, which means it cannot reach Kubernetes ClusterIP services directly.
+
+To let Docker pull images from the in-cluster `registry:2` pod:
+
+### Step A — Map the registry hostname to the pod IP
+
+```bash
+# Get current registry pod IP
+REGISTRY_POD_IP=$(kubectl get pod -l app=registry -n ppxai-system -o jsonpath='{.items[0].status.podIP}')
+
+# Add to the VM's /etc/hosts (pod IPs are routable via cni0 bridge on the VM)
+cat << EOF | colima ssh sudo tee /etc/hosts
+$(colima ssh cat /etc/hosts | grep -v registry)
+${REGISTRY_POD_IP} registry.ppxai-system.svc
+EOF
+```
+
+> **Note:** Pod IPs change when pods restart. Repeat this step after any `registry` pod restart.
+
+### Step B — Configure Docker to allow HTTP for this registry
+
+```bash
+cat << 'EOF' | colima ssh sudo tee /etc/docker/daemon.json
+{
+  "exec-opts": ["native.cgroupdriver=cgroupfs"],
+  "features": {"buildkit": true, "containerd-snapshotter": true},
+  "insecure-registries": ["registry.ppxai-system.svc:5000"]
+}
+EOF
+colima ssh sudo systemctl restart docker
+```
+
+### Step C — Verify Docker can pull from the registry
+
+```bash
+cat << 'EOF' | colima ssh sudo sh
+wget -qO- http://registry.ppxai-system.svc:5000/v2/_catalog
+EOF
+# Expected: {"repositories":["ppxai-server","ppxai-session-manager"]}
+```
+
+### Why ClusterIP doesn't work
+
+- ClusterIP (`10.43.x.x`) is accessible only via `iptables` rules in the pod network namespace
+- Docker runs in the VM's host network namespace — outside the pod network
+- Pod IPs (`10.42.x.x`) ARE reachable via the `cni0` bridge on the VM's host namespace
+- Therefore: map the registry hostname to the pod IP, not the ClusterIP
+
+---
+
 ## Network Architecture (reference)
 
 ```
@@ -293,13 +347,13 @@ macOS host
         │
         ▼ (vmnet shared network — routable)
   colima VM (192.168.106.x)
-    ├── k3s control plane
-    ├── containerd (not Docker — k3s uses containerd for pods)
-    ├── Docker daemon (for `docker build` from host)
-    └── flannel CNI (pod network: 10.42.0.0/24)
+    ├── k3s control plane (runs as a systemd service)
+    ├── Docker daemon (cri-dockerd: Docker is the k3s container runtime)
+    │   └── insecure-registries: registry.ppxai-system.svc:5000
+    ├── /etc/hosts: <registry-pod-ip>  registry.ppxai-system.svc
+    └── cni0 bridge (10.42.0.1/24) → pod IPs (10.42.0.x) accessible from host namespace
 ```
 
-**Important:** k3s pods use containerd, not Docker. Images built with `docker build`
-on the Mac go into Docker's image store inside the VM, but are **not** automatically
-available to k3s pods. For k8s deployments, push images to a registry inside the cluster
-(e.g., `registry:2` pod) and reference them with `imagePullPolicy: IfNotPresent`.
+**Key insight:** In this colima setup, k3s uses Docker (not containerd) for pod containers.
+Images must be accessible to Docker via HTTP. The in-cluster `registry:2` pod is reached by
+mapping its hostname to the pod IP (which is routable via the `cni0` bridge).

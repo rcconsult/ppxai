@@ -35,6 +35,12 @@ LABEL org.opencontainers.image.description="ppxai HTTP server — Kubernetes mul
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
+# Web UI files — served by the HTTP server from ~/.ppxai/web/
+COPY --from=builder /build/ppxai/web/ /root/.ppxai/web/
+
+# Agent instructions — loaded by bootstrap as global AGENTS.md
+COPY AGENTS.md /root/.ppxai/AGENTS.md
+
 # Per-session environment — overridden at pod creation time by session manager
 ENV PPXAI_WORKING_DIR=/workspace
 ENV PPXAI_DATA_DIR=/tmp/session

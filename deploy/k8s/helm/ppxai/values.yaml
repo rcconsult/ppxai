@@ -17,7 +17,7 @@ registry:
 
 image:
   server: registry.ppxai-system.svc:5000/ppxai-server
-  webapp: registry.ppxai-system.svc:5000/ppxai-webapp
+  sessionManager: registry.ppxai-system.svc:5000/ppxai-session-manager
   tag: latest
   pullPolicy: Always
 
@@ -25,5 +25,6 @@ image:
 apiKeys:
   perplexityApiKey: ""
   openaiApiKey: ""
+  geminiApiKey: ""
   customApiKey: ""
   customBaseUrl: ""

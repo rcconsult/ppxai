@@ -1,7 +1,8 @@
+---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: build-ppxai-server
+  name: build-ppxai-session-manager
   namespace: ppxai-system
   labels:
     app.kubernetes.io/name: ppxai
@@ -19,9 +20,9 @@ spec:
         - name: kaniko
           image: gcr.io/kaniko-project/executor:latest
           args:
-            - --dockerfile=/workspace/deploy/k8s/docker/Dockerfile.server
-            - --context=dir:///workspace
-            - --destination=registry.ppxai-system.svc:5000/ppxai-server:latest
+            - --dockerfile=/workspace/deploy/k8s/session-manager/Dockerfile
+            - --context=dir:///workspace/deploy/k8s/session-manager
+            - --destination=registry.ppxai-system.svc:5000/ppxai-session-manager:latest
             - --insecure
             - --skip-tls-verify
             - --cache=false
