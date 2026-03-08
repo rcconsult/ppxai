@@ -519,6 +519,55 @@
         "__comment": "Native tool calling enabled - vLLM started with --enable-auto-tool-choice --tool-call-parser openai"
       }
     },
+    "lmstudio": {
+      "__comment": "LM Studio local inference server with Vulkan GPU acceleration",
+      "name": "LM Studio",
+      "base_url": "http://localhost:1234/v1",
+      "api_key_env": "LMSTUDIO_API_KEY",
+      "__comment_api_key": "LM Studio doesn't require auth, but OpenAI-compat API expects a key. Set LMSTUDIO_API_KEY=lm-studio in .env",
+      "default_model": "qwen2.5-coder-7b-instruct",
+      "coding_model": "qwen2.5-coder-7b-instruct",
+      "__comment_benchmark": "Tested 2026-03-08: Qwen2.5-Coder-7B Q4_K_M at 12.4 tok/s with Vulkan GPU offload (28 layers on RX 6500M 4GB). Native tool calling works.",
+      "system_prompt": "You are an expert coding assistant running locally via LM Studio. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
+      "generation_params": {
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "frequency_penalty": 0.1
+      },
+      "tool_calling": {
+        "mode": "native",
+        "__comment_mode": "LM Studio supports native tool calling via llama.cpp for Qwen models",
+        "fallback_on_empty": true,
+        "strip_json_from_text": true
+      },
+      "models": {
+        "qwen2.5-coder-7b-instruct": {
+          "name": "Qwen2.5 Coder 7B",
+          "description": "Dedicated coding model with native tool calling. Best balance of speed and quality for local inference.",
+          "context_limit": 32768,
+          "max_tokens": 4096,
+          "__comment_best_for": "Code generation, refactoring, debugging. ~12 tok/s with GPU offload."
+        },
+        "qwen2.5-coder-3b-instruct": {
+          "name": "Qwen2.5 Coder 3B",
+          "description": "Fast lightweight coding model, ~20 tok/s. Good for simple edits.",
+          "context_limit": 32768,
+          "max_tokens": 4096
+        }
+      },
+      "pricing": {
+        "qwen2.5-coder-7b-instruct": {"input": 0.0, "output": 0.0},
+        "qwen2.5-coder-3b-instruct": {"input": 0.0, "output": 0.0}
+      },
+      "capabilities": {
+        "web_search": false,
+        "web_fetch": false,
+        "weather": false,
+        "realtime_info": false,
+        "native_tool_calling": true,
+        "__comment_native_tool_calling": "LM Studio supports native function calling via llama.cpp for supported models (Qwen, Llama, etc.)"
+      }
+    },
     "ollama": {
       "name": "Ollama Local",
       "base_url": "http://localhost:11434/v1",

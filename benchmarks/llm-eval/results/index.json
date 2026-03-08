@@ -907,6 +907,32 @@
         "overall_score": 74.81848184818482,
         "agents_md_mode": "with"
       }
+    ],
+    "lmstudio/qwen2.5-coder-7b-instruct": [
+      {
+        "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_734375b1.json",
+        "timestamp": "2026-03-08T12:39:39.581237",
+        "overall_score": 0.0,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_baa43fa8.json",
+        "timestamp": "2026-03-08T12:41:21.427187",
+        "overall_score": 0.0,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_7e3fa98a.json",
+        "timestamp": "2026-03-08T13:31:26.264903",
+        "overall_score": 71.6831683168317,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_8516ad9c.json",
+        "timestamp": "2026-03-08T14:33:15.506546",
+        "overall_score": 57.99999999999999,
+        "agents_md_mode": "with"
+      }
     ]
   },
   "runs": [
@@ -1895,6 +1921,34 @@
       "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-04_b134a336.json",
       "timestamp": "2026-03-04T12:37:56.009823",
       "overall_score": 74.81848184818482,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "lmstudio/qwen2.5-coder-7b-instruct",
+      "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_734375b1.json",
+      "timestamp": "2026-03-08T12:39:39.581237",
+      "overall_score": 0.0,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "lmstudio/qwen2.5-coder-7b-instruct",
+      "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_baa43fa8.json",
+      "timestamp": "2026-03-08T12:41:21.427187",
+      "overall_score": 0.0,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "lmstudio/qwen2.5-coder-7b-instruct",
+      "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_7e3fa98a.json",
+      "timestamp": "2026-03-08T13:31:26.264903",
+      "overall_score": 71.6831683168317,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "lmstudio/qwen2.5-coder-7b-instruct",
+      "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_8516ad9c.json",
+      "timestamp": "2026-03-08T14:33:15.506546",
+      "overall_score": 57.99999999999999,
       "agents_md_mode": "with"
     }
   ]

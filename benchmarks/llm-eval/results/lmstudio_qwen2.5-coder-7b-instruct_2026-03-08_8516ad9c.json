@@ -1,0 +1,51 @@
+{
+  "provider": "lmstudio",
+  "model": "qwen2.5-coder-7b-instruct",
+  "timestamp": "2026-03-08T14:33:15.506546",
+  "overall_score": 57.99999999999999,
+  "tests_passed": 1,
+  "tests_total": 2,
+  "duration_seconds": 397.08067083358765,
+  "category_scores": {
+    "efficiency": 57.99999999999999
+  },
+  "test_results": [
+    {
+      "name": "time_to_first_tool_call",
+      "category": "efficiency",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "preamble_length": 0,
+        "tool": "read_file"
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "tool_call_efficiency",
+      "category": "efficiency",
+      "passed": false,
+      "score": 0.3,
+      "details": {
+        "total_tool_calls": 12,
+        "optimal": 5,
+        "score": 0.3
+      },
+      "weight": 1.5
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 180,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "no-samples",
+    "tool_calling_method": "native",
+    "total_tokens": 0,
+    "total_tool_calls": 13,
+    "agents_md_mode": "with"
+  }
+}
