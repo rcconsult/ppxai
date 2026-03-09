@@ -1,7 +1,7 @@
 # Kubernetes Deployment for ppxai-server
 #
 # Usage:
-#   kubectl apply -f kubernetes/
+#   kubectl apply -f deploy/k8s/standalone/
 #
 # Prerequisites:
 #   1. Create secret with API keys:

@@ -33,7 +33,7 @@ Makes the registry reachable as `registry.ppxai-system.svc:5000` from within the
 Kaniko reads the repo from a host-path volume (the git checkout mounted into the VM), runs `Dockerfile.server`, and pushes to the in-cluster registry. Has an init container that waits for the registry to be reachable before starting.
 
 **`kaniko-session-manager-job.yaml`** — Builds `ppxai-session-manager:latest`
-Same pattern. Builds `deploy/k8s/session-manager/Dockerfile` — a minimal FastAPI app image.
+Same pattern. Builds `deploy/images/session-manager/Dockerfile` — a minimal FastAPI app image.
 
 ---
 
@@ -99,10 +99,10 @@ These are not Helm templates — the session manager creates them dynamically vi
 
 ## Docker Images
 
-**`deploy/k8s/docker/Dockerfile.server`**
+**`deploy/images/server/Dockerfile`**
 Two-stage build: builder installs `ppxai[server,search]` into a venv, runtime copies the venv + web UI files + AGENTS.md (baked at `/root/.ppxai/AGENTS.md`). Runs as root (required for local-path PVC permission compatibility).
 
-**`deploy/k8s/session-manager/Dockerfile`**
+**`deploy/images/session-manager/Dockerfile`**
 python:3.12-slim, installs `requirements.txt` (fastapi, uvicorn, kubernetes, pydantic), runs `uvicorn main:app` on `:8080`.
 
 ---

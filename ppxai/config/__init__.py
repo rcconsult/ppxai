@@ -566,6 +566,7 @@ def get_server_config() -> Dict[str, Any]:
     defaults = {
         "idle_timeout": 300,
         "port": 54320,
+        "working_dir": None,
     }
 
     config = ConfigStore.get_instance().config

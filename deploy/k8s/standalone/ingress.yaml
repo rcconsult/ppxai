@@ -11,7 +11,7 @@
 #
 # Usage:
 #   Update the host to match your domain, then:
-#   kubectl apply -f kubernetes/ingress.yaml
+#   kubectl apply -f deploy/k8s/standalone/ingress.yaml
 
 apiVersion: networking.k8s.io/v1
 kind: Ingress

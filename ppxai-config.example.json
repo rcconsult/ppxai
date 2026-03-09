@@ -12,7 +12,9 @@
     "idle_timeout": 600,
     "__comment_idle_timeout": "Auto-shutdown after N seconds of inactivity. 0 = disabled (server runs forever)",
     "port": 54320,
-    "__comment_port": "Default HTTP server port"
+    "__comment_port": "Default HTTP server port",
+    "working_dir": null,
+    "__comment_working_dir": "Default working directory for sessions. null = user home directory. Set to e.g. '/workspace' for container deployments."
   },
   "session": {
     "__comment": "Session persistence and auto-recovery (v1.13.9+)",
@@ -653,6 +655,10 @@
     "shell": {
       "timeout": 300,
       "__comment_timeout": "Shell command timeout in seconds (default: 30). Increase for long-running commands like pip install.",
+      "shell_bin": null,
+      "__comment_shell_bin": "Path to shell binary (e.g. '/bin/bash', '/bin/zsh'). null = system default. Ignored on Windows.",
+      "login_shell": false,
+      "__comment_login_shell": "Invoke shell with -l flag to source profile (full PATH). Ignored on Windows.",
       "require_consent": true,
       "dangerous_commands": [
         "^rm\\s+",

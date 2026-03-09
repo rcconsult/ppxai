@@ -1,7 +1,7 @@
 # Dockerfile for ppxai-server
 # Multi-stage build for minimal image size
 #
-# Build: docker build -t ppxai-server .
+# Build: docker build -f deploy/docker/Dockerfile -t ppxai-server .
 # Run:   docker run -p 54320:54320 --env-file .env ppxai-server
 
 # =============================================================================

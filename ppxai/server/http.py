@@ -2015,7 +2015,9 @@ async def preview_html(
 
     content = path.read_text(encoding='utf-8')
     # Include session in poll URL so reload script uses the right working dir
-    poll_url = f'/preview/poll/{filepath}?session={session_id}' if session_id else f'/preview/poll/{filepath}'
+    # Use relative URLs so preview works behind reverse-proxy path prefixes
+    # (e.g. /s/<user>/preview/file.html → relative "poll/file.html" resolves correctly)
+    poll_url = f'poll/{filepath}?session={session_id}' if session_id else f'poll/{filepath}'
 
     # Compute cache buster from newest sibling mtime so browser re-fetches
     # changed CSS/JS instead of using stale cached versions
@@ -2031,13 +2033,13 @@ async def preview_html(
     except OSError:
         pass
 
-    # Rewrite relative CSS/JS/image paths to use /preview/static/ endpoint
-    # e.g., <link href="styles.css"> → <link href="/preview/static/styles.css?session=...&_t=123">
+    # Rewrite relative CSS/JS/image paths to use preview/static/ endpoint
+    # Uses relative URLs so it works behind reverse-proxy path prefixes
     file_dir = str(PurePosixPath(filepath).parent)
     if file_dir == '.':
-        static_base = '/preview/static/'
+        static_base = 'static/'
     else:
-        static_base = f'/preview/static/{file_dir}/'
+        static_base = f'static/{file_dir}/'
     if session_id:
         static_base = f'{static_base}?session={session_id}'
     content = rewrite_asset_paths(content, static_base, cache_buster=cache_ts)

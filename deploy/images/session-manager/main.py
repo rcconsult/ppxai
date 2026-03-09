@@ -1,4 +1,4 @@
-"""ppxai Session Manager — Kubernetes multi-user session lifecycle management.
+"""Session Manager — Kubernetes multi-user session lifecycle management.
 
 Endpoints:
   POST   /sessions                    Create session (or return existing)
@@ -9,6 +9,13 @@ Endpoints:
 
 Registry: per-user JSON at /registry/<username>/meta.json (on PVC).
 Resources per session: workspace PVC (Retain), temp PVC (Delete), Pod, Service, Ingress rule.
+
+All k8s resource names are derived from APP_PREFIX (default "ppxai").
+Set env vars to customize for different deployments (e.g. APP_PREFIX=coder).
+
+Authentication:
+  AUTH_MODE=stub   — accept any username, no password required (default, POC)
+  AUTH_MODE=ldap   — validate username+password against Active Directory
 """
 
 import asyncio
@@ -37,8 +44,28 @@ WORKSPACE_SIZE = os.getenv("WORKSPACE_SIZE", "5Gi")
 TEMP_SIZE = os.getenv("TEMP_SIZE", "2Gi")
 INGRESS_NAME = os.getenv("INGRESS_NAME", "ppxai-sessions-ingress")
 
+# Naming & storage config — override these for different deployments
+APP_PREFIX = os.getenv("APP_PREFIX", "ppxai")
+WORKSPACE_SC = os.getenv("WORKSPACE_SC", "ppxai-workspace")
+EPHEMERAL_SC = os.getenv("EPHEMERAL_SC", "ppxai-ephemeral")
+CONFIG_CM = os.getenv("CONFIG_CM", f"{APP_PREFIX}-server-config")
+SECRET_NAME = os.getenv("SECRET_NAME", f"{APP_PREFIX}-api-keys")
+
+# Authentication: "stub" (no password) or "ldap" (AD bind)
+AUTH_MODE = os.getenv("AUTH_MODE", "stub")
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("session-manager")
+
+# ---------------------------------------------------------------------------
+# LDAP authenticator (lazy init — only when AUTH_MODE=ldap)
+# ---------------------------------------------------------------------------
+
+ldap_auth = None
+if AUTH_MODE == "ldap":
+    from ldap_auth import LDAPAuthenticator
+    ldap_auth = LDAPAuthenticator()
+    log.info("LDAP authentication enabled")
 
 # ---------------------------------------------------------------------------
 # Kubernetes clients
@@ -146,7 +173,7 @@ def _slug(username: str) -> str:
 
 def _create_workspace_pvc(username: str) -> str:
     slug = _slug(username)
-    name = f"ppxai-ws-{slug}"
+    name = f"{APP_PREFIX}-ws-{slug}"
     try:
         core.read_namespaced_persistent_volume_claim(name, NAMESPACE)
         log.info(f"Workspace PVC {name} already exists — reusing")
@@ -158,7 +185,7 @@ def _create_workspace_pvc(username: str) -> str:
         metadata=k8s.V1ObjectMeta(name=name, namespace=NAMESPACE),
         spec=k8s.V1PersistentVolumeClaimSpec(
             access_modes=["ReadWriteOnce"],
-            storage_class_name="ppxai-workspace",
+            storage_class_name=WORKSPACE_SC,
             resources=k8s.V1ResourceRequirements(requests={"storage": WORKSPACE_SIZE}),
         ),
     )
@@ -169,7 +196,7 @@ def _create_workspace_pvc(username: str) -> str:
 
 def _create_temp_pvc(username: str) -> str:
     slug = _slug(username)
-    name = f"ppxai-tmp-{slug}"
+    name = f"{APP_PREFIX}-tmp-{slug}"
     # Delete stale temp PVC if present (session restart)
     try:
         core.delete_namespaced_persistent_volume_claim(name, NAMESPACE, body=k8s.V1DeleteOptions())
@@ -180,7 +207,7 @@ def _create_temp_pvc(username: str) -> str:
         metadata=k8s.V1ObjectMeta(name=name, namespace=NAMESPACE),
         spec=k8s.V1PersistentVolumeClaimSpec(
             access_modes=["ReadWriteOnce"],
-            storage_class_name="ppxai-ephemeral",
+            storage_class_name=EPHEMERAL_SC,
             resources=k8s.V1ResourceRequirements(requests={"storage": TEMP_SIZE}),
         ),
     )
@@ -191,7 +218,7 @@ def _create_temp_pvc(username: str) -> str:
 
 def _create_server_pod(username: str, workspace_pvc: str, temp_pvc: str) -> str:
     slug = _slug(username)
-    name = f"ppxai-server-{slug}"
+    name = f"{APP_PREFIX}-server-{slug}"
     # Remove stale pod if present
     try:
         core.delete_namespaced_pod(
@@ -201,21 +228,11 @@ def _create_server_pod(username: str, workspace_pvc: str, temp_pvc: str) -> str:
     except k8s.ApiException:
         pass
 
-    def _secret_env(env_name: str, secret_key: str) -> k8s.V1EnvVar:
-        return k8s.V1EnvVar(
-            name=env_name,
-            value_from=k8s.V1EnvVarSource(
-                secret_key_ref=k8s.V1SecretKeySelector(
-                    name="ppxai-api-keys", key=secret_key, optional=True
-                )
-            ),
-        )
-
     pod = k8s.V1Pod(
         metadata=k8s.V1ObjectMeta(
             name=name,
             namespace=NAMESPACE,
-            labels={"app": "ppxai-server", "ppxai/user": slug},
+            labels={"app": f"{APP_PREFIX}-server", f"{APP_PREFIX}/user": slug},
         ),
         spec=k8s.V1PodSpec(
             restart_policy="Always",
@@ -224,16 +241,19 @@ def _create_server_pod(username: str, workspace_pvc: str, temp_pvc: str) -> str:
                     name="server",
                     image=SERVER_IMAGE,
                     image_pull_policy="Always",
+                    working_dir="/workspace",
                     ports=[k8s.V1ContainerPort(container_port=54320)],
                     env=[
                         k8s.V1EnvVar(name="PPXAI_WORKING_DIR", value="/workspace"),
                         k8s.V1EnvVar(name="PPXAI_DATA_DIR", value="/tmp/session"),
                         k8s.V1EnvVar(name="PPXAI_USERNAME", value=username),
-                        _secret_env("PERPLEXITY_API_KEY", "PERPLEXITY_API_KEY"),
-                        _secret_env("OPENAI_API_KEY", "OPENAI_API_KEY"),
-                        _secret_env("GEMINI_API_KEY", "GEMINI_API_KEY"),
-                        _secret_env("CUSTOM_API_KEY", "CUSTOM_API_KEY"),
-                        _secret_env("CUSTOM_BASE_URL", "CUSTOM_BASE_URL"),
+                    ],
+                    env_from=[
+                        k8s.V1EnvFromSource(
+                            secret_ref=k8s.V1SecretEnvSource(
+                                name=SECRET_NAME, optional=True
+                            )
+                        ),
                     ],
                     volume_mounts=[
                         k8s.V1VolumeMount(name="workspace", mount_path="/workspace"),
@@ -267,7 +287,7 @@ def _create_server_pod(username: str, workspace_pvc: str, temp_pvc: str) -> str:
                 ),
                 k8s.V1Volume(
                     name="server-config",
-                    config_map=k8s.V1ConfigMapVolumeSource(name="ppxai-server-config"),
+                    config_map=k8s.V1ConfigMapVolumeSource(name=CONFIG_CM),
                 ),
             ],
         ),
@@ -279,7 +299,7 @@ def _create_server_pod(username: str, workspace_pvc: str, temp_pvc: str) -> str:
 
 def _create_server_service(username: str) -> str:
     slug = _slug(username)
-    name = f"ppxai-svc-{slug}"
+    name = f"{APP_PREFIX}-svc-{slug}"
     try:
         core.delete_namespaced_service(name, NAMESPACE)
     except k8s.ApiException:
@@ -287,7 +307,7 @@ def _create_server_service(username: str) -> str:
     svc = k8s.V1Service(
         metadata=k8s.V1ObjectMeta(name=name, namespace=NAMESPACE),
         spec=k8s.V1ServiceSpec(
-            selector={"app": "ppxai-server", "ppxai/user": slug},
+            selector={"app": f"{APP_PREFIX}-server", f"{APP_PREFIX}/user": slug},
             ports=[k8s.V1ServicePort(port=54320, target_port=54320)],
         ),
     )
@@ -413,11 +433,12 @@ def _teardown_session(meta: SessionMeta) -> None:
 # FastAPI app
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="ppxai Session Manager")
+app = FastAPI(title=f"{APP_PREFIX} Session Manager")
 
 
 class CreateSessionRequest(BaseModel):
     username: str
+    password: Optional[str] = None
 
 
 @app.post("/sessions", status_code=201)
@@ -427,13 +448,29 @@ def create_session(req: CreateSessionRequest):
     if not username or not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_.-]{0,31}", username):
         raise HTTPException(400, "Invalid username — use letters, digits, dots, hyphens, underscores")
 
-    # Return existing session instead of creating duplicate
+    # Authenticate if LDAP is enabled
+    if AUTH_MODE == "ldap":
+        if not req.password:
+            raise HTTPException(400, "Password is required")
+        if not ldap_auth.authenticate(username, req.password):
+            raise HTTPException(401, "Invalid credentials")
+
+    # Return existing session if pod is actually running; otherwise rebuild
     existing = _load_meta(username)
     if existing:
-        existing.last_heartbeat = _now_iso()
-        _save_meta(existing)
-        slug = _slug(username)
-        return {"status": "existing", "username": username, "path": f"/s/{slug}/"}
+        try:
+            pod = core.read_namespaced_pod(name=existing.pod_name, namespace=NAMESPACE)
+            if pod.status.phase in ("Running", "Pending"):
+                existing.last_heartbeat = _now_iso()
+                _save_meta(existing)
+                slug = _slug(username)
+                return {"status": "existing", "username": username, "path": f"/s/{slug}/"}
+        except k8s.ApiException as e:
+            if e.status != 404:
+                raise
+        # Pod is gone — tear down stale resources and recreate below
+        log.info(f"Stale session for {username} (pod missing) — recreating")
+        _teardown_session(existing)
 
     active = _list_sessions()
     if len(active) >= MAX_SESSIONS:
@@ -492,7 +529,13 @@ def list_sessions():
 
 @app.get("/health")
 def health():
-    return {"ok": True}
+    result = {"ok": True, "auth_mode": AUTH_MODE}
+    if ldap_auth:
+        ldap_ok = ldap_auth.ping()
+        result["ldap"] = "reachable" if ldap_ok else "unreachable"
+        if not ldap_ok:
+            result["ok"] = False
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -530,7 +573,7 @@ async def startup() -> None:
     REGISTRY_DIR.mkdir(parents=True, exist_ok=True)
     _reconcile_ingress()
     asyncio.create_task(_ttl_watchdog())
-    log.info(f"Session manager ready (max={MAX_SESSIONS}, ttl={TTL_MINUTES}m, namespace={NAMESPACE})")
+    log.info(f"Session manager ready (max={MAX_SESSIONS}, ttl={TTL_MINUTES}m, auth={AUTH_MODE}, namespace={NAMESPACE})")
 
 
 def _reconcile_ingress() -> None:

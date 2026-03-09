@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Optional, Callable, Awaitable
 
 from ..common.logger import get_logger
-from ..config import get_available_providers
+from ..config import get_available_providers, get_server_config
 from ..engine import EngineClient
 
 logger = get_logger("session_manager")
@@ -104,6 +104,18 @@ class SessionManager:
         self._initialized = True
         logger.info("SessionManager initialized")
 
+    @staticmethod
+    def _get_default_working_dir() -> str:
+        """Get the default working directory from config or fall back to home."""
+        server_config = get_server_config()
+        configured = server_config.get("working_dir")
+        if configured:
+            path = Path(configured).expanduser()
+            if path.is_dir():
+                return str(path)
+            logger.warning(f"Configured working_dir '{configured}' does not exist, falling back to home")
+        return str(Path.home())
+
     @classmethod
     def get_instance(cls) -> 'SessionManager':
         """Get the singleton instance (thread-safe)."""
@@ -141,9 +153,9 @@ class SessionManager:
         )
         self._default_lock = asyncio.Lock()
 
-        # Default working dir to home so /ls, /pwd work sensibly when server
-        # starts from a binary (whose CWD is the install dir, not the user's home).
-        self._default_engine.set_working_dir(str(Path.home()))
+        # Default working dir from config (server.working_dir) or home directory.
+        # When server starts from a binary, CWD may be the install dir.
+        self._default_engine.set_working_dir(self._get_default_working_dir())
 
         # Set default provider
         providers = get_available_providers()
@@ -261,8 +273,8 @@ class SessionManager:
             shell_consent_callback=lambda cmd, wd, rl: self._handle_shell_consent(session_id, cmd, wd, rl)
         )
 
-        # Default working dir to home (binary CWD may be the install dir)
-        engine.set_working_dir(str(Path.home()))
+        # Default working dir from config (server.working_dir) or home directory
+        engine.set_working_dir(self._get_default_working_dir())
 
         # Set default provider
         providers = get_available_providers()
