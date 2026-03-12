@@ -241,7 +241,13 @@ class RightPanelFrame {
     /** Move an existing view to the top of the stack. */
     _promote(view) {
         const idx = this._stack.indexOf(view);
-        if (idx === -1 || idx === this._stack.length - 1) return;
+        if (idx === -1) return;
+
+        // Already on top — just activate, don't re-mount
+        if (idx === this._stack.length - 1) {
+            view.onActivate();
+            return;
+        }
 
         const prev = this.activeView;
         if (prev) {
@@ -287,6 +293,13 @@ class RightPanelFrame {
         }
 
         const viewport = this._viewportEl ?? this._container;
+        // Unmount any previously mounted view in the viewport before clearing DOM
+        // to avoid leaking CodeMirror instances or event listeners
+        for (const v of this._stack) {
+            if (v !== view && v._container === viewport) {
+                try { v.unmount(); } catch {}
+            }
+        }
         viewport.innerHTML = '';
         view.mount(viewport);
         view.focus();

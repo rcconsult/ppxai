@@ -59,34 +59,45 @@ class CodeEditorView extends BaseView {
     getIcon() { return this._mode === 'edit' ? '✏️' : _cevFileIcon(this._path); }
 
     async mount(container) {
+        // Clean up previous editor if re-mounted (e.g. via promote/back/forward)
+        if (this._editor) {
+            this._destroyEditor();
+        }
+        if (this._saveKeyHandler) {
+            document.removeEventListener('keydown', this._saveKeyHandler, true);
+            this._saveKeyHandler = null;
+        }
         this._container = container;
         container.innerHTML = '<div class="rpf-loading">Loading…</div>';
 
-        if (!this._isNew) {
-            try {
-                const data = await this._appState.apiClient.readFile(this._path);
-                if (data.type === 'image' || data.type === 'pdf') {
-                    container.innerHTML = `<div class="rpf-error">Cannot display binary file: ${_cevEsc(this._path)}</div>`;
-                    return;
+        // Skip fetch if content was already loaded (re-mount via promote/back/forward)
+        if (this._loadedContent === null) {
+            if (!this._isNew) {
+                try {
+                    const data = await this._appState.apiClient.readFile(this._path);
+                    if (data.type === 'image' || data.type === 'pdf') {
+                        container.innerHTML = `<div class="rpf-error">Cannot display binary file: ${_cevEsc(this._path)}</div>`;
+                        return;
+                    }
+                    this._loadedContent   = data.content ?? '';
+                    this._originalContent = this._loadedContent;
+                    this._lines           = data.lines ?? this._loadedContent.split('\n').length;
+                    this._size            = data.size  ?? 0;
+                } catch (err) {
+                    if (err.message.includes('404') || err.message.includes('not found') ||
+                        err.message.includes('does not exist') || err.message === 'HTTP 404') {
+                        this._isNew = true;
+                        this._loadedContent   = '';
+                        this._originalContent = '';
+                    } else {
+                        container.innerHTML = `<div class="rpf-error">Failed to load: ${_cevEsc(err.message)}</div>`;
+                        return;
+                    }
                 }
-                this._loadedContent   = data.content ?? '';
-                this._originalContent = this._loadedContent;
-                this._lines           = data.lines ?? this._loadedContent.split('\n').length;
-                this._size            = data.size  ?? 0;
-            } catch (err) {
-                if (err.message.includes('404') || err.message.includes('not found') ||
-                    err.message.includes('does not exist') || err.message === 'HTTP 404') {
-                    this._isNew = true;
-                    this._loadedContent   = '';
-                    this._originalContent = '';
-                } else {
-                    container.innerHTML = `<div class="rpf-error">Failed to load: ${_cevEsc(err.message)}</div>`;
-                    return;
-                }
+            } else {
+                this._loadedContent   = '';
+                this._originalContent = '';
             }
-        } else {
-            this._loadedContent   = '';
-            this._originalContent = '';
         }
 
         const ext = this._path.split('.').pop().toLowerCase();

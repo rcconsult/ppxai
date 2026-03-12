@@ -967,10 +967,14 @@ class PpxaiApp {
                     this.closeReasoningSection(contentEl);
                 }
                 fullContent += event.data || '';
-                // Throttle markdown rendering
-                if (fullContent.length % 50 === 0 || fullContent.length < 100) {
-                    contentEl.innerHTML = this.renderMarkdown(fullContent);
-                    this.scrollToBottom();
+                // Debounce markdown rendering via rAF — avoids layout thrashing
+                if (!this._streamRafPending) {
+                    this._streamRafPending = true;
+                    requestAnimationFrame(() => {
+                        contentEl.innerHTML = this.renderMarkdown(fullContent);
+                        this.scrollToBottom();
+                        this._streamRafPending = false;
+                    });
                 }
                 break;
 
@@ -1190,9 +1194,11 @@ class PpxaiApp {
         if (this._domMessageCount > MAX_DOM_MESSAGES) {
             const oldest = this.elements.messagesContainer.querySelector('.message');
             if (oldest) {
-                this._scrollSpacer.style.height =
-                    (this._scrollSpacer.offsetHeight + oldest.offsetHeight) + 'px';
+                // Batch read then write to avoid layout thrashing
+                const spacerH = this._scrollSpacer.offsetHeight;
+                const oldestH = oldest.offsetHeight;
                 oldest.remove();
+                this._scrollSpacer.style.height = (spacerH + oldestH) + 'px';
                 this._domMessageCount--;
             }
         }
@@ -2342,7 +2348,12 @@ class PpxaiApp {
     }
 
     scrollToBottom() {
-        this.elements.messagesContainer.scrollTop = this.elements.messagesContainer.scrollHeight;
+        if (this._scrollRafPending) return;
+        this._scrollRafPending = true;
+        requestAnimationFrame(() => {
+            this.elements.messagesContainer.scrollTop = this.elements.messagesContainer.scrollHeight;
+            this._scrollRafPending = false;
+        });
     }
 }
 
