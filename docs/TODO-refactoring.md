@@ -1,6 +1,6 @@
 # TODO: Technical Debt & Refactoring Plan
 
-**Status:** Planning
+**Status:** In progress
 **Priority:** Medium — address incrementally across v1.17.x releases
 **Created:** 2026-03-15
 
@@ -16,441 +16,368 @@ complexity in several key files that will slow future development if left unaddr
 - Each refactoring is a standalone commit (no feature coupling)
 - All existing tests must pass after each step
 - No public API changes (HTTP endpoints, CLI commands, config schema)
+- DAG-style imports — no circular dependencies, no deferred imports
 - Measure twice, cut once — read the file before splitting it
 
 ---
 
-## ~~1. Split `server/http.py` (2,936 lines → ~5 modules)~~
+## Completed
 
-**Status:** DONE — completed 2026-03-15
-**Priority:** HIGH — this is the single largest file and grows with every new endpoint.
+### ~~1. Split `server/http.py` (2,936 lines → 18 modules)~~
 
-### Current State
+**Status:** DONE — 2026-03-15
 
-`ppxai/server/http.py` contains:
-- 80+ route handlers (functions prefixed with `async def`)
-- Request/response models (8 Pydantic `BaseModel` classes)
-- SSE event generators (`sse_event_generator`, `sse_coding_task_generator`)
-- Session management (`get_or_create_session`, `cleanup_expired_sessions`)
-- File operations (`search_files`, `list_files`, `get_file_tree`, `write_file`, `read_file`)
-- Static file serving (7 `serve_*` functions for web UI assets)
-- Consent handlers (`http_consent_handler`, `http_shell_consent_handler`)
-- Preview system (`preview_poll`, `preview_static`, `preview_html`)
-- Checkpoint management (5 endpoints)
-- Server lifecycle (`lifespan`, `run_server`, `run_desktop`, `_run_server_with_graceful_shutdown`)
+Split into `server/{models,state,streaming}.py` + `server/routes/` (13 route modules).
+`http.py` reduced to 372-line facade (app creation, lifespan, CLI entry points).
 
-### Target Structure
+### ~~2. Consolidate `config/__init__.py` (943 lines → submodules)~~
+
+**Status:** DONE — 2026-03-15
+
+Split into `config/{providers,tools,features,paths,context,prompts}.py`.
+`__init__.py` reduced to 262-line re-export hub. All circular imports eliminated
+via clean DAG + reload callback pattern in `store.py`.
+
+---
+
+## 3. Unified AppState — Cross-Client State Management
+
+**Priority:** HIGH — foundational change that enables items 4–7 and streamlines all clients.
+**Target:** v1.17.1
+
+### Problem
+
+Application state is duplicated and managed differently in every client layer:
+
+| Client | State location | State fields | Sync mechanism |
+|--------|---------------|--------------|----------------|
+| **EngineClient** | 60 `self.*` attrs on 1,588-line class | provider, model, tools, session, agent, checkpoints, consent, bootstrap, context | Direct mutation |
+| **Textual TUI** | 15+ `self._*` fields on 2,303-line app | `_provider`, `_model`, `_is_streaming`, `_tools_enabled`, `_cancel_requested`, `_reasoning_*`, `_tool_group_*` | Manual badge updates, scattered `update_badge()` calls |
+| **Rich TUI** | Fields on handler class | provider, model, streaming state | Manual status bar updates |
+| **HTTP Server** | `SessionManager` + per-session `EngineClient` | Session isolation via dict lookup | Stateless endpoints read from engine |
+| **Web App** | `AppState` (observable Proxy) | 20+ fields with `state.on()` observers | **Already solved** — centralized + reactive |
+| **CommandContext** | Protocol with 12+ properties/methods | Delegates to engine + client-specific state | Each adapter (Rich/Textual/Server) re-implements |
+
+Each client maintains its own shadow copy of provider/model/tools state, manually
+syncing with `EngineClient`. When state changes (e.g., session restore), every client
+must remember to update its local copies + UI badges + subtitle — leading to bugs
+where one piece gets missed.
+
+### Solution: `AppState` for Python
+
+Port the web app's `AppState` pattern to Python. A single observable state object
+shared between the engine and its client, with change notifications that auto-sync UI.
+
+```python
+# ppxai/state.py — shared across all Python clients
+
+class AppState:
+    """Observable application state with change notifications.
+
+    All mutable session state lives here. Clients subscribe to changes
+    instead of polling or manually syncing.
+
+    Mirrors the web app's AppState (ppxai/web/shared/app-state.js) but
+    uses Python descriptors instead of JS Proxy.
+    """
+
+    def __init__(self, initial: dict = None):
+        self._data = dict(initial or {})
+        self._listeners: dict[str, list[Callable]] = {}
+
+    def __getattr__(self, key):
+        if key.startswith('_'):
+            return super().__getattribute__(key)
+        return self._data.get(key)
+
+    def __setattr__(self, key, value):
+        if key.startswith('_'):
+            super().__setattr__(key, value)
+            return
+        old = self._data.get(key)
+        if old == value:
+            return  # No-op dedup
+        self._data[key] = value
+        for fn in self._listeners.get(key, []):
+            fn(value)
+
+    def on(self, key: str, fn: Callable) -> "AppState":
+        """Subscribe to changes on a state key."""
+        self._listeners.setdefault(key, []).append(fn)
+        return self
+
+    def snapshot(self) -> dict:
+        """Plain dict copy for debugging/serialization."""
+        return dict(self._data)
+```
+
+### How It Flows
 
 ```
-ppxai/server/
-├── __init__.py              # (existing, unchanged)
-├── __main__.py              # (existing, unchanged)
-├── app.py                   # FastAPI app creation, lifespan, middleware, run_server/run_desktop
-├── models.py                # All Pydantic request/response models
-├── session_manager.py       # (existing, unchanged)
-├── jsonrpc.py               # (existing, unchanged)
-├── routes/
-│   ├── __init__.py          # Router aggregation
-│   ├── chat.py              # POST /chat, POST /coding-task, SSE generators
-│   ├── providers.py         # GET/POST /providers, /models, /tools, /tools-config
-│   ├── sessions.py          # GET/POST /sessions, /save, /load, /clear, /restore
-│   ├── files.py             # POST /files/search, GET /files, /file-tree, /file, POST /file
-│   ├── config.py            # GET /config/paths, /config/path, POST /config/reload
-│   ├── usage.py             # GET/POST /usage, /usage/display-mode, /usage/report
-│   ├── context.py           # GET/POST /working-dir, /auto-inject, /context, /bootstrap
-│   ├── agent.py             # GET/POST /agent/status, /agent/config, /agent/enable|disable
-│   ├── checkpoints.py       # GET/POST /checkpoints, /undo, /checkpoint-backend
-│   ├── consent.py           # POST /consent, /shell-consent + handler functions
-│   ├── preview.py           # GET /preview/*, serve_image
-│   ├── commands.py          # POST /command (CommandFactory)
-│   └── static.py            # serve_index, serve_app_js, serve_styles, serve_lib, favicon
-└── streaming.py             # sse_event_generator, sse_coding_task_generator
+                    AppState (single source of truth)
+                   ╱          │           ╲
+          EngineClient    TUI/Rich App   HTTP endpoints
+          (reads/writes)  (subscribes)   (reads)
+
+State change example — session restore:
+  1. engine.restore_session() updates AppState fields
+  2. AppState notifies subscribers
+  3. TUI: status_bar.update_badge() fires automatically
+  4. TUI: self.sub_title updates automatically
+  5. HTTP: next GET /status reads fresh values from AppState
+  6. No manual sync code anywhere
 ```
+
+### State Fields (unified across all clients)
+
+```python
+state = AppState({
+    # Provider / model
+    "provider": "perplexity",
+    "model": "sonar-pro",
+
+    # Tools
+    "tools_enabled": False,
+    "tools_verbose": False,
+    "agent_mode": False,
+
+    # Streaming
+    "is_streaming": False,
+    "cancel_requested": False,
+
+    # Context
+    "working_dir": "/path/to/project",
+    "auto_inject": True,
+    "bootstrap_loaded": False,
+
+    # Session
+    "session_name": None,
+    "message_count": 0,
+
+    # Reasoning (TUI-specific, ignored by server)
+    "reasoning_active": False,
+
+    # Tool groups (TUI-specific)
+    "tool_group_active": False,
+})
+```
+
+### Impact on Each Component
+
+#### EngineClient (item 5)
+- Replace 60 scattered `self.*` fields with `self.state = AppState({...})`
+- Checkpoint/consent/bootstrap helpers receive `state` reference
+- `restore_session()` updates `state.provider`, `state.model` etc. — subscribers notified
+
+#### Textual TUI (item 7)
+- Replace 15+ `self._*` fields with `self.state = engine.state`
+- Register observers at mount time:
+  ```python
+  self.state.on("provider", lambda v: status_bar.update_badge("provider", v))
+  self.state.on("model", lambda v: status_bar.update_badge("model", v))
+  self.state.on("tools_enabled", lambda v: status_bar.update_badge("tools", "ON" if v else "OFF"))
+  self.state.on("provider", lambda _: self._update_subtitle())
+  self.state.on("model", lambda _: self._update_subtitle())
+  ```
+- Eliminates ~30 manual `update_badge()` / `self.sub_title =` calls
+
+#### Rich TUI
+- Same pattern — observers update Rich Live display
+
+#### HTTP Server
+- `GET /status` reads from `engine.state.snapshot()` — no per-field assembly
+- Session restore response built from `state.snapshot()` subset
+
+#### CommandContext (item 4)
+- Protocol properties (`provider`, `model`, `tools_enabled`) delegate to `state`:
+  ```python
+  class TextualCommandContext:
+      @property
+      def provider(self) -> str:
+          return self._state.provider
+  ```
+- Mixin becomes trivial since all contexts read from the same `AppState`
 
 ### Migration Steps
 
-1. **Create `server/models.py`** — Move all `BaseModel` classes (ChatRequest, CodingTaskRequest,
-   SetProviderRequest, SetModelRequest, ToolsRequest, ToolsConfigRequest, WorkingDirRequest,
-   AutoInjectRequest, ConsentRequest, ShellConsentRequest, FileReadRequest, FileSearchRequest,
-   FileWriteRequest, CommandRequest, UsageDisplayModeRequest). Pure move, no logic changes.
+1. **Create `ppxai/state.py`** — `AppState` class with `__getattr__`/`__setattr__`
+   override, `on()` subscription, `snapshot()`, no-op dedup on identical writes.
 
-2. **Create `server/streaming.py`** — Move `sse_event_generator()` and
-   `sse_coding_task_generator()`. These are self-contained async generators that depend only
-   on `EngineClient` and event types. Import `get_or_create_session` from the session module.
+2. **Wire into `EngineClient`** — Add `self.state = AppState({...})` in `__init__`.
+   Keep existing `self.*` properties as thin wrappers that read/write `state` (backward
+   compat). Gradually remove the wrappers as clients migrate.
 
-3. **Create `server/routes/` directory** — Start with the easiest, most self-contained groups:
-   - `static.py` first (7 `serve_*` functions, zero business logic)
-   - `config.py` next (3 endpoints, read-only)
-   - `usage.py` (5 endpoints, isolated concern)
-   - `checkpoints.py` (5 endpoints, isolated concern)
-   - `preview.py` (3 endpoints + `serve_image` + `_extract_session_from_referer`)
-   - Work toward larger groups: `files.py`, `providers.py`, `sessions.py`, `chat.py`
+3. **Wire into Textual TUI** — Replace `self._provider` etc. with `self.state` observers.
+   Remove manual badge update calls.
 
-4. **Create `server/app.py`** — Move FastAPI app creation, `lifespan()`, middleware,
-   `run_server()`, `run_desktop()`, `_run_server_with_graceful_shutdown()`. Import and
-   `include_router()` for each route module.
+4. **Wire into Rich TUI** — Same pattern.
 
-5. **Update `server/__main__.py`** — Import `run_server` from `server.app` instead of
-   `server.http`.
+5. **Simplify CommandContext** — All 3 adapters delegate to `state` instead of
+   re-implementing getters.
 
-6. **Preserve `server/http.py` as re-export shim** (temporary) — For any external imports
-   (e.g., `from ppxai.server.http import app`), add thin re-exports. Remove after verifying
-   no consumers remain.
+6. **HTTP endpoints already work** — They read from `EngineClient` which reads from `state`.
 
-### Shared Dependencies (routes need access to)
+### Dependency Chain
 
-Each route module will need:
-- `get_or_create_session()` — from `server/app.py` or a shared `server/sessions.py`
-- `update_activity()` — activity tracking
-- `is_path_allowed()` — security check for file operations
-- Session dict / lock management
+This item is the **foundation** for all remaining items:
 
-**Approach:** Keep session state in `server/app.py` as module-level state, expose via
-`get_session_state()` function that route modules import. This avoids circular imports
-since routes depend on app state but app depends on routes only at registration time.
+```
+3. AppState (this item)
+   ├── 4. CommandContext simplification (trivial once state exists)
+   ├── 5. EngineClient decomposition (helpers share state instead of self)
+   ├── 6. TUI modularization (delegates subscribe to state)
+   └── 7. Event router pattern (handlers read state instead of passing context)
+```
 
 ### Risk
 
-- Medium — many routes share `get_or_create_session()` and session dict access
-- Mitigate by extracting session access into a shared module first
-- Test every endpoint after migration (Playwright e2e tests cover most routes)
+- Medium — touches all clients, but migration is incremental (wrappers preserve
+  backward compat during transition)
+- AppState is proven — identical pattern already works in the web app
 
 ### Estimated Effort
 
-~3 hours for the full split. Can be done incrementally (models.py → streaming.py → routes/).
+~4 hours for AppState + EngineClient integration. TUI/Rich migration ~2 hours each.
 
 ---
 
-## ~~2. Consolidate `config/__init__.py` (943 lines → submodules)~~
+## 4. Simplify CommandContext Adapters
 
-**Status:** DONE — completed 2026-03-15
-**Priority:** MEDIUM — 50+ flat functions make navigation difficult.
-
-### Current State
-
-`ppxai/config/__init__.py` has 50+ top-level `def` functions organized roughly by topic
-but all in a single flat namespace. The module manages:
-- Config loading/initialization (`_get_config`, `initialize`)
-- Provider queries (`get_provider_config`, `get_api_key`, `get_base_url`, `get_provider_capabilities`)
-- Model queries (`get_default_model`, `get_model_pricing`, `get_model_context_limit`, `get_model_max_tokens`, `get_generation_params`)
-- Tool queries (`get_tool_config`, `get_tool_description_overrides`, `get_tool_pricing`, `get_tool_calling_config`)
-- Path/data dir queries (`get_paths_config`, `get_bin_search_paths`, `get_data_dir`)
-- Feature configs (`get_tui_config`, `get_session_config`, `get_shell_config`, `get_agent_config`, `get_server_config`, `get_context_config`, `get_bootstrap_config`)
-- System prompt (`get_system_prompt`, `get_system_prompt_mode`)
-- Cost calculation (`calculate_cost`)
-- Validation (`validate_config`)
-
-### Target Structure
-
-```
-ppxai/config/
-├── __init__.py              # Re-exports all public functions (backward compat)
-├── loader.py                # _get_config(), initialize(), get_config_source(), validate_config()
-├── providers.py             # get_provider_config(), get_api_key(), get_base_url(),
-│                            # get_provider_capabilities(), provider_needs_tool(),
-│                            # get_available_providers(), get_default_provider()
-├── models.py                # get_default_model(), get_active_models(), get_model_pricing(),
-│                            # get_model_context_limit(), get_model_max_tokens(),
-│                            # get_generation_params(), get_coding_model(), calculate_cost()
-├── tools.py                 # get_tool_config(), get_tool_description_overrides(),
-│                            # get_tool_pricing(), get_tool_calling_config()
-├── paths.py                 # get_paths_config(), get_bin_search_paths(), get_data_dir(),
-│                            # _expand_path_template(), get_server_config(), get_idle_timeout()
-├── features.py              # get_tui_config(), get_tui_theme(), set_tui_config(),
-│                            # get_session_config(), get_auto_restore_mode(),
-│                            # get_auto_save_interval(), get_shell_config(), get_agent_config(),
-│                            # get_visualization_config(), get_container_config()
-├── context.py               # get_system_prompt(), get_system_prompt_mode(),
-│                            # get_context_config(), get_bootstrap_config(),
-│                            # get_bootstrap_files(), is_bootstrap_enabled(),
-│                            # get_max_injection_size(), get_default_context_limit(),
-│                            # get_context_warn_percent()
-└── pricing.py               # get_active_pricing(), get_model_pricing() (if separate from models)
-```
-
-### Migration Steps
-
-1. **Create `config/loader.py`** — Move `_get_config()`, `_get_providers()`, `_get_models()`,
-   `initialize()`, `get_config_source()`, `validate_config()`. These are the foundation
-   everything else depends on.
-
-2. **Create submodules** in dependency order: `paths.py` → `providers.py` → `models.py` →
-   `tools.py` → `features.py` → `context.py`. Each imports `_get_config` from `loader`.
-
-3. **Update `config/__init__.py`** — Replace function definitions with re-exports:
-   ```python
-   from ppxai.config.loader import initialize, validate_config, get_config_source
-   from ppxai.config.providers import get_provider_config, get_api_key, ...
-   from ppxai.config.models import get_default_model, get_model_pricing, ...
-   # etc.
-   ```
-
-4. **No external changes needed** — All consumers import from `ppxai.config`, which still
-   exports everything at the same path.
-
-### Risk
-
-- Low — pure reorganization with re-exports preserving backward compatibility
-- No circular imports since all submodules depend only on `loader`
-
-### Estimated Effort
-
-~1.5 hours. Mechanical move-and-re-export.
-
----
-
-## 3. Extract Event Router Pattern
-
-**Priority:** LOW — cosmetic improvement, reduces if/elif chains.
+**Priority:** MEDIUM — becomes trivial after AppState (item 3).
+**Depends on:** Item 3 (AppState)
 
 ### Current State
 
-Event dispatching uses sequential if/elif chains in 3 locations:
-- `ppxai/rich/event_handler.py` — ~15 branches
-- `ppxai/tui/app.py` — event processing in message handler
-- `ppxai/server/http.py` — SSE event serialization in `sse_event_generator`
-
-Pattern:
-```python
-if event.type == EventType.STREAM_CHUNK:
-    handle_chunk(event)
-elif event.type == EventType.STREAM_END:
-    handle_end(event)
-elif event.type == EventType.TOOL_CALL:
-    handle_tool_call(event)
-# ... 10+ more branches
-```
-
-### Target Pattern
-
-Strategy dict with typed handlers:
-
-```python
-from typing import Callable, Dict
-from ppxai.engine.types import Event, EventType
-
-EventHandler = Callable[[Event], None]
-
-EVENT_HANDLERS: Dict[EventType, EventHandler] = {
-    EventType.STREAM_CHUNK: handle_chunk,
-    EventType.STREAM_END: handle_end,
-    EventType.TOOL_CALL: handle_tool_call,
-    # ...
-}
-
-def dispatch_event(event: Event) -> None:
-    handler = EVENT_HANDLERS.get(event.type)
-    if handler:
-        handler(event)
-```
-
-### Scope
-
-- `ppxai/rich/event_handler.py` — Replace if/elif with dict dispatch
-- `ppxai/server/http.py:sse_event_generator` — Replace if/elif with dict of SSE formatters
-- `ppxai/tui/app.py` — Same pattern for TUI event processing
-
-### Risk
-
-- Very low — local refactoring, no API changes
-- Each location is independent, can be done one at a time
-
-### Estimated Effort
-
-~45 minutes total (15 min per location).
-
----
-
-## 4. Reduce Provider/Model Setter Boilerplate
-
-**Priority:** LOW — protocol-based design is correct, but boilerplate is repetitive.
-
-### Current State
-
-`set_provider()`, `set_model()`, `get_provider()`, `get_model()` appear in 7+ files:
-- `engine/client.py` (canonical implementation)
-- `commands/protocol.py` (interface definition)
-- `commands/handler.py` (delegates to context)
-- `commands/context.py` (TUI/server adapters)
-- `tui/app.py` (TUI implementation)
-- `server/http.py` (HTTP endpoints)
-- `server/jsonrpc.py` (JSON-RPC endpoints)
-
-Most implementations are thin wrappers that delegate to `EngineClient`.
+3 CommandContext adapters (Rich, Textual, Server) each re-implement 12+ property/method
+delegations to `EngineClient`. Most are identical boilerplate.
 
 ### Target
 
-Extract a `ProviderModelMixin` or base class that provides the common delegation pattern:
+With AppState, all adapters delegate to the shared state object:
 
 ```python
-class ProviderModelMixin:
-    """Mixin for classes that delegate provider/model ops to an EngineClient."""
+class BaseCommandContext:
+    """Common implementation for all command contexts."""
+
+    def __init__(self, engine: EngineClient):
+        self._engine = engine
 
     @property
-    def _engine(self) -> EngineClient:
-        raise NotImplementedError
+    def engine_client(self): return self._engine
+    @property
+    def session(self): return self._engine.session
+    @property
+    def provider(self): return self._engine.state.provider
+    @property
+    def current_model(self): return self._engine.state.model
+    @property
+    def working_dir(self): return self._engine.state.working_dir
+    @property
+    def tools_enabled(self): return self._engine.state.tools_enabled
 
-    async def set_provider(self, provider: str) -> bool:
-        return await self._engine.set_provider(provider)
-
-    async def set_model(self, model: str) -> bool:
-        return await self._engine.set_model(model)
-
-    def get_provider(self) -> str:
-        return self._engine.provider
-
-    def get_model(self) -> str:
-        return self._engine.model
+    def set_provider(self, p): self._engine.set_provider(p)
+    def set_model(self, m): self._engine.set_model(m)
+    def get_provider(self): return self._engine.state.provider
+    def get_model(self): return self._engine.state.model
 ```
 
-### Scope
-
-- Create `ppxai/commands/mixins.py` with `ProviderModelMixin`
-- Apply to `commands/context.py` adapters (TUICommandContext, ServerCommandContext)
-- HTTP/JSON-RPC routes remain as-is (they're FastAPI route functions, not classes)
-
-### Risk
-
-- Low — but benefit is marginal since the protocol pattern is intentional
-- Only worth doing if the command context classes grow more shared methods
+Client-specific adapters only add what's unique (e.g., Textual's `notify()` method).
 
 ### Estimated Effort
 
-~30 minutes if scoped to command contexts only.
+~30 minutes once AppState exists.
 
 ---
 
-## 5. Slim Down `engine/client.py` (1,588 lines)
+## 5. Decompose `engine/client.py` (1,588 lines)
 
-**Priority:** MEDIUM — `EngineClient` is a god class with too many responsibilities.
+**Priority:** MEDIUM — `EngineClient` is a god class with 60 methods.
+**Depends on:** Item 3 (AppState)
 
-### Current State
+### Target
 
-`EngineClient` (single class, 1,534 lines of methods) handles:
-- Provider/model management (set_provider, set_model, get available providers/models)
-- Session lifecycle (restore_session, save, load, clear, export)
-- Chat orchestration (chat, chat_with_tools delegation)
-- Tool management (set_tools, get_tools, tool config)
-- Context injection (inject_context, clear_context, get_context_info)
-- Bootstrap context (load_bootstrap, reload_bootstrap)
-- Working directory management
-- Usage tracking (get_usage, reset_usage)
-- Agent mode (enable/disable/status)
-- Checkpoint management (undo, list, clear, set backend)
-- Debug logging
-
-### Target Structure
-
-Extract cohesive groups into helper classes that `EngineClient` composes:
+Extract cohesive delegate classes that share `AppState`:
 
 ```
-ppxai/engine/
-├── client.py                # EngineClient — thin facade, delegates to helpers
-├── client_session.py        # SessionHelper — save, load, clear, export, restore_session
-├── client_context.py        # ContextHelper — inject, clear, get_info, bootstrap
-├── client_checkpoints.py    # CheckpointHelper — undo, list, clear, set_backend
-├── chat.py                  # (existing, unchanged)
-├── session.py               # (existing, unchanged — lower-level session storage)
-└── ...
+EngineClient (slim orchestrator, ~600 lines)
+  ├── self.state: AppState              ← shared observable state
+  ├── self.checkpoints: CheckpointOps   ← 8 methods, ~250 lines
+  ├── self.consent: ConsentOps          ← 3 methods, ~200 lines
+  ├── self.bootstrap: BootstrapOps      ← 5 methods, ~150 lines
+  └── core: provider/model, chat, tools ← stays on EngineClient
 ```
 
-`EngineClient` becomes a composition root:
-
-```python
-class EngineClient:
-    def __init__(self, ...):
-        self._session = SessionHelper(self)
-        self._context = ContextHelper(self)
-        self._checkpoints = CheckpointHelper(self)
-
-    # Thin delegations
-    async def save_session(self, name): return await self._session.save(name)
-    async def inject_context(self, path): return await self._context.inject(path)
-    async def undo_checkpoint(self): return await self._checkpoints.undo()
-
-    # Provider/model/chat stay on EngineClient (core responsibility)
-```
-
-### Migration Steps
-
-1. **Extract `client_checkpoints.py`** first — most isolated group (5 methods, no
-   cross-dependencies beyond `self.messages` and checkpoint storage)
-2. **Extract `client_context.py`** — context injection, bootstrap loading (depends on
-   `self.messages` and config)
-3. **Extract `client_session.py`** — session save/load/restore (depends on provider,
-   model, messages, tools — more coupled, do last)
-4. **Keep on `EngineClient`:** provider/model management, chat orchestration, tool management,
-   usage tracking (these are the core identity of the facade)
-
-### Risk
-
-- Medium — `restore_session()` is the canonical session restore and touches provider,
-  model, tools, messages, and working directory. Must stay atomic.
-- Mitigate: helpers receive a reference to `EngineClient` (not copies of its state)
+Each delegate receives `state` (not `self`), making them testable in isolation.
 
 ### Estimated Effort
 
-~2 hours. Extract checkpoints first as proof of concept, then context, then sessions.
+~2 hours once AppState exists.
 
 ---
 
 ## 6. Modularize `tui/app.py` (2,303 lines)
 
-**Priority:** LOW — marked "works, just messy" in v1.17.0 TODO. Only address if adding
-significant new TUI features.
+**Priority:** MEDIUM — elevated from LOW because AppState enables clean extraction.
+**Depends on:** Item 3 (AppState)
 
-### Current State
-
-`PPXAIDEApp` handles layout, key bindings, event routing, theme management, status bar
-updates, session management UI, side panel management, and command dispatch. Many concerns
-are already partially extracted (file tree, input box, code editor, chat view as separate
-widgets), but coordination logic remains in the app class.
-
-### Target (if addressed)
+### Target
 
 ```
 ppxai/tui/
-├── app.py                   # PPXAIDEApp — compose, mount, route events
-├── theme_manager.py         # Theme cycling, APP_THEME_TO_SYNTAX mapping, watch_theme
-├── key_router.py            # Centralized key binding dispatch (see TODO-v1.17.0.md)
-├── message_handler.py       # on_message routing for custom Textual messages
+├── app.py                   # PPXAIDEApp — compose, mount, wire observers (~800 lines)
+├── theme_manager.py         # Theme cycling, syntax theme mapping
+├── key_router.py            # Centralized key binding dispatch
+├── stream_handler.py        # Chat streaming event processing
 └── widgets/                 # (existing, unchanged)
 ```
 
-### Scope
-
-- Extract theme management first (self-contained, ~150 lines)
-- Key binding centralization is already tracked in `docs/TODO-v1.17.0.md`
-- Message handler extraction depends on how many custom messages exist
-
-### Risk
-
-- Medium — Textual's reactive system (`watch_*` methods) must stay on the app class
-- Theme watchers can be delegated but the `watch_theme` method itself stays on the app
+With AppState observers, extracted modules don't need 10+ parameters — they subscribe
+to state changes directly.
 
 ### Estimated Effort
 
-~2 hours for theme extraction. Key binding cleanup is a separate TODO item.
+~3 hours once AppState exists.
+
+---
+
+## 7. Extract Event Router Pattern
+
+**Priority:** LOW — cosmetic improvement, 45 instances across 7 files.
+**Depends on:** None (independent), but benefits from AppState context.
+
+### Assessment
+
+Most if/elif chains are context-specific (each branch does different work). A strategy
+dict adds indirection without reducing complexity. The only genuine candidate is
+`rich/event_handler.py` with two ~15-branch chains.
+
+**Recommendation:** Address opportunistically when touching affected files, not as a
+dedicated refactoring pass.
+
+### Estimated Effort
+
+~45 minutes if scoped to `rich/event_handler.py` only.
 
 ---
 
 ## Implementation Order
 
-Recommended sequence, prioritized by risk/reward:
+Revised sequence — AppState is the foundation that unlocks everything else:
 
-| Phase | Item | Priority | Effort | Can Ship Independently |
-|-------|------|----------|--------|----------------------|
-| ~~1~~ | ~~Config submodules (#2)~~ | ~~Medium~~ | ~~Done~~ | ~~Yes~~ |
-| ~~2~~ | ~~Server models + streaming extraction (#1 steps 1-2)~~ | ~~High~~ | ~~Done~~ | ~~Yes~~ |
-| ~~3~~ | ~~Server route split (#1 steps 3-5)~~ | ~~High~~ | ~~Done~~ | ~~Yes~~ |
-| 4 | Engine client checkpoint/context extraction (#5) | Medium | 2h | Yes |
-| 5 | Event router pattern (#3) | Low | 45min | Yes |
-| 6 | Provider/model mixin (#4) | Low | 30min | Yes |
-| 7 | TUI app modularization (#6) | Low | 2h | Yes |
+| Phase | Item | Priority | Effort | Depends On |
+|-------|------|----------|--------|------------|
+| ~~1~~ | ~~Server modularization (#1)~~ | ~~High~~ | ~~Done~~ | — |
+| ~~2~~ | ~~Config submodules (#2)~~ | ~~High~~ | ~~Done~~ | — |
+| 3 | **AppState — unified state management (#3)** | **High** | 4h | — |
+| 4 | CommandContext simplification (#4) | Medium | 30min | #3 |
+| 5 | EngineClient decomposition (#5) | Medium | 2h | #3 |
+| 6 | TUI app modularization (#6) | Medium | 3h | #3 |
+| 7 | Event router pattern (#7) | Low | 45min | — |
 
-**Total estimated effort:** ~10 hours across v1.17.x releases.
+**Remaining effort:** ~10 hours across v1.17.x releases.
 
-Each phase produces a clean commit that passes all tests. No phase depends on another.
+Phase 3 (AppState) is the critical path — it unblocks phases 4–6 and makes each
+subsequent phase significantly simpler.
 
 ---
 
@@ -458,8 +385,8 @@ Each phase produces a clean commit that passes all tests. No phase depends on an
 
 These are explicitly **not** part of this refactoring plan:
 
-- **Web app (`app.js`)** — Already refactored in v1.16.2 (api-client, command dispatcher,
-  stream handler, editor controller extracted). Further splitting is diminishing returns.
+- **Web app (`app.js`)** — Already has `AppState` (v1.16.2). The Python `AppState` mirrors
+  the same pattern for consistency.
 - **Feature changes** — This plan is purely structural. No new endpoints, no behavior changes.
 - **K8s deployment** — Tracked separately in `TODO-v1.17.0.md`.
 - **Multi-model routing** — Tracked separately in `TODO-routing-v1.17.6.md`.
