@@ -68,22 +68,87 @@ where one piece gets missed.
 Port the web app's `AppState` pattern to Python. A single observable state object
 shared between the engine and its client, with change notifications that auto-sync UI.
 
+#### Design Requirements
+
+**Thread-safety:** ppxai runs in multiple threading/async contexts simultaneously:
+- **Textual TUI** — Textual's event loop + worker threads for async engine calls
+- **Rich TUI** — Main thread + asyncio event loop
+- **HTTP Server** — uvicorn's async event loop + multiple concurrent requests per session
+- **Session Manager** — Background idle monitor thread + async session cleanup
+
+State reads and writes can happen from any of these contexts concurrently. The
+implementation must guarantee:
+- **Atomic reads** — No torn reads when one thread writes while another reads
+- **Atomic writes** — No lost updates when concurrent writes race
+- **Thread-safe listener dispatch** — Observers fire without corruption of the
+  listener registry, even when `on()` is called from a different thread
+- **No deadlocks** — Listener callbacks must not re-enter the lock (callbacks
+  execute outside the write lock, or the lock is reentrant)
+
+**Async-friendly:** State mutations happen inside `async def` methods (engine chat,
+session restore, tool execution). The implementation must:
+- **Never block the event loop** — No `threading.Lock.acquire()` in async code paths.
+  Use `asyncio.Lock` for async contexts, or lock-free atomic patterns.
+- **Support mixed sync/async listeners** — Engine writes state synchronously, but
+  TUI observers may need to schedule Textual `call_from_thread()` or `app.post_message()`.
+  Listeners should accept both sync and async callables.
+- **Event loop awareness** — When a listener is an async coroutine, `AppState` should
+  detect and schedule it on the running loop (`asyncio.create_task` or
+  `loop.call_soon_threadsafe`) rather than calling it synchronously.
+
+**Practical approach:** Two implementation strategies to evaluate:
+
+1. **Lock-free with atomic dict reference** (preferred for reads):
+   ```python
+   # Writes: copy-on-write with threading.Lock for mutation only
+   # Reads: direct dict access (atomic in CPython due to GIL, but
+   #         explicitly safe via immutable snapshot swap)
+   # Listeners: dispatched after lock release to prevent deadlocks
+   ```
+
+2. **RLock with sync/async dispatch**:
+   ```python
+   # RLock allows reentrant writes (listener triggers another write)
+   # Async listeners scheduled via loop.call_soon_threadsafe()
+   # Simpler but slightly higher contention
+   ```
+
 ```python
 # ppxai/state.py — shared across all Python clients
+
+import asyncio
+import threading
+from typing import Any, Callable, Union
+
+AsyncListener = Callable[[Any], Any]  # sync or async callable
+
 
 class AppState:
     """Observable application state with change notifications.
 
-    All mutable session state lives here. Clients subscribe to changes
-    instead of polling or manually syncing.
+    Thread-safe and async-friendly. All mutable session state lives here.
+    Clients subscribe to changes instead of polling or manually syncing.
 
     Mirrors the web app's AppState (ppxai/web/shared/app-state.js) but
-    uses Python descriptors instead of JS Proxy.
+    adapted for Python's threading + asyncio model.
+
+    Thread safety:
+    - Writes are serialized via threading.Lock
+    - Reads are lock-free (atomic dict reference in CPython)
+    - Listeners are dispatched outside the lock to prevent deadlocks
+    - Listener registry mutations are protected by the same lock
+
+    Async safety:
+    - Sync listeners called directly (for thread-local UI updates)
+    - Async listeners scheduled via asyncio.create_task() if a running
+      loop is detected, or loop.call_soon_threadsafe() from worker threads
+    - Safe to call from both sync and async contexts
     """
 
     def __init__(self, initial: dict = None):
         self._data = dict(initial or {})
-        self._listeners: dict[str, list[Callable]] = {}
+        self._listeners: dict[str, list[AsyncListener]] = {}
+        self._lock = threading.Lock()
 
     def __getattr__(self, key):
         if key.startswith('_'):
@@ -94,22 +159,84 @@ class AppState:
         if key.startswith('_'):
             super().__setattr__(key, value)
             return
-        old = self._data.get(key)
-        if old == value:
-            return  # No-op dedup
-        self._data[key] = value
-        for fn in self._listeners.get(key, []):
-            fn(value)
+        # Serialize writes; dispatch listeners outside the lock
+        listeners_to_call = []
+        with self._lock:
+            old = self._data.get(key)
+            if old == value:
+                return  # No-op dedup
+            self._data[key] = value
+            listeners_to_call = list(self._listeners.get(key, []))
 
-    def on(self, key: str, fn: Callable) -> "AppState":
-        """Subscribe to changes on a state key."""
-        self._listeners.setdefault(key, []).append(fn)
+        # Dispatch outside lock — prevents deadlocks from re-entrant writes
+        for fn in listeners_to_call:
+            if asyncio.iscoroutinefunction(fn):
+                # Async listener: schedule on the running event loop
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(fn(value))
+                except RuntimeError:
+                    # No running loop (called from sync thread) — skip async listener
+                    pass
+            else:
+                fn(value)
+
+    def on(self, key: str, fn: AsyncListener) -> "AppState":
+        """Subscribe to changes on a state key. Accepts sync or async callables."""
+        with self._lock:
+            self._listeners.setdefault(key, []).append(fn)
+        return self
+
+    def off(self, key: str, fn: AsyncListener) -> "AppState":
+        """Unsubscribe from changes on a state key."""
+        with self._lock:
+            fns = self._listeners.get(key, [])
+            if fn in fns:
+                fns.remove(fn)
         return self
 
     def snapshot(self) -> dict:
-        """Plain dict copy for debugging/serialization."""
+        """Plain dict copy for debugging/serialization. Lock-free read."""
         return dict(self._data)
+
+    def update(self, **kwargs) -> None:
+        """Batch-update multiple fields. Listeners fire for each changed field."""
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 ```
+
+#### Textual Integration Note
+
+Textual runs its own async event loop and uses `call_from_thread()` for cross-thread
+communication. AppState listeners registered by the TUI should use Textual's
+`app.call_from_thread()` to safely post UI updates:
+
+```python
+# In PPXAIDEApp.on_mount():
+def _badge_updater(key, badge_fn):
+    """Create a thread-safe listener that posts badge update to Textual."""
+    def listener(value):
+        self.call_from_thread(badge_fn, value)
+    return listener
+
+self.state.on("provider", _badge_updater("provider", lambda v: status_bar.update_badge("provider", v)))
+self.state.on("model", _badge_updater("model", lambda v: status_bar.update_badge("model", v)))
+```
+
+This ensures badge updates always execute on Textual's event loop thread, even when
+the engine writes state from a worker thread.
+
+#### FastAPI/Uvicorn Integration Note
+
+The HTTP server runs on uvicorn's asyncio event loop. State reads happen inside
+`async def` route handlers — these are naturally safe since they run on the same
+loop. State writes from the engine (e.g., during SSE streaming) happen within
+`asyncio.Task`s on the same loop — also safe. No special integration needed beyond
+the base `AppState` thread safety.
+
+For multi-worker deployments (k8s with multiple uvicorn workers), each worker
+process gets its own `AppState` instance — no cross-process synchronization needed
+(same model as `ConfigStore`).
 
 ### How It Flows
 
@@ -234,10 +361,25 @@ This item is the **foundation** for all remaining items:
 - Medium — touches all clients, but migration is incremental (wrappers preserve
   backward compat during transition)
 - AppState is proven — identical pattern already works in the web app
+- Thread safety is critical — engine writes from worker threads while TUI reads
+  on the event loop. Must verify no deadlocks under Textual's threading model.
+- Async listener dispatch needs careful testing — ensure `create_task()` doesn't
+  fire on a closed loop during shutdown, and `call_from_thread()` doesn't race
+  with Textual widget unmounting.
+
+### Testing Requirements
+
+- Unit tests: concurrent read/write from multiple threads (no torn reads)
+- Unit tests: async listener dispatch from sync context (scheduled, not called)
+- Unit tests: no-op dedup (identical write doesn't fire listeners)
+- Unit tests: `off()` unsubscribe prevents stale listener calls
+- Integration: Textual app with AppState observers (badge updates from worker thread)
+- Integration: FastAPI route reading state while engine writes during SSE stream
 
 ### Estimated Effort
 
-~4 hours for AppState + EngineClient integration. TUI/Rich migration ~2 hours each.
+~5 hours for AppState + EngineClient integration + thread-safety tests.
+TUI/Rich migration ~2 hours each.
 
 ---
 
