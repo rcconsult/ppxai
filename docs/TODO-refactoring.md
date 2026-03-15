@@ -63,152 +63,114 @@ syncing with `EngineClient`. When state changes (e.g., session restore), every c
 must remember to update its local copies + UI badges + subtitle — leading to bugs
 where one piece gets missed.
 
-### Solution: Unified `AppState` — Schema-Driven, Cross-Platform
+### Solution: Separated Concerns — App State + Runtime Schemas
 
-A single state schema defines all application state fields, their types, defaults,
-and which client platforms use them. Code generators produce platform-specific
-implementations (Python, JS, TS) from the schema, ensuring consistency across all
-three codebases and enabling feature-driven plug-n-play development.
+Two separate schemas with a uniform access pattern:
 
-#### Schema File: `ppxai-state.schema.yaml`
+1. **App State Schema** (`ppxai-state.schema.yaml`) — what the app knows about itself.
+   Same fields, same names, all clients. This is application logic.
 
-The schema is the single source of truth. It defines a **unified field set** shared
-by all clients. Every client gets every field — the difference is only in runtime
-behavior (thread-safe locks in Python, Proxy in JS, EventEmitter in TS).
+2. **Runtime Schema(s)** (`ppxai-runtime-*.schema.yaml`) — how the app is deployed
+   and what the deployment provides. This is infrastructure configuration that gets
+   plugged into the state store for uniform `get()`/`set()` access.
 
-Widget-local UI state (autocomplete dropdown visibility, RightPanelFrame stack depth,
-Textual theme index) does NOT belong in AppState. Those stay on the widget that owns
-them. AppState holds only **application-level state** that multiple components need.
+3. **Packaging** — how we bundle the app (PyInstaller, Docker, VSIX). Build concern
+   only. Not a state concern. Not in any schema.
 
-**Naming convention:** Schema uses `camelCase` field names. The generator applies
-platform-appropriate casing:
-- **JS/TS:** `camelCase` as-is → `state.currentProvider`
-- **Python:** converted to `snake_case` → `state.current_provider`
+The desktop web app and k8s web app are the **same app**. k8s just provides a
+runtime environment that injects configuration (session manager URL, working dir,
+LDAP endpoint). The glue code (session-manager sidecar, nginx BFF, ingress) is
+deployment infrastructure — it doesn't change the app's state model.
 
-The names must map 1:1 so a developer reading any codebase recognizes the same field.
+```
+┌──────────────────────────────────────────────┐
+│  App State Schema (ppxai-state.schema.yaml)  │  ← application logic
+│  currentProvider, currentModel, toolsEnabled │     same across ALL clients
+│  isStreaming, agentMode, checkpointCount, ... │
+└──────────────────────────────────────────────┘
+         │ plugs into
+         ▼
+┌──────────────────────────────────────────────┐
+│  AppState Store (generated per platform)     │  ← uniform public interface
+│  get() / set() / on() / off() / update()     │     Python / JS / TS
+│  snapshot()                                  │
+└──────────────────────────────────────────────┘
+         ▲ plugs into
+         │
+┌──────────────────────────────────────────────┐
+│  Runtime Schema (optional, per deployment)   │  ← infrastructure config
+│  k8s: sessionIsolation, maxSessions, ttl     │     injected at startup
+│  vscode: webviewReady                        │
+│  desktop: terminalProtocol                   │
+└──────────────────────────────────────────────┘
+```
 
-**Access convention:** All state access goes through the public interface — **zero
-direct field access**. The generated `AppState` enforces this:
-- **JS/TS:** `state.get('currentProvider')` / `state.set('currentProvider', 'openai')`
-  (Proxy shorthand `state.currentProvider` also works but resolves to get/set internally)
-- **Python:** `state.get('current_provider')` / `state.set('current_provider', 'openai')`
-  (property shorthand `state.current_provider` also works but resolves to get/set internally)
+#### App State Schema: `ppxai-state.schema.yaml`
 
-No client code ever reads `self._data['current_provider']` or writes to internal
-storage directly. This enables the runtime to enforce dedup, fire observers, and
-add validation/logging without client changes.
+The app state schema is the single source of truth for application-level state.
+Every client gets every field. No per-platform conditionals.
+
+**Naming convention:** Schema uses `camelCase`. Generator converts to `snake_case`
+for Python. Names map 1:1 across codebases.
+
+**Access convention:** Zero direct field access. All reads via `get()` or property
+shorthand. All writes via `set()` or property shorthand. Both resolve to the same
+internal mechanism that enforces dedup and fires observers.
+
+```
+# Python                             # JS / TS
+state.get("current_provider")        state.get("currentProvider")
+state.set("current_provider", "x")   state.set("currentProvider", "x")
+state.current_provider               state.currentProvider          # shorthand
+state.on("current_provider", fn)     state.on("currentProvider", fn)
+state.off("current_provider", fn)    state.off("currentProvider", fn)
+state.snapshot()                     state.snapshot()
+state.update(current_provider="x",   state.update({currentProvider: "x",
+             current_model="y")                    currentModel: "y"})
+```
 
 ```yaml
 # ppxai-state.schema.yaml — generates AppState for Python, JS, TS
 version: "1.0"
 
-# Unified field set — ALL clients get ALL fields.
-# camelCase names are converted to snake_case for Python.
 fields:
   # --- Provider / Model ---
-  currentProvider:
-    type: string
-    default: "perplexity"
-    description: "Active provider ID"
-
-  currentModel:
-    type: string
-    default: "sonar-pro"
-    description: "Active model ID"
-
-  workingDir:
-    type: string
-    default: null
-    nullable: true
-    description: "Current working directory for file operations"
+  currentProvider:       { type: string,  default: "perplexity" }
+  currentModel:          { type: string,  default: "sonar-pro" }
+  workingDir:            { type: string,  default: null, nullable: true }
 
   # --- Session ---
-  sessionName:
-    type: string
-    default: null
-    nullable: true
-    description: "Name of loaded session (null if unsaved)"
-
-  messageCount:
-    type: integer
-    default: 0
-    description: "Number of messages in current conversation"
+  sessionName:           { type: string,  default: null, nullable: true }
+  messageCount:          { type: integer, default: 0 }
 
   # --- Tools ---
-  toolsEnabled:
-    type: boolean
-    default: false
-    description: "Whether tool calling is active"
-
-  toolsVerbose:
-    type: boolean
-    default: false
-    description: "Verbose tool output logging"
-
-  agentMode:
-    type: boolean
-    default: false
-    description: "Autonomous agent mode"
+  toolsEnabled:          { type: boolean, default: false }
+  toolsVerbose:          { type: boolean, default: false }
+  agentMode:             { type: boolean, default: false }
 
   # --- Streaming ---
-  isStreaming:
-    type: boolean
-    default: false
-    description: "Chat response currently streaming"
-
-  cancelRequested:
-    type: boolean
-    default: false
-    description: "User requested stream cancellation"
+  isStreaming:            { type: boolean, default: false }
+  cancelRequested:       { type: boolean, default: false }
 
   # --- Context ---
-  autoInject:
-    type: boolean
-    default: true
-    description: "Automatic @file/@git context injection"
-
-  bootstrapLoaded:
-    type: boolean
-    default: false
-    description: "AGENTS.md/CLAUDE.md bootstrap context loaded"
+  autoInject:            { type: boolean, default: true }
+  bootstrapLoaded:       { type: boolean, default: false }
 
   # --- Checkpoints ---
-  lastCheckpoint:
-    type: string
-    default: null
-    nullable: true
-    description: "ID of most recent checkpoint (git SHA or file ID)"
-
-  checkpointCount:
-    type: integer
-    default: 0
-    description: "Number of available checkpoints"
+  lastCheckpoint:        { type: string,  default: null, nullable: true }
+  checkpointCount:       { type: integer, default: 0 }
 
   # --- Usage ---
-  usagePromptTokens:
-    type: integer
-    default: 0
-    description: "Prompt tokens used in current session"
-
-  usageCompletionTokens:
-    type: integer
-    default: 0
-    description: "Completion tokens used in current session"
-
-  usageCost:
-    type: number
-    default: 0.0
-    description: "Estimated cost in USD for current session"
+  usagePromptTokens:     { type: integer, default: 0 }
+  usageCompletionTokens: { type: integer, default: 0 }
+  usageCost:             { type: number,  default: 0.0 }
 
   # --- Debug ---
-  debugLogEnabled:
-    type: boolean
-    default: false
-    description: "Server debug logging active"
+  debugLogEnabled:       { type: boolean, default: false }
 
-# Feature flags — enable/disable groups of fields per deployment target.
-# Fields are always generated in all clients; flags control runtime behavior
-# (e.g., whether observers are wired, whether fields are exposed in GET /status).
+# Feature groups — logical grouping for documentation and selective observation.
+# All fields are always present in all clients. Groups are for wiring observers
+# and for GET /status to return a coherent subset.
 features:
   core:        [currentProvider, currentModel, workingDir, sessionName, messageCount]
   tools:       [toolsEnabled, toolsVerbose, agentMode]
@@ -219,31 +181,72 @@ features:
   debug:       [debugLogEnabled]
 ```
 
-#### Public Interface (Generated, All Platforms)
+#### Runtime Schemas (Separate Concern, Pluggable)
 
-The generator produces identical method signatures across all three languages.
-Client code MUST use these methods — no direct field access.
+Runtime configuration is NOT app state. It's deployment infrastructure that the app
+reads but doesn't own. Each runtime environment has its own schema that gets plugged
+into the AppState store at startup for uniform `get()`/`set()` access.
 
+```yaml
+# ppxai-runtime-k8s.schema.yaml
+version: "1.0"
+description: "Kubernetes multi-user deployment"
+
+fields:
+  sessionIsolation:    { type: boolean, default: true }
+  maxSessions:         { type: integer, default: 3 }
+  ttlMinutes:          { type: integer, default: 10 }
+  ldapEnabled:         { type: boolean, default: false }
+  registryPath:        { type: string,  default: "/registry" }
 ```
-# Python                             # JS / TS
-state.get("current_provider")        state.get("currentProvider")
-state.set("current_provider", "x")   state.set("currentProvider", "x")
-state.current_provider               state.currentProvider          # shorthand (resolves to get/set)
-state.on("current_provider", fn)     state.on("currentProvider", fn)
-state.off("current_provider", fn)    state.off("currentProvider", fn)
-state.snapshot()                     state.snapshot()
-state.update(current_provider="x",   state.update({currentProvider: "x",
-             current_model="y")                    currentModel: "y"})
+
+```yaml
+# ppxai-runtime-vscode.schema.yaml
+version: "1.0"
+description: "VSCode extension"
+
+fields:
+  webviewReady:        { type: boolean, default: false }
+  extensionVersion:    { type: string,  default: "" }
 ```
 
-The `update()` method applies multiple field changes and fires observers only
-once per changed field (not per `update()` call). This supports atomic multi-field
-transitions like session restore where provider + model + tools must change together.
+```yaml
+# ppxai-runtime-desktop.schema.yaml
+version: "1.0"
+description: "Desktop terminal TUI"
+
+fields:
+  terminalProtocol:    { type: string,  default: "auto", enum: [auto, sixel, iterm2, kitty] }
+```
+
+At startup, the client loads its runtime schema into the same store:
+
+```python
+# Desktop TUI startup
+state = AppState()                                # Core app state from schema
+state.load_runtime("ppxai-runtime-desktop")       # Adds terminalProtocol
+# Access uniformly: state.get("terminal_protocol")
+```
+
+```javascript
+// Web app startup (same app whether standalone or k8s)
+const state = new AppState();                     // Core app state from schema
+if (isK8sDeployment()) {
+    state.loadRuntime('ppxai-runtime-k8s');        // Adds sessionIsolation, maxSessions, etc.
+}
+// Access uniformly: state.get("sessionIsolation") ?? false
+```
+
+The app code doesn't care where the runtime config came from. It calls
+`state.get("sessionIsolation")` and gets `true` (k8s) or `undefined` (standalone).
+The runtime schema just makes the field names and types explicit so they're
+consistent across deployments.
 
 #### Code Generation
 
 ```
-ppxai-state.schema.yaml
+ppxai-state.schema.yaml              (app state — always generated)
+ppxai-runtime-*.schema.yaml          (runtime configs — generated per deployment)
          │
     scripts/generate-state.py
          │
@@ -253,44 +256,29 @@ ppxai-state.schema.yaml
 ```
 
 Each generated file includes:
-- All fields from the schema with platform-appropriate naming
+- All app state fields with platform-appropriate naming
 - `get()`, `set()`, `on()`, `off()`, `snapshot()`, `update()` public interface
-- Property accessors as shorthand (Python `__getattr__`/`__setattr__`, JS Proxy,
-  TS get/set accessors)
+- `loadRuntime(name)` method to plug in runtime fields
+- Property accessors as shorthand
 - No-op dedup on identical writes
-- `SCHEMA_VERSION` constant for runtime compatibility checks
+- `SCHEMA_VERSION` constant
 - **Python only:** `threading.Lock` for writes, async listener dispatch
-- **JS only:** `Proxy` traps (existing pattern, now generated)
+- **JS only:** `Proxy` traps
 - **TS only:** `IAppState` interface with typed fields
 
 #### Feature-Driven Development
 
-Adding a new state field is a 3-step process:
+Adding a new app state field:
 
-1. **Define** in `ppxai-state.schema.yaml`:
-   ```yaml
-   fields:
-     routingEnabled:
-       type: boolean
-       default: false
-       description: "Cross-model routing active"
-     routingMode:
-       type: string
-       default: "manual"
-       enum: ["manual", "auto", "hybrid"]
-       description: "Routing strategy"
-   features:
-     routing: [routingEnabled, routingMode]
-   ```
-
+1. **Add** to `ppxai-state.schema.yaml`
 2. **Regenerate**: `python scripts/generate-state.py`
-   - Python gets `state.routing_enabled` / `state.routing_mode`
-   - JS/TS gets `state.routingEnabled` / `state.routingMode`
-   - All with correct types, defaults, observers
+3. **Wire observers** where needed
 
-3. **Wire observers** in the clients that need reactivity.
-   Other clients get the fields automatically (for GET /status, session
-   serialize, etc.) even if they don't observe them.
+Adding a new runtime setting:
+
+1. **Add** to the relevant `ppxai-runtime-*.schema.yaml`
+2. **Regenerate**
+3. **Access** via `state.get("new_setting")` — works in any client that loads that runtime
 
 #### Design Requirements
 
@@ -452,257 +440,39 @@ class AppState:
                 fn(value)
 ```
 
-#### Composable State: Core + Feature Slices + Runtime Settings
-
-AppState is not a flat bag of fields. It's composed of three layers:
-
-```
-┌─────────────────────────────────────────────────────┐
-│  Runtime Settings (injected at startup)              │
-│  k8s: sessionIsolation, maxSessions, ttlMinutes     │
-│  vscode: webviewReady, extensionVersion              │
-│  web: themeStorage, commandHistory                   │
-│  desktop: terminalProtocol                           │
-├─────────────────────────────────────────────────────┤
-│  Feature Slices (opt-in per deployment target)       │
-│  fileTree: visible, currentPath, selectedItem        │
-│  preview: active, filePath, viewMode                 │
-│  autocomplete: visible, items, index                 │
-│  reasoning: active, content                          │
-├─────────────────────────────────────────────────────┤
-│  Core State (always present, all clients)             │
-│  currentProvider, currentModel, toolsEnabled, ...    │
-└─────────────────────────────────────────────────────┘
-```
-
-**Core state** = the unified schema fields (provider, model, tools, streaming, etc.).
-Always present in every client.
-
-**Feature slices** = UI features that may or may not be active depending on the
-deployment target. Each feature declares its state fields, events, and which runtimes
-include it. A feature slice registers itself with AppState at startup — the core
-AppState doesn't know about feature-specific fields until they're registered.
-
-**Runtime settings** = deployment-specific configuration injected at startup. The k8s
-web app has session isolation settings; VSCode has extension version tracking; the
-desktop TUI has terminal protocol detection. These are just another feature slice
-that happens to be runtime-specific.
-
-#### Schema: Features as First-Class Composable Units
-
-```yaml
-# ppxai-state.schema.yaml
-version: "1.0"
-
-# ─── Core State (always present, all clients) ───
-core:
-  fields:
-    currentProvider:  { type: string,  default: "perplexity" }
-    currentModel:     { type: string,  default: "sonar-pro" }
-    workingDir:       { type: string,  default: null, nullable: true }
-    sessionName:      { type: string,  default: null, nullable: true }
-    messageCount:     { type: integer, default: 0 }
-    toolsEnabled:     { type: boolean, default: false }
-    toolsVerbose:     { type: boolean, default: false }
-    agentMode:        { type: boolean, default: false }
-    isStreaming:       { type: boolean, default: false }
-    cancelRequested:  { type: boolean, default: false }
-    autoInject:       { type: boolean, default: true }
-    bootstrapLoaded:  { type: boolean, default: false }
-    lastCheckpoint:   { type: string,  default: null, nullable: true }
-    checkpointCount:  { type: integer, default: 0 }
-    usagePromptTokens:      { type: integer, default: 0 }
-    usageCompletionTokens:  { type: integer, default: 0 }
-    usageCost:               { type: number,  default: 0.0 }
-    debugLogEnabled:  { type: boolean, default: false }
-
-# ─── Feature Slices (composable, opt-in per runtime) ───
-features:
-  fileTree:
-    description: "File browser panel"
-    runtimes: [desktop, web, k8s]
-    fields:
-      fileTreeVisible:    { type: boolean, default: false }
-      fileTreePath:       { type: string,  default: null, nullable: true }
-      fileTreeSelected:   { type: string,  default: null, nullable: true }
-    events:
-      - fileTree:toggle
-      - fileTree:navigate
-      - fileTree:select
-
-  preview:
-    description: "File preview / editor panel"
-    runtimes: [web, k8s]
-    fields:
-      previewActive:      { type: boolean, default: false }
-      previewFilePath:    { type: string,  default: null, nullable: true }
-      previewViewMode:    { type: string,  default: "rendered", enum: [rendered, source, split] }
-    events:
-      - preview:open
-      - preview:close
-      - preview:switchMode
-
-  autocomplete:
-    description: "Input autocomplete suggestions"
-    runtimes: [web, k8s, desktop]
-    fields:
-      autocompleteVisible: { type: boolean, default: false }
-      autocompleteIndex:   { type: integer, default: 0 }
-    events:
-      - autocomplete:show
-      - autocomplete:hide
-      - autocomplete:select
-
-  reasoning:
-    description: "Reasoning/thinking chunk display"
-    runtimes: [desktop]
-    fields:
-      reasoningActive:    { type: boolean, default: false }
-    events:
-      - reasoning:start
-      - reasoning:chunk
-      - reasoning:end
-
-  htmlPreview:
-    description: "Live HTML preview with hot reload"
-    runtimes: [web, k8s]
-    fields:
-      htmlPreviewActive:   { type: boolean, default: false }
-      htmlPreviewFilepath: { type: string,  default: null, nullable: true }
-    events:
-      - htmlPreview:open
-      - htmlPreview:close
-
-# ─── Runtime Profiles ───
-runtimes:
-  desktop:
-    description: "Textual/Rich terminal TUI"
-    features: [fileTree, autocomplete, reasoning]
-    settings:
-      terminalProtocol:    { type: string,  default: "auto", enum: [auto, sixel, iterm2, kitty] }
-
-  web:
-    description: "Browser-based web app (standalone desktop-server)"
-    features: [fileTree, preview, autocomplete, htmlPreview]
-    settings:
-      themeStorage:        { type: string,  default: "localStorage" }
-
-  k8s:
-    description: "Kubernetes multi-user deployment (same web components)"
-    extends: web
-    settings:
-      sessionIsolation:    { type: boolean, default: true }
-      maxSessions:         { type: integer, default: 3 }
-      ttlMinutes:          { type: integer, default: 10 }
-      ldapEnabled:         { type: boolean, default: false }
-
-  vscode:
-    description: "VSCode extension webview"
-    features: []    # VSCode has its own tree, preview, etc.
-    settings:
-      webviewReady:        { type: boolean, default: false }
-```
-
-#### How Feature Slices Register
-
-At startup, the runtime activates its features. The state store composes
-itself from core + active feature slices + runtime settings:
-
-```python
-# Python — desktop TUI startup
-from ppxai.state import AppState, load_feature, load_runtime
-
-state = AppState()                           # Core fields only
-load_feature(state, "fileTree")              # Adds fileTree.* fields
-load_feature(state, "autocomplete")          # Adds autocomplete.* fields
-load_feature(state, "reasoning")             # Adds reasoning.* fields
-load_runtime(state, "desktop")              # Adds terminalProtocol setting
-```
-
-```javascript
-// JS — web app startup
-const state = new AppState();                // Core fields only
-loadFeature(state, 'fileTree');              // Adds fileTree.* fields
-loadFeature(state, 'preview');               // Adds preview.* fields
-loadFeature(state, 'autocomplete');          // Adds autocomplete.* fields
-loadFeature(state, 'htmlPreview');           // Adds htmlPreview.* fields
-loadRuntime(state, 'web');                   // Adds themeStorage setting
-
-// k8s deployment — same components, extra settings
-loadRuntime(state, 'k8s');                   // Adds sessionIsolation, maxSessions, ttlMinutes
-```
-
-```typescript
-// TS — VSCode extension startup
-const state = new AppState();                // Core fields only
-loadRuntime(state, 'vscode');               // Adds webviewReady setting
-// No feature slices — VSCode has native tree, preview, etc.
-```
-
 #### Event Bus Integration
 
 Each platform already has an event bus:
 - **Python (Textual):** `EventBus` with blinker signals (`ppxai/tui/event_bus.py`)
 - **TypeScript (VSCode):** `ChatEventBus` with typed emit/on (`handlers/eventBus.ts`)
-- **JavaScript (Web):** CustomEvent dispatch or direct callback wiring
+- **JavaScript (Web):** Direct callback wiring
 
-The schema's `events` field per feature generates event constants and typed
-handler signatures for each platform. Features communicate through the bus,
-not by reading/writing AppState directly:
+AppState `on()`/`off()` handles state-change observation. The event bus handles
+action/intent signals (user clicked, stream started, consent requested). These
+are complementary — not competing:
 
-```
-User clicks file tree item
-  → bus.emit("fileTree:select", { path: "src/main.py" })
-  → fileTree handler: state.set("fileTreeSelected", "src/main.py")
-  → preview handler (subscribed to fileTree:select): state.set("previewFilePath", "src/main.py")
-  → AppState observer fires: preview panel renders the file
-```
+- **Event bus:** "user selected a file" → handler decides what to do
+- **AppState observer:** "currentModel changed" → badge auto-updates
 
-State changes are the **result** of event handling, not the event itself.
-Events carry intent ("user selected a file"), state carries truth ("the selected
-file is src/main.py"). This separation means:
-- Features can react to each other's events without coupling
-- The bus is the integration point, not shared mutable state
-- A feature can be disabled by simply not registering its event handlers
-
-#### Code Generation Output (Revised)
-
-```
-ppxai-state.schema.yaml
-         │
-    scripts/generate-state.py
-         │
-         ├──→ ppxai/state.py                  # AppState class + load_feature/load_runtime
-         ├──→ ppxai/state_features.py          # Feature slice definitions (fields, defaults)
-         ├──→ ppxai/state_events.py            # Event constants (like Events class today)
-         │
-         ├──→ ppxai/web/shared/app-state.js    # AppState + loadFeature/loadRuntime
-         ├──→ ppxai/web/shared/state-features.js  # Feature slice definitions
-         ├──→ ppxai/web/shared/state-events.js    # Event constants
-         │
-         ├──→ vscode-extension/src/shared/appState.ts      # AppState + loadFeature/loadRuntime
-         ├──→ vscode-extension/src/shared/stateFeatures.ts  # Feature slice definitions
-         └──→ vscode-extension/src/shared/stateEvents.ts    # Event type map (replaces hand-written)
-```
+Widget-local UI state (autocomplete dropdown, file tree selection, preview mode)
+stays on the widget. Only app-level state flows through AppState.
 
 #### Runtime Integration Notes
 
 **Textual TUI:** AppState observers use `app.call_from_thread()` for cross-thread
 UI updates. The existing `EventBus` (blinker-based) handles engine→UI events.
-Feature slice event handlers subscribe via the same bus.
 
 **FastAPI/Uvicorn:** State reads happen in async route handlers on the same event
 loop — naturally safe. Multi-worker deployments (k8s) get per-process AppState
 instances (same model as `ConfigStore`).
 
-**Web App (standalone + k8s):** k8s deployment uses the exact same web components.
-The difference is `loadRuntime(state, 'k8s')` which adds session isolation settings
-and configures the API client to include session headers. The web app doesn't know
-or care whether it's running standalone or in k8s — it just reads `state.get("sessionIsolation")`
-and acts accordingly.
+**Web App (standalone + k8s):** Same app. k8s deployment calls
+`state.loadRuntime('ppxai-runtime-k8s')` at startup to inject session isolation
+settings. The app code calls `state.get("sessionIsolation")` and gets `true` (k8s)
+or `undefined` (standalone). No conditional code paths — just config.
 
-**VSCode Extension:** Uses VS Code's native `EventEmitter` pattern. The generated
-`ChatEventBus` replaces the hand-written one with schema-generated event types.
+**VSCode Extension:** Uses VS Code's native `EventEmitter` pattern alongside
+AppState observers.
 
 ### How It Flows
 
@@ -851,15 +621,15 @@ This item is the **foundation** for all remaining items:
 
 ### Estimated Effort
 
-- Schema design (`ppxai-state.schema.yaml`): ~2 hours
-- Generator (`scripts/generate-state.py` — Python/JS/TS templates): ~3 hours
-- Python AppState + feature slices + EngineClient integration + tests: ~5 hours
-- JS AppState regeneration + feature slices + Playwright verification: ~2 hours
-- TS AppState + feature slices + VSCode wiring: ~3 hours
-- Event constants generation + bus alignment: ~2 hours
+- App state schema: ~1 hour
+- Runtime schemas (k8s, vscode, desktop): ~1 hour
+- Generator (Python/JS/TS templates): ~3 hours
+- Python AppState + EngineClient integration + thread-safety tests: ~4 hours
+- JS AppState regeneration + Playwright verification: ~2 hours
+- TS AppState + VSCode wiring: ~2 hours
 - TUI/Rich migration to observers: ~2 hours each
 - CI `--check` mode: ~30 minutes
-- **Total: ~22 hours** (can be split across 4–5 sessions)
+- **Total: ~18 hours** (can be split across 4 sessions)
 
 ---
 
@@ -990,21 +760,22 @@ Revised sequence — AppState is the foundation that unlocks everything else:
 |-------|------|----------|--------|------------|
 | ~~1~~ | ~~Server modularization (#1)~~ | ~~High~~ | ~~Done~~ | — |
 | ~~2~~ | ~~Config submodules (#2)~~ | ~~High~~ | ~~Done~~ | — |
-| 3a | **Schema** (`ppxai-state.schema.yaml` — core + features + runtimes) | **High** | 2h | — |
-| 3b | **Generator** (`scripts/generate-state.py` — Python/JS/TS templates) | **High** | 3h | 3a |
-| 3c | **Python AppState** (generate + feature slices + EngineClient + tests) | **High** | 5h | 3b |
-| 3d | **JS AppState** (generate + feature slices + Playwright verification) | **High** | 2h | 3b |
-| 3e | **TS AppState** (generate + feature slices + VSCode wiring) | Medium | 3h | 3b |
-| 3f | **Event constants** (generate from schema, align with existing buses) | Medium | 2h | 3b |
-| 4 | CommandContext simplification (#4) | Medium | 30min | 3c |
-| 5 | EngineClient decomposition (#5) | Medium | 2h | 3c |
-| 6 | TUI app modularization (#6) | Medium | 3h | 3c |
+| 3a | **App state schema** (`ppxai-state.schema.yaml`) | **High** | 1h | — |
+| 3b | **Runtime schemas** (`ppxai-runtime-{k8s,vscode,desktop}.schema.yaml`) | Medium | 1h | 3a |
+| 3c | **Generator** (`scripts/generate-state.py` — Python/JS/TS templates) | **High** | 3h | 3a |
+| 3d | **Python AppState** (generate + EngineClient integration + tests) | **High** | 4h | 3c |
+| 3e | **JS AppState** (generate, replace hand-written, Playwright verification) | **High** | 2h | 3c |
+| 3f | **TS AppState** (generate + VSCode wiring) | Medium | 2h | 3c |
+| 4 | CommandContext simplification (#4) | Medium | 30min | 3d |
+| 5 | EngineClient decomposition (#5) | Medium | 2h | 3d |
+| 6 | TUI app modularization (#6) | Medium | 3h | 3d |
 | 7 | Event router pattern (#7) | Low | 45min | — |
 
-**Remaining effort:** ~23 hours across v1.17.x releases.
+**Remaining effort:** ~20 hours across v1.17.x releases.
 
-Phase 3a–3b (schema + generator) is the critical path. Once the generator exists,
-3c/3d/3e can run in parallel. Phases 4–6 plug into the generated state naturally.
+Phase 3a + 3c (app state schema + generator) is the critical path. 3d/3e/3f
+can run in parallel once the generator exists. Runtime schemas (3b) are
+independent and can be done anytime. Phases 4–6 plug into generated state.
 
 ---
 
