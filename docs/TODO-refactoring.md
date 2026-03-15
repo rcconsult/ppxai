@@ -63,10 +63,233 @@ syncing with `EngineClient`. When state changes (e.g., session restore), every c
 must remember to update its local copies + UI badges + subtitle — leading to bugs
 where one piece gets missed.
 
-### Solution: `AppState` for Python
+### Solution: Unified `AppState` — Schema-Driven, Cross-Platform
 
-Port the web app's `AppState` pattern to Python. A single observable state object
-shared between the engine and its client, with change notifications that auto-sync UI.
+A single state schema defines all application state fields, their types, defaults,
+and which client platforms use them. Code generators produce platform-specific
+implementations (Python, JS, TS) from the schema, ensuring consistency across all
+three codebases and enabling feature-driven plug-n-play development.
+
+#### Schema File: `ppxai-state.schema.yaml`
+
+The schema is the single source of truth. Each field declares its type, default,
+description, and which platforms consume it. Features group related fields and
+can be enabled/disabled per deployment target.
+
+```yaml
+# ppxai-state.schema.yaml — generates AppState for Python, JS, TS
+version: "1.0"
+
+features:
+  core:
+    description: "Provider, model, session — required by all clients"
+    platforms: [python, web, vscode]
+    fields:
+      provider:
+        type: string
+        default: "perplexity"
+        description: "Active provider ID"
+      model:
+        type: string
+        default: "sonar-pro"
+        description: "Active model ID"
+      working_dir:
+        type: string
+        default: null
+        nullable: true
+        description: "Current working directory for file operations"
+      session_name:
+        type: string
+        default: null
+        nullable: true
+        description: "Name of loaded session (null if unsaved)"
+      message_count:
+        type: integer
+        default: 0
+        description: "Number of messages in current conversation"
+
+  tools:
+    description: "Tool calling and agent mode"
+    platforms: [python, web, vscode]
+    fields:
+      tools_enabled:
+        type: boolean
+        default: false
+      tools_verbose:
+        type: boolean
+        default: false
+      agent_mode:
+        type: boolean
+        default: false
+
+  streaming:
+    description: "Chat streaming flow control"
+    platforms: [python, web, vscode]
+    fields:
+      is_streaming:
+        type: boolean
+        default: false
+      cancel_requested:
+        type: boolean
+        default: false
+
+  context:
+    description: "Context injection and bootstrap"
+    platforms: [python, web]
+    fields:
+      auto_inject:
+        type: boolean
+        default: true
+      bootstrap_loaded:
+        type: boolean
+        default: false
+
+  checkpoints:
+    description: "Checkpoint/undo support"
+    platforms: [python, web, vscode]
+    fields:
+      last_checkpoint:
+        type: string
+        default: null
+        nullable: true
+      checkpoint_count:
+        type: integer
+        default: 0
+
+  usage:
+    description: "Token usage tracking"
+    platforms: [python, web]
+    fields:
+      usage_prompt_tokens:
+        type: integer
+        default: 0
+      usage_completion_tokens:
+        type: integer
+        default: 0
+      usage_cost:
+        type: number
+        default: 0.0
+
+  reasoning:
+    description: "Reasoning/thinking display (TUI-specific)"
+    platforms: [python]
+    fields:
+      reasoning_active:
+        type: boolean
+        default: false
+
+  ui_web:
+    description: "Web-only UI state"
+    platforms: [web]
+    fields:
+      theme:
+        type: string
+        default: "dark"
+      autocomplete_visible:
+        type: boolean
+        default: false
+      html_preview_active:
+        type: boolean
+        default: false
+      rpf_stack_size:
+        type: integer
+        default: 10
+      rpf_active_title:
+        type: string
+        default: null
+        nullable: true
+
+  ui_vscode:
+    description: "VSCode-only UI state"
+    platforms: [vscode]
+    fields:
+      webview_ready:
+        type: boolean
+        default: false
+```
+
+#### Code Generation
+
+```
+ppxai-state.schema.yaml
+         │
+    scripts/generate-state.py
+         │
+         ├──→ ppxai/state.py            (Python: thread-safe, async-friendly AppState)
+         ├──→ ppxai/web/shared/app-state.js   (JS: Proxy-based observable, replaces hand-written)
+         └──→ vscode-extension/src/shared/appState.ts  (TS: typed interface + observable class)
+```
+
+The generator produces:
+- **Python:** `AppState` class with typed fields, `__getattr__`/`__setattr__`,
+  `threading.Lock`, async listener dispatch, `on()`/`off()` subscription
+- **JavaScript:** `AppState` class with `Proxy` get/set traps, no-op dedup,
+  `on()` subscription (replaces current hand-written `app-state.js`)
+- **TypeScript:** `IAppState` interface with typed fields + `AppState` class
+  implementing the observable pattern with `EventEmitter`
+
+Each generated file includes:
+- Only fields from features enabled for that platform
+- Type-correct defaults
+- A `SCHEMA_VERSION` constant for runtime compatibility checks
+- A `snapshot()` method for serialization/debugging
+
+#### Feature-Driven Development
+
+Adding a new feature is a 3-step process:
+
+1. **Define** in `ppxai-state.schema.yaml`:
+   ```yaml
+   features:
+     multi_model_routing:
+       description: "Cross-model routing (v1.17.6+)"
+       platforms: [python, web]
+       fields:
+         routing_enabled:
+           type: boolean
+           default: false
+         routing_mode:
+           type: string
+           default: "manual"
+           enum: ["manual", "auto", "hybrid"]
+         active_routing_table:
+           type: string
+           default: null
+           nullable: true
+   ```
+
+2. **Regenerate**: `python scripts/generate-state.py`
+
+3. **Use** — the field exists in Python and JS with correct types and defaults.
+   Wire observers in the client that needs reactivity. Clients that don't enable
+   the feature never see the fields.
+
+#### Plug-n-Play Deployment Targets
+
+The schema's `platforms` field enables deployment-specific builds:
+
+```yaml
+# k8s multi-user server: no TUI state, no VSCode state
+deploy_targets:
+  k8s-server:
+    features: [core, tools, streaming, context, checkpoints, usage]
+
+  # Desktop TUI: full feature set minus web/vscode UI
+  desktop-tui:
+    features: [core, tools, streaming, context, checkpoints, usage, reasoning]
+
+  # Web app: full web feature set
+  web-app:
+    features: [core, tools, streaming, context, checkpoints, usage, ui_web]
+
+  # VSCode extension: core + VSCode UI
+  vscode:
+    features: [core, tools, streaming, checkpoints, ui_vscode]
+```
+
+This means the k8s server binary doesn't carry TUI reasoning state, and the
+VSCode extension doesn't carry web autocomplete state — each deployment target
+gets exactly the state fields it needs.
 
 #### Design Requirements
 
@@ -327,22 +550,40 @@ state = AppState({
 
 ### Migration Steps
 
-1. **Create `ppxai/state.py`** — `AppState` class with `__getattr__`/`__setattr__`
-   override, `on()` subscription, `snapshot()`, no-op dedup on identical writes.
+1. **Write `ppxai-state.schema.yaml`** — Define all state fields across features
+   and platforms. Start with fields already used in web app's `AppState`, TUI's
+   `self._*` fields, and VSCode's `config.ts` fields.
 
-2. **Wire into `EngineClient`** — Add `self.state = AppState({...})` in `__init__`.
+2. **Write `scripts/generate-state.py`** — Schema-to-code generator that produces
+   Python, JS, and TS implementations. Jinja2 templates or plain string formatting.
+
+3. **Generate `ppxai/state.py`** — Replace hand-written AppState with generated
+   version. Verify thread-safety and async listener dispatch with unit tests.
+
+4. **Generate `ppxai/web/shared/app-state.js`** — Replace current hand-written
+   `AppState` class. Run Playwright e2e tests (200 tests) to verify no regression.
+
+5. **Generate `vscode-extension/src/shared/appState.ts`** — New file. Wire into
+   `config.ts` to replace `currentProvider`/`currentModel` fields.
+
+6. **Wire into `EngineClient`** — Add `self.state = AppState({...})` in `__init__`.
    Keep existing `self.*` properties as thin wrappers that read/write `state` (backward
    compat). Gradually remove the wrappers as clients migrate.
 
-3. **Wire into Textual TUI** — Replace `self._provider` etc. with `self.state` observers.
-   Remove manual badge update calls.
+7. **Wire into Textual TUI** — Replace `self._provider` etc. with `self.state`
+   observers. Remove manual badge update calls.
 
-4. **Wire into Rich TUI** — Same pattern.
+8. **Wire into Rich TUI** — Same pattern.
 
-5. **Simplify CommandContext** — All 3 adapters delegate to `state` instead of
+9. **Simplify CommandContext** — All 3 adapters delegate to `state` instead of
    re-implementing getters.
 
-6. **HTTP endpoints already work** — They read from `EngineClient` which reads from `state`.
+10. **HTTP endpoints already work** — They read from `EngineClient` which reads
+    from `state`.
+
+11. **Add to CI** — `generate-state.py --check` verifies generated files match
+    schema (fails build if someone edits generated files by hand instead of updating
+    the schema).
 
 ### Dependency Chain
 
@@ -378,8 +619,13 @@ This item is the **foundation** for all remaining items:
 
 ### Estimated Effort
 
-~5 hours for AppState + EngineClient integration + thread-safety tests.
-TUI/Rich migration ~2 hours each.
+- Schema + generator: ~3 hours
+- Python AppState + EngineClient integration + thread-safety tests: ~4 hours
+- JS AppState regeneration + Playwright verification: ~1 hour
+- TS AppState + VSCode wiring: ~2 hours
+- TUI/Rich migration: ~2 hours each
+- CI integration: ~30 minutes
+- **Total: ~14 hours** (can be split across multiple sessions)
 
 ---
 
@@ -510,16 +756,20 @@ Revised sequence — AppState is the foundation that unlocks everything else:
 |-------|------|----------|--------|------------|
 | ~~1~~ | ~~Server modularization (#1)~~ | ~~High~~ | ~~Done~~ | — |
 | ~~2~~ | ~~Config submodules (#2)~~ | ~~High~~ | ~~Done~~ | — |
-| 3 | **AppState — unified state management (#3)** | **High** | 4h | — |
-| 4 | CommandContext simplification (#4) | Medium | 30min | #3 |
-| 5 | EngineClient decomposition (#5) | Medium | 2h | #3 |
-| 6 | TUI app modularization (#6) | Medium | 3h | #3 |
+| 3a | **Schema + generator** (`ppxai-state.schema.yaml`, `scripts/generate-state.py`) | **High** | 3h | — |
+| 3b | **Python AppState** (generate + EngineClient integration + tests) | **High** | 4h | 3a |
+| 3c | **JS AppState** (regenerate from schema, replace hand-written) | **High** | 1h | 3a |
+| 3d | **TS AppState** (generate + VSCode wiring) | Medium | 2h | 3a |
+| 4 | CommandContext simplification (#4) | Medium | 30min | 3b |
+| 5 | EngineClient decomposition (#5) | Medium | 2h | 3b |
+| 6 | TUI app modularization (#6) | Medium | 3h | 3b |
 | 7 | Event router pattern (#7) | Low | 45min | — |
 
-**Remaining effort:** ~10 hours across v1.17.x releases.
+**Remaining effort:** ~16 hours across v1.17.x releases.
 
-Phase 3 (AppState) is the critical path — it unblocks phases 4–6 and makes each
-subsequent phase significantly simpler.
+Phase 3a (schema + generator) is the critical path — once the schema exists,
+Python/JS/TS implementations can be generated in parallel. Phases 4–6 become
+natural follow-ups that plug into the generated state.
 
 ---
 
