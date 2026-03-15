@@ -36,7 +36,7 @@ class TestPremiumWebSearchIntegration:
         # Gemini has native Google Search Grounding
         assert provider_needs_tool("gemini", "web_search") is False
 
-    @patch('ppxai.config._get_providers')
+    @patch('ppxai.config.providers._get_providers')
     def test_web_search_tool_required_for_custom(self, mock_get_providers):
         """Test that web_search tool is required for custom provider."""
         from ppxai.config import provider_needs_tool

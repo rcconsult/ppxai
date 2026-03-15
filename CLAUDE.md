@@ -253,13 +253,23 @@ ppxai/
 │   ├── providers/       # Perplexity, OpenAI-compat (BaseProvider ABC)
 │   └── tools/           # Tool system + builtins
 ├── server/              # HTTP/SSE server for IDE
-│   └── http.py          # FastAPI endpoints (POST /command — CommandFactory server pattern)
+│   ├── http.py          # FastAPI app, lifespan, CLI entry points (run_server, run_desktop)
+│   ├── models.py        # Pydantic request/response models
+│   ├── state.py         # Shared server state (session manager, utilities)
+│   ├── streaming.py     # SSE event generators
+│   └── routes/          # Route modules (chat, providers, files, sessions, etc.)
 ├── tui/
 │   └── widgets/
 │       └── file_tree.py # FileTree widget — Norton Commander browser (Ctrl+B, @file inject)
 ├── main.py              # TUI entry point
 ├── commands.py          # Slash command handlers
-└── config.py            # Configuration system
+└── config/              # Configuration system
+    ├── __init__.py      # Re-exports (backward compat)
+    ├── providers.py     # Provider, model, pricing, capabilities
+    ├── tools.py         # Tool, shell, agent, visualization, container
+    ├── features.py      # TUI and session config
+    ├── paths.py         # Paths, data dir, server config
+    └── prompts.py       # System prompts, context, bootstrap
 
 vscode-extension/        # TypeScript VSCode extension
 ├── src/
