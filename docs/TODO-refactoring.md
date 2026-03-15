@@ -452,38 +452,257 @@ class AppState:
                 fn(value)
 ```
 
-#### Textual Integration Note
+#### Composable State: Core + Feature Slices + Runtime Settings
 
-Textual runs its own async event loop and uses `call_from_thread()` for cross-thread
-communication. AppState listeners registered by the TUI should use Textual's
-`app.call_from_thread()` to safely post UI updates:
+AppState is not a flat bag of fields. It's composed of three layers:
 
-```python
-# In PPXAIDEApp.on_mount():
-def _badge_updater(key, badge_fn):
-    """Create a thread-safe listener that posts badge update to Textual."""
-    def listener(value):
-        self.call_from_thread(badge_fn, value)
-    return listener
-
-self.state.on("provider", _badge_updater("provider", lambda v: status_bar.update_badge("provider", v)))
-self.state.on("model", _badge_updater("model", lambda v: status_bar.update_badge("model", v)))
+```
+┌─────────────────────────────────────────────────────┐
+│  Runtime Settings (injected at startup)              │
+│  k8s: sessionIsolation, maxSessions, ttlMinutes     │
+│  vscode: webviewReady, extensionVersion              │
+│  web: themeStorage, commandHistory                   │
+│  desktop: terminalProtocol                           │
+├─────────────────────────────────────────────────────┤
+│  Feature Slices (opt-in per deployment target)       │
+│  fileTree: visible, currentPath, selectedItem        │
+│  preview: active, filePath, viewMode                 │
+│  autocomplete: visible, items, index                 │
+│  reasoning: active, content                          │
+├─────────────────────────────────────────────────────┤
+│  Core State (always present, all clients)             │
+│  currentProvider, currentModel, toolsEnabled, ...    │
+└─────────────────────────────────────────────────────┘
 ```
 
-This ensures badge updates always execute on Textual's event loop thread, even when
-the engine writes state from a worker thread.
+**Core state** = the unified schema fields (provider, model, tools, streaming, etc.).
+Always present in every client.
 
-#### FastAPI/Uvicorn Integration Note
+**Feature slices** = UI features that may or may not be active depending on the
+deployment target. Each feature declares its state fields, events, and which runtimes
+include it. A feature slice registers itself with AppState at startup — the core
+AppState doesn't know about feature-specific fields until they're registered.
 
-The HTTP server runs on uvicorn's asyncio event loop. State reads happen inside
-`async def` route handlers — these are naturally safe since they run on the same
-loop. State writes from the engine (e.g., during SSE streaming) happen within
-`asyncio.Task`s on the same loop — also safe. No special integration needed beyond
-the base `AppState` thread safety.
+**Runtime settings** = deployment-specific configuration injected at startup. The k8s
+web app has session isolation settings; VSCode has extension version tracking; the
+desktop TUI has terminal protocol detection. These are just another feature slice
+that happens to be runtime-specific.
 
-For multi-worker deployments (k8s with multiple uvicorn workers), each worker
-process gets its own `AppState` instance — no cross-process synchronization needed
-(same model as `ConfigStore`).
+#### Schema: Features as First-Class Composable Units
+
+```yaml
+# ppxai-state.schema.yaml
+version: "1.0"
+
+# ─── Core State (always present, all clients) ───
+core:
+  fields:
+    currentProvider:  { type: string,  default: "perplexity" }
+    currentModel:     { type: string,  default: "sonar-pro" }
+    workingDir:       { type: string,  default: null, nullable: true }
+    sessionName:      { type: string,  default: null, nullable: true }
+    messageCount:     { type: integer, default: 0 }
+    toolsEnabled:     { type: boolean, default: false }
+    toolsVerbose:     { type: boolean, default: false }
+    agentMode:        { type: boolean, default: false }
+    isStreaming:       { type: boolean, default: false }
+    cancelRequested:  { type: boolean, default: false }
+    autoInject:       { type: boolean, default: true }
+    bootstrapLoaded:  { type: boolean, default: false }
+    lastCheckpoint:   { type: string,  default: null, nullable: true }
+    checkpointCount:  { type: integer, default: 0 }
+    usagePromptTokens:      { type: integer, default: 0 }
+    usageCompletionTokens:  { type: integer, default: 0 }
+    usageCost:               { type: number,  default: 0.0 }
+    debugLogEnabled:  { type: boolean, default: false }
+
+# ─── Feature Slices (composable, opt-in per runtime) ───
+features:
+  fileTree:
+    description: "File browser panel"
+    runtimes: [desktop, web, k8s]
+    fields:
+      fileTreeVisible:    { type: boolean, default: false }
+      fileTreePath:       { type: string,  default: null, nullable: true }
+      fileTreeSelected:   { type: string,  default: null, nullable: true }
+    events:
+      - fileTree:toggle
+      - fileTree:navigate
+      - fileTree:select
+
+  preview:
+    description: "File preview / editor panel"
+    runtimes: [web, k8s]
+    fields:
+      previewActive:      { type: boolean, default: false }
+      previewFilePath:    { type: string,  default: null, nullable: true }
+      previewViewMode:    { type: string,  default: "rendered", enum: [rendered, source, split] }
+    events:
+      - preview:open
+      - preview:close
+      - preview:switchMode
+
+  autocomplete:
+    description: "Input autocomplete suggestions"
+    runtimes: [web, k8s, desktop]
+    fields:
+      autocompleteVisible: { type: boolean, default: false }
+      autocompleteIndex:   { type: integer, default: 0 }
+    events:
+      - autocomplete:show
+      - autocomplete:hide
+      - autocomplete:select
+
+  reasoning:
+    description: "Reasoning/thinking chunk display"
+    runtimes: [desktop]
+    fields:
+      reasoningActive:    { type: boolean, default: false }
+    events:
+      - reasoning:start
+      - reasoning:chunk
+      - reasoning:end
+
+  htmlPreview:
+    description: "Live HTML preview with hot reload"
+    runtimes: [web, k8s]
+    fields:
+      htmlPreviewActive:   { type: boolean, default: false }
+      htmlPreviewFilepath: { type: string,  default: null, nullable: true }
+    events:
+      - htmlPreview:open
+      - htmlPreview:close
+
+# ─── Runtime Profiles ───
+runtimes:
+  desktop:
+    description: "Textual/Rich terminal TUI"
+    features: [fileTree, autocomplete, reasoning]
+    settings:
+      terminalProtocol:    { type: string,  default: "auto", enum: [auto, sixel, iterm2, kitty] }
+
+  web:
+    description: "Browser-based web app (standalone desktop-server)"
+    features: [fileTree, preview, autocomplete, htmlPreview]
+    settings:
+      themeStorage:        { type: string,  default: "localStorage" }
+
+  k8s:
+    description: "Kubernetes multi-user deployment (same web components)"
+    extends: web
+    settings:
+      sessionIsolation:    { type: boolean, default: true }
+      maxSessions:         { type: integer, default: 3 }
+      ttlMinutes:          { type: integer, default: 10 }
+      ldapEnabled:         { type: boolean, default: false }
+
+  vscode:
+    description: "VSCode extension webview"
+    features: []    # VSCode has its own tree, preview, etc.
+    settings:
+      webviewReady:        { type: boolean, default: false }
+```
+
+#### How Feature Slices Register
+
+At startup, the runtime activates its features. The state store composes
+itself from core + active feature slices + runtime settings:
+
+```python
+# Python — desktop TUI startup
+from ppxai.state import AppState, load_feature, load_runtime
+
+state = AppState()                           # Core fields only
+load_feature(state, "fileTree")              # Adds fileTree.* fields
+load_feature(state, "autocomplete")          # Adds autocomplete.* fields
+load_feature(state, "reasoning")             # Adds reasoning.* fields
+load_runtime(state, "desktop")              # Adds terminalProtocol setting
+```
+
+```javascript
+// JS — web app startup
+const state = new AppState();                // Core fields only
+loadFeature(state, 'fileTree');              // Adds fileTree.* fields
+loadFeature(state, 'preview');               // Adds preview.* fields
+loadFeature(state, 'autocomplete');          // Adds autocomplete.* fields
+loadFeature(state, 'htmlPreview');           // Adds htmlPreview.* fields
+loadRuntime(state, 'web');                   // Adds themeStorage setting
+
+// k8s deployment — same components, extra settings
+loadRuntime(state, 'k8s');                   // Adds sessionIsolation, maxSessions, ttlMinutes
+```
+
+```typescript
+// TS — VSCode extension startup
+const state = new AppState();                // Core fields only
+loadRuntime(state, 'vscode');               // Adds webviewReady setting
+// No feature slices — VSCode has native tree, preview, etc.
+```
+
+#### Event Bus Integration
+
+Each platform already has an event bus:
+- **Python (Textual):** `EventBus` with blinker signals (`ppxai/tui/event_bus.py`)
+- **TypeScript (VSCode):** `ChatEventBus` with typed emit/on (`handlers/eventBus.ts`)
+- **JavaScript (Web):** CustomEvent dispatch or direct callback wiring
+
+The schema's `events` field per feature generates event constants and typed
+handler signatures for each platform. Features communicate through the bus,
+not by reading/writing AppState directly:
+
+```
+User clicks file tree item
+  → bus.emit("fileTree:select", { path: "src/main.py" })
+  → fileTree handler: state.set("fileTreeSelected", "src/main.py")
+  → preview handler (subscribed to fileTree:select): state.set("previewFilePath", "src/main.py")
+  → AppState observer fires: preview panel renders the file
+```
+
+State changes are the **result** of event handling, not the event itself.
+Events carry intent ("user selected a file"), state carries truth ("the selected
+file is src/main.py"). This separation means:
+- Features can react to each other's events without coupling
+- The bus is the integration point, not shared mutable state
+- A feature can be disabled by simply not registering its event handlers
+
+#### Code Generation Output (Revised)
+
+```
+ppxai-state.schema.yaml
+         │
+    scripts/generate-state.py
+         │
+         ├──→ ppxai/state.py                  # AppState class + load_feature/load_runtime
+         ├──→ ppxai/state_features.py          # Feature slice definitions (fields, defaults)
+         ├──→ ppxai/state_events.py            # Event constants (like Events class today)
+         │
+         ├──→ ppxai/web/shared/app-state.js    # AppState + loadFeature/loadRuntime
+         ├──→ ppxai/web/shared/state-features.js  # Feature slice definitions
+         ├──→ ppxai/web/shared/state-events.js    # Event constants
+         │
+         ├──→ vscode-extension/src/shared/appState.ts      # AppState + loadFeature/loadRuntime
+         ├──→ vscode-extension/src/shared/stateFeatures.ts  # Feature slice definitions
+         └──→ vscode-extension/src/shared/stateEvents.ts    # Event type map (replaces hand-written)
+```
+
+#### Runtime Integration Notes
+
+**Textual TUI:** AppState observers use `app.call_from_thread()` for cross-thread
+UI updates. The existing `EventBus` (blinker-based) handles engine→UI events.
+Feature slice event handlers subscribe via the same bus.
+
+**FastAPI/Uvicorn:** State reads happen in async route handlers on the same event
+loop — naturally safe. Multi-worker deployments (k8s) get per-process AppState
+instances (same model as `ConfigStore`).
+
+**Web App (standalone + k8s):** k8s deployment uses the exact same web components.
+The difference is `loadRuntime(state, 'k8s')` which adds session isolation settings
+and configures the API client to include session headers. The web app doesn't know
+or care whether it's running standalone or in k8s — it just reads `state.get("sessionIsolation")`
+and acts accordingly.
+
+**VSCode Extension:** Uses VS Code's native `EventEmitter` pattern. The generated
+`ChatEventBus` replaces the hand-written one with schema-generated event types.
 
 ### How It Flows
 
@@ -632,13 +851,15 @@ This item is the **foundation** for all remaining items:
 
 ### Estimated Effort
 
-- Schema + generator: ~3 hours
-- Python AppState + EngineClient integration + thread-safety tests: ~4 hours
-- JS AppState regeneration + Playwright verification: ~1 hour
-- TS AppState + VSCode wiring: ~2 hours
-- TUI/Rich migration: ~2 hours each
-- CI integration: ~30 minutes
-- **Total: ~14 hours** (can be split across multiple sessions)
+- Schema design (`ppxai-state.schema.yaml`): ~2 hours
+- Generator (`scripts/generate-state.py` — Python/JS/TS templates): ~3 hours
+- Python AppState + feature slices + EngineClient integration + tests: ~5 hours
+- JS AppState regeneration + feature slices + Playwright verification: ~2 hours
+- TS AppState + feature slices + VSCode wiring: ~3 hours
+- Event constants generation + bus alignment: ~2 hours
+- TUI/Rich migration to observers: ~2 hours each
+- CI `--check` mode: ~30 minutes
+- **Total: ~22 hours** (can be split across 4–5 sessions)
 
 ---
 
@@ -769,20 +990,21 @@ Revised sequence — AppState is the foundation that unlocks everything else:
 |-------|------|----------|--------|------------|
 | ~~1~~ | ~~Server modularization (#1)~~ | ~~High~~ | ~~Done~~ | — |
 | ~~2~~ | ~~Config submodules (#2)~~ | ~~High~~ | ~~Done~~ | — |
-| 3a | **Schema + generator** (`ppxai-state.schema.yaml`, `scripts/generate-state.py`) | **High** | 3h | — |
-| 3b | **Python AppState** (generate + EngineClient integration + tests) | **High** | 4h | 3a |
-| 3c | **JS AppState** (regenerate from schema, replace hand-written) | **High** | 1h | 3a |
-| 3d | **TS AppState** (generate + VSCode wiring) | Medium | 2h | 3a |
-| 4 | CommandContext simplification (#4) | Medium | 30min | 3b |
-| 5 | EngineClient decomposition (#5) | Medium | 2h | 3b |
-| 6 | TUI app modularization (#6) | Medium | 3h | 3b |
+| 3a | **Schema** (`ppxai-state.schema.yaml` — core + features + runtimes) | **High** | 2h | — |
+| 3b | **Generator** (`scripts/generate-state.py` — Python/JS/TS templates) | **High** | 3h | 3a |
+| 3c | **Python AppState** (generate + feature slices + EngineClient + tests) | **High** | 5h | 3b |
+| 3d | **JS AppState** (generate + feature slices + Playwright verification) | **High** | 2h | 3b |
+| 3e | **TS AppState** (generate + feature slices + VSCode wiring) | Medium | 3h | 3b |
+| 3f | **Event constants** (generate from schema, align with existing buses) | Medium | 2h | 3b |
+| 4 | CommandContext simplification (#4) | Medium | 30min | 3c |
+| 5 | EngineClient decomposition (#5) | Medium | 2h | 3c |
+| 6 | TUI app modularization (#6) | Medium | 3h | 3c |
 | 7 | Event router pattern (#7) | Low | 45min | — |
 
-**Remaining effort:** ~16 hours across v1.17.x releases.
+**Remaining effort:** ~23 hours across v1.17.x releases.
 
-Phase 3a (schema + generator) is the critical path — once the schema exists,
-Python/JS/TS implementations can be generated in parallel. Phases 4–6 become
-natural follow-ups that plug into the generated state.
+Phase 3a–3b (schema + generator) is the critical path. Once the generator exists,
+3c/3d/3e can run in parallel. Phases 4–6 plug into the generated state naturally.
 
 ---
 
