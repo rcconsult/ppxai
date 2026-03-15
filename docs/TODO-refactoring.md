@@ -72,141 +72,173 @@ three codebases and enabling feature-driven plug-n-play development.
 
 #### Schema File: `ppxai-state.schema.yaml`
 
-The schema is the single source of truth. Each field declares its type, default,
-description, and which platforms consume it. Features group related fields and
-can be enabled/disabled per deployment target.
+The schema is the single source of truth. It defines a **unified field set** shared
+by all clients. Every client gets every field — the difference is only in runtime
+behavior (thread-safe locks in Python, Proxy in JS, EventEmitter in TS).
+
+Widget-local UI state (autocomplete dropdown visibility, RightPanelFrame stack depth,
+Textual theme index) does NOT belong in AppState. Those stay on the widget that owns
+them. AppState holds only **application-level state** that multiple components need.
+
+**Naming convention:** Schema uses `camelCase` field names. The generator applies
+platform-appropriate casing:
+- **JS/TS:** `camelCase` as-is → `state.currentProvider`
+- **Python:** converted to `snake_case` → `state.current_provider`
+
+The names must map 1:1 so a developer reading any codebase recognizes the same field.
+
+**Access convention:** All state access goes through the public interface — **zero
+direct field access**. The generated `AppState` enforces this:
+- **JS/TS:** `state.get('currentProvider')` / `state.set('currentProvider', 'openai')`
+  (Proxy shorthand `state.currentProvider` also works but resolves to get/set internally)
+- **Python:** `state.get('current_provider')` / `state.set('current_provider', 'openai')`
+  (property shorthand `state.current_provider` also works but resolves to get/set internally)
+
+No client code ever reads `self._data['current_provider']` or writes to internal
+storage directly. This enables the runtime to enforce dedup, fire observers, and
+add validation/logging without client changes.
 
 ```yaml
 # ppxai-state.schema.yaml — generates AppState for Python, JS, TS
 version: "1.0"
 
+# Unified field set — ALL clients get ALL fields.
+# camelCase names are converted to snake_case for Python.
+fields:
+  # --- Provider / Model ---
+  currentProvider:
+    type: string
+    default: "perplexity"
+    description: "Active provider ID"
+
+  currentModel:
+    type: string
+    default: "sonar-pro"
+    description: "Active model ID"
+
+  workingDir:
+    type: string
+    default: null
+    nullable: true
+    description: "Current working directory for file operations"
+
+  # --- Session ---
+  sessionName:
+    type: string
+    default: null
+    nullable: true
+    description: "Name of loaded session (null if unsaved)"
+
+  messageCount:
+    type: integer
+    default: 0
+    description: "Number of messages in current conversation"
+
+  # --- Tools ---
+  toolsEnabled:
+    type: boolean
+    default: false
+    description: "Whether tool calling is active"
+
+  toolsVerbose:
+    type: boolean
+    default: false
+    description: "Verbose tool output logging"
+
+  agentMode:
+    type: boolean
+    default: false
+    description: "Autonomous agent mode"
+
+  # --- Streaming ---
+  isStreaming:
+    type: boolean
+    default: false
+    description: "Chat response currently streaming"
+
+  cancelRequested:
+    type: boolean
+    default: false
+    description: "User requested stream cancellation"
+
+  # --- Context ---
+  autoInject:
+    type: boolean
+    default: true
+    description: "Automatic @file/@git context injection"
+
+  bootstrapLoaded:
+    type: boolean
+    default: false
+    description: "AGENTS.md/CLAUDE.md bootstrap context loaded"
+
+  # --- Checkpoints ---
+  lastCheckpoint:
+    type: string
+    default: null
+    nullable: true
+    description: "ID of most recent checkpoint (git SHA or file ID)"
+
+  checkpointCount:
+    type: integer
+    default: 0
+    description: "Number of available checkpoints"
+
+  # --- Usage ---
+  usagePromptTokens:
+    type: integer
+    default: 0
+    description: "Prompt tokens used in current session"
+
+  usageCompletionTokens:
+    type: integer
+    default: 0
+    description: "Completion tokens used in current session"
+
+  usageCost:
+    type: number
+    default: 0.0
+    description: "Estimated cost in USD for current session"
+
+  # --- Debug ---
+  debugLogEnabled:
+    type: boolean
+    default: false
+    description: "Server debug logging active"
+
+# Feature flags — enable/disable groups of fields per deployment target.
+# Fields are always generated in all clients; flags control runtime behavior
+# (e.g., whether observers are wired, whether fields are exposed in GET /status).
 features:
-  core:
-    description: "Provider, model, session — required by all clients"
-    platforms: [python, web, vscode]
-    fields:
-      provider:
-        type: string
-        default: "perplexity"
-        description: "Active provider ID"
-      model:
-        type: string
-        default: "sonar-pro"
-        description: "Active model ID"
-      working_dir:
-        type: string
-        default: null
-        nullable: true
-        description: "Current working directory for file operations"
-      session_name:
-        type: string
-        default: null
-        nullable: true
-        description: "Name of loaded session (null if unsaved)"
-      message_count:
-        type: integer
-        default: 0
-        description: "Number of messages in current conversation"
-
-  tools:
-    description: "Tool calling and agent mode"
-    platforms: [python, web, vscode]
-    fields:
-      tools_enabled:
-        type: boolean
-        default: false
-      tools_verbose:
-        type: boolean
-        default: false
-      agent_mode:
-        type: boolean
-        default: false
-
-  streaming:
-    description: "Chat streaming flow control"
-    platforms: [python, web, vscode]
-    fields:
-      is_streaming:
-        type: boolean
-        default: false
-      cancel_requested:
-        type: boolean
-        default: false
-
-  context:
-    description: "Context injection and bootstrap"
-    platforms: [python, web]
-    fields:
-      auto_inject:
-        type: boolean
-        default: true
-      bootstrap_loaded:
-        type: boolean
-        default: false
-
-  checkpoints:
-    description: "Checkpoint/undo support"
-    platforms: [python, web, vscode]
-    fields:
-      last_checkpoint:
-        type: string
-        default: null
-        nullable: true
-      checkpoint_count:
-        type: integer
-        default: 0
-
-  usage:
-    description: "Token usage tracking"
-    platforms: [python, web]
-    fields:
-      usage_prompt_tokens:
-        type: integer
-        default: 0
-      usage_completion_tokens:
-        type: integer
-        default: 0
-      usage_cost:
-        type: number
-        default: 0.0
-
-  reasoning:
-    description: "Reasoning/thinking display (TUI-specific)"
-    platforms: [python]
-    fields:
-      reasoning_active:
-        type: boolean
-        default: false
-
-  ui_web:
-    description: "Web-only UI state"
-    platforms: [web]
-    fields:
-      theme:
-        type: string
-        default: "dark"
-      autocomplete_visible:
-        type: boolean
-        default: false
-      html_preview_active:
-        type: boolean
-        default: false
-      rpf_stack_size:
-        type: integer
-        default: 10
-      rpf_active_title:
-        type: string
-        default: null
-        nullable: true
-
-  ui_vscode:
-    description: "VSCode-only UI state"
-    platforms: [vscode]
-    fields:
-      webview_ready:
-        type: boolean
-        default: false
+  core:        [currentProvider, currentModel, workingDir, sessionName, messageCount]
+  tools:       [toolsEnabled, toolsVerbose, agentMode]
+  streaming:   [isStreaming, cancelRequested]
+  context:     [autoInject, bootstrapLoaded]
+  checkpoints: [lastCheckpoint, checkpointCount]
+  usage:       [usagePromptTokens, usageCompletionTokens, usageCost]
+  debug:       [debugLogEnabled]
 ```
+
+#### Public Interface (Generated, All Platforms)
+
+The generator produces identical method signatures across all three languages.
+Client code MUST use these methods — no direct field access.
+
+```
+# Python                             # JS / TS
+state.get("current_provider")        state.get("currentProvider")
+state.set("current_provider", "x")   state.set("currentProvider", "x")
+state.current_provider               state.currentProvider          # shorthand (resolves to get/set)
+state.on("current_provider", fn)     state.on("currentProvider", fn)
+state.off("current_provider", fn)    state.off("currentProvider", fn)
+state.snapshot()                     state.snapshot()
+state.update(current_provider="x",   state.update({currentProvider: "x",
+             current_model="y")                    currentModel: "y"})
+```
+
+The `update()` method applies multiple field changes and fires observers only
+once per changed field (not per `update()` call). This supports atomic multi-field
+transitions like session restore where provider + model + tools must change together.
 
 #### Code Generation
 
@@ -215,81 +247,50 @@ ppxai-state.schema.yaml
          │
     scripts/generate-state.py
          │
-         ├──→ ppxai/state.py            (Python: thread-safe, async-friendly AppState)
-         ├──→ ppxai/web/shared/app-state.js   (JS: Proxy-based observable, replaces hand-written)
-         └──→ vscode-extension/src/shared/appState.ts  (TS: typed interface + observable class)
+         ├──→ ppxai/state.py                              (Python: thread-safe, async-friendly)
+         ├──→ ppxai/web/shared/app-state.js                (JS: Proxy-based, replaces hand-written)
+         └──→ vscode-extension/src/shared/appState.ts      (TS: typed interface + class)
 ```
 
-The generator produces:
-- **Python:** `AppState` class with typed fields, `__getattr__`/`__setattr__`,
-  `threading.Lock`, async listener dispatch, `on()`/`off()` subscription
-- **JavaScript:** `AppState` class with `Proxy` get/set traps, no-op dedup,
-  `on()` subscription (replaces current hand-written `app-state.js`)
-- **TypeScript:** `IAppState` interface with typed fields + `AppState` class
-  implementing the observable pattern with `EventEmitter`
-
 Each generated file includes:
-- Only fields from features enabled for that platform
-- Type-correct defaults
-- A `SCHEMA_VERSION` constant for runtime compatibility checks
-- A `snapshot()` method for serialization/debugging
+- All fields from the schema with platform-appropriate naming
+- `get()`, `set()`, `on()`, `off()`, `snapshot()`, `update()` public interface
+- Property accessors as shorthand (Python `__getattr__`/`__setattr__`, JS Proxy,
+  TS get/set accessors)
+- No-op dedup on identical writes
+- `SCHEMA_VERSION` constant for runtime compatibility checks
+- **Python only:** `threading.Lock` for writes, async listener dispatch
+- **JS only:** `Proxy` traps (existing pattern, now generated)
+- **TS only:** `IAppState` interface with typed fields
 
 #### Feature-Driven Development
 
-Adding a new feature is a 3-step process:
+Adding a new state field is a 3-step process:
 
 1. **Define** in `ppxai-state.schema.yaml`:
    ```yaml
+   fields:
+     routingEnabled:
+       type: boolean
+       default: false
+       description: "Cross-model routing active"
+     routingMode:
+       type: string
+       default: "manual"
+       enum: ["manual", "auto", "hybrid"]
+       description: "Routing strategy"
    features:
-     multi_model_routing:
-       description: "Cross-model routing (v1.17.6+)"
-       platforms: [python, web]
-       fields:
-         routing_enabled:
-           type: boolean
-           default: false
-         routing_mode:
-           type: string
-           default: "manual"
-           enum: ["manual", "auto", "hybrid"]
-         active_routing_table:
-           type: string
-           default: null
-           nullable: true
+     routing: [routingEnabled, routingMode]
    ```
 
 2. **Regenerate**: `python scripts/generate-state.py`
+   - Python gets `state.routing_enabled` / `state.routing_mode`
+   - JS/TS gets `state.routingEnabled` / `state.routingMode`
+   - All with correct types, defaults, observers
 
-3. **Use** — the field exists in Python and JS with correct types and defaults.
-   Wire observers in the client that needs reactivity. Clients that don't enable
-   the feature never see the fields.
-
-#### Plug-n-Play Deployment Targets
-
-The schema's `platforms` field enables deployment-specific builds:
-
-```yaml
-# k8s multi-user server: no TUI state, no VSCode state
-deploy_targets:
-  k8s-server:
-    features: [core, tools, streaming, context, checkpoints, usage]
-
-  # Desktop TUI: full feature set minus web/vscode UI
-  desktop-tui:
-    features: [core, tools, streaming, context, checkpoints, usage, reasoning]
-
-  # Web app: full web feature set
-  web-app:
-    features: [core, tools, streaming, context, checkpoints, usage, ui_web]
-
-  # VSCode extension: core + VSCode UI
-  vscode:
-    features: [core, tools, streaming, checkpoints, ui_vscode]
-```
-
-This means the k8s server binary doesn't carry TUI reasoning state, and the
-VSCode extension doesn't carry web autocomplete state — each deployment target
-gets exactly the state fields it needs.
+3. **Wire observers** in the clients that need reactivity.
+   Other clients get the fields automatically (for GET /status, session
+   serialize, etc.) even if they don't observe them.
 
 #### Design Requirements
 
@@ -337,13 +338,16 @@ session restore, tool execution). The implementation must:
    ```
 
 ```python
-# ppxai/state.py — shared across all Python clients
+# ppxai/state.py — GENERATED from ppxai-state.schema.yaml
+# Do not edit by hand. Run: python scripts/generate-state.py
 
 import asyncio
 import threading
-from typing import Any, Callable, Union
+from typing import Any, Callable
 
-AsyncListener = Callable[[Any], Any]  # sync or async callable
+SCHEMA_VERSION = "1.0"
+
+Listener = Callable[[Any], Any]  # sync or async callable
 
 
 class AppState:
@@ -352,65 +356,58 @@ class AppState:
     Thread-safe and async-friendly. All mutable session state lives here.
     Clients subscribe to changes instead of polling or manually syncing.
 
-    Mirrors the web app's AppState (ppxai/web/shared/app-state.js) but
-    adapted for Python's threading + asyncio model.
+    Public interface (use these, never access _data directly):
+      state.get("current_provider")          → read
+      state.set("current_provider", "x")     → write (fires observers if changed)
+      state.current_provider                 → shorthand read (via __getattr__)
+      state.current_provider = "x"           → shorthand write (via __setattr__)
+      state.on("current_provider", fn)       → subscribe
+      state.off("current_provider", fn)      → unsubscribe
+      state.update(current_provider="x", …)  → batch write
+      state.snapshot()                       → dict copy
 
     Thread safety:
-    - Writes are serialized via threading.Lock
+    - Writes serialized via threading.Lock
     - Reads are lock-free (atomic dict reference in CPython)
-    - Listeners are dispatched outside the lock to prevent deadlocks
-    - Listener registry mutations are protected by the same lock
+    - Listeners dispatched outside the lock (no deadlocks from re-entrant writes)
+    - Listener registry mutations protected by the same lock
 
     Async safety:
-    - Sync listeners called directly (for thread-local UI updates)
-    - Async listeners scheduled via asyncio.create_task() if a running
-      loop is detected, or loop.call_soon_threadsafe() from worker threads
+    - Sync listeners called directly
+    - Async listeners scheduled via asyncio.create_task() on running loop
     - Safe to call from both sync and async contexts
     """
 
     def __init__(self, initial: dict = None):
         self._data = dict(initial or {})
-        self._listeners: dict[str, list[AsyncListener]] = {}
+        self._listeners: dict[str, list[Listener]] = {}
         self._lock = threading.Lock()
 
-    def __getattr__(self, key):
-        if key.startswith('_'):
-            return super().__getattribute__(key)
-        return self._data.get(key)
+    # === Public Interface ===
 
-    def __setattr__(self, key, value):
-        if key.startswith('_'):
-            super().__setattr__(key, value)
-            return
-        # Serialize writes; dispatch listeners outside the lock
+    def get(self, key: str, default: Any = None) -> Any:
+        """Read a state field by name."""
+        return self._data.get(key, default)
+
+    def set(self, key: str, value: Any) -> None:
+        """Write a state field by name. No-op if value unchanged. Fires observers."""
         listeners_to_call = []
         with self._lock:
             old = self._data.get(key)
             if old == value:
-                return  # No-op dedup
+                return
             self._data[key] = value
             listeners_to_call = list(self._listeners.get(key, []))
 
-        # Dispatch outside lock — prevents deadlocks from re-entrant writes
-        for fn in listeners_to_call:
-            if asyncio.iscoroutinefunction(fn):
-                # Async listener: schedule on the running event loop
-                try:
-                    loop = asyncio.get_running_loop()
-                    loop.create_task(fn(value))
-                except RuntimeError:
-                    # No running loop (called from sync thread) — skip async listener
-                    pass
-            else:
-                fn(value)
+        self._dispatch(listeners_to_call, value)
 
-    def on(self, key: str, fn: AsyncListener) -> "AppState":
+    def on(self, key: str, fn: Listener) -> "AppState":
         """Subscribe to changes on a state key. Accepts sync or async callables."""
         with self._lock:
             self._listeners.setdefault(key, []).append(fn)
         return self
 
-    def off(self, key: str, fn: AsyncListener) -> "AppState":
+    def off(self, key: str, fn: Listener) -> "AppState":
         """Unsubscribe from changes on a state key."""
         with self._lock:
             fns = self._listeners.get(key, [])
@@ -418,14 +415,41 @@ class AppState:
                 fns.remove(fn)
         return self
 
+    def update(self, **kwargs) -> None:
+        """Batch-update multiple fields. Observers fire once per changed field."""
+        for key, value in kwargs.items():
+            self.set(key, value)
+
     def snapshot(self) -> dict:
         """Plain dict copy for debugging/serialization. Lock-free read."""
         return dict(self._data)
 
-    def update(self, **kwargs) -> None:
-        """Batch-update multiple fields. Listeners fire for each changed field."""
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+    # === Property Shorthand (resolves to get/set) ===
+
+    def __getattr__(self, key: str) -> Any:
+        if key.startswith('_'):
+            return super().__getattribute__(key)
+        return self.get(key)
+
+    def __setattr__(self, key: str, value: Any) -> None:
+        if key.startswith('_'):
+            super().__setattr__(key, value)
+            return
+        self.set(key, value)
+
+    # === Internal ===
+
+    def _dispatch(self, listeners: list[Listener], value: Any) -> None:
+        """Dispatch listeners outside the lock."""
+        for fn in listeners:
+            if asyncio.iscoroutinefunction(fn):
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(fn(value))
+                except RuntimeError:
+                    pass  # No running loop — skip async listener
+            else:
+                fn(value)
 ```
 
 #### Textual Integration Note
@@ -467,86 +491,75 @@ process gets its own `AppState` instance — no cross-process synchronization ne
                     AppState (single source of truth)
                    ╱          │           ╲
           EngineClient    TUI/Rich App   HTTP endpoints
-          (reads/writes)  (subscribes)   (reads)
+          (set/update)    (on/get)        (get/snapshot)
 
 State change example — session restore:
-  1. engine.restore_session() updates AppState fields
-  2. AppState notifies subscribers
-  3. TUI: status_bar.update_badge() fires automatically
-  4. TUI: self.sub_title updates automatically
-  5. HTTP: next GET /status reads fresh values from AppState
+  1. engine.restore_session() calls state.update(
+         current_provider="openai", current_model="gpt-4",
+         tools_enabled=True, working_dir="/project")
+  2. AppState fires observers for each changed field
+  3. TUI: status_bar.update_badge("provider", ...) fires automatically
+  4. TUI: self._update_subtitle() fires automatically
+  5. HTTP: next GET /status calls state.snapshot() — fresh values
   6. No manual sync code anywhere
-```
-
-### State Fields (unified across all clients)
-
-```python
-state = AppState({
-    # Provider / model
-    "provider": "perplexity",
-    "model": "sonar-pro",
-
-    # Tools
-    "tools_enabled": False,
-    "tools_verbose": False,
-    "agent_mode": False,
-
-    # Streaming
-    "is_streaming": False,
-    "cancel_requested": False,
-
-    # Context
-    "working_dir": "/path/to/project",
-    "auto_inject": True,
-    "bootstrap_loaded": False,
-
-    # Session
-    "session_name": None,
-    "message_count": 0,
-
-    # Reasoning (TUI-specific, ignored by server)
-    "reasoning_active": False,
-
-    # Tool groups (TUI-specific)
-    "tool_group_active": False,
-})
 ```
 
 ### Impact on Each Component
 
 #### EngineClient (item 5)
 - Replace 60 scattered `self.*` fields with `self.state = AppState({...})`
+- All reads go through `self.state.get("current_provider")` or shorthand
+  `self.state.current_provider`
+- All writes go through `self.state.set("current_provider", "openai")` or
+  `self.state.update(current_provider="openai", current_model="gpt-4")`
 - Checkpoint/consent/bootstrap helpers receive `state` reference
-- `restore_session()` updates `state.provider`, `state.model` etc. — subscribers notified
+- `restore_session()` uses `state.update()` for atomic multi-field transition
 
-#### Textual TUI (item 7)
-- Replace 15+ `self._*` fields with `self.state = engine.state`
-- Register observers at mount time:
+#### Textual TUI (item 6)
+- Replace 15+ `self._*` fields — use `engine.state` directly
+- Register observers at mount time via public `on()`:
   ```python
-  self.state.on("provider", lambda v: status_bar.update_badge("provider", v))
-  self.state.on("model", lambda v: status_bar.update_badge("model", v))
-  self.state.on("tools_enabled", lambda v: status_bar.update_badge("tools", "ON" if v else "OFF"))
-  self.state.on("provider", lambda _: self._update_subtitle())
-  self.state.on("model", lambda _: self._update_subtitle())
+  engine.state.on("current_provider", lambda v: status_bar.update_badge("provider", v))
+  engine.state.on("current_model", lambda v: status_bar.update_badge("model", v))
+  engine.state.on("tools_enabled", lambda v: status_bar.update_badge("tools", "ON" if v else "OFF"))
+  engine.state.on("current_provider", lambda _: self._update_subtitle())
+  engine.state.on("current_model", lambda _: self._update_subtitle())
   ```
 - Eliminates ~30 manual `update_badge()` / `self.sub_title =` calls
+- Cleanup: `engine.state.off(...)` on widget unmount
 
 #### Rich TUI
-- Same pattern — observers update Rich Live display
+- Same pattern — observers update Rich Live display via `state.on()`
 
 #### HTTP Server
-- `GET /status` reads from `engine.state.snapshot()` — no per-field assembly
+- `GET /status` returns `engine.state.snapshot()` — no per-field assembly
 - Session restore response built from `state.snapshot()` subset
+- All reads via `state.get("current_provider")` — no direct field access
+
+#### Web App (already has AppState — align to public interface)
+- Replace `state.currentProvider` direct access with `state.get("currentProvider")`
+  and `state.set("currentProvider", ...)` where explicit access is needed
+- Property shorthand via Proxy still works but resolves to get/set internally
+- Regenerate `app-state.js` from schema to guarantee field parity
+
+#### VSCode Extension
+- Replace `this.currentProvider` on `ConfigManager` with `state.get("currentProvider")`
+- New generated `appState.ts` with typed `get<K>()` / `set<K>()` methods
+- `EventEmitter` for observer pattern (VS Code convention)
 
 #### CommandContext (item 4)
-- Protocol properties (`provider`, `model`, `tools_enabled`) delegate to `state`:
+- All 3 adapters delegate to `state` via public interface:
   ```python
-  class TextualCommandContext:
+  class BaseCommandContext:
       @property
       def provider(self) -> str:
-          return self._state.provider
+          return self._engine.state.get("current_provider")
+
+      def set_provider(self, provider: str) -> None:
+          self._engine.set_provider(provider)  # engine validates then calls state.set()
   ```
-- Mixin becomes trivial since all contexts read from the same `AppState`
+- Zero direct field access — read via `state.get()`, write via engine methods
+  (engine validates before calling `state.set()`)
 
 ### Migration Steps
 
