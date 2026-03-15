@@ -550,42 +550,27 @@ State change example — session restore:
 - Zero direct field access — read via `state.get()`, write via engine methods
   (engine validates before calling `state.set()`)
 
-### Migration Steps
+### Migration: Per-Client Phased Rollout
 
-1. **Write `ppxai-state.schema.yaml`** — Define all state fields across features
-   and platforms. Start with fields already used in web app's `AppState`, TUI's
-   `self._*` fields, and VSCode's `config.ts` fields.
+Each phase has its own detailed TODO with implementation steps, acceptance criteria,
+and a lessons-learned section that carries forward to the next phase. This creates
+a living architecture evidence trail.
 
-2. **Write `scripts/generate-state.py`** — Schema-to-code generator that produces
-   Python, JS, and TS implementations. Jinja2 templates or plain string formatting.
+| Phase | Client | Detailed Plan | Why This Order |
+|-------|--------|---------------|----------------|
+| 0 | Schema + Generator | [`TODO-appstate-0-schema.md`](TODO-appstate-0-schema.md) | Prerequisite — produces the foundation |
+| 1 | Rich TUI | [`TODO-appstate-1-rich-tui.md`](TODO-appstate-1-rich-tui.md) | Simplest client (single thread, no event bus). Proves core works. |
+| 2 | Textual TUI | [`TODO-appstate-2-textual-tui.md`](TODO-appstate-2-textual-tui.md) | Adds threading + async. Proves thread-safety + observers. |
+| 3 | Desktop Web App | [`TODO-appstate-3-web-app.md`](TODO-appstate-3-web-app.md) | Cross-language (Python→JS). 200 Playwright tests as safety net. |
+| 4 | VSCode Extension | [`TODO-appstate-4-vscode.md`](TODO-appstate-4-vscode.md) | Distinct codebase (TS). More unknowns than k8s. |
+| 5 | k8s Web App | [`TODO-appstate-5-k8s.md`](TODO-appstate-5-k8s.md) | Same app as Phase 3 + `loadRuntime()`. Lightest phase. |
 
-3. **Generate `ppxai/state.py`** — Replace hand-written AppState with generated
-   version. Verify thread-safety and async listener dispatch with unit tests.
-
-4. **Generate `ppxai/web/shared/app-state.js`** — Replace current hand-written
-   `AppState` class. Run Playwright e2e tests (200 tests) to verify no regression.
-
-5. **Generate `vscode-extension/src/shared/appState.ts`** — New file. Wire into
-   `config.ts` to replace `currentProvider`/`currentModel` fields.
-
-6. **Wire into `EngineClient`** — Add `self.state = AppState({...})` in `__init__`.
-   Keep existing `self.*` properties as thin wrappers that read/write `state` (backward
-   compat). Gradually remove the wrappers as clients migrate.
-
-7. **Wire into Textual TUI** — Replace `self._provider` etc. with `self.state`
-   observers. Remove manual badge update calls.
-
-8. **Wire into Rich TUI** — Same pattern.
-
-9. **Simplify CommandContext** — All 3 adapters delegate to `state` instead of
-   re-implementing getters.
-
-10. **HTTP endpoints already work** — They read from `EngineClient` which reads
-    from `state`.
-
-11. **Add to CI** — `generate-state.py --check` verifies generated files match
-    schema (fails build if someone edits generated files by hand instead of updating
-    the schema).
+Each TODO includes:
+- **Current state** — what exists today, what needs to change
+- **Implementation steps** — ordered, concrete file-level changes
+- **Acceptance criteria** — checkboxes for sign-off
+- **What NOT to do** — scope guard to prevent overreach
+- **Lessons learned** — filled during/after implementation, carried to next phase
 
 ### Dependency Chain
 
@@ -783,9 +768,10 @@ independent and can be done anytime. Phases 4–6 plug into generated state.
 
 These are explicitly **not** part of this refactoring plan:
 
-- **Web app (`app.js`)** — Already has `AppState` (v1.16.2). The Python `AppState` mirrors
-  the same pattern for consistency.
 - **Feature changes** — This plan is purely structural. No new endpoints, no behavior changes.
-- **K8s deployment** — Tracked separately in `TODO-v1.17.0.md`.
+- **K8s infrastructure** — Session manager, nginx BFF, ingress. Tracked in `TODO-v1.17.0.md`.
+  Phase 5 only verifies AppState + runtime schema integration, not infrastructure changes.
 - **Multi-model routing** — Tracked separately in `TODO-routing-v1.17.6.md`.
 - **Test refactoring** — Tests work; don't fix what isn't broken.
+- **Web app restructuring** — `app.js` was already refactored in v1.16.2. Phase 3 is
+  a drop-in AppState replacement + public interface enforcement, not a rewrite.
