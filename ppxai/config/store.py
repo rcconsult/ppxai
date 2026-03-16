@@ -7,10 +7,27 @@ Designed for:
 - Containerized deployments with multiple workers
 
 v1.13.10: Created as part of config.py package refactoring
+v1.17.0: Eliminated deferred imports — loader imported at top level,
+         reload callback replaces circular __init__ import
 """
 
 import threading
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
+
+from .loader import load_config
+
+
+# Callbacks invoked after config reload (registered by __init__.py)
+_reload_callbacks: List[Callable[[], None]] = []
+
+
+def register_reload_callback(callback: Callable[[], None]) -> None:
+    """Register a callback to run after config reload.
+
+    Used by __init__.py to re-populate PROVIDERS/MODELS dicts
+    without creating a circular import.
+    """
+    _reload_callbacks.append(callback)
 
 
 class ConfigStore:
@@ -63,7 +80,6 @@ class ConfigStore:
         if not self._loaded:
             with self._config_lock:
                 if not self._loaded:
-                    from .loader import load_config
                     self._config = load_config()
                     self._loaded = True
         return self._config
@@ -75,7 +91,6 @@ class ConfigStore:
         In-flight reads see either old or new config (both valid).
         """
         with self._config_lock:
-            from .loader import load_config
             self._config = load_config()
             self._loaded = True
         return self._config
@@ -119,7 +134,7 @@ def get_config() -> Dict[str, Any]:
 def reload_config() -> Dict[str, Any]:
     """Reload configuration from disk and refresh module-level attributes."""
     result = ConfigStore.get_instance().reload()
-    # Re-populate PROVIDERS/MODELS from fresh config
-    from . import initialize
-    initialize()
+    # Notify registered callbacks (e.g., re-populate PROVIDERS/MODELS)
+    for callback in _reload_callbacks:
+        callback()
     return result
