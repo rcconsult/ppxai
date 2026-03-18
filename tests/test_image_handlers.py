@@ -41,13 +41,14 @@ class TestImageHandlerFactory:
         try:
             with mock.patch("ppxai.tui.widgets.image_handlers._IMAGEVIEW_AVAILABLE", True):
                 with mock.patch("ppxai.tui.widgets.image_handlers.can_display_images", return_value=True):
-                    # Mock TextualImage widget
-                    with mock.patch("ppxai.tui.widgets.image_handlers._TextualImage") as mock_image:
-                        mock_image.return_value = mock.Mock()
+                    # Mock image widget class returned by _get_image_widget_class
+                    mock_widget_class = mock.Mock()
+                    mock_widget_class.return_value = mock.Mock()
+                    with mock.patch("ppxai.tui.widgets.image_handlers._get_image_widget_class", return_value=mock_widget_class):
                         handler = ImageHandlerFactory.create(path, None)
                         assert isinstance(handler, FullImageHandler)
-                        # Verify TextualImage was created with path directly
-                        mock_image.assert_called_once_with(path)
+                        # Verify widget class was called with path
+                        mock_widget_class.assert_called_once_with(path)
         finally:
             path.unlink()
 
@@ -166,17 +167,19 @@ class TestFullImageHandler:
 
     def test_full_handler_delegates_focus(self):
         """FullImageHandler delegates focus to underlying viewer."""
-        with mock.patch("ppxai.tui.widgets.image_handlers._TextualImage") as mock_image:
-            mock_instance = mock.Mock()
-            mock_image.return_value = mock_instance
+        mock_widget_class = mock.Mock()
+        mock_instance = mock.Mock()
+        mock_widget_class.return_value = mock_instance
+        with mock.patch("ppxai.tui.widgets.image_handlers._get_image_widget_class", return_value=mock_widget_class):
             handler = FullImageHandler(Path("test.png"), None)
             handler.focus()
             mock_instance.focus.assert_called_once()
 
     def test_full_handler_is_available_when_viewer_created(self):
         """FullImageHandler is_available is True when viewer successfully created."""
-        with mock.patch("ppxai.tui.widgets.image_handlers._TextualImage") as mock_image:
-            mock_image.return_value = mock.Mock()
+        mock_widget_class = mock.Mock()
+        mock_widget_class.return_value = mock.Mock()
+        with mock.patch("ppxai.tui.widgets.image_handlers._get_image_widget_class", return_value=mock_widget_class):
             handler = FullImageHandler(Path("test.png"), None)
             assert handler.is_available is True
 
@@ -189,9 +192,10 @@ class TestFullImageHandler:
 
     def test_full_handler_load_updates_image_property(self):
         """FullImageHandler.load() updates the image property of the viewer."""
-        with mock.patch("ppxai.tui.widgets.image_handlers._TextualImage") as mock_image:
-            mock_instance = mock.Mock()
-            mock_image.return_value = mock_instance
+        mock_widget_class = mock.Mock()
+        mock_instance = mock.Mock()
+        mock_widget_class.return_value = mock_instance
+        with mock.patch("ppxai.tui.widgets.image_handlers._get_image_widget_class", return_value=mock_widget_class):
             handler = FullImageHandler(Path("test.png"), None)
 
             # Load a new image

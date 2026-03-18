@@ -4,6 +4,8 @@ Base tool abstract class.
 All tools must implement this interface.
 """
 
+import asyncio
+import inspect
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, List
 
@@ -112,9 +114,6 @@ class FunctionTool(BaseTool):
         Returns:
             String result
         """
-        import asyncio
-        import inspect
-
         # Handle both sync and async functions
         if inspect.iscoroutinefunction(self._handler):
             result = await self._handler(**kwargs)

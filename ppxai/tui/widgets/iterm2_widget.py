@@ -11,6 +11,7 @@ Instead, we inject the iTerm2 escape sequence directly via render_lines().
 import base64
 import io
 import logging
+from collections import namedtuple
 from pathlib import Path
 from typing import IO, Iterable, NamedTuple, Union
 
@@ -39,7 +40,6 @@ def _get_cell_size():
         pass
 
     # Return a namedtuple-like object with width/height
-    from collections import namedtuple
     CellSize = namedtuple('CellSize', ['width', 'height'])
     return CellSize(10, 20)
 

@@ -9,10 +9,15 @@ This module provides utilities to:
 For proper rendering in the terminal with clickable citations.
 """
 
+import os
 import re
+from pathlib import Path
 from typing import List, Tuple, Union
+
 from rich.table import Table
 from rich.markdown import Markdown
+
+from ppxai.rich.ui_components import sanitize_for_panel
 from rich.console import Console, RenderableType
 from rich.text import Text
 
@@ -105,9 +110,6 @@ def convert_markdown_links_to_rich(content: str, working_dir: str = None) -> str
         >>> convert_markdown_links_to_rich("[README](./README.md)")  # Converts to file:// URI
         '[link=file:///path/to/README.md][bold cyan]README[/bold cyan][/link]'
     """
-    import os
-    from pathlib import Path
-
     if working_dir is None:
         working_dir = os.getcwd()
 
@@ -367,7 +369,6 @@ def render_markdown_with_tables(
 
     # Normalize emoji widths to prevent panel misalignment
     if normalize_emojis:
-        from ppxai.rich.ui_components import sanitize_for_panel
         content = sanitize_for_panel(content)
 
     blocks = split_markdown_content(content)

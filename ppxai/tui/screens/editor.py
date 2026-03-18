@@ -12,21 +12,19 @@ from pathlib import Path
 from typing import Optional
 
 from textual.app import ComposeResult
-from textual.binding import Binding
 from textual.css.query import NoMatches
 from textual.screen import Screen
 from textual.widgets import Footer, Static
 
 from ..widgets.code_editor import CodeEditor
 
+from ppxai.tui.keys import get_widget_bindings
+
 
 class EditorScreen(Screen):
     """Full-screen file editor with syntax highlighting."""
 
-    BINDINGS = [
-        Binding("ctrl+s", "save", "Save", show=True),
-        Binding("escape", "close", "Close", show=True),
-    ]
+    BINDINGS = get_widget_bindings("EditorScreen")
 
     def __init__(
         self,
@@ -144,11 +142,7 @@ class EditorScreen(Screen):
 class ConfirmCloseScreen(Screen):
     """Confirmation dialog for closing with unsaved changes."""
 
-    BINDINGS = [
-        Binding("y", "save", "Save & Close", show=True),
-        Binding("n", "discard", "Discard", show=True),
-        Binding("escape", "cancel", "Cancel", show=True),
-    ]
+    BINDINGS = get_widget_bindings("ConfirmCloseScreen")
 
     def __init__(self, filename: str):
         super().__init__()

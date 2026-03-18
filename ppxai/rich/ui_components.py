@@ -10,9 +10,11 @@ Provides reusable Rich-based components with theme support:
 This module is designed to be imported by ui.py without breaking existing functionality.
 """
 
+import os
 import re
 import tempfile
 from datetime import datetime
+from pathlib import Path
 from pathlib import Path
 from typing import Optional
 
@@ -667,8 +669,6 @@ def render_status_panel(
     # Working directory badge (compact path)
     if working_dir:
         # Shorten path for display
-        from pathlib import Path
-        import os
         path = Path(working_dir)
         # Use ~ for home directory
         try:

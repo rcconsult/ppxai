@@ -7,6 +7,7 @@ v1.13.10: Migrated to Command Factory pattern
 v1.15.0: Migrated to type-based renderer dispatch
 """
 
+import asyncio
 import subprocess
 from typing import TYPE_CHECKING, Optional
 
@@ -22,6 +23,9 @@ from .results import (
     TableResult,
     TextResult,
 )
+
+from ..rich.event_handler import TUIEventHandler
+from ..rich.ui import console
 
 if TYPE_CHECKING:
     from .handler import CommandHandler
@@ -40,8 +44,6 @@ def _handle_agent_interrupt(
         checkpoint_backend: Backend type ('git' or 'file')
     """
     from prompt_toolkit import prompt as pt_prompt
-
-    from ..rich.ui import console
 
     console.print("[yellow]Agent task incomplete due to interrupt.[/yellow]\n")
 
@@ -515,9 +517,6 @@ def handle_agent(context: CommandContext, args: str) -> CommandResult:
         ConfirmationResult for toggles
         AIResponseResult for completed tasks
     """
-    import asyncio
-    from ..rich.ui import console
-
     if not args.strip():
         return ErrorResult(
             status=ResultStatus.ERROR,
@@ -612,8 +611,6 @@ def handle_agent(context: CommandContext, args: str) -> CommandResult:
 
     async def run_agent_loop():
         """Run autonomous agent loop."""
-        from ..rich.event_handler import TUIEventHandler
-
         iteration = 0
         task_complete = False
         accumulated_output = []

@@ -7,9 +7,12 @@ Commands self-register at import time via ToolFactory.register().
 v1.13.10: Initial implementation (Command Factory pattern)
 """
 
-from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Any, Optional
+import importlib
 import logging
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Callable, Dict, List, Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -282,10 +285,6 @@ class CommandFactory:
         Returns:
             Number of modules loaded
         """
-        import sys
-        import importlib
-        from pathlib import Path
-
         # Unregister existing user commands
         user_cmds = [name for name, spec in cls._registry.items()
                      if spec.category == "custom"]

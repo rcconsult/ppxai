@@ -7,6 +7,7 @@ Supports CSV, TSV, JSON, YAML, TOML, HCL formats.
 v1.13.8: Initial implementation
 """
 
+import json
 import re
 from pathlib import Path
 from typing import Optional, Literal
@@ -140,7 +141,6 @@ def _sniff_format(content: str) -> Optional[str]:
     # JSON detection - starts with { or [
     if content.startswith(("{", "[")):
         try:
-            import json
             json.loads(content)
             return "json"
         except (json.JSONDecodeError, ValueError):
@@ -177,7 +177,6 @@ def _looks_like_jsonl(content: str) -> bool:
         return False
 
     # Each line should be valid JSON object/array
-    import json
     try:
         for line in lines[:5]:  # Check first 5 lines
             obj = json.loads(line)

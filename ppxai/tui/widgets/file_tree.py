@@ -8,10 +8,11 @@ in the side panel or injecting @file references into chat.
 from pathlib import Path
 from typing import Iterable, Optional
 
-from textual.binding import Binding
 from textual.events import Click
 from textual.message import Message
 from textual.widgets import DirectoryTree
+
+from ppxai.tui.keys import get_widget_bindings
 
 
 def _short_path(path: Path) -> str:
@@ -28,11 +29,7 @@ class FileTree(DirectoryTree):
     Escape returns focus to the chat input.
     """
 
-    BINDINGS = [
-        Binding("ctrl+enter", "edit", "Edit", show=True),
-        Binding("space", "inject", "@file", show=True),
-        Binding("escape", "dismiss_tree", "Back", show=True),
-    ]
+    BINDINGS = get_widget_bindings("FileTree")
 
     def __init__(self, path: Path, **kwargs) -> None:
         super().__init__(path, **kwargs)

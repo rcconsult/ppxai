@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
-from .types import Message, UsageStats, SessionInfo
+from .types import Message, ToolUsage, UsageStats, SessionInfo
 from ..common.logger import get_logger
 from ..constants import ConsentMode
 from ..usage import save_session_usage
@@ -343,7 +343,6 @@ class SessionManager:
         # Merge tool usage and add tool costs to session total (v1.16.0)
         for tool_name, tool_usage in usage.tool_calls.items():
             if tool_name not in self.usage.tool_calls:
-                from .types import ToolUsage
                 self.usage.tool_calls[tool_name] = ToolUsage(provider=tool_usage.provider)
             self.usage.tool_calls[tool_name].call_count += tool_usage.call_count
             self.usage.tool_calls[tool_name].tokens_in += tool_usage.tokens_in

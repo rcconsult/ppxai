@@ -18,9 +18,12 @@ Unlike OpenAICompatibleProvider, this provider:
 
 import json
 import os
+import re
+import traceback
 from typing import List, AsyncIterator, Optional, Dict, Any
 
 import httpx
+import openai
 from openai import OpenAI
 
 from ...common.logger import get_logger
@@ -767,12 +770,10 @@ class OpenAINativeProvider(BaseProvider):
     @staticmethod
     def _format_error(e: Exception) -> str:
         """Format exception into user-friendly error message."""
-        import openai as openai_module
-
         error_type = type(e).__name__
         error_str = str(e)
 
-        if isinstance(e, openai_module.APIConnectionError):
+        if isinstance(e, openai.APIConnectionError):
             if "getaddrinfo failed" in error_str:
                 return (
                     "Connection failed: Unable to resolve hostname.\n"
@@ -790,16 +791,16 @@ class OpenAINativeProvider(BaseProvider):
             else:
                 return "Connection failed: Unable to reach OpenAI API."
 
-        if isinstance(e, openai_module.AuthenticationError):
+        if isinstance(e, openai.AuthenticationError):
             return (
                 "Authentication failed: Invalid OpenAI API key.\n"
                 "Check your OPENAI_API_KEY in ~/.ppxai/.env"
             )
 
-        if isinstance(e, openai_module.RateLimitError):
+        if isinstance(e, openai.RateLimitError):
             return "Rate limit exceeded. Please wait before retrying."
 
-        if isinstance(e, openai_module.BadRequestError):
+        if isinstance(e, openai.BadRequestError):
             # Check for model not found (codex 404s on Chat Completions)
             if "404" in error_str or "not found" in error_str.lower():
                 return (
@@ -807,13 +808,12 @@ class OpenAINativeProvider(BaseProvider):
                     f"If using a Codex model, ensure it's routed to Responses API."
                 )
             if "'message':" in error_str:
-                import re
                 match = re.search(r"'message':\s*'([^']+)'", error_str)
                 if match:
                     return f"Invalid request: {match.group(1)}"
             return f"Invalid request: {error_str}"
 
-        if isinstance(e, openai_module.APIStatusError):
+        if isinstance(e, openai.APIStatusError):
             return f"OpenAI API error ({e.status_code}): {error_str}"
 
         if isinstance(e, httpx.ConnectError):
@@ -824,12 +824,6 @@ class OpenAINativeProvider(BaseProvider):
     @staticmethod
     def _log_error_traceback(e: Exception) -> None:
         """Log full exception traceback for debugging."""
-        import traceback
-        try:
-            from ppxai.common.logger import get_logger
-            log = get_logger("openai_native")
-            if log.enabled:
-                log.error(f"OpenAI native provider error: {type(e).__name__}: {e}")
-                log.debug(f"Full traceback:\n{traceback.format_exc()}")
-        except ImportError:
-            pass
+        if logger.enabled:
+            logger.error(f"OpenAI native provider error: {type(e).__name__}: {e}")
+            logger.debug(f"Full traceback:\n{traceback.format_exc()}")

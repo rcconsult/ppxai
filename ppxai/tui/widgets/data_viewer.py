@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any, Literal, Optional
 
 from textual.app import ComposeResult
-from textual.binding import Binding
 from textual.containers import Vertical
 from textual.css.query import NoMatches
 from textual.message import Message
@@ -18,6 +17,7 @@ from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import ContentSwitcher, Static
 
+from ppxai.tui.keys import get_widget_bindings
 from ppxai.tui.widgets.tree_viewer import TreeViewer
 from ppxai.tui.widgets.code_editor import CodeEditor, get_syntax_theme_for_app_theme
 
@@ -41,11 +41,7 @@ class DataViewer(Widget):
 
     # CSS is in layout.tcss
 
-    BINDINGS = [
-        Binding("v", "toggle_view", "Toggle View", show=True),
-        Binding("e", "expand_all", "Expand All", show=False),
-        Binding("c", "collapse_all", "Collapse All", show=False),
-    ]
+    BINDINGS = get_widget_bindings("DataViewer")
 
     # Reactive property for current view mode
     view_mode: reactive[ViewMode] = reactive("tree")

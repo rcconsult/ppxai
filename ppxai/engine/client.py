@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 from datetime import datetime
 from typing import List, AsyncIterator, Optional, Dict, Any
 from pathlib import Path
@@ -25,6 +26,7 @@ from .tools.manager import ToolManager
 from .tools.builtin import register_all_builtin_tools
 from .tools.parser import parse_tool_call
 from .chat import chat_simple, chat_with_tools
+from .providers.openai_compat import OpenAICompatibleProvider
 from .session import SessionManager
 from .context import ContextInjector, ScopedBootstrapSource
 from .bootstrap import BootstrapContext
@@ -448,7 +450,6 @@ class EngineClient:
 
         if self.provider is None:
             # Fallback to generic OpenAI-compatible provider
-            from .providers.openai_compat import OpenAICompatibleProvider
             self.provider = OpenAICompatibleProvider(
                 api_key=api_key,
                 base_url=base_url,
@@ -783,7 +784,6 @@ class EngineClient:
             return None
 
         try:
-            import subprocess
             working_dir = self.context_injector.working_dir
 
             # Check if there are changes to commit
@@ -942,8 +942,6 @@ class EngineClient:
         Returns:
             True if edit is allowed, False otherwise
         """
-        from pathlib import Path
-
         path = Path(file_path).resolve()
 
         # Create checkpoint before first file edit in agent mode
@@ -1307,8 +1305,6 @@ class EngineClient:
         Returns:
             Assistant response content
         """
-        import asyncio
-
         result = ""
 
         async def run():
@@ -1565,7 +1561,6 @@ class EngineClient:
             return 0
 
         # Pattern to match injected context blocks
-        import re
         injection_pattern = re.compile(
             r'\n---\n\*\*`@[^`]+`\*\*[^\n]*:\n```[^\n]*\n.*?```\n',
             re.DOTALL

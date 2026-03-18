@@ -30,6 +30,7 @@ from .results import (
     TextResult,
     TreeResult,
 )
+from ppxai.common.logger import get_logger
 from ppxai.common.preview import resolve_preview_path
 from ppxai.common.file_type import (
     FileType,
@@ -54,8 +55,6 @@ def _search_files(handler: "CommandHandler", query: str, max_results: int = 10) 
     Returns:
         List of matching Path objects
     """
-    from ..common.logger import get_logger
-
     logger = get_logger("tui")
 
     # Remove @ prefix if present

@@ -28,6 +28,7 @@ from ..config import (
     get_provider_config,
     get_tui_config,
     get_tui_theme,
+    initialize,
 )
 from .ui import console, display_welcome, select_model, select_provider
 from .ui_components import format_usage_string, render_status_line, render_status_panel
@@ -274,7 +275,6 @@ class PPXAICompleter(Completer):
 
     def _get_files(self, max_files: int = 100) -> list[tuple[str, str]]:
         """Get files in the current directory for completion."""
-        import time
         now = time.time()
 
         root = self._get_working_dir()
@@ -599,7 +599,6 @@ def main():
     parser.parse_args()
 
     # Initialize configuration system (v1.13.10: explicit initialization)
-    from ..config import initialize
     initialize()
 
     # Check if provider selection is needed or use environment default

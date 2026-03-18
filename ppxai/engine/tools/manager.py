@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Any, Tuple
 import json
 from .base import BaseTool, FunctionTool
 from ..types import Event, EventType, ToolCallInfo
+from ...config import get_tool_description_overrides
 
 
 class ToolManager:
@@ -109,15 +110,10 @@ class ToolManager:
 
     def _update_description_overrides(self):
         """Refresh description overrides from config based on current provider/model."""
-        try:
-            from ...config import get_tool_description_overrides
-            self._description_overrides = get_tool_description_overrides(
-                provider=self._provider,
-                model=self._model
-            )
-        except ImportError:
-            # Config module not available (e.g., in tests)
-            self._description_overrides = {}
+        self._description_overrides = get_tool_description_overrides(
+            provider=self._provider,
+            model=self._model
+        )
 
     def _get_tool_description(self, tool: BaseTool) -> str:
         """Get tool description, applying any config overrides.

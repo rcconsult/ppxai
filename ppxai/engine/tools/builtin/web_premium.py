@@ -7,10 +7,16 @@ with graceful fallback to free DuckDuckGo if premium providers are unavailable.
 v1.13.4: Initial implementation
 """
 
+import logging
 import os
 from typing import Optional, Tuple, List, Dict, Any
+
+import httpx
+from openai import AsyncOpenAI
+
+from ppxai.config import get_tool_config, get_tool_pricing, get_provider_config
 from ...types import ToolUsage
-from ppxai.config import get_tool_pricing
+from . import web
 
 # Global to store usage from last tool execution
 _last_tool_usage: Optional[ToolUsage] = None
@@ -39,8 +45,6 @@ def get_premium_search_provider(provider_name: Optional[str] = None) -> Optional
     Returns:
         "perplexity", "gemini", or None if no premium provider available
     """
-    from ppxai.config import get_tool_config, get_provider_config
-
     # Check for per-provider override
     if provider_name:
         try:
@@ -135,10 +139,6 @@ async def web_search_perplexity(query: str, num_results: int = 5) -> Tuple[str, 
     Raises:
         ValueError: If PERPLEXITY_API_KEY not set
     """
-    import httpx
-    from openai import AsyncOpenAI
-    from ppxai.config import get_tool_config
-
     api_key = os.getenv("PERPLEXITY_API_KEY")
     if not api_key:
         raise ValueError("PERPLEXITY_API_KEY not set")
@@ -197,9 +197,6 @@ async def web_search_gemini(query: str, num_results: int = 5) -> Tuple[str, List
     Raises:
         ValueError: If GEMINI_API_KEY not set
     """
-    import httpx
-    from ppxai.config import get_tool_config
-
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise ValueError("GEMINI_API_KEY not set")
@@ -279,7 +276,6 @@ async def web_search_premium(query: str, num_results: int = 5, _provider_name: O
             _last_tool_usage = usage
         else:
             # Fall back to free DuckDuckGo
-            from . import web
             return web.web_search(query, num_results)
 
         # Format result with provider tag at the beginning for visibility
@@ -291,7 +287,6 @@ async def web_search_premium(query: str, num_results: int = 5, _provider_name: O
 
     except Exception as e:
         # Fall back chain: Perplexity -> Gemini -> DuckDuckGo (v1.15.2)
-        import logging
         logger = logging.getLogger(__name__)
         logger.warning(f"Premium search failed ({provider}): {e}")
 
@@ -312,7 +307,6 @@ async def web_search_premium(query: str, num_results: int = 5, _provider_name: O
 
         # Final fallback to DuckDuckGo
         logger.info("Falling back to DuckDuckGo")
-        from . import web
         return web.web_search(query, num_results)
 
 
@@ -349,7 +343,6 @@ def register_tools(manager, provider=None):
     # Only register if premium provider available
     if not is_available():
         # Fall back to free search
-        from . import web
         web.register_tools(manager, provider)
         return
 
@@ -393,10 +386,6 @@ def register_tools(manager, provider=None):
 
     # Also register get_weather and fetch_url from web.py (v1.15.2)
     # These use free services (wttr.in, direct fetch) and should always be available
-    from . import web
-    web.get_weather  # Import the function
-    web.fetch_url
-
     manager.register_function(
         name="get_weather",
         description="Get current weather and forecast for a location. Uses wttr.in service (no API key needed)",

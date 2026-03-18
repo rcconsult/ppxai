@@ -18,6 +18,7 @@ References:
 
 import base64
 import io
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Tuple, Union
 
@@ -213,7 +214,6 @@ class ITerm2Image:
         Yields:
             Segment objects for Rich to render
         """
-        import logging
         logger = logging.getLogger(__name__)
 
         cell_width, cell_height = self._calculate_cell_size(

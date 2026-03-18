@@ -8,6 +8,7 @@ v1.12.3: Initial implementation
 """
 
 import json
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -101,7 +102,6 @@ class UsageStorage:
                 json.dump(self._data, f, indent=2)
         except IOError as e:
             # Log but don't crash - usage tracking is non-critical
-            import logging
             logging.getLogger(__name__).warning(f"Failed to save usage data: {e}")
 
     def save_session_usage(

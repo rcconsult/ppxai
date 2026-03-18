@@ -12,6 +12,11 @@ Architecture:
 v1.15.0: Type-based renderer dispatch refactoring
 """
 
+import logging
+import os
+import re
+from pathlib import Path
+
 from rich.console import Console
 from rich.table import Table
 from rich.tree import Tree
@@ -245,7 +250,6 @@ def render_markdown(result: MarkdownResult) -> None:
 
 def _get_terminal_type() -> str:
     """Detect terminal type for image rendering."""
-    import os
     term_program = os.environ.get("TERM_PROGRAM", "").lower()
     if term_program == "wezterm":
         return "wezterm"
@@ -260,7 +264,6 @@ def _get_terminal_type() -> str:
 
 def _render_image_iterm2(filepath: str) -> bool:
     """Render image using iTerm2 protocol (for WezTerm, iTerm2)."""
-    from pathlib import Path
     try:
         from ..tui.renderable.iterm2 import ITerm2Image
         path = Path(filepath)
@@ -269,14 +272,12 @@ def _render_image_iterm2(filepath: str) -> bool:
             console.print(img)
             return True
     except Exception as e:
-        import logging
         logging.debug(f"iTerm2 image rendering failed: {e}")
     return False
 
 
 def _render_image_sixel(filepath: str) -> bool:
     """Render image using Sixel protocol (for Windows Terminal)."""
-    from pathlib import Path
     try:
         from textual_image.renderable.sixel import Image as SixelImage
         path = Path(filepath)
@@ -285,7 +286,6 @@ def _render_image_sixel(filepath: str) -> bool:
             console.print(img)
             return True
     except Exception as e:
-        import logging
         logging.debug(f"Sixel image rendering failed: {e}")
     return False
 
@@ -404,8 +404,6 @@ def render_consent(result: ConsentResult) -> None:
 @RichRenderer.register(PromptResult)
 def render_prompt(result: PromptResult) -> None:
     """Render text input request as interactive console prompt."""
-    import re
-
     console.print(f"\n[bold]{result.message}[/bold]")
 
     prompt_text = result.prompt or result.message

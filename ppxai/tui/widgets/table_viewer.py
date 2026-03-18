@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Any, List, Literal, Optional, Tuple
 
 from textual.app import ComposeResult
-from textual.binding import Binding
 from textual.css.query import NoMatches
 from textual.message import Message
 from textual.reactive import reactive
@@ -19,6 +18,8 @@ from textual.widget import Widget
 from textual.widgets import ContentSwitcher, DataTable, Static
 
 from .code_editor import CodeEditor
+
+from ppxai.tui.keys import get_widget_bindings
 
 
 # Type alias for view modes
@@ -153,9 +154,7 @@ class TableViewer(Widget):
     can_focus = True
     can_focus_children = True
 
-    BINDINGS = [
-        Binding("v", "toggle_view", "Toggle View", show=True),
-    ]
+    BINDINGS = get_widget_bindings("TableViewer")
 
     # Reactive view mode
     view_mode: reactive[ViewMode] = reactive("table")

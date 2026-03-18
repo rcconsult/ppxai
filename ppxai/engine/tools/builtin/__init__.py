@@ -11,6 +11,8 @@ Import Pattern:
 
 from typing import TYPE_CHECKING, Optional
 
+from . import filesystem, calculator, datetime_tool, web
+
 # TYPE_CHECKING imports: only used for type hints, never at runtime
 # This breaks potential circular dependencies with manager.py and client.py
 if TYPE_CHECKING:
@@ -26,7 +28,6 @@ def register_all_builtin_tools(manager: 'ToolManager', provider: str = None, eng
         provider: Current provider name (for capability-based filtering)
         engine: Engine client instance (required for file editing and shell tools v1.11.0+)
     """
-    from . import filesystem, calculator, datetime_tool, web
 
     # Register tools from each module
     filesystem.register_tools(manager, engine)

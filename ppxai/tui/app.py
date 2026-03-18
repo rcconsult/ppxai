@@ -20,7 +20,6 @@ from pathlib import Path
 from typing import Optional
 
 from textual.app import App, ComposeResult
-from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical
 from textual.css.query import NoMatches
 from textual.message import Message
@@ -35,6 +34,7 @@ from ppxai.tui.widgets.chat_view import ChatView
 from ppxai.tui.widgets.input_box import InputBox
 from ppxai.tui.widgets.side_panel import SidePanel
 from ppxai.tui.widgets.file_tree import FileTree
+from ppxai.tui.keys import get_app_bindings
 from ppxai.tui.widgets.code_editor import CodeEditor, get_syntax_theme_for_app_theme
 from ppxai.tui.widgets.dialog import ConsentDialog
 from ppxai.tui.widgets.message_box import MessageBox
@@ -73,27 +73,7 @@ class PPXAIDEApp(App):
 
     CSS_PATH = ["themes/layout.tcss", "themes/dialog.tcss"]
 
-    BINDINGS = [
-        Binding("ctrl+enter", "", "Send", show=True),  # Display only — actual handling in ChatTextArea.on_key() and FileTree.action_edit()
-        Binding("ctrl+c", "quit", "Quit", show=True),
-        Binding("ctrl+b", "toggle_file_tree", "Files", show=True),
-        Binding("ctrl+l", "clear", "Clear", show=True),
-        Binding("ctrl+t", "cycle_theme", "Theme", show=True),
-        Binding("ctrl+w", "close_panel", "Close", show=False),
-        Binding("ctrl+s", "save_panel", "Save", show=False),
-        Binding("f6", "toggle_focus", "Switch Pane", show=False),
-        Binding("ctrl+tab", "toggle_focus", "Switch Pane", show=False),
-        Binding("escape", "cancel", "Cancel", show=False),
-        Binding("q", "hide_help_panel", "Close Help", show=False),  # Close help panel with 'q'
-        # Split resize bindings
-        # Note: ctrl+[ sends ESC in most terminals, ctrl+] sends GS — both unreliable.
-        # Use minus/equals as primary resize keys (works in all terminals).
-        Binding("minus", "resize_panel('left')", "Shrink", show=False),
-        Binding("equals", "resize_panel('right')", "Grow", show=False),
-        # Keep ctrl+[/] as fallback for terminals that support them (e.g. Ghostty/Kitty)
-        Binding("ctrl+left_square_bracket", "resize_panel('left')", "Shrink Panel", show=False),
-        Binding("ctrl+right_square_bracket", "resize_panel('right')", "Grow Panel", show=False),
-    ]
+    BINDINGS = get_app_bindings()
 
     # Split ratio presets (chat% : panel%)
     SPLIT_RATIOS = [30, 40, 50, 60, 70]
@@ -1924,6 +1904,14 @@ class PPXAIDEApp(App):
 
         else:
             chat_view.add_system_message(f"[yellow]Unknown badge action:[/yellow] {action}")
+
+    def action_noop(self) -> None:
+        """No-op action for display-only bindings.
+
+        Used by ctrl+enter app binding — shown in footer but actual handling
+        is in ChatTextArea.on_key() (submit) and FileTree.action_edit() (edit file).
+        """
+        pass
 
     def action_quit(self) -> None:
         """Quit the application with double Ctrl+C confirmation.

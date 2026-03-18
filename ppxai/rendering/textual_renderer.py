@@ -20,6 +20,7 @@ from textual.containers import VerticalScroll
 
 from .base import AsyncRenderer
 from ..preview_server import PreviewServer
+from ..tui.widgets.dialog import ConsentDialog, PromptDialog
 from ..commands.results import (
     ResultStatus,
     NotificationResult,
@@ -451,8 +452,6 @@ async def render_diff(renderer: TextualRenderer, result: DiffResult) -> None:
 @TextualRenderer.register(ConsentResult)
 async def render_consent(renderer: TextualRenderer, result: ConsentResult) -> None:
     """Render consent request with modal dialog."""
-    from ..tui.widgets.dialog import ConsentDialog
-
     # Push modal dialog and wait for response
     response = await renderer.app.push_screen_wait(
         ConsentDialog(
@@ -470,8 +469,6 @@ async def render_consent(renderer: TextualRenderer, result: ConsentResult) -> No
 @TextualRenderer.register(PromptResult)
 async def render_prompt(renderer: TextualRenderer, result: PromptResult) -> None:
     """Render text input prompt with modal dialog."""
-    from ..tui.widgets.dialog import PromptDialog
-
     # Push modal dialog and wait for response
     value = await renderer.app.push_screen_wait(
         PromptDialog(

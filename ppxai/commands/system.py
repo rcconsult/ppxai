@@ -11,6 +11,9 @@ v1.15.0: Migrated to type-based renderer dispatch
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from ..config import get_provider_config, get_tui_config, set_tui_config
+from ..rich.themes import get_theme, THEMES
+from ..version import __version__
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
@@ -46,9 +49,6 @@ def handle_help(context: CommandContext, args: str) -> CommandResult:
     Returns:
         TextResult with help content
     """
-    from ..version import __version__
-    from .factory import CommandFactory
-
     args = args.strip().lower() if args else ""
 
     # /help <command> - detailed help for specific command
@@ -97,8 +97,6 @@ def handle_theme(context: CommandContext, args: str) -> CommandResult:
     Returns:
         ListResult when listing, ConfirmationResult when switching, KeyValueResult for emoji status
     """
-    from ..rich.themes import get_theme, THEMES
-
     args = args.strip().lower() if args else ""
 
     # Note: For now, theme switching affects the old handler's state
@@ -180,9 +178,6 @@ def handle_status(context: CommandContext, args: str) -> CommandResult:
     Returns:
         ConfirmationResult for settings changes, KeyValueResult for status display
     """
-    from ..config import get_provider_config, get_tui_config, set_tui_config
-    from ..version import __version__
-
     parts = args.strip().split() if args else []
 
     # Handle toggle subcommands
@@ -367,6 +362,35 @@ provides comprehensive templates with examples and best practices.
     )
 
 
+def handle_keys(context: CommandContext, args: str) -> CommandResult:
+    """Handle /keys command - show all keyboard shortcuts.
+
+    Args:
+        context: Command context providing access to engine client
+        args: Optional subcommand ("conflicts" to show binding conflicts)
+
+    Returns:
+        TextResult with formatted key binding table
+    """
+    try:
+        from ..tui.keys import get_keys_table, get_conflicts_table
+        if args and args.strip().lower() == "conflicts":
+            return TextResult(
+                status=ResultStatus.INFO,
+                message=get_conflicts_table()
+            )
+        return TextResult(
+            status=ResultStatus.INFO,
+            message=get_keys_table()
+        )
+    except ImportError:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="Key registry not available",
+            suggestions=["This command requires the TUI components to be installed"]
+        )
+
+
 def handle_terminal(context: CommandContext, args: str) -> CommandResult:
     """Handle /terminal command - show terminal capabilities and configuration help.
 
@@ -439,4 +463,12 @@ CommandFactory.register(CommandSpec(
     handler=handle_terminal,
     category="system",
     usage="/terminal"
+))
+
+CommandFactory.register(CommandSpec(
+    name="keys",
+    description="Show keyboard shortcuts",
+    handler=handle_keys,
+    category="system",
+    usage="/keys [conflicts]"
 ))

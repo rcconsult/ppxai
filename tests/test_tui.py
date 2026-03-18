@@ -1077,12 +1077,12 @@ class TestMultiLineInput:
         assert box.get_history() == []
 
     def test_ctrl_enter_binding_is_display_only(self):
-        """Ctrl+Enter binding should have empty action (display-only, ChatTextArea handles it)."""
+        """Ctrl+Enter binding should use noop action (display-only, ChatTextArea handles it)."""
         from ppxai.tui.app import PPXAIDEApp
 
         ctrl_enter = [b for b in PPXAIDEApp.BINDINGS if b.key == "ctrl+enter"]
         assert len(ctrl_enter) == 1
-        assert ctrl_enter[0].action == ""
+        assert ctrl_enter[0].action == "noop"
 
 
 class TestThemeSwitching:
@@ -4719,3 +4719,68 @@ class TestAppIntegration:
 
         import asyncio
         asyncio.run(run_test())
+
+
+class TestKeyRegistry:
+    """Test the centralized key binding registry."""
+
+    def test_app_bindings_count(self):
+        """get_app_bindings() returns all app-level bindings."""
+        from ppxai.tui.keys import get_app_bindings
+        bindings = get_app_bindings()
+        assert len(bindings) == 15
+
+    def test_widget_bindings(self):
+        """get_widget_bindings() returns correct counts for each widget."""
+        from ppxai.tui.keys import get_widget_bindings
+        assert len(get_widget_bindings("FileTree")) == 3
+        assert len(get_widget_bindings("SidePanel")) == 2
+        assert len(get_widget_bindings("DataViewer")) == 3
+        assert len(get_widget_bindings("TableViewer")) == 1
+        assert len(get_widget_bindings("EditorScreen")) == 2
+        assert len(get_widget_bindings("ConfirmCloseScreen")) == 3
+        assert len(get_widget_bindings("ViewerScreen")) == 2
+
+    def test_no_empty_actions_in_bindings(self):
+        """No binding should have an empty action string."""
+        from ppxai.tui.keys import ALL_KEYS
+        for k in ALL_KEYS:
+            if k.is_binding:
+                assert k.action != "", f"Empty action for {k.owner}:{k.key}"
+
+    def test_keys_table_output(self):
+        """get_keys_table() returns non-empty formatted output."""
+        from ppxai.tui.keys import get_keys_table
+        table = get_keys_table()
+        assert "Keyboard Shortcuts" in table
+        assert "Ctrl+Enter" in table
+        assert "Chat Input" in table
+        assert "File Tree" in table
+
+    def test_conflicts_table_output(self):
+        """get_conflicts_table() returns non-empty formatted output."""
+        from ppxai.tui.keys import get_conflicts_table
+        table = get_conflicts_table()
+        assert "Known Key Binding Conflicts" in table
+        assert "Ctrl+W" in table
+
+    def test_app_bindings_match_app_class(self):
+        """App BINDINGS are generated from the registry."""
+        from ppxai.tui.app import PPXAIDEApp
+        from ppxai.tui.keys import get_app_bindings
+        registry_bindings = get_app_bindings()
+        assert len(PPXAIDEApp.BINDINGS) == len(registry_bindings)
+        for app_b, reg_b in zip(PPXAIDEApp.BINDINGS, registry_bindings):
+            assert app_b.key == reg_b.key
+            assert app_b.action == reg_b.action
+
+    def test_unknown_widget_returns_empty(self):
+        """get_widget_bindings() returns empty list for unknown owner."""
+        from ppxai.tui.keys import get_widget_bindings
+        assert get_widget_bindings("NonExistentWidget") == []
+
+    def test_on_key_handlers_not_in_bindings(self):
+        """on_key handlers (is_binding=False) should not appear in get_widget_bindings."""
+        from ppxai.tui.keys import get_widget_bindings
+        assert get_widget_bindings("ChatTextArea") == []
+        assert get_widget_bindings("InputBox") == []

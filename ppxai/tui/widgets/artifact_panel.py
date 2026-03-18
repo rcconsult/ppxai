@@ -19,10 +19,24 @@ Use Cases:
 v1.15.0: Type-based renderer dispatch refactoring
 """
 
+from pathlib import Path
 from typing import List, Optional, TYPE_CHECKING
-from textual.widgets import TabbedContent, TabPane, Static
+
+from textual.widgets import DataTable, Markdown, TabbedContent, TabPane, Static, Tree
 from textual.containers import Container
 from textual import on
+
+from ...commands.results import (
+    AIResponseResult,
+    ConfirmationResult,
+    ErrorResult,
+    FileViewResult,
+    ImageResult,
+    NotificationResult,
+    TableResult,
+    TextResult,
+    TreeResult,
+)
 
 if TYPE_CHECKING:
     from textual.widget import Widget
@@ -119,16 +133,6 @@ class ArtifactPanel(TabbedContent):
             return
 
         # Render each result to appropriate widget
-        from ...commands.results import (
-            ImageResult,
-            TableResult,
-            FileViewResult,
-            TreeResult,
-            TextResult,
-            ErrorResult,
-            AIResponseResult
-        )
-
         for i, result in enumerate(results, 1):
             # Determine icon and title based on result type
             if isinstance(result, ImageResult):
@@ -181,20 +185,6 @@ class ArtifactPanel(TabbedContent):
             result: Result to render
             renderer: Renderer instance
         """
-        from ...commands.results import (
-            ImageResult,
-            TableResult,
-            FileViewResult,
-            TreeResult,
-            TextResult,
-            ErrorResult,
-            AIResponseResult,
-            NotificationResult,
-            ConfirmationResult
-        )
-        from textual.widgets import DataTable, Tree, Static, Markdown
-        from pathlib import Path
-
         # Create appropriate widget based on result type
         if isinstance(result, ImageResult):
             # Show image using Static with image path

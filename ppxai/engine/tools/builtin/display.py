@@ -7,6 +7,8 @@ Allows AI to show files/artifacts in the TUI split panel.
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from ppxai.common.logger import get_logger
+
 from ..base import BaseTool
 
 if TYPE_CHECKING:
@@ -57,7 +59,6 @@ class DisplayFileTool(BaseTool):
         Returns:
             Success message or error
         """
-        from ppxai.common.logger import get_logger
         logger = get_logger("tui")
 
         try:

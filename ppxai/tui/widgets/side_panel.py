@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Optional
 
 from textual.app import ComposeResult
-from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.css.query import NoMatches
 from textual.message import Message
@@ -23,6 +22,10 @@ from .data_viewer import DataViewer
 from .image_viewer import ImageViewer
 from .table_viewer import TableViewer
 
+from ..screens.editor import ConfirmCloseScreen
+
+from ppxai.tui.keys import get_widget_bindings
+
 
 class SidePanel(Widget):
     """Side panel for displaying files in split view.
@@ -30,10 +33,7 @@ class SidePanel(Widget):
     CSS is defined in themes/layout.tcss under "Side panel" section.
     """
 
-    BINDINGS = [
-        Binding("escape", "close_panel", "Close", show=True),
-        Binding("ctrl+l", "cycle_language", "Lang", show=True),
-    ]
+    BINDINGS = get_widget_bindings("SidePanel")
 
     # Sorted list of languages for cycling
     _LANG_CYCLE = sorted(SUPPORTED_LANGUAGES)
@@ -264,7 +264,6 @@ class SidePanel(Widget):
 
         # Prompt to save unsaved changes in edit mode
         if not self._read_only and self._modified and self._path:
-            from ..screens.editor import ConfirmCloseScreen
             self.app.push_screen(
                 ConfirmCloseScreen(self._path.name),
                 self._handle_close_response,

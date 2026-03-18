@@ -9,6 +9,10 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Tuple
 
+from .terminal import can_display_images, detect_image_protocol, get_capabilities, get_image_protocol_name
+from .widgets.chat_view import ChatView
+from .widgets.image_handlers import ImageHandlerFactory, _IMAGEVIEW_AVAILABLE, _TextualImage
+
 if TYPE_CHECKING:
     from .app import PPXAIDEApp
 
@@ -78,8 +82,6 @@ async def cmd_show(app: "PPXAIDEApp", args: str) -> None:
         app: PPXAIDEApp instance
         args: File path
     """
-    from .widgets.chat_view import ChatView
-
     chat_view = app.query_one("#chat-view", ChatView)
 
     if not args.strip():
@@ -111,8 +113,6 @@ async def cmd_show(app: "PPXAIDEApp", args: str) -> None:
 
     # Handle image files first (before trying to read as text)
     if ext in image_formats:
-        from .terminal import can_display_images, get_image_protocol_name
-
         if can_display_images():
             await app.show_file_in_panel(path, "", mode="image", read_only=True)
             chat_view.add_system_message(
@@ -179,8 +179,6 @@ async def cmd_edit(app: "PPXAIDEApp", args: str) -> None:
         app: PPXAIDEApp instance
         args: File path with optional :line:col
     """
-    from .widgets.chat_view import ChatView
-
     chat_view = app.query_one("#chat-view", ChatView)
 
     if not args.strip():
@@ -236,8 +234,6 @@ async def cmd_cd(app: "PPXAIDEApp", args: str) -> None:
         app: PPXAIDEApp instance
         args: Directory path
     """
-    from .widgets.chat_view import ChatView
-
     chat_view = app.query_one("#chat-view", ChatView)
 
     if not args.strip():
@@ -271,8 +267,6 @@ async def cmd_pwd(app: "PPXAIDEApp", args: str) -> None:
         app: PPXAIDEApp instance
         args: Unused
     """
-    from .widgets.chat_view import ChatView
-
     chat_view = app.query_one("#chat-view", ChatView)
     cwd = app._working_dir or os.getcwd()
     chat_view.add_system_message(f"[cyan]Working directory:[/cyan] {cwd}")
@@ -285,19 +279,6 @@ async def cmd_debug(app: "PPXAIDEApp", args: str) -> None:
         app: PPXAIDEApp instance
         args: Unused
     """
-    from .widgets.chat_view import ChatView
-    from .widgets.image_handlers import (
-        ImageHandlerFactory,
-        _IMAGEVIEW_AVAILABLE,
-        _TextualImage
-    )
-    from .terminal import (
-        can_display_images,
-        get_image_protocol_name,
-        detect_image_protocol,
-        get_capabilities
-    )
-
     chat_view = app.query_one("#chat-view", ChatView)
 
     # Library information
@@ -383,9 +364,6 @@ async def cmd_status(app: "PPXAIDEApp", args: str) -> None:
         app: PPXAIDEApp instance
         args: Unused
     """
-    from .widgets.chat_view import ChatView
-    from .terminal import get_capabilities, get_image_protocol_name
-
     chat_view = app.query_one("#chat-view", ChatView)
 
     # Gather status info

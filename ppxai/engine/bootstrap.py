@@ -42,6 +42,8 @@ from pathlib import Path
 from typing import Any, Optional, Dict, List, Tuple, Set
 from dataclasses import dataclass, field
 
+from ..config import get_bootstrap_config
+
 
 class ContextScope(Enum):
     """Scope levels for bootstrap context files (v1.14.2)."""
@@ -631,12 +633,8 @@ def get_bootstrap_files_config() -> List[str]:
     Returns:
         List of filenames to search for, or default list
     """
-    try:
-        from ..config import get_bootstrap_config
-        config = get_bootstrap_config()
-        return config.get("files", DEFAULT_BOOTSTRAP_FILES)
-    except ImportError:
-        return DEFAULT_BOOTSTRAP_FILES
+    config = get_bootstrap_config()
+    return config.get("files", DEFAULT_BOOTSTRAP_FILES)
 
 
 def is_bootstrap_enabled() -> bool:
@@ -645,12 +643,8 @@ def is_bootstrap_enabled() -> bool:
     Returns:
         True if bootstrap is enabled in config
     """
-    try:
-        from ..config import get_bootstrap_config
-        config = get_bootstrap_config()
-        return config.get("enabled", True)
-    except ImportError:
-        return True
+    config = get_bootstrap_config()
+    return config.get("enabled", True)
 
 
 def find_git_root(start_path: Optional[Path] = None) -> Optional[Path]:

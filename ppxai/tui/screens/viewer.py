@@ -8,17 +8,21 @@ Displays files with:
 - Images (via terminal protocols)
 """
 
+import sys
 from pathlib import Path
 from typing import Optional
 
 from textual.app import ComposeResult
-from textual.binding import Binding
 from textual.containers import VerticalScroll, Center
 from textual.screen import Screen
 from textual.widgets import Footer, Static, Markdown
 
 from ..widgets.tree_viewer import TreeViewer
 from ..widgets.code_editor import CodeEditor
+from ..images import display_image
+from ..terminal import get_image_protocol_name
+
+from ppxai.tui.keys import get_widget_bindings
 
 
 class ImageViewer(Static):
@@ -31,9 +35,6 @@ class ImageViewer(Static):
 
     def on_mount(self) -> None:
         """Display the image when mounted."""
-        from ..images import display_image
-        from ..terminal import get_image_protocol_name
-
         # Get terminal size info
         size = self.app.size
         # Reserve space for header and footer
@@ -43,7 +44,6 @@ class ImageViewer(Static):
         escape_seq = display_image(self._path, max_width=max_width, max_height=max_height)
         if escape_seq:
             # Write escape sequence directly to terminal
-            import sys
             sys.stdout.write(escape_seq)
             sys.stdout.flush()
             self._image_displayed = True
@@ -55,10 +55,7 @@ class ImageViewer(Static):
 class ViewerScreen(Screen):
     """Full-screen file viewer."""
 
-    BINDINGS = [
-        Binding("escape", "close", "Close", show=True),
-        Binding("q", "close", "Close", show=False),
-    ]
+    BINDINGS = get_widget_bindings("ViewerScreen")
 
     def __init__(
         self,

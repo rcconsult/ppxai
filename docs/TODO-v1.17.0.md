@@ -2,7 +2,9 @@
 
 ---
 
-## ppxaide Key Bindings Cleanup
+## ~~ppxaide Key Bindings Cleanup~~ ✅ Done
+
+**Implementation plan:** [`docs/TODO-keybindings-cleanup.md`](TODO-keybindings-cleanup.md)
 
 ### Problem
 
