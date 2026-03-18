@@ -2,13 +2,16 @@
 # Downloads and installs ppxai binaries and configuration files
 #
 # Usage:
-#   .\install.ps1                    # Install latest release
-#   .\install.ps1 -Version v1.13.2   # Install specific version
-#   .\install.ps1 -Uninstall         # Remove installation
+#   powershell -ExecutionPolicy Bypass -File install.ps1 -Local -Force
+#   powershell -ExecutionPolicy Bypass -File install.ps1 -Version v1.13.2
+#   powershell -ExecutionPolicy Bypass -File install.ps1 -Uninstall
+#
+# If execution policy allows scripts, you can also run directly:
+#   .\install.ps1 -Local -Force
 #
 # Requirements:
 #   - PowerShell 5.1+ (Windows 10/11 default)
-#   - Internet connection for downloading binaries
+#   - Internet connection for downloading binaries (not needed with -Local)
 #
 # Installation locations:
 #   - Binaries: %USERPROFILE%\.ppxai\bin\
@@ -18,6 +21,7 @@
 
 param(
     [string]$Version = "latest",
+    [switch]$Local,
     [switch]$Uninstall,
     [switch]$Force,
     [switch]$SkipConfig,
@@ -42,24 +46,24 @@ $BINARIES = @(
     "ppxai-desktop-windows.exe"
 )
 
-function Write-Header {
+function Show-Header {
     param([string]$Text)
     Write-Host ""
     Write-Host "=== $Text ===" -ForegroundColor Cyan
     Write-Host ""
 }
 
-function Write-Success {
+function Show-Ok {
     param([string]$Text)
     Write-Host "[OK] $Text" -ForegroundColor Green
 }
 
-function Write-Warning {
+function Show-Warn {
     param([string]$Text)
     Write-Host "[WARN] $Text" -ForegroundColor Yellow
 }
 
-function Write-Error {
+function Show-Err {
     param([string]$Text)
     Write-Host "[ERROR] $Text" -ForegroundColor Red
 }
@@ -70,57 +74,58 @@ function Get-LatestVersion {
         $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/$GITHUB_REPO/releases/latest"
         return $releases.tag_name
     } catch {
-        Write-Error "Failed to fetch latest version: $_"
+        Show-Err "Failed to fetch latest version: $_"
         exit 1
     }
 }
 
-function Get-ReleaseAssets {
+function Get-ReleaseAsset {
     param([string]$Tag)
     Write-Host "Fetching release assets for $Tag..."
     try {
         $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$GITHUB_REPO/releases/tags/$Tag"
         return $release.assets
     } catch {
-        Write-Error "Failed to fetch release $Tag : $_"
+        Show-Err "Failed to fetch release ${Tag}: $_"
         exit 1
     }
 }
 
-function Download-Binary {
+function Save-Binary {
     param(
         [string]$Url,
         [string]$OutputPath
     )
 
-    Write-Host "  Downloading $(Split-Path $OutputPath -Leaf)..."
+    $fileName = Split-Path $OutputPath -Leaf
+    Write-Host "  Downloading ${fileName}..."
     try {
         # Use TLS 1.2+
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
         $webClient = New-Object System.Net.WebClient
         $webClient.DownloadFile($Url, $OutputPath)
-        Write-Success "Downloaded $(Split-Path $OutputPath -Leaf)"
+        Show-Ok "Downloaded $fileName"
     } catch {
-        Write-Error "Failed to download $Url : $_"
+        Show-Err "Failed to download ${Url}: $_"
         return $false
     }
     return $true
 }
 
-function Install-Binaries {
+function Install-BinariesFromGitHub {
     param([string]$Tag)
 
-    Write-Header "Installing Binaries"
+    Show-Header "Installing Binaries from GitHub"
 
     # Create bin directory
     if (-not (Test-Path $BIN_DIR)) {
         New-Item -ItemType Directory -Path $BIN_DIR -Force | Out-Null
-        Write-Success "Created $BIN_DIR"
+        Show-Ok "Created $BIN_DIR"
     }
 
     # Get release assets
-    $assets = Get-ReleaseAssets -Tag $Tag
+    $assets = Get-ReleaseAsset -Tag $Tag
 
     foreach ($binary in $BINARIES) {
         $asset = $assets | Where-Object { $_.name -eq $binary }
@@ -129,16 +134,16 @@ function Install-Binaries {
 
             # Check if already exists
             if ((Test-Path $outputPath) -and -not $Force) {
-                Write-Warning "$binary already exists. Use -Force to overwrite."
+                Show-Warn "$binary already exists. Use -Force to overwrite."
                 continue
             }
 
-            $success = Download-Binary -Url $asset.browser_download_url -OutputPath $outputPath
+            $success = Save-Binary -Url $asset.browser_download_url -OutputPath $outputPath
             if (-not $success) {
-                Write-Warning "Skipping $binary"
+                Show-Warn "Skipping $binary"
             }
         } else {
-            Write-Warning "Asset $binary not found in release $Tag"
+            Show-Warn "Asset $binary not found in release $Tag"
         }
     }
 
@@ -155,42 +160,187 @@ function Install-Binaries {
         $target = Join-Path $BIN_DIR $alias.Key
         if (Test-Path $source) {
             Copy-Item $source $target -Force
-            Write-Success "Created alias $($alias.Key)"
+            Show-Ok "Created alias $($alias.Key)"
         }
     }
 }
 
+function Install-BinariesFromLocal {
+    Show-Header "Installing Binaries from local folder"
+
+    # Resolve the bin/ folder next to this script
+    $scriptDir = Split-Path -Parent $MyInvocation.ScriptName
+    $localBinDir = Join-Path $scriptDir "bin"
+
+    if (-not (Test-Path $localBinDir)) {
+        Show-Err "Local bin folder not found: $localBinDir"
+        exit 1
+    }
+
+    # Create target bin directory
+    if (-not (Test-Path $BIN_DIR)) {
+        New-Item -ItemType Directory -Path $BIN_DIR -Force | Out-Null
+        Show-Ok "Created $BIN_DIR"
+    }
+
+    # Stop running ppxai-server if any
+    $serverProc = Get-Process -Name 'ppxai-server' -ErrorAction SilentlyContinue
+    if ($serverProc) {
+        Write-Host "  Stopping running ppxai-server..."
+        $serverProc | Stop-Process -Force
+        Start-Sleep -Seconds 2
+        Show-Ok "Stopped ppxai-server"
+    }
+
+    # Local bin/ uses short names (ppxai.exe, not ppxai-windows.exe)
+    $localBinaries = @("ppxai.exe", "ppxaide.exe", "ppxai-server.exe", "ppxai-desktop.exe")
+    $copied = 0
+
+    foreach ($binary in $localBinaries) {
+        $source = Join-Path $localBinDir $binary
+        $target = Join-Path $BIN_DIR $binary
+
+        if (-not (Test-Path $source)) {
+            Show-Warn "$binary not found in $localBinDir - skipping"
+            continue
+        }
+
+        if ((Test-Path $target) -and -not $Force) {
+            # Compare file sizes to detect if update is needed
+            $sourceSize = (Get-Item $source).Length
+            $targetSize = (Get-Item $target).Length
+            if ($sourceSize -eq $targetSize) {
+                Show-Warn "$binary already up to date. Use -Force to overwrite."
+                continue
+            }
+        }
+
+        Copy-Item $source $target -Force
+        $size = [math]::Round((Get-Item $target).Length / 1MB, 1)
+        Show-Ok "Installed $binary - $size MB"
+        $copied++
+    }
+
+    # Also install VSIX if present
+    $vsixFiles = Get-ChildItem -Path $scriptDir -Filter "ppxai-*.vsix" -ErrorAction SilentlyContinue
+    if ($vsixFiles) {
+        $latestVsix = $vsixFiles | Sort-Object Name -Descending | Select-Object -First 1
+        Write-Host ""
+        Write-Host "  Found VSCode extension: $($latestVsix.Name)" -ForegroundColor Cyan
+        $codePath = Get-Command code -ErrorAction SilentlyContinue
+        if ($codePath) {
+            & code --install-extension $latestVsix.FullName --force 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                Show-Ok "Installed VSCode extension: $($latestVsix.Name)"
+            } else {
+                Show-Warn "VSCode extension install failed. Install manually:"
+                Write-Host "    code --install-extension `"$($latestVsix.FullName)`"" -ForegroundColor Yellow
+            }
+        } else {
+            Show-Warn "VSCode not found in PATH. Install extension manually:"
+            Write-Host "    code --install-extension `"$($latestVsix.FullName)`"" -ForegroundColor Yellow
+        }
+    }
+
+    # Ensure data directories exist
+    foreach ($dir in @($INSTALL_DIR, $SESSIONS_DIR, $EXPORTS_DIR, $CHECKPOINTS_DIR)) {
+        if (-not (Test-Path $dir)) {
+            New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        }
+    }
+
+    # Install ppxai-config.json if present next to script
+    $localConfig = Join-Path $scriptDir "ppxai-config.json"
+    $targetConfig = Join-Path $INSTALL_DIR "ppxai-config.json"
+    if (Test-Path $localConfig) {
+        if ((Test-Path $targetConfig) -and -not $Force) {
+            Show-Warn "ppxai-config.json already exists. Use -Force to overwrite."
+        } else {
+            Copy-Item $localConfig $targetConfig -Force
+            Show-Ok "Installed ppxai-config.json"
+        }
+    }
+
+    # Install AGENTS.md if present next to script
+    $localAgents = Join-Path $scriptDir "AGENTS.md"
+    $targetAgents = Join-Path $INSTALL_DIR "AGENTS.md"
+    if (Test-Path $localAgents) {
+        if ((Test-Path $targetAgents) -and -not $Force) {
+            Show-Warn "AGENTS.md already exists. Use -Force to overwrite."
+        } else {
+            Copy-Item $localAgents $targetAgents -Force
+            Show-Ok "Installed AGENTS.md"
+        }
+    }
+
+    # Install web UI files if present next to script
+    $localWeb = Join-Path $scriptDir "web"
+    $targetWeb = Join-Path $INSTALL_DIR "web"
+    if (Test-Path $localWeb) {
+        Copy-Item $localWeb $targetWeb -Recurse -Force
+        $webFileCount = (Get-ChildItem $targetWeb -Recurse -File).Count
+        Show-Ok "Installed web UI - $webFileCount files"
+    }
+
+    # Install .env
+    $envPath = Join-Path $INSTALL_DIR ".env"
+    $localEnv = Join-Path $scriptDir ".env"
+    if (Test-Path $localEnv) {
+        if ((Test-Path $envPath) -and -not $Force) {
+            Show-Warn ".env already exists. Use -Force to overwrite."
+        } else {
+            Copy-Item $localEnv $envPath -Force
+            Show-Ok "Installed .env"
+        }
+    } elseif (-not (Test-Path $envPath)) {
+        $envContent = Get-EnvTemplate
+        $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText($envPath, $envContent, $utf8NoBom)
+        Show-Ok "Created .env template"
+    }
+
+    if ($copied -eq 0) {
+        Write-Host ""
+        Write-Host "  No binaries were updated. Use -Force to overwrite." -ForegroundColor Yellow
+    } else {
+        Write-Host ""
+        Show-Ok "Installed $copied binaries to $BIN_DIR"
+    }
+}
+
 function Install-Config {
-    Write-Header "Installing Configuration"
+    Show-Header "Installing Configuration"
 
     # Create data directories
     foreach ($dir in @($INSTALL_DIR, $SESSIONS_DIR, $EXPORTS_DIR, $CHECKPOINTS_DIR)) {
         if (-not (Test-Path $dir)) {
             New-Item -ItemType Directory -Path $dir -Force | Out-Null
-            Write-Success "Created $dir"
+            Show-Ok "Created $dir"
         }
     }
 
     # Install ppxai-config.json
     $configPath = Join-Path $INSTALL_DIR "ppxai-config.json"
     if ((Test-Path $configPath) -and -not $Force) {
-        Write-Warning "ppxai-config.json already exists. Use -Force to overwrite."
+        Show-Warn "ppxai-config.json already exists. Use -Force to overwrite."
     } else {
         $configContent = Get-ConfigTemplate
-        # Write UTF-8 without BOM (PowerShell 5.1's -Encoding UTF8 adds BOM which breaks JSON parsing)
-        [System.IO.File]::WriteAllText($configPath, $configContent, [System.Text.UTF8Encoding]::new($false))
-        Write-Success "Created ppxai-config.json"
+        # Write UTF-8 without BOM
+        $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText($configPath, $configContent, $utf8NoBom)
+        Show-Ok "Created ppxai-config.json"
     }
 
     # Install .env
     $envPath = Join-Path $INSTALL_DIR ".env"
     if ((Test-Path $envPath) -and -not $Force) {
-        Write-Warning ".env already exists. Use -Force to overwrite."
+        Show-Warn ".env already exists. Use -Force to overwrite."
     } else {
         $envContent = Get-EnvTemplate
         # Write UTF-8 without BOM
-        [System.IO.File]::WriteAllText($envPath, $envContent, [System.Text.UTF8Encoding]::new($false))
-        Write-Success "Created .env (edit to add your API keys)"
+        $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText($envPath, $envContent, $utf8NoBom)
+        Show-Ok "Created .env"
     }
 }
 
@@ -434,29 +584,29 @@ function Get-EnvTemplate {
 }
 
 function Add-ToPath {
-    Write-Header "Updating PATH"
+    Show-Header "Updating PATH"
 
     $currentPath = [Environment]::GetEnvironmentVariable("PATH", "User")
 
     if ($currentPath -notlike "*$BIN_DIR*") {
         $newPath = "$BIN_DIR;$currentPath"
         [Environment]::SetEnvironmentVariable("PATH", $newPath, "User")
-        Write-Success "Added $BIN_DIR to user PATH"
+        Show-Ok "Added $BIN_DIR to user PATH"
         Write-Host ""
         Write-Host "NOTE: Restart your terminal or run this command to update PATH:" -ForegroundColor Yellow
         Write-Host '  $env:PATH = [Environment]::GetEnvironmentVariable("PATH", "User")' -ForegroundColor Yellow
     } else {
-        Write-Success "$BIN_DIR is already in PATH"
+        Show-Ok "$BIN_DIR is already in PATH"
     }
 }
 
 function Uninstall-Ppxai {
-    Write-Header "Uninstalling ppxai"
+    Show-Header "Uninstalling ppxai"
 
     # Remove binaries
     if (Test-Path $BIN_DIR) {
         Remove-Item -Path $BIN_DIR -Recurse -Force
-        Write-Success "Removed $BIN_DIR"
+        Show-Ok "Removed $BIN_DIR"
     }
 
     # Ask about config removal
@@ -469,11 +619,11 @@ function Uninstall-Ppxai {
         if ($response -eq "y" -or $response -eq "Y") {
             if (Test-Path $configPath) {
                 Remove-Item $configPath -Force
-                Write-Success "Removed ppxai-config.json"
+                Show-Ok "Removed ppxai-config.json"
             }
             if (Test-Path $envPath) {
                 Remove-Item $envPath -Force
-                Write-Success "Removed .env"
+                Show-Ok "Removed .env"
             }
         }
     }
@@ -483,18 +633,18 @@ function Uninstall-Ppxai {
     if ($currentPath -like "*$BIN_DIR*") {
         $newPath = ($currentPath -split ";" | Where-Object { $_ -ne $BIN_DIR }) -join ";"
         [Environment]::SetEnvironmentVariable("PATH", $newPath, "User")
-        Write-Success "Removed $BIN_DIR from PATH"
+        Show-Ok "Removed $BIN_DIR from PATH"
     }
 
     Write-Host ""
-    Write-Success "ppxai uninstalled successfully"
+    Show-Ok "ppxai uninstalled successfully"
     Write-Host ""
     Write-Host "Note: Session data in $SESSIONS_DIR was preserved." -ForegroundColor Yellow
     Write-Host "Delete $INSTALL_DIR manually to remove all data." -ForegroundColor Yellow
 }
 
 function Show-PostInstall {
-    Write-Header "Installation Complete"
+    Show-Header "Installation Complete"
 
     Write-Host "ppxai has been installed to: $INSTALL_DIR" -ForegroundColor Green
     Write-Host ""
@@ -503,9 +653,8 @@ function Show-PostInstall {
     Write-Host "     notepad $INSTALL_DIR\.env" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "  2. Run ppxai:"
-    Write-Host "     ppxai                  # Terminal UI" -ForegroundColor Yellow
-    Write-Host "     ppxai                  # Rich TUI (original)" -ForegroundColor Yellow
-    Write-Host "     ppxaide                # Textual TUI (v1.15.0+ modern)" -ForegroundColor Yellow
+    Write-Host "     ppxai                  # Rich TUI" -ForegroundColor Yellow
+    Write-Host "     ppxaide                # Textual TUI" -ForegroundColor Yellow
     Write-Host "     ppxai-server           # HTTP server for VSCode" -ForegroundColor Yellow
     Write-Host "     ppxai-desktop          # Desktop web app" -ForegroundColor Yellow
     Write-Host ""
@@ -529,24 +678,31 @@ if ($Uninstall) {
     exit 0
 }
 
-# Resolve version
-if ($Version -eq "latest") {
-    $Version = Get-LatestVersion
+if ($Local) {
+    # Local mode: install from bin/ folder next to this script
+    # Config/AGENTS.md/.env are installed by Install-BinariesFromLocal
+    # from the script directory - do NOT call Install-Config (cloud template)
+    Write-Host "Mode: Local install" -ForegroundColor Green
+
+    Install-BinariesFromLocal
+
+    Add-ToPath
+    Show-PostInstall
+} else {
+    # GitHub mode: download from releases
+    if ($Version -eq "latest") {
+        $Version = Get-LatestVersion
+    }
+    Write-Host "Version: $Version" -ForegroundColor Green
+
+    if (-not $SkipBinaries) {
+        Install-BinariesFromGitHub -Tag $Version
+    }
+
+    if (-not $SkipConfig) {
+        Install-Config
+    }
+
+    Add-ToPath
+    Show-PostInstall
 }
-Write-Host "Version: $Version" -ForegroundColor Green
-
-# Install binaries
-if (-not $SkipBinaries) {
-    Install-Binaries -Tag $Version
-}
-
-# Install config
-if (-not $SkipConfig) {
-    Install-Config
-}
-
-# Update PATH
-Add-ToPath
-
-# Show post-install instructions
-Show-PostInstall

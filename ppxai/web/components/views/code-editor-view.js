@@ -152,6 +152,34 @@ class CodeEditorView extends BaseView {
         } catch {}
     }
 
+    // ── Reload from disk ──────────────────────────────────────────────────────
+
+    /**
+     * Re-fetch file content from disk and update the editor.
+     * Skips if the buffer has unsaved edits (dirty).
+     * Called when the file may have been modified externally (e.g. by AI tools).
+     */
+    async reload() {
+        if (this.isDirty()) return;  // don't clobber unsaved edits
+        if (!this._path || this._isNew) return;
+        try {
+            const data = await this._appState.apiClient.readFile(this._path);
+            if (data.type === 'image' || data.type === 'pdf') return;
+            const newContent = data.content ?? '';
+            if (newContent === this._loadedContent) return;  // no change on disk
+            this._loadedContent   = newContent;
+            this._originalContent = newContent;
+            // Update editor in-place if mounted
+            if (this._editor && this._editor.state) {
+                const len = this._editor.state.doc.length;
+                this._editor.dispatch({
+                    changes: { from: 0, to: len, insert: newContent }
+                });
+            }
+            this._setStatus('Reloaded', 2000);
+        } catch {}
+    }
+
     // ── Save API ──────────────────────────────────────────────────────────────
 
     async save() {
@@ -230,8 +258,8 @@ class CodeEditorView extends BaseView {
             if (!ok) return;
         }
 
-        // Capture state before destroying
-        const state = this.getState();
+        // Capture cursor/scroll before destroying (strip mode to avoid re-entry)
+        const { cursor, scrollTop } = this.getState();
         this._mode = newMode;
 
         // Detach old Ctrl+S handler if leaving edit
@@ -245,8 +273,9 @@ class CodeEditorView extends BaseView {
         this._destroyEditor();
         this._buildUI(content);
 
-        // Restore cursor/scroll
-        this.setState(state);
+        // Restore cursor/scroll only — mode is already set, do NOT pass mode
+        // to setState to avoid infinite _switchMode ↔ setState recursion
+        this.setState({ cursor, scrollTop });
     }
 
     _initCodeMirror(editorEl, content, lang, line, col, readOnly) {

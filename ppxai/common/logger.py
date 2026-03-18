@@ -262,6 +262,16 @@ class Logger:
         """Log tool error."""
         self.error(f"TOOL ERROR: {tool_name} - {error}")
 
+    def log_client_event(self, client: str, level: str, message: str):
+        """Log event forwarded from a web/IDE client."""
+        tag = f"CLIENT[{client}]"
+        if level == "error":
+            self.error(f"{tag}: {message[:500]}")
+        elif level == "warning":
+            self.warning(f"{tag}: {message[:500]}")
+        else:
+            self.info(f"{tag}: {message[:500]}")
+
     def log_event(self, event_type: str, data: str = ""):
         """Log generic event."""
         self.debug(f"EVENT: {event_type} - {data[:100]}")

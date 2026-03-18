@@ -72,6 +72,12 @@ class BaseView {
     /** Called when another view is pushed on top (loses focus but stays mounted). */
     onDeactivate() {}
 
+    /**
+     * Re-fetch content from disk if the file may have changed externally.
+     * Override in file-backed views; default is a no-op.
+     */
+    async reload() {}
+
     // ── Metadata ─────────────────────────────────────────────────────────────
 
     /** @returns {string} Emoji or icon shown next to title in dropdown. */

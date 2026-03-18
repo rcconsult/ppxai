@@ -195,6 +195,36 @@ class RightPanelFrame {
     }
 
     /**
+     * Close (remove) a view by its stack index.
+     * Prompts if dirty. If the closed view was active, the next view in
+     * the stack becomes active. If the stack becomes empty, the frame hides.
+     * @param {number} stackIndex
+     */
+    async closeByIndex(stackIndex) {
+        const view = this._stack[stackIndex];
+        if (!view) return;
+
+        if (view.isDirty()) {
+            const ok = confirm(`"${view.getTitle()}" has unsaved changes. Close anyway?`);
+            if (!ok) return;
+        }
+
+        const wasActive = (stackIndex === this._stack.length - 1);
+        this._savedStates.delete(view);
+        view.unmount();
+        this._stack.splice(stackIndex, 1);
+
+        if (this._stack.length === 0) {
+            this.hideFrame();
+        } else if (wasActive) {
+            this._mountActive();
+            this.activeView.onActivate();
+        }
+
+        this._notifyChange();
+    }
+
+    /**
      * Route a keyboard event to the active view.
      * Also handles back/forward navigation shortcuts.
      *
@@ -243,9 +273,10 @@ class RightPanelFrame {
         const idx = this._stack.indexOf(view);
         if (idx === -1) return;
 
-        // Already on top — just activate, don't re-mount
+        // Already on top — just activate and reload in case file changed on disk
         if (idx === this._stack.length - 1) {
             view.onActivate();
+            view.reload();
             return;
         }
 
@@ -259,6 +290,7 @@ class RightPanelFrame {
         this._stack.push(view);
         this._mountActive();
         view.onActivate();
+        view.reload();
         this._notifyChange();
     }
 
