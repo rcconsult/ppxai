@@ -253,3 +253,17 @@ async def set_debug_log(request: dict):
         "enabled": logger.enabled,
         "log_file": str(logger.log_file) if logger.log_file else None,
     }
+
+
+@router.post("/client-log")
+async def client_log(request: dict):
+    """Receive log entries from web/IDE clients.
+
+    Body: {"level": "info|warning|error", "message": "...", "client": "web"}
+    """
+    level = request.get("level", "info")
+    message = request.get("message", "")
+    client = request.get("client", "web")
+    if message:
+        logger.log_client_event(client, level, message)
+    return {"ok": True}

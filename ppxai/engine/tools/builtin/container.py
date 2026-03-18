@@ -46,6 +46,7 @@ def _run_command(
     cmd: List[str],
     timeout: int = 30,
     max_output: int = 10000,
+    cwd: Optional[str] = None,
 ) -> str:
     """
     Run a command and return output.
@@ -54,6 +55,7 @@ def _run_command(
         cmd: Command and arguments
         timeout: Timeout in seconds
         max_output: Maximum output characters
+        cwd: Working directory for command execution
 
     Returns:
         Command output or error message
@@ -64,6 +66,7 @@ def _run_command(
             capture_output=True,
             text=True,
             timeout=timeout,
+            cwd=cwd,
         )
         output = result.stdout + result.stderr
         if len(output) > max_output:
@@ -107,8 +110,9 @@ class CLITool(BaseTool):
         error = self.runtime_check()
         if error:
             return error
+        working_dir = self.engine.get_working_dir() or None
         cmd = self.build_command(**kwargs)
-        return _run_command(cmd, timeout=self._timeout)
+        return _run_command(cmd, timeout=self._timeout, cwd=working_dir)
 
 
 class ConsentCLITool(CLITool):
@@ -140,7 +144,7 @@ class ConsentCLITool(CLITool):
             return f"Error: User denied permission to execute: {cmd_str}"
 
         cmd = self.build_command(**kwargs)
-        return _run_command(cmd, timeout=self._timeout)
+        return _run_command(cmd, timeout=self._timeout, cwd=working_dir)
 
 
 class DockerTool(CLITool):

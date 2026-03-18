@@ -1,7 +1,7 @@
 # ppxai-server-config ConfigMap — mounted into every server pod at
 # /root/.ppxai/ppxai-config.json
-# API keys come from the ppxai-api-keys Secret (env vars); this file
-# holds only structural provider/model configuration.
+# Coder service: internal LLM providers only (GPT-OSS + DGX Spark).
+# API keys come from the ppxai-api-keys Secret (env vars).
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -15,7 +15,7 @@ data:
   ppxai-config.json: |
     {
       "version": "1.3",
-      "default_provider": "perplexity",
+      "default_provider": "custom",
       "system_prompt": "You are an expert AI coding assistant. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
       "system_prompt_mode": "prepend",
       "server": {
@@ -26,70 +26,39 @@ data:
         "auto_restore": "never"
       },
       "bootstrap": {
-        "files": ["AGENTS.md", "CLAUDE.md", "INSTRUCTIONS.md"],
+        "files": ["AGENTS.md"],
         "enabled": true
       },
       "providers": {
-        "perplexity": {
-          "name": "Perplexity AI",
-          "base_url": "https://api.perplexity.ai",
-          "api_key_env": "PERPLEXITY_API_KEY",
-          "default_model": "sonar-pro",
+        "custom": {
+          "name": "Internal Code AI (GPT-OSS)",
+          "base_url": "https://codeai.trad.int/v1",
+          "api_key_env": "CUSTOM_API_KEY",
+          "default_model": "openai/gpt-oss-120b",
+          "coding_model": "openai/gpt-oss-120b",
+          "system_prompt": "You are a helpful AI coding assistant. Be concise and direct.\n\nCRITICAL TOOL RULES:\n1. NEVER say 'I'll use the X tool' and then output JSON - just call the tool directly\n2. Do NOT output tool calls as JSON in your response - use native tool calling\n3. If you need a tool, call it immediately without explanation\n4. Only explain AFTER the tool returns its result\n5. Prefer read_file over cat/type commands\n6. Use replace_block/insert_text/apply_patch for editing",
           "generation_params": {
             "temperature": 0.2,
             "top_p": 0.9,
-            "frequency_penalty": 0.15
+            "frequency_penalty": 0.1,
+            "presence_penalty": 0.05
+          },
+          "tool_calling": {
+            "mode": "native",
+            "fallback_on_empty": true,
+            "strip_json_from_text": true
           },
           "models": {
-            "sonar": {
-              "name": "Sonar",
-              "description": "Lightweight search model with real-time grounding"
-            },
-            "sonar-pro": {
-              "name": "Sonar Pro",
-              "description": "Advanced search model for complex queries",
-              "context_limit": 200000
-            },
-            "sonar-reasoning-pro": {
-              "name": "Sonar Reasoning Pro",
-              "description": "Precision reasoning with Chain of Thought (DeepSeek-R1)"
+            "openai/gpt-oss-120b": {
+              "name": "GPT OSS 120B",
+              "description": "Internal self-hosted GPT model with native tool calling via vLLM",
+              "context_limit": 131072,
+              "max_tokens": 8192,
+              "tool_calling": { "fallback_on_failure": true }
             }
           },
-          "capabilities": {
-            "web_search": true,
-            "web_fetch": true,
-            "native_tool_calling": false
-          }
-        },
-        "gemini": {
-          "name": "Google Gemini",
-          "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
-          "api_key_env": "GEMINI_API_KEY",
-          "default_model": "gemini-2.5-flash",
-          "options": {
-            "enable_grounding": true,
-            "native_tool_calling": true
-          },
-          "generation_params": {
-            "temperature": 0.2,
-            "top_p": 0.9
-          },
-          "models": {
-            "gemini-2.5-flash": {
-              "name": "Gemini 2.5 Flash",
-              "description": "Fast model, best price/performance",
-              "context_limit": 1000000
-            },
-            "gemini-2.5-pro": {
-              "name": "Gemini 2.5 Pro",
-              "description": "Most capable for complex reasoning",
-              "context_limit": 1000000
-            },
-            "gemini-2.0-flash": {
-              "name": "Gemini 2.0 Flash",
-              "description": "Fast model with multimodal support",
-              "context_limit": 1000000
-            }
+          "pricing": {
+            "openai/gpt-oss-120b": { "input": 0.0, "output": 0.0 }
           },
           "capabilities": {
             "web_search": true,
@@ -97,43 +66,51 @@ data:
             "native_tool_calling": true
           }
         },
-        "openai": {
-          "name": "OpenAI",
-          "base_url": "https://api.openai.com/v1",
-          "api_key_env": "OPENAI_API_KEY",
-          "default_model": "gpt-4.1-mini",
+        "asusai-vllm": {
+          "name": "DGX Spark vLLM (GB10)",
+          "base_url": "http://llmprod.trad.int:8000/v1",
+          "api_key_env": "OLLAMA_API_KEY",
+          "default_model": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+          "coding_model": "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+          "system_prompt": "You are an expert coding assistant running on a local NVIDIA GB10 GPU via vLLM. Be concise and precise. When using tools, execute them directly and report results briefly.",
           "generation_params": {
             "temperature": 0.2,
-            "top_p": 0.95
+            "top_p": 0.9,
+            "frequency_penalty": 0.0
+          },
+          "tool_calling": {
+            "mode": "native",
+            "fallback_on_empty": true,
+            "strip_json_from_text": true
           },
           "models": {
-            "gpt-4.1-mini": {
-              "name": "GPT-4.1 Mini",
-              "description": "Budget option with 1M context",
-              "context_limit": 1047576
+            "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8": {
+              "name": "Qwen3 Coder 30B-A3B FP8 (MoE)",
+              "description": "Code-specialized MoE: 30.5B total / 3.3B active, FP8, native tool calling",
+              "context_limit": 131072,
+              "max_tokens": 8192
             },
-            "gpt-4.1": {
-              "name": "GPT-4.1",
-              "description": "Flagship with 1M context",
-              "context_limit": 1047576
+            "Qwen/Qwen3-Coder-Next-FP8": {
+              "name": "Qwen3-Coder-Next FP8 (Hybrid MoE)",
+              "description": "Code-specialized hybrid MoE: 80B total / 3B active, FP8, 256K context",
+              "context_limit": 131072,
+              "max_tokens": 8192
             },
-            "gpt-4o": {
-              "name": "GPT-4o",
-              "description": "Multimodal model"
-            },
-            "o4-mini": {
-              "name": "o4 Mini",
-              "description": "Latest reasoning model with improved tool use",
-              "context_limit": 200000,
-              "generation_params": {
-                "temperature": 1.0,
-                "max_tokens": 8192
-              }
+            "Qwen/Qwen2.5-Coder-32B-Instruct": {
+              "name": "Qwen2.5 Coder 32B (Dense)",
+              "description": "Dense 32B coding model, all 32B active per token",
+              "context_limit": 32768,
+              "max_tokens": 8192
             }
           },
+          "pricing": {
+            "Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8": { "input": 0.0, "output": 0.0 },
+            "Qwen/Qwen3-Coder-Next-FP8": { "input": 0.0, "output": 0.0 },
+            "Qwen/Qwen2.5-Coder-32B-Instruct": { "input": 0.0, "output": 0.0 }
+          },
           "capabilities": {
-            "web_search": false,
-            "web_fetch": false,
+            "web_search": true,
+            "web_fetch": true,
             "native_tool_calling": true
           }
         }
@@ -152,7 +129,7 @@ data:
     }
 ---
 # ppxai-api-keys Secret — holds provider API keys.
-# Override with: helm upgrade ppxai . --set apiKeys.perplexityApiKey=pplx-...
+# Override with: helm upgrade ppxai . --set apiKeys.customApiKey=...
 apiVersion: v1
 kind: Secret
 metadata:
@@ -163,8 +140,5 @@ metadata:
     app.kubernetes.io/component: api-keys
 type: Opaque
 stringData:
-  PERPLEXITY_API_KEY: {{ .Values.apiKeys.perplexityApiKey | quote }}
-  OPENAI_API_KEY: {{ .Values.apiKeys.openaiApiKey | quote }}
-  GEMINI_API_KEY: {{ .Values.apiKeys.geminiApiKey | quote }}
   CUSTOM_API_KEY: {{ .Values.apiKeys.customApiKey | quote }}
-  CUSTOM_BASE_URL: {{ .Values.apiKeys.customBaseUrl | quote }}
+  OLLAMA_API_KEY: {{ .Values.apiKeys.ollamaApiKey | default "dummy" | quote }}

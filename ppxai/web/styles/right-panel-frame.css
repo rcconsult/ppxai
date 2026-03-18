@@ -198,6 +198,22 @@
 .rpf-pin-btn:hover  { opacity: 0.8; }
 .rpf-pin-btn.pinned { opacity: 1; }
 
+.rpf-close-item-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: monospace;
+    padding: 0 4px;
+    line-height: 1;
+    opacity: 0.3;
+    transition: opacity 0.15s, color 0.15s;
+    flex-shrink: 0;
+    border-radius: 3px;
+    color: var(--text-muted);
+}
+.rpf-close-item-btn:hover { opacity: 1; color: #ef4444; }
+
 /* ── Viewport (content area) ──────────────────────────────── */
 
 .rpf-viewport {

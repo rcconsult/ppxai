@@ -25,10 +25,11 @@ class DisplayFileTool(BaseTool):
         self.engine = engine
         self.name = "display_file"
         self.description = (
-            "Display a file in the split view panel. Use this to show generated files, "
-            "artifacts, or relevant code files to the user after you've created or modified them. "
-            "The file will open in a side panel with syntax highlighting, tree view for "
-            "structured data, or image preview as appropriate."
+            "Open a file in the user's side panel viewer. "
+            "ONLY call this when the user explicitly asks to see, view, preview, or open a file. "
+            "Do NOT call this after writing or editing files - the user can see changes in their editor. "
+            "Do NOT call this to show your work or results - just describe what you did in text. "
+            "This tool is for user-requested file viewing only."
         )
         self.parameters = {
             "type": "object",

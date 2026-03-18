@@ -1613,6 +1613,20 @@ export class HttpClient {
             this.outputChannel.appendLine('[Server] Shutdown initiated (connection closed as expected)');
         }
     }
+
+    /**
+     * Forward a client event to the server debug log (fire-and-forget).
+     * @param level - 'info' | 'warning' | 'error'
+     * @param message - The log message
+     */
+    logClientEvent(level: string, message: string): void {
+        if (!this._ready) { return; }
+        fetch(`${this.baseUrl}/client-log`, {
+            method: 'POST',
+            headers: this.getHeaders(true),
+            body: JSON.stringify({ level, message, client: 'vscode' }),
+        }).catch(() => {});
+    }
 }
 
 /**

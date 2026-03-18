@@ -77,7 +77,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
         const view = this._view;
         return {
-            postMessage: (msg) => view.webview.postMessage(msg),
+            postMessage: (msg) => {
+                view.webview.postMessage(msg);
+                if (msg?.content && (msg.type === 'systemMessage' || msg.type === 'error')) {
+                    const level = msg.type === 'error' ? 'error' : 'info';
+                    this._backend.logClientEvent(level, msg.content);
+                }
+            },
             backend: this._backend,
             updateStatus: () => this.updateStatus(),
             updateAgentStatus: () => this.updateAgentStatus(),
@@ -156,7 +162,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
      * from UI rendering, enabling isolated testing of each component.
      */
     private wireUISubscriptions(): void {
-        const postMessage = (msg: unknown) => this._view?.webview.postMessage(msg);
+        const postMessage = (msg: unknown) => {
+            this._view?.webview.postMessage(msg);
+            // Forward system messages and errors to server debug log
+            const m = msg as { type?: string; content?: string };
+            if (m?.content && (m.type === 'systemMessage' || m.type === 'error')) {
+                const level = m.type === 'error' ? 'error' : 'info';
+                this._backend.logClientEvent(level, m.content);
+            }
+        };
 
         // Stream events -> webview messages
         this._eventBus.on('stream:thinking', (content) => {
@@ -2158,6 +2172,7 @@ Review your previous actions and continue. If the task is complete, respond with
                 content = result.message;
         }
         this._view.webview.postMessage({ type: 'systemMessage', content });
+        this._backend.logClientEvent('info', content);
     }
 
     private async handleShowCommand(args: string[]) {

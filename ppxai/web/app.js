@@ -182,6 +182,50 @@ class PpxaiApp {
         this.applyTheme();
         this.setupMarkdown();
         await this.connectToServer();
+
+        // v1.17.0: Start heartbeat watchdog
+        this._heartbeatFailCount = 0;
+        this._heartbeatTimer = setInterval(() => this._heartbeat(), 15000);
+    }
+
+    /**
+     * Periodic health check. Detects stuck connections and server unavailability.
+     * After 2 consecutive failures: marks disconnected, aborts any stuck stream.
+     * On recovery: reconnects and re-enables UI.
+     */
+    async _heartbeat() {
+        try {
+            const resp = await fetch(`${this.serverUrl}/health`, {
+                signal: AbortSignal.timeout(5000)
+            });
+            if (resp.ok) {
+                if (this._heartbeatFailCount >= 2) {
+                    // Recovered — reconnect
+                    this.updateServerStatus('connected');
+                    this.showSystemMessage('Server connection restored.');
+                }
+                this._heartbeatFailCount = 0;
+                return;
+            }
+        } catch {}
+
+        this._heartbeatFailCount++;
+
+        if (this._heartbeatFailCount === 2) {
+            this.updateServerStatus('disconnected');
+
+            // Abort any stuck streaming request
+            if (this.state.isStreaming && this.state.currentAbortController) {
+                this.state.currentAbortController.abort();
+                this.showSystemMessage('Connection lost - stream interrupted. Retrying...', 'warning');
+            }
+        }
+
+        // After 4 consecutive failures (1 min), attempt full reconnect
+        if (this._heartbeatFailCount === 4) {
+            this._heartbeatFailCount = 0;
+            this.connectToServer(true);
+        }
     }
 
     _initRightPanelFrame() {
@@ -266,6 +310,9 @@ class PpxaiApp {
                 <button class="rpf-pin-btn${item.isPinned ? ' pinned' : ''}"
                         data-stack-index="${item.stackIndex}"
                         title="${item.isPinned ? 'Unpin' : 'Pin to stack'}">📌</button>
+                <button class="rpf-close-item-btn"
+                        data-stack-index="${item.stackIndex}"
+                        title="Close">x</button>
             </div>
         `).join('');
 
@@ -288,6 +335,16 @@ class PpxaiApp {
                 if (view.isPinned()) view.unpin(); else view.pin();
                 btn.classList.toggle('pinned', view.isPinned());
                 btn.title = view.isPinned() ? 'Unpin' : 'Pin to stack';
+            });
+        });
+
+        // Close button — remove view from stack
+        dd.querySelectorAll('.rpf-close-item-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const idx = parseInt(btn.dataset.stackIndex, 10);
+                frame.closeByIndex(idx);
+                dd.classList.add('hidden');
             });
         });
 
@@ -967,10 +1024,14 @@ class PpxaiApp {
                     this.closeReasoningSection(contentEl);
                 }
                 fullContent += event.data || '';
-                // Throttle markdown rendering
-                if (fullContent.length % 50 === 0 || fullContent.length < 100) {
-                    contentEl.innerHTML = this.renderMarkdown(fullContent);
-                    this.scrollToBottom();
+                // Debounce markdown rendering via rAF — avoids layout thrashing
+                if (!this._streamRafPending) {
+                    this._streamRafPending = true;
+                    requestAnimationFrame(() => {
+                        contentEl.innerHTML = this.renderMarkdown(fullContent);
+                        this.scrollToBottom();
+                        this._streamRafPending = false;
+                    });
                 }
                 break;
 
@@ -1190,9 +1251,11 @@ class PpxaiApp {
         if (this._domMessageCount > MAX_DOM_MESSAGES) {
             const oldest = this.elements.messagesContainer.querySelector('.message');
             if (oldest) {
-                this._scrollSpacer.style.height =
-                    (this._scrollSpacer.offsetHeight + oldest.offsetHeight) + 'px';
+                // Batch read then write to avoid layout thrashing
+                const spacerH = this._scrollSpacer.offsetHeight;
+                const oldestH = oldest.offsetHeight;
                 oldest.remove();
+                this._scrollSpacer.style.height = (spacerH + oldestH) + 'px';
                 this._domMessageCount--;
             }
         }
@@ -1346,8 +1409,14 @@ class PpxaiApp {
         }
     }
 
-    showSystemMessage(content) {
+    showSystemMessage(content, level = 'info') {
         this.addMessage('system', content);
+        // Forward to server debug log (fire-and-forget)
+        fetch(`${this.serverUrl}/client-log`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ level, message: content, client: 'web' }),
+        }).catch(() => {});
     }
 
     showError(message) {
@@ -1358,6 +1427,12 @@ class PpxaiApp {
         `;
         this.elements.messagesContainer.appendChild(msgEl);
         this.scrollToBottom();
+        // Forward to server debug log
+        fetch(`${this.serverUrl}/client-log`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ level: 'error', message, client: 'web' }),
+        }).catch(() => {});
     }
 
     /**
@@ -2342,7 +2417,12 @@ class PpxaiApp {
     }
 
     scrollToBottom() {
-        this.elements.messagesContainer.scrollTop = this.elements.messagesContainer.scrollHeight;
+        if (this._scrollRafPending) return;
+        this._scrollRafPending = true;
+        requestAnimationFrame(() => {
+            this.elements.messagesContainer.scrollTop = this.elements.messagesContainer.scrollHeight;
+            this._scrollRafPending = false;
+        });
     }
 }
 
