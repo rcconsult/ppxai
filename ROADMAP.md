@@ -643,17 +643,18 @@ ppxai/tui/                     # New module (Textual-based)
 
 ## Planned (v1.17.0+)
 
-### v1.17.0 - ppxaide Key Bindings Cleanup
+### ~~v1.17.0 - ppxaide Key Bindings Cleanup~~ ✅ Done
 
-**Status:** Planned (low priority)
-**See:** `docs/TODO-v1.17.0.md`
+**See:** `docs/TODO-keybindings-cleanup.md`
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **Centralized key routing** | One place decides which widget handles what key | ⏳ Planned |
-| **Audit `event.stop()` calls** | Remove unnecessary event consumption in InputBox, ChatTextArea, FileTree | ⏳ Planned |
-| **`/keys` command** | Show effective binding table at runtime | ⏳ Planned |
-| **Kitty protocol negotiation** | Replace per-user terminal config workarounds for Ctrl+Enter, Ctrl+Tab | ⏳ Planned |
+| **Centralized key registry** | `ppxai/tui/keys.py` — single source of truth, all BINDINGS generated | ✅ Done |
+| **Widget BINDINGS migration** | All widgets use `get_widget_bindings()` from registry | ✅ Done |
+| **`/keys` command** | Show effective binding table at runtime, `/keys conflicts` for conflicts | ✅ Done |
+| **Display-only hack cleanup** | Replaced empty action string with `action_noop()` | ✅ Done |
+| **Kitty protocol documentation** | Documented in keys.py and CLAUDE.md — Textual 8.1.1 does not auto-negotiate (#6074) | ✅ Documented |
+| **Textual upgrade** | 7.4.0 → 8.1.1 (DirectoryTree fixes, GC improvements) | ✅ Done |
 
 ---
 

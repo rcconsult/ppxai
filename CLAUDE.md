@@ -259,6 +259,7 @@ ppxai/
 │   ├── streaming.py     # SSE event generators
 │   └── routes/          # Route modules (chat, providers, files, sessions, etc.)
 ├── tui/
+│   ├── keys.py          # Key binding registry — single source of truth for all shortcuts
 │   └── widgets/
 │       └── file_tree.py # FileTree widget — Norton Commander browser (Ctrl+B, @file inject)
 ├── main.py              # TUI entry point
@@ -590,15 +591,19 @@ The `TextArea` widget has its own internal rendering engine with hardcoded color
 
 ### Key Bindings
 
+All key bindings are defined in `ppxai/tui/keys.py` (single source of truth). Widget `BINDINGS` lists are generated via `get_widget_bindings()`. Use `/keys` at runtime to see all effective bindings, `/keys conflicts` for known conflicts.
+
 - `Ctrl+Enter` - Submit message (plain Enter inserts newlines)
+- `Ctrl+J` - Submit message (universal fallback for all terminals)
 - `Ctrl+B` - Toggle file tree browser (Norton Commander style)
 - `Ctrl+T` - Cycle through 8 curated themes
 - `Ctrl+P` - Command palette (all 17+ themes)
-- `Ctrl+[` / `Ctrl+]` - Resize split panes (macOS compatible)
 - `Ctrl+W` - Close side panel
 - `Ctrl+S` - Save side panel content
 - `Escape` - Close help panel / modal screen / side panel (priority order)
 - `F6` / `Ctrl+Tab` - Cycle focus: input → file tree → side panel → input
+- `-` / `=` - Resize split panes (primary, works in all terminals)
+- `Ctrl+[` / `Ctrl+]` - Resize split panes (fallback, Ghostty/Kitty only)
 
 **File tree bindings (when file tree focused):**
 - `Enter` - Preview file read-only in side panel
@@ -606,11 +611,22 @@ The `TextArea` widget has its own internal rendering engine with hardcoded color
 - `Space` - Inject `@file:path ` at cursor in chat input
 - `Escape` - Return focus to chat input
 
+### Kitty Keyboard Protocol
+
+Textual 8.1.1 does NOT auto-negotiate Kitty keyboard protocol (upstream issue #6074 open). Ctrl+Enter only works in terminals that send CSI u sequences:
+- **Kitty** — works natively
+- **Ghostty** — requires `ctrl+enter=text:\x1b[13;5u` in config
+- **WezTerm** — requires `enable_kitty_keyboard = true`
+- **All others** — use `Ctrl+J` fallback
+
+No changes planned — fallback keys cover all terminals.
+
 ### DO NOT BREAK
 
-1. **Theme sync chain:** `watch_theme()` → `get_syntax_theme_for_app_theme()` → `CodeEditor.syntax_theme`
-2. **Tree-sitter dependencies** in pyproject.toml
-3. **Language detection** via `EXTENSION_TO_LANGUAGE` mapping in code_editor.py
+1. **Key registry:** `ppxai/tui/keys.py` → `get_app_bindings()` / `get_widget_bindings()` → all BINDINGS
+2. **Theme sync chain:** `watch_theme()` → `get_syntax_theme_for_app_theme()` → `CodeEditor.syntax_theme`
+3. **Tree-sitter dependencies** in pyproject.toml
+4. **Language detection** via `EXTENSION_TO_LANGUAGE` mapping in code_editor.py
 
 ## Terminal Image Rendering (v1.15.2)
 
