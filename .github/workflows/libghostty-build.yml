@@ -1,0 +1,150 @@
+name: Build libghostty-vt
+# Builds libghostty-vt shared libraries for all platforms and publishes
+# them as a GitHub release in the ppxai repo. The main release workflow
+# can then download these artifacts for PyInstaller bundling.
+#
+# Run manually via workflow_dispatch, specifying the Ghostty commit to build from.
+# The built libraries are published to a release tagged libghostty-<short-sha>.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ghostty_ref:
+        description: 'Ghostty commit/branch/tag to build from'
+        required: true
+        default: 'main'
+      release_tag:
+        description: 'Release tag for the built artifacts (e.g., libghostty-20260319)'
+        required: true
+        default: 'libghostty-latest'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-linux-gnu
+            lib_name: libghostty_vt.so
+            artifact_name: libghostty_vt-linux-amd64.so
+          - os: macos-13
+            target: x86_64-macos
+            lib_name: libghostty_vt.dylib
+            artifact_name: libghostty_vt-macos-intel.dylib
+          - os: macos-latest
+            target: aarch64-macos
+            lib_name: libghostty_vt.dylib
+            artifact_name: libghostty_vt-macos-arm64.dylib
+          - os: windows-latest
+            target: x86_64-windows-gnu
+            lib_name: ghostty_vt.dll
+            artifact_name: ghostty_vt-windows-amd64.dll
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Install Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.15.2
+
+      - name: Checkout Ghostty
+        uses: actions/checkout@v4
+        with:
+          repository: ghostty-org/ghostty
+          ref: ${{ inputs.ghostty_ref }}
+
+      - name: Record commit SHA
+        id: sha
+        shell: bash
+        run: echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Build libghostty-vt shared library
+        run: zig build lib-vt -Doptimize=ReleaseSafe
+
+      - name: List build output
+        shell: bash
+        run: find zig-out/ -type f 2>/dev/null || echo "No zig-out directory"
+
+      - name: Copy C headers
+        shell: bash
+        run: |
+          mkdir -p dist/include
+          cp -r include/ghostty dist/include/
+
+      - name: Package artifact
+        shell: bash
+        run: |
+          mkdir -p dist/lib
+          # Find the shared library (path varies by platform)
+          find zig-out/ -name "*.so" -o -name "*.dylib" -o -name "*.dll" | head -1 | xargs -I{} cp {} dist/lib/${{ matrix.artifact_name }}
+          echo "Built from ghostty-org/ghostty@${{ steps.sha.outputs.sha }}" > dist/BUILD_INFO.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ppxai (for gh CLI context)
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Collect all files
+        run: |
+          mkdir -p release
+          # Flatten: each artifact dir has dist/lib/<name> and dist/include/
+          for dir in artifacts/*/; do
+            cp -r "$dir"/dist/lib/* release/ 2>/dev/null || true
+          done
+          # Headers from any one artifact (they're all identical)
+          first_dir=$(ls -d artifacts/*/ | head -1)
+          cp -r "$first_dir"/dist/include release/include 2>/dev/null || true
+          cp "$first_dir"/dist/BUILD_INFO.txt release/ 2>/dev/null || true
+          # Create a tar of headers for easy download
+          cd release && tar czf ghostty-vt-headers.tar.gz include/ && cd ..
+          ls -la release/
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ inputs.release_tag }}"
+          # Delete existing release if updating
+          gh release delete "$TAG" --yes 2>/dev/null || true
+          git tag -d "$TAG" 2>/dev/null || true
+          git push origin ":refs/tags/$TAG" 2>/dev/null || true
+          # Create new release
+          gh release create "$TAG" \
+            --title "libghostty-vt ($TAG)" \
+            --notes "Pre-built libghostty-vt shared libraries for ppxai.
+
+Built from: ghostty-org/ghostty@${{ inputs.ghostty_ref }}
+
+**Libraries:**
+- \`libghostty_vt-linux-amd64.so\` — Linux x86_64
+- \`libghostty_vt-macos-arm64.dylib\` — macOS Apple Silicon
+- \`libghostty_vt-macos-intel.dylib\` — macOS Intel
+- \`ghostty_vt-windows-amd64.dll\` — Windows x86_64
+- \`ghostty-vt-headers.tar.gz\` — C API headers
+
+These are build-time artifacts consumed by ppxai's release pipeline.
+Not intended for direct user download." \
+            --prerelease \
+            release/libghostty_vt-linux-amd64.so \
+            release/libghostty_vt-macos-arm64.dylib \
+            release/libghostty_vt-macos-intel.dylib \
+            release/ghostty_vt-windows-amd64.dll \
+            release/ghostty-vt-headers.tar.gz \
+            release/BUILD_INFO.txt
