@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
     
     
       
@@ -1118,15 +1118,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#ppxaide-key-bindings-cleanup" class="md-nav__link">
+  <a href="#ppxaide-key-bindings-cleanup-done" class="md-nav__link">
     <span class="md-ellipsis">
       
-        ppxaide Key Bindings Cleanup
+        ~~ppxaide Key Bindings Cleanup~~ ✅ Done
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="ppxaide Key Bindings Cleanup">
+    <nav class="md-nav" aria-label="~~ppxaide Key Bindings Cleanup~~ ✅ Done">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1189,6 +1189,249 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#kubernetes-deployment-poc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kubernetes Deployment POC
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Kubernetes Deployment POC">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#session-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session Lifecycle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pod-inventory-2-active-users" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pod Inventory (2 active users)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#image-build-kaniko" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Image Build (Kaniko)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#session-manager-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session Manager API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#login-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Login Service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#future-ldap-path-design-preserved" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future LDAP Path (design preserved)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#helm-chart-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Helm Chart Layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Checklist
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implementation Checklist">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-cluster-foundations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1 — Cluster Foundations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-build-images" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2 — Build Images
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-session-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3 — Session Manager
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-login-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4 — Login Service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-5-nginx-ingress" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5 — Nginx Ingress
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-6-configmaps-and-secrets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 6 — ConfigMaps and Secrets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-7-helm-chart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 7 — Helm Chart
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-8-integration-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 8 — Integration Test
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1211,7 +1454,8 @@
 
 <h1 id="todo-v1170-backlog">TODO: v1.17.0 Backlog<a class="headerlink" href="#todo-v1170-backlog" title="Permanent link">&para;</a></h1>
 <hr />
-<h2 id="ppxaide-key-bindings-cleanup">ppxaide Key Bindings Cleanup<a class="headerlink" href="#ppxaide-key-bindings-cleanup" title="Permanent link">&para;</a></h2>
+<h2 id="ppxaide-key-bindings-cleanup-done">~~ppxaide Key Bindings Cleanup~~ ✅ Done<a class="headerlink" href="#ppxaide-key-bindings-cleanup-done" title="Permanent link">&para;</a></h2>
+<p><strong>Implementation plan:</strong> <a href="../TODO-keybindings-cleanup/"><code>docs/TODO-keybindings-cleanup.md</code></a></p>
 <h3 id="problem">Problem<a class="headerlink" href="#problem" title="Permanent link">&para;</a></h3>
 <p>Key binding management in ppxaide is inconsistent and fragile:</p>
 <ul>
@@ -1247,6 +1491,293 @@
 <hr />
 <h2 id="web-app-right-panel-view-framework-rightpanelframe">~~Web App: Right Panel View Framework (<code>RightPanelFrame</code>)~~<a class="headerlink" href="#web-app-right-panel-view-framework-rightpanelframe" title="Permanent link">&para;</a></h2>
 <p><strong>Completed in v1.16.2</strong> — see <code>docs/TODO-v1.16.2.md</code> Feature 11. All 5 phases done.</p>
+<hr />
+<h2 id="kubernetes-deployment-poc">Kubernetes Deployment POC<a class="headerlink" href="#kubernetes-deployment-poc" title="Permanent link">&para;</a></h2>
+<h3 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h3>
+<p>Deploy ppxai as a multi-user Kubernetes application with session isolation, persistent user
+workspaces, and a login-gated web app. Each user session gets a matched pod pair (webapp +
+server) with dedicated PVCs. Designed to extend naturally to LDAP auth in a future release.</p>
+<p><strong>Target cluster:</strong> colima single-node k8s (k3s v1.35.0)
+<strong>Ingress host:</strong> <code>ppxai.local</code> (add to <code>/etc/hosts</code> pointing to colima IP)</p>
+<h3 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>Browser
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  |
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  v
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>Nginx Ingress  (ppxai.local)
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  |-- /login        --&gt; Login Service       (shared, always running)
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  |-- /api/         --&gt; Session Manager     (shared, always running)
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>  |-- /s/alice/     --&gt; ppxai-webapp-alice  (nginx BFF per user)
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>  |                       +-- proxies /api/, /stream/ --&gt; ppxai-server-alice:54320
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>  +-- /s/bob/       --&gt; ppxai-webapp-bob
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>                          +-- proxies /api/, /stream/ --&gt; ppxai-server-bob:54320
+</span></code></pre></div>
+<h3 id="session-lifecycle">Session Lifecycle<a class="headerlink" href="#session-lifecycle" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>1. User hits ppxai.local/login  --&gt;  username form
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>2. POST /api/sessions {username}
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>   Session Manager:
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>     - active sessions &gt;= 3?       --&gt; 503 &quot;Max sessions reached&quot;
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>     - ppxai-ws-&lt;user&gt; PVC exists? --&gt; reuse (returning user)
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>     - first login?                --&gt; create ppxai-ws-&lt;user&gt; PVC (Retain)
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>   Creates:
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>     - ppxai-temp-&lt;user&gt; PVC              (Delete, every session)
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>     - ppxai-server-&lt;user&gt; Pod + Service
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>     - ppxai-webapp-&lt;user&gt; Pod + Service  (nginx, SERVER_URL injected via env)
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>     - Patches Ingress: /s/&lt;user&gt;/ --&gt; ppxai-webapp-&lt;user&gt;
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>     - Writes /registry/&lt;user&gt;/meta.json
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>   Returns: { redirect: &quot;/s/&lt;user&gt;/&quot; }
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>3. Browser redirected to /s/&lt;user&gt;/  (username stored in cookie)
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>4. Webapp pod serves static ppxai web files + proxies API/SSE to server pod
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>5. Inactivity watchdog: 10-min TTL, deletes pod pair + temp PVC on expiry
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>   Workspace PVC (Retain) is never deleted automatically
+</span></code></pre></div>
+<h3 id="pod-inventory-2-active-users">Pod Inventory (2 active users)<a class="headerlink" href="#pod-inventory-2-active-users" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Always-on pods:
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  login-service
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>  session-manager
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>  registry              (local image registry for Kaniko builds, registry:2)
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>Per-user pods (max 3 pairs = 6 ephemeral pods):
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>  ppxai-webapp-&lt;user&gt;   nginx BFF: serves web app files + proxies to server pod
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>  ppxai-server-&lt;user&gt;   ppxai-server binary, port 54320
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>PVCs:
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>  ppxai-registry        Retain, RWO  -- session-manager only, /registry/&lt;user&gt;/meta.json
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>  ppxai-ws-&lt;user&gt;       Retain, RWO  -- /workspace in server pod, survives session end
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>  ppxai-temp-&lt;user&gt;     Delete, RWO  -- /tmp/session in server pod, auto-deleted
+</span></code></pre></div>
+<h3 id="storage">Storage<a class="headerlink" href="#storage" title="Permanent link">&para;</a></h3>
+<p>Two StorageClasses (both backed by local-path provisioner):</p>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Reclaim Policy</th>
+<th>PVC naming</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ppxai-ephemeral</code></td>
+<td>Delete</td>
+<td><code>ppxai-temp-&lt;user&gt;</code></td>
+</tr>
+<tr>
+<td><code>ppxai-workspace</code></td>
+<td>Retain</td>
+<td><code>ppxai-ws-&lt;user&gt;</code></td>
+</tr>
+</tbody>
+</table>
+<p>Session manager is the sole writer to the registry PVC (avoids ReadWriteMany limitation of
+local-path provisioner). All session state is queried via REST from the session manager.</p>
+<h3 id="image-build-kaniko">Image Build (Kaniko)<a class="headerlink" href="#image-build-kaniko" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Source:</strong> hostPath mount of <code>/Users/rado/git/utils/ppxai</code> (colima mounts macOS home at
+  same path inside VM — no copy needed)</li>
+<li><strong>Registry:</strong> <code>registry:2</code> pod + ClusterIP service (<code>registry.ppxai-system.svc:5000</code>),
+  HTTP only, Kaniko uses <code>--insecure</code> flag</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Image</th>
+<th>Base</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ppxai-server:latest</code></td>
+<td><code>python:3.12-slim</code></td>
+<td>ppxai package + server entry point</td>
+</tr>
+<tr>
+<td><code>ppxai-webapp:latest</code></td>
+<td><code>nginx:alpine</code></td>
+<td>ppxai/web/ files + nginx.conf template + envsubst entrypoint</td>
+</tr>
+</tbody>
+</table>
+<p>Dockerfiles live in <code>deploy/k8s/docker/</code>.</p>
+<h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Resource</th>
+<th>Mounts to</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ConfigMap <code>ppxai-server-config</code></td>
+<td>ppxai-server pods</td>
+<td><code>ppxai-config.json</code></td>
+</tr>
+<tr>
+<td>ConfigMap <code>ppxai-session-manager-config</code></td>
+<td>session-manager</td>
+<td>max_sessions, registry_path, workspace_size, temp_size, ttl_minutes</td>
+</tr>
+<tr>
+<td>ConfigMap <code>ppxai-webapp-nginx</code></td>
+<td>ppxai-webapp pods</td>
+<td><code>nginx.conf.tmpl</code> (envsubst on <code>$PPXAI_SERVER_URL</code>)</td>
+</tr>
+<tr>
+<td>ConfigMap <code>ppxai-login-config</code></td>
+<td>login-service</td>
+<td>session_manager_url, app_title, max_sessions</td>
+</tr>
+<tr>
+<td>Secret <code>ppxai-api-keys</code></td>
+<td>ppxai-server pods</td>
+<td><code>.env</code> (provider API keys)</td>
+</tr>
+</tbody>
+</table>
+<p>Pod-level env vars injected by session manager at creation time:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>ppxai-server-&lt;user&gt;:  PPXAI_WORKING_DIR=/workspace  PPXAI_DATA_DIR=/tmp/session  PPXAI_USERNAME=&lt;user&gt;
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>ppxai-webapp-&lt;user&gt;:  PPXAI_SERVER_URL=http://ppxai-server-&lt;user&gt;.ppxai-system.svc:54320
+</span></code></pre></div>
+<h3 id="session-manager-api">Session Manager API<a class="headerlink" href="#session-manager-api" title="Permanent link">&para;</a></h3>
+<p>FastAPI service with in-cluster k8s SDK. RBAC grants rights to create/delete pods, services,
+PVCs and patch ingresses.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>POST   /api/sessions            {username}  -&gt; create session pair, return redirect URL
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>DELETE /api/sessions/{user}                 -&gt; destroy pod pair + temp PVC (keep workspace)
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>GET    /api/sessions                        -&gt; list active sessions + metadata
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>GET    /api/sessions/{user}                 -&gt; session status + last_seen
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>POST   /api/sessions/{user}/heartbeat       -&gt; update last_seen (called by webapp on SSE activity)
+</span></code></pre></div>
+<p>Inactivity watchdog: asyncio background task, 60-second tick, TTL = 10 minutes.</p>
+<h3 id="login-service">Login Service<a class="headerlink" href="#login-service" title="Permanent link">&para;</a></h3>
+<p>Standalone nginx pod serving a simple HTML username form. On submit:
+1. JS sends <code>POST /api/sessions {username}</code>
+2. On success (201): redirect to <code>redirect</code> URL from response
+3. On 503 (max sessions): show "Server is at capacity, try again later"</p>
+<h3 id="future-ldap-path-design-preserved">Future LDAP Path (design preserved)<a class="headerlink" href="#future-ldap-path-design-preserved" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>POC (v1.17.0)</th>
+<th>LDAP (future)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Username form on login page</td>
+<td>Nginx <code>auth_request</code> to LDAP auth proxy sidecar</td>
+</tr>
+<tr>
+<td>Username from form input</td>
+<td><code>uid</code> claim from validated LDAP token</td>
+</tr>
+<tr>
+<td>Session manager trusts submitted username</td>
+<td>Session manager receives username from verified identity</td>
+</tr>
+<tr>
+<td>Workspace PVC <code>ppxai-ws-&lt;user&gt;</code></td>
+<td>Same PVC, re-bound by same <code>uid</code> — workspace survives auth migration</td>
+</tr>
+</tbody>
+</table>
+<p>LDAP adds only an auth layer at Nginx. Everything downstream (pod pairs, PVC binding, registry)
+is unchanged.</p>
+<h3 id="helm-chart-layout">Helm Chart Layout<a class="headerlink" href="#helm-chart-layout" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>deploy/k8s/
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  helm/ppxai/
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    Chart.yaml
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    values.yaml                        # max_sessions, storage sizes, ingress host, TTL
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    templates/
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>      namespace.yaml
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>      storageclass-ephemeral.yaml
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>      storageclass-workspace.yaml
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>      registry-deployment.yaml
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>      registry-service.yaml
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>      kaniko-server-job.yaml
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>      kaniko-webapp-job.yaml
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>      session-manager-deployment.yaml
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>      session-manager-service.yaml
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>      session-manager-configmap.yaml
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>      session-manager-rbac.yaml
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>      session-manager-pvc.yaml
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>      login-service-deployment.yaml
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>      login-service-service.yaml
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>      login-service-configmap.yaml
+</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>      ingress.yaml
+</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>      api-keys-secret.yaml             # values only, never checked in
+</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>      server-configmap.yaml
+</span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a>      webapp-nginx-configmap.yaml
+</span><span id="__span-5-25"><a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a>  docker/
+</span><span id="__span-5-26"><a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a>    Dockerfile.server
+</span><span id="__span-5-27"><a id="__codelineno-5-27" name="__codelineno-5-27" href="#__codelineno-5-27"></a>    Dockerfile.webapp
+</span><span id="__span-5-28"><a id="__codelineno-5-28" name="__codelineno-5-28" href="#__codelineno-5-28"></a>  session-manager/
+</span><span id="__span-5-29"><a id="__codelineno-5-29" name="__codelineno-5-29" href="#__codelineno-5-29"></a>    main.py                            # FastAPI app + k8s SDK + watchdog
+</span><span id="__span-5-30"><a id="__codelineno-5-30" name="__codelineno-5-30" href="#__codelineno-5-30"></a>    requirements.txt
+</span></code></pre></div>
+<h3 id="implementation-checklist">Implementation Checklist<a class="headerlink" href="#implementation-checklist" title="Permanent link">&para;</a></h3>
+<h4 id="phase-1-cluster-foundations">Phase 1 — Cluster Foundations<a class="headerlink" href="#phase-1-cluster-foundations" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[ ] Add <code>ppxai.local</code> to <code>/etc/hosts</code> pointing to colima IP</li>
+<li>[ ] Create <code>ppxai-system</code> namespace</li>
+<li>[ ] Deploy <code>registry:2</code> pod + ClusterIP service</li>
+<li>[ ] Create StorageClass <code>ppxai-ephemeral</code> (Delete, local-path)</li>
+<li>[ ] Create StorageClass <code>ppxai-workspace</code> (Retain, local-path)</li>
+<li>[ ] Create <code>ppxai-registry</code> PVC (Retain, RWO, for session manager)</li>
+</ul>
+<h4 id="phase-2-build-images">Phase 2 — Build Images<a class="headerlink" href="#phase-2-build-images" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[ ] Write <code>deploy/k8s/docker/Dockerfile.server</code></li>
+<li>[ ] Write <code>deploy/k8s/docker/Dockerfile.webapp</code> (nginx + web files + envsubst)</li>
+<li>[ ] Write Kaniko Job YAML for server image (hostPath source)</li>
+<li>[ ] Write Kaniko Job YAML for webapp image (hostPath source)</li>
+<li>[ ] Run Kaniko jobs, verify images in local registry</li>
+</ul>
+<h4 id="phase-3-session-manager">Phase 3 — Session Manager<a class="headerlink" href="#phase-3-session-manager" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[ ] Write session manager FastAPI app (<code>deploy/k8s/session-manager/main.py</code>)</li>
+<li>[ ] RBAC: ServiceAccount + ClusterRole + ClusterRoleBinding</li>
+<li>[ ] ConfigMap <code>ppxai-session-manager-config</code></li>
+<li>[ ] Deployment + Service YAML</li>
+<li>[ ] Inactivity watchdog (10-min TTL, 60-second tick)</li>
+<li>[ ] Heartbeat endpoint</li>
+</ul>
+<h4 id="phase-4-login-service">Phase 4 — Login Service<a class="headerlink" href="#phase-4-login-service" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[ ] Login HTML form (username input, no-auth for POC)</li>
+<li>[ ] JS: POST to session manager, redirect on success, error message on 503</li>
+<li>[ ] nginx container serving login page</li>
+<li>[ ] ConfigMap + Deployment + Service YAML</li>
+</ul>
+<h4 id="phase-5-nginx-ingress">Phase 5 — Nginx Ingress<a class="headerlink" href="#phase-5-nginx-ingress" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[ ] Install nginx-ingress-controller in colima cluster</li>
+<li>[ ] Base Ingress resource with <code>/login</code> and <code>/api/</code> routes</li>
+<li>[ ] Session manager patches Ingress dynamically on session create/delete</li>
+</ul>
+<h4 id="phase-6-configmaps-and-secrets">Phase 6 — ConfigMaps and Secrets<a class="headerlink" href="#phase-6-configmaps-and-secrets" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[ ] <code>ppxai-server-config</code> ConfigMap (<code>ppxai-config.json</code>)</li>
+<li>[ ] <code>ppxai-api-keys</code> Secret (<code>.env</code>)</li>
+<li>[ ] <code>ppxai-webapp-nginx</code> ConfigMap (<code>nginx.conf.tmpl</code>)</li>
+</ul>
+<h4 id="phase-7-helm-chart">Phase 7 — Helm Chart<a class="headerlink" href="#phase-7-helm-chart" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[ ] Wrap all manifests in Helm chart under <code>deploy/k8s/helm/ppxai/</code></li>
+<li>[ ] <code>values.yaml</code> with: max_sessions=3, ttl_minutes=10, storage sizes, ingress_host=ppxai.local</li>
+<li>[ ] README for chart installation</li>
+</ul>
+<h4 id="phase-8-integration-test">Phase 8 — Integration Test<a class="headerlink" href="#phase-8-integration-test" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[ ] Deploy: <code>helm install ppxai deploy/k8s/helm/ppxai</code></li>
+<li>[ ] Test login → session creation → web app usage</li>
+<li>[ ] Test 3 concurrent sessions</li>
+<li>[ ] Test 4th session rejected with clear error message</li>
+<li>[ ] Test idle timeout: session auto-destroyed after 10 min</li>
+<li>[ ] Test workspace PVC persists across logout/login</li>
+<li>[ ] Verify temp PVC deleted after session ends</li>
+</ul>
 
 
 
