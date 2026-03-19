@@ -1327,7 +1327,7 @@ wheels = [
 
 [[package]]
 name = "ppxai"
-version = "1.17.0.dev0"
+version = "1.17.0"
 source = { editable = "." }
 dependencies = [
     { name = "blinker" },
