@@ -5,6 +5,39 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.17.0] - 2026-03-19
+
+**Focus:** Server/config modularization, K8s deployment POC, key bindings registry, Textual 8.1.1, import DAG cleanup
+
+### Added
+
+- **Server modularization** — `http.py` (2,936 lines) split into 13 route modules under `server/routes/` + shared `state.py`, `models.py`, `streaming.py`; facade reduced to 372 lines
+- **Config modularization** — `config/__init__.py` (943 lines) split into `providers.py`, `tools.py`, `features.py`, `paths.py`, `prompts.py`, `context.py`; hub reduced to 262 lines
+- **K8s deployment POC** (phases 1-5) — namespace, StorageClasses, in-cluster registry, Kaniko builds, session manager (FastAPI + k8s SDK), login service, LDAP auth, Helm chart
+- **Key bindings registry** (`ppxai/tui/keys.py`) — single source of truth for all 32 keyboard shortcuts; widget BINDINGS generated via `get_widget_bindings()`; `/keys` and `/keys conflicts` commands
+- **Protocol-based dependency inversion** — `ToolEngineProtocol` and `ToolManagerProtocol` in `engine/types.py`; all 9 tool modules use direct protocol imports instead of TYPE_CHECKING
+- **Client log forwarding** — server-side log forwarding from web/VSCode clients
+- **Web heartbeat watchdog** — stale connection detection
+- **Benchmark: qwen2.5-coder-7b** — LM Studio eval (69.4% / 72.2% with AGENTS.md); multi-model routing plan
+- **Shared deploy configs** — `deploy/shared/` with AGENTS.md and ppxai-config for k8s deployments
+- **AppState architecture docs** — 6-part TODO series for cross-client state management
+
+### Fixed
+
+- **Web streaming layout thrashing** — RAF-based rendering prevents layout recalculation storms
+- **Preview panel freeze on display_file** — concurrent file display requests handled properly
+- **Preview URLs for reverse proxy** — all URLs now relative (works behind ingress path prefix)
+- **Stale session detection** — verifies pod exists before returning "existing"
+- **Tool fixes** — container.py and display.py error handling improvements
+
+### Changed
+
+- **Textual 8.1.1** — upgraded from 7.4.0 (DirectoryTree threading fixes, weak-ref DOM, GC improvements)
+- **Lazy import cleanup** — ~70 imports moved to top-level across 30+ files; all 14 TYPE_CHECKING blocks eliminated
+- **install.ps1** — Windows installer rewritten
+- **VSCode extension** — chatPanel and httpClient improvements
+- **display-only ctrl+enter** — replaced empty action string hack with explicit `action_noop()`
+
 ## [1.16.2] - 2026-03-07
 
 **Focus:** Web app RightPanelFrame, file tree sidebar, inline images, web refactor, server fixes
