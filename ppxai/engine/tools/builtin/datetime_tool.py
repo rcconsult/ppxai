@@ -3,11 +3,9 @@ Date and time tool with timezone support.
 """
 
 from datetime import datetime
-from typing import TYPE_CHECKING
 import time
 
-if TYPE_CHECKING:
-    from ..manager import ToolManager
+from ...types import ToolManagerProtocol
 
 
 def get_system_timezone() -> str:
@@ -100,7 +98,7 @@ def get_datetime(timezone: str = "") -> str:
         return f"Error getting datetime: {str(e)}"
 
 
-def register_tools(manager: 'ToolManager'):
+def register_tools(manager: ToolManagerProtocol):
     """Register datetime tools with the manager."""
 
     manager.register_function(

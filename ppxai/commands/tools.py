@@ -7,7 +7,7 @@ v1.13.10: Migrated to Command Factory pattern
 v1.15.0: Migrated to type-based renderer dispatch
 """
 
-from typing import TYPE_CHECKING, List
+from typing import List
 
 from ..config import get_model_context_limit, get_max_injection_size
 from ..engine.tools.builtin import web_premium
@@ -24,10 +24,6 @@ from .results import (
     NotificationResult,
     TextResult,
 )
-
-if TYPE_CHECKING:
-    from .handler import CommandHandler
-
 
 
 # =============================================================================

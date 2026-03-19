@@ -7,7 +7,6 @@ v1.13.10: Migrated to Command Factory pattern
 v1.15.0: Migrated to type-based renderer dispatch
 """
 
-from typing import TYPE_CHECKING
 
 from ..config import (
     PROVIDERS,
@@ -28,9 +27,6 @@ from .results import (
     ErrorResult,
     KeyValueResult,
 )
-
-if TYPE_CHECKING:
-    from .handler import CommandHandler
 
 
 def handle_model(context: CommandContext, args: str) -> CommandResult:

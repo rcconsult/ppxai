@@ -7,14 +7,11 @@ commands for the Textual-based TUI.
 
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import Any, Optional, Tuple
 
 from .terminal import can_display_images, detect_image_protocol, get_capabilities, get_image_protocol_name
 from .widgets.chat_view import ChatView
 from .widgets.image_handlers import ImageHandlerFactory, _IMAGEVIEW_AVAILABLE, _TextualImage
-
-if TYPE_CHECKING:
-    from .app import PPXAIDEApp
 
 
 def parse_file_location(args: str) -> Tuple[str, Optional[int], Optional[int]]:
@@ -71,7 +68,7 @@ def resolve_path(path_str: str, working_dir: str = None) -> Optional[Path]:
     return path if path.exists() else None
 
 
-async def cmd_show(app: "PPXAIDEApp", args: str) -> None:
+async def cmd_show(app: Any, args: str) -> None:
     """Handle /show command - display file contents.
 
     For code files: syntax-highlighted view
@@ -169,7 +166,7 @@ async def cmd_show(app: "PPXAIDEApp", args: str) -> None:
         )
 
 
-async def cmd_edit(app: "PPXAIDEApp", args: str) -> None:
+async def cmd_edit(app: Any, args: str) -> None:
     """Handle /edit command - edit file with CodeEditor.
 
     Opens a full-screen editor with syntax highlighting.
@@ -227,7 +224,7 @@ async def cmd_edit(app: "PPXAIDEApp", args: str) -> None:
     )
 
 
-async def cmd_cd(app: "PPXAIDEApp", args: str) -> None:
+async def cmd_cd(app: Any, args: str) -> None:
     """Handle /cd command - change working directory.
 
     Args:
@@ -260,7 +257,7 @@ async def cmd_cd(app: "PPXAIDEApp", args: str) -> None:
     chat_view.add_system_message(f"[green]Working directory:[/green] {target}")
 
 
-async def cmd_pwd(app: "PPXAIDEApp", args: str) -> None:
+async def cmd_pwd(app: Any, args: str) -> None:
     """Handle /pwd command - show working directory.
 
     Args:
@@ -272,7 +269,7 @@ async def cmd_pwd(app: "PPXAIDEApp", args: str) -> None:
     chat_view.add_system_message(f"[cyan]Working directory:[/cyan] {cwd}")
 
 
-async def cmd_debug(app: "PPXAIDEApp", args: str) -> None:
+async def cmd_debug(app: Any, args: str) -> None:
     """Handle /debug command - show image viewer debug information.
 
     Args:
@@ -357,7 +354,7 @@ async def cmd_debug(app: "PPXAIDEApp", args: str) -> None:
     chat_view.add_system_message(debug_info)
 
 
-async def cmd_status(app: "PPXAIDEApp", args: str) -> None:
+async def cmd_status(app: Any, args: str) -> None:
     """Handle /status command - show status information.
 
     Args:

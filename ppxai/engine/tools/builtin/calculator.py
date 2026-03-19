@@ -6,10 +6,9 @@ Uses AST-based parsing for safe evaluation (no eval()).
 
 import ast
 import operator
-from typing import TYPE_CHECKING, Union
+from typing import Union
 
-if TYPE_CHECKING:
-    from ..manager import ToolManager
+from ...types import ToolManagerProtocol
 
 
 # Supported operators for safe evaluation
@@ -103,7 +102,7 @@ def calculate(expression: str) -> str:
         return f"Error calculating: {str(e)}"
 
 
-def register_tools(manager: 'ToolManager'):
+def register_tools(manager: ToolManagerProtocol):
     """Register calculator tools with the manager."""
 
     manager.register_function(

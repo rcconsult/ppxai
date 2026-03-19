@@ -11,7 +11,7 @@ v1.15.0: Migrated to type-based renderer dispatch
 import os
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import Any
 
 from ..common.logger import Logger, get_logger
 from ..config import find_config_file, reload_config
@@ -34,11 +34,7 @@ from .results import (
 IGNORE_DIRS = {'.git', '__pycache__', 'node_modules', '.venv', 'venv',
                '.pytest_cache', '.mypy_cache', 'dist', 'build', '.tox', '.eggs'}
 
-if TYPE_CHECKING:
-    from .handler import CommandHandler
-
-
-def _show_active_hints(handler: "CommandHandler", console) -> None:
+def _show_active_hints(handler: Any, console) -> None:
     """Display active bootstrap hints for current provider/model (v1.14.0)."""
     hints_info = handler.engine_client.get_active_hints()
 
@@ -97,7 +93,7 @@ def _show_active_hints(handler: "CommandHandler", console) -> None:
     console.print("[dim]Use /context to see full context usage[/dim]\n")
 
 
-def _show_bootstrap_hierarchy(handler: "CommandHandler", console) -> None:
+def _show_bootstrap_hierarchy(handler: Any, console) -> None:
     """Display bootstrap context hierarchy with scope information (v1.14.2)."""
     status = handler.engine_client.get_bootstrap_status()
 

@@ -12,7 +12,6 @@ import asyncio
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING
 
 from ..common.async_compat import is_event_loop_running
 from ..config import get_coding_model
@@ -28,9 +27,6 @@ from .results import (
     ErrorResult,
     AIResponseResult,
 )
-
-if TYPE_CHECKING:
-    from .handler import CommandHandler
 
 
 # =============================================================================

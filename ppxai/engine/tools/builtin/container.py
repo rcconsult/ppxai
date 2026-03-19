@@ -10,13 +10,10 @@ v1.13.10: Refactored to reduce code duplication using parameterized base classes
 
 import shutil
 import subprocess
-from typing import TYPE_CHECKING, Optional, List, Dict, Any, Callable
+from typing import Optional, List, Dict, Any, Callable
 
+from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
-
-if TYPE_CHECKING:
-    from ...client import EngineClient
-    from ..manager import ToolManager
 
 
 # =============================================================================
@@ -94,7 +91,7 @@ class CLITool(BaseTool):
         - runtime_check(): returns error string or None
     """
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         self.engine = engine
         self._timeout = 30
 
@@ -122,7 +119,7 @@ class ConsentCLITool(CLITool):
     Adds consent request before command execution.
     """
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         super().__init__(engine)
         self._timeout = 60
 
@@ -198,7 +195,7 @@ class KubeConsentTool(ConsentCLITool):
 class ContainerListTool(DockerTool):
     """List containers."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         super().__init__(engine)
         self.name = "container_list"
         self.description = (
@@ -235,7 +232,7 @@ class ContainerListTool(DockerTool):
 class ContainerLogsTool(DockerTool):
     """Get container logs."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         super().__init__(engine)
         self.name = "container_logs"
         self.description = (
@@ -272,7 +269,7 @@ class ContainerLogsTool(DockerTool):
 class ContainerInspectTool(DockerTool):
     """Inspect container details."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         super().__init__(engine)
         self.name = "container_inspect"
         self.description = (
@@ -305,7 +302,7 @@ class ContainerInspectTool(DockerTool):
 class ContainerStartStopTool(DockerConsentTool):
     """Start, stop, or restart a container (requires consent)."""
 
-    def __init__(self, engine: 'EngineClient', action: str):
+    def __init__(self, engine: ToolEngineProtocol, action: str):
         super().__init__(engine)
         self.action = action  # 'start', 'stop', 'restart'
         self.name = f"container_{action}"
@@ -328,7 +325,7 @@ class ContainerStartStopTool(DockerConsentTool):
 class ContainerExecTool(DockerConsentTool):
     """Execute command in a running container (requires consent)."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         super().__init__(engine)
         self._timeout = 30
         self.name = "container_exec"
@@ -370,7 +367,7 @@ class ContainerExecTool(DockerConsentTool):
 class ImageListTool(DockerTool):
     """List container images."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         super().__init__(engine)
         self.name = "image_list"
         self.description = "List Docker/Podman images."
@@ -408,7 +405,7 @@ class ImageListTool(DockerTool):
 class KubePodListTool(KubeTool):
     """List Kubernetes pods."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         super().__init__(engine)
         self.name = "pod_list"
         self.description = (
@@ -447,7 +444,7 @@ class KubePodListTool(KubeTool):
 class KubePodLogsTool(KubeTool):
     """Get pod logs."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         super().__init__(engine)
         self.name = "pod_logs"
         self.description = (
@@ -495,7 +492,7 @@ class KubePodLogsTool(KubeTool):
 class KubePodDescribeTool(KubeTool):
     """Describe a pod."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         super().__init__(engine)
         self.name = "pod_describe"
         self.description = (
@@ -527,7 +524,7 @@ class KubePodDescribeTool(KubeTool):
 class KubeDeploymentListTool(KubeTool):
     """List deployments."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         super().__init__(engine)
         self.name = "deployment_list"
         self.description = "List Kubernetes deployments."
@@ -558,7 +555,7 @@ class KubeDeploymentListTool(KubeTool):
 class KubeServiceListTool(KubeTool):
     """List services."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         super().__init__(engine)
         self.name = "service_list"
         self.description = "List Kubernetes services."
@@ -589,7 +586,7 @@ class KubeServiceListTool(KubeTool):
 class KubeApplyTool(KubeConsentTool):
     """Apply Kubernetes manifest (requires consent)."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         super().__init__(engine)
         self.name = "kubectl_apply"
         self.description = (
@@ -635,7 +632,7 @@ class KubeApplyTool(KubeConsentTool):
 class KubePodExecTool(KubeConsentTool):
     """Execute command in a pod (requires consent)."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         super().__init__(engine)
         self._timeout = 30
         self.name = "pod_exec"
@@ -683,7 +680,7 @@ class KubePodExecTool(KubeConsentTool):
 class KubeNamespaceListTool(KubeTool):
     """List namespaces."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         super().__init__(engine)
         self.name = "namespace_list"
         self.description = "List Kubernetes namespaces."
@@ -701,7 +698,7 @@ class KubeNamespaceListTool(KubeTool):
 # Registration
 # =============================================================================
 
-def register_tools(manager: 'ToolManager', engine: 'EngineClient') -> None:
+def register_tools(manager: ToolManagerProtocol, engine: ToolEngineProtocol) -> None:
     """
     Register container tools with the manager.
 

@@ -8,7 +8,6 @@ v1.15.0: Migrated to type-based renderer dispatch
 """
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Union
 
 import pyperclip
 
@@ -22,9 +21,6 @@ from .results import (
     ErrorResult,
     NotificationResult,
 )
-
-if TYPE_CHECKING:
-    from ..commands import CommandHandler
 
 
 def handle_save(context: CommandContext, args: str) -> CommandResult:

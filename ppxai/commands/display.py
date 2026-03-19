@@ -13,7 +13,7 @@ import json
 import re
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
@@ -39,12 +39,8 @@ from ppxai.common.file_type import (
     get_language_for_extension,
 )
 
-if TYPE_CHECKING:
-    from .handler import CommandHandler
-
-
 # Helper function for file search (used by both old and new handlers)
-def _search_files(handler: "CommandHandler", query: str, max_results: int = 10) -> List[Path]:
+def _search_files(handler: Any, query: str, max_results: int = 10) -> List[Path]:
     """Search for files matching query in engine's working directory.
 
     Args:

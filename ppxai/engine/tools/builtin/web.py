@@ -11,10 +11,7 @@ import ssl
 import urllib.request
 import urllib.parse
 import urllib.error
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ..manager import ToolManager
+from ...types import ToolManagerProtocol
 
 
 def _create_ssl_context() -> ssl.SSLContext:
@@ -267,7 +264,7 @@ def fetch_url(url: str, max_length: int = 5000) -> str:
         return f"Error fetching URL: {str(e)}"
 
 
-def register_tools(manager: 'ToolManager', provider: str = None):
+def register_tools(manager: ToolManagerProtocol, provider: str = None):
     """Register web tools with the manager.
 
     These tools are excluded for providers with native capabilities.

@@ -12,8 +12,9 @@ import sys
 import time
 import unicodedata
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Dict, Any
+from typing import Optional, Dict, Any
 
+from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
 
 
@@ -48,12 +49,7 @@ def _atomic_replace(temp_path: Path, target_path: Path, max_retries: int = 3):
                     pass
                 raise
 
-if TYPE_CHECKING:
-    from ...client import EngineClient
-    from ..manager import ToolManager
-
-
-def _register_checkpoint_file(engine: 'EngineClient', path: Path):
+def _register_checkpoint_file(engine: ToolEngineProtocol, path: Path):
     """Register a file with the checkpoint manager before editing.
 
     This ensures file-based checkpoints capture the original content
@@ -67,7 +63,7 @@ def _register_checkpoint_file(engine: 'EngineClient', path: Path):
 class ApplyPatchTool(BaseTool):
     """Apply unified diff patch to a file."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         """Initialize with engine reference for consent.
 
         Args:
@@ -206,7 +202,7 @@ class ApplyPatchTool(BaseTool):
 class ReplaceBlockTool(BaseTool):
     """Search for exact text block and replace it."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         """Initialize with engine reference for consent.
 
         Args:
@@ -322,7 +318,7 @@ class ReplaceBlockTool(BaseTool):
 class InsertTextTool(BaseTool):
     """Insert text at a specific line number."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         """Initialize with engine reference for consent.
 
         Args:
@@ -451,7 +447,7 @@ class InsertTextTool(BaseTool):
 class DeleteLinesTool(BaseTool):
     """Delete a range of lines from a file."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         """Initialize with engine reference for consent.
 
         Args:
@@ -901,7 +897,7 @@ def _replace_hunk(content: str, old_lines: list, new_lines: list) -> str:
     return content
 
 
-def register_tools(manager: 'ToolManager', engine: 'EngineClient'):
+def register_tools(manager: ToolManagerProtocol, engine: ToolEngineProtocol):
     """Register file editing tools with the manager.
 
     Args:

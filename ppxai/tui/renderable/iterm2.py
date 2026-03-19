@@ -20,15 +20,17 @@ import base64
 import io
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Tuple, Union
+from typing import Tuple, Union
 
 from rich.console import Console, ConsoleOptions, RenderResult
 from rich.control import Control
 from rich.measure import Measurement
 from rich.segment import ControlType, Segment
 
-if TYPE_CHECKING:
+try:
     from PIL import Image as PILImageType
+except ImportError:
+    PILImageType = None
 
 # No-op control code that tricks Rich into passing our escape sequence through unchanged
 # This is the same technique used by textual-image for Sixel rendering

@@ -13,12 +13,10 @@ Architecture:
 v1.15.0: Type-based renderer dispatch refactoring
 """
 
-from typing import Protocol, runtime_checkable, Callable, Optional, TYPE_CHECKING
-from .results import CommandResult
+from typing import Any, Protocol, runtime_checkable, Callable, Optional
 
-if TYPE_CHECKING:
-    from ..engine.client import EngineClient
-    from ..engine.session import Session
+from ..engine.client import EngineClient
+from .results import CommandResult
 
 
 @runtime_checkable
@@ -43,7 +41,7 @@ class CommandContext(Protocol):
     # ========================================================================
 
     @property
-    def engine_client(self) -> "EngineClient":
+    def engine_client(self) -> EngineClient:
         """Access to engine client for AI operations.
 
         Provides:
@@ -55,7 +53,7 @@ class CommandContext(Protocol):
         ...
 
     @property
-    def session(self) -> "Session":
+    def session(self) -> Any:
         """Access to current session.
 
         Provides:

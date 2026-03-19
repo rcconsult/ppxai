@@ -7,14 +7,11 @@ v1.13.6: Interactive command lists now configurable via JSON config.
 import os
 import subprocess
 import platform
-from typing import TYPE_CHECKING, List
+from typing import List
 
 from ....config import get_shell_config
+from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
-
-if TYPE_CHECKING:
-    from ...client import EngineClient
-    from ..manager import ToolManager
 
 
 def _get_shell_config() -> dict:
@@ -64,7 +61,7 @@ def _get_interactive_commands() -> tuple[List[str], List[str]]:
 class ShellExecuteTool(BaseTool):
     """Execute shell commands with user consent."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         """Initialize with engine reference for consent.
 
         Args:
@@ -248,7 +245,7 @@ class ShellExecuteTool(BaseTool):
             return f"Error executing command: {str(e)}"
 
 
-def register_tools(manager: 'ToolManager', engine: 'EngineClient'):
+def register_tools(manager: ToolManagerProtocol, engine: ToolEngineProtocol):
     """Register shell tools with the manager.
 
     Args:

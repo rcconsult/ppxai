@@ -20,13 +20,15 @@ v1.15.0: Type-based renderer dispatch refactoring
 """
 
 from pathlib import Path
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, Optional
 
+from textual.widget import Widget
 from textual.widgets import DataTable, Markdown, TabbedContent, TabPane, Static, Tree
 from textual.containers import Container
 from textual import on
 
 from ...commands.results import (
+    CommandResult,
     AIResponseResult,
     ConfirmationResult,
     ErrorResult,
@@ -37,10 +39,6 @@ from ...commands.results import (
     TextResult,
     TreeResult,
 )
-
-if TYPE_CHECKING:
-    from textual.widget import Widget
-    from ...commands.results import CommandResult
 
 
 class ArtifactPanel(TabbedContent):

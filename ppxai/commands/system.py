@@ -9,7 +9,6 @@ v1.15.0: Migrated to type-based renderer dispatch
 """
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from ..config import get_provider_config, get_tui_config, set_tui_config
 from ..rich.themes import get_theme, THEMES
@@ -26,9 +25,6 @@ from .results import (
     MarkdownResult,
     TextResult,
 )
-
-if TYPE_CHECKING:
-    from .handler import CommandHandler
 
 
 # =============================================================================

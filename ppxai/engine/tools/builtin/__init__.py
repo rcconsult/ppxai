@@ -2,25 +2,15 @@
 Built-in tools for the ppxai engine.
 
 These tools are registered automatically when the engine starts.
-
-Import Pattern:
-    Uses TYPE_CHECKING to avoid circular imports. ToolManager and EngineClient
-    are only imported for type hints during static analysis, not at runtime.
-    This is the standard pattern for all builtin tool modules.
 """
 
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 from . import filesystem, calculator, datetime_tool, web
-
-# TYPE_CHECKING imports: only used for type hints, never at runtime
-# This breaks potential circular dependencies with manager.py and client.py
-if TYPE_CHECKING:
-    from ..manager import ToolManager
-    from ...client import EngineClient
+from ...types import ToolEngineProtocol, ToolManagerProtocol
 
 
-def register_all_builtin_tools(manager: 'ToolManager', provider: str = None, engine: Optional['EngineClient'] = None):
+def register_all_builtin_tools(manager: ToolManagerProtocol, provider: str = None, engine: Optional[ToolEngineProtocol] = None):
     """Register all built-in tools with the manager.
 
     Args:

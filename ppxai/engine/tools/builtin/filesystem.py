@@ -7,8 +7,6 @@ import os
 import stat
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
-
 try:
     import pwd
 except ImportError:
@@ -19,17 +17,14 @@ try:
 except ImportError:
     grp = None
 
+from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
-
-if TYPE_CHECKING:
-    from ...client import EngineClient
-    from ..manager import ToolManager
 
 
 class SetWorkingDirectoryTool(BaseTool):
     """Tool to set the working directory for file operations."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         self.engine = engine
         self.name = "set_working_directory"
         self.description = (
@@ -78,7 +73,7 @@ class SetWorkingDirectoryTool(BaseTool):
 class GetWorkingDirectoryTool(BaseTool):
     """Tool to get the current working directory."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         self.engine = engine
         self.name = "get_working_directory"
         self.description = (
@@ -110,7 +105,7 @@ class GetWorkingDirectoryTool(BaseTool):
 class ListDirectoryTool(BaseTool):
     """Tool to list files and directories."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         self.engine = engine
         self.name = "list_directory"
         self.description = "List files and directories in a path. Supports simple and long format (like 'ls -la')"
@@ -204,7 +199,7 @@ class ListDirectoryTool(BaseTool):
 class SearchFilesTool(BaseTool):
     """Tool to search for files matching a pattern."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         self.engine = engine
         self.name = "search_files"
         self.description = "Search for files matching a glob pattern in a directory"
@@ -255,7 +250,7 @@ class SearchFilesTool(BaseTool):
 class ReadFileTool(BaseTool):
     """Tool to read file contents."""
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         self.engine = engine
         self.name = "read_file"
         self.description = "Read the contents of a text file"
@@ -421,7 +416,7 @@ def list_directory(path: str = ".", format: str = "simple") -> str:
         return f"Error: {str(e)}"
 
 
-def register_tools(manager: 'ToolManager', engine: 'EngineClient' = None):
+def register_tools(manager: ToolManagerProtocol, engine: ToolEngineProtocol = None):
     """Register filesystem tools with the manager.
 
     Args:

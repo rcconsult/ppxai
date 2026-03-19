@@ -14,7 +14,7 @@ v1.15.0: Type-based renderer dispatch refactoring
 """
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import Any, Optional
 from textual.widgets import DataTable, Tree, Static, Markdown as TextualMarkdown
 from textual.containers import VerticalScroll
 
@@ -44,11 +44,6 @@ from ..commands.results import (
     TextResult,
 )
 
-if TYPE_CHECKING:
-    from ..tui.app import PPXAIDEApp
-    from ..tui.widgets.chat_view import ChatView
-
-
 class TextualRenderer(AsyncRenderer):
     """Textual TUI renderer with type-based async dispatch.
 
@@ -60,14 +55,14 @@ class TextualRenderer(AsyncRenderer):
         await renderer.render(result, renderer)
     """
 
-    def __init__(self, app: "PPXAIDEApp"):
+    def __init__(self, app: Any):
         """Initialize Textual renderer.
 
         Args:
             app: PPXAIDEApp instance
         """
         self.app = app
-        self.chat_view: Optional["ChatView"] = None
+        self.chat_view: Optional[Any] = None
 
         # Lazy load chat_view to avoid errors during initialization
         try:
@@ -76,7 +71,7 @@ class TextualRenderer(AsyncRenderer):
             # Chat view might not be mounted yet
             pass
 
-    def _get_chat_view(self) -> "ChatView":
+    def _get_chat_view(self) -> Any:
         """Get chat view (lazy load if needed)."""
         if self.chat_view is None:
             self.chat_view = self.app.query_one("#chat-view")

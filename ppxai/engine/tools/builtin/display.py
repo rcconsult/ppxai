@@ -5,15 +5,11 @@ Allows AI to show files/artifacts in the TUI split panel.
 """
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from ppxai.common.logger import get_logger
 
+from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
-
-if TYPE_CHECKING:
-    from ...client import EngineClient
-    from ..manager import ToolManager
 
 
 class DisplayFileTool(BaseTool):
@@ -23,7 +19,7 @@ class DisplayFileTool(BaseTool):
     or relevant code files to the user after completing a task.
     """
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         self.engine = engine
         self.name = "display_file"
         self.description = (
@@ -96,7 +92,7 @@ class DisplayFileTool(BaseTool):
             return msg
 
 
-def register_tools(manager: 'ToolManager', engine: 'EngineClient'):
+def register_tools(manager: ToolManagerProtocol, engine: ToolEngineProtocol):
     """Register display tools.
 
     Args:

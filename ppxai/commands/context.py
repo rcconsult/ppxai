@@ -15,13 +15,9 @@ v1.15.0: Type-based renderer dispatch refactoring
 v1.16.1: Cleaned up to use only public interfaces (DAG compliance)
 """
 
-from typing import Optional, TYPE_CHECKING
+from typing import Any, Optional
 
-if TYPE_CHECKING:
-    from ..commands.handler import CommandHandler as RichHandler
-    from ..tui.app import PPXAIDEApp
-    from ..engine.client import EngineClient
-    from ..engine.session import Session
+from ..engine.client import EngineClient
 
 
 class RichCommandContext:
@@ -30,17 +26,17 @@ class RichCommandContext:
     Wraps CommandHandler, delegating to its public interface.
     """
 
-    def __init__(self, handler: "RichHandler"):
+    def __init__(self, handler: Any):
         self._handler = handler
 
     # -- Properties (read public attributes) --
 
     @property
-    def engine_client(self) -> "EngineClient":
+    def engine_client(self) -> Any:
         return self._handler.engine_client
 
     @property
-    def session(self) -> "Session":
+    def session(self) -> Any:
         return self._handler.session
 
     @property
@@ -109,17 +105,17 @@ class TextualCommandContext:
     PPXAIDEApp implements CommandContext protocol methods directly.
     """
 
-    def __init__(self, app: "PPXAIDEApp"):
+    def __init__(self, app: Any):
         self._app = app
 
     # -- Properties (delegate to public properties on PPXAIDEApp) --
 
     @property
-    def engine_client(self) -> "EngineClient":
+    def engine_client(self) -> Any:
         return self._app.engine_client
 
     @property
-    def session(self) -> "Session":
+    def session(self) -> Any:
         return self._app.session
 
     @property
@@ -188,17 +184,17 @@ class ServerCommandContext:
     Used by POST /command/{name} endpoint to execute shared command handlers.
     """
 
-    def __init__(self, engine: "EngineClient"):
+    def __init__(self, engine: EngineClient):
         self._engine = engine
 
     # -- Properties --
 
     @property
-    def engine_client(self) -> "EngineClient":
+    def engine_client(self) -> Any:
         return self._engine
 
     @property
-    def session(self) -> "Session":
+    def session(self) -> Any:
         return self._engine.session
 
     @property

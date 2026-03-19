@@ -5,8 +5,58 @@ These types are used across all layers (engine, server, clients) and have no UI 
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional, Callable
+from typing import List, Dict, Any, Optional, Callable, Protocol, Set, runtime_checkable
 from enum import Enum
+
+
+# =============================================================================
+# Protocols — structural typing for dependency inversion
+#
+# These protocols define the interfaces that tool modules type against,
+# breaking the circular dependency: client.py → builtin/ → client.py.
+# EngineClient and ToolManager satisfy these protocols without inheriting them.
+#
+# This is the recommended pattern for all cross-module type dependencies
+# where a direct import would create a cycle. Define the protocol here
+# (leaf module), import it where needed, and let the concrete class
+# satisfy it structurally.
+# =============================================================================
+
+
+@runtime_checkable
+class ToolEngineProtocol(Protocol):
+    """Interface that tools use to interact with the engine.
+
+    Satisfied by EngineClient. Tools import this protocol instead of the
+    concrete class, avoiding the client → tools → client circular dependency.
+    """
+
+    _agent_edited_files: Set[str]
+
+    def get_working_dir(self) -> Optional[str]: ...
+    def set_working_dir(self, path: str) -> None: ...
+    async def request_file_edit_consent(self, file_path: str) -> bool: ...
+    async def request_shell_consent(self, command: str, working_dir: str = ".") -> bool: ...
+
+
+@runtime_checkable
+class ToolManagerProtocol(Protocol):
+    """Interface that tool registration functions use.
+
+    Satisfied by ToolManager. Tool modules import this protocol instead of
+    the concrete class, avoiding the manager → builtin → manager cycle.
+    """
+
+    def register_tool(self, tool: Any) -> None: ...
+    def register_function(
+        self,
+        name: str,
+        description: str,
+        parameters: Dict[str, Any],
+        handler: Callable,
+        provider_specific: Optional[List[str]] = None,
+        provider_excluded: Optional[List[str]] = None,
+    ) -> None: ...
 
 
 class EventType(Enum):

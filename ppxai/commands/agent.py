@@ -9,7 +9,7 @@ v1.15.0: Migrated to type-based renderer dispatch
 
 import asyncio
 import subprocess
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
@@ -26,9 +26,6 @@ from .results import (
 
 from ..rich.event_handler import TUIEventHandler
 from ..rich.ui import console
-
-if TYPE_CHECKING:
-    from .handler import CommandHandler
 
 
 def _handle_agent_interrupt(
