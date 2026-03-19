@@ -1,5 +1,4 @@
 name: Build libghostty-vt
-
 # Builds libghostty-vt shared libraries for all platforms and publishes
 # them as a GitHub release in the ppxai repo. The main release workflow
 # can then download these artifacts for PyInstaller bundling.
