@@ -1,12 +1,9 @@
 name: Build libghostty-vt
-# Builds libghostty-vt shared libraries for all platforms using Zig
-# cross-compilation from a single Linux runner, then publishes them
-# as GitHub release assets in the ppxai repo.
+# Builds libghostty-vt shared libraries for all platforms and publishes
+# them as GitHub release assets in the ppxai repo.
 #
-# Cross-compilation avoids platform-specific build issues:
-# - macos-13 runners deprecated
-# - Windows native build has Zig path-handling panic
-# - Zig cross-compiles cleanly to all targets from Linux
+# Strategy: native builds for Linux/macOS, cross-compile Windows from Linux.
+# macOS Intel is cross-compiled from macOS ARM runner (same OS, different arch).
 
 on:
   workflow_dispatch:
@@ -25,7 +22,28 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: ''
+            artifact_name: libghostty_vt-linux-amd64.so
+            lib_glob: '*.so'
+          - os: macos-latest
+            target: ''
+            artifact_name: libghostty_vt-macos-arm64.dylib
+            lib_glob: '*.dylib'
+          - os: macos-latest
+            target: '-Dtarget=x86_64-macos'
+            artifact_name: libghostty_vt-macos-intel.dylib
+            lib_glob: '*.dylib'
+          - os: ubuntu-latest
+            target: '-Dtarget=x86_64-windows-gnu'
+            artifact_name: ghostty_vt-windows-amd64.dll
+            lib_glob: '*.dll'
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Install Zig
@@ -43,45 +61,24 @@ jobs:
         id: sha
         run: echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
-      - name: Build all targets
+      - name: Build libghostty-vt
+        run: zig build lib-vt -Doptimize=ReleaseSafe ${{ matrix.target }}
+
+      - name: List build output
+        run: find zig-out/ -type f 2>/dev/null || echo "No zig-out directory"
+
+      - name: Package artifact
         run: |
-          set -e
-          mkdir -p dist/lib
+          mkdir -p dist
+          find zig-out/ -name "${{ matrix.lib_glob }}" | head -1 | xargs -I{} cp {} dist/${{ matrix.artifact_name }}
+          echo "Built from ghostty-org/ghostty@${{ steps.sha.outputs.sha }}" > dist/BUILD_INFO.txt
+          ls -la dist/
 
-          echo "=== Building Linux amd64 ==="
-          zig build lib-vt -Doptimize=ReleaseSafe
-          find zig-out/ -name "*.so" | head -1 | xargs -I{} cp {} dist/lib/libghostty_vt-linux-amd64.so
-          rm -rf zig-out .zig-cache
-
-          echo "=== Building macOS ARM64 ==="
-          zig build lib-vt -Doptimize=ReleaseSafe -Dtarget=aarch64-macos
-          find zig-out/ -name "*.dylib" | head -1 | xargs -I{} cp {} dist/lib/libghostty_vt-macos-arm64.dylib
-          rm -rf zig-out .zig-cache
-
-          echo "=== Building macOS Intel ==="
-          zig build lib-vt -Doptimize=ReleaseSafe -Dtarget=x86_64-macos
-          find zig-out/ -name "*.dylib" | head -1 | xargs -I{} cp {} dist/lib/libghostty_vt-macos-intel.dylib
-          rm -rf zig-out .zig-cache
-
-          echo "=== Building Windows amd64 ==="
-          zig build lib-vt -Doptimize=ReleaseSafe -Dtarget=x86_64-windows-gnu
-          find zig-out/ -name "*.dll" | head -1 | xargs -I{} cp {} dist/lib/ghostty_vt-windows-amd64.dll
-          rm -rf zig-out .zig-cache
-
-          echo "=== All builds complete ==="
-          ls -la dist/lib/
-
-      - name: Package headers
-        run: |
-          cp -r include/ghostty dist/include-ghostty
-          tar czf dist/lib/ghostty-vt-headers.tar.gz -C dist include-ghostty
-          echo "Built from ghostty-org/ghostty@${{ steps.sha.outputs.sha }}" > dist/lib/BUILD_INFO.txt
-
-      - name: Upload artifacts
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: libghostty-vt-all
-          path: dist/lib/
+          name: ${{ matrix.artifact_name }}
+          path: dist/${{ matrix.artifact_name }}
 
   publish:
     needs: build
@@ -90,14 +87,27 @@ jobs:
       - name: Checkout ppxai
         uses: actions/checkout@v4
 
-      - name: Download artifacts
+      - name: Checkout Ghostty (for headers)
+        uses: actions/checkout@v4
+        with:
+          repository: ghostty-org/ghostty
+          ref: ${{ inputs.ghostty_ref }}
+          path: ghostty-src
+
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          name: libghostty-vt-all
-          path: release/
+          path: artifacts/
 
-      - name: List artifacts
-        run: ls -la release/
+      - name: Collect release files
+        run: |
+          mkdir -p release
+          for dir in artifacts/*/; do
+            cp "$dir"/* release/ 2>/dev/null || true
+          done
+          tar czf release/ghostty-vt-headers.tar.gz -C ghostty-src/include ghostty
+          echo "Built from ghostty-org/ghostty@${{ inputs.ghostty_ref }}" > release/BUILD_INFO.txt
+          ls -la release/
 
       - name: Create release notes
         run: |
