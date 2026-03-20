@@ -426,6 +426,18 @@ class PpxaiApp {
     }
 
     setupEventListeners() {
+        // Prevent accidental tab/window close when session is active
+        window.addEventListener('beforeunload', (e) => {
+            // Only warn if there's an active chat (messages beyond the welcome)
+            const hasMessages = this.elements.messagesContainer &&
+                this.elements.messagesContainer.querySelectorAll('.message.user-message').length > 0;
+            if (hasMessages) {
+                e.preventDefault();
+                // Modern browsers ignore custom messages but require returnValue
+                e.returnValue = '';
+            }
+        });
+
         // Input handling
         this.elements.messageInput.addEventListener('keydown', (e) => this.handleInputKeydown(e));
         this.elements.messageInput.addEventListener('input', () => this.handleInputChange());
@@ -605,8 +617,21 @@ class PpxaiApp {
 
     /**
      * Handle Quit button - shutdown server and close tab (v1.13.6)
+     * v1.17.0: In coder mode (path prefix /s/<user>), redirect to login
+     * instead of killing the server — the pod must stay alive.
      */
     async handleQuit() {
+        const pathPrefix = window.location.pathname.match(/^(\/s\/[^/]+)/)?.[1] || '';
+
+        if (pathPrefix) {
+            // Coder mode: don't kill the server, redirect to login
+            const confirmed = confirm('Leave this session and return to login?');
+            if (!confirmed) return;
+            window.location.href = '/login';
+            return;
+        }
+
+        // Desktop/local mode: shutdown server and close tab
         const confirmed = confirm('Stop the ppxai server and close this tab?');
         if (!confirmed) return;
 
