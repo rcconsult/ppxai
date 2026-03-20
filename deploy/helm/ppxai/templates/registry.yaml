@@ -1,10 +1,12 @@
+{{- if not .Values.registry.external }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: registry
-  namespace: ppxai-system
+  namespace: {{ include "ppxai.namespace" . }}
   labels:
-    app.kubernetes.io/name: ppxai
+    {{- include "ppxai.labels" . | nindent 4 }}
     app.kubernetes.io/component: registry
 spec:
   replicas: 1
@@ -25,8 +27,25 @@ spec:
             - name: REGISTRY_STORAGE_DELETE_ENABLED
               value: "true"
           volumeMounts:
-            - name: registry-data
+            - name: data
               mountPath: /var/lib/registry
       volumes:
-        - name: registry-data
+        - name: data
           emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry
+  namespace: {{ include "ppxai.namespace" . }}
+  labels:
+    {{- include "ppxai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: registry
+spec:
+  selector:
+    app: registry
+  ports:
+    - port: {{ .Values.registry.port | default 5000 }}
+      targetPort: 5000
+  type: ClusterIP
+{{- end }}

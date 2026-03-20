@@ -1,0 +1,6 @@
+.git
+.gitignore
+*.md
+values-microk8s.yaml
+build.sh
+deploy.sh

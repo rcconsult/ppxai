@@ -1,27 +1,28 @@
+---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: build-ppxai-server
-  namespace: ppxai-system
+  name: build-{{ include "ppxai.fullname" . }}-server
+  namespace: {{ include "ppxai.namespace" . }}
   labels:
-    app.kubernetes.io/name: ppxai
+    {{- include "ppxai.labels" . | nindent 4 }}
     app.kubernetes.io/component: build
 spec:
-  ttlSecondsAfterFinished: 600
+  ttlSecondsAfterFinished: {{ .Values.kaniko.ttlSecondsAfterFinished }}
   template:
     spec:
       restartPolicy: Never
       initContainers:
         - name: wait-for-registry
           image: busybox
-          command: ['sh', '-c', 'until nc -z registry 5000; do echo "waiting for registry..."; sleep 3; done']
+          command: ['sh', '-c', '{{ include "ppxai.registryWaitCommand" . }}']
       containers:
         - name: kaniko
           image: gcr.io/kaniko-project/executor:latest
           args:
-            - --dockerfile=/workspace/deploy/k8s/docker/Dockerfile.server
+            - --dockerfile=/workspace/{{ .Values.kaniko.serverDockerfile }}
             - --context=dir:///workspace
-            - --destination=registry.ppxai-system.svc:5000/ppxai-server:latest
+            - --destination={{ include "ppxai.registryUrl" . }}/{{ include "ppxai.fullname" . }}-server:{{ .Values.image.tag }}
             - --insecure
             - --skip-tls-verify
             - --cache=false
@@ -31,5 +32,5 @@ spec:
       volumes:
         - name: source
           hostPath:
-            path: /Users/rado/git/utils/ppxai
+            path: {{ .Values.kaniko.sourcePath }}
             type: Directory

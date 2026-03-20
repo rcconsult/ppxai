@@ -1,0 +1,26 @@
+# Colima (macOS dev) — minimal overrides
+# Usage: helm upgrade --install ppxai . -f values-colima.yaml
+#
+# All defaults in values.yaml are already colima-friendly:
+#   auth.mode: stub, registry.external: false, ingress.tls.enabled: false,
+#   storageClass.create: true, resources.enabled: false
+
+kaniko:
+  sourcePath: /Users/rado/git/utils/ppxai
+
+# Provide at least one provider
+serverConfig:
+  providers:
+    custom:
+      name: "Local AI"
+      base_url: "http://localhost:8000/v1"
+      api_key_env: "CUSTOM_API_KEY"
+      default_model: "your-model-id"
+      coding_model: "your-model-id"
+      models:
+        your-model-id:
+          name: "Your Model"
+          context_limit: 131072
+          max_tokens: 8192
+      capabilities:
+        native_tool_calling: true
