@@ -41,10 +41,14 @@ registry:
   # -- true = use pre-existing external registry (microk8s addon, etc.)
   #    false = deploy in-chart registry:2 pod
   external: false
-  # -- External registry host (only when external=true)
+  # -- External registry host for Kaniko push (in-cluster DNS)
   externalHost: ""
   # -- External registry port
   externalPort: 5000
+  # -- Host used for image pulls by kubelet (may differ from externalHost)
+  #    On microk8s: kubelet uses localhost:32000, Kaniko uses in-cluster DNS
+  #    Leave empty to use externalHost:externalPort
+  pullHost: ""
   # -- In-chart registry port
   port: 5000
   # -- In-chart registry storage size

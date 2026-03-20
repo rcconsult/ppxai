@@ -62,17 +62,30 @@ registry.{{ include "ppxai.namespace" . }}.svc:{{ .Values.registry.port | defaul
 {{- end }}
 
 {{/*
-Server image full reference.
+Registry URL for image pulls (kubelet perspective).
+On microk8s, kubelet can't resolve in-cluster DNS — it uses localhost:32000.
+Falls back to registryUrl if pullHost is not set.
 */}}
-{{- define "ppxai.serverImage" -}}
-{{ include "ppxai.registryUrl" . }}/{{ include "ppxai.fullname" . }}-server:{{ .Values.image.tag }}
+{{- define "ppxai.registryPullUrl" -}}
+{{- if .Values.registry.pullHost -}}
+{{- .Values.registry.pullHost }}
+{{- else -}}
+{{- include "ppxai.registryUrl" . }}
+{{- end -}}
 {{- end }}
 
 {{/*
-Session manager image full reference.
+Server image full reference (for kubelet image pull).
+*/}}
+{{- define "ppxai.serverImage" -}}
+{{ include "ppxai.registryPullUrl" . }}/{{ include "ppxai.fullname" . }}-server:{{ .Values.image.tag }}
+{{- end }}
+
+{{/*
+Session manager image full reference (for kubelet image pull).
 */}}
 {{- define "ppxai.sessionManagerImage" -}}
-{{ include "ppxai.registryUrl" . }}/{{ include "ppxai.fullname" . }}-session-manager:{{ .Values.image.tag }}
+{{ include "ppxai.registryPullUrl" . }}/{{ include "ppxai.fullname" . }}-session-manager:{{ .Values.image.tag }}
 {{- end }}
 
 {{/*

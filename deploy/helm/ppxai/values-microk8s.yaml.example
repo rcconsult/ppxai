@@ -34,6 +34,8 @@ registry:
   external: true
   externalHost: "registry.container-registry.svc.cluster.local"
   externalPort: 5000
+  # kubelet uses NodePort, not in-cluster DNS
+  pullHost: "localhost:32000"
 
 # --- TLS ingress ---
 ingress:
