@@ -9,8 +9,14 @@ from typing import List, Tuple
 import pyray as rl
 
 from ppxai.native import theme
-from ppxai.native.layout import LayoutRects, Rect
-from ppxai.native.text_engine import draw_wrapped_text, measure_wrapped_height
+from ppxai.native.layout import LayoutRects
+from ppxai.native.text_engine import (
+    draw_wrapped_text,
+    parse_markdown,
+    measure_content_height,
+    draw_parsed_content,
+    measure_wrapped_height,
+)
 
 
 def draw_status_bar(font: rl.Font, layout: LayoutRects,
@@ -19,30 +25,25 @@ def draw_status_bar(font: rl.Font, layout: LayoutRects,
     r = layout.status_bar
     rl.draw_rectangle(int(r.x), int(r.y), int(r.w), int(r.h), theme.STATUS_BG)
 
-    # Provider badge
     x = r.x + theme.PADDING
     y = r.y + (r.h - theme.FONT_SIZE_STATUS) / 2
     rl.draw_text_ex(font, provider.encode("utf-8"),
                     rl.Vector2(x, y), theme.FONT_SIZE_STATUS, 1, theme.ACCENT)
 
-    # Separator
     provider_w = rl.measure_text_ex(font, provider.encode("utf-8"), theme.FONT_SIZE_STATUS, 1).x
     x += provider_w + theme.PADDING
     rl.draw_text_ex(font, b"|", rl.Vector2(x, y), theme.FONT_SIZE_STATUS, 1, theme.TEXT_DIM)
 
-    # Model
     x += theme.PADDING + 8
     rl.draw_text_ex(font, model.encode("utf-8"),
                     rl.Vector2(x, y), theme.FONT_SIZE_STATUS, 1, theme.TEXT)
 
-    # Right-aligned status text
     if status_text:
         status_w = rl.measure_text_ex(font, status_text.encode("utf-8"), theme.FONT_SIZE_STATUS, 1).x
         rl.draw_text_ex(font, status_text.encode("utf-8"),
                         rl.Vector2(r.x + r.w - status_w - theme.PADDING, y),
                         theme.FONT_SIZE_STATUS, 1, theme.TEXT_DIM)
 
-    # Bottom border
     rl.draw_line(int(r.x), int(r.y + r.h - 1), int(r.x + r.w), int(r.y + r.h - 1), theme.BORDER)
 
 
@@ -53,7 +54,6 @@ def draw_chat_area(font: rl.Font, font_bold: rl.Font, layout: LayoutRects,
     r = layout.chat_area
     rl.draw_rectangle(int(r.x), int(r.y), int(r.w), int(r.h), theme.BG)
 
-    # Enable scissor clipping
     rl.begin_scissor_mode(int(r.x), int(r.y), int(r.w), int(r.h))
 
     content_width = r.w - theme.PADDING * 2
@@ -64,7 +64,6 @@ def draw_chat_area(font: rl.Font, font_bold: rl.Font, layout: LayoutRects,
                            content_width, role, content, r.y, r.h)
         y += theme.MESSAGE_GAP
 
-    # Streaming text (partial AI response)
     if streaming_text:
         y += _draw_message(font, font_bold, r.x + theme.PADDING, y,
                            content_width, "assistant", streaming_text + "█", r.y, r.h)
@@ -79,8 +78,7 @@ def draw_chat_area(font: rl.Font, font_bold: rl.Font, layout: LayoutRects,
 def _draw_message(font: rl.Font, font_bold: rl.Font, x: float, y: float,
                   max_width: float, role: str, content: str,
                   clip_y: float, clip_h: float) -> float:
-    """Draw a single message bubble. Returns height consumed."""
-    # Role indicator
+    """Draw a single message bubble with markdown rendering. Returns height consumed."""
     if role == "user":
         role_color = theme.USER_ACCENT
         bubble_color = theme.USER_BUBBLE
@@ -98,10 +96,17 @@ def _draw_message(font: rl.Font, font_bold: rl.Font, x: float, y: float,
         bubble_color = theme.BG
         label = ""
 
-    # Calculate message height for bubble background
-    text_height = measure_wrapped_height(content, font, theme.FONT_SIZE,
-                                         theme.LINE_HEIGHT, max_width - theme.PADDING * 2)
-    total_height = text_height + theme.LINE_HEIGHT + theme.PADDING  # label + content + padding
+    # Parse markdown for AI messages
+    inner_width = max_width - theme.PADDING * 2
+    if role == "assistant":
+        parsed = parse_markdown(content)
+        text_height = measure_content_height(parsed, font, font_bold, inner_width)
+    else:
+        parsed = None
+        text_height = measure_wrapped_height(content, font, theme.FONT_SIZE,
+                                             theme.LINE_HEIGHT, inner_width)
+
+    total_height = text_height + theme.LINE_HEIGHT + theme.PADDING
 
     # Bubble background
     if y + total_height >= clip_y and y <= clip_y + clip_h:
@@ -118,10 +123,14 @@ def _draw_message(font: rl.Font, font_bold: rl.Font, x: float, y: float,
                           max_width, role_color, clip_y, clip_h)
 
     # Message content
-    draw_wrapped_text(font, content, x, y + theme.LINE_HEIGHT,
-                      theme.FONT_SIZE, theme.LINE_HEIGHT,
-                      max_width - theme.PADDING * 2, theme.TEXT,
-                      clip_y, clip_h)
+    content_y = y + theme.LINE_HEIGHT
+    if parsed:
+        draw_parsed_content(font, font_bold, parsed, x, content_y,
+                            inner_width, clip_y, clip_h)
+    else:
+        draw_wrapped_text(font, content, x, content_y,
+                          theme.FONT_SIZE, theme.LINE_HEIGHT,
+                          inner_width, theme.TEXT, clip_y, clip_h)
 
     return total_height
 
@@ -131,11 +140,8 @@ def draw_input_area(font: rl.Font, layout: LayoutRects,
     """Draw the bottom input area with cursor."""
     r = layout.input_area
     rl.draw_rectangle(int(r.x), int(r.y), int(r.w), int(r.h), theme.INPUT_BG)
-
-    # Top border
     rl.draw_line(int(r.x), int(r.y), int(r.x + r.w), int(r.y), theme.BORDER)
 
-    # Hint text
     text_x = r.x + theme.PADDING
     text_y = r.y + theme.PADDING
 
@@ -144,15 +150,13 @@ def draw_input_area(font: rl.Font, layout: LayoutRects,
                         rl.Vector2(text_x, text_y), theme.FONT_SIZE, 1, theme.TEXT_DIM)
         return
 
-    # Draw text content
     content_width = r.w - theme.PADDING * 2
     draw_wrapped_text(font, text, text_x, text_y,
                       theme.FONT_SIZE, theme.LINE_HEIGHT,
                       content_width, theme.TEXT)
 
-    # Cursor (blinking)
+    # Blinking cursor
     if int(rl.get_time() * 2) % 2 == 0:
-        # Measure text up to cursor position
         before_cursor = text[:cursor_pos]
         lines = before_cursor.split("\n")
         last_line = lines[-1] if lines else ""
@@ -168,12 +172,10 @@ def draw_scrollbar(layout: LayoutRects, scroll_offset: float, content_height: fl
     """Draw scrollbar indicator in the chat area."""
     r = layout.scrollbar
     if content_height <= layout.chat_area.h:
-        return  # No scrollbar needed
+        return
 
-    # Track
     rl.draw_rectangle(int(r.x), int(r.y), int(r.w), int(r.h), theme.STATUS_BG)
 
-    # Thumb
     visible_ratio = layout.chat_area.h / content_height
     thumb_h = max(20, r.h * visible_ratio)
     scroll_ratio = scroll_offset / (content_height - layout.chat_area.h) if content_height > layout.chat_area.h else 0
