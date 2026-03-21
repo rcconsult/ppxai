@@ -62,7 +62,10 @@ jobs:
         run: echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Build libghostty-vt
-        run: zig build lib-vt -Doptimize=ReleaseSafe ${{ matrix.target }}
+        run: |
+          # Try new default install step first, fall back to legacy lib-vt step
+          zig build -Doptimize=ReleaseSafe ${{ matrix.target }} || \
+          zig build lib-vt -Doptimize=ReleaseSafe ${{ matrix.target }}
 
       - name: List build output
         run: find zig-out/ -type f 2>/dev/null || echo "No zig-out directory"
