@@ -82,6 +82,11 @@ data = [
     "python-hcl2>=4.3",
 ]
 
+# Native desktop app with Raylib (v1.17.1+)
+native = [
+    "raylib>=5.5.0",
+]
+
 # Next-gen TUI with Textual (v1.15.0+)
 tui = [
     "textual>=0.47.0",
@@ -105,6 +110,7 @@ build = [
 ppxai = "ppxai.rich.main:main"
 ppxai-server = "ppxai.server.http:run_server"
 ppxai-desktop = "ppxai.server.http:run_desktop"
+ppxai-native = "ppxai.native:main"
 ppxaide = "ppxai.tui:main"
 
 [project.urls]
