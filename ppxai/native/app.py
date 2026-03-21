@@ -14,10 +14,12 @@ import os
 import queue
 import threading
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import pyray as rl
 
+from ppxai.commands.factory import CommandFactory
+from ppxai.commands.results import ResultStatus, TextResult, ErrorResult, NotificationResult
 from ppxai.config import get_default_model, get_default_provider, initialize
 from ppxai.engine import EngineClient
 from ppxai.engine.types import EventType
@@ -41,8 +43,82 @@ from ppxai.native.input_handler import (
     CursorRight,
     CursorHome,
     CursorEnd,
+    HistoryPrev,
+    HistoryNext,
     Cancel,
 )
+
+
+class NativeCommandContext:
+    """CommandContext adapter for ppxai-native. Satisfies the CommandContext protocol."""
+
+    def __init__(self, app: "NativeApp"):
+        self._app = app
+
+    @property
+    def engine_client(self) -> Any:
+        return self._app._engine
+
+    @property
+    def session(self) -> Any:
+        return self._app._engine.session if self._app._engine else None
+
+    @property
+    def working_dir(self) -> str:
+        return self._app._engine.get_working_dir() or "" if self._app._engine else ""
+
+    @property
+    def current_model(self) -> str:
+        return self._app.model
+
+    @property
+    def provider(self) -> str:
+        return self._app.provider
+
+    @property
+    def tools_enabled(self) -> bool:
+        return self._app._engine.tools_enabled if self._app._engine else False
+
+    @property
+    def autoroute_enabled(self) -> bool:
+        return False
+
+    def set_model(self, model: str) -> None:
+        if self._app._engine:
+            self._app._engine.set_model(model)
+            self._app.model = model
+
+    def set_provider(self, provider: str) -> None:
+        if self._app._engine:
+            self._app._engine.set_provider(provider)
+            self._app.provider = provider
+
+    def get_provider(self) -> str:
+        return self._app.provider
+
+    def get_model(self) -> str:
+        return self._app.model
+
+    def get_auto_route(self) -> bool:
+        return False
+
+    def set_auto_route(self, enabled: bool) -> None:
+        pass
+
+    def get_tools_available(self) -> bool:
+        return self._app._engine.tools_enabled if self._app._engine else False
+
+    def get_tools_verbose(self) -> bool:
+        return False
+
+    def set_tools_verbose(self, verbose: bool) -> None:
+        pass
+
+    def get_config_value(self, key: str, default: Optional[str] = None) -> Optional[str]:
+        return default
+
+    def set_config_value(self, key: str, value: str) -> None:
+        pass
 
 
 class NativeApp:
@@ -58,6 +134,9 @@ class NativeApp:
         # Input state
         self.input_text: str = ""
         self.cursor_pos: int = 0
+        self._history: List[str] = []
+        self._history_index: int = -1
+        self._history_saved_input: str = ""
 
         # Scroll state
         self.scroll_offset: float = 0.0
@@ -69,6 +148,7 @@ class NativeApp:
         self.provider: str = ""
         self.model: str = ""
         self.status_text: str = ""
+        self._context: Optional[NativeCommandContext] = None
 
         # Thread communication
         self._event_queue: queue.Queue = queue.Queue()
@@ -136,6 +216,7 @@ class NativeApp:
             return
 
         self._engine.set_working_dir(os.getcwd())
+        self._context = NativeCommandContext(self)
         self.messages.append(("system",
             f"Connected to {self.provider}/{self.model}. "
             "Type a message and press Ctrl+Enter to send."))
@@ -294,6 +375,62 @@ class NativeApp:
             self._consent_event.set()
 
     # =========================================================================
+    # Slash commands
+    # =========================================================================
+
+    def _handle_slash_command(self, text: str) -> None:
+        """Route slash commands through CommandFactory."""
+        parts = text[1:].split(" ", 1)
+        cmd_name = parts[0].lower()
+        cmd_args = parts[1] if len(parts) > 1 else ""
+
+        # Built-in commands handled directly
+        if cmd_name == "clear":
+            self.messages.clear()
+            self.scroll_offset = 0
+            return
+
+        if cmd_name == "quit" or cmd_name == "exit":
+            # Signal window close
+            return
+
+        # Try CommandFactory
+        if self._context:
+            try:
+                result = CommandFactory.dispatch(cmd_name, self._context, cmd_args)
+                # Render result as system message
+                if result is None:
+                    return
+                if hasattr(result, "message"):
+                    msg = result.message
+                    if hasattr(result, "content") and result.content:
+                        msg = f"{msg}\n{result.content}"
+                    status = getattr(result, "status", None)
+                    if status == ResultStatus.ERROR:
+                        self.messages.append(("system", f"Error: {msg}"))
+                    else:
+                        self.messages.append(("system", msg))
+                else:
+                    self.messages.append(("system", str(result)))
+                self.auto_scroll = True
+
+                # Update provider/model if changed
+                if self._engine:
+                    new_provider = self._engine.get_current_provider()
+                    new_model = self._engine.get_current_model()
+                    if new_provider:
+                        self.provider = new_provider
+                    if new_model:
+                        self.model = new_model
+
+            except ValueError as e:
+                self.messages.append(("system", str(e)))
+            except Exception as e:
+                self.messages.append(("system", f"Command error: {e}"))
+        else:
+            self.messages.append(("system", f"Unknown command: {text}"))
+
+    # =========================================================================
     # Input handling
     # =========================================================================
 
@@ -338,11 +475,40 @@ class NativeApp:
             elif isinstance(action, SubmitMessage):
                 text = self.input_text.strip()
                 if text and not self.is_streaming:
-                    self.messages.append(("user", text))
+                    # Add to history
+                    if not self._history or self._history[-1] != text:
+                        self._history.append(text)
+                    self._history_index = -1
+
                     self.input_text = ""
                     self.cursor_pos = 0
                     self.auto_scroll = True
-                    self._submit_to_engine(text)
+
+                    if text.startswith("/"):
+                        self._handle_slash_command(text)
+                    else:
+                        self.messages.append(("user", text))
+                        self._submit_to_engine(text)
+
+            elif isinstance(action, HistoryPrev):
+                if self._history:
+                    if self._history_index == -1:
+                        self._history_saved_input = self.input_text
+                        self._history_index = len(self._history) - 1
+                    elif self._history_index > 0:
+                        self._history_index -= 1
+                    self.input_text = self._history[self._history_index]
+                    self.cursor_pos = len(self.input_text)
+
+            elif isinstance(action, HistoryNext):
+                if self._history_index >= 0:
+                    self._history_index += 1
+                    if self._history_index >= len(self._history):
+                        self._history_index = -1
+                        self.input_text = self._history_saved_input
+                    else:
+                        self.input_text = self._history[self._history_index]
+                    self.cursor_pos = len(self.input_text)
 
             elif isinstance(action, CursorLeft):
                 self.cursor_pos = max(0, self.cursor_pos - 1)
