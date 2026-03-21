@@ -12,6 +12,7 @@ Thread model (same as ppxaide app.py:919-936):
 import asyncio
 import os
 import queue
+import re
 import threading
 from pathlib import Path
 from typing import Any, List, Optional, Tuple
@@ -153,6 +154,9 @@ class NativeApp:
         # Thread communication
         self._event_queue: queue.Queue = queue.Queue()
 
+        # Window state
+        self._should_close: bool = False
+
         # Consent bridge
         self._consent_pending: Optional[dict] = None
         self._consent_result: Optional[Tuple[bool, str]] = None
@@ -181,7 +185,7 @@ class NativeApp:
         # Initialize engine
         self._initialize_engine()
 
-        while not rl.window_should_close():
+        while not rl.window_should_close() and not self._should_close:
             self._handle_input()
             self._process_events()
             self._draw()
@@ -390,29 +394,15 @@ class NativeApp:
             self.scroll_offset = 0
             return
 
-        if cmd_name == "quit" or cmd_name == "exit":
-            # Signal window close
+        if cmd_name in ("quit", "exit", "q"):
+            self._should_close = True
             return
 
         # Try CommandFactory
         if self._context:
             try:
                 result = CommandFactory.dispatch(cmd_name, self._context, cmd_args)
-                # Render result as system message
-                if result is None:
-                    return
-                if hasattr(result, "message"):
-                    msg = result.message
-                    if hasattr(result, "content") and result.content:
-                        msg = f"{msg}\n{result.content}"
-                    status = getattr(result, "status", None)
-                    if status == ResultStatus.ERROR:
-                        self.messages.append(("system", f"Error: {msg}"))
-                    else:
-                        self.messages.append(("system", msg))
-                else:
-                    self.messages.append(("system", str(result)))
-                self.auto_scroll = True
+                self._render_command_result(result)
 
                 # Update provider/model if changed
                 if self._engine:
@@ -429,6 +419,54 @@ class NativeApp:
                 self.messages.append(("system", f"Command error: {e}"))
         else:
             self.messages.append(("system", f"Unknown command: {text}"))
+
+    def _render_command_result(self, result: Any) -> None:
+        """Render a CommandResult as a system message."""
+        if result is None:
+            return
+
+        self.auto_scroll = True
+        status = getattr(result, "status", None)
+        is_error = status == ResultStatus.ERROR
+
+        # Extract displayable text from various result types
+        parts = []
+
+        # message field (most result types)
+        msg = getattr(result, "message", None)
+        if msg:
+            parts.append(msg)
+
+        # content field (TextResult, MarkdownResult)
+        content = getattr(result, "content", None)
+        if content and content != msg:
+            parts.append(content)
+
+        # items field (KeyValueResult — dict of key: value pairs)
+        items = getattr(result, "items", None)
+        if isinstance(items, dict):
+            for k, v in items.items():
+                parts.append(f"  {k}: {v}")
+
+        # items field (ListResult — list of strings)
+        if isinstance(items, list):
+            for item in items:
+                parts.append(f"  {item}")
+
+        # suggestions field (ErrorResult)
+        suggestions = getattr(result, "suggestions", None)
+        if suggestions:
+            parts.append("Suggestions: " + ", ".join(suggestions))
+
+        text = "\n".join(parts) if parts else str(result)
+
+        # Strip Rich markup tags (simple removal)
+        text = re.sub(r'\[/?[^\]]+\]', '', text)
+
+        if is_error:
+            self.messages.append(("system", f"Error: {text}"))
+        else:
+            self.messages.append(("system", text))
 
     # =========================================================================
     # Input handling
