@@ -71,14 +71,19 @@ def draw_chat_area(font: rl.Font, font_bold: rl.Font, layout: LayoutRects,
 
     rl.end_scissor_mode()
 
-    total_height = (y + scroll_offset) - r.y
+    # Add bottom padding so last message is fully visible when scrolled to end
+    total_height = (y + scroll_offset) - r.y + theme.PADDING * 2
     return total_height
 
 
 def _draw_message(font: rl.Font, font_bold: rl.Font, x: float, y: float,
                   max_width: float, role: str, content: str,
                   clip_y: float, clip_h: float) -> float:
-    """Draw a single message bubble with markdown rendering. Returns height consumed."""
+    """Draw a single message bubble with markdown rendering. Returns height consumed.
+
+    Uses two-pass approach: measure content height first for accurate bubble sizing,
+    then draw bubble background and content.
+    """
     if role == "user":
         role_color = theme.USER_ACCENT
         bubble_color = theme.USER_BUBBLE
@@ -106,15 +111,15 @@ def _draw_message(font: rl.Font, font_bold: rl.Font, x: float, y: float,
         text_height = measure_wrapped_height(content, font, theme.FONT_SIZE,
                                              theme.LINE_HEIGHT, inner_width)
 
-    total_height = text_height + theme.LINE_HEIGHT + theme.PADDING
+    label_height = theme.LINE_HEIGHT
+    total_height = label_height + text_height + theme.PADDING
 
-    # Bubble background
-    if y + total_height >= clip_y and y <= clip_y + clip_h:
-        rl.draw_rectangle_rounded(
-            rl.Rectangle(x - theme.PADDING_SMALL, y,
-                         max_width + theme.PADDING_SMALL, total_height),
-            0.02, 4, bubble_color
-        )
+    # Bubble background — draw full height even if partially off-screen
+    rl.draw_rectangle_rounded(
+        rl.Rectangle(x - theme.PADDING_SMALL, y,
+                     max_width + theme.PADDING_SMALL, total_height),
+        0.02, 4, bubble_color
+    )
 
     # Role label
     if label:
@@ -122,11 +127,14 @@ def _draw_message(font: rl.Font, font_bold: rl.Font, x: float, y: float,
                           theme.FONT_SIZE_SMALL, theme.LINE_HEIGHT_SMALL,
                           max_width, role_color, clip_y, clip_h)
 
-    # Message content
-    content_y = y + theme.LINE_HEIGHT
+    # Message content — draw_parsed_content returns actual height drawn
+    content_y = y + label_height
     if parsed:
-        draw_parsed_content(font, font_bold, parsed, x, content_y,
-                            inner_width, clip_y, clip_h)
+        actual_content_h = draw_parsed_content(font, font_bold, parsed, x, content_y,
+                                               inner_width, clip_y, clip_h)
+        # Use actual height if larger than estimate (fixes clipping)
+        if actual_content_h > text_height:
+            total_height = label_height + actual_content_h + theme.PADDING
     else:
         draw_wrapped_text(font, content, x, content_y,
                           theme.FONT_SIZE, theme.LINE_HEIGHT,

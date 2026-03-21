@@ -148,15 +148,21 @@ def measure_wrapped_height(text: str, font: rl.Font, font_size: float,
 
 def measure_content_height(content: ParsedContent, font: rl.Font, font_bold: rl.Font,
                            max_width: float) -> float:
-    """Calculate total height of parsed markdown content."""
+    """Calculate total height of parsed markdown content.
+
+    Measures each span individually to match actual rendering.
+    """
     total = 0.0
     for block in content.blocks:
         if block.kind == "code_block":
             lines = block.raw_text.split("\n")
             total += len(lines) * theme.LINE_HEIGHT + theme.PADDING * 2 + theme.PADDING_SMALL
         else:
-            total += measure_wrapped_height(block.raw_text, font, theme.FONT_SIZE,
-                                            theme.LINE_HEIGHT, max_width)
+            # Measure each span separately (matching _draw_text_block)
+            for span in block.spans:
+                f = font_bold if span.style == "bold" else font
+                total += measure_wrapped_height(span.text, f, theme.FONT_SIZE,
+                                                theme.LINE_HEIGHT, max_width)
     return total
 
 
