@@ -69,9 +69,18 @@ ghostty-org/ghostty (GitHub)
 
 ```
 Repository: ghostty-org/ghostty
-Ref: main (pin to specific SHA once C API stabilizes)
+Working build: libghostty-20260319 release (built from main as of 2026-03-19)
 Zig version: 0.15.2
+Build step: zig build lib-vt (removed from main ~2026-03-20, now part of default install)
 ```
+
+**NOTE (2026-03-21):** The `lib-vt` build step was removed from Ghostty's main branch.
+The default `zig build` now installs the shared lib but also tries to build the GUI
+(which fails without platform deps on CI). The workflow needs updating to either:
+1. Find the new correct build step name
+2. Use `zig build -Dapp=false` or similar flag to skip GUI
+3. Use the CMake integration path (like ghostling does)
+Current `libghostty-20260319` binaries work and are published.
 
 ## Reference Implementation: Ghostling
 

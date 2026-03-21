@@ -10,10 +10,10 @@ The shared library (libghostty_vt.so/.dylib/.dll) is bundled with
 PyInstaller builds and loaded at runtime via ctypes. No build tools
 or headers are needed at runtime.
 
-Build artifacts are published via the build-libghostty.yml CI workflow
+Build artifacts are published via the build-ghostty-vt.yml CI workflow
 and stored as GitHub release assets tagged libghostty-<date>.
 """
 
-from ppxai.terminal.ghostty import is_available, get_version
+from ppxai.terminal.ghostty import is_available, get_version, encode_key, cleanup
 
-__all__ = ["is_available", "get_version"]
+__all__ = ["is_available", "get_version", "encode_key", "cleanup"]
