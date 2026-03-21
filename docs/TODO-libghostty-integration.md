@@ -73,6 +73,53 @@ Ref: main (pin to specific SHA once C API stabilizes)
 Zig version: 0.15.2
 ```
 
+## Reference Implementation: Ghostling
+
+[ghostty-org/ghostling](https://github.com/ghostty-org/ghostling) is a **complete minimal terminal emulator**
+in a single C file (~800 lines) using libghostty-vt + Raylib. This proves the C API is production-ready.
+
+**Data flow:**
+```
+PTY output → ghostty_terminal_vt_write() → render state → your renderer
+User input → key/mouse encoder → escape sequences → PTY write
+```
+
+**Key API functions (from ghostling/main.c):**
+```c
+// Terminal lifecycle
+ghostty_terminal_new(allocator, &terminal, opts)  // create terminal
+ghostty_terminal_vt_write(terminal, data, len)     // feed VT data
+
+// Keyboard encoding (Kitty protocol)
+ghostty_key_encoder_new(&encoder)
+ghostty_key_event_set_key(event, key)
+ghostty_key_event_set_mods(event, mods)
+ghostty_key_encoder_encode(encoder, event, buf, buflen, &written)
+
+// Mouse encoding (SGR, X10, URxvt modes)
+ghostty_mouse_encoder_new(&encoder)
+ghostty_mouse_encoder_setopt_from_terminal(encoder, terminal)
+ghostty_mouse_encoder_encode(encoder, event, buf, buflen, &written)
+
+// Render state (row/cell iteration)
+ghostty_render_state_new(&state)
+ghostty_render_state_update(state, terminal)
+ghostty_render_state_row_iterator_next(iter)  // walk rows
+ghostty_render_state_row_cells_next(cells)    // walk cells per row
+
+// Terminal queries
+ghostty_terminal_mode_get(terminal, mode, &value)
+ghostty_terminal_get(terminal, data_type, &result)
+```
+
+**Features ghostling demonstrates working:**
+- 24-bit + 256-color, bold/italic/inverse styles
+- Unicode/multi-codepoint grapheme rendering
+- Text reflow on resize, scrollback
+- Kitty keyboard protocol (key + modifiers → escape sequences)
+- Mouse tracking (SGR, URxvt, UTF8, X10 modes)
+- Focus reporting, scrollbar with drag
+
 ## C API Headers (reference)
 
 The public API surface from `include/ghostty/vt.h`:
