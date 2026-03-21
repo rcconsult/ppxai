@@ -1,0 +1,41 @@
+{{- if .Values.storageClass.create }}
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.storageClass.workspaceName }}
+  labels:
+    {{- include "ppxai.labels" . | nindent 4 }}
+provisioner: {{ .Values.storageClass.workspaceProvisioner }}
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.storageClass.ephemeralName }}
+  labels:
+    {{- include "ppxai.labels" . | nindent 4 }}
+provisioner: {{ .Values.storageClass.ephemeralProvisioner }}
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+{{- end }}
+{{- if .Values.storage.staticPv.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ include "ppxai.fullname" . }}-registry-pv
+  labels:
+    {{- include "ppxai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: storage
+spec:
+  capacity:
+    storage: {{ .Values.storage.staticPv.size }}
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: {{ .Values.storage.staticPv.storageClassName }}
+  hostPath:
+    path: {{ .Values.storage.staticPv.hostPath }}
+    type: DirectoryOrCreate
+{{- end }}

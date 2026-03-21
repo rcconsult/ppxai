@@ -3,9 +3,9 @@ apiVersion: v1
 kind: Service
 metadata:
   name: session-manager
-  namespace: ppxai-system
+  namespace: {{ include "ppxai.namespace" . }}
   labels:
-    app.kubernetes.io/name: ppxai
+    {{- include "ppxai.labels" . | nindent 4 }}
     app.kubernetes.io/component: session-manager
 spec:
   selector:
