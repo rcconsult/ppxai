@@ -63,13 +63,32 @@ GHOSTTY_KEY_ENCODER_OPT_KITTY_FLAGS = 5
 GHOSTTY_KEY_ENCODER_OPT_MACOS_OPTION_AS_ALT = 6
 
 # GhosttyKey enum — physical key codes (subset most relevant to ppxai)
-# Full enum has 150+ keys; we define the ones we actually use.
+# Full enum has 150+ keys. Values verified empirically against libghostty-20260319.
+# Enum order matches include/ghostty/vt/key/event.h
 GHOSTTY_KEY_UNIDENTIFIED = 0
-GHOSTTY_KEY_ENTER = 0  # Will be resolved from header; placeholder
-GHOSTTY_KEY_TAB = 0
-GHOSTTY_KEY_ESCAPE = 0
-GHOSTTY_KEY_SPACE = 0
-GHOSTTY_KEY_BACKSPACE = 0
+# Writing system keys: 1-49 (backquote..slash)
+# Functional keys start at 50:
+GHOSTTY_KEY_ALT_LEFT = 50
+GHOSTTY_KEY_ALT_RIGHT = 51
+GHOSTTY_KEY_BACKSPACE = 53
+GHOSTTY_KEY_ENTER = 58
+GHOSTTY_KEY_SPACE = 63
+GHOSTTY_KEY_TAB = 64
+# Control pad keys:
+GHOSTTY_KEY_DELETE = 68
+GHOSTTY_KEY_END = 69
+GHOSTTY_KEY_HOME = 71
+GHOSTTY_KEY_INSERT = 72
+GHOSTTY_KEY_PAGE_DOWN = 73
+GHOSTTY_KEY_PAGE_UP = 74
+# Arrow keys:
+GHOSTTY_KEY_ARROW_DOWN = 75
+GHOSTTY_KEY_ARROW_LEFT = 76
+GHOSTTY_KEY_ARROW_RIGHT = 77
+GHOSTTY_KEY_ARROW_UP = 78
+# Function keys (after numpad):
+GHOSTTY_KEY_ESCAPE = 120
+GHOSTTY_KEY_F1 = 121
 
 # Opaque pointer types
 GhosttyKeyEncoder = ctypes.c_void_p
@@ -139,7 +158,6 @@ def _load_lib() -> Optional[ctypes.CDLL]:
     try:
         _lib = ctypes.CDLL(str(path))
         _setup_signatures(_lib)
-        _resolve_key_codes(_lib)
         return _lib
     except OSError as e:
         _load_error = f"Failed to load {path}: {e}"
@@ -196,41 +214,6 @@ def _setup_signatures(lib: ctypes.CDLL) -> None:
         ctypes.c_char_p, ctypes.c_size_t, ctypes.POINTER(ctypes.c_size_t),
     ]
     lib.ghostty_key_encoder_encode.restype = ctypes.c_int
-
-
-def _resolve_key_codes(lib: ctypes.CDLL) -> None:
-    """Resolve key code enum values by encoding known keys and checking output.
-
-    The GhosttyKey enum values are sequential but their exact values depend on
-    the build. We resolve them by looking up key names from the header ordering.
-    These match the enum order in include/ghostty/vt/key/event.h.
-    """
-    # The enum is sequential starting from 0 (UNIDENTIFIED).
-    # Order from the header: writing system keys, then functional keys.
-    # We hardcode the offsets based on the header enum order.
-    # This is stable — the enum is part of the C ABI.
-    global GHOSTTY_KEY_ENTER, GHOSTTY_KEY_TAB, GHOSTTY_KEY_ESCAPE
-    global GHOSTTY_KEY_SPACE, GHOSTTY_KEY_BACKSPACE
-
-    # Writing system keys: backquote, backslash, bracket_left, bracket_right,
-    # comma, digit_0..digit_9, equal, intl_backslash, intl_ro, intl_yen,
-    # a..z, minus, period, quote, semicolon, slash
-    # That's: 1 + 1 + 1 + 1 + 1 + 10 + 1 + 1 + 1 + 1 + 26 + 1 + 1 + 1 + 1 + 1 = 49 keys
-    # Functional keys start at offset 50:
-    # alt_left, alt_right, backspace, caps_lock, context_menu,
-    # control_left, control_right, enter, ...
-    _FUNC_START = 50  # offset of first functional key (alt_left)
-    GHOSTTY_KEY_BACKSPACE = _FUNC_START + 2
-    GHOSTTY_KEY_ENTER = _FUNC_START + 7
-    GHOSTTY_KEY_SPACE = _FUNC_START + 10
-    GHOSTTY_KEY_TAB = _FUNC_START + 11
-
-    # Control pad keys (after functional)
-    _CTRL_PAD_START = _FUNC_START + 17  # after convert, kana_mode, non_convert
-    GHOSTTY_KEY_ESCAPE = _CTRL_PAD_START + 30  # in function keys section (after arrow keys, numpad)
-    # Escape is in the "Function Row" section — F keys start after numpad
-    # This needs verification against actual enum. For now use a safe approach:
-    # We'll verify by trying to encode and checking output.
 
 
 def _get_encoder() -> Optional[ctypes.c_void_p]:
