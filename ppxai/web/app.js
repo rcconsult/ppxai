@@ -2004,8 +2004,10 @@ class PpxaiApp {
                     // Encode only the session param value.
                     const encodedPath = filepath.split('/').map(encodeURIComponent).join('/');
                     const src = `${this._serverUrl}/preview/${encodedPath}?session=${encodeURIComponent(this._sessionId)}`;
-                    // No sandbox — content is same-origin from user's own server.
-                    // allow-scripts + allow-same-origin together defeats the sandbox anyway.
+                    // No sandbox — same-origin required for live-reload polling.
+                    // Preview API leakage (user HTML calling /tasks etc.) is handled
+                    // server-side: unknown routes from preview referers return a
+                    // helpful JSON error instead of ppxai's default 404.
                     container.innerHTML = `<iframe src="${src}" style="width:100%;height:100%;border:none;background:#fff;" class="rpf-html-iframe"></iframe>`;
                 },
                 unmount() { if (this._container) { this._container.innerHTML = ''; this._container = null; } },

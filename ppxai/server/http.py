@@ -195,9 +195,32 @@ app.add_middleware(
 
 @app.middleware("http")
 async def activity_tracking_middleware(request: Request, call_next):
-    """Track client activity for idle shutdown (v1.13.10)."""
+    """Track client activity for idle shutdown (v1.13.10).
+
+    Also intercepts 404s from preview iframes: when a previewed HTML page
+    makes API calls (e.g. fetch('/tasks')), they hit ppxai's server instead
+    of the user's backend. Return a helpful JSON error so the user sees
+    "preview-only" instead of a confusing ppxai 404.
+    """
     update_activity()
     response = await call_next(request)
+
+    if response.status_code == 404:
+        referer = request.headers.get("referer", "")
+        if "/preview/" in referer:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code = 404,
+                content = {
+                    "error": "preview_only",
+                    "detail": (
+                        f"Route '{request.url.path}' does not exist on ppxai's server. "
+                        f"The preview serves static HTML only — start your backend "
+                        f"separately to handle API calls."
+                    ),
+                },
+            )
+
     return response
 
 
