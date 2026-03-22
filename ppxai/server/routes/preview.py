@@ -130,10 +130,11 @@ def _detect_command(working_dir: str) -> Optional[str]:
         except (json.JSONDecodeError, OSError):
             pass
 
-    # Python files
+    # Python files — use python3 on macOS/Linux (python may not exist)
+    python = "python3" if os.name != "nt" else "python"
     for name in ("main.py", "app.py", "server.py"):
         if (wd / name).exists():
-            return f"python {name}"
+            return f"{python} {name}"
 
     # Makefile with run target
     makefile = wd / "Makefile"
@@ -161,8 +162,14 @@ def _guess_port_from_command(command: str) -> int:
     return 8000  # safe default
 
 
-async def _detect_port_from_output(process: asyncio.subprocess.Process, timeout: float = 5.0) -> Optional[int]:
-    """Read process stdout/stderr for port announcements."""
+async def _detect_port_from_output(process: asyncio.subprocess.Process, collected_output: list, timeout: float = 5.0) -> Optional[int]:
+    """Read process stdout/stderr for port announcements.
+
+    Args:
+        process: The subprocess to read from
+        collected_output: List to append output lines to (for error reporting)
+        timeout: Max seconds to wait for port detection
+    """
     deadline = time.time() + timeout
     while time.time() < deadline:
         if process.returncode is not None:
@@ -172,6 +179,7 @@ async def _detect_port_from_output(process: asyncio.subprocess.Process, timeout:
             if not line:
                 continue
             text = line.decode("utf-8", errors="replace")
+            collected_output.append(text)
             for pattern in _PORT_PATTERNS:
                 m = pattern.search(text)
                 if m:
@@ -213,8 +221,10 @@ async def start_preview_serve(
         await kill_preview_backend(existing)
         remove_preview_backend(s.id)
 
-    # Resolve command
+    # Resolve command — normalize python → python3 on macOS/Linux
     command = request.command or _detect_command(working_dir)
+    if command and os.name != "nt":
+        command = re.sub(r'^python(\s)', r'python3\1', command)
     if not command:
         raise HTTPException(
             status_code=400,
@@ -245,19 +255,21 @@ async def start_preview_serve(
         raise HTTPException(status_code=500, detail=f"Failed to start process: {e}")
 
     # Try to detect port from stdout first, fall back to guessed port
-    detected_port = await _detect_port_from_output(process, timeout=5.0)
+    collected_output = []
+    detected_port = await _detect_port_from_output(process, collected_output, timeout=5.0)
     if detected_port:
         port = detected_port
         logger.info(f"Preview serve: detected port {port} from stdout")
 
     # Check if process died during startup
     if process.returncode is not None:
-        # Read remaining output for error message
         remaining = await process.stdout.read(2000)
-        error_msg = remaining.decode("utf-8", errors="replace").strip()
+        error_text = remaining.decode("utf-8", errors="replace")
+        all_output = "".join(collected_output) + error_text
+        error_msg = all_output.strip()[-500:]  # Last 500 chars
         raise HTTPException(
             status_code=500,
-            detail=f"Backend process exited with code {process.returncode}: {error_msg}",
+            detail=f"Backend exited with code {process.returncode}:\n{error_msg}",
         )
 
     # Wait for port to become reachable
@@ -266,10 +278,12 @@ async def start_preview_serve(
         # Check if process is still alive
         if process.returncode is not None:
             remaining = await process.stdout.read(2000)
-            error_msg = remaining.decode("utf-8", errors="replace").strip()
+            error_text = remaining.decode("utf-8", errors="replace")
+            all_output = "".join(collected_output) + error_text
+            error_msg = all_output.strip()[-500:]
             raise HTTPException(
                 status_code=500,
-                detail=f"Backend died during startup (exit {process.returncode}): {error_msg}",
+                detail=f"Backend died during startup (exit {process.returncode}):\n{error_msg}",
             )
         # Process alive but port not reachable — it might use a different port
         raise HTTPException(
