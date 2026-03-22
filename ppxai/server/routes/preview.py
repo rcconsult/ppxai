@@ -107,7 +107,7 @@ async def preview_html(
         return FileResponse(path, headers={"Cache-Control": "no-cache"})
 
     content = path.read_text(encoding='utf-8')
-    poll_url = f'poll/{filepath}?session={session_id}' if session_id else f'poll/{filepath}'
+    poll_url = f'/preview/poll/{filepath}?session={session_id}' if session_id else f'/preview/poll/{filepath}'
 
     cache_ts = str(int(path.stat().st_mtime))
     try:
@@ -123,9 +123,9 @@ async def preview_html(
 
     file_dir = str(PurePosixPath(filepath).parent)
     if file_dir == '.':
-        static_base = '__assets__/'
+        static_base = '/preview/__assets__/'
     else:
-        static_base = f'__assets__/{file_dir}/'
+        static_base = f'/preview/__assets__/{file_dir}/'
     if session_id:
         static_base = f'{static_base}?session={session_id}'
     content = rewrite_asset_paths(content, static_base, cache_buster=cache_ts)
