@@ -54,9 +54,6 @@ async def respond_to_consent(
     """
     session_manager = get_session_manager()
 
-    # Determine session ID (use default if not provided)
-    s.id = x_session_id or "default"
-
     file_path = request.file_path
 
     # Normalize response to standard enum value (handles yes/Yes/YES/y/etc.)
@@ -99,9 +96,6 @@ async def respond_to_shell_consent(
     v1.13.10: Now uses SessionManager.resolve_shell_consent().
     """
     session_manager = get_session_manager()
-
-    # Determine session ID (use default if not provided)
-    s.id = x_session_id or "default"
 
     command = request.command
 
