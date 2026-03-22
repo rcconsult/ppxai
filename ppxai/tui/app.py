@@ -99,10 +99,12 @@ class PPXAIDEApp(App):
 
         self._current_theme_index = 0
         self._engine_client: Optional[EngineClient] = None
+        # Shadow state fields — kept for compose() which runs before engine init.
+        # After _initialize_engine(), properties delegate to engine_client.state (AppState).
         self._provider = "perplexity"
         self._model = "sonar"
-        self._tools_enabled = False
-        self._tools_verbose = False  # Tool output verbosity (controlled via /tools verbose on/off)
+        self._tools_enabled = False     # Shadow for compose(); reads from AppState after init
+        self._tools_verbose = False     # Shadow for compose(); reads from AppState after init
         self._tool_group_active = False  # v1.16.0: Track active tool group for noise reduction
         self._tool_group_tools = []  # v1.16.0: Tool names in current group
         self._working_dir = os.getcwd()
@@ -112,8 +114,6 @@ class PPXAIDEApp(App):
 
         # Streaming state (Phase 6.1)
         self._current_message_content = ""
-        self._is_streaming = False
-        self._cancel_requested = False  # Signal to cancel streaming (v1.15.2)
 
         # Ctrl+C double-press tracking (v1.15.2)
         self._last_ctrl_c_time: float = 0.0
@@ -317,6 +317,16 @@ class PPXAIDEApp(App):
         self._event_bus.on(Events.ENGINE_WORKING_DIR_CHANGED, self._on_working_dir_changed)
         self._log.info("[EventBus] Subscribed to all engine events")
 
+        # Register AppState observers — auto-update status bar on state changes.
+        # This replaces ~30 manual update_badge() calls scattered across methods.
+        state = self._engine_client.state
+        state.on("provider", self._on_state_provider_changed)
+        state.on("model", self._on_state_model_changed)
+        state.on("tools_enabled", self._on_state_tools_changed)
+        state.on("tools_verbose", self._on_state_tools_verbose_changed)
+        state.on("working_dir", self._on_state_working_dir_changed)
+        self._log.info("[AppState] Observers registered for status bar sync")
+
         # Set provider and model
         try:
             provider_ok = self._engine_client.set_provider(self._provider)
@@ -344,6 +354,38 @@ class PPXAIDEApp(App):
             self._log.info(f"Engine initialized: {self._provider}/{self._model}")
         else:
             self._log.warning("Engine not fully initialized - use /provider and /model commands")
+
+    # ========================================================================
+    # AppState observers — auto-update status bar on state changes
+    # ========================================================================
+
+    def _on_state_provider_changed(self, value: str) -> None:
+        """AppState observer: provider changed → update status bar."""
+        self._provider = value  # Keep shadow field for compose()
+        if self._status_bar:
+            self._status_bar.update_badge("provider", value or "[bold red]none[/bold red]")
+
+    def _on_state_model_changed(self, value: str) -> None:
+        """AppState observer: model changed → update status bar."""
+        self._model = value  # Keep shadow field for compose()
+        if self._status_bar:
+            self._status_bar.update_badge("model", value or "[bold red]none[/bold red]")
+
+    def _on_state_tools_changed(self, value: bool) -> None:
+        """AppState observer: tools_enabled changed → update status bar + shadow."""
+        self._tools_enabled = value  # Keep shadow for compose() and direct reads
+        if self._status_bar:
+            self._status_bar.update_badge("tools", "ON" if value else "OFF")
+
+    def _on_state_tools_verbose_changed(self, value: bool) -> None:
+        """AppState observer: tools_verbose changed → sync shadow field."""
+        self._tools_verbose = value
+
+    def _on_state_working_dir_changed(self, value: str) -> None:
+        """AppState observer: working_dir changed → update status bar + shadow."""
+        self._working_dir = value  # Keep shadow field for FileTree
+        if self._status_bar and value:
+            self._status_bar.update_badge("cwd", self._format_cwd_display(value))
 
     async def _file_edit_consent_handler(self, file_path: str) -> tuple[bool, str]:
         """Handle file edit consent request using Textual dialog.
@@ -662,21 +704,9 @@ class PPXAIDEApp(App):
             return False
 
         self._log.info(f"Session loaded successfully: {result['message_count']} messages")
-
-        status_bar = self._status_bar
-
-        if result["provider"]:
-            self._provider = result["provider"]
-            status_bar.update_badge("provider", self._provider)
-            self._log.info(f"Restored provider: {self._provider}")
-
-        if result["model"]:
-            self._model = result["model"]
-            status_bar.update_badge("model", self._model)
-            self._log.info(f"Restored model: {self._model}")
-
-        self._tools_enabled = result["tools_enabled"]
-        status_bar.update_badge("tools", "ON" if self._tools_enabled else "OFF")
+        # Provider/model/tools/working_dir already synced to AppState by
+        # engine_client.restore_session() → observers update badges automatically.
+        self._log.info(f"Restored provider: {result.get('provider')}, model: {result.get('model')}")
 
         # Restore working directory (TUI-specific: os.chdir + completer + cwd badge)
         working_dir = result["working_dir"]
@@ -757,21 +787,22 @@ class PPXAIDEApp(App):
     @property
     def current_model(self) -> str:
         """Currently selected model (CommandContext protocol)."""
-        return self._model
+        if self._engine_client:
+            return self._engine_client.state.get("model") or ""
+        return self._model or ""
 
     @property
     def provider(self) -> str:
         """Currently selected provider (CommandContext protocol)."""
-        return self._provider
+        if self._engine_client:
+            return self._engine_client.state.get("provider") or ""
+        return self._provider or ""
 
     def set_model(self, model: str) -> None:
         """Switch to specified model (CommandContext protocol)."""
         if self._engine_client:
             self._engine_client.set_model(model)
-            self._model = model
-            # Update status bar
-            status_bar = self._status_bar
-            status_bar.update_badge("model", model)
+            # AppState observer updates status bar automatically
             # Notify user if context was reset (A3)
             reset_count = self._engine_client.last_model_switch_reset
             if reset_count > 0:
@@ -781,51 +812,59 @@ class PPXAIDEApp(App):
         """Switch to specified provider (CommandContext protocol)."""
         if self._engine_client:
             self._engine_client.set_provider(provider)
-            self._provider = provider
-            # Update status bar
-            status_bar = self._status_bar
-            status_bar.update_badge("provider", provider)
+            # AppState observer updates status bar automatically
 
     def get_provider(self) -> str:
         """Get current provider (CommandContext protocol)."""
-        return self._provider
+        if self._engine_client:
+            return self._engine_client.state.get("provider") or ""
+        return self._provider or ""
 
     def get_model(self) -> str:
         """Get current model (CommandContext protocol)."""
-        return self._model
+        if self._engine_client:
+            return self._engine_client.state.get("model") or ""
+        return self._model or ""
 
     def get_auto_route(self) -> bool:
         """Get auto-routing status (CommandContext protocol)."""
-        # TUI doesn't support auto-routing yet
+        if self._engine_client:
+            return self._engine_client.state.get("auto_route")
         return False
 
     def set_auto_route(self, enabled: bool) -> None:
         """Set auto-routing status (CommandContext protocol)."""
-        # TUI doesn't support auto-routing yet
-        pass
+        if self._engine_client:
+            self._engine_client.state.set("auto_route", enabled)
 
     def get_tools_available(self) -> bool:
         """Check if tool support is available (CommandContext protocol)."""
-        # Tools are always available in ppxai (dependencies are built-in)
         return True
 
     def get_tools_verbose(self) -> bool:
         """Get tool verbose logging status (CommandContext protocol)."""
-        return self._tools_verbose
+        if self._engine_client:
+            return self._engine_client.state.get("tools_verbose")
+        return False
 
     def set_tools_verbose(self, verbose: bool) -> None:
         """Set tool verbose logging status (CommandContext protocol)."""
-        self._tools_verbose = verbose
+        if self._engine_client:
+            self._engine_client.state.set("tools_verbose", verbose)
         self._log.debug(f"Tools verbose mode: {'enabled' if verbose else 'disabled'}")
 
     @property
     def tools_enabled(self) -> bool:
         """Check if tools are enabled (CommandContext protocol)."""
-        return self._tools_enabled
+        if self._engine_client:
+            return self._engine_client.state.get("tools_enabled")
+        return False
 
     @property
     def autoroute_enabled(self) -> bool:
         """Check if auto-routing is enabled (CommandContext protocol)."""
+        if self._engine_client:
+            return self._engine_client.state.get("auto_route")
         return False
 
     # ========================================================================
@@ -860,7 +899,7 @@ class PPXAIDEApp(App):
             return
 
         # Prevent concurrent submissions while streaming
-        if self._is_streaming:
+        if self._engine_client and self._engine_client.state.get("is_streaming"):
             self.notify(
                 "Please wait for the current response to complete",
                 title="Streaming in Progress",
@@ -888,8 +927,7 @@ class PPXAIDEApp(App):
             # Setup in main thread (UI-safe)
             status_bar = self._status_bar
             self._current_message_content = ""
-            self._is_streaming = True
-            self._cancel_requested = False  # Reset cancellation flag (v1.15.2)
+            self._engine_client.state.update(is_streaming=True, cancel_requested=False)
             self._reasoning_started = False
             self._reasoning_content = ""
             self._reasoning_message = None
@@ -940,8 +978,7 @@ class PPXAIDEApp(App):
         # Cleanup: clear footer status, reset state
         footer_status = self._footer_status
         footer_status.clear()
-        self._is_streaming = False
-        self._cancel_requested = False  # Reset cancellation flag (v1.15.2)
+        self._engine_client.state.update(is_streaming=False, cancel_requested=False)
         self._log.info("Stream complete, cleaned up")
 
     def _handle_stream_cancelled(self) -> None:
@@ -956,8 +993,7 @@ class PPXAIDEApp(App):
         # Cleanup: clear footer status, reset state
         footer_status = self._footer_status
         footer_status.clear()
-        self._is_streaming = False
-        self._cancel_requested = False  # Reset flag
+        self._engine_client.state.update(is_streaming=False, cancel_requested=False)
 
     def _handle_stream_error(self, error_msg: str) -> None:
         """Handle stream error (called via call_from_thread)."""
@@ -968,8 +1004,7 @@ class PPXAIDEApp(App):
         # Cleanup: clear footer status, reset state
         footer_status = self._footer_status
         footer_status.clear()
-        self._is_streaming = False
-        self._cancel_requested = False  # Reset flag (v1.15.2)
+        self._engine_client.state.update(is_streaming=False, cancel_requested=False)
 
     def _handle_stream_event(self, event_type: str, event_data: any) -> None:
         """Handle stream event in main thread (called via call_from_thread).
@@ -1025,7 +1060,7 @@ class PPXAIDEApp(App):
             event_count = 0
             async for event in engine_client.chat(user_input, stream=True):
                 # Check for cancellation request (v1.15.2)
-                if self._cancel_requested:
+                if engine_client.state.get("cancel_requested"):
                     self._log.info("Thread: Cancellation requested, stopping stream")
                     self.call_from_thread(self._handle_stream_cancelled)
                     return
@@ -1578,28 +1613,10 @@ class PPXAIDEApp(App):
                     if bus_event:
                         self._event_bus.emit(bus_event, data=result)
 
-                # Sync TUI state with engine client after command execution
-                if cmd in ("load", "l", "sessions") and self._engine_client:
-                    # Sync provider/model/tools badges after session load
-                    status_bar = self._status_bar
-                    new_provider = self._engine_client.provider_name
-                    new_model = self._engine_client.model
-                    if new_provider:
-                        self._provider = new_provider
-                        status_bar.update_badge("provider", new_provider)
-                    if new_model:
-                        self._model = new_model
-                        status_bar.update_badge("model", new_model)
-                    self._tools_enabled = self._engine_client.tools_enabled
-                    status_bar.update_badge("tools", "ON" if self._tools_enabled else "OFF")
+                # AppState observers handle provider/model/tools badge sync
+                # automatically after session load and tools commands.
 
                 if cmd in ("tools", "agent"):
-                    # Update tools enabled state
-                    if self._engine_client:
-                        self._tools_enabled = self._engine_client.tools_enabled
-                        status_bar = self._status_bar
-                        status_bar.update_badge("tools", "ON" if self._tools_enabled else "OFF")
-
                     # Update agent mode badge (Phase 1.3)
                     if cmd == "agent" and self._engine_client:
                         agent_mode = self._engine_client.agent_mode
@@ -1925,8 +1942,10 @@ class PPXAIDEApp(App):
         time_since_last = now - self._last_ctrl_c_time
 
         # If streaming is active, first Ctrl+C cancels the stream
-        if self._is_streaming and not self._cancel_requested:
-            self._cancel_requested = True
+        is_streaming = self._engine_client and self._engine_client.state.get("is_streaming")
+        cancel_requested = self._engine_client and self._engine_client.state.get("cancel_requested")
+        if is_streaming and not cancel_requested:
+            self._engine_client.interrupt_stream()
             self._log.info("Cancellation requested for active stream")
             self.notify(
                 "Cancelling stream... Press Ctrl+C again to force quit",
