@@ -24,14 +24,14 @@ async def get_sessions(s: Session = Depends(get_session)):
     return {
         "sessions": [
             {
-                "name": s.name,
-                "created_at": s.created_at,
-                "saved_at": s.saved_at,
-                "provider": s.provider,
-                "model": s.model,
-                "message_count": s.message_count,
+                "name": sess.name,
+                "created_at": sess.created_at,
+                "saved_at": sess.saved_at,
+                "provider": sess.provider,
+                "model": sess.model,
+                "message_count": sess.message_count,
             }
-            for s in sessions_list
+            for sess in sessions_list
         ]
     }
 
