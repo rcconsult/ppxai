@@ -1999,8 +1999,14 @@ class PpxaiApp {
                 getPath()    { return filepath; },
                 getIcon()    { return '🌐'; },
                 mount(container) {
-                    const src = `${this._serverUrl}/preview/${encodeURIComponent(filepath)}?session=${encodeURIComponent(this._sessionId)}`;
-                    container.innerHTML = `<iframe src="${src}" sandbox="allow-scripts allow-same-origin" style="width:100%;height:100%;border:none;background:#fff;" class="rpf-html-iframe"></iframe>`;
+                    // Don't encodeURIComponent the filepath — slashes must stay as /
+                    // for the /preview/{filepath:path} route to match correctly.
+                    // Encode only the session param value.
+                    const encodedPath = filepath.split('/').map(encodeURIComponent).join('/');
+                    const src = `${this._serverUrl}/preview/${encodedPath}?session=${encodeURIComponent(this._sessionId)}`;
+                    // No sandbox — content is same-origin from user's own server.
+                    // allow-scripts + allow-same-origin together defeats the sandbox anyway.
+                    container.innerHTML = `<iframe src="${src}" style="width:100%;height:100%;border:none;background:#fff;" class="rpf-html-iframe"></iframe>`;
                 },
                 unmount() { if (this._container) { this._container.innerHTML = ''; this._container = null; } },
                 focus()     {},
