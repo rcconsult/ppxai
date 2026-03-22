@@ -41,6 +41,8 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
         engine_iter = engine.chat(prompt).__aiter__()
         engine_done = False
         pending_next = None  # asyncio.Task for the next engine event
+        last_event_time = asyncio.get_event_loop().time()
+        KEEPALIVE_INTERVAL = 15  # seconds — send SSE comment to prevent proxy/browser timeout
 
         while not engine_done:
             # Start fetching next engine event if not already in flight
@@ -49,6 +51,14 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
 
             # Poll: race between engine event and consent queue (100ms ticks)
             while not pending_next.done():
+                # SSE keepalive: send comment to prevent idle connection timeout
+                # Proxies (nginx) and browsers may drop silent SSE connections
+                now = asyncio.get_event_loop().time()
+                if now - last_event_time >= KEEPALIVE_INTERVAL:
+                    yield ": keepalive\n\n"
+                    await asyncio.sleep(0)
+                    last_event_time = now
+
                 # Drain side-channel event queue while waiting for engine
                 # v1.16.0: Dispatch by actual event type — only CONSENT_REQUEST
                 # events are consent dialogs. STATUS, WORKING_DIR_CHANGED, etc.
@@ -69,6 +79,12 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
                 if request and await request.is_disconnected():
                     logger.info(f"Client disconnected during SSE stream (session={session_id})")
                     pending_next.cancel()
+                    # Retrieve the cancelled task's exception to prevent
+                    # "Task exception was never retrieved" warning from asyncio
+                    try:
+                        await pending_next
+                    except (asyncio.CancelledError, StopAsyncIteration):
+                        pass
                     engine_done = True
                     break
 
@@ -119,6 +135,7 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
             yield f"data: {json.dumps(event_data)}\n\n"
             # Force event loop to flush the response immediately
             await asyncio.sleep(0)
+            last_event_time = asyncio.get_event_loop().time()
     except Exception as e:
         logger.error(
             f"Exception in SSE event generator: {e}\n{traceback.format_exc()}"

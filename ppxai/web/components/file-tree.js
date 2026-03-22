@@ -116,8 +116,8 @@ class FileTreeComponent {
         this._renderTree();
         try {
             const url = relPath
-                ? `${this.serverUrl}/files/list?path=${encodeURIComponent(relPath)}`
-                : `${this.serverUrl}/files/list`;
+                ? `${this.serverUrl}/files/list?path=${encodeURIComponent(relPath)}&a=true`
+                : `${this.serverUrl}/files/list?a=true`;
             const resp = await fetch(url, { headers: this.getHeaders() });
             if (!resp.ok) {
                 const err = await resp.json().catch(() => ({ detail: resp.statusText }));

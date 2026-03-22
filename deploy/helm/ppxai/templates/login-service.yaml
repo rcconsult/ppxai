@@ -1,0 +1,233 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ppxai.fullname" . }}-login-page
+  namespace: {{ include "ppxai.namespace" . }}
+  labels:
+    {{- include "ppxai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: login
+data:
+  nginx.conf: |
+    worker_processes 2;
+    error_log /var/log/nginx/error.log notice;
+    pid /run/nginx.pid;
+    events { worker_connections 128; }
+    http {
+      include /etc/nginx/mime.types;
+      default_type application/octet-stream;
+      sendfile on;
+      keepalive_timeout 65;
+      server {
+        listen 80;
+        server_name _;
+        location / {
+          root /usr/share/nginx/html;
+          index index.html;
+        }
+      }
+    }
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>{{ .Values.login.title }} — Sign In</title>
+      <link rel="icon" href="data:,">
+      <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+          background: #0f1117; color: #e2e8f0;
+          min-height: 100vh; display: flex; align-items: center; justify-content: center;
+        }
+        .card {
+          background: #1a1d27; border: 1px solid #2d3148; border-radius: 12px;
+          padding: 2.5rem 2rem; width: 100%; max-width: 360px;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+        .logo { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.5px; color: #818cf8; margin-bottom: 0.25rem; }
+        .tagline { font-size: 0.82rem; color: #64748b; margin-bottom: 2rem; }
+        label { display: block; font-size: 0.8rem; font-weight: 500; color: #94a3b8; margin-bottom: 0.4rem; letter-spacing: 0.03em; text-transform: uppercase; }
+        input[type="text"], input[type="password"] {
+          width: 100%; padding: 0.65rem 0.9rem; background: #0f1117;
+          border: 1px solid #2d3148; border-radius: 7px; color: #e2e8f0;
+          font-size: 0.95rem; outline: none; transition: border-color 0.15s; margin-bottom: 1.25rem;
+        }
+        input[type="text"]:focus, input[type="password"]:focus { border-color: #818cf8; }
+        input::placeholder { color: #3d4263; }
+        button {
+          width: 100%; padding: 0.7rem; background: #4f46e5; color: #fff; border: none;
+          border-radius: 7px; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+          transition: background 0.15s, opacity 0.15s;
+        }
+        button:hover:not(:disabled) { background: #4338ca; }
+        button:disabled { opacity: 0.55; cursor: not-allowed; }
+        .status { margin-top: 1rem; padding: 0.65rem 0.9rem; border-radius: 7px; font-size: 0.85rem; display: none; }
+        .status.error { background: #2d1515; border: 1px solid #7f1d1d; color: #fca5a5; display: block; }
+        .status.info { background: #1a2240; border: 1px solid #1e3a8a; color: #93c5fd; display: block; }
+        .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="logo">{{ .Values.login.logo }}</div>
+        <div class="tagline">{{ .Values.login.tagline }}</div>
+
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="your-name" maxlength="32" autocomplete="username" autocapitalize="none" spellcheck="false" />
+
+        {{- if eq .Values.auth.mode "ldap" }}
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="AD password" autocomplete="current-password" />
+        {{- end }}
+
+        <button id="btn" onclick="startSession()">
+        {{- if .Values.login.buttonText -}}
+          {{ .Values.login.buttonText }}
+        {{- else if eq .Values.auth.mode "ldap" -}}
+          Sign In
+        {{- else -}}
+          Start Session
+        {{- end -}}
+        </button>
+        <div class="status" id="status"></div>
+      </div>
+
+      <script>
+        document.querySelectorAll('#username{{ if eq .Values.auth.mode "ldap" }}, #password{{ end }}').forEach(function(el) {
+          el.addEventListener('keydown', function(e) { if (e.key === 'Enter') startSession(); });
+        });
+        document.getElementById('username').focus();
+
+        async function startSession() {
+          var btn = document.getElementById('btn');
+          var status = document.getElementById('status');
+          var username = document.getElementById('username').value.trim();
+
+          if (!username) { showError('Please enter a username.'); return; }
+
+          {{- if eq .Values.auth.mode "ldap" }}
+          var password = document.getElementById('password').value;
+          if (!password) { showError('Please enter your password.'); return; }
+          var body = JSON.stringify({ username: username, password: password });
+          {{- else }}
+          var body = JSON.stringify({ username: username });
+          {{- end }}
+
+          btn.disabled = true;
+          btn.innerHTML = '<span class="spinner"></span>Signing in\u2026';
+          status.className = 'status'; status.style.display = 'none';
+
+          try {
+            var res = await fetch('/api/sessions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: body
+            });
+
+            if (res.status === 201 || res.status === 200) {
+              var data = await res.json();
+              showInfo('Session starting \u2014 waiting for route\u2026');
+              await waitForRoute(data.path);
+              showInfo('Session ready \u2014 redirecting\u2026');
+              window.location.href = data.path;
+              return;
+            }
+
+            if (res.status === 401) { showError('Invalid username or password.'); }
+            else if (res.status === 503) { showError('All sessions are in use. Please try again in a few minutes.'); }
+            else if (res.status === 400) {
+              var d = await res.json().catch(function() { return {}; });
+              showError(d.detail || 'Invalid username.');
+            } else { showError('Unexpected error (' + res.status + '). Please try again.'); }
+          } catch (err) { showError('Could not reach the server. Check your connection and try again.'); }
+
+          btn.disabled = false;
+          btn.textContent = '{{ if eq .Values.auth.mode "ldap" }}Sign In{{ else }}Start Session{{ end }}';
+        }
+
+        async function waitForRoute(path) {
+          for (var i = 0; i < 20; i++) {
+            try { var r = await fetch(path + 'health'); if (r.ok) return; } catch (e) {}
+            await new Promise(function(resolve) { setTimeout(resolve, 500); });
+          }
+        }
+
+        function showError(msg) { var el = document.getElementById('status'); el.className = 'status error'; el.textContent = msg; }
+        function showInfo(msg) { var el = document.getElementById('status'); el.className = 'status info'; el.textContent = msg; }
+      </script>
+    </body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: login
+  namespace: {{ include "ppxai.namespace" . }}
+  labels:
+    {{- include "ppxai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: login
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: login
+  template:
+    metadata:
+      labels:
+        app: login
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: html
+              mountPath: /usr/share/nginx/html
+            - name: nginx-conf
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          {{- if .Values.resources.enabled }}
+          resources:
+            {{- toYaml .Values.resources.login | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: html
+          configMap:
+            name: {{ include "ppxai.fullname" . }}-login-page
+            items:
+              - key: index.html
+                path: index.html
+        - name: nginx-conf
+          configMap:
+            name: {{ include "ppxai.fullname" . }}-login-page
+            items:
+              - key: nginx.conf
+                path: nginx.conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: login
+  namespace: {{ include "ppxai.namespace" . }}
+  labels:
+    {{- include "ppxai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: login
+spec:
+  selector:
+    app: login
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

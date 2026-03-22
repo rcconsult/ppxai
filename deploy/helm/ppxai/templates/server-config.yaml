@@ -1,0 +1,28 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ppxai.fullname" . }}-server-config
+  namespace: {{ include "ppxai.namespace" . }}
+  labels:
+    {{- include "ppxai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server-config
+data:
+  ppxai-config.json: |
+    {{ .Values.serverConfig | toJson }}
+{{- if .Values.apiKeys.create }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "ppxai.fullname" . }}-api-keys
+  namespace: {{ include "ppxai.namespace" . }}
+  labels:
+    {{- include "ppxai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server-config
+type: Opaque
+stringData:
+  {{- range $key, $val := .Values.apiKeys.keys }}
+  {{ $key }}: {{ $val | quote }}
+  {{- end }}
+{{- end }}

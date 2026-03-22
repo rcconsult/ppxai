@@ -1,0 +1,36 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: build-{{ include "ppxai.fullname" . }}-session-manager
+  namespace: {{ include "ppxai.namespace" . }}
+  labels:
+    {{- include "ppxai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: build
+spec:
+  ttlSecondsAfterFinished: {{ .Values.kaniko.ttlSecondsAfterFinished }}
+  template:
+    spec:
+      restartPolicy: Never
+      initContainers:
+        - name: wait-for-registry
+          image: busybox
+          command: ['sh', '-c', '{{ include "ppxai.registryWaitCommand" . }}']
+      containers:
+        - name: kaniko
+          image: gcr.io/kaniko-project/executor:latest
+          args:
+            - --dockerfile=/workspace/{{ .Values.kaniko.sessionManagerDockerfile }}
+            - --context=dir:///workspace/{{ .Values.kaniko.sessionManagerContext }}
+            - --destination={{ include "ppxai.registryUrl" . }}/{{ include "ppxai.fullname" . }}-session-manager:{{ .Values.image.tag }}
+            - --insecure
+            - --skip-tls-verify
+            - --cache=false
+          volumeMounts:
+            - name: source
+              mountPath: /workspace
+      volumes:
+        - name: source
+          hostPath:
+            path: {{ .Values.kaniko.sourcePath }}
+            type: Directory

@@ -1,0 +1,111 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: session-manager
+  namespace: {{ include "ppxai.namespace" . }}
+  labels:
+    {{- include "ppxai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: session-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: session-manager
+  template:
+    metadata:
+      labels:
+        app: session-manager
+      {{- if .Values.monitoring.enabled }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+      {{- end }}
+    spec:
+      serviceAccountName: session-manager
+      containers:
+        - name: session-manager
+          image: {{ include "ppxai.sessionManagerImage" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+          env:
+            - name: NAMESPACE
+              value: {{ include "ppxai.namespace" . }}
+            - name: REGISTRY_DIR
+              value: /registry
+            - name: MAX_SESSIONS
+              value: {{ .Values.session.maxSessions | quote }}
+            - name: TTL_MINUTES
+              value: {{ .Values.session.ttlMinutes | quote }}
+            - name: SERVER_IMAGE
+              value: {{ include "ppxai.serverImage" . }}
+            - name: WORKSPACE_SIZE
+              value: {{ .Values.storage.workspaceSize | quote }}
+            - name: TEMP_SIZE
+              value: {{ .Values.storage.tempSize | quote }}
+            - name: INGRESS_NAME
+              value: {{ include "ppxai.ingressName" . }}
+            - name: INGRESS_HOST
+              value: {{ .Values.ingress.host }}
+            - name: APP_PREFIX
+              value: {{ include "ppxai.fullname" . }}
+            - name: WORKSPACE_SC
+              value: {{ .Values.storageClass.workspaceName }}
+            - name: EPHEMERAL_SC
+              value: {{ .Values.storageClass.ephemeralName }}
+            - name: CONFIG_CM
+              value: {{ include "ppxai.fullname" . }}-server-config
+            - name: SECRET_NAME
+              {{- if .Values.apiKeys.create }}
+              value: {{ include "ppxai.fullname" . }}-api-keys
+              {{- else }}
+              value: {{ .Values.apiKeys.existingSecret }}
+              {{- end }}
+            - name: AUTH_MODE
+              value: {{ .Values.auth.mode }}
+            {{- if eq .Values.auth.mode "ldap" }}
+            - name: LDAP_URL
+              value: {{ .Values.auth.ldap.url | quote }}
+            - name: LDAP_BASE_DN
+              value: {{ .Values.auth.ldap.baseDn | quote }}
+            - name: LDAP_BIND_DN
+              value: {{ .Values.auth.ldap.bindDn | quote }}
+            - name: LDAP_BIND_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.ldap.existingSecret }}
+                  key: {{ .Values.auth.ldap.existingSecretKey }}
+            - name: LDAP_USER_FILTER
+              value: {{ .Values.auth.ldap.userFilter | quote }}
+            - name: LDAP_USERNAME_ATTR
+              value: {{ .Values.auth.ldap.usernameAttr | quote }}
+            - name: LDAP_CACHE_TTL
+              value: {{ .Values.auth.ldap.cacheTtl | quote }}
+            {{- end }}
+          volumeMounts:
+            - name: registry
+              mountPath: /registry
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          {{- if .Values.resources.enabled }}
+          resources:
+            {{- toYaml .Values.resources.sessionManager | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: registry
+          persistentVolumeClaim:
+            claimName: {{ include "ppxai.fullname" . }}-registry
