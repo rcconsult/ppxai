@@ -43,7 +43,7 @@ def rewrite_asset_paths(html: str, static_base: str, cache_buster: str = '') -> 
 
     Args:
         html: Raw HTML content
-        static_base: Base URL for static assets (e.g., "/preview/static/?session=xxx")
+        static_base: Base URL for static assets (e.g., "/preview/__assets__/?session=xxx")
                      Should end with "/" or include query string.
         cache_buster: Optional value appended as &_t= or ?_t= to bust browser cache.
                       Pass a timestamp or mtime to force reload of changed assets.
@@ -60,7 +60,7 @@ def rewrite_asset_paths(html: str, static_base: str, cache_buster: str = '') -> 
         # Build the rewritten URL
         # static_base may contain ? for query params, use appropriate separator
         if '?' in static_base:
-            # e.g., /preview/static/?session=xxx → /preview/static/styles.css?session=xxx
+            # e.g., /preview/__assets__/?session=xxx → /preview/__assets__/styles.css?session=xxx
             base, query = static_base.split('?', 1)
             url = f'{base}{path}?{query}'
         else:

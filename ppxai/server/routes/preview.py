@@ -66,7 +66,7 @@ async def preview_poll(
     return {"mtime": mtime}
 
 
-@router.get("/preview/static/{filepath:path}")
+@router.get("/preview/__assets__/{filepath:path}")
 async def preview_static(
     request: Request,
     filepath: str,
@@ -123,9 +123,9 @@ async def preview_html(
 
     file_dir = str(PurePosixPath(filepath).parent)
     if file_dir == '.':
-        static_base = 'static/'
+        static_base = '__assets__/'
     else:
-        static_base = f'static/{file_dir}/'
+        static_base = f'__assets__/{file_dir}/'
     if session_id:
         static_base = f'{static_base}?session={session_id}'
     content = rewrite_asset_paths(content, static_base, cache_buster=cache_ts)
