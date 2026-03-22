@@ -10,9 +10,11 @@ All functions take the app instance as first parameter.
 
 import asyncio
 import time
+from pathlib import Path
 from typing import Any
 
 from ppxai.config import get_auto_save_interval, get_tui_config
+from ppxai.tui.widgets.file_tree import FileTree
 from ppxai.engine.types import Event, EventType
 from ppxai.tui.event_bus import Events
 from ppxai.tui.widgets.message_box import MessageBox
@@ -369,9 +371,6 @@ async def on_engine_info(app, sender, data, **kwargs) -> None:
 
 async def on_working_dir_changed(app, sender, data, **kwargs) -> None:
     """Handle WORKING_DIR_CHANGED event."""
-    from pathlib import Path
-    from ppxai.tui.widgets.file_tree import FileTree
-
     path = data.get("path", "") if isinstance(data, dict) else str(data)
     if not path or path == app._working_dir:
         return

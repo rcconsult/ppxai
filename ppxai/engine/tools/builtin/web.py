@@ -12,6 +12,7 @@ import urllib.request
 import urllib.parse
 import urllib.error
 from ...types import ToolManagerProtocol
+from ....config import get_tool_config
 
 
 def _create_ssl_context() -> ssl.SSLContext:
@@ -39,7 +40,6 @@ def _get_web_timeout(tool_name: str, default: int = 15) -> int:
     Reads from tools.<tool_name>.timeout in ppxai-config.json.
     """
     try:
-        from ppxai.config import get_tool_config
         config = get_tool_config(tool_name)
         return config.get("timeout", default)
     except Exception:

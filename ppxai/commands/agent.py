@@ -11,6 +11,8 @@ import asyncio
 import subprocess
 from typing import Optional
 
+from prompt_toolkit import prompt as pt_prompt
+
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
@@ -40,8 +42,6 @@ def _handle_agent_interrupt(
         checkpoint_id: Checkpoint ID if one was created
         checkpoint_backend: Backend type ('git' or 'file')
     """
-    from prompt_toolkit import prompt as pt_prompt
-
     console.print("[yellow]Agent task incomplete due to interrupt.[/yellow]\n")
 
     if not checkpoint_id:

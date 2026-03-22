@@ -94,27 +94,27 @@ class TestGetWebTimeout:
 
     def test_returns_default_when_no_config(self):
         """Returns default timeout when config import fails."""
-        with patch("ppxai.config.get_tool_config", side_effect=Exception("no config")):
+        with patch("ppxai.engine.tools.builtin.web.get_tool_config", side_effect=Exception("no config")):
             timeout = _get_web_timeout("get_weather", default=15)
             assert timeout == 15
 
     def test_reads_timeout_from_config(self):
         """Reads timeout from tools.<name>.timeout config."""
         mock_config = {"timeout": 30}
-        with patch("ppxai.config.get_tool_config", return_value=mock_config):
+        with patch("ppxai.engine.tools.builtin.web.get_tool_config", return_value=mock_config):
             timeout = _get_web_timeout("get_weather", default=15)
             assert timeout == 30
 
     def test_returns_default_when_timeout_not_in_config(self):
         """Returns default when config exists but has no timeout key."""
         mock_config = {"some_other_key": "value"}
-        with patch("ppxai.config.get_tool_config", return_value=mock_config):
+        with patch("ppxai.engine.tools.builtin.web.get_tool_config", return_value=mock_config):
             timeout = _get_web_timeout("fetch_url", default=15)
             assert timeout == 15
 
     def test_different_defaults_per_tool(self):
         """Each tool can have its own default timeout."""
-        with patch("ppxai.config.get_tool_config", return_value={}):
+        with patch("ppxai.engine.tools.builtin.web.get_tool_config", return_value={}):
             assert _get_web_timeout("get_weather", default=15) == 15
             assert _get_web_timeout("fetch_url", default=20) == 20
 
