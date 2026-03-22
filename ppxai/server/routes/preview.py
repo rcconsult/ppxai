@@ -50,6 +50,30 @@ async def _resolve_session(request: Request, x_session_id: Optional[str], sessio
     return session_id, engine
 
 
+def _get_path_prefix(request: Request) -> str:
+    """Detect reverse proxy path prefix for K8s ingress compatibility.
+
+    In K8s, nginx ingress rewrites /s/<user>/preview/... to /preview/...
+    but sets X-Forwarded-Prefix to /s/<user>. We need this prefix to
+    construct correct absolute URLs for poll and asset endpoints.
+
+    Returns:
+        Path prefix string (e.g., '/s/rado') or empty string for direct access.
+    """
+    # Check standard headers set by reverse proxies
+    prefix = request.headers.get("x-forwarded-prefix", "")
+    if prefix:
+        return prefix.rstrip("/")
+    # Fallback: check X-Original-URI vs request path
+    original = request.headers.get("x-original-uri", "")
+    if original and "/preview/" in original:
+        # e.g., X-Original-URI: /s/rado/preview/index.html → prefix = /s/rado
+        idx = original.index("/preview/")
+        prefix = original[:idx]
+        return prefix.rstrip("/")
+    return ""
+
+
 @router.get("/preview/poll/{filepath:path}")
 async def preview_poll(
     request: Request,
@@ -373,7 +397,11 @@ async def preview_html(
         return FileResponse(path, headers={"Cache-Control": "no-cache"})
 
     content = path.read_text(encoding='utf-8')
-    poll_url = f'/preview/poll/{filepath}?session={session_id}' if session_id else f'/preview/poll/{filepath}'
+
+    # Detect reverse proxy prefix for K8s ingress (e.g., /s/rado)
+    prefix = _get_path_prefix(request)
+
+    poll_url = f'{prefix}/preview/poll/{filepath}?session={session_id}' if session_id else f'{prefix}/preview/poll/{filepath}'
 
     cache_ts = str(int(path.stat().st_mtime))
     try:
@@ -389,9 +417,9 @@ async def preview_html(
 
     file_dir = str(PurePosixPath(filepath).parent)
     if file_dir == '.':
-        static_base = '/preview/__assets__/'
+        static_base = f'{prefix}/preview/__assets__/'
     else:
-        static_base = f'/preview/__assets__/{file_dir}/'
+        static_base = f'{prefix}/preview/__assets__/{file_dir}/'
     if session_id:
         static_base = f'{static_base}?session={session_id}'
     content = rewrite_asset_paths(content, static_base, cache_buster=cache_ts)
