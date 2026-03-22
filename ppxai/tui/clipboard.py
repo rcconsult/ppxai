@@ -7,11 +7,9 @@ clipboard access. Note: Only text is supported (no images or binary data).
 
 from typing import Optional
 
-try:
-    import pyperclip
-    CLIPBOARD_AVAILABLE = True
-except ImportError:
-    CLIPBOARD_AVAILABLE = False
+import pyperclip  # Required dependency (in pyproject.toml)
+
+CLIPBOARD_AVAILABLE = True
 
 
 def copy_to_clipboard(text: str) -> bool:

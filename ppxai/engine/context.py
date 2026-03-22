@@ -21,20 +21,13 @@ from typing import List, Tuple, Optional, Set, Dict
 from .bootstrap import BootstrapContext, find_bootstrap_files_by_scope
 from ..config import get_bootstrap_files, get_max_injection_size, is_bootstrap_enabled
 
-try:
-    import httpx
-except ImportError:
-    httpx = None  # type: ignore[assignment]
-
-try:
-    import pyperclip
-except ImportError:
-    pyperclip = None  # type: ignore[assignment]
+import httpx
+import pyperclip
 
 try:
     import trafilatura
 except ImportError:
-    trafilatura = None  # type: ignore[assignment]
+    trafilatura = None  # type: ignore[assignment]  # Truly optional, not in any extras group
 
 
 @dataclass

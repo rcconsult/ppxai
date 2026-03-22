@@ -9,8 +9,29 @@ v1.13.8: Initial implementation
 import csv
 import json
 import io
+import sys
 from dataclasses import dataclass, field
 from typing import Any, List, Optional, Union
+
+# Optional data format parsers (in 'data' extras group)
+try:
+    import yaml
+except ImportError:
+    yaml = None  # type: ignore[assignment]
+
+# Python 3.11+ has tomllib built-in; fallback to tomli for older Python
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    try:
+        import tomli as tomllib  # type: ignore[no-redef]
+    except ImportError:
+        tomllib = None  # type: ignore[assignment]
+
+try:
+    import hcl2
+except ImportError:
+    hcl2 = None  # type: ignore[assignment]
 
 
 @dataclass
@@ -137,12 +158,10 @@ def parse_yaml(
     Returns:
         TreeNode representing the YAML structure
     """
-    try:
-        import yaml
-        data = yaml.safe_load(content)
-        return _build_tree(root_key, data, depth=0, max_depth=max_depth)
-    except ImportError:
-        raise ImportError("PyYAML is required for YAML parsing: pip install pyyaml")
+    if yaml is None:
+        raise ImportError("PyYAML is required for YAML parsing: pip install 'ppxai[data]'")
+    data = yaml.safe_load(content)
+    return _build_tree(root_key, data, depth=0, max_depth=max_depth)
 
 
 def parse_toml(
@@ -161,18 +180,9 @@ def parse_toml(
     Returns:
         TreeNode representing the TOML structure
     """
-    try:
-        # Python 3.11+ has tomllib built-in
-        import tomllib
-        data = tomllib.loads(content)
-    except ImportError:
-        try:
-            # Fallback to tomli for older Python
-            import tomli as tomllib
-            data = tomllib.loads(content)
-        except ImportError:
-            raise ImportError("tomli is required for TOML parsing on Python < 3.11")
-
+    if tomllib is None:
+        raise ImportError("tomli is required for TOML parsing on Python < 3.11: pip install tomli")
+    data = tomllib.loads(content)
     return _build_tree(root_key, data, depth=0, max_depth=max_depth)
 
 
@@ -192,13 +202,10 @@ def parse_hcl(
     Returns:
         TreeNode representing the HCL structure
     """
-    try:
-        import hcl2
-        # hcl2 returns a dict
-        data = hcl2.loads(content)
-        return _build_tree(root_key, data, depth=0, max_depth=max_depth)
-    except ImportError:
-        raise ImportError("python-hcl2 is required for HCL parsing: pip install python-hcl2")
+    if hcl2 is None:
+        raise ImportError("python-hcl2 is required for HCL parsing: pip install 'ppxai[data]'")
+    data = hcl2.loads(content)
+    return _build_tree(root_key, data, depth=0, max_depth=max_depth)
 
 
 def parse_structured(

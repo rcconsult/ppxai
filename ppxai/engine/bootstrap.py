@@ -37,6 +37,11 @@ Scope Precedence (v1.14.2):
 import os
 import re
 import subprocess
+
+try:
+    import yaml
+except ImportError:
+    yaml = None  # type: ignore[assignment]  # Optional: data extras
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional, Dict, List, Tuple, Set
@@ -93,7 +98,8 @@ def load_hint_templates() -> Dict[str, List[str]]:
         return _hint_templates_cache
 
     try:
-        import yaml
+        if yaml is None:
+            return _hint_templates_cache
         content = HINT_TEMPLATES_FILE.read_text(encoding="utf-8")
         data = yaml.safe_load(content)
 

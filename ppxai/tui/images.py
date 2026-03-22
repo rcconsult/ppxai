@@ -10,9 +10,28 @@ Uses terminal capability detection to choose the best protocol.
 """
 
 import base64
+import io
 import os
 import sys
 from pathlib import Path
+
+# Optional image library (not in any extras group)
+try:
+    from PIL import Image as PILImage
+    HAS_PIL = True
+except ImportError:
+    PILImage = None  # type: ignore[assignment,misc]
+    HAS_PIL = False
+
+# Optional sixel library
+try:
+    import libsixel
+    from libsixel import encoder as sixel_encoder
+    HAS_SIXEL = True
+except ImportError:
+    libsixel = None  # type: ignore[assignment]
+    sixel_encoder = None  # type: ignore[assignment]
+    HAS_SIXEL = False
 from typing import Optional, Tuple
 
 from .terminal import ImageProtocol, detect_image_protocol, can_display_images
@@ -46,16 +65,12 @@ def get_image_size(data: bytes) -> Optional[Tuple[int, int]]:
     Returns:
         Tuple of (width, height) or None if unable to determine
     """
-    try:
-        # Try PIL/Pillow first
-        from PIL import Image
-        import io
-        img = Image.open(io.BytesIO(data))
-        return img.size
-    except ImportError:
-        pass
-    except Exception:
-        pass
+    if HAS_PIL:
+        try:
+            img = PILImage.open(io.BytesIO(data))
+            return img.size
+        except Exception:
+            pass
 
     # Fallback: Try to parse PNG header
     if data[:8] == b'\x89PNG\r\n\x1a\n':
@@ -166,11 +181,11 @@ def display_image_sixel(
     Returns:
         Sixel data string or None if conversion fails
     """
-    try:
-        from PIL import Image
-        import io
+    if not HAS_PIL:
+        return None
 
-        img = Image.open(io.BytesIO(data))
+    try:
+        img = PILImage.open(io.BytesIO(data))
 
         # Resize if dimensions specified
         if width or height:
@@ -183,36 +198,31 @@ def display_image_sixel(
             else:
                 ratio = height / orig_h
                 new_size = (int(orig_w * ratio), height)
-            img = img.resize(new_size, Image.Resampling.LANCZOS)
+            img = img.resize(new_size, PILImage.Resampling.LANCZOS)
 
         # Convert to palette mode (Sixel uses indexed colors)
         if img.mode != 'P':
-            img = img.convert('P', palette=Image.Palette.ADAPTIVE, colors=256)
+            img = img.convert('P', palette=PILImage.Palette.ADAPTIVE, colors=256)
 
         # Try to use libsixel if available
-        try:
-            import libsixel
-            from libsixel import encoder as sixel_encoder
+        if HAS_SIXEL:
+            try:
+                output = io.BytesIO()
+                enc = sixel_encoder.Encoder()
+                enc.setopt(libsixel.SIXEL_OPTFLAG_OUTPUT, output)
 
-            output = io.BytesIO()
-            enc = sixel_encoder.Encoder()
-            enc.setopt(libsixel.SIXEL_OPTFLAG_OUTPUT, output)
+                # Convert to RGB for libsixel
+                rgb_img = img.convert('RGB')
+                rgb_data = rgb_img.tobytes()
+                enc.encode_bytes(rgb_data, rgb_img.width, rgb_img.height)
 
-            # Convert to RGB for libsixel
-            rgb_img = img.convert('RGB')
-            rgb_data = rgb_img.tobytes()
-            enc.encode_bytes(rgb_data, rgb_img.width, rgb_img.height)
-
-            return output.getvalue().decode('ascii')
-        except ImportError:
-            pass
+                return output.getvalue().decode('ascii')
+            except Exception:
+                pass
 
         # Fallback: basic sixel generation (limited quality)
-        # This is a simplified implementation
         return _generate_basic_sixel(img)
 
-    except ImportError:
-        return None
     except Exception:
         return None
 
@@ -228,8 +238,6 @@ def _generate_basic_sixel(img) -> str:
     Returns:
         Sixel data string
     """
-    from PIL import Image
-
     width, height = img.size
     palette = img.getpalette()
 

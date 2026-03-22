@@ -17,6 +17,7 @@ Usage:
         # Use TableViewer
 """
 
+import filetype
 import mimetypes
 from enum import Enum, auto
 from pathlib import Path
@@ -258,7 +259,6 @@ def detect_file_type(path: Path, content: Optional[str] = None) -> FileType:
     """
     # Try filetype-based detection first (magic byte detection)
     try:
-        import filetype
         kind = filetype.guess(str(path))
         if kind is not None:
             mime = kind.mime
