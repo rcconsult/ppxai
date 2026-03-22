@@ -7,7 +7,10 @@ state but the app module depends on routes only at registration time.
 """
 
 import asyncio
-from dataclasses import dataclass
+import os
+import signal
+import time
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -22,6 +25,62 @@ class Session:
     id: str
     engine: EngineClient
     lock: asyncio.Lock
+
+
+@dataclass
+class PreviewBackend:
+    """A child process started by /preview --serve."""
+    process: asyncio.subprocess.Process
+    port: int
+    command: str
+    url: str
+    working_dir: str
+    last_seen: float = field(default_factory=time.time)
+
+
+# Preview backend processes, keyed by session ID (one per session)
+_preview_backends: dict[str, PreviewBackend] = {}
+
+# Orphan watchdog TTL (seconds) — kill backends with no health check
+PREVIEW_BACKEND_TTL = 300  # 5 minutes
+
+
+def get_preview_backend(session_id: str) -> Optional[PreviewBackend]:
+    """Get the preview backend for a session."""
+    return _preview_backends.get(session_id)
+
+
+def set_preview_backend(session_id: str, backend: PreviewBackend) -> None:
+    """Store a preview backend for a session."""
+    _preview_backends[session_id] = backend
+
+
+def remove_preview_backend(session_id: str) -> Optional[PreviewBackend]:
+    """Remove and return the preview backend for a session."""
+    return _preview_backends.pop(session_id, None)
+
+
+def all_preview_backends() -> dict[str, PreviewBackend]:
+    """Get all active preview backends."""
+    return _preview_backends
+
+
+async def kill_preview_backend(backend: PreviewBackend) -> None:
+    """Terminate a preview backend process, killing the process group."""
+    try:
+        # Kill process group (handles npm/node child processes)
+        pgid = os.getpgid(backend.process.pid)
+        os.killpg(pgid, signal.SIGTERM)
+    except (ProcessLookupError, OSError):
+        pass
+
+    try:
+        await asyncio.wait_for(backend.process.wait(), timeout=2)
+    except (asyncio.TimeoutError, ProcessLookupError):
+        try:
+            backend.process.kill()
+        except ProcessLookupError:
+            pass
 
 
 async def get_session(x_session_id: Optional[str] = Header(None)) -> Session:

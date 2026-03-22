@@ -1988,29 +1988,52 @@ class PpxaiApp {
         // Legacy no-op (editorController removed in v1.16.2)
     }
 
-    // === /preview Command (v1.15.4) ===
+    // === /preview Command (v1.15.4, v1.17.1 --serve) ===
 
-    openHtmlPreview(filepath) {
+    openHtmlPreview(filepath, externalUrl = null) {
         // Route through RightPanelFrame (v1.16.2): push an inline iframe view
         if (this.rightPanelFrame) {
-            // Inline minimal BaseView subclass for live HTML preview
+            const app = this;
+            const served = !!externalUrl;
             const iframeView = Object.assign(Object.create(BaseView.prototype), {
-                getTitle()   { return filepath.split('/').pop(); },
+                getTitle()   { return filepath.split('/').pop() + (served ? ' ⚡' : ''); },
                 getPath()    { return filepath; },
-                getIcon()    { return '🌐'; },
+                getIcon()    { return served ? '⚡' : '🌐'; },
                 mount(container) {
-                    // Don't encodeURIComponent the filepath — slashes must stay as /
-                    // for the /preview/{filepath:path} route to match correctly.
-                    // Encode only the session param value.
-                    const encodedPath = filepath.split('/').map(encodeURIComponent).join('/');
-                    const src = `${this._serverUrl}/preview/${encodedPath}?session=${encodeURIComponent(this._sessionId)}`;
-                    // No sandbox — same-origin required for live-reload polling.
-                    // Preview API leakage (user HTML calling /tasks etc.) is handled
-                    // server-side: unknown routes from preview referers return a
-                    // helpful JSON error instead of ppxai's default 404.
-                    container.innerHTML = `<iframe src="${src}" style="width:100%;height:100%;border:none;background:#fff;" class="rpf-html-iframe"></iframe>`;
+                    let src;
+                    if (externalUrl) {
+                        src = externalUrl;
+                    } else {
+                        const encodedPath = filepath.split('/').map(encodeURIComponent).join('/');
+                        src = `${this._serverUrl}/preview/${encodedPath}?session=${encodeURIComponent(this._sessionId)}`;
+                    }
+                    // Header bar with stop button (--serve mode only)
+                    const header = served
+                        ? `<div style="display:flex;align-items:center;justify-content:space-between;padding:2px 8px;background:var(--bg-secondary,#1e1e1e);border-bottom:1px solid var(--border-color,#333);font-size:12px;color:var(--text-dim,#888);">
+                             <span>⚡ Backend running on ${externalUrl}</span>
+                             <button onclick="this.closest('.rpf-served-preview').dispatchEvent(new CustomEvent('stop-backend'))"
+                                     style="background:var(--bg-tertiary,#333);color:var(--text-color,#ccc);border:1px solid var(--border-color,#555);border-radius:3px;padding:1px 8px;cursor:pointer;font-size:11px;">
+                               ■ Stop
+                             </button>
+                           </div>`
+                        : '';
+                    container.innerHTML = `<div class="rpf-served-preview" style="display:flex;flex-direction:column;height:100%;">
+                        ${header}
+                        <iframe src="${src}" style="flex:1;width:100%;border:none;background:#fff;" class="rpf-html-iframe"></iframe>
+                    </div>`;
+                    // Wire stop button
+                    if (served) {
+                        container.querySelector('.rpf-served-preview').addEventListener('stop-backend', () => {
+                            app.stopServedPreview();
+                        });
+                    }
                 },
-                unmount() { if (this._container) { this._container.innerHTML = ''; this._container = null; } },
+                unmount() {
+                    if (served) {
+                        app.apiClient.stopPreviewServe().catch(() => {});
+                    }
+                    if (this._container) { this._container.innerHTML = ''; this._container = null; }
+                },
                 focus()     {},
                 onKeyDown() { return false; },
             });
@@ -2021,9 +2044,28 @@ class PpxaiApp {
             this.elements.resizeHandle.classList.remove('hidden');
             this.state.htmlPreviewActive  = true;
             this.state.htmlPreviewFilepath = filepath;
+            this.state.htmlPreviewServed = served;
             return;
         }
-        // Legacy fallback — no-op (previewPanel removed in v1.16.2)
+    }
+
+    async openServedPreview(filepath, command, port) {
+        this.showSystemMessage('Starting backend...', 'info');
+        try {
+            const result = await this.apiClient.startPreviewServe(filepath, command, port);
+            this.showSystemMessage(`Backend running on ${result.url} (pid ${result.pid})`, 'info');
+            this.openHtmlPreview(filepath, result.url);
+        } catch (error) {
+            this.showError(`Failed to start backend: ${error.message}`);
+        }
+    }
+
+    async stopServedPreview() {
+        try {
+            await this.apiClient.stopPreviewServe();
+            this.showSystemMessage('Backend stopped.');
+        } catch {}
+        this.closeHtmlPreview();
     }
 
     closeHtmlPreview() {
@@ -2032,6 +2074,7 @@ class PpxaiApp {
         }
         this.state.htmlPreviewActive  = false;
         this.state.htmlPreviewFilepath = null;
+        this.state.htmlPreviewServed = false;
     }
 
     /**

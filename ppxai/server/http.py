@@ -162,6 +162,13 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    # Shutdown: Kill preview backends (v1.17.1)
+    from .state import all_preview_backends, remove_preview_backend, kill_preview_backend
+    for sid, backend in list(all_preview_backends().items()):
+        logger.info(f"Stopping preview backend for session {sid} (pid {backend.process.pid})")
+        await kill_preview_backend(backend)
+        remove_preview_backend(sid)
+
     # Shutdown: Cleanup via SessionManager (v1.13.10)
     uptime = time.time() - get_server_start_time()
     uptime_str = _format_uptime(uptime)

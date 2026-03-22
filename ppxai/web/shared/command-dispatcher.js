@@ -853,18 +853,39 @@ class CommandDispatcher {
 
     async handlePreviewCommand(args) {
         if (!args || !args.trim()) {
-            this.app.showError('Usage: /preview <file.html>');
+            this.app.showError('Usage: /preview <file.html> [--serve ["command"]] [--port N]');
             return;
         }
 
-        const filepath = args.trim();
+        const raw = args.trim();
 
-        if (filepath.toLowerCase() === 'close') {
+        if (raw.toLowerCase() === 'close') {
             this.app.closeHtmlPreview();
             return;
         }
 
-        this.app.openHtmlPreview(filepath);
+        // Parse --serve and --port flags
+        const serveMatch = raw.match(/--serve(?:\s+"([^"]+)"|\s+(\S+))?/);
+        const portMatch = raw.match(/--port\s+(\d+)/);
+
+        // Strip flags to get the filepath
+        const filepath = raw
+            .replace(/\s*--serve(?:\s+"[^"]+"|\s+\S+)?/, '')
+            .replace(/\s*--port\s+\d+/, '')
+            .trim();
+
+        if (!filepath) {
+            this.app.showError('Usage: /preview <file.html> [--serve ["command"]]');
+            return;
+        }
+
+        if (serveMatch) {
+            const command = serveMatch[1] || serveMatch[2] || null;
+            const port = portMatch ? parseInt(portMatch[1], 10) : null;
+            await this.app.openServedPreview(filepath, command, port);
+        } else {
+            this.app.openHtmlPreview(filepath);
+        }
     }
 
     async handleShowCommand(args) {

@@ -348,6 +348,23 @@ class ApiClient {
     async setDebugLog(enabled) {
         return this.post('/debug-log', { enabled });
     }
+
+    // === Preview Serve (v1.17.1) ===
+
+    async startPreviewServe(filepath, command = null, port = null) {
+        const body = { filepath };
+        if (command) body.command = command;
+        if (port) body.port = port;
+        return this.post('/preview/serve', body);
+    }
+
+    async stopPreviewServe() {
+        return this.post('/preview/serve/stop');
+    }
+
+    async getPreviewServeStatus() {
+        return this.get('/preview/serve/status');
+    }
 }
 
 /**

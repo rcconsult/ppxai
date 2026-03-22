@@ -94,3 +94,10 @@ class UsageDisplayModeRequest(BaseModel):
 class CommandRequest(BaseModel):
     """Request body for command execution."""
     args: str = ""
+
+
+class PreviewServeRequest(BaseModel):
+    """Request to start a backend process for preview serving."""
+    filepath: str = ""
+    command: Optional[str] = None
+    port: Optional[int] = None

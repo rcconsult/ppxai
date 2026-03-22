@@ -193,6 +193,38 @@ Graph stats: 5,800 nodes, 38,232 edges, 293 files (Python, JS, TS).
 - ~50 lines of duplication removed, 6 call sites → 3
 - Safe refactoring — no control flow changes
 
+### 13. Preview `--serve` flag — full-stack preview (~4h)
+
+Start user's backend process and preview through it instead of static file serving.
+
+**Usage:** `/preview static/index.html --serve "python main.py"` or `--serve` (auto-detect)
+
+**Server-side (3 files):**
+- `state.py` — `PreviewBackend` dataclass (process, port, command, url) + session-keyed storage
+- `models.py` — `PreviewServeRequest` model
+- `routes/preview.py` — `POST /preview/serve` (start + port detect + health poll), `POST /preview/serve/stop`
+- `http.py` — kill orphaned backends on server shutdown
+- Port detection: regex stdout patterns + framework defaults (uvicorn=8000, express=3000, vite=5173)
+- Use `asyncio.create_subprocess_exec` (not `subprocess.Popen`) to avoid blocking event loop
+- Use `os.setsid` + `os.killpg` for process group cleanup (npm spawns child nodes)
+
+**Client-side (3 files):**
+- `command-dispatcher.js` — parse `--serve` / `--port` flags
+- `api-client.js` — `startPreviewServe()` / `stopPreviewServe()`
+- `app.js` — `openServedPreview()`, external URL iframe, stop on close
+
+**UI additions:**
+- Stop button in preview tab header (visible only in `--serve` mode)
+- Process status badge: `⚡ running :8000`
+- Auto-stop on `unmount()` + `beforeunload` fallback
+- Server-side orphan watchdog: kill backends with no health check after 5 min TTL
+
+**Safeguards:**
+- One backend per session (kill previous before starting new)
+- Skip reload script injection in `--serve` mode (backend has own hot-reload)
+- iframe cross-port works (different ports allowed for iframe navigation)
+- `unmount()` removes iframe from DOM to stop any leaked polling
+
 ---
 
 ## Deferred
