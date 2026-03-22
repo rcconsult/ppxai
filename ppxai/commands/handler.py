@@ -402,6 +402,34 @@ class CommandHandler:
         """Set model — delegates to engine (which syncs AppState)."""
         self.engine_client.set_model(model)
 
+    # CommandContext protocol methods (used by __getattr__ proxy in context.py)
+    def get_provider(self) -> str:
+        return self.provider
+
+    def get_model(self) -> str:
+        return self.current_model
+
+    def get_auto_route(self) -> bool:
+        return self.auto_route
+
+    def set_auto_route(self, enabled: bool) -> None:
+        self.auto_route = enabled
+
+    def get_tools_available(self) -> bool:
+        return self.tools_available
+
+    def get_tools_verbose(self) -> bool:
+        return self.tools_verbose
+
+    def set_tools_verbose(self, verbose: bool) -> None:
+        self.tools_verbose = verbose
+
+    def get_config_value(self, key: str, default=None):
+        return default
+
+    def set_config_value(self, key: str, value: str) -> None:
+        pass
+
     def handle_quit(self) -> bool:
         """Handle /quit or /exit command. Returns True if should exit."""
         if self.engine_client.session.messages:

@@ -8,11 +8,12 @@ its full-stack logic; adapters only translate protocol calls.
 Architecture:
 - RichCommandContext wraps CommandHandler (Rich TUI)
 - TextualCommandContext wraps PPXAIDEApp (Textual TUI)
-- Both implement CommandContext protocol
-- Adapters use ONLY public methods/properties on the wrapped object
+- ServerCommandContext wraps EngineClient (HTTP server)
+- All implement CommandContext protocol
 
 v1.15.0: Type-based renderer dispatch refactoring
 v1.16.1: Cleaned up to use only public interfaces (DAG compliance)
+v1.17.1: Replaced boilerplate forwarding with __getattr__ proxy
 """
 
 from typing import Any, Optional
@@ -20,174 +21,58 @@ from typing import Any, Optional
 from ..engine.client import EngineClient
 
 
-class RichCommandContext:
-    """CommandContext adapter for Rich TUI.
+class _CommandContextProxy:
+    """Generic proxy that forwards attribute access to the wrapped object.
 
-    Wraps CommandHandler, delegating to its public interface.
+    Used by RichCommandContext and TextualCommandContext to eliminate
+    ~80 lines of identical property/method forwarding boilerplate.
+    The wrapped object must satisfy the CommandContext protocol directly.
+
+    Overrides get_config_value/set_config_value with hasattr guards.
     """
 
-    def __init__(self, handler: Any):
-        self._handler = handler
+    def __init__(self, wrapped: Any):
+        # Use object.__setattr__ to avoid triggering __getattr__
+        object.__setattr__(self, '_wrapped', wrapped)
 
-    # -- Properties (read public attributes) --
-
-    @property
-    def engine_client(self) -> Any:
-        return self._handler.engine_client
-
-    @property
-    def session(self) -> Any:
-        return self._handler.session
-
-    @property
-    def working_dir(self) -> str:
-        return self._handler.working_dir
-
-    @property
-    def current_model(self) -> str:
-        return self._handler.current_model
-
-    @property
-    def provider(self) -> str:
-        return self._handler.provider
-
-    @property
-    def tools_enabled(self) -> bool:
-        return self._handler.tools_enabled
-
-    @property
-    def autoroute_enabled(self) -> bool:
-        return self._handler.autoroute_enabled
-
-    # -- Mutations (delegate to public methods) --
-
-    def set_model(self, model: str) -> None:
-        self._handler.set_model(model)
-
-    def set_provider(self, provider: str) -> None:
-        self._handler.set_provider(provider)
-
-    def get_provider(self) -> str:
-        return self._handler.provider
-
-    def get_model(self) -> str:
-        return self._handler.current_model
-
-    def get_auto_route(self) -> bool:
-        return self._handler.auto_route
-
-    def set_auto_route(self, enabled: bool) -> None:
-        self._handler.auto_route = enabled
-
-    def get_tools_available(self) -> bool:
-        return self._handler.tools_available
-
-    def get_tools_verbose(self) -> bool:
-        return self._handler.tools_verbose
-
-    def set_tools_verbose(self, verbose: bool) -> None:
-        self._handler.tools_verbose = verbose
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._wrapped, name)
 
     def get_config_value(self, key: str, default: Optional[str] = None) -> Optional[str]:
-        if hasattr(self._handler, 'config'):
-            return self._handler.config.get(key, default)
+        wrapped = object.__getattribute__(self, '_wrapped')
+        if hasattr(wrapped, 'get_config_value'):
+            return wrapped.get_config_value(key, default)
+        if hasattr(wrapped, 'config'):
+            return wrapped.config.get(key, default)
         return default
 
     def set_config_value(self, key: str, value: str) -> None:
-        if hasattr(self._handler, 'config'):
-            self._handler.config[key] = value
+        wrapped = object.__getattribute__(self, '_wrapped')
+        if hasattr(wrapped, 'set_config_value'):
+            wrapped.set_config_value(key, value)
+        elif hasattr(wrapped, 'config'):
+            wrapped.config[key] = value
 
 
-class TextualCommandContext:
-    """CommandContext adapter for Textual TUI.
+class RichCommandContext(_CommandContextProxy):
+    """CommandContext adapter for Rich TUI. Wraps CommandHandler."""
+    pass
 
-    Wraps PPXAIDEApp, delegating to its public interface.
-    PPXAIDEApp implements CommandContext protocol methods directly.
-    """
 
-    def __init__(self, app: Any):
-        self._app = app
-
-    # -- Properties (delegate to public properties on PPXAIDEApp) --
-
-    @property
-    def engine_client(self) -> Any:
-        return self._app.engine_client
-
-    @property
-    def session(self) -> Any:
-        return self._app.session
-
-    @property
-    def working_dir(self) -> str:
-        return self._app.working_dir
-
-    @property
-    def current_model(self) -> str:
-        return self._app.current_model
-
-    @property
-    def provider(self) -> str:
-        return self._app.provider
-
-    @property
-    def tools_enabled(self) -> bool:
-        return self._app.tools_enabled
-
-    @property
-    def autoroute_enabled(self) -> bool:
-        return self._app.autoroute_enabled
-
-    # -- Mutations (delegate to public methods on PPXAIDEApp) --
-
-    def set_model(self, model: str) -> None:
-        self._app.set_model(model)
-
-    def set_provider(self, provider: str) -> None:
-        self._app.set_provider(provider)
-
-    def get_provider(self) -> str:
-        return self._app.get_provider()
-
-    def get_model(self) -> str:
-        return self._app.get_model()
-
-    def get_auto_route(self) -> bool:
-        return self._app.get_auto_route()
-
-    def set_auto_route(self, enabled: bool) -> None:
-        self._app.set_auto_route(enabled)
-
-    def get_tools_available(self) -> bool:
-        return self._app.get_tools_available()
-
-    def get_tools_verbose(self) -> bool:
-        return self._app.get_tools_verbose()
-
-    def set_tools_verbose(self, verbose: bool) -> None:
-        self._app.set_tools_verbose(verbose)
-
-    def get_config_value(self, key: str, default: Optional[str] = None) -> Optional[str]:
-        if hasattr(self._app, 'get_config_value'):
-            return self._app.get_config_value(key, default)
-        return default
-
-    def set_config_value(self, key: str, value: str) -> None:
-        if hasattr(self._app, 'set_config_value'):
-            self._app.set_config_value(key, value)
+class TextualCommandContext(_CommandContextProxy):
+    """CommandContext adapter for Textual TUI. Wraps PPXAIDEApp."""
+    pass
 
 
 class ServerCommandContext:
     """CommandContext adapter for HTTP server.
 
-    Wraps EngineClient directly — no UI state.
-    Used by POST /command/{name} endpoint to execute shared command handlers.
+    Wraps EngineClient directly — has custom overrides for server context
+    (no auto-route, no verbose, no config values).
     """
 
     def __init__(self, engine: EngineClient):
         self._engine = engine
-
-    # -- Properties --
 
     @property
     def engine_client(self) -> Any:
@@ -217,8 +102,6 @@ class ServerCommandContext:
     def autoroute_enabled(self) -> bool:
         return False
 
-    # -- Mutations --
-
     def set_model(self, model: str) -> None:
         self._engine.set_model(model)
 
@@ -235,7 +118,7 @@ class ServerCommandContext:
         return False
 
     def set_auto_route(self, enabled: bool) -> None:
-        pass  # No auto-route in server context
+        pass
 
     def get_tools_available(self) -> bool:
         return self._engine.tools_enabled
@@ -244,7 +127,7 @@ class ServerCommandContext:
         return False
 
     def set_tools_verbose(self, verbose: bool) -> None:
-        pass  # No verbose in server context
+        pass
 
     def get_config_value(self, key: str, default: Optional[str] = None) -> Optional[str]:
         return default
@@ -253,7 +136,6 @@ class ServerCommandContext:
         pass
 
 
-# Export context adapters
 __all__ = [
     "RichCommandContext",
     "TextualCommandContext",
