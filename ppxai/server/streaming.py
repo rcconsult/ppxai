@@ -42,7 +42,7 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
         engine_done = False
         pending_next = None  # asyncio.Task for the next engine event
         last_event_time = asyncio.get_event_loop().time()
-        KEEPALIVE_INTERVAL = 15  # seconds — send SSE comment to prevent proxy/browser timeout
+        KEEPALIVE_INTERVAL = 5  # seconds — must be shorter than client heartbeat (15s) to prevent false disconnects
 
         while not engine_done:
             # Start fetching next engine event if not already in flight
