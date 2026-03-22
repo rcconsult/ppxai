@@ -46,6 +46,13 @@ class AppState:
 
     # Canonical field definitions with types and defaults.
     # This is the single source of truth for all clients.
+    #
+    # Cross-language naming convention:
+    #   Python: snake_case  (provider, tools_enabled, is_streaming)
+    #   JS/TS:  camelCase   (provider, toolsEnabled, isStreaming)
+    #
+    # The semantic fields are identical — only casing differs per language
+    # convention. The v1.18.x schema generator will auto-convert.
     FIELDS: Dict[str, Any] = {
         # --- Core identity ---
         "provider": "",                # Current provider name (e.g., "perplexity")

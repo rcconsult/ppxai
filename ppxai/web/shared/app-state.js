@@ -12,6 +12,25 @@
  *   this.state.currentProvider          // read
  *   this.state.currentProvider = 'openai'  // write (no-op if unchanged)
  *   this.state.on('currentProvider', v => updateBadge(v))  // subscribe
+ *
+ * Canonical field mapping (Python snake_case → JS camelCase):
+ *   provider         → currentProvider
+ *   model            → currentModel
+ *   tools_enabled    → toolsEnabled
+ *   tools_verbose    → toolsVerbose
+ *   agent_mode       → agentMode
+ *   is_streaming     → isStreaming
+ *   cancel_requested → cancelRequested
+ *   working_dir      → workingDir
+ *   session_id       → sessionId
+ *   session_name     → sessionName
+ *   total_tokens     → totalTokens
+ *   prompt_tokens    → promptTokens
+ *   completion_tokens→ completionTokens
+ *   total_cost       → totalCost
+ *   context_percentage→ contextPercentage
+ *   auto_route       → autoRoute
+ *   debug_log        → debugLog
  */
 
 class AppState {

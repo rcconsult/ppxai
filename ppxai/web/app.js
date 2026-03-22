@@ -63,20 +63,41 @@ class PpxaiApp {
         this.commandDispatcher = new CommandDispatcher(this);
 
         // State — all mutable state is managed via AppState (observable Proxy)
+        // Canonical fields match Python AppState (snake_case → camelCase).
         this.state = new AppState({
-            // Provider / model
+            // --- Canonical fields (match ppxai/engine/app_state.py) ---
+            // Core identity
             currentProvider: '',
             currentModel:    '',
+            workingDir:      '',
+            sessionId:       this.sessionId,
+            sessionName:     '',
 
             // Feature toggles
-            toolsEnabled: false,
-            agentMode:    false,
+            toolsEnabled:  false,
+            toolsVerbose:  false,
+            agentMode:     false,
+            autoRoute:     false,
 
+            // Streaming / flow control
+            isStreaming:      false,
+            cancelRequested: false,
+
+            // Usage statistics (flattened from previous {prompt, completion, cost} object)
+            totalTokens:       0,
+            promptTokens:      0,
+            completionTokens:  0,
+            totalCost:         0.0,
+            contextPercentage: 0.0,
+
+            // Debug
+            debugLog: false,
+
+            // --- Web-app-specific fields (not in canonical set) ---
             // UI theme
             theme: localStorage.getItem('ppxai-theme') || 'dark',
 
-            // Streaming / flow control
-            isStreaming:             false,
+            // Flow control (web-specific)
             isSending:               false,
             isHandlingCommand:       false,
             currentAbortController:  null,
@@ -86,14 +107,9 @@ class PpxaiApp {
             commandHistory: JSON.parse(localStorage.getItem('ppxai-history') || '[]'),
             historyIndex:   -1,
 
-            // Debug
-            debugLogEnabled: false,
-            verbose:         false,
-
             // Checkpoints
             lastCheckpoint:  null,
             checkpointCount: 0,
-            usage: { prompt: 0, completion: 0, cost: 0 },
 
             // Preview panel
             previewViewMode:   'rendered',
@@ -730,7 +746,7 @@ class PpxaiApp {
 
             // Load tools status
             const toolsData = await this.apiClient.getTools();
-            this.state.verbose = toolsData.verbose || false;
+            this.state.toolsVerbose = toolsData.verbose || false;
 
             // Load agent status
             try {
@@ -755,7 +771,7 @@ class PpxaiApp {
             // Load debug log status
             try {
                 const debugData = await this.apiClient.getDebugLogStatus();
-                this.state.debugLogEnabled = debugData.enabled;
+                this.state.debugLog = debugData.enabled;
                 this.updateDebugIndicator();
             } catch {}
 
@@ -1561,7 +1577,7 @@ class PpxaiApp {
             <span class="tool-expand">▶</span>
         </div>`;
 
-        if (this.state.verbose && data.arguments) {
+        if (this.state.toolsVerbose && data.arguments) {
             content += `<div class="tool-details">
                 <pre>${escapeHtml(typeof data.arguments === 'string' ? data.arguments : JSON.stringify(data.arguments, null, 2))}</pre>
             </div>`;
@@ -1594,7 +1610,7 @@ class PpxaiApp {
             <span class="tool-expand">▶</span>
         </div>`;
 
-        if (this.state.verbose && data.result) {
+        if (this.state.toolsVerbose && data.result) {
             const result = typeof data.result === 'string' ? data.result : JSON.stringify(data.result, null, 2);
             content += `<div class="tool-details">
                 <pre>${escapeHtml(result.slice(0, 2000))}${result.length > 2000 ? '\n...(truncated)' : ''}</pre>
@@ -2299,9 +2315,9 @@ class PpxaiApp {
 
     async toggleDebugLog() {
         try {
-            const newState = !this.state.debugLogEnabled;
+            const newState = !this.state.debugLog;
             const data = await this.apiClient.setDebugLog(newState);
-            this.state.debugLogEnabled = data.enabled;
+            this.state.debugLog = data.enabled;
             this.updateDebugIndicator();
             this.showSystemMessage(`Debug logging ${data.enabled ? 'enabled' : 'disabled'}${data.log_file ? `: ${data.log_file}` : ''}`);
         } catch (error) {
@@ -2310,7 +2326,7 @@ class PpxaiApp {
     }
 
     updateDebugIndicator() {
-        this.elements.debugIndicator.className = `menu-indicator ${this.state.debugLogEnabled ? 'active' : ''}`;
+        this.elements.debugIndicator.className = `menu-indicator ${this.state.debugLog ? 'active' : ''}`;
     }
 
     // === Usage ===
@@ -2323,7 +2339,10 @@ class PpxaiApp {
             const completion = data.completion_tokens || 0;
             const cost = data.estimated_cost || 0;
 
-            this.state.usage = { prompt, completion, cost };
+            this.state.promptTokens = prompt;
+            this.state.completionTokens = completion;
+            this.state.totalTokens = prompt + completion;
+            this.state.totalCost = cost;
 
             // Format badge
             const formatTokens = (n) => n >= 1000 ? `${(n/1000).toFixed(1)}K` : n;

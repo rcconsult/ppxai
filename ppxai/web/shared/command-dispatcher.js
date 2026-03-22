@@ -264,7 +264,7 @@ class CommandDispatcher {
                     const value = setParts[1] === 'on' || setParts[1] === 'true';
                     try {
                         await this.app.apiClient.setToolConfig('verbose', value ? 'on' : 'off');
-                        this.app.state.verbose = value;
+                        this.app.state.toolsVerbose = value;
                         this.app.showSystemMessage(`Verbose mode ${value ? 'enabled' : 'disabled'}`);
                     } catch (error) {
                         this.app.showError(`Failed to set verbose: ${error.message}`);
