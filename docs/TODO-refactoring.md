@@ -42,8 +42,11 @@ via clean DAG + reload callback pattern in `store.py`.
 
 ## 3. Unified AppState — Cross-Client State Management
 
-**Priority:** HIGH — foundational change that enables items 4–7 and streamlines all clients.
-**Target:** v1.17.1
+**Priority:** HIGH — foundational change that streamlines all clients.
+**Target:** v1.18.x (deferred from v1.17.1 — too ambitious for current cycle)
+
+> **Note (2026-03-22):** Items 4-7 proceed without AppState in v1.17.1 using
+> simple parameter passing. AppState schema+generator deferred to v1.18.x.
 
 ### Problem
 
@@ -771,7 +774,7 @@ These are explicitly **not** part of this refactoring plan:
 - **Feature changes** — This plan is purely structural. No new endpoints, no behavior changes.
 - **K8s infrastructure** — Session manager, nginx BFF, ingress. Tracked in `TODO-v1.17.0.md`.
   Phase 5 only verifies AppState + runtime schema integration, not infrastructure changes.
-- **Multi-model routing** — Tracked separately in `TODO-routing-v1.17.6.md`.
+- **Multi-model routing** — Tracked separately in `TODO-routing-v1.17.2.md`.
 - **Test refactoring** — Tests work; don't fix what isn't broken.
 - **Web app restructuring** — `app.js` was already refactored in v1.16.2. Phase 3 is
   a drop-in AppState replacement + public interface enforcement, not a rewrite.

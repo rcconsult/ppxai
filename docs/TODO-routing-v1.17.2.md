@@ -1,8 +1,14 @@
-# TODO: Multi-Model Routing (v1.17.6+)
+# TODO: Multi-Model Routing (v1.17.2+)
 
 **Status:** Planning
-**Target:** v1.17.6 (infrastructure), v1.18.x (full routing)
+**Target:** v1.17.2 (infrastructure + testing), v1.18.x (full routing)
 **Priority:** Medium — foundational for advanced agentic workflows
+
+> **Scheduling note (2026-03-22):** Moved from v1.17.6 to v1.17.2. Requires
+> thorough testing — agent mode and multi-tool calling sequences must work
+> correctly with mid-session provider switches. Benchmark suite may need
+> expansion to cover routed sessions (e.g., planning turn on model A →
+> tool execution on model B → synthesis on model A).
 
 ---
 

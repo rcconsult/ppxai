@@ -84,7 +84,7 @@ Architectural pattern for breaking circular import chains:
 ### Benchmark: qwen2.5-coder-7b
 
 - LM Studio evaluation: 69.4% without hints, 72.2% with AGENTS.md
-- Multi-model routing architecture plan (`docs/TODO-routing-v1.17.6.md`)
+- Multi-model routing architecture plan (`docs/TODO-routing-v1.17.2.md`)
 
 ---
 
@@ -127,7 +127,7 @@ All 14 `TYPE_CHECKING` blocks removed:
 ## Architecture Documentation
 
 - `docs/TODO-appstate-{0..5}.md` — unified AppState architecture plan (6-part series)
-- `docs/TODO-routing-v1.17.6.md` — multi-model routing architecture plan
+- `docs/TODO-routing-v1.17.2.md` — multi-model routing architecture plan
 - `docs/TODO-refactoring.md` — remaining tech debt tracker
 - `docs/TODO-keybindings-cleanup.md` — key bindings implementation plan (completed)
 

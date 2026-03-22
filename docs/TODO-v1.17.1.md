@@ -1,0 +1,167 @@
+# TODO: v1.17.1 — Unified AppState + Code Streamlining
+
+**Status:** In progress
+**Target:** v1.17.1
+**Priority:** HIGH — validate AppState pattern, reduce complexity before routing (v1.17.2)
+
+---
+
+## Goal
+
+Hand-craft a **single AppState interface** with identical fields and semantics
+across all four clients (ppxai Rich TUI, ppxaide Textual TUI, Web app, VSCode
+extension). No code generation — write each implementation manually to validate
+the pattern and build empirical evidence that the schema+generator approach
+will work in v1.18.x.
+
+Alongside AppState, streamline server routes, constants, and adapters to reduce
+duplication and improve maintainability.
+
+**Success criteria:** All four clients use the same field names, types, and
+observer pattern. Server routes use dependency injection. Magic numbers are
+centralized.
+
+---
+
+## AppState Convergence
+
+### 1. Define AppState interface + Python implementation (~3h)
+
+- `ppxai/engine/app_state.py` — canonical `AppState` class
+- Fields: `provider`, `model`, `tools_enabled`, `tools_verbose`, `working_dir`,
+  `is_streaming`, `cancel_requested`, `session_id`, `session_name`,
+  `total_tokens`, `prompt_tokens`, `completion_tokens`, `total_cost`,
+  `context_percentage`, `auto_route`, `agent_iterations`, `reasoning_active`
+- Observer pattern: `on(field, callback)`, `set(field, value)` triggers listeners
+- Thread-safe: RLock for Python clients
+- Reference: Web app's existing `AppState` (Proxy-based observable) as model
+
+### 2. Rich TUI — wire AppState (~3h)
+
+**Plan:** [`docs/TODO-appstate-1-rich-tui.md`](TODO-appstate-1-rich-tui.md)
+
+- Simplest client — single thread, sync handlers
+- Replace scattered state fields in EngineClient/event_handler with AppState
+- Status bar reads from AppState observers instead of manual updates
+
+### 3. Textual TUI — wire AppState (~3h)
+
+**Plan:** [`docs/TODO-appstate-2-textual-tui.md`](TODO-appstate-2-textual-tui.md)
+
+- Replace 15+ `self._*` shadow state fields with AppState observers
+- Eliminate ~30 manual `update_badge()` calls
+- Threading/async complexity — AppState must dispatch to correct event loop
+
+### 4. Web app — align AppState (~2h)
+
+**Plan:** [`docs/TODO-appstate-3-web-app.md`](TODO-appstate-3-web-app.md)
+
+- Web app already HAS an observable AppState (Proxy-based)
+- Align field names and types to match the Python canonical definition
+- 200 Playwright E2E tests as safety net
+
+### 5. VSCode extension — align AppState (~2h)
+
+**Plan:** [`docs/TODO-appstate-4-vscode.md`](TODO-appstate-4-vscode.md)
+
+- TypeScript interface matching the canonical fields
+- Align with Web app's field names
+
+---
+
+## File Decomposition
+
+### 6. Decompose `engine/client.py` (~2h)
+
+**Plan:** `docs/TODO-refactoring.md` item #5
+
+- Extract: `checkpoint_ops.py` (~250 lines), `consent_ops.py` (~200 lines), `bootstrap_ops.py` (~150 lines)
+- EngineClient: ~600 lines (from 1,588)
+- Easier after #2 since AppState absorbs some fields
+
+### 7. Modularize `tui/app.py` (~3h)
+
+**Plan:** `docs/TODO-refactoring.md` item #6
+
+- Extract: `theme_manager.py`, `key_router.py`, `stream_handler.py`
+- app.py: ~800 lines (from 2,303)
+- Easier after #3 since AppState absorbs shadow state
+
+---
+
+## Server Streamlining
+
+### 8. Consolidate `reload_config()` calls (~2h)
+
+- 10+ redundant `engine.reload_config()` calls scattered across 13 route files
+- Move to `get_or_create_session()` in `server/state.py` so reload happens once
+- Some routes reload, others don't — make it consistent
+
+### 9. Server route dependency injection (~2h)
+
+- Every route starts with `session_id, engine, _ = await get_or_create_session(x_session_id)`
+- Create FastAPI `Depends(get_engine)` dependency in `server/dependencies.py`
+- Reduces boilerplate in all 13 route modules
+- Standardize error responses (some routes raise HTTPException, others return error dicts)
+
+---
+
+## Code Cleanup
+
+### 10. Centralize constants (~1h)
+
+- `ppxai/constants.py` — single source of truth for magic numbers
+- `AGENT_MAX_ITERATIONS` (currently 15 in manager.py, 20 in chat.py — which is it?)
+- `TOOL_RESULT_CHAR_LIMIT`, `CHECKPOINT_KEEP_LAST`, `SESSION_TTL_SECONDS`
+- Import everywhere instead of hardcoded values
+
+### 11. CommandContext `__getattr__` proxy (~1h)
+
+- Two 40-line adapter classes (Rich, Textual) with identical property forwarding
+- Replace with 5-line `__getattr__` proxy base class
+- All adapters delegate to wrapped object automatically
+
+---
+
+## Dependency Graph
+
+```
+#1 Define AppState interface
+  ├→ #2 Rich TUI ──→ #6 EngineClient decompose
+  ├→ #3 Textual TUI ──→ #7 tui/app.py modularize
+  ├→ #4 Web app (align fields)
+  └→ #5 VSCode (align fields)
+
+#8 reload_config consolidation ──→ #9 server dependency injection
+
+#10 constants (independent)
+#11 CommandContext proxy (independent)
+```
+
+## Estimated Effort
+
+| Item | Hours |
+|------|------:|
+| **AppState** | |
+| Define interface + Python impl | 3 |
+| Rich TUI wire-up | 3 |
+| Textual TUI wire-up | 3 |
+| Web app align | 2 |
+| VSCode align | 2 |
+| **Decomposition** | |
+| EngineClient decompose | 2 |
+| tui/app.py modularize | 3 |
+| **Server** | |
+| reload_config consolidation | 2 |
+| Server dependency injection | 2 |
+| **Cleanup** | |
+| Centralize constants | 1 |
+| CommandContext proxy | 1 |
+| **Total** | **24** |
+
+---
+
+## Deferred
+
+- **v1.17.2:** Multi-model routing → `docs/TODO-routing-v1.17.2.md`
+- **v1.18.x:** AppState schema+generator (YAML → Python/JS/TS codegen), error hierarchy, ConfigLoader DI, K8s AppState phase
