@@ -17,7 +17,8 @@ class TestCommandHandlerBothProviders:
 
     @pytest.fixture
     def mock_engine_client(self):
-        """Create a mock EngineClient with session."""
+        """Create a mock EngineClient with session and AppState."""
+        from ppxai.engine.app_state import AppState
         engine = Mock()
         engine.session = Mock()
         engine.session.messages = []
@@ -33,6 +34,11 @@ class TestCommandHandlerBothProviders:
         engine.tools_enabled = False
         engine.model = "sonar-pro"
         engine.provider = "perplexity"
+        # Real AppState so property delegation works
+        engine.state = AppState(initial={
+            "provider": "perplexity",
+            "model": "sonar-pro",
+        })
         return engine
 
     @pytest.fixture
@@ -52,6 +58,7 @@ class TestCommandHandlerBothProviders:
         """Create CommandHandler for custom provider."""
         mock_engine_client.model = "custom-model"
         mock_engine_client.provider = "custom"
+        mock_engine_client.state.update(provider="custom", model="custom-model")
         handler = CommandHandler(
             "custom-api-key",
             "custom-model",

@@ -273,7 +273,7 @@ class CommandHandler:
         if isinstance(client_or_api_key, str):
             # New signature: (api_key, current_model, base_url, provider)
             self.api_key = client_or_api_key
-            self.current_model = api_key_or_model
+            initial_model = api_key_or_model
             base_url = current_model_or_base_url
             provider = base_url_or_provider
         else:
@@ -287,14 +287,12 @@ class CommandHandler:
                 stacklevel=2
             )
             self.api_key = api_key_or_model
-            self.current_model = current_model_or_base_url
+            initial_model = current_model_or_base_url
             base_url = base_url_or_provider
             provider = provider_or_none
 
         actual_provider = provider or get_default_provider()
-        self.provider = actual_provider
         self.base_url = base_url or get_base_url(actual_provider)
-        self.tools_verbose = False
 
         # EngineClient is REQUIRED for all operations
         # Create engine client with consent callbacks
@@ -302,16 +300,16 @@ class CommandHandler:
             consent_callback=tui_consent_handler,
             shell_consent_callback=tui_shell_consent_handler
         )
-        self.engine_client.set_provider(self.provider)
-        self.engine_client.set_model(self.current_model, reset_context=False)
+        self.engine_client.set_provider(actual_provider)
+        self.engine_client.set_model(initial_model, reset_context=False)
         # Set working directory for context injection
         self.engine_client.set_working_dir(os.getcwd())
 
+        # Sync initial state to AppState
+        self.engine_client.state.set("auto_route", True)
+
         # tools_available is always True (engine has builtin tools)
         self.tools_available = True
-
-        # auto_route flag for coding task auto-routing
-        self.auto_route = True
 
         # TUI theme support - load from config
         try:
@@ -333,7 +331,48 @@ class CommandHandler:
 
     # ========================================================================
     # Public Interface (used by RichCommandContext adapter)
+    # Properties delegate to engine_client.state (AppState) where possible.
     # ========================================================================
+
+    @property
+    def provider(self) -> str:
+        """Current provider name — reads from AppState."""
+        return self.engine_client.state.get("provider")
+
+    @provider.setter
+    def provider(self, value: str) -> None:
+        """Write-through to AppState (for backward compat with direct assignment)."""
+        self.engine_client.state.set("provider", value)
+
+    @property
+    def current_model(self) -> str:
+        """Current model ID — reads from AppState."""
+        return self.engine_client.state.get("model")
+
+    @current_model.setter
+    def current_model(self, value: str) -> None:
+        """Write-through to AppState (for backward compat with direct assignment)."""
+        self.engine_client.state.set("model", value)
+
+    @property
+    def tools_verbose(self) -> bool:
+        """Tool output verbosity — reads from AppState."""
+        return self.engine_client.state.get("tools_verbose")
+
+    @tools_verbose.setter
+    def tools_verbose(self, value: bool) -> None:
+        """Write-through to AppState."""
+        self.engine_client.state.set("tools_verbose", value)
+
+    @property
+    def auto_route(self) -> bool:
+        """Auto-routing for coding tasks — reads from AppState."""
+        return self.engine_client.state.get("auto_route")
+
+    @auto_route.setter
+    def auto_route(self, value: bool) -> None:
+        """Write-through to AppState."""
+        self.engine_client.state.set("auto_route", value)
 
     @property
     def session(self):
@@ -343,26 +382,24 @@ class CommandHandler:
     @property
     def working_dir(self) -> str:
         """Current working directory."""
-        return self.engine_client.get_working_dir() or ""
+        return self.engine_client.state.get("working_dir") or ""
 
     @property
     def tools_enabled(self) -> bool:
         """Check if tools are enabled."""
-        return self.engine_client.tools_enabled if self.engine_client else False
+        return self.engine_client.state.get("tools_enabled")
 
     @property
     def autoroute_enabled(self) -> bool:
         """Check if auto-routing is enabled."""
-        return self.auto_route
+        return self.engine_client.state.get("auto_route")
 
     def set_provider(self, provider: str) -> None:
-        """Set provider — updates handler state and engine."""
-        self.provider = provider
+        """Set provider — delegates to engine (which syncs AppState)."""
         self.engine_client.set_provider(provider)
 
     def set_model(self, model: str) -> None:
-        """Set model — updates handler state and engine."""
-        self.current_model = model
+        """Set model — delegates to engine (which syncs AppState)."""
         self.engine_client.set_model(model)
 
     def handle_quit(self) -> bool:

@@ -49,6 +49,7 @@ from ..config import (
 from ..common.logger import get_logger
 from ..common.consent import classify_shell_command
 from ..constants import ConsentMode, ConsentResponse, ShellRiskLevel
+from .app_state import AppState
 
 logger = get_logger("tui")
 
@@ -87,6 +88,10 @@ class EngineClient:
         self.tool_manager = ToolManager()
         self.session = SessionManager()
         self.tools_enabled: bool = False
+
+        # Canonical observable state — single source of truth shared across
+        # all clients. Mutators below keep this in sync with instance fields.
+        self.state = AppState()
 
         # Context injection for automatic file content inclusion
         self.context_injector = ContextInjector()
@@ -213,6 +218,7 @@ class EngineClient:
             return
 
         self.context_injector.set_working_dir(path)
+        self.state.set("working_dir", path)
         self.session.set_working_dir(path)  # Also update session for persistence
         self._init_checkpoint_manager(path)
 
@@ -411,6 +417,7 @@ class EngineClient:
         The stream will stop at the next chunk and return partial results.
         """
         self._interrupted = True
+        self.state.set("cancel_requested", True)
 
     # === Provider Management ===
 
@@ -459,6 +466,7 @@ class EngineClient:
             )
 
         self.provider_name = provider_name
+        self.state.set("provider", provider_name)
         self.tool_manager.set_provider(provider_name)
         self.session.set_provider(provider_name)
 
@@ -562,6 +570,7 @@ class EngineClient:
     def _apply_model_switch(self, model_id: str, reset_context: bool) -> bool:
         """Apply a confirmed model switch: update state, optionally reset context."""
         self.model = model_id
+        self.state.set("model", model_id)
         self.session.set_model(model_id)
         if reset_context and self.session.messages:
             removed = self.session.reset_for_model_switch()
@@ -622,6 +631,7 @@ class EngineClient:
             # Apply configurable loop detection threshold
             self.tool_manager.max_same_tool_calls = self._agent_config.get("max_same_tool_calls", 3)
             self.tools_enabled = True
+            self.state.set("tools_enabled", True)
             self.session.tools_enabled = True  # Sync for session persistence
         return True
 
@@ -632,6 +642,7 @@ class EngineClient:
             True if tools were disabled
         """
         self.tools_enabled = False
+        self.state.set("tools_enabled", False)
         self.session.tools_enabled = False  # Sync for session persistence
         self.tool_manager.clear()
         return True
@@ -651,6 +662,7 @@ class EngineClient:
             True if agent mode was enabled
         """
         self._agent_mode = True
+        self.state.set("agent_mode", True)
         if not self.tools_enabled:
             self.enable_tools()
 
@@ -693,6 +705,7 @@ class EngineClient:
             True if agent mode was disabled
         """
         self._agent_mode = False
+        self.state.set("agent_mode", False)
         return True
 
     def get_agent_config(self) -> dict:
@@ -1124,6 +1137,7 @@ class EngineClient:
         elif setting == "verbose":
             # Store verbose setting for tool output display
             self._tools_verbose = value in [True, "on", "true", "1", "yes"]
+            self.state.set("tools_verbose", self._tools_verbose)
             return True
         elif setting == "auto_retry_empty":
             # Auto-retry on empty responses (0=disabled)
@@ -1217,6 +1231,7 @@ class EngineClient:
 
         # Reset interrupt flag at start of chat
         self._interrupted = False
+        self.state.update(is_streaming=True, cancel_requested=False)
 
         # Auto-inject file context if enabled
         injected_contexts = []
@@ -1259,12 +1274,15 @@ class EngineClient:
         # Add message to history (with injected content)
         self.session.add_message(Message("user", message))
 
-        if self.tools_enabled:
-            async for event in self._chat_with_tools(stream):
-                yield event
-        else:
-            async for event in self._chat_simple(stream):
-                yield event
+        try:
+            if self.tools_enabled:
+                async for event in self._chat_with_tools(stream):
+                    yield event
+            else:
+                async for event in self._chat_simple(stream):
+                    yield event
+        finally:
+            self.state.update(is_streaming=False, cancel_requested=False)
 
     async def _chat_simple(self, stream: bool) -> AsyncIterator[Event]:
         """Simple chat without tools.
@@ -1388,6 +1406,8 @@ class EngineClient:
 
         if not self.session.load(name):
             return {"success": False, "error": f"Session not found: {name}"}
+
+        self.state.update(session_id=name, session_name=name)
 
         stored_provider = self.session.metadata.get("provider")
         if stored_provider:
