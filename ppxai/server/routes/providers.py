@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from ..models import SetProviderRequest, SetModelRequest, ToolsRequest, ToolsConfigRequest
 from ..state import Session, get_session
 from ...common.logger import get_logger
+from ...constants import Default
 
 logger = get_logger("server")
 
@@ -108,8 +109,8 @@ async def get_tools(s: Session = Depends(get_session)):
     return {
         "tools": tools,
         "enabled": s.engine.tools_enabled,
-        "max_iterations": status.get('max_iterations', 15),
-        "auto_retry_empty": status.get('auto_retry_empty', 2),
+        "max_iterations": status.get('max_iterations', Default.MAX_TOOL_ITERATIONS),
+        "auto_retry_empty": status.get('auto_retry_empty', Default.AUTO_RETRY_EMPTY),
         "consent_mode": consent_mode,
         "verbose": status.get('verbose', False),
     }

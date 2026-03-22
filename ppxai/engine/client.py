@@ -43,6 +43,7 @@ from ..config import (
     PROVIDERS,
 )
 from ..common.logger import get_logger
+from ..constants import Default
 from .app_state import AppState
 from . import bootstrap_ops, checkpoint_ops, consent_ops, session_ops
 
@@ -357,8 +358,8 @@ class EngineClient:
         if self.tools_enabled:
             self.tool_manager.clear()
             register_all_builtin_tools(self.tool_manager, provider_name, engine=self)
-            self.tool_manager.max_iterations = self._agent_config.get("max_tool_iterations", 15)
-            self.tool_manager.max_same_tool_calls = self._agent_config.get("max_same_tool_calls", 3)
+            self.tool_manager.max_iterations = self._agent_config.get("max_tool_iterations", Default.MAX_TOOL_ITERATIONS)
+            self.tool_manager.max_same_tool_calls = self._agent_config.get("max_same_tool_calls", Default.MAX_SAME_TOOL_CALLS)
 
         # Log hints transition for debugging (v1.14.0)
         if self._bootstrap_context:
@@ -498,9 +499,9 @@ class EngineClient:
             # Register all built-in tools (including file editing tools v1.11.0)
             register_all_builtin_tools(self.tool_manager, self.provider_name, engine=self)
             # Apply configurable max_tool_iterations
-            self.tool_manager.max_iterations = self._agent_config.get("max_tool_iterations", 15)
+            self.tool_manager.max_iterations = self._agent_config.get("max_tool_iterations", Default.MAX_TOOL_ITERATIONS)
             # Apply configurable loop detection threshold
-            self.tool_manager.max_same_tool_calls = self._agent_config.get("max_same_tool_calls", 3)
+            self.tool_manager.max_same_tool_calls = self._agent_config.get("max_same_tool_calls", Default.MAX_SAME_TOOL_CALLS)
             self.tools_enabled = True
             self.state.set("tools_enabled", True)
             self.session.tools_enabled = True  # Sync for session persistence

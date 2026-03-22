@@ -52,12 +52,14 @@ DEFAULT_ALLOWED_COMMANDS: List[str] = [
 
 
 # =============================================================================
-# Agent Defaults
+# Agent Defaults — canonical values in ppxai/constants.py:Default
 # =============================================================================
 
-DEFAULT_AGENT_MAX_ITERATIONS = 10
-DEFAULT_AGENT_MAX_TOOL_ITERATIONS = 15
-DEFAULT_AGENT_MAX_SAME_TOOL_CALLS = 3
-DEFAULT_AGENT_CONTEXT_CHAR_LIMIT = 2000
-DEFAULT_AGENT_MIN_TASK_WORDS = 3
-DEFAULT_AGENT_AUTO_RETRY_EMPTY = 3
+from ppxai.constants import Default
+
+DEFAULT_AGENT_MAX_ITERATIONS = Default.MAX_ITERATIONS
+DEFAULT_AGENT_MAX_TOOL_ITERATIONS = Default.MAX_TOOL_ITERATIONS
+DEFAULT_AGENT_MAX_SAME_TOOL_CALLS = Default.MAX_SAME_TOOL_CALLS
+DEFAULT_AGENT_CONTEXT_CHAR_LIMIT = Default.CONTEXT_CHAR_LIMIT
+DEFAULT_AGENT_MIN_TASK_WORDS = Default.MIN_TASK_WORDS
+DEFAULT_AGENT_AUTO_RETRY_EMPTY = Default.AUTO_RETRY_EMPTY
