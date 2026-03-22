@@ -9,7 +9,7 @@ Architecture:
 - Callbacks are provided by the client for rendering
 - Business logic is centralized, UI is delegated
 
-Version: v1.17.0-dev
+Version: v1.17.1
 """
 
 from datetime import datetime
