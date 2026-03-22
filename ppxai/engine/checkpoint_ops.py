@@ -10,7 +10,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .types import Event, EventType
-from ..checkpoint import FileCheckpointBackend
+from ..checkpoint import CheckpointManager, FileCheckpointBackend
+from ..common.logger import get_logger
+
+logger = get_logger("engine")
 
 
 def create_checkpoint(engine, description: str) -> Optional[str]:
@@ -126,7 +129,8 @@ def commit_agent_changes(engine, description: str) -> Optional[str]:
         engine._last_checkpoint_id = commit_hash
         return commit_hash
 
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
+        logger.debug(f"Agent commit failed: {e}")
         return None
 
 
@@ -191,8 +195,6 @@ def set_checkpoint_backend(engine, backend: str) -> bool:
     Returns:
         True if backend was set successfully
     """
-    from ..checkpoint import CheckpointManager
-
     valid_backends = ('git', 'file', 'auto', 'none')
     if backend not in valid_backends:
         return False

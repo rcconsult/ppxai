@@ -208,8 +208,8 @@ class ContextInjector:
         try:
             if not is_bootstrap_enabled():
                 return []
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Bootstrap enabled check failed: {e}")
 
         aliases = self.bootstrap_files
         if not aliases:
@@ -242,8 +242,8 @@ class ContextInjector:
         try:
             if not is_bootstrap_enabled():
                 return []
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Bootstrap enabled check failed (merged): {e}")
 
         work_dir = Path(self.working_dir)
         if not work_dir.exists() or not work_dir.is_dir():

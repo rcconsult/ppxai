@@ -590,7 +590,8 @@ class SessionManager:
 
             return True
 
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Session load failed for '{name}': {e}")
             return False
 
     def list_sessions(self) -> List[SessionInfo]:
@@ -850,7 +851,8 @@ class SessionManager:
             with open(SESSION_STATE_FILE, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             return data.get("last_session")
-        except Exception:
+        except Exception as e:
+            logger.debug(f"State file read failed: {e}")
             return None
 
     @staticmethod

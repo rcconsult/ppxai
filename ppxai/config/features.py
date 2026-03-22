@@ -5,8 +5,11 @@ TUI and session configuration.
 import json
 from typing import Any, Dict
 
+from ..common.logger import get_logger
 from .loader import USER_CONFIG_FILE, find_config_file
 from .store import ConfigStore
+
+logger = get_logger("config")
 
 
 # =============================================================================
@@ -66,7 +69,8 @@ def set_tui_config(key: str, value: Any) -> bool:
         current["tui"][key] = value
 
         return True
-    except IOError:
+    except IOError as e:
+        logger.warning(f"Config save failed: {e}")
         return False
 
 

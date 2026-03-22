@@ -393,8 +393,8 @@ async def _execute_single_tool(
                 tool_usage = web_premium.get_last_tool_usage()
                 if tool_usage:
                     ctx.track_tool_usage(tool_name, tool_usage)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Tool usage tracking failed: {e}")
 
         # Emit DISPLAY_FILE event for display_file tool
         if tool_name == "display_file" and "filepath" in tool_args:

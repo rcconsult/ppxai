@@ -11,7 +11,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from ..common.logger import get_logger
 from ..config import get_default_model, get_model_context_limit, EXPORTS_DIR
+
+logger = get_logger("engine")
 
 
 def restore_session(engine, name: str) -> dict:
@@ -34,8 +37,8 @@ def restore_session(engine, name: str) -> dict:
     if stored_provider:
         try:
             engine.set_provider(stored_provider)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to restore provider '{stored_provider}': {e}")
 
     stored_model = engine.session.metadata.get("model")
     if stored_model:
