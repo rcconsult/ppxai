@@ -83,6 +83,9 @@ def is_path_allowed(target: Path, base: Path) -> bool:
 async def get_or_create_session(session_id: Optional[str]) -> tuple[str, EngineClient, asyncio.Lock]:
     """Get existing session or create new one (v1.13.10, v1.13.10 refactored).
 
+    Automatically reloads config on each call so routes don't need to
+    call engine.reload_config() individually (v1.17.1 consolidation).
+
     Args:
         session_id: Session ID from X-Session-Id header, or None for default
 
@@ -95,7 +98,10 @@ async def get_or_create_session(session_id: Optional[str]) -> tuple[str, EngineC
         raise HTTPException(status_code=503, detail="Engine not initialized")
 
     try:
-        return await session_manager.get_or_create_session(session_id)
+        sid, engine, lock = await session_manager.get_or_create_session(session_id)
+        # Reload config to pick up external changes (new providers, models, etc.)
+        engine.reload_config()
+        return sid, engine, lock
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
