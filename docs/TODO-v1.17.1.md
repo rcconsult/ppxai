@@ -136,6 +136,7 @@ centralized.
 
 #10 constants (independent)
 #11 CommandContext proxy (independent)
+#12 chat_with_tools helpers (independent)
 ```
 
 ## Estimated Effort
@@ -157,7 +158,40 @@ centralized.
 | **Cleanup** | |
 | Centralize constants | 1 |
 | CommandContext proxy | 1 |
-| **Total** | **24** |
+| chat_with_tools helpers | 1 |
+| **Total** | **25** |
+
+---
+
+## Code Review Graph Analysis (2026-03-22)
+
+Graph stats: 5,800 nodes, 38,232 edges, 293 files (Python, JS, TS).
+
+### Findings
+
+**Test coverage gaps (94 changed functions untested):**
+- ✅ Ops modules: `bootstrap_ops`, `checkpoint_ops`, `consent_ops`, `session_ops` — **73 tests added** (`tests/test_ops_modules.py`)
+- ✅ Server routes: `reload_config`, `list_models`, `get_providers`, `export_answer` — **7 tests added** (`tests/test_server_routes.py`)
+- Remaining gaps: scattered across server routes, TUI handlers — lower priority
+
+**AppState import verification:**
+- ✅ Verified wired correctly: `engine/client.py`, `tui/app.py` (15+ refs), `commands/handler.py` (12+ refs), 2 test files
+- Graph showed 0 importers (IMPORTS_FROM edge resolution quirk, not a real gap)
+
+**`chat_with_tools` decomposition (543 lines, largest function):**
+- 6 clear phases: setup, provider call, tool parsing, tool execution, final response, max-iterations epilogue
+- 3 duplicated blocks suitable for immediate extraction:
+  - `_accumulate_tool_usage()` — lines 929–938 / 956–965
+  - `_finalize_usage()` — lines 942–950 / 967–974
+  - `_commit_and_signal()` — lines 916–926 / 978–989
+- Larger phase extraction deferred — async generator yield/continue/return interleaving makes it risky without more integration tests
+- Only 2 direct callers (both test helpers in `test_chat_profile_routing.py` and `test_tool_messages.py`)
+
+### 12. Extract `chat_with_tools` helper functions (~1h)
+
+- Extract 3 duplicated blocks into helpers (see above)
+- ~50 lines of duplication removed, 6 call sites → 3
+- Safe refactoring — no control flow changes
 
 ---
 
