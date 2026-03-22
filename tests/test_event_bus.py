@@ -90,21 +90,22 @@ def test_event_bus_in_app():
     print(f"  ✓ Event bus type: {type(app._event_bus).__name__}")
     print(f"  ✓ Event logging enabled: {app._event_bus._log_events}")
 
-    # Verify event handler methods exist
+    # Verify event handler functions exist in stream_handler module
+    from ppxai.tui import stream_handler
     required_handlers = [
-        "_on_stream_start",
-        "_on_stream_chunk",
-        "_on_stream_end",
-        "_on_tool_call",
-        "_on_tool_result",
-        "_on_engine_error",
+        "on_stream_start",
+        "on_stream_chunk",
+        "on_stream_end",
+        "on_tool_call",
+        "on_tool_result",
+        "on_engine_error",
     ]
 
     for handler_name in required_handlers:
-        assert hasattr(app, handler_name), f"Missing handler: {handler_name}"
-        handler = getattr(app, handler_name)
+        assert hasattr(stream_handler, handler_name), f"Missing handler: {handler_name}"
+        handler = getattr(stream_handler, handler_name)
         assert callable(handler), f"Handler not callable: {handler_name}"
-        print(f"  ✓ Handler exists: {handler_name}")
+        print(f"  ✓ Handler exists: stream_handler.{handler_name}")
 
     print("\n✅ Test 3 PASSED: Event bus integrated in PPXAIDEApp")
 
