@@ -19,13 +19,7 @@ router = APIRouter()
 
 
 def _extract_session_from_referer(request: Request) -> Optional[str]:
-    """Extract session ID from the Referer header's query string.
-
-    When JS inside a preview iframe does fetch('recipes.json'), the browser
-    resolves it to /preview/recipes.json with no session param.  But the
-    Referer header still points to the parent page URL which *does* contain
-    ?session=xxx.  This lets us recover the correct working directory.
-    """
+    """Extract session ID from the Referer header's query string."""
     referer = request.headers.get('referer', '')
     if 'session=' in referer:
         qs = parse_qs(urlparse(referer).query)
@@ -35,6 +29,13 @@ def _extract_session_from_referer(request: Request) -> Optional[str]:
     return None
 
 
+async def _resolve_session(request: Request, x_session_id: Optional[str], session: Optional[str]):
+    """Resolve session from header, query param, or referer."""
+    sid = x_session_id or session or _extract_session_from_referer(request)
+    session_id, engine, _ = await get_or_create_session(sid)
+    return session_id, engine
+
+
 @router.get("/preview/poll/{filepath:path}")
 async def preview_poll(
     request: Request,
@@ -42,16 +43,8 @@ async def preview_poll(
     x_session_id: Optional[str] = Header(None),
     session: Optional[str] = None
 ):
-    """Return file modification time for preview reload polling.
-
-    v1.15.4: Used by the injected reload script to detect file changes.
-    Accepts session ID via header (X-Session-Id) or query param (?session=).
-
-    Returns:
-        JSON: {"mtime": float}
-    """
-    sid = x_session_id or session or _extract_session_from_referer(request)
-    session_id, engine, _ = await get_or_create_session(sid)
+    """Return file modification time for preview reload polling."""
+    session_id, engine = await _resolve_session(request, x_session_id, session)
     working_dir = engine.get_working_dir() or os.getcwd()
 
     try:
@@ -59,8 +52,6 @@ async def preview_poll(
     except (FileNotFoundError, ValueError):
         raise HTTPException(status_code=404, detail="File not found")
 
-    # Return the newest mtime of HTML file + sibling assets (CSS/JS/images)
-    # so that changes to linked stylesheets/scripts also trigger a reload
     mtime = path.stat().st_mtime
     try:
         for sibling in path.parent.iterdir():
@@ -71,7 +62,7 @@ async def preview_poll(
                 if sib_mtime > mtime:
                     mtime = sib_mtime
     except OSError:
-        pass  # Network/permission errors — fall back to HTML mtime only
+        pass
     return {"mtime": mtime}
 
 
@@ -82,27 +73,15 @@ async def preview_static(
     x_session_id: Optional[str] = Header(None),
     session: Optional[str] = None
 ):
-    """Serve static assets (CSS/JS/images) referenced by preview HTML.
-
-    v1.15.4: Resolves paths relative to the working directory.
-    Accepts session ID via header (X-Session-Id), query param (?session=),
-    or extracted from Referer header.
-
-    Returns:
-        FileResponse for the static asset with no-cache headers
-    """
-    sid = x_session_id or session or _extract_session_from_referer(request)
-    session_id, engine, _ = await get_or_create_session(sid)
+    """Serve static assets (CSS/JS/images) referenced by preview HTML."""
+    session_id, engine = await _resolve_session(request, x_session_id, session)
     working_dir = engine.get_working_dir() or os.getcwd()
 
     try:
-        # No extension restriction for static assets
         path = resolve_preview_path(filepath, working_dir, restrict_extension=False)
     except (FileNotFoundError, ValueError) as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-    # no-cache ensures browser revalidates on every request so live-reload
-    # picks up CSS/JS changes immediately instead of serving stale cache
     return FileResponse(path, headers={"Cache-Control": "no-cache"})
 
 
@@ -113,26 +92,10 @@ async def preview_html(
     x_session_id: Optional[str] = Header(None),
     session: Optional[str] = None
 ):
-    """Serve HTML file with injected reload script, or static assets.
-
-    v1.15.4: The reload script polls /preview/poll/{filepath} for mtime
-    changes and triggers a page reload when the file is modified.
-
-    Non-HTML files (e.g., recipes.json fetched by JS in the page) are
-    served as static assets so that fetch() calls with relative URLs work
-    inside the preview iframe.
-
-    Accepts session ID via header (X-Session-Id), query param (?session=),
-    or extracted from Referer header (for JS fetch() calls inside iframe).
-
-    Returns:
-        HTMLResponse with injected reload script, or FileResponse for non-HTML
-    """
-    sid = x_session_id or session or _extract_session_from_referer(request)
-    session_id, engine, _ = await get_or_create_session(sid)
+    """Serve HTML file with injected reload script, or static assets."""
+    session_id, engine = await _resolve_session(request, x_session_id, session)
     working_dir = engine.get_working_dir() or os.getcwd()
 
-    # First resolve without extension restriction to check if file exists
     try:
         path = resolve_preview_path(filepath, working_dir, restrict_extension=False)
     except FileNotFoundError:
@@ -140,18 +103,12 @@ async def preview_html(
     except ValueError as e:
         raise HTTPException(status_code=403, detail=str(e))
 
-    # Non-HTML files: serve as static assets (supports JS fetch() calls)
     if path.suffix.lower() not in ('.html', '.htm'):
         return FileResponse(path, headers={"Cache-Control": "no-cache"})
 
     content = path.read_text(encoding='utf-8')
-    # Include session in poll URL so reload script uses the right working dir
-    # Use relative URLs so preview works behind reverse-proxy path prefixes
-    # (e.g. /s/<user>/preview/file.html → relative "poll/file.html" resolves correctly)
     poll_url = f'poll/{filepath}?session={session_id}' if session_id else f'poll/{filepath}'
 
-    # Compute cache buster from newest sibling mtime so browser re-fetches
-    # changed CSS/JS instead of using stale cached versions
     cache_ts = str(int(path.stat().st_mtime))
     try:
         for sibling in path.parent.iterdir():
@@ -164,8 +121,6 @@ async def preview_html(
     except OSError:
         pass
 
-    # Rewrite relative CSS/JS/image paths to use preview/static/ endpoint
-    # Uses relative URLs so it works behind reverse-proxy path prefixes
     file_dir = str(PurePosixPath(filepath).parent)
     if file_dir == '.':
         static_base = 'static/'

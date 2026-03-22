@@ -4,24 +4,23 @@ Session management endpoints (save, load, clear, restore).
 
 from pathlib import Path
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import Optional
 
 from ...engine.session import SessionManager as EngineSessionManager
-from ..state import get_or_create_session
+from ..state import Session, get_session
 
 router = APIRouter()
 
 
 @router.get("/sessions")
-async def get_sessions(x_session_id: Optional[str] = Header(None)):
+async def get_sessions(s: Session = Depends(get_session)):
     """Get list of saved sessions.
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    sessions_list = engine.session.list_sessions()
+    sessions_list = s.engine.session.list_sessions()
     return {
         "sessions": [
             {
@@ -40,28 +39,26 @@ async def get_sessions(x_session_id: Optional[str] = Header(None)):
 @router.post("/sessions/save")
 async def save_session(
     name: Optional[str] = None,
-    x_session_id: Optional[str] = Header(None)
+    s: Session = Depends(get_session)
 ):
     """Save current session.
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    saved_name = engine.session.save(name)
+    saved_name = s.engine.session.save(name)
     return {"name": saved_name}
 
 
 @router.post("/export")
 async def export_answer(
     request: Request,
-    x_session_id: Optional[str] = Header(None)
+    s: Session = Depends(get_session)
 ):
     """Export last answer to markdown.
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     try:
         body = await request.json()
@@ -70,7 +67,7 @@ async def export_answer(
         filename = None
 
     try:
-        filepath = engine.export_answer(filename)
+        filepath = s.engine.export_answer(filename)
         return {"filepath": str(filepath)}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -79,16 +76,15 @@ async def export_answer(
 @router.post("/sessions/load/{name}")
 async def load_session(
     name: str,
-    x_session_id: Optional[str] = Header(None)
+    s: Session = Depends(get_session)
 ):
     """Load a saved session.
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     v1.15.3: Now restores provider and model from session metadata.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    result = engine.restore_session(name)
+    result = s.engine.restore_session(name)
     if not result["success"]:
         raise HTTPException(status_code=404, detail=result.get("error", f"Session not found: {name}"))
 
@@ -104,19 +100,18 @@ async def load_session(
 
 
 @router.post("/sessions/clear")
-async def clear_session(x_session_id: Optional[str] = Header(None)):
+async def clear_session(s: Session = Depends(get_session)):
     """Clear current session.
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    engine.session.clear()
+    s.engine.session.clear()
     return {"cleared": True}
 
 
 @router.get("/sessions/last")
-async def get_last_session(x_session_id: Optional[str] = Header(None)):
+async def get_last_session(s: Session = Depends(get_session)):
     """Get last session state from state file.
 
     v1.13.9: Returns info about the last session for auto-restore prompts.
@@ -150,7 +145,7 @@ async def get_last_session(x_session_id: Optional[str] = Header(None)):
 
 
 @router.post("/sessions/restore")
-async def restore_last_session(x_session_id: Optional[str] = Header(None)):
+async def restore_last_session(s: Session = Depends(get_session)):
     """Restore the last session automatically.
 
     v1.13.9: Auto-restore last session including working_dir and tools state.
@@ -159,7 +154,6 @@ async def restore_last_session(x_session_id: Optional[str] = Header(None)):
     Returns:
         JSON with restored session info
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     state = EngineSessionManager.get_last_session_state()
     if not state or not state.get("name"):
@@ -167,7 +161,7 @@ async def restore_last_session(x_session_id: Optional[str] = Header(None)):
 
     session_name = state["name"]
 
-    result = engine.restore_session(session_name)
+    result = s.engine.restore_session(session_name)
     if not result["success"]:
         raise HTTPException(status_code=404, detail=result.get("error", f"Session not found: {session_name}"))
 

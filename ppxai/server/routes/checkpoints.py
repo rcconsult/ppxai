@@ -4,11 +4,11 @@ Checkpoint management endpoints (v1.12.0).
 
 import subprocess
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional
 
 from ...common.logger import get_logger
-from ..state import get_or_create_session
+from ..state import Session, get_session
 
 logger = get_logger("server")
 
@@ -16,27 +16,25 @@ router = APIRouter()
 
 
 @router.get("/checkpoint/status")
-async def get_checkpoint_status(x_session_id: Optional[str] = Header(None)):
+async def get_checkpoint_status(s: Session = Depends(get_session)):
     """Get checkpoint system status (v1.12.0).
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    return engine.get_checkpoint_status()
+    return s.engine.get_checkpoint_status()
 
 
 @router.post("/checkpoint/undo")
-async def undo_last_checkpoint(x_session_id: Optional[str] = Header(None)):
+async def undo_last_checkpoint(s: Session = Depends(get_session)):
     """Undo the last checkpoint (revert agent task changes) (v1.12.0).
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     # Allow undo regardless of agent mode - checkpoints from previous sessions should be undoable
     # Check if checkpoints are enabled
-    status = engine.get_checkpoint_status()
+    status = s.engine.get_checkpoint_status()
     if not status.get("enabled"):
         raise HTTPException(
             status_code=400,
@@ -65,7 +63,7 @@ async def undo_last_checkpoint(x_session_id: Optional[str] = Header(None)):
         try:
             result = subprocess.run(
                 ["git", "status", "--porcelain"],
-                cwd=engine.context_injector.working_dir,
+                cwd=s.engine.context_injector.working_dir,
                 capture_output=True,
                 text=True
             )
@@ -78,14 +76,14 @@ async def undo_last_checkpoint(x_session_id: Optional[str] = Header(None)):
             pass  # If git status fails, let the undo attempt proceed
 
     # Perform undo
-    success = engine.undo_last_checkpoint()
+    success = s.engine.undo_last_checkpoint()
     if not success:
         raise HTTPException(
             status_code=500,
             detail="Failed to undo checkpoint (git revert may have failed)"
         )
 
-    logger.info(f"Checkpoint undo successful via API for session {session_id}")
+    logger.info(f"Checkpoint undo successful via API for session {s.id}")
 
     return {
         "success": True,
@@ -98,15 +96,14 @@ async def undo_last_checkpoint(x_session_id: Optional[str] = Header(None)):
 @router.get("/checkpoint/list")
 async def list_checkpoints(
     limit: int = 10,
-    x_session_id: Optional[str] = Header(None)
+    s: Session = Depends(get_session)
 ):
     """List recent checkpoints (v1.12.4).
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    checkpoints = engine.list_checkpoints(limit=limit)
+    checkpoints = s.engine.list_checkpoints(limit=limit)
     return {
         "checkpoints": checkpoints,
         "count": len(checkpoints),
@@ -116,7 +113,7 @@ async def list_checkpoints(
 @router.post("/checkpoint/backend")
 async def set_checkpoint_backend(
     request: dict,
-    x_session_id: Optional[str] = Header(None)
+    s: Session = Depends(get_session)
 ):
     """Set the checkpoint backend (v1.12.4).
 
@@ -124,7 +121,6 @@ async def set_checkpoint_backend(
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     backend = request.get("backend")
     if not backend:
@@ -137,12 +133,12 @@ async def set_checkpoint_backend(
             detail=f"Invalid backend: {backend}. Valid options: {', '.join(valid_backends)}"
         )
 
-    success = engine.set_checkpoint_backend(backend)
+    success = s.engine.set_checkpoint_backend(backend)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to set checkpoint backend")
 
     # Return the new status
-    status = engine.get_checkpoint_status()
+    status = s.engine.get_checkpoint_status()
     return {
         "success": True,
         "backend": status.get("backend"),
@@ -153,7 +149,7 @@ async def set_checkpoint_backend(
 @router.post("/checkpoint/clear")
 async def clear_file_checkpoints(
     request: dict = None,
-    x_session_id: Optional[str] = Header(None)
+    s: Session = Depends(get_session)
 ):
     """Clear old file-based checkpoint snapshots (v1.12.4).
 
@@ -161,20 +157,19 @@ async def clear_file_checkpoints(
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     keep_last = 0
     if request:
         keep_last = request.get("keep_last", 0)
 
-    status = engine.get_checkpoint_status()
+    status = s.engine.get_checkpoint_status()
     if status.get("backend") != "file":
         raise HTTPException(
             status_code=400,
             detail=f"Clear only applies to file-based checkpoints. Current backend: {status.get('backend', 'none')}"
         )
 
-    removed = engine.clear_file_checkpoints(keep_last=keep_last)
+    removed = s.engine.clear_file_checkpoints(keep_last=keep_last)
     return {
         "success": True,
         "removed": removed,
@@ -185,7 +180,7 @@ async def clear_file_checkpoints(
 @router.get("/checkpoint/info/{checkpoint_id}")
 async def get_checkpoint_info(
     checkpoint_id: str,
-    x_session_id: Optional[str] = Header(None)
+    s: Session = Depends(get_session)
 ):
     """Get details about a specific checkpoint.
 
@@ -193,9 +188,8 @@ async def get_checkpoint_info(
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    checkpoints = engine.list_checkpoints(limit=20)
+    checkpoints = s.engine.list_checkpoints(limit=20)
 
     # Find matching checkpoint (prefix match)
     matching = [cp for cp in checkpoints if cp.get("id", "").startswith(checkpoint_id)]
@@ -209,7 +203,7 @@ async def get_checkpoint_info(
     cp = matching[0]
 
     # Check if this is the current checkpoint
-    status = engine.get_checkpoint_status()
+    status = s.engine.get_checkpoint_status()
     is_current = status.get("last_checkpoint", "").startswith(checkpoint_id)
 
     return {

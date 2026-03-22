@@ -7,12 +7,33 @@ state but the app module depends on routes only at registration time.
 """
 
 import asyncio
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from fastapi import HTTPException
+from fastapi import Header, HTTPException
 
 from ..engine import EngineClient
+
+
+@dataclass
+class Session:
+    """Session context returned by the get_session dependency."""
+    id: str
+    engine: EngineClient
+    lock: asyncio.Lock
+
+
+async def get_session(x_session_id: Optional[str] = Header(None)) -> Session:
+    """FastAPI dependency — resolves session from X-Session-Id header.
+
+    Usage in routes:
+        @router.get("/providers")
+        async def get_providers(s: Session = Depends(get_session)):
+            providers = s.engine.list_providers()
+    """
+    sid, engine, lock = await get_or_create_session(x_session_id)
+    return Session(id=sid, engine=engine, lock=lock)
 
 # Session manager singleton (v1.13.10)
 # Set by http.py lifespan, accessed by route modules

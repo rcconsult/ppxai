@@ -6,7 +6,7 @@ import asyncio
 import signal
 import time
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional
 
 from ...common.logger import get_logger
@@ -18,7 +18,7 @@ from ...config import (
     reload_config,
 )
 from ...version import __version__
-from ..state import get_or_create_session, get_session_manager, get_shutdown_event
+from ..state import Session, get_session, get_session_manager, get_shutdown_event
 
 logger = get_logger("server")
 
@@ -131,22 +131,21 @@ async def shutdown_server():
 
 
 @router.get("/status")
-async def get_status(x_session_id: Optional[str] = Header(None)):
+async def get_status(s: Session = Depends(get_session)):
     """Get current engine status.
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     v1.14.0: Added bootstrap context status.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     return {
-        "provider": engine.provider_name,
-        "model": engine.model,
-        "tools_enabled": engine.tools_enabled,
-        "agent_mode": engine.agent_mode,
-        "auto_inject_context": engine.auto_inject_context,
-        "session_id": session_id,
-        "bootstrap": engine.get_bootstrap_status(),  # v1.14.0
+        "provider": s.engine.provider_name,
+        "model": s.engine.model,
+        "tools_enabled": s.engine.tools_enabled,
+        "agent_mode": s.engine.agent_mode,
+        "auto_inject_context": s.engine.auto_inject_context,
+        "session_id": s.id,
+        "bootstrap": s.engine.get_bootstrap_status(),  # v1.14.0
     }
 
 

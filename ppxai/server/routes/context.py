@@ -4,12 +4,12 @@ Context, working directory, and bootstrap context endpoints.
 
 import os
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional
 
 from ...common.logger import get_logger
 from ..models import WorkingDirRequest, AutoInjectRequest
-from ..state import get_or_create_session
+from ..state import Session, get_session
 
 logger = get_logger("server")
 
@@ -17,73 +17,69 @@ router = APIRouter()
 
 
 @router.get("/context/working_dir")
-async def get_working_dir(x_session_id: Optional[str] = Header(None)):
+async def get_working_dir(s: Session = Depends(get_session)):
     """Get the current working directory.
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    path = engine.get_working_dir() or os.getcwd()
-    return {"path": path, "session_id": session_id}
+    path = s.engine.get_working_dir() or os.getcwd()
+    return {"path": path, "session_id": s.id}
 
 
 @router.post("/context/working_dir")
 async def set_working_dir(
     request: WorkingDirRequest,
-    x_session_id: Optional[str] = Header(None)
+    s: Session = Depends(get_session)
 ):
     """Set the working directory for file path resolution.
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     Each session maintains its own working directory.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     # Expand tilde and resolve to absolute path
     path = os.path.expanduser(request.path)
 
     # If relative path, resolve relative to session's current working dir (not server cwd)
     if not os.path.isabs(path):
-        current_wd = engine.get_working_dir() or os.getcwd()
+        current_wd = s.engine.get_working_dir() or os.getcwd()
         path = os.path.normpath(os.path.join(current_wd, path))
 
     if not os.path.isdir(path):
         raise HTTPException(status_code=400, detail=f"Not a valid directory: {path}")
 
-    engine.set_working_dir(path)
-    logger.info(f"Session {session_id} working directory set to: {path}")
-    return {"path": path, "success": True, "session_id": session_id}
+    s.engine.set_working_dir(path)
+    logger.info(f"Session {s.id} working directory set to: {path}")
+    return {"path": path, "success": True, "session_id": s.id}
 
 
 @router.post("/context/auto_inject")
 async def set_auto_inject(
     request: AutoInjectRequest,
-    x_session_id: Optional[str] = Header(None)
+    s: Session = Depends(get_session)
 ):
     """Enable or disable automatic context injection.
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    engine.set_auto_inject(request.enabled)
+    s.engine.set_auto_inject(request.enabled)
     return {"enabled": request.enabled, "success": True}
 
 
 @router.get("/context/auto_inject")
-async def get_auto_inject(x_session_id: Optional[str] = Header(None)):
+async def get_auto_inject(s: Session = Depends(get_session)):
     """Get auto-inject context status.
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    return {"enabled": engine.get_auto_inject()}
+    return {"enabled": s.engine.get_auto_inject()}
 
 
 @router.get("/context/info")
-async def get_context_info(x_session_id: Optional[str] = Header(None)):
+async def get_context_info(s: Session = Depends(get_session)):
     """Get context usage information.
 
     v1.13.9: Returns token usage, context limit, and injected files.
@@ -96,14 +92,13 @@ async def get_context_info(x_session_id: Optional[str] = Header(None)):
         - injected_tokens: Tokens used by injections
         - message_count: Number of messages in history
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    info = engine.get_context_info()
-    return {**info, "session_id": session_id}
+    info = s.engine.get_context_info()
+    return {**info, "session_id": s.id}
 
 
 @router.post("/context/clear")
-async def clear_context_injections(x_session_id: Optional[str] = Header(None)):
+async def clear_context_injections(s: Session = Depends(get_session)):
     """Clear injected @file/@git/@tree content from conversation history.
 
     v1.13.9: Removes injection blocks from messages to free context space.
@@ -113,18 +108,17 @@ async def clear_context_injections(x_session_id: Optional[str] = Header(None)):
         - removed_count: Number of injections removed
         - success: True if operation completed
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    removed_count = engine.clear_injected_contexts()
+    removed_count = s.engine.clear_injected_contexts()
     return {
         "removed_count": removed_count,
         "success": True,
-        "session_id": session_id
+        "session_id": s.id
     }
 
 
 @router.get("/context/hints")
-async def get_active_hints(x_session_id: Optional[str] = Header(None)):
+async def get_active_hints(s: Session = Depends(get_session)):
     """Get active bootstrap hints for current provider/model.
 
     v1.14.0: Returns detailed breakdown of which hints from AGENTS.md/CLAUDE.md
@@ -142,17 +136,16 @@ async def get_active_hints(x_session_id: Optional[str] = Header(None)):
         - all_provider_keys: List of all provider hint keys in file
         - all_model_patterns: List of all model patterns in file
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    hints_info = engine.get_active_hints()
+    hints_info = s.engine.get_active_hints()
     return {
         **hints_info,
-        "session_id": session_id
+        "session_id": s.id
     }
 
 
 @router.get("/context/bootstrap")
-async def get_bootstrap_status(x_session_id: Optional[str] = Header(None)):
+async def get_bootstrap_status(s: Session = Depends(get_session)):
     """Get bootstrap context hierarchy with scope information (v1.14.2).
 
     Returns detailed information about loaded bootstrap files including
@@ -168,17 +161,16 @@ async def get_bootstrap_status(x_session_id: Optional[str] = Header(None)):
         - model_hints: List[str] - model patterns with hints
         - total_size: int - total size in bytes
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    status = engine.get_bootstrap_status()
+    status = s.engine.get_bootstrap_status()
     return {
         **status,
-        "session_id": session_id
+        "session_id": s.id
     }
 
 
 @router.post("/context/reload")
-async def reload_bootstrap_context(x_session_id: Optional[str] = Header(None)):
+async def reload_bootstrap_context(s: Session = Depends(get_session)):
     """Reload bootstrap context from disk (v1.14.1, v1.14.2 scopes).
 
     Reloads bootstrap context files from all scopes (global, project, subdir).
@@ -190,15 +182,14 @@ async def reload_bootstrap_context(x_session_id: Optional[str] = Header(None)):
     v1.14.1: Added for VSCode /context reload command.
     v1.14.2: Returns full scoped source info.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    logger.info(f"HTTP POST /context/reload - session: {session_id}")
+    logger.info(f"HTTP POST /context/reload - session: {s.id}")
 
-    success = engine.reload_bootstrap_context()
-    status = engine.get_bootstrap_status()
+    success = s.engine.reload_bootstrap_context()
+    status = s.engine.get_bootstrap_status()
 
     return {
         "success": success,
         **status,
-        "session_id": session_id
+        "session_id": s.id
     }

@@ -2,11 +2,10 @@
 Provider and model management endpoints.
 """
 
-from fastapi import APIRouter, Header, HTTPException
-from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException
 
 from ..models import SetProviderRequest, SetModelRequest, ToolsRequest, ToolsConfigRequest
-from ..state import get_or_create_session
+from ..state import Session, get_session
 from ...common.logger import get_logger
 
 logger = get_logger("server")
@@ -15,14 +14,9 @@ router = APIRouter()
 
 
 @router.get("/providers")
-async def get_providers(x_session_id: Optional[str] = Header(None)):
-    """Get list of available providers.
-
-    v1.13.10: Supports X-Session-Id header for session isolation.
-    """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
-
-    providers = engine.list_providers()
+async def get_providers(s: Session = Depends(get_session)):
+    """Get list of available providers."""
+    providers = s.engine.list_providers()
     return {
         "providers": [
             {
@@ -38,47 +32,33 @@ async def get_providers(x_session_id: Optional[str] = Header(None)):
             }
             for p in providers
         ],
-        "current": engine.provider_name,
+        "current": s.engine.provider_name,
     }
 
 
 @router.post("/providers")
-async def set_provider(
-    request: SetProviderRequest,
-    x_session_id: Optional[str] = Header(None)
-):
-    """Set the active provider.
-
-    v1.13.10: Supports X-Session-Id header for session isolation.
-    """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
-
-    success = engine.set_provider(request.provider)
+async def set_provider(request: SetProviderRequest, s: Session = Depends(get_session)):
+    """Set the active provider."""
+    success = s.engine.set_provider(request.provider)
     if not success:
         raise HTTPException(status_code=400, detail=f"Failed to set provider: {request.provider}")
 
-    # Optionally set model
     if request.model:
-        engine.set_model(request.model, reset_context=request.reset_context)
+        s.engine.set_model(request.model, reset_context=request.reset_context)
 
     result = {
-        "provider": engine.provider_name,
-        "model": engine.model,
+        "provider": s.engine.provider_name,
+        "model": s.engine.model,
     }
-    if engine.last_model_switch_reset > 0:
-        result["context_reset"] = engine.last_model_switch_reset
+    if s.engine.last_model_switch_reset > 0:
+        result["context_reset"] = s.engine.last_model_switch_reset
     return result
 
 
 @router.get("/models")
-async def get_models(x_session_id: Optional[str] = Header(None)):
-    """Get list of models for current provider.
-
-    v1.13.10: Supports X-Session-Id header for session isolation.
-    """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
-
-    models = engine.list_models()
+async def get_models(s: Session = Depends(get_session)):
+    """Get list of models for current provider."""
+    models = s.engine.list_models()
     return {
         "models": [
             {
@@ -88,61 +68,46 @@ async def get_models(x_session_id: Optional[str] = Header(None)):
             }
             for m in models
         ],
-        "current": engine.model,
-        "provider": engine.provider_name,
+        "current": s.engine.model,
+        "provider": s.engine.provider_name,
     }
 
 
 @router.post("/models")
-async def set_model(
-    request: SetModelRequest,
-    x_session_id: Optional[str] = Header(None)
-):
-    """Set the active model.
-
-    v1.13.10: Supports X-Session-Id header for session isolation.
-    """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
-
-    success = engine.set_model(request.model, reset_context=request.reset_context)
+async def set_model(request: SetModelRequest, s: Session = Depends(get_session)):
+    """Set the active model."""
+    success = s.engine.set_model(request.model, reset_context=request.reset_context)
     if not success:
         raise HTTPException(status_code=400, detail=f"Failed to set model: {request.model}")
 
     result = {
-        "model": engine.model,
-        "provider": engine.provider_name,
+        "model": s.engine.model,
+        "provider": s.engine.provider_name,
     }
-    if engine.last_model_switch_reset > 0:
-        result["context_reset"] = engine.last_model_switch_reset
+    if s.engine.last_model_switch_reset > 0:
+        result["context_reset"] = s.engine.last_model_switch_reset
     return result
 
 
 # === Tools Management ===
 
 @router.get("/tools")
-async def get_tools(x_session_id: Optional[str] = Header(None)):
-    """Get list of available tools.
+async def get_tools(s: Session = Depends(get_session)):
+    """Get list of available tools."""
+    tools = s.engine.list_tools()
 
-    v1.13.10: Supports X-Session-Id header for session isolation.
-    """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
-
-    tools = engine.list_tools()
-
-    # Get consent mode from session (v1.11.9)
     consent_mode = "default"
     try:
-        if hasattr(engine, 'session') and hasattr(engine.session, 'edit_consent_mode'):
-            consent_mode = engine.session.edit_consent_mode
+        if hasattr(s.engine, 'session') and hasattr(s.engine.session, 'edit_consent_mode'):
+            consent_mode = s.engine.session.edit_consent_mode
     except Exception as e:
         logger.debug(f"Failed to get consent mode from session: {e}")
 
-    # Get full status including auto_retry_empty
-    status = engine.get_tools_status()
+    status = s.engine.get_tools_status()
 
     return {
-        "tools": tools,  # Already list of {"name": ..., "description": ...}
-        "enabled": engine.tools_enabled,
+        "tools": tools,
+        "enabled": s.engine.tools_enabled,
         "max_iterations": status.get('max_iterations', 15),
         "auto_retry_empty": status.get('auto_retry_empty', 2),
         "consent_mode": consent_mode,
@@ -151,38 +116,20 @@ async def get_tools(x_session_id: Optional[str] = Header(None)):
 
 
 @router.post("/tools")
-async def set_tools(
-    request: ToolsRequest,
-    x_session_id: Optional[str] = Header(None)
-):
-    """Enable or disable tools.
-
-    v1.13.10: Supports X-Session-Id header for session isolation.
-    """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
-
+async def set_tools(request: ToolsRequest, s: Session = Depends(get_session)):
+    """Enable or disable tools."""
     if request.enabled:
-        engine.enable_tools()
+        s.engine.enable_tools()
     else:
-        engine.disable_tools()
+        s.engine.disable_tools()
 
-    return {
-        "enabled": engine.tools_enabled,
-    }
+    return {"enabled": s.engine.tools_enabled}
 
 
 @router.post("/tools/config")
-async def set_tools_config(
-    request: ToolsConfigRequest,
-    x_session_id: Optional[str] = Header(None)
-):
-    """Configure tool settings (e.g., max_iterations).
-
-    v1.13.10: Supports X-Session-Id header for session isolation.
-    """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
-
-    success = engine.set_tool_config(request.setting, request.value)
+async def set_tools_config(request: ToolsConfigRequest, s: Session = Depends(get_session)):
+    """Configure tool settings (e.g., max_iterations)."""
+    success = s.engine.set_tool_config(request.setting, request.value)
     if not success:
         raise HTTPException(status_code=400, detail=f"Unknown setting: {request.setting}")
 
@@ -194,24 +141,14 @@ async def set_tools_config(
 
 
 @router.get("/tools/help/{tool_name}")
-async def get_tool_help(
-    tool_name: str,
-    x_session_id: Optional[str] = Header(None)
-):
-    """Get detailed help for a specific tool.
-
-    Returns tool definition including parameters, description, and usage examples.
-
-    v1.13.10: Supports X-Session-Id header for session isolation.
-    """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
-
-    if not engine.tools_enabled or not engine.tool_manager:
+async def get_tool_help(tool_name: str, s: Session = Depends(get_session)):
+    """Get detailed help for a specific tool."""
+    if not s.engine.tools_enabled or not s.engine.tool_manager:
         raise HTTPException(status_code=400, detail="Tools not enabled")
 
-    tool = engine.tool_manager.get_tool(tool_name)
+    tool = s.engine.tool_manager.get_tool(tool_name)
     if not tool:
-        available_tools = engine.tool_manager.list_tools()
+        available_tools = s.engine.tool_manager.list_tools()
         tool_names = [t['name'] for t in available_tools]
         raise HTTPException(
             status_code=404,

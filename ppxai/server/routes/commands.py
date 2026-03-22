@@ -5,13 +5,13 @@ Generic endpoint that dispatches commands through CommandFactory.
 All clients (web app, VSCode) call this instead of bespoke endpoints.
 """
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional
 
 from ...commands.context import ServerCommandContext
 from ...commands.factory import CommandFactory
 from ..models import CommandRequest
-from ..state import get_or_create_session
+from ..state import Session, get_session
 
 router = APIRouter()
 
@@ -20,7 +20,7 @@ router = APIRouter()
 async def execute_command(
     name: str,
     request: CommandRequest,
-    x_session_id: Optional[str] = Header(None)
+    s: Session = Depends(get_session)
 ):
     """Execute a slash command server-side via CommandFactory.
 
@@ -33,7 +33,6 @@ async def execute_command(
     if not spec:
         raise HTTPException(status_code=404, detail=f"Unknown command: /{name}")
 
-    session_id, engine, _ = await get_or_create_session(x_session_id)
-    context = ServerCommandContext(engine)
+    context = ServerCommandContext(s.engine)
     result = spec.handler(context, request.args)
     return result.to_dict()

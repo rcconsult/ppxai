@@ -7,13 +7,13 @@ import os
 import time
 from pathlib import Path
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from typing import Optional
 
 from ...common.logger import get_logger
 from ..models import FileReadRequest, FileSearchRequest, FileWriteRequest
-from ..state import get_or_create_session, is_path_allowed, MIME_TYPES
+from ..state import Session, get_session, is_path_allowed, MIME_TYPES
 
 logger = get_logger("server")
 
@@ -26,7 +26,7 @@ router = APIRouter()
 @router.post("/files/search")
 async def search_files(
     request: FileSearchRequest,
-    x_session_id: Optional[str] = Header(None)
+    s: Session = Depends(get_session)
 ):
     """Search for files in working directory (v1.13.8 - for @file autocomplete).
 
@@ -39,11 +39,10 @@ async def search_files(
     Returns:
         JSON: {"files": [{"name": "file.py", "path": "src/file.py"}, ...]}
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     logger.info(f"HTTP POST /files/search - query: {request.query}")
 
-    working_dir = Path(engine.get_working_dir() or os.getcwd())
+    working_dir = Path(s.engine.get_working_dir() or os.getcwd())
     query = request.query.lower()
     results = []
 
@@ -91,7 +90,7 @@ async def search_files(
 async def list_files(
     path: Optional[str] = None,
     a: bool = False,
-    x_session_id: Optional[str] = Header(None)
+    s: Session = Depends(get_session)
 ):
     """List directory contents (v1.16.0 - for /ls command).
 
@@ -104,9 +103,8 @@ async def list_files(
     Returns:
         JSON: {"files": [...], "path": "/abs/path"}
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    working_dir = Path(engine.get_working_dir() or os.getcwd())
+    working_dir = Path(s.engine.get_working_dir() or os.getcwd())
     if path:
         path_obj = Path(path).expanduser()
         target = path_obj if path_obj.is_absolute() else working_dir / path_obj
@@ -162,7 +160,7 @@ async def list_files(
 async def get_file_tree(
     path: Optional[str] = None,
     depth: int = 3,
-    x_session_id: Optional[str] = Header(None)
+    s: Session = Depends(get_session)
 ):
     """Get directory tree structure (v1.16.0 - for /tree command).
 
@@ -175,9 +173,8 @@ async def get_file_tree(
     Returns:
         JSON: {"tree": {...}, "path": "/abs/path", "stats": {"dirs": N, "files": N}}
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    working_dir = Path(engine.get_working_dir() or os.getcwd())
+    working_dir = Path(s.engine.get_working_dir() or os.getcwd())
     if path:
         path_obj = Path(path).expanduser()
         target = path_obj if path_obj.is_absolute() else working_dir / path_obj
@@ -233,7 +230,7 @@ async def get_file_tree(
 @router.post("/files/write")
 async def write_file(
     request: FileWriteRequest,
-    x_session_id: Optional[str] = Header(None)
+    s: Session = Depends(get_session)
 ):
     """Write file contents (v1.14.1 - for /edit command).
 
@@ -248,7 +245,6 @@ async def write_file(
 
     v1.14.1: Added for VSCode /edit command.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     logger.info(f"HTTP POST /files/write - path: {request.path}")
 
@@ -260,14 +256,14 @@ async def write_file(
 
     path = Path(filepath)
     if not path.is_absolute():
-        working_dir = Path(engine.get_working_dir() or os.getcwd())
+        working_dir = Path(s.engine.get_working_dir() or os.getcwd())
         path = working_dir / filepath
 
     path = path.resolve()
     logger.debug(f"  Resolved path: {path}")
 
     # Security: ensure path is within working directory tree or home directory
-    working_dir = Path(engine.get_working_dir() or os.getcwd()).resolve()
+    working_dir = Path(s.engine.get_working_dir() or os.getcwd()).resolve()
     home_dir = Path.home().resolve()
 
     # Allow files in working directory tree or home directory tree
@@ -304,23 +300,22 @@ async def write_file(
 @router.get("/files/image/{filepath:path}")
 async def serve_image(
     filepath: str,
-    x_session_id: Optional[str] = Header(None)
+    s: Session = Depends(get_session)
 ):
     """Serve raw image file for inline display in chat bubbles (v1.16.2).
 
     Returns the image binary with correct Content-Type header.
     Used by marked.js ![alt](/files/image/path) in chat messages.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     path = Path(filepath)
     if not path.is_absolute():
-        working_dir = Path(engine.get_working_dir() or os.getcwd())
+        working_dir = Path(s.engine.get_working_dir() or os.getcwd())
         path = working_dir / filepath
     path = path.resolve()
 
     # Security: same checks as /files/read
-    working_dir = Path(engine.get_working_dir() or os.getcwd()).resolve()
+    working_dir = Path(s.engine.get_working_dir() or os.getcwd()).resolve()
     home_dir = Path.home().resolve()
     if not (is_path_allowed(path, working_dir) or str(path).startswith(str(home_dir))):
         raise HTTPException(status_code=403, detail="Access denied")
@@ -339,7 +334,7 @@ async def serve_image(
 @router.post("/files/read")
 async def read_file(
     request: FileReadRequest,
-    x_session_id: Optional[str] = Header(None)
+    s: Session = Depends(get_session)
 ):
     """Read file contents (v1.13.1 - for /show command).
 
@@ -354,10 +349,9 @@ async def read_file(
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     logger.info(f"HTTP POST /files/read - path: {request.path}")
-    logger.debug(f"  Working directory: {engine.get_working_dir()}")
+    logger.debug(f"  Working directory: {s.engine.get_working_dir()}")
 
     filepath = request.path.strip()
 
@@ -365,7 +359,7 @@ async def read_file(
     if filepath.startswith('@'):
         query = filepath[1:]  # Remove @
         # Simple file search in working directory
-        working_dir = Path(engine.get_working_dir() or os.getcwd())
+        working_dir = Path(s.engine.get_working_dir() or os.getcwd())
         matches = []
 
         try:
@@ -394,14 +388,14 @@ async def read_file(
 
     path = Path(filepath)
     if not path.is_absolute():
-        working_dir = Path(engine.get_working_dir() or os.getcwd())
+        working_dir = Path(s.engine.get_working_dir() or os.getcwd())
         path = working_dir / filepath
 
     path = path.resolve()
     logger.debug(f"  Resolved path: {path}")
 
     # Security: ensure path is within working directory tree or home directory
-    working_dir = Path(engine.get_working_dir() or os.getcwd()).resolve()
+    working_dir = Path(s.engine.get_working_dir() or os.getcwd()).resolve()
     home_dir = Path.home().resolve()
 
     # Allow files in working directory tree (parent or child) or home directory tree

@@ -2,32 +2,31 @@
 Usage statistics endpoints.
 """
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional
 
 from ..models import UsageDisplayModeRequest
-from ..state import get_or_create_session
+from ..state import Session, get_session
 from ...usage import get_usage_report as get_report, get_usage_storage
 
 router = APIRouter()
 
 
 @router.get("/usage")
-async def get_usage(x_session_id: Optional[str] = Header(None)):
+async def get_usage(s: Session = Depends(get_session)):
     """Get token usage statistics for current session.
 
     Returns full usage including per-model breakdown (v1.12.2).
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    return engine.get_usage()
+    return s.engine.get_usage()
 
 
 @router.post("/usage/display")
 async def set_usage_display_mode(
     request: UsageDisplayModeRequest,
-    x_session_id: Optional[str] = Header(None)
+    s: Session = Depends(get_session)
 ):
     """Set usage display mode for status line (v1.12.2).
 
@@ -40,7 +39,6 @@ async def set_usage_display_mode(
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
     valid_modes = {"session", "provider", "model", "off"}
     if request.mode not in valid_modes:
@@ -49,30 +47,28 @@ async def set_usage_display_mode(
             detail=f"Invalid mode: {request.mode}. Valid modes: {', '.join(valid_modes)}"
         )
 
-    success = engine.session.set_usage_display_mode(request.mode)
+    success = s.engine.session.set_usage_display_mode(request.mode)
     return {"mode": request.mode, "success": success}
 
 
 @router.get("/usage/display")
-async def get_usage_display_mode(x_session_id: Optional[str] = Header(None)):
+async def get_usage_display_mode(s: Session = Depends(get_session)):
     """Get current usage display mode (v1.12.2).
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    return {"mode": engine.session.usage_display_mode}
+    return {"mode": s.engine.session.usage_display_mode}
 
 
 @router.post("/usage/reset")
-async def reset_usage(x_session_id: Optional[str] = Header(None)):
+async def reset_usage(s: Session = Depends(get_session)):
     """Reset all usage statistics to zero (v1.12.2).
 
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
-    session_id, engine, _ = await get_or_create_session(x_session_id)
 
-    engine.session.reset_usage()
+    s.engine.session.reset_usage()
     return {"success": True}
 
 
