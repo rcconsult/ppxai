@@ -50,20 +50,25 @@ a = Analysis(
         'raylib._raylib_cffi',
         'pyray',
         'cffi',
-        # Engine core
-        'openai',
-        'dotenv',
-        'httpx',
-        # ppxai modules
+        # pyte — VT100 terminal emulator for screen buffer
+        'pyte',
+        # ppxai-native modules (terminal emulator shell)
         'ppxai.native',
         'ppxai.native.app',
-        'ppxai.native.renderer',
-        'ppxai.native.input_handler',
+        'ppxai.native.cell_renderer',
+        'ppxai.native.pty_io',
         'ppxai.native.layout',
-        'ppxai.native.text_engine',
         'ppxai.native.theme',
         'ppxai.terminal',
         'ppxai.terminal.ghostty',
+        # Rich TUI runs as child process via PTY — needs all engine deps
+        # bundled so the child can import ppxai.rich.main
+        'openai',
+        'dotenv',
+        'httpx',
+        'rich',
+        'ppxai.rich',
+        'ppxai.rich.main',
         'ppxai.engine',
         'ppxai.engine.client',
         'ppxai.engine.chat',

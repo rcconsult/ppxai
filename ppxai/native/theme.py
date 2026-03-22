@@ -26,16 +26,18 @@ SCROLLBAR_HOVER = rl.Color(88, 91, 112, 200)
 SELECTION = rl.Color(137, 180, 250, 60)
 BORDER = rl.Color(69, 71, 90, 255)
 
-# Font sizes
+# Font sizes — terminal emulator mode uses slightly larger font for readability
 FONT_SIZE = 18
 FONT_SIZE_SMALL = 14
 FONT_SIZE_STATUS = 14
+FONT_SIZE_TERMINAL = 16  # Cell grid font size
 LINE_HEIGHT = FONT_SIZE + 4
 LINE_HEIGHT_SMALL = FONT_SIZE_SMALL + 3
 
 # Spacing
 PADDING = 12
 PADDING_SMALL = 6
+CELL_PADDING = 4  # Padding around the terminal cell grid
 STATUS_HEIGHT = 32
 INPUT_MIN_HEIGHT = 80
 INPUT_MAX_HEIGHT = 200

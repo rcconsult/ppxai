@@ -1,653 +1,402 @@
 """
-NativeApp — main application class for ppxai-native.
+NativeApp — PTY + pyte terminal emulator for ppxai-native.
 
-Owns the Raylib window, engine integration, and main loop.
+Spawns ppxai Rich TUI inside a PTY, uses pyte to parse VT output
+into a screen buffer, and renders the cell grid with Raylib.
+Full Rich formatting (markdown tables, syntax highlighting, panels)
+works unchanged.
 
-Thread model (same as ppxaide app.py:919-936):
-- Main thread: Raylib draw loop (sync, 60fps), drains event queue
-- Engine thread: asyncio loop, runs EngineClient.chat() async generator
-- Communication: queue.Queue for events, threading.Event for consent
+Thread model:
+- Main thread: Raylib draw loop (sync, 60fps)
+  - Reads PTY output (non-blocking)
+  - Feeds VT data to pyte Stream → Screen
+  - Draws cell grid from Screen.buffer
+  - Encodes keyboard input via ghostty → writes to PTY
+- Child process: ppxai Rich TUI (separate process via pty.fork())
+
+Keyboard encoding uses libghostty-vt key encoder for correct escape sequences.
+Screen buffer uses pyte (pure Python VT100 emulator) for cell-level access.
+
+macOS/Linux only. Windows lacks pty.fork() — use the chat UI fallback.
 """
 
-import asyncio
-import os
-import queue
-import re
-import threading
+import codecs
+import ctypes
+import platform
+import sys
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Optional
 
+import pyte
 import pyray as rl
 
-from ppxai.commands.factory import CommandFactory
-from ppxai.commands.results import ResultStatus, TextResult, ErrorResult, NotificationResult
-from ppxai.config import get_default_model, get_default_provider, initialize
-from ppxai.engine import EngineClient
-from ppxai.engine.types import EventType
 from ppxai.native import theme
-from ppxai.native.layout import calculate_layout
-from ppxai.native.renderer import (
-    draw_status_bar,
-    draw_chat_area,
-    draw_input_area,
-    draw_scrollbar,
+from ppxai.native.cell_renderer import draw_cursor, draw_screen
+from ppxai.native.pty_io import (
+    close_master,
+    is_child_alive,
+    kill_child,
+    pty_read,
+    pty_resize,
+    pty_write,
+    spawn_ppxai,
 )
-from ppxai.native.input_handler import (
-    handle_input,
-    InsertChar,
-    DeleteBack,
-    DeleteForward,
-    SubmitMessage,
-    NewLine,
-    Scroll,
-    CursorLeft,
-    CursorRight,
-    CursorHome,
-    CursorEnd,
-    HistoryPrev,
-    HistoryNext,
-    Cancel,
-)
+from ppxai.terminal import ghostty
 
 
-class NativeCommandContext:
-    """CommandContext adapter for ppxai-native. Satisfies the CommandContext protocol."""
+# Raylib key code → (ghostty_key, utf8_bytes, ghostty_mods)
+# Maps Raylib KEY_* constants to ghostty key encoder inputs.
+# Writing system keys (a-z, 0-9, symbols) go through get_char_pressed() instead.
+_RAYLIB_KEY_MAP = {
+    rl.KeyboardKey.KEY_ENTER: (ghostty.GHOSTTY_KEY_ENTER, b"\r", 0),
+    rl.KeyboardKey.KEY_KP_ENTER: (ghostty.GHOSTTY_KEY_ENTER, b"\r", 0),
+    rl.KeyboardKey.KEY_TAB: (ghostty.GHOSTTY_KEY_TAB, b"\t", 0),
+    rl.KeyboardKey.KEY_BACKSPACE: (ghostty.GHOSTTY_KEY_BACKSPACE, b"\x7f", 0),
+    rl.KeyboardKey.KEY_DELETE: (ghostty.GHOSTTY_KEY_DELETE, None, 0),
+    rl.KeyboardKey.KEY_ESCAPE: (ghostty.GHOSTTY_KEY_ESCAPE, b"\x1b", 0),
+    rl.KeyboardKey.KEY_UP: (ghostty.GHOSTTY_KEY_ARROW_UP, None, 0),
+    rl.KeyboardKey.KEY_DOWN: (ghostty.GHOSTTY_KEY_ARROW_DOWN, None, 0),
+    rl.KeyboardKey.KEY_LEFT: (ghostty.GHOSTTY_KEY_ARROW_LEFT, None, 0),
+    rl.KeyboardKey.KEY_RIGHT: (ghostty.GHOSTTY_KEY_ARROW_RIGHT, None, 0),
+    rl.KeyboardKey.KEY_HOME: (ghostty.GHOSTTY_KEY_HOME, None, 0),
+    rl.KeyboardKey.KEY_END: (ghostty.GHOSTTY_KEY_END, None, 0),
+    rl.KeyboardKey.KEY_PAGE_UP: (ghostty.GHOSTTY_KEY_PAGE_UP, None, 0),
+    rl.KeyboardKey.KEY_PAGE_DOWN: (ghostty.GHOSTTY_KEY_PAGE_DOWN, None, 0),
+    rl.KeyboardKey.KEY_INSERT: (ghostty.GHOSTTY_KEY_INSERT, None, 0),
+    rl.KeyboardKey.KEY_SPACE: (ghostty.GHOSTTY_KEY_SPACE, b" ", 0),
+    rl.KeyboardKey.KEY_F1: (ghostty.GHOSTTY_KEY_F1, None, 0),
+}
 
-    def __init__(self, app: "NativeApp"):
-        self._app = app
+# Raylib KEY_A..KEY_Z → ghostty key codes (writing system keys start at 4 in ghostty)
+# Only used for ctrl+key combinations; normal typing uses get_char_pressed()
+_GHOSTTY_KEY_A = 4
+_KEY_A = rl.KeyboardKey.KEY_A
 
-    @property
-    def engine_client(self) -> Any:
-        return self._app._engine
 
-    @property
-    def session(self) -> Any:
-        return self._app._engine.session if self._app._engine else None
+def _build_codepoints() -> list:
+    """Build Unicode codepoint list for font loading.
 
-    @property
-    def working_dir(self) -> str:
-        return self._app._engine.get_working_dir() or "" if self._app._engine else ""
-
-    @property
-    def current_model(self) -> str:
-        return self._app.model
-
-    @property
-    def provider(self) -> str:
-        return self._app.provider
-
-    @property
-    def tools_enabled(self) -> bool:
-        return self._app._engine.tools_enabled if self._app._engine else False
-
-    @property
-    def autoroute_enabled(self) -> bool:
-        return False
-
-    def set_model(self, model: str) -> None:
-        if self._app._engine:
-            self._app._engine.set_model(model)
-            self._app.model = model
-
-    def set_provider(self, provider: str) -> None:
-        if self._app._engine:
-            self._app._engine.set_provider(provider)
-            self._app.provider = provider
-
-    def get_provider(self) -> str:
-        return self._app.provider
-
-    def get_model(self) -> str:
-        return self._app.model
-
-    def get_auto_route(self) -> bool:
-        return False
-
-    def set_auto_route(self, enabled: bool) -> None:
-        pass
-
-    def get_tools_available(self) -> bool:
-        return self._app._engine.tools_enabled if self._app._engine else False
-
-    def get_tools_verbose(self) -> bool:
-        return False
-
-    def set_tools_verbose(self, verbose: bool) -> None:
-        pass
-
-    def get_config_value(self, key: str, default: Optional[str] = None) -> Optional[str]:
-        return default
-
-    def set_config_value(self, key: str, value: str) -> None:
-        pass
+    Focused on characters Rich TUI actually uses: ASCII, Latin,
+    box-drawing, block elements, and common symbols. Kept small
+    to ensure all glyphs fit comfortably in the font atlas.
+    """
+    cps = []
+    cps.extend(range(0x0020, 0x007F))  # Basic ASCII (95)
+    cps.extend(range(0x00A0, 0x0100))  # Latin-1 Supplement (96)
+    cps.extend(range(0x2010, 0x2030))  # General Punctuation: dashes, bullets (32)
+    cps.extend(range(0x2190, 0x21A0))  # Arrows: basic 16
+    cps.extend(range(0x2500, 0x2580))  # Box Drawing (128)
+    cps.extend(range(0x2580, 0x25A0))  # Block Elements (32)
+    # Specific symbols Rich uses
+    cps.extend([
+        0x25A0, 0x25A1,  # Black/white square
+        0x25B2, 0x25B6, 0x25BC, 0x25C0,  # Triangles
+        0x25CB, 0x25CF,  # Circles
+        0x2713, 0x2714, 0x2717, 0x2718,  # Check marks, crosses
+        0x26A0,  # Warning sign
+        0x2022,  # Bullet
+    ])
+    return cps
 
 
 class NativeApp:
-    """ppxai native desktop application."""
+    """ppxai native desktop application — terminal emulator mode."""
 
     def __init__(self) -> None:
-        # Chat state
-        self.messages: List[Tuple[str, str]] = []  # (role, content)
-        self.streaming_text: str = ""
-        self.is_streaming: bool = False
-        self._cancel_requested: bool = False
+        # PTY state
+        self._child_pid: int = 0
+        self._master_fd: int = -1
 
-        # Input state
-        self.input_text: str = ""
-        self.cursor_pos: int = 0
-        self._history: List[str] = []
-        self._history_index: int = -1
-        self._history_saved_input: str = ""
+        # pyte screen buffer + VT stream parser
+        self._screen: Optional[pyte.HistoryScreen] = None
+        self._stream: Optional[pyte.Stream] = None
+        # Incremental UTF-8 decoder — buffers partial multi-byte sequences
+        # across pty_read() calls so box-drawing chars (3-byte UTF-8) don't
+        # get split and replaced with U+FFFD
+        self._utf8_decoder = codecs.getincrementaldecoder("utf-8")("replace")
 
-        # Scroll state
-        self.scroll_offset: float = 0.0
-        self.content_height: float = 0.0
-        self.auto_scroll: bool = True
+        # Cell grid dimensions
+        self._cols: int = 0
+        self._rows: int = 0
+        self._cell_w: float = 0.0
+        self._cell_h: float = 0.0
 
-        # Engine
-        self._engine: Optional[EngineClient] = None
-        self.provider: str = ""
-        self.model: str = ""
-        self.status_text: str = ""
-        self._context: Optional[NativeCommandContext] = None
-
-        # Thread communication
-        self._event_queue: queue.Queue = queue.Queue()
-
-        # Window state
-        self._should_close: bool = False
-
-        # Consent bridge
-        self._consent_pending: Optional[dict] = None
-        self._consent_result: Optional[Tuple[bool, str]] = None
-        self._consent_event: threading.Event = threading.Event()
-
-        # Fonts (loaded in run())
+        # Fonts
         self._font: rl.Font = rl.Font()
         self._font_bold: rl.Font = rl.Font()
 
+        # Window tracking for resize detection
+        self._last_screen_w: int = 0
+        self._last_screen_h: int = 0
+
     def run(self) -> None:
         """Main application loop."""
+        if platform.system() == "Windows":
+            print("ppxai-native terminal emulator requires macOS or Linux.")
+            print("On Windows, use ppxai-native with the chat UI (Phase 1-6).")
+            sys.exit(1)
+
+        if not ghostty.is_available():
+            print(f"libghostty-vt not found: {ghostty.get_load_error()}")
+            print("ppxai-native requires libghostty-vt for keyboard encoding.")
+            sys.exit(1)
+
+        # Initialize Raylib window
         rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_RESIZABLE)
         rl.init_window(theme.DEFAULT_WIDTH, theme.DEFAULT_HEIGHT, b"ppxai-native")
         rl.set_target_fps(theme.TARGET_FPS)
         rl.set_exit_key(rl.KeyboardKey.KEY_NULL)  # Don't exit on Escape
 
-        # Load fonts
+        # Load monospace fonts with Unicode codepoints for box-drawing etc.
         assets_dir = Path(__file__).parent / "assets"
         font_path = str(assets_dir / "JetBrainsMono-Regular.ttf").encode("utf-8")
         font_bold_path = str(assets_dir / "JetBrainsMono-Bold.ttf").encode("utf-8")
-        self._font = rl.load_font_ex(font_path, 32, None, 0)
-        self._font_bold = rl.load_font_ex(font_bold_path, 32, None, 0)
+        codepoints = _build_codepoints()
+        cp_arr = rl.ffi.new("int[]", codepoints)
+        cp_ptr = rl.ffi.cast("int *", cp_arr)
+        # Rasterize at 48px to avoid "size is bigger than expected" clipping
+        # for box-drawing/block element glyphs that extend beyond the em square
+        self._font = rl.load_font_ex(font_path, 48, cp_ptr, len(codepoints))
+        self._font_bold = rl.load_font_ex(font_bold_path, 48, cp_ptr, len(codepoints))
         rl.set_texture_filter(self._font.texture, rl.TextureFilter.TEXTURE_FILTER_BILINEAR)
         rl.set_texture_filter(self._font_bold.texture, rl.TextureFilter.TEXTURE_FILTER_BILINEAR)
 
-        # Initialize engine
-        self._initialize_engine()
-
-        while not rl.window_should_close() and not self._should_close:
-            self._handle_input()
-            self._process_events()
-            self._draw()
-
-        rl.unload_font(self._font)
-        rl.unload_font(self._font_bold)
-        rl.close_window()
-
-    # =========================================================================
-    # Engine initialization (mirrors ppxaide app.py:280-346)
-    # =========================================================================
-
-    def _initialize_engine(self) -> None:
-        """Initialize EngineClient with provider/model from config."""
-        initialize()
-
-        self.provider = get_default_provider()
-        self.model = get_default_model(self.provider)
-
-        self._engine = EngineClient(
-            consent_callback=self._consent_file_handler,
-            shell_consent_callback=self._consent_shell_handler,
-        )
-
-        try:
-            self._engine.set_provider(self.provider)
-            self._engine.set_model(self.model, reset_context=False)
-        except Exception as e:
-            self.messages.append(("system", f"Engine init error: {e}"))
-            self.provider = "error"
-            self.model = str(e)[:40]
-            return
-
-        self._engine.set_working_dir(os.getcwd())
-        self._context = NativeCommandContext(self)
-        self.messages.append(("system",
-            f"Connected to {self.provider}/{self.model}. "
-            "Type a message and press Ctrl+Enter to send."))
-
-    # =========================================================================
-    # Consent callbacks (called from engine thread, block until main thread responds)
-    # =========================================================================
-
-    async def _consent_file_handler(self, file_path: str) -> Tuple[bool, str]:
-        """File edit consent — blocks engine thread, renders dialog in main thread."""
-        self._consent_pending = {"type": "file", "path": file_path}
-        self._consent_event.clear()
-        self._consent_event.wait(timeout=300)
-        result = self._consent_result or (False, "n")
-        self._consent_pending = None
-        self._consent_result = None
-        return result
-
-    async def _consent_shell_handler(self, command: str, working_dir: str = ".") -> Tuple[bool, str]:
-        """Shell command consent — blocks engine thread, renders dialog in main thread."""
-        self._consent_pending = {"type": "shell", "command": command, "cwd": working_dir}
-        self._consent_event.clear()
-        self._consent_event.wait(timeout=300)
-        result = self._consent_result or (False, "n")
-        self._consent_pending = None
-        self._consent_result = None
-        return result
-
-    # =========================================================================
-    # Engine thread (mirrors ppxaide app.py:919-1045)
-    # =========================================================================
-
-    def _submit_to_engine(self, text: str) -> None:
-        """Submit a message to the engine in a background thread."""
-        if self._engine is None or self.is_streaming:
-            return
-
-        self.is_streaming = True
-        self._cancel_requested = False
-        self.streaming_text = ""
-        self.status_text = "thinking..."
-
-        thread = threading.Thread(
-            target=self._engine_thread,
-            args=(text,),
-            daemon=True,
-        )
-        thread.start()
-
-    def _engine_thread(self, message: str) -> None:
-        """Worker thread: run async engine chat in its own event loop."""
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(self._stream_response(message))
-        except Exception as e:
-            self._event_queue.put(("ERROR", str(e)))
-        finally:
-            self._event_queue.put(("DONE", None))
-            loop.close()
-
-    async def _stream_response(self, message: str) -> None:
-        """Stream AI response, pushing events to the queue."""
-        async for event in self._engine.chat(message, stream=True):
-            if self._cancel_requested:
-                self._event_queue.put(("CANCELLED", None))
-                return
-            self._event_queue.put((event.type.name, event.data))
-
-    # =========================================================================
-    # Event processing (main thread, called each frame)
-    # =========================================================================
-
-    def _process_events(self) -> None:
-        """Drain the event queue and update state."""
-        while not self._event_queue.empty():
-            try:
-                event_type, event_data = self._event_queue.get_nowait()
-            except queue.Empty:
-                break
-
-            if event_type == "DONE":
-                if self.streaming_text:
-                    self.messages.append(("assistant", self.streaming_text))
-                    self.streaming_text = ""
-                self.is_streaming = False
-                self._cancel_requested = False
-                self.status_text = ""
-                self.auto_scroll = True
-
-            elif event_type == "CANCELLED":
-                self.messages.append(("system", "Stream cancelled"))
-                self.streaming_text = ""
-                self.is_streaming = False
-                self._cancel_requested = False
-                self.status_text = ""
-
-            elif event_type == "ERROR":
-                self.messages.append(("system", f"Error: {event_data}"))
-                self.streaming_text = ""
-                self.is_streaming = False
-                self.status_text = ""
-
-            elif event_type == EventType.STREAM_CHUNK.name:
-                self.streaming_text += event_data or ""
-                self.auto_scroll = True
-
-            elif event_type == EventType.STREAM_END.name:
-                # Usage stats in event_data (dict with tokens, cost, etc.)
-                if isinstance(event_data, dict):
-                    tokens = event_data.get("total_tokens", 0)
-                    if tokens:
-                        self.status_text = f"{tokens} tokens"
-
-            elif event_type == EventType.TOOL_CALL.name:
-                if isinstance(event_data, dict):
-                    tool_name = event_data.get("name", "unknown")
-                    self.messages.append(("tool", f"Calling: {tool_name}"))
-                    self.status_text = f"tool: {tool_name}"
-
-            elif event_type == EventType.TOOL_RESULT.name:
-                if isinstance(event_data, dict):
-                    result = event_data.get("result", "")
-                    # Truncate long tool results
-                    if len(result) > 500:
-                        result = result[:500] + "..."
-                    self.messages.append(("tool", result))
-                elif isinstance(event_data, str):
-                    result = event_data[:500] + "..." if len(event_data) > 500 else event_data
-                    self.messages.append(("tool", result))
-
-            elif event_type == EventType.TOOL_ERROR.name:
-                self.messages.append(("system", f"Tool error: {event_data}"))
-
-            elif event_type == EventType.REASONING_CHUNK.name:
-                # Show reasoning in streaming text with dimmed prefix
-                pass  # Phase 3: render reasoning separately
-
-            elif event_type == EventType.ERROR.name:
-                self.messages.append(("system", f"Error: {event_data}"))
-
-        # Handle consent dialog input
-        if self._consent_pending:
-            self._handle_consent_input()
-
-    def _handle_consent_input(self) -> None:
-        """Check for Y/N input when consent dialog is showing."""
-        if rl.is_key_pressed(rl.KeyboardKey.KEY_Y):
-            self._consent_result = (True, "y")
-            self._consent_event.set()
-        elif rl.is_key_pressed(rl.KeyboardKey.KEY_N) or rl.is_key_pressed(rl.KeyboardKey.KEY_ESCAPE):
-            self._consent_result = (False, "n")
-            self._consent_event.set()
-        elif rl.is_key_pressed(rl.KeyboardKey.KEY_A):
-            self._consent_result = (True, "always")
-            self._consent_event.set()
-
-    # =========================================================================
-    # Slash commands
-    # =========================================================================
-
-    def _handle_slash_command(self, text: str) -> None:
-        """Route slash commands through CommandFactory."""
-        parts = text[1:].split(" ", 1)
-        cmd_name = parts[0].lower()
-        cmd_args = parts[1] if len(parts) > 1 else ""
-
-        # Built-in commands handled directly
-        if cmd_name == "clear":
-            self.messages.clear()
-            self.scroll_offset = 0
-            return
-
-        if cmd_name in ("quit", "exit", "q"):
-            self._should_close = True
-            return
-
-        # Try CommandFactory
-        if self._context:
-            try:
-                result = CommandFactory.dispatch(cmd_name, self._context, cmd_args)
-                self._render_command_result(result)
-
-                # Update provider/model if changed
-                if self._engine:
-                    new_provider = self._engine.get_current_provider()
-                    new_model = self._engine.get_current_model()
-                    if new_provider:
-                        self.provider = new_provider
-                    if new_model:
-                        self.model = new_model
-
-            except ValueError as e:
-                self.messages.append(("system", str(e)))
-            except Exception as e:
-                self.messages.append(("system", f"Command error: {e}"))
-        else:
-            self.messages.append(("system", f"Unknown command: {text}"))
-
-    def _render_command_result(self, result: Any) -> None:
-        """Render a CommandResult as a system message."""
-        if result is None:
-            return
-
-        self.auto_scroll = True
-        status = getattr(result, "status", None)
-        is_error = status == ResultStatus.ERROR
-
-        # Extract displayable text from various result types
-        parts = []
-
-        # message field (most result types)
-        msg = getattr(result, "message", None)
-        if msg:
-            parts.append(msg)
-
-        # content field (TextResult, MarkdownResult)
-        content = getattr(result, "content", None)
-        if content and content != msg:
-            parts.append(content)
-
-        # items field (KeyValueResult — dict of key: value pairs)
-        items = getattr(result, "items", None)
-        if isinstance(items, dict):
-            for k, v in items.items():
-                parts.append(f"  {k}: {v}")
-
-        # items field (ListResult — list of strings)
-        if isinstance(items, list):
-            for item in items:
-                parts.append(f"  {item}")
-
-        # suggestions field (ErrorResult)
-        suggestions = getattr(result, "suggestions", None)
-        if suggestions:
-            parts.append("Suggestions: " + ", ".join(suggestions))
-
-        text = "\n".join(parts) if parts else str(result)
-
-        # Strip Rich markup tags (simple removal)
-        text = re.sub(r'\[/?[^\]]+\]', '', text)
-
-        if is_error:
-            self.messages.append(("system", f"Error: {text}"))
-        else:
-            self.messages.append(("system", text))
-
-    # =========================================================================
-    # Input handling
-    # =========================================================================
-
-    def _handle_input(self) -> None:
-        """Process input actions."""
-        # Skip normal input when consent dialog is showing
-        if self._consent_pending:
-            return
-
-        for action in handle_input():
-            if isinstance(action, InsertChar):
-                self.input_text = (
-                    self.input_text[:self.cursor_pos]
-                    + action.char
-                    + self.input_text[self.cursor_pos:]
-                )
-                self.cursor_pos += len(action.char)
-
-            elif isinstance(action, NewLine):
-                self.input_text = (
-                    self.input_text[:self.cursor_pos]
-                    + "\n"
-                    + self.input_text[self.cursor_pos:]
-                )
-                self.cursor_pos += 1
-
-            elif isinstance(action, DeleteBack):
-                if self.cursor_pos > 0:
-                    self.input_text = (
-                        self.input_text[:self.cursor_pos - 1]
-                        + self.input_text[self.cursor_pos:]
-                    )
-                    self.cursor_pos -= 1
-
-            elif isinstance(action, DeleteForward):
-                if self.cursor_pos < len(self.input_text):
-                    self.input_text = (
-                        self.input_text[:self.cursor_pos]
-                        + self.input_text[self.cursor_pos + 1:]
-                    )
-
-            elif isinstance(action, SubmitMessage):
-                text = self.input_text.strip()
-                if text and not self.is_streaming:
-                    # Add to history
-                    if not self._history or self._history[-1] != text:
-                        self._history.append(text)
-                    self._history_index = -1
-
-                    self.input_text = ""
-                    self.cursor_pos = 0
-                    self.auto_scroll = True
-
-                    if text.startswith("/"):
-                        self._handle_slash_command(text)
-                    else:
-                        self.messages.append(("user", text))
-                        self._submit_to_engine(text)
-
-            elif isinstance(action, HistoryPrev):
-                if self._history:
-                    if self._history_index == -1:
-                        self._history_saved_input = self.input_text
-                        self._history_index = len(self._history) - 1
-                    elif self._history_index > 0:
-                        self._history_index -= 1
-                    self.input_text = self._history[self._history_index]
-                    self.cursor_pos = len(self.input_text)
-
-            elif isinstance(action, HistoryNext):
-                if self._history_index >= 0:
-                    self._history_index += 1
-                    if self._history_index >= len(self._history):
-                        self._history_index = -1
-                        self.input_text = self._history_saved_input
-                    else:
-                        self.input_text = self._history[self._history_index]
-                    self.cursor_pos = len(self.input_text)
-
-            elif isinstance(action, CursorLeft):
-                self.cursor_pos = max(0, self.cursor_pos - 1)
-
-            elif isinstance(action, CursorRight):
-                self.cursor_pos = min(len(self.input_text), self.cursor_pos + 1)
-
-            elif isinstance(action, CursorHome):
-                self.cursor_pos = 0
-
-            elif isinstance(action, CursorEnd):
-                self.cursor_pos = len(self.input_text)
-
-            elif isinstance(action, Scroll):
-                self.auto_scroll = False
-                self.scroll_offset = max(0, self.scroll_offset + action.pixels)
-
-            elif isinstance(action, Cancel):
-                if self.is_streaming:
-                    self._cancel_requested = True
-
-    # =========================================================================
-    # Drawing
-    # =========================================================================
-
-    def _draw(self) -> None:
-        """Render one frame."""
+        # Calculate cell dimensions from font metrics
+        m_size = rl.measure_text_ex(self._font, b"M", theme.FONT_SIZE_TERMINAL, 0)
+        self._cell_w = m_size.x
+        self._cell_h = m_size.y + 2  # Small vertical padding between rows
+
+        # Calculate grid dimensions
         screen_w = rl.get_screen_width()
         screen_h = rl.get_screen_height()
-        input_lines = self.input_text.count("\n") + 1
+        self._cols, self._rows = self._calculate_grid(screen_w, screen_h)
+        self._last_screen_w = screen_w
+        self._last_screen_h = screen_h
 
-        layout = calculate_layout(screen_w, screen_h, input_lines)
+        # Create pyte screen buffer + VT stream parser
+        self._screen = pyte.HistoryScreen(self._cols, self._rows, history=10000)
+        self._screen.set_mode(pyte.modes.LNM)  # Line feed mode
+        self._stream = pyte.Stream(self._screen)
 
-        # Auto-scroll to bottom
-        if self.auto_scroll and self.content_height > layout.chat_area.h:
-            self.scroll_offset = self.content_height - layout.chat_area.h
+        # Spawn ppxai Rich TUI in PTY
+        self._child_pid, self._master_fd = spawn_ppxai(self._cols, self._rows)
 
-        # Clamp scroll
-        max_scroll = max(0, self.content_height - layout.chat_area.h)
-        self.scroll_offset = max(0, min(self.scroll_offset, max_scroll))
+        # Main loop
+        try:
+            while not rl.window_should_close():
+                # Check if child is still alive
+                if not is_child_alive(self._child_pid):
+                    break
 
+                # Handle window resize
+                self._handle_resize()
+
+                # Read PTY output and feed to pyte
+                self._read_pty()
+
+                # Handle keyboard input → encode → write to PTY
+                self._handle_keyboard()
+
+                # Handle mouse (scroll)
+                self._handle_mouse()
+
+                # Draw
+                self._draw()
+        finally:
+            self._cleanup()
+
+    def _calculate_grid(self, screen_w: int, screen_h: int) -> tuple:
+        """Calculate terminal grid dimensions (cols, rows) from screen size."""
+        pad = theme.CELL_PADDING
+        usable_w = screen_w - 2 * pad
+        usable_h = screen_h - 2 * pad
+        cols = max(20, int(usable_w / self._cell_w))
+        rows = max(5, int(usable_h / self._cell_h))
+        return cols, rows
+
+    def _handle_resize(self) -> None:
+        """Detect window resize and update pyte screen + PTY dimensions."""
+        if not rl.is_window_resized():
+            return
+
+        screen_w = rl.get_screen_width()
+        screen_h = rl.get_screen_height()
+
+        if screen_w == self._last_screen_w and screen_h == self._last_screen_h:
+            return
+
+        self._last_screen_w = screen_w
+        self._last_screen_h = screen_h
+
+        new_cols, new_rows = self._calculate_grid(screen_w, screen_h)
+        if new_cols == self._cols and new_rows == self._rows:
+            return
+
+        self._cols = new_cols
+        self._rows = new_rows
+
+        # Resize pyte screen
+        self._screen.resize(self._rows, self._cols)
+
+        # Resize PTY (sends SIGWINCH to child)
+        pty_resize(self._master_fd, self._cols, self._rows)
+
+    def _read_pty(self) -> None:
+        """Read available data from PTY and feed to pyte stream."""
+        data = pty_read(self._master_fd)
+        if not data:
+            return
+
+        # Handle CPR (Cursor Position Report) requests from Rich
+        # Rich sends ESC[6n to query cursor position; we must respond
+        if b"\x1b[6n" in data:
+            row = self._screen.cursor.y + 1
+            col = self._screen.cursor.x + 1
+            response = f"\x1b[{row};{col}R".encode("ascii")
+            pty_write(self._master_fd, response)
+
+        # Incremental decode: buffers partial multi-byte UTF-8 sequences
+        # (e.g., box-drawing ╇ = 3 bytes that may split across reads)
+        text = self._utf8_decoder.decode(data)
+        if text:
+            self._stream.feed(text)
+
+    def _handle_keyboard(self) -> None:
+        """Process keyboard input: encode via ghostty and write to PTY."""
+        lib = ghostty._load_lib()
+        if lib is None:
+            return
+
+        encoder = ghostty._get_encoder()
+        event = ghostty._get_event()
+        if encoder is None or event is None:
+            return
+
+        ctrl = (
+            rl.is_key_down(rl.KeyboardKey.KEY_LEFT_CONTROL)
+            or rl.is_key_down(rl.KeyboardKey.KEY_RIGHT_CONTROL)
+        )
+        shift = (
+            rl.is_key_down(rl.KeyboardKey.KEY_LEFT_SHIFT)
+            or rl.is_key_down(rl.KeyboardKey.KEY_RIGHT_SHIFT)
+        )
+        alt = (
+            rl.is_key_down(rl.KeyboardKey.KEY_LEFT_ALT)
+            or rl.is_key_down(rl.KeyboardKey.KEY_RIGHT_ALT)
+        )
+
+        mods = 0
+        if ctrl:
+            mods |= ghostty.GHOSTTY_MODS_CTRL
+        if shift:
+            mods |= ghostty.GHOSTTY_MODS_SHIFT
+        if alt:
+            mods |= ghostty.GHOSTTY_MODS_ALT
+
+        # Handle special keys (Enter, Tab, arrows, etc.)
+        for rl_key, (gk, utf8, base_mods) in _RAYLIB_KEY_MAP.items():
+            if rl.is_key_pressed(rl_key) or rl.is_key_pressed_repeat(rl_key):
+                combined_mods = mods | base_mods
+                seq = self._encode_ghostty_key(
+                    lib, encoder, event, gk, utf8, combined_mods,
+                )
+                if seq:
+                    pty_write(self._master_fd, seq)
+
+        # Handle Ctrl+letter combinations (Ctrl+C, Ctrl+D, Ctrl+Z, etc.)
+        if ctrl:
+            for offset in range(26):  # A..Z
+                rl_letter = _KEY_A + offset
+                if rl.is_key_pressed(rl_letter):
+                    gk = _GHOSTTY_KEY_A + offset
+                    seq = self._encode_ghostty_key(
+                        lib, encoder, event, gk, None, mods,
+                    )
+                    if seq:
+                        pty_write(self._master_fd, seq)
+
+        # Handle regular character input (typing)
+        # Only process if no ctrl modifier (ctrl combos handled above)
+        if not ctrl:
+            while True:
+                ch = rl.get_char_pressed()
+                if ch == 0:
+                    break
+                # Send UTF-8 encoded character directly to PTY
+                char_bytes = chr(ch).encode("utf-8")
+                pty_write(self._master_fd, char_bytes)
+
+    def _encode_ghostty_key(
+        self, lib, encoder, event,
+        ghostty_key: int, utf8: Optional[bytes], mods: int,
+    ) -> Optional[bytes]:
+        """Encode a single key event through ghostty key encoder."""
+        lib.ghostty_key_event_set_action(event, ghostty.GHOSTTY_KEY_ACTION_PRESS)
+        lib.ghostty_key_event_set_key(event, ghostty_key)
+        lib.ghostty_key_event_set_mods(event, mods)
+        if utf8 is not None:
+            lib.ghostty_key_event_set_utf8(event, utf8, len(utf8))
+
+        out_buf = ctypes.create_string_buffer(128)
+        out_len = ctypes.c_size_t(0)
+        result = lib.ghostty_key_encoder_encode(
+            encoder, event, out_buf, 128, ctypes.byref(out_len),
+        )
+        if result != ghostty.GHOSTTY_SUCCESS or out_len.value == 0:
+            return None
+        return out_buf.raw[:out_len.value]
+
+    def _handle_mouse(self) -> None:
+        """Handle mouse wheel — scroll pyte's HistoryScreen scrollback."""
+        wheel = rl.get_mouse_wheel_move()
+        if wheel == 0:
+            return
+        if wheel > 0:
+            self._screen.prev_page()
+        else:
+            self._screen.next_page()
+
+    def _draw(self) -> None:
+        """Render one frame: draw cell grid from pyte screen buffer."""
         rl.begin_drawing()
+
+        # Clear with background color
         rl.clear_background(theme.BG)
 
-        draw_status_bar(self._font, layout, self.provider, self.model, self.status_text)
-        self.content_height = draw_chat_area(
-            self._font, self._font_bold, layout,
-            self.messages, self.streaming_text, self.scroll_offset,
+        # Draw cell grid
+        pad = theme.CELL_PADDING
+        draw_screen(
+            self._font, self._font_bold,
+            self._screen,
+            self._cell_w, self._cell_h,
+            pad, pad,
+            theme.FONT_SIZE_TERMINAL,
         )
-        draw_scrollbar(layout, self.scroll_offset, self.content_height)
-        draw_input_area(self._font, layout, self.input_text, self.cursor_pos, self.is_streaming)
 
-        # Consent dialog overlay
-        if self._consent_pending:
-            self._draw_consent_overlay(screen_w, screen_h)
+        # Draw cursor
+        cursor = self._screen.cursor
+        draw_cursor(
+            self._cell_w, self._cell_h,
+            cursor.x, cursor.y,
+            pad, pad,
+            self._screen.cursor.hidden,
+        )
 
         rl.end_drawing()
 
-    def _draw_consent_overlay(self, screen_w: int, screen_h: int) -> None:
-        """Draw consent dialog as modal overlay."""
-        # Semi-transparent background
-        rl.draw_rectangle(0, 0, screen_w, screen_h, rl.Color(0, 0, 0, 160))
+    def _cleanup(self) -> None:
+        """Clean up all resources."""
+        # Kill child process
+        if self._child_pid > 0:
+            kill_child(self._child_pid)
 
-        # Dialog box
-        dialog_w = min(600, screen_w - 40)
-        dialog_h = 160
-        dialog_x = (screen_w - dialog_w) // 2
-        dialog_y = (screen_h - dialog_h) // 2
+        # Close PTY
+        if self._master_fd >= 0:
+            close_master(self._master_fd)
 
-        rl.draw_rectangle_rounded(
-            rl.Rectangle(dialog_x, dialog_y, dialog_w, dialog_h),
-            0.02, 4, theme.INPUT_BG
-        )
-        rl.draw_rectangle_rounded_lines_ex(
-            rl.Rectangle(dialog_x, dialog_y, dialog_w, dialog_h),
-            0.02, 4, 1.0, theme.ACCENT
-        )
+        ghostty.cleanup()
 
-        # Title
-        consent = self._consent_pending
-        if consent["type"] == "file":
-            title = "File Edit Consent"
-            detail = consent.get("path", "unknown file")
-        else:
-            title = "Shell Command Consent"
-            detail = consent.get("command", "unknown command")
-
-        y = dialog_y + theme.PADDING
-        rl.draw_text_ex(self._font, title.encode("utf-8"),
-                        rl.Vector2(dialog_x + theme.PADDING, y),
-                        theme.FONT_SIZE, 1, theme.ACCENT)
-
-        y += theme.LINE_HEIGHT + 4
-        # Truncate detail if too long
-        if len(detail) > 60:
-            detail = detail[:57] + "..."
-        rl.draw_text_ex(self._font, detail.encode("utf-8"),
-                        rl.Vector2(dialog_x + theme.PADDING, y),
-                        theme.FONT_SIZE, 1, theme.TEXT)
-
-        y += theme.LINE_HEIGHT + 12
-        rl.draw_text_ex(self._font, b"[Y] Allow  [N] Deny  [A] Always allow  [Esc] Deny",
-                        rl.Vector2(dialog_x + theme.PADDING, y),
-                        theme.FONT_SIZE_SMALL, 1, theme.TEXT_DIM)
+        # Unload fonts and close window
+        rl.unload_font(self._font)
+        rl.unload_font(self._font_bold)
+        rl.close_window()

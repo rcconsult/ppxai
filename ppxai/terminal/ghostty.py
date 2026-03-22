@@ -93,7 +93,6 @@ GHOSTTY_KEY_F1 = 121
 # Opaque pointer types
 GhosttyKeyEncoder = ctypes.c_void_p
 GhosttyKeyEvent = ctypes.c_void_p
-GhosttyTerminal = ctypes.c_void_p
 
 
 # =============================================================================
@@ -165,7 +164,7 @@ def _load_lib() -> Optional[ctypes.CDLL]:
 
 
 def _setup_signatures(lib: ctypes.CDLL) -> None:
-    """Define C function signatures matching include/ghostty/vt/key/*.h"""
+    """Define C function signatures matching include/ghostty/vt/*.h"""
 
     # --- Key Event lifecycle ---
     # GhosttyResult ghostty_key_event_new(const GhosttyAllocator*, GhosttyKeyEvent*)

@@ -1,9 +1,11 @@
 """
-ppxai-native — Native desktop application using Raylib + libghostty-vt.
+ppxai-native — Native desktop terminal emulator using Raylib + libghostty-vt.
 
-Renders a chat interface directly using Raylib 2D drawing, bypassing both
-browser and terminal emulator dependencies. Uses the same EngineClient as
-ppxaide for AI communication.
+Spawns ppxai Rich TUI inside a PTY and renders the VT output as a cell grid
+using libghostty-vt for parsing and Raylib for drawing. Full Rich formatting
+(markdown, syntax highlighting, tables, panels) works unchanged.
+
+macOS/Linux only. Windows uses the direct chat UI fallback (Phase 1-6).
 """
 
 

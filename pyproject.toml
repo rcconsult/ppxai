@@ -85,6 +85,7 @@ data = [
 # Native desktop app with Raylib (v1.17.1+)
 native = [
     "raylib>=5.5.0",
+    "pyte>=0.8.0",
 ]
 
 # Next-gen TUI with Textual (v1.15.0+)
