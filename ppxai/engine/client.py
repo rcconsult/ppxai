@@ -9,8 +9,6 @@ import asyncio
 import hashlib
 import json
 import os
-import re
-import subprocess
 from datetime import datetime
 from typing import List, AsyncIterator, Optional, Dict, Any
 from pathlib import Path
@@ -30,7 +28,7 @@ from .providers.openai_compat import OpenAICompatibleProvider
 from .session import SessionManager
 from .context import ContextInjector, ScopedBootstrapSource
 from .bootstrap import BootstrapContext
-from ..checkpoint import CheckpointManager, FileCheckpointBackend
+from ..checkpoint import CheckpointManager
 from ..config import (
     calculate_cost,
     get_api_key,
@@ -39,17 +37,14 @@ from ..config import (
     get_default_provider,
     get_system_prompt,
     get_system_prompt_mode,
-    get_model_context_limit,
     get_shell_config,
     get_agent_config,
     reload_config as _reload_config,
     PROVIDERS,
-    EXPORTS_DIR,
 )
 from ..common.logger import get_logger
-from ..common.consent import classify_shell_command
-from ..constants import ConsentMode, ConsentResponse, ShellRiskLevel
 from .app_state import AppState
+from . import bootstrap_ops, checkpoint_ops, consent_ops, session_ops
 
 logger = get_logger("tui")
 
@@ -262,151 +257,27 @@ class EngineClient:
 
     # === Bootstrap Context (v1.14.0) ===
 
+    # === Bootstrap Context (delegated to bootstrap_ops.py) ===
+
     def load_bootstrap_context(self) -> bool:
-        """Load bootstrap context from AGENTS.md/CLAUDE.md across all scopes.
-
-        v1.14.2: Searches hierarchical scopes (global, project, subdir) and merges
-        files in precedence order with source tracking.
-
-        Scopes searched:
-        1. ~/.ppxai/AGENTS.md (global defaults)
-        2. {git_root}/AGENTS.md (project-specific)
-        3. {cwd}/AGENTS.md (subdirectory overrides)
-
-        Returns:
-            True if bootstrap context was loaded, False if no file found
-        """
-        ctx, sources = self.context_injector.load_bootstrap_context_merged()
-        if ctx:
-            self._bootstrap_context = ctx
-            self._bootstrap_sources = sources
-            return True
-        else:
-            self._bootstrap_context = None
-            self._bootstrap_sources = []
-            return False
+        """Load bootstrap context from AGENTS.md/CLAUDE.md across all scopes."""
+        return bootstrap_ops.load_bootstrap_context(self)
 
     def reload_bootstrap_context(self) -> bool:
-        """Reload bootstrap context from disk.
-
-        Returns:
-            True if bootstrap context was loaded, False if no file found
-        """
-        return self.load_bootstrap_context()
+        """Reload bootstrap context from disk."""
+        return bootstrap_ops.load_bootstrap_context(self)
 
     def get_bootstrap_status(self) -> Dict[str, Any]:
-        """Get status of loaded bootstrap context.
-
-        Returns:
-            Dict with:
-            - loaded: bool - whether bootstrap context is loaded
-            - sources: List[Dict] - scoped source info (v1.14.2)
-            - source_paths: List[str] - simple list of paths (backwards compat)
-            - char_count: int - total characters in base instructions
-            - has_hints: bool - whether provider/model hints are defined
-            - provider_hints: List[str] - list of providers with hints
-            - model_hints: List[str] - list of model patterns with hints
-            - total_size: int - total size of all sources in bytes
-        """
-        if not self._bootstrap_context:
-            return {
-                "loaded": False,
-                "sources": [],
-                "source_paths": [],
-                "char_count": 0,
-                "has_hints": False,
-                "provider_hints": [],
-                "model_hints": [],
-                "total_size": 0,
-            }
-
-        # Build scoped source info (v1.14.2)
-        sources_info = []
-        total_size = 0
-        for src in self._bootstrap_sources:
-            sources_info.append({
-                "path": str(src.path),
-                "scope": src.scope,
-                "size": src.size,
-            })
-            total_size += src.size
-
-        return {
-            "loaded": True,
-            "sources": sources_info,
-            "source_paths": [str(src.path) for src in self._bootstrap_sources],
-            "char_count": self._bootstrap_context.char_count,
-            "has_hints": self._bootstrap_context.has_hints,
-            "provider_hints": list(self._bootstrap_context.provider_hints.keys()),
-            "model_hints": list(self._bootstrap_context.model_hints.keys()),
-            "total_size": total_size,
-        }
+        """Get status of loaded bootstrap context."""
+        return bootstrap_ops.get_bootstrap_status(self)
 
     def get_bootstrap_prompt(self) -> str:
-        """Get the bootstrap prompt for the current provider/model.
-
-        Returns:
-            Assembled bootstrap prompt string, or empty string if not loaded
-        """
-        if not self._bootstrap_context:
-            return ""
-        return self._bootstrap_context.get_prompt_for(self.provider_name, self.model)
+        """Get the bootstrap prompt for the current provider/model."""
+        return bootstrap_ops.get_bootstrap_prompt(self)
 
     def get_active_hints(self) -> Dict[str, Any]:
-        """Get detailed breakdown of active hints for current provider/model.
-
-        Returns:
-            Dict with:
-            - loaded: bool - whether bootstrap context is loaded
-            - source: str - source description (v1.14.2: "merged (N files)" for multi-scope)
-            - sources: List[Dict] - scoped source info (v1.14.2)
-            - provider: str - current provider
-            - model: str - current model
-            - provider_hints: List of (source, hint) tuples
-            - model_hints: List of (pattern, hint) tuples
-            - inherited_local: bool - whether 'local' hints were inherited
-            - matched_patterns: List of matched model patterns
-            - all_provider_keys: List of all provider hint keys in file
-            - all_model_patterns: List of all model patterns in file
-        """
-        if not self._bootstrap_context:
-            return {
-                "loaded": False,
-                "source": "",
-                "sources": [],
-                "provider": self.provider_name,
-                "model": self.model,
-                "provider_hints": [],
-                "model_hints": [],
-                "inherited_local": False,
-                "matched_patterns": [],
-                "all_provider_keys": [],
-                "all_model_patterns": [],
-            }
-
-        active = self._bootstrap_context.get_active_hints_for(
-            self.provider_name, self.model
-        )
-
-        # Build scoped source info (v1.14.2)
-        sources_info = [
-            {"path": str(src.path), "scope": src.scope, "size": src.size}
-            for src in self._bootstrap_sources
-        ]
-
-        return {
-            "loaded": True,
-            "source": self._bootstrap_context.source_file,
-            "sources": sources_info,
-            "provider": self.provider_name,
-            "model": self.model,
-            "provider_hints": active["provider_hints"],
-            "model_hints": active["model_hints"],
-            "inherited_local": active["inherited_local"],
-            "matched_patterns": active["matched_patterns"],
-            "all_provider_keys": list(self._bootstrap_context.provider_hints.keys()),
-            "all_model_patterns": list(self._bootstrap_context.model_hints.keys()),
-        }
+        """Get detailed breakdown of active hints for current provider/model."""
+        return bootstrap_ops.get_active_hints(self)
 
     # === Interrupt Handling ===
 
@@ -716,402 +587,49 @@ class EngineClient:
         """
         return self._agent_config
 
-    # === Checkpoint Management (v1.12.0) ===
+    # === Checkpoint Management (delegated to checkpoint_ops.py) ===
 
     def create_checkpoint(self, description: str) -> Optional[str]:
-        """Create a checkpoint before agent task execution (v1.12.0).
-
-        Args:
-            description: Description of the task (for commit message)
-
-        Returns:
-            Checkpoint ID if successful, None otherwise
-        """
-        if not self._checkpoint_manager or not self._agent_mode:
-            return None
-
-        checkpoint_id = self._checkpoint_manager.create_checkpoint(description)
-        if checkpoint_id:
-            self._last_checkpoint_id = checkpoint_id
-
-            # Emit notification
-            backend = self._checkpoint_manager.get_backend_name()
-            if backend == "git":
-                msg = f"✓ Checkpoint created: {checkpoint_id[:8]} ({description})"
-            else:
-                msg = f"✓ Snapshot saved: {checkpoint_id} ({description})"
-
-            self._consent_event_queue.append(Event(
-                type=EventType.STATUS,
-                data=msg
-            ))
-
-        return checkpoint_id
+        """Create a checkpoint before agent task execution."""
+        return checkpoint_ops.create_checkpoint(self, description)
 
     def undo_last_checkpoint(self) -> bool:
-        """Undo the last checkpoint (revert changes) (v1.12.0).
-
-        Returns:
-            True if undo was successful, False otherwise
-        """
-        if not self._checkpoint_manager or not self._last_checkpoint_id:
-            return False
-
-        success = self._checkpoint_manager.restore_checkpoint(self._last_checkpoint_id)
-        if success:
-            backend = self._checkpoint_manager.get_backend_name()
-            checkpoint_id = self._last_checkpoint_id
-
-            if backend == "git":
-                msg = f"✓ Changes reverted using git revert (checkpoint: {checkpoint_id[:8]})"
-            else:
-                msg = f"✓ Files restored from snapshot: {checkpoint_id}"
-
-            self._consent_event_queue.append(Event(
-                type=EventType.STATUS,
-                data=msg
-            ))
-
-            self._last_checkpoint_id = None
-            return True
-
-        return False
+        """Undo the last checkpoint (revert changes)."""
+        return checkpoint_ops.undo_last_checkpoint(self)
 
     def commit_agent_changes(self, description: str) -> Optional[str]:
-        """Commit changes made during agent task (v1.12.0).
-
-        This commits any uncommitted changes after a successful agent task,
-        allowing undo to work via git revert.
-
-        Args:
-            description: Description of the changes (for commit message)
-
-        Returns:
-            Commit hash if successful, None otherwise
-        """
-        if not self._checkpoint_manager or not self._agent_mode:
-            return None
-
-        # Only git backend supports this
-        if self._checkpoint_manager.get_backend_name() != "git":
-            return None
-
-        try:
-            working_dir = self.context_injector.working_dir
-
-            # Check if there are changes to commit
-            result = subprocess.run(
-                ["git", "status", "--porcelain"],
-                cwd=working_dir,
-                capture_output=True,
-                text=True
-            )
-            if not result.stdout.strip():
-                return None  # No changes to commit
-
-            # Stage all changes
-            subprocess.run(
-                ["git", "add", "-A"],
-                cwd=working_dir,
-                check=True
-            )
-
-            # Commit with descriptive message
-            commit_msg = f"ppxai agent: {description}"
-            subprocess.run(
-                ["git", "commit", "-m", commit_msg],
-                cwd=working_dir,
-                check=True
-            )
-
-            # Get the commit hash
-            result = subprocess.run(
-                ["git", "rev-parse", "HEAD"],
-                cwd=working_dir,
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            commit_hash = result.stdout.strip()
-
-            # Update last checkpoint to the new commit (so undo reverts this)
-            self._last_checkpoint_id = commit_hash
-
-            return commit_hash
-        except subprocess.CalledProcessError:
-            return None
+        """Commit changes made during agent task."""
+        return checkpoint_ops.commit_agent_changes(self, description)
 
     def get_checkpoint_status(self) -> Dict[str, Any]:
-        """Get checkpoint system status (v1.12.0, updated v1.12.1).
-
-        Returns:
-            Dictionary with checkpoint status information including validity.
-        """
-        if not self._checkpoint_manager:
-            return {
-                "enabled": False,
-                "backend": "none",
-                "last_checkpoint": None,
-                "is_valid": False,
-                "validity_reason": "Checkpointing is disabled",
-            }
-
-        # Check if checkpoint is still valid (not stale)
-        is_valid = False
-        validity_reason = "No checkpoint available"
-        checkpoint_id = self._last_checkpoint_id  # Capture before potential clearing
-
-        if checkpoint_id:
-            is_valid, validity_reason = self._checkpoint_manager.is_checkpoint_valid(
-                checkpoint_id
-            )
-
-            # Auto-invalidate stale checkpoints (clear internal reference)
-            # But keep returning the ID so users can manually revert if needed
-            if not is_valid:
-                self._last_checkpoint_id = None
-
-        return {
-            "enabled": self._checkpoint_manager.is_enabled(),
-            "backend": self._checkpoint_manager.get_backend_name(),
-            "last_checkpoint": checkpoint_id,  # Return even if stale
-            "is_valid": is_valid,
-            "validity_reason": validity_reason,
-            "status_description": self._checkpoint_manager.get_status_description(),
-        }
+        """Get checkpoint system status."""
+        return checkpoint_ops.get_checkpoint_status(self)
 
     def list_checkpoints(self, limit: int = 10) -> List[Dict[str, str]]:
-        """List recent checkpoints (v1.12.4).
-
-        Returns:
-            List of checkpoint info dicts with keys: id, description, timestamp
-        """
-        if not self._checkpoint_manager:
-            return []
-
-        checkpoints = self._checkpoint_manager.list_checkpoints()
-        return [
-            {"id": cp[0], "description": cp[1], "timestamp": cp[2]}
-            for cp in checkpoints[:limit]
-        ]
+        """List recent checkpoints."""
+        return checkpoint_ops.list_checkpoints(self, limit)
 
     def set_checkpoint_backend(self, backend: str) -> bool:
-        """Set the checkpoint backend mode (v1.12.4).
-
-        Args:
-            backend: One of 'git', 'file', 'auto', 'none'
-
-        Returns:
-            True if backend was set successfully
-        """
-        valid_backends = ('git', 'file', 'auto', 'none')
-        if backend not in valid_backends:
-            return False
-
-        # Reinitialize checkpoint manager with new backend
-        working_dir = str(Path.cwd())
-        session_id = self.session.session_name if self.session else "default"
-
-        self._checkpoint_manager = CheckpointManager(
-            working_dir=working_dir,
-            session_id=session_id,
-            backend=backend
-        )
-        return True
+        """Set the checkpoint backend mode."""
+        return checkpoint_ops.set_checkpoint_backend(self, backend)
 
     def clear_file_checkpoints(self, keep_last: int = 0) -> int:
-        """Clear old file-based checkpoint snapshots (v1.12.4).
+        """Clear old file-based checkpoint snapshots."""
+        return checkpoint_ops.clear_file_checkpoints(self, keep_last)
 
-        Args:
-            keep_last: Number of recent checkpoints to keep (0 = clear all)
-
-        Returns:
-            Number of checkpoints removed
-        """
-        if not self._checkpoint_manager:
-            return 0
-
-        if isinstance(self._checkpoint_manager.backend, FileCheckpointBackend):
-            before_count = len(self._checkpoint_manager.list_checkpoints())
-            self._checkpoint_manager.backend.cleanup_old_checkpoints(keep_last=keep_last)
-            after_count = len(self._checkpoint_manager.list_checkpoints())
-            return before_count - after_count
-
-        return 0
+    # === Consent Management (delegated to consent_ops.py) ===
 
     async def request_file_edit_consent(self, file_path: str) -> bool:
-        """Request user consent for editing a file (v1.11.0).
-
-        This method manages the consent flow:
-        1. Check if consent mode is "always" or "never"
-        2. Check if file already allowed
-        3. If needed, call consent_callback to ask user
-        4. Update session state based on response
-        5. v1.12.0: Create checkpoint before first file edit in agent mode
-
-        Args:
-            file_path: Path to file that needs editing
-
-        Returns:
-            True if edit is allowed, False otherwise
-        """
-        path = Path(file_path).resolve()
-
-        # Create checkpoint before first file edit in agent mode
-        # Only create once per chat turn (when no files have been edited yet)
-        # create_checkpoint() already emits STATUS event - don't duplicate
-        if self._agent_mode and self._checkpoint_manager and not self.session.allowed_files:
-            # Extract filename for checkpoint description
-            filename = path.name
-            self.create_checkpoint(f"Before editing {filename}")
-
-        # Check global consent mode
-        if self.session.edit_consent_mode == ConsentMode.ALWAYS:
-            return True
-        if self.session.edit_consent_mode == ConsentMode.NEVER:
-            return False
-
-        # Check if already consented for this file
-        if path in self.session.allowed_files:
-            return True
-
-        # If no callback, default to allow (backward compatible)
-        if self.consent_callback is None:
-            return True
-
-        # Request consent from user via callback
-        try:
-            # Emit consent request event (Phase 1C: for HTTP/SSE support)
-            consent_event = Event(
-                type=EventType.CONSENT_REQUEST,
-                data={"file_path": str(path)},
-                metadata={"file_path": str(path)}
-            )
-            self._consent_event_queue.append(consent_event)
-            logger.debug(f"Consent: queued consent_request event for {path}")
-
-            # Call consent callback and wait for response
-            logger.debug(f"Consent: calling callback for {path}")
-            approved, response = await self.consent_callback(str(path))
-            logger.debug(f"Consent: callback returned approved={approved} response={response}")
-
-            if response == ConsentResponse.YES:
-                self.session.allowed_files.add(path)
-                return True
-            elif response == ConsentResponse.ALWAYS:
-                self.session.edit_consent_mode = ConsentMode.ALWAYS
-                logger.debug("Consent: set edit_consent_mode to ALWAYS")
-                return True
-            elif response == ConsentResponse.NEVER:
-                self.session.edit_consent_mode = ConsentMode.NEVER
-                return False
-            else:  # "n" or anything else
-                return False
-
-        except Exception as e:
-            # If consent callback fails, deny for safety
-            logger.debug(f"Consent: callback EXCEPTION: {type(e).__name__}: {e}")
-            logger.error(f"Consent callback error: {e}")
-            return False
+        """Request user consent for editing a file."""
+        return await consent_ops.request_file_edit_consent(self, file_path)
 
     def _classify_shell_command(self, command: str) -> str:
-        """Classify shell command risk level.
-
-        Delegates to common.consent.classify_shell_command().
-
-        Args:
-            command: Shell command to classify
-
-        Returns:
-            Risk level: ShellRiskLevel value (NEVER, DANGEROUS, or SAFE)
-        """
-        return classify_shell_command(command, self._shell_config)
+        """Classify shell command risk level."""
+        return consent_ops.classify_command(self, command)
 
     async def request_shell_consent(self, command: str, working_dir: str = ".") -> bool:
-        """Request user consent for shell command execution (v1.11.2).
-
-        This method manages the shell consent flow:
-        1. Classify command risk level (never/dangerous/safe)
-        2. Block "never" commands immediately
-        3. Allow "safe" commands without consent
-        4. Request consent for "dangerous" commands
-        5. Check session state (always/never modes)
-
-        Args:
-            command: Shell command to execute
-            working_dir: Working directory for the command
-
-        Returns:
-            True if execution is allowed, False otherwise
-        """
-        # Classify command risk
-        risk_level = self._classify_shell_command(command)
-
-        # Debug logging
-        logger.debug(f"Shell consent: command='{command[:50]}...' risk={risk_level} callback={self.shell_consent_callback is not None}")
-
-        # Never-allow commands are always blocked
-        if risk_level == ShellRiskLevel.NEVER:
-            return False
-
-        # Safe commands are always allowed (no consent needed)
-        if risk_level == ShellRiskLevel.SAFE:
-            return True
-
-        # Check global shell consent mode
-        if self.session.shell_consent_mode == ConsentMode.ALWAYS:
-            return True
-        if self.session.shell_consent_mode == ConsentMode.NEVER:
-            return False
-
-        # Check if already consented for this specific command
-        if command in self.session.allowed_commands:
-            return True
-
-        # If no callback, default to deny (fail-safe)
-        if self.shell_consent_callback is None:
-            return False
-
-        # Request consent from user via callback
-        try:
-            # Debug logging
-            logger.debug(f"Requesting shell consent for: {command[:50]}...")
-
-            # Emit consent request event (for HTTP/SSE support)
-            consent_event = Event(
-                type=EventType.CONSENT_REQUEST,
-                data={
-                    "command": command,
-                    "working_dir": working_dir,
-                    "risk_level": risk_level,
-                    "type": "shell"
-                },
-                metadata={"command": command, "type": "shell"}
-            )
-            self._consent_event_queue.append(consent_event)
-
-            # Call shell consent callback and wait for response
-            approved, response = await self.shell_consent_callback(command, working_dir, risk_level)
-
-            # Debug logging
-            logger.debug(f"Shell consent response: approved={approved} response={response}")
-
-            if response == ConsentResponse.YES:
-                self.session.allowed_commands.add(command)
-                return True
-            elif response == ConsentResponse.ALWAYS:
-                self.session.shell_consent_mode = ConsentMode.ALWAYS
-                return True
-            elif response == ConsentResponse.NEVER:
-                self.session.shell_consent_mode = ConsentMode.NEVER
-                return False
-            else:  # "n" or anything else
-                return False
-
-        except Exception as e:
-            # If consent callback fails, deny for safety
-            logger.error(f"Shell consent callback error: {e}")
-            return False
+        """Request user consent for shell command execution."""
+        return await consent_ops.request_shell_consent(self, command, working_dir)
 
     def list_tools(self) -> List[Dict[str, Any]]:
         """List available tools for current provider.
@@ -1393,208 +911,41 @@ class EngineClient:
 
     # === Session Management ===
 
+    # === Session & Export (delegated to session_ops.py) ===
+
     def restore_session(self, name: str) -> dict:
-        """Load session file and restore all engine state.
-
-        Reloads config, loads session, restores provider/model/tools/working_dir.
-
-        Returns:
-            dict with keys: success, provider, model, tools_enabled, working_dir,
-            message_count, error
-        """
-        self.reload_config()
-
-        if not self.session.load(name):
-            return {"success": False, "error": f"Session not found: {name}"}
-
-        self.state.update(session_id=name, session_name=name)
-
-        stored_provider = self.session.metadata.get("provider")
-        if stored_provider:
-            try:
-                self.set_provider(stored_provider)
-            except Exception:
-                pass
-
-        stored_model = self.session.metadata.get("model")
-        if stored_model:
-            if not self.set_model(stored_model, strict=True, reset_context=False):
-                provider_name = self.provider_name if self.provider else stored_provider
-                default = get_default_model(provider_name) if provider_name else None
-                if default:
-                    self.set_model(default, reset_context=False)
-
-        if self.session.tools_enabled:
-            self.enable_tools()
-        else:
-            self.disable_tools()
-
-        wd = self.session.working_dir
-        if wd and os.path.isdir(wd):
-            self.set_working_dir(wd)
-
-        return {
-            "success": True,
-            "provider": self.provider_name,
-            "model": self.model,
-            "tools_enabled": self.tools_enabled,
-            "working_dir": self.get_working_dir(),
-            "message_count": len(self.session.messages),
-        }
+        """Load session file and restore all engine state."""
+        return session_ops.restore_session(self, name)
 
     def get_history(self) -> List[Dict[str, str]]:
-        """Get conversation history as dicts.
-
-        Returns:
-            List of message dicts
-        """
-        return self.session.get_messages_as_dicts()
+        """Get conversation history as dicts."""
+        return session_ops.get_history(self)
 
     def export_conversation(self, filename: Optional[str] = None) -> Path:
-        """Export conversation to markdown.
-
-        Args:
-            filename: Optional filename
-
-        Returns:
-            Path to exported file
-        """
-        return self.session.export(filename)
+        """Export conversation to markdown."""
+        return session_ops.export_conversation(self, filename)
 
     def export_answer(self, filename: Optional[str] = None) -> Path:
-        """Export last assistant answer to markdown.
-
-        Args:
-            filename: Optional filename
-
-        Returns:
-            Path to exported file
-
-        Raises:
-            ValueError: If no assistant message found
-        """
-        # Find last assistant message
-        last_assistant_msg = None
-        for msg in reversed(self.session.messages):
-            if msg.role == 'assistant':
-                last_assistant_msg = msg.content
-                break
-
-        if not last_assistant_msg:
-            raise ValueError("No assistant response to export yet")
-
-        # Generate filename with timestamp
-        if not filename:
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            filename = f"answer_{timestamp}.md"
-
-        if not filename.endswith('.md'):
-            filename += '.md'
-
-        filepath = EXPORTS_DIR / filename
-
-        # Write content
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(last_assistant_msg)
-
-        return filepath
+        """Export last assistant answer to markdown."""
+        return session_ops.export_answer(self, filename)
 
     def get_usage(self) -> Dict[str, Any]:
-        """Get usage statistics.
+        """Get usage statistics."""
+        return session_ops.get_usage(self)
 
-        Returns:
-            Usage stats dict
-        """
-        return self.session.get_usage()
-
-    # === Status ===
+    # === Status & Context (delegated to session_ops.py) ===
 
     def get_status(self) -> Dict[str, Any]:
-        """Get current engine status.
-
-        Returns:
-            Status dictionary
-        """
-        return {
-            "provider": self.provider_name,
-            "model": self.model,
-            "tools_enabled": self.tools_enabled,
-            "tool_count": len(self.tool_manager.list_tools()) if self.tools_enabled else 0,
-            "auto_inject_context": self.auto_inject_context,
-            "has_api_key": self.provider is not None,
-            "message_count": len(self.session.messages)
-        }
-
-    # === Context Management (v1.13.9) ===
+        """Get current engine status."""
+        return session_ops.get_status(self)
 
     def get_context_info(self) -> Dict[str, Any]:
-        """Get context usage information for /context command.
-
-        Returns:
-            Dict with context usage info:
-            - estimated_tokens: Estimated total tokens
-            - context_limit: Model context limit
-            - usage_percent: Usage percentage
-            - injected_contexts: List of injected @file/@git/@tree
-            - message_count: Number of messages in history
-            - total_chars: Total characters in history
-        """
-        # Calculate total characters in message history
-        total_chars = sum(len(m.content) for m in self.session.messages)
-
-        # Estimate tokens (~4 chars per token)
-        estimated_tokens = total_chars // 4
-
-        # Get context limit for current model
-        context_limit = get_model_context_limit(self.provider_name, self.model)
-
-        usage_percent = (estimated_tokens / context_limit) * 100 if context_limit > 0 else 0
-
-        # Calculate injected context size
-        injected_size = sum(ctx.get('size', 0) for ctx in self._injected_contexts)
-        injected_tokens = injected_size // 4
-
-        return {
-            "estimated_tokens": estimated_tokens,
-            "context_limit": context_limit,
-            "usage_percent": usage_percent,
-            "injected_contexts": self._injected_contexts.copy(),
-            "injected_tokens": injected_tokens,
-            "message_count": len(self.session.messages),
-            "total_chars": total_chars,
-            "provider": self.provider_name,
-            "model": self.model
-        }
+        """Get context usage information for /context command."""
+        return session_ops.get_context_info(self)
 
     def clear_injected_contexts(self) -> int:
-        """Clear tracked injected contexts and remove from message history.
-
-        This removes the injected file content from messages but keeps
-        the conversation flow intact.
-
-        Returns:
-            Number of injections removed
-        """
-        removed_count = len(self._injected_contexts)
-
-        if removed_count == 0:
-            return 0
-
-        # Pattern to match injected context blocks
-        injection_pattern = re.compile(
-            r'\n---\n\*\*`@[^`]+`\*\*[^\n]*:\n```[^\n]*\n.*?```\n',
-            re.DOTALL
-        )
-
-        # Remove injected blocks from all user messages
-        for msg in self.session.messages:
-            if msg.role == "user":
-                msg.content = injection_pattern.sub('', msg.content)
-
-        # Clear the tracking list
-        self._injected_contexts.clear()
-
-        return removed_count
+        """Clear tracked injected contexts and remove from message history."""
+        return session_ops.clear_injected_contexts(self)
 
     # === Cleanup ===
 
