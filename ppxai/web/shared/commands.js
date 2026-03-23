@@ -7,7 +7,7 @@
  *
  * When adding new commands, update this file and both UIs will have access.
  *
- * @version 1.15.5
+ * @version 1.17.1
  */
 
 // Command categories for organization
@@ -151,8 +151,24 @@ const SLASH_COMMANDS = {
         category: CommandCategory.FILE
     },
     '/preview': {
-        description: 'Open live-reloading HTML preview',
-        usage: '/preview <file.html>',
+        description: 'Preview HTML — static, full-stack (--serve), or proxied (--proxy)',
+        usage: '/preview <file.html> [--serve ["cmd"]] [--proxy port] [--port N]',
+        category: CommandCategory.FILE,
+        subcommands: ['close', 'help']
+    },
+    '/terminal': {
+        description: 'Open interactive terminal in right panel',
+        usage: '/terminal',
+        category: CommandCategory.FILE
+    },
+    '/term': {
+        description: 'Alias for /terminal',
+        usage: '/term',
+        category: CommandCategory.FILE
+    },
+    '/sh': {
+        description: 'Alias for /terminal',
+        usage: '/sh',
         category: CommandCategory.FILE
     },
 
@@ -205,6 +221,12 @@ const SLASH_COMMANDS = {
         usage: '/theme [dark|light]',
         category: CommandCategory.OTHER,
         subcommands: ['dark', 'light']
+    },
+    '/config': {
+        description: 'Show or reload configuration',
+        usage: '/config [reload|path]',
+        category: CommandCategory.OTHER,
+        subcommands: ['reload', 'path']
     }
 };
 
