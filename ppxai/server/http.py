@@ -208,7 +208,13 @@ async def activity_tracking_middleware(request: Request, call_next):
     makes API calls (e.g. fetch('/tasks')), they hit ppxai's server instead
     of the user's backend. Return a helpful JSON error so the user sees
     "preview-only" instead of a confusing ppxai 404.
+
+    Skips WebSocket upgrade requests — they bypass HTTP middleware.
     """
+    # Skip WebSocket upgrades — they must not be intercepted by HTTP middleware
+    if request.headers.get("upgrade", "").lower() == "websocket":
+        return await call_next(request)
+
     update_activity()
     response = await call_next(request)
 
