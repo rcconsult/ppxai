@@ -5,6 +5,43 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.17.1] - 2026-03-23
+
+**Focus:** AppState convergence, web terminal, preview hardening, server dependency injection, client.py decomposition
+
+### Added
+
+- **AppState** (`ppxai/engine/app_state.py`) — canonical observable application state with `subscribe()`/`notify()` pattern; wired into EngineClient, CommandHandler, Textual TUI, Web app, and VSCode extension; 243 unit tests
+- **Web terminal** — interactive xterm.js terminal with PTY WebSocket backend; `/terminal`, `/term`, `/sh` commands in web and VSCode clients
+- **Preview `--serve` flag** — full-stack preview launches backend process alongside frontend; `ppxai-desktop` serves previews with live backend
+- **Preview `--proxy` flag** — K8s full-stack preview via reverse proxy through ingress path prefix
+- **Preview K8s ingress detection** — automatic reverse proxy path prefix for K8s ingress compatibility
+- **80 new tests** — ops modules (`session_ops`, `provider_ops`, `tool_ops`, `context_ops`) and server routes; graph-analysis-driven coverage
+
+### Fixed
+
+- **Preview route collision** — previewing files in `static/` directories no longer collides with the static file mount
+- **Preview absolute URLs** — poll and asset paths in subdirectories now use absolute URLs instead of broken relative ones
+- **Preview helpful 404** — previewed HTML making API calls to the preview server now gets an actionable error instead of silent failure
+- **Preview python→python3** — macOS compatibility fix; backend stderr surfaced on failure
+- **SSE keepalive** — reduced from 15s to 5s to prevent false disconnect detection in browsers
+- **Consent route crash** — undefined `x_session_id` variable in consent route handler
+- **Sessions route** — variable collision in `get_sessions` route
+- **Web preview iframe** — URL encoding and sandbox warning fixes
+- **Terminal WebSocket 403** — event loop fd reader for PTY output; HTTP middleware now skips WebSocket upgrades
+- **Lazy imports** — 3 + 2 remaining lazy imports moved to module level (DAG compliance)
+- **Swallowed exceptions** — logging added to 8 previously silent exception handlers
+
+### Changed
+
+- **`client.py` decomposition** — monolith split into ops modules: `session_ops.py`, `provider_ops.py`, `tool_ops.py`, `context_ops.py`; client.py reduced to facade
+- **FastAPI dependency injection** — session resolution extracted from route handlers into FastAPI `Depends()` dependencies
+- **`reload_config` consolidation** — scattered reload calls consolidated into `get_or_create_session`
+- **`stream_handler.py` extraction** — stream handling logic extracted from Textual `app.py`
+- **`constants.Default` centralization** — magic numbers (keepalive interval, debounce delay, max retries, etc.) moved to `constants.Default` enum
+- **`CommandContext.__getattr__` proxy** — adapter boilerplate in command handlers replaced with attribute proxy
+- **Web command help** — updated for `/terminal`, `/preview --serve`/`--proxy`, `/config` commands
+
 ## [1.17.0] - 2026-03-19
 
 **Focus:** Server/config modularization, K8s deployment POC, key bindings registry, Textual 8.1.1, import DAG cleanup
