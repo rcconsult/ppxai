@@ -137,6 +137,8 @@ centralized.
 #10 constants (independent)
 #11 CommandContext proxy (independent)
 #12 chat_with_tools helpers (independent)
+#13 preview --serve (independent) ✅ done
+#14 web terminal xterm.js (independent)
 ```
 
 ## Estimated Effort
@@ -159,7 +161,9 @@ centralized.
 | Centralize constants | 1 |
 | CommandContext proxy | 1 |
 | chat_with_tools helpers | 1 |
-| **Total** | **25** |
+| preview --serve | 4 |
+| web terminal (xterm.js) | 4 |
+| **Total** | **33** |
 
 ---
 
@@ -224,6 +228,56 @@ Start user's backend process and preview through it instead of static file servi
 - Skip reload script injection in `--serve` mode (backend has own hot-reload)
 - iframe cross-port works (different ports allowed for iframe navigation)
 - `unmount()` removes iframe from DOM to stop any leaked polling
+
+### 14. Web terminal — xterm.js + PTY/K8s exec (~4h)
+
+Lightweight terminal in the web app right panel, configurable shell via ppxai-config.json.
+
+**Frontend (web/lib/ + BaseView):**
+- `xterm.js` + `xterm.css` (~120KB minified, MIT) — terminal emulator
+- `xterm-addon-fit.js` — auto-resize to container
+- `xterm-addon-web-links.js` — clickable URLs (optional)
+- Terminal as `BaseView` subclass in right panel frame
+- Open via `/terminal` command or keyboard shortcut
+- Multiple terminals supported (tab per terminal in RPF stack)
+
+**Backend — local mode (routes/terminal.py):**
+- `WS /ws/terminal` — WebSocket endpoint
+- `pty.spawn()` (Python stdlib) for local shell
+- Shell binary from `tools.shell.shell_bin` config, fallback to `$SHELL` or `/bin/sh`
+- Login shell from `tools.shell.login_shell` config (sources profile for PATH/env)
+- PTY resize on xterm fit events
+- Working directory set to engine's current `working_dir`
+- Clean process kill on WebSocket close / server shutdown
+
+**Backend — K8s mode (routes/terminal.py):**
+- Same WebSocket endpoint, different spawner
+- `kubernetes.stream(v1.connect_get_namespaced_pod_exec(...))` — exec into pod
+- Shell: `/bin/sh` or configurable per pod
+- Session manager already has K8s SDK, reuse auth/namespace config
+- Detect mode from env: `KUBERNETES_SERVICE_HOST` present → K8s exec
+
+**Config (existing, no changes needed):**
+```json
+{
+  "tools": {
+    "shell": {
+      "shell_bin": "/bin/zsh",
+      "login_shell": true
+    }
+  }
+}
+```
+
+**Nginx ingress (already configured):**
+- `proxy-http-version: "1.1"` — required for WebSocket upgrade
+- `proxy-read-timeout: "3600"` — long-lived connections
+- WebSocket path: `/s/<user>/ws/terminal` → rewrite → `/ws/terminal`
+
+**Platform notes:**
+- macOS/Linux: `pty` module (stdlib), no extra deps
+- Windows: needs `pywinpty` — defer to later
+- K8s: `kubernetes` SDK already in deploy deps
 
 ---
 
