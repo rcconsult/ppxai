@@ -1686,8 +1686,12 @@ complexity in several key files that will slow future development if left unaddr
 via clean DAG + reload callback pattern in <code>store.py</code>.</p>
 <hr />
 <h2 id="3-unified-appstate-cross-client-state-management">3. Unified AppState — Cross-Client State Management<a class="headerlink" href="#3-unified-appstate-cross-client-state-management" title="Permanent link">&para;</a></h2>
-<p><strong>Priority:</strong> HIGH — foundational change that enables items 4–7 and streamlines all clients.
-<strong>Target:</strong> v1.17.1</p>
+<p><strong>Priority:</strong> HIGH — foundational change that streamlines all clients.
+<strong>Target:</strong> v1.18.x (deferred from v1.17.1 — too ambitious for current cycle)</p>
+<blockquote>
+<p><strong>Note (2026-03-22):</strong> Items 4-7 proceed without AppState in v1.17.1 using
+simple parameter passing. AppState schema+generator deferred to v1.18.x.</p>
+</blockquote>
 <h3 id="problem">Problem<a class="headerlink" href="#problem" title="Permanent link">&para;</a></h3>
 <p>Application state is duplicated and managed differently in every client layer:</p>
 <table>
@@ -2479,7 +2483,7 @@ independent and can be done anytime. Phases 4–6 plug into generated state.</p>
 <li><strong>Feature changes</strong> — This plan is purely structural. No new endpoints, no behavior changes.</li>
 <li><strong>K8s infrastructure</strong> — Session manager, nginx BFF, ingress. Tracked in <code>TODO-v1.17.0.md</code>.
   Phase 5 only verifies AppState + runtime schema integration, not infrastructure changes.</li>
-<li><strong>Multi-model routing</strong> — Tracked separately in <code>TODO-routing-v1.17.6.md</code>.</li>
+<li><strong>Multi-model routing</strong> — Tracked separately in <code>TODO-routing-v1.17.2.md</code>.</li>
 <li><strong>Test refactoring</strong> — Tests work; don't fix what isn't broken.</li>
 <li><strong>Web app restructuring</strong> — <code>app.js</code> was already refactored in v1.16.2. Phase 3 is
   a drop-in AppState replacement + public interface enforcement, not a rewrite.</li>

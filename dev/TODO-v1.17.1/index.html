@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.17.0/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/TODO-v1.17.1/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>Release Notes: v1.17.0 - ppxai Documentation</title>
+        <title>TODO: v1.17.1 — Unified AppState + Code Streamlining - ppxai Documentation</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#release-notes-v1170" class="md-skip">
+        <a href="#todo-v1171-unified-appstate-code-streamlining" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Release Notes: v1.17.0
+              TODO: v1.17.1 — Unified AppState + Code Streamlining
             
           </span>
         </div>
@@ -1118,10 +1118,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#goal" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Overview
+        Goal
       
     </span>
   </a>
@@ -1129,22 +1129,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#new-features" class="md-nav__link">
+  <a href="#appstate-convergence" class="md-nav__link">
     <span class="md-ellipsis">
       
-        New Features
+        AppState Convergence
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="New Features">
+    <nav class="md-nav" aria-label="AppState Convergence">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#server-modularization" class="md-nav__link">
+  <a href="#1-define-appstate-interface-python-implementation-3h" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Server Modularization
+        1. Define AppState interface + Python implementation (~3h)
       
     </span>
   </a>
@@ -1152,10 +1152,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#config-modularization" class="md-nav__link">
+  <a href="#2-rich-tui-wire-appstate-3h" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Config Modularization
+        2. Rich TUI — wire AppState (~3h)
       
     </span>
   </a>
@@ -1163,10 +1163,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#kubernetes-deployment-poc-phases-1-5" class="md-nav__link">
+  <a href="#3-textual-tui-wire-appstate-3h" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Kubernetes Deployment POC (Phases 1-5)
+        3. Textual TUI — wire AppState (~3h)
       
     </span>
   </a>
@@ -1174,10 +1174,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#key-bindings-registry" class="md-nav__link">
+  <a href="#4-web-app-align-appstate-2h" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Bindings Registry
+        4. Web app — align AppState (~2h)
       
     </span>
   </a>
@@ -1185,32 +1185,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#protocol-based-dependency-inversion" class="md-nav__link">
+  <a href="#5-vscode-extension-align-appstate-2h" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Protocol-Based Dependency Inversion
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#client-log-forwarding" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Client Log Forwarding
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#benchmark-qwen25-coder-7b" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Benchmark: qwen2.5-coder-7b
+        5. VSCode extension — align AppState (~2h)
       
     </span>
   </a>
@@ -1223,33 +1201,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#fixes" class="md-nav__link">
+  <a href="#file-decomposition" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Fixes
+        File Decomposition
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#refactoring" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Refactoring
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Refactoring">
+    <nav class="md-nav" aria-label="File Decomposition">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#lazy-import-cleanup" class="md-nav__link">
+  <a href="#6-decompose-engineclientpy-2h" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Lazy Import Cleanup
+        6. Decompose engine/client.py (~2h)
       
     </span>
   </a>
@@ -1257,21 +1224,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#type_checking-elimination" class="md-nav__link">
+  <a href="#7-modularize-tuiapppy-3h" class="md-nav__link">
     <span class="md-ellipsis">
       
-        TYPE_CHECKING Elimination
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#textual-811-upgrade" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Textual 8.1.1 Upgrade
+        7. Modularize tui/app.py (~3h)
       
     </span>
   </a>
@@ -1284,10 +1240,88 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#architecture-documentation" class="md-nav__link">
+  <a href="#server-streamlining" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Architecture Documentation
+        Server Streamlining
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Server Streamlining">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#8-consolidate-reload_config-calls-2h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Consolidate reload_config() calls (~2h)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-server-route-dependency-injection-2h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Server route dependency injection (~2h)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#code-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Code Cleanup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Code Cleanup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#10-centralize-constants-1h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Centralize constants (~1h)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-commandcontext-__getattr__-proxy-1h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. CommandContext __getattr__ proxy (~1h)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependency-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependency Graph
       
     </span>
   </a>
@@ -1295,10 +1329,82 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#upgrade-notes" class="md-nav__link">
+  <a href="#estimated-effort" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Upgrade Notes
+        Estimated Effort
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#code-review-graph-analysis-2026-03-22" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Code Review Graph Analysis (2026-03-22)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Code Review Graph Analysis (2026-03-22)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Findings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-extract-chat_with_tools-helper-functions-1h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Extract chat_with_tools helper functions (~1h)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-preview-serve-flag-full-stack-preview-4h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. Preview --serve flag — full-stack preview (~4h)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-web-terminal-xtermjs-ptyk8s-exec-4h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. Web terminal — xterm.js + PTY/K8s exec (~4h)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deferred" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deferred
       
     </span>
   </a>
@@ -1325,127 +1431,307 @@
   
 
 
-<h1 id="release-notes-v1170">Release Notes: v1.17.0<a class="headerlink" href="#release-notes-v1170" title="Permanent link">&para;</a></h1>
-<p><strong>Release Date:</strong> 2026-03-19
-<strong>Branch:</strong> feature/v1.17.0
-<strong>Focus:</strong> Server/config modularization, K8s deployment POC, key bindings registry, Textual 8.1.1, import DAG cleanup</p>
+<h1 id="todo-v1171-unified-appstate-code-streamlining">TODO: v1.17.1 — Unified AppState + Code Streamlining<a class="headerlink" href="#todo-v1171-unified-appstate-code-streamlining" title="Permanent link">&para;</a></h1>
+<p><strong>Status:</strong> In progress
+<strong>Target:</strong> v1.17.1
+<strong>Priority:</strong> HIGH — validate AppState pattern, reduce complexity before routing (v1.17.2)</p>
 <hr />
-<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p>v1.17.0 is an architecture and infrastructure release. The server monolith (<code>http.py</code>, 2,936 lines) is
-split into 13 route modules with shared state/models/streaming. The config monolith is split into 6
-submodules. A Kubernetes deployment POC delivers session-isolated multi-user deployments with LDAP auth.
-The TUI gets a centralized key binding registry, Textual is upgraded to 8.1.1, and the entire codebase
-is cleaned of lazy imports and TYPE_CHECKING blocks using protocol-based dependency inversion.</p>
-<p><strong>Key Numbers:</strong>
-- 1,647 unit tests passing (up from 1,639 in v1.16.2)
-- 200 Playwright E2E tests passing
-- 146 files changed, +13,118 / -5,682 lines vs v1.16.2</p>
+<h2 id="goal">Goal<a class="headerlink" href="#goal" title="Permanent link">&para;</a></h2>
+<p>Hand-craft a <strong>single AppState interface</strong> with identical fields and semantics
+across all four clients (ppxai Rich TUI, ppxaide Textual TUI, Web app, VSCode
+extension). No code generation — write each implementation manually to validate
+the pattern and build empirical evidence that the schema+generator approach
+will work in v1.18.x.</p>
+<p>Alongside AppState, streamline server routes, constants, and adapters to reduce
+duplication and improve maintainability.</p>
+<p><strong>Success criteria:</strong> All four clients use the same field names, types, and
+observer pattern. Server routes use dependency injection. Magic numbers are
+centralized.</p>
 <hr />
-<h2 id="new-features">New Features<a class="headerlink" href="#new-features" title="Permanent link">&para;</a></h2>
-<h3 id="server-modularization">Server Modularization<a class="headerlink" href="#server-modularization" title="Permanent link">&para;</a></h3>
-<p><code>ppxai/server/http.py</code> (2,936 lines) split into focused modules:</p>
+<h2 id="appstate-convergence">AppState Convergence<a class="headerlink" href="#appstate-convergence" title="Permanent link">&para;</a></h2>
+<h3 id="1-define-appstate-interface-python-implementation-3h">1. Define AppState interface + Python implementation (~3h)<a class="headerlink" href="#1-define-appstate-interface-python-implementation-3h" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>13 route modules</strong> under <code>ppxai/server/routes/</code>: agent, chat, checkpoints, commands, config,
-  consent, context, files, preview, providers, sessions, static, usage</li>
-<li><strong>Shared modules</strong>: <code>state.py</code> (session manager, utilities), <code>models.py</code> (Pydantic request/response),
-  <code>streaming.py</code> (SSE event generators)</li>
-<li><code>http.py</code> reduced to 372-line facade (app creation, lifespan, CLI entry points)</li>
+<li><code>ppxai/engine/app_state.py</code> — canonical <code>AppState</code> class</li>
+<li>Fields: <code>provider</code>, <code>model</code>, <code>tools_enabled</code>, <code>tools_verbose</code>, <code>working_dir</code>,
+  <code>is_streaming</code>, <code>cancel_requested</code>, <code>session_id</code>, <code>session_name</code>,
+  <code>total_tokens</code>, <code>prompt_tokens</code>, <code>completion_tokens</code>, <code>total_cost</code>,
+  <code>context_percentage</code>, <code>auto_route</code>, <code>agent_iterations</code>, <code>reasoning_active</code></li>
+<li>Observer pattern: <code>on(field, callback)</code>, <code>set(field, value)</code> triggers listeners</li>
+<li>Thread-safe: RLock for Python clients</li>
+<li>Reference: Web app's existing <code>AppState</code> (Proxy-based observable) as model</li>
 </ul>
-<h3 id="config-modularization">Config Modularization<a class="headerlink" href="#config-modularization" title="Permanent link">&para;</a></h3>
-<p><code>ppxai/config/__init__.py</code> (943 lines) split into submodules:</p>
+<h3 id="2-rich-tui-wire-appstate-3h">2. Rich TUI — wire AppState (~3h)<a class="headerlink" href="#2-rich-tui-wire-appstate-3h" title="Permanent link">&para;</a></h3>
+<p><strong>Plan:</strong> <a href="../TODO-appstate-1-rich-tui/"><code>docs/TODO-appstate-1-rich-tui.md</code></a></p>
 <ul>
-<li><code>providers.py</code> — provider, model, pricing, capabilities</li>
-<li><code>tools.py</code> — tool, shell, agent, visualization, container config</li>
-<li><code>features.py</code> — TUI and session config</li>
-<li><code>paths.py</code> — paths, data dir, server config</li>
-<li><code>prompts.py</code> — system prompts, context, bootstrap queries</li>
-<li><code>context.py</code> — context injection, bootstrap configuration</li>
-<li><code>__init__.py</code> reduced to 262-line re-export hub</li>
+<li>Simplest client — single thread, sync handlers</li>
+<li>Replace scattered state fields in EngineClient/event_handler with AppState</li>
+<li>Status bar reads from AppState observers instead of manual updates</li>
 </ul>
-<h3 id="kubernetes-deployment-poc-phases-1-5">Kubernetes Deployment POC (Phases 1-5)<a class="headerlink" href="#kubernetes-deployment-poc-phases-1-5" title="Permanent link">&para;</a></h3>
-<p>Multi-user K8s deployment with session isolation:</p>
+<h3 id="3-textual-tui-wire-appstate-3h">3. Textual TUI — wire AppState (~3h)<a class="headerlink" href="#3-textual-tui-wire-appstate-3h" title="Permanent link">&para;</a></h3>
+<p><strong>Plan:</strong> <a href="../TODO-appstate-2-textual-tui/"><code>docs/TODO-appstate-2-textual-tui.md</code></a></p>
 <ul>
-<li><strong>Phase 1</strong>: Namespace, StorageClasses (ephemeral/workspace), in-cluster registry, Kaniko build jobs</li>
-<li><strong>Phase 2</strong>: Dockerfile.server, nginx ingress, web URL path-prefix support</li>
-<li><strong>Phase 3</strong>: Session Manager (FastAPI + k8s SDK) — create/delete/heartbeat/TTL watchdog</li>
-<li><strong>Phase 4</strong>: Login Service (nginx + HTML/JS), dynamic sessions ingress</li>
-<li><strong>Phase 5</strong>: LDAP auth module for session-manager</li>
-<li>Helm chart under <code>deploy/k8s/helm/ppxai/</code></li>
-<li>Shared deploy configs under <code>deploy/shared/</code></li>
+<li>Replace 15+ <code>self._*</code> shadow state fields with AppState observers</li>
+<li>Eliminate ~30 manual <code>update_badge()</code> calls</li>
+<li>Threading/async complexity — AppState must dispatch to correct event loop</li>
 </ul>
-<h3 id="key-bindings-registry">Key Bindings Registry<a class="headerlink" href="#key-bindings-registry" title="Permanent link">&para;</a></h3>
-<p>Centralized key binding management for ppxaide TUI:</p>
+<h3 id="4-web-app-align-appstate-2h">4. Web app — align AppState (~2h)<a class="headerlink" href="#4-web-app-align-appstate-2h" title="Permanent link">&para;</a></h3>
+<p><strong>Plan:</strong> <a href="../TODO-appstate-3-web-app/"><code>docs/TODO-appstate-3-web-app.md</code></a></p>
 <ul>
-<li><strong><code>ppxai/tui/keys.py</code></strong> — single source of truth for all keyboard shortcuts (32 key definitions)</li>
-<li>All widget <code>BINDINGS</code> generated via <code>get_widget_bindings()</code> from registry</li>
-<li><strong><code>/keys</code> command</strong> — shows all effective shortcuts at runtime</li>
-<li><strong><code>/keys conflicts</code></strong> — documents known binding conflicts and resolution rules</li>
-<li>Display-only <code>ctrl+enter</code> hack replaced with explicit <code>action_noop()</code></li>
+<li>Web app already HAS an observable AppState (Proxy-based)</li>
+<li>Align field names and types to match the Python canonical definition</li>
+<li>200 Playwright E2E tests as safety net</li>
 </ul>
-<h3 id="protocol-based-dependency-inversion">Protocol-Based Dependency Inversion<a class="headerlink" href="#protocol-based-dependency-inversion" title="Permanent link">&para;</a></h3>
-<p>Architectural pattern for breaking circular import chains:</p>
+<h3 id="5-vscode-extension-align-appstate-2h">5. VSCode extension — align AppState (~2h)<a class="headerlink" href="#5-vscode-extension-align-appstate-2h" title="Permanent link">&para;</a></h3>
+<p><strong>Plan:</strong> <a href="../TODO-appstate-4-vscode/"><code>docs/TODO-appstate-4-vscode.md</code></a></p>
 <ul>
-<li><strong><code>ToolEngineProtocol</code></strong> in <code>engine/types.py</code> — interface tools use for engine interaction</li>
-<li><strong><code>ToolManagerProtocol</code></strong> in <code>engine/types.py</code> — interface for tool registration</li>
-<li>All 9 builtin tool modules migrated from TYPE_CHECKING to direct protocol imports</li>
-<li>Pattern documented in CLAUDE.md as recommended architecture</li>
-</ul>
-<h3 id="client-log-forwarding">Client Log Forwarding<a class="headerlink" href="#client-log-forwarding" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Server-side log forwarding from web/VSCode clients</li>
-<li>Web heartbeat watchdog for stale connection detection</li>
-</ul>
-<h3 id="benchmark-qwen25-coder-7b">Benchmark: qwen2.5-coder-7b<a class="headerlink" href="#benchmark-qwen25-coder-7b" title="Permanent link">&para;</a></h3>
-<ul>
-<li>LM Studio evaluation: 69.4% without hints, 72.2% with AGENTS.md</li>
-<li>Multi-model routing architecture plan (<code>docs/TODO-routing-v1.17.2.md</code>)</li>
+<li>TypeScript interface matching the canonical fields</li>
+<li>Align with Web app's field names</li>
 </ul>
 <hr />
-<h2 id="fixes">Fixes<a class="headerlink" href="#fixes" title="Permanent link">&para;</a></h2>
+<h2 id="file-decomposition">File Decomposition<a class="headerlink" href="#file-decomposition" title="Permanent link">&para;</a></h2>
+<h3 id="6-decompose-engineclientpy-2h">6. Decompose <code>engine/client.py</code> (~2h)<a class="headerlink" href="#6-decompose-engineclientpy-2h" title="Permanent link">&para;</a></h3>
+<p><strong>Plan:</strong> <code>docs/TODO-refactoring.md</code> item #5</p>
 <ul>
-<li><strong>Web streaming layout thrashing</strong> — RAF-based rendering prevents layout recalculation storms</li>
-<li><strong>Preview panel freeze on display_file</strong> — panel now properly handles concurrent file display requests</li>
-<li><strong>Preview URLs for reverse proxy</strong> — all preview URLs are now relative (works behind ingress path prefix)</li>
-<li><strong>Stale session detection</strong> — session manager verifies pod exists before returning "existing"</li>
-<li><strong>Tool fixes</strong> — container.py and display.py error handling improvements</li>
+<li>Extract: <code>checkpoint_ops.py</code> (~250 lines), <code>consent_ops.py</code> (~200 lines), <code>bootstrap_ops.py</code> (~150 lines)</li>
+<li>EngineClient: ~600 lines (from 1,588)</li>
+<li>Easier after #2 since AppState absorbs some fields</li>
+</ul>
+<h3 id="7-modularize-tuiapppy-3h">7. Modularize <code>tui/app.py</code> (~3h)<a class="headerlink" href="#7-modularize-tuiapppy-3h" title="Permanent link">&para;</a></h3>
+<p><strong>Plan:</strong> <code>docs/TODO-refactoring.md</code> item #6</p>
+<ul>
+<li>Extract: <code>theme_manager.py</code>, <code>key_router.py</code>, <code>stream_handler.py</code></li>
+<li>app.py: ~800 lines (from 2,303)</li>
+<li>Easier after #3 since AppState absorbs shadow state</li>
 </ul>
 <hr />
-<h2 id="refactoring">Refactoring<a class="headerlink" href="#refactoring" title="Permanent link">&para;</a></h2>
-<h3 id="lazy-import-cleanup">Lazy Import Cleanup<a class="headerlink" href="#lazy-import-cleanup" title="Permanent link">&para;</a></h3>
-<p>~70 lazy imports moved to top-level across 30+ files:</p>
+<h2 id="server-streamlining">Server Streamlining<a class="headerlink" href="#server-streamlining" title="Permanent link">&para;</a></h2>
+<h3 id="8-consolidate-reload_config-calls-2h">8. Consolidate <code>reload_config()</code> calls (~2h)<a class="headerlink" href="#8-consolidate-reload_config-calls-2h" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Redundant stdlib imports (re, os, Path, asyncio inside functions that already had them at top)</li>
-<li>Unnecessary try/except guards on always-available modules (config, logger)</li>
-<li>Internal ppxai imports moved from function bodies to module level</li>
-<li>Test mock targets updated after import restructuring</li>
+<li>10+ redundant <code>engine.reload_config()</code> calls scattered across 13 route files</li>
+<li>Move to <code>get_or_create_session()</code> in <code>server/state.py</code> so reload happens once</li>
+<li>Some routes reload, others don't — make it consistent</li>
 </ul>
-<h3 id="type_checking-elimination">TYPE_CHECKING Elimination<a class="headerlink" href="#type_checking-elimination" title="Permanent link">&para;</a></h3>
-<p>All 14 <code>TYPE_CHECKING</code> blocks removed:</p>
+<h3 id="9-server-route-dependency-injection-2h">9. Server route dependency injection (~2h)<a class="headerlink" href="#9-server-route-dependency-injection-2h" title="Permanent link">&para;</a></h3>
 <ul>
-<li>9 tool modules → protocol-based imports</li>
-<li>6 command modules → dead import removal</li>
-<li>Remaining circular refs → <code>Any</code> for duck-typed adapters or direct imports where no cycle exists</li>
-</ul>
-<h3 id="textual-811-upgrade">Textual 8.1.1 Upgrade<a class="headerlink" href="#textual-811-upgrade" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Upgraded from 7.4.0 (DirectoryTree threading fixes, weak-ref DOM, GC improvements)</li>
-<li>textual-image 0.8.0 → 0.8.5</li>
+<li>Every route starts with <code>session_id, engine, _ = await get_or_create_session(x_session_id)</code></li>
+<li>Create FastAPI <code>Depends(get_engine)</code> dependency in <code>server/dependencies.py</code></li>
+<li>Reduces boilerplate in all 13 route modules</li>
+<li>Standardize error responses (some routes raise HTTPException, others return error dicts)</li>
 </ul>
 <hr />
-<h2 id="architecture-documentation">Architecture Documentation<a class="headerlink" href="#architecture-documentation" title="Permanent link">&para;</a></h2>
+<h2 id="code-cleanup">Code Cleanup<a class="headerlink" href="#code-cleanup" title="Permanent link">&para;</a></h2>
+<h3 id="10-centralize-constants-1h">10. Centralize constants (~1h)<a class="headerlink" href="#10-centralize-constants-1h" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>docs/TODO-appstate-{0..5}.md</code> — unified AppState architecture plan (6-part series)</li>
-<li><code>docs/TODO-routing-v1.17.2.md</code> — multi-model routing architecture plan</li>
-<li><code>docs/TODO-refactoring.md</code> — remaining tech debt tracker</li>
-<li><code>docs/TODO-keybindings-cleanup.md</code> — key bindings implementation plan (completed)</li>
+<li><code>ppxai/constants.py</code> — single source of truth for magic numbers</li>
+<li><code>AGENT_MAX_ITERATIONS</code> (currently 15 in manager.py, 20 in chat.py — which is it?)</li>
+<li><code>TOOL_RESULT_CHAR_LIMIT</code>, <code>CHECKPOINT_KEEP_LAST</code>, <code>SESSION_TTL_SECONDS</code></li>
+<li>Import everywhere instead of hardcoded values</li>
+</ul>
+<h3 id="11-commandcontext-__getattr__-proxy-1h">11. CommandContext <code>__getattr__</code> proxy (~1h)<a class="headerlink" href="#11-commandcontext-__getattr__-proxy-1h" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Two 40-line adapter classes (Rich, Textual) with identical property forwarding</li>
+<li>Replace with 5-line <code>__getattr__</code> proxy base class</li>
+<li>All adapters delegate to wrapped object automatically</li>
 </ul>
 <hr />
-<h2 id="upgrade-notes">Upgrade Notes<a class="headerlink" href="#upgrade-notes" title="Permanent link">&para;</a></h2>
+<h2 id="dependency-graph">Dependency Graph<a class="headerlink" href="#dependency-graph" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>#1 Define AppState interface
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  ├→ #2 Rich TUI ──→ #6 EngineClient decompose
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  ├→ #3 Textual TUI ──→ #7 tui/app.py modularize
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  ├→ #4 Web app (align fields)
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  └→ #5 VSCode (align fields)
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>#8 reload_config consolidation ──→ #9 server dependency injection
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>#10 constants (independent)
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>#11 CommandContext proxy (independent)
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>#12 chat_with_tools helpers (independent)
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>#13 preview --serve (independent) ✅ done
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>#14 web terminal xterm.js (independent)
+</span></code></pre></div>
+<h2 id="estimated-effort">Estimated Effort<a class="headerlink" href="#estimated-effort" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th style="text-align: right;">Hours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>AppState</strong></td>
+<td style="text-align: right;"></td>
+</tr>
+<tr>
+<td>Define interface + Python impl</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr>
+<td>Rich TUI wire-up</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr>
+<td>Textual TUI wire-up</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr>
+<td>Web app align</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td>VSCode align</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td><strong>Decomposition</strong></td>
+<td style="text-align: right;"></td>
+</tr>
+<tr>
+<td>EngineClient decompose</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td>tui/app.py modularize</td>
+<td style="text-align: right;">3</td>
+</tr>
+<tr>
+<td><strong>Server</strong></td>
+<td style="text-align: right;"></td>
+</tr>
+<tr>
+<td>reload_config consolidation</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td>Server dependency injection</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td><strong>Cleanup</strong></td>
+<td style="text-align: right;"></td>
+</tr>
+<tr>
+<td>Centralize constants</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td>CommandContext proxy</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td>chat_with_tools helpers</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr>
+<td>preview --serve</td>
+<td style="text-align: right;">4</td>
+</tr>
+<tr>
+<td>web terminal (xterm.js)</td>
+<td style="text-align: right;">4</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td style="text-align: right;"><strong>33</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="code-review-graph-analysis-2026-03-22">Code Review Graph Analysis (2026-03-22)<a class="headerlink" href="#code-review-graph-analysis-2026-03-22" title="Permanent link">&para;</a></h2>
+<p>Graph stats: 5,800 nodes, 38,232 edges, 293 files (Python, JS, TS).</p>
+<h3 id="findings">Findings<a class="headerlink" href="#findings" title="Permanent link">&para;</a></h3>
+<p><strong>Test coverage gaps (94 changed functions untested):</strong>
+- ✅ Ops modules: <code>bootstrap_ops</code>, <code>checkpoint_ops</code>, <code>consent_ops</code>, <code>session_ops</code> — <strong>73 tests added</strong> (<code>tests/test_ops_modules.py</code>)
+- ✅ Server routes: <code>reload_config</code>, <code>list_models</code>, <code>get_providers</code>, <code>export_answer</code> — <strong>7 tests added</strong> (<code>tests/test_server_routes.py</code>)
+- Remaining gaps: scattered across server routes, TUI handlers — lower priority</p>
+<p><strong>AppState import verification:</strong>
+- ✅ Verified wired correctly: <code>engine/client.py</code>, <code>tui/app.py</code> (15+ refs), <code>commands/handler.py</code> (12+ refs), 2 test files
+- Graph showed 0 importers (IMPORTS_FROM edge resolution quirk, not a real gap)</p>
+<p><strong><code>chat_with_tools</code> decomposition (543 lines, largest function):</strong>
+- 6 clear phases: setup, provider call, tool parsing, tool execution, final response, max-iterations epilogue
+- 3 duplicated blocks suitable for immediate extraction:
+  - <code>_accumulate_tool_usage()</code> — lines 929–938 / 956–965
+  - <code>_finalize_usage()</code> — lines 942–950 / 967–974
+  - <code>_commit_and_signal()</code> — lines 916–926 / 978–989
+- Larger phase extraction deferred — async generator yield/continue/return interleaving makes it risky without more integration tests
+- Only 2 direct callers (both test helpers in <code>test_chat_profile_routing.py</code> and <code>test_tool_messages.py</code>)</p>
+<h3 id="12-extract-chat_with_tools-helper-functions-1h">12. Extract <code>chat_with_tools</code> helper functions (~1h)<a class="headerlink" href="#12-extract-chat_with_tools-helper-functions-1h" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>No breaking changes</strong> to HTTP API, CLI commands, or config schema</li>
-<li><strong>Textual 8.1.1</strong> — <code>Select.BLANK</code> renamed to <code>Select.NULL</code> (not used by ppxai)</li>
-<li><strong>pyproject.toml</strong> already allows Textual 8.x (<code>textual&gt;=0.47.0</code>)</li>
-<li>K8s deployment requires colima or compatible k8s cluster (see <code>deploy/k8s/docs/</code>)</li>
+<li>Extract 3 duplicated blocks into helpers (see above)</li>
+<li>~50 lines of duplication removed, 6 call sites → 3</li>
+<li>Safe refactoring — no control flow changes</li>
+</ul>
+<h3 id="13-preview-serve-flag-full-stack-preview-4h">13. Preview <code>--serve</code> flag — full-stack preview (~4h)<a class="headerlink" href="#13-preview-serve-flag-full-stack-preview-4h" title="Permanent link">&para;</a></h3>
+<p>Start user's backend process and preview through it instead of static file serving.</p>
+<p><strong>Usage:</strong> <code>/preview static/index.html --serve "python main.py"</code> or <code>--serve</code> (auto-detect)</p>
+<p><strong>Server-side (3 files):</strong>
+- <code>state.py</code> — <code>PreviewBackend</code> dataclass (process, port, command, url) + session-keyed storage
+- <code>models.py</code> — <code>PreviewServeRequest</code> model
+- <code>routes/preview.py</code> — <code>POST /preview/serve</code> (start + port detect + health poll), <code>POST /preview/serve/stop</code>
+- <code>http.py</code> — kill orphaned backends on server shutdown
+- Port detection: regex stdout patterns + framework defaults (uvicorn=8000, express=3000, vite=5173)
+- Use <code>asyncio.create_subprocess_exec</code> (not <code>subprocess.Popen</code>) to avoid blocking event loop
+- Use <code>os.setsid</code> + <code>os.killpg</code> for process group cleanup (npm spawns child nodes)</p>
+<p><strong>Client-side (3 files):</strong>
+- <code>command-dispatcher.js</code> — parse <code>--serve</code> / <code>--port</code> flags
+- <code>api-client.js</code> — <code>startPreviewServe()</code> / <code>stopPreviewServe()</code>
+- <code>app.js</code> — <code>openServedPreview()</code>, external URL iframe, stop on close</p>
+<p><strong>UI additions:</strong>
+- Stop button in preview tab header (visible only in <code>--serve</code> mode)
+- Process status badge: <code>⚡ running :8000</code>
+- Auto-stop on <code>unmount()</code> + <code>beforeunload</code> fallback
+- Server-side orphan watchdog: kill backends with no health check after 5 min TTL</p>
+<p><strong>Safeguards:</strong>
+- One backend per session (kill previous before starting new)
+- Skip reload script injection in <code>--serve</code> mode (backend has own hot-reload)
+- iframe cross-port works (different ports allowed for iframe navigation)
+- <code>unmount()</code> removes iframe from DOM to stop any leaked polling</p>
+<h3 id="14-web-terminal-xtermjs-ptyk8s-exec-4h">14. Web terminal — xterm.js + PTY/K8s exec (~4h)<a class="headerlink" href="#14-web-terminal-xtermjs-ptyk8s-exec-4h" title="Permanent link">&para;</a></h3>
+<p>Lightweight terminal in the web app right panel, configurable shell via ppxai-config.json.</p>
+<p><strong>Frontend (web/lib/ + BaseView):</strong>
+- <code>xterm.js</code> + <code>xterm.css</code> (~120KB minified, MIT) — terminal emulator
+- <code>xterm-addon-fit.js</code> — auto-resize to container
+- <code>xterm-addon-web-links.js</code> — clickable URLs (optional)
+- Terminal as <code>BaseView</code> subclass in right panel frame
+- Open via <code>/terminal</code> command or keyboard shortcut
+- Multiple terminals supported (tab per terminal in RPF stack)</p>
+<p><strong>Backend — local mode (routes/terminal.py):</strong>
+- <code>WS /ws/terminal</code> — WebSocket endpoint
+- <code>pty.spawn()</code> (Python stdlib) for local shell
+- Shell binary from <code>tools.shell.shell_bin</code> config, fallback to <code>$SHELL</code> or <code>/bin/sh</code>
+- Login shell from <code>tools.shell.login_shell</code> config (sources profile for PATH/env)
+- PTY resize on xterm fit events
+- Working directory set to engine's current <code>working_dir</code>
+- Clean process kill on WebSocket close / server shutdown</p>
+<p><strong>Backend — K8s mode (routes/terminal.py):</strong>
+- Same WebSocket endpoint, different spawner
+- <code>kubernetes.stream(v1.connect_get_namespaced_pod_exec(...))</code> — exec into pod
+- Shell: <code>/bin/sh</code> or configurable per pod
+- Session manager already has K8s SDK, reuse auth/namespace config
+- Detect mode from env: <code>KUBERNETES_SERVICE_HOST</code> present → K8s exec</p>
+<p><strong>Config (existing, no changes needed):</strong>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">&quot;shell&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">      </span><span class="nt">&quot;shell_bin&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/bin/zsh&quot;</span><span class="p">,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">&quot;login_shell&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p">}</span>
+</span></code></pre></div></p>
+<p><strong>Nginx ingress (already configured):</strong>
+- <code>proxy-http-version: "1.1"</code> — required for WebSocket upgrade
+- <code>proxy-read-timeout: "3600"</code> — long-lived connections
+- WebSocket path: <code>/s/&lt;user&gt;/ws/terminal</code> → rewrite → <code>/ws/terminal</code></p>
+<p><strong>Platform notes:</strong>
+- macOS/Linux: <code>pty</code> module (stdlib), no extra deps
+- Windows: needs <code>pywinpty</code> — defer to later
+- K8s: <code>kubernetes</code> SDK already in deploy deps</p>
+<hr />
+<h2 id="deferred">Deferred<a class="headerlink" href="#deferred" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>v1.17.2:</strong> Multi-model routing → <code>docs/TODO-routing-v1.17.2.md</code></li>
+<li><strong>v1.18.x:</strong> AppState schema+generator (YAML → Python/JS/TS codegen), error hierarchy, ConfigLoader DI, K8s AppState phase</li>
 </ul>
 
 

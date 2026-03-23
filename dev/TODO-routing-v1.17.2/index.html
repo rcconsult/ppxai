@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/TODO-routing-v1.17.6/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/TODO-routing-v1.17.2/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>TODO: Multi-Model Routing (v1.17.6+) - ppxai Documentation</title>
+        <title>TODO: Multi-Model Routing (v1.17.2+) - ppxai Documentation</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#todo-multi-model-routing-v1176" class="md-skip">
+        <a href="#todo-multi-model-routing-v1172" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              TODO: Multi-Model Routing (v1.17.6+)
+              TODO: Multi-Model Routing (v1.17.2+)
             
           </span>
         </div>
@@ -1503,10 +1503,17 @@
   
 
 
-<h1 id="todo-multi-model-routing-v1176">TODO: Multi-Model Routing (v1.17.6+)<a class="headerlink" href="#todo-multi-model-routing-v1176" title="Permanent link">&para;</a></h1>
+<h1 id="todo-multi-model-routing-v1172">TODO: Multi-Model Routing (v1.17.2+)<a class="headerlink" href="#todo-multi-model-routing-v1172" title="Permanent link">&para;</a></h1>
 <p><strong>Status:</strong> Planning
-<strong>Target:</strong> v1.17.6 (infrastructure), v1.18.x (full routing)
+<strong>Target:</strong> v1.17.2 (infrastructure + testing), v1.18.x (full routing)
 <strong>Priority:</strong> Medium — foundational for advanced agentic workflows</p>
+<blockquote>
+<p><strong>Scheduling note (2026-03-22):</strong> Moved from v1.17.6 to v1.17.2. Requires
+thorough testing — agent mode and multi-tool calling sequences must work
+correctly with mid-session provider switches. Benchmark suite may need
+expansion to cover routed sessions (e.g., planning turn on model A →
+tool execution on model B → synthesis on model A).</p>
+</blockquote>
 <hr />
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>Enable cross-provider/model routing so ppxai can use different models for different
