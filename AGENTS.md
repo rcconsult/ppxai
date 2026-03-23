@@ -321,7 +321,7 @@ The web tools (`get_weather`, `fetch_url`, `web_search`) support corporate proxy
 - `docs/TODO-v1.16.2.md` - Current task list
 - `docs/KNOWN-ISSUES.md` - Known issues tracker (KI-001: google-genai SDK pin)
 
-### Current Version: v1.17.0
+### Current Version: v1.17.1
 
 **v1.16.2 Fixes:**
 - **FIX:** Inline `<think>` block parsing — Qwen3 via vLLM routed to REASONING_CHUNK
