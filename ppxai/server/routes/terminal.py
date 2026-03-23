@@ -142,17 +142,24 @@ async def websocket_terminal(websocket: WebSocket):
         return
 
     async def read_pty():
-        """Read PTY output and send to WebSocket."""
+        """Read PTY output and send to WebSocket using event loop fd monitoring."""
+        loop = asyncio.get_event_loop()
         try:
             while proc.is_alive():
+                # Wait until the PTY fd is readable
+                readable = asyncio.Event()
+                loop.add_reader(proc.fd, readable.set)
+                try:
+                    await readable.wait()
+                finally:
+                    loop.remove_reader(proc.fd)
+
                 data = proc.read()
                 if data:
                     await websocket.send_json({
                         "type": "output",
                         "data": data.decode("utf-8", errors="replace"),
                     })
-                else:
-                    await asyncio.sleep(0.01)
         except (WebSocketDisconnect, RuntimeError):
             pass
         except Exception as e:
