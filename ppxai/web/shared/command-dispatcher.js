@@ -859,7 +859,13 @@ class CommandDispatcher {
 
     async handlePreviewCommand(args) {
         if (!args || !args.trim()) {
-            this.app.showError('Usage: /preview <file.html> [--serve ["command"]] [--port N]');
+            this.app.showError(
+                'Usage:\n' +
+                '  /preview <file.html>                          — static preview with live reload\n' +
+                '  /preview <file.html> --serve ["cmd"] [--port N] — start backend + preview (desktop)\n' +
+                '  /preview <file.html> --proxy <port>            — proxy to running backend (K8s)\n' +
+                '  /preview close                                — close preview'
+            );
             return;
         }
 
@@ -870,22 +876,42 @@ class CommandDispatcher {
             return;
         }
 
-        // Parse --serve and --port flags
+        if (raw.toLowerCase() === 'help') {
+            this.app.showSystemMessage(
+                '**Preview modes:**\n\n' +
+                '**Static** (default) — serves HTML with live reload:\n' +
+                '```\n/preview index.html\n```\n\n' +
+                '**Full-stack (desktop)** — starts backend process + proxies:\n' +
+                '```\n/preview index.html --serve "python main.py"\n/preview index.html --serve --port 8000\n/preview index.html --serve              # auto-detect\n```\n\n' +
+                '**Full-stack (K8s)** — proxies to backend started from /terminal:\n' +
+                '```\n/terminal                                # open shell\n# start your backend: python main.py\n/preview index.html --proxy 8000\n```\n\n' +
+                '`/preview close` — close preview and stop backend/proxy',
+                'info'
+            );
+            return;
+        }
+
+        // Parse flags
         const serveMatch = raw.match(/--serve(?:\s+"([^"]+)"|\s+(\S+))?/);
+        const proxyMatch = raw.match(/--proxy\s+(\d+)/);
         const portMatch = raw.match(/--port\s+(\d+)/);
 
         // Strip flags to get the filepath
         const filepath = raw
             .replace(/\s*--serve(?:\s+"[^"]+"|\s+\S+)?/, '')
+            .replace(/\s*--proxy\s+\d+/, '')
             .replace(/\s*--port\s+\d+/, '')
             .trim();
 
         if (!filepath) {
-            this.app.showError('Usage: /preview <file.html> [--serve ["command"]]');
+            this.app.showError('Usage: /preview <file.html> [--serve|--proxy] — type /preview help for details');
             return;
         }
 
-        if (serveMatch) {
+        if (proxyMatch) {
+            const port = parseInt(proxyMatch[1], 10);
+            await this.app.openProxiedPreview(filepath, port);
+        } else if (serveMatch) {
             const command = serveMatch[1] || serveMatch[2] || null;
             const port = portMatch ? parseInt(portMatch[1], 10) : null;
             await this.app.openServedPreview(filepath, command, port);

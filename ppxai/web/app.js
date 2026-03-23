@@ -1990,7 +1990,7 @@ class PpxaiApp {
 
     // === /preview Command (v1.15.4, v1.17.1 --serve) ===
 
-    openHtmlPreview(filepath, externalUrl = null) {
+    openHtmlPreview(filepath, externalUrl = null, proxied = false) {
         // Route through RightPanelFrame (v1.16.2): push an inline iframe view
         if (this.rightPanelFrame) {
             const app = this;
@@ -2007,29 +2007,40 @@ class PpxaiApp {
                         const encodedPath = filepath.split('/').map(encodeURIComponent).join('/');
                         src = `${this._serverUrl}/preview/${encodedPath}?session=${encodeURIComponent(this._sessionId)}`;
                     }
-                    // Header bar with stop button (--serve mode only)
-                    const header = served
-                        ? `<div style="display:flex;align-items:center;justify-content:space-between;padding:2px 8px;background:var(--bg-secondary,#1e1e1e);border-bottom:1px solid var(--border-color,#333);font-size:12px;color:var(--text-dim,#888);">
-                             <span>⚡ Backend running on ${externalUrl}</span>
+                    // Header bar with stop button (--serve and --proxy modes)
+                    let header = '';
+                    if (served || proxied) {
+                        const label = proxied
+                            ? `🔌 Proxying to localhost:${externalUrl.match(/:(\d+)/)?.[1] || '?'}`
+                            : `⚡ Backend running on ${externalUrl}`;
+                        const stopLabel = proxied ? '■ Disconnect' : '■ Stop';
+                        header = `<div style="display:flex;align-items:center;justify-content:space-between;padding:2px 8px;background:var(--bg-secondary,#1e1e1e);border-bottom:1px solid var(--border-color,#333);font-size:12px;color:var(--text-dim,#888);">
+                             <span>${label}</span>
                              <button onclick="this.closest('.rpf-served-preview').dispatchEvent(new CustomEvent('stop-backend'))"
                                      style="background:var(--bg-tertiary,#333);color:var(--text-color,#ccc);border:1px solid var(--border-color,#555);border-radius:3px;padding:1px 8px;cursor:pointer;font-size:11px;">
-                               ■ Stop
+                               ${stopLabel}
                              </button>
-                           </div>`
-                        : '';
+                           </div>`;
+                    }
                     container.innerHTML = `<div class="rpf-served-preview" style="display:flex;flex-direction:column;height:100%;">
                         ${header}
                         <iframe src="${src}" style="flex:1;width:100%;border:none;background:#fff;" class="rpf-html-iframe"></iframe>
                     </div>`;
                     // Wire stop button
-                    if (served) {
+                    if (served || proxied) {
                         container.querySelector('.rpf-served-preview').addEventListener('stop-backend', () => {
-                            app.stopServedPreview();
+                            if (proxied) {
+                                app.apiClient.stopPreviewProxy().catch(() => {});
+                                app.showSystemMessage('Proxy disconnected.');
+                            }
+                            app.closeHtmlPreview();
                         });
                     }
                 },
                 unmount() {
-                    if (served) {
+                    if (proxied) {
+                        app.apiClient.stopPreviewProxy().catch(() => {});
+                    } else if (served) {
                         app.apiClient.stopPreviewServe().catch(() => {});
                     }
                     if (this._container) { this._container.innerHTML = ''; this._container = null; }
@@ -2045,6 +2056,7 @@ class PpxaiApp {
             this.state.htmlPreviewActive  = true;
             this.state.htmlPreviewFilepath = filepath;
             this.state.htmlPreviewServed = served;
+            this.state.htmlPreviewProxied = proxied;
             return;
         }
     }
@@ -2060,6 +2072,19 @@ class PpxaiApp {
         }
     }
 
+    async openProxiedPreview(filepath, port) {
+        this.showSystemMessage(`Connecting to port ${port}...`, 'info');
+        try {
+            const result = await this.apiClient.startPreviewProxy(port);
+            this.showSystemMessage(`Proxying to ${result.url}`, 'info');
+            // Use the proxy URL through ppxai's server (same origin, works behind ingress)
+            const proxyUrl = `${this.serverUrl}/preview/proxy/`;
+            this.openHtmlPreview(filepath, proxyUrl, true);
+        } catch (error) {
+            this.showError(`Failed to connect: ${error.message}`);
+        }
+    }
+
     async stopServedPreview() {
         try {
             await this.apiClient.stopPreviewServe();
@@ -2072,9 +2097,13 @@ class PpxaiApp {
         if (this.rightPanelFrame && this.state.htmlPreviewActive) {
             this.rightPanelFrame.pop();
         }
+        if (this.state.htmlPreviewProxied) {
+            this.apiClient.stopPreviewProxy().catch(() => {});
+        }
         this.state.htmlPreviewActive  = false;
         this.state.htmlPreviewFilepath = null;
         this.state.htmlPreviewServed = false;
+        this.state.htmlPreviewProxied = false;
     }
 
     /**

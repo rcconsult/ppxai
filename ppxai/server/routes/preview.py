@@ -375,6 +375,100 @@ async def preview_serve_status(s: Session = Depends(get_session)):
     }
 
 
+# === Preview --proxy: reverse proxy to local port (v1.17.1) ===
+# Used in K8s where user starts backend from /terminal, ppxai proxies to it.
+
+# Module-level dict tracking active proxy ports per session
+_proxy_ports: dict[str, int] = {}
+
+
+@router.post("/preview/proxy/start")
+async def start_preview_proxy(
+    request: Request,
+    s: Session = Depends(get_session),
+):
+    """Start proxying to a local port (no process management).
+
+    The user starts their backend separately (e.g., from /terminal).
+    This just verifies the port is reachable and enables proxying.
+    """
+    body = await request.json()
+    port = int(body.get("port", 8000))
+
+    # Check if port is reachable
+    if not await _wait_for_port(port, timeout=3.0):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Port {port} is not reachable. Start your backend first (e.g., from /terminal).",
+        )
+
+    _proxy_ports[s.id] = port
+    url = f"http://localhost:{port}"
+    logger.info(f"Preview proxy: proxying to {url} (session={s.id})")
+
+    return {"url": url, "port": port}
+
+
+@router.post("/preview/proxy/stop")
+async def stop_preview_proxy(s: Session = Depends(get_session)):
+    """Stop proxying (does not kill any process)."""
+    port = _proxy_ports.pop(s.id, None)
+    if port is None:
+        return {"stopped": False, "reason": "no proxy active"}
+    logger.info(f"Preview proxy: stopped proxying to port {port} (session={s.id})")
+    return {"stopped": True, "port": port}
+
+
+@router.api_route("/preview/proxy/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def preview_proxy_passthrough(
+    request: Request,
+    path: str,
+    x_session_id: Optional[str] = Header(None),
+    session: Optional[str] = None,
+):
+    """Reverse proxy requests to the user's backend.
+
+    Routes /preview/proxy/* to localhost:{port}/* for the active session.
+    Supports all HTTP methods so the previewed app's API calls work.
+    """
+    sid = x_session_id or session or _extract_session_from_referer(request)
+    port = _proxy_ports.get(sid)
+    if port is None:
+        raise HTTPException(status_code=404, detail="No proxy active for this session")
+
+    target_url = f"http://localhost:{port}/{path}"
+    if request.url.query:
+        target_url += f"?{request.url.query}"
+
+    # Forward the request
+    body = await request.body()
+    headers = dict(request.headers)
+    # Remove hop-by-hop headers
+    for h in ("host", "connection", "transfer-encoding"):
+        headers.pop(h, None)
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.request(
+                method=request.method,
+                url=target_url,
+                headers=headers,
+                content=body,
+            )
+    except httpx.ConnectError:
+        raise HTTPException(status_code=502, detail=f"Backend on port {port} is not reachable")
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail=f"Backend on port {port} timed out")
+
+    # Return the proxied response
+    from starlette.responses import Response
+    return Response(
+        content=response.content,
+        status_code=response.status_code,
+        headers=dict(response.headers),
+    )
+
+
 @router.get("/preview/{filepath:path}")
 async def preview_html(
     request: Request,

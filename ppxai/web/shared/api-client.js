@@ -365,6 +365,16 @@ class ApiClient {
     async getPreviewServeStatus() {
         return this.get('/preview/serve/status');
     }
+
+    // === Preview Proxy (v1.17.1 — K8s) ===
+
+    async startPreviewProxy(port) {
+        return this.post('/preview/proxy/start', { port });
+    }
+
+    async stopPreviewProxy() {
+        return this.post('/preview/proxy/stop');
+    }
 }
 
 /**
