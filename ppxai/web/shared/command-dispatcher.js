@@ -131,6 +131,12 @@ class CommandDispatcher {
                 await this.handlePreviewCommand(args);
                 break;
 
+            case '/terminal':
+            case '/term':
+            case '/sh':
+                this.handleTerminalCommand();
+                break;
+
             case '/config':
                 await this.handleConfigCommand(args);
                 break;
@@ -886,6 +892,20 @@ class CommandDispatcher {
         } else {
             this.app.openHtmlPreview(filepath);
         }
+    }
+
+    handleTerminalCommand() {
+        if (!this.app.rightPanelFrame) {
+            this.app.showError('Right panel not available');
+            return;
+        }
+        if (typeof TerminalView === 'undefined') {
+            this.app.showError('Terminal not available — xterm.js not loaded');
+            return;
+        }
+        const view = new TerminalView(this.app.serverUrl, this.app.sessionId);
+        this.app.rightPanelFrame.push(view);
+        this.app.elements.resizeHandle.classList.remove('hidden');
     }
 
     async handleShowCommand(args) {

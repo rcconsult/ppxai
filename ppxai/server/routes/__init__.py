@@ -19,6 +19,7 @@ from . import (
     providers,
     sessions,
     static,
+    terminal,
     usage,
 )
 
@@ -36,5 +37,6 @@ all_routers: list[APIRouter] = [
     consent.router,
     agent.router,
     checkpoints.router,
+    terminal.router,
     static.router,
 ]
