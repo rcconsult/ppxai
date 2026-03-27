@@ -33,7 +33,7 @@ async def get_providers(s: Session = Depends(get_session)):
             }
             for p in providers
         ],
-        "current": s.engine.provider_name,
+        "current": s.engine.state.get("provider"),
     }
 
 
@@ -47,9 +47,10 @@ async def set_provider(request: SetProviderRequest, s: Session = Depends(get_ses
     if request.model:
         s.engine.set_model(request.model, reset_context=request.reset_context)
 
+    state = s.engine.state
     result = {
-        "provider": s.engine.provider_name,
-        "model": s.engine.model,
+        "provider": state.get("provider"),
+        "model": state.get("model"),
     }
     if s.engine.last_model_switch_reset > 0:
         result["context_reset"] = s.engine.last_model_switch_reset
@@ -60,6 +61,7 @@ async def set_provider(request: SetProviderRequest, s: Session = Depends(get_ses
 async def get_models(s: Session = Depends(get_session)):
     """Get list of models for current provider."""
     models = s.engine.list_models()
+    state = s.engine.state
     return {
         "models": [
             {
@@ -69,8 +71,8 @@ async def get_models(s: Session = Depends(get_session)):
             }
             for m in models
         ],
-        "current": s.engine.model,
-        "provider": s.engine.provider_name,
+        "current": state.get("model"),
+        "provider": state.get("provider"),
     }
 
 
@@ -81,9 +83,10 @@ async def set_model(request: SetModelRequest, s: Session = Depends(get_session))
     if not success:
         raise HTTPException(status_code=400, detail=f"Failed to set model: {request.model}")
 
+    state = s.engine.state
     result = {
-        "model": s.engine.model,
-        "provider": s.engine.provider_name,
+        "model": state.get("model"),
+        "provider": state.get("provider"),
     }
     if s.engine.last_model_switch_reset > 0:
         result["context_reset"] = s.engine.last_model_switch_reset
@@ -108,7 +111,7 @@ async def get_tools(s: Session = Depends(get_session)):
 
     return {
         "tools": tools,
-        "enabled": s.engine.tools_enabled,
+        "enabled": s.engine.state.get("tools_enabled"),
         "max_iterations": status.get('max_iterations', Default.MAX_TOOL_ITERATIONS),
         "auto_retry_empty": status.get('auto_retry_empty', Default.AUTO_RETRY_EMPTY),
         "consent_mode": consent_mode,
@@ -124,7 +127,7 @@ async def set_tools(request: ToolsRequest, s: Session = Depends(get_session)):
     else:
         s.engine.disable_tools()
 
-    return {"enabled": s.engine.tools_enabled}
+    return {"enabled": s.engine.state.get("tools_enabled")}
 
 
 @router.post("/tools/config")
@@ -144,7 +147,7 @@ async def set_tools_config(request: ToolsConfigRequest, s: Session = Depends(get
 @router.get("/tools/help/{tool_name}")
 async def get_tool_help(tool_name: str, s: Session = Depends(get_session)):
     """Get detailed help for a specific tool."""
-    if not s.engine.tools_enabled or not s.engine.tool_manager:
+    if not s.engine.state.get("tools_enabled") or not s.engine.tool_manager:
         raise HTTPException(status_code=400, detail="Tools not enabled")
 
     tool = s.engine.tool_manager.get_tool(tool_name)

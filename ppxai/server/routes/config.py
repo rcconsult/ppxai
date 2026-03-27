@@ -138,13 +138,11 @@ async def get_status(s: Session = Depends(get_session)):
     v1.14.0: Added bootstrap context status.
     """
 
+    state = s.engine.state.snapshot()
     return {
-        "provider": s.engine.provider_name,
-        "model": s.engine.model,
-        "tools_enabled": s.engine.tools_enabled,
-        "agent_mode": s.engine.agent_mode,
-        "auto_inject_context": s.engine.auto_inject_context,
+        **state,
         "session_id": s.id,
+        "auto_inject_context": s.engine.auto_inject_context,
         "bootstrap": s.engine.get_bootstrap_status(),  # v1.14.0
     }
 

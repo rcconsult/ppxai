@@ -23,11 +23,20 @@ from ppxai.server.session_manager import SessionManager
 
 def create_mock_engine():
     """Create a mock EngineClient."""
+    from ppxai.engine.app_state import AppState
+
     engine = MagicMock()
     engine.provider_name = "perplexity"
     engine.model = "sonar-pro"
     engine.tools_enabled = False
     engine.auto_inject_context = True
+
+    # Real AppState so routes can use state.get()/snapshot()
+    engine.state = AppState(initial={
+        "provider": "perplexity",
+        "model": "sonar-pro",
+        "tools_enabled": False,
+    })
 
     # Mock list_providers
     mock_provider = MagicMock()
@@ -330,6 +339,7 @@ class TestHttpServerToolsHelp:
         """Test GET /tools/help/{tool_name} returns tool definition."""
         client, mock_engine = mock_client
         mock_engine.tools_enabled = True
+        mock_engine.state.set("tools_enabled", True)
 
         # Create mock tool with get_definition method
         mock_tool = MagicMock()
@@ -367,6 +377,7 @@ class TestHttpServerToolsHelp:
         """Test GET /tools/help/{tool_name} returns 404 for unknown tool."""
         client, mock_engine = mock_client
         mock_engine.tools_enabled = True
+        mock_engine.state.set("tools_enabled", True)
         mock_engine.tool_manager = MagicMock()
         mock_engine.tool_manager.get_tool.return_value = None
         mock_engine.tool_manager.list_tools.return_value = [

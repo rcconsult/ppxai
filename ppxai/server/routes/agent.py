@@ -23,9 +23,10 @@ async def get_agent_status(s: Session = Depends(get_session)):
     # Include checkpoint status in v1.12.0+
     checkpoint_status = s.engine.get_checkpoint_status()
 
+    state = s.engine.state
     return {
-        "agent_mode": s.engine.agent_mode,
-        "tools_enabled": s.engine.tools_enabled,
+        "agent_mode": state.get("agent_mode"),
+        "tools_enabled": state.get("tools_enabled"),
         "checkpoint": checkpoint_status,
     }
 
@@ -55,7 +56,7 @@ async def enable_agent_mode(s: Session = Depends(get_session)):
     return {
         "ok": True,
         "agent_mode": True,
-        "tools_enabled": s.engine.tools_enabled,
+        "tools_enabled": s.engine.state.get("tools_enabled"),
     }
 
 

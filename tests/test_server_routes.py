@@ -30,10 +30,18 @@ def create_test_app():
 
 def make_mock_session():
     """Create a mock Session with a mock EngineClient."""
+    from ppxai.engine.app_state import AppState
+
     engine = MagicMock()
     engine.provider_name = "openai"
     engine.model = "gpt-4"
     engine.tools_enabled = True
+    # Real AppState so routes can use state.get()/snapshot()
+    engine.state = AppState(initial={
+        "provider": "openai",
+        "model": "gpt-4",
+        "tools_enabled": True,
+    })
     return Session(id="test", engine=engine, lock=asyncio.Lock())
 
 

@@ -67,8 +67,9 @@ class TextualCommandContext(_CommandContextProxy):
 class ServerCommandContext:
     """CommandContext adapter for HTTP server.
 
-    Wraps EngineClient directly — has custom overrides for server context
-    (no auto-route, no verbose, no config values).
+    Wraps EngineClient — reads state from AppState for consistency with
+    TUI clients. Server-specific overrides: no auto-route, no verbose,
+    no config values.
     """
 
     def __init__(self, engine: EngineClient):
@@ -84,19 +85,19 @@ class ServerCommandContext:
 
     @property
     def working_dir(self) -> str:
-        return self._engine.get_working_dir() or ""
+        return self._engine.state.get("working_dir") or ""
 
     @property
     def current_model(self) -> str:
-        return self._engine.get_current_model() or ""
+        return self._engine.state.get("model") or ""
 
     @property
     def provider(self) -> str:
-        return self._engine.get_current_provider() or ""
+        return self._engine.state.get("provider") or ""
 
     @property
     def tools_enabled(self) -> bool:
-        return self._engine.tools_enabled
+        return self._engine.state.get("tools_enabled")
 
     @property
     def autoroute_enabled(self) -> bool:
@@ -109,10 +110,10 @@ class ServerCommandContext:
         self._engine.set_provider(provider)
 
     def get_provider(self) -> str:
-        return self._engine.get_current_provider() or ""
+        return self._engine.state.get("provider") or ""
 
     def get_model(self) -> str:
-        return self._engine.get_current_model() or ""
+        return self._engine.state.get("model") or ""
 
     def get_auto_route(self) -> bool:
         return False
@@ -121,7 +122,7 @@ class ServerCommandContext:
         pass
 
     def get_tools_available(self) -> bool:
-        return self._engine.tools_enabled
+        return self._engine.state.get("tools_enabled")
 
     def get_tools_verbose(self) -> bool:
         return False
