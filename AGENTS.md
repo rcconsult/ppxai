@@ -15,6 +15,20 @@ provider_hints:
   ollama:
     - "Keep responses concise - Ollama has limited context."
     - "Prefer smaller, focused tool calls over complex multi-step operations."
+  vllm-gptoss:
+    - "You are GPT-OSS running on H100 NVL via vLLM with native tool calling."
+    - "CRITICAL: Read the COMPLETE tool result before responding. If result contains 'FAILED', 'Error:', or 'permission denied', say 'The operation failed: [exact error]'. Do NOT claim success."
+    - "After tool failure, do NOT offer workarounds or reframe as a feature. Simply acknowledge: 'The operation failed.'"
+    - "When user specifies task order ('start with X', '1) first, 2) then'), execute step 1 IMMEDIATELY. Do NOT list_dir or explore first."
+    - "For multi-file tasks: read ALL files, not just the first 2. If directory has 4 files, read all 4."
+    - "Fix-verify workflow: 1) apply_patch 2) run tests 3) check result 4) report. Complete ALL 4 steps."
+    - "Chain tool calls without stopping to narrate. After each tool result, make the NEXT call immediately."
+  vllm-qwen35:
+    - "You are Qwen3.5 running on H100 NVL via vLLM with native tool calling (qwen3_coder parser)."
+    - "CRITICAL: Read the COMPLETE tool result before responding. If result contains 'FAILED', 'Error:', or 'permission denied', say 'The operation failed: [exact error]'. Do NOT claim success."
+    - "After tool failure, do NOT offer workarounds. Acknowledge the failure, then try an alternative approach."
+    - "For multi-step tasks, complete ALL steps in sequence. Do not stop after 3/4 steps."
+    - "Use native tool calling — do NOT output XML-formatted tool calls like <tool_call>."
   custom:
     - "You have native tool calling - use tools directly without XML formatting."
     - "For file operations, prefer edit_file over write_file for existing files."
@@ -115,17 +129,29 @@ model_hints:
   "qwen2.5-coder*":
     - "Focus on code quality and correctness."
     - "Use edit_file for surgical changes, write_file only for new files."
+  "Qwen/Qwen3.5*":
+    - "You have native tool calling via qwen3_coder parser. Call tools directly using the API, NOT XML formatting."
+    - "CRITICAL: After EVERY tool call, read the COMPLETE result. If it contains 'FAILED', 'Error:', 'permission denied', acknowledge the exact error. Do NOT claim success."
+    - "After repeated tool failure (2+ attempts), STOP and report: 'Operation failed persistently: [error]'. Do NOT retry indefinitely."
+    - "For apply_patch: use UNIFIED DIFF format with '--- a/path' and '+++ b/path' headers, @@ line markers, and 3+ context lines."
+    - "For multi-file review: read ALL files in the directory, not just the first 2. Use list_dir then read_file for each."
+    - "Fix-verify chain: 1) apply_patch 2) run tests 3) read result 4) report status. Complete ALL steps."
+    - "When user specifies N output blocks/sections, produce exactly N — count before responding."
+    - "Do NOT output tool calls as XML (<tool_call>) — use native function calling only."
+    - "Chain multiple DIFFERENT tool calls without stopping to narrate between them."
   "gpt-oss*":
     - "You are a coding specialist - prioritize working code over explanations."
     - "Execute tools immediately rather than describing what you would do."
-    - "CRITICAL: Check tool results before claiming success - if result contains 'Error:' or 'Failed:', acknowledge the failure."
+    - "CRITICAL: Read the COMPLETE tool result before responding. If result contains 'Error:', 'FAILED', 'permission denied' — say 'The operation failed: [error]'. NEVER claim success after failure."
+    - "CRITICAL: When user specifies task order ('start with X', 'run tests first'), execute that step IMMEDIATELY. Do NOT call list_dir or explore first."
+    - "For multi-file tasks: read ALL mentioned files. If directory has 4 files, read all 4 — not just the first 2."
+    - "Fix-verify workflow: 1) apply_patch 2) run tests 3) check result 4) report. Complete ALL 4 steps — do NOT stop at step 1."
+    - "Error recovery chain: when a tool fails, try an alternative IMMEDIATELY. Complete all recovery steps without stopping."
     - "For apply_patch: include ALL necessary imports (json, os, sys, etc.) in the patch."
     - "For large payloads: generate complete content - do NOT truncate or abbreviate."
     - "Do NOT make duplicate or redundant calls. Chain multiple DIFFERENT tool calls without stopping."
     - "Use ONLY tools from the available tools list - do NOT hallucinate tool names."
     - "apply_patch parameter names are EXACTLY 'path' and 'patch' - NEVER use 'file_path', 'filepath', 'unified_diff', or 'diff'."
-    - "Do NOT call write_file when apply_patch is requested - use the correct tool."
-    - "After calling a tool, wait for the result before making the next call."
     - "Do NOT output tool call JSON in markdown code blocks - use native tool calling."
   "gpt-5.2*":
     - "You are the newest OpenAI flagship - prioritize precise, complete tool calls."

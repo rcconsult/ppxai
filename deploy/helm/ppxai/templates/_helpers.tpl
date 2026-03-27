@@ -94,3 +94,92 @@ Ingress name.
 {{- define "ppxai.ingressName" -}}
 {{ include "ppxai.fullname" . }}-ingress
 {{- end }}
+
+{{/*
+Benchmark pod template — shared between Job and CronJob.
+*/}}
+{{- define "ppxai.benchmarkPodTemplate" -}}
+metadata:
+  labels:
+    app: benchmark
+    app.kubernetes.io/component: benchmark
+spec:
+  restartPolicy: Never
+  containers:
+    - name: benchmark
+      image: {{ include "ppxai.serverImage" . }}
+      imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+      command: ["sh", "-c"]
+      args:
+        - |
+          cd /src/benchmarks/llm-eval
+          {{- range .Values.benchmark.providers }}
+          echo "=== Benchmarking {{ .provider }}/{{ .model }} ==="
+          python benchmark.py \
+            --provider {{ .provider | quote }} \
+            --model {{ .model | quote }} \
+            {{- if $.Values.benchmark.categories }}
+            --categories {{ $.Values.benchmark.categories | quote }} \
+            {{- end }}
+            {{- if $.Values.benchmark.timeout }}
+            --timeout {{ $.Values.benchmark.timeout }} \
+            {{- end }}
+            {{- if $.Values.benchmark.debug }}
+            --debug \
+            {{- end }}
+            --verbose || true
+          {{- end }}
+          echo "=== Ranking ==="
+          python benchmark.py --ranking
+      env:
+        - name: PPXAI_CONFIG_FILE
+          value: /config/ppxai-config.json
+        - name: PYTHONPATH
+          value: /src
+        {{- if .Values.apiKeys.existingSecret }}
+        - name: VLLM_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.apiKeys.existingSecret }}
+              key: VLLM_API_KEY
+        {{- else }}
+        {{- range $key, $val := .Values.apiKeys.keys }}
+        - name: {{ $key }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "ppxai.fullname" $ }}-api-keys
+              key: {{ $key }}
+        {{- end }}
+        {{- end }}
+      volumeMounts:
+        - name: server-config
+          mountPath: /config
+          readOnly: true
+        - name: source
+          mountPath: /src
+          readOnly: true
+        - name: results
+          mountPath: /src/benchmarks/llm-eval/results
+        - name: debug
+          mountPath: /src/benchmarks/llm-eval/debug
+      {{- if .Values.benchmark.resources }}
+      resources:
+        {{- toYaml .Values.benchmark.resources | nindent 8 }}
+      {{- end }}
+  volumes:
+    - name: server-config
+      configMap:
+        name: {{ include "ppxai.fullname" . }}-server-config
+    - name: source
+      hostPath:
+        path: {{ .Values.kaniko.sourcePath }}
+        type: Directory
+    - name: results
+      hostPath:
+        path: {{ .Values.kaniko.sourcePath }}/benchmarks/llm-eval/results
+        type: DirectoryOrCreate
+    - name: debug
+      hostPath:
+        path: {{ .Values.kaniko.sourcePath }}/benchmarks/llm-eval/debug
+        type: DirectoryOrCreate
+{{- end }}

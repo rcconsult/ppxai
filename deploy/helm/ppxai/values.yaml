@@ -199,6 +199,37 @@ serverConfig:
       checkpoint_backend: "none"
 
 # ============================================================
+# Benchmark Job/CronJob
+# ============================================================
+benchmark:
+  # -- Enable benchmark Job/CronJob
+  enabled: false
+  # -- Cron schedule (e.g., "0 6 * * 1" = Monday 6am). Empty = one-shot Job.
+  schedule: ""
+  # -- Providers to benchmark (each entry: provider + model)
+  providers: []
+  #   - provider: "vllm-gptoss"
+  #     model: "openai/gpt-oss-120b"
+  # -- Comma-separated test categories (empty = all)
+  categories: ""
+  # -- Timeout per test in seconds
+  timeout: 120
+  # -- Enable debug logging
+  debug: false
+  # -- TTL for completed jobs
+  ttlSeconds: 3600
+  # -- History limit for CronJob
+  historyLimit: 5
+  # -- Resource limits
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# ============================================================
 # Login page branding
 # ============================================================
 login:

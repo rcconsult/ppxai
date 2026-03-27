@@ -1,0 +1,37 @@
+{{- if .Values.benchmark.enabled }}
+{{/*
+Benchmark Job/CronJob — runs llm-eval benchmarks against in-cluster LLMs.
+
+Uses the coder-server image (has ppxai installed) with the benchmark scripts
+mounted from the Kaniko source hostPath. Results are written to the same
+hostPath so they persist across runs.
+*/}}
+{{- $podSpec := dict }}
+---
+apiVersion: batch/v1
+{{- if .Values.benchmark.schedule }}
+kind: CronJob
+{{- else }}
+kind: Job
+{{- end }}
+metadata:
+  name: {{ include "ppxai.fullname" . }}-benchmark
+  namespace: {{ include "ppxai.namespace" . }}
+  labels:
+    {{- include "ppxai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: benchmark
+spec:
+{{- if .Values.benchmark.schedule }}
+  schedule: {{ .Values.benchmark.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: {{ .Values.benchmark.historyLimit | default 5 }}
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: {{ .Values.benchmark.ttlSeconds | default 3600 }}
+      template: {{- include "ppxai.benchmarkPodTemplate" . | nindent 8 }}
+{{- else }}
+  ttlSecondsAfterFinished: {{ .Values.benchmark.ttlSeconds | default 3600 }}
+  template: {{- include "ppxai.benchmarkPodTemplate" . | nindent 4 }}
+{{- end }}
+{{- end }}
