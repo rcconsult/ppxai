@@ -990,6 +990,18 @@
         "timestamp": "2026-03-27T22:53:28.632573",
         "overall_score": 80.75907590759076,
         "agents_md_mode": "without"
+      },
+      {
+        "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_30c2369f.json",
+        "timestamp": "2026-03-27T23:17:48.289745",
+        "overall_score": 82.01320132013201,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_bca63973.json",
+        "timestamp": "2026-03-27T23:19:21.853971",
+        "overall_score": 82.24422442244223,
+        "agents_md_mode": "without"
       }
     ],
     "vllm-qwen35/Qwen/Qwen3.5-27B-FP8": [
@@ -2111,6 +2123,20 @@
       "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_5f72a16c.json",
       "timestamp": "2026-03-27T23:12:07.360876",
       "overall_score": 84.05940594059406,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "vllm-gptoss/openai/gpt-oss-120b",
+      "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_30c2369f.json",
+      "timestamp": "2026-03-27T23:17:48.289745",
+      "overall_score": 82.01320132013201,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "vllm-gptoss/openai/gpt-oss-120b",
+      "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_bca63973.json",
+      "timestamp": "2026-03-27T23:19:21.853971",
+      "overall_score": 82.24422442244223,
       "agents_md_mode": "without"
     }
   ]
