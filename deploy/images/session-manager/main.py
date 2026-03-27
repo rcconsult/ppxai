@@ -420,10 +420,19 @@ def _apply_ingress_paths(ingress) -> None:
             }]
         },
     }
-    net.patch_namespaced_ingress(
-        INGRESS_NAME, NAMESPACE, apply_body,
-        field_manager="helm", force=True,
-        _content_type="application/apply-patch+yaml",
+    # Use the raw REST client for server-side apply (content-type not
+    # supported as kwarg in all kubernetes-client versions).
+    import json as _json
+    _api_client.call_api(
+        f"/apis/networking.k8s.io/v1/namespaces/{NAMESPACE}/ingresses/{INGRESS_NAME}",
+        "PATCH",
+        body=_json.dumps(apply_body),
+        query_params=[("fieldManager", "helm"), ("force", "true")],
+        header_params={
+            "Content-Type": "application/apply-patch+yaml",
+            "Accept": "application/json",
+        },
+        response_type="object",
     )
 
 
