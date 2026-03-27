@@ -384,8 +384,8 @@ class ImageHandlerFactory:
         Returns:
             ImageHandler instance (Full or Fallback)
         """
-        # Check library availability first
-        if not _IMAGEVIEW_AVAILABLE:
+        # Check library availability — need textual-image OR our native widget
+        if not _IMAGEVIEW_AVAILABLE and _ITerm2ImageWidget is None:
             return FallbackHandler(path, parent, reason="library")
 
         # Check terminal capabilities

@@ -385,10 +385,17 @@ class PPXAIDEApp(App):
         self._tools_verbose = value
 
     def _on_state_working_dir_changed(self, value: str) -> None:
-        """AppState observer: working_dir changed → update status bar + shadow."""
-        self._working_dir = value  # Keep shadow field for FileTree
+        """AppState observer: working_dir changed → update status bar + file tree."""
+        self._working_dir = value
         if self._status_bar and value:
             self._status_bar.update_badge("cwd", self._format_cwd_display(value))
+        # Sync file tree root directory
+        if value:
+            try:
+                file_tree = self.query_one("#file-tree", FileTree)
+                file_tree.update_root_path(Path(value))
+            except Exception:
+                pass
 
     async def _file_edit_consent_handler(self, file_path: str) -> tuple[bool, str]:
         """Handle file edit consent request using Textual dialog.
