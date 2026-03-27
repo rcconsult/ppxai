@@ -231,7 +231,7 @@ class PPXAIDEApp(App):
             self.set_interval(60, self._update_datetime)
 
         # Agent mode badge (Phase 1.3)
-        if self._engine_client and self._engine_client.agent_mode:
+        if self._engine_client and self._engine_client.state.get("agent_mode"):
             status_bar.add_badge("agent", "Agent", "ACTIVE", variant="success")
             self._update_checkpoint_badge(status_bar)
 
@@ -1027,7 +1027,7 @@ class PPXAIDEApp(App):
                 if cmd in ("tools", "agent"):
                     # Update agent mode badge (Phase 1.3)
                     if cmd == "agent" and self._engine_client:
-                        agent_mode = self._engine_client.agent_mode
+                        agent_mode = self._engine_client.state.get("agent_mode")
                         if agent_mode:
                             status_bar.add_badge("agent", "Agent", "ACTIVE", variant="success")
                             self._update_checkpoint_badge(status_bar)
@@ -1593,6 +1593,9 @@ class PPXAIDEApp(App):
             Logger.enable_all()
         else:
             Logger.disable_all()
+        # Sync to AppState
+        if self._engine_client:
+            self._engine_client.state.set("debug_log", enabled)
         self._log.info(f"Debug logging {'enabled' if enabled else 'disabled'}")
 
     def on_side_panel_opened(self, event: SidePanel.Opened) -> None:

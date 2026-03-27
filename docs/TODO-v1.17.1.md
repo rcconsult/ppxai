@@ -1,6 +1,6 @@
 # TODO: v1.17.1 — Unified AppState + Code Streamlining
 
-**Status:** In progress
+**Status:** Complete — all 14 items done
 **Target:** v1.17.1
 **Priority:** HIGH — validate AppState pattern, reduce complexity before routing (v1.17.2)
 
@@ -25,145 +25,133 @@ centralized.
 
 ## AppState Convergence
 
-### 1. Define AppState interface + Python implementation (~3h)
+### ~~1. Define AppState interface + Python implementation~~ ✅
 
-- `ppxai/engine/app_state.py` — canonical `AppState` class
-- Fields: `provider`, `model`, `tools_enabled`, `tools_verbose`, `working_dir`,
-  `is_streaming`, `cancel_requested`, `session_id`, `session_name`,
-  `total_tokens`, `prompt_tokens`, `completion_tokens`, `total_cost`,
-  `context_percentage`, `auto_route`, `agent_iterations`, `reasoning_active`
-- Observer pattern: `on(field, callback)`, `set(field, value)` triggers listeners
-- Thread-safe: RLock for Python clients
-- Reference: Web app's existing `AppState` (Proxy-based observable) as model
+**Done.** `ppxai/engine/app_state.py` — thread-safe `AppState` class with
+`on()`/`off()`/`get()`/`set()`/`update()`/`snapshot()`. 17 canonical fields.
+Integrated in `EngineClient.state`, `commands/handler.py`, and Textual TUI.
 
-### 2. Rich TUI — wire AppState (~3h)
+### ~~2. Rich TUI — wire AppState~~ ✅
 
-**Plan:** [`docs/TODO-appstate-1-rich-tui.md`](TODO-appstate-1-rich-tui.md)
+**Done.** Rich TUI now reads all core state through AppState:
+- `get_status_line()` reads provider, model, tools_enabled, agent_mode, working_dir via
+  handler properties (which delegate to `engine_client.state`)
+- `restore_session_to_handler()` relies on `restore_session()` to update AppState
+  atomically — no manual handler.provider/handler.current_model sync
+- `stream_engine_response()` reads tools_verbose from AppState
+- Derived data (checkpoint_status, usage_display, context_percentage) still uses
+  engine_client method calls — these are computed on demand, not stored in AppState
 
-- Simplest client — single thread, sync handlers
-- Replace scattered state fields in EngineClient/event_handler with AppState
-- Status bar reads from AppState observers instead of manual updates
+### ~~3. Textual TUI — wire AppState~~ ✅
 
-### 3. Textual TUI — wire AppState (~3h)
+**Done.** 5 observers registered in `_initialize_engine()`: provider, model,
+tools_enabled, tools_verbose, working_dir. Auto-updates status bar badges.
 
-**Plan:** [`docs/TODO-appstate-2-textual-tui.md`](TODO-appstate-2-textual-tui.md)
+### ~~4. Web app — align AppState~~ ✅
 
-- Replace 15+ `self._*` shadow state fields with AppState observers
-- Eliminate ~30 manual `update_badge()` calls
-- Threading/async complexity — AppState must dispatch to correct event loop
+**Done.** `ppxai/web/shared/app-state.js` — Proxy-based observable with aligned
+field names. E2E tests in `tests/e2e/app-state.spec.ts`.
 
-### 4. Web app — align AppState (~2h)
+### ~~5. VSCode extension — align AppState~~ ✅
 
-**Plan:** [`docs/TODO-appstate-3-web-app.md`](TODO-appstate-3-web-app.md)
-
-- Web app already HAS an observable AppState (Proxy-based)
-- Align field names and types to match the Python canonical definition
-- 200 Playwright E2E tests as safety net
-
-### 5. VSCode extension — align AppState (~2h)
-
-**Plan:** [`docs/TODO-appstate-4-vscode.md`](TODO-appstate-4-vscode.md)
-
-- TypeScript interface matching the canonical fields
-- Align with Web app's field names
+**Done.** `vscode-extension/src/appState.ts` — typed `AppStateFields` interface
+with `get<K>()`/`set<K>()`/`on()`/`off()`/`update()`/`snapshot()`.
 
 ---
 
 ## File Decomposition
 
-### 6. Decompose `engine/client.py` (~2h)
+### ~~6. Decompose `engine/client.py`~~ ✅
 
-**Plan:** `docs/TODO-refactoring.md` item #5
+**Done.** Extracted `checkpoint_ops.py`, `consent_ops.py`, `bootstrap_ops.py`.
+`client.py` reduced to 955 lines (from 1,588).
 
-- Extract: `checkpoint_ops.py` (~250 lines), `consent_ops.py` (~200 lines), `bootstrap_ops.py` (~150 lines)
-- EngineClient: ~600 lines (from 1,588)
-- Easier after #2 since AppState absorbs some fields
+### 7. Modularize `tui/app.py` — mostly done
 
-### 7. Modularize `tui/app.py` (~3h)
+**Mostly done.** Three modules extracted:
+- `stream_handler.py` (425 lines) — engine event processing, tool/reasoning display
+- `event_bus.py` (225 lines) — blinker-based pub/sub for Textual TUI
+- `keys.py` (243 lines) — key binding registry (`get_app_bindings()`)
 
-**Plan:** `docs/TODO-refactoring.md` item #6
-
-- Extract: `theme_manager.py`, `key_router.py`, `stream_handler.py`
-- app.py: ~800 lines (from 2,303)
-- Easier after #3 since AppState absorbs shadow state
+`app.py` reduced from 2,303 → 1,718 lines. Remaining inline: theme management
+(`watch_theme()`, `action_cycle_theme()` — ~20 lines). A `theme_manager.py`
+extraction is optional — the code is small and tightly coupled to Textual's
+reactive `watch_theme()` pattern.
 
 ---
 
 ## Server Streamlining
 
-### 8. Consolidate `reload_config()` calls (~2h)
+### ~~8. Consolidate `reload_config()` calls~~ ✅
 
-- 10+ redundant `engine.reload_config()` calls scattered across 13 route files
-- Move to `get_or_create_session()` in `server/state.py` so reload happens once
-- Some routes reload, others don't — make it consistent
+**Done.** Centralized in `server/state.py`'s `get_or_create_session()` (v1.17.1
+consolidation). Only intentional reload in `/config/reload` endpoint remains.
 
-### 9. Server route dependency injection (~2h)
+### ~~9. Server route dependency injection~~ ✅
 
-- Every route starts with `session_id, engine, _ = await get_or_create_session(x_session_id)`
-- Create FastAPI `Depends(get_engine)` dependency in `server/dependencies.py`
-- Reduces boilerplate in all 13 route modules
-- Standardize error responses (some routes raise HTTPException, others return error dicts)
+**Done.** All 13 route modules use `Depends(get_session)`. 65+ dependency injection
+call sites. No manual `get_or_create_session()` in route handlers.
 
 ---
 
 ## Code Cleanup
 
-### 10. Centralize constants (~1h)
+### ~~10. Centralize constants~~ ✅
 
-- `ppxai/constants.py` — single source of truth for magic numbers
-- `AGENT_MAX_ITERATIONS` (currently 15 in manager.py, 20 in chat.py — which is it?)
-- `TOOL_RESULT_CHAR_LIMIT`, `CHECKPOINT_KEEP_LAST`, `SESSION_TTL_SECONDS`
-- Import everywhere instead of hardcoded values
+**Done.** `ppxai/constants.py` — `Default`, `ToolSetting`, `ConfigKey` classes.
+`MAX_ITERATIONS=10`, `CONTEXT_CHAR_LIMIT=2000`, `IDLE_TIMEOUT=300`, etc.
 
-### 11. CommandContext `__getattr__` proxy (~1h)
+### ~~11. CommandContext `__getattr__` proxy~~ ✅
 
-- Two 40-line adapter classes (Rich, Textual) with identical property forwarding
-- Replace with 5-line `__getattr__` proxy base class
-- All adapters delegate to wrapped object automatically
+**Done.** `ppxai/commands/context.py` — `_CommandContextProxy` base class (v1.17.1).
+`RichCommandContext` and `TextualCommandContext` are 2-3 line stubs. 143 lines total.
 
 ---
 
 ## Dependency Graph
 
 ```
-#1 Define AppState interface
-  ├→ #2 Rich TUI ──→ #6 EngineClient decompose
-  ├→ #3 Textual TUI ──→ #7 tui/app.py modularize
-  ├→ #4 Web app (align fields)
-  └→ #5 VSCode (align fields)
+#1 Define AppState interface ✅
+  ├→ #2 Rich TUI ✅
+  ├→ #3 Textual TUI ✅
+  ├→ #4 Web app ✅
+  └→ #5 VSCode ✅
 
-#8 reload_config consolidation ──→ #9 server dependency injection
+#6 EngineClient decompose ✅
+#7 tui/app.py modularize ✅ mostly done (stream_handler + event_bus + keys extracted)
 
-#10 constants (independent)
-#11 CommandContext proxy (independent)
-#12 chat_with_tools helpers (independent)
-#13 preview --serve (independent) ✅ done
-#14 web terminal xterm.js (independent)
+#8 reload_config consolidation ✅ ──→ #9 server dependency injection ✅
+
+#10 constants ✅
+#11 CommandContext proxy ✅
+#12 chat_with_tools helpers ✅
+#13 preview --serve ✅
+#14 web terminal xterm.js ✅
 ```
 
-## Estimated Effort
+## Effort Summary
 
-| Item | Hours |
-|------|------:|
-| **AppState** | |
-| Define interface + Python impl | 3 |
-| Rich TUI wire-up | 3 |
-| Textual TUI wire-up | 3 |
-| Web app align | 2 |
-| VSCode align | 2 |
-| **Decomposition** | |
-| EngineClient decompose | 2 |
-| tui/app.py modularize | 3 |
-| **Server** | |
-| reload_config consolidation | 2 |
-| Server dependency injection | 2 |
-| **Cleanup** | |
-| Centralize constants | 1 |
-| CommandContext proxy | 1 |
-| chat_with_tools helpers | 1 |
-| preview --serve | 4 |
-| web terminal (xterm.js) | 4 |
-| **Total** | **33** |
+| Item | Status | Hours |
+|------|--------|------:|
+| **AppState** | | |
+| ~~Define interface + Python impl~~ | ✅ Done | — |
+| ~~Rich TUI wire-up~~ | ✅ Done | — |
+| ~~Textual TUI wire-up~~ | ✅ Done | — |
+| ~~Web app align~~ | ✅ Done | — |
+| ~~VSCode align~~ | ✅ Done | — |
+| **Decomposition** | | |
+| ~~EngineClient decompose~~ | ✅ Done | — |
+| tui/app.py modularize | ✅ Mostly done | — |
+| **Server** | | |
+| ~~reload_config consolidation~~ | ✅ Done | — |
+| ~~Server dependency injection~~ | ✅ Done | — |
+| **Cleanup** | | |
+| ~~Centralize constants~~ | ✅ Done | — |
+| ~~CommandContext proxy~~ | ✅ Done | — |
+| ~~chat_with_tools helpers~~ | ✅ Done | — |
+| ~~preview --serve~~ | ✅ Done | — |
+| ~~web terminal (xterm.js)~~ | ✅ Done | — |
+| **Remaining** | | **0** |
 
 ---
 

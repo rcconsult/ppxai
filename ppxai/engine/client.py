@@ -89,6 +89,14 @@ class EngineClient:
         # all clients. Mutators below keep this in sync with instance fields.
         self.state = AppState()
 
+        # Wire session → AppState sync callbacks
+        self.session.on_usage_updated = self._sync_usage_to_state
+        self.session.on_name_changed = lambda name: self.state.update(
+            session_id=name, session_name=name
+        )
+        # Sync initial session name
+        self.state.set("session_name", self.session.session_name)
+
         # Context injection for automatic file content inclusion
         self.context_injector = ContextInjector()
         self.auto_inject_context: bool = True  # Enabled by default
@@ -200,6 +208,23 @@ class EngineClient:
         except Exception as e:
             logger.debug(f"Failed to restore checkpoint ID: {e}")
             # Checkpoint ID will be None until first checkpoint is created
+
+    def _sync_usage_to_state(self, usage: 'UsageStats') -> None:
+        """Callback from session.update_usage() — sync totals to AppState."""
+        # Context percentage — derived from session message history
+        try:
+            context_info = self.get_context_info()
+            context_pct = context_info.get('usage_percent', 0.0)
+        except Exception:
+            context_pct = 0.0
+
+        self.state.update(
+            prompt_tokens=usage.prompt_tokens,
+            completion_tokens=usage.completion_tokens,
+            total_tokens=usage.total_tokens,
+            total_cost=usage.estimated_cost,
+            context_percentage=context_pct,
+        )
 
     def set_working_dir(self, path: str):
         """Set working directory for file path resolution.

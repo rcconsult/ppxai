@@ -11,7 +11,7 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import Callable, List, Dict, Any, Optional
 
 from .types import Message, ToolUsage, UsageStats, SessionInfo
 from ..common.logger import get_logger
@@ -84,6 +84,10 @@ class SessionManager:
         self.tools_enabled: bool = False  # Whether tools were enabled
         self._dirty: bool = False  # True if session has unsaved changes
         self._was_dirty: bool = False  # True if save_dirty() was ever called this session
+
+        # Optional callbacks wired by EngineClient to sync to AppState.
+        self.on_usage_updated: Optional[Callable[[UsageStats], None]] = None
+        self.on_name_changed: Optional[Callable[[str], None]] = None
 
     def add_message(self, message: Message):
         """Add a message to the conversation history.
@@ -351,6 +355,10 @@ class SessionManager:
             # Tool costs contribute to session total
             self.usage.estimated_cost += tool_usage.estimated_cost
 
+        # Notify listener (AppState sync)
+        if self.on_usage_updated:
+            self.on_usage_updated(self.usage)
+
     def get_usage(self) -> Dict[str, Any]:
         """Get usage statistics.
 
@@ -511,6 +519,8 @@ class SessionManager:
         """
         if name:
             self.session_name = name
+            if self.on_name_changed:
+                self.on_name_changed(name)
 
         # Validate and fix alternation issues before saving (v1.14.1)
         self.validate_and_fix_alternation()

@@ -52,16 +52,17 @@ def format_tokens(count: int) -> str:
 def get_status_line(handler, use_themed: bool = True):
     """Generate status line showing current settings.
 
-    v1.12.0: Now uses handler.provider instead of legacy client.
-    v1.12.0: Added agent mode and checkpoint status.
-    v1.12.0: Added session token usage and cost display.
-    v1.12.0: Added themed status line with badges (experiment/rich-tui).
+    All state reads go through handler properties / AppState.
+    Only checkpoint_status and usage_display require engine_client
+    method calls (not part of AppState — derived data).
     """
+    state = handler.engine_client.state
     provider_config = get_provider_config(handler.provider)
     provider_name = provider_config["name"]
 
-    # Get tools status (v1.12.0: engine only)
-    tools_enabled = handler.engine_client.tools_enabled if handler.engine_client else False
+    # All core fields from AppState via handler properties
+    tools_enabled = handler.tools_enabled
+    agent_mode = state.get("agent_mode")
 
     # Get model display name (use ID if not found)
     model_display = handler.current_model
@@ -70,71 +71,45 @@ def get_status_line(handler, use_themed: bool = True):
             model_display = model_info.get("name", handler.current_model)
             break
 
-    # Get agent mode status (v1.12.0)
-    agent_mode = handler.engine_client and handler.engine_client.agent_mode
-
-    # Get checkpoint status for display (v1.12.1)
-    # Shows user-friendly label instead of git hash
+    # Checkpoint status — derived data, not in AppState
     checkpoint_str = None
-    if agent_mode and handler.engine_client:
+    if agent_mode:
         checkpoint_status = handler.engine_client.get_checkpoint_status()
         if checkpoint_status.get("enabled"):
             last_checkpoint = checkpoint_status.get("last_checkpoint")
             is_valid = checkpoint_status.get("is_valid", True)
             if last_checkpoint:
-                if not is_valid:
-                    checkpoint_str = "↶!"  # Stale - undo may not work correctly
-                else:
-                    checkpoint_str = "↶"  # Valid checkpoint - undo available
+                checkpoint_str = "↶!" if not is_valid else "↶"
 
-    # Get session usage stats (v1.12.0, v1.12.2: display mode support)
+    # Usage stats — derived data, not in AppState
     usage_str = None
-    if handler.engine_client:
-        # Use display mode-aware method
-        usage_display = handler.engine_client.session.get_usage_for_display(
-            current_provider=handler.provider,
-            current_model=handler.current_model
-        )
+    usage_display = handler.engine_client.session.get_usage_for_display(
+        current_provider=handler.provider,
+        current_model=handler.current_model
+    )
+    if usage_display:
+        prompt_tokens = usage_display.get("prompt_tokens", 0)
+        completion_tokens = usage_display.get("completion_tokens", 0)
+        cost = usage_display.get("estimated_cost", 0.0)
+        label = usage_display.get("label")
+        if prompt_tokens > 0 or completion_tokens > 0:
+            usage_str = format_usage_string(prompt_tokens, completion_tokens, cost)
+            if label:
+                usage_str = f"[{label}] {usage_str}"
 
-        if usage_display:  # None if display_mode is "off"
-            prompt_tokens = usage_display.get("prompt_tokens", 0)
-            completion_tokens = usage_display.get("completion_tokens", 0)
-            cost = usage_display.get("estimated_cost", 0.0)
-            label = usage_display.get("label")  # Provider/model label or None
-
-            if prompt_tokens > 0 or completion_tokens > 0:
-                usage_str = format_usage_string(prompt_tokens, completion_tokens, cost)
-                # Add label prefix for provider/model modes
-                if label:
-                    usage_str = f"[{label}] {usage_str}"
-
-    # Use themed status line if available (experiment/rich-tui)
     if use_themed:
-        # Use handler's current theme if set, otherwise fall back to config
         theme_name = getattr(handler, 'current_theme_name', None) or get_tui_theme()
         theme = get_theme(theme_name)
 
-        # Get TUI display options
         tui_config = get_tui_config()
         show_version = tui_config.get("show_version", True)
         show_cwd = tui_config.get("show_cwd", True)
         show_datetime = tui_config.get("show_datetime", False)
 
-        # Get working directory from engine
-        working_dir = None
-        if show_cwd and handler.engine_client:
-            working_dir = handler.engine_client.get_working_dir()
+        # Working dir and context from AppState
+        working_dir = handler.working_dir if show_cwd else None
+        context_percent = state.get("context_percentage")
 
-        # Get context usage percentage
-        context_percent = None
-        if handler.engine_client:
-            try:
-                context_info = handler.engine_client.get_context_info()
-                context_percent = context_info.get('usage_percent', 0)
-            except Exception:
-                pass  # Silently ignore errors getting context info
-
-        # Use framed panel for status (experiment/rich-tui)
         return render_status_panel(
             provider=provider_name,
             model=model_display,
@@ -151,13 +126,11 @@ def get_status_line(handler, use_themed: bool = True):
 
     # Fallback: plain text status line
     tools_status = "[green]ON[/green]" if tools_enabled else "[dim]OFF[/dim]"
-
-    # Build legacy status line
     parts = [provider_name, model_display, f"Tools: {tools_status}"]
     if agent_mode:
         parts.append("Agent: [green]ON[/green]")
         if checkpoint_str:
-            parts.append(f"[cyan]{checkpoint_str}[/cyan]")  # ↶ for undo available, ↶! for stale
+            parts.append(f"[cyan]{checkpoint_str}[/cyan]")
     if usage_str:
         parts.append(f"[cyan]{usage_str}[/cyan]")
 
@@ -560,6 +533,10 @@ def check_session_recovery() -> tuple[bool, dict | None]:
 def restore_session_to_handler(handler: CommandHandler, session_state: dict) -> bool:
     """Restore a session to the command handler.
 
+    restore_session() updates EngineClient and AppState atomically.
+    Handler properties (provider, current_model, working_dir) read
+    from AppState, so no manual sync is needed.
+
     Args:
         handler: CommandHandler to restore to
         session_state: Session state dict from state file
@@ -576,11 +553,11 @@ def restore_session_to_handler(handler: CommandHandler, session_state: dict) -> 
         console.print(f"[red]Failed to load session: {session_name}[/red]")
         return False
 
-    handler.provider = result["provider"] or handler.provider
-    handler.current_model = result["model"] or handler.current_model
+    # AppState is already updated by restore_session() — handler.provider
+    # and handler.current_model read from state automatically.
 
-    # Restore working directory
-    working_dir = result["working_dir"]
+    # Sync OS working directory to match restored session
+    working_dir = handler.working_dir
     if working_dir and os.path.isdir(working_dir):
         try:
             os.chdir(working_dir)
@@ -719,7 +696,7 @@ def main():
                 async def stream_engine_response():
                     """Stream response from EngineClient using shared TUIEventHandler."""
                     # Create TUI-specific event handler with verbose setting, theme, and emoji mode
-                    verbose = hasattr(handler, 'tools_verbose') and handler.tools_verbose
+                    verbose = handler.tools_verbose  # reads from AppState
                     theme_name = getattr(handler, 'current_theme_name', None)
                     emoji_mode = getattr(handler, 'emoji_mode', False)
                     event_handler = TUIEventHandler(

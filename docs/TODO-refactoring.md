@@ -43,10 +43,13 @@ via clean DAG + reload callback pattern in `store.py`.
 ## 3. Unified AppState — Cross-Client State Management
 
 **Priority:** HIGH — foundational change that streamlines all clients.
-**Target:** v1.18.x (deferred from v1.17.1 — too ambitious for current cycle)
+**Status:** Hand-crafted implementations DONE (Python, JS, TS). Schema+generator deferred to v1.18.x.
 
-> **Note (2026-03-22):** Items 4-7 proceed without AppState in v1.17.1 using
-> simple parameter passing. AppState schema+generator deferred to v1.18.x.
+> **Update (2026-03-26):** Hand-crafted AppState implementations are complete and
+> wired in Python (`engine/app_state.py` + EngineClient + Textual TUI + commands),
+> JavaScript (`web/shared/app-state.js` + E2E tests), and TypeScript
+> (`vscode-extension/src/appState.ts`). Rich TUI still uses EventBus — deferred
+> to v1.18.x alongside the YAML schema+generator approach.
 
 ### Problem
 
@@ -621,102 +624,37 @@ This item is the **foundation** for all remaining items:
 
 ---
 
-## 4. Simplify CommandContext Adapters
+### ~~4. Simplify CommandContext Adapters~~
 
-**Priority:** MEDIUM — becomes trivial after AppState (item 3).
-**Depends on:** Item 3 (AppState)
+**Status:** DONE — v1.17.1
 
-### Current State
-
-3 CommandContext adapters (Rich, Textual, Server) each re-implement 12+ property/method
-delegations to `EngineClient`. Most are identical boilerplate.
-
-### Target
-
-With AppState, all adapters delegate to the shared state object:
-
-```python
-class BaseCommandContext:
-    """Common implementation for all command contexts."""
-
-    def __init__(self, engine: EngineClient):
-        self._engine = engine
-
-    @property
-    def engine_client(self): return self._engine
-    @property
-    def session(self): return self._engine.session
-    @property
-    def provider(self): return self._engine.state.provider
-    @property
-    def current_model(self): return self._engine.state.model
-    @property
-    def working_dir(self): return self._engine.state.working_dir
-    @property
-    def tools_enabled(self): return self._engine.state.tools_enabled
-
-    def set_provider(self, p): self._engine.set_provider(p)
-    def set_model(self, m): self._engine.set_model(m)
-    def get_provider(self): return self._engine.state.provider
-    def get_model(self): return self._engine.state.model
-```
-
-Client-specific adapters only add what's unique (e.g., Textual's `notify()` method).
-
-### Estimated Effort
-
-~30 minutes once AppState exists.
+`ppxai/commands/context.py` — `_CommandContextProxy` base class with `__getattr__`
+proxy. `RichCommandContext` and `TextualCommandContext` are 2-3 line stubs.
+`ServerCommandContext` retains intentional custom overrides. 143 lines total.
 
 ---
 
-## 5. Decompose `engine/client.py` (1,588 lines)
+### ~~5. Decompose `engine/client.py` (1,588 → 955 lines)~~
 
-**Priority:** MEDIUM — `EngineClient` is a god class with 60 methods.
-**Depends on:** Item 3 (AppState)
+**Status:** DONE — v1.17.1
 
-### Target
-
-Extract cohesive delegate classes that share `AppState`:
-
-```
-EngineClient (slim orchestrator, ~600 lines)
-  ├── self.state: AppState              ← shared observable state
-  ├── self.checkpoints: CheckpointOps   ← 8 methods, ~250 lines
-  ├── self.consent: ConsentOps          ← 3 methods, ~200 lines
-  ├── self.bootstrap: BootstrapOps      ← 5 methods, ~150 lines
-  └── core: provider/model, chat, tools ← stays on EngineClient
-```
-
-Each delegate receives `state` (not `self`), making them testable in isolation.
-
-### Estimated Effort
-
-~2 hours once AppState exists.
+Extracted `checkpoint_ops.py`, `consent_ops.py`, `bootstrap_ops.py`.
+`client.py` reduced to 955 lines. 73 tests added in `tests/test_ops_modules.py`.
 
 ---
 
-## 6. Modularize `tui/app.py` (2,303 lines)
+### ~~6. Modularize `tui/app.py` (2,303 → 1,718 lines)~~
 
-**Priority:** MEDIUM — elevated from LOW because AppState enables clean extraction.
-**Depends on:** Item 3 (AppState)
+**Status:** DONE — v1.17.1 (mostly complete)
 
-### Target
+Three modules extracted:
+- `stream_handler.py` (425 lines) — engine event processing, tool/reasoning display
+- `event_bus.py` (225 lines) — blinker-based pub/sub for Textual TUI
+- `keys.py` (243 lines) — key binding registry (`get_app_bindings()`)
 
-```
-ppxai/tui/
-├── app.py                   # PPXAIDEApp — compose, mount, wire observers (~800 lines)
-├── theme_manager.py         # Theme cycling, syntax theme mapping
-├── key_router.py            # Centralized key binding dispatch
-├── stream_handler.py        # Chat streaming event processing
-└── widgets/                 # (existing, unchanged)
-```
-
-With AppState observers, extracted modules don't need 10+ parameters — they subscribe
-to state changes directly.
-
-### Estimated Effort
-
-~3 hours once AppState exists.
+Remaining inline: theme management (`watch_theme()`, `action_cycle_theme()` — ~20 lines).
+Extraction to `theme_manager.py` is optional — tightly coupled to Textual's reactive
+`watch_theme()` pattern, and the code is small.
 
 ---
 
@@ -744,26 +682,19 @@ dedicated refactoring pass.
 
 Revised sequence — AppState is the foundation that unlocks everything else:
 
-| Phase | Item | Priority | Effort | Depends On |
-|-------|------|----------|--------|------------|
-| ~~1~~ | ~~Server modularization (#1)~~ | ~~High~~ | ~~Done~~ | — |
-| ~~2~~ | ~~Config submodules (#2)~~ | ~~High~~ | ~~Done~~ | — |
-| 3a | **App state schema** (`ppxai-state.schema.yaml`) | **High** | 1h | — |
-| 3b | **Runtime schemas** (`ppxai-runtime-{k8s,vscode,desktop}.schema.yaml`) | Medium | 1h | 3a |
-| 3c | **Generator** (`scripts/generate-state.py` — Python/JS/TS templates) | **High** | 3h | 3a |
-| 3d | **Python AppState** (generate + EngineClient integration + tests) | **High** | 4h | 3c |
-| 3e | **JS AppState** (generate, replace hand-written, Playwright verification) | **High** | 2h | 3c |
-| 3f | **TS AppState** (generate + VSCode wiring) | Medium | 2h | 3c |
-| 4 | CommandContext simplification (#4) | Medium | 30min | 3d |
-| 5 | EngineClient decomposition (#5) | Medium | 2h | 3d |
-| 6 | TUI app modularization (#6) | Medium | 3h | 3d |
-| 7 | Event router pattern (#7) | Low | 45min | — |
+| Phase | Item | Priority | Effort | Status |
+|-------|------|----------|--------|--------|
+| ~~1~~ | ~~Server modularization (#1)~~ | ~~High~~ | ~~Done~~ | ✅ |
+| ~~2~~ | ~~Config submodules (#2)~~ | ~~High~~ | ~~Done~~ | ✅ |
+| ~~3~~ | ~~AppState — hand-crafted (Python, JS, TS)~~ | ~~High~~ | ~~Done~~ | ✅ |
+| 3+ | AppState schema+generator (YAML → codegen) | Medium | ~8h | Deferred v1.18.x |
+| ~~3+~~ | ~~Rich TUI — wire AppState~~ | ~~Medium~~ | ~~Done~~ | ✅ |
+| ~~4~~ | ~~CommandContext simplification (#4)~~ | ~~Medium~~ | ~~Done~~ | ✅ |
+| ~~5~~ | ~~EngineClient decomposition (#5)~~ | ~~Medium~~ | ~~Done~~ | ✅ |
+| ~~6~~ | ~~TUI app modularization (#6)~~ | ~~Medium~~ | ~~Done~~ | ✅ |
+| ~~7~~ | ~~Event router pattern (#7)~~ | ~~Low~~ | ~~Done~~ | ✅ |
 
-**Remaining effort:** ~20 hours across v1.17.x releases.
-
-Phase 3a + 3c (app state schema + generator) is the critical path. 3d/3e/3f
-can run in parallel once the generator exists. Runtime schemas (3b) are
-independent and can be done anytime. Phases 4–6 plug into generated state.
+**Remaining effort:** ~8 hours (AppState codegen for v1.18.x).
 
 ---
 

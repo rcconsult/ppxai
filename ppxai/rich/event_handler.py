@@ -85,81 +85,80 @@ class EventHandler:
         self._reasoning_response = ""
         self._should_break = False
 
-    async def handle_event(self, event: Event) -> bool:
-        """
-        Handle a single event from the engine.
+    # Strategy dispatch table: EventType → (handler_method_name, returns)
+    # Handlers return True to continue, False to break the event loop.
+    _EVENT_DISPATCH = {
+        EventType.STREAM_START: ("_handle_stream_start", True),
+        EventType.REASONING_CHUNK: ("_handle_reasoning_chunk", True),
+        EventType.STREAM_CHUNK: ("_handle_stream_chunk", True),
+        EventType.TOOL_CALL: ("_handle_tool_call", True),
+        EventType.TOOL_RESULT: ("_handle_tool_result", True),
+        EventType.TOOL_ERROR: ("_handle_tool_error", True),
+        EventType.CONTEXT_INJECTED: (None, True),  # no-op, continue
+        EventType.CONSENT_REQUEST: ("_handle_consent_request", True),
+        EventType.STREAM_END: ("_handle_stream_end", False),
+        EventType.ERROR: ("_handle_error", False),
+    }
 
-        Args:
-            event: Event object from EngineClient
+    async def handle_event(self, event: Event) -> bool:
+        """Handle a single event from the engine.
+
+        Uses strategy dispatch table for O(1) lookup instead of if/elif chain.
 
         Returns:
             bool: True if event loop should continue, False if should break
         """
-        if event.type == EventType.STREAM_START:
-            self._full_response = ""
-            self._reasoning_response = ""
-            self._should_break = False
-            self.on_stream_start()
-            return True
+        entry = self._EVENT_DISPATCH.get(event.type)
+        if entry is None:
+            return True  # Unknown event type — continue
 
-        elif event.type == EventType.REASONING_CHUNK:
-            # Reasoning tokens from DeepSeek R1, GPT-OSS 120B
-            self._reasoning_response += event.data
-            self.on_reasoning_chunk(event.data)
-            return True
+        method_name, should_continue = entry
+        if method_name is not None:
+            getattr(self, method_name)(event)
+        return should_continue
 
-        elif event.type == EventType.STREAM_CHUNK:
-            self._full_response += event.data
-            self.on_stream_chunk(event.data)
-            return True
+    def _handle_stream_start(self, event: Event) -> None:
+        self._full_response = ""
+        self._reasoning_response = ""
+        self._should_break = False
+        self.on_stream_start()
 
-        elif event.type == EventType.TOOL_CALL:
-            tool_data = {
-                'tool': event.data.get('tool', 'unknown') if isinstance(event.data, dict) else 'unknown',
-                'arguments': event.data.get('arguments', {}) if isinstance(event.data, dict) else {}
-            }
-            self.on_tool_call(tool_data)
-            return True
+    def _handle_reasoning_chunk(self, event: Event) -> None:
+        self._reasoning_response += event.data
+        self.on_reasoning_chunk(event.data)
 
-        elif event.type == EventType.TOOL_RESULT:
-            self.on_tool_result(event.data)
-            return True
+    def _handle_stream_chunk(self, event: Event) -> None:
+        self._full_response += event.data
+        self.on_stream_chunk(event.data)
 
-        elif event.type == EventType.TOOL_ERROR:
-            # event.data is {tool: "...", error: "..."} object
-            if isinstance(event.data, dict):
-                tool_name = event.data.get('tool', 'unknown')
-                error_msg = f"({tool_name}): {event.data.get('error', str(event.data))}"
-            else:
-                error_msg = str(event.data)
-            self.on_tool_error(error_msg)
-            return True
+    def _handle_tool_call(self, event: Event) -> None:
+        tool_data = {
+            'tool': event.data.get('tool', 'unknown') if isinstance(event.data, dict) else 'unknown',
+            'arguments': event.data.get('arguments', {}) if isinstance(event.data, dict) else {}
+        }
+        self.on_tool_call(tool_data)
 
-        elif event.type == EventType.CONTEXT_INJECTED:
-            # File/git/tree context was auto-injected (v1.11.4)
-            # Just continue - the client can choose to display or ignore
-            return True
+    def _handle_tool_result(self, event: Event) -> None:
+        self.on_tool_result(event.data)
 
-        elif event.type == EventType.CONSENT_REQUEST:
-            # Consent is typically handled by engine's callback
-            # This is just for logging/notification purposes
-            if event.data and isinstance(event.data, dict):
-                self.on_consent_request(event.data)
-            return True
+    def _handle_tool_error(self, event: Event) -> None:
+        if isinstance(event.data, dict):
+            tool_name = event.data.get('tool', 'unknown')
+            error_msg = f"({tool_name}): {event.data.get('error', str(event.data))}"
+        else:
+            error_msg = str(event.data)
+        self.on_tool_error(error_msg)
 
-        elif event.type == EventType.STREAM_END:
-            # Use the final response from event data if available
-            final_response = event.data if event.data else self._full_response
-            self.on_stream_end(final_response)
-            return False  # Signal to break the loop
+    def _handle_consent_request(self, event: Event) -> None:
+        if event.data and isinstance(event.data, dict):
+            self.on_consent_request(event.data)
 
-        elif event.type == EventType.ERROR:
-            error_str = str(event.data)
-            self.on_error(error_str)
-            return False  # Signal to break the loop
+    def _handle_stream_end(self, event: Event) -> None:
+        final_response = event.data if event.data else self._full_response
+        self.on_stream_end(final_response)
 
-        # Unknown event type - continue
-        return True
+    def _handle_error(self, event: Event) -> None:
+        self.on_error(str(event.data))
 
     async def process_events(self, event_stream: AsyncIterator[Event]) -> str:
         """
@@ -251,109 +250,103 @@ class TUIEventHandler(EventHandler):
         # Track if thinking indicator was shown (v1.15.0)
         self._thinking_shown = False
 
+    # TUI-specific event dispatch — extends base class dispatch table.
+    # Entries: EventType → (method_name, should_continue)
+    _TUI_EVENT_DISPATCH = {
+        EventType.CONTEXT_INJECTED: ("_tui_context_injected", True),
+        EventType.STATUS: ("_tui_status", True),
+        EventType.WORKING_DIR_CHANGED: ("_tui_working_dir_changed", True),
+        EventType.AGENT_ITERATION: ("_tui_agent_iteration", True),
+        EventType.AGENT_COMPLETE: ("_tui_agent_complete", False),
+        EventType.AGENT_MAX_ITERATIONS: ("_tui_agent_max_iterations", False),
+        EventType.DISPLAY_FILE: ("_tui_display_file", True),
+        EventType.TOOL_GROUP_START: ("_tui_tool_group_start", True),
+        EventType.TOOL_GROUP_END: ("_tui_tool_group_end", True),
+    }
+
     async def handle_event(self, event: Event) -> bool:
-        """Override to handle CONTEXT_INJECTED and AGENT_* events for TUI display."""
-        if event.type == EventType.CONTEXT_INJECTED:
-            # Collect injected contexts
-            self._injected_contexts.append(event.data)
-            # Display what was injected
-            if event.data and isinstance(event.data, dict):
-                source = event.data.get('source', 'unknown')
-                size = event.data.get('size', 0)
-                # Format size
-                if size < 1024:
-                    size_str = f"{size} B"
-                elif size < 1024 * 1024:
-                    size_str = f"{size / 1024:.1f} KB"
-                else:
-                    size_str = f"{size / (1024 * 1024):.1f} MB"
-
-                # Show what was injected
-                self.console.print(f"[dim]→ Injected context: {source} ({size_str})[/dim]")
-            return True
-
-        # Status messages (v1.12.0 - checkpoint notifications, etc.)
-        elif event.type == EventType.STATUS:
-            # Display status/notification messages
-            msg = str(event.data) if event.data else ""
-            if msg:
-                self.console.print(f"[cyan]{msg}[/cyan]")
-            return True
-
-        # Working directory changed (v1.13.2)
-        elif event.type == EventType.WORKING_DIR_CHANGED:
-            path = event.data.get("path", "") if isinstance(event.data, dict) else str(event.data)
-            if path:
-                self.console.print(f"[cyan]📁 Working directory: {path}[/cyan]")
-            return True
-
-        # Agent loop events (v1.11.8)
-        elif event.type == EventType.AGENT_ITERATION:
-            iteration = event.data.get("iteration", 0) if isinstance(event.data, dict) else 0
-            max_iter = event.data.get("max", 5) if isinstance(event.data, dict) else 5
-            self.console.print(f"\n[yellow]━━━ Iteration {iteration}/{max_iter} ━━━[/yellow]\n")
-            return True
-
-        elif event.type == EventType.AGENT_COMPLETE:
-            summary = event.data.get("summary", "") if isinstance(event.data, dict) else ""
-            self.console.print(f"\n[green]✅ Task completed![/green]")
-            if summary:
-                self.console.print(f"[dim]Summary: {summary}[/dim]\n")
-            return False  # Signal completion
-
-        elif event.type == EventType.AGENT_MAX_ITERATIONS:
-            max_iter = event.data.get("iterations", 5) if isinstance(event.data, dict) else 5
-            self.console.print(f"\n[yellow]⚠️  Max iterations ({max_iter}) reached[/yellow]")
-            self.console.print("[dim]Task may be incomplete. Review output above.[/dim]\n")
-            return False  # Signal completion
-
-        # DISPLAY_FILE event - AI-triggered file display (v1.15.1)
-        elif event.type == EventType.DISPLAY_FILE:
-            filepath = event.data.get("filepath") if isinstance(event.data, dict) else None
-            if filepath:
-                # Execute /show command via command handler
-                spec = CommandFactory.get('show')
-                if spec:
-                    try:
-                        # Create minimal context for command execution with engine_client
-                        class SimpleContext:
-                            def __init__(self, console, engine_client):
-                                self.console = console
-                                self.engine_client = engine_client
-
-                        context = SimpleContext(self.console, self.engine_client)
-                        result = spec.handler(context, filepath)
-
-                        # Render result with RichRenderer (class method - no instantiation)
-                        RichRenderer.render(result)
-                        return True
-                    except Exception as e:
-                        self.logger.error(f"Error displaying file: {e}")
-                        self.console.print(f"[red]Error displaying file: {e}[/red]")
-                        return True
-
-        # v1.16.0: Tool group start/end for visual grouping
-        elif event.type == EventType.TOOL_GROUP_START:
-            iteration = event.data.get("iteration", 0) if isinstance(event.data, dict) else 0
-            count = event.data.get("count", 0) if isinstance(event.data, dict) else 0
-            self.console.print(f"[dim]─── Iteration {iteration} ({count} tool{'s' if count != 1 else ''}) ───[/dim]")
-            return True
-
-        elif event.type == EventType.TOOL_GROUP_END:
-            if isinstance(event.data, dict):
-                all_ok = event.data.get("all_succeeded", True)
-                tools = event.data.get("tools", [])
-                tool_list = ", ".join(tools) if tools else ""
-            else:
-                all_ok = True
-                tool_list = ""
-            status = "[green]✓[/green]" if all_ok else "[red]✗[/red]"
-            suffix = f" {tool_list}" if tool_list else ""
-            self.console.print(f"[dim]───{suffix} {status} ───[/dim]")
-            return True
-
-        # Delegate to parent for all other event types
+        """Handle TUI-specific events, delegate rest to base class."""
+        entry = self._TUI_EVENT_DISPATCH.get(event.type)
+        if entry is not None:
+            method_name, should_continue = entry
+            getattr(self, method_name)(event)
+            return should_continue
         return await super().handle_event(event)
+
+    def _tui_context_injected(self, event: Event) -> None:
+        self._injected_contexts.append(event.data)
+        if event.data and isinstance(event.data, dict):
+            source = event.data.get('source', 'unknown')
+            size = event.data.get('size', 0)
+            if size < 1024:
+                size_str = f"{size} B"
+            elif size < 1024 * 1024:
+                size_str = f"{size / 1024:.1f} KB"
+            else:
+                size_str = f"{size / (1024 * 1024):.1f} MB"
+            self.console.print(f"[dim]→ Injected context: {source} ({size_str})[/dim]")
+
+    def _tui_status(self, event: Event) -> None:
+        msg = str(event.data) if event.data else ""
+        if msg:
+            self.console.print(f"[cyan]{msg}[/cyan]")
+
+    def _tui_working_dir_changed(self, event: Event) -> None:
+        path = event.data.get("path", "") if isinstance(event.data, dict) else str(event.data)
+        if path:
+            self.console.print(f"[cyan]📁 Working directory: {path}[/cyan]")
+
+    def _tui_agent_iteration(self, event: Event) -> None:
+        iteration = event.data.get("iteration", 0) if isinstance(event.data, dict) else 0
+        max_iter = event.data.get("max", 5) if isinstance(event.data, dict) else 5
+        self.console.print(f"\n[yellow]━━━ Iteration {iteration}/{max_iter} ━━━[/yellow]\n")
+
+    def _tui_agent_complete(self, event: Event) -> None:
+        summary = event.data.get("summary", "") if isinstance(event.data, dict) else ""
+        self.console.print(f"\n[green]✅ Task completed![/green]")
+        if summary:
+            self.console.print(f"[dim]Summary: {summary}[/dim]\n")
+
+    def _tui_agent_max_iterations(self, event: Event) -> None:
+        max_iter = event.data.get("iterations", 5) if isinstance(event.data, dict) else 5
+        self.console.print(f"\n[yellow]⚠️  Max iterations ({max_iter}) reached[/yellow]")
+        self.console.print("[dim]Task may be incomplete. Review output above.[/dim]\n")
+
+    def _tui_display_file(self, event: Event) -> None:
+        filepath = event.data.get("filepath") if isinstance(event.data, dict) else None
+        if not filepath:
+            return
+        spec = CommandFactory.get('show')
+        if not spec:
+            return
+        try:
+            class SimpleContext:
+                def __init__(self, console, engine_client):
+                    self.console = console
+                    self.engine_client = engine_client
+            context = SimpleContext(self.console, self.engine_client)
+            result = spec.handler(context, filepath)
+            RichRenderer.render(result)
+        except Exception as e:
+            self.logger.error(f"Error displaying file: {e}")
+            self.console.print(f"[red]Error displaying file: {e}[/red]")
+
+    def _tui_tool_group_start(self, event: Event) -> None:
+        iteration = event.data.get("iteration", 0) if isinstance(event.data, dict) else 0
+        count = event.data.get("count", 0) if isinstance(event.data, dict) else 0
+        self.console.print(f"[dim]─── Iteration {iteration} ({count} tool{'s' if count != 1 else ''}) ───[/dim]")
+
+    def _tui_tool_group_end(self, event: Event) -> None:
+        if isinstance(event.data, dict):
+            all_ok = event.data.get("all_succeeded", True)
+            tools = event.data.get("tools", [])
+            tool_list = ", ".join(tools) if tools else ""
+        else:
+            all_ok = True
+            tool_list = ""
+        status = "[green]✓[/green]" if all_ok else "[red]✗[/red]"
+        suffix = f" {tool_list}" if tool_list else ""
+        self.console.print(f"[dim]───{suffix} {status} ───[/dim]")
 
     def _on_stream_start(self):
         """Handle stream start for TUI."""
