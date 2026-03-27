@@ -463,6 +463,8 @@ def create_session(req: CreateSessionRequest):
             if pod.status.phase in ("Running", "Pending"):
                 existing.last_heartbeat = _now_iso()
                 _save_meta(existing)
+                # Re-add ingress rule in case it was lost (e.g., Helm recreated ingress)
+                _patch_ingress_add(username, existing.svc_name)
                 slug = _slug(username)
                 return {"status": "existing", "username": username, "path": f"/s/{slug}/"}
         except k8s.ApiException as e:
