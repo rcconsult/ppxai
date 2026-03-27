@@ -487,7 +487,9 @@ class TestSSETermination:
         mock_engine = AsyncMock()
         mock_engine.session = MagicMock()
         mock_engine.session.save_usage_to_persistent_storage = MagicMock()
-        mock_engine._consent_event_queue = []
+        mock_engine._event_queue = []
+        mock_engine._event_queue_lock = __import__('threading').Lock()
+        mock_engine.drain_events = lambda: []
 
         # Mock chat to yield start, chunk, end events
         async def mock_chat(prompt):

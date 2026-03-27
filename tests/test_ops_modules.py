@@ -51,7 +51,9 @@ def _make_engine(**overrides):
     engine._checkpoint_manager = None
     engine._agent_mode = False
     engine._last_checkpoint_id = None
-    engine._consent_event_queue = []
+    engine._event_queue = []
+    engine._event_queue_lock = __import__('threading').Lock()
+    engine.enqueue_event = lambda evt: engine._event_queue.append(evt)
     engine._shell_config = {}
     engine._injected_contexts = []
     engine.provider_name = "openai"
@@ -236,8 +238,8 @@ class TestCheckpointOps:
 
         assert result == "abc12345"
         assert engine._last_checkpoint_id == "abc12345"
-        assert len(engine._consent_event_queue) == 1
-        evt = engine._consent_event_queue[0]
+        assert len(engine._event_queue) == 1
+        evt = engine._event_queue[0]
         assert evt.type == EventType.STATUS
         assert "abc12345" in evt.data
 
@@ -252,7 +254,7 @@ class TestCheckpointOps:
 
         result = create_checkpoint(engine, "task")
         assert result == "snap_001"
-        assert "Snapshot" in engine._consent_event_queue[0].data
+        assert "Snapshot" in engine._event_queue[0].data
 
     def test_create_checkpoint_manager_returns_none(self):
         mgr = MagicMock()
@@ -286,8 +288,8 @@ class TestCheckpointOps:
 
         assert result is True
         assert engine._last_checkpoint_id is None
-        assert len(engine._consent_event_queue) == 1
-        assert "reverted" in engine._consent_event_queue[0].data
+        assert len(engine._event_queue) == 1
+        assert "reverted" in engine._event_queue[0].data
 
     def test_undo_last_checkpoint_file_backend(self):
         mgr = MagicMock()
@@ -300,7 +302,7 @@ class TestCheckpointOps:
 
         result = undo_last_checkpoint(engine)
         assert result is True
-        assert "restored" in engine._consent_event_queue[0].data
+        assert "restored" in engine._event_queue[0].data
 
     def test_undo_last_checkpoint_restore_fails(self):
         mgr = MagicMock()
@@ -582,8 +584,8 @@ class TestConsentOps:
 
         await request_file_edit_consent(engine, "/tmp/test.py")
 
-        assert len(engine._consent_event_queue) == 1
-        evt = engine._consent_event_queue[0]
+        assert len(engine._event_queue) == 1
+        evt = engine._event_queue[0]
         assert evt.type == EventType.CONSENT_REQUEST
 
     def test_classify_command(self):

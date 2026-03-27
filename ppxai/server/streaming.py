@@ -59,12 +59,8 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
                     await asyncio.sleep(0)
                     last_event_time = now
 
-                # Drain side-channel event queue while waiting for engine
-                # v1.16.0: Dispatch by actual event type — only CONSENT_REQUEST
-                # events are consent dialogs. STATUS, WORKING_DIR_CHANGED, etc.
-                # use their own SSE event type for proper client handling.
-                while engine._consent_event_queue:
-                    queued_event = engine._consent_event_queue.pop(0)
+                # Drain side-channel event queue (thread-safe via drain_events)
+                for queued_event in engine.drain_events():
                     event_data = {
                         "type": queued_event.type.value,
                         "data": queued_event.data,
@@ -103,8 +99,8 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
                 break
 
             # Drain side-channel queue one more time (event may have been queued just before yield)
-            while engine._consent_event_queue:
-                queued_event = engine._consent_event_queue.pop(0)
+            # Drain side-channel one more time (event may have been queued just before yield)
+            for queued_event in engine.drain_events():
                 event_data = {
                     "type": queued_event.type.value,
                     "data": queued_event.data,

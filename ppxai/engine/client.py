@@ -9,6 +9,7 @@ import asyncio
 import hashlib
 import json
 import os
+import threading
 from datetime import datetime
 from typing import List, AsyncIterator, Optional, Dict, Any
 from pathlib import Path
@@ -140,9 +141,10 @@ class EngineClient:
         # initialization makes the intent clear and avoids any early-call edge cases.
         self._suppress_hint_log: bool = False
 
-        # Event emitter for consent requests (Phase 1C: HTTP/SSE support)
-        # This allows emitting events from within consent callback
-        self._consent_event_queue: List[Event] = []
+        # Event side-channel for SSE streaming (consent requests, state sync).
+        # Protected by a lock — SSE drain loop pops while listeners/callbacks append.
+        self._event_queue: List[Event] = []
+        self._event_queue_lock = threading.Lock()
 
         # Push AppState changes to SSE side-channel so connected web/VSCode
         # clients stay in sync. Fields that change frequently during streaming
@@ -154,7 +156,7 @@ class EngineClient:
             "session_name", "debug_log",
         }
         for _field in _SSE_SYNC_FIELDS:
-            self.state.on(_field, lambda v, k=_field: self._consent_event_queue.append(
+            self.state.on(_field, lambda v, k=_field: self.enqueue_event(
                 Event(type=EventType.STATE_SYNC, data={k: v})
             ))
 
@@ -223,6 +225,20 @@ class EngineClient:
             logger.debug(f"Failed to restore checkpoint ID: {e}")
             # Checkpoint ID will be None until first checkpoint is created
 
+    # === Thread-safe event queue ===
+
+    def enqueue_event(self, event: Event) -> None:
+        """Thread-safe append to the SSE event side-channel."""
+        with self._event_queue_lock:
+            self._event_queue.append(event)
+
+    def drain_events(self) -> List[Event]:
+        """Atomically drain all pending events. Returns the list (may be empty)."""
+        with self._event_queue_lock:
+            events = self._event_queue
+            self._event_queue = []
+        return events
+
     def _sync_usage_to_state(self, usage: 'UsageStats') -> None:
         """Callback from session.update_usage() — sync totals to AppState."""
         # Context percentage — derived from session message history
@@ -259,7 +275,7 @@ class EngineClient:
 
         # Emit working directory change event only if directory actually changed (v1.13.2, v1.15.3)
         # This event will be picked up by SSE stream and sent to clients
-        self._consent_event_queue.append(Event(
+        self.enqueue_event(Event(
             type=EventType.WORKING_DIR_CHANGED,
             data={"path": path}
         ))
@@ -602,7 +618,7 @@ class EngineClient:
                 )
 
             # Queue notification event
-            self._consent_event_queue.append(Event(
+            self.enqueue_event(Event(
                 type=EventType.STATUS,
                 data=notification
             ))
@@ -731,9 +747,7 @@ class EngineClient:
 
     def get_consent_events(self) -> List[Event]:
         """Get and clear queued consent events (ChatContext interface)."""
-        events = list(self._consent_event_queue)
-        self._consent_event_queue.clear()
-        return events
+        return self.drain_events()
 
     def track_tool_usage(self, tool_name: str, usage: Dict[str, Any]) -> None:
         """Track tool usage for cost calculation (ChatContext interface)."""

@@ -38,7 +38,7 @@ def create_checkpoint(engine, description: str) -> Optional[str]:
         else:
             msg = f"✓ Snapshot saved: {checkpoint_id} ({description})"
 
-        engine._consent_event_queue.append(Event(
+        engine.enqueue_event(Event(
             type=EventType.STATUS,
             data=msg
         ))
@@ -65,7 +65,7 @@ def undo_last_checkpoint(engine) -> bool:
         else:
             msg = f"✓ Files restored from snapshot: {checkpoint_id}"
 
-        engine._consent_event_queue.append(Event(
+        engine.enqueue_event(Event(
             type=EventType.STATUS,
             data=msg
         ))

@@ -4,7 +4,7 @@ AppState — canonical observable application state for ppxai.
 All mutable application state lives here. Provides:
 - No-op deduplication on writes (skip if value unchanged)
 - Observer pattern: subscribe to individual field changes
-- Thread-safe: RLock protects reads/writes and listener dispatch
+- Thread-safe: Lock protects data, listeners dispatched OUTSIDE the lock
 - Batch updates: set multiple fields atomically, fire listeners once
 
 This is the Python canonical implementation. The same field names and
@@ -21,6 +21,15 @@ Usage:
 
     # Batch update (listeners fire after all fields set):
     state.update(provider="openai", model="gpt-4.1-mini")
+
+Thread-safety design:
+- Lock protects _data and _listeners mutations only
+- Listener callbacks execute OUTSIDE the lock to prevent:
+  (a) Deadlock if a listener calls state.set() on another field
+  (b) Blocking other threads waiting to read state while a slow listener runs
+  (c) Priority inversion where a high-priority reader waits on a listener
+- Listeners see a consistent snapshot: the value passed is the committed value
+- Listener list is copied before dispatch to allow on()/off() during iteration
 """
 
 import threading
@@ -34,8 +43,8 @@ Listener = Callable[[Any], None]
 class AppState:
     """Centralized observable application state.
 
-    Thread-safe. All field access goes through get()/set() which
-    hold the lock and dispatch listeners synchronously.
+    Thread-safe. Reads and writes are serialized via Lock.
+    Listener callbacks are dispatched outside the lock.
 
     Fields are divided into:
     - Core: provider, model, working directory, session identity
@@ -83,7 +92,7 @@ class AppState:
     }
 
     def __init__(self, initial: Optional[Dict[str, Any]] = None) -> None:
-        self._lock = threading.RLock()
+        self._lock = threading.Lock()
         self._data: Dict[str, Any] = dict(self.FIELDS)
         self._listeners: Dict[str, List[Listener]] = {}
 
@@ -101,7 +110,7 @@ class AppState:
         """Set a state field value. Returns True if value changed.
 
         No-op if value is identical (prevents redundant listener calls).
-        Listeners are called synchronously under the lock.
+        Listeners are called OUTSIDE the lock.
         """
         with self._lock:
             if key not in self._data:
@@ -110,8 +119,12 @@ class AppState:
             if old == value:
                 return False
             self._data[key] = value
-            self._dispatch(key, value)
-            return True
+            pending = list(self._listeners.get(key, []))
+
+        # Dispatch outside lock — prevents deadlock and lock contention
+        for fn in pending:
+            fn(value)
+        return True
 
     def update(self, **kwargs: Any) -> None:
         """Set multiple fields atomically. Listeners fire after all fields are set.
@@ -119,22 +132,26 @@ class AppState:
         Usage: state.update(provider="openai", model="gpt-4.1-mini")
         """
         with self._lock:
-            changed: List[tuple] = []
+            pending: List[tuple] = []
             for key, value in kwargs.items():
                 if key not in self._data:
                     continue
                 if self._data[key] != value:
                     self._data[key] = value
-                    changed.append((key, value))
-            # Dispatch after all mutations complete
-            for key, value in changed:
-                self._dispatch(key, value)
+                    fns = list(self._listeners.get(key, []))
+                    if fns:
+                        pending.append((fns, value))
+
+        # Dispatch outside lock
+        for fns, value in pending:
+            for fn in fns:
+                fn(value)
 
     def on(self, key: str, fn: Listener) -> "AppState":
         """Subscribe to changes on a field. Returns self for chaining.
 
         The callback receives the new value: fn(new_value).
-        Called synchronously when set() changes the value.
+        Called synchronously after set() changes the value (outside lock).
         """
         with self._lock:
             if key not in self._listeners:
@@ -154,11 +171,3 @@ class AppState:
         """Return a plain dict copy of current state (for debugging/serialization)."""
         with self._lock:
             return dict(self._data)
-
-    def _dispatch(self, key: str, value: Any) -> None:
-        """Notify listeners for a field. Called under lock."""
-        fns = self._listeners.get(key)
-        if not fns:
-            return
-        for fn in fns:
-            fn(value)

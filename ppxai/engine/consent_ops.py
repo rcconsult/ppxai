@@ -59,7 +59,7 @@ async def request_file_edit_consent(engine, file_path: str) -> bool:
             data={"file_path": str(path)},
             metadata={"file_path": str(path)}
         )
-        engine._consent_event_queue.append(consent_event)
+        engine.enqueue_event(consent_event)
         logger.debug(f"Consent: queued consent_request event for {path}")
 
         logger.debug(f"Consent: calling callback for {path}")
@@ -154,7 +154,7 @@ async def request_shell_consent(engine, command: str, working_dir: str = ".") ->
             },
             metadata={"command": command, "type": "shell"}
         )
-        engine._consent_event_queue.append(consent_event)
+        engine.enqueue_event(consent_event)
 
         approved, response = await engine.shell_consent_callback(command, working_dir, risk_level)
 

@@ -348,8 +348,8 @@ async def _execute_single_tool(
 
         # Wait for tool completion, checking for interrupt.
         # NOTE: Consent events are NOT drained here — they stay in
-        # ctx._consent_event_queue for the SSE generator to poll and
-        # deliver to the client. Draining them into a local list caused
+        # ctx._event_queue for the SSE generator to poll via drain_events()
+        # and deliver to the client. Draining them into a local list caused
         # a deadlock: the events were trapped here while the SSE generator
         # never saw them (v1.16.0 fix).
         while not tool_task.done():
