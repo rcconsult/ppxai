@@ -62,11 +62,10 @@ def _get_image_widget_class():
     force high-res rendering for known terminals.
 
     Terminal support:
-    - WezTerm: Uses our native iTerm2 protocol implementation (textual-image
-      doesn't support iTerm2, only TGP which is Kitty protocol)
-    - Windows Terminal: Uses textual-image auto-detection (Sixel works)
-    - Kitty: Uses TGP (Kitty Graphics Protocol)
-    - iTerm2: Uses TGP (also supports iTerm2 protocol but TGP is preferred)
+    - iTerm2: Uses our native iTerm2 protocol implementation (OSC 1337)
+    - WezTerm: Same iTerm2 protocol (WezTerm supports it natively)
+    - Kitty: Uses TGP (Kitty Graphics Protocol) via textual-image
+    - Windows Terminal: Uses textual-image auto-detection (Sixel)
 
     Returns:
         The appropriate image widget class
@@ -101,10 +100,12 @@ def _get_image_widget_class():
             from ppxai.tui.widgets.iterm2_widget import ITerm2ImageWidget
             return ITerm2ImageWidget
 
-    # iTerm2 on macOS: Use TGP (native support)
+    # iTerm2 on macOS: Use native iTerm2 inline image protocol (OSC 1337)
+    # NOT TGP — that's Kitty Graphics Protocol which iTerm2 doesn't support.
     if term_program == "iterm.app":
-        if _TGPImage is not None:
-            return _TGPImage
+        if _ITerm2Image is not None:
+            from ppxai.tui.widgets.iterm2_widget import ITerm2ImageWidget
+            return ITerm2ImageWidget
 
     # Kitty: Use TGP (native support)
     if os.environ.get("KITTY_WINDOW_ID"):
