@@ -13,9 +13,16 @@ import io
 import logging
 from collections import namedtuple
 from pathlib import Path
-from typing import IO, Iterable, NamedTuple, Union
+from typing import Any, IO, Iterable, NamedTuple, Union
 
-from PIL import Image as PILImage
+try:
+    from PIL import Image as PILImage
+except ImportError:
+    PILImage = None  # type: ignore[assignment,misc]
+
+# Image input type — includes PILImage.Image when available
+_ImageInput = Union[Path, bytes, IO[bytes], Any]  # Any covers PILImage.Image
+
 from rich.control import Control
 from rich.segment import ControlType, Segment
 from rich.style import Style
@@ -42,6 +49,31 @@ def _get_cell_size():
     # Return a namedtuple-like object with width/height
     CellSize = namedtuple('CellSize', ['width', 'height'])
     return CellSize(10, 20)
+
+
+def _read_image_dimensions(data: bytes) -> tuple:
+    """Read image dimensions from PNG/JPEG/GIF header without PIL."""
+    import struct
+    if data[:8] == b'\x89PNG\r\n\x1a\n' and len(data) >= 24:
+        # PNG: width and height at bytes 16-23 in IHDR chunk
+        w, h = struct.unpack('>II', data[16:24])
+        return w, h
+    if data[:2] == b'\xff\xd8':
+        # JPEG: scan for SOF0/SOF2 marker
+        i = 2
+        while i < len(data) - 9:
+            if data[i] != 0xFF:
+                break
+            marker = data[i + 1]
+            length = struct.unpack('>H', data[i + 2:i + 4])[0]
+            if marker in (0xC0, 0xC2):  # SOF0 or SOF2
+                h, w = struct.unpack('>HH', data[i + 5:i + 9])
+                return w, h
+            i += 2 + length
+    if data[:6] in (b'GIF87a', b'GIF89a') and len(data) >= 10:
+        w, h = struct.unpack('<HH', data[6:10])
+        return w, h
+    return 0, 0
 
 
 class _CachedImage(NamedTuple):
@@ -79,7 +111,7 @@ class ITerm2ImageWidget(Widget):
 
     def __init__(
         self,
-        image: Union[Path, bytes, IO[bytes], PILImage.Image, None] = None,
+        image: Union[_ImageInput, None] = None,
         *,
         name: str | None = None,
         id: str | None = None,
@@ -88,7 +120,7 @@ class ITerm2ImageWidget(Widget):
     ):
         """Initialize the widget."""
         super().__init__(name=name, id=id, classes=classes, disabled=disabled)
-        self._image: Union[Path, bytes, IO[bytes], PILImage.Image, None] = None
+        self._image: Union[_ImageInput, None] = None
         self._image_data: bytes | None = None
         self._image_name: str = "image"
         self._image_width: int = 0
@@ -98,12 +130,12 @@ class ITerm2ImageWidget(Widget):
         self.image = image
 
     @property
-    def image(self) -> Union[Path, bytes, IO[bytes], PILImage.Image, None]:
+    def image(self) -> Union[_ImageInput, None]:
         """The image to render."""
         return self._image
 
     @image.setter
-    def image(self, value: Union[Path, bytes, IO[bytes], PILImage.Image, None]) -> None:
+    def image(self, value) -> None:
         """Set the image to render."""
         self._cached = None  # Invalidate cache
         self._image = value
@@ -114,31 +146,24 @@ class ITerm2ImageWidget(Widget):
             self._image_height = 0
             return
 
-        # Load image data
+        # Load image data and dimensions
         try:
             if isinstance(value, Path):
                 self._image_data = value.read_bytes()
                 self._image_name = value.name
-                img = PILImage.open(value)
-                self._image_width = img.width
-                self._image_height = img.height
-                img.close()
             elif isinstance(value, bytes):
                 self._image_data = value
                 self._image_name = "image"
-                img = PILImage.open(io.BytesIO(value))
-                self._image_width = img.width
-                self._image_height = img.height
-                img.close()
-            elif isinstance(value, PILImage.Image):
+            elif PILImage is not None and isinstance(value, PILImage.Image):
                 self._image_width = value.width
                 self._image_height = value.height
                 buf = io.BytesIO()
                 value.save(buf, format='PNG')
                 self._image_data = buf.getvalue()
                 self._image_name = "image.png"
+                self.refresh(layout=True)
+                return
             elif hasattr(value, 'read'):
-                # IO stream
                 data = value.read()
                 try:
                     value.seek(0)
@@ -146,10 +171,16 @@ class ITerm2ImageWidget(Widget):
                     pass
                 self._image_data = data
                 self._image_name = "image"
-                img = PILImage.open(io.BytesIO(data))
-                self._image_width = img.width
-                self._image_height = img.height
-                img.close()
+
+            # Get dimensions — PIL if available, header parsing as fallback
+            if self._image_data:
+                if PILImage is not None:
+                    img = PILImage.open(io.BytesIO(self._image_data))
+                    self._image_width = img.width
+                    self._image_height = img.height
+                    img.close()
+                else:
+                    self._image_width, self._image_height = _read_image_dimensions(self._image_data)
         except Exception as e:
             logger.error(f"Failed to load image: {e}")
             self._image_width = 800

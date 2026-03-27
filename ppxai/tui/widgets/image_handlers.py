@@ -51,6 +51,14 @@ try:
 except ImportError:
     pass
 
+# Check for our native iTerm2 Textual widget (works without PIL via header parsing)
+_ITerm2ImageWidget = None
+try:
+    from ppxai.tui.widgets.iterm2_widget import ITerm2ImageWidget
+    _ITerm2ImageWidget = ITerm2ImageWidget
+except ImportError:
+    pass
+
 
 def _get_image_widget_class():
     """Get the best image widget class for the current terminal.
@@ -95,17 +103,10 @@ def _get_image_widget_class():
     # WezTerm supports iTerm2 inline images but not Kitty TGP or Sixel queries.
     # We use the same integration technique as textual-image's Sixel renderer:
     # placeholder text + cursor save/restore + control segment trick.
-    if term_program == "wezterm":
-        if _ITerm2Image is not None:
-            from ppxai.tui.widgets.iterm2_widget import ITerm2ImageWidget
-            return ITerm2ImageWidget
-
-    # iTerm2 on macOS: Use native iTerm2 inline image protocol (OSC 1337)
-    # NOT TGP — that's Kitty Graphics Protocol which iTerm2 doesn't support.
-    if term_program == "iterm.app":
-        if _ITerm2Image is not None:
-            from ppxai.tui.widgets.iterm2_widget import ITerm2ImageWidget
-            return ITerm2ImageWidget
+    # WezTerm / iTerm2: Use native iTerm2 inline image protocol (OSC 1337)
+    if term_program in ("wezterm", "iterm.app"):
+        if _ITerm2ImageWidget is not None:
+            return _ITerm2ImageWidget
 
     # Kitty: Use TGP (native support)
     if os.environ.get("KITTY_WINDOW_ID"):

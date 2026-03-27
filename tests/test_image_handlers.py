@@ -185,8 +185,8 @@ class TestFullImageHandler:
 
     def test_full_handler_not_available_when_viewer_creation_fails(self):
         """FullImageHandler is_available is False when viewer creation fails."""
-        with mock.patch("ppxai.tui.widgets.image_handlers._TextualImage") as mock_image:
-            mock_image.side_effect = Exception("Failed to create viewer")
+        mock_widget = mock.Mock(side_effect=Exception("Failed to create viewer"))
+        with mock.patch("ppxai.tui.widgets.image_handlers._get_image_widget_class", return_value=mock_widget):
             handler = FullImageHandler(Path("test.png"), None)
             assert handler.is_available is False
 
