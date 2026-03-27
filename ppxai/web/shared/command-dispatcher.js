@@ -891,14 +891,14 @@ class CommandDispatcher {
             return;
         }
 
-        // Parse flags
-        const serveMatch = raw.match(/--serve(?:\s+"([^"]+)"|\s+(\S+))?/);
+        // Parse flags — accept both single and double quotes around command
+        const serveMatch = raw.match(/--serve(?:\s+"([^"]+)"|\s+'([^']+)'|\s+(\S+))?/);
         const proxyMatch = raw.match(/--proxy\s+(\d+)/);
         const portMatch = raw.match(/--port\s+(\d+)/);
 
         // Strip flags to get the filepath
         const filepath = raw
-            .replace(/\s*--serve(?:\s+"[^"]+"|\s+\S+)?/, '')
+            .replace(/\s*--serve(?:\s+"[^"]+"|\s+'[^']+'|\s+\S+)?/, '')
             .replace(/\s*--proxy\s+\d+/, '')
             .replace(/\s*--port\s+\d+/, '')
             .trim();
@@ -912,7 +912,7 @@ class CommandDispatcher {
             const port = parseInt(proxyMatch[1], 10);
             await this.app.openProxiedPreview(filepath, port);
         } else if (serveMatch) {
-            const command = serveMatch[1] || serveMatch[2] || null;
+            const command = serveMatch[1] || serveMatch[2] || serveMatch[3] || null;
             const port = portMatch ? parseInt(portMatch[1], 10) : null;
             await this.app.openServedPreview(filepath, command, port);
         } else {

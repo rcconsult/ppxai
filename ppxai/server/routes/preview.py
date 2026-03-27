@@ -154,8 +154,17 @@ def _detect_command(working_dir: str) -> Optional[str]:
         except (json.JSONDecodeError, OSError):
             pass
 
-    # Python files — use python3 on macOS/Linux (python may not exist)
-    python = "python3" if os.name != "nt" else "python"
+    # Python files — prefer venv python if available, else python3
+    if os.name == "nt":
+        venv_python = wd / "venv" / "Scripts" / "python.exe"
+        fallback_python = "python"
+    else:
+        venv_python = wd / "venv" / "bin" / "python"
+        fallback_python = "python3"
+    # Also check .venv (common convention)
+    if not venv_python.exists():
+        venv_python = wd / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    python = str(venv_python) if venv_python.exists() else fallback_python
     for name in ("main.py", "app.py", "server.py"):
         if (wd / name).exists():
             return f"{python} {name}"
