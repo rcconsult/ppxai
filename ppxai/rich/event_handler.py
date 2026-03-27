@@ -15,10 +15,8 @@ Version: v1.17.1
 from datetime import datetime
 from typing import AsyncIterator, Callable, Optional, Any, Dict
 from ppxai.engine.types import Event, EventType
-from ppxai.rich.markdown_tables import render_markdown_with_tables
 from ppxai.rich.themes import get_theme, DEFAULT_THEME
 from ppxai.rich.ui_components import render_message
-from ppxai.config import get_tui_theme
 from ppxai.commands.factory import CommandFactory
 from ppxai.rendering.rich_renderer import RichRenderer
 

@@ -20,7 +20,6 @@ from ..commands.handler import CommandHandler
 from ..config import (
     PROVIDERS,
     get_default_provider,
-    get_default_model,
     get_api_key,
     get_auto_restore_mode,
     get_auto_save_interval,
@@ -31,10 +30,8 @@ from ..config import (
     initialize,
 )
 from .ui import console, display_welcome, select_model, select_provider
-from .ui_components import format_usage_string, render_status_line, render_status_panel
+from .ui_components import format_usage_string, render_status_panel
 from ..engine.session import SessionManager
-from ..engine.types import EventType
-from .markdown_tables import render_markdown_with_tables
 from .themes import get_theme
 from ..common.logger import get_logger
 from .event_handler import TUIEventHandler

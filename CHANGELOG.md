@@ -5,6 +5,32 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.17.2] - 2026-03-27
+
+**Focus:** AppState alignment across all 5 clients, thread-safety, SSE state sync, iTerm2 image rendering
+
+### Added
+
+- **SSE state_sync push** — engine pushes `STATE_SYNC` events via SSE side-channel when key AppState fields change (provider, model, tools, agent_mode, working_dir, session_name); web app and VSCode extension update local state automatically
+- **Event router pattern** — `EventHandler` and `TUIEventHandler` use strategy dispatch dicts for O(1) event lookup instead of if/elif chains
+
+### Fixed
+
+- **AppState thread-safety** — listeners dispatch outside the lock (was inside RLock); event queue protected by threading.Lock with `enqueue_event()`/`drain_events()` API; fixes race between SSE drain loop and AppState observers
+- **Rich TUI AppState alignment** — `get_status_line()` reads all state through AppState; `restore_session_to_handler()` relies on atomic AppState update; `agent_mode` reads from state consistently across Rich and Textual TUI
+- **HTTP server AppState alignment** — `GET /status` returns `state.snapshot()`; all provider/model/tools reads in routes use `state.get()`; `ServerCommandContext` reads from `engine.state`
+- **ppxaide iTerm2 image rendering** — was incorrectly assigned Kitty Graphics Protocol (TGP); now uses native iTerm2 inline image protocol (OSC 1337) via `ITerm2ImageWidget`
+- **ppxaide image display without PIL** — `ITerm2ImageWidget` reads PNG/JPEG/GIF dimensions from file headers via `struct` when Pillow isn't installed; `ImageHandlerFactory` accepts native widget without `textual-image` dependency
+- **ppxaide file tree sync** — AppState `working_dir` observer now updates file tree widget; `/cd`, session restore, and engine tool changes all propagate to the file browser
+- **Preview `--serve` venv detection** — auto-detect checks `venv/bin/python` and `.venv/bin/python` before falling back to bare `python3`
+- **Preview single-quoted commands** — `/preview --serve 'python main.py'` now works alongside double-quoted syntax
+
+### Changed
+
+- **All 17 AppState fields wired** — session usage (tokens, cost, context%) synced via `session.on_usage_updated` callback; session_name via `on_name_changed`; debug_log via Textual toggle
+- **Event queue renamed** — `_consent_event_queue` → `_event_queue` with thread-safe `enqueue_event()`/`drain_events()` API
+- Removed 16 unused imports across engine, Rich TUI, and Textual TUI modules
+
 ## [1.17.1] - 2026-03-23
 
 **Focus:** AppState convergence, web terminal, preview hardening, server dependency injection, client.py decomposition

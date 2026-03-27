@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Optional, Protocol, Tuple
 
 from textual.app import ComposeResult
-from textual.containers import Center, Vertical, VerticalScroll
+from textual.containers import Center, Vertical
 from textual.widget import Widget
 from textual.widgets import Static
 

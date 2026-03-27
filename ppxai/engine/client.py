@@ -6,9 +6,6 @@ It has no UI dependencies and communicates via events.
 """
 
 import asyncio
-import hashlib
-import json
-import os
 import threading
 from datetime import datetime
 from typing import List, AsyncIterator, Optional, Dict, Any
@@ -16,10 +13,10 @@ from pathlib import Path
 
 from .types import (
     Message, Event, EventType, UsageStats,
-    ProviderInfo, ModelInfo, SessionInfo, ProviderCapabilities
+    ProviderInfo, ModelInfo, ProviderCapabilities
 )
 from ..prompts import CODING_PROMPTS
-from .providers import create_provider, list_registered_providers
+from .providers import create_provider
 from .providers.base import BaseProvider
 from .tools.manager import ToolManager
 from .tools.builtin import register_all_builtin_tools
@@ -31,13 +28,8 @@ from .context import ContextInjector, ScopedBootstrapSource
 from .bootstrap import BootstrapContext
 from ..checkpoint import CheckpointManager
 from ..config import (
-    calculate_cost,
     get_api_key,
     get_base_url,
-    get_default_model,
-    get_default_provider,
-    get_system_prompt,
-    get_system_prompt_mode,
     get_shell_config,
     get_agent_config,
     reload_config as _reload_config,

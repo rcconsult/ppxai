@@ -20,11 +20,9 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
 
     SSE format: data: {json}\n\n
     Each event is yielded immediately with a sleep(0) to force flush.
-    Phase 1C: Also checks consent_event_queue for pending consent requests.
-    v1.11.2: Added debug logging for troubleshooting.
-    v1.13.10: Takes engine as parameter for session isolation.
-    v1.13.9: Added explicit [DONE] termination for robust stream completion.
-             Helps prevent aiohttp ClientPayloadError in downstream clients.
+    Drains engine.drain_events() side-channel for consent requests, state sync,
+    and status events while the main chat generator is blocked.
+    v1.17.2: Thread-safe event queue via drain_events().
     v1.16.0: B11 — Detects client disconnect and cancels background engine task.
     """
     if not engine:
