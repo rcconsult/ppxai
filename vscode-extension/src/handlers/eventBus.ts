@@ -110,6 +110,7 @@ export interface UIEvents {
     'ui:status_update': () => void;
     'ui:working_dir_changed': (path: string) => void;
     'ui:clear': () => void;
+    'state:sync': (changes: Record<string, unknown>) => void;
 }
 
 /** Combined event map for type-safe subscriptions */

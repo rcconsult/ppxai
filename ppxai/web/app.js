@@ -721,6 +721,46 @@ class PpxaiApp {
         this.elements.folderBadge.title = `Working directory: ${path}\nClick to change`;
     }
 
+    /**
+     * Handle state_sync SSE event — engine pushed a state change.
+     * Converts Python snake_case keys to JS camelCase and updates local AppState.
+     * Also updates UI elements that depend on the changed fields.
+     */
+    handleStateSync(changes) {
+        // Python snake_case → JS camelCase field mapping
+        const keyMap = {
+            provider: 'currentProvider',
+            model: 'currentModel',
+            tools_enabled: 'toolsEnabled',
+            tools_verbose: 'toolsVerbose',
+            agent_mode: 'agentMode',
+            auto_route: 'autoRoute',
+            working_dir: 'workingDir',
+            session_name: 'sessionName',
+            debug_log: 'debugLog',
+        };
+
+        for (const [pyKey, value] of Object.entries(changes)) {
+            const jsKey = keyMap[pyKey] || pyKey;
+            this.state[jsKey] = value;
+
+            // Side effects for UI elements
+            if (pyKey === 'provider') {
+                this.elements.providerSelect.value = value;
+                // Reload models for new provider
+                this.loadModels();
+            } else if (pyKey === 'model') {
+                this.elements.modelSelect.value = value;
+            } else if (pyKey === 'tools_enabled') {
+                this.updateToolsBadge();
+            } else if (pyKey === 'working_dir' && value) {
+                this.updateFolderBadge(value);
+            } else if (pyKey === 'agent_mode') {
+                this.updateAgentBadge();
+            }
+        }
+    }
+
     async loadInitialState() {
         try {
             // Load providers
@@ -1184,6 +1224,14 @@ class PpxaiApp {
                 const infoMsg = typeof event.data === 'string' ? event.data : (event.data?.message || '');
                 if (infoMsg) {
                     this.updateThinkingIndicator(infoMsg, contentEl);
+                }
+                break;
+
+            case 'state_sync':
+                // v1.17.1: Engine pushed a state change — sync local AppState.
+                // event.data is {key: value} dict with one or more changed fields.
+                if (event.data && typeof event.data === 'object') {
+                    this.handleStateSync(event.data);
                 }
                 break;
 

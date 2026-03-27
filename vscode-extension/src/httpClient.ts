@@ -41,7 +41,7 @@ export interface EventMetadata {
 }
 
 export interface StreamEvent {
-    type: 'thinking' | 'started' | 'reasoning_chunk' | 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'context_injected' | 'display_file' | 'consent_request' | 'status' | 'agent_iteration' | 'agent_complete' | 'agent_max_iterations' | 'working_dir_changed' | 'tool_group_start' | 'tool_group_end';
+    type: 'thinking' | 'started' | 'reasoning_chunk' | 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'context_injected' | 'display_file' | 'consent_request' | 'status' | 'agent_iteration' | 'agent_complete' | 'agent_max_iterations' | 'working_dir_changed' | 'tool_group_start' | 'tool_group_end' | 'state_sync';
     content: string;
     metadata?: EventMetadata;
 }
@@ -1027,6 +1027,12 @@ export class HttpClient {
                 };
             case 'error':
                 return { type: 'error', content: event.data || 'Unknown error' };
+            case 'state_sync':
+                // v1.17.1: Engine pushed AppState field change
+                return {
+                    type: 'state_sync',
+                    content: typeof event.data === 'object' ? JSON.stringify(event.data) : (event.data || '')
+                };
             case 'info':
                 return { type: 'thinking', content: event.data || '' };
             default:

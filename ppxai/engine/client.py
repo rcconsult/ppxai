@@ -144,6 +144,20 @@ class EngineClient:
         # This allows emitting events from within consent callback
         self._consent_event_queue: List[Event] = []
 
+        # Push AppState changes to SSE side-channel so connected web/VSCode
+        # clients stay in sync. Fields that change frequently during streaming
+        # (is_streaming, cancel_requested, usage tokens) are excluded to avoid
+        # flooding the SSE channel — clients read those from STREAM_END metadata.
+        _SSE_SYNC_FIELDS = {
+            "provider", "model", "tools_enabled", "tools_verbose",
+            "agent_mode", "auto_route", "working_dir",
+            "session_name", "debug_log",
+        }
+        for _field in _SSE_SYNC_FIELDS:
+            self.state.on(_field, lambda v, k=_field: self._consent_event_queue.append(
+                Event(type=EventType.STATE_SYNC, data={k: v})
+            ))
+
         # Load configuration (including shell command patterns)
         self._load_config()
 

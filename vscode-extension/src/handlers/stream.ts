@@ -89,6 +89,11 @@ export function processStreamEvent(event: StreamEvent, eventBus: ChatEventBus): 
             }
             break;
 
+        case 'state_sync':
+            // v1.17.1: Engine pushed state change — forward to subscribers
+            processStateSync(event, eventBus);
+            break;
+
         case 'error':
             eventBus.emit('stream:error', event.content);
             break;
@@ -263,5 +268,22 @@ function processAgentMaxIterations(event: StreamEvent, eventBus: ChatEventBus): 
         eventBus.emit('agent:max_iterations', iterations);
     } catch {
         eventBus.emit('agent:max_iterations', 10);
+    }
+}
+
+/**
+ * Process state_sync event — engine pushed an AppState field change.
+ * Emits 'state:sync' with the changed fields as a plain object.
+ */
+function processStateSync(event: StreamEvent, eventBus: ChatEventBus): void {
+    try {
+        const data = typeof event.content === 'string'
+            ? JSON.parse(event.content)
+            : event.content;
+        if (data && typeof data === 'object') {
+            eventBus.emit('state:sync', data);
+        }
+    } catch {
+        console.warn('Failed to parse state_sync event:', event.content);
     }
 }
