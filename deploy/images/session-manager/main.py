@@ -76,6 +76,7 @@ try:
 except k8s_config.ConfigException:
     k8s_config.load_kube_config()
 
+_api_client = k8s.ApiClient()
 core = k8s.CoreV1Api()
 net = k8s.NetworkingV1Api()
 
@@ -376,7 +377,7 @@ def _patch_ingress_add(username: str, svc_name: str) -> None:
     # Insert user path at front (nginx matches in order; more specific first)
     paths.insert(0, path_rule)
     ingress.spec.rules[0].http.paths = paths
-    net.replace_namespaced_ingress(INGRESS_NAME, NAMESPACE, ingress)
+    _apply_ingress_paths(ingress)
     log.info(f"Ingress patched: added /s/{slug}")
 
 
@@ -396,8 +397,34 @@ def _patch_ingress_remove(username: str) -> None:
         log.info(f"Ingress deleted (no sessions remaining)")
         return
     ingress.spec.rules[0].http.paths = paths
-    net.replace_namespaced_ingress(INGRESS_NAME, NAMESPACE, ingress)
+    _apply_ingress_paths(ingress)
     log.info(f"Ingress patched: removed /s/{slug}")
+
+
+def _apply_ingress_paths(ingress) -> None:
+    """Apply ingress path changes as the 'helm' field manager.
+
+    By using the same field manager as Helm, the session-manager's
+    .spec.rules changes merge cleanly — no ownership conflict on
+    subsequent `helm upgrade`.
+    """
+    paths = [_api_client.sanitize_for_serialization(p) for p in ingress.spec.rules[0].http.paths]
+    apply_body = {
+        "apiVersion": "networking.k8s.io/v1",
+        "kind": "Ingress",
+        "metadata": {"name": INGRESS_NAME, "namespace": NAMESPACE},
+        "spec": {
+            "rules": [{
+                "host": ingress.spec.rules[0].host,
+                "http": {"paths": paths},
+            }]
+        },
+    }
+    net.patch_namespaced_ingress(
+        INGRESS_NAME, NAMESPACE, apply_body,
+        field_manager="helm", force=True,
+        _content_type="application/apply-patch+yaml",
+    )
 
 
 def _teardown_session(meta: SessionMeta) -> None:
