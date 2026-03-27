@@ -978,6 +978,18 @@
         "timestamp": "2026-03-27T21:50:25.880771",
         "overall_score": 79.27392739273927,
         "agents_md_mode": "with"
+      },
+      {
+        "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_bf629396.json",
+        "timestamp": "2026-03-27T22:51:43.227327",
+        "overall_score": 81.45214521452145,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_f802f622.json",
+        "timestamp": "2026-03-27T22:53:28.632573",
+        "overall_score": 80.75907590759076,
+        "agents_md_mode": "without"
       }
     ],
     "vllm-qwen35/Qwen/Qwen3.5-27B-FP8": [
@@ -986,6 +998,18 @@
         "timestamp": "2026-03-27T21:59:40.463062",
         "overall_score": 87.02970297029704,
         "agents_md_mode": "with"
+      },
+      {
+        "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_b0e808b8.json",
+        "timestamp": "2026-03-27T23:02:45.406010",
+        "overall_score": 86.03960396039605,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_5f72a16c.json",
+        "timestamp": "2026-03-27T23:12:07.360876",
+        "overall_score": 84.05940594059406,
+        "agents_md_mode": "without"
       }
     ]
   },
@@ -2060,6 +2084,34 @@
       "timestamp": "2026-03-27T22:10:43.939354",
       "overall_score": 8.118811881188117,
       "agents_md_mode": "with"
+    },
+    {
+      "pair": "vllm-gptoss/openai/gpt-oss-120b",
+      "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_bf629396.json",
+      "timestamp": "2026-03-27T22:51:43.227327",
+      "overall_score": 81.45214521452145,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "vllm-gptoss/openai/gpt-oss-120b",
+      "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_f802f622.json",
+      "timestamp": "2026-03-27T22:53:28.632573",
+      "overall_score": 80.75907590759076,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "vllm-qwen35/Qwen/Qwen3.5-27B-FP8",
+      "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_b0e808b8.json",
+      "timestamp": "2026-03-27T23:02:45.406010",
+      "overall_score": 86.03960396039605,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "vllm-qwen35/Qwen/Qwen3.5-27B-FP8",
+      "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_5f72a16c.json",
+      "timestamp": "2026-03-27T23:12:07.360876",
+      "overall_score": 84.05940594059406,
+      "agents_md_mode": "without"
     }
   ]
 }

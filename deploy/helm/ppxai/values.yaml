@@ -216,6 +216,8 @@ benchmark:
   timeout: 120
   # -- Enable debug logging
   debug: false
+  # -- AGENTS.md mode: "with", "without", or "both" (delta testing)
+  agentsMd: ""
   # -- TTL for completed jobs
   ttlSeconds: 3600
   # -- History limit for CronJob

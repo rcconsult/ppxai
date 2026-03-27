@@ -127,6 +127,9 @@ spec:
             {{- if $.Values.benchmark.debug }}
             --debug \
             {{- end }}
+            {{- if $.Values.benchmark.agentsMd }}
+            --agents-md {{ $.Values.benchmark.agentsMd }} \
+            {{- end }}
             --verbose || true
           {{- end }}
           echo "=== Ranking ==="
