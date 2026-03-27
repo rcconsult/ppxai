@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.17.1 (March 2026) | RightPanelFrame + Web App Refactor
+> **Current Version**: v1.17.2 (March 2026) | RightPanelFrame + Web App Refactor
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
