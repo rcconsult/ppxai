@@ -76,7 +76,6 @@ try:
 except k8s_config.ConfigException:
     k8s_config.load_kube_config()
 
-_api_client = k8s.ApiClient()
 core = k8s.CoreV1Api()
 net = k8s.NetworkingV1Api()
 
@@ -377,7 +376,7 @@ def _patch_ingress_add(username: str, svc_name: str) -> None:
     # Insert user path at front (nginx matches in order; more specific first)
     paths.insert(0, path_rule)
     ingress.spec.rules[0].http.paths = paths
-    _apply_ingress_paths(ingress)
+    net.replace_namespaced_ingress(INGRESS_NAME, NAMESPACE, ingress)
     log.info(f"Ingress patched: added /s/{slug}")
 
 
@@ -397,43 +396,8 @@ def _patch_ingress_remove(username: str) -> None:
         log.info(f"Ingress deleted (no sessions remaining)")
         return
     ingress.spec.rules[0].http.paths = paths
-    _apply_ingress_paths(ingress)
+    net.replace_namespaced_ingress(INGRESS_NAME, NAMESPACE, ingress)
     log.info(f"Ingress patched: removed /s/{slug}")
-
-
-def _apply_ingress_paths(ingress) -> None:
-    """Apply ingress path changes as the 'helm' field manager.
-
-    By using the same field manager as Helm, the session-manager's
-    .spec.rules changes merge cleanly — no ownership conflict on
-    subsequent `helm upgrade`.
-    """
-    paths = [_api_client.sanitize_for_serialization(p) for p in ingress.spec.rules[0].http.paths]
-    apply_body = {
-        "apiVersion": "networking.k8s.io/v1",
-        "kind": "Ingress",
-        "metadata": {"name": INGRESS_NAME, "namespace": NAMESPACE},
-        "spec": {
-            "rules": [{
-                "host": ingress.spec.rules[0].host,
-                "http": {"paths": paths},
-            }]
-        },
-    }
-    # Use the raw REST client for server-side apply (content-type not
-    # supported as kwarg in all kubernetes-client versions).
-    import json as _json
-    _api_client.call_api(
-        f"/apis/networking.k8s.io/v1/namespaces/{NAMESPACE}/ingresses/{INGRESS_NAME}",
-        "PATCH",
-        body=_json.dumps(apply_body),
-        query_params=[("fieldManager", "helm"), ("force", "true")],
-        header_params={
-            "Content-Type": "application/apply-patch+yaml",
-            "Accept": "application/json",
-        },
-        response_type="object",
-    )
 
 
 def _teardown_session(meta: SessionMeta) -> None:

@@ -1,3 +1,11 @@
+{{/*
+Ingress is created by Helm on first install, then owned by session-manager
+which dynamically adds/removes per-user /s/{slug} path rules.
+
+On upgrade, Helm skips this resource if it already exists to avoid
+field manager conflicts with the session-manager's replace_namespaced_ingress.
+*/}}
+{{- if not (lookup "networking.k8s.io/v1" "Ingress" (include "ppxai.namespace" .) (include "ppxai.ingressName" .)) }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -8,6 +16,7 @@ metadata:
     {{- include "ppxai.labels" . | nindent 4 }}
     app.kubernetes.io/component: ingress
   annotations:
+    helm.sh/resource-policy: keep
     nginx.ingress.kubernetes.io/rewrite-target: /$2
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
@@ -59,3 +68,4 @@ spec:
                 name: login
                 port:
                   number: 80
+{{- end }}
