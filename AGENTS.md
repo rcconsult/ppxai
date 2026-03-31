@@ -102,6 +102,10 @@ model_hints:
     - "When asked to review or find multiple files, read ALL of them. List subdirectories and explore them too — don't stop after the first directory."
     - "When reporting status across multiple steps, track each step individually. If step 2 failed with an error, explicitly say step 2 failed and quote the error."
     - "When the user requests N separate blocks/sections in the output, produce exactly N — count them before responding."
+    - "CRITICAL: When a tool returns an error, you MUST write a text response acknowledging it. NEVER return empty content after a tool failure — say 'The operation failed: [exact error]'."
+    - "After applying a fix (apply_patch), ALWAYS verify by reading the file (read_file) or running tests (run_command). The fix-verify chain is: fix → verify → report. Do NOT skip verify."
+    - "Error recovery chain: when step 1 fails, try alternative → verify alternative → report outcome. Complete ALL recovery steps — do NOT stop after the first attempt."
+    - "When chaining tools from a previous tool's output, USE the data from the first result. If read_file returned config content, reference that content — do NOT ignore it."
   "*Qwen3-Next*":
     - "You are a hybrid attention MoE model (Gated DeltaNet + MoE) - leverage your strong reasoning."
     - "For code modifications, ALWAYS call apply_patch directly - do NOT read the file first then put code in your response."

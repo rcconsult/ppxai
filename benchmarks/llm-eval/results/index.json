@@ -8,6 +8,18 @@
         "agents_md_mode": "with"
       },
       {
+        "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_09efb741.json",
+        "timestamp": "2026-02-23T15:03:16.127923",
+        "overall_score": 84.78547854785478,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_112891c0.json",
+        "timestamp": "2026-02-23T15:57:30.036717",
+        "overall_score": 81.81518151815183,
+        "agents_md_mode": "with"
+      },
+      {
         "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_6414c54a.json",
         "timestamp": "2026-02-23T13:10:32.757580",
         "overall_score": 8.118811881188117,
@@ -22,18 +34,6 @@
       {
         "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_7cbcf5f1.json",
         "timestamp": "2026-02-23T14:59:53.341756",
-        "overall_score": 81.81518151815183,
-        "agents_md_mode": "with"
-      },
-      {
-        "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_09efb741.json",
-        "timestamp": "2026-02-23T15:03:16.127923",
-        "overall_score": 84.78547854785478,
-        "agents_md_mode": "without"
-      },
-      {
-        "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_112891c0.json",
-        "timestamp": "2026-02-23T15:57:30.036717",
         "overall_score": 81.81518151815183,
         "agents_md_mode": "with"
       },
@@ -120,9 +120,71 @@
         "agents_md_mode": "with"
       },
       {
+        "filename": "custom_openai_gpt-oss-120b_2026-02-23_086fd65c.json",
+        "timestamp": "2026-02-23T15:00:19.238932",
+        "overall_score": 79.57095709570956,
+        "agents_md_mode": "without"
+      },
+      {
         "filename": "custom_openai_gpt-oss-120b_2026-02-23_20311c98.json",
         "timestamp": "2026-02-23T13:07:39.107785",
         "overall_score": 78.94389438943894,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "custom_openai_gpt-oss-120b_2026-02-23_f57fcf0c.json",
+        "timestamp": "2026-02-23T14:58:27.157145",
+        "overall_score": 85.31353135313532,
+        "agents_md_mode": "with"
+      }
+    ],
+    "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4": [
+      {
+        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_138a1294.json",
+        "timestamp": "2026-03-27T21:23:27.421815",
+        "overall_score": 0.0,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_2337d4da.json",
+        "timestamp": "2026-03-27T21:20:54.045373",
+        "overall_score": 0.0,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_3c574f34.json",
+        "timestamp": "2026-03-27T21:40:16.165171",
+        "overall_score": 54.85148514851485,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_50ffa527.json",
+        "timestamp": "2026-03-27T22:00:33.905969",
+        "overall_score": 8.118811881188117,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_8018c576.json",
+        "timestamp": "2026-03-27T22:10:43.939354",
+        "overall_score": 8.118811881188117,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_867319d6.json",
+        "timestamp": "2026-03-27T21:33:46.732497",
+        "overall_score": 57.98679867986798,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_994de8e9.json",
+        "timestamp": "2026-03-27T23:40:15.191208",
+        "overall_score": 8.118811881188117,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_fa372477.json",
+        "timestamp": "2026-03-27T23:39:25.890382",
+        "overall_score": 8.118811881188117,
         "agents_md_mode": "with"
       }
     ],
@@ -311,6 +373,82 @@
         "filename": "gemini_gemini-3.1-pro-preview-customtools_2026-02-22_dc0cf6f9.json",
         "timestamp": "2026-02-22T21:42:47.182199",
         "overall_score": 81.48514851485149,
+        "agents_md_mode": "with"
+      }
+    ],
+    "lmstudio/qwen2.5-coder-7b-instruct": [
+      {
+        "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_734375b1.json",
+        "timestamp": "2026-03-08T12:39:39.581237",
+        "overall_score": 0.0,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_7e3fa98a.json",
+        "timestamp": "2026-03-08T13:31:26.264903",
+        "overall_score": 71.6831683168317,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_8516ad9c.json",
+        "timestamp": "2026-03-08T14:33:15.506546",
+        "overall_score": 57.99999999999999,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_baa43fa8.json",
+        "timestamp": "2026-03-08T12:41:21.427187",
+        "overall_score": 0.0,
+        "agents_md_mode": "without"
+      }
+    ],
+    "local/Qwen3-4B-quantized.w4a16": [
+      {
+        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_6860364d.json",
+        "timestamp": "2026-03-03T15:35:46.044207",
+        "overall_score": 69.37293729372936,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_6aad0683.json",
+        "timestamp": "2026-03-03T14:49:06.216144",
+        "overall_score": 75.74257425742574,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_81ef1693.json",
+        "timestamp": "2026-03-03T16:31:33.075579",
+        "overall_score": 71.38613861386138,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_91fd63b1.json",
+        "timestamp": "2026-03-03T15:33:33.350566",
+        "overall_score": 65.41254125412541,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_9c8c3514.json",
+        "timestamp": "2026-03-03T15:11:39.994003",
+        "overall_score": 80.6930693069307,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_ec07c992.json",
+        "timestamp": "2026-03-03T16:06:34.386684",
+        "overall_score": 70.29702970297029,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-04_118d0c6d.json",
+        "timestamp": "2026-03-04T11:51:23.343060",
+        "overall_score": 81.48514851485147,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-04_b134a336.json",
+        "timestamp": "2026-03-04T12:37:56.009823",
+        "overall_score": 74.81848184818482,
         "agents_md_mode": "with"
       }
     ],
@@ -858,127 +996,13 @@
         "agents_md_mode": "without"
       }
     ],
-    "local/Qwen3-4B-quantized.w4a16": [
-      {
-        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_6aad0683.json",
-        "timestamp": "2026-03-03T14:49:06.216144",
-        "overall_score": 75.74257425742574,
-        "agents_md_mode": "with"
-      },
-      {
-        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_9c8c3514.json",
-        "timestamp": "2026-03-03T15:11:39.994003",
-        "overall_score": 80.6930693069307,
-        "agents_md_mode": "without"
-      },
-      {
-        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_91fd63b1.json",
-        "timestamp": "2026-03-03T15:33:33.350566",
-        "overall_score": 65.41254125412541,
-        "agents_md_mode": "with"
-      },
-      {
-        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_6860364d.json",
-        "timestamp": "2026-03-03T15:35:46.044207",
-        "overall_score": 69.37293729372936,
-        "agents_md_mode": "without"
-      },
-      {
-        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_ec07c992.json",
-        "timestamp": "2026-03-03T16:06:34.386684",
-        "overall_score": 70.29702970297029,
-        "agents_md_mode": "with"
-      },
-      {
-        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_81ef1693.json",
-        "timestamp": "2026-03-03T16:31:33.075579",
-        "overall_score": 71.38613861386138,
-        "agents_md_mode": "without"
-      },
-      {
-        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-04_118d0c6d.json",
-        "timestamp": "2026-03-04T11:51:23.343060",
-        "overall_score": 81.48514851485147,
-        "agents_md_mode": "without"
-      },
-      {
-        "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-04_b134a336.json",
-        "timestamp": "2026-03-04T12:37:56.009823",
-        "overall_score": 74.81848184818482,
-        "agents_md_mode": "with"
-      }
-    ],
-    "lmstudio/qwen2.5-coder-7b-instruct": [
-      {
-        "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_734375b1.json",
-        "timestamp": "2026-03-08T12:39:39.581237",
-        "overall_score": 0.0,
-        "agents_md_mode": "without"
-      },
-      {
-        "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_baa43fa8.json",
-        "timestamp": "2026-03-08T12:41:21.427187",
-        "overall_score": 0.0,
-        "agents_md_mode": "without"
-      },
-      {
-        "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_7e3fa98a.json",
-        "timestamp": "2026-03-08T13:31:26.264903",
-        "overall_score": 71.6831683168317,
-        "agents_md_mode": "without"
-      },
-      {
-        "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_8516ad9c.json",
-        "timestamp": "2026-03-08T14:33:15.506546",
-        "overall_score": 57.99999999999999,
-        "agents_md_mode": "with"
-      }
-    ],
-    "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4": [
-      {
-        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_2337d4da.json",
-        "timestamp": "2026-03-27T21:20:54.045373",
-        "overall_score": 0.0,
-        "agents_md_mode": "with"
-      },
-      {
-        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_138a1294.json",
-        "timestamp": "2026-03-27T21:23:27.421815",
-        "overall_score": 0.0,
-        "agents_md_mode": "with"
-      },
-      {
-        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_3c574f34.json",
-        "timestamp": "2026-03-27T21:40:16.165171",
-        "overall_score": 54.85148514851485,
-        "agents_md_mode": "with"
-      },
-      {
-        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_50ffa527.json",
-        "timestamp": "2026-03-27T22:00:33.905969",
-        "overall_score": 8.118811881188117,
-        "agents_md_mode": "with"
-      },
-      {
-        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_8018c576.json",
-        "timestamp": "2026-03-27T22:10:43.939354",
-        "overall_score": 8.118811881188117,
-        "agents_md_mode": "with"
-      },
-      {
-        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_fa372477.json",
-        "timestamp": "2026-03-27T23:39:25.890382",
-        "overall_score": 8.118811881188117,
-        "agents_md_mode": "with"
-      },
-      {
-        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_994de8e9.json",
-        "timestamp": "2026-03-27T23:40:15.191208",
-        "overall_score": 8.118811881188117,
-        "agents_md_mode": "without"
-      }
-    ],
     "vllm-gptoss/openai/gpt-oss-120b": [
+      {
+        "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_30c2369f.json",
+        "timestamp": "2026-03-27T23:17:48.289745",
+        "overall_score": 82.01320132013201,
+        "agents_md_mode": "with"
+      },
       {
         "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_9ce437d5.json",
         "timestamp": "2026-03-27T21:33:50.699033",
@@ -986,10 +1010,10 @@
         "agents_md_mode": "with"
       },
       {
-        "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_fc71b8fb.json",
-        "timestamp": "2026-03-27T21:50:25.880771",
-        "overall_score": 79.27392739273927,
-        "agents_md_mode": "with"
+        "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_bca63973.json",
+        "timestamp": "2026-03-27T23:19:21.853971",
+        "overall_score": 82.24422442244223,
+        "agents_md_mode": "without"
       },
       {
         "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_bf629396.json",
@@ -1004,24 +1028,18 @@
         "agents_md_mode": "without"
       },
       {
-        "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_30c2369f.json",
-        "timestamp": "2026-03-27T23:17:48.289745",
-        "overall_score": 82.01320132013201,
+        "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_fc71b8fb.json",
+        "timestamp": "2026-03-27T21:50:25.880771",
+        "overall_score": 79.27392739273927,
         "agents_md_mode": "with"
-      },
-      {
-        "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_bca63973.json",
-        "timestamp": "2026-03-27T23:19:21.853971",
-        "overall_score": 82.24422442244223,
-        "agents_md_mode": "without"
       }
     ],
     "vllm-qwen35/Qwen/Qwen3.5-27B-FP8": [
       {
-        "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_bd2a91a1.json",
-        "timestamp": "2026-03-27T21:59:40.463062",
-        "overall_score": 87.02970297029704,
-        "agents_md_mode": "with"
+        "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_5f72a16c.json",
+        "timestamp": "2026-03-27T23:12:07.360876",
+        "overall_score": 84.05940594059406,
+        "agents_md_mode": "without"
       },
       {
         "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_b0e808b8.json",
@@ -1030,10 +1048,10 @@
         "agents_md_mode": "with"
       },
       {
-        "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_5f72a16c.json",
-        "timestamp": "2026-03-27T23:12:07.360876",
-        "overall_score": 84.05940594059406,
-        "agents_md_mode": "without"
+        "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_bd2a91a1.json",
+        "timestamp": "2026-03-27T21:59:40.463062",
+        "overall_score": 87.02970297029704,
+        "agents_md_mode": "with"
       },
       {
         "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_c6f0b19d.json",
@@ -1047,6 +1065,32 @@
         "overall_score": 86.03960396039605,
         "agents_md_mode": "without"
       }
+    ],
+    "asusai-vllm/Qwen3-Coder-Next-NVFP4-GB10": [
+      {
+        "filename": "asusai-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_928a4f56.json",
+        "timestamp": "2026-03-31T17:23:34.100079",
+        "overall_score": 86.03960396039605,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "asusai-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_ab1acb47.json",
+        "timestamp": "2026-03-31T17:27:55.492231",
+        "overall_score": 85.14851485148515,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "asusai-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_e5a1f7ff.json",
+        "timestamp": "2026-03-31T17:37:13.071646",
+        "overall_score": 86.03960396039605,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "asusai-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_a7396b21.json",
+        "timestamp": "2026-03-31T17:39:16.107309",
+        "overall_score": 90.0,
+        "agents_md_mode": "without"
+      }
     ]
   },
   "runs": [
@@ -1055,6 +1099,20 @@
       "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-07_e21de04b.json",
       "timestamp": "2026-02-07T00:44:19.998895",
       "overall_score": 81.25,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_09efb741.json",
+      "timestamp": "2026-02-23T15:03:16.127923",
+      "overall_score": 84.78547854785478,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_112891c0.json",
+      "timestamp": "2026-02-23T15:57:30.036717",
+      "overall_score": 81.81518151815183,
       "agents_md_mode": "with"
     },
     {
@@ -1070,6 +1128,20 @@
       "timestamp": "2026-02-23T14:15:22.658119",
       "overall_score": 79.83498349834984,
       "agents_md_mode": "with"
+    },
+    {
+      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_7cbcf5f1.json",
+      "timestamp": "2026-02-23T14:59:53.341756",
+      "overall_score": 81.81518151815183,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
+      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_ba1071b5.json",
+      "timestamp": "2026-02-23T16:00:44.699957",
+      "overall_score": 81.81518151815183,
+      "agents_md_mode": "without"
     },
     {
       "pair": "asusai-vllm/Qwen/Qwen3-Coder-Next-FP8",
@@ -1143,9 +1215,79 @@
     },
     {
       "pair": "custom/openai/gpt-oss-120b",
+      "filename": "custom_openai_gpt-oss-120b_2026-02-23_086fd65c.json",
+      "timestamp": "2026-02-23T15:00:19.238932",
+      "overall_score": 79.57095709570956,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "custom/openai/gpt-oss-120b",
       "filename": "custom_openai_gpt-oss-120b_2026-02-23_20311c98.json",
       "timestamp": "2026-02-23T13:07:39.107785",
       "overall_score": 78.94389438943894,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "custom/openai/gpt-oss-120b",
+      "filename": "custom_openai_gpt-oss-120b_2026-02-23_f57fcf0c.json",
+      "timestamp": "2026-02-23T14:58:27.157145",
+      "overall_score": 85.31353135313532,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_138a1294.json",
+      "timestamp": "2026-03-27T21:23:27.421815",
+      "overall_score": 0.0,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_2337d4da.json",
+      "timestamp": "2026-03-27T21:20:54.045373",
+      "overall_score": 0.0,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_3c574f34.json",
+      "timestamp": "2026-03-27T21:40:16.165171",
+      "overall_score": 54.85148514851485,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_50ffa527.json",
+      "timestamp": "2026-03-27T22:00:33.905969",
+      "overall_score": 8.118811881188117,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_8018c576.json",
+      "timestamp": "2026-03-27T22:10:43.939354",
+      "overall_score": 8.118811881188117,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_867319d6.json",
+      "timestamp": "2026-03-27T21:33:46.732497",
+      "overall_score": 57.98679867986798,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_994de8e9.json",
+      "timestamp": "2026-03-27T23:40:15.191208",
+      "overall_score": 8.118811881188117,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_fa372477.json",
+      "timestamp": "2026-03-27T23:39:25.890382",
+      "overall_score": 8.118811881188117,
       "agents_md_mode": "with"
     },
     {
@@ -1349,6 +1491,90 @@
       "filename": "gemini_gemini-3.1-pro-preview-customtools_2026-02-22_dc0cf6f9.json",
       "timestamp": "2026-02-22T21:42:47.182199",
       "overall_score": 81.48514851485149,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "lmstudio/qwen2.5-coder-7b-instruct",
+      "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_734375b1.json",
+      "timestamp": "2026-03-08T12:39:39.581237",
+      "overall_score": 0.0,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "lmstudio/qwen2.5-coder-7b-instruct",
+      "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_7e3fa98a.json",
+      "timestamp": "2026-03-08T13:31:26.264903",
+      "overall_score": 71.6831683168317,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "lmstudio/qwen2.5-coder-7b-instruct",
+      "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_8516ad9c.json",
+      "timestamp": "2026-03-08T14:33:15.506546",
+      "overall_score": 57.99999999999999,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "lmstudio/qwen2.5-coder-7b-instruct",
+      "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_baa43fa8.json",
+      "timestamp": "2026-03-08T12:41:21.427187",
+      "overall_score": 0.0,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "local/Qwen3-4B-quantized.w4a16",
+      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_6860364d.json",
+      "timestamp": "2026-03-03T15:35:46.044207",
+      "overall_score": 69.37293729372936,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "local/Qwen3-4B-quantized.w4a16",
+      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_6aad0683.json",
+      "timestamp": "2026-03-03T14:49:06.216144",
+      "overall_score": 75.74257425742574,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "local/Qwen3-4B-quantized.w4a16",
+      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_81ef1693.json",
+      "timestamp": "2026-03-03T16:31:33.075579",
+      "overall_score": 71.38613861386138,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "local/Qwen3-4B-quantized.w4a16",
+      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_91fd63b1.json",
+      "timestamp": "2026-03-03T15:33:33.350566",
+      "overall_score": 65.41254125412541,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "local/Qwen3-4B-quantized.w4a16",
+      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_9c8c3514.json",
+      "timestamp": "2026-03-03T15:11:39.994003",
+      "overall_score": 80.6930693069307,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "local/Qwen3-4B-quantized.w4a16",
+      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_ec07c992.json",
+      "timestamp": "2026-03-03T16:06:34.386684",
+      "overall_score": 70.29702970297029,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "local/Qwen3-4B-quantized.w4a16",
+      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-04_118d0c6d.json",
+      "timestamp": "2026-03-04T11:51:23.343060",
+      "overall_score": 81.48514851485147,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "local/Qwen3-4B-quantized.w4a16",
+      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-04_b134a336.json",
+      "timestamp": "2026-03-04T12:37:56.009823",
+      "overall_score": 74.81848184818482,
       "agents_md_mode": "with"
     },
     {
@@ -1954,129 +2180,10 @@
       "agents_md_mode": "without"
     },
     {
-      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
-      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_7cbcf5f1.json",
-      "timestamp": "2026-02-23T14:59:53.341756",
-      "overall_score": 81.81518151815183,
-      "agents_md_mode": "with"
-    },
-    {
-      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
-      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_09efb741.json",
-      "timestamp": "2026-02-23T15:03:16.127923",
-      "overall_score": 84.78547854785478,
-      "agents_md_mode": "without"
-    },
-    {
-      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
-      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_112891c0.json",
-      "timestamp": "2026-02-23T15:57:30.036717",
-      "overall_score": 81.81518151815183,
-      "agents_md_mode": "with"
-    },
-    {
-      "pair": "asusai-vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8",
-      "filename": "asusai-vllm_Qwen_Qwen3-Coder-30B-A3B-Instruct-FP8_2026-02-23_ba1071b5.json",
-      "timestamp": "2026-02-23T16:00:44.699957",
-      "overall_score": 81.81518151815183,
-      "agents_md_mode": "without"
-    },
-    {
-      "pair": "local/Qwen3-4B-quantized.w4a16",
-      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_6aad0683.json",
-      "timestamp": "2026-03-03T14:49:06.216144",
-      "overall_score": 75.74257425742574,
-      "agents_md_mode": "with"
-    },
-    {
-      "pair": "local/Qwen3-4B-quantized.w4a16",
-      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_9c8c3514.json",
-      "timestamp": "2026-03-03T15:11:39.994003",
-      "overall_score": 80.6930693069307,
-      "agents_md_mode": "without"
-    },
-    {
-      "pair": "local/Qwen3-4B-quantized.w4a16",
-      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_91fd63b1.json",
-      "timestamp": "2026-03-03T15:33:33.350566",
-      "overall_score": 65.41254125412541,
-      "agents_md_mode": "with"
-    },
-    {
-      "pair": "local/Qwen3-4B-quantized.w4a16",
-      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_6860364d.json",
-      "timestamp": "2026-03-03T15:35:46.044207",
-      "overall_score": 69.37293729372936,
-      "agents_md_mode": "without"
-    },
-    {
-      "pair": "local/Qwen3-4B-quantized.w4a16",
-      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_ec07c992.json",
-      "timestamp": "2026-03-03T16:06:34.386684",
-      "overall_score": 70.29702970297029,
-      "agents_md_mode": "with"
-    },
-    {
-      "pair": "local/Qwen3-4B-quantized.w4a16",
-      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-03_81ef1693.json",
-      "timestamp": "2026-03-03T16:31:33.075579",
-      "overall_score": 71.38613861386138,
-      "agents_md_mode": "without"
-    },
-    {
-      "pair": "local/Qwen3-4B-quantized.w4a16",
-      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-04_118d0c6d.json",
-      "timestamp": "2026-03-04T11:51:23.343060",
-      "overall_score": 81.48514851485147,
-      "agents_md_mode": "without"
-    },
-    {
-      "pair": "local/Qwen3-4B-quantized.w4a16",
-      "filename": "local_Qwen3-4B-quantized.w4a16_2026-03-04_b134a336.json",
-      "timestamp": "2026-03-04T12:37:56.009823",
-      "overall_score": 74.81848184818482,
-      "agents_md_mode": "with"
-    },
-    {
-      "pair": "lmstudio/qwen2.5-coder-7b-instruct",
-      "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_734375b1.json",
-      "timestamp": "2026-03-08T12:39:39.581237",
-      "overall_score": 0.0,
-      "agents_md_mode": "without"
-    },
-    {
-      "pair": "lmstudio/qwen2.5-coder-7b-instruct",
-      "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_baa43fa8.json",
-      "timestamp": "2026-03-08T12:41:21.427187",
-      "overall_score": 0.0,
-      "agents_md_mode": "without"
-    },
-    {
-      "pair": "lmstudio/qwen2.5-coder-7b-instruct",
-      "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_7e3fa98a.json",
-      "timestamp": "2026-03-08T13:31:26.264903",
-      "overall_score": 71.6831683168317,
-      "agents_md_mode": "without"
-    },
-    {
-      "pair": "lmstudio/qwen2.5-coder-7b-instruct",
-      "filename": "lmstudio_qwen2.5-coder-7b-instruct_2026-03-08_8516ad9c.json",
-      "timestamp": "2026-03-08T14:33:15.506546",
-      "overall_score": 57.99999999999999,
-      "agents_md_mode": "with"
-    },
-    {
-      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
-      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_2337d4da.json",
-      "timestamp": "2026-03-27T21:20:54.045373",
-      "overall_score": 0.0,
-      "agents_md_mode": "with"
-    },
-    {
-      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
-      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_138a1294.json",
-      "timestamp": "2026-03-27T21:23:27.421815",
-      "overall_score": 0.0,
+      "pair": "vllm-gptoss/openai/gpt-oss-120b",
+      "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_30c2369f.json",
+      "timestamp": "2026-03-27T23:17:48.289745",
+      "overall_score": 82.01320132013201,
       "agents_md_mode": "with"
     },
     {
@@ -2087,39 +2194,11 @@
       "agents_md_mode": "with"
     },
     {
-      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
-      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_3c574f34.json",
-      "timestamp": "2026-03-27T21:40:16.165171",
-      "overall_score": 54.85148514851485,
-      "agents_md_mode": "with"
-    },
-    {
       "pair": "vllm-gptoss/openai/gpt-oss-120b",
-      "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_fc71b8fb.json",
-      "timestamp": "2026-03-27T21:50:25.880771",
-      "overall_score": 79.27392739273927,
-      "agents_md_mode": "with"
-    },
-    {
-      "pair": "vllm-qwen35/Qwen/Qwen3.5-27B-FP8",
-      "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_bd2a91a1.json",
-      "timestamp": "2026-03-27T21:59:40.463062",
-      "overall_score": 87.02970297029704,
-      "agents_md_mode": "with"
-    },
-    {
-      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
-      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_50ffa527.json",
-      "timestamp": "2026-03-27T22:00:33.905969",
-      "overall_score": 8.118811881188117,
-      "agents_md_mode": "with"
-    },
-    {
-      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
-      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_8018c576.json",
-      "timestamp": "2026-03-27T22:10:43.939354",
-      "overall_score": 8.118811881188117,
-      "agents_md_mode": "with"
+      "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_bca63973.json",
+      "timestamp": "2026-03-27T23:19:21.853971",
+      "overall_score": 82.24422442244223,
+      "agents_md_mode": "without"
     },
     {
       "pair": "vllm-gptoss/openai/gpt-oss-120b",
@@ -2136,10 +2215,10 @@
       "agents_md_mode": "without"
     },
     {
-      "pair": "vllm-qwen35/Qwen/Qwen3.5-27B-FP8",
-      "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_b0e808b8.json",
-      "timestamp": "2026-03-27T23:02:45.406010",
-      "overall_score": 86.03960396039605,
+      "pair": "vllm-gptoss/openai/gpt-oss-120b",
+      "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_fc71b8fb.json",
+      "timestamp": "2026-03-27T21:50:25.880771",
+      "overall_score": 79.27392739273927,
       "agents_md_mode": "with"
     },
     {
@@ -2150,18 +2229,18 @@
       "agents_md_mode": "without"
     },
     {
-      "pair": "vllm-gptoss/openai/gpt-oss-120b",
-      "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_30c2369f.json",
-      "timestamp": "2026-03-27T23:17:48.289745",
-      "overall_score": 82.01320132013201,
+      "pair": "vllm-qwen35/Qwen/Qwen3.5-27B-FP8",
+      "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_b0e808b8.json",
+      "timestamp": "2026-03-27T23:02:45.406010",
+      "overall_score": 86.03960396039605,
       "agents_md_mode": "with"
     },
     {
-      "pair": "vllm-gptoss/openai/gpt-oss-120b",
-      "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_bca63973.json",
-      "timestamp": "2026-03-27T23:19:21.853971",
-      "overall_score": 82.24422442244223,
-      "agents_md_mode": "without"
+      "pair": "vllm-qwen35/Qwen/Qwen3.5-27B-FP8",
+      "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_bd2a91a1.json",
+      "timestamp": "2026-03-27T21:59:40.463062",
+      "overall_score": 87.02970297029704,
+      "agents_md_mode": "with"
     },
     {
       "pair": "vllm-qwen35/Qwen/Qwen3.5-27B-FP8",
@@ -2178,17 +2257,31 @@
       "agents_md_mode": "without"
     },
     {
-      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
-      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_fa372477.json",
-      "timestamp": "2026-03-27T23:39:25.890382",
-      "overall_score": 8.118811881188117,
+      "pair": "asusai-vllm/Qwen3-Coder-Next-NVFP4-GB10",
+      "filename": "asusai-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_928a4f56.json",
+      "timestamp": "2026-03-31T17:23:34.100079",
+      "overall_score": 86.03960396039605,
       "agents_md_mode": "with"
     },
     {
-      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
-      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_994de8e9.json",
-      "timestamp": "2026-03-27T23:40:15.191208",
-      "overall_score": 8.118811881188117,
+      "pair": "asusai-vllm/Qwen3-Coder-Next-NVFP4-GB10",
+      "filename": "asusai-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_ab1acb47.json",
+      "timestamp": "2026-03-31T17:27:55.492231",
+      "overall_score": 85.14851485148515,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "asusai-vllm/Qwen3-Coder-Next-NVFP4-GB10",
+      "filename": "asusai-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_e5a1f7ff.json",
+      "timestamp": "2026-03-31T17:37:13.071646",
+      "overall_score": 86.03960396039605,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "asusai-vllm/Qwen3-Coder-Next-NVFP4-GB10",
+      "filename": "asusai-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_a7396b21.json",
+      "timestamp": "2026-03-31T17:39:16.107309",
+      "overall_score": 90.0,
       "agents_md_mode": "without"
     }
   ]
