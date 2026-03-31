@@ -964,6 +964,18 @@
         "timestamp": "2026-03-27T22:10:43.939354",
         "overall_score": 8.118811881188117,
         "agents_md_mode": "with"
+      },
+      {
+        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_fa372477.json",
+        "timestamp": "2026-03-27T23:39:25.890382",
+        "overall_score": 8.118811881188117,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_994de8e9.json",
+        "timestamp": "2026-03-27T23:40:15.191208",
+        "overall_score": 8.118811881188117,
+        "agents_md_mode": "without"
       }
     ],
     "vllm-gptoss/openai/gpt-oss-120b": [
@@ -1021,6 +1033,18 @@
         "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_5f72a16c.json",
         "timestamp": "2026-03-27T23:12:07.360876",
         "overall_score": 84.05940594059406,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_c6f0b19d.json",
+        "timestamp": "2026-03-27T23:28:52.985617",
+        "overall_score": 87.62376237623762,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_d1638595.json",
+        "timestamp": "2026-03-27T23:38:32.397493",
+        "overall_score": 86.03960396039605,
         "agents_md_mode": "without"
       }
     ]
@@ -2137,6 +2161,34 @@
       "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-03-27_bca63973.json",
       "timestamp": "2026-03-27T23:19:21.853971",
       "overall_score": 82.24422442244223,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "vllm-qwen35/Qwen/Qwen3.5-27B-FP8",
+      "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_c6f0b19d.json",
+      "timestamp": "2026-03-27T23:28:52.985617",
+      "overall_score": 87.62376237623762,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "vllm-qwen35/Qwen/Qwen3.5-27B-FP8",
+      "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_d1638595.json",
+      "timestamp": "2026-03-27T23:38:32.397493",
+      "overall_score": 86.03960396039605,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_fa372477.json",
+      "timestamp": "2026-03-27T23:39:25.890382",
+      "overall_score": 8.118811881188117,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-03-27_994de8e9.json",
+      "timestamp": "2026-03-27T23:40:15.191208",
+      "overall_score": 8.118811881188117,
       "agents_md_mode": "without"
     }
   ]
