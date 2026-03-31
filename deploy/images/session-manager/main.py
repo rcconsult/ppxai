@@ -264,10 +264,27 @@ def _create_server_pod(username: str, workspace_pvc: str, temp_pvc: str) -> str:
                             sub_path="ppxai-config.json",
                         ),
                     ],
+                    resources=k8s.V1ResourceRequirements(
+                        requests={"cpu": "1", "memory": "1Gi"},
+                        limits={"cpu": "4", "memory": "4Gi"},
+                    ),
                     liveness_probe=k8s.V1Probe(
                         http_get=k8s.V1HTTPGetAction(path="/health", port=54320),
-                        initial_delay_seconds=15,
-                        period_seconds=15,
+                        initial_delay_seconds=30,
+                        period_seconds=60,
+                        timeout_seconds=10,
+                        failure_threshold=5,
+                    ),
+                    readiness_probe=k8s.V1Probe(
+                        # TCP probe — succeeds when uvicorn binds the socket.
+                        # HTTP readiness was failing during LLM streaming because
+                        # the single-worker event loop can't serve /health while
+                        # streaming tokens. TCP avoids that — it only checks the
+                        # socket is open, not that the app can process a request.
+                        tcp_socket=k8s.V1TCPSocketAction(port=54320),
+                        initial_delay_seconds=5,
+                        period_seconds=10,
+                        timeout_seconds=2,
                         failure_threshold=3,
                     ),
                 )

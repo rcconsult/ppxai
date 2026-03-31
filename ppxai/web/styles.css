@@ -235,6 +235,18 @@ body {
     color: var(--bg-primary);
 }
 
+.hints-badge {
+    cursor: default;
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+.hints-badge.enabled {
+    opacity: 1;
+    background: var(--info-color);
+    color: white;
+}
+
 .undo-badge {
     background: var(--info-color);
     color: white;

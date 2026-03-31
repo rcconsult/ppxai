@@ -73,4 +73,5 @@ async def disable_agent_mode(s: Session = Depends(get_session)):
     return {
         "ok": True,
         "agent_mode": False,
+        "tools_enabled": s.engine.state.get("tools_enabled"),
     }

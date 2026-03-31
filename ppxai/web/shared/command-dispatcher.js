@@ -728,6 +728,7 @@ class CommandDispatcher {
 
         try {
             const data = await this.app.apiClient.setWorkingDir(targetPath);
+            this.app.state.workingDir = data.path || '';
             this.app.showSystemMessage(`Working directory changed to: \`${data.path}\``);
             // Update the folder badge
             this.app.updateFolderBadge(data.path);

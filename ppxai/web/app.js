@@ -206,8 +206,13 @@ class PpxaiApp {
 
     /**
      * Periodic health check. Detects stuck connections and server unavailability.
-     * After 2 consecutive failures: marks disconnected, aborts any stuck stream.
+     * After consecutive failures: marks disconnected, aborts stuck streams.
      * On recovery: reconnects and re-enables UI.
+     *
+     * IMPORTANT: During active streaming, the single-worker server cannot
+     * serve /health — so health failures while streaming are EXPECTED and
+     * must NOT abort the stream. Only abort if failures persist AFTER
+     * streaming stops, indicating a real server issue.
      */
     async _heartbeat() {
         try {
@@ -224,6 +229,12 @@ class PpxaiApp {
                 return;
             }
         } catch {}
+
+        // During streaming, health failures are expected (single-worker busy
+        // with LLM tokens). Don't count these toward disconnect threshold.
+        if (this.state.isStreaming) {
+            return;
+        }
 
         this._heartbeatFailCount++;
 
@@ -397,6 +408,8 @@ class PpxaiApp {
             settingsBtn: document.getElementById('settingsBtn'),
             contextBadge: document.getElementById('contextBadge'),
             contextUsage: document.getElementById('contextUsage'),
+            hintsBadge: document.getElementById('hintsBadge'),
+            hintsStatus: document.getElementById('hintsStatus'),
             clearContextBtn: document.getElementById('clearContextBtn'),
 
             // Messages
@@ -676,6 +689,8 @@ class PpxaiApp {
         try {
             const result = await this.apiClient.reloadConfig();
             this.showSystemMessage(`Configuration reloaded from ${result.config_path || 'defaults'}`);
+            // Re-sync state — config reload may change provider, model, tools, etc.
+            await this.loadInitialState();
         } catch (error) {
             console.error('Failed to reload config:', error);
             this.showSystemMessage('Failed to reload configuration', 'error');
@@ -693,6 +708,7 @@ class PpxaiApp {
     async loadWorkingDir() {
         try {
             const data = await this.apiClient.getWorkingDir();
+            this.state.workingDir = data.path || '';
             this.updateFolderBadge(data.path);
         } catch (e) {
             console.error('Failed to load working directory:', e);
@@ -702,6 +718,7 @@ class PpxaiApp {
     async setWorkingDir(path) {
         try {
             const data = await this.apiClient.setWorkingDir(path);
+            this.state.workingDir = data.path || '';
             this.updateFolderBadge(data.path);
             this.showSystemMessage(`Working directory set to: ${data.path}`);
         } catch (e) {
@@ -749,8 +766,12 @@ class PpxaiApp {
                 this.elements.providerSelect.value = value;
                 // Reload models for new provider
                 this.loadModels();
+                // Hints are provider-specific — refresh
+                this.loadHintsStatus();
             } else if (pyKey === 'model') {
                 this.elements.modelSelect.value = value;
+                // Hints are model-specific — refresh
+                this.loadHintsStatus();
             } else if (pyKey === 'tools_enabled') {
                 this.updateToolsBadge();
             } else if (pyKey === 'working_dir' && value) {
@@ -767,11 +788,16 @@ class PpxaiApp {
             const providersData = await this.apiClient.getProviders();
             this.populateProviders(providersData.providers);
 
-            // Load status
+            // Load status — returns full AppState snapshot from server.
+            // Sync all known fields so local state matches server from the start.
             const status = await this.apiClient.getStatus();
-            this.state.currentProvider = status.provider;
-            this.state.currentModel = status.model;
-            this.state.toolsEnabled = status.tools_enabled;
+            this.state.currentProvider = status.provider || '';
+            this.state.currentModel = status.model || '';
+            this.state.toolsEnabled = status.tools_enabled || false;
+            this.state.toolsVerbose = status.tools_verbose || false;
+            this.state.agentMode = status.agent_mode || false;
+            this.state.debugLog = status.debug_log || false;
+            this.state.workingDir = status.working_dir || '';
 
             // Select current provider/model
             this.elements.providerSelect.value = this.state.currentProvider;
@@ -780,21 +806,18 @@ class PpxaiApp {
 
             // Update badges
             this.updateToolsBadge();
+            this.updateAgentBadge();
+            if (this.state.workingDir) {
+                this.updateFolderBadge(this.state.workingDir);
+            } else {
+                // Fallback: dedicated endpoint if snapshot had empty working_dir
+                await this.loadWorkingDir();
+            }
 
-            // Load working directory
-            await this.loadWorkingDir();
-
-            // Load tools status
-            const toolsData = await this.apiClient.getTools();
-            this.state.toolsVerbose = toolsData.verbose || false;
-
-            // Load agent status
+            // Load checkpoint status (agent_mode already synced from /status above)
             try {
                 const agentData = await this.apiClient.getAgentStatus();
-                this.state.agentMode = agentData.agent_mode;
-                this.updateAgentBadge();
-
-                // Update undo badge
+                // Update undo badge from checkpoint data
                 if (agentData.checkpoint && agentData.checkpoint.last_checkpoint) {
                     this.state.lastCheckpoint = agentData.checkpoint.last_checkpoint;
                     this.elements.undoBadge.classList.remove('hidden');
@@ -808,12 +831,11 @@ class PpxaiApp {
             await this.updateUsage();
             await this.updateContextInfo();
 
-            // Load debug log status
-            try {
-                const debugData = await this.apiClient.getDebugLogStatus();
-                this.state.debugLog = debugData.enabled;
-                this.updateDebugIndicator();
-            } catch {}
+            // Update debug indicator (debug_log already synced from /status above)
+            this.updateDebugIndicator();
+
+            // Load bootstrap hints status (shows active AGENTS.md hints)
+            await this.loadHintsStatus();
 
             // v1.13.9: Check for last session to restore
             await this.checkSessionRestore();
@@ -859,7 +881,8 @@ class PpxaiApp {
 
             // Update state from restored session
             if (data.working_dir) {
-                this.elements.folderPath.textContent = data.working_dir;
+                this.state.workingDir = data.working_dir;
+                this.updateFolderBadge(data.working_dir);
             }
             if (data.tools_enabled) {
                 this.state.toolsEnabled = true;
@@ -1091,6 +1114,10 @@ class PpxaiApp {
 
     handleStreamEvent(event, contentEl, fullContent) {
         switch (event.type) {
+            case 'stream_start':
+                // Model info from engine — no UI action needed, chunks follow
+                break;
+
             case 'reasoning_chunk':
                 // v1.13.9: Reasoning tokens from DeepSeek R1, GPT-OSS 120B
                 // Show in collapsible thinking section
@@ -1183,6 +1210,7 @@ class PpxaiApp {
             case 'working_dir_changed':
                 // Update folder badge when working directory changes (v1.13.2)
                 if (event.data && event.data.path) {
+                    this.state.workingDir = event.data.path;
                     this.updateFolderBadge(event.data.path);
                     // Debounce file tree refresh — session restore fires multiple
                     // working_dir_changed events in quick succession; only refresh once.
@@ -2455,6 +2483,45 @@ class PpxaiApp {
 
     updateDebugIndicator() {
         this.elements.debugIndicator.className = `menu-indicator ${this.state.debugLog ? 'active' : ''}`;
+    }
+
+    /**
+     * Load and display bootstrap hints status.
+     * Shows a badge when AGENTS.md is loaded with active hints for the
+     * current provider/model — important for coder deployments where
+     * hints control tool-calling behavior.
+     */
+    async loadHintsStatus() {
+        try {
+            const hints = await this.apiClient.getContextHints();
+            const badge = this.elements.hintsBadge;
+            const status = this.elements.hintsStatus;
+            if (!badge || !status) return;
+
+            if (!hints.loaded) {
+                badge.classList.add('hidden');
+                badge.title = 'No bootstrap hints loaded';
+                return;
+            }
+
+            const provCount = (hints.provider_hints || []).length;
+            const modelCount = (hints.model_hints || []).length;
+            const total = provCount + modelCount;
+
+            if (total > 0) {
+                status.textContent = `Hints: ${total}`;
+                badge.title = `${provCount} provider + ${modelCount} model hints active\nSource: ${hints.source || 'AGENTS.md'}\nClick /context hints for details`;
+                badge.classList.remove('hidden');
+                badge.classList.add('enabled');
+            } else {
+                status.textContent = 'Hints: 0';
+                badge.title = `Bootstrap loaded from ${hints.source || 'AGENTS.md'} but no hints match current provider/model`;
+                badge.classList.remove('hidden', 'enabled');
+            }
+        } catch (e) {
+            // Hints are informational — don't block on failure
+            console.debug('Failed to load hints status:', e);
+        }
     }
 
     // === Usage ===
