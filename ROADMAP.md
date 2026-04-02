@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.17.2 (March 2026) | RightPanelFrame + Web App Refactor
+> **Current Version**: v1.17.2 (April 2026) | SSE State Sync + Benchmark Infra
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
@@ -641,20 +641,98 @@ ppxai/tui/                     # New module (Textual-based)
 
 ---
 
-## Planned (v1.17.0+)
+## Completed (v1.17.x)
 
-### ~~v1.17.0 - ppxaide Key Bindings Cleanup~~ ✅ Done
+### v1.17.0 - Server + Config Modularization, K8s POC ✅
 
-**See:** `docs/TODO-keybindings-cleanup.md`
+**Status:** ✅ Complete (2026-03-15)
+**Release Notes:** [docs/RELEASE-NOTES-v1.17.0.md](docs/RELEASE-NOTES-v1.17.0.md)
 
 | Feature | Description | Status |
 |---------|-------------|--------|
+| **Server modularization** | `server/http.py` 2,936→372 lines: `models.py`, `state.py`, `streaming.py` + `routes/` (13 modules) | ✅ Done |
+| **Config submodules** | `config/__init__.py` 943→262 lines: `providers.py`, `tools.py`, `features.py`, `paths.py`, `context.py`, `prompts.py` | ✅ Done |
 | **Centralized key registry** | `ppxai/tui/keys.py` — single source of truth, all BINDINGS generated | ✅ Done |
-| **Widget BINDINGS migration** | All widgets use `get_widget_bindings()` from registry | ✅ Done |
-| **`/keys` command** | Show effective binding table at runtime, `/keys conflicts` for conflicts | ✅ Done |
-| **Display-only hack cleanup** | Replaced empty action string with `action_noop()` | ✅ Done |
-| **Kitty protocol documentation** | Documented in keys.py and CLAUDE.md — Textual 8.1.1 does not auto-negotiate (#6074) | ✅ Documented |
 | **Textual upgrade** | 7.4.0 → 8.1.1 (DirectoryTree fixes, GC improvements) | ✅ Done |
+| **K8s POC** | 5 phases: namespace, Dockerfile.server, session manager, login service, LDAP auth | ✅ Done |
+| **Client log forwarding** | Web/VSCode forward client logs to server debug log | ✅ Done |
+| **Web heartbeat watchdog** | Detect disconnects, auto-reconnect SSE | ✅ Done |
+| **Deploy structure** | `deploy/{compose,docker,images,k8s}/` + shared configs | ✅ Done |
+| **AppState architecture docs** | `docs/TODO-appstate-{0..5}.md` + refactoring tracker | ✅ Done |
+
+### v1.17.1 - AppState Wiring + EngineClient Decomposition ✅
+
+**Status:** ✅ Complete (2026-03-26)
+**Release Notes:** [docs/RELEASE-NOTES-v1.17.1.md](docs/RELEASE-NOTES-v1.17.1.md)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **AppState (hand-crafted)** | Python, JS, TS implementations wired across all 4 clients | ✅ Done |
+| **EngineClient decomposition** | 1,588→955 lines: `checkpoint_ops.py`, `consent_ops.py`, `bootstrap_ops.py` | ✅ Done |
+| **CommandContext proxy** | `__getattr__` base class, Rich/Textual are 2-3 line stubs | ✅ Done |
+| **Constants centralized** | `ppxai/constants.py` — single source for magic values | ✅ Done |
+| **Server DI** | `Depends(get_session)` across all 13 route modules | ✅ Done |
+| **`/preview --serve`** | Full-stack preview with live reload | ✅ Done |
+| **`/terminal`** | xterm.js + PTY WebSocket terminal | ✅ Done |
+| **Stream handler extraction** | `tui/stream_handler.py` — 2,303→1,718 lines in `app.py` | ✅ Done |
+| **Event router pattern** | Strategy dispatch dicts in `EventHandler` + `TUIEventHandler` | ✅ Done |
+| **Session → AppState sync** | `on_usage_updated`, `on_name_changed` callbacks | ✅ Done |
+
+### v1.17.2 - SSE State Sync + Benchmark Infra ✅
+
+**Status:** ✅ Complete (2026-03-28)
+**Release Notes:** [docs/RELEASE-NOTES-v1.17.2.md](docs/RELEASE-NOTES-v1.17.2.md)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **SSE `state_sync` push** | Cross-client AppState alignment via server-sent events | ✅ Done |
+| **Thread-safe AppState** | Lock-protected dispatch and event queue | ✅ Done |
+| **Heartbeat streaming fix** | Skip health failures during active LLM streaming (single-worker) | ✅ Done |
+| **ppxaide iTerm2 images** | Native image protocol, file tree syncs with AppState | ✅ Done |
+| **Preview auto-detect** | Venv python detection + single-quoted command support | ✅ Done |
+| **Helm chart 0.3.0** | Ingress field manager conflict fix, preview route prefix detection | ✅ Done |
+| **K8s benchmark jobs** | `--agents-md` toggle, delta test results, in-cluster runs | ✅ Done |
+| **New models benchmarked** | Qwen3.5-122B-A10B, Qwen3.5-27B-FP8, Qwen3-Coder-Next-NVFP4-GB10 | ✅ Done |
+| **Web verbose tools toggle** | Menu indicator + SSE state_sync for tools_verbose, debug_log | ✅ Done |
+
+---
+
+## Planned (v1.18.x)
+
+**Theme:** AppState codegen + multi-model routing
+
+### v1.18.0 - AppState Codegen + Routing Infrastructure
+
+| Feature | Description | Plan |
+|---------|-------------|------|
+| **AppState schema + generator** | YAML → Python/JS/TS codegen, CI `--check` mode | [TODO-appstate-codegen.md](docs/TODO-appstate-codegen.md) |
+| **AppState client wiring** | Replace hand-crafted with generated across Rich, Textual, Web, VSCode, k8s | [TODO-appstate-codegen.md](docs/TODO-appstate-codegen.md) |
+| **Routing infrastructure** | `RoutingRole`, `ProviderPool`, `ModelRouter` classes | [TODO-routing.md](docs/TODO-routing.md) Phase 1 |
+| **Coding command routing** | Replace `coding_model` with `router.resolve(RoutingRole.CODER)` | [TODO-routing.md](docs/TODO-routing.md) Phase 2 |
+
+### v1.18.1 - Agent + Chat Mode Routing
+
+| Feature | Description | Plan |
+|---------|-------------|------|
+| **Agent mode routing** | Planner role on first turn, tools role on iterations 2+ | [TODO-routing.md](docs/TODO-routing.md) Phase 3 |
+| **Chat mode routing** | Route regular chat to `chat` role, mode presets | [TODO-routing.md](docs/TODO-routing.md) Phase 4 |
+
+### v1.18.2+ - Preset Commands + TUI Integration
+
+| Feature | Description | Plan |
+|---------|-------------|------|
+| **`/preset` command** | List, switch, show preset bindings | [TODO-routing.md](docs/TODO-routing.md) Phase 5 |
+| **Status bar preset badge** | Show active preset name in TUI/Web | [TODO-routing.md](docs/TODO-routing.md) Phase 5 |
+
+### v1.19.x - Prompt Analyzer + Adaptive Routing (Future)
+
+| Feature | Description | Plan |
+|---------|-------------|------|
+| **Rule-based classifier** | Tier 1: regex patterns for role classification | [TODO-routing.md](docs/TODO-routing.md) Phase 6a |
+| **Decision logging** | `decisions.jsonl` with outcome signals | [TODO-routing.md](docs/TODO-routing.md) Phase 6b |
+| **Embedding similarity** | TF-IDF cache for past prompt classification | [TODO-routing.md](docs/TODO-routing.md) Phase 6c |
+| **Silent AI classifier** | Fast model fallback for ambiguous prompts | [TODO-routing.md](docs/TODO-routing.md) Phase 6d |
+| **Adaptive learning** | Self-improving routing from decision logs | [TODO-routing.md](docs/TODO-routing.md) Phase 7 |
 
 ---
 
@@ -872,7 +950,7 @@ ppxai is **not** trying to be:
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ```bash
-uv run pytest tests/ -v       # Run tests (1628 passing)
+uv run pytest tests/ -v       # Run tests
 uv run ppxai-server           # Start server for VSCode dev
 ```
 
@@ -889,4 +967,4 @@ For archived planning documents:
 
 ---
 
-**Last Updated**: March 5, 2026
+**Last Updated**: April 2, 2026

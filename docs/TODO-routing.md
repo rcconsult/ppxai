@@ -1,14 +1,13 @@
-# TODO: Multi-Model Routing (v1.17.2+)
+# TODO: Multi-Model Routing
 
 **Status:** Planning
-**Target:** v1.17.2 (infrastructure + testing), v1.18.x (full routing)
+**Target:** v1.18.x series
 **Priority:** Medium — foundational for advanced agentic workflows
 
-> **Scheduling note (2026-03-22):** Moved from v1.17.6 to v1.17.2. Requires
-> thorough testing — agent mode and multi-tool calling sequences must work
-> correctly with mid-session provider switches. Benchmark suite may need
-> expansion to cover routed sessions (e.g., planning turn on model A →
-> tool execution on model B → synthesis on model A).
+> **Scheduling note (2026-04-02):** Consolidated to v1.18.x. Phase 1-2 target
+> v1.18.0, Phase 3-4 target v1.18.1, Phase 5 targets v1.18.2, Phase 6+ deferred
+> to v1.19.x. Requires thorough testing — agent mode and multi-tool calling
+> sequences must work correctly with mid-session provider switches.
 
 ---
 
@@ -207,7 +206,7 @@ This keeps simple presets short (2-3 lines) while allowing full control when nee
 
 ## Phased Implementation
 
-### Phase 1: Infrastructure (v1.17.6)
+### Phase 1: Infrastructure (v1.18.0)
 
 **Goal:** Define config schema, build `ProviderPool` and `ModelRouter` — no actual routing yet.
 
@@ -279,7 +278,7 @@ class ModelRouter:
 
 ---
 
-### Phase 2: Coding Command Routing (v1.17.7)
+### Phase 2: Coding Command Routing (v1.18.0)
 
 **Goal:** Replace `coding_model` + `/autoroute` with routing system. Simplest integration
 point — coding commands already switch models.
@@ -323,7 +322,7 @@ to swap a cached provider instance, NOT `set_provider()` which reconstructs ever
 
 ---
 
-### Phase 3: Agent Mode Routing (v1.18.0)
+### Phase 3: Agent Mode Routing (v1.18.1)
 
 **Goal:** In agent mode, route first turn to `planner` role, subsequent tool-loop
 iterations to `tools` role.
@@ -370,7 +369,7 @@ preset switching when entering/leaving agent mode.
 
 ---
 
-### Phase 5: `/preset` Command + TUI Integration (v1.18.2)
+### Phase 5: `/preset` Command + TUI Integration (v1.18.2+)
 
 **Goal:** User-facing commands for preset management.
 
