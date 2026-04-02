@@ -403,6 +403,8 @@ class PpxaiApp {
             menuDropdown: document.getElementById('menuDropdown'),
             saveSessionBtn: document.getElementById('saveSessionBtn'),
             exportBtn: document.getElementById('exportBtn'),
+            verboseToolsBtn: document.getElementById('verboseToolsBtn'),
+            verboseIndicator: document.getElementById('verboseIndicator'),
             debugLogBtn: document.getElementById('debugLogBtn'),
             debugIndicator: document.getElementById('debugIndicator'),
             settingsBtn: document.getElementById('settingsBtn'),
@@ -501,6 +503,7 @@ class PpxaiApp {
         });
         this.elements.saveSessionBtn.addEventListener('click', () => this.saveSession());
         this.elements.exportBtn.addEventListener('click', () => this.exportAnswer());
+        this.elements.verboseToolsBtn.addEventListener('click', () => this.toggleVerboseTools());
         this.elements.debugLogBtn.addEventListener('click', () => this.toggleDebugLog());
         this.elements.reloadConfigBtn.addEventListener('click', () => this.reloadConfig());
         this.elements.settingsBtn.addEventListener('click', () => this.showSettings());
@@ -776,8 +779,12 @@ class PpxaiApp {
                 this.updateToolsBadge();
             } else if (pyKey === 'working_dir' && value) {
                 this.updateFolderBadge(value);
+            } else if (pyKey === 'tools_verbose') {
+                this.updateVerboseIndicator();
             } else if (pyKey === 'agent_mode') {
                 this.updateAgentBadge();
+            } else if (pyKey === 'debug_log') {
+                this.updateDebugIndicator();
             }
         }
     }
@@ -831,7 +838,8 @@ class PpxaiApp {
             await this.updateUsage();
             await this.updateContextInfo();
 
-            // Update debug indicator (debug_log already synced from /status above)
+            // Update menu indicators (already synced from /status above)
+            this.updateVerboseIndicator();
             this.updateDebugIndicator();
 
             // Load bootstrap hints status (shows active AGENTS.md hints)
@@ -2465,6 +2473,24 @@ class PpxaiApp {
                 document.body.style.userSelect = '';
             }
         });
+    }
+
+    // === Verbose Tools ===
+
+    async toggleVerboseTools() {
+        try {
+            const newState = !this.state.toolsVerbose;
+            await this.apiClient.setToolConfig('verbose', newState ? 'on' : 'off');
+            this.state.toolsVerbose = newState;
+            this.updateVerboseIndicator();
+            this.showSystemMessage(`Verbose tool output ${newState ? 'enabled' : 'disabled'}`);
+        } catch (error) {
+            this.showError(`Failed to toggle verbose tools: ${error.message}`);
+        }
+    }
+
+    updateVerboseIndicator() {
+        this.elements.verboseIndicator.className = `menu-indicator ${this.state.toolsVerbose ? 'active' : ''}`;
     }
 
     // === Debug Log ===
