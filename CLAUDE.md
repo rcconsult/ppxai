@@ -8,38 +8,35 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current Version:** v1.17.2
 
-**v1.16.0 highlights:**
-- **NEW:** Provider hierarchy — `BaseProvider` ABC, profile-driven tool loop
-- **NEW:** Multi-tool native mode — proper `tool` role messages, grouped tool calls in UI
-- **NEW:** Config integration — per-model `tool_calling` overrides
-- **NEW:** Benchmark v2 — 36 tests across 9 categories
-- **NEW:** `EngineClient.restore_session()` — unified session restore across all clients (fixes JSON-RPC provider/model bug)
-
-**v1.16.1-dev highlights:**
-- **NEW:** FileTree widget — Norton Commander-style browser (Ctrl+B), `@file` injection, Enter/Ctrl+Enter preview/edit
-- **NEW:** CommandFactory server pattern — `/usage` unified across TUI, VSCode, Web via `POST /command`
-- **FIX:** Session restore centralised — `restore_session()` covers provider/model/tools/working_dir
-- **FIX:** Tool messages rendered via Markdown (Rich markup stripped), side panel save prompt on close
+**v1.17.x highlights:**
+- **NEW:** AppState — observable state across all 4 clients (Python, JS, TS), SSE `state_sync` push
+- **NEW:** Server modularization — `http.py` 2,936→372 lines, 13 route modules, DI via `Depends(get_session)`
+- **NEW:** Config submodules — `config/__init__.py` 943→262 lines, 6 submodules
+- **NEW:** EngineClient decomposition — 1,588→955 lines, `checkpoint_ops`, `consent_ops`, `bootstrap_ops`
+- **NEW:** CodeMirror modular — shared core + 30 language addons (6.3MB→2.3MB), lazy loading
+- **NEW:** K8s POC — 5 phases: namespace, Dockerfile.server, session manager, login, LDAP auth
+- **NEW:** Benchmark infra — K8s benchmark jobs, `--agents-md` toggle, delta test results
+- **FIX:** Heartbeat during streaming — skip health failures while single-worker busy with LLM tokens
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.16.2.dev0
-- VSCode extension (package.json): v1.16.2
-- Last release tag: v1.16.0
+- Python package (pyproject.toml): v1.17.2
+- VSCode extension (package.json): v1.17.2
+- Last release tag: v1.17.2
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
 
-## Codebase Statistics (v1.16.0, approximate)
+## Codebase Statistics (v1.17.2, approximate)
 
 | Language | Files | Lines |
 |----------|------:|------:|
-| Python (core) | 66 | ~24,100 |
-| Python (tests) | 30 | ~11,800 |
-| TypeScript (VSCode) | 17 | ~8,300 |
-| JavaScript (Web) | 7 | ~5,200 |
-| CSS | 3 | ~2,000 |
-| **Total** | **~123** | **~51,400** |
+| Python (core) | 150 | ~46,400 |
+| Python (tests) | 59 | ~29,100 |
+| TypeScript (VSCode) | 17 | ~8,500 |
+| JavaScript (Web) | 19 | ~8,700 |
+| CSS | 5 | ~3,000 |
+| **Total** | **~250** | **~95,700** |
 
-Breakdown: ~70% Python, ~16% TypeScript, ~10% JavaScript, ~4% CSS/HTML
+Breakdown: ~79% Python, ~9% JavaScript, ~9% TypeScript, ~3% CSS
 
 ## Installation Locations (CRITICAL)
 

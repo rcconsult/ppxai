@@ -5,6 +5,31 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **CodeMirror modular architecture** — replaced 5 monolithic bundles (6.3MB, each bundling full CM core) with shared `core.min.js` (411KB, loaded once) + 30 per-language addons; lazy-loaded on first use
+- **30 editor languages** — native: Python, JavaScript, JSON, YAML, Markdown, HTML, CSS, SQL, Rust, Go, Java, C/C++, XML, PHP; legacy modes: Shell, TOML, Dockerfile, Ruby, Perl, Lua, Swift, R, Kotlin, Scala, PowerShell, Diff, Protobuf, Nginx, CMake, Properties
+- **Verbose Tools toggle** — menu indicator in web app `⋮` menu with green-dot active state; SSE `state_sync` push for `tools_verbose` and `debug_log` fields
+- **Benchmark K8s jobs** — `--agents-md` toggle, delta test results, in-cluster benchmark runs
+- **New models benchmarked** — Qwen3.5-122B-A10B-NVFP4, Qwen3.5-27B-FP8, Qwen3-Coder-Next-NVFP4-GB10
+
+### Fixed
+
+- **DataFileView and MarkdownFileView** — updated to new modular `cm6.newEditor()` API with language parameter; edit mode now gets proper syntax highlighting for JSON, YAML, TOML, Markdown
+- **CodeMirror per-language cache** — each language addon self-registers into `cm6.langs`; switching between files in different languages preserves correct syntax highlighting
+- **Filename-based language detection** — `Makefile` → shell, `Dockerfile` → dockerfile, `CMakeLists.txt` → cmake
+- **Heartbeat stream abort** — skip health failure counting while `isStreaming` is true (single-worker uvicorn can't serve `/health` during LLM streaming)
+- **Helm ingress** — skip ingress on upgrade, re-add rule on existing session login, field manager conflict fix, raw REST API for server-side apply
+- **Preview relative URLs** — poll and asset paths use relative URLs for K8s ingress compatibility
+
+### Changed
+
+- **TODO consolidation** — 11 files → 2 active (`TODO-appstate-codegen.md`, `TODO-routing.md`) + 4 archived; all open items retargeted to v1.18.x
+- **ROADMAP** — added v1.17.0/v1.17.1/v1.17.2 completed sections, v1.18.x planned section
+- **Tool failure hints** — improved AGENTS.md hints for tool calling reliability
+
 ## [1.17.2] - 2026-03-27
 
 **Focus:** AppState alignment across all 5 clients, thread-safety, SSE state sync, iTerm2 image rendering
