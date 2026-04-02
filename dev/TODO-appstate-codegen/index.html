@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/TODO-appstate-1-rich-tui/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/TODO-appstate-codegen/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>TODO: AppState Phase 1 — Rich TUI - ppxai Documentation</title>
+        <title>TODO: AppState Schema + Code Generation - ppxai Documentation</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#todo-appstate-phase-1-rich-tui" class="md-skip">
+        <a href="#todo-appstate-schema-code-generation" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              TODO: AppState Phase 1 — Rich TUI
+              TODO: AppState Schema + Code Generation
             
           </span>
         </div>
@@ -1118,10 +1118,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#why-first" class="md-nav__link">
+  <a href="#overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why First
+        Overview
       
     </span>
   </a>
@@ -1129,33 +1129,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#current-state" class="md-nav__link">
+  <a href="#phase-0-schema-generator" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Current State
+        Phase 0: Schema + Generator
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#implementation-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Implementation Steps
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Implementation Steps">
+    <nav class="md-nav" aria-label="Phase 0: Schema + Generator">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#step-1-wire-engineclient-to-appstate" class="md-nav__link">
+  <a href="#deliverables" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 1: Wire EngineClient to AppState
+        Deliverables
       
     </span>
   </a>
@@ -1163,44 +1152,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#step-2-simplify-richcommandcontext" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 2: Simplify RichCommandContext
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#step-3-verify-rich-tui-behavior" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 3: Verify Rich TUI behavior
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#step-4-add-appstate-unit-tests" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 4: Add AppState unit tests
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#acceptance-criteria" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1210,79 +1161,12 @@
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#what-not-to-do" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What NOT to Do
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#estimated-effort" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Estimated Effort
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#lessons-learned" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Lessons Learned
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Lessons Learned">
-      <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#architecture-decisions" class="md-nav__link">
+  <a href="#effort-5-hours" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Architecture Decisions
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#pitfalls-encountered" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pitfalls Encountered
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#patterns-that-worked-well" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Patterns That Worked Well
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#what-to-do-differently-next-time" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What to Do Differently Next Time
+        Effort: ~5 hours
       
     </span>
   </a>
@@ -1291,6 +1175,168 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-1-rich-tui-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Rich TUI Integration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 1: Rich TUI Integration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#effort-4-hours" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Effort: ~4 hours
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-2-textual-tui-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Textual TUI Integration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 2: Textual TUI Integration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#effort-4-hours_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Effort: ~4 hours
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-3-web-app-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Web App Integration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 3: Web App Integration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#effort-3-hours" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Effort: ~3 hours
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-4-vscode-extension-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4: VSCode Extension Integration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 4: VSCode Extension Integration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#effort-3-hours_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Effort: ~3 hours
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-5-k8s-web-app-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5: k8s Web App Verification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 5: k8s Web App Verification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#effort-2-hours" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Effort: ~2 hours
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#total-effort-21-hours-across-4-5-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Total Effort: ~21 hours (across 4-5 sessions)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependency-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependency Chain
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1314,146 +1360,155 @@
   
 
 
-<h1 id="todo-appstate-phase-1-rich-tui">TODO: AppState Phase 1 — Rich TUI<a class="headerlink" href="#todo-appstate-phase-1-rich-tui" title="Permanent link">&para;</a></h1>
+<h1 id="todo-appstate-schema-code-generation">TODO: AppState Schema + Code Generation<a class="headerlink" href="#todo-appstate-schema-code-generation" title="Permanent link">&para;</a></h1>
 <p><strong>Status:</strong> Open
-<strong>Priority:</strong> HIGH — simplest client, proves AppState core works
-<strong>Depends on:</strong> Phase 0 (schema + generator)
-<strong>Target:</strong> v1.17.1</p>
+<strong>Priority:</strong> Medium — builds on hand-crafted implementations (v1.17.1)
+<strong>Target:</strong> v1.18.0
+<strong>Created:</strong> 2026-03-20 (consolidated from TODO-appstate-{0..5}.md on 2026-04-02)</p>
 <hr />
-<h2 id="why-first">Why First<a class="headerlink" href="#why-first" title="Permanent link">&para;</a></h2>
-<p>The Rich TUI (<code>ppxai</code> command) is the simplest client:
-- Single thread — no <code>call_from_thread()</code>, no worker threads
-- Sync event handler — no async listener dispatch needed
-- No event bus — events flow through <code>EventHandler</code> callbacks directly
-- Minimal client state — most state lives on <code>EngineClient</code>
-- Well-tested — <code>CommandHandler</code> and <code>EventHandler</code> have good test coverage</p>
-<p>This makes it the safest place to prove the AppState pattern works before
-adding threading and async complexity in Phase 2.</p>
-<h2 id="current-state">Current State<a class="headerlink" href="#current-state" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>File</th>
-<th style="text-align: right;">Lines</th>
-<th>State fields</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>ppxai/rich/main.py</code></td>
-<td style="text-align: right;">803</td>
-<td>Reads from <code>EngineClient</code> directly</td>
-</tr>
-<tr>
-<td><code>ppxai/rich/event_handler.py</code></td>
-<td style="text-align: right;">~350</td>
-<td><code>_full_response</code>, <code>_reasoning_response</code>, <code>_should_break</code> (internal accumulators, NOT app state)</td>
-</tr>
-<tr>
-<td><code>ppxai/rich/ui_components.py</code></td>
-<td style="text-align: right;">871</td>
-<td>Stateless rendering</td>
-</tr>
-<tr>
-<td><code>ppxai/commands/handler.py</code></td>
-<td style="text-align: right;">~500</td>
-<td>Reads/writes via <code>EngineClient</code> + <code>RichCommandContext</code> adapter</td>
-</tr>
-<tr>
-<td><code>ppxai/commands/context.py</code></td>
-<td style="text-align: right;"><code>RichCommandContext</code></td>
-<td>12+ properties delegating to <code>EngineClient</code></td>
-</tr>
-</tbody>
-</table>
-<p>Key observation: Rich TUI has almost no shadow state. It reads directly from
-<code>EngineClient</code>. The main work is:
-1. Wire <code>EngineClient</code> to use <code>AppState</code> internally
-2. Simplify <code>RichCommandContext</code> to read from <code>state</code>
-3. Verify all existing behavior is preserved</p>
-<h2 id="implementation-steps">Implementation Steps<a class="headerlink" href="#implementation-steps" title="Permanent link">&para;</a></h2>
-<h3 id="step-1-wire-engineclient-to-appstate">Step 1: Wire EngineClient to AppState<a class="headerlink" href="#step-1-wire-engineclient-to-appstate" title="Permanent link">&para;</a></h3>
-<p><strong>Files:</strong> <code>ppxai/engine/client.py</code></p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>Hand-crafted AppState implementations are complete and wired across all 4 clients
+(Python, JS, TS) since v1.17.1. This TODO covers the next step: a YAML schema that
+generates those implementations, ensuring field parity and preventing drift.</p>
+<p><strong>What exists today (v1.17.2):</strong>
+- <code>ppxai/engine/app_state.py</code> — Python (thread-safe, async listeners, 17 fields wired)
+- <code>ppxai/web/shared/app-state.js</code> — JS (Proxy-based, observers)
+- <code>vscode-extension/src/appState.ts</code> — TS (typed interface + class)
+- All 4 clients (Rich, Textual, Web, VSCode) use AppState for all state access
+- SSE <code>state_sync</code> push for cross-client alignment</p>
+<p><strong>What this TODO adds:</strong>
+- YAML schema → codegen so field additions/changes propagate automatically
+- Runtime schemas for k8s, vscode, desktop deployment-specific settings
+- CI <code>--check</code> mode to catch hand-edits to generated files</p>
+<hr />
+<h2 id="phase-0-schema-generator">Phase 0: Schema + Generator<a class="headerlink" href="#phase-0-schema-generator" title="Permanent link">&para;</a></h2>
+<h3 id="deliverables">Deliverables<a class="headerlink" href="#deliverables" title="Permanent link">&para;</a></h3>
+<p><strong>1. <code>ppxai-state.schema.yaml</code></strong></p>
+<p>Unified field set for all clients. Must cover the union of fields across
+<code>app_state.py</code>, <code>app-state.js</code>, <code>appState.ts</code>, and EngineClient properties.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1.0&quot;</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">fields</span><span class="p">:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">currentProvider</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;perplexity&quot;</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">currentModel</span><span class="p">:</span><span class="w">          </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;sonar-pro&quot;</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">workingDir</span><span class="p">:</span><span class="w">            </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="nv">null</span><span class="p p-Indicator">,</span><span class="nt"> nullable</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">sessionName</span><span class="p">:</span><span class="w">           </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="nv">null</span><span class="p p-Indicator">,</span><span class="nt"> nullable</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="nt">messageCount</span><span class="p">:</span><span class="w">          </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">integer</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="nt">toolsEnabled</span><span class="p">:</span><span class="w">          </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span><span class="nt">toolsVerbose</span><span class="p">:</span><span class="w">          </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span><span class="nt">agentMode</span><span class="p">:</span><span class="w">             </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">  </span><span class="nt">autoRoute</span><span class="p">:</span><span class="w">             </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">  </span><span class="nt">isStreaming</span><span class="p">:</span><span class="w">            </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">  </span><span class="nt">cancelRequested</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">  </span><span class="nt">autoInject</span><span class="p">:</span><span class="w">            </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">  </span><span class="nt">bootstrapLoaded</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">  </span><span class="nt">lastCheckpoint</span><span class="p">:</span><span class="w">        </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="nv">null</span><span class="p p-Indicator">,</span><span class="nt"> nullable</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">  </span><span class="nt">checkpointCount</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">integer</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">  </span><span class="nt">usagePromptTokens</span><span class="p">:</span><span class="w">     </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">integer</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">  </span><span class="nt">usageCompletionTokens</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">integer</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">  </span><span class="nt">usageCost</span><span class="p">:</span><span class="w">             </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">number</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="nv">0.0</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">  </span><span class="nt">contextPercentage</span><span class="p">:</span><span class="w">     </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">number</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="nv">0.0</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="w">  </span><span class="nt">debugLog</span><span class="p">:</span><span class="w">              </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="nt">features</span><span class="p">:</span>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="w">  </span><span class="nt">core</span><span class="p">:</span><span class="w">        </span><span class="p p-Indicator">[</span><span class="nv">currentProvider</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">currentModel</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">workingDir</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">sessionName</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">messageCount</span><span class="p p-Indicator">]</span>
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="w">  </span><span class="nt">tools</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">[</span><span class="nv">toolsEnabled</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">toolsVerbose</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">agentMode</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">autoRoute</span><span class="p p-Indicator">]</span>
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="w">  </span><span class="nt">streaming</span><span class="p">:</span><span class="w">   </span><span class="p p-Indicator">[</span><span class="nv">isStreaming</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">cancelRequested</span><span class="p p-Indicator">]</span>
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="w">  </span><span class="nt">context</span><span class="p">:</span><span class="w">     </span><span class="p p-Indicator">[</span><span class="nv">autoInject</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">bootstrapLoaded</span><span class="p p-Indicator">]</span>
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="w">  </span><span class="nt">checkpoints</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">lastCheckpoint</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">checkpointCount</span><span class="p p-Indicator">]</span>
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="w">  </span><span class="nt">usage</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">[</span><span class="nv">usagePromptTokens</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">usageCompletionTokens</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">usageCost</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">contextPercentage</span><span class="p p-Indicator">]</span>
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a><span class="w">  </span><span class="nt">debug</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">[</span><span class="nv">debugLog</span><span class="p p-Indicator">]</span>
+</span></code></pre></div>
+<p><strong>2. Runtime schemas</strong></p>
 <ul>
-<li>Add <code>self.state = AppState({...})</code> in <code>__init__</code> with all schema fields</li>
-<li>Keep existing properties (<code>provider_name</code>, <code>model</code>, <code>tools_enabled</code>, etc.) as
-  thin wrappers that read/write <code>state</code>:
-  <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nd">@property</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">provider_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;current_provider&quot;</span><span class="p">)</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nd">@property</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="k">def</span><span class="w"> </span><span class="nf">model</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;current_model&quot;</span><span class="p">)</span>
-</span></code></pre></div></li>
-<li>Update <code>set_provider()</code>, <code>set_model()</code>, <code>restore_session()</code> to write via
-  <code>state.set()</code> / <code>state.update()</code></li>
-<li>All existing tests must pass unchanged — wrappers preserve the public interface</li>
+<li><code>ppxai-runtime-k8s.schema.yaml</code> — sessionIsolation, maxSessions, ttlMinutes, ldapEnabled</li>
+<li><code>ppxai-runtime-vscode.schema.yaml</code> — webviewReady, extensionVersion</li>
+<li><code>ppxai-runtime-desktop.schema.yaml</code> — terminalProtocol</li>
 </ul>
-<h3 id="step-2-simplify-richcommandcontext">Step 2: Simplify RichCommandContext<a class="headerlink" href="#step-2-simplify-richcommandcontext" title="Permanent link">&para;</a></h3>
-<p><strong>Files:</strong> <code>ppxai/commands/context.py</code></p>
+<p><strong>3. <code>scripts/generate-state.py</code></strong></p>
+<p>Reads schemas and produces:
+- <code>ppxai/engine/app_state.py</code> — Python (threading.Lock, async listener dispatch)
+- <code>ppxai/web/shared/app-state.js</code> — JS (Proxy-based)
+- <code>vscode-extension/src/appState.ts</code> — TS (typed IAppState interface + class)</p>
+<p>Each output includes: <code>get()</code>/<code>set()</code>/<code>on()</code>/<code>off()</code>/<code>update()</code>/<code>snapshot()</code>,
+property shorthand, <code>loadRuntime()</code>, no-op dedup, <code>SCHEMA_VERSION</code>.</p>
+<p><strong>4. CI check mode:</strong> <code>scripts/generate-state.py --check</code> — fails if generated
+files differ from checked-in versions.</p>
+<h3 id="acceptance-criteria">Acceptance Criteria<a class="headerlink" href="#acceptance-criteria" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>RichCommandContext</code> properties delegate to <code>engine.state.get()</code> instead of
-  reading <code>engine.provider_name</code> etc. directly</li>
-<li>This is a minor change since the engine wrappers exist, but establishes the
-  pattern of reading state through the public interface</li>
+<li>[ ] Schema covers all existing state fields across all clients</li>
+<li>[ ] Generator produces valid Python/JS/TS that passes lint/type checks</li>
+<li>[ ] Generated Python AppState passes thread-safety unit tests</li>
+<li>[ ] Generated JS AppState passes existing Playwright e2e tests (drop-in replacement)</li>
+<li>[ ] <code>--check</code> mode works for CI integration</li>
+<li>[ ] No client code changes yet — this phase is infrastructure only</li>
 </ul>
-<h3 id="step-3-verify-rich-tui-behavior">Step 3: Verify Rich TUI behavior<a class="headerlink" href="#step-3-verify-rich-tui-behavior" title="Permanent link">&para;</a></h3>
-<p><strong>Tests:</strong>
-- Run full test suite (1,318 tests)
-- Manual smoke test: <code>uv run ppxai</code> → chat, switch provider/model, save/load session,
-  enable/disable tools, agent mode, checkpoint undo
-- Verify status line shows correct provider/model/tools after every operation</p>
-<h3 id="step-4-add-appstate-unit-tests">Step 4: Add AppState unit tests<a class="headerlink" href="#step-4-add-appstate-unit-tests" title="Permanent link">&para;</a></h3>
-<p><strong>Files:</strong> <code>tests/test_app_state.py</code> (new)</p>
-<ul>
-<li><code>test_get_set_basic</code> — set a value, read it back</li>
-<li><code>test_dedup</code> — set same value twice, observer fires only once</li>
-<li><code>test_observer_on_off</code> — subscribe, verify callback, unsubscribe, verify no callback</li>
-<li><code>test_update_batch</code> — update multiple fields, each observer fires</li>
-<li><code>test_snapshot</code> — snapshot returns correct dict copy</li>
-<li><code>test_property_shorthand</code> — <code>state.current_provider</code> works like <code>state.get("current_provider")</code></li>
-<li><code>test_load_runtime</code> — runtime fields accessible after <code>loadRuntime()</code></li>
-</ul>
-<p>Thread-safety and async tests are NOT needed in this phase (Rich TUI is single-threaded).
-They will be added in Phase 2 (Textual TUI).</p>
-<h2 id="acceptance-criteria">Acceptance Criteria<a class="headerlink" href="#acceptance-criteria" title="Permanent link">&para;</a></h2>
-<ul>
-<li>[ ] <code>EngineClient</code> uses <code>AppState</code> internally for all state fields</li>
-<li>[ ] Existing properties (<code>provider_name</code>, <code>model</code>, etc.) work unchanged</li>
-<li>[ ] <code>RichCommandContext</code> reads from <code>engine.state</code></li>
-<li>[ ] All 1,318 existing tests pass</li>
-<li>[ ] New <code>test_app_state.py</code> tests pass</li>
-<li>[ ] Manual smoke test: Rich TUI behaves identically to before</li>
-<li>[ ] No lazy imports, no circular dependencies</li>
-</ul>
-<h2 id="what-not-to-do">What NOT to Do<a class="headerlink" href="#what-not-to-do" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Don't add threading/async complexity — save for Phase 2</li>
-<li>Don't change the EventHandler — its internal accumulators are NOT app state</li>
-<li>Don't touch Textual TUI, web app, or VSCode — those are later phases</li>
-<li>Don't remove EngineClient wrapper properties yet — backward compat for other clients</li>
-</ul>
-<h2 id="estimated-effort">Estimated Effort<a class="headerlink" href="#estimated-effort" title="Permanent link">&para;</a></h2>
-<p>~4 hours</p>
-<h2 id="lessons-learned">Lessons Learned<a class="headerlink" href="#lessons-learned" title="Permanent link">&para;</a></h2>
-<p><em>(To be filled during/after implementation — these carry forward to Phase 2)</em></p>
-<h3 id="architecture-decisions">Architecture Decisions<a class="headerlink" href="#architecture-decisions" title="Permanent link">&para;</a></h3>
-<ul>
-<li>...</li>
-</ul>
-<h3 id="pitfalls-encountered">Pitfalls Encountered<a class="headerlink" href="#pitfalls-encountered" title="Permanent link">&para;</a></h3>
-<ul>
-<li>...</li>
-</ul>
-<h3 id="patterns-that-worked-well">Patterns That Worked Well<a class="headerlink" href="#patterns-that-worked-well" title="Permanent link">&para;</a></h3>
-<ul>
-<li>...</li>
-</ul>
-<h3 id="what-to-do-differently-next-time">What to Do Differently Next Time<a class="headerlink" href="#what-to-do-differently-next-time" title="Permanent link">&para;</a></h3>
-<ul>
-<li>...</li>
-</ul>
+<h3 id="effort-5-hours">Effort: ~5 hours<a class="headerlink" href="#effort-5-hours" title="Permanent link">&para;</a></h3>
+<hr />
+<h2 id="phase-1-rich-tui-integration">Phase 1: Rich TUI Integration<a class="headerlink" href="#phase-1-rich-tui-integration" title="Permanent link">&para;</a></h2>
+<p>Wire <code>EngineClient</code> to use generated <code>AppState</code> internally. Rich TUI is the
+simplest client (single thread, sync event handler), proving the core works.</p>
+<p><strong>Steps:</strong>
+1. <code>EngineClient.__init__</code> creates <code>AppState({...})</code> with all schema fields
+2. Existing properties (<code>provider_name</code>, <code>model</code>, etc.) become thin wrappers
+3. <code>RichCommandContext</code> reads from <code>engine.state.get()</code> instead of direct fields
+4. Add <code>test_app_state.py</code> — basic get/set, dedup, observers, snapshot</p>
+<p><strong>Acceptance:</strong> All existing tests pass, manual smoke test identical behavior.</p>
+<h3 id="effort-4-hours">Effort: ~4 hours<a class="headerlink" href="#effort-4-hours" title="Permanent link">&para;</a></h3>
+<hr />
+<h2 id="phase-2-textual-tui-integration">Phase 2: Textual TUI Integration<a class="headerlink" href="#phase-2-textual-tui-integration" title="Permanent link">&para;</a></h2>
+<p>Replace 15+ <code>self._*</code> shadow state fields on <code>PPXAIDEApp</code> with AppState observers.
+This is where thread-safety and <code>call_from_thread()</code> integration are proven.</p>
+<p><strong>Steps:</strong>
+1. Replace <code>self._provider</code>, <code>self._model</code>, etc. with <code>engine.state</code> reads
+2. Register observers in <code>on_mount()</code> that call <code>self.call_from_thread()</code> for UI updates
+3. Remove ~30 manual <code>update_badge()</code> calls — observers handle them
+4. Add thread-safety tests (concurrent R/W, no deadlocks, async dispatch)
+5. Verify EventBus + AppState coexistence (complementary, not competing)</p>
+<p><strong>Acceptance:</strong> All shadow state removed, all badge updates via observers, thread-safe tests pass.</p>
+<h3 id="effort-4-hours_1">Effort: ~4 hours<a class="headerlink" href="#effort-4-hours_1" title="Permanent link">&para;</a></h3>
+<hr />
+<h2 id="phase-3-web-app-integration">Phase 3: Web App Integration<a class="headerlink" href="#phase-3-web-app-integration" title="Permanent link">&para;</a></h2>
+<p>Replace hand-written <code>app-state.js</code> with generated version. Drop-in replacement —
+the web app already uses the <code>state.on()</code> pattern.</p>
+<p><strong>Steps:</strong>
+1. Generated <code>app-state.js</code> replaces hand-written version
+2. Widget-local fields (theme, autocomplete, RPF state) added at construction time
+3. Enforce public interface — no direct <code>_data</code> access
+4. Run 200 Playwright e2e tests as regression safety net
+5. Test <code>state.loadRuntime('ppxai-runtime-k8s')</code> for Phase 5</p>
+<p><strong>Acceptance:</strong> All 200 e2e tests pass, <code>SCHEMA_VERSION</code> matches Python/TS.</p>
+<h3 id="effort-3-hours">Effort: ~3 hours<a class="headerlink" href="#effort-3-hours" title="Permanent link">&para;</a></h3>
+<hr />
+<h2 id="phase-4-vscode-extension-integration">Phase 4: VSCode Extension Integration<a class="headerlink" href="#phase-4-vscode-extension-integration" title="Permanent link">&para;</a></h2>
+<p>Generate typed <code>appState.ts</code> with <code>IAppState</code> interface. Wire into <code>ConfigManager</code>
+and <code>ChatPanel</code>.</p>
+<p><strong>Steps:</strong>
+1. Generated <code>appState.ts</code> with typed <code>get&lt;K&gt;()</code>/<code>set&lt;K&gt;()</code> generics
+2. <code>ConfigManager</code> uses <code>state.get()</code>/<code>state.set()</code> for provider/model
+3. <code>ChatEventBus</code> coexists with AppState (events vs state observation)
+4. Extension compiles, packages, and passes manual smoke test</p>
+<p><strong>Acceptance:</strong> TS compilation clean, manual smoke test passes all flows.</p>
+<h3 id="effort-3-hours_1">Effort: ~3 hours<a class="headerlink" href="#effort-3-hours_1" title="Permanent link">&para;</a></h3>
+<hr />
+<h2 id="phase-5-k8s-web-app-verification">Phase 5: k8s Web App Verification<a class="headerlink" href="#phase-5-k8s-web-app-verification" title="Permanent link">&para;</a></h2>
+<p>Same app as Phase 3 + runtime config injection. Lightest phase.</p>
+<p><strong>Steps:</strong>
+1. Verify <code>state.loadRuntime('ppxai-runtime-k8s')</code> injects settings
+2. Replace implicit k8s detection (<code>/s/&lt;user&gt;/</code> URL) with <code>state.get('sessionIsolation')</code>
+3. Deploy to colima cluster, verify login → session → chat flow
+4. Verify TTL watchdog and heartbeat work as before</p>
+<p><strong>Acceptance:</strong> End-to-end k8s flow works, runtime fields in <code>state.snapshot()</code>.</p>
+<h3 id="effort-2-hours">Effort: ~2 hours<a class="headerlink" href="#effort-2-hours" title="Permanent link">&para;</a></h3>
+<hr />
+<h2 id="total-effort-21-hours-across-4-5-sessions">Total Effort: ~21 hours (across 4-5 sessions)<a class="headerlink" href="#total-effort-21-hours-across-4-5-sessions" title="Permanent link">&para;</a></h2>
+<h2 id="dependency-chain">Dependency Chain<a class="headerlink" href="#dependency-chain" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Phase 0 (schema + generator)
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  └── Phase 1 (Rich TUI — proves core)
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>       └── Phase 2 (Textual TUI — proves threading)
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>            └── Phase 3 (Web App — proves JS codegen)
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>                 ├── Phase 4 (VSCode — proves TS codegen)
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>                 └── Phase 5 (k8s — verification only)
+</span></code></pre></div>
 
 
 

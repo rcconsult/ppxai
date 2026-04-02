@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/TODO-routing-v1.17.2/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/TODO-routing/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>TODO: Multi-Model Routing (v1.17.2+) - ppxai Documentation</title>
+        <title>TODO: Multi-Model Routing - ppxai Documentation</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#todo-multi-model-routing-v1172" class="md-skip">
+        <a href="#todo-multi-model-routing" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              TODO: Multi-Model Routing (v1.17.2+)
+              TODO: Multi-Model Routing
             
           </span>
         </div>
@@ -1247,10 +1247,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#phase-1-infrastructure-v1176" class="md-nav__link">
+  <a href="#phase-1-infrastructure-v1180" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 1: Infrastructure (v1.17.6)
+        Phase 1: Infrastructure (v1.18.0)
       
     </span>
   </a>
@@ -1258,10 +1258,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#phase-2-coding-command-routing-v1177" class="md-nav__link">
+  <a href="#phase-2-coding-command-routing-v1180" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 2: Coding Command Routing (v1.17.7)
+        Phase 2: Coding Command Routing (v1.18.0)
       
     </span>
   </a>
@@ -1269,10 +1269,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#phase-3-agent-mode-routing-v1180" class="md-nav__link">
+  <a href="#phase-3-agent-mode-routing-v1181" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 3: Agent Mode Routing (v1.18.0)
+        Phase 3: Agent Mode Routing (v1.18.1)
       
     </span>
   </a>
@@ -1294,7 +1294,7 @@
   <a href="#phase-5-preset-command-tui-integration-v1182" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 5: /preset Command + TUI Integration (v1.18.2)
+        Phase 5: /preset Command + TUI Integration (v1.18.2+)
       
     </span>
   </a>
@@ -1503,16 +1503,15 @@
   
 
 
-<h1 id="todo-multi-model-routing-v1172">TODO: Multi-Model Routing (v1.17.2+)<a class="headerlink" href="#todo-multi-model-routing-v1172" title="Permanent link">&para;</a></h1>
+<h1 id="todo-multi-model-routing">TODO: Multi-Model Routing<a class="headerlink" href="#todo-multi-model-routing" title="Permanent link">&para;</a></h1>
 <p><strong>Status:</strong> Planning
-<strong>Target:</strong> v1.17.2 (infrastructure + testing), v1.18.x (full routing)
+<strong>Target:</strong> v1.18.x series
 <strong>Priority:</strong> Medium — foundational for advanced agentic workflows</p>
 <blockquote>
-<p><strong>Scheduling note (2026-03-22):</strong> Moved from v1.17.6 to v1.17.2. Requires
-thorough testing — agent mode and multi-tool calling sequences must work
-correctly with mid-session provider switches. Benchmark suite may need
-expansion to cover routed sessions (e.g., planning turn on model A →
-tool execution on model B → synthesis on model A).</p>
+<p><strong>Scheduling note (2026-04-02):</strong> Consolidated to v1.18.x. Phase 1-2 target
+v1.18.0, Phase 3-4 target v1.18.1, Phase 5 targets v1.18.2, Phase 6+ deferred
+to v1.19.x. Requires thorough testing — agent mode and multi-tool calling
+sequences must work correctly with mid-session provider switches.</p>
 </blockquote>
 <hr />
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
@@ -1718,7 +1717,7 @@ just map multiple roles to the same provider/model:</p>
 This keeps simple presets short (2-3 lines) while allowing full control when needed.</p>
 <hr />
 <h2 id="phased-implementation">Phased Implementation<a class="headerlink" href="#phased-implementation" title="Permanent link">&para;</a></h2>
-<h3 id="phase-1-infrastructure-v1176">Phase 1: Infrastructure (v1.17.6)<a class="headerlink" href="#phase-1-infrastructure-v1176" title="Permanent link">&para;</a></h3>
+<h3 id="phase-1-infrastructure-v1180">Phase 1: Infrastructure (v1.18.0)<a class="headerlink" href="#phase-1-infrastructure-v1180" title="Permanent link">&para;</a></h3>
 <p><strong>Goal:</strong> Define config schema, build <code>ProviderPool</code> and <code>ModelRouter</code> — no actual routing yet.</p>
 <p><strong>New files:</strong>
 - <code>ppxai/engine/router.py</code> — <code>RoutingRole</code>, <code>RoleBinding</code>, <code>ProviderPool</code>, <code>ModelRouter</code></p>
@@ -1780,7 +1779,7 @@ This keeps simple presets short (2-3 lines) while allowing full control when nee
 - [ ] Unit tests pass
 - [ ] <code>routing.enabled: false</code> has zero impact on existing behavior</p>
 <hr />
-<h3 id="phase-2-coding-command-routing-v1177">Phase 2: Coding Command Routing (v1.17.7)<a class="headerlink" href="#phase-2-coding-command-routing-v1177" title="Permanent link">&para;</a></h3>
+<h3 id="phase-2-coding-command-routing-v1180">Phase 2: Coding Command Routing (v1.18.0)<a class="headerlink" href="#phase-2-coding-command-routing-v1180" title="Permanent link">&para;</a></h3>
 <p><strong>Goal:</strong> Replace <code>coding_model</code> + <code>/autoroute</code> with routing system. Simplest integration
 point — coding commands already switch models.</p>
 <p><strong>Modified files:</strong>
@@ -1815,7 +1814,7 @@ to swap a cached provider instance, NOT <code>set_provider()</code> which recons
 - [ ] Backward-compatible when routing disabled (falls back to <code>coding_model</code>)
 - [ ] Provider swap uses pool (no reconstruction)</p>
 <hr />
-<h3 id="phase-3-agent-mode-routing-v1180">Phase 3: Agent Mode Routing (v1.18.0)<a class="headerlink" href="#phase-3-agent-mode-routing-v1180" title="Permanent link">&para;</a></h3>
+<h3 id="phase-3-agent-mode-routing-v1181">Phase 3: Agent Mode Routing (v1.18.1)<a class="headerlink" href="#phase-3-agent-mode-routing-v1181" title="Permanent link">&para;</a></h3>
 <p><strong>Goal:</strong> In agent mode, route first turn to <code>planner</code> role, subsequent tool-loop
 iterations to <code>tools</code> role.</p>
 <p><strong>Modified files:</strong>
@@ -1849,7 +1848,7 @@ preset switching when entering/leaving agent mode.</p>
 - [ ] Agent mode auto-switches to agent preset
 - [ ] Mode preset switching is seamless (no user action required)</p>
 <hr />
-<h3 id="phase-5-preset-command-tui-integration-v1182">Phase 5: <code>/preset</code> Command + TUI Integration (v1.18.2)<a class="headerlink" href="#phase-5-preset-command-tui-integration-v1182" title="Permanent link">&para;</a></h3>
+<h3 id="phase-5-preset-command-tui-integration-v1182">Phase 5: <code>/preset</code> Command + TUI Integration (v1.18.2+)<a class="headerlink" href="#phase-5-preset-command-tui-integration-v1182" title="Permanent link">&para;</a></h3>
 <p><strong>Goal:</strong> User-facing commands for preset management.</p>
 <p><strong>New files:</strong>
 - <code>ppxai/commands/routing.py</code> — <code>/preset</code>, <code>/route</code> slash commands</p>
