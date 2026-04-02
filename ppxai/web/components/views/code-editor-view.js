@@ -278,33 +278,54 @@ class CodeEditorView extends BaseView {
         this.setState({ cursor, scrollTop });
     }
 
+    /**
+     * Load the CodeMirror core (once) and the language addon, then create
+     * the editor. Core is loaded from lib/codemirror/core.min.js (sets the
+     * cm6 global with newEditor/registerLang/modules). Language addons are
+     * lib/codemirror/lang-{name}.min.js — each calls cm6.registerLang().
+     */
     _initCodeMirror(editorEl, content, lang, line, col, readOnly) {
         this._destroyEditor();
 
-        const tryCreate = () => {
-            if (typeof cm6 !== 'undefined') {
-                this._createEditor(editorEl, content, line, col, readOnly);
+        const create = () => {
+            if (typeof cm6 !== 'undefined' && cm6.newEditor) {
+                this._createEditor(editorEl, content, lang, line, col, readOnly);
             } else {
                 this._createFallback(editorEl, content, line, col, readOnly);
             }
         };
 
-        if (typeof cm6 === 'undefined' && lang) {
-            const script = document.createElement('script');
-            script.src = `lib/codemirror/${lang}.min.js`;
-            script.onload  = tryCreate;
-            script.onerror = () => this._createFallback(editorEl, content, line, col, readOnly);
-            document.head.appendChild(script);
+        const loadLang = () => {
+            if (!lang || (cm6.langs && cm6.langs[lang])) {
+                create();
+                return;
+            }
+            // Track loaded scripts to avoid duplicate <script> tags
+            if (!window._cm6Loaded) window._cm6Loaded = {};
+            if (window._cm6Loaded[lang]) { create(); return; }
+            window._cm6Loaded[lang] = true;
+            const s = document.createElement('script');
+            s.src = `lib/codemirror/lang-${lang}.min.js`;
+            s.onload  = create;
+            s.onerror = () => this._createFallback(editorEl, content, line, col, readOnly);
+            document.head.appendChild(s);
+        };
+
+        if (typeof cm6 === 'undefined' || !cm6.newEditor) {
+            const s = document.createElement('script');
+            s.src = 'lib/codemirror/core.min.js';
+            s.onload  = loadLang;
+            s.onerror = () => this._createFallback(editorEl, content, line, col, readOnly);
+            document.head.appendChild(s);
         } else {
-            tryCreate();
+            loadLang();
         }
     }
 
-    _createEditor(editorEl, content, line, col, readOnly) {
+    _createEditor(editorEl, content, lang, line, col, readOnly) {
         try {
             const isDark = this._resolveTheme() === 'dark';
-            const api  = cm6.load();
-            const view = api.newEditor(editorEl, content, { dark: isDark, lineWrapping: true, readOnly });
+            const view = cm6.newEditor(editorEl, content, { lang, dark: isDark, lineWrapping: true, readOnly });
             this._editor = view;
             this._scrollToPosition(view, line, col);
             if (!readOnly) view.focus();
@@ -428,14 +449,47 @@ function _cevFileIcon(path) {
 
 function _cevExtToLang(ext) {
     const map = {
-        py: 'python', python: 'python',
+        // Native CodeMirror 6 lang packages
+        py: 'python', python: 'python', pyw: 'python', pyi: 'python',
         js: 'javascript', mjs: 'javascript', cjs: 'javascript',
         ts: 'javascript', tsx: 'javascript', jsx: 'javascript',
-        json: 'json',
+        json: 'json', jsonl: 'json',
         yaml: 'yaml', yml: 'yaml',
         md: 'markdown', markdown: 'markdown',
+        html: 'html', htm: 'html', svelte: 'html', vue: 'html',
+        css: 'css', scss: 'css', less: 'css',
+        sql: 'sql',
+        rs: 'rust',
+        go: 'go',
+        java: 'java',
+        c: 'cpp', cpp: 'cpp', cc: 'cpp', cxx: 'cpp', h: 'cpp', hpp: 'cpp',
+        xml: 'xml', svg: 'xml', xsl: 'xml',
+        php: 'php',
+        // Legacy modes (StreamLanguage wrappers)
+        sh: 'shell', bash: 'shell', zsh: 'shell', csh: 'shell', fish: 'shell', ksh: 'shell',
+        toml: 'toml',
+        kt: 'kotlin', kts: 'kotlin',
+        scala: 'scala', sc: 'scala',
+        rb: 'ruby', rake: 'ruby', gemspec: 'ruby',
+        pl: 'perl', pm: 'perl',
+        lua: 'lua',
+        r: 'r',
+        swift: 'swift',
+        ps1: 'powershell', psm1: 'powershell', psd1: 'powershell',
+        diff: 'diff', patch: 'diff',
+        proto: 'protobuf',
+        nginx: 'nginx', conf: 'nginx',
+        cmake: 'cmake',
+        properties: 'properties', env: 'properties', ini: 'properties',
     };
-    return map[ext] || null;
+    if (map[ext]) return map[ext];
+    // Filename-based detection (no extension or special names)
+    const names = {
+        makefile: 'shell', dockerfile: 'dockerfile',
+        cmakelists: 'cmake', rakefile: 'ruby',
+        gemfile: 'ruby', vagrantfile: 'ruby',
+    };
+    return names[ext] || null;
 }
 
 function _cevExtToHljsLang(ext) {
@@ -457,8 +511,31 @@ function _cevSyntaxOptions(activeLang) {
         ['markdown',   'Markdown'],
         ['yaml',       'YAML'],
         ['json',       'JSON'],
+        ['toml',       'TOML'],
         ['python',     'Python'],
         ['javascript', 'JavaScript'],
+        ['html',       'HTML'],
+        ['css',        'CSS'],
+        ['sql',        'SQL'],
+        ['shell',      'Shell'],
+        ['rust',       'Rust'],
+        ['go',         'Go'],
+        ['java',       'Java'],
+        ['kotlin',     'Kotlin'],
+        ['scala',      'Scala'],
+        ['cpp',        'C/C++'],
+        ['xml',        'XML'],
+        ['php',        'PHP'],
+        ['ruby',       'Ruby'],
+        ['perl',       'Perl'],
+        ['lua',        'Lua'],
+        ['swift',      'Swift'],
+        ['r',          'R'],
+        ['dockerfile', 'Dockerfile'],
+        ['diff',       'Diff'],
+        ['powershell', 'PowerShell'],
+        ['protobuf',   'Protobuf'],
+        ['nginx',      'Nginx'],
     ];
     return options.map(([val, label]) =>
         `<option value="${val}"${val === activeLang ? ' selected' : ''}>${label}</option>`

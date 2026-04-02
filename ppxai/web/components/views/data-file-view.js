@@ -197,6 +197,7 @@ class DataFileView extends BaseView {
     _renderCode(contentEl, editable) {
         const content = this._currentContent() || this._content || '';
         const ext     = this._path.split('.').pop().toLowerCase();
+        const cmLang  = _dfvExtToCmLang(ext);
         this._destroyEditor();
         this._destroyDataViewer();
 
@@ -213,16 +214,36 @@ class DataFileView extends BaseView {
             editorEl.className = 'cev-codemirror';
             contentEl.appendChild(editorEl);
 
-            if (typeof cm6 !== 'undefined') {
+            const createCm = () => {
                 try {
                     const isDark = this._resolveTheme() === 'dark';
-                    this._editor = cm6.load().newEditor(editorEl, content, { dark: isDark, lineWrapping: false, readOnly: false });
+                    this._editor = cm6.newEditor(editorEl, content, { lang: cmLang, dark: isDark, lineWrapping: false, readOnly: false });
                     setTimeout(() => this._editor?.focus?.(), 50);
                 } catch {
                     this._createFallback(editorEl, content);
                 }
+            };
+
+            const loadLang = () => {
+                if (!cmLang || (cm6.langs && cm6.langs[cmLang])) { createCm(); return; }
+                if (!window._cm6Loaded) window._cm6Loaded = {};
+                if (window._cm6Loaded[cmLang]) { createCm(); return; }
+                window._cm6Loaded[cmLang] = true;
+                const s = document.createElement('script');
+                s.src = `lib/codemirror/lang-${cmLang}.min.js`;
+                s.onload  = createCm;
+                s.onerror = () => this._createFallback(editorEl, content);
+                document.head.appendChild(s);
+            };
+
+            if (typeof cm6 === 'undefined' || !cm6.newEditor) {
+                const s = document.createElement('script');
+                s.src = 'lib/codemirror/core.min.js';
+                s.onload  = loadLang;
+                s.onerror = () => this._createFallback(editorEl, content);
+                document.head.appendChild(s);
             } else {
-                this._createFallback(editorEl, content);
+                loadLang();
             }
         }
     }
@@ -292,6 +313,16 @@ function _dfvFormatFromExt(ext) {
 
 function _dfvEsc(str) {
     return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function _dfvExtToCmLang(ext) {
+    const map = {
+        json: 'json', jsonl: 'json',
+        yaml: 'yaml', yml: 'yaml',
+        toml: 'toml',
+        xml: 'xml', svg: 'xml',
+    };
+    return map[ext] || null;
 }
 
 function _dfvExtToHljsLang(ext) {

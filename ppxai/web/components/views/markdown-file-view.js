@@ -190,6 +190,7 @@ class MarkdownFileView extends BaseView {
 
     _renderCode(contentEl, editable) {
         const content = this._currentContent() || this._content || '';
+        const lang = 'markdown';
         this._destroyEditor();
 
         if (!editable) {
@@ -204,16 +205,36 @@ class MarkdownFileView extends BaseView {
             editorEl.className = 'cev-codemirror';
             contentEl.appendChild(editorEl);
 
-            if (typeof cm6 !== 'undefined') {
+            const createCm = () => {
                 try {
                     const isDark = this._resolveTheme() === 'dark';
-                    this._editor = cm6.load().newEditor(editorEl, content, { dark: isDark, lineWrapping: true, readOnly: false });
+                    this._editor = cm6.newEditor(editorEl, content, { lang, dark: isDark, lineWrapping: true, readOnly: false });
                     setTimeout(() => this._editor?.focus?.(), 50);
                 } catch {
                     this._createFallback(editorEl, content);
                 }
+            };
+
+            const loadLang = () => {
+                if (cm6.langs && cm6.langs[lang]) { createCm(); return; }
+                if (!window._cm6Loaded) window._cm6Loaded = {};
+                if (window._cm6Loaded[lang]) { createCm(); return; }
+                window._cm6Loaded[lang] = true;
+                const s = document.createElement('script');
+                s.src = `lib/codemirror/lang-${lang}.min.js`;
+                s.onload  = createCm;
+                s.onerror = () => this._createFallback(editorEl, content);
+                document.head.appendChild(s);
+            };
+
+            if (typeof cm6 === 'undefined' || !cm6.newEditor) {
+                const s = document.createElement('script');
+                s.src = 'lib/codemirror/core.min.js';
+                s.onload  = loadLang;
+                s.onerror = () => this._createFallback(editorEl, content);
+                document.head.appendChild(s);
             } else {
-                this._createFallback(editorEl, content);
+                loadLang();
             }
         }
     }
