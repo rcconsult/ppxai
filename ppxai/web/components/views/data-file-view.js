@@ -214,6 +214,9 @@ class DataFileView extends BaseView {
             editorEl.className = 'cev-codemirror';
             contentEl.appendChild(editorEl);
 
+            // Shim editor during async CM load so isDirty() works correctly
+            this._editor = { state: { doc: { toString: () => content } }, focus: () => {}, destroy: () => {} };
+
             const createCm = () => {
                 try {
                     const isDark = this._resolveTheme() === 'dark';
