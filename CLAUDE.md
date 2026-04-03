@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.17.2
+**Current Version:** v1.17.3
 
 **v1.17.x highlights:**
 - **NEW:** AppState — observable state across all 4 clients (Python, JS, TS), SSE `state_sync` push
@@ -19,13 +19,13 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **FIX:** Heartbeat during streaming — skip health failures while single-worker busy with LLM tokens
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.17.2
-- VSCode extension (package.json): v1.17.2
-- Last release tag: v1.17.2
+- Python package (pyproject.toml): v1.17.3
+- VSCode extension (package.json): v1.17.3
+- Last release tag: v1.17.3
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
 
-## Codebase Statistics (v1.17.2, approximate)
+## Codebase Statistics (v1.17.3, approximate)
 
 | Language | Files | Lines |
 |----------|------:|------:|

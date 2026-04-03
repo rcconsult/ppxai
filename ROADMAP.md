@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.17.2 (April 2026) | SSE State Sync + Benchmark Infra
+> **Current Version**: v1.17.3 (April 2026) | CodeMirror Modular + VSCode Parity
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
