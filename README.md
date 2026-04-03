@@ -14,7 +14,7 @@
 ![ppxai Rich TUI](docs/ppxai-v1.17.2.png)
 
 ### VSCode Extension — chat panel with agent mode, tool consent, and inline code editing
-![VSCode Extension](docs/ppxai-vscode-v1.17.2.png)
+![VSCode Extension](docs/ppxai-vscode-v1.17.3.png)
 
 ## Why ppxai?
 
