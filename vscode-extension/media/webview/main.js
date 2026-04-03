@@ -17,8 +17,12 @@ const menuBtn = document.getElementById('menuBtn');
 const menuDropdown = document.getElementById('menuDropdown');
 const saveSessionMenuItem = document.getElementById('saveSessionMenuItem');
 const saveAnswerMenuItem = document.getElementById('saveAnswerMenuItem');
+const verboseToolsMenuItem = document.getElementById('verboseToolsMenuItem');
+const verboseToolsIndicator = document.getElementById('verboseToolsIndicator');
 const debugLogMenuItem = document.getElementById('debugLogMenuItem');
 const debugLogIndicator = document.getElementById('debugLogIndicator');
+const hintsBadge = document.getElementById('hintsBadge');
+const hintsStatus = document.getElementById('hintsStatus');
 
 let currentResponseEl = null;
 let currentResponseContent = '';
@@ -490,6 +494,13 @@ saveAnswerMenuItem.addEventListener('click', () => {
     menuDropdown.classList.remove('visible');
 });
 
+// Verbose Tools menu item click handler
+verboseToolsMenuItem.addEventListener('click', () => {
+    const isActive = verboseToolsIndicator.classList.contains('active');
+    vscode.postMessage({ type: 'toggleVerboseTools', enable: !isActive });
+    menuDropdown.classList.remove('visible');
+});
+
 // Debug Log menu item click handler
 debugLogMenuItem.addEventListener('click', () => {
     const isActive = debugLogIndicator.classList.contains('active');
@@ -762,6 +773,53 @@ window.addEventListener('message', (event) => {
                     usageBadge.classList.remove('has-cost');
                 }
                 usageBadge.title = 'Session: ' + message.usage.totalTokens.toLocaleString() + ' tokens, $' + cost.toFixed(4);
+            }
+            // Sync verbose/debug indicators from full status
+            if (message.toolsVerbose !== undefined) {
+                verboseToolsIndicator.classList.toggle('active', message.toolsVerbose);
+            }
+            if (message.debugLog !== undefined) {
+                debugLogIndicator.classList.toggle('active', message.debugLog);
+            }
+            break;
+
+        case 'verboseToolsStatus':
+            verboseToolsIndicator.classList.toggle('active', message.enabled);
+            break;
+
+        case 'hintsStatus':
+            if (!message.loaded || message.total === 0) {
+                hintsBadge.style.display = 'none';
+            } else {
+                hintsStatus.textContent = 'Hints: ' + message.total;
+                hintsBadge.title = message.provCount + ' provider + ' + message.modelCount + ' model hints\nSource: ' + message.source;
+                hintsBadge.style.display = '';
+                hintsBadge.classList.toggle('enabled', message.total > 0);
+            }
+            break;
+
+        case 'stateSync':
+            // SSE state_sync — update UI elements for changed fields
+            if (message.changes) {
+                const c = message.changes;
+                if (c.currentProvider !== undefined) { providerSpan.textContent = c.currentProvider; }
+                if (c.currentModel !== undefined) { modelSpan.textContent = c.currentModel; }
+                if (c.toolsEnabled !== undefined) {
+                    if (c.toolsEnabled) {
+                        toolsBadge.classList.remove('disabled');
+                        toolsBadge.classList.add('enabled');
+                    } else {
+                        toolsBadge.classList.add('disabled');
+                        toolsBadge.classList.remove('enabled');
+                        toolsBadge.textContent = 'Tools: off';
+                    }
+                }
+                if (c.toolsVerbose !== undefined) {
+                    verboseToolsIndicator.classList.toggle('active', c.toolsVerbose);
+                }
+                if (c.debugLog !== undefined) {
+                    debugLogIndicator.classList.toggle('active', c.debugLog);
+                }
             }
             break;
 

@@ -544,6 +544,8 @@ export async function activate(context: vscode.ExtensionContext) {
                     vscode.window.showInformationMessage(
                         `Configuration reloaded from ${result.config_path || 'defaults'}`
                     );
+                    // Re-sync state — config reload may change provider, model, tools, etc.
+                    chatViewProvider.updateStatus();
                 } else {
                     vscode.window.showErrorMessage(`Failed to reload config: ${result.message}`);
                 }

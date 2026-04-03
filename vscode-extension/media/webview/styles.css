@@ -264,6 +264,18 @@ body {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }
 }
+.hints-badge {
+    background: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    cursor: default;
+}
+.hints-badge.enabled {
+    background: var(--vscode-charts-green, #89d185);
+    color: var(--vscode-editor-background, #1e1e1e);
+}
 
 /* v1.12.0: Tool messages with collapsible details */
 .tool-title {

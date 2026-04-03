@@ -74,6 +74,12 @@ export interface EngineStatus {
     provider: string;
     model: string;
     tools_enabled: boolean;
+    tools_verbose?: boolean;
+    agent_mode?: boolean;
+    auto_route?: boolean;
+    working_dir?: string;
+    session_name?: string;
+    debug_log?: boolean;
     tool_count?: number;
     has_api_key?: boolean;
     message_count?: number;
@@ -243,6 +249,12 @@ export class HttpClient {
             provider: data.provider,
             model: data.model,
             tools_enabled: data.tools_enabled,
+            tools_verbose: data.tools_verbose || false,
+            agent_mode: data.agent_mode || false,
+            auto_route: data.auto_route || false,
+            working_dir: data.working_dir || '',
+            session_name: data.session_name || '',
+            debug_log: data.debug_log || false,
             auto_inject_context: data.auto_inject_context,
         };
     }

@@ -31,6 +31,8 @@ import {
     CommandResultData
 } from './shared/formatters';
 
+import { AppState } from './appState';
+
 // Import extracted handlers (Phase 2-4 refactoring)
 import {
     HandlerContext,
@@ -55,6 +57,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     // Phase 3a: EventBus for decoupled event handling
     private _eventBus: ChatEventBus = new ChatEventBus();
+
+    // v1.17.3: Canonical application state
+    private _appState: AppState = new AppState();
 
     // Phase 4a: Agent state machine (initialized lazily after backend available)
     private _agentStateMachine?: AgentStateMachine;
@@ -280,6 +285,29 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             postMessage({ type: 'error', content: message });
         });
 
+        // State sync — engine pushes AppState field changes via SSE
+        this._eventBus.on('state:sync', (changes: Record<string, any>) => {
+            // Python snake_case → TS camelCase
+            const keyMap: Record<string, string> = {
+                provider: 'currentProvider',
+                model: 'currentModel',
+                tools_enabled: 'toolsEnabled',
+                tools_verbose: 'toolsVerbose',
+                agent_mode: 'agentMode',
+                auto_route: 'autoRoute',
+                working_dir: 'workingDir',
+                session_name: 'sessionName',
+                debug_log: 'debugLog',
+            };
+            const mapped: Record<string, any> = {};
+            for (const [pyKey, value] of Object.entries(changes)) {
+                const tsKey = keyMap[pyKey] || pyKey;
+                mapped[tsKey] = value;
+            }
+            this._appState.update(mapped as any);
+            postMessage({ type: 'stateSync', changes: mapped });
+        });
+
         // UI events
         this._eventBus.on('ui:working_dir_changed', (path) => {
             postMessage({ type: 'workingDirChanged', path });
@@ -350,6 +378,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'toggleTools':
                     await this.handleToggleTools(message.enable);
+                    break;
+                case 'toggleVerboseTools':
+                    await this.handleToggleVerboseTools(message.enable);
                     break;
                 case 'toggleDebugLog':
                     await this.handleToggleDebugLog(message.enable);
@@ -1652,6 +1683,29 @@ Review your previous actions and continue. If the task is complete, respond with
         }
     }
 
+    private async handleToggleVerboseTools(enable: boolean) {
+        if (!this._view) { return; }
+
+        try {
+            await this._backend.setToolConfig('verbose', enable ? 'on' : 'off');
+            this._appState.set('toolsVerbose', enable);
+
+            this._view.webview.postMessage({
+                type: 'systemMessage',
+                content: `✓ Verbose tool output ${enable ? 'enabled' : 'disabled'}`
+            });
+            this._view.webview.postMessage({
+                type: 'verboseToolsStatus',
+                enabled: enable
+            });
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: `Failed to toggle verbose tools: ${error}`
+            });
+        }
+    }
+
     private async handleToggleDebugLog(enable: boolean) {
         if (!this._view) { return; }
 
@@ -2648,11 +2702,27 @@ Review your previous actions and continue. If the task is complete, respond with
             const toolsStatus = await this._backend.getToolsStatus();
             const usage = await this._backend.getUsage();
 
+            // Sync full state to AppState
+            this._appState.update({
+                currentProvider: status.provider,
+                currentModel: status.model,
+                toolsEnabled: toolsStatus.enabled,
+                toolsVerbose: status.tools_verbose || false,
+                agentMode: status.agent_mode || false,
+                autoRoute: status.auto_route || false,
+                workingDir: status.working_dir || '',
+                sessionName: status.session_name || '',
+                debugLog: status.debug_log || false,
+            });
+
             this._view.webview.postMessage({
                 type: 'status',
                 provider: status.provider,
                 model: status.model,
                 toolsEnabled: toolsStatus.enabled,
+                toolsVerbose: status.tools_verbose || false,
+                agentMode: status.agent_mode || false,
+                debugLog: status.debug_log || false,
                 toolCount: toolsStatus.tool_count,
                 usage: {
                     promptTokens: usage.prompt_tokens || 0,
@@ -2675,6 +2745,30 @@ Review your previous actions and continue. If the task is complete, respond with
 
         // v1.13.9: Also update context badge
         await this.updateContextBadge();
+
+        // v1.17.3: Update hints badge
+        await this.updateHintsBadge();
+    }
+
+    private async updateHintsBadge() {
+        if (!this._view) { return; }
+        try {
+            const hints = await this._backend.getActiveHints();
+            const provCount = (hints.provider_hints || []).length;
+            const modelCount = (hints.model_hints || []).length;
+            const total = provCount + modelCount;
+
+            this._view.webview.postMessage({
+                type: 'hintsStatus',
+                loaded: hints.loaded,
+                total,
+                provCount,
+                modelCount,
+                source: hints.source || 'AGENTS.md',
+            });
+        } catch {
+            // Hints are informational — don't block on failure
+        }
     }
 
     public async refreshHistory() {
@@ -2746,6 +2840,9 @@ Review your previous actions and continue. If the task is complete, respond with
             <button class="context-badge" id="contextBadge" title="Context window usage - Click to clear injected files">
                 <span id="contextUsage">Ctx: 0%</span>
             </button>
+            <span class="hints-badge" id="hintsBadge" style="display: none;" title="No bootstrap hints loaded">
+                <span id="hintsStatus">Hints</span>
+            </span>
         </div>
         <div class="workspace-info" id="workspaceInfo" style="display: none;">
             <span class="workspace-icon">📁</span>
@@ -2764,6 +2861,10 @@ Review your previous actions and continue. If the task is complete, respond with
                         <span>📄 Save Answer</span>
                     </div>
                     <div class="menu-separator"></div>
+                    <div class="menu-item" id="verboseToolsMenuItem">
+                        <span class="menu-indicator" id="verboseToolsIndicator"></span>
+                        <span>Verbose Tools</span>
+                    </div>
                     <div class="menu-item" id="debugLogMenuItem">
                         <span class="menu-indicator" id="debugLogIndicator"></span>
                         <span>Debug Log</span>
