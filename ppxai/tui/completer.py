@@ -56,6 +56,13 @@ class TextualCompleter:
         ('reset',    'Reset usage counters'),
     ]
 
+    USAGE_DISPLAY_MODES = [
+        ('session',  'Status line shows session totals'),
+        ('provider', 'Status line shows current provider totals'),
+        ('model',    'Status line shows current model totals'),
+        ('off',      'Hide usage from status line'),
+    ]
+
     CHECKPOINT_SUBCOMMANDS = [
         ('status',  'Show checkpoint status'),
         ('list',    'List recent checkpoints'),
@@ -137,9 +144,19 @@ class TextualCompleter:
             query = parts[1].lower()
 
             if cmd == '/tools':
-                return [(f"{parts[0]} {s}", d) for s, d in self.TOOLS_SUBCOMMANDS if s.startswith(query)]
+                if len(parts) == 2:
+                    return [(f"{parts[0]} {s}", d) for s, d in self.TOOLS_SUBCOMMANDS if s.startswith(query)]
+                if len(parts) == 3 and parts[1].lower() == 'help':
+                    tool_query = parts[2].lower()
+                    return [(f"{parts[0]} help {n}", d) for n, d in self._get_tool_completions(tool_query)]
+                return []
             if cmd == '/usage':
-                return [(f"{parts[0]} {s}", d) for s, d in self.USAGE_SUBCOMMANDS if s.startswith(query)]
+                if len(parts) == 2:
+                    return [(f"{parts[0]} {s}", d) for s, d in self.USAGE_SUBCOMMANDS if s.startswith(query)]
+                if len(parts) == 3 and parts[1].lower() == 'show':
+                    mode_query = parts[2].lower()
+                    return [(f"{parts[0]} show {m}", d) for m, d in self.USAGE_DISPLAY_MODES if m.startswith(mode_query)]
+                return []
             if cmd == '/checkpoint':
                 if len(parts) == 2:
                     return [(f"{parts[0]} {s}", d) for s, d in self.CHECKPOINT_SUBCOMMANDS if s.startswith(query)]
@@ -173,6 +190,26 @@ class TextualCompleter:
             (text[:cursor + item["replace_start"]] + item["text"] + " ", item.get("description", ""))
             for item in items
         ]
+
+    def _get_tool_completions(self, query: str) -> list[tuple[str, str]]:
+        """Return (tool_name, description) pairs for /tools help <tab>."""
+        if self.engine_client and self.engine_client.tools_enabled and self.engine_client.tool_manager:
+            tools = [
+                (name, tool.description[:60] if hasattr(tool, 'description') else '')
+                for name, tool in self.engine_client.tool_manager._tools.items()
+            ]
+        else:
+            # Fallback: common built-in names when tools aren't active
+            tools = [
+                ('calculator',            'Evaluate mathematical expressions'),
+                ('get_datetime',          'Get current date and time'),
+                ('list_directory',        'List files in a directory'),
+                ('read_file',             'Read file contents'),
+                ('execute_shell_command', 'Execute shell commands'),
+                ('apply_patch',           'Apply unified diff patches'),
+                ('replace_block',         'Find and replace text blocks'),
+            ]
+        return [(n, d) for n, d in sorted(tools) if not query or n.startswith(query)]
 
     def _get_model_completions(self, query: str) -> list[tuple[str, str]]:
         if not self.engine_client:
