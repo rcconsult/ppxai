@@ -182,48 +182,11 @@ class InputBox(Static):
                 self._completion_index = 0
 
             if self._completion_matches:
-                # Apply current completion
+                # Apply current completion.
+                # TextualCompleter always returns the full desired input-box
+                # content as completion_text, so a direct assignment suffices.
                 completion_text, description = self._completion_matches[self._completion_index]
-
-                # Handle different completion types
-                if text.rfind('@') >= 0:
-                    # @file/@clipboard/@url completion: replace from @ to end
-                    at_pos = text.rfind('@')
-                    text_area.text = text[:at_pos] + completion_text
-                elif self._is_file_command(text):
-                    # File commands (/show, /edit, /cat): replace from command to end
-                    # Example: "/show READ" + Tab → "/show README.md"
-                    parts = text.split(None, 1)  # Split on first whitespace
-                    if len(parts) == 2:
-                        # Has command + partial filename
-                        text_area.text = f"{parts[0]} {completion_text}"
-                    else:
-                        # Just command, no space yet
-                        text_area.text = f"{parts[0]} {completion_text}"
-                elif text.startswith('/'):
-                    # Slash command handling - preserve command prefix for subcommands
-                    parts = text.split()
-                    has_space = text and text[-1].isspace()
-
-                    if len(parts) >= 1 and (len(parts) > 1 or has_space):
-                        # Subcommand completion: preserve command prefix
-                        # Examples:
-                        #   "/provider " + Tab → "/provider perplexity"
-                        #   "/model son" + Tab → "/model sonar"
-                        #   "/tools ena" + Tab → "/tools enable"
-                        cmd = parts[0]
-                        if completion_text.startswith('/'):
-                            # Completion is a full command - replace entirely
-                            text_area.text = completion_text
-                        else:
-                            # Completion is a subcommand/argument - preserve prefix
-                            text_area.text = f"{cmd} {completion_text}"
-                    else:
-                        # Simple command completion: replace entire input
-                        text_area.text = completion_text
-                else:
-                    # Fallback: replace entire input
-                    text_area.text = completion_text
+                text_area.text = completion_text
 
                 # Move cursor to end
                 text_area.move_cursor_relative(rows=999, columns=999)
@@ -264,11 +227,6 @@ class InputBox(Static):
         elif event.key == "down":
             self._navigate_history(1)
             event.prevent_default()
-
-    def _is_file_command(self, text: str) -> bool:
-        """Check if text is a file-referencing command (/show, /edit, /cat)."""
-        text_lower = text.lower().strip()
-        return text_lower.startswith(('/show ', '/edit ', '/cat '))
 
     def _navigate_history(self, direction: int) -> None:
         """Navigate through command history."""

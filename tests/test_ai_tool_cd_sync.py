@@ -60,11 +60,10 @@ print(f"   Files available: {len(completions)}")
 if completions:
     print(f"   First 3: {[c[0] for c in completions[:3]]}")
 
-# Verify cache was invalidated
-print("\n4. Cache invalidation check:")
-print(f"   Cache size: {len(completer._file_cache)}")
-print(f"   Cache dir: {completer._cache_dir}")
-print(f"   ✓ Cache properly invalidated" if not completer._file_cache else "   ✗ Cache still populated")
+# Verify working_dir updated correctly
+print("\n4. Working directory check:")
+print(f"   Current working_dir: {completer.working_dir}")
+print(f"   ✓ Working dir matches cwd" if completer.working_dir == Path.cwd() else "   ✗ Working dir mismatch")
 
 print("\n" + "=" * 60)
 print("Test Flow:")
