@@ -2272,6 +2272,7 @@ class PpxaiApp {
             this.showAutocomplete();
         } catch (error) {
             if (reqId !== this._completeRequestId) return;
+            console.warn('[PpxaiApp] autocomplete failed:', error);
             this.hideAutocomplete();
         }
     }
