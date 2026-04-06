@@ -396,6 +396,82 @@ messageInput.addEventListener('input', () => {
 let isStreaming = false;
 let isSending = false;
 
+// === File attachment staging (v1.17.4 Phase 6.1) ===
+let pendingFiles = [];
+
+const attachBtn = document.getElementById('attachBtn');
+const fileInput = document.getElementById('fileInput');
+const attachmentBadgesEl = document.getElementById('attachmentBadges');
+
+if (attachBtn && fileInput) {
+    attachBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+        for (const file of fileInput.files) {
+            stageFile(file);
+        }
+        fileInput.value = '';
+    });
+}
+
+// Drag-drop on the input container
+const inputContainer = document.querySelector('.input-container');
+if (inputContainer) {
+    let dragCounter = 0;
+    inputContainer.addEventListener('dragenter', (e) => { e.preventDefault(); dragCounter++; });
+    inputContainer.addEventListener('dragover', (e) => e.preventDefault());
+    inputContainer.addEventListener('dragleave', () => { dragCounter--; });
+    inputContainer.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dragCounter = 0;
+        for (const file of e.dataTransfer.files) {
+            stageFile(file);
+        }
+    });
+}
+
+function stageFile(file) {
+    if (file.size > 10 * 1024 * 1024) {
+        addMessage('system', `❌ ${file.name} exceeds the 10 MB limit.`);
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+        const b64 = reader.result.split(',')[1] || '';
+        pendingFiles.push({
+            name: file.name,
+            media_type: file.type || 'application/octet-stream',
+            data: b64,
+            size: file.size,
+        });
+        renderPendingBadges();
+    };
+    reader.readAsDataURL(file);
+}
+
+function renderPendingBadges() {
+    if (!attachmentBadgesEl) return;
+    if (pendingFiles.length === 0) {
+        attachmentBadgesEl.classList.add('hidden');
+        attachmentBadgesEl.innerHTML = '';
+        return;
+    }
+    attachmentBadgesEl.classList.remove('hidden');
+    attachmentBadgesEl.innerHTML = pendingFiles.map((f, i) => {
+        const icon = f.media_type.startsWith('image/') ? '🖼' : '📄';
+        const sizeKB = (f.size / 1024).toFixed(1);
+        const shortName = f.name.length > 25 ? f.name.slice(0, 22) + '...' : f.name;
+        return `<span class="file-badge">
+            ${icon} ${shortName} (${sizeKB} KB)
+            <span class="badge-remove" onclick="removePendingFile(${i})">×</span>
+        </span>`;
+    }).join('');
+}
+
+function removePendingFile(index) {
+    pendingFiles.splice(index, 1);
+    renderPendingBadges();
+}
+
 // Send message
 function sendMessage() {
     const content = messageInput.value.trim();
@@ -415,11 +491,19 @@ function sendMessage() {
     historyIndex = -1;
     currentInput = '';
 
-    vscode.postMessage({ type: 'chat', content });
+    // v1.17.4 Phase 6.1: include pending file attachments in the message
+    const files = [...pendingFiles];
+    pendingFiles = [];
+    renderPendingBadges();
+
+    const msg = files.length > 0
+        ? { type: 'chat', content, files }
+        : { type: 'chat', content };
+    vscode.postMessage(msg);
+
     messageInput.value = '';
     messageInput.style.height = 'auto';
-    hideAutocomplete(); // v1.13.8: Hide autocomplete when sending
-    // Input stays enabled but flags prevent sending - focus is preserved
+    hideAutocomplete();
 }
 
 sendBtn.addEventListener('click', sendMessage);
@@ -820,6 +904,19 @@ window.addEventListener('message', (event) => {
                 if (c.debugLog !== undefined) {
                     debugLogIndicator.classList.toggle('active', c.debugLog);
                 }
+                // v1.17.4 Phase 6.3: contextAttachments pushed via state_sync.
+                // Full chip-strip UI lands in Phase 6.1-6.2; for now we log
+                // the change so developers can see the AppState mirror working.
+                if (c.contextAttachments !== undefined) {
+                    const count = Array.isArray(c.contextAttachments)
+                        ? c.contextAttachments.length : 0;
+                    if (count > 0) {
+                        console.log(
+                            `[ppxai] context_attachments updated: ${count} file(s)`,
+                            c.contextAttachments
+                        );
+                    }
+                }
             }
             break;
 
@@ -1059,7 +1156,31 @@ function addTimeDivider(date) {
     messagesContainer.insertBefore(divider, typingIndicator);
 }
 
+// Flatten multimodal content (string | array of content blocks) to plain
+// text for display. Mirrors Message.text_content() in the Python engine.
+// SSE stream chunks always arrive as strings — this matters only for
+// messages loaded from a saved session that contain attachments.
+function normalizeContent(content) {
+    if (typeof content === 'string') return content;
+    if (!Array.isArray(content)) return content == null ? '' : String(content);
+    const parts = [];
+    for (const block of content) {
+        if (!block || typeof block !== 'object') continue;
+        if (block.type === 'text') {
+            parts.push(block.text || '');
+        } else if (block.type === 'image_url') {
+            parts.push(`[Image: ${block.name || 'image'}]`);
+        } else if (block.type === 'input_file' || block.type === 'file') {
+            parts.push(`[File: ${block.name || block.filename || 'file'}]`);
+        } else {
+            parts.push(`[${block.type || 'part'}]`);
+        }
+    }
+    return parts.join('\n');
+}
+
 function addMessage(role, content, useMarkdown = true) {
+    content = normalizeContent(content);
     const now = new Date();
 
     // Check if we should show a time divider before this message

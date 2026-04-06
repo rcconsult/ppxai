@@ -457,18 +457,67 @@ class GeminiProvider(BaseProvider):
 
         for m in messages:
             if m.role == "system":
-                # Collect system messages for system_instruction
-                system_parts.append(m.content)
+                # Collect system messages for system_instruction. Gemini's
+                # system_instruction is text-only, so flatten any multimodal
+                # content to its text representation.
+                system_parts.append(m.text_content())
             else:
                 role = "model" if m.role == "assistant" else "user"
                 contents.append({
                     "role": role,
-                    "parts": [{"text": m.content}]
+                    "parts": self._content_to_gemini_parts(m.content),
                 })
 
         # Combine all system messages into one instruction
         system_instruction = "\n\n".join(system_parts) if system_parts else None
         return contents, system_instruction
+
+    @staticmethod
+    def _content_to_gemini_parts(content: Any) -> List[Dict[str, Any]]:
+        """Convert Message.content to Gemini `parts` list.
+
+        String content → single text part. List content (OpenAI multimodal
+        format) → mix of `{"text": ...}` and `{"inline_data": {mime_type, data}}`
+        parts. Data URIs (`data:image/png;base64,...`) are split into mime_type
+        and base64 payload. Remote `http(s)://` URLs are unsupported — Gemini
+        requires the caller to fetch and embed the bytes.
+        """
+        if isinstance(content, str):
+            return [{"text": content}]
+        if not isinstance(content, list):
+            return [{"text": str(content)}]
+
+        parts: List[Dict[str, Any]] = []
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            btype = block.get("type")
+            if btype == "text":
+                parts.append({"text": block.get("text", "")})
+            elif btype == "image_url":
+                url = (block.get("image_url") or {}).get("url", "")
+                if url.startswith("data:"):
+                    # data:image/png;base64,AAAA...
+                    try:
+                        header, data = url.split(",", 1)
+                        mime_type = header[5:].split(";", 1)[0] or "image/png"
+                    except ValueError:
+                        # Malformed data URI — skip rather than crash.
+                        continue
+                    parts.append({
+                        "inline_data": {
+                            "mime_type": mime_type,
+                            "data": data,
+                        }
+                    })
+                # Non-data URIs are silently skipped; the preprocessing layer
+                # is responsible for inlining remote images before they reach
+                # the provider.
+        # Gemini rejects empty parts — fall back to a blank text part so the
+        # turn stays valid even if every block was filtered out.
+        if not parts:
+            parts.append({"text": ""})
+        return parts
 
     def _build_config(
         self,

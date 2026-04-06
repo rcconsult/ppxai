@@ -56,6 +56,11 @@ class ModelProfile:
         max_tokens: Default max_tokens for this model (0 = use provider default)
         max_tool_iterations: Max tool loop iterations for this model (0 = use default)
         supports_reasoning: Model supports reasoning/thinking tokens (o-series)
+        supports_vision: Model accepts `image_url` content parts natively
+            (v1.17.4 Phase 2.5). Used by file preprocessing to decide
+            whether to send images directly or route through a VL
+            sidecar for captioning. Verified against official docs per
+            provider family — see BUILTIN_PROFILES below for specifics.
         restricted_params: Parameters that must NOT be sent to this model
             (e.g., temperature/top_p for o-series reasoning models)
         tier: Benchmark performance tier (S/A/B/C/D) for reference
@@ -64,6 +69,7 @@ class ModelProfile:
     max_tokens: int = 0
     max_tool_iterations: int = 0
     supports_reasoning: bool = False
+    supports_vision: bool = False
     restricted_params: List[str] = field(default_factory=list)
     tier: str = ""
 
@@ -83,6 +89,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         tool_calling=ToolCallingProfile(mode="native"),
         max_tokens=65_536,
         max_tool_iterations=25,
+        supports_vision=True,
         tier="S",
     ),
     "gemini-2.5-flash-lite*": ModelProfile(
@@ -93,12 +100,14 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         ),
         max_tokens=8_192,
         max_tool_iterations=10,
+        supports_vision=True,
         tier="D",
     ),
     "gemini-2.5-flash*": ModelProfile(
         tool_calling=ToolCallingProfile(mode="native"),
         max_tokens=65_536,
         max_tool_iterations=25,
+        supports_vision=True,
         tier="S",
     ),
     "qwen3-coder*": ModelProfile(
@@ -120,6 +129,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         ),
         max_tokens=128_000,
         restricted_params=["temperature", "top_p"],
+        supports_vision=True,
         tier="A",
     ),
     "gpt-4.1": ModelProfile(
@@ -128,6 +138,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
             strip_json_from_text=True,
         ),
         max_tokens=32_768,
+        supports_vision=True,
         tier="A",
     ),
     "gpt-5-mini*": ModelProfile(
@@ -137,6 +148,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
             fallback_on_empty=True,
         ),
         max_tokens=128_000,
+        supports_vision=True,
         tier="A",
     ),
     "gpt-5": ModelProfile(
@@ -145,6 +157,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
             strip_json_from_text=True,
         ),
         max_tokens=128_000,
+        supports_vision=True,
         tier="A",
     ),
 
@@ -153,6 +166,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
     "gpt-4.1-mini*": ModelProfile(
         tool_calling=ToolCallingProfile(mode="prompt_based"),
         max_tokens=32_768,
+        supports_vision=True,
         tier="B",
     ),
     # NOTE: codex-mini MUST come before codex* to avoid glob shadowing
@@ -166,6 +180,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         max_tokens=128_000,
         max_tool_iterations=20,
         restricted_params=["temperature", "top_p"],
+        supports_vision=True,
         tier="B",
     ),
     "gpt-5.1-codex*": ModelProfile(
@@ -175,6 +190,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         ),
         max_tokens=128_000,
         restricted_params=["temperature", "top_p"],
+        supports_vision=True,
         tier="B",
     ),
     "o4-mini*": ModelProfile(
@@ -184,6 +200,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         ),
         max_tokens=100_000,
         supports_reasoning=True,
+        supports_vision=True,
         restricted_params=["temperature", "top_p"],
         tier="B",
     ),
@@ -198,6 +215,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         ),
         max_tokens=8_192,
         restricted_params=["temperature", "top_p"],
+        supports_vision=True,
         tier="C",
     ),
     "gpt-4.1-nano*": ModelProfile(
@@ -206,31 +224,39 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
             strip_json_from_text=True,
         ),
         max_tokens=32_768,
+        supports_vision=True,
         tier="C",
     ),
     "gpt-4o-mini*": ModelProfile(
         tool_calling=ToolCallingProfile(mode="native"),
         max_tokens=16_384,
+        supports_vision=True,
         tier="C",
     ),
     "gpt-4o*": ModelProfile(
         tool_calling=ToolCallingProfile(mode="native"),
         max_tokens=16_384,
+        supports_vision=True,
         tier="C",
     ),
 
     # ── Tier D: <40% success ──────────────────────────────────────────
 
     # ── Reasoning models (o-series) ──────────────────────────────────
+    # Vision support per OpenAI docs (April 2026):
+    # - o1, o3, o3-pro, o4-mini → support image_url input
+    # - o1-mini, o3-mini → text-only (explicitly text-only variants)
 
     "o3-pro*": ModelProfile(
         tool_calling=ToolCallingProfile(mode="native"),
         max_tokens=100_000,
         supports_reasoning=True,
+        supports_vision=True,
         restricted_params=["temperature", "top_p"],
         tier="A",
     ),
     "o3-mini*": ModelProfile(
+        # Text-only reasoning model — no supports_vision.
         tool_calling=ToolCallingProfile(mode="native"),
         max_tokens=100_000,
         supports_reasoning=True,
@@ -241,10 +267,12 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         tool_calling=ToolCallingProfile(mode="native"),
         max_tokens=100_000,
         supports_reasoning=True,
+        supports_vision=True,
         restricted_params=["temperature", "top_p"],
         tier="A",
     ),
     "o1-mini*": ModelProfile(
+        # Text-only reasoning model — no supports_vision.
         tool_calling=ToolCallingProfile(mode="native"),
         max_tokens=65_536,
         supports_reasoning=True,
@@ -255,6 +283,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         tool_calling=ToolCallingProfile(mode="native"),
         max_tokens=100_000,
         supports_reasoning=True,
+        supports_vision=True,
         restricted_params=["temperature", "top_p"],
         tier="B",
     ),
@@ -346,12 +375,14 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         tool_calling=ToolCallingProfile(mode="prompt_based"),
         max_tokens=8_192,
         max_tool_iterations=20,
+        supports_vision=True,
         tier="A",
     ),
     "sonar*": ModelProfile(
         tool_calling=ToolCallingProfile(mode="prompt_based"),
         max_tokens=2_048,
         max_tool_iterations=20,
+        supports_vision=True,
         tier="B",
     ),
 
@@ -372,10 +403,25 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         ),
         max_tokens=65_536,
         max_tool_iterations=25,
+        supports_vision=True,
         tier="S",
     ),
     # ── Gemini 3.1 models ───────────────────────────────────────────
 
+    # Gemini 3.1 Flash Lite: cheapest Gemini 3 tier, replaces 2.5-flash-lite.
+    # Same fallback-on-empty pattern as other Flash Lite variants —
+    # small models occasionally return empty tool calls under load.
+    "gemini-3.1-flash-lite*": ModelProfile(
+        tool_calling=ToolCallingProfile(
+            mode="native",
+            fallback_on_empty=True,
+            fallback_on_failure=True,
+        ),
+        max_tokens=16_384,
+        max_tool_iterations=15,
+        supports_vision=True,
+        tier="B",
+    ),
     "gemini-3.1-pro*customtools*": ModelProfile(
         tool_calling=ToolCallingProfile(
             mode="native",
@@ -384,6 +430,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         ),
         max_tokens=65_536,
         max_tool_iterations=20,
+        supports_vision=True,
         tier="A",
     ),
     "gemini-3.1-pro*": ModelProfile(
@@ -393,7 +440,94 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         ),
         max_tokens=65_536,
         max_tool_iterations=20,
+        supports_vision=True,
         tier="A",
+    ),
+
+    # ── Gemma 4 family ──────────────────────────────────────────────
+    # Google's open-weights instruct family. Served via the Gemini API
+    # (same API key) or self-hosted via Ollama / vLLM. All variants
+    # support vision; only the "e" edge variants also support audio.
+    # Pattern order matters: specific variants before the generic gemma-4*
+    # fallback to avoid glob shadowing (same rule as codex-mini vs codex*).
+
+    # 31B dense: full-capability Gemma 4. Native tool calling; 256K context.
+    "gemma-4-31b*": ModelProfile(
+        tool_calling=ToolCallingProfile(
+            mode="native",
+            fallback_on_empty=True,
+        ),
+        max_tokens=32_768,
+        max_tool_iterations=20,
+        supports_vision=True,
+        tier="B",
+    ),
+    # 26B MoE (3.8B active): faster inference than 31B dense at similar quality.
+    "gemma-4-26b*": ModelProfile(
+        tool_calling=ToolCallingProfile(
+            mode="native",
+            fallback_on_empty=True,
+        ),
+        max_tokens=32_768,
+        max_tool_iterations=20,
+        supports_vision=True,
+        tier="B",
+    ),
+    # Edge variants (E4B / E2B): smaller, prompt-based tool calling is
+    # more reliable for models under 10B parameters. Also support audio.
+    "gemma-4-e*": ModelProfile(
+        tool_calling=ToolCallingProfile(
+            mode="prompt_based",
+            fallback_on_empty=True,
+        ),
+        max_tokens=8_192,
+        max_tool_iterations=15,
+        supports_vision=True,
+        tier="C",
+    ),
+    # Generic catch-all for any future Gemma 4 variant (4-it, 4-v2, etc.)
+    # matched AFTER the specific variants above.
+    "gemma-4*": ModelProfile(
+        tool_calling=ToolCallingProfile(
+            mode="native",
+            fallback_on_empty=True,
+        ),
+        max_tokens=16_384,
+        max_tool_iterations=15,
+        supports_vision=True,
+        tier="C",
+    ),
+
+    # ── Local vision-language (VL) models ────────────────────────────
+    # These models are served locally (Ollama, vLLM, etc.) and accept
+    # image_url content parts natively. Listed here so `file_preprocessing`
+    # can route images to them directly without going through a VL sidecar.
+    # Patterns are broad because local deployments use many variants.
+
+    "*qwen3-vl*": ModelProfile(
+        tool_calling=ToolCallingProfile(mode="native"),
+        supports_vision=True,
+        tier="B",
+    ),
+    "*qwen2-vl*": ModelProfile(
+        tool_calling=ToolCallingProfile(mode="native"),
+        supports_vision=True,
+        tier="C",
+    ),
+    "*llava*": ModelProfile(
+        tool_calling=ToolCallingProfile(mode="prompt_based"),
+        supports_vision=True,
+        tier="C",
+    ),
+    "*pixtral*": ModelProfile(
+        tool_calling=ToolCallingProfile(mode="native"),
+        supports_vision=True,
+        tier="B",
+    ),
+    "*minicpm-v*": ModelProfile(
+        tool_calling=ToolCallingProfile(mode="prompt_based"),
+        supports_vision=True,
+        tier="C",
     ),
 
 }
@@ -494,3 +628,21 @@ def get_profile(model: str) -> ModelProfile:
         ModelProfile for the model
     """
     return get_registry().get(model)
+
+
+def supports_vision(model: str) -> bool:
+    """Return True if the given model accepts image_url content parts natively.
+
+    v1.17.4 Phase 2.5: used by `file_preprocessing` to decide whether to
+    send images directly to the provider or route them through a VL
+    sidecar for captioning. Unknown / unregistered models return False
+    (conservative default — the caller decides what to do when vision
+    is unsupported, e.g. surface a helpful error or fall back to text).
+
+    Args:
+        model: Model ID (e.g., "gpt-5.2", "gemini-3-flash-preview")
+
+    Returns:
+        True if the model's profile declares supports_vision=True.
+    """
+    return get_registry().get(model).supports_vision

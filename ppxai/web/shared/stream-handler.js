@@ -39,11 +39,18 @@ class StreamHandler {
      * @param {AbortSignal} [signal]
      * @yields {{ type: string, data: * }}
      */
-    async* stream(message, signal) {
+    async* stream(message, signal, files = []) {
+        // v1.17.4 Phase 5.3: include files array when attachments are present.
+        // The server ChatRequest model accepts `files: [{name, media_type, data}]`
+        // where data is base64. When files is empty the body is identical to
+        // the pre-Phase-5 format (just `{message}`) so backward compat is free.
+        const body = files.length > 0
+            ? { message, files }
+            : { message };
         const response = await fetch(`${this.serverUrl}/chat`, {
             method:  'POST',
             headers: this.getHeaders(true),
-            body:    JSON.stringify({ message }),
+            body:    JSON.stringify(body),
             signal
         });
 

@@ -4725,15 +4725,17 @@ class TestKeyRegistry:
     """Test the centralized key binding registry."""
 
     def test_app_bindings_count(self):
-        """get_app_bindings() returns all app-level bindings."""
+        """get_app_bindings() returns all app-level bindings.
+        v1.17.4 Phase 7.2: +1 for ctrl+u (attach_shortcut).
+        """
         from ppxai.tui.keys import get_app_bindings
         bindings = get_app_bindings()
-        assert len(bindings) == 15
+        assert len(bindings) == 16
 
     def test_widget_bindings(self):
         """get_widget_bindings() returns correct counts for each widget."""
         from ppxai.tui.keys import get_widget_bindings
-        assert len(get_widget_bindings("FileTree")) == 3
+        assert len(get_widget_bindings("FileTree")) == 4  # v1.17.4: +1 for 'a' (attach)
         assert len(get_widget_bindings("SidePanel")) == 2
         assert len(get_widget_bindings("DataViewer")) == 3
         assert len(get_widget_bindings("TableViewer")) == 1

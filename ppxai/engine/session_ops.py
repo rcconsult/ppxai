@@ -86,7 +86,7 @@ def export_answer(engine, filename: Optional[str] = None) -> Path:
     last_assistant_msg = None
     for msg in reversed(engine.session.messages):
         if msg.role == 'assistant':
-            last_assistant_msg = msg.content
+            last_assistant_msg = msg.text_content()
             break
 
     if not last_assistant_msg:
@@ -127,7 +127,7 @@ def get_status(engine) -> Dict[str, Any]:
 
 def get_context_info(engine) -> Dict[str, Any]:
     """Get context usage information for /context command."""
-    total_chars = sum(len(m.content) for m in engine.session.messages)
+    total_chars = sum(len(m.text_content()) for m in engine.session.messages)
     estimated_tokens = total_chars // 4
     context_limit = get_model_context_limit(engine.provider_name, engine.model)
     usage_percent = (estimated_tokens / context_limit) * 100 if context_limit > 0 else 0
@@ -165,8 +165,17 @@ def clear_injected_contexts(engine) -> int:
     )
 
     for msg in engine.session.messages:
-        if msg.role == "user":
+        if msg.role != "user":
+            continue
+        # For string content, apply the regex directly. For multimodal list
+        # content, apply the regex only to text parts — image/file parts are
+        # left untouched. Injected context blocks only ever appear in text.
+        if isinstance(msg.content, str):
             msg.content = injection_pattern.sub('', msg.content)
+        elif isinstance(msg.content, list):
+            for block in msg.content:
+                if isinstance(block, dict) and block.get("type") == "text":
+                    block["text"] = injection_pattern.sub('', block.get("text", ""))
 
     engine._injected_contexts.clear()
 

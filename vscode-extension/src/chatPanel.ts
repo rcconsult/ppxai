@@ -298,6 +298,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 working_dir: 'workingDir',
                 session_name: 'sessionName',
                 debug_log: 'debugLog',
+                context_attachments: 'contextAttachments',  // v1.17.4 Phase 6.3
             };
             const mapped: Record<string, any> = {};
             for (const [pyKey, value] of Object.entries(changes)) {
@@ -361,7 +362,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             console.log('[ppxai] Received message from webview:', message.type);
             switch (message.type) {
                 case 'chat':
-                    await this.handleChat(message.content);
+                    // v1.17.4 Phase 6.1: webview may include files[] for multimodal
+                    await this.handleChat(message.content, message.files);
                     break;
                 case 'clear':
                     await this._backend.clearHistory();
@@ -535,7 +537,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private async handleChat(content: string) {
+    private async handleChat(content: string, files?: Array<{name: string; media_type: string; data: string}>) {
         if (!this._view) { return; }
 
         const trimmed = content.trim();
@@ -547,10 +549,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         }
 
         // Regular chat message
-        // Show user message
+        // Show user message (include attachment hint if files present)
+        const displayContent = files && files.length > 0
+            ? `${content}\n\n[Attached: ${files.map(f => f.name).join(', ')}]`
+            : content;
         this._view.webview.postMessage({
             type: 'userMessage',
-            content
+            content: displayContent
         });
 
         // Process @filename references and build augmented message
@@ -573,9 +578,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         this._view.webview.postMessage({ type: 'startResponse' });
 
         try {
+            // v1.17.4 Phase 6.1: pass files array to the backend
+            // chat method so they get included in the POST /chat body.
+            // When no files are attached, behavior is unchanged.
             await this._backend.chat(finalMessage, (event) => {
                 this.handleStreamEvent(event);
-            });
+            }, files);
         } catch (error) {
             // Don't show interrupt as error - user initiated it
             if (error instanceof Error && error.message === 'Interrupted by user') {
@@ -2879,10 +2887,14 @@ Review your previous actions and continue. If the task is complete, respond with
     </div>
 
     <div class="input-container">
-        <div class="input-hint">Type /help for commands • @file to reference • ↑/↓ for history</div>
+        <div class="input-hint">Type /help for commands • @file to reference • ↑/↓ for history • drag files to attach</div>
+        <div class="attachment-badges hidden" id="attachmentBadges"></div>
         <div class="autocomplete-container">
             <div class="autocomplete-dropdown" id="autocompleteDropdown"></div>
             <div class="input-wrapper">
+                <input type="file" id="fileInput" multiple style="display:none"
+                       accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.xlsx,.pptx,.docx,.txt,.md,.py,.js,.ts,.json,.yaml,.yml">
+                <button id="attachBtn" class="attach-btn" title="Attach files">📎</button>
                 <textarea
                     id="messageInput"
                     placeholder="Ask anything or type / for commands..."

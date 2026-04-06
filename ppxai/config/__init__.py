@@ -87,6 +87,7 @@ from .tools import (
     get_agent_config,
     get_visualization_config,
     get_container_config,
+    get_vision_model_config,
 )
 
 # TUI and session
@@ -243,6 +244,7 @@ __all__ = [
     "get_shell_config",
     "get_visualization_config",
     "get_container_config",
+    "get_vision_model_config",
     "get_tool_pricing",
     # TUI functions
     "get_tui_config",

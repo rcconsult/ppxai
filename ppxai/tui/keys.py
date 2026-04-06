@@ -86,8 +86,15 @@ ALL_KEYS: list[KeyDef] = [
            context="when file tree focused"),
     KeyDef("space", "inject", "@file", "FileTree", show=True,
            context="when file tree focused"),
+    KeyDef("a", "attach_file", "Attach", "FileTree", show=True,
+           context="when file tree focused",
+           notes="v1.17.4 Phase 7.1: Stage highlighted file as upload for next chat turn"),
     KeyDef("escape", "dismiss_tree", "Back", "FileTree", show=True,
            context="when file tree focused"),
+
+    # ── App-level: Ctrl+U attach shortcut ──────────────────────────────────
+    KeyDef("ctrl+u", "attach_shortcut", "Attach File", "app",
+           notes="v1.17.4 Phase 7.2: Opens file tree if hidden, or focuses it for attach"),
 
     # ── SidePanel ───────────────────────────────────────────────────────────
     KeyDef("escape", "close_panel", "Close", "SidePanel", show=True,

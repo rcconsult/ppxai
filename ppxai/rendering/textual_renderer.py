@@ -133,7 +133,9 @@ async def render_confirmation(renderer: TextualRenderer, result: ConfirmationRes
         messages = result.details.get("messages", [])
         for msg in messages:
             role = msg.role
-            content = msg.content
+            # Extract text for display; list content (multimodal) is flattened
+            # with [Image:/File:] placeholders for any non-text parts.
+            content = msg.text_content() if hasattr(msg, "text_content") else msg.content
 
             if role == "user":
                 chat_view.add_user_message(content)

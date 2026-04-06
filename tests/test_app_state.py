@@ -239,5 +239,8 @@ class TestAppStateFieldCoverage:
             assert type(value) == type(default), f"{key}: expected {type(default)}, got {type(value)}"
 
     def test_field_count(self):
-        # Catch accidental field removal
-        assert len(AppState.FIELDS) == 17
+        # Catch accidental field removal. Bump this when adding new canonical
+        # state fields — the number is intentional friction so additions get
+        # reviewed against the cross-client (Python/JS/TS) schema.
+        # v1.17.4 Phase 1: +1 for context_attachments (multimodal tracking).
+        assert len(AppState.FIELDS) == 18

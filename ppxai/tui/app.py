@@ -58,6 +58,7 @@ from ppxai.version import __version__
 
 # Command Factory integration (Phase 6.1.1 - Technical debt cleanup)
 from ppxai.commands import CommandFactory
+from ppxai.commands.attach import build_multimodal_content, _load_file as _attach_load_file
 from ppxai.commands.protocol import CommandContext
 from ppxai.commands.results import CommandResult, DirectoryListingResult, DirectoryTreeResult
 from ppxai.rendering.textual_renderer import TextualRenderer
@@ -132,6 +133,13 @@ class PPXAIDEApp(App):
         self._status_bar: Optional["StatusBar"] = None
         self._footer_status: Optional["FooterStatus"] = None
         self._input_box: Optional["InputBox"] = None
+
+        # Files staged for the next chat turn (v1.17.4 Phase 7.1-7.3).
+        # Populated by FileTree.FileAttach handler and /attach command,
+        # consumed and cleared by on_input_box_submitted before calling
+        # engine.chat(). Public property so CommandContext proxy can
+        # forward it to /attach's handle_attach.
+        self.pending_files: list = []
 
     def compose(self) -> ComposeResult:
         """Compose the application layout with split view support."""
@@ -208,6 +216,22 @@ class PPXAIDEApp(App):
                     scope_text = "/".join(scopes)  # e.g., "global/project" or "project"
                     status_bar.add_badge("context", "Context", scope_text)
                     self._log.info(f"Bootstrap context loaded: {scope_text}")
+
+        # Subscribe to context_attachments changes (v1.17.4 Phase 7.4).
+        # When the user attaches images (via /attach in Rich TUI, or
+        # via the file tree, or loaded from a session), the status bar
+        # shows a persistent badge. Same data source as Rich's status
+        # bar — AppState.context_attachments is the canonical field.
+        if self._engine_client:
+            self._engine_client.state.on(
+                "context_attachments",
+                self._on_context_attachments_changed,
+            )
+            # Render initial snapshot in case a restored session already
+            # has attachments.
+            initial_attachments = self._engine_client.state.get("context_attachments") or []
+            if initial_attachments:
+                self._on_context_attachments_changed(initial_attachments)
 
         # Add optional status bar badges based on config (Phase 1.2)
         tui_config = get_tui_config()
@@ -525,6 +549,37 @@ class PPXAIDEApp(App):
             now = datetime.now().strftime("%Y-%m-%d %H:%M")
             status_bar.update_badge("datetime", now)
 
+    def _on_context_attachments_changed(self, attachments) -> None:
+        """Callback from AppState — update the attachment badge (Phase 7.4).
+
+        Called by the engine's `_refresh_context_attachments` → AppState →
+        listener chain whenever session.messages mutates and the multimodal
+        attachment set changes. The badge shows a compact count + filenames
+        in the status bar, matching the Rich TUI's `📎 N: file1, file2`
+        format. Empty attachments list hides the badge.
+        """
+        if not self._status_bar:
+            return
+        if not attachments:
+            self._status_bar.remove_badge("attachments")
+            return
+
+        count = len(attachments)
+        names = [
+            (a.get("name") if isinstance(a, dict) else getattr(a, "name", "?"))
+            for a in attachments
+        ]
+        short = []
+        for n in names[:3]:
+            short.append(n if len(n) <= 18 else n[:15] + "...")
+        label = ", ".join(short)
+        if count > 3:
+            label += f", +{count - 3}"
+
+        self._status_bar.add_badge(
+            "attachments", "\U0001F4CE", f"{count}: {label}", variant="warning"
+        )
+
     def _format_cwd_display(self, path: str) -> str:
         """Format working directory path for status bar display.
 
@@ -746,7 +801,9 @@ class PPXAIDEApp(App):
         self._log.info(f"Rendering {len(messages)} messages to chat view")
         for msg in messages:
             role = msg.role
-            content = msg.content
+            # Flatten multimodal content to text for widget display; image
+            # and file parts become [Image: name] / [File: name] placeholders.
+            content = msg.text_content()
 
             if role == "user":
                 chat_view.add_user_message(content)
@@ -934,6 +991,33 @@ class PPXAIDEApp(App):
 
         # Stream response from engine using Textual's call_from_thread()
         if self._engine_client:
+            # v1.17.4 Phase 7.3: if files are staged, build multimodal
+            # content. Same pipeline as Rich TUI (build_multimodal_content
+            # → preprocess_file). Pending files are cleared after the
+            # stream thread receives the payload, so a failed stream
+            # doesn't leave orphaned attachments on the next turn.
+            pending = list(self.pending_files)
+            if pending:
+                chat_payload = build_multimodal_content(
+                    message,
+                    pending,
+                    model=self._engine_client.model or "",
+                    provider=self._engine_client.provider_name or "",
+                    file_store=self._engine_client.file_store,
+                    vl_captioner=(
+                        self._engine_client.caption_image
+                        if self._engine_client.has_vision_model()
+                        else None
+                    ),
+                )
+                self.pending_files.clear()
+                self._log.info(
+                    f"Sending multimodal: {len(pending)} file(s), "
+                    f"{len(chat_payload)} part(s)"
+                )
+            else:
+                chat_payload = message
+
             # Setup in main thread (UI-safe)
             status_bar = self._status_bar
             self._current_message_content = ""
@@ -955,7 +1039,7 @@ class PPXAIDEApp(App):
             # Worker will use call_from_thread() to emit events in main thread
             thread = threading.Thread(
                 target=self._stream_response_thread,
-                args=(message, self._engine_client),
+                args=(chat_payload, self._engine_client),
                 daemon=True
             )
             thread.start()
@@ -1689,6 +1773,37 @@ class PPXAIDEApp(App):
         input_box = self._input_box
         input_box.inject_text(f"@file:{rel_path} ")
         self.notify(f"Injected @file:{rel_path}", title="File injected")
+
+    def on_file_tree_file_attach(self, event: FileTree.FileAttach) -> None:
+        """Handle file tree 'a' key — stage file for next chat turn (Phase 7.1).
+
+        Reads file bytes, runs early validation for images, creates a
+        PendingFile, and stages it in `_pending_files`. On the next chat
+        submit, `_stream_response_thread` will consume the pending files
+        through `build_multimodal_content` → `preprocess_file`.
+        """
+        file_store = getattr(self._engine_client, "file_store", None)
+        pf, err = _attach_load_file(str(event.path), self._working_dir, file_store=file_store)
+        if err:
+            self.notify(err, title="Attach failed", severity="error", timeout=5)
+            return
+
+        self.pending_files.append(pf)
+        kind_icon = "\U0001F5BC" if pf.kind == "image" else "\U0001F4C4"
+        self.notify(
+            f"{kind_icon} {pf.name} ({pf.media_type}, {pf.size / 1024:.1f} KB) staged",
+            title="Attached",
+            timeout=3,
+        )
+
+    def action_attach_shortcut(self) -> None:
+        """Ctrl+U — open or focus the file tree for attaching (Phase 7.2).
+
+        If the file tree is hidden, toggle it visible. If already visible,
+        just focus it so the user can navigate and press 'a' to attach.
+        """
+        # Use the same toggle action as Ctrl+B, which shows/hides the tree.
+        self.action_toggle_file_tree()
 
     async def show_file_in_panel(
         self,

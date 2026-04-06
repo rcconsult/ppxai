@@ -54,49 +54,63 @@ class TestMessageToolFields:
 # ---------------------------------------------------------------------------
 
 class TestSessionToolMessageSerialization:
-    """Test session save/load round-trip with tool messages."""
+    """Test session save/load round-trip with tool messages.
 
-    def test_serialize_message_basic(self):
+    v1.17.4 Phase 2.1a: _serialize_message / _deserialize_message became
+    instance methods (was @staticmethod) because they now optionally
+    consult `self.file_store` to rewrite multimodal content parts. For
+    plain text / tool-call content these methods behave identically to
+    the previous staticmethods — only the call site changed from
+    `SessionManager._serialize_message(m)` to `session._serialize_message(m)`.
+    """
+
+    @pytest.fixture
+    def session(self, tmp_path):
+        return SessionManager(
+            sessions_dir=tmp_path, exports_dir=tmp_path / "exports"
+        )
+
+    def test_serialize_message_basic(self, session):
         """Basic message serialization (no tool fields)."""
         m = Message("user", "hello")
-        d = SessionManager._serialize_message(m)
+        d = session._serialize_message(m)
         assert d == {"role": "user", "content": "hello"}
 
-    def test_serialize_message_with_tool_calls(self):
+    def test_serialize_message_with_tool_calls(self, session):
         """Serialization includes tool_calls when present."""
         tool_calls = [{"id": "call_1", "type": "function", "function": {"name": "read_file", "arguments": "{}"}}]
         m = Message("assistant", "", tool_calls=tool_calls)
-        d = SessionManager._serialize_message(m)
+        d = session._serialize_message(m)
         assert d["tool_calls"] == tool_calls
         assert "tool_call_id" not in d
 
-    def test_serialize_message_with_tool_call_id(self):
+    def test_serialize_message_with_tool_call_id(self, session):
         """Serialization includes tool_call_id when present."""
         m = Message("tool", "result", tool_call_id="call_1")
-        d = SessionManager._serialize_message(m)
+        d = session._serialize_message(m)
         assert d["tool_call_id"] == "call_1"
         assert "tool_calls" not in d
 
-    def test_deserialize_message_basic(self):
+    def test_deserialize_message_basic(self, session):
         """Basic message deserialization (old format without tool fields)."""
-        m = SessionManager._deserialize_message({"role": "user", "content": "hello"})
+        m = session._deserialize_message({"role": "user", "content": "hello"})
         assert m.role == "user"
         assert m.content == "hello"
         assert m.tool_calls is None
         assert m.tool_call_id is None
 
-    def test_deserialize_message_with_tool_calls(self):
+    def test_deserialize_message_with_tool_calls(self, session):
         """Deserialization restores tool_calls."""
         tool_calls = [{"id": "call_1", "type": "function", "function": {"name": "read_file", "arguments": "{}"}}]
-        m = SessionManager._deserialize_message({
+        m = session._deserialize_message({
             "role": "assistant", "content": "", "tool_calls": tool_calls
         })
         assert m.tool_calls == tool_calls
         assert m.tool_call_id is None
 
-    def test_deserialize_message_with_tool_call_id(self):
+    def test_deserialize_message_with_tool_call_id(self, session):
         """Deserialization restores tool_call_id."""
-        m = SessionManager._deserialize_message({
+        m = session._deserialize_message({
             "role": "tool", "content": "result", "tool_call_id": "call_1"
         })
         assert m.tool_call_id == "call_1"

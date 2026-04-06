@@ -15,7 +15,7 @@ from ..engine import EngineClient, EventType
 logger = get_logger("server")
 
 
-async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str = "default", request: Request = None) -> AsyncGenerator[str, None]:
+async def sse_event_generator(prompt, engine: EngineClient, session_id: str = "default", request: Request = None) -> AsyncGenerator[str, None]:
     """Generate SSE events from engine chat.
 
     SSE format: data: {json}\n\n
@@ -23,6 +23,9 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
     Drains engine.drain_events() side-channel for consent requests, state sync,
     and status events while the main chat generator is blocked.
     v1.17.2: Thread-safe event queue via drain_events().
+    v1.17.4: `prompt` accepts MessageContent (str | list[dict]) so the chat
+    route can pass multimodal content lists with file attachments directly
+    through to EngineClient.chat().
     v1.16.0: B11 — Detects client disconnect and cancels background engine task.
     """
     if not engine:
@@ -30,7 +33,15 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
         yield f"data: {json.dumps({'type': 'error', 'data': 'Engine not initialized'})}\n\n"
         return
 
-    logger.log_user_message(prompt)
+    # Log text content for the prompt (multimodal content is logged at
+    # engine level; here we just want the text portion for the server log).
+    if isinstance(prompt, str):
+        logger.log_user_message(prompt)
+    elif isinstance(prompt, list):
+        text_parts = [b.get("text", "") for b in prompt if isinstance(b, dict) and b.get("type") == "text"]
+        logger.log_user_message(" ".join(text_parts)[:200] or "[multimodal]")
+    else:
+        logger.log_user_message(str(prompt)[:200])
 
     try:
         # v1.16.0: Use racing iterator to poll consent queue while engine is blocked.
@@ -146,7 +157,7 @@ async def sse_event_generator(prompt: str, engine: EngineClient, session_id: str
                 # Find and remove orphan user messages (consecutive user messages at the end)
                 while len(messages) > 1 and messages[-1].role == "user" and messages[-2].role == "user":
                     removed = messages.pop()
-                    logger.info(f"Session cleanup: removed orphan user message (len={len(removed.content)})")
+                    logger.info(f"Session cleanup: removed orphan user message (len={len(removed.text_content())})")
                 logger.info(f"Session cleaned up, now has {len(messages)} messages")
             except Exception as cleanup_error:
                 logger.error(f"Session cleanup failed: {cleanup_error}")
@@ -207,7 +218,7 @@ async def sse_coding_task_generator(
                 messages = engine.session.messages
                 while len(messages) > 1 and messages[-1].role == "user" and messages[-2].role == "user":
                     removed = messages.pop()
-                    logger.info(f"Session cleanup: removed orphan user message (len={len(removed.content)})")
+                    logger.info(f"Session cleanup: removed orphan user message (len={len(removed.text_content())})")
             except Exception as cleanup_error:
                 logger.error(f"Session cleanup failed: {cleanup_error}")
 

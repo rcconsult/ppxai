@@ -1368,6 +1368,91 @@ body {
     font-size: 16px;
 }
 
+/* Attach button (v1.17.4 Phase 5.1) */
+.attach-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    transition: background 0.15s, border-color 0.15s;
+}
+.attach-btn:hover {
+    background: var(--hover-bg, rgba(255,255,255,0.05));
+    border-color: var(--accent-color);
+}
+
+/* Attachment badges strip (v1.17.4 Phase 5.2) */
+.attachment-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 12px;
+    max-height: 80px;
+    overflow-y: auto;
+}
+.attachment-badges.hidden { display: none; }
+
+.file-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    background: var(--hover-bg, rgba(255,255,255,0.08));
+    border: 1px solid var(--border-color);
+}
+.file-badge .badge-icon { opacity: 0.7; }
+.file-badge .badge-name {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.file-badge .badge-remove {
+    cursor: pointer;
+    opacity: 0.5;
+    font-size: 14px;
+    line-height: 1;
+}
+.file-badge .badge-remove:hover { opacity: 1; }
+
+/* Context attachment indicator (v1.17.4 Phase 5.4) */
+.attachment-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    margin: 0 12px 4px;
+    border-radius: 10px;
+    font-size: 12px;
+    background: var(--hover-bg, rgba(255,255,255,0.06));
+    border: 1px solid var(--border-color);
+}
+.attachment-badge.hidden { display: none; }
+
+/* Drag-drop overlay (v1.17.4 Phase 5.1) */
+.drag-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    pointer-events: none;
+}
+.drag-overlay-text {
+    color: white;
+    font-size: 24px;
+    font-weight: 600;
+    padding: 40px 60px;
+    border: 3px dashed rgba(255,255,255,0.5);
+    border-radius: 16px;
+}
+
 /* Autocomplete dropdown */
 .autocomplete-container {
     position: relative;

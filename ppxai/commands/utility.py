@@ -607,12 +607,21 @@ def _relative_time(mtime: float) -> str:
 def handle_ls(context: CommandContext, args: str) -> CommandResult:
     """Handle /ls command - list directory contents.
 
+    Behaves like shell `ls`:
+    - `/ls` (no args) → list current working directory
+    - `/ls <dir>` → list that directory
+    - `/ls <file>` → show the file as a single-row entry (v1.17.4 — was
+      an error before, which surprised users passing paths from /save
+      output or tab completion)
+    - `/ls -a <path>` → include hidden files
+
     Args:
         context: Command context providing access to engine client
         args: Optional path and -a flag for hidden files
 
     Returns:
-        TableResult with directory listing, or ErrorResult on failure
+        DirectoryListingResult with listing, or ErrorResult if the path
+        doesn't exist or is unreadable.
     """
     if not context.engine_client:
         return ErrorResult(status=ResultStatus.ERROR, message="Engine client not available")
@@ -632,10 +641,46 @@ def handle_ls(context: CommandContext, args: str) -> CommandResult:
             target = target / parts[0]
 
     target = target.resolve()
-    if not target.is_dir():
+
+    if not target.exists():
         return ErrorResult(
             status=ResultStatus.ERROR,
-            message=f"Not a directory: {target}",
+            message=f"No such file or directory: {target}",
+            suggestions=["Check the path and try again"]
+        )
+
+    # Single-file case — mirror shell `ls file.txt`: show one row for
+    # the file itself. This makes /ls safe to use with any path, not
+    # just directories, which matches what users expect when they paste
+    # a path from /save, /show, or tab completion.
+    if target.is_file():
+        try:
+            stat = target.stat()
+            size = _human_size(stat.st_size)
+            modified = _relative_time(stat.st_mtime)
+        except OSError as exc:
+            return ErrorResult(
+                status=ResultStatus.ERROR,
+                message=f"Cannot stat {target}: {exc}"
+            )
+
+        name = target.name
+        if target.is_symlink():
+            name += "@"
+
+        return DirectoryListingResult(
+            status=ResultStatus.SUCCESS,
+            message=f"1 file: {target}",
+            columns=["Name", "Size", "Modified"],
+            rows=[[name, size, modified]]
+        )
+
+    if not target.is_dir():
+        # Not a file and not a directory — socket, fifo, block device,
+        # character device, or stale symlink. Rare but surface it clearly.
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=f"Not a regular file or directory: {target}",
             suggestions=["Check the path and try again"]
         )
 

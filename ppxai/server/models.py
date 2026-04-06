@@ -2,16 +2,47 @@
 Pydantic request/response models for the ppxai HTTP server.
 """
 
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel
 
 
+class FileAttachment(BaseModel):
+    """A file attached to a chat request (v1.17.4 Phase 3.1).
+
+    Clients (web app drag-drop, VSCode file picker) base64-encode the
+    file bytes and include them in the `files` array of a ChatRequest.
+    The server chat route decodes, validates via `preprocess_file`, and
+    builds multimodal content parts.
+
+    Attributes:
+        name: Original filename (basename only).
+        media_type: MIME type (e.g. "image/png", "application/pdf").
+                    Used as a hint — the preprocessing pipeline may
+                    override it via magic-byte sniffing for images.
+        data: Base64-encoded file bytes.
+    """
+    name: str
+    media_type: str
+    data: str  # base64
+
+
 class ChatRequest(BaseModel):
-    """Chat request body."""
+    """Chat request body.
+
+    v1.17.4 Phase 3.1: Added optional `files` array for multimodal
+    attachments. When present, each file is preprocessed through
+    `engine.file_preprocessing.preprocess_file` and merged into the
+    user message as multimodal content parts (image_url blocks for
+    images, `<uploaded_file>` references for PDFs/Office, inline
+    `<file>` blocks for text/code). The chat route builds the content
+    list exactly the way the Rich TUI's `build_multimodal_content`
+    does — same pipeline, same validation, same vision routing.
+    """
     message: str
     provider: Optional[str] = None
     model: Optional[str] = None
+    files: List[FileAttachment] = []
 
 
 class CodingTaskRequest(BaseModel):

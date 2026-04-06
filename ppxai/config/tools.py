@@ -125,3 +125,34 @@ def get_container_config() -> Dict[str, Any]:
         "default_runtime": tool_config.get("default_runtime", "auto"),
         "timeout": tool_config.get("timeout", 60),
     }
+
+
+def get_vision_model_config() -> Dict[str, Any]:
+    """Get vision-language sidecar configuration (v1.17.4 Phase 2.7).
+
+    Returns the `tools.vision_model` section with sensible defaults for
+    every field. When `enabled` is False (the default), the VL sidecar
+    is not used and text-only models fall back to the placeholder path
+    in `file_preprocessing`.
+
+    Callers typically check `result["enabled"]` first, then read the
+    rest of the fields only when the sidecar is active. The endpoint
+    and model are required for calls to succeed — an enabled config
+    with missing endpoint is considered disabled by `EngineClient`.
+    """
+    tool_config = get_tool_config("vision_model")
+
+    return {
+        "enabled": tool_config.get("enabled", False),
+        "endpoint": tool_config.get("endpoint", ""),
+        "model": tool_config.get("model", ""),
+        "api_key_env": tool_config.get("api_key_env", ""),
+        "auto_caption": tool_config.get("auto_caption", True),
+        "timeout": tool_config.get("timeout", 30),
+        "max_tokens": tool_config.get("max_tokens", 200),
+        "prompt": tool_config.get(
+            "prompt",
+            "Describe this image in one or two sentences. Focus on what "
+            "would help a text-only language model reason about it.",
+        ),
+    }

@@ -5,6 +5,30 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.17.4] - 2026-04-06
+
+### Added
+
+- **File Upload Phase 2 — Engine Foundation**
+  - **SessionFileStore** (`ppxai/engine/session_store.py`) — content-addressed file IDs, staging-to-session directory lifecycle, save/get/cleanup/move_to_session/restore_from_session
+  - **Engine wiring** — EngineClient owns SessionFileStore; session serialize/deserialize rewrites inline base64 to/from file_id references; dual-format sessions (flat .json for text-only, directory with uploads/ for multimodal); `context_attachments` schema extended with `file_id` field
+  - **`/attach remove`** — `/attach remove <name>` and `/attach remove all` evict committed attachments from session history; `EngineClient.remove_context_attachment()` method
+  - **File preprocessing** (`ppxai/engine/file_preprocessing.py`) — central dispatcher `preprocess_file()`, routes images/text/PDF/Office per model vision capability
+  - **Image validation** (`ppxai/engine/image_validation.py`) — magic-byte sniffing (PNG/JPEG/WEBP/GIF), provider-aware size limits, dimension extraction from headers, token cost estimation
+  - **`supports_vision`** flag on `ModelProfile` — set for GPT-5.x, GPT-4.x, Gemini 2.5/3/3.1, Gemma 4, Sonar/Sonar Pro, local VL models; convenience function `supports_vision(model_id)`
+  - **VL sidecar config** — `tools.vision_model` section in config (endpoint, model, auto_caption, prompt); `EngineClient.has_vision_model()` + `caption_image()` methods
+  - **PDF tools** (`ppxai/engine/tools/builtin/pdf_tools.py`) — `ReadPdfTool` (text extraction by pages) and `GetPdfPageImageTool` (rasterization to PNG data URI); guarded by pypdf import
+  - **`[data]` deps** extended with `pypdf>=4.0` and `pdf2image>=1.17`
+- **`/doctor` command** (`ppxai/commands/doctor.py`) — read-only config advisor with deprecation table (`ppxai/engine/model_deprecations.py`); scans user config, reports dead/deprecated/new/recommended models
+- **Gemini 3.1 Flash Lite** + **Gemma 4 family** (31B, 26B MoE, E4B, E2B) added to ppxai-config.example.json and model_profiles.py
+- **Gemini deprecation flags** — 2.0/2.5 models flagged with shutdown dates; `gemini-3-pro-preview` removed (shut down March 2026)
+
+### Fixed
+
+- **`/save <name>`** now honors the name argument (was silently ignored)
+- **`/ls <file>`** shows single-file entry (shell ls semantics, was error before)
+- **`/save` warning** when pending attachments haven't been sent yet
+
 ## [1.17.3] - 2026-04-03
 
 ### Added

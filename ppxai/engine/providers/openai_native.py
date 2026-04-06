@@ -681,7 +681,9 @@ class OpenAINativeProvider(BaseProvider):
 
         for m in messages:
             if m.role == "system":
-                instructions_parts.append(m.content)
+                # system_instruction is text-only — multimodal content never
+                # appears on system messages, but extract text defensively.
+                instructions_parts.append(m.text_content())
             elif m.role == "tool":
                 # Tool result — include tool_call_id for proper linking
                 item: Dict[str, Any] = {"role": "tool", "content": m.content}

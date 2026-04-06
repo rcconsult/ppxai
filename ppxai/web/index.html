@@ -151,11 +151,22 @@
         <!-- Input Container -->
         <footer class="input-container">
             <div class="input-hint">
-                Type <kbd>/help</kbd> for commands • <kbd>@file</kbd> to reference • <kbd>↑/↓</kbd> for history
+                Type <kbd>/help</kbd> for commands • <kbd>@file</kbd> to reference • <kbd>↑/↓</kbd> for history • drag files to attach
             </div>
+            <!-- Attachment badges strip (v1.17.4 Phase 5.2) -->
+            <div class="attachment-badges hidden" id="attachmentBadges"></div>
+            <!-- Context attachment indicator from AppState (v1.17.4 Phase 5.4) -->
+            <span class="attachment-badge hidden" id="attachment-badge"></span>
             <div class="autocomplete-container">
                 <div class="autocomplete-dropdown hidden" id="autocompleteDropdown"></div>
                 <div class="input-wrapper">
+                    <!-- Hidden file input for the paperclip button (v1.17.4 Phase 5.1) -->
+                    <input type="file" id="fileInput" multiple
+                           accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.xlsx,.xls,.pptx,.ppt,.docx,.doc,.txt,.md,.py,.js,.ts,.json,.yaml,.yml,.toml,.xml,.csv,.sh,.go,.rs,.c,.cpp,.h,.java,.rb,.sql"
+                           style="display:none">
+                    <button id="attachBtn" class="attach-btn" title="Attach files (images, PDF, Excel, PowerPoint, code)">
+                        <span>📎</span>
+                    </button>
                     <textarea
                         id="messageInput"
                         placeholder="Ask anything or type / for commands..."

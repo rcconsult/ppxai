@@ -16,7 +16,7 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 from pathlib import Path
-from typing import Optional
+from typing import Any, List, Optional
 
 from rich import box
 from rich.console import Console, RenderableType
@@ -593,6 +593,7 @@ def render_status_panel(
     working_dir: Optional[str] = None,
     show_datetime: bool = False,
     context_percent: Optional[float] = None,
+    pending_files: Optional[List[Any]] = None,
 ) -> Panel:
     """Render status line in a framed panel with badges.
 
@@ -650,6 +651,44 @@ def render_status_panel(
     if usage_str:
         badges.append(" ")
         badges.append(f" {usage_str} ", style=theme.usage_badge)
+
+    # Attachment badge (v1.17.4 Phase 1) — shows every multimodal file the
+    # model currently "sees" in this conversation. That's the union of two
+    # sets: files staged by /attach for the next turn, AND images already
+    # committed to prior turns of `session.messages`. In-context attachments
+    # are re-sent (and re-billed) on every subsequent chat call, so the
+    # badge intentionally persists for the whole session rather than
+    # disappearing after /attach is consumed.
+    #
+    # Parameter is named `pending_files` for backward compat; semantically
+    # it accepts any iterable of heterogeneous entries — either dataclass
+    # instances with `.name` / `.kind` attributes (staged PendingFile from
+    # the Rich handler) or plain dicts with `"name"` / `"kind"` keys (the
+    # canonical AppState.context_attachments shape mirrored into JS/TS).
+    if pending_files:
+        def _field(entry, key: str, default: Any = None) -> Any:
+            if isinstance(entry, dict):
+                return entry.get(key, default)
+            return getattr(entry, key, default)
+
+        image_count = sum(1 for pf in pending_files if _field(pf, "kind") == "image")
+        text_count = sum(1 for pf in pending_files if _field(pf, "kind") == "text")
+        # Compact label: "📎 2 (1🖼 1📄)" when mixed, or "📎 2 files" when uniform.
+        names = [_field(pf, "name", "?") for pf in pending_files]
+        # Truncate each name to keep the badge narrow on small terminals.
+        short = []
+        for n in names[:3]:
+            short.append(n if len(n) <= 18 else n[:15] + "...")
+        names_str = ", ".join(short)
+        if len(pending_files) > 3:
+            names_str += f", +{len(pending_files) - 3}"
+        if image_count and text_count:
+            mix = f"{image_count}\U0001F5BC {text_count}\U0001F4C4"  # 🖼 📄
+            label = f" \U0001F4CE {len(pending_files)} ({mix}): {names_str} "  # 📎
+        else:
+            label = f" \U0001F4CE {len(pending_files)}: {names_str} "  # 📎
+        badges.append(" ")
+        badges.append(label, style=theme.usage_badge)
 
     # Context usage badge (v1.13.9) - shows context window utilization
     if context_percent is not None:

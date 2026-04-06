@@ -41,6 +41,25 @@ export interface AppStateFields {
 
     // --- Debug ---
     debugLog: boolean;
+
+    // --- Multimodal context (v1.17.4 Phase 6.3) ---
+    // List of attachment summaries currently in session.messages.
+    // Pushed from server via state_sync SSE. Each entry mirrors the
+    // Python AppState.context_attachments schema:
+    //   { name, kind, media_type, turn_index, file_id }
+    contextAttachments: ContextAttachment[];
+}
+
+/**
+ * A single multimodal attachment entry in context_attachments.
+ * Matches the Python dict schema from EngineClient._refresh_context_attachments.
+ */
+export interface ContextAttachment {
+    name: string;
+    kind: string;        // "image" | "text" | "pdf" | "file"
+    media_type: string;  // e.g. "image/png", "" if unknown
+    turn_index: number;  // index into session.messages
+    file_id: string;     // SessionFileStore identifier, "" for legacy
 }
 
 /** Listener callback type */
@@ -75,6 +94,7 @@ export class AppState {
             totalCost: 0,
             contextPercentage: 0,
             debugLog: false,
+            contextAttachments: [],
             ...initial,
         };
     }

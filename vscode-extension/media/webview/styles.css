@@ -916,6 +916,47 @@ body {
     cursor: not-allowed;
 }
 
+/* Attach button (v1.17.4 Phase 6.1) */
+.attach-btn {
+    background: transparent;
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 16px;
+}
+.attach-btn:hover {
+    border-color: var(--vscode-focusBorder);
+}
+
+/* Attachment badges (v1.17.4 Phase 6.1) */
+.attachment-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px 8px;
+    max-height: 60px;
+    overflow-y: auto;
+}
+.attachment-badges.hidden { display: none; }
+
+.file-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    background: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+}
+.file-badge .badge-remove {
+    cursor: pointer;
+    opacity: 0.6;
+    margin-left: 4px;
+}
+.file-badge .badge-remove:hover { opacity: 1; }
+
 .typing-indicator {
     display: none;
     padding: 8px 12px;

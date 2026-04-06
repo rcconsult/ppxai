@@ -11,6 +11,7 @@ from . import (
     chat,
     checkpoints,
     commands,
+    completion,
     config,
     consent,
     context,
@@ -38,5 +39,6 @@ all_routers: list[APIRouter] = [
     agent.router,
     checkpoints.router,
     terminal.router,
+    completion.router,  # v1.17.4: POST /complete for cross-client autocomplete
     static.router,
 ]

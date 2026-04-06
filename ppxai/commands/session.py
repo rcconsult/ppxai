@@ -8,6 +8,7 @@ v1.15.0: Migrated to type-based renderer dispatch
 """
 
 from datetime import datetime
+from typing import Optional
 
 import pyperclip
 
@@ -28,20 +29,67 @@ def handle_save(context: CommandContext, args: str) -> CommandResult:
 
     Args:
         context: Command context providing access to engine client
-        args: Command arguments (unused)
+        args: Optional session name override. When provided, the session
+              is renamed and saved under the given name (e.g.
+              `/save my_experiment`). When empty, the current auto-
+              generated `session_<timestamp>` name is used.
 
     Returns:
         ConfirmationResult on success, ErrorResult on failure
+
+    v1.17.4: Honors the `args` positional parameter (previously ignored),
+    reports the correct filesystem path for both flat-file and directory-
+    format multimodal sessions, and warns when the user has staged
+    attachments via `/attach` that haven't been sent yet (those live
+    only in the handler's pending_files buffer and won't land in the
+    saved session until a chat message flushes them).
     """
     try:
-        session_name = context.engine_client.session.save()
-        filepath = context.engine_client.session.sessions_dir / f"{session_name}.json"
+        session = context.engine_client.session
+
+        # Warn about staged-but-unsent attachments. `pending_files` lives
+        # on the CommandHandler (Rich TUI) or the web/vscode client;
+        # access it defensively via getattr so headless contexts (tests,
+        # server route) don't break.
+        pending_files = getattr(context, "pending_files", None) or []
+        pending_warning: Optional[str] = None
+        if pending_files:
+            names = ", ".join(getattr(pf, "name", "?") for pf in pending_files[:3])
+            if len(pending_files) > 3:
+                names += f", +{len(pending_files) - 3} more"
+            pending_warning = (
+                f"Note: {len(pending_files)} attachment(s) are staged via /attach "
+                f"({names}) but have not been sent yet — they live only in the "
+                f"pending buffer and are NOT included in this save. Send your "
+                f"message first if you want them committed to the session, "
+                f"or run /attach clear to discard them."
+            )
+
+        # Pass the optional name through to SessionManager.save() — None
+        # means "keep current name" while a stripped arg means "rename
+        # and save under the new name".
+        new_name = args.strip() if args and args.strip() else None
+        session_name = session.save(name=new_name)
+
+        # Determine the actual on-disk path for display. Multimodal
+        # sessions save to `<dir>/session.json`, text-only sessions to
+        # `<name>.json`. The same resolver used by save() tells us
+        # which format we actually wrote.
+        json_path, is_dir = session._resolve_session_storage(session_name)
+        filepath = json_path
+
+        message = f"Session saved to: {filepath}"
+        if pending_warning:
+            message = f"{message}\n\n⚠ {pending_warning}"
+
         return ConfirmationResult(
             status=ResultStatus.SUCCESS,
-            message=f"Session saved to: {filepath}",
+            message=message,
             details={
                 "session_name": session_name,
-                "filepath": str(filepath)
+                "filepath": str(filepath),
+                "format": "directory" if is_dir else "flat",
+                "pending_attachments_warning": bool(pending_warning),
             }
         )
     except Exception as e:

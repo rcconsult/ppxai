@@ -20,7 +20,7 @@ Usage:
     logger.enable()
     logger.log_api_request(1, messages)
 
-Version: v1.17.3
+Version: v1.17.4
 """
 
 import logging
@@ -60,6 +60,36 @@ def _sanitize_for_logging(text: str) -> str:
     for char, replacement in replacements.items():
         text = text.replace(char, replacement)
     return text
+
+
+def _preview_message_content(msg, limit: int) -> str:
+    """Build a short, single-line preview of a Message or message-dict.
+
+    Handles both `Message` dataclass instances (which may have multimodal
+    list content via `text_content()`) and plain dicts used in API payloads.
+    Returns at most `limit` characters with newlines escaped.
+    """
+    if hasattr(msg, 'text_content'):
+        text = msg.text_content()
+    elif hasattr(msg, 'content'):
+        raw = msg.content
+        if isinstance(raw, str):
+            text = raw
+        elif isinstance(raw, list):
+            # Mirror Message.text_content() for non-Message objects.
+            parts = []
+            for block in raw:
+                if isinstance(block, dict):
+                    if block.get('type') == 'text':
+                        parts.append(block.get('text', ''))
+                    else:
+                        parts.append(f"[{block.get('type', 'part')}]")
+            text = '\n'.join(parts)
+        else:
+            text = str(raw)
+    else:
+        text = str(msg)
+    return text[:limit].replace('\n', '\\n')
 
 
 class Logger:
@@ -228,7 +258,7 @@ class Logger:
         """Log conversation history sync."""
         self.info(f"HISTORY SYNC: legacy={legacy_count}, engine={engine_count}")
         for i, msg in enumerate(messages):
-            content_preview = msg.content[:80].replace('\n', '\\n') if hasattr(msg, 'content') else str(msg)[:80]
+            content_preview = _preview_message_content(msg, 80)
             role = msg.role if hasattr(msg, 'role') else msg.get('role', 'unknown')
             self.debug(f"  [{i}] {role:10s}: {content_preview}")
 
@@ -236,7 +266,7 @@ class Logger:
         """Log API request with message sequence."""
         self.info(f"API REQUEST: iteration={iteration}, messages={len(messages)}")
         for i, msg in enumerate(messages):
-            content_preview = msg.content[:100].replace('\n', '\\n') if hasattr(msg, 'content') else str(msg)[:100]
+            content_preview = _preview_message_content(msg, 100)
             role = msg.role if hasattr(msg, 'role') else msg.get('role', 'unknown')
             self.debug(f"  [{i}] {role:10s}: {content_preview}")
 

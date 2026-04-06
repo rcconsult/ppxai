@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from ppxai.constants import ConsentMode, ConsentResponse, ShellRiskLevel
+from ppxai.engine.types import Message
 from ppxai.engine.bootstrap_ops import (
     get_active_hints,
     get_bootstrap_prompt,
@@ -776,9 +777,7 @@ class TestSessionOps:
     def test_export_answer_success(self, mock_exports_dir, tmp_path):
         mock_exports_dir.__truediv__ = lambda self, name: tmp_path / name
 
-        msg = MagicMock()
-        msg.role = "assistant"
-        msg.content = "Here is the answer."
+        msg = Message(role="assistant", content="Here is the answer.")
         engine = _make_engine()
         engine.session.messages = [msg]
 
@@ -791,9 +790,7 @@ class TestSessionOps:
     def test_export_answer_auto_filename(self, mock_exports_dir, tmp_path):
         mock_exports_dir.__truediv__ = lambda self, name: tmp_path / name
 
-        msg = MagicMock()
-        msg.role = "assistant"
-        msg.content = "Auto named."
+        msg = Message(role="assistant", content="Auto named.")
         engine = _make_engine()
         engine.session.messages = [msg]
 
@@ -807,9 +804,7 @@ class TestSessionOps:
     def test_export_answer_adds_md_extension(self, mock_exports_dir, tmp_path):
         mock_exports_dir.__truediv__ = lambda self, name: tmp_path / name
 
-        msg = MagicMock()
-        msg.role = "assistant"
-        msg.content = "Content"
+        msg = Message(role="assistant", content="Content")
         engine = _make_engine()
         engine.session.messages = [msg]
 
@@ -820,15 +815,9 @@ class TestSessionOps:
     def test_export_answer_finds_last_assistant(self, mock_exports_dir, tmp_path):
         mock_exports_dir.__truediv__ = lambda self, name: tmp_path / name
 
-        user_msg = MagicMock()
-        user_msg.role = "user"
-        user_msg.content = "question"
-        first_asst = MagicMock()
-        first_asst.role = "assistant"
-        first_asst.content = "first answer"
-        second_asst = MagicMock()
-        second_asst.role = "assistant"
-        second_asst.content = "second answer"
+        user_msg = Message(role="user", content="question")
+        first_asst = Message(role="assistant", content="first answer")
+        second_asst = Message(role="assistant", content="second answer")
         engine = _make_engine()
         engine.session.messages = [user_msg, first_asst, user_msg, second_asst]
 
@@ -864,10 +853,8 @@ class TestSessionOps:
 
     @patch("ppxai.engine.session_ops.get_model_context_limit", return_value=128000)
     def test_get_context_info(self, mock_limit):
-        msg1 = MagicMock()
-        msg1.content = "a" * 400  # 100 tokens
-        msg2 = MagicMock()
-        msg2.content = "b" * 400  # 100 tokens
+        msg1 = Message(role="user", content="a" * 400)  # 100 tokens
+        msg2 = Message(role="assistant", content="b" * 400)  # 100 tokens
         engine = _make_engine()
         engine.session.messages = [msg1, msg2]
         engine._injected_contexts = [{"name": "file.py", "size": 200}]

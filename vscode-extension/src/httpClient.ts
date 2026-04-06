@@ -86,9 +86,47 @@ export interface EngineStatus {
     auto_inject_context?: boolean;
 }
 
+// Multimodal content part (OpenAI format). Text parts carry `text`, image
+// parts carry `image_url.url` (usually a data: URI), file parts carry
+// `name` / `filename`. Unknown types are tolerated and surface as placeholders.
+export interface ContentBlock {
+    type: string;
+    text?: string;
+    image_url?: { url: string };
+    name?: string;
+    filename?: string;
+}
+
+export type MessageContent = string | ContentBlock[];
+
 export interface Message {
     role: 'user' | 'assistant' | 'system';
-    content: string;
+    content: MessageContent;
+}
+
+/**
+ * Flatten Message.content (string | ContentBlock[]) to plain display text.
+ * Mirrors Message.text_content() in the Python engine. Image / file parts
+ * become [Image: name] / [File: name] placeholders.
+ */
+export function textContent(content: MessageContent | undefined | null): string {
+    if (content == null) return '';
+    if (typeof content === 'string') return content;
+    if (!Array.isArray(content)) return String(content);
+    const parts: string[] = [];
+    for (const block of content) {
+        if (!block || typeof block !== 'object') continue;
+        if (block.type === 'text') {
+            parts.push(block.text || '');
+        } else if (block.type === 'image_url') {
+            parts.push(`[Image: ${block.name || 'image'}]`);
+        } else if (block.type === 'input_file' || block.type === 'file') {
+            parts.push(`[File: ${block.name || block.filename || 'file'}]`);
+        } else {
+            parts.push(`[${block.type || 'part'}]`);
+        }
+    }
+    return parts.join('\n');
 }
 
 export interface SessionInfo {
@@ -677,15 +715,28 @@ export class HttpClient {
     /**
      * Send chat message with SSE streaming
      */
-    async chat(message: string, streamCallback?: StreamCallback): Promise<string> {
+    async chat(
+        message: string,
+        streamCallback?: StreamCallback,
+        files?: Array<{name: string; media_type: string; data: string}>
+    ): Promise<string> {
         // Create new AbortController for this request
         this.currentAbortController = new AbortController();
 
         try {
+            // v1.17.4 Phase 6.1: include files array when present.
+            // Server ChatRequest accepts files: [{name, media_type, data}]
+            // where data is base64. When omitted the body is identical
+            // to pre-Phase-6 format for backward compatibility.
+            const body: Record<string, any> = { message };
+            if (files && files.length > 0) {
+                body.files = files;
+            }
+
             const response = await fetch(`${this.baseUrl}/chat`, {
                 method: 'POST',
                 headers: this.getHeaders(true),
-                body: JSON.stringify({ message }),
+                body: JSON.stringify(body),
                 signal: this.currentAbortController.signal
             });
 
@@ -1055,7 +1106,7 @@ export class HttpClient {
     /**
      * Get conversation history
      */
-    async getHistory(): Promise<Array<{ role: string; content: string }>> {
+    async getHistory(): Promise<Message[]> {
         return [...this.conversationHistory];
     }
 

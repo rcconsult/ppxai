@@ -896,8 +896,8 @@ async def chat_with_tools(
             # B7: Check for session pollution (response too similar to previous model's output)
             if iteration == 1 and full_response:
                 recent_assistant = [
-                    m.content for m in ctx.session.messages[-10:]
-                    if m.role == "assistant" and m.content and m != ctx.session.messages[-1]
+                    m.text_content() for m in ctx.session.messages[-10:]
+                    if m.role == "assistant" and m.text_content() and m != ctx.session.messages[-1]
                 ]
                 pollution_warning = check_session_pollution(full_response, recent_assistant)
                 if pollution_warning:

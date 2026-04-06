@@ -5,8 +5,21 @@ These types are used across all layers (engine, server, clients) and have no UI 
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional, Callable, Protocol, Set, runtime_checkable
+from typing import List, Dict, Any, Optional, Callable, Protocol, Set, Union, runtime_checkable
 from enum import Enum
+
+
+# Type alias for multimodal message content.
+#
+# Messages carry either plain text (the historical format) or a list of
+# OpenAI-style content parts for multimodal inputs:
+#
+#   [{"type": "text", "text": "..."},
+#    {"type": "image_url", "image_url": {"url": "data:image/png;base64,..."}}]
+#
+# All str-consuming code paths (logging, token estimation, markdown export,
+# clipboard copy, widget rendering) must go through Message.text_content().
+MessageContent = Union[str, List[Dict[str, Any]]]
 
 
 # =============================================================================
@@ -98,11 +111,60 @@ class Event:
 
 @dataclass
 class Message:
-    """A conversation message."""
+    """A conversation message.
+
+    `content` is either a plain string (historical single-modal format) or a
+    list of OpenAI-style content parts for multimodal messages (text + images,
+    uploaded file references). Code that needs plain text for logging,
+    serialization, or widget rendering must use `text_content()` rather than
+    reading `content` directly.
+    """
     role: str  # 'user', 'assistant', 'system', 'tool'
-    content: str
+    content: MessageContent
     tool_calls: Optional[List[Dict[str, Any]]] = None   # For assistant messages with native calls
     tool_call_id: Optional[str] = None                    # For tool role messages
+
+    def text_content(self) -> str:
+        """Extract plain text from the message content.
+
+        For string content, returns it as-is. For list content (multimodal),
+        joins the text of all `{"type": "text", ...}` parts with newlines and
+        adds `[Image: name]` / `[File: name]` placeholders for non-text parts
+        so logs, token estimates, and markdown exports remain human-readable.
+        """
+        if isinstance(self.content, str):
+            return self.content
+        if not isinstance(self.content, list):
+            return str(self.content)
+        parts: List[str] = []
+        for block in self.content:
+            if not isinstance(block, dict):
+                continue
+            btype = block.get("type")
+            if btype == "text":
+                parts.append(block.get("text", ""))
+            elif btype == "image_url":
+                # Surface a placeholder so callers that slice/len the result
+                # still see something meaningful (e.g. logger previews).
+                url = (block.get("image_url") or {}).get("url", "")
+                name = block.get("name") or _guess_name_from_url(url) or "image"
+                parts.append(f"[Image: {name}]")
+            elif btype == "input_file" or btype == "file":
+                name = block.get("name") or block.get("filename") or "file"
+                parts.append(f"[File: {name}]")
+            else:
+                # Unknown part type — include a marker but don't crash.
+                parts.append(f"[{btype or 'part'}]")
+        return "\n".join(parts)
+
+
+def _guess_name_from_url(url: str) -> str:
+    """Best-effort filename extraction from an image_url (data: or http)."""
+    if not url or url.startswith("data:"):
+        return ""
+    # Strip query string, take basename.
+    tail = url.split("?", 1)[0].rstrip("/")
+    return tail.rsplit("/", 1)[-1] if "/" in tail else tail
 
 
 @dataclass

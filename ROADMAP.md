@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.17.3 (April 2026) | CodeMirror Modular + VSCode Parity
+> **Current Version**: v1.17.4 (April 2026) | CodeMirror Modular + VSCode Parity
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
@@ -694,6 +694,25 @@ ppxai/tui/                     # New module (Textual-based)
 | **K8s benchmark jobs** | `--agents-md` toggle, delta test results, in-cluster runs | ✅ Done |
 | **New models benchmarked** | Qwen3.5-122B-A10B, Qwen3.5-27B-FP8, Qwen3-Coder-Next-NVFP4-GB10 | ✅ Done |
 | **Web verbose tools toggle** | Menu indicator + SSE state_sync for tools_verbose, debug_log | ✅ Done |
+
+### v1.17.4 - File Upload & Data Processing (In Progress)
+
+**Status:** Phase 2 complete, Phase 3 next
+**Branch:** `feat/file-upload`
+**Plan:** [docs/TODO-file-upload.md](docs/TODO-file-upload.md)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Phase 0 — Multimodal plumbing** | `Message.content: Union[str, list[dict]]`, `text_content()` helper, all providers + clients updated | ✅ Done |
+| **Phase 1 — Rich TUI `/attach`** | `/attach <path>` slash cmd, inline image preview, `EngineClient.chat(MessageContent)`, AppState `context_attachments`, dynamic autocomplete | ✅ Done |
+| **Phase 2 — Engine foundation** | SessionFileStore, file preprocessing, image validation, VL sidecar, PDF tools, `/doctor`, `/attach remove`, `supports_vision`, Gemini 3.1 + Gemma 4 models | ✅ Done |
+| **Phase 3 — Server API** | `ChatRequest.files[]`, preprocessing in chat route, `state_sync` SSE for `context_attachments` | ⏳ Next |
+| **Phase 4 — Excel + PPTX tools** | openpyxl + python-pptx extraction and rendering tools | 📋 Planned |
+| **Phase 5 — Web client** | Drag-drop, file picker, staging chips, AppState mirror | 📋 Planned |
+| **Phase 6 — VSCode client** | Webview picker, context menu attach, AppState mirror | 📋 Planned |
+| **Phase 7 — Textual TUI** | File tree attach, Ctrl+U, staging badge, footer badge | 📋 Planned |
+
+**Tests:** 2179 passing (was 1753 before Phase 0). 426 new tests, zero regressions.
 
 ---
 

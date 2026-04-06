@@ -70,6 +70,19 @@ class FileTree(DirectoryTree):
             super().__init__()
             self.path = path
 
+    class FileAttach(Message):
+        """Posted when user wants to attach a file for the next chat turn (a key).
+
+        v1.17.4 Phase 7.1: The app handler reads the file bytes, runs early
+        validation, stages it as a PendingFile, and shows a notification.
+        On the next chat submit, pending files are preprocessed and sent
+        as multimodal content parts.
+        """
+
+        def __init__(self, path: Path) -> None:
+            super().__init__()
+            self.path = path
+
     # Directories to hide — keep the tree navigable in large Python projects
     _HIDDEN_DIRS = frozenset({
         ".git", ".svn", ".hg",
@@ -113,6 +126,12 @@ class FileTree(DirectoryTree):
         path = self._get_cursor_file_path()
         if path:
             self.post_message(self.FileInject(path))
+
+    def action_attach_file(self) -> None:
+        """Attach the file at the current cursor position (a key, Phase 7.1)."""
+        path = self._get_cursor_file_path()
+        if path:
+            self.post_message(self.FileAttach(path))
 
     def action_dismiss_tree(self) -> None:
         """Return focus to the chat input box (Escape)."""

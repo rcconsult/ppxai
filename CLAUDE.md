@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.17.3
+**Current Version:** v1.17.4
 
 **v1.17.x highlights:**
 - **NEW:** AppState — observable state across all 4 clients (Python, JS, TS), SSE `state_sync` push
@@ -16,27 +16,30 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **NEW:** CodeMirror modular — shared core + 30 language addons (6.3MB→2.3MB), lazy loading
 - **NEW:** K8s POC — 5 phases: namespace, Dockerfile.server, session manager, login, LDAP auth
 - **NEW:** Benchmark infra — K8s benchmark jobs, `--agents-md` toggle, delta test results
+- **NEW:** File upload Phase 2 — SessionFileStore (content-addressed), file preprocessing pipeline, image validation, VL sidecar captioning, PDF tools, `/doctor` config advisor, `/attach remove`, `supports_vision` on ModelProfile
+- **NEW:** Gemini 3.1 Flash Lite + Gemma 4 family (31B, 26B MoE, E4B, E2B); deprecated 2.0/2.5 models with shutdown dates
 - **FIX:** Heartbeat during streaming — skip health failures while single-worker busy with LLM tokens
+- **FIX:** `/save <name>` now honors name argument; `/ls <file>` supports single-file listing
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.17.3
-- VSCode extension (package.json): v1.17.3
-- Last release tag: v1.17.3
+- Python package (pyproject.toml): v1.17.4
+- VSCode extension (package.json): v1.17.4
+- Last release tag: v1.17.4
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
 
-## Codebase Statistics (v1.17.3, approximate)
+## Codebase Statistics (v1.17.4, approximate)
 
 | Language | Files | Lines |
 |----------|------:|------:|
-| Python (core) | 150 | ~46,400 |
-| Python (tests) | 59 | ~29,100 |
+| Python (core) | 157 | ~51,300 |
+| Python (tests) | 73 | ~34,600 |
 | TypeScript (VSCode) | 17 | ~8,500 |
 | JavaScript (Web) | 19 | ~8,700 |
 | CSS | 5 | ~3,000 |
-| **Total** | **~250** | **~95,700** |
+| **Total** | **~271** | **~106,100** |
 
-Breakdown: ~79% Python, ~9% JavaScript, ~9% TypeScript, ~3% CSS
+Breakdown: ~81% Python, ~8% JavaScript, ~8% TypeScript, ~3% CSS
 
 ## Installation Locations (CRITICAL)
 
@@ -247,8 +250,13 @@ ppxai/
 │   ├── client.py        # EngineClient facade (restore_session() is canonical session restore)
 │   ├── types.py         # Message, Event, UsageStats
 │   ├── session.py       # Session management
+│   ├── session_store.py # SessionFileStore — content-addressed file storage for uploads
+│   ├── file_preprocessing.py  # Central file dispatcher (images/text/PDF/Office)
+│   ├── image_validation.py    # Magic-byte sniffing, size/dimension limits, token estimation
+│   ├── model_deprecations.py  # Deprecation table for /doctor command
+│   ├── model_profiles.py      # ModelProfile registry with supports_vision flag
 │   ├── providers/       # Perplexity, OpenAI-compat (BaseProvider ABC)
-│   └── tools/           # Tool system + builtins
+│   └── tools/           # Tool system + builtins (incl. pdf_tools.py)
 ├── server/              # HTTP/SSE server for IDE
 │   ├── http.py          # FastAPI app, lifespan, CLI entry points (run_server, run_desktop)
 │   ├── models.py        # Pydantic request/response models
@@ -261,6 +269,7 @@ ppxai/
 │       └── file_tree.py # FileTree widget — Norton Commander browser (Ctrl+B, @file inject)
 ├── main.py              # TUI entry point
 ├── commands.py          # Slash command handlers
+├── commands/            # Command modules (attach.py, doctor.py, etc.)
 └── config/              # Configuration system
     ├── __init__.py      # Re-exports (backward compat)
     ├── providers.py     # Provider, model, pricing, capabilities
@@ -520,6 +529,115 @@ class ReadFileTool(BaseTool):
 3. When a direct import would create a cycle, define a `Protocol` in a leaf module
 4. Protocols go in `engine/types.py` (for engine-layer types) or the appropriate leaf module
 5. Use `@runtime_checkable` so protocols can be used with `isinstance()` checks
+
+## Critical Architecture Pattern: Cross-Client State Through AppState
+
+**Added:** v1.17.4 (Phase 1 follow-up, multimodal file upload work)
+**Status:** **CRITICAL — Required for every new piece of state that more than one client needs**
+**Reference:** `ppxai/engine/app_state.py`, `ppxai/engine/client.py::_refresh_context_attachments`
+
+### Problem
+
+State that multiple clients need to read (Rich, Textual, Web, VSCode)
+tends to get re-implemented per client: each scans `session.messages`
+on demand, each keeps its own cache, each rerenders on its own schedule.
+This produces four near-identical bugs, four drift points, and four places
+to update when the shape changes.
+
+### Solution: AppState owns the canonical value; clients subscribe
+
+Any piece of state that more than one client needs to render or react to
+must live in `AppState.FIELDS` with these invariants:
+
+1. **Stable JSON-serializable schema** — plain dicts, not dataclasses.
+   The field round-trips through SSE `state_sync` events to
+   `ppxai/web/shared/app-state.js` and `vscode-extension/src/appState.ts`,
+   which mirror the same field names in camelCase. Cross-language schema
+   drift is a production bug.
+
+2. **Engine-owned invalidation** — `EngineClient` recomputes the field on
+   mutation via a session callback. For `session.messages`, the callback
+   is `SessionManager.on_messages_changed`, installed once and fired from
+   every mutation site (`add_message`, `remove_last_message`, `clear`,
+   `load`, `reset_for_model_switch`, `validate_and_fix_alternation`).
+   When adding a new mutable store in the engine, give it an analogous
+   `on_<thing>_changed` callback hook — never expect clients to poll.
+
+3. **No client-side scanning** — clients read `state.get("field_name")` or
+   subscribe via `state.on("field_name", listener)`. They never iterate
+   `session.messages` (or the equivalent store) themselves. The Rich
+   status bar and the Textual footer badge both call
+   `state.get("context_attachments")` — they don't know how the value is
+   computed.
+
+4. **Equality-dedup on writes** — `AppState.set()` short-circuits when the
+   new value equals the old, so callbacks stay quiet on no-op mutations.
+   This matters for SSE: a conversation sending only text turns doesn't
+   flood the wire with redundant `state_sync` events. Test this behavior
+   explicitly when adding a new field.
+
+5. **Defensive getter copies** — public getters
+   (`engine_client.get_<thing>()`) return copies so external mutation
+   can't corrupt canonical state. Callers that want to mutate must go
+   through a proper write method.
+
+### Worked Example: `context_attachments` (v1.17.4 Phase 1)
+
+```python
+# engine/app_state.py
+"context_attachments": [],  # List of {name, kind, media_type, turn_index}
+                            # Stable JSON schema — JS/TS mirrors in camelCase
+```
+
+```python
+# engine/session.py — new callback, fired from 6 mutation sites
+self.on_messages_changed: Optional[Callable[[], None]] = None
+
+def add_message(self, message):
+    self.messages.append(message)
+    self.metadata["message_count"] = len(self.messages)
+    self._notify_messages_changed()  # → engine refreshes AppState
+```
+
+```python
+# engine/client.py — wire the callback, recompute on each mutation
+self.session.on_messages_changed = self._refresh_context_attachments
+
+def _refresh_context_attachments(self):
+    """Walk session.messages, write to AppState — equality-dedup'd."""
+    attachments = [...]  # scan once
+    self.state.set("context_attachments", attachments)  # no-op if unchanged
+```
+
+```python
+# rich/main.py — status bar reads AppState, never scans messages
+attachments = state.get("context_attachments")  # canonical source
+render_status_panel(..., pending_files=attachments)
+```
+
+Clients that arrive later (Textual, Web, VSCode) do the same:
+subscribe with `state.on("context_attachments", listener)`, render from
+the pushed value, done. No per-client scanning.
+
+### Rules
+
+1. **Ask "does more than one client need this?"** before inventing
+   per-client state. If yes, it goes in AppState.
+2. **Schemas must be JSON-serializable plain dicts** — no dataclasses, no
+   enums, no custom types. Document the schema inline in `FIELDS`.
+3. **Mirror the field in `web/shared/app-state.js` and
+   `vscode-extension/src/appState.ts`** when adding to Python. Use
+   camelCase. The three AppState implementations are copies of the same
+   contract.
+4. **Invalidation is engine-side**, triggered by a single observable
+   callback on the mutable store. Never have clients call a "refresh
+   state" method manually.
+5. **Test the dedup path** — write a test that verifies a no-op mutation
+   does NOT fire the field's listeners. Without this test, regressions
+   that spam SSE events go unnoticed until production.
+6. **Bump `len(AppState.FIELDS)` sentinel test** in `tests/test_app_state.py`
+   when adding a new field — intentional friction so every addition gets
+   reviewed against the cross-client schema contract.
 
 ## VSCode Extension
 

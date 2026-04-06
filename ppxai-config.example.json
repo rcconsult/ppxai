@@ -142,32 +142,38 @@
         "temperature": 0.2,
         "top_p": 0.9
       },
+      "__comment_deprecations": "Gemini deprecation timeline (v1.17.4 Phase 2.3, verified 2026-04-06 against https://ai.google.dev/gemini-api/docs/deprecations). Run /doctor to audit your config. Migrate to gemini-3-flash-preview (recommended default) or gemini-3.1-pro-preview for complex reasoning. gemini-3-pro-preview was SHUT DOWN 2026-03-09 and is removed from this file — remove it from your local config too.",
       "models": {
         "gemini-2.0-flash": {
           "name": "Gemini 2.0 Flash",
-          "description": "Fast model with multimodal support",
-          "context_limit": 1000000
+          "description": "Fast model with multimodal support. DEPRECATED — shuts down 2026-06-01.",
+          "context_limit": 1000000,
+          "__comment_deprecated": "shutdown 2026-06-01. Migrate to gemini-3-flash-preview."
         },
         "gemini-2.0-flash-lite": {
           "name": "Gemini 2.0 Flash Lite",
-          "description": "Cost-efficient for high-volume tasks",
-          "context_limit": 1000000
+          "description": "Cost-efficient for high-volume tasks. DEPRECATED — shuts down 2026-06-01.",
+          "context_limit": 1000000,
+          "__comment_deprecated": "shutdown 2026-06-01. Migrate to gemini-3.1-flash-lite-preview."
         },
         "gemini-2.5-flash": {
           "name": "Gemini 2.5 Flash",
-          "description": "Latest fast model, best price/performance. 71.4% code editing quality with aggressive hints.",
+          "description": "Fast model, best price/performance. 71.4% code editing quality. DEPRECATED — shuts down 2026-06-17.",
           "context_limit": 1000000,
-          "__comment_best_for": "Good alternative if gemini-3-flash-preview unavailable. Requires aggressive AGENTS.md hints."
+          "__comment_best_for": "Good alternative if gemini-3-flash-preview unavailable. Requires aggressive AGENTS.md hints.",
+          "__comment_deprecated": "shutdown 2026-06-17. Migrate to gemini-3-flash-preview."
         },
         "gemini-2.5-pro": {
           "name": "Gemini 2.5 Pro",
-          "description": "Most capable model for complex reasoning",
-          "context_limit": 1000000
+          "description": "Capable model for complex reasoning. DEPRECATED — shuts down 2026-06-17.",
+          "context_limit": 1000000,
+          "__comment_deprecated": "shutdown 2026-06-17. Migrate to gemini-3.1-pro-preview."
         },
         "gemini-2.5-flash-lite": {
           "name": "Gemini 2.5 Flash Lite",
-          "description": "For simple tasks that need to be done quickly",
-          "context_limit": 1000000
+          "description": "For simple tasks that need to be done quickly. DEPRECATED — shuts down 2026-07-22.",
+          "context_limit": 1000000,
+          "__comment_deprecated": "shutdown 2026-07-22. Migrate to gemini-3.1-flash-lite-preview."
         },
         "gemini-3-flash-preview": {
           "name": "Gemini 3 Flash Preview",
@@ -175,10 +181,17 @@
           "context_limit": 1000000,
           "__comment_best_for": "Code editing, refactoring, debugging. Achieved 100% quality score with balanced AGENTS.md hints."
         },
-        "gemini-3-pro-preview": {
-          "name": "Gemini 3 Pro Preview",
-          "description": "Most powerful agentic model with 1M context, code execution, and search grounding",
-          "context_limit": 1000000
+        "gemini-3.1-flash-lite-preview": {
+          "name": "Gemini 3.1 Flash Lite Preview",
+          "description": "Cheapest Gemini 3 tier with text + image + video input. Replaces gemini-2.5-flash-lite.",
+          "context_limit": 1000000,
+          "__comment_best_for": "High-volume, cost-sensitive workloads where full Gemini 3 Pro isn't needed."
+        },
+        "gemini-3.1-flash-image-preview": {
+          "name": "Gemini 3.1 Flash Image Preview (Nano Banana 2)",
+          "description": "Image generation / editing model with 4K output. Not a chat model — use via dedicated image endpoints.",
+          "context_limit": 32000,
+          "__comment_not_a_chat_model": "This is an image GENERATION model, not a chat model. It does not participate in normal ppxai conversations and won't appear in /model selection."
         },
         "gemini-3.1-pro-preview": {
           "name": "Gemini 3.1 Pro Preview",
@@ -189,6 +202,30 @@
           "name": "Gemini 3.1 Pro Preview (Custom Tools)",
           "description": "Optimized for custom tool usage and agentic workflows with 1M context",
           "context_limit": 1000000
+        },
+        "gemma-4-31b-it": {
+          "name": "Gemma 4 31B (Dense)",
+          "description": "Dense 31B open-weights instruct model with text + vision, 256K context. Served via Gemini API (same API key) or self-hosted.",
+          "context_limit": 262144,
+          "__comment_best_for": "Open-weights workloads needing vision support. Free tier via Gemini API."
+        },
+        "gemma-4-26b-a4b-it": {
+          "name": "Gemma 4 26B (MoE)",
+          "description": "Mixture-of-Experts 26B (3.8B active) with text + vision, 256K context. Faster inference than 31B dense for similar quality.",
+          "context_limit": 262144,
+          "__comment_best_for": "Workloads benefiting from MoE efficiency — lower latency per token with 3.8B active parameters."
+        },
+        "gemma-4-e4b-it": {
+          "name": "Gemma 4 E4B (Edge)",
+          "description": "Edge-optimized 8B (4.5B effective) with text + vision + audio, 128K context. Designed for on-device deployment.",
+          "context_limit": 131072,
+          "__comment_best_for": "Laptop / edge deployments. Supports audio input alongside text and vision."
+        },
+        "gemma-4-e2b-it": {
+          "name": "Gemma 4 E2B (Edge)",
+          "description": "Smallest edge model at 5.1B (2.3B effective) with text + vision + audio, 128K context.",
+          "context_limit": 131072,
+          "__comment_best_for": "Resource-constrained edge deployments (laptops, phones, Raspberry Pi)."
         }
       },
       "pricing": {
@@ -198,9 +235,14 @@
         "gemini-2.5-flash-lite": {"input": 0.075, "output": 0.30},
         "gemini-2.5-pro": {"input": 1.25, "output": 10.00},
         "gemini-3-flash-preview": {"input": 0.50, "output": 3.00},
-        "gemini-3-pro-preview": {"input": 2.00, "output": 12.00},
+        "gemini-3.1-flash-lite-preview": {"input": 0.10, "output": 0.40},
+        "gemini-3.1-flash-image-preview": {"input": 0.50, "output": 3.00, "__comment": "Image generation pricing, per-image output"},
         "gemini-3.1-pro-preview": {"input": 2.00, "output": 12.00},
-        "gemini-3.1-pro-preview-customtools": {"input": 2.00, "output": 12.00}
+        "gemini-3.1-pro-preview-customtools": {"input": 2.00, "output": 12.00},
+        "gemma-4-31b-it": {"input": 0.0, "output": 0.0, "__comment": "Free tier via Gemini API; self-host for unlimited"},
+        "gemma-4-26b-a4b-it": {"input": 0.0, "output": 0.0, "__comment": "Free tier via Gemini API; self-host for unlimited"},
+        "gemma-4-e4b-it": {"input": 0.0, "output": 0.0, "__comment": "Free tier via Gemini API; self-host for unlimited"},
+        "gemma-4-e2b-it": {"input": 0.0, "output": 0.0, "__comment": "Free tier via Gemini API; self-host for unlimited"}
       },
       "capabilities": {
         "web_search": true,
@@ -736,6 +778,25 @@
       "__comment_default_runtime": "Container runtime: 'auto' (detect), 'docker', 'podman'",
       "timeout": 60,
       "__comment_timeout": "Container command timeout in seconds"
+    },
+    "vision_model": {
+      "__comment": "Vision-language sidecar for text-only models (v1.17.4 Phase 2.7). When the user attaches an image while chatting with a text-only model (e.g. o1-mini, gpt-oss, sonar-reasoning), ppxai can optionally fetch a caption from a separate VL endpoint and inject it as a text placeholder. Unset / disabled = fallback to a '[Image: name — vision not supported]' placeholder.",
+      "enabled": false,
+      "__comment_enabled": "Set to true to enable the VL sidecar fallback path.",
+      "endpoint": "",
+      "__comment_endpoint": "OpenAI-compatible /v1 endpoint serving a VL model (e.g. 'http://localhost:11434/v1' for Ollama, 'http://dgx-node:8001/v1' for vLLM).",
+      "model": "",
+      "__comment_model": "Model ID to call on that endpoint (e.g. 'qwen2.5vl:7b', 'llava:34b', 'Qwen/Qwen3-VL-8B-Instruct').",
+      "api_key_env": "",
+      "__comment_api_key_env": "Optional env var holding the API key. Leave empty for no-auth local endpoints.",
+      "auto_caption": true,
+      "__comment_auto_caption": "When true, /attach + file_preprocessing call the VL sidecar automatically for images attached to text-only models. When false, the sidecar is wired but only used when explicitly invoked.",
+      "timeout": 30,
+      "__comment_timeout": "Request timeout in seconds — VL models can be slow on first load.",
+      "max_tokens": 200,
+      "__comment_max_tokens": "Max caption length in tokens. Captions are short — 200 is plenty.",
+      "prompt": "Describe this image in one or two sentences. Focus on what would help a text-only language model reason about it.",
+      "__comment_prompt": "System prompt handed to the VL model alongside the image."
     },
     "web_search": {
       "__comment": "Premium web search configuration (v1.13.4+)",

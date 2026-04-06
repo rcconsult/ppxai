@@ -87,6 +87,33 @@ class AppState:
         "total_cost": 0.0,            # Cumulative cost in USD
         "context_percentage": 0.0,     # Context window usage (0.0-100.0)
 
+        # --- Multimodal context (v1.17.4 Phase 1, extended in Phase 2.1a) ---
+        # List of attachment summaries currently sitting in session.messages.
+        # Each entry is a plain JSON-serializable dict so the field can mirror
+        # across Python/JS/TS AppState implementations and flow through SSE
+        # state_sync events unchanged.
+        #
+        # Entry schema (stable contract — all clients depend on it):
+        #   {
+        #     "name": str,       # Display name (basename or content-part `name`)
+        #     "kind": str,       # "image" | "text" | "pdf" | "file"
+        #     "media_type": str, # MIME type (e.g. "image/png"); "" if unknown
+        #     "turn_index": int, # Index into session.messages where it lives
+        #     "file_id": str,    # SessionFileStore identifier; "" for legacy
+        #                        # Phase-1 blocks that predate the store. Used
+        #                        # by clients to fetch thumbnails via a
+        #                        # future server endpoint keyed on file_id.
+        #   }
+        #
+        # Dedup: entries are deduped by file_id (preferred) or name (fallback
+        # for legacy blocks). Tool / assistant / system role messages are
+        # NOT scanned — only user-attached content contributes.
+        #
+        # Recomputed by EngineClient._refresh_context_attachments() whenever
+        # session.messages mutates. Clients subscribe to this field to render
+        # their attachment badges / chips / file-list UI.
+        "context_attachments": [],
+
         # --- Debug ---
         "debug_log": False,            # Debug logging enabled
     }

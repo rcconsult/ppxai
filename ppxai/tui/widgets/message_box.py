@@ -3,6 +3,7 @@ MessageBox widget - Individual chat message display.
 """
 
 from datetime import datetime
+from typing import Any, List
 
 from textual.app import ComposeResult
 from textual.containers import Vertical, Horizontal, VerticalScroll
@@ -11,6 +12,36 @@ from textual.reactive import reactive
 from textual.widgets import Static, Markdown, Button
 
 from ..clipboard import copy_to_clipboard
+
+
+def _normalize_content_to_text(content: Any) -> str:
+    """Flatten multimodal Message.content (str | list[dict]) to display text.
+
+    Image / file parts are rendered as `[Image: name]` / `[File: name]`
+    placeholders so the user sees *something* for attached media rather than
+    a silently truncated bubble. This mirrors Message.text_content() but is
+    duplicated here to keep widgets free of engine imports.
+    """
+    if isinstance(content, str):
+        return content
+    if not isinstance(content, list):
+        return str(content)
+    parts: List[str] = []
+    for block in content:
+        if not isinstance(block, dict):
+            continue
+        btype = block.get("type")
+        if btype == "text":
+            parts.append(block.get("text", ""))
+        elif btype == "image_url":
+            name = block.get("name") or "image"
+            parts.append(f"[Image: {name}]")
+        elif btype in ("input_file", "file"):
+            name = block.get("name") or block.get("filename") or "file"
+            parts.append(f"[File: {name}]")
+        else:
+            parts.append(f"[{btype or 'part'}]")
+    return "\n".join(parts)
 
 
 class MessageBox(Static):
@@ -37,13 +68,16 @@ class MessageBox(Static):
 
     def __init__(
         self,
-        content: str = "",
+        content: Any = "",
         role: str = "assistant",
         streaming: bool = False,
         response_time: float = 0.0,
     ):
         super().__init__()
-        self.content = content
+        # Widget always displays plain text; multimodal list content is
+        # flattened to text + placeholders. Streaming chunks (appended later)
+        # are always strings so the reactive field stays str-typed.
+        self.content = _normalize_content_to_text(content)
         self.role = role
         self.streaming = streaming
         self.response_time = response_time

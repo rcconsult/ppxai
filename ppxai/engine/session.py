@@ -7,13 +7,16 @@ v1.13.9: Added session state file for auto-recovery and command history persiste
 v1.13.11: Migrated to centralized constants (ConsentMode)
 """
 
+import base64
 import json
 import os
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, List, Dict, Any, Optional
 
 from .types import Message, ToolUsage, UsageStats, SessionInfo
+from .session_store import SessionFileStore
 from ..common.logger import get_logger
 from ..constants import ConsentMode
 from ..usage import save_session_usage
@@ -23,6 +26,26 @@ logger = get_logger("session")
 
 # Session state file location
 SESSION_STATE_FILE = Path.home() / ".ppxai" / "session-state.json"
+
+
+# Minimal media-type → extension map used when a content block arrives
+# without a `name` field — we synthesize a default filename like
+# "attachment.png" so the file has a stable name in the store.
+_MEDIA_TYPE_TO_EXT = {
+    "image/png": "png",
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/webp": "webp",
+    "image/gif": "gif",
+    "application/pdf": "pdf",
+    "text/plain": "txt",
+    "text/markdown": "md",
+}
+
+
+def _ext_from_media_type(media_type: str) -> str:
+    """Best-effort extension for an unknown-named attachment."""
+    return _MEDIA_TYPE_TO_EXT.get(media_type, "bin")
 
 
 class SessionManager:
@@ -88,6 +111,30 @@ class SessionManager:
         # Optional callbacks wired by EngineClient to sync to AppState.
         self.on_usage_updated: Optional[Callable[[UsageStats], None]] = None
         self.on_name_changed: Optional[Callable[[str], None]] = None
+        # Fires whenever `self.messages` mutates (add/remove/replace/load/clear).
+        # EngineClient wires this to recompute the `context_attachments`
+        # AppState field so every client's multimodal badge stays fresh.
+        self.on_messages_changed: Optional[Callable[[], None]] = None
+
+        # Binary file store for multimodal attachments (v1.17.4 Phase 2.1a).
+        # EngineClient wires an instance here so serialize/deserialize can
+        # swap inline data: URIs for compact file_id references in session
+        # JSON. When None, serialization falls back to the legacy
+        # inline-base64 format — so tests that don't care about multimodal
+        # content can use SessionManager standalone without wiring a store.
+        self.file_store: Optional[SessionFileStore] = None
+
+    def _notify_messages_changed(self) -> None:
+        """Invoke the on_messages_changed callback if wired.
+
+        Exceptions in the callback are swallowed — the session is the source
+        of truth and must never fail because a listener misbehaved.
+        """
+        if self.on_messages_changed is not None:
+            try:
+                self.on_messages_changed()
+            except Exception as exc:
+                logger.warning(f"on_messages_changed listener raised: {exc}")
 
     def add_message(self, message: Message):
         """Add a message to the conversation history.
@@ -97,6 +144,7 @@ class SessionManager:
         """
         self.messages.append(message)
         self.metadata["message_count"] = len(self.messages)
+        self._notify_messages_changed()
 
     def get_messages(self) -> List[Message]:
         """Get conversation history.
@@ -114,25 +162,219 @@ class SessionManager:
         """
         return [self._serialize_message(m) for m in self.messages]
 
-    @staticmethod
-    def _serialize_message(m: Message) -> Dict[str, Any]:
-        """Serialize a Message to a dict for JSON storage/API use."""
-        msg: Dict[str, Any] = {"role": m.role, "content": m.content}
+    def _serialize_message(self, m: Message) -> Dict[str, Any]:
+        """Serialize a Message to a dict for JSON storage/API use.
+
+        Content handling (v1.17.4 Phase 2.1a):
+        - String content → passed through unchanged (legacy single-modal)
+        - List content → scanned for `image_url` parts with `data:` URIs.
+          When `self.file_store` is wired, each data URI is materialized
+          into the store (hashing yields a stable `file_id`) and the
+          content part is rewritten to carry a compact
+          `file://uploads/<file_id>/<name>` reference plus an explicit
+          `file_id` field. Session JSON stays small; bytes live on disk
+          in the session's `uploads/` directory.
+        - When `self.file_store` is None (tests, legacy callers), list
+          content passes through unchanged and session JSON contains
+          inline base64 — matching Phase 1 behavior for backward compat.
+
+        The rewritten shape is stable across save → load round trips:
+        `_deserialize_message` reads the `file_id` field and expands the
+        reference back into a `data:` URI so in-memory `Message.content`
+        matches what providers expect. All provider adapters (Gemini,
+        OpenAI, Perplexity) continue to see identical data URIs whether
+        the session was just loaded or built mid-conversation.
+        """
+        content = m.content
+        if self.file_store is not None and isinstance(content, list):
+            content = self._rewrite_content_for_serialize(content)
+
+        msg: Dict[str, Any] = {"role": m.role, "content": content}
         if m.tool_calls:
             msg["tool_calls"] = m.tool_calls
         if m.tool_call_id:
             msg["tool_call_id"] = m.tool_call_id
         return msg
 
-    @staticmethod
-    def _deserialize_message(m: Dict[str, Any]) -> Message:
-        """Deserialize a dict to a Message (backward compatible with old format)."""
+    def _deserialize_message(self, m: Dict[str, Any]) -> Message:
+        """Deserialize a dict to a Message.
+
+        Accepts every shape `_serialize_message` produces:
+        - Legacy string content
+        - Legacy inline-base64 list content (Phase 1 sessions, no file_store)
+        - New file_id-referenced list content (Phase 2.1a sessions) —
+          expanded back into data URIs via `self.file_store` so in-memory
+          messages look identical to what provider adapters expect.
+        """
+        content = m["content"]
+        if self.file_store is not None and isinstance(content, list):
+            content = self._rewrite_content_for_deserialize(content)
+
         return Message(
             role=m["role"],
-            content=m["content"],
+            content=content,
             tool_calls=m.get("tool_calls"),
             tool_call_id=m.get("tool_call_id"),
         )
+
+    # ------------------------------------------------------------------
+    # Content-part rewriting for SessionFileStore integration
+    # ------------------------------------------------------------------
+
+    def _rewrite_content_for_serialize(
+        self, content: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Rewrite `data:` URIs in image_url content parts to file_id references.
+
+        For every block that carries a `data:image/...;base64,...` URI:
+        1. Decode the base64 payload once
+        2. Save the bytes via SessionFileStore (idempotent — identical
+           content across turns yields a single on-disk copy thanks to
+           content-addressed file_ids)
+        3. Replace the URL with `file://uploads/<file_id>/<name>` and set
+           an explicit `file_id` field on the block
+
+        Blocks that already carry a `file_id` field (i.e. were produced
+        by `/attach` which now pre-registers with the store) are passed
+        through unchanged — we don't re-hash bytes that are already on disk.
+
+        Non-image parts, string content, and malformed data URIs are
+        passed through unchanged. Failures during base64 decode or store
+        write are logged and the original block is kept, so a corrupt
+        attachment never blocks the whole session save.
+        """
+        if self.file_store is None:
+            return content
+
+        rewritten: List[Dict[str, Any]] = []
+        for block in content:
+            if not isinstance(block, dict) or block.get("type") != "image_url":
+                rewritten.append(block)
+                continue
+
+            # Already-registered block — rewrite URL only.
+            existing_file_id = block.get("file_id")
+            url = (block.get("image_url") or {}).get("url", "")
+
+            if existing_file_id:
+                meta = self.file_store.get_metadata(existing_file_id)
+                if meta is not None:
+                    new_block = dict(block)
+                    new_block["image_url"] = {
+                        "url": f"file://uploads/{existing_file_id}/{meta.name}"
+                    }
+                    new_block["file_id"] = existing_file_id
+                    rewritten.append(new_block)
+                    continue
+                # file_id is stale — fall through to re-register from URL.
+
+            if not url.startswith("data:"):
+                # Non-data URL (http, file://, etc.) — pass through.
+                rewritten.append(block)
+                continue
+
+            # data:image/png;base64,HELLO...  →  decode, save, rewrite
+            try:
+                header, b64data = url.split(",", 1)
+                media_type = header[5:].split(";", 1)[0] or "application/octet-stream"
+                raw = base64.b64decode(b64data)
+            except (ValueError, base64.binascii.Error) as exc:
+                logger.warning(
+                    f"Session serialize: malformed data URI in image_url block: {exc}"
+                )
+                rewritten.append(block)
+                continue
+
+            name = block.get("name") or f"attachment.{_ext_from_media_type(media_type)}"
+            try:
+                meta = self.file_store.save(name, raw, media_type=media_type)
+            except OSError as exc:
+                logger.warning(
+                    f"Session serialize: file_store.save failed for {name}: {exc}"
+                )
+                rewritten.append(block)
+                continue
+
+            new_block = dict(block)
+            new_block["image_url"] = {
+                "url": f"file://uploads/{meta.file_id}/{meta.name}"
+            }
+            new_block["file_id"] = meta.file_id
+            new_block["name"] = meta.name  # Normalize in case caller omitted it
+            rewritten.append(new_block)
+
+        return rewritten
+
+    def _rewrite_content_for_deserialize(
+        self, content: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Expand file_id references back into data URIs.
+
+        Inverse of `_rewrite_content_for_serialize`. For every block
+        carrying a `file_id` field, look up the bytes in the store,
+        base64-encode them, and rebuild a `data:` URI on
+        `image_url.url` so provider adapters see the format they expect.
+
+        Legacy Phase-1 blocks (no file_id, inline data URI already)
+        pass through unchanged. Missing files (user deleted
+        `~/.ppxai/sessions/foo/uploads/` manually, etc.) are replaced
+        with a text placeholder block so deserialization never crashes
+        a session load — the user sees `[Attachment missing: chart.png]`
+        instead of a confusing exception.
+        """
+        if self.file_store is None:
+            return content
+
+        rewritten: List[Dict[str, Any]] = []
+        for block in content:
+            if not isinstance(block, dict) or block.get("type") != "image_url":
+                rewritten.append(block)
+                continue
+
+            file_id = block.get("file_id")
+            if not file_id:
+                # Legacy shape — no file_id, already has inline data URI.
+                rewritten.append(block)
+                continue
+
+            meta = self.file_store.get_metadata(file_id)
+            if meta is None or not meta.path.exists():
+                # File vanished — replace with a text placeholder so the
+                # conversation remains loadable.
+                name = block.get("name") or file_id
+                logger.warning(
+                    f"Session deserialize: attachment missing for file_id={file_id}, "
+                    f"replacing with placeholder"
+                )
+                rewritten.append({
+                    "type": "text",
+                    "text": f"[Attachment missing: {name}]",
+                })
+                continue
+
+            try:
+                raw = meta.path.read_bytes()
+            except OSError as exc:
+                logger.warning(
+                    f"Session deserialize: cannot read {meta.path} for "
+                    f"file_id={file_id}: {exc}"
+                )
+                rewritten.append({
+                    "type": "text",
+                    "text": f"[Attachment unreadable: {meta.name}]",
+                })
+                continue
+
+            b64 = base64.b64encode(raw).decode("ascii")
+            new_block = dict(block)
+            new_block["image_url"] = {
+                "url": f"data:{meta.media_type};base64,{b64}",
+            }
+            new_block["file_id"] = file_id
+            new_block["name"] = meta.name
+            rewritten.append(new_block)
+
+        return rewritten
 
     def remove_last_message(self) -> bool:
         """Remove the last message from conversation history.
@@ -146,6 +388,7 @@ class SessionManager:
         if self.messages:
             self.messages.pop()
             self.metadata["message_count"] = len(self.messages)
+            self._notify_messages_changed()
             return True
         return False
 
@@ -180,7 +423,7 @@ class SessionManager:
             removed_count += 1
             logger.warning(
                 f"Session alternation fix: removed leading {removed.role} message "
-                f"(len={len(removed.content)})"
+                f"(len={len(removed.text_content())})"
             )
 
         if not self.messages:
@@ -214,7 +457,7 @@ class SessionManager:
                     removed_count += 1
                     logger.warning(
                         f"Session alternation fix: removed orphan tool message "
-                        f"(len={len(msg.content)}) at position {i}"
+                        f"(len={len(msg.text_content())}) at position {i}"
                     )
                 continue
 
@@ -230,7 +473,7 @@ class SessionManager:
                 # But prefer assistant messages over user messages
                 if msg.role == "assistant":
                     # Two assistant messages in a row - keep longer one
-                    if len(msg.content) > len(prev.content):
+                    if len(msg.text_content()) > len(prev.text_content()):
                         fixed_messages[-1] = msg
                 else:
                     # Two user messages in a row - keep first one (already in fixed_messages)
@@ -238,7 +481,7 @@ class SessionManager:
                 removed_count += 1
                 logger.warning(
                     f"Session alternation fix: removed duplicate {msg.role} message "
-                    f"(len={len(msg.content)}) at position {i}"
+                    f"(len={len(msg.text_content())}) at position {i}"
                 )
 
         # Also ensure session ends with assistant message (not orphan user)
@@ -250,7 +493,7 @@ class SessionManager:
             removed_count += 1
             logger.warning(
                 f"Session alternation fix: removed trailing {removed.role} message "
-                f"(len={len(removed.content)})"
+                f"(len={len(removed.text_content())})"
             )
 
         if removed_count > 0:
@@ -260,6 +503,7 @@ class SessionManager:
                 f"Session alternation fixed: removed {removed_count} messages, "
                 f"{len(self.messages)} remaining"
             )
+            self._notify_messages_changed()
 
         return removed_count
 
@@ -285,9 +529,12 @@ class SessionManager:
                 f"Model switch: removed {removed} assistant/tool messages, "
                 f"kept {len(self.messages)} user messages"
             )
+            self._notify_messages_changed()
 
         # Fix alternation: stripping assistant messages leaves consecutive
         # user messages which violates API requirements (e.g., Perplexity)
+        # validate_and_fix_alternation() will fire its own notification if
+        # it ends up mutating anything further.
         alternation_fixed = self.validate_and_fix_alternation()
         if alternation_fixed:
             removed += alternation_fixed
@@ -301,6 +548,7 @@ class SessionManager:
         # Reset file editing consent state
         self.allowed_files.clear()
         self.edit_consent_mode = ConsentMode.PROMPT
+        self._notify_messages_changed()
 
     def set_provider(self, provider: str):
         """Set the current provider.
@@ -505,6 +753,114 @@ class SessionManager:
             for provider, stats in by_provider.items()
         }
 
+    # ------------------------------------------------------------------
+    # Session save path — dual-format (flat .json vs directory)
+    # ------------------------------------------------------------------
+
+    def _has_multimodal_attachments(self) -> bool:
+        """True if any message in the session has image_url content parts.
+
+        Used by save()/load() to decide between the flat `<name>.json`
+        format (text-only sessions, backward compat) and the directory
+        format `<name>/session.json` + `<name>/uploads/` (multimodal
+        sessions). Scanning is O(messages × parts); a typical session
+        has under a hundred messages so the cost is negligible per save.
+        """
+        for msg in self.messages:
+            content = getattr(msg, "content", None)
+            if not isinstance(content, list):
+                continue
+            for block in content:
+                if isinstance(block, dict) and block.get("type") == "image_url":
+                    return True
+        return False
+
+    def _resolve_session_storage(self, name: str) -> tuple[Path, bool]:
+        """Determine the JSON path and format for a given session name.
+
+        Priority:
+        1. If `<name>/` already exists on disk → directory format (once
+           upgraded, always directory — never downgrade back to flat)
+        2. Else if this session currently has multimodal attachments →
+           directory format (migration case: a previously-flat session
+           gained its first attachment, must switch to directory to hold
+           the uploads/ subdirectory)
+        3. Else if `<name>.json` exists → flat format (stable text-only
+           session keeps its existing flat file untouched)
+        4. Otherwise → new flat file
+
+        Note the ordering: rule 2 runs before rule 3 so the flat→directory
+        transition fires as soon as an attachment appears, rather than
+        getting pinned to flat forever by a stale `.json` file. The
+        caller (`_write_session_json`) cleans up the stale flat file after
+        writing the directory-format session.
+
+        Returns:
+            Tuple of (json_path, is_directory_format).
+        """
+        dir_path = self.sessions_dir / name
+        flat_path = self.sessions_dir / f"{name}.json"
+
+        # Rule 1: existing directory format wins — no downgrades.
+        if dir_path.is_dir():
+            return dir_path / "session.json", True
+
+        # Rule 2: multimodal content forces directory format even if a
+        # stale flat file exists (format migration mid-conversation).
+        if self._has_multimodal_attachments():
+            return dir_path / "session.json", True
+
+        # Rule 3: text-only session with an existing flat file — keep it.
+        if flat_path.is_file():
+            return flat_path, False
+
+        # Rule 4: brand new session with no attachments — new flat file.
+        return flat_path, False
+
+    def _write_session_json(
+        self, session_name: str, session_data: Dict[str, Any]
+    ) -> Path:
+        """Write session JSON to the correct flat/directory location.
+
+        Handles the flat → directory transition when a session that
+        started text-only gains its first attachment mid-conversation:
+        creates the directory, writes `session.json` inside, moves any
+        staged files from the store into `<name>/uploads/`, and deletes
+        the stale flat `.json` file if one exists.
+
+        This is the only place session JSON is written to disk.
+        """
+        json_path, is_dir_format = self._resolve_session_storage(session_name)
+        dir_path = self.sessions_dir / session_name
+        flat_path = self.sessions_dir / f"{session_name}.json"
+
+        if is_dir_format:
+            dir_path.mkdir(parents=True, exist_ok=True)
+            # If the store is wired, move any staged files into the
+            # session's uploads directory. This is idempotent — files
+            # already there are left in place.
+            if self.file_store is not None:
+                self.file_store.move_to_session(dir_path)
+            # If a stale flat file exists from a prior text-only save,
+            # remove it so list_sessions doesn't see duplicates.
+            if flat_path.exists():
+                try:
+                    flat_path.unlink()
+                    logger.debug(
+                        f"Session format transition: removed stale flat "
+                        f"{flat_path.name} in favor of directory"
+                    )
+                except OSError as exc:
+                    logger.warning(
+                        f"Failed to remove stale flat session file "
+                        f"{flat_path}: {exc}"
+                    )
+
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(session_data, f, indent=2)
+
+        return json_path
+
     def save(self, name: Optional[str] = None) -> str:
         """Save current session to file.
 
@@ -516,6 +872,8 @@ class SessionManager:
 
         v1.13.9: Now includes working_dir and tools_enabled for session persistence.
         v1.14.1: Validates and fixes message alternation before saving.
+        v1.17.4: Dual-format storage (flat JSON for text-only, directory
+                 with uploads/ for multimodal). Handled by _write_session_json.
         """
         if name:
             self.session_name = name
@@ -524,8 +882,6 @@ class SessionManager:
 
         # Validate and fix alternation issues before saving (v1.14.1)
         self.validate_and_fix_alternation()
-
-        filepath = self.sessions_dir / f"{self.session_name}.json"
 
         session_data = {
             "session_name": self.session_name,
@@ -539,8 +895,7 @@ class SessionManager:
             "tools_enabled": self.tools_enabled
         }
 
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(session_data, f, indent=2)
+        self._write_session_json(self.session_name, session_data)
 
         # Only update the state pointer when this session has actual messages.
         # An empty-session save (e.g. /save right after startup) must not clobber
@@ -550,6 +905,24 @@ class SessionManager:
             self._dirty = False
 
         return self.session_name
+
+    def _resolve_session_load_path(self, name: str) -> Optional[tuple[Path, Optional[Path]]]:
+        """Find the JSON file for a saved session name.
+
+        Returns a tuple of (json_path, session_dir) where `session_dir`
+        is the enclosing directory for directory-format sessions (used
+        to restore the file store) or None for flat-format sessions.
+        Returns None if no session with that name exists in either format.
+        """
+        dir_path = self.sessions_dir / name
+        flat_path = self.sessions_dir / f"{name}.json"
+
+        dir_json = dir_path / "session.json"
+        if dir_path.is_dir() and dir_json.is_file():
+            return dir_json, dir_path
+        if flat_path.is_file():
+            return flat_path, None
+        return None
 
     def load(self, name: str) -> bool:
         """Load a saved session.
@@ -561,13 +934,28 @@ class SessionManager:
             True if loaded successfully
 
         v1.14.1: Validates and fixes message alternation after loading.
+        v1.17.4: Dual-format support — finds both flat `<name>.json` and
+                 directory `<name>/session.json` layouts. Restores the
+                 file store from `<name>/uploads/` for directory sessions.
         """
-        filepath = self.sessions_dir / f"{name}.json"
-
-        if not filepath.exists():
+        resolved = self._resolve_session_load_path(name)
+        if resolved is None:
             return False
+        filepath, session_dir = resolved
 
         try:
+            # Restore the file store from the session's uploads/ directory
+            # BEFORE deserializing messages. Deserialization needs the store
+            # populated so it can expand `file_id` references back into
+            # data URIs; without it, any attachments load as missing-file
+            # placeholders.
+            if session_dir is not None and self.file_store is not None:
+                restored = self.file_store.restore_from_session(session_dir)
+                if restored > 0:
+                    logger.debug(
+                        f"Restored {restored} attachment(s) from {session_dir}/uploads/"
+                    )
+
             with open(filepath, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
@@ -592,12 +980,17 @@ class SessionManager:
             self.tools_enabled = data.get("tools_enabled", False)
 
             # Validate and fix alternation issues after loading (v1.14.1)
+            # validate_and_fix_alternation() fires its own on_messages_changed
+            # when it mutates anything; we always fire after a successful load
+            # below so listeners (AppState sync) pick up the newly loaded
+            # messages even when alternation was already clean.
             fixed_count = self.validate_and_fix_alternation()
             if fixed_count > 0:
                 logger.warning(
                     f"Loaded session '{name}' had {fixed_count} message alternation issues - auto-fixed"
                 )
 
+            self._notify_messages_changed()
             return True
 
         except Exception as e:
@@ -608,26 +1001,60 @@ class SessionManager:
         """List all saved sessions.
 
         Returns:
-            List of SessionInfo objects
-        """
-        sessions = []
+            List of SessionInfo objects, sorted by filename in reverse
+            (newest first by naming convention).
 
-        for filepath in sorted(self.sessions_dir.glob("*.json"), reverse=True):
+        v1.17.4: Scans both flat `<name>.json` files and directory-format
+        `<name>/session.json` layouts so multimodal sessions appear
+        alongside text-only ones. Deduplicates by session name in case
+        a transition left stale artifacts on disk.
+        """
+        # Collect (json_path, synthetic_name) pairs from both layouts.
+        candidates: List[tuple[Path, str]] = []
+
+        # Flat format: ~/.ppxai/sessions/<name>.json
+        for filepath in self.sessions_dir.glob("*.json"):
+            candidates.append((filepath, filepath.stem))
+
+        # Directory format: ~/.ppxai/sessions/<name>/session.json
+        for entry in self.sessions_dir.iterdir():
+            if not entry.is_dir():
+                continue
+            session_json = entry / "session.json"
+            if session_json.is_file():
+                candidates.append((session_json, entry.name))
+
+        # Sort by synthetic name descending (newest timestamped sessions
+        # come first under the default naming convention).
+        candidates.sort(key=lambda pair: pair[1], reverse=True)
+
+        sessions: List[SessionInfo] = []
+        seen_names: set = set()
+        for filepath, fallback_name in candidates:
             try:
-                with open(filepath, 'r', encoding='utf-8') as f:
+                with open(filepath, "r", encoding="utf-8") as f:
                     data = json.load(f)
+
+                session_name = data.get("session_name", fallback_name)
+                if session_name in seen_names:
+                    # Stale flat file from a format transition — directory
+                    # format takes precedence because it's written later.
+                    continue
+                seen_names.add(session_name)
 
                 metadata = data.get("metadata", {})
                 sessions.append(SessionInfo(
-                    name=data.get("session_name", filepath.stem),
+                    name=session_name,
                     created_at=metadata.get("created_at", ""),
                     provider=metadata.get("provider", "unknown"),
                     model=metadata.get("model", "unknown"),
                     message_count=len(data.get("messages", [])),
-                    saved_at=data.get("saved_at", "")
+                    saved_at=data.get("saved_at", ""),
                 ))
             except Exception as e:
-                logger.warning(f"Skipping corrupted session file '{filepath.name}': {e}")
+                logger.warning(
+                    f"Skipping corrupted session file '{filepath}': {e}"
+                )
                 continue
 
         return sessions
@@ -669,7 +1096,7 @@ class SessionManager:
         content += "## Conversation\n\n"
         for msg in self.messages:
             role = msg.role.capitalize()
-            content += f"### {role}\n\n{msg.content}\n\n"
+            content += f"### {role}\n\n{msg.text_content()}\n\n"
 
         # Write to file
         with open(filepath, 'w', encoding='utf-8') as f:
@@ -685,13 +1112,31 @@ class SessionManager:
 
         Returns:
             True if deleted successfully
-        """
-        filepath = self.sessions_dir / f"{name}.json"
 
-        if filepath.exists():
-            filepath.unlink()
-            return True
-        return False
+        v1.17.4: Handles both flat-file and directory-format sessions.
+        Removes the entire directory (including uploads/) for multimodal
+        sessions — shutil.rmtree rather than unlink so no orphaned
+        attachment files are left behind.
+        """
+        dir_path = self.sessions_dir / name
+        flat_path = self.sessions_dir / f"{name}.json"
+        deleted = False
+
+        if dir_path.is_dir():
+            try:
+                shutil.rmtree(dir_path)
+                deleted = True
+            except OSError as exc:
+                logger.warning(f"Failed to remove session directory {dir_path}: {exc}")
+
+        if flat_path.is_file():
+            try:
+                flat_path.unlink()
+                deleted = True
+            except OSError as exc:
+                logger.warning(f"Failed to remove session file {flat_path}: {exc}")
+
+        return deleted
 
     def save_usage_to_persistent_storage(self):
         """Save session usage to persistent storage (v1.12.3).
@@ -799,11 +1244,14 @@ class SessionManager:
         Internal method that saves the full session data including
         command_history, working_dir, and tools_enabled fields.
 
+        v1.17.4: Routes through `_write_session_json` so auto-saves
+        (save_dirty) honor the dual flat/directory format rules — a
+        session that gains its first attachment mid-conversation will
+        auto-migrate to directory layout on the very next dirty save.
+
         Returns:
             Session name
         """
-        filepath = self.sessions_dir / f"{self.session_name}.json"
-
         session_data = {
             "session_name": self.session_name,
             "metadata": self.metadata,
@@ -816,9 +1264,7 @@ class SessionManager:
             "tools_enabled": self.tools_enabled
         }
 
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(session_data, f, indent=2)
-
+        self._write_session_json(self.session_name, session_data)
         return self.session_name
 
     def _update_state_file(self, dirty: bool):

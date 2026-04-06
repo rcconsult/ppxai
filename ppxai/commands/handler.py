@@ -70,6 +70,8 @@ from . import utility  # noqa: F401 - imported for side-effect (registration)
 from . import agent  # noqa: F401 - imported for side-effect (registration)
 from . import tools  # noqa: F401 - imported for side-effect (registration)
 from . import display  # noqa: F401 - imported for side-effect (registration)
+from . import attach  # noqa: F401 - imported for side-effect (registration)
+from . import doctor  # noqa: F401 - imported for side-effect (registration)
 
 logger = get_logger("tui")
 
@@ -325,6 +327,11 @@ class CommandHandler:
         # True = show original emojis (may cause misalignment in some terminals)
         # False = convert emojis to text symbols (guaranteed alignment)
         self.emoji_mode = False  # Default: text symbols for reliable alignment
+
+        # Files staged by /attach for the next chat turn (v1.17.4, Phase 1).
+        # Populated by commands/attach.py, consumed and cleared by the Rich
+        # TUI send loop in rich/main.py.
+        self.pending_files = []
 
         # Initialize logger for agent mode event handling
         self.logger = get_logger("tui")
@@ -609,6 +616,15 @@ class CommandHandler:
 
                 if result is not None and isinstance(result, CommandResult):
                     RichRenderer.render(result)
+                    # v1.17.4 Phase 1: /attach returns a TextResult with
+                    # metadata["attached_paths"] holding any newly-attached
+                    # *image* files. Render an inline preview of each so the
+                    # user sees confirmation that the image loaded correctly
+                    # before sending their prompt. Non-image attachments
+                    # don't preview (text files just go into the prompt).
+                    attached_paths = (result.metadata or {}).get("attached_paths") if result.metadata else None
+                    if attached_paths:
+                        self._render_inline_image_previews(attached_paths)
 
                 return False
             except Exception as e:
@@ -619,3 +635,33 @@ class CommandHandler:
         console.print(f"[red]Unknown command: {user_input}[/red]")
         console.print("[yellow]Type /help for available commands[/yellow]\n")
         return False
+
+    def _render_inline_image_previews(self, paths: list) -> None:
+        """Show inline image previews for newly-attached files.
+
+        Uses the existing ImageResult renderer helpers which dispatch to the
+        iTerm2 or Sixel protocol based on the detected terminal. Terminals
+        without image support silently fall through — the /attach result
+        text already lists filenames, so the user isn't left guessing.
+        """
+        try:
+            from ..rendering.rich_renderer import (
+                _get_terminal_type,
+                _render_image_iterm2,
+                _render_image_sixel,
+            )
+        except Exception as exc:
+            logger.debug(f"Inline preview unavailable: {exc}")
+            return
+
+        terminal = _get_terminal_type()
+        for path in paths:
+            rendered = False
+            if terminal == "windows_terminal":
+                rendered = _render_image_sixel(path)
+            elif terminal in ("wezterm", "iterm2"):
+                rendered = _render_image_iterm2(path)
+            if not rendered:
+                # Stay silent on unsupported terminals — the text result
+                # already named the files.
+                return

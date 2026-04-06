@@ -93,6 +93,13 @@ class PpxaiApp {
             // Debug
             debugLog: false,
 
+            // Multimodal context (v1.17.4 Phase 5.4)
+            // List of attachment dicts currently in session.messages.
+            // Pushed from server via state_sync SSE. Entry schema
+            // matches Python AppState.context_attachments:
+            //   { name, kind, mediaType, turnIndex, fileId }
+            contextAttachments: [],
+
             // --- Web-app-specific fields (not in canonical set) ---
             // UI theme
             theme: localStorage.getItem('ppxai-theme') || 'dark',
@@ -533,6 +540,63 @@ class PpxaiApp {
             this.elements.sidebarToggleBtn.addEventListener('click', () => this.toggleFileSidebar());
         }
 
+        // === File upload: attach button + drag-drop (v1.17.4 Phase 5.1) ===
+        this.pendingFiles = [];
+
+        // Paperclip button triggers hidden file input
+        const attachBtn = document.getElementById('attachBtn');
+        const fileInput = document.getElementById('fileInput');
+        if (attachBtn && fileInput) {
+            attachBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', () => {
+                for (const file of fileInput.files) {
+                    this._stageFile(file);
+                }
+                fileInput.value = '';  // reset so same file can be re-selected
+            });
+        }
+
+        // Drag-drop on the input container
+        const inputContainer = document.querySelector('.input-container');
+        if (inputContainer) {
+            let dragCounter = 0;
+            inputContainer.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                dragCounter++;
+                this._showDragOverlay();
+            });
+            inputContainer.addEventListener('dragover', (e) => {
+                e.preventDefault();
+            });
+            inputContainer.addEventListener('dragleave', () => {
+                dragCounter--;
+                if (dragCounter <= 0) {
+                    dragCounter = 0;
+                    this._hideDragOverlay();
+                }
+            });
+            inputContainer.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dragCounter = 0;
+                this._hideDragOverlay();
+                for (const file of e.dataTransfer.files) {
+                    this._stageFile(file);
+                }
+            });
+        }
+
+        // Also accept drag-drop anywhere on the page for convenience
+        document.body.addEventListener('dragover', (e) => e.preventDefault());
+        document.body.addEventListener('drop', (e) => {
+            e.preventDefault();
+            this._hideDragOverlay();
+            if (e.dataTransfer.files.length > 0) {
+                for (const file of e.dataTransfer.files) {
+                    this._stageFile(file);
+                }
+            }
+        });
+
         // Right panel frame resize handle
         this.initResizeHandle();
 
@@ -758,6 +822,7 @@ class PpxaiApp {
             working_dir: 'workingDir',
             session_name: 'sessionName',
             debug_log: 'debugLog',
+            context_attachments: 'contextAttachments',  // v1.17.4 Phase 5.4
         };
 
         for (const [pyKey, value] of Object.entries(changes)) {
@@ -785,8 +850,119 @@ class PpxaiApp {
                 this.updateAgentBadge();
             } else if (pyKey === 'debug_log') {
                 this.updateDebugIndicator();
+            } else if (pyKey === 'context_attachments') {
+                // v1.17.4 Phase 5.4: update the attachment indicator
+                // in the header bar. Full drag-drop + chip-strip UI
+                // lands in Phase 5.1-5.3; for now we show/hide a
+                // simple count badge so the user knows how many
+                // files the model currently "sees" in context.
+                this.updateAttachmentBadge();
             }
         }
+    }
+
+    /**
+     * Update the attachment count badge in the header (v1.17.4 Phase 5.4).
+     *
+     * Renders a compact indicator when context_attachments is non-empty.
+     * The full attachment-chips component (drag-drop + per-file remove)
+     * lands in Phase 5.1-5.3; this badge gives immediate visibility
+     * that the AppState mirror is working and the server is pushing
+     * attachment state changes correctly.
+     */
+    updateAttachmentBadge() {
+        const attachments = this.state.contextAttachments || [];
+        const badge = document.getElementById('attachment-badge');
+        if (!badge) return;
+        if (attachments.length === 0) {
+            badge.style.display = 'none';
+            badge.textContent = '';
+        } else {
+            const names = attachments.map(a => a.name || '?').slice(0, 3);
+            let label = `\u{1F4CE} ${attachments.length} in context: ${names.join(', ')}`;
+            if (attachments.length > 3) label += `, +${attachments.length - 3}`;
+            badge.style.display = 'inline-block';
+            badge.textContent = label;
+        }
+    }
+
+    // === File upload helpers (v1.17.4 Phase 5.1-5.3) ===
+
+    /**
+     * Stage a file from the picker or drag-drop.
+     * Reads the file as base64 and adds it to pendingFiles[].
+     * @param {File} file - Browser File object
+     */
+    _stageFile(file) {
+        // 10 MB limit (matches engine's MAX_FILE_BYTES)
+        if (file.size > 10 * 1024 * 1024) {
+            this.addMessage('system',
+                `\u274C ${file.name} is ${(file.size / 1024 / 1024).toFixed(1)} MB \u2014 exceeds the 10 MB limit.`
+            );
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            // result is "data:<mime>;base64,<b64>"
+            const b64 = reader.result.split(',')[1] || '';
+            this.pendingFiles.push({
+                name: file.name,
+                media_type: file.type || 'application/octet-stream',
+                data: b64,
+                size: file.size,
+            });
+            this._renderPendingBadges();
+        };
+        reader.onerror = () => {
+            this.addMessage('system', `\u274C Failed to read ${file.name}`);
+        };
+        reader.readAsDataURL(file);
+    }
+
+    /** Render the pending-files badge strip below the input hint. */
+    _renderPendingBadges() {
+        const container = document.getElementById('attachmentBadges');
+        if (!container) return;
+
+        if (this.pendingFiles.length === 0) {
+            container.classList.add('hidden');
+            container.innerHTML = '';
+            return;
+        }
+
+        container.classList.remove('hidden');
+        container.innerHTML = this.pendingFiles.map((f, i) => {
+            const icon = f.media_type.startsWith('image/') ? '\u{1F5BC}' : '\u{1F4C4}';
+            const sizeKB = (f.size / 1024).toFixed(1);
+            const shortName = f.name.length > 25 ? f.name.slice(0, 22) + '...' : f.name;
+            return `<span class="file-badge" data-index="${i}">
+                <span class="badge-icon">${icon}</span>
+                <span class="badge-name" title="${f.name}">${shortName}</span>
+                <span class="badge-size">(${sizeKB} KB)</span>
+                <span class="badge-remove" onclick="window.ppxai._removePendingFile(${i})">\u00D7</span>
+            </span>`;
+        }).join('');
+    }
+
+    /** Remove a staged file by index (called from badge X button). */
+    _removePendingFile(index) {
+        this.pendingFiles.splice(index, 1);
+        this._renderPendingBadges();
+    }
+
+    _showDragOverlay() {
+        if (document.getElementById('drag-overlay')) return;
+        const overlay = document.createElement('div');
+        overlay.id = 'drag-overlay';
+        overlay.className = 'drag-overlay';
+        overlay.innerHTML = '<div class="drag-overlay-text">\u{1F4CE} Drop files to attach</div>';
+        document.body.appendChild(overlay);
+    }
+
+    _hideDragOverlay() {
+        const overlay = document.getElementById('drag-overlay');
+        if (overlay) overlay.remove();
     }
 
     async loadInitialState() {
@@ -1069,14 +1245,25 @@ class PpxaiApp {
             return;
         }
 
-        // Show user message
-        this.addMessage('user', content);
+        // Show user message (include attachment count hint if any)
+        if (this.pendingFiles.length > 0) {
+            const fileNames = this.pendingFiles.map(f => f.name).join(', ');
+            this.addMessage('user', `${content}\n\n[Attached: ${fileNames}]`);
+        } else {
+            this.addMessage('user', content);
+        }
+
+        // Snapshot pending files and clear the staging buffer before
+        // streaming starts — same pattern as Rich TUI's try/finally.
+        const files = [...this.pendingFiles];
+        this.pendingFiles = [];
+        this._renderPendingBadges();
 
         // Start streaming (isSending will be reset by streamChat's finally block)
-        await this.streamChat(content);
+        await this.streamChat(content, files);
     }
 
-    async streamChat(message) {
+    async streamChat(message, files = []) {
         this.state.isStreaming = true;
         this.elements.streamingBadge.classList.remove('hidden');
         this.state.currentAbortController = new AbortController();
@@ -1093,7 +1280,8 @@ class PpxaiApp {
 
         try {
             // v1.16.2: Delegate SSE fetch + line-buffering to StreamHandler
-            for await (const event of this.streamHandler.stream(message, this.state.currentAbortController.signal)) {
+            // v1.17.4 Phase 5.3: pass files array for multimodal attachments
+            for await (const event of this.streamHandler.stream(message, this.state.currentAbortController.signal, files)) {
                 fullContent = this.handleStreamEvent(event, contentEl, fullContent);
             }
 
@@ -1343,6 +1531,12 @@ class PpxaiApp {
     // === Messages ===
 
     addMessage(role, content, streaming = false) {
+        // Normalize multimodal content (list[dict]) to display text before
+        // rendering. SSE stream chunks are always strings so this is a no-op
+        // during streaming; the break point is loaded session messages where
+        // content may be an OpenAI-style content-blocks array.
+        content = this.normalizeContent(content);
+
         const msgEl = document.createElement('div');
         msgEl.className = `message ${role}-message`;
 
@@ -2656,6 +2850,33 @@ class PpxaiApp {
     }
 
     // === Utilities ===
+
+    // Flatten multimodal Message.content (string | array of content blocks)
+    // to a plain text string for display. Image / file parts are replaced
+    // with [Image: name] / [File: name] placeholders so the user sees
+    // *something* for attached media. Mirrors Message.text_content() in the
+    // Python engine.
+    normalizeContent(content) {
+        if (typeof content === 'string') return content;
+        if (!Array.isArray(content)) return content == null ? '' : String(content);
+        const parts = [];
+        for (const block of content) {
+            if (!block || typeof block !== 'object') continue;
+            const btype = block.type;
+            if (btype === 'text') {
+                parts.push(block.text || '');
+            } else if (btype === 'image_url') {
+                const name = block.name || 'image';
+                parts.push(`[Image: ${name}]`);
+            } else if (btype === 'input_file' || btype === 'file') {
+                const name = block.name || block.filename || 'file';
+                parts.push(`[File: ${name}]`);
+            } else {
+                parts.push(`[${btype || 'part'}]`);
+            }
+        }
+        return parts.join('\n');
+    }
 
     renderMarkdown(text) {
         if (typeof marked !== 'undefined') {
