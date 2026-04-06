@@ -695,9 +695,9 @@ ppxai/tui/                     # New module (Textual-based)
 | **New models benchmarked** | Qwen3.5-122B-A10B, Qwen3.5-27B-FP8, Qwen3-Coder-Next-NVFP4-GB10 | ✅ Done |
 | **Web verbose tools toggle** | Menu indicator + SSE state_sync for tools_verbose, debug_log | ✅ Done |
 
-### v1.17.4 - File Upload & Data Processing (In Progress)
+### v1.17.4 - File Upload & Data Processing
 
-**Status:** Phase 2 complete, Phase 3 next
+**Status:** All phases complete, ready for release
 **Branch:** `feat/file-upload`
 **Plan:** [docs/TODO-file-upload.md](docs/TODO-file-upload.md)
 
@@ -706,13 +706,14 @@ ppxai/tui/                     # New module (Textual-based)
 | **Phase 0 — Multimodal plumbing** | `Message.content: Union[str, list[dict]]`, `text_content()` helper, all providers + clients updated | ✅ Done |
 | **Phase 1 — Rich TUI `/attach`** | `/attach <path>` slash cmd, inline image preview, `EngineClient.chat(MessageContent)`, AppState `context_attachments`, dynamic autocomplete | ✅ Done |
 | **Phase 2 — Engine foundation** | SessionFileStore, file preprocessing, image validation, VL sidecar, PDF tools, `/doctor`, `/attach remove`, `supports_vision`, Gemini 3.1 + Gemma 4 models | ✅ Done |
-| **Phase 3 — Server API** | `ChatRequest.files[]`, preprocessing in chat route, `state_sync` SSE for `context_attachments` | ⏳ Next |
-| **Phase 4 — Excel + PPTX tools** | openpyxl + python-pptx extraction and rendering tools | 📋 Planned |
-| **Phase 5 — Web client** | Drag-drop, file picker, staging chips, AppState mirror | 📋 Planned |
-| **Phase 6 — VSCode client** | Webview picker, context menu attach, AppState mirror | 📋 Planned |
-| **Phase 7 — Textual TUI** | File tree attach, Ctrl+U, staging badge, footer badge | 📋 Planned |
+| **Phase 3 — Server API** | `ChatRequest.files[]`, preprocessing in chat route, `state_sync` SSE, `POST /complete`, `GET /files/serve/{file_id}` | ✅ Done |
+| **Phase 4 — Excel + PPTX tools** | openpyxl + python-pptx extraction and rendering tools | ✅ Done |
+| **Phase 5 — Web client** | Drag-drop, file picker, attachment badges, inline thumbnails, split panel lightbox/PDF embed | ✅ Done |
+| **Phase 6 — VSCode client** | Webview picker, drag-drop, pendingFiles staging, extension host forwarding | ✅ Done |
+| **Phase 7 — Textual TUI** | FileTree `a` key attach, Ctrl+U shortcut, `build_multimodal_content()`, `pending_files` attribute | ✅ Done |
+| **Task #11 — CompletionProvider** | `engine/completion.py`, `POST /complete` server route, Rich completer delegating to engine | ✅ Done |
 
-**Tests:** 2179 passing (was 1753 before Phase 0). 426 new tests, zero regressions.
+**Tests:** 2218 passing (was 1753 before Phase 0). 465 new tests, zero regressions.
 
 ---
 

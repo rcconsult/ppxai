@@ -16,10 +16,14 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **NEW:** CodeMirror modular — shared core + 30 language addons (6.3MB→2.3MB), lazy loading
 - **NEW:** K8s POC — 5 phases: namespace, Dockerfile.server, session manager, login, LDAP auth
 - **NEW:** Benchmark infra — K8s benchmark jobs, `--agents-md` toggle, delta test results
-- **NEW:** File upload Phase 2 — SessionFileStore (content-addressed), file preprocessing pipeline, image validation, VL sidecar captioning, PDF tools, `/doctor` config advisor, `/attach remove`, `supports_vision` on ModelProfile
+- **NEW:** File upload Phases 0-7 complete — multimodal message plumbing, `/attach` command, SessionFileStore, file preprocessing, image validation, VL sidecar, PDF/Excel/PPTX tools, web drag-drop + thumbnails, VSCode file picker, Textual file tree attach
+- **NEW:** CompletionProvider engine layer — `engine/completion.py` with `POST /complete` server endpoint, Rich TUI delegating to engine
 - **NEW:** Gemini 3.1 Flash Lite + Gemma 4 family (31B, 26B MoE, E4B, E2B); deprecated 2.0/2.5 models with shutdown dates
+- **NEW:** `/doctor` config advisor — deprecation table, dead/deprecated/new/recommended model scanning
 - **FIX:** Heartbeat during streaming — skip health failures while single-worker busy with LLM tokens
 - **FIX:** `/save <name>` now honors name argument; `/ls <file>` supports single-file listing
+- **FIX:** Session autorestore for directory-format sessions; context attachment badge visibility
+- **FIX:** Inline attachment thumbnails with split panel lightbox (images) and PDF embed
 
 **Version Alignment:**
 - Python package (pyproject.toml): v1.17.4
@@ -32,14 +36,14 @@ For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE
 
 | Language | Files | Lines |
 |----------|------:|------:|
-| Python (core) | 157 | ~51,300 |
-| Python (tests) | 73 | ~34,600 |
-| TypeScript (VSCode) | 17 | ~8,500 |
-| JavaScript (Web) | 19 | ~8,700 |
-| CSS | 5 | ~3,000 |
-| **Total** | **~271** | **~106,100** |
+| Python (core) | 162 | ~52,700 |
+| Python (tests) | 75 | ~35,100 |
+| TypeScript (VSCode) | 17 | ~8,700 |
+| JavaScript (Web) | 19 | ~9,200 |
+| CSS | 6 | ~3,400 |
+| **Total** | **~279** | **~109,100** |
 
-Breakdown: ~81% Python, ~8% JavaScript, ~8% TypeScript, ~3% CSS
+Breakdown: ~80% Python, ~8% JavaScript, ~8% TypeScript, ~3% CSS
 
 ## Installation Locations (CRITICAL)
 

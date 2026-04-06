@@ -22,12 +22,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`/doctor` command** (`ppxai/commands/doctor.py`) — read-only config advisor with deprecation table (`ppxai/engine/model_deprecations.py`); scans user config, reports dead/deprecated/new/recommended models
 - **Gemini 3.1 Flash Lite** + **Gemma 4 family** (31B, 26B MoE, E4B, E2B) added to ppxai-config.example.json and model_profiles.py
 - **Gemini deprecation flags** — 2.0/2.5 models flagged with shutdown dates; `gemini-3-pro-preview` removed (shut down March 2026)
+- **File Upload Phase 3 — Server API**
+  - `ChatRequest.files[]` Pydantic model (`FileAttachment`) in `ppxai/server/models.py`
+  - Chat route preprocessing integration — `preprocess_file()` per attachment in `ppxai/server/routes/chat.py`
+  - `context_attachments` added to `state_sync` SSE whitelist for cross-client push
+  - `POST /complete` server endpoint (`ppxai/server/routes/completion.py`) for cross-client autocomplete
+  - `GET /files/serve/{file_id}` endpoint for raw binary serving of session files
+- **File Upload Phase 4 — Excel + PPTX Tools**
+  - `ReadExcelSheetTool`, `ListExcelSheetsTool`, `ListExcelChartsTool`, `RenderExcelChartTool` in `ppxai/engine/tools/builtin/excel_tools.py`
+  - `ListPptxSlidesTool`, `ReadPptxSlideTextTool`, `RenderPptxSlideTool`, `ExtractPptxImagesTool` in `ppxai/engine/tools/builtin/pptx_tools.py`
+- **File Upload Phase 5 — Web Client UI**
+  - Paperclip attach button + hidden file input in `ppxai/web/index.html`
+  - Drag-drop zone on input container + body-level drop handler
+  - Attachment badge strip with image thumbnails below input
+  - Inline clickable thumbnails in user message bubbles — images open split panel lightbox, PDFs open split panel embed, other files show text preview
+  - `pendingFiles[]` staging array, cleared on send; `stream-handler.js` accepts `files` parameter
+- **File Upload Phase 6 — VSCode Client**
+  - Webview file picker (`attachBtn` + `fileInput` + drag-drop)
+  - `pendingFiles` staging, `renderPendingBadges()`, `removePendingFile()`
+  - `sendMessage` includes `files` in `postMessage` to extension host
+  - `chatPanel.ts` handles `files` field, forwards to `httpClient.ts` `chat()` method
+- **File Upload Phase 7 — Textual TUI**
+  - FileTree `a` key binding emits `FileAttach` message, handled by `on_file_tree_file_attach`
+  - `Ctrl+U` shortcut (`action_attach_shortcut`) toggles file tree for attach
+  - Send integration: `pending_files` consumed via `build_multimodal_content()` before `engine.chat()`
+  - Public `pending_files` attribute on `PPXAIDEApp` for `CommandContext` proxy
+- **CompletionProvider** (`ppxai/engine/completion.py`) — engine-layer `complete()` function extracted from Rich TUI completer; `POST /complete` server route; Rich `PPXAICompleter` refactored to delegate to engine completion
 
 ### Fixed
 
 - **`/save <name>`** now honors the name argument (was silently ignored)
 - **`/ls <file>`** shows single-file entry (shell ls semantics, was error before)
 - **`/save` warning** when pending attachments haven't been sent yet
+- **Session autorestore** for directory-format sessions (line 130 check in `sessions.py`)
+- **Context attachment badge visibility** — `classList` toggle instead of inline style
+- **Inline attachment thumbnails** — clickable via global data map + `onclick`; `_openImagePreview` lightbox uses Blob URL instead of blocked `data:` URI navigation
+- **Split panel preview** for images (zoom toggle) and PDFs (iframe embed)
 
 ## [1.17.3] - 2026-04-03
 

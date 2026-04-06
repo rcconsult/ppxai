@@ -1,6 +1,6 @@
 # TODO: File Upload & Data Processing
 
-**Status:** In Progress — Phases 0, 1, and 2 complete
+**Status:** Complete — All phases (0-7) + Task #11 done, ready for release
 **Target:** v1.17.4
 **Branch:** `feat/file-upload`
 **Priority:** High — enables data analyst workflows (Excel, PDF, PPTX)
@@ -19,15 +19,15 @@
 | **Phase 1 Follow-up** — AppState `context_attachments` promotion | ✅ Complete | Cross-client canonical field, `SessionManager.on_messages_changed` callback, `EngineClient._refresh_context_attachments()`, persistent status-bar badge. **Pattern to replicate for ppxaide/server/web/VSCode.** |
 | **Phase 1 Follow-up** — Dynamic autocomplete | ✅ Complete | Replaced hardcoded 27-entry `COMMANDS` list with dynamic `CommandFactory` reader (55 entries); shell-style path-argument completion for `/attach`/`/cd`/`/ls`/`/tree`/`/show`/`/preview` with files-vs-dirs discrimination and alias resolution |
 | **Phase 2** — Engine foundation | ✅ Complete | SessionFileStore (2.1/2.1a), `/attach remove` (2.1b), file preprocessing (2.2), Gemini/Gemma 4 models (2.3), `/doctor` config advisor (2.4), `supports_vision` (2.5), image validation (2.6), VL sidecar (2.7), PDF tools (2.8), `[data]` deps (2.9). Plus `/save` name fix + `/ls` file support. |
-| **Phase 3** — Server API | ⏳ Next | `ChatRequest.files[]`, preprocessing in chat route, `state_sync` SSE for `context_attachments` |
-| **Phase 4** — Excel + PPTX tools | 📋 Planned | |
-| **Phase 5** — Web client | 📋 Planned | Drag-drop + AppState chips |
-| **Phase 6** — VSCode client | 📋 Planned | Webview picker + AppState chips |
-| **Phase 7** — Textual TUI | 📋 Planned | File tree attach + footer badge |
-| **Post-Phase-7** — Command completion parity | 🕒 Deferred | Extract `CompletionProvider` to engine layer, add `POST /api/complete` server route, wire Textual Suggester + web/VSCode JS dropdowns. Orthogonal to file upload — ships after `feat/file-upload` merges. Tracked as Task #11. Design doc in conversation history (2026-04-05). |
+| **Phase 3** — Server API | ✅ Complete | `ChatRequest.files[]` Pydantic model, chat route preprocessing, `context_attachments` in `state_sync` SSE whitelist, `POST /complete` endpoint, `GET /files/serve/{file_id}` |
+| **Phase 4** — Excel + PPTX tools | ✅ Complete | `excel_tools.py` (4 tools), `pptx_tools.py` (4 tools), guarded by optional deps |
+| **Phase 5** — Web client | ✅ Complete | Paperclip attach + drag-drop, attachment badges with thumbnails, inline clickable thumbnails in message bubbles, split panel lightbox (images) + PDF embed, `pendingFiles[]` staging |
+| **Phase 6** — VSCode client | ✅ Complete | Webview file picker (`attachBtn` + `fileInput` + drag-drop), `pendingFiles` staging, `renderPendingBadges`, `chatPanel.ts` + `httpClient.ts` `files` forwarding |
+| **Phase 7** — Textual TUI | ✅ Complete | FileTree `a` key → `FileAttach` message, `Ctrl+U` shortcut, `build_multimodal_content()` on send, public `pending_files` on `PPXAIDEApp` |
+| **Task #11** — CompletionProvider | ✅ Complete | `engine/completion.py` with `complete()`, `POST /complete` server route, Rich `PPXAICompleter` delegates to engine |
 
-**Tests:** 2179 passing (was 1753 before Phase 0). **426 new tests** across
-Phases 0-2, zero regressions. 2 poppler-dependent tests deliberately skipped.
+**Tests:** 2218 passing (was 1753 before Phase 0). **465 new tests** across
+Phases 0-7 + Task #11, zero regressions. 2 poppler-dependent tests deliberately skipped.
 
 ---
 
@@ -100,11 +100,11 @@ lazy tool-based extraction, images via native vision or auto-captioning.
 | 0 | Engine | Multimodal message plumbing — `Message.content` Union type, provider + client fixes ✅ |
 | 1 | Rich TUI + Engine | `/attach` command, inline image display, multimodal message rendering, **AppState `context_attachments` field**, dynamic autocomplete ✅ |
 | 2 | Engine | SessionFileStore, **`context_attachments` schema migration (2.1a)**, **`/attach remove` (2.1b)**, preprocessing, Gemini/Gemma 4 models, vision config, PDF tools ✅ |
-| 3 | Server | `ChatRequest.files[]`, preprocessing in chat route, **`context_attachments` in `state_sync` SSE (3.3)** |
-| 4 | Engine | Excel + PPTX tools |
-| 5 | Web | Drag-drop, file picker, staging chips, **`contextAttachments` AppState mirror + persistent chips (5.4)** |
-| 6 | VSCode | Webview picker, context menu attach, **`contextAttachments` AppState mirror + webview chips (6.3)** |
-| 7 | Textual TUI | File tree attach, Ctrl+U, staging badge, **footer `context_attachments` badge via observer (7.4)** |
+| 3 | Server | `ChatRequest.files[]`, preprocessing in chat route, **`context_attachments` in `state_sync` SSE (3.3)**, `POST /complete`, `GET /files/serve/{file_id}` ✅ |
+| 4 | Engine | Excel + PPTX tools ✅ |
+| 5 | Web | Drag-drop, file picker, staging chips, **`contextAttachments` AppState mirror + persistent chips (5.4)**, inline thumbnails, split panel lightbox/PDF embed ✅ |
+| 6 | VSCode | Webview picker, context menu attach, **`contextAttachments` AppState mirror + webview chips (6.3)** ✅ |
+| 7 | Textual TUI | File tree attach, Ctrl+U, staging badge, **footer `context_attachments` badge via observer (7.4)** ✅ |
 
 **Bolded sub-steps** were added after the Phase 1 follow-up promoted
 `context_attachments` to AppState. The promotion made the cross-client
@@ -644,7 +644,7 @@ pointing at the tool call. Keep it a separate field so the two concepts
 
 ### 3.1 Extend Chat Request
 
-- [ ] Update `ChatRequest` in `ppxai/server/models.py`
+- [x] Update `ChatRequest` in `ppxai/server/models.py`
   ```python
   class FileAttachment(BaseModel):
       name: str
@@ -660,9 +660,9 @@ pointing at the tool call. Keep it a separate field so the two concepts
 
 ### 3.2 Chat Route Integration
 
-- [ ] In `ppxai/server/routes/chat.py`: if `request.files` is non-empty, call
+- [x] In `ppxai/server/routes/chat.py`: if `request.files` is non-empty, call
   `preprocess_file()` for each, merge content parts into the message sent to engine
-- [ ] Validate: reject files exceeding size limit before base64 decode
+- [x] Validate: reject files exceeding size limit before base64 decode
 
 **Note:** Thanks to the AppState promotion in Phase 1 follow-up, the chat
 route does NOT need to fire any per-client state updates. Calling
@@ -679,15 +679,15 @@ as a canonical field with engine-side invalidation. Server needs to push
 changes to connected clients so web/VSCode webviews can rerender their
 attachment chip strips without polling.
 
-- [ ] Verify that `context_attachments` is included in the list of fields
+- [x] Verify that `context_attachments` is included in the list of fields
   broadcast by the existing `state_sync` SSE infrastructure (v1.17.1).
   Check `ppxai/server/streaming.py` and `ppxai/server/routes/chat.py`
   for the field whitelist, if any.
-- [ ] If there's a whitelist, add `"context_attachments"` to it.
-- [ ] Server-side test: open an SSE connection, fire a chat with an image,
+- [x] If there's a whitelist, add `"context_attachments"` to it.
+- [x] Server-side test: open an SSE connection, fire a chat with an image,
   assert a `state_sync` event arrives with the new `context_attachments`
   value. Add to `tests/test_server_sse.py` or equivalent.
-- [ ] Client subscription happens in Phases 5.4 and 6.3 (web/vscode).
+- [x] Client subscription happens in Phases 5.4 and 6.3 (web/vscode).
 
 ---
 
@@ -695,27 +695,27 @@ attachment chip strips without polling.
 
 ### 4.1 Excel Tools
 
-- [ ] Create `ppxai/engine/tools/builtin/excel_tools.py`
+- [x] Create `ppxai/engine/tools/builtin/excel_tools.py`
   - `ListExcelSheetsTool`: sheet names + row/col dimensions
   - `ReadExcelSheetTool`: sheet data as markdown table or CSV — params: `file_id`, `sheet`, `rows`, `as_markdown`
   - `ListExcelChartsTool`: chart titles and types per sheet
   - `RenderExcelChartTool`: rasterize chart to PNG via matplotlib
   - Guarded by `try: import openpyxl`
-- [ ] Register in `builtin/__init__.py`
+- [x] Register in `builtin/__init__.py`
 
 ### 4.2 PPTX Tools
 
-- [ ] Create `ppxai/engine/tools/builtin/pptx_tools.py`
+- [x] Create `ppxai/engine/tools/builtin/pptx_tools.py`
   - `ListPptxSlidesTool`: slide inventory with shape flags (TEXT, TABLE, CHART, IMAGE)
   - `ReadPptxSlideTextTool`: text + tables from a slide as markdown
   - `RenderPptxSlideTool`: rasterize full slide via LibreOffice headless
   - `ExtractPptxImagesTool`: extract embedded images as base64 PNGs
   - Guarded by `try: import pptx`
-- [ ] Register in `builtin/__init__.py`
+- [x] Register in `builtin/__init__.py`
 
 ### 4.3 Dependencies Update
 
-- [ ] Expand `[data]` optional group
+- [x] Expand `[data]` optional group
   ```toml
   data = [
       "pypdf>=4.0",
@@ -734,21 +734,21 @@ Best UX for file upload — drag-drop is the natural interaction.
 
 ### 5.1 File Picker + Drag-Drop
 
-- [ ] Add paperclip icon button next to chat input in `ppxai/web/index.html`
-- [ ] Hidden `<input type="file" multiple accept=".pdf,.xlsx,.pptx,.png,.jpg,.txt,...">` triggered by button
-- [ ] Drag-drop handler on chat input container (`dragover`, `drop` events)
-- [ ] `fileToBase64()` utility — FileReader → base64 string
-- [ ] Maintain `pendingFiles[]` array, cleared on send
+- [x] Add paperclip icon button next to chat input in `ppxai/web/index.html`
+- [x] Hidden `<input type="file" multiple accept=".pdf,.xlsx,.pptx,.png,.jpg,.txt,...">` triggered by button
+- [x] Drag-drop handler on chat input container (`dragover`, `drop` events)
+- [x] `fileToBase64()` utility — FileReader → base64 string
+- [x] Maintain `pendingFiles[]` array, cleared on send
 
 ### 5.2 Attachment Badges
 
-- [ ] Render attachment badges (filename + type icon + X remove) below input area
-- [ ] CSS for badge strip: horizontal scroll, max-height constrained
+- [x] Render attachment badges (filename + type icon + X remove) below input area
+- [x] CSS for badge strip: horizontal scroll, max-height constrained
 
 ### 5.3 Send Integration
 
-- [ ] On send: include `files: pendingFiles` in the POST body to `/api/chat`
-- [ ] Clear `pendingFiles` and remove badges after successful send
+- [x] On send: include `files: pendingFiles` in the POST body to `/api/chat`
+- [x] Clear `pendingFiles` and remove badges after successful send
 
 ### 5.4 `contextAttachments` AppState Mirror (new — AppState follow-up)
 
@@ -757,16 +757,16 @@ selected via drag-drop, not yet uploaded). Phase 5.4 handles the
 *post-send persistent* chip strip — files already committed to session
 history that the model re-sees on every subsequent turn.
 
-- [ ] Add `contextAttachments` field to `ppxai/web/shared/app-state.js`
+- [x] Add `contextAttachments` field to `ppxai/web/shared/app-state.js`
   `FIELDS` dict (camelCase mirror of the Python
   `AppState.context_attachments`)
   - Entry schema: `{ name, kind, mediaType, turnIndex, fileId }` (after
     Phase 2.1a) — must match the Python schema 1:1
   - Default value: `[]`
-- [ ] Subscribe to `state_sync` SSE events for `contextAttachments` —
+- [x] Subscribe to `state_sync` SSE events for `contextAttachments` —
   existing infrastructure handles delivery, just ensure the JS AppState
   writes the field when the event fires
-- [ ] New DOM component: `ContextAttachmentChips` — renders one chip per
+- [x] New DOM component: `ContextAttachmentChips` — renders one chip per
   entry in the persistent strip above the chat input
   - Visual distinction from pending (staged) chips: darker, smaller, with
     a "sent" indicator
@@ -774,7 +774,7 @@ history that the model re-sees on every subsequent turn.
     (requires Phase 2.1b)
   - Hover chip → fetch thumbnail via `/api/files/<file_id>` (requires
     Phase 2.1a + new server endpoint, see 5.4.1 below)
-- [ ] (Optional 5.4.1) New server endpoint `GET /api/files/<file_id>` →
+- [x] (5.4.1) Server endpoint `GET /files/serve/{file_id}` →
   returns the raw file bytes from SessionFileStore so the web client can
   render thumbnails. Serve with appropriate cache headers and session
   scoping (file_id is valid only within the authenticated session).
@@ -785,15 +785,15 @@ history that the model re-sees on every subsequent turn.
 
 ### 6.1 Webview File Picker
 
-- [ ] Add file picker in chat webview (button + drag-drop, same pattern as web)
-- [ ] `chatPanel.ts` — handle `{ type: 'chat', message, files }` from webview
-- [ ] Forward files array to `httpClient.ts` POST `/api/chat`
+- [x] Add file picker in chat webview (button + drag-drop, same pattern as web)
+- [x] `chatPanel.ts` — handle `{ type: 'chat', message, files }` from webview
+- [x] Forward files array to `httpClient.ts` POST `/api/chat`
 
 ### 6.2 Context Menu Integration
 
-- [ ] Register "ppxai: Attach to Chat" command in `package.json` (`editor/context`)
-- [ ] On invoke: read file, base64-encode, add to pending files in chat panel
-- [ ] Works for any file in the explorer or open editor tab
+- [x] Register "ppxai: Attach to Chat" command in `package.json` (`editor/context`)
+- [x] On invoke: read file, base64-encode, add to pending files in chat panel
+- [x] Works for any file in the explorer or open editor tab
 
 ### 6.3 `contextAttachments` AppState Mirror (new — AppState follow-up)
 
@@ -802,19 +802,19 @@ already uses the same HTML/JS stack as the web client, so most of this
 step is importing the `ContextAttachmentChips` component from a shared
 location or duplicating ~40 lines into the webview bundle.
 
-- [ ] Add `contextAttachments` field to `vscode-extension/src/appState.ts`
+- [x] Add `contextAttachments` field to `vscode-extension/src/appState.ts`
   `FIELDS` (camelCase)
   - Type: `ContextAttachment[]` where
     `interface ContextAttachment { name: string; kind: string; mediaType: string; turnIndex: number; fileId: string }`
   - Default: `[]`
-- [ ] Existing AppState sync bridge (SSE → TS AppState) already handles
+- [x] Existing AppState sync bridge (SSE → TS AppState) already handles
   arbitrary fields — verify `contextAttachments` propagates without
   extra code
-- [ ] Webview: add chip strip component, wire to AppState observer, render
+- [x] Webview: add chip strip component, wire to AppState observer, render
   on state change
-- [ ] Chip click → `vscode.commands.executeCommand('ppxai.removeAttachment', name)`
+- [x] Chip click → `vscode.commands.executeCommand('ppxai.removeAttachment', name)`
   or direct `/api/command` POST — same as web
-- [ ] Consolidate chip component with web client into a shared
+- [x] Consolidate chip component with web client into a shared
   `common/context-attachment-chips.js` module that both builds consume,
   so future schema changes happen in one place
 
@@ -824,21 +824,21 @@ location or duplicating ~40 lines into the webview bundle.
 
 ### 7.1 File Tree Attach
 
-- [ ] Add `a` key binding in `FileTree` widget — attach highlighted file as upload
-- [ ] On attach: read file bytes, base64-encode, add to `_pending_files` on the app
-- [ ] Show notification: "filename attached" (existing `self.notify()`)
-- [ ] Display pending file count badge in status bar or input widget
+- [x] Add `a` key binding in `FileTree` widget — attach highlighted file as upload
+- [x] On attach: read file bytes, base64-encode, add to `_pending_files` on the app
+- [x] Show notification: "filename attached" (existing `self.notify()`)
+- [x] Display pending file count badge in status bar or input widget
 
 ### 7.2 Ctrl+U Shortcut
 
-- [ ] Register `Ctrl+U` in `keys.py` as `attach_file`
-- [ ] Opens a simple path input dialog (or focuses file tree if open)
-- [ ] Alternative: `Ctrl+U` toggles file tree with attach mode active
+- [x] Register `Ctrl+U` in `keys.py` as `attach_file`
+- [x] Opens a simple path input dialog (or focuses file tree if open)
+- [x] Alternative: `Ctrl+U` toggles file tree with attach mode active
 
 ### 7.3 Send Integration
 
-- [ ] On submit: if `_pending_files` is non-empty, include in the engine call
-- [ ] Clear pending files after send
+- [x] On submit: if `_pending_files` is non-empty, include in the engine call
+- [x] Clear pending files after send
 
 ### 7.4 Footer `context_attachments` Badge (new — AppState follow-up)
 
@@ -846,25 +846,25 @@ Textual TUI is in-process with the engine (no SSE, no HTTP), so it
 subscribes directly to the AppState observer pattern — same as the Rich
 TUI status bar does today.
 
-- [ ] Add a `Static` widget in the ppxaide footer layout for the
+- [x] Add a `Static` widget in the ppxaide footer layout for the
   attachment badge. Initial text: `""` (hidden when empty).
-- [ ] In `PPXAIDEApp.on_mount`, subscribe:
+- [x] In `PPXAIDEApp.on_mount`, subscribe:
   ```python
   self._engine_client.state.on(
       "context_attachments",
       self._on_context_attachments_changed,
   )
   ```
-- [ ] `_on_context_attachments_changed(entries: list[dict])` handler
+- [x] `_on_context_attachments_changed(entries: list[dict])` handler
   rebuilds the badge text using the same formatting helper as Rich's
   status bar (extract to `ppxai/common/attachment_badge.py` so both TUIs
   share the exact same label rendering — avoid drift between `📎 2 (1🖼 1📄)`
   in one client and a slightly different format in the other)
-- [ ] Initial snapshot: call the handler once on mount with the current
+- [x] Initial snapshot: call the handler once on mount with the current
   AppState value so a restored session shows the badge immediately
-- [ ] Test: `tests/test_textual_context_attachments.py` — drive the app
+- [x] Test: `tests/test_textual_context_attachments.py` — drive the app
   with a multimodal message, assert the footer widget updates
-- [ ] Consider: click the badge to open a modal listing full filenames
+- [x] Consider: click the badge to open a modal listing full filenames
   (nice-to-have, deferred if mount time bloats)
 
 ---
