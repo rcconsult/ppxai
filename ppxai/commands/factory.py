@@ -1,10 +1,14 @@
 """
 Command Factory - Central registry for slash commands.
 
-This is a LEAF MODULE - no ppxai imports allowed.
-Commands self-register at import time via ToolFactory.register().
+The factory guarantees that all built-in command modules are imported
+(and therefore registered) before any read operation on the registry.
+This makes command availability deterministic regardless of import path:
+``from .factory import CommandFactory`` and ``from . import CommandFactory``
+both yield a fully-populated registry.
 
 v1.13.10: Initial implementation (Command Factory pattern)
+v1.17.4:  Eager loading — factory owns its preconditions
 """
 
 import importlib
@@ -15,6 +19,22 @@ from pathlib import Path
 from typing import Callable, Dict, List, Any, Optional
 
 logger = logging.getLogger(__name__)
+
+# Built-in command modules that self-register when imported.
+# The factory imports these eagerly on first read access so the registry
+# is fully populated regardless of which module imported CommandFactory.
+_BUILTIN_COMMAND_MODULES = (
+    "session",
+    "provider",
+    "system",
+    "coding",
+    "utility",
+    "agent",
+    "tools",
+    "display",
+    "attach",
+    "doctor",
+)
 
 
 @dataclass
@@ -68,6 +88,23 @@ class CommandFactory:
     """
     _registry: Dict[str, CommandSpec] = {}
     _aliases: Dict[str, str] = {}  # alias -> canonical name
+    _loaded: bool = False
+
+    @classmethod
+    def _ensure_loaded(cls) -> None:
+        """Import all built-in command modules so the registry is populated.
+
+        Called automatically before any read operation. Idempotent — the
+        import cost is paid exactly once per process.
+        """
+        if cls._loaded:
+            return
+        cls._loaded = True
+        for module_name in _BUILTIN_COMMAND_MODULES:
+            try:
+                importlib.import_module(f".{module_name}", package="ppxai.commands")
+            except Exception as e:
+                logger.warning(f"Failed to load command module {module_name}: {e}")
 
     @classmethod
     def register(cls, spec: CommandSpec) -> None:
@@ -121,6 +158,7 @@ class CommandFactory:
         Returns:
             CommandSpec if found, None otherwise
         """
+        cls._ensure_loaded()
         # Check if it's an alias
         canonical = cls._aliases.get(name, name)
         return cls._registry.get(canonical)
@@ -172,6 +210,7 @@ class CommandFactory:
         Returns:
             List of command names (not aliases)
         """
+        cls._ensure_loaded()
         return list(cls._registry.keys())
 
     @classmethod
@@ -184,6 +223,7 @@ class CommandFactory:
         Returns:
             List of CommandSpec in the category
         """
+        cls._ensure_loaded()
         return [spec for spec in cls._registry.values()
                 if spec.category == category and not spec.hidden]
 
@@ -194,6 +234,7 @@ class CommandFactory:
         Returns:
             Sorted list of category names
         """
+        cls._ensure_loaded()
         categories = set(spec.category for spec in cls._registry.values()
                         if not spec.hidden)
         return sorted(categories)
@@ -203,6 +244,7 @@ class CommandFactory:
         """Clear all registrations (for testing)."""
         cls._registry.clear()
         cls._aliases.clear()
+        cls._loaded = False
 
     @classmethod
     def generate_help(cls, client: Optional[str] = None) -> str:
@@ -216,6 +258,7 @@ class CommandFactory:
         Returns:
             Formatted help text with Rich markup
         """
+        cls._ensure_loaded()
         lines = ["[bold]Available Commands:[/bold]\n"]
 
         # Group by category
@@ -249,6 +292,7 @@ class CommandFactory:
         Returns:
             Formatted help text, or None if command not found
         """
+        cls._ensure_loaded()
         spec = cls.get(name)
         if not spec:
             return None

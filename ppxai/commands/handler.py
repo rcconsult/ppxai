@@ -62,16 +62,6 @@ from ..constants import ConsentResponse, ConsentDecision, ShellRiskLevel
 from .context import RichCommandContext
 from .factory import CommandFactory
 from .results import CommandResult
-from . import session  # noqa: F401 - imported for side-effect (registration)
-from . import provider  # noqa: F401 - imported for side-effect (registration)
-from . import system  # noqa: F401 - imported for side-effect (registration)
-from . import coding  # noqa: F401 - imported for side-effect (registration)
-from . import utility  # noqa: F401 - imported for side-effect (registration)
-from . import agent  # noqa: F401 - imported for side-effect (registration)
-from . import tools  # noqa: F401 - imported for side-effect (registration)
-from . import display  # noqa: F401 - imported for side-effect (registration)
-from . import attach  # noqa: F401 - imported for side-effect (registration)
-from . import doctor  # noqa: F401 - imported for side-effect (registration)
 
 logger = get_logger("tui")
 
