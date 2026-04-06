@@ -670,6 +670,32 @@ class PPXAICompleter(Completer):
                             )
                 return
 
+            # Handle /model — dynamic model names for current provider
+            if cmd_text.startswith('/model '):
+                parts = text.split()
+                if len(parts) == 2:
+                    query = parts[1].lower()
+                    for model_id, model_name in self._get_model_names(query):
+                        yield Completion(
+                            model_id,
+                            start_position=-len(parts[1]),
+                            display_meta=model_name,
+                        )
+                return
+
+            # Handle /provider — known provider IDs
+            if cmd_text.startswith('/provider '):
+                parts = text.split()
+                if len(parts) == 2:
+                    query = parts[1].lower()
+                    for provider_id, provider_name in self._get_provider_names(query):
+                        yield Completion(
+                            provider_id,
+                            start_position=-len(parts[1]),
+                            display_meta=provider_name,
+                        )
+                return
+
             # Regular command name completion — delegated to engine.
             wd = str(self._get_working_dir())
             for item in engine_complete(text, len(text), working_dir=wd):
@@ -679,6 +705,29 @@ class PPXAICompleter(Completer):
                     display=item.get("display", item["text"]),
                     display_meta=item.get("description", ""),
                 )
+
+    def _get_model_names(self, query: str = '') -> list[tuple[str, str]]:
+        """Dynamic model names for the current provider."""
+        if not self._command_handler:
+            return []
+        current_provider = self._command_handler.provider
+        provider_config = get_provider_config(current_provider)
+        results = []
+        for model_key, model_info in provider_config.get('models', {}).items():
+            model_id = model_info.get('id', model_key)
+            model_name = model_info.get('name', model_id)
+            if not query or query in model_id.lower() or query in model_name.lower():
+                results.append((model_id, model_name))
+        return results
+
+    def _get_provider_names(self, query: str = '') -> list[tuple[str, str]]:
+        """All configured provider IDs and display names."""
+        results = []
+        for provider_id, provider_cfg in PROVIDERS.items():
+            provider_name = provider_cfg.get('name', provider_id)
+            if not query or query in provider_id.lower() or query in provider_name.lower():
+                results.append((provider_id, provider_name))
+        return results
 
     def _get_tool_names(self) -> list[tuple[str, str]]:
         """Get available tool names and descriptions for completion."""
