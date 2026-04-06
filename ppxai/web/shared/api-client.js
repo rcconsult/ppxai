@@ -235,6 +235,10 @@ class ApiClient {
         return this.post('/files/search', { query, limit });
     }
 
+    async complete(buffer, cursor = -1) {
+        return this.post('/complete', { buffer, cursor });
+    }
+
     // === Working Directory ===
 
     async getWorkingDir() {

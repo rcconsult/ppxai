@@ -1421,6 +1421,110 @@ body {
 }
 .file-badge .badge-remove:hover { opacity: 1; }
 
+/* Badge thumbnail previews (v1.17.4) */
+.badge-thumb {
+    width: 32px;
+    height: 32px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+/* Inline attachment thumbnails in user message bubbles (v1.17.4) */
+.message-attachments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+.attachment-thumbnail {
+    max-width: 200px;
+    max-height: 150px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.15s;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.attachment-thumbnail:hover {
+    opacity: 0.9;
+    transform: scale(1.02);
+    border-color: var(--accent-color, #4a9eff);
+    box-shadow: 0 0 8px rgba(74, 158, 255, 0.3);
+}
+.attachment-file-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--accent-color, #4a9eff);
+    color: var(--accent-color, #4a9eff);
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 3px;
+    transition: background 0.15s, color 0.15s;
+}
+.attachment-file-badge:hover {
+    background: rgba(74, 158, 255, 0.12);
+    color: var(--accent-hover, #6cb3ff);
+    text-decoration-style: solid;
+}
+
+/* Image lightbox overlay (v1.17.4) */
+.image-lightbox {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.lightbox-header {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: rgba(0,0,0,0.5);
+}
+.lightbox-title {
+    color: white;
+    font-size: 14px;
+    opacity: 0.9;
+}
+.lightbox-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    opacity: 0.7;
+    padding: 0 8px;
+}
+.lightbox-close:hover { opacity: 1; }
+.lightbox-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 95vw;
+    max-height: 90vh;
+    padding: 48px 16px 16px;
+}
+.lightbox-body img {
+    max-width: 100%;
+    max-height: 85vh;
+    border-radius: 8px;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.5);
+}
+
 /* Context attachment indicator (v1.17.4 Phase 5.4) */
 .attachment-badge {
     display: inline-block;

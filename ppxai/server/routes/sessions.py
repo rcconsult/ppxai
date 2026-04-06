@@ -124,10 +124,14 @@ async def get_last_session(s: Session = Depends(get_session)):
         return {"last_session": None}
 
     # Verify the session file still exists; clear stale pointer if not.
+    # v1.17.4: Check both flat (.json) and directory (dir/session.json)
+    # formats — multimodal sessions save in directory format.
     session_name = state.get("name")
     if session_name:
         sessions_dir = Path.home() / ".ppxai" / "sessions"
-        if not (sessions_dir / f"{session_name}.json").exists():
+        flat_exists = (sessions_dir / f"{session_name}.json").exists()
+        dir_exists = (sessions_dir / session_name / "session.json").exists()
+        if not flat_exists and not dir_exists:
             EngineSessionManager.clear_state_file()
             return {"last_session": None}
 

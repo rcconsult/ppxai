@@ -542,6 +542,7 @@ class PpxaiApp {
 
         // === File upload: attach button + drag-drop (v1.17.4 Phase 5.1) ===
         this.pendingFiles = [];
+        this._completeRequestId = 0;
 
         // Paperclip button triggers hidden file input
         const attachBtn = document.getElementById('attachBtn');
@@ -875,13 +876,13 @@ class PpxaiApp {
         const badge = document.getElementById('attachment-badge');
         if (!badge) return;
         if (attachments.length === 0) {
-            badge.style.display = 'none';
+            badge.classList.add('hidden');
             badge.textContent = '';
         } else {
             const names = attachments.map(a => a.name || '?').slice(0, 3);
             let label = `\u{1F4CE} ${attachments.length} in context: ${names.join(', ')}`;
             if (attachments.length > 3) label += `, +${attachments.length - 3}`;
-            badge.style.display = 'inline-block';
+            badge.classList.remove('hidden');
             badge.textContent = label;
         }
     }
@@ -920,7 +921,10 @@ class PpxaiApp {
         reader.readAsDataURL(file);
     }
 
-    /** Render the pending-files badge strip below the input hint. */
+    /** Render the pending-files badge strip below the input hint.
+     *  Images get a small thumbnail preview using a data: URI from the
+     *  base64 bytes already in memory — no server round trip needed.
+     */
     _renderPendingBadges() {
         const container = document.getElementById('attachmentBadges');
         if (!container) return;
@@ -933,11 +937,15 @@ class PpxaiApp {
 
         container.classList.remove('hidden');
         container.innerHTML = this.pendingFiles.map((f, i) => {
-            const icon = f.media_type.startsWith('image/') ? '\u{1F5BC}' : '\u{1F4C4}';
             const sizeKB = (f.size / 1024).toFixed(1);
             const shortName = f.name.length > 25 ? f.name.slice(0, 22) + '...' : f.name;
+            // Inline thumbnail for images — shows the actual image in the badge
+            const isImage = f.media_type.startsWith('image/');
+            const thumb = isImage
+                ? `<img class="badge-thumb" src="data:${f.media_type};base64,${f.data}" alt="${f.name}">`
+                : `<span class="badge-icon">\u{1F4C4}</span>`;
             return `<span class="file-badge" data-index="${i}">
-                <span class="badge-icon">${icon}</span>
+                ${thumb}
                 <span class="badge-name" title="${f.name}">${shortName}</span>
                 <span class="badge-size">(${sizeKB} KB)</span>
                 <span class="badge-remove" onclick="window.ppxai._removePendingFile(${i})">\u00D7</span>
@@ -963,6 +971,156 @@ class PpxaiApp {
     _hideDragOverlay() {
         const overlay = document.getElementById('drag-overlay');
         if (overlay) overlay.remove();
+    }
+
+    /**
+     * Preview an attached file by key (called via onclick from message HTML).
+     * Opens in the right-side split panel using the existing RightPanelFrame
+     * infrastructure — same preview experience as clicking files in the
+     * sidebar, but with bytes from the attachment staging buffer instead
+     * of a server fetch.
+     */
+    _previewAttachment(key) {
+        const entry = (window._ppxaiAttachData || {})[key];
+        if (!entry) return;
+
+        if (!this.rightPanelFrame) {
+            // Fallback if right panel isn't available
+            if (entry.media_type.startsWith('image/')) {
+                this._openImagePreview(entry.name, entry.media_type, entry.data);
+            }
+            return;
+        }
+
+        // Create an inline BaseView subclass that renders directly from
+        // the base64 data without a server round trip. Matches the API
+        // of ImageFileView / PdfFileView but skips the fetch.
+        const frame = this.rightPanelFrame;
+        const name = entry.name;
+        const mediaType = entry.media_type;
+        const b64 = entry.data;
+        const sizeKB = (b64.length * 3 / 4 / 1024).toFixed(1);
+
+        if (mediaType.startsWith('image/')) {
+            const view = {
+                getTitle: () => name,
+                getPath: () => `attachment:${name}`,
+                getIcon: () => '\u{1F5BC}',
+                mount: (container) => {
+                    container.innerHTML = `
+                        <div class="rpf-view-toolbar">
+                            <span class="rpf-view-info">Image \u2022 ${sizeKB} KB</span>
+                            <button class="rpf-btn ifv-zoom-btn" title="Toggle zoom">\u{1F50D} Zoom</button>
+                        </div>
+                        <div class="ifv-img-wrapper">
+                            <img class="ifv-img"
+                                 src="data:${mediaType};base64,${b64}"
+                                 alt="${name}"
+                                 title="Click to toggle zoom"
+                                 style="max-width:100%; max-height:100%;">
+                        </div>`;
+                    let zoomed = false;
+                    const img = container.querySelector('.ifv-img');
+                    const zoomBtn = container.querySelector('.ifv-zoom-btn');
+                    const toggleZoom = () => {
+                        zoomed = !zoomed;
+                        img.style.maxWidth = zoomed ? 'none' : '100%';
+                        img.style.maxHeight = zoomed ? 'none' : '100%';
+                        zoomBtn.textContent = zoomed ? '\u{1F50D} Fit' : '\u{1F50D} Zoom';
+                    };
+                    if (img) img.addEventListener('click', toggleZoom);
+                    if (zoomBtn) zoomBtn.addEventListener('click', toggleZoom);
+                },
+                unmount: () => {},
+                focus: () => {},
+                onKeyDown: () => false,
+            };
+            frame.push(view);
+        } else if (mediaType === 'application/pdf') {
+            const view = {
+                getTitle: () => name,
+                getPath: () => `attachment:${name}`,
+                getIcon: () => '\u{1F4D5}',
+                mount: (container) => {
+                    container.innerHTML = `
+                        <div class="rpf-view-toolbar">
+                            <span class="rpf-view-info">PDF \u2022 ${sizeKB} KB</span>
+                        </div>
+                        <div class="pfv-embed-wrapper" style="flex:1; min-height:0;">
+                            <embed src="data:application/pdf;base64,${b64}"
+                                   type="application/pdf"
+                                   style="width:100%; height:100%;">
+                        </div>`;
+                },
+                unmount: () => {},
+                focus: () => {},
+                onKeyDown: () => false,
+            };
+            frame.push(view);
+        } else {
+            // Other file types — show content as text in code view
+            try {
+                const text = atob(b64);
+                const view = {
+                    getTitle: () => name,
+                    getPath: () => `attachment:${name}`,
+                    getIcon: () => '\u{1F4C4}',
+                    mount: (container) => {
+                        container.innerHTML = `
+                            <div class="rpf-view-toolbar">
+                                <span class="rpf-view-info">File \u2022 ${sizeKB} KB</span>
+                            </div>
+                            <pre style="padding:16px; overflow:auto; flex:1;">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>`;
+                    },
+                    unmount: () => {},
+                    focus: () => {},
+                    onKeyDown: () => false,
+                };
+                frame.push(view);
+            } catch (e) {
+                console.error('[ppxai] File preview failed:', e);
+            }
+        }
+    }
+
+    /**
+     * Open an image in a full-screen lightbox overlay.
+     * Uses a data: URI for immediate display — no server round trip.
+     * Browsers block window.open on data: URIs, so we use an in-page
+     * overlay instead.
+     */
+    _openImagePreview(name, mediaType, b64Data) {
+        // Remove any existing lightbox
+        const existing = document.getElementById('image-lightbox');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'image-lightbox';
+        overlay.className = 'image-lightbox';
+        overlay.innerHTML = `
+            <div class="lightbox-header">
+                <span class="lightbox-title">${name}</span>
+                <button class="lightbox-close" title="Close (Esc)">\u00D7</button>
+            </div>
+            <div class="lightbox-body">
+                <img src="data:${mediaType};base64,${b64Data}" alt="${name}">
+            </div>`;
+
+        // Close on backdrop click, close button, or Escape
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay || e.target.closest('.lightbox-close')) {
+                overlay.remove();
+            }
+        });
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                overlay.remove();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+
+        document.body.appendChild(overlay);
     }
 
     async loadInitialState() {
@@ -1245,10 +1403,48 @@ class PpxaiApp {
             return;
         }
 
-        // Show user message (include attachment count hint if any)
+        // Show user message with clickable attachment indicators.
+        // Images get inline thumbnails, PDFs/other get file badges.
+        // All are clickable: images open a lightbox, PDFs open in
+        // browser's built-in viewer via Blob URL.
         if (this.pendingFiles.length > 0) {
-            const fileNames = this.pendingFiles.map(f => f.name).join(', ');
-            this.addMessage('user', `${content}\n\n[Attached: ${fileNames}]`);
+            // Store file data in a global map so onclick handlers can
+            // retrieve it after pendingFiles is cleared. Using a global
+            // map + onclick attributes is more reliable than event
+            // delegation through complex innerHTML-rendered DOM.
+            if (!window._ppxaiAttachData) window._ppxaiAttachData = {};
+            const attachId = Date.now();
+
+            let attachHtml = '<div class="message-attachments">';
+            for (let i = 0; i < this.pendingFiles.length; i++) {
+                const f = this.pendingFiles[i];
+                const key = `${attachId}_${i}`;
+                window._ppxaiAttachData[key] = {
+                    name: f.name,
+                    media_type: f.media_type,
+                    data: f.data,
+                };
+                const sizeKB = (f.size / 1024).toFixed(1);
+                if (f.media_type.startsWith('image/')) {
+                    attachHtml += `<img class="attachment-thumbnail" `
+                        + `src="data:${f.media_type};base64,${f.data}" `
+                        + `alt="${f.name}" `
+                        + `title="${f.name} (${sizeKB} KB) — click to preview" `
+                        + `onclick="window.ppxai._previewAttachment('${key}')">`;
+                } else {
+                    attachHtml += `<span class="attachment-file-badge" `
+                        + `title="${f.name} (${sizeKB} KB) — click to preview" `
+                        + `onclick="window.ppxai._previewAttachment('${key}')">`
+                        + `\u{1F4CE} ${f.name}</span>`;
+                }
+            }
+            attachHtml += '</div>';
+
+            const msgEl = this.addMessage('user', '');
+            const contentEl = msgEl.querySelector('.message-content');
+            if (contentEl) {
+                contentEl.innerHTML = this.renderMarkdown(content) + attachHtml;
+            }
         } else {
             this.addMessage('user', content);
         }
@@ -2045,63 +2241,39 @@ class PpxaiApp {
     handleInputChange() {
         const value = this.elements.messageInput.value;
         const cursorPos = this.elements.messageInput.selectionStart;
-
-        // Check for slash command autocomplete
-        if (value.startsWith('/') && !value.includes(' ')) {
-            const query = value.toLowerCase();
-            this.state.autocompleteItems = Object.keys(this.slashCommands)
-                .filter(cmd => cmd.startsWith(query))
-                .map(cmd => ({
-                    label: cmd,
-                    description: this.slashCommands[cmd].description,
-                    value: cmd
-                }));
-            this.state.autocompleteType = 'command';
-            this.state.autocompleteIndex = 0;
-            this.showAutocomplete();
-            return;
-        }
-
-        // Check for file reference autocomplete (@)
         const beforeCursor = value.slice(0, cursorPos);
-        const atMatch = beforeCursor.match(/@([\w.\-\/]*)$/);
-        if (atMatch) {
-            const query = atMatch[1];
-            this.searchFilesForAutocomplete(query);
-            return;
-        }
 
-        this.hideAutocomplete();
+        // Delegate to server-side completion for slash commands and @file refs
+        if (beforeCursor.startsWith('/') || /@[\w.\-/]*$/.test(beforeCursor)) {
+            this._fetchAutocomplete(beforeCursor, cursorPos);
+        } else {
+            this.hideAutocomplete();
+        }
     }
 
-    async searchFilesForAutocomplete(query) {
-        // v1.13.8: Use server endpoint for file search
-        this.state.autocompleteType = 'file';
-        const fallback = [
-            { label: '@git', description: 'Include git diff', value: '@git' },
-            { label: '@tree', description: 'Include project structure', value: '@tree' },
-        ];
-
+    async _fetchAutocomplete(buffer, cursor) {
+        const reqId = ++this._completeRequestId;
         try {
-            const data = await this.apiClient.searchFiles(query || '', 20);
-            this.state.autocompleteItems = data.files.map(file => ({
-                label: file.name.startsWith('@') ? file.name : `@${file.name}`,
-                description: file.path,
-                value: file.name.startsWith('@') ? file.name : `@${file.name}`
+            const data = await this.apiClient.complete(buffer, cursor);
+            if (reqId !== this._completeRequestId) return;
+            if (!data.items || data.items.length === 0) {
+                this.hideAutocomplete();
+                return;
+            }
+            this.state.autocompleteItems = data.items.map(item => ({
+                label: item.display,
+                description: item.description || '',
+                value: item.text,
+                replaceStart: item.replace_start,
+                kind: item.kind,
             }));
+            this.state.autocompleteType = 'server';
+            this.state.autocompleteIndex = 0;
+            this.showAutocomplete();
         } catch (error) {
-            // Fallback to special refs on error
-            this.state.autocompleteItems = query
-                ? fallback.filter(item => item.label.toLowerCase().includes(query.toLowerCase()))
-                : fallback;
+            if (reqId !== this._completeRequestId) return;
+            this.hideAutocomplete();
         }
-
-        this.state.autocompleteIndex = 0;
-        // v1.13.8: Don't show if input was cleared (message sent during async request)
-        if (!this.elements.messageInput.value.includes('@')) {
-            return;
-        }
-        this.showAutocomplete();
     }
 
     showAutocomplete() {
@@ -2142,20 +2314,34 @@ class PpxaiApp {
         if (!item) return;
 
         const input = this.elements.messageInput;
-        const value = input.value;
+        const cursorPos = input.selectionStart;
 
-        if (this.state.autocompleteType === 'command') {
-            input.value = item.value + ' ';
-        } else if (this.state.autocompleteType === 'file') {
-            // Replace @query with @filename
-            const beforeCursor = value.slice(0, input.selectionStart);
-            const afterCursor = value.slice(input.selectionStart);
-            const atPos = beforeCursor.lastIndexOf('@');
-            input.value = beforeCursor.slice(0, atPos) + item.value + ' ' + afterCursor;
+        if (item.replaceStart !== undefined) {
+            // Server-provided replace_start: negative offset from cursor
+            const replaceFrom = cursorPos + item.replaceStart;
+            // Dirs get no trailing space so the user can continue typing the path
+            const insertText = item.value + (item.kind === 'dir' ? '' : ' ');
+            input.value = input.value.slice(0, replaceFrom) + insertText + input.value.slice(cursorPos);
+            const newPos = replaceFrom + insertText.length;
+            input.selectionStart = input.selectionEnd = newPos;
+            this.hideAutocomplete();
+            input.focus();
+            // Re-trigger completion so dir traversal feels seamless
+            if (item.kind === 'dir') {
+                input.dispatchEvent(new Event('input'));
+            }
+        } else {
+            // Legacy fallback (should not be reached with server completion)
+            if (this.state.autocompleteType === 'command') {
+                input.value = item.value + ' ';
+            } else {
+                const beforeCursor = input.value.slice(0, cursorPos);
+                const atPos = beforeCursor.lastIndexOf('@');
+                input.value = beforeCursor.slice(0, atPos) + item.value + ' ' + input.value.slice(cursorPos);
+            }
+            this.hideAutocomplete();
+            input.focus();
         }
-
-        this.hideAutocomplete();
-        input.focus();
     }
 
     // === Session Management ===
@@ -2179,6 +2365,14 @@ class PpxaiApp {
             this._scrollSpacer.style.height = '0';
             this.elements.messagesContainer.prepend(this._scrollSpacer);
             this._domMessageCount = 0;
+            // Clear pending (staged) files and context attachment badge.
+            // state_sync SSE events are only drained during chat streams, so
+            // we update the client state directly here rather than waiting for
+            // the next stream to deliver the server-side AppState reset.
+            this.pendingFiles = [];
+            this._renderPendingBadges();
+            this.state.contextAttachments = [];
+            this.updateAttachmentBadge();
             // Quick command handlers use event delegation, no need to re-attach
             this.showSystemMessage('Conversation cleared');
         } catch (error) {

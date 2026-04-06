@@ -15,6 +15,7 @@ from . import (
     config,
     consent,
     context,
+    file_serve,
     files,
     preview,
     providers,
@@ -34,6 +35,7 @@ all_routers: list[APIRouter] = [
     context.router,
     sessions.router,
     files.router,
+    file_serve.router,  # v1.17.4: GET /files/serve/<file_id> for raw binary serving
     preview.router,
     consent.router,
     agent.router,
