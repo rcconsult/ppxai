@@ -29,7 +29,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from ..commands.factory import CommandFactory
+from ..commands import CommandFactory
 
 
 # Commands that accept path arguments, and what kinds of entries make

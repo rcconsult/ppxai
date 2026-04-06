@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional
 
 from ...commands.context import ServerCommandContext
-from ...commands.factory import CommandFactory
+from ...commands import CommandFactory
 from ..models import CommandRequest
 from ..state import Session, get_session
 
