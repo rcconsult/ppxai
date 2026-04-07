@@ -520,7 +520,7 @@ body {
    layout space for it. Chat scrollbar sits inside .messages which
    ends before this handle. */
 .resize-handle {
-    flex: 0 0 3px;
+    flex: 0 0 4px;
     cursor: col-resize;
     background: var(--border-color);
     transition: background 0.15s;
