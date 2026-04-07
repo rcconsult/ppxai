@@ -186,6 +186,42 @@
         "timestamp": "2026-03-27T23:39:25.890382",
         "overall_score": 8.118811881188117,
         "agents_md_mode": "with"
+      },
+      {
+        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-04-07_7325046d.json",
+        "timestamp": "2026-04-07T13:38:46.682869",
+        "overall_score": 8.118811881188117,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-04-07_48f14f06.json",
+        "timestamp": "2026-04-07T13:39:36.609184",
+        "overall_score": 8.118811881188117,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-04-07_7ba2a4cb.json",
+        "timestamp": "2026-04-07T14:22:16.158894",
+        "overall_score": 8.118811881188117,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-04-07_e9c33001.json",
+        "timestamp": "2026-04-07T14:23:06.045132",
+        "overall_score": 8.118811881188117,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-04-07_7a0059ba.json",
+        "timestamp": "2026-04-07T19:07:11.041930",
+        "overall_score": 8.118811881188117,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-04-07_61e38359.json",
+        "timestamp": "2026-04-07T19:08:00.574166",
+        "overall_score": 8.118811881188117,
+        "agents_md_mode": "without"
       }
     ],
     "gemini/gemini-2.0-flash-exp": [
@@ -1032,6 +1068,42 @@
         "timestamp": "2026-03-27T21:50:25.880771",
         "overall_score": 79.27392739273927,
         "agents_md_mode": "with"
+      },
+      {
+        "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-04-07_6ad5fb49.json",
+        "timestamp": "2026-04-07T13:15:48.021151",
+        "overall_score": 82.24422442244223,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-04-07_b54981d1.json",
+        "timestamp": "2026-04-07T13:17:49.457050",
+        "overall_score": 81.35313531353135,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-04-07_05904afb.json",
+        "timestamp": "2026-04-07T13:59:30.897787",
+        "overall_score": 81.25412541254124,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-04-07_cf6c8a30.json",
+        "timestamp": "2026-04-07T14:01:21.586220",
+        "overall_score": 75.97359735973598,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-04-07_477dbbfe.json",
+        "timestamp": "2026-04-07T18:44:24.035334",
+        "overall_score": 82.83828382838284,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-04-07_58c7aa32.json",
+        "timestamp": "2026-04-07T18:46:06.475726",
+        "overall_score": 78.28382838283828,
+        "agents_md_mode": "without"
       }
     ],
     "vllm-qwen35/Qwen/Qwen3.5-27B-FP8": [
@@ -1063,6 +1135,42 @@
         "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-03-27_d1638595.json",
         "timestamp": "2026-03-27T23:38:32.397493",
         "overall_score": 86.03960396039605,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-04-07_686d8760.json",
+        "timestamp": "2026-04-07T13:28:17.497295",
+        "overall_score": 86.63366336633663,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-04-07_13c355eb.json",
+        "timestamp": "2026-04-07T13:37:53.028499",
+        "overall_score": 84.05940594059406,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-04-07_adc1173c.json",
+        "timestamp": "2026-04-07T14:11:27.588872",
+        "overall_score": 88.61386138613861,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-04-07_c6d2a123.json",
+        "timestamp": "2026-04-07T14:21:22.907992",
+        "overall_score": 86.03960396039605,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-04-07_1a4a28e2.json",
+        "timestamp": "2026-04-07T18:56:05.461669",
+        "overall_score": 89.60396039603961,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-04-07_357869b0.json",
+        "timestamp": "2026-04-07T19:06:16.354699",
+        "overall_score": 87.02970297029704,
         "agents_md_mode": "without"
       }
     ],
@@ -2282,6 +2390,132 @@
       "filename": "asusai-vllm_Qwen3-Coder-Next-NVFP4-GB10_2026-03-31_a7396b21.json",
       "timestamp": "2026-03-31T17:39:16.107309",
       "overall_score": 90.0,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "vllm-gptoss/openai/gpt-oss-120b",
+      "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-04-07_6ad5fb49.json",
+      "timestamp": "2026-04-07T13:15:48.021151",
+      "overall_score": 82.24422442244223,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "vllm-gptoss/openai/gpt-oss-120b",
+      "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-04-07_b54981d1.json",
+      "timestamp": "2026-04-07T13:17:49.457050",
+      "overall_score": 81.35313531353135,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "vllm-qwen35/Qwen/Qwen3.5-27B-FP8",
+      "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-04-07_686d8760.json",
+      "timestamp": "2026-04-07T13:28:17.497295",
+      "overall_score": 86.63366336633663,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "vllm-qwen35/Qwen/Qwen3.5-27B-FP8",
+      "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-04-07_13c355eb.json",
+      "timestamp": "2026-04-07T13:37:53.028499",
+      "overall_score": 84.05940594059406,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-04-07_7325046d.json",
+      "timestamp": "2026-04-07T13:38:46.682869",
+      "overall_score": 8.118811881188117,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-04-07_48f14f06.json",
+      "timestamp": "2026-04-07T13:39:36.609184",
+      "overall_score": 8.118811881188117,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "vllm-gptoss/openai/gpt-oss-120b",
+      "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-04-07_05904afb.json",
+      "timestamp": "2026-04-07T13:59:30.897787",
+      "overall_score": 81.25412541254124,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "vllm-gptoss/openai/gpt-oss-120b",
+      "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-04-07_cf6c8a30.json",
+      "timestamp": "2026-04-07T14:01:21.586220",
+      "overall_score": 75.97359735973598,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "vllm-qwen35/Qwen/Qwen3.5-27B-FP8",
+      "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-04-07_adc1173c.json",
+      "timestamp": "2026-04-07T14:11:27.588872",
+      "overall_score": 88.61386138613861,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "vllm-qwen35/Qwen/Qwen3.5-27B-FP8",
+      "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-04-07_c6d2a123.json",
+      "timestamp": "2026-04-07T14:21:22.907992",
+      "overall_score": 86.03960396039605,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-04-07_7ba2a4cb.json",
+      "timestamp": "2026-04-07T14:22:16.158894",
+      "overall_score": 8.118811881188117,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-04-07_e9c33001.json",
+      "timestamp": "2026-04-07T14:23:06.045132",
+      "overall_score": 8.118811881188117,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "vllm-gptoss/openai/gpt-oss-120b",
+      "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-04-07_477dbbfe.json",
+      "timestamp": "2026-04-07T18:44:24.035334",
+      "overall_score": 82.83828382838284,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "vllm-gptoss/openai/gpt-oss-120b",
+      "filename": "vllm-gptoss_openai_gpt-oss-120b_2026-04-07_58c7aa32.json",
+      "timestamp": "2026-04-07T18:46:06.475726",
+      "overall_score": 78.28382838283828,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "vllm-qwen35/Qwen/Qwen3.5-27B-FP8",
+      "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-04-07_1a4a28e2.json",
+      "timestamp": "2026-04-07T18:56:05.461669",
+      "overall_score": 89.60396039603961,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "vllm-qwen35/Qwen/Qwen3.5-27B-FP8",
+      "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-04-07_357869b0.json",
+      "timestamp": "2026-04-07T19:06:16.354699",
+      "overall_score": 87.02970297029704,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-04-07_7a0059ba.json",
+      "timestamp": "2026-04-07T19:07:11.041930",
+      "overall_score": 8.118811881188117,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "dgx-spark//models/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-spark__models_Qwen3.5-122B-A10B-NVFP4_2026-04-07_61e38359.json",
+      "timestamp": "2026-04-07T19:08:00.574166",
+      "overall_score": 8.118811881188117,
       "agents_md_mode": "without"
     }
   ]
