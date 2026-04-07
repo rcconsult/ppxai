@@ -95,3 +95,11 @@ def register_all_builtin_tools(manager: ToolManagerProtocol, provider: str = Non
             csv_tools.register_tools(manager, engine)
         except Exception:
             pass
+
+        # Word document tools (v1.17.4) — read_docx.
+        # Uses stdlib zipfile + xml.etree, no external deps.
+        try:
+            from . import docx_tools
+            docx_tools.register_tools(manager, engine)
+        except Exception:
+            pass

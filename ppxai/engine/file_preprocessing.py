@@ -573,12 +573,23 @@ def _preprocess_office(
 
     size_kb = len(data) / 1024
     doc_type = _office_friendly_name(media_type, name)
+
+    # Provide type-specific tool hints
+    lower_name = name.lower()
+    if lower_name.endswith((".docx", ".doc")) or "wordprocessing" in media_type:
+        tool_hint = "Use the read_docx tool to access its text content."
+    elif lower_name.endswith((".xlsx", ".xls")) or "spreadsheet" in media_type or "excel" in media_type:
+        tool_hint = "Use list_excel_sheets and read_excel_sheet tools to access its content."
+    elif lower_name.endswith((".pptx", ".ppt")) or "presentation" in media_type:
+        tool_hint = "Use list_pptx_slides, read_pptx_slide_text, or summarize_pptx_visual tools to access its content."
+    else:
+        tool_hint = "Use the appropriate extraction tools to access its content."
+
     reference = (
         f'<uploaded_file name="{meta.name}" type="{media_type}" '
         f'file_id="{meta.file_id}" size_kb="{size_kb:.1f}">\n'
         f"{doc_type} attached: {meta.name} ({size_kb:.1f} KB). "
-        f"Use the appropriate extraction tools (Phase 4: list_excel_sheets, "
-        f"read_excel_sheet, list_pptx_slides, etc.) to access its content.\n"
+        f"{tool_hint}\n"
         f"</uploaded_file>"
     )
 
