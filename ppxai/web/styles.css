@@ -1619,6 +1619,49 @@ body {
 }
 .xlsx-rendered-table tr:hover td { background: var(--bg-hover); }
 
+/* PPTX slide viewer (v1.17.4) */
+.pptx-preview {
+    display: flex;
+    flex-direction: column;
+}
+.pptx-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 8px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+.pptx-nav-btn {
+    background: var(--bg-hover);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+.pptx-nav-btn:hover:not(:disabled) { background: var(--accent-color); color: #fff; }
+.pptx-nav-btn:disabled { opacity: 0.3; cursor: default; }
+.pptx-slide-counter { font-size: 13px; color: var(--text-secondary); min-width: 80px; text-align: center; }
+.pptx-slide-container {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    background: var(--bg-secondary);
+}
+.pptx-slide-img {
+    max-width: 100%;
+    max-height: 100%;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+    border-radius: 2px;
+}
+
 /* Drag-drop overlay (v1.17.4 Phase 5.1) */
 .drag-overlay {
     position: fixed;

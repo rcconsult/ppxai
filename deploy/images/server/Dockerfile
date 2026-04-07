@@ -38,8 +38,13 @@ LABEL org.opencontainers.image.description="ppxai HTTP server — Kubernetes mul
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# poppler-utils needed at runtime by pdf2image (GetPdfPageImageTool)
-RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils && rm -rf /var/lib/apt/lists/*
+# Runtime system deps:
+#   poppler-utils  — pdf2image (GetPdfPageImageTool)
+#   libreoffice-nogui — PPTX/DOCX slide rasterization (RenderPptxSlideTool)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    poppler-utils \
+    libreoffice-nogui \
+    && rm -rf /var/lib/apt/lists/*
 
 # Web UI files — served by the HTTP server from ~/.ppxai/web/
 COPY --from=builder /build/ppxai/web/ /root/.ppxai/web/

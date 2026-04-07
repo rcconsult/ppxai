@@ -922,7 +922,9 @@ class PpxaiApp {
             }
 
             // Fall back to server fetch via file_id
-            const resp = await fetch(`files/serve/${fileId}`);
+            const resp = await fetch(`files/serve/${fileId}`, {
+                headers: this.apiClient.getHeaders(),
+            });
             if (!resp.ok) {
                 this.showSystemMessage(`File not available for preview (uploaded in a previous session). Re-attach to preview.`, 'error');
                 return;
@@ -1198,21 +1200,101 @@ class PpxaiApp {
                 render();
             });
             frame.push(view);
+        } else if (mediaType.includes('presentation') || mediaType.includes('powerpoint')
+                   || name.endsWith('.pptx') || name.endsWith('.ppt')) {
+            // PPTX slide viewer — renders slides via server-side LibreOffice
+            const fileId = (this.state.contextAttachments || []).find(
+                a => a.name === name
+            )?.file_id || '';
+            const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4CA}', (container) => {
+                container.innerHTML = `
+                    <div class="rpf-view-toolbar">
+                        <span class="rpf-view-info">Loading slides\u2026</span>
+                    </div>
+                    <div class="pptx-preview" style="flex:1; display:flex; flex-direction:column; overflow:hidden;"></div>`;
+                const previewEl = container.querySelector('.pptx-preview');
+                const infoEl = container.querySelector('.rpf-view-info');
+
+                if (!fileId) {
+                    previewEl.innerHTML = '<p style="padding:16px; color:var(--text-muted);">No file_id — cannot render slides. Re-attach the file.</p>';
+                    infoEl.textContent = 'PowerPoint Presentation';
+                    return;
+                }
+
+                // Fetch total slide count, then render slide navigator
+                fetch(`files/preview/${fileId}?total=true`, {
+                    headers: this.apiClient.getHeaders(),
+                })
+                    .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
+                    .then(info => {
+                        const total = info.total;
+                        infoEl.textContent = `${total} slide${total !== 1 ? 's' : ''} \u2022 ${sizeKB} KB`;
+
+                        let current = 1;
+
+                        // Navigation bar
+                        const nav = document.createElement('div');
+                        nav.className = 'pptx-nav';
+                        nav.innerHTML = `
+                            <button class="pptx-nav-btn" id="pptxPrev" title="Previous slide">\u25C0</button>
+                            <span class="pptx-slide-counter">Slide <span class="pptx-current">1</span> / ${total}</span>
+                            <button class="pptx-nav-btn" id="pptxNext" title="Next slide">\u25B6</button>`;
+                        previewEl.appendChild(nav);
+
+                        // Slide image container
+                        const imgContainer = document.createElement('div');
+                        imgContainer.className = 'pptx-slide-container';
+                        previewEl.appendChild(imgContainer);
+
+                        const counterEl = nav.querySelector('.pptx-current');
+                        const prevBtn = nav.querySelector('#pptxPrev');
+                        const nextBtn = nav.querySelector('#pptxNext');
+
+                        const sessionHeaders = this.apiClient.getHeaders();
+                        const showSlide = (n) => {
+                            current = n;
+                            counterEl.textContent = n;
+                            prevBtn.disabled = n <= 1;
+                            nextBtn.disabled = n >= total;
+                            imgContainer.innerHTML = '<p style="padding:16px; color:var(--text-muted);">Rendering\u2026</p>';
+                            fetch(`files/preview/${fileId}?slide=${n}`, { headers: sessionHeaders })
+                                .then(r => r.ok ? r.blob() : Promise.reject('Failed'))
+                                .then(blob => {
+                                    const img = new Image();
+                                    img.className = 'pptx-slide-img';
+                                    img.alt = `Slide ${n}`;
+                                    img.src = URL.createObjectURL(blob);
+                                    imgContainer.innerHTML = '';
+                                    imgContainer.appendChild(img);
+                                })
+                                .catch(() => {
+                                    imgContainer.innerHTML = '<p style="padding:16px; color:var(--error-color);">Failed to load slide.</p>';
+                                });
+                        };
+
+                        prevBtn.addEventListener('click', () => { if (current > 1) showSlide(current - 1); });
+                        nextBtn.addEventListener('click', () => { if (current < total) showSlide(current + 1); });
+
+                        showSlide(1);
+                    })
+                    .catch(err => {
+                        previewEl.innerHTML = `<p style="padding:16px; color:var(--error-color);">
+                            Slide rendering unavailable: ${err}</p>
+                            <p style="padding:0 16px; font-size:13px; color:var(--text-muted);">
+                            The model can still use <code>list_pptx_slides</code> and <code>read_pptx_slide_text</code> tools.</p>`;
+                        infoEl.textContent = `PowerPoint \u2022 ${sizeKB} KB`;
+                    });
+            });
+            frame.push(view);
         } else {
-            // Other office files (pptx, docx) — info panel
+            // Other office files (docx) — info panel
             const officeMimes = [
                 'application/vnd.openxmlformats-officedocument.',
-                'application/vnd.ms-powerpoint', 'application/msword',
+                'application/msword',
             ];
             const isOffice = officeMimes.some(m => mediaType.startsWith(m));
             if (isOffice) {
-                const ext = name.split('.').pop().toUpperCase();
-                const typeLabel = mediaType.includes('presentation') || mediaType.includes('powerpoint')
-                    ? 'PowerPoint Presentation'
-                    : mediaType.includes('word') ? 'Word Document' : `${ext} Document`;
-                const toolHint = mediaType.includes('presentation') || mediaType.includes('powerpoint')
-                    ? 'The model can use <code>list_pptx_slides</code> and <code>read_pptx_slide_text</code> tools to explore this file.'
-                    : 'The model can use tools to explore this file.';
+                const typeLabel = mediaType.includes('word') ? 'Word Document' : `${name.split('.').pop().toUpperCase()} Document`;
                 const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4C4}', (container) => {
                     container.innerHTML = `
                         <div class="rpf-view-toolbar">
@@ -1221,7 +1303,6 @@ class PpxaiApp {
                         <div style="padding:24px; color:var(--text-secondary);">
                             <h3 style="margin-bottom:12px; color:var(--text-primary);">${name}</h3>
                             <p style="margin-bottom:8px;">${typeLabel} \u2022 ${sizeKB} KB</p>
-                            <p style="margin-bottom:16px; font-size:13px;">${toolHint}</p>
                             <p style="font-size:12px; opacity:0.7;">
                                 Browser preview is not available for this file type.
                                 Ask the model to summarize or analyze its contents.
