@@ -1474,6 +1474,16 @@ body {
     color: var(--accent-hover, #6cb3ff);
     text-decoration-style: solid;
 }
+/* Inside user message bubbles — white-on-blue for visibility */
+.user-message .attachment-file-badge {
+    background: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.5);
+    color: #ffffff;
+}
+.user-message .attachment-file-badge:hover {
+    background: rgba(255,255,255,0.3);
+    color: #ffffff;
+}
 
 /* Image lightbox overlay (v1.17.4) */
 .image-lightbox {
@@ -1528,14 +1538,80 @@ body {
 /* Context attachment indicator (v1.17.4 Phase 5.4) */
 .attachment-badge {
     display: inline-block;
-    padding: 2px 10px;
+    padding: 3px 12px;
     margin: 0 12px 4px;
     border-radius: 10px;
     font-size: 12px;
-    background: var(--hover-bg, rgba(255,255,255,0.06));
-    border: 1px solid var(--border-color);
+    background: rgba(74, 158, 255, 0.1);
+    border: 1px solid var(--accent-color);
+    color: var(--accent-color);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.attachment-badge:hover {
+    background: rgba(74, 158, 255, 0.2);
 }
 .attachment-badge.hidden { display: none; }
+
+/* SheetJS Excel preview (v1.17.4) */
+.xlsx-preview {
+    display: flex;
+    flex-direction: column;
+}
+.xlsx-tabs {
+    display: flex;
+    gap: 2px;
+    padding: 4px 8px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    overflow-x: auto;
+    flex-shrink: 0;
+}
+.xlsx-tab {
+    padding: 4px 12px;
+    font-size: 12px;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.xlsx-tab:hover { color: var(--text-primary); background: var(--bg-hover); }
+.xlsx-tab.active {
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    border-color: var(--border-color);
+}
+.xlsx-table-wrapper {
+    flex: 1;
+    overflow: auto;
+    padding: 4px;
+}
+.xlsx-rendered-table {
+    border-collapse: collapse;
+    font-size: 12px;
+    width: max-content;
+}
+.xlsx-rendered-table td,
+.xlsx-rendered-table th {
+    border: 1px solid var(--border-color);
+    padding: 3px 8px;
+    white-space: nowrap;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.xlsx-rendered-table th,
+.xlsx-rendered-table tr:first-child td {
+    background: var(--bg-tertiary);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.xlsx-rendered-table tr:hover td { background: var(--bg-hover); }
 
 /* Drag-drop overlay (v1.17.4 Phase 5.1) */
 .drag-overlay {

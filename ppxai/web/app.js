@@ -884,6 +884,53 @@ class PpxaiApp {
             if (attachments.length > 3) label += `, +${attachments.length - 3}`;
             badge.classList.remove('hidden');
             badge.textContent = label;
+            badge.title = 'Click to preview attached file';
+            badge.style.cursor = 'pointer';
+            badge.onclick = () => {
+                // Open the first (or only) attachment in the split panel
+                // by fetching its bytes from the server via file_id.
+                const a = attachments[0];
+                if (!a || !a.file_id) return;
+                this._previewAttachmentById(a.file_id, a.name, a.media_type);
+            };
+        }
+    }
+
+    /**
+     * Fetch a file by file_id from the server and open it in the split panel.
+     * Used by the status strip badge click handler.
+     */
+    async _previewAttachmentById(fileId, name, mediaType) {
+        try {
+            const resp = await fetch(`files/serve/${fileId}`);
+            if (!resp.ok) {
+                // File not in store (e.g., from a previous session) — try
+                // the in-memory attach data map as fallback.
+                const cached = Object.values(window._ppxaiAttachData || {}).find(
+                    e => e.name === name
+                );
+                if (cached) {
+                    const key = Object.keys(window._ppxaiAttachData).find(
+                        k => window._ppxaiAttachData[k] === cached
+                    );
+                    if (key) { this._previewAttachment(key); return; }
+                }
+                this.showSystemMessage(`File not available for preview (uploaded in a previous session). Re-attach to preview.`, 'error');
+                return;
+            }
+            const blob = await resp.blob();
+            const reader = new FileReader();
+            reader.onload = () => {
+                const b64 = reader.result.split(',')[1];
+                // Reuse the existing preview pipeline via the global attach map
+                if (!window._ppxaiAttachData) window._ppxaiAttachData = {};
+                const key = `ctx_${fileId}`;
+                window._ppxaiAttachData[key] = { name, media_type: mediaType || blob.type, data: b64 };
+                this._previewAttachment(key);
+            };
+            reader.readAsDataURL(blob);
+        } catch (e) {
+            this.showSystemMessage(`Preview failed: ${e.message}`, 'error');
         }
     }
 
@@ -1069,20 +1116,134 @@ class PpxaiApp {
             const origUnmount = view.unmount.bind(view);
             view.unmount = () => { URL.revokeObjectURL(blobUrl); origUnmount(); };
             frame.push(view);
+        } else if (mediaType.includes('sheet') || mediaType.includes('excel')
+                   || name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv')) {
+            // Excel / CSV preview via SheetJS (lazy-loaded)
+            const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4CA}', (container) => {
+                container.innerHTML = `
+                    <div class="rpf-view-toolbar">
+                        <span class="rpf-view-info">Loading spreadsheet\u2026</span>
+                    </div>
+                    <div class="xlsx-preview" style="flex:1; overflow:auto;"></div>`;
+                const previewEl = container.querySelector('.xlsx-preview');
+                const infoEl = container.querySelector('.rpf-view-info');
+
+                const render = () => {
+                    try {
+                        const wb = window.XLSX.read(b64, { type: 'base64' });
+                        infoEl.textContent = `${wb.SheetNames.length} sheet${wb.SheetNames.length > 1 ? 's' : ''} \u2022 ${sizeKB} KB`;
+
+                        // Sheet tabs
+                        const tabsEl = document.createElement('div');
+                        tabsEl.className = 'xlsx-tabs';
+                        previewEl.appendChild(tabsEl);
+
+                        // Table container
+                        const tableEl = document.createElement('div');
+                        tableEl.className = 'xlsx-table-wrapper';
+                        previewEl.appendChild(tableEl);
+
+                        const showSheet = (idx) => {
+                            tabsEl.querySelectorAll('.xlsx-tab').forEach((t, i) => {
+                                t.classList.toggle('active', i === idx);
+                            });
+                            const ws = wb.Sheets[wb.SheetNames[idx]];
+                            tableEl.innerHTML = window.XLSX.utils.sheet_to_html(ws, { editable: false });
+                            // Style the generated table
+                            const tbl = tableEl.querySelector('table');
+                            if (tbl) tbl.className = 'xlsx-rendered-table';
+                        };
+
+                        wb.SheetNames.forEach((sn, i) => {
+                            const tab = document.createElement('button');
+                            tab.className = 'xlsx-tab';
+                            tab.textContent = sn;
+                            tab.addEventListener('click', () => showSheet(i));
+                            tabsEl.appendChild(tab);
+                        });
+
+                        showSheet(0);
+                    } catch (e) {
+                        previewEl.innerHTML = `<p style="padding:16px; color:var(--error-color);">
+                            Failed to parse spreadsheet: ${e.message}</p>`;
+                    }
+                };
+
+                // Lazy-load SheetJS if not already loaded.
+                // Check for .read specifically — the XLSX var is declared
+                // early in the script but make_xlsx_lib() populates .read
+                // only after the full script executes.
+                if (window.XLSX && window.XLSX.read) {
+                    render();
+                } else {
+                    const existing = document.querySelector('script[src*="xlsx"]');
+                    if (!existing) {
+                        const script = document.createElement('script');
+                        script.src = 'lib/xlsx.full.min.js';
+                        document.head.appendChild(script);
+                    }
+                    const poll = setInterval(() => {
+                        if (window.XLSX && window.XLSX.read) {
+                            clearInterval(poll);
+                            render();
+                        }
+                    }, 100);
+                    setTimeout(() => {
+                        clearInterval(poll);
+                        if (!window.XLSX || !window.XLSX.read) {
+                            previewEl.innerHTML = `<p style="padding:16px; color:var(--error-color);">
+                                Failed to load SheetJS library.</p>`;
+                        }
+                    }, 10000);
+                }
+            });
+            frame.push(view);
         } else {
-            // Other file types — show content as text in code view
-            try {
-                const text = atob(b64);
+            // Other office files (pptx, docx) — info panel
+            const officeMimes = [
+                'application/vnd.openxmlformats-officedocument.',
+                'application/vnd.ms-powerpoint', 'application/msword',
+            ];
+            const isOffice = officeMimes.some(m => mediaType.startsWith(m));
+            if (isOffice) {
+                const ext = name.split('.').pop().toUpperCase();
+                const typeLabel = mediaType.includes('presentation') || mediaType.includes('powerpoint')
+                    ? 'PowerPoint Presentation'
+                    : mediaType.includes('word') ? 'Word Document' : `${ext} Document`;
+                const toolHint = mediaType.includes('presentation') || mediaType.includes('powerpoint')
+                    ? 'The model can use <code>list_pptx_slides</code> and <code>read_pptx_slide_text</code> tools to explore this file.'
+                    : 'The model can use tools to explore this file.';
                 const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4C4}', (container) => {
                     container.innerHTML = `
                         <div class="rpf-view-toolbar">
-                            <span class="rpf-view-info">File \u2022 ${sizeKB} KB</span>
+                            <span class="rpf-view-info">${typeLabel} \u2022 ${sizeKB} KB</span>
                         </div>
-                        <pre style="padding:16px; overflow:auto; flex:1;">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>`;
+                        <div style="padding:24px; color:var(--text-secondary);">
+                            <h3 style="margin-bottom:12px; color:var(--text-primary);">${name}</h3>
+                            <p style="margin-bottom:8px;">${typeLabel} \u2022 ${sizeKB} KB</p>
+                            <p style="margin-bottom:16px; font-size:13px;">${toolHint}</p>
+                            <p style="font-size:12px; opacity:0.7;">
+                                Browser preview is not available for this file type.
+                                Ask the model to summarize or analyze its contents.
+                            </p>
+                        </div>`;
                 });
                 frame.push(view);
-            } catch (e) {
-                console.error('[ppxai] File preview failed:', e);
+            } else {
+                // Text/code files — decode and show as pre
+                try {
+                    const text = atob(b64);
+                    const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4C4}', (container) => {
+                        container.innerHTML = `
+                            <div class="rpf-view-toolbar">
+                                <span class="rpf-view-info">File \u2022 ${sizeKB} KB</span>
+                            </div>
+                            <pre style="padding:16px; overflow:auto; flex:1;">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>`;
+                    });
+                    frame.push(view);
+                } catch (e) {
+                    console.error('[ppxai] File preview failed:', e);
+                }
             }
         }
     }
