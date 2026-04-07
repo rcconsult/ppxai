@@ -515,18 +515,24 @@ body {
     scroll-behavior: smooth;
 }
 
-/* Resize Handle */
+/* Resize Handle — flex sibling between messages and right panel.
+   Must be a real flex item (not 0-width) so the browser allocates
+   layout space for it. Chat scrollbar sits inside .messages which
+   ends before this handle. */
 .resize-handle {
-    width: 6px;
+    flex: 0 0 3px;
     cursor: col-resize;
     background: var(--border-color);
     transition: background 0.15s;
-    flex-shrink: 0;
 }
 
 .resize-handle:hover,
 .resize-handle.dragging {
     background: var(--accent-color);
+}
+.resize-handle:hover::after,
+.resize-handle.dragging::after {
+    color: #fff;
 }
 
 .resize-handle.hidden {

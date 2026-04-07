@@ -279,6 +279,13 @@ class PpxaiApp {
         this.rightPanelFrame = new RightPanelFrame(el.rpfFrame, this.state);
         this.rightPanelFrame._viewportEl = el.rpfViewport;
 
+        // Sync resize handle visibility with panel show/hide
+        const rpf = this.rightPanelFrame;
+        const origShow = rpf.showFrame.bind(rpf);
+        const origHide = rpf.hideFrame.bind(rpf);
+        rpf.showFrame = () => { origShow(); el.resizeHandle.classList.remove('hidden'); };
+        rpf.hideFrame = () => { origHide(); el.resizeHandle.classList.add('hidden'); };
+
         // AppState observers → update chrome and persist stack on change
         this.state.on('rpfActiveTitle', () => this._updateFrameChrome());
         this.state.on('rpfActiveDirty', () => this._updateFrameChrome());
@@ -902,19 +909,21 @@ class PpxaiApp {
      */
     async _previewAttachmentById(fileId, name, mediaType) {
         try {
+            // Try in-memory cache first (avoids server round-trip + 404 for
+            // files attached in the current page session).
+            const cached = Object.values(window._ppxaiAttachData || {}).find(
+                e => e.name === name
+            );
+            if (cached) {
+                const key = Object.keys(window._ppxaiAttachData).find(
+                    k => window._ppxaiAttachData[k] === cached
+                );
+                if (key) { this._previewAttachment(key); return; }
+            }
+
+            // Fall back to server fetch via file_id
             const resp = await fetch(`files/serve/${fileId}`);
             if (!resp.ok) {
-                // File not in store (e.g., from a previous session) — try
-                // the in-memory attach data map as fallback.
-                const cached = Object.values(window._ppxaiAttachData || {}).find(
-                    e => e.name === name
-                );
-                if (cached) {
-                    const key = Object.keys(window._ppxaiAttachData).find(
-                        k => window._ppxaiAttachData[k] === cached
-                    );
-                    if (key) { this._previewAttachment(key); return; }
-                }
                 this.showSystemMessage(`File not available for preview (uploaded in a previous session). Re-attach to preview.`, 'error');
                 return;
             }
@@ -1148,10 +1157,26 @@ class PpxaiApp {
                                 t.classList.toggle('active', i === idx);
                             });
                             const ws = wb.Sheets[wb.SheetNames[idx]];
-                            tableEl.innerHTML = window.XLSX.utils.sheet_to_html(ws, { editable: false });
-                            // Style the generated table
-                            const tbl = tableEl.querySelector('table');
-                            if (tbl) tbl.className = 'xlsx-rendered-table';
+                            const json = window.XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+                            if (!json.length) {
+                                tableEl.innerHTML = '<p style="padding:16px; color:var(--text-muted);">Empty sheet</p>';
+                                return;
+                            }
+                            // First row as headers, rest as data rows
+                            const headers = json[0].map(h => String(h));
+                            const rows = json.slice(1).map(r => r.map(c => String(c)));
+                            tableEl.innerHTML = '';
+                            new DataTableViewer(tableEl, {
+                                headers,
+                                rows,
+                                rowCount: rows.length,
+                            }, {
+                                maxHeight: 'none',
+                                pageSize: 200,
+                                sortable: true,
+                                filterable: true,
+                                showRowNumbers: true,
+                            });
                         };
 
                         wb.SheetNames.forEach((sn, i) => {
@@ -1169,33 +1194,8 @@ class PpxaiApp {
                     }
                 };
 
-                // Lazy-load SheetJS if not already loaded.
-                // Check for .read specifically — the XLSX var is declared
-                // early in the script but make_xlsx_lib() populates .read
-                // only after the full script executes.
-                if (window.XLSX && window.XLSX.read) {
-                    render();
-                } else {
-                    const existing = document.querySelector('script[src*="xlsx"]');
-                    if (!existing) {
-                        const script = document.createElement('script');
-                        script.src = 'lib/xlsx.full.min.js';
-                        document.head.appendChild(script);
-                    }
-                    const poll = setInterval(() => {
-                        if (window.XLSX && window.XLSX.read) {
-                            clearInterval(poll);
-                            render();
-                        }
-                    }, 100);
-                    setTimeout(() => {
-                        clearInterval(poll);
-                        if (!window.XLSX || !window.XLSX.read) {
-                            previewEl.innerHTML = `<p style="padding:16px; color:var(--error-color);">
-                                Failed to load SheetJS library.</p>`;
-                        }
-                    }, 10000);
-                }
+                // SheetJS is loaded via index.html <script> tag
+                render();
             });
             frame.push(view);
         } else {
@@ -3018,7 +3018,7 @@ class PpxaiApp {
             const maxWidth = containerWidth * 0.8;
             newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
 
-            panel.style.width = newWidth + 'px';
+            panel.style.flex = `0 0 ${newWidth}px`;
         });
 
         document.addEventListener('mouseup', () => {

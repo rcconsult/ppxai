@@ -21,6 +21,10 @@
     <script src="lib/hcl2-browser.js"></script>
     <script src="lib/hcl2-parser.min.js"></script>
     <script>if (typeof hcl2Init === 'function') hcl2Init();</script>
+    <!-- SheetJS: clean up window.module left by hcl2-browser.js so
+         SheetJS exports to window.XLSX instead of module.exports -->
+    <script>delete window.module;</script>
+    <script src="lib/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="app">
@@ -121,7 +125,7 @@
                 </div>
             </main>
 
-            <!-- Resize Handle -->
+            <!-- Resize Handle (flex sibling between chat and panel) -->
             <div class="resize-handle hidden" id="resizeHandle"></div>
 
             <!-- Right Panel Frame -->
