@@ -52,46 +52,8 @@ let autocompleteQuery = '';
 let autocompleteStartPos = 0;
 let autocompleteDisabled = false; // Disabled for special providers (@git, @tree)
 
-// Slash commands for autocomplete (keep in sync with shared/commands.ts)
-const slashCommands = [
-    // Session & Chat
-    { name: '/help', description: 'Show available commands' },
-    { name: '/clear', description: 'Clear conversation history' },
-    { name: '/save', description: 'Save session to JSON' },
-    { name: '/export', description: 'Export last answer to markdown' },
-    { name: '/load', description: 'Load a saved session' },
-    { name: '/sessions', description: 'List saved sessions' },
-    // Provider & Model
-    { name: '/provider', description: 'Switch provider or list providers' },
-    { name: '/model', description: 'Switch model or list models' },
-    // Tools & Agent
-    { name: '/tools', description: 'Manage AI tools (enable|disable|list)' },
-    { name: '/agent', description: 'Run autonomous agent task' },
-    // Checkpoint
-    { name: '/checkpoint', description: 'Manage checkpoints (status|list|undo)' },
-    // Usage & Status
-    { name: '/usage', description: 'Show token usage stats' },
-    { name: '/status', description: 'Show current status' },
-    { name: '/context', description: 'Show context window usage and injected files' },
-    // File Display
-    { name: '/show', description: 'Display file contents locally' },
-    { name: '/cat', description: 'Alias for /show' },
-    { name: '/edit', description: 'Open file in editor' },
-    { name: '/cd', description: 'Change working directory' },
-    { name: '/pwd', description: 'Print working directory' },
-    { name: '/preview', description: 'Open live-reloading HTML preview' },
-    // Coding Tasks
-    { name: '/generate', description: 'Generate code from description' },
-    { name: '/explain', description: 'Explain code or concept' },
-    { name: '/test', description: 'Generate tests for code' },
-    { name: '/docs', description: 'Generate documentation' },
-    { name: '/debug', description: 'Debug an error message' },
-    { name: '/implement', description: 'Implement from description' },
-    { name: '/convert', description: 'Convert code between languages' },
-    { name: '/spec', description: 'Show specification templates' },
-    // Other
-    { name: '/theme', description: 'Switch theme (dark|light)' },
-];
+// v1.17.4: Slash commands now fetched dynamically from server via POST /complete.
+// No hardcoded list needed — CommandFactory is the single source of truth.
 
 // Configure marked for GFM
 // Check if marked library loaded
@@ -270,7 +232,8 @@ function renderAutocomplete() {
         return;
     }
 
-    const header = autocompleteMode === 'file' ? 'Files' : 'Commands';
+    const headers = { file: 'Files', command: 'Commands', path: 'Path' };
+    const header = headers[autocompleteMode] || 'Suggestions';
     let html = '<div class="autocomplete-header">' + header + '</div>';
 
     autocompleteItems.forEach((item, index) => {
@@ -282,10 +245,11 @@ function renderAutocomplete() {
                 '<span class="path">' + (item.path || '') + '</span>' +
             '</div>';
         } else {
+            const icon = (item.kind === 'dir') ? '📁' : (item.kind === 'file') ? '📄' : '⌘';
             html += '<div class="autocomplete-item' + selectedClass + '" data-index="' + index + '">' +
-                '<span class="icon">⌘</span>' +
+                '<span class="icon">' + icon + '</span>' +
                 '<span class="name">' + item.name + '</span>' +
-                '<span class="description">' + item.description + '</span>' +
+                '<span class="description">' + (item.description || '') + '</span>' +
             '</div>';
         }
     });
@@ -307,20 +271,40 @@ function selectAutocompleteItem(index) {
 
     const item = autocompleteItems[index];
     const value = messageInput.value;
-    const beforeTrigger = value.substring(0, autocompleteStartPos);
-    const afterCursor = value.substring(messageInput.selectionStart);
+    const cursorPos = messageInput.selectionStart;
 
-    let insertText;
     if (autocompleteMode === 'file') {
+        // @file mode — replace from autocompleteStartPos
+        const beforeTrigger = value.substring(0, autocompleteStartPos);
+        const afterCursor = value.substring(cursorPos);
         // v1.13.8: Don't add @ prefix if name already has it (e.g., @git, @tree)
-        insertText = item.name.startsWith('@') ? item.name : '@' + item.name;
+        const insertText = item.name.startsWith('@') ? item.name : '@' + item.name;
+        messageInput.value = beforeTrigger + insertText + ' ' + afterCursor;
+        const newPos = beforeTrigger.length + insertText.length + 1;
+        messageInput.setSelectionRange(newPos, newPos);
+    } else if (item.replace_start !== undefined && item.replace_start < 0) {
+        // v1.17.4: Server completion with replace_start (negative offset from cursor)
+        const replaceFrom = cursorPos + item.replace_start;
+        const before = value.substring(0, replaceFrom);
+        const afterCursor = value.substring(cursorPos);
+        const text = item.text || item.name;
+        // For directories, don't add trailing space (user continues typing path)
+        const suffix = item.kind === 'dir' ? '' : ' ';
+        messageInput.value = before + text + suffix + afterCursor;
+        const newPos = before.length + text.length + suffix.length;
+        messageInput.setSelectionRange(newPos, newPos);
+        // If a directory was selected, trigger another completion round
+        if (item.kind === 'dir') {
+            setTimeout(() => checkAutocomplete(), 50);
+        }
     } else {
-        insertText = item.name;
+        // Legacy fallback — replace from start
+        const insertText = item.text || item.name;
+        messageInput.value = insertText + ' ';
+        const newPos = insertText.length + 1;
+        messageInput.setSelectionRange(newPos, newPos);
     }
 
-    messageInput.value = beforeTrigger + insertText + ' ' + afterCursor;
-    const newPos = beforeTrigger.length + insertText.length + 1;
-    messageInput.setSelectionRange(newPos, newPos);
     hideAutocomplete();
     messageInput.focus();
 }
@@ -350,6 +334,9 @@ function handleAutocompleteNavigation(e) {
     return false;
 }
 
+// v1.17.4: Request ID to discard stale completion responses
+let _completeRequestId = 0;
+
 function checkAutocomplete() {
     const value = messageInput.value;
     const cursorPos = messageInput.selectionStart;
@@ -366,16 +353,18 @@ function checkAutocomplete() {
         return;
     }
 
-    // Check for / command at start of line
-    const cmdMatch = textBeforeCursor.match(/^(\/[\w]*)$/);
+    // Check for / command or /command <path-arg> — delegate to server
+    const cmdMatch = textBeforeCursor.match(/^(\/[\w]*.*)$/);
     if (cmdMatch) {
         autocompleteStartPos = 0;
-        autocompleteQuery = cmdMatch[1].toLowerCase();
-        // Filter commands locally
-        const filtered = slashCommands.filter(cmd =>
-            cmd.name.toLowerCase().startsWith(autocompleteQuery)
-        );
-        showAutocomplete(filtered, 'command');
+        autocompleteQuery = cmdMatch[1];
+        _completeRequestId++;
+        vscode.postMessage({
+            type: 'complete',
+            buffer: textBeforeCursor,
+            cursor: cursorPos,
+            requestId: _completeRequestId
+        });
         return;
     }
 
@@ -413,20 +402,42 @@ if (attachBtn && fileInput) {
     });
 }
 
-// Drag-drop on the input container
+// Drag-drop on the input container + body-level overlay
 const inputContainer = document.querySelector('.input-container');
-if (inputContainer) {
-    let dragCounter = 0;
-    inputContainer.addEventListener('dragenter', (e) => { e.preventDefault(); dragCounter++; });
-    inputContainer.addEventListener('dragover', (e) => e.preventDefault());
-    inputContainer.addEventListener('dragleave', () => { dragCounter--; });
-    inputContainer.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dragCounter = 0;
+let bodyDragCounter = 0;
+
+document.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    bodyDragCounter++;
+    if (bodyDragCounter === 1) showDragOverlay();
+});
+document.addEventListener('dragover', (e) => e.preventDefault());
+document.addEventListener('dragleave', () => {
+    bodyDragCounter--;
+    if (bodyDragCounter <= 0) { bodyDragCounter = 0; hideDragOverlay(); }
+});
+document.addEventListener('drop', (e) => {
+    e.preventDefault();
+    bodyDragCounter = 0;
+    hideDragOverlay();
+    if (e.dataTransfer.files.length > 0) {
         for (const file of e.dataTransfer.files) {
             stageFile(file);
         }
-    });
+    }
+});
+
+function showDragOverlay() {
+    if (document.getElementById('drag-overlay')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'drag-overlay';
+    overlay.className = 'drag-overlay';
+    overlay.innerHTML = '<div class="drag-overlay-text">\u{1F4CE} Drop files to attach</div>';
+    document.body.appendChild(overlay);
+}
+function hideDragOverlay() {
+    const overlay = document.getElementById('drag-overlay');
+    if (overlay) overlay.remove();
 }
 
 function stageFile(file) {
@@ -457,11 +468,14 @@ function renderPendingBadges() {
     }
     attachmentBadgesEl.classList.remove('hidden');
     attachmentBadgesEl.innerHTML = pendingFiles.map((f, i) => {
-        const icon = f.media_type.startsWith('image/') ? '🖼' : '📄';
+        const isImage = f.media_type.startsWith('image/');
+        const thumb = isImage
+            ? `<img class="badge-thumb" src="data:${f.media_type};base64,${f.data}" alt="${f.name}">`
+            : `<span class="badge-icon">\u{1F4C4}</span>`;
         const sizeKB = (f.size / 1024).toFixed(1);
         const shortName = f.name.length > 25 ? f.name.slice(0, 22) + '...' : f.name;
         return `<span class="file-badge">
-            ${icon} ${shortName} (${sizeKB} KB)
+            ${thumb} ${shortName} (${sizeKB} KB)
             <span class="badge-remove" onclick="removePendingFile(${i})">×</span>
         </span>`;
     }).join('');
@@ -601,6 +615,26 @@ serverBadge.addEventListener('click', () => {
     vscode.postMessage({ type: 'toggleServer', stop: isConnected });
 });
 
+// v1.17.4: Update context attachments badge in status bar
+function updateContextAttachmentsBadge(count) {
+    let badge = document.getElementById('contextAttachBadge');
+    if (count > 0) {
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.id = 'contextAttachBadge';
+            badge.className = 'context-attach-badge';
+            // Insert near the context badge
+            const statusRow = document.querySelector('.badge-row') || contextBadge?.parentElement;
+            if (statusRow) statusRow.appendChild(badge);
+        }
+        badge.textContent = '\u{1F4CE} ' + count + ' in context';
+        badge.title = count + ' file(s) attached to conversation context';
+        badge.style.display = '';
+    } else if (badge) {
+        badge.style.display = 'none';
+    }
+}
+
 // Function to update server status (v1.13.1)
 function updateServerStatus(connected, connecting = false) {
     serverBadge.classList.remove('connected', 'disconnected', 'connecting');
@@ -677,7 +711,7 @@ window.addEventListener('message', (event) => {
 
     switch (message.type) {
         case 'userMessage':
-            addMessage('user', message.content, false);
+            addMessage('user', message.content, false, message.files);
             break;
 
         case 'commandMessage':
@@ -904,18 +938,11 @@ window.addEventListener('message', (event) => {
                 if (c.debugLog !== undefined) {
                     debugLogIndicator.classList.toggle('active', c.debugLog);
                 }
-                // v1.17.4 Phase 6.3: contextAttachments pushed via state_sync.
-                // Full chip-strip UI lands in Phase 6.1-6.2; for now we log
-                // the change so developers can see the AppState mirror working.
+                // v1.17.4: Show context attachments count badge
                 if (c.contextAttachments !== undefined) {
                     const count = Array.isArray(c.contextAttachments)
                         ? c.contextAttachments.length : 0;
-                    if (count > 0) {
-                        console.log(
-                            `[ppxai] context_attachments updated: ${count} file(s)`,
-                            c.contextAttachments
-                        );
-                    }
+                    updateContextAttachmentsBadge(count);
                 }
             }
             break;
@@ -1089,6 +1116,25 @@ window.addEventListener('message', (event) => {
                 showAutocomplete(message.files, 'file');
             }
             break;
+
+        case 'completionItems':
+            // v1.17.4: Server-side completion results (commands + path args)
+            if (!messageInput.value.startsWith('/')) break;
+            if (message.items && message.items.length > 0) {
+                // Map server items to autocomplete format
+                const items = message.items.map(item => ({
+                    name: item.display || item.text,
+                    description: item.description || '',
+                    text: item.text,
+                    kind: item.kind,
+                    replace_start: item.replace_start || 0,
+                }));
+                const mode = items[0].kind === 'dir' || items[0].kind === 'file' ? 'path' : 'command';
+                showAutocomplete(items, mode);
+            } else {
+                hideAutocomplete();
+            }
+            break;
     }
 });
 
@@ -1179,7 +1225,7 @@ function normalizeContent(content) {
     return parts.join('\n');
 }
 
-function addMessage(role, content, useMarkdown = true) {
+function addMessage(role, content, useMarkdown = true, files = null) {
     content = normalizeContent(content);
     const now = new Date();
 
@@ -1248,6 +1294,20 @@ function addMessage(role, content, useMarkdown = true) {
         contentEl.textContent = content;
     }
     el.appendChild(contentEl);
+
+    // v1.17.4: Inline attachment thumbnails for user messages with files
+    if (files && files.length > 0) {
+        const attachDiv = document.createElement('div');
+        attachDiv.className = 'message-attachments';
+        attachDiv.innerHTML = files.map(f => {
+            const isImage = f.media_type && f.media_type.startsWith('image/');
+            if (isImage && f.data) {
+                return `<img class="attach-thumb" src="data:${f.media_type};base64,${f.data}" alt="${f.name}" title="${f.name}">`;
+            }
+            return `<span class="attach-file-badge" title="${f.name}">\u{1F4C4} ${f.name}</span>`;
+        }).join('');
+        el.appendChild(attachDiv);
+    }
 
     messagesContainer.insertBefore(el, typingIndicator);
     scrollToBottom();

@@ -142,6 +142,43 @@ The server runs on `http://127.0.0.1:54320` by default. Keep it running while us
 
 In VSCode: Click the ppxai icon in the Activity Bar (sidebar), or run command `ppxai: Open Chat`.
 
+## File Upload & Multimodal (v1.17.4)
+
+Attach images, PDFs, Excel, PowerPoint, Word, CSV, and code files to your conversations using the paperclip button, drag-drop, or the `/attach` command.
+
+**No extra setup needed for:** images, text/code files, Word (.docx), CSV
+
+**Optional dependencies for advanced file tools:**
+
+| File Type | Python Package | System Package | Install |
+|-----------|---------------|----------------|---------|
+| PDF text extraction | `pypdf` | — | `pip install 'ppxai[data]'` |
+| PDF page images | `pdf2image` | `poppler-utils` | see below |
+| Excel (.xlsx) | `openpyxl` | — | `pip install 'ppxai[data]'` |
+| PowerPoint (.pptx) | `python-pptx` | — | `pip install 'ppxai[data]'` |
+| PPTX slide rendering | — | `libreoffice` | see below |
+
+**Install all Python extras at once:**
+```bash
+pip install 'ppxai[data]'
+# Or with uv
+uv pip install 'ppxai[data]'
+```
+
+**System dependencies (only needed for PDF page images and PPTX slide rendering):**
+```bash
+# macOS
+brew install poppler libreoffice
+
+# Debian/Ubuntu
+apt install poppler-utils libreoffice-nogui
+
+# Windows — poppler: download from https://github.com/oschwartz10612/poppler-windows
+# Windows — LibreOffice: download from https://www.libreoffice.org/download
+```
+
+Pre-built server binaries include all Python `[data]` dependencies. System packages (poppler, LibreOffice) must be installed separately if you need PDF rasterization or PPTX slide rendering.
+
 ## Troubleshooting
 
 **"Could not connect to server"**

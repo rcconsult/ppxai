@@ -49,10 +49,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Resizable split panel** — drag handle between chat and preview, sets `flex-basis`
   - **Attachment badge** — clickable context indicator at status strip, fetches file via `file_id` for preview
 - **File Upload Phase 6 — VSCode Client**
-  - Webview file picker (`attachBtn` + `fileInput` + drag-drop)
-  - `pendingFiles` staging, `renderPendingBadges()`, `removePendingFile()`
+  - Webview file picker (`attachBtn` + `fileInput` + drag-drop with overlay)
+  - `pendingFiles` staging with image thumbnail previews, `renderPendingBadges()`, `removePendingFile()`
   - `sendMessage` includes `files` in `postMessage` to extension host
   - `chatPanel.ts` handles `files` field, forwards to `httpClient.ts` `chat()` method
+  - Inline attachment thumbnails in user message bubbles (images render, files show badge)
+  - Context attachments badge from SSE `state_sync` — shows file count in status area
+  - Dynamic autocomplete via `POST /complete` — replaces hardcoded 27-entry command list with live CommandFactory (56+ entries), path arguments, @file refs
+  - `httpClient.complete()` method for server-side completion
 - **File Upload Phase 7 — Textual TUI**
   - FileTree `a` key binding emits `FileAttach` message, handled by `on_file_tree_file_attach`
   - `Ctrl+U` shortcut (`action_attach_shortcut`) toggles file tree for attach
@@ -69,6 +73,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Context attachment badge visibility** — `classList` toggle instead of inline style
 - **Inline attachment thumbnails** — clickable via global data map + `onclick`; `_openImagePreview` lightbox uses Blob URL instead of blocked `data:` URI navigation
 - **Split panel preview** for images (zoom toggle) and PDFs (iframe embed)
+- **Terminal PTY on Windows** — guarded Unix-only imports (`fcntl`, `pty`, `termios`) so server starts on Windows; WebSocket returns clear error instead of crash
+- **ppxai-desktop version** — added `ppxai.version` hidden import to PyInstaller spec; updated fallback version
 
 ### Deploy (K8s / coder.trad.int)
 

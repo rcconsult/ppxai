@@ -12,7 +12,7 @@ a = Analysis(
         ('ppxai/web', 'ppxai/web'),
         ('ppxai-config.example.json', '.'),
     ],
-    hiddenimports=[],
+    hiddenimports=['ppxai.version'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

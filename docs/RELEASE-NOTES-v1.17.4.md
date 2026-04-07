@@ -35,7 +35,7 @@ Users can attach files via `/attach` (Rich/Textual), drag-drop (Web), file picke
 ### Cross-Client Features (Phases 5-7)
 - **Web app** — paperclip button, drag-drop zone, attachment badges strip, send with files via POST /chat
 - **Web preview** — PDF (Blob URL + iframe), Excel (SheetJS + DataTableViewer with sort/filter/pagination), PPTX (slide navigator with LibreOffice-rendered images), resizable split panel
-- **VSCode extension** — webview file picker, drag-drop, attachment badges, sends files through httpClient
+- **VSCode extension** — webview file picker, drag-drop with overlay, image thumbnail badges, inline attachment display in messages, context attachments badge, dynamic autocomplete via `POST /complete` (56+ commands, path args, @file refs)
 - **Textual TUI** — file tree `a` key to attach, `Ctrl+U` shortcut, send integration with multimodal content, footer StatusBar badge
 - **AppState `context_attachments`** — canonical cross-client field pushed via SSE state_sync. All 4 clients subscribe to it for their attachment badge/chip UI. Clickable badge opens file preview.
 
@@ -49,6 +49,8 @@ Users can attach files via `/attach` (Rich/Textual), drag-drop (Web), file picke
 - **`/save` warns about unsent attachments** — staged files from `/attach` that haven't been sent yet are not included in the save; the user gets a clear warning
 - **`/ls <file>` shows file entry** — matches shell `ls` semantics; was returning "Not a directory" error
 - **Image validation rejects fake images** — a .png file containing non-image bytes is caught at attach time with a clear "Unrecognized image format" error
+- **Terminal PTY on Windows** — server no longer crashes on Windows due to Unix-only `fcntl`/`pty`/`termios` imports; WebSocket endpoint returns clear error
+- **ppxai-desktop version reporting** — PyInstaller spec now includes `ppxai.version` hidden import; frozen binary reports correct version
 
 ## Dependencies
 

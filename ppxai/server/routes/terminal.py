@@ -3,15 +3,15 @@ WebSocket terminal endpoint — PTY-backed shell in the browser (v1.17.1).
 
 Local mode: spawns a shell via pty.fork()
 K8s mode: kubectl exec into pod (future)
+
+NOTE: PTY is Unix-only. On Windows, the router registers but the endpoint
+returns an error explaining that the terminal feature requires a Unix host.
 """
 
 import asyncio
-import fcntl
 import os
-import pty
-import signal
+import platform
 import struct
-import termios
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -22,6 +22,19 @@ from ..state import get_or_create_session
 logger = get_logger("server")
 
 router = APIRouter()
+
+# Unix-only modules — guarded so the server can still start on Windows
+_PTY_AVAILABLE = False
+if platform.system() != "Windows":
+    try:
+        import fcntl
+        import pty
+        import signal
+        import termios
+
+        _PTY_AVAILABLE = True
+    except ImportError:
+        pass
 
 
 class PtyProcess:
@@ -114,6 +127,14 @@ async def websocket_terminal(websocket: WebSocket):
             {"type": "exit", "code": N}           — shell exited
     """
     await websocket.accept()
+
+    if not _PTY_AVAILABLE:
+        await websocket.send_json({
+            "type": "error",
+            "data": "Terminal requires a Unix host (PTY not available on Windows).",
+        })
+        await websocket.close()
+        return
 
     # Resolve session from query params
     session_id = websocket.query_params.get("session")

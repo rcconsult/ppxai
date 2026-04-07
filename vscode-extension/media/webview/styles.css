@@ -957,6 +957,79 @@ body {
 }
 .file-badge .badge-remove:hover { opacity: 1; }
 
+/* Badge thumbnail previews (v1.17.4) */
+.badge-thumb {
+    width: 32px;
+    height: 32px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+.badge-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+/* Inline attachment thumbnails in user messages (v1.17.4) */
+.message-attachments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid var(--vscode-panel-border);
+}
+.attach-thumb {
+    max-width: 120px;
+    max-height: 80px;
+    border-radius: 4px;
+    cursor: default;
+    object-fit: cover;
+}
+.attach-file-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 11px;
+    background: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+}
+
+/* Drag-drop overlay (v1.17.4) */
+.drag-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    pointer-events: none;
+}
+.drag-overlay-text {
+    color: white;
+    font-size: 20px;
+    font-weight: 600;
+    padding: 30px 50px;
+    border: 3px dashed rgba(255,255,255,0.5);
+    border-radius: 12px;
+}
+
+/* Context attachments badge (v1.17.4) */
+.context-attach-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    background: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    cursor: default;
+}
+
 .typing-indicator {
     display: none;
     padding: 8px 12px;

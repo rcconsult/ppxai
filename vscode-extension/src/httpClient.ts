@@ -1684,6 +1684,32 @@ export class HttpClient {
     }
 
     /**
+     * Request autocomplete suggestions from the server (v1.17.4).
+     * Returns items from engine CompletionProvider (commands, paths, @file refs).
+     */
+    async complete(buffer: string, cursor: number = -1): Promise<Array<{
+        text: string;
+        display: string;
+        description: string;
+        kind: string;
+        replace_start: number;
+    }>> {
+        if (!this._ready) { return []; }
+        try {
+            const response = await fetch(`${this.baseUrl}/complete`, {
+                method: 'POST',
+                headers: this.getHeaders(true),
+                body: JSON.stringify({ buffer, cursor }),
+            });
+            if (!response.ok) { return []; }
+            const data = await response.json() as { items: Array<any> };
+            return data.items || [];
+        } catch {
+            return [];
+        }
+    }
+
+    /**
      * Forward a client event to the server debug log (fire-and-forget).
      * @param level - 'info' | 'warning' | 'error'
      * @param message - The log message

@@ -19,7 +19,7 @@ from pathlib import Path
 try:
     from ppxai.version import __version__
 except ImportError:
-    __version__ = "1.16.2"  # fallback when running as frozen binary without ppxai package
+    __version__ = "1.17.4"  # fallback when running as frozen binary without ppxai package
 
 
 def get_resource_path(relative_path: str) -> Path:

@@ -399,6 +399,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 case 'searchFiles':
                     await this.handleSearchFilesForAutocomplete(message.query);
                     break;
+                case 'complete':
+                    await this.handleComplete(message.buffer, message.cursor);
+                    break;
                 case 'openLink':
                     if (message.url) {
                         vscode.env.openExternal(vscode.Uri.parse(message.url));
@@ -448,6 +451,23 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             });
         } catch (error) {
             // Silently fail - autocomplete is optional
+        }
+    }
+
+    /**
+     * v1.17.4: Server-side autocomplete via POST /complete.
+     * Returns dynamic command list + path completions + @file refs.
+     */
+    private async handleComplete(buffer: string, cursor: number) {
+        if (!this._view) { return; }
+        try {
+            const items = await this._backend.complete(buffer, cursor);
+            this._view.webview.postMessage({
+                type: 'completionItems',
+                items
+            });
+        } catch {
+            // Silently fail — autocomplete is optional
         }
     }
 
@@ -549,13 +569,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         }
 
         // Regular chat message
-        // Show user message (include attachment hint if files present)
-        const displayContent = files && files.length > 0
-            ? `${content}\n\n[Attached: ${files.map(f => f.name).join(', ')}]`
-            : content;
+        // Show user message with attachment metadata for inline thumbnails
         this._view.webview.postMessage({
             type: 'userMessage',
-            content: displayContent
+            content,
+            files: files && files.length > 0 ? files : undefined
         });
 
         // Process @filename references and build augmented message

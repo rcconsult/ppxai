@@ -16,14 +16,16 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **NEW:** CodeMirror modular — shared core + 30 language addons (6.3MB→2.3MB), lazy loading
 - **NEW:** K8s POC — 5 phases: namespace, Dockerfile.server, session manager, login, LDAP auth
 - **NEW:** Benchmark infra — K8s benchmark jobs, `--agents-md` toggle, delta test results
-- **NEW:** File upload Phases 0-7 complete — multimodal message plumbing, `/attach` command, SessionFileStore, file preprocessing, image validation, VL sidecar, PDF/Excel/PPTX tools, web drag-drop + thumbnails, VSCode file picker, Textual file tree attach
-- **NEW:** CompletionProvider engine layer — `engine/completion.py` with `POST /complete` server endpoint, Rich TUI delegating to engine
+- **NEW:** File upload Phases 0-7 complete — multimodal message plumbing, `/attach` command, SessionFileStore, file preprocessing, image validation, VL sidecar, PDF/Excel/PPTX tools, web drag-drop + thumbnails, VSCode drag-drop overlay + inline thumbnails + context badge, Textual file tree attach
+- **NEW:** CompletionProvider engine layer — `engine/completion.py` with `POST /complete` server endpoint, Rich TUI + VSCode dynamic autocomplete (56+ commands, path args, @file refs)
 - **NEW:** Gemini 3.1 Flash Lite + Gemma 4 family (31B, 26B MoE, E4B, E2B); deprecated 2.0/2.5 models with shutdown dates
 - **NEW:** `/doctor` config advisor — deprecation table, dead/deprecated/new/recommended model scanning
 - **FIX:** Heartbeat during streaming — skip health failures while single-worker busy with LLM tokens
 - **FIX:** `/save <name>` now honors name argument; `/ls <file>` supports single-file listing
 - **FIX:** Session autorestore for directory-format sessions; context attachment badge visibility
 - **FIX:** Inline attachment thumbnails with split panel lightbox (images) and PDF embed
+- **FIX:** Terminal PTY Windows crash — guarded Unix-only imports; server starts cleanly on Windows
+- **FIX:** ppxai-desktop version reporting — PyInstaller spec includes `ppxai.version` hidden import
 
 **Version Alignment:**
 - Python package (pyproject.toml): v1.17.4
