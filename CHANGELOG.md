@@ -28,15 +28,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `context_attachments` added to `state_sync` SSE whitelist for cross-client push
   - `POST /complete` server endpoint (`ppxai/server/routes/completion.py`) for cross-client autocomplete
   - `GET /files/serve/{file_id}` endpoint for raw binary serving of session files
+  - `GET /files/preview/{file_id}?slide=N` endpoint for PPTX slide rendering via LibreOffice headless
 - **File Upload Phase 4 — Excel + PPTX Tools**
   - `ReadExcelSheetTool`, `ListExcelSheetsTool`, `ListExcelChartsTool`, `RenderExcelChartTool` in `ppxai/engine/tools/builtin/excel_tools.py`
-  - `ListPptxSlidesTool`, `ReadPptxSlideTextTool`, `RenderPptxSlideTool`, `ExtractPptxImagesTool` in `ppxai/engine/tools/builtin/pptx_tools.py`
+  - `ListPptxSlidesTool`, `ReadPptxSlideTextTool`, `RenderPptxSlideTool`, `SummarizePptxVisualTool` in `ppxai/engine/tools/builtin/pptx_tools.py`
+  - **`summarize_pptx_visual`** — renders all slides via LibreOffice headless, captions each via VL sidecar (Qwen3-VL-8B), returns visual descriptions in a single tool call (replaces N×`read_pptx_slide_text` iterations)
 - **File Upload Phase 5 — Web Client UI**
   - Paperclip attach button + hidden file input in `ppxai/web/index.html`
   - Drag-drop zone on input container + body-level drop handler
   - Attachment badge strip with image thumbnails below input
   - Inline clickable thumbnails in user message bubbles — images open split panel lightbox, PDFs open split panel embed, other files show text preview
   - `pendingFiles[]` staging array, cleared on send; `stream-handler.js` accepts `files` parameter
+  - **SheetJS** (`xlsx.full.min.js`) for client-side Excel preview with `DataTableViewer` (sort, filter, pagination, sheet tabs)
+  - **PPTX slide viewer** — prev/next navigation with LibreOffice-rendered slide images via `/files/preview` endpoint
+  - **PDF preview** — Blob URL + `<iframe>` (replaces `data:` URI `<embed>` which fails for large PDFs)
+  - **Resizable split panel** — drag handle between chat and preview, sets `flex-basis`
+  - **Attachment badge** — clickable context indicator at status strip, fetches file via `file_id` for preview
 - **File Upload Phase 6 — VSCode Client**
   - Webview file picker (`attachBtn` + `fileInput` + drag-drop)
   - `pendingFiles` staging, `renderPendingBadges()`, `removePendingFile()`
@@ -58,6 +65,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Context attachment badge visibility** — `classList` toggle instead of inline style
 - **Inline attachment thumbnails** — clickable via global data map + `onclick`; `_openImagePreview` lightbox uses Blob URL instead of blocked `data:` URI navigation
 - **Split panel preview** for images (zoom toggle) and PDFs (iframe embed)
+
+### Deploy (K8s / coder.trad.int)
+
+- **Dockerfile** — added `[data]` pip extras (pypdf, openpyxl, python-pptx, pdf2image) + `poppler-utils` + `libreoffice-nogui` system packages
+- **Data persistence** — `PPXAI_DATA_DIR` moved from ephemeral `/tmp/session` to persistent `/workspace/.ppxai` (workspace PVC with Retain policy)
+- **PV affinity** — `SessionMeta.workspace_pv` persists PV name so PVC recreation binds to the correct volume (prevents data loss during namespace churn)
+- **deploy.sh resilience** — pre-creates namespace with Helm labels, auto-recovers Reflector-synced secrets (LDAP, TLS) via annotation toggle, auto-creates API key secret from vllm namespace
+- **Ingress** — `proxy-body-size: 50m` for file uploads through nginx
+- **Login wait** — polling increased from 10s to 60s with progress messages for cold pod starts
+- **VL sidecar** — `tools.vision_model` configured for Qwen3-VL-8B-Instruct (auto-caption images on text-only models)
 
 ## [1.17.3] - 2026-04-03
 

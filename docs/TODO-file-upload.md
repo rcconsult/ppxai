@@ -1,6 +1,6 @@
 # TODO: File Upload & Data Processing
 
-**Status:** Complete — All phases (0-7) + Task #11 done, ready for release
+**Status:** Complete — All phases (0-7) + Task #11 + coder deployment + PPTX visual preview done, ready for release
 **Target:** v1.17.4
 **Branch:** `feat/file-upload`
 **Priority:** High — enables data analyst workflows (Excel, PDF, PPTX)
@@ -28,6 +28,27 @@
 
 **Tests:** 2218 passing (was 1753 before Phase 0). **465 new tests** across
 Phases 0-7 + Task #11, zero regressions. 2 poppler-dependent tests deliberately skipped.
+
+### Post-Phase Work (coder.trad.int deployment, April 7)
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Dockerfile `[data]` extras + poppler + libreoffice-nogui | ✅ | System deps for PDF/PPTX rendering |
+| `PPXAI_DATA_DIR` → workspace PVC | ✅ | Uploaded files survive session teardown |
+| PV affinity (`SessionMeta.workspace_pv`) | ✅ | Prevents workspace data loss on namespace churn |
+| deploy.sh resilience (secrets, namespace, labels) | ✅ | Auto-recovers Reflector secrets, API keys |
+| `proxy-body-size: 50m` ingress annotation | ✅ | File uploads through nginx |
+| Login wait 60s polling | ✅ | Cold pod starts without 503 |
+| VL sidecar config (Qwen3-VL-8B) | ✅ | Auto-caption images on text-only models |
+| `render_pptx_slide` tool (LibreOffice → PNG) | ✅ | Individual slide rasterization |
+| `summarize_pptx_visual` tool (VL batch) | ✅ | All slides captioned in 1 tool call via VL sidecar |
+| `GET /files/preview/{file_id}?slide=N` endpoint | ✅ | Server-side slide rendering for web preview |
+| PDF preview — Blob URL + iframe | ✅ | Fixes blank preview for large PDFs |
+| Excel preview — SheetJS + DataTableViewer | ✅ | Sort, filter, pagination, sheet tabs |
+| PPTX preview — slide navigator | ✅ | Prev/next with LibreOffice-rendered images |
+| Resizable split panel | ✅ | Drag handle sets flex-basis |
+| Clickable attachment badge | ✅ | Cache-first file preview from status strip |
+| `_refresh_context_attachments` for PDFs/Office | ✅ | Parses `<uploaded_file>` markers in text blocks |
 
 ---
 
