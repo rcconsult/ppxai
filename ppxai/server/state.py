@@ -8,6 +8,7 @@ state but the app module depends on routes only at registration time.
 
 import asyncio
 import os
+import platform
 import signal
 import time
 from dataclasses import dataclass, field
@@ -68,10 +69,13 @@ def all_preview_backends() -> dict[str, PreviewBackend]:
 async def kill_preview_backend(backend: PreviewBackend) -> None:
     """Terminate a preview backend process, killing the process group."""
     try:
-        # Kill process group (handles npm/node child processes)
-        pgid = os.getpgid(backend.process.pid)
-        os.killpg(pgid, signal.SIGTERM)
-    except (ProcessLookupError, OSError):
+        if platform.system() != "Windows":
+            # Kill process group (handles npm/node child processes)
+            pgid = os.getpgid(backend.process.pid)
+            os.killpg(pgid, signal.SIGTERM)
+        else:
+            backend.process.terminate()
+    except (ProcessLookupError, OSError, AttributeError):
         pass
 
     try:

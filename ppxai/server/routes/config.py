@@ -3,6 +3,7 @@ Server health, status, and configuration endpoints.
 """
 
 import asyncio
+import os
 import signal
 import time
 
@@ -120,7 +121,7 @@ async def shutdown_server():
             _shutdown_event.set()
         else:
             # Fallback for edge cases where event wasn't initialized
-            signal.raise_signal(signal.SIGTERM)
+            os.kill(os.getpid(), signal.SIGTERM)
 
     asyncio.create_task(delayed_shutdown())
 

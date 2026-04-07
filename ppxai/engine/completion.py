@@ -127,6 +127,7 @@ def complete(
 
 def _complete_commands(prefix: str) -> List[Dict[str, Any]]:
     """Complete slash command names from CommandFactory."""
+    CommandFactory._ensure_loaded()
     items: List[Dict[str, Any]] = []
     prefix_lower = prefix.lower()
 

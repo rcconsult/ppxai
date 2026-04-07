@@ -486,6 +486,68 @@ function removePendingFile(index) {
     renderPendingBadges();
 }
 
+// v1.17.4: Brief "sent" badge shown after files are submitted, before
+// server pushes context_attachments via SSE state_sync.
+function showSentFilesBadge(count) {
+    let badge = document.getElementById('sentFilesBadge');
+    if (!badge) {
+        badge = document.createElement('span');
+        badge.id = 'sentFilesBadge';
+        badge.className = 'sent-files-badge';
+        const statusRow = document.querySelector('.badge-row') || contextBadge?.parentElement;
+        if (statusRow) statusRow.appendChild(badge);
+    }
+    badge.textContent = '\u{2705} ' + count + ' file(s) sent';
+    badge.style.display = '';
+    // Auto-hide after server badge appears or after timeout
+    clearTimeout(badge._timer);
+    badge._timer = setTimeout(() => { badge.style.display = 'none'; }, 8000);
+}
+
+// v1.17.4: Lightbox preview for attached files in user message bubbles
+function showAttachLightbox(file) {
+    const isImage = file.media_type && file.media_type.startsWith('image/');
+    const overlay = document.createElement('div');
+    overlay.className = 'attach-lightbox';
+    overlay.addEventListener('click', () => overlay.remove());
+
+    if (isImage && file.data) {
+        const img = document.createElement('img');
+        img.src = `data:${file.media_type};base64,${file.data}`;
+        img.alt = file.name;
+        img.addEventListener('click', (e) => e.stopPropagation());
+        overlay.appendChild(img);
+    } else if (isImage && file.file_id) {
+        // Image stored in SessionFileStore — load via server
+        const img = document.createElement('img');
+        img.alt = file.name;
+        // Request the image bytes through the extension host
+        vscode.postMessage({ type: 'previewFile', fileId: file.file_id, name: file.name });
+        img.addEventListener('click', (e) => e.stopPropagation());
+        overlay.appendChild(img);
+    } else {
+        // Non-image file — show info card
+        const card = document.createElement('div');
+        card.style.cssText = 'background:var(--vscode-editor-background);padding:24px 32px;border-radius:8px;text-align:center;max-width:400px;';
+        card.addEventListener('click', (e) => e.stopPropagation());
+        const sizeStr = file.size ? ` (${(file.size / 1024).toFixed(1)} KB)` : '';
+        card.innerHTML = `<div style="font-size:48px;margin-bottom:12px;">\u{1F4C4}</div>`
+            + `<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${file.name}</div>`
+            + `<div style="font-size:11px;color:var(--vscode-descriptionForeground);">${file.media_type || 'unknown type'}${sizeStr}</div>`;
+        overlay.appendChild(card);
+    }
+
+    const caption = document.createElement('div');
+    caption.className = 'attach-lightbox-caption';
+    caption.textContent = file.name + ' — click outside to close';
+    overlay.appendChild(caption);
+    document.body.appendChild(overlay);
+
+    // Close on Escape
+    const onKey = (e) => { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', onKey); } };
+    document.addEventListener('keydown', onKey);
+}
+
 // Send message
 function sendMessage() {
     const content = messageInput.value.trim();
@@ -509,6 +571,12 @@ function sendMessage() {
     const files = [...pendingFiles];
     pendingFiles = [];
     renderPendingBadges();
+
+    // v1.17.4: Show brief "sent" badge so user sees confirmation before
+    // server-side context_attachments badge appears via SSE state_sync
+    if (files.length > 0) {
+        showSentFilesBadge(files.length);
+    }
 
     const msg = files.length > 0
         ? { type: 'chat', content, files }
@@ -615,20 +683,38 @@ serverBadge.addEventListener('click', () => {
     vscode.postMessage({ type: 'toggleServer', stop: isConnected });
 });
 
-// v1.17.4: Update context attachments badge in status bar
-function updateContextAttachmentsBadge(count) {
+// v1.17.4: Track context attachments for badge + click behavior
+let _contextAttachments = [];
+
+function updateContextAttachmentsBadge(count, attachments) {
+    _contextAttachments = attachments || [];
+    // Hide the transient "sent" badge once the real server-side badge arrives
+    if (count > 0) {
+        const sentBadge = document.getElementById('sentFilesBadge');
+        if (sentBadge) sentBadge.style.display = 'none';
+    }
     let badge = document.getElementById('contextAttachBadge');
     if (count > 0) {
         if (!badge) {
             badge = document.createElement('span');
             badge.id = 'contextAttachBadge';
             badge.className = 'context-attach-badge';
+            badge.addEventListener('click', () => {
+                // Show list of attached files, let user click to open
+                if (_contextAttachments.length > 0) {
+                    const names = _contextAttachments.map(a => a.name).join(', ');
+                    vscode.postMessage({
+                        type: 'chat',
+                        content: '/context'
+                    });
+                }
+            });
             // Insert near the context badge
             const statusRow = document.querySelector('.badge-row') || contextBadge?.parentElement;
             if (statusRow) statusRow.appendChild(badge);
         }
         badge.textContent = '\u{1F4CE} ' + count + ' in context';
-        badge.title = count + ' file(s) attached to conversation context';
+        badge.title = count + ' file(s) attached — click to show details';
         badge.style.display = '';
     } else if (badge) {
         badge.style.display = 'none';
@@ -940,9 +1026,9 @@ window.addEventListener('message', (event) => {
                 }
                 // v1.17.4: Show context attachments count badge
                 if (c.contextAttachments !== undefined) {
-                    const count = Array.isArray(c.contextAttachments)
-                        ? c.contextAttachments.length : 0;
-                    updateContextAttachmentsBadge(count);
+                    const arr = Array.isArray(c.contextAttachments)
+                        ? c.contextAttachments : [];
+                    updateContextAttachmentsBadge(arr.length, arr);
                 }
             }
             break;
@@ -1299,13 +1385,25 @@ function addMessage(role, content, useMarkdown = true, files = null) {
     if (files && files.length > 0) {
         const attachDiv = document.createElement('div');
         attachDiv.className = 'message-attachments';
-        attachDiv.innerHTML = files.map(f => {
+        files.forEach(f => {
             const isImage = f.media_type && f.media_type.startsWith('image/');
             if (isImage && f.data) {
-                return `<img class="attach-thumb" src="data:${f.media_type};base64,${f.data}" alt="${f.name}" title="${f.name}">`;
+                const img = document.createElement('img');
+                img.className = 'attach-thumb';
+                img.src = `data:${f.media_type};base64,${f.data}`;
+                img.alt = f.name;
+                img.title = `${f.name} — click to preview`;
+                img.addEventListener('click', () => showAttachLightbox(f));
+                attachDiv.appendChild(img);
+            } else {
+                const badge = document.createElement('span');
+                badge.className = 'attach-file-badge';
+                badge.title = `${f.name} — click to preview`;
+                badge.textContent = '\u{1F4C4} ' + f.name;
+                badge.addEventListener('click', () => showAttachLightbox(f));
+                attachDiv.appendChild(badge);
             }
-            return `<span class="attach-file-badge" title="${f.name}">\u{1F4C4} ${f.name}</span>`;
-        }).join('');
+        });
         el.appendChild(attachDiv);
     }
 

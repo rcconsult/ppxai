@@ -266,7 +266,10 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
 
     # Set up signal handlers to capture shutdown reason
     def handle_signal(signum, frame):
-        sig_name = signal.Signals(signum).name
+        try:
+            sig_name = signal.Signals(signum).name
+        except (AttributeError, ValueError):
+            sig_name = str(signum)
         reason = "ctrl_c" if signum == signal.SIGINT else "signal"
         logger.info(f"Received {sig_name}, initiating shutdown")
         if _state.session_manager:
