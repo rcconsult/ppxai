@@ -49,6 +49,12 @@ Phases 0-7 + Task #11, zero regressions. 2 poppler-dependent tests deliberately 
 | Resizable split panel | ✅ | Drag handle sets flex-basis |
 | Clickable attachment badge | ✅ | Cache-first file preview from status strip |
 | `_refresh_context_attachments` for PDFs/Office | ✅ | Parses `<uploaded_file>` markers in text blocks |
+| `ReadDocxTool` (read_docx) | ✅ | Stdlib zipfile + xml.etree, no python-docx dep |
+| `ReadCsvTool` + `ListCsvColumnsTool` | ✅ | Large CSVs >50KB lazy-loaded via SessionFileStore |
+| CSV preprocessing threshold (50KB) | ✅ | Small CSVs inline, large CSVs use tools |
+| Word document preview (LibreOffice → PDF → iframe) | ✅ | Server-side conversion, cached |
+| Type-specific tool hints in `<uploaded_file>` | ✅ | read_docx for Word, list_excel for Excel, etc. |
+| Tests: PPTX render (15) + CSV (13) + Word (7) | ✅ | 35 new tests, full suite 2201 passed |
 
 ---
 

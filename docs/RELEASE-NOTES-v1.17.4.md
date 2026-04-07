@@ -21,6 +21,8 @@ Users can attach files via `/attach` (Rich/Textual), drag-drop (Web), file picke
 - **PDF tools** — `read_pdf` (text extraction by pages, range selector, 100KB truncation) and `get_pdf_page_image` (page rasterization to PNG data URI via pdf2image/poppler)
 - **Excel tools** — `list_excel_sheets` (sheet names + dimensions + header preview) and `read_excel_sheet` (markdown table or CSV output with row limiting)
 - **PPTX tools** — `list_pptx_slides` (slide inventory with shape type counts), `read_pptx_slide_text` (text + tables as markdown), `render_pptx_slide` (slide → PNG via LibreOffice headless), `summarize_pptx_visual` (all slides → VL model captions in one call)
+- **Word tools** — `read_docx` (text extraction via stdlib zipfile + xml.etree, no python-docx dependency)
+- **CSV tools** — `read_csv` (row ranges, column filtering, markdown/CSV output) and `list_csv_columns` (column names, types, row count). Large CSVs (>50KB) lazy-loaded via SessionFileStore instead of inlining
 
 ### Model & Config Management (Phase 2.3-2.7)
 - **`supports_vision` flag** on ModelProfile — set for GPT-5.x, GPT-4.x, Gemini 2.5/3/3.1, Gemma 4, Sonar/Sonar Pro, and local VL models (qwen3-vl, llava, pixtral, minicpm-v)
@@ -76,7 +78,7 @@ All in the `[data]` optional extras group: `pip install 'ppxai[data]'`
 
 ## Test Coverage
 - **Starting point:** 1,753 tests
-- **Final count:** 2,218 tests
-- **New tests:** 465
+- **Final count:** 2,253 tests (2,201 passing + 7 skipped in local env; additional tests for PPTX render, CSV, Word)
+- **New tests:** 500
 - **Regressions:** 0
-- **Skipped:** 2 (poppler-dependent, platform-specific)
+- **Skipped:** 7 (poppler-dependent, platform-specific, optional deps)

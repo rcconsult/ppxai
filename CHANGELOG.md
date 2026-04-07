@@ -33,6 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `ReadExcelSheetTool`, `ListExcelSheetsTool`, `ListExcelChartsTool`, `RenderExcelChartTool` in `ppxai/engine/tools/builtin/excel_tools.py`
   - `ListPptxSlidesTool`, `ReadPptxSlideTextTool`, `RenderPptxSlideTool`, `SummarizePptxVisualTool` in `ppxai/engine/tools/builtin/pptx_tools.py`
   - **`summarize_pptx_visual`** — renders all slides via LibreOffice headless, captions each via VL sidecar (Qwen3-VL-8B), returns visual descriptions in a single tool call (replaces N×`read_pptx_slide_text` iterations)
+  - **`ReadDocxTool`** (`read_docx`) in `ppxai/engine/tools/builtin/docx_tools.py` — extracts text from .docx via stdlib zipfile + xml.etree (no python-docx dependency)
+  - **`ReadCsvTool`** (`read_csv`) + **`ListCsvColumnsTool`** (`list_csv_columns`) in `ppxai/engine/tools/builtin/csv_tools.py` — lazy-loading for large CSVs (>50KB) stored in SessionFileStore; row ranges, column filtering, markdown/CSV output
+  - **CSV preprocessing threshold** — CSVs >50KB stored with `<uploaded_file>` reference instead of inlining; model uses tools on demand
+  - **Type-specific tool hints** — `<uploaded_file>` references now suggest the correct tool per file type (read_docx for Word, list_excel_sheets for Excel, summarize_pptx_visual for PPTX)
 - **File Upload Phase 5 — Web Client UI**
   - Paperclip attach button + hidden file input in `ppxai/web/index.html`
   - Drag-drop zone on input container + body-level drop handler
