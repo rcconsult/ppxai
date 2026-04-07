@@ -1,10 +1,8 @@
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: {{ include "ppxai.namespace" . }}
-  labels:
-    {{- include "ppxai.labels" . | nindent 4 }}
-    {{- with .Values.namespaceLabels }}
-    {{- toYaml . | nindent 4 }}
-    {{- end }}
+{{/*
+Namespace is managed by deploy.sh (pre-created before Helm runs).
+This prevents namespace ownership conflicts on uninstall/reinstall cycles,
+since the namespace must outlive Helm releases (PVCs with Retain policy persist).
+
+deploy.sh labels the namespace with Helm ownership metadata so helm upgrade
+can still validate it. See deploy.sh Step 1.
+*/}}

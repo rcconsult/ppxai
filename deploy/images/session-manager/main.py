@@ -245,7 +245,7 @@ def _create_server_pod(username: str, workspace_pvc: str, temp_pvc: str) -> str:
                     ports=[k8s.V1ContainerPort(container_port=54320)],
                     env=[
                         k8s.V1EnvVar(name="PPXAI_WORKING_DIR", value="/workspace"),
-                        k8s.V1EnvVar(name="PPXAI_DATA_DIR", value="/tmp/session"),
+                        k8s.V1EnvVar(name="PPXAI_DATA_DIR", value="/workspace/.ppxai"),
                         k8s.V1EnvVar(name="PPXAI_USERNAME", value=username),
                     ],
                     env_from=[

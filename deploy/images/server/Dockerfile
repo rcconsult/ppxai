@@ -14,7 +14,10 @@ FROM python:3.12-slim-bookworm AS builder
 
 WORKDIR /build
 
-RUN apt-get update && apt-get install -y --no-install-recommends gcc && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
@@ -22,7 +25,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY pyproject.toml README.md ./
 COPY ppxai/ ./ppxai/
 
-RUN pip install --no-cache-dir ".[server,search]"
+RUN pip install --no-cache-dir ".[server,search,data]"
 
 # =============================================================================
 # Stage 2: Runtime
@@ -35,6 +38,9 @@ LABEL org.opencontainers.image.description="ppxai HTTP server — Kubernetes mul
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
+# poppler-utils needed at runtime by pdf2image (GetPdfPageImageTool)
+RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils && rm -rf /var/lib/apt/lists/*
+
 # Web UI files — served by the HTTP server from ~/.ppxai/web/
 COPY --from=builder /build/ppxai/web/ /root/.ppxai/web/
 
@@ -43,7 +49,7 @@ COPY AGENTS.md /root/.ppxai/AGENTS.md
 
 # Per-session environment — overridden at pod creation time by session manager
 ENV PPXAI_WORKING_DIR=/workspace
-ENV PPXAI_DATA_DIR=/tmp/session
+ENV PPXAI_DATA_DIR=/workspace/.ppxai
 ENV PPXAI_USERNAME=""
 
 # PVC mount points
