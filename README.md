@@ -1,6 +1,6 @@
 # ppxai - Multi-LLM Interface for Developers
 
-![Version](https://img.shields.io/badge/version-1.17.4-blue) ![Tests](https://img.shields.io/badge/tests-2218%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
+![Version](https://img.shields.io/badge/version-1.17.4-blue) ![Tests](https://img.shields.io/badge/tests-2253%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
 
 **Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
 
@@ -195,6 +195,17 @@ Switch providers anytime: `/provider gemini` or `/model gemini-2.5-pro`
 - **Cost Control** - Use Perplexity for research, Gemini for long context, local models for sensitive code—all in one session
 - **Real-time Usage Tracking** - Token counts and cost estimates in status line (`1.2K↓/0.5K↑ $0.0045`)
 - **Themed TUI Panels** - Rich TUI: 6 themes; Textual TUI (ppxaide): 17+ themes (`/theme` to cycle or Ctrl+T)
+
+### File Upload & Data Analysis (v1.17.4)
+Attach files to conversations across all four clients:
+- **Images** - Inline preview, vision model analysis (Gemini, GPT-5, local VL models)
+- **PDF** - Text extraction (`read_pdf`), page rasterization (`get_pdf_page_image`), split panel preview
+- **Excel** - Sheet listing, data reading as markdown tables (`read_excel_sheet`), client-side preview with SheetJS (sort, filter, pagination)
+- **PowerPoint** - Slide text extraction, visual summary via VL model (`summarize_pptx_visual`), split panel slide navigator with LibreOffice rendering
+- **Word** - Text extraction (`read_docx`), split panel PDF preview via LibreOffice
+- **CSV** - Small files inline, large (>50KB) lazy-loaded via `read_csv` / `list_csv_columns` tools
+
+**How to attach:** `/attach <path>` (TUI), drag-drop or paperclip button (Web/VSCode), `a` key in file tree (ppxaide)
 
 ### Agent Mode
 Enable with `/agent on` or click the Agent button in VSCode:
