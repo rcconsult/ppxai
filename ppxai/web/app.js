@@ -992,90 +992,94 @@ class PpxaiApp {
             return;
         }
 
-        // Create an inline BaseView subclass that renders directly from
-        // the base64 data without a server round trip. Matches the API
-        // of ImageFileView / PdfFileView but skips the fetch.
+        // Create a BaseView subclass that renders directly from the
+        // base64 data without a server round trip. Must extend BaseView
+        // so RightPanelFrame's promote/dedup/stack-info all work.
         const frame = this.rightPanelFrame;
         const name = entry.name;
         const mediaType = entry.media_type;
         const b64 = entry.data;
         const sizeKB = (b64.length * 3 / 4 / 1024).toFixed(1);
 
+        /** Inline attachment view extending BaseView for full RPF compat. */
+        class AttachmentView extends BaseView {
+            constructor(title, path, icon, mountFn) {
+                super();
+                this._title = title;
+                this._path = path;
+                this._icon = icon;
+                this._mountFn = mountFn;
+            }
+            getTitle() { return this._title; }
+            getPath() { return this._path; }
+            getIcon() { return this._icon; }
+            mount(container) { this._mountFn(container); }
+            unmount() {}
+            focus() {}
+            onKeyDown() { return false; }
+        }
+
         if (mediaType.startsWith('image/')) {
-            const view = {
-                getTitle: () => name,
-                getPath: () => `attachment:${name}`,
-                getIcon: () => '\u{1F5BC}',
-                mount: (container) => {
-                    container.innerHTML = `
-                        <div class="rpf-view-toolbar">
-                            <span class="rpf-view-info">Image \u2022 ${sizeKB} KB</span>
-                            <button class="rpf-btn ifv-zoom-btn" title="Toggle zoom">\u{1F50D} Zoom</button>
-                        </div>
-                        <div class="ifv-img-wrapper">
-                            <img class="ifv-img"
-                                 src="data:${mediaType};base64,${b64}"
-                                 alt="${name}"
-                                 title="Click to toggle zoom"
-                                 style="max-width:100%; max-height:100%;">
-                        </div>`;
-                    let zoomed = false;
-                    const img = container.querySelector('.ifv-img');
-                    const zoomBtn = container.querySelector('.ifv-zoom-btn');
-                    const toggleZoom = () => {
-                        zoomed = !zoomed;
-                        img.style.maxWidth = zoomed ? 'none' : '100%';
-                        img.style.maxHeight = zoomed ? 'none' : '100%';
-                        zoomBtn.textContent = zoomed ? '\u{1F50D} Fit' : '\u{1F50D} Zoom';
-                    };
-                    if (img) img.addEventListener('click', toggleZoom);
-                    if (zoomBtn) zoomBtn.addEventListener('click', toggleZoom);
-                },
-                unmount: () => {},
-                focus: () => {},
-                onKeyDown: () => false,
-            };
+            const view = new AttachmentView(name, `attachment:${name}`, '\u{1F5BC}', (container) => {
+                container.innerHTML = `
+                    <div class="rpf-view-toolbar">
+                        <span class="rpf-view-info">Image \u2022 ${sizeKB} KB</span>
+                        <button class="rpf-btn ifv-zoom-btn" title="Toggle zoom">\u{1F50D} Zoom</button>
+                    </div>
+                    <div class="ifv-img-wrapper">
+                        <img class="ifv-img"
+                             src="data:${mediaType};base64,${b64}"
+                             alt="${name}"
+                             title="Click to toggle zoom"
+                             style="max-width:100%; max-height:100%;">
+                    </div>`;
+                let zoomed = false;
+                const img = container.querySelector('.ifv-img');
+                const zoomBtn = container.querySelector('.ifv-zoom-btn');
+                const toggleZoom = () => {
+                    zoomed = !zoomed;
+                    img.style.maxWidth = zoomed ? 'none' : '100%';
+                    img.style.maxHeight = zoomed ? 'none' : '100%';
+                    zoomBtn.textContent = zoomed ? '\u{1F50D} Fit' : '\u{1F50D} Zoom';
+                };
+                if (img) img.addEventListener('click', toggleZoom);
+                if (zoomBtn) zoomBtn.addEventListener('click', toggleZoom);
+            });
             frame.push(view);
         } else if (mediaType === 'application/pdf') {
-            const view = {
-                getTitle: () => name,
-                getPath: () => `attachment:${name}`,
-                getIcon: () => '\u{1F4D5}',
-                mount: (container) => {
-                    container.innerHTML = `
-                        <div class="rpf-view-toolbar">
-                            <span class="rpf-view-info">PDF \u2022 ${sizeKB} KB</span>
-                        </div>
-                        <div class="pfv-embed-wrapper" style="flex:1; min-height:0;">
-                            <embed src="data:application/pdf;base64,${b64}"
-                                   type="application/pdf"
-                                   style="width:100%; height:100%;">
-                        </div>`;
-                },
-                unmount: () => {},
-                focus: () => {},
-                onKeyDown: () => false,
-            };
+            // Use Blob URL instead of data: URI — large base64 PDFs
+            // exceed browser limits for embed src attributes.
+            const byteStr = atob(b64);
+            const bytes = new Uint8Array(byteStr.length);
+            for (let i = 0; i < byteStr.length; i++) bytes[i] = byteStr.charCodeAt(i);
+            const blob = new Blob([bytes], { type: 'application/pdf' });
+            const blobUrl = URL.createObjectURL(blob);
+            const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4D5}', (container) => {
+                container.innerHTML = `
+                    <div class="rpf-view-toolbar">
+                        <span class="rpf-view-info">PDF \u2022 ${sizeKB} KB</span>
+                    </div>
+                    <div class="pfv-embed-wrapper" style="flex:1; min-height:0;">
+                        <iframe src="${blobUrl}"
+                                style="width:100%; height:100%; border:none;">
+                        </iframe>
+                    </div>`;
+            });
+            // Clean up Blob URL when view is evicted from stack
+            const origUnmount = view.unmount.bind(view);
+            view.unmount = () => { URL.revokeObjectURL(blobUrl); origUnmount(); };
             frame.push(view);
         } else {
             // Other file types — show content as text in code view
             try {
                 const text = atob(b64);
-                const view = {
-                    getTitle: () => name,
-                    getPath: () => `attachment:${name}`,
-                    getIcon: () => '\u{1F4C4}',
-                    mount: (container) => {
-                        container.innerHTML = `
-                            <div class="rpf-view-toolbar">
-                                <span class="rpf-view-info">File \u2022 ${sizeKB} KB</span>
-                            </div>
-                            <pre style="padding:16px; overflow:auto; flex:1;">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>`;
-                    },
-                    unmount: () => {},
-                    focus: () => {},
-                    onKeyDown: () => false,
-                };
+                const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4C4}', (container) => {
+                    container.innerHTML = `
+                        <div class="rpf-view-toolbar">
+                            <span class="rpf-view-info">File \u2022 ${sizeKB} KB</span>
+                        </div>
+                        <pre style="padding:16px; overflow:auto; flex:1;">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>`;
+                });
                 frame.push(view);
             } catch (e) {
                 console.error('[ppxai] File preview failed:', e);
@@ -1139,6 +1143,7 @@ class PpxaiApp {
             this.state.agentMode = status.agent_mode || false;
             this.state.debugLog = status.debug_log || false;
             this.state.workingDir = status.working_dir || '';
+            this.state.contextAttachments = status.context_attachments || [];
 
             // Select current provider/model
             this.elements.providerSelect.value = this.state.currentProvider;
@@ -1148,6 +1153,7 @@ class PpxaiApp {
             // Update badges
             this.updateToolsBadge();
             this.updateAgentBadge();
+            this.updateAttachmentBadge();
             if (this.state.workingDir) {
                 this.updateFolderBadge(this.state.workingDir);
             } else {

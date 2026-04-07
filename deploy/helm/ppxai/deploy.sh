@@ -193,8 +193,7 @@ echo "==> Deploying ppxai to namespace '$NAMESPACE' (release: $RELEASE_NAME)..."
 
 helm upgrade --install "$RELEASE_NAME" "$SCRIPT_DIR" \
   ${VALUES_FILE:+-f "$SCRIPT_DIR/$VALUES_FILE"} \
-  --namespace "$NAMESPACE" \
-  --force
+  --namespace "$NAMESPACE"
 
 echo ""
 echo "==> Deployment complete."

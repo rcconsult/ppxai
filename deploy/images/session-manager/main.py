@@ -94,6 +94,7 @@ class SessionMeta:
         temp_pvc: str,
         created_at: str,
         last_heartbeat: str,
+        workspace_pv: str = "",
     ):
         self.username = username
         self.pod_name = pod_name
@@ -102,12 +103,16 @@ class SessionMeta:
         self.temp_pvc = temp_pvc
         self.created_at = created_at
         self.last_heartbeat = last_heartbeat
+        self.workspace_pv = workspace_pv
 
     def to_dict(self) -> dict:
         return self.__dict__.copy()
 
     @classmethod
     def from_dict(cls, d: dict) -> "SessionMeta":
+        # Backward compat: old meta.json files lack workspace_pv
+        if "workspace_pv" not in d:
+            d["workspace_pv"] = ""
         return cls(**d)
 
 
@@ -171,7 +176,15 @@ def _slug(username: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _create_workspace_pvc(username: str) -> str:
+def _create_workspace_pvc(username: str, volume_name: str = "") -> str:
+    """Create or reuse the workspace PVC for a user.
+
+    If *volume_name* is provided (from SessionMeta.workspace_pv), the PVC
+    is created with an explicit ``volumeName`` so Kubernetes binds it to
+    the exact same PV that held the user's data previously.  Before
+    binding, any stale ``claimRef`` on the target PV is cleared so the
+    Retain-policy PV accepts the new PVC.
+    """
     slug = _slug(username)
     name = f"{APP_PREFIX}-ws-{slug}"
     try:
@@ -181,16 +194,33 @@ def _create_workspace_pvc(username: str) -> str:
     except k8s.ApiException as e:
         if e.status != 404:
             raise
+
+    # If we know the exact PV, clear its stale claimRef so it can rebind
+    if volume_name:
+        try:
+            pv = core.read_persistent_volume(volume_name)
+            claim_ref = pv.spec.claim_ref
+            if claim_ref and pv.status.phase == "Released":
+                log.info(f"Clearing stale claimRef on PV {volume_name}")
+                core.patch_persistent_volume(
+                    volume_name,
+                    {"spec": {"claimRef": None}},
+                )
+        except k8s.ApiException as e:
+            log.warning(f"Could not prepare PV {volume_name}: {e.reason}")
+            volume_name = ""  # fall back to dynamic binding
+
     pvc = k8s.V1PersistentVolumeClaim(
         metadata=k8s.V1ObjectMeta(name=name, namespace=NAMESPACE),
         spec=k8s.V1PersistentVolumeClaimSpec(
             access_modes=["ReadWriteOnce"],
             storage_class_name=WORKSPACE_SC,
             resources=k8s.V1ResourceRequirements(requests={"storage": WORKSPACE_SIZE}),
+            volume_name=volume_name or None,
         ),
     )
     core.create_namespaced_persistent_volume_claim(NAMESPACE, pvc)
-    log.info(f"Created workspace PVC {name}")
+    log.info(f"Created workspace PVC {name}" + (f" → PV {volume_name}" if volume_name else ""))
     return name
 
 
@@ -474,7 +504,9 @@ def create_session(req: CreateSessionRequest):
 
     # Return existing session if pod is actually running; otherwise rebuild
     existing = _load_meta(username)
+    stored_pv = ""
     if existing:
+        stored_pv = existing.workspace_pv or ""
         try:
             pod = core.read_namespaced_pod(name=existing.pod_name, namespace=NAMESPACE)
             if pod.status.phase in ("Running", "Pending"):
@@ -495,11 +527,19 @@ def create_session(req: CreateSessionRequest):
     if len(active) >= MAX_SESSIONS:
         raise HTTPException(503, f"Max sessions ({MAX_SESSIONS}) reached — try again later")
 
-    workspace_pvc = _create_workspace_pvc(username)
+    workspace_pvc = _create_workspace_pvc(username, volume_name=stored_pv)
     temp_pvc = _create_temp_pvc(username)
     pod_name = _create_server_pod(username, workspace_pvc, temp_pvc)
     svc_name = _create_server_service(username)
     _patch_ingress_add(username, svc_name)
+
+    # Read back the actual PV name after binding and persist it
+    bound_pv = ""
+    try:
+        pvc_obj = core.read_namespaced_persistent_volume_claim(workspace_pvc, NAMESPACE)
+        bound_pv = pvc_obj.spec.volume_name or ""
+    except k8s.ApiException:
+        pass
 
     now = _now_iso()
     meta = SessionMeta(
@@ -510,6 +550,7 @@ def create_session(req: CreateSessionRequest):
         temp_pvc=temp_pvc,
         created_at=now,
         last_heartbeat=now,
+        workspace_pv=bound_pv,
     )
     _save_meta(meta)
     log.info(f"Session created for {username}")

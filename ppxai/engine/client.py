@@ -372,9 +372,36 @@ class EngineClient:
                         "turn_index": turn_index,
                         "file_id": file_id,
                     })
-                # text parts intentionally ignored — text-file attachments
-                # merge into the prompt at send time and leave nothing
-                # distinguishable in session history.
+                elif btype == "text":
+                    # PDF and Office attachments produce text parts with
+                    # an <uploaded_file> XML marker (Phase 2.8+). Parse
+                    # the marker to recover name, file_id, and type for
+                    # the attachment badge.
+                    text = block.get("text") or ""
+                    if "<uploaded_file " in text:
+                        import re as _re
+                        m = _re.search(
+                            r'<uploaded_file\s+'
+                            r'name="([^"]*)"[^>]*'
+                            r'type="([^"]*)"[^>]*'
+                            r'file_id="([^"]*)"',
+                            text,
+                        )
+                        if m:
+                            uf_name = m.group(1) or "file"
+                            uf_type = m.group(2) or ""
+                            uf_fid = m.group(3) or ""
+                            dedup_key = uf_fid or uf_name
+                            if dedup_key not in seen_keys:
+                                seen_keys.add(dedup_key)
+                                kind = "pdf" if "pdf" in uf_type else "file"
+                                attachments.append({
+                                    "name": uf_name,
+                                    "kind": kind,
+                                    "media_type": uf_type,
+                                    "turn_index": turn_index,
+                                    "file_id": uf_fid,
+                                })
 
         # AppState.set() short-circuits on equality so unchanged lists don't
         # fire listeners or SSE events.
