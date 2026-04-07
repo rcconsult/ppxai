@@ -324,10 +324,110 @@ def _preprocess_image(
     )
 
 
+def _is_csv_file(name: str, media_type: str) -> bool:
+    """Check if a file is a CSV based on extension or media type."""
+    return (
+        media_type == "text/csv"
+        or name.lower().endswith(".csv")
+    )
+
+
+# Threshold above which CSVs are lazy-loaded via SessionFileStore
+# instead of inlined into the prompt. 50 KB is generous for text
+# context but prevents multi-MB data files from eating the context
+# window.
+_CSV_LAZY_THRESHOLD = 50 * 1024  # 50 KB
+
+
+def _count_csv_rows_cols(data: bytes) -> tuple[int, int]:
+    """Count rows and columns in a CSV. Returns (rows, columns).
+
+    Uses csv.reader with delimiter sniffing. Row count excludes the
+    header row. Returns (0, 0) on empty or unparseable data.
+    """
+    import csv as _csv
+    import io as _io
+
+    text = _decode_text(data)
+    try:
+        dialect = _csv.Sniffer().sniff(text[:8192])
+        delimiter = dialect.delimiter
+    except _csv.Error:
+        delimiter = ","
+
+    reader = _csv.reader(_io.StringIO(text), delimiter=delimiter)
+    rows = list(reader)
+    if not rows:
+        return 0, 0
+
+    columns = len(rows[0])
+    data_rows = len(rows) - 1  # exclude header
+    return max(data_rows, 0), columns
+
+
+def _preprocess_csv(
+    name: str,
+    data: bytes,
+    media_type: str,
+    *,
+    file_store: Optional[SessionFileStore],
+) -> PreprocessResult:
+    """Persist a large CSV and emit a text reference with metadata.
+
+    Large CSVs are NOT inlined — instead the model sees a marker
+    indicating the file is available via the read_csv and
+    list_csv_columns tools. This mirrors the PDF lazy-loading pattern.
+    """
+    warnings: List[str] = []
+
+    file_id = ""
+    if file_store is not None:
+        try:
+            meta = file_store.save(name, data, media_type=media_type)
+            file_id = meta.file_id
+            name = meta.name
+        except OSError as exc:
+            return PreprocessResult(
+                ok=False,
+                name=name,
+                media_type=media_type,
+                kind=KIND_TEXT,
+                error=f"file_store.save failed: {exc}",
+            )
+    else:
+        warnings.append(
+            "No SessionFileStore wired — CSV will be unreachable to tools"
+        )
+
+    row_count, col_count = _count_csv_rows_cols(data)
+    size_kb = len(data) / 1024
+
+    reference = (
+        f'<uploaded_file name="{name}" type="text/csv" '
+        f'file_id="{file_id}" rows="{row_count}" columns="{col_count}" '
+        f'size_kb="{size_kb:.1f}">\n'
+        f"CSV attached: {name} ({row_count} rows, {col_count} columns, "
+        f"{size_kb:.1f} KB). Use the read_csv tool to access its content.\n"
+        f"</uploaded_file>"
+    )
+
+    return PreprocessResult(
+        ok=True,
+        parts=[{"type": "text", "text": reference}],
+        file_id=file_id,
+        name=name,
+        media_type=media_type,
+        kind=KIND_TEXT,
+        warnings=warnings,
+    )
+
+
 def _preprocess_text(
     name: str,
     data: bytes,
     media_type: str,
+    *,
+    file_store: Optional[SessionFileStore] = None,
 ) -> PreprocessResult:
     """Inline a text/code file into the prompt as a `<file>` block.
 
@@ -336,7 +436,16 @@ def _preprocess_text(
     returned content part wraps the file in `<file name="..." type="...">`
     tags so non-vision models can still consume it alongside the user's
     prompt text.
+
+    Exception: Large CSV files (>= 50 KB) are routed to `_preprocess_csv`
+    for lazy loading via SessionFileStore and tool-based access.
     """
+    # Large CSV files get lazy-loaded to avoid eating context window.
+    if _is_csv_file(name, media_type) and len(data) >= _CSV_LAZY_THRESHOLD:
+        return _preprocess_csv(
+            name, data, media_type, file_store=file_store,
+        )
+
     text = _decode_text(data)
     block = {
         "type": "text",
@@ -565,7 +674,7 @@ def preprocess_file(
         )
 
     if kind == KIND_TEXT:
-        return _preprocess_text(name, data, canonical_mt)
+        return _preprocess_text(name, data, canonical_mt, file_store=file_store)
 
     if kind == KIND_PDF:
         return _preprocess_pdf(

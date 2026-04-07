@@ -13,7 +13,9 @@ render images, PDFs, and other media inline. Used by:
 
     GET /files/preview/{file_id}?slide=N&total=true
     → 200 PNG for PPTX slide N (rendered via LibreOffice headless)
-    → JSON {"total": N} when total=true
+    → 200 PDF for Word documents (.docx/.doc, converted via LibreOffice)
+    → JSON {"total": N, "name": "...", "type": "pdf"} when total=true (Word)
+    → JSON {"total": N, "name": "..."} when total=true (PPTX)
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -63,6 +65,63 @@ async def serve_file(
     )
 
 
+_WORD_MIMES = {
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/msword",
+}
+_WORD_EXTENSIONS = {".docx", ".doc"}
+
+
+def _is_word_document(meta) -> bool:
+    """Return True if the file metadata indicates a Word document."""
+    if meta.media_type and meta.media_type in _WORD_MIMES:
+        return True
+    if meta.name:
+        from pathlib import PurePosixPath
+        ext = PurePosixPath(meta.name).suffix.lower()
+        if ext in _WORD_EXTENSIONS:
+            return True
+    return False
+
+
+def _convert_docx_to_pdf(source_path, cache_dir) -> "Path":
+    """Convert a Word document to PDF via LibreOffice headless.
+
+    The result is cached as ``cache_dir / preview.pdf``.  Returns the
+    path to the cached PDF.
+    """
+    import subprocess
+    import tempfile
+    from pathlib import Path
+
+    cache_dir = Path(cache_dir)
+    cached_pdf = cache_dir / "preview.pdf"
+    if cached_pdf.exists():
+        return cached_pdf
+
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        subprocess.run(
+            [
+                "libreoffice", "--headless", "--norestore",
+                "--convert-to", "pdf",
+                "--outdir", tmpdir,
+                str(source_path),
+            ],
+            capture_output=True,
+            timeout=120,
+        )
+        pdf_candidates = list(Path(tmpdir).glob("*.pdf"))
+        if not pdf_candidates:
+            raise RuntimeError("LibreOffice produced no PDF output")
+        # Copy to cache
+        import shutil
+        shutil.copy2(pdf_candidates[0], cached_pdf)
+
+    return cached_pdf
+
+
 @router.get("/files/preview/{file_id}")
 async def preview_file(
     file_id: str,
@@ -70,13 +129,16 @@ async def preview_file(
     total: bool = Query(False, description="Return only the total slide count"),
     s: Session = Depends(get_session),
 ):
-    """Render a PPTX slide as PNG via LibreOffice headless.
+    """Render a PPTX slide as PNG or a Word document as PDF via LibreOffice.
 
-    Used by the web app split panel slide viewer. Slides are rendered
-    once and cached alongside the source file in SessionFileStore.
+    Used by the web app split panel slide/document viewer.
 
-    - GET /files/preview/{file_id}?total=true → {"total": N, "name": "..."}
-    - GET /files/preview/{file_id}?slide=3 → PNG bytes for slide 3
+    PPTX: slides rendered once and cached as PNGs.
+    Word (.docx/.doc): converted to PDF once and cached.
+
+    - GET /files/preview/{file_id}?total=true → {"total": N, "name": "...", "type": "..."}
+    - GET /files/preview/{file_id}?slide=3 → PNG bytes for slide 3 (PPTX)
+    - GET /files/preview/{file_id}?slide=1 → PDF bytes (Word)
     """
     file_store = getattr(s.engine, "file_store", None)
     if file_store is None:
@@ -88,10 +150,31 @@ async def preview_file(
     if not meta.path.exists():
         raise HTTPException(status_code=404, detail="File bytes missing")
 
-    from ...engine.tools.builtin.pptx_tools import render_pptx_slides, _libreoffice_available
+    from ...engine.tools.builtin.pptx_tools import _libreoffice_available
 
     if not _libreoffice_available():
         raise HTTPException(status_code=503, detail="LibreOffice not installed")
+
+    # ── Word document → PDF ──────────────────────────────────────────
+    if _is_word_document(meta):
+        cache_dir = meta.path.parent / "preview"
+        try:
+            pdf_path = _convert_docx_to_pdf(meta.path, cache_dir)
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
+
+        if total:
+            return JSONResponse({"total": 1, "name": meta.name, "type": "pdf"})
+
+        pdf_bytes = pdf_path.read_bytes()
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Cache-Control": "private, max-age=3600"},
+        )
+
+    # ── PPTX → slide PNGs ────────────────────────────────────────────
+    from ...engine.tools.builtin.pptx_tools import render_pptx_slides
 
     cache_dir = meta.path.parent / "slides"
     try:

@@ -1286,15 +1286,72 @@ class PpxaiApp {
                     });
             });
             frame.push(view);
+        } else if (mediaType.includes('word') || mediaType === 'application/msword'
+                   || name.endsWith('.docx') || name.endsWith('.doc')) {
+            // Word document preview — convert to PDF via server-side LibreOffice
+            const fileId = (this.state.contextAttachments || []).find(
+                a => a.name === name
+            )?.file_id || '';
+            const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4C4}', (container) => {
+                container.innerHTML = `
+                    <div class="rpf-view-toolbar">
+                        <span class="rpf-view-info">Loading document\u2026</span>
+                    </div>
+                    <div class="docx-preview" style="flex:1; min-height:0;"></div>`;
+                const previewEl = container.querySelector('.docx-preview');
+                const infoEl = container.querySelector('.rpf-view-info');
+
+                if (!fileId) {
+                    previewEl.innerHTML = '<p style="padding:16px; color:var(--text-muted);">No file_id \u2014 cannot render document. Re-attach the file.</p>';
+                    infoEl.textContent = `Word Document \u2022 ${sizeKB} KB`;
+                    return;
+                }
+
+                // Fetch the converted PDF from the preview endpoint
+                fetch(`files/preview/${fileId}?slide=1`, {
+                    headers: this.apiClient.getHeaders(),
+                })
+                    .then(r => r.ok ? r.blob() : Promise.reject(r.statusText))
+                    .then(blob => {
+                        infoEl.textContent = `Word Document \u2022 ${sizeKB} KB`;
+                        const blobUrl = URL.createObjectURL(blob);
+                        previewEl.innerHTML = `
+                            <iframe src="${blobUrl}"
+                                    style="width:100%; height:100%; border:none;">
+                            </iframe>`;
+                        // Store blobUrl for cleanup
+                        previewEl._blobUrl = blobUrl;
+                    })
+                    .catch(err => {
+                        // Fallback to info panel if conversion unavailable
+                        infoEl.textContent = `Word Document \u2022 ${sizeKB} KB`;
+                        previewEl.innerHTML = `<div style="padding:24px; color:var(--text-secondary);">
+                            <h3 style="margin-bottom:12px; color:var(--text-primary);">${name}</h3>
+                            <p style="margin-bottom:8px;">Word Document \u2022 ${sizeKB} KB</p>
+                            <p style="font-size:12px; opacity:0.7;">
+                                PDF conversion unavailable: ${err}<br>
+                                Ask the model to summarize or analyze its contents.
+                            </p>
+                        </div>`;
+                    });
+            });
+            // Clean up Blob URL when view is evicted from stack
+            const origUnmount = view.unmount.bind(view);
+            view.unmount = () => {
+                const el = document.querySelector('.docx-preview');
+                if (el && el._blobUrl) URL.revokeObjectURL(el._blobUrl);
+                origUnmount();
+            };
+            frame.push(view);
         } else {
-            // Other office files (docx) — info panel
+            // Other office files — info panel
             const officeMimes = [
                 'application/vnd.openxmlformats-officedocument.',
                 'application/msword',
             ];
             const isOffice = officeMimes.some(m => mediaType.startsWith(m));
             if (isOffice) {
-                const typeLabel = mediaType.includes('word') ? 'Word Document' : `${name.split('.').pop().toUpperCase()} Document`;
+                const typeLabel = `${name.split('.').pop().toUpperCase()} Document`;
                 const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4C4}', (container) => {
                     container.innerHTML = `
                         <div class="rpf-view-toolbar">

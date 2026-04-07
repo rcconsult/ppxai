@@ -86,3 +86,12 @@ def register_all_builtin_tools(manager: ToolManagerProtocol, provider: str = Non
             pptx_tools.register_tools(manager, engine)
         except Exception:
             pass
+
+        # CSV tools (v1.17.4) — read_csv, list_csv_columns.
+        # No optional dependencies (csv is stdlib). Always registers
+        # when engine is available.
+        try:
+            from . import csv_tools
+            csv_tools.register_tools(manager, engine)
+        except Exception:
+            pass
