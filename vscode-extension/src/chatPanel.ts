@@ -414,7 +414,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     await this.handleClearContext();
                     break;
                 case 'previewFile':
-                    await this.handlePreviewFile(message.fileId, message.name);
+                    await this.handlePreviewFile(message.fileId, message.name, message.data);
                     break;
             }
         });
@@ -1690,8 +1690,8 @@ Review your previous actions and continue. If the task is complete, respond with
      * - Everything else (PDF, images, text): fetches raw bytes from
      *   /files/serve and opens with VSCode's native viewer.
      */
-    private async handlePreviewFile(fileId: string, name: string) {
-        if (!fileId) { return; }
+    private async handlePreviewFile(fileId: string | undefined, name: string, data?: string) {
+        if (!fileId && !data) { return; }
 
         const os = require('os');
         const path = require('path');
@@ -1702,6 +1702,18 @@ Review your previous actions and continue. If the task is complete, respond with
         const ext = path.extname(name).toLowerCase();
 
         try {
+            // If we have inline base64 data (file just attached, no server file_id yet),
+            // write it directly to a temp file and open with VSCode native viewer.
+            if (!fileId && data) {
+                const buffer = Buffer.from(data, 'base64');
+                const tmpFile = path.join(tmpDir, name);
+                fs.writeFileSync(tmpFile, buffer);
+                await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(tmpFile));
+                return;
+            }
+            // From here on we need a server-side file_id
+            if (!fileId) { return; }
+
             // PPTX → render slides as PNG via LibreOffice, open each
             if (ext === '.pptx' || ext === '.ppt') {
                 const metaResp = await fetch(`${base}/files/preview/${fileId}?total=true`);

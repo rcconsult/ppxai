@@ -534,9 +534,19 @@ function showAttachLightbox(file) {
         return;
     }
 
-    // All other files — delegate to VSCode native preview via extension host
+    // All other files — delegate to VSCode native preview via extension host.
+    // Files just attached have base64 data but no file_id (assigned server-side).
+    // Files from context_attachments have file_id but no data.
     if (file.file_id) {
         vscode.postMessage({ type: 'previewFile', fileId: file.file_id, name: file.name });
+    } else if (file.data) {
+        vscode.postMessage({ type: 'previewFile', name: file.name, data: file.data });
+    } else {
+        // Try to find file_id from context_attachments by name
+        const ctx = _contextAttachments.find(a => a.name === file.name);
+        if (ctx && ctx.file_id) {
+            vscode.postMessage({ type: 'previewFile', fileId: ctx.file_id, name: file.name });
+        }
     }
 }
 
