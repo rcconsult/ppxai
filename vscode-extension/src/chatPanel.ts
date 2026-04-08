@@ -413,6 +413,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 case 'clearContext':
                     await this.handleClearContext();
                     break;
+                case 'previewFile':
+                    await this.handlePreviewFile(message.fileId, message.name);
+                    break;
             }
         });
     }
@@ -1674,6 +1677,39 @@ Review your previous actions and continue. If the task is complete, respond with
                 type: 'error',
                 content: `Failed to clear context: ${error}`
             });
+        }
+    }
+
+    /**
+     * Handle file preview request from webview attachment badge click (v1.17.4).
+     * Fetches file bytes from the server's SessionFileStore and opens
+     * them in VSCode's native preview (PDF viewer, image viewer, etc.).
+     */
+    private async handlePreviewFile(fileId: string, name: string) {
+        if (!fileId) { return; }
+
+        try {
+            const url = `${this._backend.getBaseUrl()}/files/serve/${fileId}`;
+            const resp = await fetch(url);
+            if (!resp.ok) {
+                vscode.window.showWarningMessage(`Cannot preview ${name}: server returned ${resp.status}`);
+                return;
+            }
+            const buffer = Buffer.from(await resp.arrayBuffer());
+
+            // Write to a temp file preserving the original extension
+            const os = require('os');
+            const path = require('path');
+            const fs = require('fs');
+            const tmpDir = path.join(os.tmpdir(), 'ppxai-preview');
+            fs.mkdirSync(tmpDir, { recursive: true });
+            const tmpFile = path.join(tmpDir, name);
+            fs.writeFileSync(tmpFile, buffer);
+
+            const uri = vscode.Uri.file(tmpFile);
+            await vscode.commands.executeCommand('vscode.open', uri);
+        } catch (error) {
+            vscode.window.showWarningMessage(`Preview failed for ${name}: ${error}`);
         }
     }
 

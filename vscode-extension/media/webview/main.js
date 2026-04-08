@@ -504,48 +504,40 @@ function showSentFilesBadge(count) {
     badge._timer = setTimeout(() => { badge.style.display = 'none'; }, 8000);
 }
 
-// v1.17.4: Lightbox preview for attached files in user message bubbles
+// v1.17.4: Preview attached files from user message bubbles.
+// Images with inline base64 data open in a lightbox overlay.
+// Everything else (PDFs, Office docs, images without data) delegates
+// to VSCode's native preview via the extension host.
 function showAttachLightbox(file) {
     const isImage = file.media_type && file.media_type.startsWith('image/');
-    const overlay = document.createElement('div');
-    overlay.className = 'attach-lightbox';
-    overlay.addEventListener('click', () => overlay.remove());
 
+    // Images with inline base64 — show in webview lightbox
     if (isImage && file.data) {
+        const overlay = document.createElement('div');
+        overlay.className = 'attach-lightbox';
+        overlay.addEventListener('click', () => overlay.remove());
+
         const img = document.createElement('img');
         img.src = `data:${file.media_type};base64,${file.data}`;
         img.alt = file.name;
         img.addEventListener('click', (e) => e.stopPropagation());
         overlay.appendChild(img);
-    } else if (isImage && file.file_id) {
-        // Image stored in SessionFileStore — load via server
-        const img = document.createElement('img');
-        img.alt = file.name;
-        // Request the image bytes through the extension host
-        vscode.postMessage({ type: 'previewFile', fileId: file.file_id, name: file.name });
-        img.addEventListener('click', (e) => e.stopPropagation());
-        overlay.appendChild(img);
-    } else {
-        // Non-image file — show info card
-        const card = document.createElement('div');
-        card.style.cssText = 'background:var(--vscode-editor-background);padding:24px 32px;border-radius:8px;text-align:center;max-width:400px;';
-        card.addEventListener('click', (e) => e.stopPropagation());
-        const sizeStr = file.size ? ` (${(file.size / 1024).toFixed(1)} KB)` : '';
-        card.innerHTML = `<div style="font-size:48px;margin-bottom:12px;">\u{1F4C4}</div>`
-            + `<div style="font-size:14px;font-weight:600;margin-bottom:4px;">${file.name}</div>`
-            + `<div style="font-size:11px;color:var(--vscode-descriptionForeground);">${file.media_type || 'unknown type'}${sizeStr}</div>`;
-        overlay.appendChild(card);
+
+        const caption = document.createElement('div');
+        caption.className = 'attach-lightbox-caption';
+        caption.textContent = file.name + ' — click outside to close';
+        overlay.appendChild(caption);
+        document.body.appendChild(overlay);
+
+        const onKey = (e) => { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', onKey); } };
+        document.addEventListener('keydown', onKey);
+        return;
     }
 
-    const caption = document.createElement('div');
-    caption.className = 'attach-lightbox-caption';
-    caption.textContent = file.name + ' — click outside to close';
-    overlay.appendChild(caption);
-    document.body.appendChild(overlay);
-
-    // Close on Escape
-    const onKey = (e) => { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', onKey); } };
-    document.addEventListener('keydown', onKey);
+    // All other files — delegate to VSCode native preview via extension host
+    if (file.file_id) {
+        vscode.postMessage({ type: 'previewFile', fileId: file.file_id, name: file.name });
+    }
 }
 
 // Send message
