@@ -1682,35 +1682,87 @@ Review your previous actions and continue. If the task is complete, respond with
 
     /**
      * Handle file preview request from webview attachment badge click (v1.17.4).
-     * Fetches file bytes from the server's SessionFileStore and opens
-     * them in VSCode's native preview (PDF viewer, image viewer, etc.).
+     *
+     * - PPTX: fetches rendered slide PNGs from /files/preview and opens
+     *   each as an image tab in VSCode.
+     * - DOCX/DOC: fetches the LibreOffice-converted PDF from /files/preview
+     *   and opens it in VSCode's PDF viewer.
+     * - Everything else (PDF, images, text): fetches raw bytes from
+     *   /files/serve and opens with VSCode's native viewer.
      */
     private async handlePreviewFile(fileId: string, name: string) {
         if (!fileId) { return; }
 
+        const os = require('os');
+        const path = require('path');
+        const fs = require('fs');
+        const tmpDir = path.join(os.tmpdir(), 'ppxai-preview');
+        fs.mkdirSync(tmpDir, { recursive: true });
+        const base = this._backend.getBaseUrl();
+        const ext = path.extname(name).toLowerCase();
+
         try {
-            const url = `${this._backend.getBaseUrl()}/files/serve/${fileId}`;
-            const resp = await fetch(url);
-            if (!resp.ok) {
-                vscode.window.showWarningMessage(`Cannot preview ${name}: server returned ${resp.status}`);
+            // PPTX → render slides as PNG via LibreOffice, open each
+            if (ext === '.pptx' || ext === '.ppt') {
+                const metaResp = await fetch(`${base}/files/preview/${fileId}?total=true`);
+                if (!metaResp.ok) {
+                    // LibreOffice not available — fall back to raw file
+                    return this._openRawFile(base, fileId, name, tmpDir, fs, path);
+                }
+                const meta = await metaResp.json() as { total: number; name: string };
+                const total = meta.total || 1;
+
+                // Open first slide, then the rest in background tabs
+                for (let i = 1; i <= total; i++) {
+                    const slideResp = await fetch(`${base}/files/preview/${fileId}?slide=${i}`);
+                    if (!slideResp.ok) { continue; }
+                    const buf = Buffer.from(await slideResp.arrayBuffer());
+                    const slideName = `${path.basename(name, ext)}_slide${i}.png`;
+                    const tmpFile = path.join(tmpDir, slideName);
+                    fs.writeFileSync(tmpFile, buf);
+                    const uri = vscode.Uri.file(tmpFile);
+                    // First slide in active column, rest as preview tabs
+                    await vscode.commands.executeCommand('vscode.open', uri,
+                        { preview: i > 1 });
+                }
                 return;
             }
-            const buffer = Buffer.from(await resp.arrayBuffer());
 
-            // Write to a temp file preserving the original extension
-            const os = require('os');
-            const path = require('path');
-            const fs = require('fs');
-            const tmpDir = path.join(os.tmpdir(), 'ppxai-preview');
-            fs.mkdirSync(tmpDir, { recursive: true });
-            const tmpFile = path.join(tmpDir, name);
-            fs.writeFileSync(tmpFile, buffer);
+            // DOCX/DOC → convert to PDF via LibreOffice, open PDF
+            if (ext === '.docx' || ext === '.doc') {
+                const pdfResp = await fetch(`${base}/files/preview/${fileId}?slide=1`);
+                if (pdfResp.ok) {
+                    const buf = Buffer.from(await pdfResp.arrayBuffer());
+                    const pdfName = `${path.basename(name, ext)}.pdf`;
+                    const tmpFile = path.join(tmpDir, pdfName);
+                    fs.writeFileSync(tmpFile, buf);
+                    await vscode.commands.executeCommand('vscode.open',
+                        vscode.Uri.file(tmpFile));
+                    return;
+                }
+                // Fall through to raw file if conversion unavailable
+            }
 
-            const uri = vscode.Uri.file(tmpFile);
-            await vscode.commands.executeCommand('vscode.open', uri);
+            // Default: serve raw bytes (PDF, images, text, etc.)
+            await this._openRawFile(base, fileId, name, tmpDir, fs, path);
         } catch (error) {
             vscode.window.showWarningMessage(`Preview failed for ${name}: ${error}`);
         }
+    }
+
+    private async _openRawFile(
+        base: string, fileId: string, name: string,
+        tmpDir: string, fs: any, path: any
+    ) {
+        const resp = await fetch(`${base}/files/serve/${fileId}`);
+        if (!resp.ok) {
+            vscode.window.showWarningMessage(`Cannot preview ${name}: server returned ${resp.status}`);
+            return;
+        }
+        const buffer = Buffer.from(await resp.arrayBuffer());
+        const tmpFile = path.join(tmpDir, name);
+        fs.writeFileSync(tmpFile, buffer);
+        await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(tmpFile));
     }
 
     /**
