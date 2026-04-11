@@ -11,9 +11,9 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 **v1.17.x highlights:**
 - **NEW:** AppState schema DTO — `ppxai/engine/app_state_schema.json` is the golden source of truth for all 4 clients. Python loads via `importlib.resources`, Web via `window.APP_STATE_SCHEMA` injected into `index.html` by FastAPI, VSCode via bundled copy kept in sync by `scripts/sync-schema.js` precompile hook. Rich + Textual TUIs consume it transitively via the Python `AppState`. `GET /schema/app-state` diagnostic endpoint. Zero hand-maintained parallel schemas.
 - **NEW:** AppState — observable state across all 4 clients (Python, JS, TS), SSE `state_sync` push
-- **NEW:** Server modularization — `http.py` 2,936→372 lines, 13 route modules, DI via `Depends(get_session)`
+- **NEW:** Server modularization — `http.py` 2,936→411 lines, 17 route modules (agent, chat, checkpoints, commands, completion, config, consent, context, file_serve, files, preview, providers, schema, sessions, static, terminal, usage), DI via `Depends(get_session)`. The v1.17.1 baseline was 13 modules; v1.17.4 added `completion.py` (cross-client autocomplete), `file_serve.py` + `preview.py` (file upload Phase 3), and `schema.py` (AppState DTO)
 - **NEW:** Config submodules — `config/__init__.py` 943→262 lines, 6 submodules
-- **NEW:** EngineClient decomposition — 1,588→955 lines, `checkpoint_ops`, `consent_ops`, `bootstrap_ops`
+- **NEW:** EngineClient decomposition — 1,588→977 lines across **6 ops modules**: `bootstrap_ops`, `checkpoint_ops`, `consent_ops`, `session_ops`, `multimodal_ops` (v1.17.4 Phase 2 extraction: context attachments + VL sidecar), `provider_ops` (v1.17.4: provider/model switching, list, current). `client.py` stays ~977 lines as a thin facade; each ops module is <500 lines and independently testable.
 - **NEW:** CodeMirror modular — shared core + 30 language addons (6.3MB→2.3MB), lazy loading
 - **NEW:** K8s POC — 5 phases: namespace, Dockerfile.server, session manager, login, LDAP auth
 - **NEW:** Benchmark infra — K8s benchmark jobs, `--agents-md` toggle, delta test results

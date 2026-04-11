@@ -1799,11 +1799,29 @@ class PPXAIDEApp(App):
     def action_attach_shortcut(self) -> None:
         """Ctrl+U — open or focus the file tree for attaching (Phase 7.2).
 
-        If the file tree is hidden, toggle it visible. If already visible,
-        just focus it so the user can navigate and press 'a' to attach.
+        If the file tree is hidden, show it. Then focus it so the user
+        can immediately navigate with arrow keys and press 'a' to attach
+        the highlighted file. Pressing Ctrl+U a second time while the
+        tree is already focused does nothing (not toggle-close) — that
+        matches the docstring intent: this shortcut is a "get me to
+        attach mode in one keystroke", not a show/hide toggle.
+        Ctrl+B remains the show/hide toggle.
         """
-        # Use the same toggle action as Ctrl+B, which shows/hides the tree.
-        self.action_toggle_file_tree()
+        # Step 1: make sure the tree is visible. `action_toggle_file_tree`
+        # is a pure toggle, so only call it when the tree is currently
+        # hidden — otherwise it would close a tree the user wants to use.
+        if not self._file_tree_visible:
+            self.action_toggle_file_tree()
+
+        # Step 2: move focus to the tree so the 'a' key hits it directly.
+        # Ignored silently if the tree widget isn't mounted yet (shouldn't
+        # happen during a normal session, but belt-and-suspenders so a
+        # shortcut press during app startup doesn't raise).
+        try:
+            file_tree = self.query_one("#file-tree", FileTree)
+        except NoMatches:
+            return
+        file_tree.focus()
 
     async def show_file_in_panel(
         self,

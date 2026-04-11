@@ -42,7 +42,14 @@ from ..config import (
 from ..common.logger import get_logger
 from ..constants import Default
 from .app_state import AppState
-from . import bootstrap_ops, checkpoint_ops, consent_ops, session_ops
+from . import (
+    bootstrap_ops,
+    checkpoint_ops,
+    consent_ops,
+    multimodal_ops,
+    provider_ops,
+    session_ops,
+)
 
 logger = get_logger("tui")
 
@@ -278,236 +285,31 @@ class EngineClient:
     def _refresh_context_attachments(self) -> None:
         """Recompute the `context_attachments` AppState field from session history.
 
-        Called from `session.on_messages_changed` after every mutation of
-        `session.messages`. Walks the history once, extracts one dict per
-        unique multimodal content part, and writes the full list to
-        AppState. The write is a no-op (no listener fire, no SSE push) if
-        the computed list is equal to the previous value — so this is safe
-        to call on every mutation, including assistant turns that never
-        contain attachments.
-
-        **Role filter (important invariant for Phase 2.8+):** only
-        `role == "user"` turns contribute to `context_attachments`.
-        Tool-generated images (e.g. `GetPdfPageImageTool` returning a
-        rasterized PDF page, Phase 2.8; `RenderExcelChartTool`, Phase 4)
-        land in `role == "tool"` or `role == "assistant"` messages and
-        are deliberately excluded. Rationale: the badge represents "what
-        the user attached to this conversation," not "every multimodal
-        artifact in the history." A user who reads 20 PDF pages via tools
-        should not see 20 entries in their badge — that would bury real
-        user uploads and conflate intent (deliberate attach) with side
-        effects (tool exploration). If we later want to surface tool
-        artifacts as a separate badge, Phase 4 can add a `kind="tool_output"`
-        variant and a second AppState field or a grouped display.
-
-        Entry schema matches the contract documented on AppState.FIELDS:
-        `{"name", "kind", "media_type", "turn_index", "file_id"}`. Keys
-        are stable and JSON-serializable so web/VSCode clients can consume
-        this via SSE `state_sync` without any translation. `file_id` is
-        the empty string for legacy entries (Phase 1 sessions predating
-        SessionFileStore); clients use it to request thumbnails from a
-        future server endpoint.
+        Delegates to `multimodal_ops.refresh_context_attachments`. Wired
+        into `session.on_messages_changed` so it fires on every mutation
+        of `session.messages`. See `multimodal_ops.py` for the full role
+        filter, dedup, and entry schema documentation.
         """
-        attachments: List[Dict[str, Any]] = []
-        seen_keys: set = set()
-        for turn_index, msg in enumerate(self.session.messages):
-            # Role filter — see docstring. Tool/assistant multimodal content
-            # is invisible to this scanner by design.
-            if getattr(msg, "role", None) != "user":
-                continue
-            content = getattr(msg, "content", None)
-            if not isinstance(content, list):
-                continue
-            for block in content:
-                if not isinstance(block, dict):
-                    continue
-                btype = block.get("type")
-                if btype == "image_url":
-                    name = block.get("name") or "image"
-                    file_id = block.get("file_id") or ""
-                    # Dedup key prefers file_id (stable content-addressed
-                    # identity) and falls back to name for legacy blocks.
-                    dedup_key = file_id or name
-                    if dedup_key in seen_keys:
-                        continue
-                    seen_keys.add(dedup_key)
-
-                    # Prefer authoritative metadata from the file store
-                    # (populated in Phase 2.1a). Falls back to parsing the
-                    # data URI for pure-Phase-1 content blocks.
-                    media_type = ""
-                    if file_id and self.file_store is not None:
-                        meta = self.file_store.get_metadata(file_id)
-                        if meta is not None:
-                            media_type = meta.media_type
-                            # Keep the filename from the store canonical
-                            # — it survives save→load round trips.
-                            name = meta.name
-                    if not media_type:
-                        url = (block.get("image_url") or {}).get("url", "")
-                        if url.startswith("data:"):
-                            try:
-                                media_type = url[5:].split(";", 1)[0] or ""
-                            except Exception:
-                                media_type = ""
-
-                    attachments.append({
-                        "name": name,
-                        "kind": "image",
-                        "media_type": media_type,
-                        "turn_index": turn_index,
-                        "file_id": file_id,
-                    })
-                elif btype in ("input_file", "file"):
-                    name = block.get("name") or block.get("filename") or "file"
-                    file_id = block.get("file_id") or ""
-                    dedup_key = file_id or name
-                    if dedup_key in seen_keys:
-                        continue
-                    seen_keys.add(dedup_key)
-                    attachments.append({
-                        "name": name,
-                        "kind": "file",
-                        "media_type": block.get("media_type") or "",
-                        "turn_index": turn_index,
-                        "file_id": file_id,
-                    })
-                elif btype == "text":
-                    # PDF and Office attachments produce text parts with
-                    # an <uploaded_file> XML marker (Phase 2.8+). Parse
-                    # the marker to recover name, file_id, and type for
-                    # the attachment badge.
-                    text = block.get("text") or ""
-                    if "<uploaded_file " in text:
-                        import re as _re
-                        m = _re.search(
-                            r'<uploaded_file\s+'
-                            r'name="([^"]*)"[^>]*'
-                            r'type="([^"]*)"[^>]*'
-                            r'file_id="([^"]*)"',
-                            text,
-                        )
-                        if m:
-                            uf_name = m.group(1) or "file"
-                            uf_type = m.group(2) or ""
-                            uf_fid = m.group(3) or ""
-                            dedup_key = uf_fid or uf_name
-                            if dedup_key not in seen_keys:
-                                seen_keys.add(dedup_key)
-                                kind = "pdf" if "pdf" in uf_type else "file"
-                                attachments.append({
-                                    "name": uf_name,
-                                    "kind": kind,
-                                    "media_type": uf_type,
-                                    "turn_index": turn_index,
-                                    "file_id": uf_fid,
-                                })
-
-        # AppState.set() short-circuits on equality so unchanged lists don't
-        # fire listeners or SSE events.
-        self.state.set("context_attachments", attachments)
+        multimodal_ops.refresh_context_attachments(self)
 
     def get_context_attachments(self) -> List[Dict[str, Any]]:
         """Return the current multimodal attachments in conversation context.
 
-        Reads from AppState — the canonical source maintained by
-        `_refresh_context_attachments`. Clients should prefer this method
-        (or subscribing to the `context_attachments` AppState field
-        directly) over scanning `session.messages` themselves, so all
-        four clients render identical data.
+        Delegates to `multimodal_ops.get_context_attachments`. Reads from
+        AppState (the canonical source). Clients should prefer subscribing
+        to the `context_attachments` AppState field directly.
         """
-        return list(self.state.get("context_attachments") or [])
+        return multimodal_ops.get_context_attachments(self)
 
     def remove_context_attachment(self, name: str) -> int:
         """Drop all user-turn multimodal parts matching `name` from history.
 
-        Walks `session.messages`, rewrites any user message containing an
-        `image_url` or file content part whose `name` field (or file_id)
-        matches the argument, and drops those parts. Messages whose
-        content list becomes empty after removal get a `[Attachment
-        removed: name]` text placeholder so conversation alternation stays
-        valid — dropping the whole message would leave consecutive
-        assistant turns and violate provider API rules.
-
-        The SessionFileStore file_id → path mapping is intentionally NOT
-        touched: other turns may still reference the same file_id, and
-        cleaning up orphaned bytes is the job of `cleanup_all` at session
-        teardown. Clients that want to reclaim disk space immediately can
-        call `file_store.cleanup(file_id)` themselves after confirming no
-        remaining message references the id.
-
-        Fires `on_messages_changed` at the end, which refreshes the
-        `context_attachments` AppState field and cascades to every
-        subscribed client (Rich status bar, Textual footer, web chips,
-        VSCode chips).
-
-        Args:
-            name: Attachment display name as reported by
-                  `get_context_attachments()`, OR the literal string
-                  "all" to remove every attachment in one call. Matches
-                  are case-insensitive for "all"; exact for names so
-                  files that legitimately share a prefix aren't grouped.
-
-        Returns:
-            Number of content parts removed across all messages. Zero
-            indicates no matches — the caller should surface a "no
-            such attachment" message rather than pretending success.
+        Delegates to `multimodal_ops.remove_context_attachment`. Fires
+        `on_messages_changed` internally so the `context_attachments`
+        AppState field refreshes and cascades to every subscribed client.
+        Pass `"all"` to remove every attachment in one call.
         """
-        if not name:
-            return 0
-
-        remove_all = name.lower() == "all"
-        removed_count = 0
-        mutated = False
-
-        for msg in self.session.messages:
-            if getattr(msg, "role", None) != "user":
-                continue
-            content = getattr(msg, "content", None)
-            if not isinstance(content, list):
-                continue
-
-            kept: List[Dict[str, Any]] = []
-            had_attachment = False
-            for block in content:
-                if not isinstance(block, dict):
-                    kept.append(block)
-                    continue
-                btype = block.get("type")
-                if btype not in ("image_url", "input_file", "file"):
-                    kept.append(block)
-                    continue
-                block_name = (
-                    block.get("name")
-                    or block.get("filename")
-                    or block.get("file_id")
-                    or ""
-                )
-                if remove_all or block_name == name:
-                    removed_count += 1
-                    had_attachment = True
-                    continue
-                kept.append(block)
-
-            if not had_attachment:
-                continue
-
-            # If the message now has no content parts left (a rare case
-            # where a user turn was nothing but attachments), inject a
-            # text placeholder so alternation stays valid.
-            if not kept:
-                kept.append({
-                    "type": "text",
-                    "text": f"[Attachment removed: {name}]",
-                })
-
-            msg.content = kept
-            mutated = True
-
-        if mutated:
-            self.session._notify_messages_changed()
-
-        return removed_count
+        return multimodal_ops.remove_context_attachment(self, name)
 
     # ------------------------------------------------------------------
     # Vision-language sidecar (v1.17.4 Phase 2.7)
@@ -516,22 +318,11 @@ class EngineClient:
     def has_vision_model(self) -> bool:
         """Return True if a vision-language sidecar is configured and usable.
 
-        Checks the `tools.vision_model` config section: the sidecar is
-        "available" when `enabled=True`, endpoint and model are both
-        non-empty, and (by default) `auto_caption=True` so file
-        preprocessing calls it automatically. Callers with their own
-        use policy can read `get_vision_model_config()` directly.
+        Delegates to `multimodal_ops.has_vision_model`. Reads the
+        `tools.vision_model` config section; returns True when enabled,
+        endpoint, and model are all set.
         """
-        try:
-            cfg = get_vision_model_config()
-        except Exception as exc:
-            logger.debug(f"has_vision_model: config read failed: {exc}")
-            return False
-        return (
-            bool(cfg.get("enabled"))
-            and bool(cfg.get("endpoint"))
-            and bool(cfg.get("model"))
-        )
+        return multimodal_ops.has_vision_model()
 
     def caption_image(
         self,
@@ -541,98 +332,13 @@ class EngineClient:
     ) -> str:
         """One-shot VL caption call for a single image.
 
-        Used by `file_preprocessing.preprocess_file` when the user
-        attaches an image while chatting with a text-only model. Sends
-        a single `/chat/completions` request to the configured VL
-        endpoint with the image as an `image_url` data URI and a
-        concise "describe this" system prompt, and returns the plain
-        text caption.
-
-        Any failure (sidecar disabled, network error, malformed
-        response, timeout) returns an empty string so
-        `file_preprocessing` falls through to its placeholder path
-        rather than aborting the whole attachment. Warnings are logged
-        for diagnostic purposes.
-
-        Args:
-            name: Display name of the image (used only for log messages).
-            media_type: MIME type of the image bytes (e.g. "image/png").
-            data: Raw image bytes.
-
-        Returns:
-            A caption string on success, or "" on any failure.
+        Delegates to `multimodal_ops.caption_image`. Used by
+        `file_preprocessing.preprocess_file` when the user attaches an
+        image while chatting with a text-only model. Returns "" on any
+        failure so `file_preprocessing` falls through to its placeholder
+        path rather than aborting the whole attachment.
         """
-        cfg = get_vision_model_config()
-        if not cfg.get("enabled") or not cfg.get("endpoint") or not cfg.get("model"):
-            return ""
-
-        endpoint = cfg["endpoint"].rstrip("/")
-        # OpenAI-compatible clients expect the /chat/completions path;
-        # strip any trailing /v1 the user may have included.
-        if endpoint.endswith("/v1"):
-            url = f"{endpoint}/chat/completions"
-        else:
-            url = f"{endpoint}/v1/chat/completions" if "/v1" not in endpoint else f"{endpoint}/chat/completions"
-
-        # Build the request. We use the OpenAI SDK for consistency with
-        # how ppxai talks to every other provider, rather than raw
-        # httpx — the SDK handles retries, auth headers, and error
-        # translation for us.
-        try:
-            from openai import OpenAI  # noqa: PLC0415
-        except ImportError:
-            logger.warning("caption_image: openai SDK not installed")
-            return ""
-
-        api_key = ""
-        api_key_env = cfg.get("api_key_env") or ""
-        if api_key_env:
-            api_key = os.environ.get(api_key_env, "")
-        # OpenAI SDK requires a non-empty api_key even for no-auth
-        # endpoints; use a placeholder for local servers.
-        if not api_key:
-            api_key = "local-sidecar"
-
-        b64 = base64.b64encode(data).decode("ascii")
-        data_uri = f"data:{media_type};base64,{b64}"
-
-        try:
-            client = OpenAI(
-                base_url=endpoint if endpoint.endswith("/v1") else f"{endpoint}/v1",
-                api_key=api_key,
-                timeout=float(cfg.get("timeout", 30)),
-            )
-            response = client.chat.completions.create(
-                model=cfg["model"],
-                max_tokens=int(cfg.get("max_tokens", 200)),
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": cfg.get("prompt", "Describe this image.")},
-                            {"type": "image_url", "image_url": {"url": data_uri}},
-                        ],
-                    }
-                ],
-            )
-        except Exception as exc:
-            logger.warning(f"caption_image: VL call failed for {name}: {exc}")
-            return ""
-
-        try:
-            caption = response.choices[0].message.content or ""
-        except (AttributeError, IndexError):
-            logger.warning(
-                f"caption_image: unexpected response shape for {name}"
-            )
-            return ""
-
-        caption = caption.strip()
-        logger.debug(
-            f"caption_image: {name} → {len(caption)} chars via "
-            f"{cfg['endpoint']} ({cfg['model']})"
-        )
-        return caption
+        return multimodal_ops.caption_image(self, name, media_type, data)
 
     def set_working_dir(self, path: str):
         """Set working directory for file path resolution.
@@ -729,196 +435,71 @@ class EngineClient:
     def set_provider(self, provider_name: str) -> bool:
         """Switch to a different provider.
 
+        Delegates to `provider_ops.set_provider`. See that module for the
+        full switch sequence: API key lookup, capability resolution,
+        provider instance creation, default model application, tool
+        re-registration, and hints logging.
+
         Args:
             provider_name: Provider ID (e.g., 'perplexity', 'openai')
 
         Returns:
             True if provider was set successfully
         """
-        if provider_name not in self.providers_config:
-            return False
-
-        api_key = self._get_api_key(provider_name)
-        if not api_key:
-            return False
-
-        base_url = self._get_base_url(provider_name)
-        provider_config = self.providers_config[provider_name]
-
-        # Parse capabilities from config
-        caps_dict = provider_config.get("capabilities", {})
-        capabilities = ProviderCapabilities.from_dict(caps_dict)
-
-        # Create provider instance with optional provider-specific options
-        provider_options = provider_config.get("options", {})
-        self.provider = create_provider(
-            provider_name,
-            api_key=api_key,
-            base_url=base_url,
-            models=provider_config.get("models", {}),
-            capabilities=capabilities,
-            **provider_options  # Pass provider-specific options (e.g., enable_grounding for Gemini)
-        )
-
-        if self.provider is None:
-            # Fallback to generic OpenAI-compatible provider
-            self.provider = OpenAICompatibleProvider(
-                api_key=api_key,
-                base_url=base_url,
-                models=provider_config.get("models", {}),
-                capabilities=capabilities,
-                provider_id=provider_name  # For config lookup (generation_params, max_tokens)
-            )
-
-        self.provider_name = provider_name
-        self.state.set("provider", provider_name)
-        self.tool_manager.set_provider(provider_name)
-        self.session.set_provider(provider_name)
-
-        # Set default model for this provider (no context reset — provider switch
-        # resets via the user's explicit set_model call, not this internal default).
-        # Suppress hint logging here — the caller's set_model() will log the final model.
-        default_model = provider_config.get("default_model")
-        if default_model:
-            self._suppress_hint_log = True
-            self.set_model(default_model, reset_context=False)
-            self._suppress_hint_log = False
-
-        # Re-register tools when switching providers if tools are enabled
-        # This ensures provider-aware tools (like web_search) are correctly filtered
-        # for the new provider. Without this, switching from perplexity to custom
-        # would keep web_search excluded even though custom providers need it.
-        if self.tools_enabled:
-            self.tool_manager.clear()
-            register_all_builtin_tools(self.tool_manager, provider_name, engine=self)
-            self.tool_manager.max_iterations = self._agent_config.get("max_tool_iterations", Default.MAX_TOOL_ITERATIONS)
-            self.tool_manager.max_same_tool_calls = self._agent_config.get("max_same_tool_calls", Default.MAX_SAME_TOOL_CALLS)
-
-        # Log hints transition for debugging (v1.14.0)
-        if self._bootstrap_context:
-            hints_info = self.get_active_hints()
-            provider_count = len(hints_info["provider_hints"])
-            model_count = len(hints_info["model_hints"])
-            inherited = " (inherited local)" if hints_info["inherited_local"] else ""
-            patterns = hints_info["matched_patterns"]
-            logger.debug(
-                f"Provider switch to '{provider_name}': "
-                f"{provider_count} provider hints{inherited}, "
-                f"{model_count} model hints (patterns: {patterns})"
-            )
-
-        return True
+        return provider_ops.set_provider(self, provider_name)
 
     def list_providers(self) -> List[ProviderInfo]:
         """List available providers with their status.
 
-        Returns:
-            List of ProviderInfo objects
+        Delegates to `provider_ops.list_providers`.
         """
-        providers = []
-        for provider_id, config in self.providers_config.items():
-            has_key = bool(self._get_api_key(provider_id))
-            caps_dict = config.get("capabilities", {})
-
-            providers.append(ProviderInfo(
-                id=provider_id,
-                name=config.get("name", provider_id),
-                base_url=config.get("base_url", ""),
-                api_key_env=config.get("api_key_env", ""),
-                has_api_key=has_key,
-                capabilities=ProviderCapabilities.from_dict(caps_dict),
-                default_model=config.get("default_model", ""),
-                coding_model=config.get("coding_model")
-            ))
-
-        return providers
+        return provider_ops.list_providers(self)
 
     def get_current_provider(self) -> Optional[str]:
         """Get the current provider name.
 
-        Returns:
-            Provider name or None
+        Delegates to `provider_ops.get_current_provider`. Returns the
+        active provider name or None if no provider is currently set.
         """
-        return self.provider_name if self.provider else None
+        return provider_ops.get_current_provider(self)
 
     # === Model Management ===
 
-    def set_model(self, model_id: str, strict: bool = False, reset_context: bool = True) -> bool:
+    def set_model(
+        self,
+        model_id: str,
+        strict: bool = False,
+        reset_context: bool = True,
+    ) -> bool:
         """Set the current model.
+
+        Delegates to `provider_ops.set_model`. See that module for the
+        strict/permissive model lookup and the reset_context semantics.
 
         Args:
             model_id: Model ID to use
-            strict: If True, reject models not in provider's configured list (v1.13.10)
-            reset_context: If True, strip assistant/tool messages on model switch (v1.16.0)
+            strict: If True, reject models not in provider's configured list
+            reset_context: If True, strip assistant/tool messages on model switch
 
         Returns:
             True if model was set successfully
         """
-        if not self.provider:
-            return False
-
-        self.last_model_switch_reset = 0
-
-        models = self.provider.list_models()
-        model_exists = any(m.id == model_id for m in models)
-
-        if model_exists:
-            return self._apply_model_switch(model_id, reset_context)
-
-        if strict:
-            # Strict mode - reject unavailable models (used for session restore)
-            return False
-
-        # Allow setting model even if not in list (for flexibility with custom endpoints)
-        return self._apply_model_switch(model_id, reset_context)
-
-    def _apply_model_switch(self, model_id: str, reset_context: bool) -> bool:
-        """Apply a confirmed model switch: update state, optionally reset context."""
-        self.model = model_id
-        self.state.set("model", model_id)
-        self.session.set_model(model_id)
-        if reset_context and self.session.messages:
-            removed = self.session.reset_for_model_switch()
-            self.last_model_switch_reset = removed
-            if removed:
-                logger.info(f"Reset context for model switch to {model_id}: removed {removed} messages")
-        self._log_model_hints_transition(model_id)
-        return True
-
-    def _log_model_hints_transition(self, model_id: str) -> None:
-        """Log hints transition when model changes (v1.14.0)."""
-        if not self._bootstrap_context or getattr(self, '_suppress_hint_log', False):
-            return
-
-        hints_info = self.get_active_hints()
-        model_count = len(hints_info["model_hints"])
-        patterns = hints_info["matched_patterns"]
-
-        if patterns:
-            logger.debug(
-                f"Model switch to '{model_id}': "
-                f"{model_count} model hints (matched: {patterns})"
-            )
-        # No logging when no hints matched - reduces noise in logs
-        # Available patterns can be seen via /context show command
+        return provider_ops.set_model(self, model_id, strict, reset_context)
 
     def list_models(self) -> List[ModelInfo]:
         """List available models for current provider.
 
-        Returns:
-            List of ModelInfo objects
+        Delegates to `provider_ops.list_models`.
         """
-        if not self.provider:
-            return []
-        return self.provider.list_models()
+        return provider_ops.list_models(self)
 
     def get_current_model(self) -> Optional[str]:
         """Get the current model.
 
-        Returns:
-            Model ID or None
+        Delegates to `provider_ops.get_current_model`. Returns the active
+        model ID or None if no model is currently set.
         """
-        return self.model if self.model else None
+        return provider_ops.get_current_model(self)
 
     # === Tool Management ===
 
