@@ -36,6 +36,8 @@ from ppxai.commands.results import ResultStatus
 from ppxai.engine.model_deprecations import (
     ALL_DEPRECATIONS,
     GEMINI_DEPRECATIONS,
+    OPENAI_DEPRECATIONS,
+    PERPLEXITY_DEPRECATIONS,
     RECOMMENDED_DEFAULTS,
     RECOMMENDED_NEW_MODELS,
     audit_config_models,
@@ -469,6 +471,15 @@ class TestDeprecationTableInvariants:
                 f"{entry.replacement!r}"
             )
 
+    def test_all_openai_entries_have_valid_replacement(self):
+        # Same invariant for OpenAI: replacement must not itself be
+        # in the OpenAI deprecation dict.
+        for model, entry in OPENAI_DEPRECATIONS.items():
+            assert entry.replacement not in OPENAI_DEPRECATIONS, (
+                f"{model!r} points at deprecated replacement "
+                f"{entry.replacement!r}"
+            )
+
     def test_recommended_defaults_are_not_deprecated(self):
         for provider, default in RECOMMENDED_DEFAULTS.items():
             info = classify_model(default)
@@ -495,3 +506,80 @@ class TestDeprecationTableInvariants:
                     f"{model!r} has invalid shutdown_date "
                     f"{entry.shutdown_date!r}"
                 )
+
+    # ----------------------------------------------------------------
+    # Count sentinels — intentional friction so additions get reviewed
+    # ----------------------------------------------------------------
+
+    def test_gemini_deprecation_count(self):
+        # Gemini family — bump when adding a new shutdown.
+        # Current (verified 2026-04-12): 3-pro-preview, 2.0-flash, 2.0-flash-lite,
+        # 2.5-pro, 2.5-flash, 2.5-flash-lite, 2.5-flash-image.
+        assert len(GEMINI_DEPRECATIONS) == 7
+
+    def test_openai_deprecation_count(self):
+        # OpenAI family — bump when adding a new shutdown.
+        # Current (verified 2026-04-12): chatgpt-4o-latest, codex-mini-latest,
+        # gpt-4-0314, gpt-4-0125-preview, gpt-4-1106-preview, gpt-4-turbo-preview,
+        # gpt-4o-realtime-preview, gpt-4o-mini-realtime-preview,
+        # gpt-4o-audio-preview, gpt-4o-mini-audio-preview, dall-e-2, dall-e-3,
+        # gpt-3.5-turbo-instruct, gpt-3.5-turbo-1106, babbage-002, davinci-002.
+        assert len(OPENAI_DEPRECATIONS) == 16
+
+    def test_perplexity_deprecation_count(self):
+        # Perplexity has no active deprecations (verified 2026-04-12).
+        # The empty dict is intentional — future shutdowns land here.
+        assert len(PERPLEXITY_DEPRECATIONS) == 0
+
+    def test_all_deprecations_merged_correctly(self):
+        # ALL_DEPRECATIONS must be the union of every provider-specific dict.
+        expected = (
+            len(GEMINI_DEPRECATIONS)
+            + len(OPENAI_DEPRECATIONS)
+            + len(PERPLEXITY_DEPRECATIONS)
+        )
+        assert len(ALL_DEPRECATIONS) == expected, (
+            f"ALL_DEPRECATIONS ({len(ALL_DEPRECATIONS)}) != sum of provider "
+            f"dicts ({expected}). Check for duplicate keys across providers."
+        )
+        # Spot-check: every provider-specific entry must be in the merged dict.
+        for k in GEMINI_DEPRECATIONS:
+            assert k in ALL_DEPRECATIONS
+        for k in OPENAI_DEPRECATIONS:
+            assert k in ALL_DEPRECATIONS
+
+    def test_openai_default_is_current(self):
+        # The recommended OpenAI default must match the current flagship
+        # in ppxai-config.example.json. Updated 2026-04-12 to gpt-5.4.
+        assert RECOMMENDED_DEFAULTS["openai"] == "gpt-5.4"
+
+    def test_example_config_has_no_deprecated_models(self):
+        """The shipped `ppxai-config.example.json` must not advertise any
+        model that is scheduled for shutdown. CI fails here if someone
+        removes a model from the deprecation table without also
+        removing it from the example config, OR if someone adds a
+        deprecated model to the example.
+        """
+        import json
+        import pathlib
+
+        repo_root = pathlib.Path(__file__).parent.parent
+        example_path = repo_root / "ppxai-config.example.json"
+        cfg = json.loads(example_path.read_text())
+
+        violations = []
+        for provider_name, provider_cfg in cfg.get("providers", {}).items():
+            for model_id in provider_cfg.get("models", {}):
+                if model_id in ALL_DEPRECATIONS:
+                    entry = ALL_DEPRECATIONS[model_id]
+                    violations.append(
+                        f"{provider_name}.{model_id} "
+                        f"(shutdown {entry.shutdown_date}, "
+                        f"replacement: {entry.replacement})"
+                    )
+        assert not violations, (
+            "ppxai-config.example.json contains deprecated models:\n  "
+            + "\n  ".join(violations)
+            + "\nRemove them from the example config OR remove them "
+            "from model_deprecations.py if they've been un-deprecated."
+        )

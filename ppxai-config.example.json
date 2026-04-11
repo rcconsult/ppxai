@@ -142,39 +142,8 @@
         "temperature": 0.2,
         "top_p": 0.9
       },
-      "__comment_deprecations": "Gemini deprecation timeline (v1.17.4 Phase 2.3, verified 2026-04-06 against https://ai.google.dev/gemini-api/docs/deprecations). Run /doctor to audit your config. Migrate to gemini-3-flash-preview (recommended default) or gemini-3.1-pro-preview for complex reasoning. gemini-3-pro-preview was SHUT DOWN 2026-03-09 and is removed from this file — remove it from your local config too.",
+      "__comment_deprecations": "Gemini deprecation timeline (verified 2026-04-12 against https://ai.google.dev/gemini-api/docs/deprecations). The Gemini 2.0 and 2.5 families were REMOVED from this example file in v1.17.4 because all variants are scheduled for shutdown between 2026-06-01 and 2026-07-22. `/doctor` still knows about them via `ppxai/engine/model_deprecations.py` — users with old local configs get a warning with upgrade targets. Recommended replacements: gemini-3-flash-preview (best benchmark score, 100%) for general coding, gemini-3.1-pro-preview for complex reasoning, gemini-3.1-flash-lite-preview for high-volume cost-sensitive workloads. gemini-3-pro-preview was SHUT DOWN 2026-03-09.",
       "models": {
-        "gemini-2.0-flash": {
-          "name": "Gemini 2.0 Flash",
-          "description": "Fast model with multimodal support. DEPRECATED — shuts down 2026-06-01.",
-          "context_limit": 1000000,
-          "__comment_deprecated": "shutdown 2026-06-01. Migrate to gemini-3-flash-preview."
-        },
-        "gemini-2.0-flash-lite": {
-          "name": "Gemini 2.0 Flash Lite",
-          "description": "Cost-efficient for high-volume tasks. DEPRECATED — shuts down 2026-06-01.",
-          "context_limit": 1000000,
-          "__comment_deprecated": "shutdown 2026-06-01. Migrate to gemini-3.1-flash-lite-preview."
-        },
-        "gemini-2.5-flash": {
-          "name": "Gemini 2.5 Flash",
-          "description": "Fast model, best price/performance. 71.4% code editing quality. DEPRECATED — shuts down 2026-06-17.",
-          "context_limit": 1000000,
-          "__comment_best_for": "Good alternative if gemini-3-flash-preview unavailable. Requires aggressive AGENTS.md hints.",
-          "__comment_deprecated": "shutdown 2026-06-17. Migrate to gemini-3-flash-preview."
-        },
-        "gemini-2.5-pro": {
-          "name": "Gemini 2.5 Pro",
-          "description": "Capable model for complex reasoning. DEPRECATED — shuts down 2026-06-17.",
-          "context_limit": 1000000,
-          "__comment_deprecated": "shutdown 2026-06-17. Migrate to gemini-3.1-pro-preview."
-        },
-        "gemini-2.5-flash-lite": {
-          "name": "Gemini 2.5 Flash Lite",
-          "description": "For simple tasks that need to be done quickly. DEPRECATED — shuts down 2026-07-22.",
-          "context_limit": 1000000,
-          "__comment_deprecated": "shutdown 2026-07-22. Migrate to gemini-3.1-flash-lite-preview."
-        },
         "gemini-3-flash-preview": {
           "name": "Gemini 3 Flash Preview",
           "description": "Speed-optimized preview with frontier intelligence and 1M context. RECOMMENDED: Best code editing quality (100% benchmark).",
@@ -229,11 +198,6 @@
         }
       },
       "pricing": {
-        "gemini-2.0-flash": {"input": 0.10, "output": 0.40},
-        "gemini-2.0-flash-lite": {"input": 0.075, "output": 0.30},
-        "gemini-2.5-flash": {"input": 0.30, "output": 2.50},
-        "gemini-2.5-flash-lite": {"input": 0.075, "output": 0.30},
-        "gemini-2.5-pro": {"input": 1.25, "output": 10.00},
         "gemini-3-flash-preview": {"input": 0.50, "output": 3.00},
         "gemini-3.1-flash-lite-preview": {"input": 0.10, "output": 0.40},
         "gemini-3.1-flash-image-preview": {"input": 0.50, "output": 3.00, "__comment": "Image generation pricing, per-image output"},
@@ -258,7 +222,8 @@
       "name": "OpenAI",
       "base_url": "https://api.openai.com/v1",
       "api_key_env": "OPENAI_API_KEY",
-      "default_model": "gpt-5.2",
+      "default_model": "gpt-5.4",
+      "__comment_default_model": "Updated to gpt-5.4 (released 2026-03-05) in v1.17.4 alongside Gemini 2.x removal. Previous default was gpt-5.2 (still shipped).",
       "coding_model": "gpt-5.1-codex",
       "system_prompt": "You are an expert AI coding assistant. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
       "generation_params": {
@@ -274,9 +239,44 @@
         "preferred": "gemini"
       },
       "models": {
+        "gpt-5.4": {
+          "name": "GPT-5.4",
+          "description": "Current flagship (released 2026-03-05). 1M context, 75% computer use benchmark, best overall intelligence.",
+          "context_limit": 1048576,
+          "__comment_best_for": "Complex refactoring, architecture decisions, multi-file changes, agentic workflows with browser/computer use.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED by ppxai — using stub hints from gpt-5.2*. Refine after running benchmarks/llm-eval."
+        },
+        "gpt-5.4-pro": {
+          "name": "GPT-5.4 Pro",
+          "description": "Premium tier of GPT-5.4 (released 2026-03-05). Highest capability for difficult tasks.",
+          "context_limit": 1048576,
+          "__comment_best_for": "Hardest problems, novel algorithm design, critical code review. Expensive but top-of-line.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED — using stub hints. Refine after benchmark run.",
+          "generation_params": {
+            "temperature": 0.1,
+            "max_tokens": 16384
+          }
+        },
+        "gpt-5.4-mini": {
+          "name": "GPT-5.4 Mini",
+          "description": "Newest small model (released 2026-03-17). 400K context, $0.75/$4.50 per MTok. OpenAI's 'most capable small model yet'.",
+          "context_limit": 400000,
+          "__comment_best_for": "Everyday coding, edits, explanations at lower cost than full GPT-5.4. Good price/performance sweet spot.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED — using stub hints. Refine after benchmark run."
+        },
+        "gpt-5.4-nano": {
+          "name": "GPT-5.4 Nano",
+          "description": "Cheapest GPT-5.4 variant (released 2026-03-17). API-only. $0.20/$1.25 per MTok.",
+          "context_limit": 400000,
+          "__comment_best_for": "Simple edits, file operations, high-volume quick Q&A. Lowest-cost GPT-5.4 option.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED — using stub hints. Refine after benchmark run.",
+          "generation_params": {
+            "max_tokens": 8192
+          }
+        },
         "gpt-5.2": {
           "name": "GPT-5.2",
-          "description": "Newest flagship model with 400K context. Best overall intelligence.",
+          "description": "Previous flagship with 400K context. Still excellent; consider gpt-5.4 for newer workloads.",
           "context_limit": 400000,
           "__comment_best_for": "Complex refactoring, architecture decisions, multi-file changes, code review."
         },
@@ -393,6 +393,10 @@
         }
       },
       "pricing": {
+        "gpt-5.4": {"input": 2.50, "output": 15.00},
+        "gpt-5.4-pro": {"input": 15.00, "output": 75.00, "__comment": "Premium tier — verify against https://platform.openai.com/docs/pricing"},
+        "gpt-5.4-mini": {"input": 0.75, "output": 4.50},
+        "gpt-5.4-nano": {"input": 0.20, "output": 1.25},
         "gpt-5.2": {"input": 1.75, "output": 14.00},
         "gpt-5.2-pro": {"input": 21.00, "output": 168.00},
         "gpt-5.1": {"input": 1.25, "output": 10.00},
