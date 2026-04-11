@@ -19,6 +19,7 @@ from . import (
     files,
     preview,
     providers,
+    schema,
     sessions,
     static,
     terminal,
@@ -42,5 +43,6 @@ all_routers: list[APIRouter] = [
     checkpoints.router,
     terminal.router,
     completion.router,  # v1.17.4: POST /complete for cross-client autocomplete
+    schema.router,      # v1.17.4: GET /schema/app-state — canonical DTO
     static.router,
 ]

@@ -180,7 +180,10 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
+    "sync-schema": "node scripts/sync-schema.js",
+    "precompile": "npm run sync-schema",
     "compile": "npx tsc -p ./",
+    "prewatch": "npm run sync-schema",
     "watch": "npx tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",

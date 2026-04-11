@@ -48,6 +48,11 @@ import {
     ConsentContext
 } from './handlers';
 
+// Cross-language state translation lives on the AppState class itself
+// (see vscode-extension/src/appState.ts :: AppState.PYTHON_TO_TS +
+// updateFromPython). This file only consumes AppState via
+// `this._appState.updateFromPython(pythonPayload)` — no keyMaps here.
+
 export class ChatViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'ppxai.chatView';
 
@@ -285,27 +290,20 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             postMessage({ type: 'error', content: message });
         });
 
-        // State sync — engine pushes AppState field changes via SSE
+        // State sync — engine pushes AppState field changes via SSE.
+        //
+        // Delegates translation and writes to the AppState facade:
+        // `updateFromPython()` handles snake_case → camelCase mapping,
+        // fires observers, and surfaces drift warnings for unknown
+        // Python fields. See vscode-extension/src/appState.ts.
+        //
+        // Invariant: the server only pushes fields listed in
+        // `_SSE_SYNC_FIELDS` at ppxai/engine/client.py. High-frequency
+        // fields (tokens, cost, streaming flags) are excluded there
+        // and reach the client via STREAM_END metadata or local state
+        // writes during the SSE stream lifecycle.
         this._eventBus.on('state:sync', (changes: Record<string, any>) => {
-            // Python snake_case → TS camelCase
-            const keyMap: Record<string, string> = {
-                provider: 'currentProvider',
-                model: 'currentModel',
-                tools_enabled: 'toolsEnabled',
-                tools_verbose: 'toolsVerbose',
-                agent_mode: 'agentMode',
-                auto_route: 'autoRoute',
-                working_dir: 'workingDir',
-                session_name: 'sessionName',
-                debug_log: 'debugLog',
-                context_attachments: 'contextAttachments',  // v1.17.4 Phase 6.3
-            };
-            const mapped: Record<string, any> = {};
-            for (const [pyKey, value] of Object.entries(changes)) {
-                const tsKey = keyMap[pyKey] || pyKey;
-                mapped[tsKey] = value;
-            }
-            this._appState.update(mapped as any);
+            const mapped = this._appState.updateFromPython(changes);
             postMessage({ type: 'stateSync', changes: mapped });
         });
 

@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "description": "Canonical AppState schema for ppxai. Golden source of truth for cross-language state field definitions. Loaded at startup by Python (ppxai/engine/app_state.py), Web (via window.APP_STATE_SCHEMA injected into index.html), and VSCode (bundled at vscode-extension/resources/app-state-schema.json, kept in sync by a pre-compile script). DO NOT hand-edit field maps in any client; edit this file only.",
+  "fields": {
+    "provider":            {"client": "currentProvider",    "type": "string",  "default": "",    "group": "core",       "doc": "Active provider ID (e.g. 'perplexity', 'openai')"},
+    "model":               {"client": "currentModel",       "type": "string",  "default": "",    "group": "core",       "doc": "Active model ID (e.g. 'sonar-pro')"},
+    "working_dir":         {"client": "workingDir",         "type": "string",  "default": "",    "group": "core",       "doc": "Current working directory path"},
+    "session_id":          {"client": "sessionId",          "type": "string",  "default": "",    "group": "core",       "doc": "Session identifier"},
+    "session_name":        {"client": "sessionName",        "type": "string",  "default": "",    "group": "core",       "doc": "Human-readable session name"},
+    "tools_enabled":       {"client": "toolsEnabled",       "type": "boolean", "default": false, "group": "features",   "doc": "AI tools available"},
+    "tools_verbose":       {"client": "toolsVerbose",       "type": "boolean", "default": false, "group": "features",   "doc": "Show detailed tool output"},
+    "agent_mode":          {"client": "agentMode",          "type": "boolean", "default": false, "group": "features",   "doc": "Autonomous task execution mode"},
+    "auto_route":          {"client": "autoRoute",          "type": "boolean", "default": false, "group": "features",   "doc": "Auto-route coding tasks to a specialized model"},
+    "is_streaming":        {"client": "isStreaming",        "type": "boolean", "default": false, "group": "streaming",  "doc": "Response stream in progress"},
+    "cancel_requested":    {"client": "cancelRequested",    "type": "boolean", "default": false, "group": "streaming",  "doc": "User requested stream cancellation"},
+    "total_tokens":        {"client": "totalTokens",        "type": "integer", "default": 0,     "group": "usage",      "doc": "Total tokens (prompt + completion)"},
+    "prompt_tokens":       {"client": "promptTokens",       "type": "integer", "default": 0,     "group": "usage",      "doc": "Prompt/input tokens"},
+    "completion_tokens":   {"client": "completionTokens",   "type": "integer", "default": 0,     "group": "usage",      "doc": "Completion/output tokens"},
+    "total_cost":          {"client": "totalCost",          "type": "number",  "default": 0.0,   "group": "usage",      "doc": "Cumulative cost in USD"},
+    "context_percentage":  {"client": "contextPercentage",  "type": "number",  "default": 0.0,   "group": "usage",      "doc": "Context window usage (0.0-100.0)"},
+    "context_attachments": {"client": "contextAttachments", "type": "array",   "default": [],    "group": "multimodal", "doc": "List of attachment summaries currently in session.messages. Entry schema: {name, kind, media_type, turn_index, file_id}"},
+    "debug_log":           {"client": "debugLog",           "type": "boolean", "default": false, "group": "debug",      "doc": "Debug logging enabled"}
+  }
+}

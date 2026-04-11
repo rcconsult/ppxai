@@ -7,10 +7,20 @@ All mutable application state lives here. Provides:
 - Thread-safe: Lock protects data, listeners dispatched OUTSIDE the lock
 - Batch updates: set multiple fields atomically, fire listeners once
 
-This is the Python canonical implementation. The same field names and
-semantics must be used in:
-- ppxai/web/shared/app-state.js (JavaScript, Proxy-based)
-- vscode-extension/src/appState.ts (TypeScript, to be created)
+This is the Python canonical implementation. The **same JSON schema**
+file (`ppxai/engine/app_state_schema.json`) is loaded by:
+- ppxai/engine/app_state.py    — this file, at module import
+- ppxai/web/shared/app-state.js — via `window.APP_STATE_SCHEMA`
+                                   injected into index.html by the
+                                   FastAPI static-file route
+- vscode-extension/src/appState.ts — via a bundled copy at
+                                   vscode-extension/resources/
+                                   app-state-schema.json (kept in sync
+                                   by the pre-compile script)
+
+The schema file is the **golden source of truth**. The server exposes
+it at `GET /schema/app-state` so any client (including diagnostic
+tooling) can fetch it at runtime.
 
 Usage:
     state = AppState()
@@ -32,12 +42,74 @@ Thread-safety design:
 - Listener list is copied before dispatch to allow on()/off() during iteration
 """
 
+import json
 import threading
-from typing import Any, Callable, Dict, List, Optional
+from importlib.resources import files
+from typing import Any, Callable, Dict, List, Mapping, Optional
 
 
 # Type alias for listener callbacks: fn(new_value) -> None
 Listener = Callable[[Any], None]
+
+
+def _load_schema() -> Dict[str, Any]:
+    """Load the canonical AppState schema from the package resources.
+
+    The JSON file ships inside the `ppxai.engine` package so it is
+    available at runtime regardless of how ppxai was installed (pip,
+    editable, PyInstaller frozen bundle). `importlib.resources.files`
+    handles all three cases uniformly.
+
+    Structure (see `app_state_schema.json` for the full spec):
+
+        {
+          "version": "1.0",
+          "description": "...",
+          "fields": {
+            "<python_name>": {
+              "client": "<camelCase>",
+              "type": "string|boolean|integer|number|array",
+              "default": <JSON-compatible default>,
+              "group": "core|features|streaming|usage|multimodal|debug",
+              "doc": "..."
+            },
+            ...
+          }
+        }
+    """
+    resource = files("ppxai.engine").joinpath("app_state_schema.json")
+    return json.loads(resource.read_text(encoding="utf-8"))
+
+
+# Loaded once at module import. Immutable from Python's perspective;
+# tests and the server route hand this directly to consumers.
+SCHEMA: Dict[str, Any] = _load_schema()
+
+
+def _default_for(field_spec: Mapping[str, Any]) -> Any:
+    """Return a mutable copy of a field's default value.
+
+    Containers (lists, dicts) must be copied on access so two AppState
+    instances don't share the same underlying object — otherwise a
+    mutation on one instance's `context_attachments` would leak into
+    the other.
+    """
+    default = field_spec["default"]
+    if isinstance(default, list):
+        return list(default)
+    if isinstance(default, dict):
+        return dict(default)
+    return default
+
+
+def _build_fields(schema: Dict[str, Any]) -> Dict[str, Any]:
+    """Derive the flat {python_name: default_value} FIELDS dict from
+    the schema. Preserves insertion order (Python 3.7+ dict ordering)
+    so the documented grouping in the schema JSON carries through."""
+    return {
+        name: _default_for(spec)
+        for name, spec in schema["fields"].items()
+    }
 
 
 class AppState:
@@ -46,81 +118,28 @@ class AppState:
     Thread-safe. Reads and writes are serialized via Lock.
     Listener callbacks are dispatched outside the lock.
 
-    Fields are divided into:
-    - Core: provider, model, working directory, session identity
-    - Features: tools, agent mode, auto-route, verbose
-    - Streaming: is_streaming, cancel_requested
-    - Usage: token counts, cost, context percentage
+    Schema is loaded from `app_state_schema.json` at module import.
+    `FIELDS` is a derived dict of {python_name: default_value} kept
+    for backward compatibility with call sites that iterate it.
     """
 
-    # Canonical field definitions with types and defaults.
-    # This is the single source of truth for all clients.
-    #
-    # Cross-language naming convention:
-    #   Python: snake_case  (provider, tools_enabled, is_streaming)
-    #   JS/TS:  camelCase   (provider, toolsEnabled, isStreaming)
-    #
-    # The semantic fields are identical — only casing differs per language
-    # convention. The v1.18.x schema generator will auto-convert.
-    FIELDS: Dict[str, Any] = {
-        # --- Core identity ---
-        "provider": "",                # Current provider name (e.g., "perplexity")
-        "model": "",                   # Current model ID (e.g., "sonar-pro")
-        "working_dir": "",             # Current working directory path
-        "session_id": "",              # Session identifier
-        "session_name": "",            # Human-readable session name
+    # Raw schema (for the server endpoint, tests, and diagnostic tools).
+    SCHEMA: Dict[str, Any] = SCHEMA
 
-        # --- Feature toggles ---
-        "tools_enabled": False,        # AI tools available
-        "tools_verbose": False,        # Show detailed tool output
-        "agent_mode": False,           # Autonomous task execution
-        "auto_route": False,           # Auto-route coding tasks to coding model
-
-        # --- Streaming / flow control ---
-        "is_streaming": False,         # Response stream in progress
-        "cancel_requested": False,     # User requested stream cancellation
-
-        # --- Usage statistics ---
-        "total_tokens": 0,             # Total tokens (prompt + completion)
-        "prompt_tokens": 0,            # Prompt/input tokens
-        "completion_tokens": 0,        # Completion/output tokens
-        "total_cost": 0.0,            # Cumulative cost in USD
-        "context_percentage": 0.0,     # Context window usage (0.0-100.0)
-
-        # --- Multimodal context (v1.17.4 Phase 1, extended in Phase 2.1a) ---
-        # List of attachment summaries currently sitting in session.messages.
-        # Each entry is a plain JSON-serializable dict so the field can mirror
-        # across Python/JS/TS AppState implementations and flow through SSE
-        # state_sync events unchanged.
-        #
-        # Entry schema (stable contract — all clients depend on it):
-        #   {
-        #     "name": str,       # Display name (basename or content-part `name`)
-        #     "kind": str,       # "image" | "text" | "pdf" | "file"
-        #     "media_type": str, # MIME type (e.g. "image/png"); "" if unknown
-        #     "turn_index": int, # Index into session.messages where it lives
-        #     "file_id": str,    # SessionFileStore identifier; "" for legacy
-        #                        # Phase-1 blocks that predate the store. Used
-        #                        # by clients to fetch thumbnails via a
-        #                        # future server endpoint keyed on file_id.
-        #   }
-        #
-        # Dedup: entries are deduped by file_id (preferred) or name (fallback
-        # for legacy blocks). Tool / assistant / system role messages are
-        # NOT scanned — only user-attached content contributes.
-        #
-        # Recomputed by EngineClient._refresh_context_attachments() whenever
-        # session.messages mutates. Clients subscribe to this field to render
-        # their attachment badges / chips / file-list UI.
-        "context_attachments": [],
-
-        # --- Debug ---
-        "debug_log": False,            # Debug logging enabled
-    }
+    # Flat {python_name: default_value} map — derived from SCHEMA.
+    # Callers that iterate FIELDS (tests, EngineClient, etc.) keep
+    # working unchanged. Mutation-safe containers are copied on init.
+    FIELDS: Dict[str, Any] = _build_fields(SCHEMA)
 
     def __init__(self, initial: Optional[Dict[str, Any]] = None) -> None:
         self._lock = threading.Lock()
-        self._data: Dict[str, Any] = dict(self.FIELDS)
+        # Start from a per-instance copy of the schema defaults so
+        # mutable defaults (lists, dicts) are not shared between
+        # AppState instances.
+        self._data: Dict[str, Any] = {
+            name: _default_for(spec)
+            for name, spec in self.SCHEMA["fields"].items()
+        }
         self._listeners: Dict[str, List[Listener]] = {}
 
         if initial:

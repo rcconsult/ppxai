@@ -713,9 +713,10 @@ ppxai/tui/                     # New module (Textual-based)
 | **Phase 7 — Textual TUI** | FileTree `a` key attach, Ctrl+U shortcut, `build_multimodal_content()`, `pending_files` attribute | ✅ Done |
 | **Task #11 — CompletionProvider** | `engine/completion.py`, `POST /complete` server route, Rich completer delegating to engine | ✅ Done |
 | **Task #11 Follow-up — Cross-client parity** | Engine owns all sources (commands, path args, subcommands `/tools`/`/usage`/`/checkpoint`/`/status`/`/theme`, dynamic `/model`+`/provider`, `/tools help <tool>`, `@git`/`@tree`/`@clipboard`/`@url`). Rich completer 594→85 lines; Textual 238→100 lines; VSCode unifies `@` + `/` onto one `POST /complete` flow. Web picks up all new sources for free. | ✅ Done |
+| **AppState schema DTO** | `ppxai/engine/app_state_schema.json` is the canonical golden source of truth. Python loads via `importlib.resources`, Web via `window.APP_STATE_SCHEMA` injected by FastAPI, VSCode via bundled copy kept in sync by `scripts/sync-schema.js` (precompile hook). `GET /schema/app-state` exposes the schema as a diagnostic endpoint. Zero hand-maintained parallel schemas. | ✅ Done |
 | **K8s deployment** | Dockerfile `[data]+libreoffice`, PV affinity, deploy.sh resilience, VL sidecar, ingress body-size, login wait | ✅ Done |
 
-**Tests:** 2280 total (was 1753 before Phase 0). 527 new tests, zero regressions.
+**Tests:** 2288 total (was 1753 before Phase 0). 535 new tests, zero regressions.
 **System deps (K8s):** poppler-utils, libreoffice-nogui. **JS libs (web):** SheetJS (xlsx.full.min.js).
 
 ---

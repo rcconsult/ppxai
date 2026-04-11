@@ -4,26 +4,67 @@ Web UI static file serving endpoints.
 Must be registered after all API routes to avoid path conflicts.
 """
 
+import json
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 
+from ...engine.app_state import SCHEMA as _APP_STATE_SCHEMA
+
 # Web UI directory (installed by ppxai-desktop or manually)
 WEB_UI_DIR = Path.home() / '.ppxai' / 'web'
+
+# Canonical AppState schema serialized once at module import. The
+# serve_index handler injects this into every `index.html` response
+# so `shared/app-state.js` can read `window.APP_STATE_SCHEMA`
+# synchronously at module load — no extra fetch round-trip, no async
+# bootstrap, no schema-before-clients race condition.
+_APP_STATE_SCHEMA_JSON = json.dumps(_APP_STATE_SCHEMA, separators=(',', ':'))
+_APP_STATE_SCHEMA_SCRIPT = (
+    '<script id="app-state-schema">'
+    f'window.APP_STATE_SCHEMA = {_APP_STATE_SCHEMA_JSON};'
+    '</script>'
+)
 
 router = APIRouter()
 
 
 @router.get("/")
 async def serve_index():
-    """Serve the web UI index.html."""
+    """Serve the web UI index.html with the canonical AppState schema
+    injected into `<head>` before any script that consumes it.
+
+    The injection makes the schema available at
+    `window.APP_STATE_SCHEMA` before `shared/app-state.js` runs, so
+    the `AppState` class can build its Python→JS field map and
+    default values synchronously at module load. No fetch, no async
+    bootstrap, no drift — the schema the browser sees is byte-for-byte
+    the same object Python loaded from
+    `ppxai/engine/app_state_schema.json` at startup.
+    """
     index_file = WEB_UI_DIR / 'index.html'
-    if index_file.exists():
-        return FileResponse(index_file, media_type='text/html')
+    if not index_file.exists():
+        return HTMLResponse(
+            content="<h1>ppxai Web UI not found</h1><p>Install web UI to ~/.ppxai/web/</p>",
+            status_code=404,
+        )
+
+    html = index_file.read_text(encoding='utf-8')
+
+    # Inject the schema script just before </head>. Use replace with
+    # count=1 so a web UI that already contains <head> for some reason
+    # doesn't get multiple injections.
+    injected = f'    {_APP_STATE_SCHEMA_SCRIPT}\n</head>'
+    if '</head>' in html:
+        html = html.replace('</head>', injected, 1)
+    else:
+        # Fallback: prepend to body if the HTML doesn't have a proper head.
+        html = _APP_STATE_SCHEMA_SCRIPT + html
+
     return HTMLResponse(
-        content="<h1>ppxai Web UI not found</h1><p>Install web UI to ~/.ppxai/web/</p>",
-        status_code=404
+        content=html,
+        headers={"Cache-Control": "no-cache, must-revalidate"},
     )
 
 

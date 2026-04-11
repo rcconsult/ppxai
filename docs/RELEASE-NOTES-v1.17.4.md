@@ -76,7 +76,177 @@ All client-side subcommand tables were deleted — the engine owns them.
 **Tests**
 - `tests/test_completion_provider.py`: 21 → **39 tests** (+18). New classes: `TestContextProviderCompletion`, `TestSubcommandCompletion`, `TestDynamicCompletion`.
 - Deleted stale `TestDynamicCommandList` + `TestCacheInvalidation` in `tests/test_completer_dynamic.py` — those pinned the Rich-internal cache that's now dead code. Equivalent coverage exists in `test_completion_provider.py`.
-- Full suite: **2280 passing, 2 skipped, zero regressions**.
+- Full suite: **2288 passing, 2 skipped, zero regressions** (includes +22 tests from the schema DTO rewrite — see below: 12 new in `TestSchemaDTO` / `TestAppStateFieldCoverage` and 10 new in `tests/test_schema_endpoint.py`).
+
+### Schema-driven cross-language AppState (golden source of truth)
+
+**Problem.** The web (`ppxai/web/app.js::handleStateSync`) and VSCode
+(`vscode-extension/src/chatPanel.ts` `state:sync` handler) used to
+maintain hand-written 10-entry `keyMap`s for Python snake_case →
+JS/TS camelCase translation on incoming SSE `state_sync` events, with
+a `|| pyKey` fallback that silently masked contract drift. If a new
+field landed in `_SSE_SYNC_FIELDS` (Python) without matching updates
+to both client keyMaps, the field would fall through:
+- **Web**: the `AppState` Proxy silently stored the snake_case key
+  as a new property, so the UI's camelCase accessors kept showing
+  stale data.
+- **VSCode**: `AppState.update()` silently dropped unknown keys via
+  its `if (key in this._data)` guard — worse, state simply didn't
+  advance.
+
+Neither client warned. Adding a new cross-client field was a silent
+landmine waiting to ship broken. Even worse, Python, Web, and VSCode
+each had their own hand-maintained schema definition, creating three
+places that could drift independently.
+
+**Fix — one JSON DTO, loaded by every client at startup.**
+
+The canonical AppState schema is now a single JSON file:
+`ppxai/engine/app_state_schema.json`. Every canonical field, its
+Python snake_case name, its JS/TS camelCase name, its type, and its
+default value are declared once in this file. Python, Web, and
+VSCode all load the same schema at startup and derive their field
+maps from it. **There are zero hand-maintained parallel schemas.**
+
+**The golden source of truth:**
+
+```json
+{
+  "version": "1.0",
+  "fields": {
+    "provider":            {"client": "currentProvider",  "type": "string",  "default": "",    "group": "core"},
+    "tools_enabled":       {"client": "toolsEnabled",     "type": "boolean", "default": false, "group": "features"},
+    "context_attachments": {"client": "contextAttachments", "type": "array", "default": [],    "group": "multimodal"},
+    ...18 entries total
+  }
+}
+```
+
+**Per-client loading:**
+
+| Client | Loading mechanism | Sync/async |
+|---|---|---|
+| **Python** (`ppxai/engine/app_state.py`) | `importlib.resources.files("ppxai.engine") / "app_state_schema.json"` parsed at module import. `AppState.FIELDS` is derived. | Sync at import |
+| **Web** (`ppxai/web/shared/app-state.js`) | `window.APP_STATE_SCHEMA` injected into `index.html` by `ppxai/server/routes/static.py::serve_index` before `shared/app-state.js` runs. `AppState` constructor reads the global. | Sync at module load |
+| **VSCode** (`vscode-extension/src/appState.ts`) | `fs.readFileSync()` of `../resources/app-state-schema.json` at module init. The bundled copy is kept in sync with the Python source by `scripts/sync-schema.js` running as a `precompile` hook in `package.json`. | Sync at module load |
+
+**Golden-source chain:**
+
+```
+   ppxai/engine/app_state_schema.json   ← canonical, commit this
+                 │
+       ┌─────────┼─────────┐
+       ▼         ▼         ▼
+   Python      Web       VSCode
+   AppState   AppState   AppState
+       │         │         │
+       │         │         ▼
+       │         │     resources/app-state-schema.json (bundled)
+       │         │         │
+       │         │     sync-schema.js (precompile hook)
+       │         │         │
+       │         │         └── byte-equality enforced by test
+       │         │
+       │         ▼
+       │     HTML injection via server/routes/static.py
+       │         │
+       │         └── window.APP_STATE_SCHEMA global
+       │
+       ▼
+   GET /schema/app-state  (diagnostic endpoint, server/routes/schema.py)
+```
+
+**Adding a new field now takes one edit to one file.** Update
+`app_state_schema.json`, bump the sentinel test in
+`tests/test_app_state.py::TestSchemaDTO::test_schema_has_fields_dict`,
+and everything else propagates automatically:
+- Python's `AppState.FIELDS` picks it up at next import
+- The server's `/schema/app-state` endpoint returns it
+- The server injects the new schema into `index.html` on next page load
+- The web `AppState` reads it from `window.APP_STATE_SCHEMA` on next page load
+- `scripts/sync-schema.js` copies the updated JSON to VSCode's `resources/`
+- The VSCode `AppState` picks it up on next extension activation
+
+The only manual edit left is the VSCode `AppStateFields` TypeScript
+interface, which is hand-maintained as **type documentation only**
+(the schema doesn't produce a TS interface at runtime). The v1.18.x
+schema generator will automate even that step.
+
+**Drift detection is now architectural, not accidental:**
+
+1. `TestSchemaDTO::test_vscode_bundled_copy_matches_canonical` does
+   byte-for-byte equality between `ppxai/engine/app_state_schema.json`
+   and `vscode-extension/resources/app-state-schema.json`. CI fails
+   if someone edits one without running `npm run sync-schema`.
+2. `TestSchemaDTO::test_every_field_has_required_properties` pins
+   the schema format — `client`, `type`, `default`, `group` must all
+   be present on every field.
+3. `TestSchemaDTO::test_field_defaults_match_declared_type` catches
+   mismatches between a field's declared type and its default value
+   (e.g. `{"type": "boolean", "default": 0}` would fail).
+4. `TestSchemaDTO::test_field_names_are_snake_case` and
+   `test_client_names_are_camel_case` pin the naming contract.
+5. `TestSseSyncFieldsContract::test_sync_fields_have_client_names_in_schema`
+   ensures every `_SSE_SYNC_FIELDS` entry has a matching schema entry
+   (so the facades can translate it).
+6. Runtime drift warnings in both `updateFromPython()` implementations
+   fire if the server pushes a field not in the current schema —
+   which would mean server and client are running different ppxai
+   versions.
+
+**Call sites stay small:**
+
+```js
+// web/app.js :: handleStateSync
+this.state.updateFromPython(changes);  // single cross-language call
+// ... plus existing DOM side-effect dispatch
+```
+
+```ts
+// chatPanel.ts :: state:sync handler
+const mapped = this._appState.updateFromPython(changes);
+postMessage({ type: 'stateSync', changes: mapped });
+```
+
+**Files:**
+- `ppxai/engine/app_state_schema.json` — new, canonical source (18 fields)
+- `ppxai/engine/app_state.py` — `FIELDS` now derived via
+  `_build_fields(SCHEMA)`; `AppState.SCHEMA` exposed for the server
+  endpoint and tests; mutable defaults cloned per instance
+- `ppxai/server/routes/schema.py` — new, `GET /schema/app-state`
+  returns the canonical schema as JSON (registered in
+  `server/routes/__init__.py`)
+- `ppxai/server/routes/static.py` — `serve_index` rewritten to
+  inject `<script>window.APP_STATE_SCHEMA = {...}</script>` into
+  `index.html` before the `shared/app-state.js` tag
+- `ppxai/web/shared/app-state.js` — rewritten to read the schema
+  from `window.APP_STATE_SCHEMA` at construction, derive
+  `_pythonToJs` and defaults dynamically, expose `jsToPython`
+  inverse lazily
+- `vscode-extension/src/appState.ts` — rewritten to load the
+  bundled schema via `fs.readFileSync`, derive `PYTHON_TO_TS` +
+  defaults at module init, expose `TS_TO_PYTHON` inverse
+- `vscode-extension/resources/app-state-schema.json` — new,
+  bundled copy of the canonical source (kept in sync by
+  `scripts/sync-schema.js`)
+- `vscode-extension/scripts/sync-schema.js` — new, copies the
+  canonical JSON into `resources/` with JSON validation; runs
+  via `precompile` and `prewatch` hooks in `package.json`
+- `vscode-extension/package.json` — added `sync-schema`,
+  `precompile`, `prewatch` script entries
+- `tests/test_app_state.py` — added `TestSchemaDTO` class (10
+  tests) pinning schema format and VSCode bundled-copy equality;
+  added `TestAppStateFieldCoverage::test_mutable_defaults_not_shared_between_instances`
+  to catch the mutable-default leak; updated
+  `TestSseSyncFieldsContract` to reference the schema-driven facades
+- `tests/test_schema_endpoint.py` — new, 10 tests covering the
+  `GET /schema/app-state` endpoint and the HTML schema injection
+  pipeline
+
+**Behaviour change:** none for end users. The 10 fields the server
+pushes via `_SSE_SYNC_FIELDS` are unchanged. What changed is the
+architecture: there's now one canonical schema instead of three, and
+adding a field means editing one file.
 
 ## Bug Fixes
 - **`/save <name>` now honors the name argument** — was silently ignoring the user's chosen name

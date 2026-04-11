@@ -27,8 +27,9 @@
 | **Task #11** — CompletionProvider | ✅ Complete | `engine/completion.py` with `complete()`, `POST /complete` server route, Rich `PPXAICompleter` delegates to engine |
 | **Task #11 Follow-up** — Cross-client autocomplete parity | ✅ Complete | Engine now owns subcommands (`/tools`, `/usage`, `/checkpoint`, `/status`, `/theme`), dynamic `/model` + `/provider`, `/tools help <tool>`, and `@git`/`@tree`/`@clipboard`/`@url` context providers. Rich `PPXAICompleter` 594→85 lines, Textual `TextualCompleter` 238→100 lines. VSCode webview unifies `@` and `/` onto a single `POST /complete` flow (retires legacy `handleSearchFilesForAutocomplete` + `fileSuggestions`). Web picks up new sources for free via existing `replace_start`/`kind` dispatch. 18 new tests (39 total in `test_completion_provider.py`). Rich lazy imports hoisted per DAG rule. |
 
-**Tests:** 2280 passing (was 1753 before Phase 0). **483 new tests** across
-Phases 0-7 + Task #11 + autocomplete parity, zero regressions. 2 poppler-dependent tests deliberately skipped.
+**Tests:** 2288 passing (was 1753 before Phase 0). **535 new tests** across
+Phases 0-7 + Task #11 + autocomplete parity + schema-driven AppState DTO,
+zero regressions. 2 poppler-dependent tests deliberately skipped.
 
 ### Post-Phase Work (coder.trad.int deployment, April 7)
 

@@ -698,3 +698,120 @@ picks it up on the next extension reload. Rich and Textual get it
 immediately because they call the engine in-process. Tests live next
 to the engine logic in `tests/test_completion_provider.py` (39 tests
 covering every source).
+
+## Schema-Driven AppState DTO (v1.17.4)
+
+Every client's observable application state (provider, model, tools,
+tokens, context attachments, etc.) derives from **one** JSON schema
+file, `ppxai/engine/app_state_schema.json`. This is the golden source
+of truth for cross-language state field definitions.
+
+```
+    ppxai/engine/app_state_schema.json   ← golden source of truth
+              │
+    ┌─────────┴─────────────────────────┐
+    ▼                                   ▼
+Python (engine/app_state.py)       VSCode (appState.ts)
+loaded via importlib.resources     loaded via fs.readFileSync from
+at module import. AppState.FIELDS  vscode-extension/resources/...
+derived from SCHEMA.               (synced by scripts/sync-schema.js
+                                   precompile hook, byte-for-byte
+                                   equality pinned by pytest)
+    │                                   ▲
+    │                                   │ sync-schema.js
+    │                                   │ (on every npm run compile)
+    │                                   │
+    │   ┌──────────────────────────────┘
+    │   │
+    ▼   ▼
+GET /schema/app-state   (server/routes/schema.py)
+returns canonical SCHEMA as JSON
+    │
+    ├── Web: server/routes/static.py injects
+    │   <script>window.APP_STATE_SCHEMA = {...}</script>
+    │   into index.html before shared/app-state.js runs
+    │
+    └── Diagnostic tooling, CI, future REST consumers
+```
+
+### What uses the DTO
+
+| Client | Mechanism | Derivation |
+|---|---|---|
+| **Python AppState** (Rich TUI + Textual TUI + Engine) | `importlib.resources.files("ppxai.engine") / "app_state_schema.json"` parsed at module import | `AppState.FIELDS` is derived via `_build_fields(SCHEMA)`; mutable defaults cloned per instance |
+| **Web AppState** (browser) | `window.APP_STATE_SCHEMA` injected into `index.html` by the FastAPI static route before any script runs | `AppState` constructor reads the global, derives `_pythonToJs` and defaults from `schema.fields` |
+| **VSCode AppState** (extension) | `fs.readFileSync()` of `../resources/app-state-schema.json` at module init | `AppState` module-init code builds `PYTHON_TO_TS` + defaults from the loaded JSON |
+
+The Python TUIs (`ppxai` and `ppxaide`) **also** use the schema —
+transitively, through the Python `AppState` class in
+`ppxai/engine/app_state.py`. They access state via `engine_client.state`
+which is a schema-driven `AppState` instance. A
+`test_python_tui_state_access_uses_schema_fields_only` test scans the
+TUI sources and asserts every `state.get/on/set("<field>")` call
+references a schema-declared field — drift surfaces at CI time.
+
+### Schema entry format
+
+```json
+{
+  "provider": {
+    "client": "currentProvider",
+    "type": "string",
+    "default": "",
+    "group": "core",
+    "doc": "Active provider ID"
+  }
+}
+```
+
+- **`client`**: camelCase name used by Web (`this.state.currentProvider`)
+  and TypeScript (`state.get("currentProvider")`). Python uses the
+  snake_case top-level key directly.
+- **`type`**: one of `string | boolean | integer | number | array | object`.
+- **`default`**: initial value. Mutable defaults (lists, dicts) are
+  cloned per instance so observers on one AppState don't leak into
+  another.
+- **`group`**: documentation/layout hint (`core`, `features`,
+  `streaming`, `usage`, `multimodal`, `debug`).
+- **`doc`**: optional human-readable description.
+
+### Drift protection
+
+Four layers, in increasing severity:
+
+1. **Schema format tests** (`tests/test_app_state.py::TestSchemaDTO`)
+   pin that every entry has the required properties, types match
+   their defaults, names follow case conventions, etc.
+2. **VSCode bundled-copy equality** test does byte-for-byte
+   comparison between the canonical JSON and the copy bundled with
+   the extension. CI fails if someone edits one without running
+   `npm run sync-schema`.
+3. **TUI field-name scan** test pins that Rich + Textual source code
+   only accesses state fields declared in the schema.
+4. **Runtime drift warnings** in both Web + VSCode `updateFromPython()`
+   fire if the server pushes an unknown field — covers the case where
+   server and client are running different ppxai versions.
+
+### Adding a new field
+
+One edit: add an entry to `ppxai/engine/app_state_schema.json`. Then
+bump the sentinel count in
+`tests/test_app_state.py::TestSchemaDTO::test_schema_has_fields_dict`
+and (until v1.18.x codegen lands) add the camelCase name to the
+`AppStateFields` TypeScript interface in
+`vscode-extension/src/appState.ts`. Everything else propagates
+automatically:
+
+- Python `AppState.FIELDS` picks it up at next import
+- `GET /schema/app-state` returns the updated schema
+- `serve_index` injects the updated schema into `index.html`
+- Web `AppState` reads it from `window.APP_STATE_SCHEMA`
+- `sync-schema.js` copies the new JSON to `vscode-extension/resources/`
+  on the next `npm run compile`
+- VSCode `AppState` reads the bundled copy
+
+The v1.18.x schema-generator work in `docs/TODO-appstate-codegen.md`
+builds on this: runtime loading is the architecture; codegen adds
+compile-time type generation for TypeScript so the `AppStateFields`
+interface becomes an artifact instead of hand-maintained.
+

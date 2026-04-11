@@ -29,6 +29,11 @@
 // These are available as globals: SharedCommands, SharedFormatters
 // Or when using ES modules: import from './shared/index.js'
 
+// Cross-language state translation lives on the AppState class itself
+// (see ppxai/web/shared/app-state.js :: AppState.PYTHON_TO_JS +
+// updateFromPython). This file only consumes AppState via
+// `this.state.updateFromPython(pythonPayload)` — no keyMaps here.
+
 class PpxaiApp {
     constructor() {
         // Configuration
@@ -815,29 +820,32 @@ class PpxaiApp {
 
     /**
      * Handle state_sync SSE event — engine pushed a state change.
-     * Converts Python snake_case keys to JS camelCase and updates local AppState.
-     * Also updates UI elements that depend on the changed fields.
+     *
+     * Delegates translation and writes to the AppState facade:
+     * `this.state.updateFromPython(changes)` handles snake_case →
+     * camelCase mapping, fires observers, and surfaces drift warnings
+     * for unknown Python fields. See `ppxai/web/shared/app-state.js`.
+     *
+     * This method only keeps the **side-effect dispatch** that
+     * couples state changes to DOM elements and PpxaiApp methods
+     * (reloading models on provider change, toggling badges, etc.).
+     * Those side effects stay here because they're PpxaiApp concerns,
+     * not AppState concerns.
+     *
+     * Invariant: the server only pushes fields listed in
+     * `_SSE_SYNC_FIELDS` in `ppxai/engine/client.py`. High-frequency
+     * fields (tokens, cost, streaming flags) are excluded there by
+     * design and reach the web client through other paths
+     * (`GET /usage`, local writes on SSE stream boundaries).
      */
     handleStateSync(changes) {
-        // Python snake_case → JS camelCase field mapping
-        const keyMap = {
-            provider: 'currentProvider',
-            model: 'currentModel',
-            tools_enabled: 'toolsEnabled',
-            tools_verbose: 'toolsVerbose',
-            agent_mode: 'agentMode',
-            auto_route: 'autoRoute',
-            working_dir: 'workingDir',
-            session_name: 'sessionName',
-            debug_log: 'debugLog',
-            context_attachments: 'contextAttachments',  // v1.17.4 Phase 5.4
-        };
+        // All translation + dedup + observer dispatch happens inside
+        // AppState. We only need to know which Python fields changed
+        // so we can fire the DOM / PpxaiApp side effects below.
+        this.state.updateFromPython(changes);
 
-        for (const [pyKey, value] of Object.entries(changes)) {
-            const jsKey = keyMap[pyKey] || pyKey;
-            this.state[jsKey] = value;
-
-            // Side effects for UI elements
+        for (const pyKey of Object.keys(changes)) {
+            const value = changes[pyKey];
             if (pyKey === 'provider') {
                 this.elements.providerSelect.value = value;
                 // Reload models for new provider

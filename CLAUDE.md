@@ -9,6 +9,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 **Current Version:** v1.17.4
 
 **v1.17.x highlights:**
+- **NEW:** AppState schema DTO — `ppxai/engine/app_state_schema.json` is the golden source of truth for all 4 clients. Python loads via `importlib.resources`, Web via `window.APP_STATE_SCHEMA` injected into `index.html` by FastAPI, VSCode via bundled copy kept in sync by `scripts/sync-schema.js` precompile hook. Rich + Textual TUIs consume it transitively via the Python `AppState`. `GET /schema/app-state` diagnostic endpoint. Zero hand-maintained parallel schemas.
 - **NEW:** AppState — observable state across all 4 clients (Python, JS, TS), SSE `state_sync` push
 - **NEW:** Server modularization — `http.py` 2,936→372 lines, 13 route modules, DI via `Depends(get_session)`
 - **NEW:** Config submodules — `config/__init__.py` 943→262 lines, 6 submodules
