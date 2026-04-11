@@ -1,11 +1,14 @@
-"""Tests for PPXAICompleter dynamic command discovery (v1.17.4).
+"""Integration tests for PPXAICompleter — the Rich TUI adapter over
+engine.completion.
 
-The old completer kept a hardcoded COMMANDS list that drifted against the
-CommandFactory registry — new commands (like `/attach`) weren't completable
-until someone remembered to update two places. These tests pin the new
-behavior: the completer reads from CommandFactory, picks up every
-registered command and alias automatically, and keeps the two builtin
-specials `/quit` / `/exit` which never reach the factory.
+Since v1.17.x, PPXAICompleter is a thin glue layer that delegates ALL
+autocomplete logic to `ppxai.engine.completion.complete()`. Command-name
+discovery, alias resolution, hidden-command filtering, and cache
+invalidation are now tested directly against the engine in
+`tests/test_completion_provider.py`. The tests in this file exercise
+the glue layer itself: that `get_completions()` wires `document` +
+`complete_event` to the engine and yields prompt_toolkit `Completion`
+objects with the right `start_position` / `display` / `display_meta`.
 """
 
 from __future__ import annotations
@@ -22,103 +25,6 @@ from ppxai.rich.main import PPXAICompleter
 @pytest.fixture
 def completer() -> PPXAICompleter:
     return PPXAICompleter()
-
-
-def _command_names(entries: list[tuple[str, str]]) -> set[str]:
-    return {e[0] for e in entries}
-
-
-class TestDynamicCommandList:
-    def test_includes_attach_command(self, completer):
-        names = _command_names(completer._get_commands())
-        assert "/attach" in names
-        assert "/att" in names  # alias
-
-    def test_includes_all_registered_non_hidden_commands(self, completer):
-        entries = completer._get_commands()
-        names = _command_names(entries)
-        # Every canonical command in the registry must be completable unless hidden.
-        for cmd_name, spec in CommandFactory._registry.items():
-            if spec.hidden:
-                continue
-            assert f"/{cmd_name}" in names, (
-                f"/{cmd_name} is registered but missing from completer output"
-            )
-
-    def test_includes_all_registered_aliases(self, completer):
-        names = _command_names(completer._get_commands())
-        for alias in CommandFactory._aliases:
-            assert f"/{alias}" in names, f"alias /{alias} missing from completer"
-
-    def test_includes_builtin_specials(self, completer):
-        # /quit and /exit are handled by a hardcoded check in CommandHandler,
-        # not the factory. They must still be completable.
-        names = _command_names(completer._get_commands())
-        assert "/quit" in names
-        assert "/exit" in names
-
-    def test_aliases_show_canonical_in_meta(self, completer):
-        entries = dict(completer._get_commands())
-        assert "(alias for /attach)" in entries["/att"]
-        assert "(alias for /clear)" in entries["/c"]
-        assert "(alias for /save)" in entries["/s"]
-
-    def test_entries_are_sorted_alphabetically(self, completer):
-        entries = completer._get_commands()
-        names = [e[0] for e in entries]
-        assert names == sorted(names), "completion list must be alphabetically sorted"
-
-    def test_hidden_commands_are_excluded(self, completer):
-        # Register a temporary hidden command, verify it's filtered, clean up.
-        from ppxai.commands.factory import CommandSpec
-
-        def _noop(_ctx, _args):  # pragma: no cover - not invoked
-            return None
-
-        CommandFactory.register(CommandSpec(
-            name="__test_hidden__",
-            description="internal",
-            handler=_noop,
-            hidden=True,
-        ))
-        # Fresh completer instance to skip any stale cache.
-        c = PPXAICompleter()
-        try:
-            names = _command_names(c._get_commands())
-            assert "/__test_hidden__" not in names
-        finally:
-            CommandFactory.unregister("__test_hidden__")
-
-
-class TestCacheInvalidation:
-    def test_cache_invalidates_when_registry_grows(self, completer):
-        # Prime the cache.
-        first = completer._get_commands()
-        assert any(e[0] == "/attach" for e in first)
-
-        # Add a new command — cache should detect the size change.
-        from ppxai.commands.factory import CommandSpec
-
-        def _noop(_ctx, _args):  # pragma: no cover
-            return None
-
-        CommandFactory.register(CommandSpec(
-            name="__test_newcmd__",
-            description="temporary for cache test",
-            handler=_noop,
-        ))
-        try:
-            second = completer._get_commands()
-            assert any(e[0] == "/__test_newcmd__" for e in second)
-            assert len(second) == len(first) + 1
-        finally:
-            CommandFactory.unregister("__test_newcmd__")
-
-    def test_cache_returns_same_list_when_size_unchanged(self, completer):
-        a = completer._get_commands()
-        b = completer._get_commands()
-        # Second call is served from cache — same list object by identity.
-        assert a is b
 
 
 class TestCompletionIntegration:

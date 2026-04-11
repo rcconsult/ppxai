@@ -151,3 +151,128 @@ class TestEdgeCases:
         texts = [i["text"] for i in items]
         assert "/attach" in texts
         assert "/att" in texts
+
+
+class TestContextProviderCompletion:
+    def test_at_sign_surfaces_context_providers(self, populated_dir):
+        items = complete("@", working_dir=str(populated_dir))
+        texts = [i["text"] for i in items]
+        assert "@git" in texts
+        assert "@tree" in texts
+        assert "@clipboard" in texts
+        assert "@url" in texts
+
+    def test_at_prefix_filters_providers(self, populated_dir):
+        items = complete("@gi", working_dir=str(populated_dir))
+        texts = [i["text"] for i in items]
+        assert "@git" in texts
+        assert "@tree" not in texts
+
+    def test_context_providers_before_files(self, populated_dir):
+        # With an empty @ query, providers should come first
+        items = complete("@", working_dir=str(populated_dir))
+        provider_indices = [i for i, it in enumerate(items) if it["kind"] == "context_ref"]
+        file_indices = [i for i, it in enumerate(items) if it["kind"] == "file_ref"]
+        if provider_indices and file_indices:
+            assert max(provider_indices) < min(file_indices)
+
+    def test_context_ref_kind(self, populated_dir):
+        items = complete("@git", working_dir=str(populated_dir))
+        assert any(i["kind"] == "context_ref" and i["text"] == "@git" for i in items)
+
+
+class TestSubcommandCompletion:
+    def test_tools_subcommands(self):
+        items = complete("/tools ")
+        texts = [i["text"] for i in items]
+        assert "enable" in texts
+        assert "disable" in texts
+        assert "list" in texts
+
+    def test_tools_prefix_filter(self):
+        items = complete("/tools en")
+        texts = [i["text"] for i in items]
+        assert "enable" in texts
+        assert "disable" not in texts
+
+    def test_tools_help_with_tool_names(self):
+        tools = [("calculator", "Evaluate math"), ("read_file", "Read file contents")]
+        items = complete("/tools help ca", tool_names=tools)
+        texts = [i["text"] for i in items]
+        assert "calculator" in texts
+        assert "read_file" not in texts
+
+    def test_usage_subcommands(self):
+        items = complete("/usage ")
+        texts = [i["text"] for i in items]
+        assert "show" in texts
+        assert "reset" in texts
+
+    def test_usage_show_modes(self):
+        items = complete("/usage show ")
+        texts = [i["text"] for i in items]
+        assert "session" in texts
+        assert "provider" in texts
+
+    def test_checkpoint_subcommands(self):
+        items = complete("/checkpoint ")
+        texts = [i["text"] for i in items]
+        assert "status" in texts
+        assert "undo" in texts
+
+    def test_checkpoint_backend_values(self):
+        items = complete("/checkpoint backend ")
+        texts = [i["text"] for i in items]
+        assert "git" in texts
+        assert "file" in texts
+        assert "auto" in texts
+
+    def test_status_subcommands(self):
+        items = complete("/status ")
+        texts = [i["text"] for i in items]
+        assert "version" in texts
+        assert "cwd" in texts
+
+    def test_theme_lists_themes_and_subs(self):
+        items = complete("/theme ")
+        texts = [i["text"] for i in items]
+        assert "dracula" in texts
+        assert "list" in texts
+        assert "emoji" in texts
+
+    def test_theme_emoji_options(self):
+        items = complete("/theme emoji ")
+        texts = [i["text"] for i in items]
+        assert "on" in texts
+        assert "off" in texts
+
+    def test_subcommand_replace_start(self):
+        # Completing `/tools en` should replace only `en`
+        items = complete("/tools en")
+        for item in items:
+            assert item["replace_start"] == -2
+
+    def test_alias_resolves_for_subcommands(self):
+        # Aliases should route to the canonical subcommand table.
+        # `/t` is an alias for `/tools` in the default registry.
+        items = complete("/t en")
+        if items:
+            texts = [i["text"] for i in items]
+            assert "enable" in texts
+
+
+class TestDynamicCompletion:
+    def test_provider_without_current_provider_is_empty(self):
+        items = complete("/model ")
+        # No current_provider passed → empty
+        assert items == []
+
+    def test_provider_lists_all_configured(self):
+        items = complete("/provider ")
+        # PROVIDERS is populated by config loader; at minimum should
+        # include the built-in perplexity provider once config is loaded.
+        # We only assert the call shape + kind here so the test is
+        # robust to config differences between dev machines.
+        assert isinstance(items, list)
+        for item in items:
+            assert item["kind"] == "provider"

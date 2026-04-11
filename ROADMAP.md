@@ -712,9 +712,10 @@ ppxai/tui/                     # New module (Textual-based)
 | **Phase 6 — VSCode client** | Webview picker, drag-drop, pendingFiles staging, extension host forwarding | ✅ Done |
 | **Phase 7 — Textual TUI** | FileTree `a` key attach, Ctrl+U shortcut, `build_multimodal_content()`, `pending_files` attribute | ✅ Done |
 | **Task #11 — CompletionProvider** | `engine/completion.py`, `POST /complete` server route, Rich completer delegating to engine | ✅ Done |
+| **Task #11 Follow-up — Cross-client parity** | Engine owns all sources (commands, path args, subcommands `/tools`/`/usage`/`/checkpoint`/`/status`/`/theme`, dynamic `/model`+`/provider`, `/tools help <tool>`, `@git`/`@tree`/`@clipboard`/`@url`). Rich completer 594→85 lines; Textual 238→100 lines; VSCode unifies `@` + `/` onto one `POST /complete` flow. Web picks up all new sources for free. | ✅ Done |
 | **K8s deployment** | Dockerfile `[data]+libreoffice`, PV affinity, deploy.sh resilience, VL sidecar, ingress body-size, login wait | ✅ Done |
 
-**Tests:** 2253 total (was 1753 before Phase 0). 500 new tests, zero regressions.
+**Tests:** 2280 total (was 1753 before Phase 0). 527 new tests, zero regressions.
 **System deps (K8s):** poppler-utils, libreoffice-nogui. **JS libs (web):** SheetJS (xlsx.full.min.js).
 
 ---

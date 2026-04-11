@@ -599,11 +599,102 @@ app.js                (PpxaiApp — orchestrates all modules)
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
 | `/chat` | POST | Stream chat; returns SSE events |
+| `/complete` | POST | Autocomplete — returns completion items for buffer+cursor |
 | `/files/list` | GET | Directory listing (`at_fs_root` flag) |
 | `/files/read` | POST | Read file (returns relative path from working dir) |
 | `/files/write` | POST | Write file |
 | `/files/image/{path}` | GET | Serve image binary for inline display |
+| `/files/serve/{file_id}` | GET | Serve uploaded file by content-addressed ID |
+| `/files/preview/{file_id}` | GET | Preview rendering (PPTX slides, DOCX→PDF) |
 | `/command` | POST | CommandFactory server pattern (unified `/usage`, `/status`, etc.) |
 | `/set_working_dir` | POST | Change working directory (REST, no SSE emitted) |
 | `/interrupt` | POST | Abort current streaming response |
 | `/checkpoint/undo` | POST | Undo last agent operation |
+
+## Cross-Client Autocomplete (v1.17.x)
+
+`ppxai/engine/completion.py` is the **single source of truth** for
+autocomplete across all four clients. Rich and Textual call it in-
+process; Web and VSCode call it via `POST /complete`. Client completers
+are pure glue layers — no client owns any subcommand tables, no client
+scans its own buffer to decide completion mode.
+
+```
+                  ┌──────────────────────────────────────────┐
+                  │  engine/completion.py  ::  complete()    │
+                  │  ──────────────────────────────────────  │
+                  │  • slash commands (CommandFactory)       │
+                  │  • aliases + /quit /exit                 │
+                  │  • path args (/attach, /cd, ...)         │
+                  │  • subcommands (/tools, /usage, ...)     │
+                  │  • /model + /provider (dynamic)          │
+                  │  • /tools help <tool>                    │
+                  │  • @file refs + @git/@tree/@clipboard/   │
+                  │    @url context providers                │
+                  └──────────────────────────────────────────┘
+                         ▲             ▲
+            in-process   │             │  in-process
+           ┌─────────────┘             └──────────┐
+           │                                      │
+  ┌────────┴────────┐                  ┌──────────┴────────┐
+  │  Rich TUI       │                  │  Textual TUI      │
+  │  PPXAICompleter │                  │  TextualCompleter │
+  │  (~85 lines)    │                  │  (~100 lines)     │
+  └─────────────────┘                  └───────────────────┘
+
+                       POST /complete
+           ┌─────────────┐             ┌──────────┐
+           │             ▼             ▼          │
+  ┌────────┴────────┐                  ┌──────────┴────────┐
+  │  server/routes/ │                  │                   │
+  │  completion.py  │◀────── ▲ ────────┤  vscode webview   │
+  │  passes:        │        │         │  media/main.js    │
+  │   • working_dir │        │         │  unified @+/ flow │
+  │   • current_    │        │         └───────────────────┘
+  │     provider    │        │
+  │   • tool_names  │        │         ┌───────────────────┐
+  │     (live)      │◀───────┴────────┤  web app.js       │
+  └─────────────────┘                  │  _fetchAutocomplete│
+                                       └───────────────────┘
+```
+
+### Stable completion item schema
+
+Every client — in-process or over HTTP — consumes the same dict shape:
+
+```python
+{
+  "text":          str,   # text to insert
+  "display":       str,   # what to show in the dropdown
+  "description":   str,   # hover/meta text
+  "kind":          str,   # command | alias | dir | file | file_ref
+                          # | context_ref | subcommand | tool | model
+                          # | provider | theme
+  "replace_start": int,   # negative offset from cursor:
+                          # replace |replace_start| chars with text
+}
+```
+
+Clients map this to whatever native completion type they need
+(`prompt_toolkit.Completion` for Rich, tuples for Textual's InputBox,
+DOM elements for Web + VSCode webview). `replace_start` is how every
+client knows where to splice the text, so `selectAutocompleteItem`
+logic is identical across platforms — no special-casing `@` vs `/`.
+
+### Why this matters
+
+Before v1.17.x, each client kept its own hand-maintained tables of
+subcommands, context providers, and path-arg rules. They drifted
+constantly: Web and VSCode had no `/tools enable` completion; Textual
+had `@git`/`@tree`/`@clipboard`/`@url` but Rich didn't; Rich had
+`/model` + `/provider` lookups but the others showed nothing. Adding
+a new subcommand meant editing five files and guessing which clients
+to retest.
+
+After the unification, adding a new subcommand or context provider
+is a one-file change in `engine/completion.py`. The web client picks
+it up for free (no recompile needed, just a server restart). VSCode
+picks it up on the next extension reload. Rich and Textual get it
+immediately because they call the engine in-process. Tests live next
+to the engine logic in `tests/test_completion_provider.py` (39 tests
+covering every source).

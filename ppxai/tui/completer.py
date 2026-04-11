@@ -1,235 +1,102 @@
 """
 Autocomplete logic for Textual TUI.
 
-Delegates command-name, path-argument, and @file-reference completion to
-engine/completion.py — the same CompletionProvider used by the Rich TUI
-(`PPXAICompleter`) and the `POST /complete` server endpoint. All four
-clients get identical results for these cases.
+Since v1.17.x, Textual delegates ALL autocomplete logic to
+`engine.completion.complete()` — the same function used by Rich TUI
+(in-process) and by Web + VSCode (via the `POST /complete` server
+endpoint). This class is a thin adapter that:
 
-Subcommand-level completion (/tools enable, /model <name>, etc.) and the
-@git/@tree/@clipboard/@url context-provider shortcuts remain here as
-TUI-specific UI chrome that isn't shared with other clients.
+1. Builds the completion context from the active EngineClient
+   (working_dir, current_provider, live tool list), and
+2. Translates the engine's stable dict schema into the
+   `(replacement_text, description)` tuple shape that InputBox expects.
 
-`get_completions()` returns (replacement_text, description) tuples where
-replacement_text is the *full desired content* of the input box after
-applying the completion. InputBox sets text_area.text = replacement_text
-directly — no further transformation needed.
+Subcommand tables (/tools, /usage, /checkpoint, /status, /theme),
+`/model` + `/provider` name lookups, path-arg routing, @file refs,
+and @git/@tree/@clipboard/@url context providers are all owned by the
+engine. Do NOT re-introduce client-side tables here — every table here
+used to drift against the Rich TUI copy. The whole point of the
+v1.17.x autocomplete refactor was to kill this duplication.
 """
 
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional, Tuple
 
-from ..config import PROVIDERS, get_provider_config
 from ..engine.completion import complete as engine_complete
 
 
 class TextualCompleter:
-    """Autocomplete handler for Textual TUI."""
+    """Autocomplete handler for Textual TUI.
 
-    # Context provider shortcuts — handled by ContextInjector, not in engine
-    CONTEXT_PROVIDERS = [
-        ('@git',       'Include git diff (staged + unstaged)'),
-        ('@tree',      'Include project directory structure'),
-        ('@clipboard', 'Include clipboard text content'),
-        ('@url',       'Fetch and include URL content'),
-    ]
-
-    # Subcommands for /tools
-    TOOLS_SUBCOMMANDS = [
-        ('on',      'Enable AI tools'),
-        ('off',     'Disable AI tools'),
-        ('enable',  'Enable AI tools'),
-        ('disable', 'Disable AI tools'),
-        ('list',    'List available tools'),
-        ('status',  'Show tools status'),
-        ('help',    'Show help for a tool'),
-        ('set',     'Configure tool settings'),
-        ('config',  'Show tool configuration'),
-        ('agent',   'Enable/disable agent mode'),
-    ]
-
-    USAGE_SUBCOMMANDS = [
-        ('show',     'Show usage statistics'),
-        ('session',  'Show session usage'),
-        ('provider', 'Show provider usage'),
-        ('off',      'Hide usage display'),
-        ('reset',    'Reset usage counters'),
-    ]
-
-    USAGE_DISPLAY_MODES = [
-        ('session',  'Status line shows session totals'),
-        ('provider', 'Status line shows current provider totals'),
-        ('model',    'Status line shows current model totals'),
-        ('off',      'Hide usage from status line'),
-    ]
-
-    CHECKPOINT_SUBCOMMANDS = [
-        ('status',  'Show checkpoint status'),
-        ('list',    'List recent checkpoints'),
-        ('backend', 'Set checkpoint backend'),
-        ('clear',   'Clear old snapshots'),
-        ('info',    'Show checkpoint details'),
-        ('undo',    'Revert last checkpoint'),
-    ]
-
-    CHECKPOINT_BACKENDS = [
-        ('git',  'Use git commits'),
-        ('file', 'Use file snapshots'),
-        ('auto', 'Auto-detect best backend'),
-        ('none', 'Disable checkpoints'),
-    ]
-
-    STATUS_SUBCOMMANDS = [
-        ('version',  'Toggle version display'),
-        ('cwd',      'Toggle working directory display'),
-        ('datetime', 'Toggle date/time display'),
-    ]
-
-    THEME_NAMES = [
-        ('catppuccin-mocha', 'Catppuccin Mocha'),
-        ('dracula',          'Dracula'),
-        ('tokyo-night',      'Tokyo Night'),
-        ('nord',             'Nord'),
-        ('gruvbox',          'Gruvbox'),
-        ('solarized-dark',   'Solarized Dark'),
-        ('solarized-light',  'Solarized Light'),
-        ('monokai',          'Monokai'),
-        ('material',         'Material'),
-        ('textual-dark',     'Textual Dark (default)'),
-        ('textual-light',    'Textual Light'),
-        ('tron-legacy',      'Tron Legacy (cyan/orange)'),
-        ('matrix',           'Matrix (green-on-black)'),
-    ]
+    `get_completions()` returns `(replacement_text, description)` tuples
+    where `replacement_text` is the *full desired content* of the input
+    box after applying the completion. InputBox sets
+    `text_area.text = replacement_text` directly — no further
+    transformation needed.
+    """
 
     def __init__(self, working_dir: Path, engine_client=None):
         self.working_dir = working_dir
         self.engine_client = engine_client
 
-    def get_completions(self, text: str) -> list[tuple[str, str]]:
+    # ------------------------------------------------------------------
+    # Context builders — pulled from the active EngineClient at request
+    # time so /model, /provider, and /tools help <tool> complete against
+    # live state rather than a stale snapshot.
+    # ------------------------------------------------------------------
+
+    def _get_current_provider(self) -> Optional[str]:
+        if self.engine_client is None:
+            return None
+        return getattr(self.engine_client, "provider_name", None) or None
+
+    def _get_tool_names(self) -> List[Tuple[str, str]]:
+        if self.engine_client is None:
+            return []
+        tool_manager = getattr(self.engine_client, "tool_manager", None)
+        if tool_manager is None:
+            return []
+        try:
+            return [
+                (t["name"], t.get("description", ""))
+                for t in tool_manager.list_tools()
+            ]
+        except Exception:
+            return []
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def get_completions(self, text: str) -> List[Tuple[str, str]]:
         """Return completion candidates for *text*.
 
-        Each item is (replacement_text, description) where replacement_text
-        is the full desired input-box content after applying the completion.
-        The caller can set text_area.text = replacement_text directly.
+        Each item is `(replacement_text, description)` where
+        `replacement_text` is the full desired input-box content after
+        applying the completion. The caller can set
+        `text_area.text = replacement_text` directly.
         """
-        # @file references and context provider shortcuts
-        at_pos = text.rfind('@')
-        if at_pos >= 0:
-            query = text[at_pos + 1:].lower()
-            completions: list[tuple[str, str]] = []
-            # @git, @tree, @clipboard, @url — not in engine
-            for provider, desc in self.CONTEXT_PROVIDERS:
-                if provider[1:].startswith(query):
-                    completions.append((text[:at_pos] + provider, desc))
-            # @file references from engine (uses working_dir for fs scan)
-            for item in engine_complete(text, len(text), working_dir=str(self.working_dir)):
-                full = text[:len(text) + item["replace_start"]] + item["text"]
-                completions.append((full, item.get("description", "")))
-            return completions[:20]
-
-        if text.startswith('/'):
-            return self._complete_command(text)
-
-        return []
-
-    def _complete_command(self, text: str) -> list[tuple[str, str]]:
-        """Return slash command completions (names, subcommands, path args)."""
-        parts = text.split()
-        has_trailing_space = bool(text) and text[-1].isspace()
-        if has_trailing_space:
-            parts.append('')
-
-        if len(parts) >= 2:
-            cmd = parts[0].lower()
-            query = parts[1].lower()
-
-            if cmd == '/tools':
-                if len(parts) == 2:
-                    return [(f"{parts[0]} {s}", d) for s, d in self.TOOLS_SUBCOMMANDS if s.startswith(query)]
-                if len(parts) == 3 and parts[1].lower() == 'help':
-                    tool_query = parts[2].lower()
-                    return [(f"{parts[0]} help {n}", d) for n, d in self._get_tool_completions(tool_query)]
-                return []
-            if cmd == '/usage':
-                if len(parts) == 2:
-                    return [(f"{parts[0]} {s}", d) for s, d in self.USAGE_SUBCOMMANDS if s.startswith(query)]
-                if len(parts) == 3 and parts[1].lower() == 'show':
-                    mode_query = parts[2].lower()
-                    return [(f"{parts[0]} show {m}", d) for m, d in self.USAGE_DISPLAY_MODES if m.startswith(mode_query)]
-                return []
-            if cmd == '/checkpoint':
-                if len(parts) == 2:
-                    return [(f"{parts[0]} {s}", d) for s, d in self.CHECKPOINT_SUBCOMMANDS if s.startswith(query)]
-                if len(parts) == 3 and parts[1].lower() == 'backend':
-                    return [(f"{parts[0]} backend {s}", d) for s, d in self.CHECKPOINT_BACKENDS if s.startswith(parts[2].lower())]
-                return []
-            if cmd == '/status':
-                return [(f"{parts[0]} {s}", d) for s, d in self.STATUS_SUBCOMMANDS if s.startswith(query)]
-            if cmd == '/theme':
-                subs = [(f"{parts[0]} {s}", d) for s, d in [('list', 'Show available themes')] if s.startswith(query)]
-                themes = [(f"{parts[0]} {n}", d) for n, d in self.THEME_NAMES if n.startswith(query)]
-                return subs + themes
-            if cmd == '/model':
-                return [(f"{parts[0]} {m}", d) for m, d in self._get_model_completions(query)]
-            if cmd == '/provider':
-                return [(f"{parts[0]} {p}", d) for p, d in self._get_provider_completions(query)]
-
-            # Path argument completion from engine (/attach, /cd, /ls, /show, /tree, /preview)
-            items = engine_complete(text, len(text), working_dir=str(self.working_dir))
-            return [
-                (text[:len(text) + item["replace_start"]] + item["text"], item.get("description", ""))
-                for item in items
-            ]
-
-        # Command name completion from engine — reads CommandFactory._registry + aliases,
-        # matches PPXAICompleter behaviour exactly.
-        # Append a trailing space so the completed command is ready for arguments.
         cursor = len(text)
-        items = engine_complete(text, cursor, working_dir=str(self.working_dir))
-        return [
-            (text[:cursor + item["replace_start"]] + item["text"] + " ", item.get("description", ""))
-            for item in items
-        ]
+        items = engine_complete(
+            text,
+            cursor,
+            working_dir=str(self.working_dir),
+            current_provider=self._get_current_provider(),
+            tool_names=self._get_tool_names(),
+        )
 
-    def _get_tool_completions(self, query: str) -> list[tuple[str, str]]:
-        """Return (tool_name, description) pairs for /tools help <tab>."""
-        if self.engine_client and self.engine_client.tools_enabled and self.engine_client.tool_manager:
-            tools = [
-                (name, tool.description[:60] if hasattr(tool, 'description') else '')
-                for name, tool in self.engine_client.tool_manager._tools.items()
-            ]
-        else:
-            # Fallback: common built-in names when tools aren't active
-            tools = [
-                ('calculator',            'Evaluate mathematical expressions'),
-                ('get_datetime',          'Get current date and time'),
-                ('list_directory',        'List files in a directory'),
-                ('read_file',             'Read file contents'),
-                ('execute_shell_command', 'Execute shell commands'),
-                ('apply_patch',           'Apply unified diff patches'),
-                ('replace_block',         'Find and replace text blocks'),
-            ]
-        return [(n, d) for n, d in sorted(tools) if not query or n.startswith(query)]
+        completions: List[Tuple[str, str]] = []
+        for item in items:
+            replace_start = item.get("replace_start", 0)
+            # Cut off the chars the engine says to replace, then append
+            # the completion text. For command-name completions we
+            # additionally append a trailing space so the user can
+            # immediately type arguments — matches the old behaviour.
+            base = text[: cursor + replace_start]
+            suffix = " " if item.get("kind") in ("command", "alias") else ""
+            replacement = base + item["text"] + suffix
+            completions.append((replacement, item.get("description", "")))
 
-    def _get_model_completions(self, query: str) -> list[tuple[str, str]]:
-        if not self.engine_client:
-            return []
-        current_provider = self.engine_client.provider_name
-        provider_config = get_provider_config(current_provider)
-        completions = []
-        for model_key, model_info in provider_config.get('models', {}).items():
-            model_id = model_info.get('id', model_key)
-            model_name = model_info.get('name', model_id)
-            if not query or query in model_id.lower() or query in model_name.lower():
-                completions.append((model_id, model_name))
-        return completions
-
-    def _get_provider_completions(self, query: str) -> list[tuple[str, str]]:
-        completions = []
-        for provider_id, provider_cfg in PROVIDERS.items():
-            provider_name = provider_cfg.get('name', provider_id)
-            if not query or query in provider_id.lower() or query in provider_name.lower():
-                completions.append((provider_id, provider_name))
         return completions
 
     def update_working_dir(self, working_dir: Path) -> None:

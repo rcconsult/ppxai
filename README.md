@@ -168,8 +168,8 @@ Switch providers anytime: `/provider gemini` or `/model gemini-2.5-pro`
 |----------------|-----------------|------------------|
 | **ppxai** - Rich TUI (original) | Browser-based UI | Webview chat panel |
 | **ppxaide** - Textual TUI (v1.15.0+) | Full slash commands | Right-click: Explain, Test, Docs |
-| Tab autocomplete for `/` commands | Same context injection | Same context injection |
-| `@file`, `@git`, `@tree` context | Provider/model badges | Provider/model switcher |
+| Unified autocomplete via `engine/completion.py` (v1.17.x) | Same autocomplete over `POST /complete` | Same autocomplete over `POST /complete` |
+| `@file`, `@git`, `@tree`, `@clipboard`, `@url` context | Provider/model badges | Provider/model switcher |
 | Status bar with provider/model | SSE streaming | SSE streaming |
 
 **ppxaide features (v1.15.0+):**

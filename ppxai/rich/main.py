@@ -31,6 +31,7 @@ from ..config import (
     get_tui_theme,
     initialize,
 )
+from ..engine.completion import complete as engine_complete
 from .ui import console, display_welcome, select_model, select_provider
 from .ui_components import format_usage_string, render_status_panel
 from ..engine.session import SessionManager
@@ -161,599 +162,81 @@ def get_status_line(handler, use_themed: bool = True):
 
 
 class PPXAICompleter(Completer):
-    """Custom completer for slash commands and @file references.
+    """Prompt-toolkit adapter for engine.completion.
 
-    Slash-command completions are computed dynamically from the
-    CommandFactory registry (the single source of truth that every command
-    module registers into via side-effect imports). This means newly-added
-    commands such as `/attach` (Phase 1) and upcoming `/doctor` (Phase 2)
-    appear in tab completion automatically — no hand-maintained list to
-    drift against reality.
+    Rich TUI delegates ALL autocomplete logic to `engine.completion.complete()`,
+    the same function used by Textual TUI (in-process) and by Web + VSCode
+    (via `POST /complete`). This class is purely a glue layer that:
 
-    Subcommand-level completion (e.g. `/tools <enable|disable|list>`) still
-    uses hardcoded tables below, because subcommands are encoded in each
-    command's `usage` string as free-form text and can't be reliably parsed.
-    When we add structured subcommand metadata to `CommandSpec` later, the
-    tables below can be retired the same way.
+    1. Builds the completion context from the active EngineClient
+       (working_dir, current_provider, live tool list), and
+    2. Maps the engine's stable dict schema to prompt_toolkit Completion
+       objects.
+
+    Subcommand tables (/tools, /usage, /checkpoint, /status, /theme),
+    `/model` and `/provider` name lookups, path-arg routing, @file refs,
+    and @git/@tree/@clipboard/@url context providers are all owned by
+    the engine — keeping this class this short is the whole point of the
+    v1.17.x autocomplete refactor. Do NOT re-introduce client-side tables.
     """
 
-    # Commands the factory doesn't own (special-cased in CommandHandler).
-    # Kept as a tiny fallback list so /quit and /exit remain completable.
-    _BUILTIN_SPECIAL_COMMANDS = (
-        ('/quit', 'Exit the application'),
-        ('/exit', 'Exit the application'),
-    )
-
-    # Commands that accept path arguments, and what kinds of entries make
-    # sense to complete for each. `include_files` and `include_dirs` control
-    # which filesystem entries appear in the suggestion list — directories
-    # are always traversable on tab, but e.g. `/cd` only makes sense to
-    # select a directory at the end. Keys are canonical command names
-    # *without* the leading slash; aliases resolve via CommandFactory at
-    # lookup time so adding a new alias doesn't require editing this table.
-    _PATH_ARG_COMMANDS: dict = {
-        # files only (dirs still shown so users can traverse into them)
-        "attach":  {"include_files": True,  "include_dirs": True},
-        "show":    {"include_files": True,  "include_dirs": True},
-        "preview": {"include_files": True,  "include_dirs": True},
-        # dirs-only targets
-        "cd":      {"include_files": False, "include_dirs": True},
-        "tree":    {"include_files": False, "include_dirs": True},
-        # dirs + files both legitimate
-        "ls":      {"include_files": True,  "include_dirs": True},
-    }
-
-    # Subcommands for /tools
-    TOOLS_SUBCOMMANDS = [
-        ('enable', 'Enable AI tools'),
-        ('disable', 'Disable AI tools'),
-        ('list', 'List available tools'),
-        ('status', 'Show tools status'),
-        ('help', 'Show help for a tool'),
-        ('set', 'Configure tool settings'),
-        ('config', 'Configure tool settings'),
-        ('agent', 'Enable/disable agent mode'),
-    ]
-
-    # Theme names for /theme autocomplete
-    THEME_NAMES = [
-        ('list', 'Show available themes'),
-        ('standard', 'Default ppxai theme'),
-        ('tron-legacy', 'Cyan/orange Tron: Legacy style'),
-        ('matrix', 'Green-on-black Matrix style'),
-        ('nord', 'Arctic bluish Nord palette'),
-    ]
-
-    # Subcommands for /usage (v1.12.2)
-    USAGE_SUBCOMMANDS = [
-        ('show', 'Set status line display mode'),
-        ('reset', 'Reset all usage counters'),
-    ]
-
-    # Subcommands for /checkpoint (v1.12.4)
-    CHECKPOINT_SUBCOMMANDS = [
-        ('status', 'Show checkpoint status'),
-        ('list', 'List recent checkpoints'),
-        ('backend', 'Set checkpoint backend'),
-        ('clear', 'Clear old file-based snapshots'),
-        ('info', 'Show details about a checkpoint'),
-        ('undo', 'Revert last checkpoint (alias)'),
-    ]
-
-    # Backend options for /checkpoint backend
-    CHECKPOINT_BACKENDS = [
-        ('git', 'Use git commits (requires git repo)'),
-        ('file', 'Use file snapshots'),
-        ('auto', 'Auto-detect best backend'),
-        ('none', 'Disable checkpoints'),
-    ]
-
-    # Display modes for /usage show
-    USAGE_DISPLAY_MODES = [
-        ('session', 'Show session totals'),
-        ('provider', 'Show current provider totals'),
-        ('model', 'Show current model totals'),
-        ('off', 'Hide usage from status line'),
-    ]
-
-    # Subcommands for /status
-    STATUS_SUBCOMMANDS = [
-        ('version', 'Show/toggle version display'),
-        ('cwd', 'Show/toggle working directory display'),
-        ('datetime', 'Show/toggle date/time display'),
-    ]
-
-    # Directories to ignore when searching for files
-    IGNORE_DIRS = {'.git', 'node_modules', '__pycache__', '.venv', 'venv', '.tox', 'dist', 'build', '.eggs', '.mypy_cache'}
-
     def __init__(self, command_handler=None):
-        self._file_cache = {}
-        self._cache_time = 0
-        self._cache_dir = None  # Track which directory the cache is for
         self._command_handler = command_handler
-        # Cached (commands, registry_size) — invalidates when CommandFactory
-        # grows (e.g. /reload of user commands) without polling every keystroke.
-        self._commands_cache: list[tuple[str, str]] = []
-        self._commands_cache_size = -1
 
-    def _get_commands(self) -> list[tuple[str, str]]:
-        """Return the full list of completable slash commands.
+    def _engine_client(self):
+        if self._command_handler is None:
+            return None
+        return getattr(self._command_handler, "engine_client", None)
 
-        Pulls from `CommandFactory._registry` (canonical set of registered
-        commands) plus `CommandFactory._aliases` (so `/att` completes the
-        same as `/attach`, `/s` as `/save`, etc.), and finally adds the two
-        builtin specials `/quit` and `/exit` which bypass the factory.
-
-        Cached until the registry size changes. Reading the size is O(1)
-        and avoids rebuilding the list on every keystroke during typing,
-        but still picks up dynamically loaded user commands the first time
-        the user hits tab after a `/config reload`.
-        """
-        # Local import avoids a top-of-module cycle: commands.handler imports
-        # from this module via the rendering stack, so we defer the factory
-        # import into the function body.
-        from ..commands.factory import CommandFactory
-
-        current_size = len(CommandFactory._registry) + len(CommandFactory._aliases)
-        if current_size == self._commands_cache_size and self._commands_cache:
-            return self._commands_cache
-
-        commands: list[tuple[str, str]] = []
-
-        # Canonical commands from the registry (skip hidden ones).
-        for name, spec in CommandFactory._registry.items():
-            if spec.hidden:
-                continue
-            commands.append((f"/{name}", spec.description))
-
-        # Aliases — resolve to the canonical spec for the description, with a
-        # marker in the meta so the user can see what it points at.
-        for alias, canonical in CommandFactory._aliases.items():
-            spec = CommandFactory._registry.get(canonical)
-            if not spec or spec.hidden:
-                continue
-            commands.append((f"/{alias}", f"{spec.description} (alias for /{canonical})"))
-
-        # Hardcoded fallbacks for commands that never reach the factory.
-        commands.extend(self._BUILTIN_SPECIAL_COMMANDS)
-
-        # Stable alphabetical order — makes the completion menu predictable
-        # as new commands land instead of reflecting registration order.
-        commands.sort(key=lambda entry: entry[0])
-
-        self._commands_cache = commands
-        self._commands_cache_size = current_size
-        return commands
-
-    def _get_working_dir(self) -> Path:
-        """Get the current working directory from engine client or fallback to os.cwd()."""
-        if self._command_handler and hasattr(self._command_handler, 'engine_client'):
-            return Path(self._command_handler.engine_client.get_working_dir())
-        return Path.cwd()
-
-    def _get_files(self, max_files: int = 100) -> list[tuple[str, str]]:
-        """Get files in the current directory for completion."""
-        now = time.time()
-
-        root = self._get_working_dir()
-
-        # Cache for 5 seconds, but invalidate if directory changed
-        if (now - self._cache_time < 5 and
-            self._file_cache and
-            self._cache_dir == root):
-            return list(self._file_cache.items())[:max_files]
-
-        files = {}
-
-        try:
-            for path in root.rglob('*'):
-                if len(files) >= max_files * 2:
-                    break
-                try:
-                    # Check if file - can fail on network paths (WinError 4350)
-                    if path.is_file():
-                        # Skip files in ignored directories
-                        if any(ignored in path.parts for ignored in self.IGNORE_DIRS):
-                            continue
-                        try:
-                            rel_path = str(path.relative_to(root))
-                            files[path.name] = rel_path
-                        except ValueError:
-                            pass
-                except OSError:
-                    # Network file unavailable, skip it
-                    pass
-        except (PermissionError, OSError):
-            pass
-
-        self._file_cache = files
-        self._cache_time = now
-        self._cache_dir = root  # Remember which directory this cache is for
-        return list(files.items())[:max_files]
-
-    def _resolve_path_base(self, partial: str) -> tuple[Path, str]:
-        """Split a user-typed partial path into (directory_to_list, leaf_prefix).
-
-        Handles `~/` expansion, absolute paths, and relative paths resolved
-        against the engine's current working directory. A trailing separator
-        (`src/`) means "list everything in `src/`"; an unterminated partial
-        (`src/com`) means "list `src/` filtered by names starting with `com`";
-        a bare `.` or `.foo` leaf correctly means "match hidden files"
-        rather than being normalized away.
-
-        Uses `os.path` string operations rather than `Path.parent` /
-        `Path.name` because pathlib normalizes trailing `"."` / `".."`
-        components — e.g. `Path("/tmp") / "." .name == ""` on some
-        interpreter versions, which loses the hidden-file filter the user
-        explicitly typed.
-
-        Returns the parent directory to iterate over, plus the leaf prefix
-        to filter against. If the partial points somewhere that doesn't
-        exist or isn't a directory, the caller will see an empty parent
-        and yield no completions.
-        """
-        # Empty input — list working directory contents.
-        if not partial:
-            return self._get_working_dir(), ""
-
-        # ~ expansion (display stays literal — expanduser only influences
-        # where we look on disk, not what we render).
-        if partial.startswith("~"):
-            expanded = str(Path(partial).expanduser())
-        elif os.path.isabs(partial):
-            expanded = partial
-        else:
-            expanded = os.path.join(str(self._get_working_dir()), partial)
-
-        # Trailing separator signals "enter this directory".
-        if expanded.endswith(("/", os.sep)):
-            return Path(expanded), ""
-
-        # `os.path.split` preserves literal leafs like "." and ".foo"
-        # instead of collapsing them via pathlib normalization.
-        parent_str, leaf = os.path.split(expanded)
-        return Path(parent_str), leaf
-
-    def _complete_path(
-        self,
-        partial: str,
-        include_files: bool,
-        include_dirs: bool,
-        max_entries: int = 200,
-    ):
-        """Yield path completions for a typed partial.
-
-        Standard shell-style path completion: list a single directory, filter
-        by leaf prefix, append a trailing `/` to directories so pressing tab
-        on a directory navigates *into* it rather than selecting it as the
-        final answer. Hidden files (dotfiles) are skipped unless the user
-        explicitly typed a leading dot — matching common shell behavior.
-
-        Args:
-            partial: The path fragment typed by the user (e.g. "src/com").
-            include_files: Whether to yield regular files.
-            include_dirs: Whether to yield directories. Directories are
-                          *always* traversable via tab even when
-                          include_files is the primary intent.
-            max_entries: Hard cap on yielded completions — huge directories
-                         don't hang the completion UI.
-        """
-        parent, leaf = self._resolve_path_base(partial)
-        if not parent.exists() or not parent.is_dir():
-            return
-
-        leaf_lower = leaf.lower()
-        show_hidden = leaf.startswith(".")
-
-        try:
-            # Directories first, then files; alphabetical within each group.
-            entries = sorted(
-                parent.iterdir(),
-                key=lambda p: (not p.is_dir(), p.name.lower()),
-            )
-        except (OSError, PermissionError):
-            return
-
-        yielded = 0
-        for entry in entries:
-            if yielded >= max_entries:
-                break
-            name = entry.name
-            if not show_hidden and name.startswith("."):
-                continue
-            if leaf_lower and not name.lower().startswith(leaf_lower):
-                continue
+    def _get_working_dir(self) -> str:
+        engine = self._engine_client()
+        if engine is not None:
             try:
-                is_dir = entry.is_dir()
-            except OSError:
-                continue
-            if is_dir and not include_dirs:
-                continue
-            if not is_dir and not include_files:
-                continue
+                wd = engine.get_working_dir()
+                if wd:
+                    return str(wd)
+            except Exception:
+                pass
+        return os.getcwd()
 
-            # Directories get a trailing slash so tab-completing a directory
-            # leaves the cursor in position to keep typing into it (the user
-            # can hit tab again to list its contents).
-            completion_text = name + ("/" if is_dir else "")
-            display_meta = "dir" if is_dir else "file"
-            yield Completion(
-                completion_text,
-                start_position=-len(leaf),
-                display=completion_text,
-                display_meta=display_meta,
-            )
-            yielded += 1
+    def _get_current_provider(self):
+        engine = self._engine_client()
+        if engine is None:
+            return None
+        return getattr(engine, "provider_name", None) or None
 
-    def _last_whitespace_token(self, text: str) -> tuple[int, str]:
-        """Return (start_index, token) for the last whitespace-delimited token.
-
-        Used by path-argument completion in multi-arg commands like
-        `/attach a.png b.p<tab>` — we want to complete only `b.p`, not the
-        whole args string. Returns (0, "") for empty input.
-        """
-        if not text:
-            return 0, ""
-        idx = len(text)
-        while idx > 0 and not text[idx - 1].isspace():
-            idx -= 1
-        return idx, text[idx:]
+    def _get_tool_names(self) -> list[tuple[str, str]]:
+        engine = self._engine_client()
+        if engine is None:
+            return []
+        tool_manager = getattr(engine, "tool_manager", None)
+        if tool_manager is None:
+            return []
+        try:
+            return [
+                (t["name"], t.get("description", ""))
+                for t in tool_manager.list_tools()
+            ]
+        except Exception:
+            return []
 
     def get_completions(self, document, complete_event):
         text = document.text_before_cursor
+        items = engine_complete(
+            text,
+            len(text),
+            working_dir=self._get_working_dir(),
+            current_provider=self._get_current_provider(),
+            tool_names=self._get_tool_names(),
+        )
+        for item in items:
+            yield Completion(
+                item["text"],
+                start_position=item.get("replace_start", 0),
+                display=item.get("display", item["text"]),
+                display_meta=item.get("description", ""),
+            )
 
-        # Delegate command names, path arguments, and @file references
-        # to the engine's CompletionProvider (v1.17.4 Task #11). This
-        # is the same logic that the POST /complete server endpoint
-        # uses, so all four clients get identical results. Subcommand
-        # tables (tools, theme, usage, etc.) remain here because they're
-        # Rich-specific UI chrome not shared with other clients.
-        from ..engine.completion import complete as engine_complete
-
-        # @file reference — delegate and return early
-        at_pos = text.rfind('@')
-        if at_pos >= 0:
-            wd = str(self._get_working_dir())
-            for item in engine_complete(text, len(text), working_dir=wd):
-                yield Completion(
-                    item["text"],
-                    start_position=item.get("replace_start", 0),
-                    display=item.get("display", item["text"]),
-                    display_meta=item.get("description", ""),
-                )
-            return
-
-        # Slash commands
-        if text.startswith('/'):
-            cmd_text = text.lower()
-
-            # Path-argument completion — delegated to engine
-            space_idx = text.find(" ")
-            if space_idx > 0:
-                typed_cmd = text[1:space_idx]
-                spec = CommandFactory.get(typed_cmd)
-                canonical = spec.name if spec else typed_cmd
-                path_opts = self._PATH_ARG_COMMANDS.get(canonical)
-                if path_opts is not None:
-                    wd = str(self._get_working_dir())
-                    for item in engine_complete(text, len(text), working_dir=wd):
-                        yield Completion(
-                            item["text"],
-                            start_position=item.get("replace_start", 0),
-                            display=item.get("display", item["text"]),
-                            display_meta=item.get("description", ""),
-                        )
-                    return
-
-            # Handle /tools subcommands
-            if cmd_text.startswith('/tools '):
-                parts = text.split()
-                if len(parts) == 2:
-                    # Completing subcommand: /tools en<tab>
-                    subquery = parts[1].lower()
-                    for subcmd, desc in self.TOOLS_SUBCOMMANDS:
-                        if subcmd.startswith(subquery):
-                            yield Completion(
-                                subcmd,
-                                start_position=-len(parts[1]),
-                                display_meta=desc
-                            )
-                elif len(parts) >= 3 and parts[1].lower() == 'help':
-                    # Completing tool name: /tools help calc<tab>
-                    tool_query = parts[2].lower() if len(parts) > 2 else ''
-                    for tool_name, tool_desc in self._get_tool_names():
-                        if tool_name.lower().startswith(tool_query):
-                            yield Completion(
-                                tool_name,
-                                start_position=-len(tool_query) if tool_query else 0,
-                                display_meta=tool_desc[:40] + '...' if len(tool_desc) > 40 else tool_desc
-                            )
-                return
-
-            # Handle /theme subcommands (experiment/rich-tui)
-            if cmd_text.startswith('/theme '):
-                parts = text.split()
-                if len(parts) == 2:
-                    # Completing theme name or emoji subcommand: /theme ma<tab> or /theme em<tab>
-                    query = parts[1].lower()
-
-                    # Check if typing "emoji" subcommand
-                    if 'emoji'.startswith(query):
-                        yield Completion(
-                            'emoji',
-                            start_position=-len(parts[1]),
-                            display_meta='Toggle emoji mode (on|off)'
-                        )
-
-                    # Theme names
-                    for theme_name, desc in self.THEME_NAMES:
-                        if theme_name.startswith(query):
-                            yield Completion(
-                                theme_name,
-                                start_position=-len(parts[1]),
-                                display_meta=desc
-                            )
-                elif len(parts) == 3 and parts[1].lower() == 'emoji':
-                    # Completing /theme emoji on|off
-                    emoji_query = parts[2].lower()
-                    for opt, desc in [('on', 'Show original emojis'), ('off', 'Convert to text symbols')]:
-                        if opt.startswith(emoji_query):
-                            yield Completion(
-                                opt,
-                                start_position=-len(parts[2]),
-                                display_meta=desc
-                            )
-                return
-
-            # Handle /usage subcommands (v1.12.2)
-            if cmd_text.startswith('/usage '):
-                parts = text.split()
-                if len(parts) == 2:
-                    # Completing subcommand: /usage sh<tab>
-                    subquery = parts[1].lower()
-                    for subcmd, desc in self.USAGE_SUBCOMMANDS:
-                        if subcmd.startswith(subquery):
-                            yield Completion(
-                                subcmd,
-                                start_position=-len(parts[1]),
-                                display_meta=desc
-                            )
-                elif len(parts) == 3 and parts[1].lower() == 'show':
-                    # Completing display mode: /usage show se<tab>
-                    mode_query = parts[2].lower()
-                    for mode, desc in self.USAGE_DISPLAY_MODES:
-                        if mode.startswith(mode_query):
-                            yield Completion(
-                                mode,
-                                start_position=-len(parts[2]),
-                                display_meta=desc
-                            )
-                return
-
-            # Handle /checkpoint subcommands (v1.12.4)
-            if cmd_text.startswith('/checkpoint '):
-                parts = text.split()
-                if len(parts) == 2:
-                    # Completing subcommand: /checkpoint st<tab>
-                    subquery = parts[1].lower()
-                    for subcmd, desc in self.CHECKPOINT_SUBCOMMANDS:
-                        if subcmd.startswith(subquery):
-                            yield Completion(
-                                subcmd,
-                                start_position=-len(parts[1]),
-                                display_meta=desc
-                            )
-                elif len(parts) == 3 and parts[1].lower() == 'backend':
-                    # Completing backend: /checkpoint backend gi<tab>
-                    backend_query = parts[2].lower()
-                    for backend, desc in self.CHECKPOINT_BACKENDS:
-                        if backend.startswith(backend_query):
-                            yield Completion(
-                                backend,
-                                start_position=-len(parts[2]),
-                                display_meta=desc
-                            )
-                return
-
-            # Handle /status subcommands (v1.13.10)
-            if cmd_text.startswith('/status '):
-                parts = text.split()
-                if len(parts) == 2:
-                    # Completing subcommand: /status ver<tab>
-                    subquery = parts[1].lower()
-                    for subcmd, desc in self.STATUS_SUBCOMMANDS:
-                        if subcmd.startswith(subquery):
-                            yield Completion(
-                                subcmd,
-                                start_position=-len(parts[1]),
-                                display_meta=desc
-                            )
-                return
-
-            # Handle /model — dynamic model names for current provider
-            if cmd_text.startswith('/model '):
-                parts = text.split()
-                if len(parts) == 2:
-                    query = parts[1].lower()
-                    for model_id, model_name in self._get_model_names(query):
-                        yield Completion(
-                            model_id,
-                            start_position=-len(parts[1]),
-                            display_meta=model_name,
-                        )
-                return
-
-            # Handle /provider — known provider IDs
-            if cmd_text.startswith('/provider '):
-                parts = text.split()
-                if len(parts) == 2:
-                    query = parts[1].lower()
-                    for provider_id, provider_name in self._get_provider_names(query):
-                        yield Completion(
-                            provider_id,
-                            start_position=-len(parts[1]),
-                            display_meta=provider_name,
-                        )
-                return
-
-            # Regular command name completion — delegated to engine.
-            wd = str(self._get_working_dir())
-            for item in engine_complete(text, len(text), working_dir=wd):
-                yield Completion(
-                    item["text"],
-                    start_position=item.get("replace_start", 0),
-                    display=item.get("display", item["text"]),
-                    display_meta=item.get("description", ""),
-                )
-
-    def _get_model_names(self, query: str = '') -> list[tuple[str, str]]:
-        """Dynamic model names for the current provider."""
-        if not self._command_handler:
-            return []
-        current_provider = self._command_handler.provider
-        provider_config = get_provider_config(current_provider)
-        results = []
-        for model_key, model_info in provider_config.get('models', {}).items():
-            model_id = model_info.get('id', model_key)
-            model_name = model_info.get('name', model_id)
-            if not query or query in model_id.lower() or query in model_name.lower():
-                results.append((model_id, model_name))
-        return results
-
-    def _get_provider_names(self, query: str = '') -> list[tuple[str, str]]:
-        """All configured provider IDs and display names."""
-        results = []
-        for provider_id, provider_cfg in PROVIDERS.items():
-            provider_name = provider_cfg.get('name', provider_id)
-            if not query or query in provider_id.lower() or query in provider_name.lower():
-                results.append((provider_id, provider_name))
-        return results
-
-    def _get_tool_names(self) -> list[tuple[str, str]]:
-        """Get available tool names and descriptions for completion."""
-        if not self._command_handler:
-            return []
-
-        engine = self._command_handler.engine_client
-        if not engine or not engine.tools_enabled or not engine.tool_manager:
-            # Return common tool names even if tools not enabled
-            return [
-                ('calculator', 'Evaluate mathematical expressions'),
-                ('get_datetime', 'Get current date and time'),
-                ('list_directory', 'List files in a directory'),
-                ('read_file', 'Read file contents'),
-                ('execute_shell_command', 'Execute shell commands'),
-                ('apply_patch', 'Apply unified diff patches'),
-                ('replace_block', 'Find and replace text blocks'),
-                ('insert_text', 'Insert text at line numbers'),
-                ('delete_lines', 'Delete line ranges'),
-                ('web_search', 'Search the web'),
-                ('fetch_url', 'Fetch URL contents'),
-            ]
-
-        # Get actual tools from manager
-        tools = engine.tool_manager.list_tools()
-        return [(t['name'], t['description']) for t in tools]
 
 # Note: Environment variables are loaded in config.py
 

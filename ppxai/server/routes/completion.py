@@ -12,7 +12,7 @@ completion without reimplementing the logic in JavaScript/TypeScript.
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from ...engine.completion import complete
 from ..state import Session, get_session
@@ -38,18 +38,33 @@ async def complete_endpoint(
 ):
     """Return autocomplete suggestions for the given input buffer.
 
-    Uses the session's engine working directory for path completions,
-    so results match what the user would see if they ran the same
-    command in their terminal.
+    Uses the session's engine working directory, current provider, and
+    live tool list so Web/VSCode get the same `/tools help <tab>`,
+    `/model <tab>`, and `/provider <tab>` behaviour that Rich/Textual
+    already enjoy via in-process calls.
     """
-    working_dir = None
+    working_dir: Optional[str] = None
+    current_provider: Optional[str] = None
+    tool_names: List[Tuple[str, str]] = []
+
     if s.engine:
         working_dir = s.engine.get_working_dir()
+        current_provider = s.engine.provider_name or None
+        if s.engine.tool_manager is not None:
+            try:
+                tool_names = [
+                    (t["name"], t.get("description", ""))
+                    for t in s.engine.tool_manager.list_tools()
+                ]
+            except Exception:
+                tool_names = []
 
     items = complete(
         request.buffer,
         request.cursor,
         working_dir=working_dir,
+        current_provider=current_provider,
+        tool_names=tool_names,
     )
 
     return CompleteResponse(items=items)

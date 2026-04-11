@@ -8,9 +8,12 @@ Multi-provider AI chat interface for VS Code, powered by ppxai.
 - **Message Timestamps**: Each message shows time and date (HH:MM:SS Mon DD)
 - **Time Dividers**: Visual separators between conversations (after 5min gap or date change)
 - **@file References**: Type `@filename` to include file content, `@clipboard` for clipboard text, `@url` for web content
-- **Autocomplete**:
-  - `/` commands with descriptions
-  - `@` file references with fuzzy search
+- **Autocomplete** (unified with all ppxai clients via `POST /complete`):
+  - `/` commands + aliases + `/quit`/`/exit` (dynamic, from server's `CommandFactory`)
+  - `/tools`, `/usage`, `/checkpoint`, `/status`, `/theme` subcommands + second-level args (`/usage show <mode>`, `/theme emoji on/off`, `/checkpoint backend <backend>`, `/tools help <tool>`)
+  - Dynamic `/model <name>` for the active provider, `/provider <name>` for configured providers
+  - Path arguments for `/attach`, `/cd`, `/ls`, `/show`, `/tree`, `/preview` with alias resolution
+  - `@file` fuzzy search + `@git`, `@tree`, `@clipboard`, `@url` context providers in one dropdown
 - **Tools Toggle**: Click the tools badge to enable/disable AI tools (persists across restarts)
 - **Code Commands**: Right-click context menu for code operations
   - Explain Selection

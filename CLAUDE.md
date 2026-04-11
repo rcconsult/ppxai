@@ -17,7 +17,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **NEW:** K8s POC — 5 phases: namespace, Dockerfile.server, session manager, login, LDAP auth
 - **NEW:** Benchmark infra — K8s benchmark jobs, `--agents-md` toggle, delta test results
 - **NEW:** File upload Phases 0-7 complete — multimodal message plumbing, `/attach` command, SessionFileStore, file preprocessing, image validation, VL sidecar, PDF/Excel/PPTX tools, web drag-drop + thumbnails, VSCode drag-drop overlay + inline thumbnails + context badge, Textual file tree attach
-- **NEW:** CompletionProvider engine layer — `engine/completion.py` with `POST /complete` server endpoint, Rich TUI + VSCode dynamic autocomplete (56+ commands, path args, @file refs)
+- **NEW:** CompletionProvider engine layer — `engine/completion.py` is the single source of truth for autocomplete across ALL 4 clients (Rich, Textual, Web, VSCode). Covers: slash commands + aliases, path args, @file refs, `@git`/`@tree`/`@clipboard`/`@url` context providers, `/tools`/`/usage`/`/checkpoint`/`/status`/`/theme` subcommands, dynamic `/model` + `/provider` lookups, `/tools help <tool>`. Rich + Textual call in-process; Web + VSCode call via `POST /complete`. Client completers are pure glue (~85 lines Rich, ~100 lines Textual, down from ~594 / ~238). No more duplicated subcommand tables.
 - **NEW:** Gemini 3.1 Flash Lite + Gemma 4 family (31B, 26B MoE, E4B, E2B); deprecated 2.0/2.5 models with shutdown dates
 - **NEW:** `/doctor` config advisor — deprecation table, dead/deprecated/new/recommended model scanning
 - **FIX:** Heartbeat during streaming — skip health failures while single-worker busy with LLM tokens

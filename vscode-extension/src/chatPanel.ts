@@ -396,9 +396,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 case 'undoCheckpoint':
                     await this.handleUndoCheckpoint();
                     break;
-                case 'searchFiles':
-                    await this.handleSearchFilesForAutocomplete(message.query);
-                    break;
                 case 'complete':
                     await this.handleComplete(message.buffer, message.cursor);
                     break;
@@ -420,46 +417,20 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         });
     }
 
-    private async handleSearchFilesForAutocomplete(query: string) {
-        if (!this._view) { return; }
-
-        try {
-            const matches = await this.searchFiles(query || '', 10);
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            const pathModule = require('path');
-
-            // v1.13.8: Include special refs (@git, @tree) at the start
-            const specialRefs = [
-                { name: '@git', path: 'Include git diff' },
-                { name: '@tree', path: 'Include project structure' },
-            ];
-
-            // Filter special refs by query
-            const queryLower = (query || '').toLowerCase();
-            const filteredSpecialRefs = specialRefs.filter(ref =>
-                ref.name.toLowerCase().includes(queryLower)
-            );
-
-            const files = matches.map(m => {
-                const name = m.path.split('/').pop() || '';
-                const relPath = workspaceFolders
-                    ? pathModule.relative(workspaceFolders[0].uri.fsPath, m.fsPath)
-                    : m.path;
-                return { name, path: relPath };
-            });
-
-            this._view.webview.postMessage({
-                type: 'fileSuggestions',
-                files: [...filteredSpecialRefs, ...files]
-            });
-        } catch (error) {
-            // Silently fail - autocomplete is optional
-        }
-    }
-
     /**
      * v1.17.4: Server-side autocomplete via POST /complete.
-     * Returns dynamic command list + path completions + @file refs.
+     *
+     * Unified entry point for all autocomplete: slash commands +
+     * aliases, subcommands (/tools, /usage, /checkpoint, /status,
+     * /theme), dynamic /model + /provider name lookups, path-arg
+     * completion, @file references, and @git/@tree/@clipboard/@url
+     * context providers — everything goes through the engine's
+     * CompletionProvider.
+     *
+     * The old `handleSearchFilesForAutocomplete` method was retired
+     * in v1.17.4 because the engine now handles @file refs natively
+     * and returns `@git` / `@tree` / `@clipboard` / `@url` alongside
+     * the filesystem results.
      */
     private async handleComplete(buffer: string, cursor: number) {
         if (!this._view) { return; }

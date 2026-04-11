@@ -47,13 +47,12 @@ const TIME_GAP_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes - show divider after t
 const autocompleteDropdown = document.getElementById('autocompleteDropdown');
 let autocompleteItems = [];
 let autocompleteSelectedIndex = -1;
-let autocompleteMode = null; // 'file', 'command', or null
-let autocompleteQuery = '';
-let autocompleteStartPos = 0;
-let autocompleteDisabled = false; // Disabled for special providers (@git, @tree)
 
-// v1.17.4: Slash commands now fetched dynamically from server via POST /complete.
-// No hardcoded list needed — CommandFactory is the single source of truth.
+// v1.17.4: Unified autocomplete via POST /complete. All completion
+// (slash commands, subcommands, path args, @file refs, @git/@tree/
+// @clipboard/@url) flows through one code path — the engine owns the
+// logic, the webview is pure display. No client-side tables, no per-
+// mode state, no @-vs-/ branches.
 
 // Configure marked for GFM
 // Check if marked library loaded
@@ -212,9 +211,8 @@ function fullRender(showTime = false) {
 }
 
 // Autocomplete functions
-function showAutocomplete(items, mode) {
+function showAutocomplete(items) {
     autocompleteItems = items;
-    autocompleteMode = mode;
     autocompleteSelectedIndex = items.length > 0 ? 0 : -1;
     renderAutocomplete();
 }
@@ -222,7 +220,6 @@ function showAutocomplete(items, mode) {
 function hideAutocomplete() {
     autocompleteDropdown.classList.remove('visible');
     autocompleteItems = [];
-    autocompleteMode = null;
     autocompleteSelectedIndex = -1;
 }
 
@@ -232,26 +229,33 @@ function renderAutocomplete() {
         return;
     }
 
-    const headers = { file: 'Files', command: 'Commands', path: 'Path' };
-    const header = headers[autocompleteMode] || 'Suggestions';
-    let html = '<div class="autocomplete-header">' + header + '</div>';
+    // v1.17.4: Single unified renderer. Every item comes from the
+    // engine with a `kind` field we can map directly to an icon —
+    // no more per-mode branching.
+    const iconFor = (kind) => {
+        switch (kind) {
+            case 'dir':         return '📁';
+            case 'file':        return '📄';
+            case 'file_ref':    return '📄';
+            case 'context_ref': return '🏷️';
+            case 'alias':       return '🔗';
+            case 'tool':        return '🔧';
+            case 'model':       return '🤖';
+            case 'provider':    return '🌐';
+            case 'theme':       return '🎨';
+            case 'subcommand':  return '▸';
+            default:            return '⌘';
+        }
+    };
 
+    let html = '<div class="autocomplete-header">Suggestions</div>';
     autocompleteItems.forEach((item, index) => {
         const selectedClass = index === autocompleteSelectedIndex ? ' selected' : '';
-        if (autocompleteMode === 'file') {
-            html += '<div class="autocomplete-item' + selectedClass + '" data-index="' + index + '">' +
-                '<span class="icon">📄</span>' +
-                '<span class="name">' + item.name + '</span>' +
-                '<span class="path">' + (item.path || '') + '</span>' +
-            '</div>';
-        } else {
-            const icon = (item.kind === 'dir') ? '📁' : (item.kind === 'file') ? '📄' : '⌘';
-            html += '<div class="autocomplete-item' + selectedClass + '" data-index="' + index + '">' +
-                '<span class="icon">' + icon + '</span>' +
-                '<span class="name">' + item.name + '</span>' +
-                '<span class="description">' + (item.description || '') + '</span>' +
-            '</div>';
-        }
+        html += '<div class="autocomplete-item' + selectedClass + '" data-index="' + index + '">' +
+            '<span class="icon">' + iconFor(item.kind) + '</span>' +
+            '<span class="name">' + item.name + '</span>' +
+            '<span class="description">' + (item.description || '') + '</span>' +
+        '</div>';
     });
 
     autocompleteDropdown.innerHTML = html;
@@ -273,40 +277,31 @@ function selectAutocompleteItem(index) {
     const value = messageInput.value;
     const cursorPos = messageInput.selectionStart;
 
-    if (autocompleteMode === 'file') {
-        // @file mode — replace from autocompleteStartPos
-        const beforeTrigger = value.substring(0, autocompleteStartPos);
-        const afterCursor = value.substring(cursorPos);
-        // v1.13.8: Don't add @ prefix if name already has it (e.g., @git, @tree)
-        const insertText = item.name.startsWith('@') ? item.name : '@' + item.name;
-        messageInput.value = beforeTrigger + insertText + ' ' + afterCursor;
-        const newPos = beforeTrigger.length + insertText.length + 1;
-        messageInput.setSelectionRange(newPos, newPos);
-    } else if (item.replace_start !== undefined && item.replace_start < 0) {
-        // v1.17.4: Server completion with replace_start (negative offset from cursor)
-        const replaceFrom = cursorPos + item.replace_start;
-        const before = value.substring(0, replaceFrom);
-        const afterCursor = value.substring(cursorPos);
-        const text = item.text || item.name;
-        // For directories, don't add trailing space (user continues typing path)
-        const suffix = item.kind === 'dir' ? '' : ' ';
-        messageInput.value = before + text + suffix + afterCursor;
-        const newPos = before.length + text.length + suffix.length;
-        messageInput.setSelectionRange(newPos, newPos);
-        // If a directory was selected, trigger another completion round
-        if (item.kind === 'dir') {
-            setTimeout(() => checkAutocomplete(), 50);
-        }
-    } else {
-        // Legacy fallback — replace from start
-        const insertText = item.text || item.name;
-        messageInput.value = insertText + ' ';
-        const newPos = insertText.length + 1;
-        messageInput.setSelectionRange(newPos, newPos);
-    }
+    // v1.17.4 unified path: every item from the engine carries a
+    // `replace_start` (negative offset from cursor) so we can handle
+    // commands, subcommands, path args, @file refs, and @git/@tree/
+    // @clipboard/@url through a single insertion path.
+    const replaceStart = (item.replace_start !== undefined) ? item.replace_start : 0;
+    const replaceFrom = cursorPos + replaceStart;
+    const before = value.substring(0, replaceFrom);
+    const afterCursor = value.substring(cursorPos);
+    const text = item.text || item.name;
+
+    // Directories keep the cursor inside the path (no trailing space)
+    // so users can continue typing into subdirs.
+    const suffix = item.kind === 'dir' ? '' : ' ';
+    messageInput.value = before + text + suffix + afterCursor;
+    const newPos = before.length + text.length + suffix.length;
+    messageInput.setSelectionRange(newPos, newPos);
 
     hideAutocomplete();
     messageInput.focus();
+
+    // For directories, re-trigger completion so users can drill down
+    // seamlessly — matches the web + Rich UX.
+    if (item.kind === 'dir') {
+        setTimeout(() => checkAutocomplete(), 50);
+    }
 }
 
 function handleAutocompleteNavigation(e) {
@@ -342,34 +337,26 @@ function checkAutocomplete() {
     const cursorPos = messageInput.selectionStart;
     const textBeforeCursor = value.substring(0, cursorPos);
 
-    // Check for @ file reference
-    const atMatch = textBeforeCursor.match(/@([\w.\-\/]*)$/);
-    if (atMatch) {
-        autocompleteStartPos = cursorPos - atMatch[0].length;
-        autocompleteQuery = atMatch[1];
-        autocompleteDisabled = false;
-        // v1.13.8: Request file suggestions (now includes @git, @tree)
-        vscode.postMessage({ type: 'searchFiles', query: autocompleteQuery || '' });
+    // v1.17.4: Unified autocomplete — all completion (slash commands,
+    // path args, @file refs, @git/@tree/@clipboard/@url) goes through
+    // the engine's POST /complete endpoint. The webview never scans
+    // its own buffer; the engine decides what to return based on the
+    // buffer contents.
+    const hasSlash = textBeforeCursor.startsWith('/');
+    const hasAtRef = /@([\w.\-\/]*)$/.test(textBeforeCursor);
+
+    if (!hasSlash && !hasAtRef) {
+        hideAutocomplete();
         return;
     }
 
-    // Check for / command or /command <path-arg> — delegate to server
-    const cmdMatch = textBeforeCursor.match(/^(\/[\w]*.*)$/);
-    if (cmdMatch) {
-        autocompleteStartPos = 0;
-        autocompleteQuery = cmdMatch[1];
-        _completeRequestId++;
-        vscode.postMessage({
-            type: 'complete',
-            buffer: textBeforeCursor,
-            cursor: cursorPos,
-            requestId: _completeRequestId
-        });
-        return;
-    }
-
-    // No autocomplete trigger found
-    hideAutocomplete();
+    _completeRequestId++;
+    vscode.postMessage({
+        type: 'complete',
+        buffer: textBeforeCursor,
+        cursor: cursorPos,
+        requestId: _completeRequestId
+    });
 }
 
 // Auto-resize textarea
@@ -1193,23 +1180,16 @@ window.addEventListener('message', (event) => {
             lastMessageTime = null; // Reset time tracking
             break;
 
-        case 'fileSuggestions':
-            // Received file suggestions for autocomplete
-            // v1.13.8: Don't show if input was cleared (message sent during async request)
-            if (!messageInput.value.includes('@')) {
+        case 'completionItems':
+            // v1.17.4: Unified server-side completion. Engine handles
+            // slash commands, path args, @file refs, and @git/@tree/
+            // @clipboard/@url context providers — all through one code
+            // path. Mode = 'command' dispatch is used for everything
+            // because the engine provides `replace_start` on every item.
+            if (!messageInput.value.startsWith('/') && !messageInput.value.includes('@')) {
                 break;
             }
-            // Don't show if autocomplete is disabled (e.g., @git, @tree special providers)
-            if (!autocompleteDisabled && (autocompleteMode === 'file' || message.files.length > 0)) {
-                showAutocomplete(message.files, 'file');
-            }
-            break;
-
-        case 'completionItems':
-            // v1.17.4: Server-side completion results (commands + path args)
-            if (!messageInput.value.startsWith('/')) break;
             if (message.items && message.items.length > 0) {
-                // Map server items to autocomplete format
                 const items = message.items.map(item => ({
                     name: item.display || item.text,
                     description: item.description || '',
@@ -1217,8 +1197,7 @@ window.addEventListener('message', (event) => {
                     kind: item.kind,
                     replace_start: item.replace_start || 0,
                 }));
-                const mode = items[0].kind === 'dir' || items[0].kind === 'file' ? 'path' : 'command';
-                showAutocomplete(items, mode);
+                showAutocomplete(items);
             } else {
                 hideAutocomplete();
             }

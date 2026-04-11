@@ -102,13 +102,26 @@ ppxai includes built-in tools for AI-powered development:
 
 ### Autocomplete
 
-The TUI supports tab-completion for tools:
+All four clients (Rich TUI, Textual TUI, Web, VSCode) share the same
+autocomplete via `ppxai/engine/completion.py`. Rich + Textual call it
+in-process; Web + VSCode call it via `POST /complete`.
 
 | Input | Tab Shows |
 |-------|-----------|
 | `/tools <tab>` | enable, disable, list, status, help |
-| `/tools help <tab>` | All available tool names |
+| `/tools help <tab>` | All available tool names (live from `tool_manager.list_tools()`) |
 | `/tools help calc<tab>` | Completes to `calculator` |
+| `/usage show <tab>` | session, provider, model, off |
+| `/checkpoint backend <tab>` | git, file, auto, none |
+| `/theme <tab>` | All themes + `list`, `emoji` subcommands |
+| `/model <tab>` | Models for the active provider (dynamic) |
+| `/provider <tab>` | All configured provider IDs |
+| `/attach <tab>` | Path completion with file/dir discrimination |
+| `@<tab>` | `@git`, `@tree`, `@clipboard`, `@url` + fuzzy file search |
+
+Every item returned by the engine has a stable JSON schema:
+`{text, display, description, kind, replace_start}`. Client-side
+completers are pure glue — they don't own any subcommand tables.
 
 ### Creating Custom Tools
 

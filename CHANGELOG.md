@@ -62,7 +62,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `Ctrl+U` shortcut (`action_attach_shortcut`) toggles file tree for attach
   - Send integration: `pending_files` consumed via `build_multimodal_content()` before `engine.chat()`
   - Public `pending_files` attribute on `PPXAIDEApp` for `CommandContext` proxy
-- **CompletionProvider** (`ppxai/engine/completion.py`) — engine-layer `complete()` function extracted from Rich TUI completer; `POST /complete` server route; Rich `PPXAICompleter` refactored to delegate to engine completion
+- **CompletionProvider** (`ppxai/engine/completion.py`) — engine-layer `complete()` function is the **single source of truth** for autocomplete across all 4 clients. Rich + Textual call in-process; Web + VSCode call via `POST /complete`. Three-phase delivery:
+  - **Task #11 (initial):** extracted `complete()` from Rich TUI, added `POST /complete` route, refactored Rich `PPXAICompleter` to delegate
+  - **Cross-client unification:** extended `complete()` to own **all** completion sources: slash commands + aliases + `/quit`/`/exit` builtins, path args, @file refs, `@git`/`@tree`/`@clipboard`/`@url` context providers, `/tools`/`/usage`/`/checkpoint`/`/status`/`/theme` subcommands (both first- and second-level args like `/usage show <mode>`, `/theme emoji on/off`, `/checkpoint backend <backend>`, `/tools help <tool>`), dynamic `/model <name>` (pulled from active provider config), dynamic `/provider <name>` (pulled from `PROVIDERS`)
+  - **Parity rollout:** Web + VSCode now receive subcommand, model, provider, tool-help, and context-provider suggestions that previously only existed in Rich and Textual. Server route passes `current_provider` and live `tool_names` from `s.engine.tool_manager.list_tools()`
+  - **Client simplification:** Rich `PPXAICompleter` reduced from ~594 lines to ~85 (pure glue). Textual `TextualCompleter` reduced from ~238 lines to ~100. VSCode webview `@` flow unified with `/` flow — both trigger `POST /complete` through one code path. Legacy `handleSearchFilesForAutocomplete` + `fileSuggestions` message type retired in VSCode extension. All client-side subcommand tables (`TOOLS_SUBCOMMANDS`, `THEME_NAMES`, `USAGE_SUBCOMMANDS`, `CHECKPOINT_SUBCOMMANDS`, `STATUS_SUBCOMMANDS`, etc.) deleted — the engine owns them
+  - **Stable schema:** every completion item carries `{text, display, description, kind, replace_start}`. New `kind` values: `subcommand`, `tool`, `model`, `provider`, `theme`, `context_ref`
+  - **Tests:** `tests/test_completion_provider.py` grew from 21 to 39 tests (new classes `TestContextProviderCompletion`, `TestSubcommandCompletion`, `TestDynamicCompletion`). Deleted stale `TestDynamicCommandList`/`TestCacheInvalidation` in `test_completer_dynamic.py` that pinned the old Rich-internal cache. Suite: 2280 passing, zero regressions
+  - **Rule fix:** hoisted the two lazy imports (`CommandFactory`, `engine_complete`) in `ppxai/rich/main.py` — no more `TYPE_CHECKING`-style dodges, all imports at module top per the project's DAG rule
 
 ### Fixed
 

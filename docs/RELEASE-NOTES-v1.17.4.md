@@ -39,10 +39,44 @@ Users can attach files via `/attach` (Rich/Textual), drag-drop (Web), file picke
 - **Textual TUI** — file tree `a` key to attach, `Ctrl+U` shortcut, send integration with multimodal content, footer StatusBar badge
 - **AppState `context_attachments`** — canonical cross-client field pushed via SSE state_sync. All 4 clients subscribe to it for their attachment badge/chip UI. Clickable badge opens file preview.
 
-### Autocomplete (Phase 1 + Task #11)
-- **Dynamic command discovery** — replaced hardcoded 27-entry COMMANDS list with live CommandFactory reader (56+ entries). New commands auto-appear in tab completion.
-- **Shell-style path completion** — `/attach`, `/cd`, `/ls`, `/tree`, `/show`, `/preview` complete file/directory paths with per-command filters, alias resolution, sub-path navigation
-- **CompletionProvider extraction** — `engine/completion.py` shared across all clients. `POST /complete` server endpoint for web/VSCode.
+### Autocomplete — unified across all 4 clients (Phase 1 + Task #11 + parity rollout)
+
+`ppxai/engine/completion.py` is now the **single source of truth** for
+autocomplete across Rich TUI, Textual TUI, Web, and VSCode. Rich and
+Textual call it in-process; Web and VSCode reach it via `POST /complete`.
+All client-side subcommand tables were deleted — the engine owns them.
+
+**Completion sources (all clients, all triggers)**
+- **Slash command names** — live `CommandFactory` reader with aliases (`/att` → `/attach`), hidden-command filtering, and builtin specials (`/quit`, `/exit`). Replaces the pre-v1.17 27-entry hardcoded list; now 56+ entries, auto-discovered.
+- **Shell-style path arguments** — `/attach`, `/cd`, `/ls`, `/tree`, `/show`, `/preview` with per-command file/dir filters, alias resolution, hidden-file opt-in, sub-path navigation.
+- **Subcommands** — `/tools`, `/usage`, `/checkpoint`, `/status`, `/theme` with both first-level args (`/tools en` → `enable`) and second-level args (`/usage show <mode>`, `/theme emoji on/off`, `/checkpoint backend <backend>`, `/tools help <tool>`).
+- **Dynamic `/model <name>`** — reads from the active provider's config so typing `/model gpt-4` surfaces the matching models.
+- **Dynamic `/provider <name>`** — reads from `PROVIDERS` so the list matches whatever is configured.
+- **`@file` references + context providers** — `@git`, `@tree`, `@clipboard`, `@url` appear alongside filesystem matches in one unified dropdown.
+
+**Architectural cleanup**
+- **Rich `PPXAICompleter`**: ~594 lines → ~85 lines. Deleted `_get_commands()` cache (dead code), `_get_files()`, `_get_model_names()`, `_get_provider_names()`, `_get_tool_names()`, `_PATH_ARG_COMMANDS`, `TOOLS_SUBCOMMANDS`, `THEME_NAMES`, `USAGE_SUBCOMMANDS`, `CHECKPOINT_SUBCOMMANDS`, `STATUS_SUBCOMMANDS`, `USAGE_DISPLAY_MODES`, `CHECKPOINT_BACKENDS`, `IGNORE_DIRS`, `_BUILTIN_SPECIAL_COMMANDS`. Hoisted both lazy imports to module top (no more `TYPE_CHECKING`-style dodges).
+- **Textual `TextualCompleter`**: ~238 lines → ~100 lines. Same pattern as Rich — all subcommand tables and dynamic lookup helpers deleted.
+- **VSCode webview**: unified `@` and `/` triggers onto a single `POST /complete` path. Retired `handleSearchFilesForAutocomplete` in `chatPanel.ts` and the `fileSuggestions` webview message type. `selectAutocompleteItem` simplified to one code path using `replace_start` for everything. New `kind → icon` map (📁 dir, 📄 file, 🏷️ context_ref, 🔗 alias, 🔧 tool, 🤖 model, 🌐 provider, 🎨 theme, ▸ subcommand, ⌘ command). Dead state vars (`autocompleteMode`, `autocompleteDisabled`, `autocompleteStartPos`, `autocompleteQuery`) removed.
+- **Web**: no code change needed — already consuming `POST /complete` correctly. New subcommand / model / provider / context-provider items flow through automatically via the existing `replace_start` + `kind` dispatch.
+- **Server route**: `POST /complete` now passes `current_provider` and live `tool_names` from `s.engine.tool_manager.list_tools()` so `/tools help <tab>`, `/model <tab>`, and `/provider <tab>` work for Web and VSCode with the same fidelity Rich + Textual already had.
+
+**Stable JSON schema** (relayed unchanged by the server to HTTP clients):
+```
+{
+  "text":          str,   # text to insert
+  "display":       str,   # dropdown label
+  "description":   str,   # meta/hover text
+  "kind":          str,   # command|alias|dir|file|file_ref|context_ref
+                          # |subcommand|tool|model|provider|theme
+  "replace_start": int    # negative offset from cursor
+}
+```
+
+**Tests**
+- `tests/test_completion_provider.py`: 21 → **39 tests** (+18). New classes: `TestContextProviderCompletion`, `TestSubcommandCompletion`, `TestDynamicCompletion`.
+- Deleted stale `TestDynamicCommandList` + `TestCacheInvalidation` in `tests/test_completer_dynamic.py` — those pinned the Rich-internal cache that's now dead code. Equivalent coverage exists in `test_completion_provider.py`.
+- Full suite: **2280 passing, 2 skipped, zero regressions**.
 
 ## Bug Fixes
 - **`/save <name>` now honors the name argument** — was silently ignoring the user's chosen name
