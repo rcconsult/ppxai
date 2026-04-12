@@ -3,6 +3,7 @@ UI/display functions for the ppxai terminal interface.
 """
 
 import json
+import sys
 from typing import Optional
 
 from rich.console import Console
@@ -317,7 +318,11 @@ def display_models(provider: str = None):
 
 
 def select_model(provider: str = None) -> Optional[str]:
-    """Prompt user to select a model."""
+    """Prompt user to select a model.
+
+    Returns None and prints a clean exit message on Ctrl+C / EOF
+    instead of dumping a stack trace.
+    """
     config = get_provider_config(provider)
     models = config["models"]
 
@@ -326,11 +331,15 @@ def select_model(provider: str = None) -> Optional[str]:
     # Default to first model if only one available
     default_choice = "1" if len(models) == 1 else "2" if "2" in models else "1"
 
-    choice = Prompt.ask(
-        "\n[bold yellow]Select a model[/bold yellow]",
-        choices=list(models.keys()),
-        default=default_choice
-    )
+    try:
+        choice = Prompt.ask(
+            "\n[bold yellow]Select a model[/bold yellow]",
+            choices=list(models.keys()),
+            default=default_choice
+        )
+    except (KeyboardInterrupt, EOFError):
+        console.print("\n[dim]Interrupted.[/dim]")
+        sys.exit(0)
 
     selected_model = models[choice]
     console.print(f"\n[green]Selected:[/green] {selected_model['name']}")
@@ -338,7 +347,10 @@ def select_model(provider: str = None) -> Optional[str]:
 
 
 def select_provider() -> str:
-    """Prompt user to select a provider."""
+    """Prompt user to select a provider.
+
+    Returns cleanly on Ctrl+C / EOF instead of dumping a stack trace.
+    """
     table = Table(title="Available Providers", show_header=True, header_style="bold magenta")
     table.add_column("Choice", style="cyan", width=8)
     table.add_column("Provider", style="green")
@@ -351,11 +363,15 @@ def select_provider() -> str:
 
     console.print(table)
 
-    choice = Prompt.ask(
-        "\n[bold yellow]Select a provider[/bold yellow]",
-        choices=[str(i) for i in range(1, len(provider_keys) + 1)],
-        default="1"
-    )
+    try:
+        choice = Prompt.ask(
+            "\n[bold yellow]Select a provider[/bold yellow]",
+            choices=[str(i) for i in range(1, len(provider_keys) + 1)],
+            default="1"
+        )
+    except (KeyboardInterrupt, EOFError):
+        console.print("\n[dim]Interrupted.[/dim]")
+        sys.exit(0)
 
     selected_provider = provider_keys[int(choice) - 1]
     console.print(f"\n[green]Selected:[/green] {PROVIDERS[selected_provider]['name']}")
