@@ -2037,6 +2037,67 @@
   
 </li>
         
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ppxaide-textual-tui-multimodal-fragility-batch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ppxaide (Textual TUI) multimodal fragility batch
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ppxaide (Textual TUI) multimodal fragility batch">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#r16-textual-event-router-warns-on-unknown-eventtype-latent-gap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R16. Textual event router warns on unknown EventType — latent gap 🟡
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r17-gemini-provider-nonetype-still-fires-despite-prior-fix-regression-or-second-code-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R17. Gemini provider NoneType still fires despite prior fix — regression or second code path 🟡
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r18-attach-path-error-ux-gives-no-hint-when-path-is-wrong-polish" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R18. /attach &lt;path&gt; error UX gives no hint when path is wrong — polish 🟢
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#r19-ppxaide-multimodal-sendreceive-has-downstream-rough-edges-broader-investigation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R19. ppxaide multimodal send/receive has downstream rough edges — broader investigation 🟡
+      
+    </span>
+  </a>
+  
+</li>
+        
           <li class="md-nav__item">
   <a href="#release-plan" class="md-nav__link">
     <span class="md-ellipsis">
@@ -3912,6 +3973,122 @@ ran concurrently with a VSCode session, surfacing the
 alternation mismatch with Perplexity. Not a regression from
 today's commits — the behaviour predates v1.17.4.</p>
 <hr />
+<h2 id="ppxaide-textual-tui-multimodal-fragility-batch">ppxaide (Textual TUI) multimodal fragility batch<a class="headerlink" href="#ppxaide-textual-tui-multimodal-fragility-batch" title="Permanent link">&para;</a></h2>
+<p>Surfaced during v1.17.4 post-release testing on 2026-04-12 around
+23:38-23:44. User comment: "pxpaide multi-modal UI is a bit
+fragile." Four distinct issues observed in one short session; all
+are ppxaide-client-side and none are Rich TUI / web / VSCode
+regressions.</p>
+<hr />
+<h3 id="r16-textual-event-router-warns-on-unknown-eventtype-latent-gap">R16. Textual event router warns on unknown EventType — <strong>latent gap</strong> 🟡<a class="headerlink" href="#r16-textual-event-router-warns-on-unknown-eventtype-latent-gap" title="Permanent link">&para;</a></h3>
+<p><strong>Location.</strong> <code>ppxai/tui/app.py</code> event dispatch code (the event
+router / handler map that routes <code>EventType.*</code> engine events to
+<code>_on_*</code> methods).</p>
+<p><strong>Symptom.</strong> During a normal ppxaide session, the debug log
+captured:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>23:42:22.315 | WARNING | Unknown event type: EventType.WORKING_DIR_CHANGED
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>23:42:22.366 | WARNING | Unknown event type: EventType.INFO
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>23:43:01.547 | WARNING | Unknown event type: EventType.INFO
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>23:43:56.980 | WARNING | Unknown event type: EventType.INFO
+</span></code></pre></div>
+<p><code>WORKING_DIR_CHANGED</code> and <code>INFO</code> are valid engine event types — the
+engine emits them, clients are expected to handle them. In
+ppxaide the dispatcher's static map doesn't include them, so they
+fall through to a "Unknown event type" WARNING and do nothing.
+User sees silence where they should see UI updates (cwd badge
+refresh, intermediate "Processing step N…" info messages).</p>
+<p>Rich TUI handles these fine; web/VSCode handle them via SSE
+<code>state_sync</code>. Only the Textual TUI dispatcher is incomplete.</p>
+<p><strong>Proposed fix.</strong>
+1. Make the dispatch map exhaustive — one entry per every member
+   of <code>EventType</code>, with a plain no-op handler where there's
+   nothing to render yet (so a future engine event addition
+   doesn't re-trigger this warning).
+2. Add a unit test that reflects over <code>EventType</code> and asserts the
+   dispatcher has a handler for every enum member. Architectural
+   drift detector — same pattern as the AppState schema drift
+   test.</p>
+<p><strong>Target.</strong> v1.17.5 — small, visible UX improvement.</p>
+<hr />
+<h3 id="r17-gemini-provider-nonetype-still-fires-despite-prior-fix-regression-or-second-code-path">R17. Gemini provider <code>NoneType</code> still fires despite prior fix — <strong>regression or second code path</strong> 🟡<a class="headerlink" href="#r17-gemini-provider-nonetype-still-fires-despite-prior-fix-regression-or-second-code-path" title="Permanent link">&para;</a></h3>
+<p><strong>Location.</strong> <code>ppxai/engine/providers/gemini.py</code> — <code>response.candidates[0].content.parts</code>
+access + any related access to <code>.candidates</code> / <code>.content</code>.</p>
+<p><strong>Symptom.</strong> Log at 23:41:16.902:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>ERROR | Stream error from thread: Gemini error (TypeError): &#39;NoneType&#39; object is not iterable
+</span></code></pre></div></p>
+<p>An earlier session landed a <code>.parts</code> null-check fix for exactly
+this kind of error. Either:
+  1. The fix wasn't included in the v1.17.4 release binary (unlikely
+     given it was a focused commit, but worth verifying by grepping
+     the installed server binary strings)
+  2. There's a <strong>second code path</strong> that also dereferences
+     <code>.candidates[0].content.parts</code> or <code>.candidates[0].parts</code>
+     without the same null-check, and it only fires under specific
+     conditions (first turn, empty content, block_reason set on
+     candidate, etc.)</p>
+<p><strong>Proposed fix.</strong>
+1. Verify the earlier null-check guard is live in v1.17.4 server
+   binary. If not, patch-release.
+2. Grep <code>gemini.py</code> for every <code>.candidates[</code> / <code>.content.parts</code> /
+   <code>.parts</code> access and confirm each has a guard against None or
+   missing index.
+3. Add a unit test with a mock Gemini response where
+   <code>candidates[0].content.parts</code> is None — assert no TypeError.</p>
+<p><strong>Target.</strong> v1.17.5 — confirm scope first (regression vs. second
+path); if regression → fast-track to a v1.17.5-rc patch release.</p>
+<hr />
+<h3 id="r18-attach-path-error-ux-gives-no-hint-when-path-is-wrong-polish">R18. <code>/attach &lt;path&gt;</code> error UX gives no hint when path is wrong — <strong>polish</strong> 🟢<a class="headerlink" href="#r18-attach-path-error-ux-gives-no-hint-when-path-is-wrong-polish" title="Permanent link">&para;</a></h3>
+<p><strong>Location.</strong> <code>ppxai/commands/attach.py</code> — file-not-found error
+path in <code>handle_attach()</code>.</p>
+<p><strong>Symptom.</strong> User tried <code>/attach resources/ppxai-vscode-v1.17.3.png</code>,
+got a generic <code>ErrorResult</code> ("file not found"). Actual file was in
+<code>docs/</code>, not <code>resources/</code>. User had to retry twice to find it. The
+directory listing would have disambiguated the retry immediately.</p>
+<p><strong>Proposed fix.</strong>
+1. When the path doesn't exist, enumerate the parent directory
+   (if it exists) and show the 5 closest matches by
+   <code>difflib.get_close_matches(target_name, os.listdir(parent))</code>.
+2. If the parent directory itself doesn't exist, walk up to the
+   first existing ancestor and suggest sibling directories.
+3. Error message template:
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>File not found: resources/ppxai-vscode-v1.17.3.png
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>Nearest matches in resources/: ppxai-tui-preview.png, ppxai-original-preview.png, ppxai-tui-preview-48.png
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>(check cwd with /pwd, list with /ls)
+</span></code></pre></div></p>
+<p><strong>Target.</strong> v1.17.5 — trivial, high UX return.</p>
+<hr />
+<h3 id="r19-ppxaide-multimodal-sendreceive-has-downstream-rough-edges-broader-investigation">R19. ppxaide multimodal send/receive has downstream rough edges — <strong>broader investigation</strong> 🟡<a class="headerlink" href="#r19-ppxaide-multimodal-sendreceive-has-downstream-rough-edges-broader-investigation" title="Permanent link">&para;</a></h3>
+<p><strong>Location.</strong> Full ppxaide multimodal flow — <code>build_multimodal_content()</code>,
+send path, stream handlers for multimodal assistant responses.</p>
+<p><strong>Symptom.</strong> Same session as R16/R17:
+<div class="language-text highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>23:42:08.435 | INFO  | Sending multimodal: 1 file(s), 2 part(s)    ← send succeeded
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>23:44:38.267 | DEBUG | Handler returned: ErrorResult                ← downstream failure
+</span></code></pre></div></p>
+<p>The attach + send worked (multimodal payload hit the engine fine),
+but something downstream returned ErrorResult 2.5 minutes later.
+Without the exact error message in the log this needs live repro
+to diagnose. Possible culprits:
+  - Assistant response rendering for mixed text+image content
+  - Stream event ordering when the model pauses between text and
+    tool_call blocks in a multimodal reply
+  - <code>pending_files</code> cleanup after send leaving stale state
+  - <code>context_attachments</code> badge rendering mid-stream</p>
+<p><strong>Proposed fix.</strong>
+Scope this as a <strong>focused multimodal stress test for ppxaide</strong>:
+1. Attach via <code>/attach</code>, <code>Ctrl+U</code>, and file-tree <code>a</code> — three entry
+   points should all produce identical results
+2. Send with images only, text+image, PDF+text, PDF alone, image
+   with streaming assistant reply containing tool calls
+3. Run through full lifecycle: attach → send → stream → tool call
+   → tool result → stream → final → save → restore → re-verify UI
+   state
+4. Capture all ErrorResult returns with the actual error message
+   (currently the log only reports the result type)</p>
+<p><strong>Target.</strong> v1.17.5 or v1.17.6 — sized like a half-day of focused
+Textual TUI session testing + fixes. Natural companion to R16
+(exhaustive event dispatcher — once everything routes, debugging
+the actual handler issues gets much easier).</p>
+<hr />
 <h3 id="release-plan">Release plan<a class="headerlink" href="#release-plan" title="Permanent link">&para;</a></h3>
 <p><strong>v1.17.4 — ship as-is.</strong> Current branch HEAD is release-ready. R1,
 R2, R3, R4, R6, R7, R11, <strong>R13</strong> are fixed; plus the event-bus
@@ -3956,6 +4133,30 @@ after v1.17.4 ships.</p>
 <td>🟡 VSCode + Perplexity alternation</td>
 <td>~1 hr + test</td>
 <td>VSCode context-only <code>/chat</code> triggers upstream 400; hold or merge into user turn</td>
+</tr>
+<tr>
+<td><strong>R16</strong></td>
+<td>🟡 ppxaide event dispatch</td>
+<td>~30 min + test</td>
+<td>Textual TUI dispatcher must handle every <code>EventType</code>; eliminates silent "Unknown event type" WARNINGs</td>
+</tr>
+<tr>
+<td><strong>R17</strong></td>
+<td>🟡 Gemini NoneType 2nd path</td>
+<td>~1 hr + test</td>
+<td>confirm earlier <code>.parts</code> null-check is live in release binary; grep for second deref site</td>
+</tr>
+<tr>
+<td><strong>R18</strong></td>
+<td>🟢 <code>/attach</code> error UX</td>
+<td>~30 min</td>
+<td><code>difflib.get_close_matches</code> on file-not-found; list sibling suggestions</td>
+</tr>
+<tr>
+<td><strong>R19</strong></td>
+<td>🟡 ppxaide multimodal rough edges</td>
+<td>~half day</td>
+<td>focused stress test of ppxaide multimodal flow (attach entry points × payload types × lifecycle); fix downstream ErrorResult captured post-send</td>
 </tr>
 <tr>
 <td><strong>R5</strong></td>
