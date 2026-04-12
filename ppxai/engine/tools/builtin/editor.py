@@ -16,6 +16,10 @@ from typing import Optional, Dict, Any
 
 from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
+from .syntax_validator import (
+    validate_candidate_content,
+    format_validation_error,
+)
 
 
 def _atomic_replace(temp_path: Path, target_path: Path, max_retries: int = 3):
@@ -160,6 +164,18 @@ class ApplyPatchTool(BaseTool):
                         f"Try using write_file tool to overwrite the file directly."
                     )
 
+                # R13: cheap post-apply syntax check. Catches silent
+                # corruption when the model's diff context matched the
+                # wrong function / lines and produced syntactically
+                # broken output. We validate BEFORE writing, so failure
+                # leaves the file untouched — no rollback needed.
+                ok, language, err = validate_candidate_content(str(path), new_content)
+                if not ok:
+                    return format_validation_error(
+                        file_path, language or "file", err or "parse failed",
+                        tool_name="apply_patch",
+                    )
+
                 # Register with checkpoint manager before writing
                 _register_checkpoint_file(self.engine, path)
 
@@ -290,6 +306,16 @@ class ReplaceBlockTool(BaseTool):
                 # Perform replacement
                 new_content = content.replace(search, replace, 1)
 
+                # R13: syntax-validate before committing. A replace_block
+                # that straddled a boundary or dropped a closing brace
+                # would otherwise silently corrupt the file.
+                ok, language, err = validate_candidate_content(str(path), new_content)
+                if not ok:
+                    return format_validation_error(
+                        file_path, language or "file", err or "parse failed",
+                        tool_name="replace_block",
+                    )
+
                 # Register with checkpoint manager before writing
                 _register_checkpoint_file(self.engine, path)
 
@@ -407,6 +433,18 @@ class InsertTextTool(BaseTool):
 
                 # Insert text
                 lines.insert(insert_idx, text)
+
+                # R13: syntax-validate the combined content before writing.
+                # Particularly useful for insert_text — a snippet pasted at
+                # the wrong line (wrong indentation, mid-expression) can
+                # break a file without the model noticing.
+                new_content = ''.join(lines)
+                ok, language, err = validate_candidate_content(str(path), new_content)
+                if not ok:
+                    return format_validation_error(
+                        file_path, language or "file", err or "parse failed",
+                        tool_name="insert_text",
+                    )
 
                 # Register with checkpoint manager before writing
                 _register_checkpoint_file(self.engine, path)
@@ -535,6 +573,17 @@ class DeleteLinesTool(BaseTool):
 
                 # Delete lines
                 new_lines = lines[:start_idx] + lines[end_idx:]
+
+                # R13: syntax-validate after deletion. Dropping a closing
+                # brace, an `except:` block, or a function body can leave
+                # the file unparseable — we catch it before the write.
+                new_content = ''.join(new_lines)
+                ok, language, err = validate_candidate_content(str(path), new_content)
+                if not ok:
+                    return format_validation_error(
+                        file_path, language or "file", err or "parse failed",
+                        tool_name="delete_lines",
+                    )
 
                 # Register with checkpoint manager before writing
                 _register_checkpoint_file(self.engine, path)

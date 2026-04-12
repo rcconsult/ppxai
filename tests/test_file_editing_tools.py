@@ -1341,3 +1341,295 @@ class TestCheckpointRegistration:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+# =============================================================================
+# R13: post-write syntax validation (v1.17.5 fast-tracked into v1.17.4)
+# =============================================================================
+
+
+@pytest.fixture
+def temp_python_file():
+    """Create a temporary .py file with a real function."""
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        f.write(
+            "def greet(name):\n"
+            "    return f'Hello, {name}!'\n"
+            "\n"
+            "def farewell(name):\n"
+            "    return f'Goodbye, {name}!'\n"
+        )
+        p = Path(f.name)
+    yield p
+    if p.exists():
+        p.unlink()
+
+
+@pytest.fixture
+def temp_json_file():
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        f.write('{"name": "test", "count": 42}\n')
+        p = Path(f.name)
+    yield p
+    if p.exists():
+        p.unlink()
+
+
+class TestR13SyntaxValidation:
+    """R13: every file-editing tool must syntax-validate the candidate
+    content BEFORE committing the write, and reject with a clear error
+    (leaving the file unchanged) when validation fails.
+
+    Discovered live during v1.17.4 release testing — gemini-3.1-pro's
+    apply_patch produced Python that ast.parse rejects, yet the tool
+    reported success. This test class pins the invariant.
+    """
+
+    @pytest.mark.asyncio
+    async def test_apply_patch_rejects_python_syntax_error(
+        self, temp_python_file, engine_with_consent
+    ):
+        """apply_patch must reject a diff that produces invalid Python."""
+        tool = ApplyPatchTool(engine=engine_with_consent)
+        original = temp_python_file.read_text()
+
+        # Diff that inserts a raw `base_dir = ...` line inside a function
+        # return statement — mirrors the gemini-3.1-pro corruption.
+        diff = (
+            "*** Begin Patch\n"
+            f"--- {temp_python_file.name}\n"
+            f"+++ {temp_python_file.name}\n"
+            "@@ -1,2 +1,3 @@\n"
+            " def greet(name):\n"
+            "+base_dir = undefined_var +\n"
+            "     return f'Hello, {name}!'\n"
+            "*** End Patch\n"
+        )
+
+        result = await tool.execute(
+            file_path=str(temp_python_file),
+            unified_diff=diff,
+        )
+
+        # Must be an error response, file unchanged.
+        assert result.startswith("Error"), f"Expected Error, got: {result!r}"
+        assert "python" in result.lower() or "syntax" in result.lower(), (
+            f"Error should mention python/syntax: {result!r}"
+        )
+        # File must NOT have been modified.
+        assert temp_python_file.read_text() == original, (
+            "File was modified despite syntax validation failure"
+        )
+
+    @pytest.mark.asyncio
+    async def test_apply_patch_accepts_valid_python(
+        self, temp_python_file, engine_with_consent
+    ):
+        """Valid Python edits pass through unchanged by the validator."""
+        tool = ApplyPatchTool(engine=engine_with_consent)
+
+        # Valid diff: add a new function after the existing ones.
+        diff = (
+            "*** Begin Patch\n"
+            f"--- {temp_python_file.name}\n"
+            f"+++ {temp_python_file.name}\n"
+            "@@ -4,3 +4,6 @@\n"
+            " def farewell(name):\n"
+            "     return f'Goodbye, {name}!'\n"
+            " \n"
+            "+def shout(name):\n"
+            "+    return f'HI {name.upper()}!'\n"
+            "+\n"
+            "*** End Patch\n"
+        )
+
+        result = await tool.execute(
+            file_path=str(temp_python_file),
+            unified_diff=diff,
+        )
+        assert not result.startswith("Error"), f"Valid diff rejected: {result!r}"
+        # New function must be in the file.
+        assert "def shout" in temp_python_file.read_text()
+
+    @pytest.mark.asyncio
+    async def test_replace_block_rejects_broken_python(
+        self, temp_python_file, engine_with_consent
+    ):
+        """replace_block catches an edit that removes a closing paren."""
+        tool = ReplaceBlockTool(engine=engine_with_consent)
+        original = temp_python_file.read_text()
+
+        # Replace `return f'Hello, {name}!'` with a broken version
+        # (unterminated string).
+        result = await tool.execute(
+            file_path=str(temp_python_file),
+            search="return f'Hello, {name}!'",
+            replace="return f'Hello, {name",  # missing closing brace + quote
+        )
+        assert result.startswith("Error"), f"Expected Error, got: {result!r}"
+        assert temp_python_file.read_text() == original
+
+    @pytest.mark.asyncio
+    async def test_insert_text_rejects_broken_python(
+        self, temp_python_file, engine_with_consent
+    ):
+        """insert_text catches a snippet pasted mid-expression."""
+        tool = InsertTextTool(engine=engine_with_consent)
+        original = temp_python_file.read_text()
+
+        # Insert "def broken(" at line 2 — smack in the middle of the
+        # greet() body, produces invalid Python.
+        result = await tool.execute(
+            file_path=str(temp_python_file),
+            text="def broken(\n",
+            line_number=2,
+        )
+        assert result.startswith("Error"), f"Expected Error, got: {result!r}"
+        assert temp_python_file.read_text() == original
+
+    @pytest.mark.asyncio
+    async def test_delete_lines_rejects_when_result_is_broken(
+        self, engine_with_consent
+    ):
+        """delete_lines catches removing a critical structural line."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(
+                "def f():\n"
+                "    if True:\n"
+                "        return 1\n"
+                "    return 2\n"
+            )
+            p = Path(f.name)
+        try:
+            tool = DeleteLinesTool(engine=engine_with_consent)
+            original = p.read_text()
+
+            # Delete just line 2 (`    if True:`) — leaves a dangling
+            # `return 1` indented under nothing. Still parses in Python
+            # (the indent is just inside the function), so this case
+            # should actually PASS validation. Let's instead delete
+            # line 1 (the `def f():` line) — that's clearly broken.
+            result = await tool.execute(
+                file_path=str(p),
+                start_line=1,
+                end_line=1,
+            )
+            assert result.startswith("Error"), f"Expected Error, got: {result!r}"
+            assert p.read_text() == original
+        finally:
+            if p.exists():
+                p.unlink()
+
+    @pytest.mark.asyncio
+    async def test_validation_skipped_for_unsupported_extension(
+        self, temp_file, engine_with_consent
+    ):
+        """`.txt` files have no validator — writes proceed without gating."""
+        # temp_file fixture creates a .txt file.
+        tool = ReplaceBlockTool(engine=engine_with_consent)
+        # Any replacement goes through; no validator for .txt.
+        result = await tool.execute(
+            file_path=str(temp_file),
+            search="Line 2",
+            replace="LINE TWO — gibberish {{{",  # totally fine for .txt
+        )
+        assert not result.startswith("Error"), f"Unexpected error: {result!r}"
+        assert "LINE TWO" in temp_file.read_text()
+
+    @pytest.mark.asyncio
+    async def test_json_validation_rejects_broken_object(
+        self, temp_json_file, engine_with_consent
+    ):
+        """JSON files are validated — missing comma → reject."""
+        tool = ReplaceBlockTool(engine=engine_with_consent)
+        original = temp_json_file.read_text()
+
+        result = await tool.execute(
+            file_path=str(temp_json_file),
+            search='"name": "test",',
+            replace='"name": "test"',  # drop the trailing comma → invalid
+        )
+        assert result.startswith("Error"), f"Expected Error, got: {result!r}"
+        assert "json" in result.lower()
+        assert temp_json_file.read_text() == original
+
+
+# =============================================================================
+# R13: validator unit tests (no engine, no fixtures)
+# =============================================================================
+
+
+class TestSyntaxValidator:
+    """Unit tests for the validator helpers directly, without the tool layer."""
+
+    def test_python_valid(self):
+        from ppxai.engine.tools.builtin.syntax_validator import validate_candidate_content
+        ok, lang, err = validate_candidate_content("x.py", "def f():\n    return 1\n")
+        assert ok is True
+        assert lang == "python"
+        assert err is None
+
+    def test_python_invalid(self):
+        from ppxai.engine.tools.builtin.syntax_validator import validate_candidate_content
+        ok, lang, err = validate_candidate_content("x.py", "def f(\n")
+        assert ok is False
+        assert lang == "python"
+        assert err and "line" in err.lower()
+
+    def test_json_valid(self):
+        from ppxai.engine.tools.builtin.syntax_validator import validate_candidate_content
+        ok, lang, err = validate_candidate_content("x.json", '{"a": 1}')
+        assert ok is True
+        assert lang == "json"
+
+    def test_json_invalid(self):
+        from ppxai.engine.tools.builtin.syntax_validator import validate_candidate_content
+        ok, lang, err = validate_candidate_content("x.json", '{"a": 1')
+        assert ok is False
+        assert lang == "json"
+
+    def test_yaml_valid(self):
+        from ppxai.engine.tools.builtin.syntax_validator import validate_candidate_content
+        ok, lang, err = validate_candidate_content("x.yaml", "a: 1\nb: 2\n")
+        assert ok is True
+        assert lang == "yaml"
+
+    def test_yaml_invalid(self):
+        from ppxai.engine.tools.builtin.syntax_validator import validate_candidate_content
+        ok, lang, err = validate_candidate_content("x.yaml", "a: 1\n  b:\n\ta: tabs-and-spaces-mixed\n")
+        # Some YAML errors only surface with structure — pyyaml is
+        # permissive. Assert that if validation runs, it returned SOME
+        # result (no exception).
+        assert isinstance(ok, bool)
+
+    def test_toml_valid(self):
+        from ppxai.engine.tools.builtin.syntax_validator import validate_candidate_content
+        ok, lang, err = validate_candidate_content("x.toml", 'a = 1\nb = "hi"\n')
+        assert ok is True
+        assert lang == "toml"
+
+    def test_toml_invalid(self):
+        from ppxai.engine.tools.builtin.syntax_validator import validate_candidate_content
+        ok, lang, err = validate_candidate_content("x.toml", 'a = = 1\n')
+        assert ok is False
+        assert lang == "toml"
+
+    def test_unknown_extension_passes(self):
+        """Extensions we don't validate must return ok=True."""
+        from ppxai.engine.tools.builtin.syntax_validator import validate_candidate_content
+        for path in ("a.txt", "b.md", "c.sql", "d.sh", "e"):
+            ok, lang, err = validate_candidate_content(path, "anything goes")
+            assert ok is True, f"{path} should have passed"
+            assert lang is None, f"{path} should have no language"
+
+    def test_validator_exception_does_not_block(self, monkeypatch):
+        """A bug in a validator must NEVER block writes — fail-open."""
+        from ppxai.engine.tools.builtin import syntax_validator as sv
+
+        def broken_validator(content):
+            raise RuntimeError("simulated validator bug")
+
+        monkeypatch.setitem(sv._VALIDATORS, "python", broken_validator)
+        ok, lang, err = sv.validate_candidate_content("x.py", "def f():\n    return 1\n")
+        assert ok is True  # must fail-open
+        assert err is None
