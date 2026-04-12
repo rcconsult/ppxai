@@ -1,10 +1,29 @@
 import { test, expect } from '@playwright/test';
 import * as path from 'path';
+import * as fs from 'fs';
 
 const harnessPath = path.resolve(__dirname, 'app-state-harness.html');
 
+// v1.17.4 post-release hotfix: AppState is schema-driven and throws
+// in its constructor if `window.APP_STATE_SCHEMA` is missing. The
+// real web app injects the schema via the FastAPI static route; the
+// E2E harness runs over file:// which blocks synchronous XHR in
+// modern Chromium/Playwright. Read the canonical schema from disk
+// via Node fs and inject it with page.addInitScript — runs BEFORE
+// any page script, guaranteed by Playwright contract.
+const schemaPath = path.resolve(
+  __dirname, '..', '..', 'ppxai', 'engine', 'app_state_schema.json'
+);
+const schemaJson = fs.readFileSync(schemaPath, 'utf-8');
+
 test.describe('AppState', () => {
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript(
+      (schemaJsonArg: string) => {
+        (window as any).APP_STATE_SCHEMA = JSON.parse(schemaJsonArg);
+      },
+      schemaJson,
+    );
     await page.goto(`file://${harnessPath}`);
     await page.waitForSelector('#status:has-text("Ready")');
   });
