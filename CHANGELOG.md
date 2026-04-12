@@ -204,7 +204,7 @@ persistence, disk-scan fallback) all landed this day.
   (`[File: path | N lines total | showing lines X-Y]`) so models
   handle large files without re-reading from the top.
 
-### Deploy (K8s / coder.trad.int)
+### Deploy (K8s / coder)
 
 - **Dockerfile** — added `[data]` pip extras (pypdf, openpyxl, python-pptx, pdf2image) + `poppler-utils` + `libreoffice-nogui` system packages
 - **Data persistence** — `PPXAI_DATA_DIR` moved from ephemeral `/tmp/session` to persistent `/workspace/.ppxai` (workspace PVC with Retain policy)

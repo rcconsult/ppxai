@@ -273,7 +273,7 @@ All in the `[data]` optional extras group: `pip install 'ppxai[data]'`
 **JavaScript (web app):**
 - `xlsx.full.min.js` (SheetJS, 930KB, Apache 2.0) — client-side Excel parsing for split panel preview
 
-## K8s Deployment (coder.trad.int)
+## K8s Deployment (coder)
 
 - **Dockerfile** includes `[data]` extras + system packages
 - **Data persistence** — `PPXAI_DATA_DIR=/workspace/.ppxai` on Retain PVC
