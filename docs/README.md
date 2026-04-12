@@ -25,6 +25,7 @@
 | [Ollama Limitations](ollama-limitations.md) | Local model constraints and workarounds |
 | [Tool Calling](TOOL_CALLING.md) | Native vs prompt-based tool calling (v1.15.3+) |
 | [Installation Guide](INSTALLATION.md) | Install ppxai on any platform |
+| [Debug Logging](DEBUG-LOGGING.md) | `/debug-log` command, persistence, early-startup diagnostics |
 
 ### Technical Reference
 

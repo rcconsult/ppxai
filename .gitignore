@@ -109,3 +109,4 @@ deploy/shared/ppxai-config-local.json
 # MicroK8s raw manifests (contain real IPs, hostnames, LDAP details — replaced by Helm chart)
 deploy/microk8s/
 .mcp.json
+docs/session-log-*.txt

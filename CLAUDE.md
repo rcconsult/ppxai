@@ -680,6 +680,19 @@ code --install-extension ppxai-X.Y.Z.vsix
 
 **Resolved:** TUI Markdown Tables (v1.10.4), Ctrl-C Message Alternation (v1.10.5)
 
+## Debug Logging
+
+Default: **off** for fresh installs. Toggle with `/debug-log on|off`
+(Rich + Textual) or `POST /config/debug-log` (web/VSCode). The flag is
+persisted to `ppxai-config.json → tui.debug_log` and restored inside
+`config.initialize()`, so logging is active **before** any client code
+runs — critical for diagnosing early-startup regressions like silent
+session-recovery failures.
+
+See [docs/DEBUG-LOGGING.md](docs/DEBUG-LOGGING.md) for the full flow
+and [memory/feedback_session_recovery_ordering.md](memory/feedback_session_recovery_ordering.md)
+for the regression pattern this persistence is designed to catch.
+
 ## ppxaide TUI Implementation (CRITICAL)
 
 The `ppxaide` command launches a Textual-based TUI with syntax-highlighted code editing. This section documents key implementation details that MUST be preserved.
