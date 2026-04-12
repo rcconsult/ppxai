@@ -317,6 +317,20 @@ model_hints:
     - "If a tool call was truncated, do NOT repeat it. Break the work into smaller patches or use a different tool."
     - "Do NOT mention tools in your response that you didn't actually call."
     - "After calling a tool, provide minimal response - let the tool output speak for itself."
+  # gemini-3-flash* — benchmarked 2026-04-12.
+  # Best score: 74.3% WITH hints (8 hints). Tuning attempt with 14 hints
+  # scored 65.3% (−9.0% regression) — aggressive "MUST/NEVER/CRITICAL"
+  # language broke code_editing (−81.8%) by disrupting Flash's natural
+  # tool-call-only flow. Reverted to the working 8 + cherry-picked the
+  # 2 new hints that demonstrably fixed specific failures without
+  # regressions: contradiction_detection and information_gathering.
+  #
+  # Remaining 5 failures (stable, resist hint tuning):
+  #   - respects_tool_failure: model returns empty content (Flash trait)
+  #   - repeated_failure_acknowledgment: same pattern
+  #   - consecutive_tool_loop: 0/5 steps (deep agentic chain limit)
+  #   - error_recovery_chain: 1/4 steps
+  #   - tool_call_efficiency: 0 calls in efficiency test scenario
   "gemini-3-flash*":
     - "You excel at code editing - use apply_patch confidently for all file modifications."
     - "Include all necessary imports and context in patches."
@@ -326,6 +340,8 @@ model_hints:
     - "Let the patch contain all code changes - your response can briefly confirm the action taken."
     - "For complex patches (indentation, multiline): Include ALL affected lines with proper context (3+ lines before/after)."
     - "replace_block requires ALL 3 parameters: file_path, search, replace — NEVER omit search."
+    - "When a tool result contradicts what you expected, note the discrepancy before proceeding."
+    - "When asked to find or review multiple files, call read_file for each relevant file found — do not stop after listing the directory."
   # gemini-3.1-flash-lite* — cheapest Gemini 3 tier. NOT BENCHMARKED yet.
   # Stub hints modelled on gemini-3-flash* (benchmarked 100%) + tightened for the
   # smaller/cheaper variant's known failure modes on long tasks.

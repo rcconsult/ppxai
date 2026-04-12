@@ -398,10 +398,34 @@
         "agents_md_mode": "with"
       },
       {
+        "filename": "gemini_gemini-3-flash-preview_2026-04-12_4a8240e3.json",
+        "timestamp": "2026-04-12T12:40:37.655506",
+        "overall_score": 70.29702970297029,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "gemini_gemini-3-flash-preview_2026-04-12_76ff6e60.json",
+        "timestamp": "2026-04-12T12:35:26.007869",
+        "overall_score": 74.25742574257426,
+        "agents_md_mode": "with"
+      },
+      {
         "filename": "gemini_gemini-3-flash-preview_2026-04-12_eac6ab63.json",
         "timestamp": "2026-04-12T00:30:04.970192",
         "overall_score": 67.32673267326733,
         "agents_md_mode": "without"
+      },
+      {
+        "filename": "gemini_gemini-3-flash-preview_2026-04-12_ef4b42ec.json",
+        "timestamp": "2026-04-12T13:00:12.354060",
+        "overall_score": 65.34653465346535,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-3-flash-preview_2026-04-12_f99df408.json",
+        "timestamp": "2026-04-12T13:22:17.219011",
+        "overall_score": 74.75247524752476,
+        "agents_md_mode": "with"
       }
     ],
     "gemini/gemini-3-pro-preview": [
@@ -458,10 +482,22 @@
         "agents_md_mode": "without"
       },
       {
+        "filename": "gemini_gemini-3.1-pro-preview_2026-04-12_b8b2d33f.json",
+        "timestamp": "2026-04-12T13:12:45.049044",
+        "overall_score": 71.58415841584159,
+        "agents_md_mode": "with"
+      },
+      {
         "filename": "gemini_gemini-3.1-pro-preview_2026-04-12_bb631a66.json",
         "timestamp": "2026-04-12T01:48:54.171130",
         "overall_score": 64.85148514851485,
         "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-3.1-pro-preview_2026-04-12_d8f270c0.json",
+        "timestamp": "2026-04-12T14:06:44.099057",
+        "overall_score": 66.83168316831683,
+        "agents_md_mode": "without"
       }
     ],
     "gemini/gemma-4-31b-it": [
@@ -1699,10 +1735,38 @@
     },
     {
       "pair": "gemini/gemini-3-flash-preview",
+      "filename": "gemini_gemini-3-flash-preview_2026-04-12_4a8240e3.json",
+      "timestamp": "2026-04-12T12:40:37.655506",
+      "overall_score": 70.29702970297029,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "gemini/gemini-3-flash-preview",
+      "filename": "gemini_gemini-3-flash-preview_2026-04-12_76ff6e60.json",
+      "timestamp": "2026-04-12T12:35:26.007869",
+      "overall_score": 74.25742574257426,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-3-flash-preview",
       "filename": "gemini_gemini-3-flash-preview_2026-04-12_eac6ab63.json",
       "timestamp": "2026-04-12T00:30:04.970192",
       "overall_score": 67.32673267326733,
       "agents_md_mode": "without"
+    },
+    {
+      "pair": "gemini/gemini-3-flash-preview",
+      "filename": "gemini_gemini-3-flash-preview_2026-04-12_ef4b42ec.json",
+      "timestamp": "2026-04-12T13:00:12.354060",
+      "overall_score": 65.34653465346535,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-3-flash-preview",
+      "filename": "gemini_gemini-3-flash-preview_2026-04-12_f99df408.json",
+      "timestamp": "2026-04-12T13:22:17.219011",
+      "overall_score": 74.75247524752476,
+      "agents_md_mode": "with"
     },
     {
       "pair": "gemini/gemini-3-pro-preview",
@@ -1762,10 +1826,24 @@
     },
     {
       "pair": "gemini/gemini-3.1-pro-preview",
+      "filename": "gemini_gemini-3.1-pro-preview_2026-04-12_b8b2d33f.json",
+      "timestamp": "2026-04-12T13:12:45.049044",
+      "overall_score": 71.58415841584159,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-3.1-pro-preview",
       "filename": "gemini_gemini-3.1-pro-preview_2026-04-12_bb631a66.json",
       "timestamp": "2026-04-12T01:48:54.171130",
       "overall_score": 64.85148514851485,
       "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-3.1-pro-preview",
+      "filename": "gemini_gemini-3.1-pro-preview_2026-04-12_d8f270c0.json",
+      "timestamp": "2026-04-12T14:06:44.099057",
+      "overall_score": 66.83168316831683,
+      "agents_md_mode": "without"
     },
     {
       "pair": "gemini/gemma-4-31b-it",
