@@ -1519,20 +1519,37 @@ of iteration 2.
 
 ---
 
-### Proposed merge order (updated)
+### Release plan
 
-R1 + R7 already landed. R2, R3, R4, R6 already landed. Remaining
-items targeted for v1.17.5 at the user's request:
+**v1.17.4 — ship as-is.** Current branch HEAD is release-ready. R1,
+R2, R3, R4, R6, R7 are fixed; plus the event-bus coroutine-drop fix,
+disk-scan session fallback, and debug-log persistence all landed
+during testing. Don't implement R8+ in this release.
 
-| # | Priority | Effort | Target |
+**v1.17.5 — collected scope (NOT YET IMPLEMENTED).** The items below
+are tracked here so they're not lost; implementation deferred until
+after v1.17.4 ships.
+
+| # | Priority | Effort | Notes |
 |---|---|---|---|
-| **R8** | 🟡 polish R3 | ~30 min + test | v1.17.5 |
-| **R9** | 🟡 correctness edge | ~1 hr + 2 tests | v1.17.5 |
-| **R10** | 🟢 micro-perf | ~30 min + test | v1.17.5 |
-| **R11** | 🟢 crash-edge | ~1 hr (option 2 then 1) | v1.17.5 |
-| **R5** | 🟢 schema change, retires R7 | ~3 hr + cross-client sweep | v1.17.5 |
-| **R12** (Opt 1) | 🟢 UX progress signal | ~1 hr + test | v1.17.5 or v1.17.6 |
-| **R12** (Opt 3) | 🟢 full streaming tool loop | ~1 day + test harness | v1.18.x |
+| **R8** | 🟡 polish R3 | ~30 min + test | CSV sniff on 8 KB, stream rest via `BytesIO`+`TextIOWrapper` |
+| **R9** | 🟡 correctness edge | ~1 hr + 2 tests | `validate_and_fix_alternation` — prefer messages with `tool_calls`, warn before dropping trailing user |
+| **R10** | 🟢 micro-perf | ~30 min + test | cache `_has_multimodal_attachments` on Session, invalidate from mutation sites |
+| **R11** | 🟢 crash-edge | ~1 hr | atomic flat↔directory session transition (option 2 belt first, then option 1) |
+| **R5** | 🟢 schema change | ~3 hr + cross-client sweep | first-class `uploaded_file` content type, retires R7 workaround |
+| **R12** (Opt 1) | 🟢 UX progress signal | ~1 hr + test | post-iteration intermediate-prose event |
+
+**v1.18.x — deferred structural work**
+
+| # | Scope |
+|---|---|
+| #1 (pre-existing) | Scanned PDF auto-route through VL when no text layer |
+| #3 (pre-existing) | `_render_chart_to_axes` matplotlib chart rendering |
+| #4 (pre-existing) | Native PDF passthrough — watch for provider-API optimization |
+| #5 (pre-existing) | Audio/video input — Gemini Live / OpenAI Realtime |
+| #6 (pre-existing) | Image generation output — Nano Banana |
+| #7 (pre-existing) | Session migration tool — uncertain necessity, revisit at planning |
+| **R12** (Opt 3) | Full streaming tool loop — provider-adapter sweep + test harness |
 
 ---
 
