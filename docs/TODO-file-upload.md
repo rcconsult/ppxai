@@ -932,11 +932,16 @@ TUI status bar does today.
 - [ ] **Image generation output — Gemini Nano Banana.** Engine has no
   assistant-emitted `image_url` rendering path; no client displays
   model-generated images. Target: v1.18.x.
-- [ ] **Session migration tool** — no `scripts/migrate*` or
-  `session_migration*` module. Likely not needed in practice (old
-  sessions have no multimodal content), but an audit + script would
-  close the question. Target: v1.18.x (lowest priority — ship only if
-  we hit a migration bug in the wild).
+- [?] **Session migration tool** — 🔭 **Uncertain necessity, tracked
+  for visibility.** No `scripts/migrate*` or `session_migration*`
+  module exists. Likely not needed in practice (old sessions have no
+  multimodal content, so they load fine under the current format
+  dual-path). Keeping the item on the list — explicitly at v1.18.x —
+  so we don't lose sight of the question if a migration bug ever
+  surfaces in the wild (orphan flat/dir sessions, field rename, etc.).
+  Action: revisit at v1.18.x planning time; either ship a thin
+  `scripts/migrate_sessions.py` audit + converter, or explicitly
+  close this item once we've confirmed no migration path is needed.
 
 ---
 
