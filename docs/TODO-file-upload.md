@@ -910,6 +910,215 @@ TUI status bar does today.
 
 ---
 
+## Pre-merge Review Findings (gpt-5.4, session_20260412_192249)
+
+External review on `feat/file-upload` by gpt-5.4 surfaced these issues.
+Each is verified against the branch; ranked by user-visible impact.
+
+### R1. `/attach remove` doesn't handle PDF/Office attachments — **correctness gap** 🔴
+
+**Symptom.** User uploads a PDF → badge appears in status bar. User runs
+`/attach remove myfile.pdf` → command reports success but badge stays,
+the marker remains in context, and the model continues to see the file
+on the next turn.
+
+**Root cause.** Tracking and removal use different rules.
+[`refresh_context_attachments()`](../ppxai/engine/multimodal_ops.py#L141-L169)
+at lines 141-169 scans **both** structured blocks (`image_url`,
+`input_file`, `file`) **and** `<uploaded_file>` XML markers embedded
+inside `text` blocks. But
+[`remove_context_attachment()`](../ppxai/engine/multimodal_ops.py#L244)
+at line 244 filters only the structured types:
+
+```python
+if btype not in ("image_url", "input_file", "file"):
+    kept.append(block)
+    continue
+```
+
+PDFs and Office files are surfaced as `<uploaded_file name="..." type="..." file_id="..." />`
+tags inside text blocks (the "Phase 2.8+" marker convention), so they
+silently slip through the `continue` and survive removal.
+
+**Proposed fix.**
+1. In `remove_context_attachment()`, add a second pass for `text` blocks
+   that contain `<uploaded_file>` markers. Use the same regex as the
+   tracker (ideally factored into a shared helper — see R6 below).
+2. When a marker matches, either:
+   - strip only the marker substring from the text block (preserves any
+     user-authored text around it), or
+   - if the text block is *only* the marker (+ whitespace), drop the
+     entire block.
+3. Increment `removed_count` and set `mutated = True` so the
+   `on_messages_changed` callback fires and the badge clears.
+
+**Test.** Add a regression test to `tests/test_attach_remove.py` (or
+equivalent) with a user turn containing a mix of: text, image_url block,
+`<uploaded_file pdf>` marker embedded in text, another text block. Call
+`remove_context_attachment(engine, "myfile.pdf")` and assert only the
+marker is stripped.
+
+---
+
+### R2. `files: List[FileAttachment] = []` mutable default — **fragile** 🟡
+
+**Location.** [`ppxai/server/models.py:45`](../ppxai/server/models.py#L45)
+
+**Risk.** Pydantic v2 copies the default for each instance so this
+doesn't cross-contaminate in practice, but the pattern is easy to
+regress when the model is copied, inherited, or ported — and it fails
+static-analysis rules the project has been tightening elsewhere.
+
+**Proposed fix.**
+```python
+from pydantic import BaseModel, Field
+# ...
+files: List[FileAttachment] = Field(default_factory=list)
+```
+
+**Scope.** One line. No behavior change. Add a quick test asserting
+`ChatRequest().files is not ChatRequest().files` (different identity).
+
+---
+
+### R3. `_count_csv_rows_cols()` materializes entire CSV in memory — **performance** 🟡
+
+**Location.** [`ppxai/engine/file_preprocessing.py:359`](../ppxai/engine/file_preprocessing.py#L359)
+
+```python
+reader = _csv.reader(_io.StringIO(text), delimiter=delimiter)
+rows = list(reader)        # ← materializes every row
+```
+
+**Risk.** For the exact use case this function exists for (metadata for
+*large* CSVs that are persisted rather than inlined), loading every row
+into a Python list is the opposite of what we want. A 500 MB CSV
+becomes a multi-GB object graph.
+
+**Proposed fix — streaming count:**
+```python
+reader = _csv.reader(_io.StringIO(text), delimiter=delimiter)
+try:
+    first = next(reader)
+except StopIteration:
+    return 0, 0
+columns = len(first)
+data_rows = sum(1 for _ in reader)   # streaming
+return data_rows, columns
+```
+
+Same semantics, O(1) memory instead of O(n).
+
+**Test.** Existing tests should pass unchanged. Add a test that counts
+rows/cols on a 10 MB synthetic CSV and asserts peak memory stays below
+~50 MB (or just asserts the function returns correctly — the memory
+assertion is nice-to-have).
+
+---
+
+### R4. `has_vision_model()` naming hides sidecar-vs-model distinction — **clarity** 🟡
+
+**Location.** [`ppxai/engine/multimodal_ops.py:285`](../ppxai/engine/multimodal_ops.py#L285)
++ caller at [`ppxai/server/routes/chat.py::_build_chat_payload`](../ppxai/server/routes/chat.py)
+
+**Risk.** The name reads as "is the active model vision-capable?" but
+the implementation checks the VL **sidecar** configuration
+(`tools.vision_model` block). When the active model is vision-capable
+but no sidecar is configured, the function returns False — which reads
+wrong to anyone calling the method by name.
+
+**Proposed fix.** Rename to `has_vision_sidecar()` and update callers:
+- `ppxai/engine/multimodal_ops.py` — the definition
+- `ppxai/engine/client.py:318` — `EngineClient.has_vision_model` facade
+- `ppxai/server/routes/chat.py` — `_build_chat_payload` call site
+- any tests
+
+Add a one-line docstring pointer so future readers who grep for the
+old name land on the new one.
+
+**Alternative (cheaper).** Keep the name, add an explicit note to the
+docstring: *"`has_vision_model` = "is the VL sidecar available?", NOT
+"is the active model vision-capable?" For the latter, check
+`model_profiles.get_profile(model).supports_vision`."* Lower-effort
+but preserves the ambiguity for the next reader.
+
+---
+
+### R5. Uploaded-file metadata lives in free-form text blocks — **design debt** 🟢
+
+**Symptom.** PDFs/Office files are represented as `<uploaded_file>`
+XML markers *inside* text blocks rather than as first-class content
+types. Tracking, removal, rendering, and serialization all need to
+parse the same regex, and any client that forgets to parse it shows
+raw XML to the user.
+
+**Proposed fix (medium-term).** Promote uploaded files to a dedicated
+content-part type:
+
+```json
+{
+  "type": "uploaded_file",
+  "name": "report.pdf",
+  "media_type": "application/pdf",
+  "file_id": "sha256:..."
+}
+```
+
+All four clients (Python engine, Rich, Textual, Web, VSCode) already
+normalize content blocks, so adding a type is a schema change + four
+rendering updates. Session serialization becomes trivial (no regex).
+R1 and R6 collapse into "handle the new type."
+
+**Decision.** Defer to a v1.18.x structural change. Too invasive for
+v1.17.4. Track here so we don't forget.
+
+---
+
+### R6. Shared uploaded-file marker helpers — **small refactor, enables R1** 🟢
+
+**Symptom.** The `<uploaded_file ... />` marker regex and format
+string live in at least three places: the tracker, the generator in
+`file_preprocessing.py`, and (soon) the R1 removal path.
+
+**Proposed fix.** Add to `ppxai/engine/multimodal_ops.py` (or a new
+`ppxai/engine/uploaded_file_marker.py`):
+
+```python
+UPLOADED_FILE_MARKER_RE = re.compile(
+    r'<uploaded_file\s+name="([^"]*)"[^>]*'
+    r'type="([^"]*)"[^>]*'
+    r'file_id="([^"]*)"[^/]*/>'
+)
+
+def format_uploaded_file_marker(name: str, media_type: str, file_id: str) -> str:
+    return f'<uploaded_file name="{name}" type="{media_type}" file_id="{file_id}" />'
+
+def parse_uploaded_file_markers(text: str) -> list[tuple[str, str, str]]:
+    return [(m.group(1), m.group(2), m.group(3))
+            for m in UPLOADED_FILE_MARKER_RE.finditer(text)]
+```
+
+Replace the inline regex in `refresh_context_attachments()` and the
+inline f-string in whichever preprocessor generates the marker. R1's
+removal path consumes the same helpers.
+
+---
+
+### Proposed merge order
+
+Do R2 + R3 + R6 first — small, atomic, low-risk. Then R1 (the real
+bug) on top of R6. R4 and R5 are follow-ups that don't need to land
+for v1.17.4.
+
+1. **R2** — `Field(default_factory=list)` [trivial]
+2. **R3** — streaming CSV count [small, pure function]
+3. **R6** — extract marker helpers [refactor, no behavior change]
+4. **R1** — fix `/attach remove` PDF/Office parity [uses R6; add test]
+5. **R4** — `has_vision_sidecar` rename OR docstring note [optional]
+6. **R5** — first-class `uploaded_file` content type [v1.18.x]
+
+---
+
 ## Key Files (planned)
 
 | File | Purpose |
