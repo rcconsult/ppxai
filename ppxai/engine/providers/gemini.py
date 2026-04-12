@@ -347,7 +347,7 @@ class GeminiProvider(BaseProvider):
                 content = ""
                 reasoning = ""
                 tool_calls = []
-                if response.candidates and response.candidates[0].content:
+                if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
                     for part in response.candidates[0].content.parts:
                         # Handle text parts
                         if hasattr(part, 'text') and part.text:
@@ -428,7 +428,7 @@ class GeminiProvider(BaseProvider):
         )
 
         content = ""
-        if response.candidates and response.candidates[0].content:
+        if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
             for part in response.candidates[0].content.parts:
                 if hasattr(part, 'text') and part.text:
                     content += part.text
