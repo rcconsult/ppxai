@@ -1743,6 +1743,158 @@ today's commits — the behaviour predates v1.17.4.
 
 ---
 
+## ppxaide (Textual TUI) multimodal fragility batch
+
+Surfaced during v1.17.4 post-release testing on 2026-04-12 around
+23:38-23:44. User comment: "pxpaide multi-modal UI is a bit
+fragile." Four distinct issues observed in one short session; all
+are ppxaide-client-side and none are Rich TUI / web / VSCode
+regressions.
+
+---
+
+### R16. Textual event router warns on unknown EventType — **latent gap** 🟡
+
+**Location.** `ppxai/tui/app.py` event dispatch code (the event
+router / handler map that routes `EventType.*` engine events to
+`_on_*` methods).
+
+**Symptom.** During a normal ppxaide session, the debug log
+captured:
+
+```
+23:42:22.315 | WARNING | Unknown event type: EventType.WORKING_DIR_CHANGED
+23:42:22.366 | WARNING | Unknown event type: EventType.INFO
+23:43:01.547 | WARNING | Unknown event type: EventType.INFO
+23:43:56.980 | WARNING | Unknown event type: EventType.INFO
+```
+
+`WORKING_DIR_CHANGED` and `INFO` are valid engine event types — the
+engine emits them, clients are expected to handle them. In
+ppxaide the dispatcher's static map doesn't include them, so they
+fall through to a "Unknown event type" WARNING and do nothing.
+User sees silence where they should see UI updates (cwd badge
+refresh, intermediate "Processing step N…" info messages).
+
+Rich TUI handles these fine; web/VSCode handle them via SSE
+`state_sync`. Only the Textual TUI dispatcher is incomplete.
+
+**Proposed fix.**
+1. Make the dispatch map exhaustive — one entry per every member
+   of `EventType`, with a plain no-op handler where there's
+   nothing to render yet (so a future engine event addition
+   doesn't re-trigger this warning).
+2. Add a unit test that reflects over `EventType` and asserts the
+   dispatcher has a handler for every enum member. Architectural
+   drift detector — same pattern as the AppState schema drift
+   test.
+
+**Target.** v1.17.5 — small, visible UX improvement.
+
+---
+
+### R17. Gemini provider `NoneType` still fires despite prior fix — **regression or second code path** 🟡
+
+**Location.** `ppxai/engine/providers/gemini.py` — `response.candidates[0].content.parts`
+access + any related access to `.candidates` / `.content`.
+
+**Symptom.** Log at 23:41:16.902:
+```
+ERROR | Stream error from thread: Gemini error (TypeError): 'NoneType' object is not iterable
+```
+
+An earlier session landed a `.parts` null-check fix for exactly
+this kind of error. Either:
+  1. The fix wasn't included in the v1.17.4 release binary (unlikely
+     given it was a focused commit, but worth verifying by grepping
+     the installed server binary strings)
+  2. There's a **second code path** that also dereferences
+     `.candidates[0].content.parts` or `.candidates[0].parts`
+     without the same null-check, and it only fires under specific
+     conditions (first turn, empty content, block_reason set on
+     candidate, etc.)
+
+**Proposed fix.**
+1. Verify the earlier null-check guard is live in v1.17.4 server
+   binary. If not, patch-release.
+2. Grep `gemini.py` for every `.candidates[` / `.content.parts` /
+   `.parts` access and confirm each has a guard against None or
+   missing index.
+3. Add a unit test with a mock Gemini response where
+   `candidates[0].content.parts` is None — assert no TypeError.
+
+**Target.** v1.17.5 — confirm scope first (regression vs. second
+path); if regression → fast-track to a v1.17.5-rc patch release.
+
+---
+
+### R18. `/attach <path>` error UX gives no hint when path is wrong — **polish** 🟢
+
+**Location.** `ppxai/commands/attach.py` — file-not-found error
+path in `handle_attach()`.
+
+**Symptom.** User tried `/attach resources/ppxai-vscode-v1.17.3.png`,
+got a generic `ErrorResult` ("file not found"). Actual file was in
+`docs/`, not `resources/`. User had to retry twice to find it. The
+directory listing would have disambiguated the retry immediately.
+
+**Proposed fix.**
+1. When the path doesn't exist, enumerate the parent directory
+   (if it exists) and show the 5 closest matches by
+   `difflib.get_close_matches(target_name, os.listdir(parent))`.
+2. If the parent directory itself doesn't exist, walk up to the
+   first existing ancestor and suggest sibling directories.
+3. Error message template:
+   ```
+   File not found: resources/ppxai-vscode-v1.17.3.png
+   Nearest matches in resources/: ppxai-tui-preview.png, ppxai-original-preview.png, ppxai-tui-preview-48.png
+   (check cwd with /pwd, list with /ls)
+   ```
+
+**Target.** v1.17.5 — trivial, high UX return.
+
+---
+
+### R19. ppxaide multimodal send/receive has downstream rough edges — **broader investigation** 🟡
+
+**Location.** Full ppxaide multimodal flow — `build_multimodal_content()`,
+send path, stream handlers for multimodal assistant responses.
+
+**Symptom.** Same session as R16/R17:
+```
+23:42:08.435 | INFO  | Sending multimodal: 1 file(s), 2 part(s)    ← send succeeded
+23:44:38.267 | DEBUG | Handler returned: ErrorResult                ← downstream failure
+```
+
+The attach + send worked (multimodal payload hit the engine fine),
+but something downstream returned ErrorResult 2.5 minutes later.
+Without the exact error message in the log this needs live repro
+to diagnose. Possible culprits:
+  - Assistant response rendering for mixed text+image content
+  - Stream event ordering when the model pauses between text and
+    tool_call blocks in a multimodal reply
+  - `pending_files` cleanup after send leaving stale state
+  - `context_attachments` badge rendering mid-stream
+
+**Proposed fix.**
+Scope this as a **focused multimodal stress test for ppxaide**:
+1. Attach via `/attach`, `Ctrl+U`, and file-tree `a` — three entry
+   points should all produce identical results
+2. Send with images only, text+image, PDF+text, PDF alone, image
+   with streaming assistant reply containing tool calls
+3. Run through full lifecycle: attach → send → stream → tool call
+   → tool result → stream → final → save → restore → re-verify UI
+   state
+4. Capture all ErrorResult returns with the actual error message
+   (currently the log only reports the result type)
+
+**Target.** v1.17.5 or v1.17.6 — sized like a half-day of focused
+Textual TUI session testing + fixes. Natural companion to R16
+(exhaustive event dispatcher — once everything routes, debugging
+the actual handler issues gets much easier).
+
+---
+
 ### Release plan
 
 **v1.17.4 — ship as-is.** Current branch HEAD is release-ready. R1,
@@ -1763,6 +1915,10 @@ after v1.17.4 ships.
 | **R9** | 🟡 correctness edge | ~1 hr + 2 tests | `validate_and_fix_alternation` — prefer messages with `tool_calls`, warn before dropping trailing user |
 | **R10** | 🟢 micro-perf | ~30 min + test | cache `_has_multimodal_attachments` on Session, invalidate from mutation sites |
 | **R15** | 🟡 VSCode + Perplexity alternation | ~1 hr + test | VSCode context-only `/chat` triggers upstream 400; hold or merge into user turn |
+| **R16** | 🟡 ppxaide event dispatch | ~30 min + test | Textual TUI dispatcher must handle every `EventType`; eliminates silent "Unknown event type" WARNINGs |
+| **R17** | 🟡 Gemini NoneType 2nd path | ~1 hr + test | confirm earlier `.parts` null-check is live in release binary; grep for second deref site |
+| **R18** | 🟢 `/attach` error UX | ~30 min | `difflib.get_close_matches` on file-not-found; list sibling suggestions |
+| **R19** | 🟡 ppxaide multimodal rough edges | ~half day | focused stress test of ppxaide multimodal flow (attach entry points × payload types × lifecycle); fix downstream ErrorResult captured post-send |
 | **R5** | 🟢 schema change | ~3 hr + cross-client sweep | first-class `uploaded_file` content type, retires R7 workaround |
 | **R12** (Opt 1) | 🟢 UX progress signal | ~1 hr + test | post-iteration intermediate-prose event |
 
