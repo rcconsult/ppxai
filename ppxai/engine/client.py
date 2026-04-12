@@ -189,6 +189,20 @@ class EngineClient:
         # Load configuration (including shell command patterns)
         self._load_config()
 
+        # Sync AppState.debug_log from persisted config (v1.17.4 fix).
+        # initialize() already enabled the file logger if tui.debug_log is
+        # true; without this line AppState stays at its default `false` and
+        # the web UI's debug toggle shows OFF even though the server IS
+        # writing to server-debug.log. GET /status then returns stale data
+        # and the whole "debug-log persistence works across restarts"
+        # contract silently breaks for the web and VSCode clients.
+        try:
+            from ..config import get_debug_log_enabled
+            self.state.set("debug_log", bool(get_debug_log_enabled()))
+        except Exception:
+            # Config unavailable (tests, minimal bootstrap) — leave default.
+            pass
+
         # Initialize checkpoint manager with default working directory
         # This ensures TUI has checkpoints available without explicit set_working_dir call
         self._init_checkpoint_manager(self.context_injector.working_dir)

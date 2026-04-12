@@ -743,6 +743,7 @@
     "theme": "catppuccin-mocha",
     "show_version": true,
     "show_cwd": true,
-    "show_datetime": true
+    "show_datetime": true,
+    "debug_log": false
   }
 }
