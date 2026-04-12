@@ -1245,8 +1245,9 @@ class TestBOMHandling:
         tool = ReadFileTool(engine)
         result = await tool.execute(filepath=str(bom_file))
         # BOM should NOT appear in returned content
-        assert not result.startswith('\ufeff')
-        assert result.startswith("/* Spider-Man Theme */")
+        assert '\ufeff' not in result
+        # Result now includes a [File: ...] metadata header before the content
+        assert "/* Spider-Man Theme */" in result
 
 
 class TestCheckpointRegistration:

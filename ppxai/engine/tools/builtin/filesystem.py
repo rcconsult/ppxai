@@ -253,25 +253,41 @@ class ReadFileTool(BaseTool):
     def __init__(self, engine: ToolEngineProtocol):
         self.engine = engine
         self.name = "read_file"
-        self.description = "Read the contents of a text file"
+        self.description = (
+            "Read the contents of a text file. Returns a header with total "
+            "line count so you know the full size. Use offset to continue "
+            "reading from where you left off instead of re-reading from the start."
+        )
         self.parameters = {
             "type": "object",
             "properties": {
                 "filepath": {"type": "string", "description": "Path to the file"},
-                "max_lines": {"type": "integer", "description": "Max lines (default: 1000)"}
+                "offset": {
+                    "type": "integer",
+                    "description": (
+                        "Line number to start reading from (0-indexed, default: 0). "
+                        "Use this to continue reading a large file from where a "
+                        "previous read left off, instead of re-reading from the start."
+                    ),
+                },
+                "max_lines": {"type": "integer", "description": "Max lines to return (default: 1000)"},
             },
             "required": ["filepath"]
         }
 
-    async def execute(self, filepath: str, max_lines: int = 1000, **kwargs) -> str:
+    async def execute(self, filepath: str, offset: int = 0, max_lines: int = 1000, **kwargs) -> str:
         """Read contents of a file.
 
         Args:
             filepath: Path to the file
+            offset: Line number to start from (0-indexed, default: 0)
             max_lines: Maximum lines to read (default: 1000)
 
         Returns:
-            File contents or error message
+            File contents with a header showing total lines, the range
+            returned, and whether more content follows. This metadata
+            lets the model decide whether to request more without
+            re-reading already-seen content.
         """
         try:
             # Resolve path relative to engine's working directory
@@ -294,13 +310,23 @@ class ReadFileTool(BaseTool):
                 return f"Error: Not a file: {filepath}"
 
             with open(path, 'r', encoding='utf-8-sig') as f:
-                lines = f.readlines()[:max_lines]
-                content = ''.join(lines)
+                all_lines = f.readlines()
 
-            if len(lines) == max_lines:
-                content += f"\n... (truncated to {max_lines} lines)"
+            total_lines = len(all_lines)
+            start = min(offset, total_lines)
+            end = min(start + max_lines, total_lines)
+            selected = all_lines[start:end]
+            content = ''.join(selected)
 
-            return content
+            # Header: tells the model the file size and what slice it got,
+            # so it can use offset for the next read instead of re-reading
+            # from line 0 with a bigger max_lines.
+            header = f"[File: {filepath} | {total_lines} lines total | showing lines {start + 1}-{end}]"
+            if end < total_lines:
+                remaining = total_lines - end
+                header += f" ({remaining} more lines — use offset={end} to continue)"
+
+            return f"{header}\n{content}"
         except Exception as e:
             return f"Error reading file: {str(e)}"
 
