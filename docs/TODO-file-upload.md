@@ -900,13 +900,43 @@ TUI status bar does today.
 
 ## Open Items (post v1.17.4)
 
-- [ ] Scanned PDF support — rasterize + route pages through VL model
-- [ ] DOCX support — `python-docx` text extraction
-- [ ] `_render_chart_to_axes()` — matplotlib re-render from openpyxl chart data
-- [ ] Native PDF passthrough for Perplexity sonar — skip tool extraction, send via API directly
-- [ ] Audio/video input — Gemini Live API, OpenAI Realtime API (different integration path)
-- [ ] Image generation output — Gemini Nano Banana models can generate images in responses
-- [ ] Session migration tool — batch-convert old `.json` sessions if needed (likely not needed, old sessions have no multimodal content)
+**Audit (2026-04-12):** reviewed against code. Corrections below.
+
+- [x] **DOCX support** — **DONE.** `ppxai/engine/tools/builtin/docx_tools.py`
+  exists with `python-docx` extraction. Remove from open list.
+- [~] **Scanned PDF support — rasterize + route through VL.** **Partial.**
+  The `get_pdf_page_image` tool at `pdf_tools.py:250` rasterizes pages
+  on demand, and the model can call it when it decides it needs a
+  visual. What's **missing** is the **auto-detection path**: if a PDF
+  has no text layer (or extraction returns empty), the engine should
+  proactively route pages through the VL sidecar / vision-capable
+  model instead of handing the model an empty `read_pdf` result and
+  letting it figure out to call `get_pdf_page_image`. Target: v1.18.x.
+- [ ] **`_render_chart_to_axes()`** — matplotlib re-render from openpyxl
+  chart data. Explicitly deferred at `excel_tools.py:18`
+  ("Chart rendering ... is deferred to a follow-up step"). Target: v1.18.x.
+- [ ] **Native PDF passthrough** — **keep watching for v1.18.x.**
+  Today the uniform tool-based path (write PDF to SessionFileStore →
+  `<uploaded_file>` marker → model calls `read_pdf`/`get_pdf_page_image`)
+  works for every provider including Perplexity sonar, verified in web
+  + VSCode. **No provider currently uses native passthrough** — image
+  blocks are the only content type that skip the tool layer. Follow-up
+  is an *optimization*, not a gap: wire `input_file`/`file_data` content
+  blocks for providers whose APIs accept them natively (OpenAI GPT-5+
+  Responses API, Gemini inline_data, Perplexity if/when they add file
+  support), skipping a tool round-trip and ~1 model turn of latency.
+  Target: v1.18.x as a provider-adapter sweep.
+- [ ] **Audio/video input — Gemini Live API, OpenAI Realtime API.**
+  Integration path is fundamentally different (WebSocket streaming,
+  not request/response). Not a content-block extension. Target: v1.18.x.
+- [ ] **Image generation output — Gemini Nano Banana.** Engine has no
+  assistant-emitted `image_url` rendering path; no client displays
+  model-generated images. Target: v1.18.x.
+- [ ] **Session migration tool** — no `scripts/migrate*` or
+  `session_migration*` module. Likely not needed in practice (old
+  sessions have no multimodal content), but an audit + script would
+  close the question. Target: v1.18.x (lowest priority — ship only if
+  we hit a migration bug in the wild).
 
 ---
 
