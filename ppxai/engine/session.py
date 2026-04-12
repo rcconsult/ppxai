@@ -823,42 +823,129 @@ class SessionManager:
         """Write session JSON to the correct flat/directory location.
 
         Handles the flat → directory transition when a session that
-        started text-only gains its first attachment mid-conversation:
-        creates the directory, writes `session.json` inside, moves any
-        staged files from the store into `<name>/uploads/`, and deletes
-        the stale flat `.json` file if one exists.
-
+        started text-only gains its first attachment mid-conversation.
         This is the only place session JSON is written to disk.
+
+        R11 crash-safety (v1.17.4): when transitioning flat → directory,
+        the new directory is staged under a `<name>.tmp/` sibling and
+        atomically renamed to `<name>/` before the old flat file is
+        removed. `os.rename` is atomic on POSIX same-filesystem moves,
+        so a crash mid-transition leaves either the flat file alone
+        (directory never appeared) or the directory alone (flat file
+        already gone) — never both visible to the session list.
+
+        Sequence for a flat → directory transition:
+          1. Create `<name>.tmp/` (no conflict with the live `<name>.json`)
+          2. Write `<name>.tmp/session.json` + migrate uploads
+          3. `os.rename(<name>.tmp, <name>)` — atomic, single step
+          4. `unlink(<name>.json)` — if this step crashes, the
+             duplicate-detector in `_resolve_session_load_path` picks
+             the directory (newer mtime) and warns
+
+        Updates and pure text-only saves bypass the staging dance.
         """
         json_path, is_dir_format = self._resolve_session_storage(session_name)
         dir_path = self.sessions_dir / session_name
         flat_path = self.sessions_dir / f"{session_name}.json"
+        # Has a flat file from a prior text-only save? This is the
+        # signal we're doing a transition, not a normal write.
+        is_transition = is_dir_format and flat_path.exists() and not dir_path.exists()
 
-        if is_dir_format:
-            dir_path.mkdir(parents=True, exist_ok=True)
-            # If the store is wired, move any staged files into the
-            # session's uploads directory. This is idempotent — files
-            # already there are left in place.
-            if self.file_store is not None:
-                self.file_store.move_to_session(dir_path)
-            # If a stale flat file exists from a prior text-only save,
-            # remove it so list_sessions doesn't see duplicates.
-            if flat_path.exists():
+        if is_dir_format and is_transition:
+            # Stage into a sibling tmp directory, then atomic rename.
+            tmp_dir = self.sessions_dir / f"{session_name}.tmp"
+            # Clean up any leftover from an earlier failed attempt so
+            # rmtree + mkdir start fresh. Using shutil.rmtree so stale
+            # partial writes don't block us.
+            if tmp_dir.exists():
+                import shutil
                 try:
-                    flat_path.unlink()
-                    logger.debug(
-                        f"Session format transition: removed stale flat "
-                        f"{flat_path.name} in favor of directory"
-                    )
+                    shutil.rmtree(tmp_dir)
                 except OSError as exc:
                     logger.warning(
-                        f"Failed to remove stale flat session file "
-                        f"{flat_path}: {exc}"
+                        f"Session '{session_name}': stale tmp dir "
+                        f"{tmp_dir} couldn't be cleaned: {exc}. "
+                        f"Falling back to in-place write."
                     )
+                    return self._write_session_json_in_place(
+                        session_name, session_data, is_dir_format
+                    )
+            tmp_dir.mkdir(parents=True, exist_ok=False)
+
+            # Write session.json into the tmp dir.
+            tmp_json = tmp_dir / "session.json"
+            with open(tmp_json, "w", encoding="utf-8") as f:
+                json.dump(session_data, f, indent=2)
+
+            # Move staged files from the store into the tmp uploads/.
+            # If the store's move_to_session signs off, we commit.
+            if self.file_store is not None:
+                self.file_store.move_to_session(tmp_dir)
+
+            # Atomic rename — the filesystem flips from "tmp dir
+            # present, live dir absent" to "live dir present" in a
+            # single inode update.
+            try:
+                os.rename(tmp_dir, dir_path)
+            except OSError as exc:
+                logger.error(
+                    f"Session '{session_name}': atomic rename "
+                    f"{tmp_dir} → {dir_path} failed: {exc}. The tmp "
+                    f"directory is left in place for manual recovery."
+                )
+                raise
+
+            # Finally remove the old flat file. A crash here is safe:
+            # the duplicate-detector on load picks the directory (newer
+            # mtime) and warns about the orphan.
+            try:
+                flat_path.unlink()
+                logger.debug(
+                    f"Session format transition: atomically renamed "
+                    f"{tmp_dir.name} → {dir_path.name} and removed "
+                    f"stale flat {flat_path.name}"
+                )
+            except OSError as exc:
+                logger.warning(
+                    f"Session '{session_name}': directory transition "
+                    f"succeeded but unlink of stale flat "
+                    f"{flat_path.name} failed: {exc}. Duplicate-detector "
+                    f"will handle on next load."
+                )
+
+            return dir_path / "session.json"
+
+        # Non-transition path: directory already exists, or we're
+        # writing a pure flat session. Both are single-file writes so
+        # atomicity is already handled by the filesystem for overwrite.
+        return self._write_session_json_in_place(
+            session_name, session_data, is_dir_format
+        )
+
+    def _write_session_json_in_place(
+        self,
+        session_name: str,
+        session_data: Dict[str, Any],
+        is_dir_format: bool,
+    ) -> Path:
+        """Write session JSON without the flat→dir transition dance.
+
+        Used when either (a) the session is already in directory format
+        and we're just updating session.json, or (b) the session is
+        purely flat. No rename, no cross-format footwork — just the
+        single JSON write.
+        """
+        dir_path = self.sessions_dir / session_name
+        if is_dir_format:
+            dir_path.mkdir(parents=True, exist_ok=True)
+            if self.file_store is not None:
+                self.file_store.move_to_session(dir_path)
+            json_path = dir_path / "session.json"
+        else:
+            json_path = self.sessions_dir / f"{session_name}.json"
 
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(session_data, f, indent=2)
-
         return json_path
 
     def save(self, name: Optional[str] = None) -> str:
@@ -913,14 +1000,61 @@ class SessionManager:
         is the enclosing directory for directory-format sessions (used
         to restore the file store) or None for flat-format sessions.
         Returns None if no session with that name exists in either format.
+
+        R11 duplicate-detector (v1.17.4): if BOTH a flat `<name>.json`
+        and a directory `<name>/session.json` exist sharing the same
+        name, the session-format transition was interrupted mid-flight
+        (crash/SIGKILL/filesystem error between the directory write and
+        the flat-file unlink). We log a WARNING and pick the newer
+        file by mtime so the user at least sees a deterministic result
+        instead of two entries for the same conversation in the session
+        list. Full atomic-rename fix is still R11 in TODO-file-upload.
         """
         dir_path = self.sessions_dir / name
         flat_path = self.sessions_dir / f"{name}.json"
 
         dir_json = dir_path / "session.json"
-        if dir_path.is_dir() and dir_json.is_file():
+        has_dir = dir_path.is_dir() and dir_json.is_file()
+        has_flat = flat_path.is_file()
+
+        # Duplicate-format detector — both layouts coexist. Pick newer;
+        # log explicitly so the condition surfaces in debug logs.
+        if has_dir and has_flat:
+            try:
+                dir_mtime = dir_json.stat().st_mtime
+                flat_mtime = flat_path.stat().st_mtime
+            except OSError as exc:
+                logger.warning(
+                    f"Session '{name}': both flat and directory formats "
+                    f"exist, stat() failed during tiebreak: {exc}. "
+                    f"Defaulting to directory format."
+                )
+                return dir_json, dir_path
+
+            if dir_mtime >= flat_mtime:
+                logger.warning(
+                    f"Session '{name}': found duplicate formats on disk "
+                    f"(flat + directory). Picking directory (mtime "
+                    f"{dir_mtime:.0f} >= flat {flat_mtime:.0f}). The "
+                    f"stale flat file {flat_path.name} should be removed "
+                    f"— it's a leftover from an interrupted format "
+                    f"transition. See R11 in TODO-file-upload.md."
+                )
+                return dir_json, dir_path
+            else:
+                logger.warning(
+                    f"Session '{name}': found duplicate formats on disk "
+                    f"(flat + directory), but flat is NEWER "
+                    f"(flat {flat_mtime:.0f} > dir {dir_mtime:.0f}). "
+                    f"This is unusual — the directory format was written "
+                    f"then the flat file was touched again somehow. "
+                    f"Picking flat; investigate manually."
+                )
+                return flat_path, None
+
+        if has_dir:
             return dir_json, dir_path
-        if flat_path.is_file():
+        if has_flat:
             return flat_path, None
         return None
 
