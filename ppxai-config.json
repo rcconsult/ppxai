@@ -18,7 +18,11 @@
     "warn_at_percent": 80
   },
   "bootstrap": {
-    "files": ["AGENTS.md", "CLAUDE.md", "INSTRUCTIONS.md"],
+    "files": [
+      "AGENTS.md",
+      "CLAUDE.md",
+      "INSTRUCTIONS.md"
+    ],
     "enabled": true
   },
   "paths": {
@@ -128,22 +132,6 @@
         "top_p": 0.9
       },
       "models": {
-        "gemini-2.5-flash": {
-          "name": "Gemini 2.5 Flash",
-          "description": "Latest fast model, best price/performance. 71.4% code editing quality with aggressive hints.",
-          "context_limit": 1000000,
-          "__comment_best_for": "Good alternative if gemini-3-flash-preview unavailable. Requires aggressive AGENTS.md hints."
-        },
-        "gemini-2.5-pro": {
-          "name": "Gemini 2.5 Pro",
-          "description": "Most capable model for complex reasoning",
-          "context_limit": 1000000
-        },
-        "gemini-2.5-flash-lite": {
-          "name": "Gemini 2.5 Flash Lite",
-          "description": "For simple tasks that need to be done quickly",
-          "context_limit": 1000000
-        },
         "gemini-3-flash-preview": {
           "name": "Gemini 3 Flash Preview",
           "description": "Speed-optimized preview with frontier intelligence and 1M context. RECOMMENDED: Best code editing quality (100% benchmark).",
@@ -159,23 +147,41 @@
           "name": "Gemini 3.1 Pro Preview (Custom Tools)",
           "description": "Optimized for custom tool usage and agentic workflows with 1M context",
           "context_limit": 1000000
+        },
+        "gemini-3.1-flash-lite-preview": {
+          "name": "Gemini 3.1 Flash Lite Preview",
+          "description": "Cheapest Gemini 3 tier with text + image + video input. Replaces gemini-2.5-flash-lite.",
+          "context_limit": 1000000,
+          "__comment_best_for": "High-volume, cost-sensitive workloads where full Gemini 3 Pro isn't needed."
+        },
+        "gemma-4-31b-it": {
+          "name": "Gemma 4 31B (Dense)",
+          "description": "Dense 31B open-weights instruct model with text + vision, 256K context. Served via Gemini API (same API key) or self-hosted.",
+          "context_limit": 262144,
+          "__comment_best_for": "Open-weights workloads needing vision support. Free tier via Gemini API."
+        },
+        "gemma-4-26b-a4b-it": {
+          "name": "Gemma 4 26B (MoE)",
+          "description": "Mixture-of-Experts 26B (3.8B active) with text + vision, 256K context. Faster inference than 31B dense for similar quality.",
+          "context_limit": 262144,
+          "__comment_best_for": "Workloads benefiting from MoE efficiency — lower latency per token with 3.8B active parameters."
+        },
+        "gemma-4-e4b-it": {
+          "name": "Gemma 4 E4B (Edge)",
+          "description": "Edge-optimized 8B (4.5B effective) with text + vision + audio, 128K context. Designed for on-device deployment.",
+          "context_limit": 131072,
+          "__comment_best_for": "Laptop / edge deployments. Supports audio input alongside text and vision."
+        },
+        "gemma-4-e2b-it": {
+          "name": "Gemma 4 E2B (Edge)",
+          "description": "Smallest edge model at 5.1B (2.3B effective) with text + vision + audio, 128K context.",
+          "context_limit": 131072,
+          "__comment_best_for": "Resource-constrained edge deployments (laptops, phones, Raspberry Pi)."
         }
       },
       "pricing": {
-        "gemini-2.5-flash": {
-          "input": 0.30,
-          "output": 2.50
-        },
-        "gemini-2.5-flash-lite": {
-          "input": 0.075,
-          "output": 0.3
-        },
-        "gemini-2.5-pro": {
-          "input": 1.25,
-          "output": 10.0
-        },
         "gemini-3-flash-preview": {
-          "input": 0.50,
+          "input": 0.5,
           "output": 3.0
         },
         "gemini-3.1-pro-preview": {
@@ -185,6 +191,30 @@
         "gemini-3.1-pro-preview-customtools": {
           "input": 2.0,
           "output": 12.0
+        },
+        "gemini-3.1-flash-lite-preview": {
+          "input": 0.1,
+          "output": 0.4
+        },
+        "gemma-4-31b-it": {
+          "input": 0.0,
+          "output": 0.0,
+          "__comment": "Free tier via Gemini API; self-host for unlimited"
+        },
+        "gemma-4-26b-a4b-it": {
+          "input": 0.0,
+          "output": 0.0,
+          "__comment": "Free tier via Gemini API; self-host for unlimited"
+        },
+        "gemma-4-e4b-it": {
+          "input": 0.0,
+          "output": 0.0,
+          "__comment": "Free tier via Gemini API; self-host for unlimited"
+        },
+        "gemma-4-e2b-it": {
+          "input": 0.0,
+          "output": 0.0,
+          "__comment": "Free tier via Gemini API; self-host for unlimited"
         }
       },
       "capabilities": {
@@ -213,6 +243,41 @@
         "preferred": "gemini"
       },
       "models": {
+        "gpt-5.4": {
+          "name": "GPT-5.4",
+          "description": "Current flagship (released 2026-03-05). 1M context, 75% computer use benchmark, best overall intelligence.",
+          "context_limit": 1048576,
+          "__comment_best_for": "Complex refactoring, architecture decisions, multi-file changes, agentic workflows with browser/computer use.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED by ppxai — using stub hints from gpt-5.2*. Refine after running benchmarks/llm-eval."
+        },
+        "gpt-5.4-pro": {
+          "name": "GPT-5.4 Pro",
+          "description": "Premium tier of GPT-5.4 (released 2026-03-05). Highest capability for difficult tasks.",
+          "context_limit": 1048576,
+          "__comment_best_for": "Hardest problems, novel algorithm design, critical code review. Expensive but top-of-line.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED — using stub hints. Refine after benchmark run.",
+          "generation_params": {
+            "temperature": 0.1,
+            "max_tokens": 16384
+          }
+        },
+        "gpt-5.4-mini": {
+          "name": "GPT-5.4 Mini",
+          "description": "Newest small model (released 2026-03-17). 400K context, $0.75/$4.50 per MTok. OpenAI's 'most capable small model yet'.",
+          "context_limit": 400000,
+          "__comment_best_for": "Everyday coding, edits, explanations at lower cost than full GPT-5.4. Good price/performance sweet spot.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED — using stub hints. Refine after benchmark run."
+        },
+        "gpt-5.4-nano": {
+          "name": "GPT-5.4 Nano",
+          "description": "Cheapest GPT-5.4 variant (released 2026-03-17). API-only. $0.20/$1.25 per MTok.",
+          "context_limit": 400000,
+          "__comment_best_for": "Simple edits, file operations, high-volume quick Q&A. Lowest-cost GPT-5.4 option.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED — using stub hints. Refine after benchmark run.",
+          "generation_params": {
+            "max_tokens": 8192
+          }
+        },
         "gpt-5.2": {
           "name": "GPT-5.2",
           "description": "Newest flagship model with 400K context. Best overall intelligence.",
@@ -327,6 +392,23 @@
         }
       },
       "pricing": {
+        "gpt-5.4": {
+          "input": 2.5,
+          "output": 15.0
+        },
+        "gpt-5.4-pro": {
+          "input": 15.0,
+          "output": 75.0,
+          "__comment": "Premium tier — verify against https://platform.openai.com/docs/pricing"
+        },
+        "gpt-5.4-mini": {
+          "input": 0.75,
+          "output": 4.5
+        },
+        "gpt-5.4-nano": {
+          "input": 0.2,
+          "output": 1.25
+        },
         "gpt-5.2": {
           "input": 1.75,
           "output": 14.0
@@ -516,8 +598,8 @@
     },
     "shell": {
       "timeout": 300,
-      "shell_bin": null,
-      "login_shell": false,
+      "shell_bin": "/bin/zsh",
+      "login_shell": true,
       "require_consent": true,
       "dangerous_commands": [
         "^rm\\s+",
