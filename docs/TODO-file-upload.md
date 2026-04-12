@@ -1605,6 +1605,71 @@ Reverted via `git checkout` before the release.
 
 ---
 
+### R14. Expand R13 syntax-validator language coverage — **follow-up** 🟡
+
+R13 (landed in v1.17.4) validates write results for Python, JSON,
+YAML, TOML, and JS (via optional `node --check`). Every other
+language falls through the "unsupported extension → pass" path,
+so the silent-corruption class that R13 closes for Python remains
+open for Go, Rust, C/C++, Terraform, Zig, Ruby, Swift, etc.
+
+**Scope per language** (ordered by cost/benefit, ship the cheap ones
+first, skip the heavyweight ones).
+
+| Language | Extension | Validator | Dep | Verdict |
+|---|---|---|---|---|
+| **Go** | `.go` | `gofmt -l <file>` (nonzero on syntax errors) | `gofmt` binary | ✅ cheap — widely installed, skip-if-missing pattern matches `node --check` |
+| **Zig** | `.zig` | `zig fmt --check <file>` | `zig` binary | ✅ cheap — skip-if-missing |
+| **Terraform / HCL** | `.tf`, `.tfvars` | `python-hcl2` parse | `pip install python-hcl2` | ✅ cheap — Python-side parser; consider bundling as a soft dep |
+| **TypeScript** | `.ts`, `.tsx` | `tsc --noEmit --allowJs false <tmp>` if available | `tsc` | 🟡 medium — currently skipped because `node --check` false-positives on valid TS. `tsc` works but is slow for large projects. Consider `--isolatedModules` + in-memory stdlib shim |
+| **Shell** | `.sh`, `.bash` | `bash -n <tmp>` | bash | 🟡 medium — guarded syntax-only parse, mostly useful but very permissive (`bash` accepts a lot) |
+| **Ruby** | `.rb` | `ruby -c <tmp>` | ruby binary | 🟡 medium — same pattern as node, skip-if-missing |
+| **Swift** | `.swift` | `swift -parse <tmp>` | swift toolchain | 🟡 medium — macOS-common, sparse on Linux |
+| **Rust** | `.rs` | `rustc --emit=metadata` | `rustc` | ❌ skip — needs full crate context, slow, false-positives on valid snippets |
+| **C / C++** | `.c`, `.cpp`, `.h`, `.hpp`, `.cc` | `gcc -fsyntax-only -x c[++] -` | gcc/clang | ❌ skip — **headers fail in isolation** (need includes path), high false-positive rate. Probably harmful on net |
+
+**Proposed implementation.**
+
+Extend `ppxai/engine/tools/builtin/syntax_validator.py`:
+
+1. Add entries to `_EXT_LANG` for the extensions in the "cheap" tier.
+2. Add `_check_go`, `_check_zig`, `_check_terraform` following the
+   same fail-open pattern as `_check_js_like` — if the required
+   binary/package isn't present, return None (pass-through) and log
+   a DEBUG line. Never block writes because a toolchain is absent.
+3. Register the new validators in `_VALIDATORS`.
+4. For each new validator, add matching unit tests in
+   `tests/test_file_editing_tools.py::TestSyntaxValidator` — one
+   valid case, one invalid case, one "binary missing" skip case
+   (monkeypatch `shutil.which` to return None).
+
+**What NOT to do.**
+- Don't add Rust / C / C++ unless we have a good crate/include
+  context story. A validator that rejects valid code is worse than
+  no validator at all.
+- Don't gate the install. `python-hcl2` should stay optional; a
+  ppxai install without it just doesn't validate `.tf` files. Same
+  pattern as the Node-optional JS check.
+- Don't add linters (ruff, eslint, rubocop). Parser-level only.
+  Linter rejections on valid-but-ugly code would swamp the model
+  with spurious errors.
+
+**When to schedule.**
+Defer to v1.18.x unless a user hits the gap in practice on a
+common language (Go is the most likely). Track here so we don't
+lose the thread.
+
+**Related.**
+- R13 (landed): the original Python/JSON/YAML/TOML/JS validator
+- R9 (v1.17.5 collected): `validate_and_fix_alternation` message
+  prefer-tool_calls — sibling correctness category
+
+**Discovered.** 2026-04-12, follow-up discussion after R13 landed.
+User flagged the language-coverage gap: "do we handle also
+languages like terraform, golang, rust, c, c++ or zig?"
+
+---
+
 ### Release plan
 
 **v1.17.4 — ship as-is.** Current branch HEAD is release-ready. R1,
@@ -1638,6 +1703,7 @@ after v1.17.4 ships.
 | #6 (pre-existing) | Image generation output — Nano Banana |
 | #7 (pre-existing) | Session migration tool — uncertain necessity, revisit at planning |
 | **R12** (Opt 3) | Full streaming tool loop — provider-adapter sweep + test harness |
+| **R14** | Expand R13 syntax-validator coverage — Go, Zig, Terraform, TS, Shell, Ruby, Swift |
 
 ---
 
