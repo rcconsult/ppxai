@@ -1608,9 +1608,12 @@ Reverted via `git checkout` before the release.
 ### Release plan
 
 **v1.17.4 — ship as-is.** Current branch HEAD is release-ready. R1,
-R2, R3, R4, R6, R7, R11 are fixed; plus the event-bus coroutine-drop
-fix, disk-scan session fallback, and debug-log persistence all landed
-during testing. Don't implement R8+ in this release.
+R2, R3, R4, R6, R7, R11, **R13** are fixed; plus the event-bus
+coroutine-drop fix, disk-scan session fallback, and debug-log
+persistence all landed during testing. R13 (silent file corruption
+by `apply_patch`) was promoted from v1.17.5 to v1.17.4 on
+2026-04-12 — a bug class too dangerous to release without a guard.
+Don't implement R8+ in this release.
 
 **v1.17.5 — collected scope (NOT YET IMPLEMENTED).** The items below
 are tracked here so they're not lost; implementation deferred until
@@ -1618,7 +1621,6 @@ after v1.17.4 ships.
 
 | # | Priority | Effort | Notes |
 |---|---|---|---|
-| **R13** | 🔴 correctness bug | ~2 hr + 3 tests | `apply_patch` must syntax-validate result; revert on parse failure to prevent silent file corruption |
 | **R8** | 🟡 polish R3 | ~30 min + test | CSV sniff on 8 KB, stream rest via `BytesIO`+`TextIOWrapper` |
 | **R9** | 🟡 correctness edge | ~1 hr + 2 tests | `validate_and_fix_alternation` — prefer messages with `tool_calls`, warn before dropping trailing user |
 | **R10** | 🟢 micro-perf | ~30 min + test | cache `_has_multimodal_attachments` on Session, invalidate from mutation sites |
