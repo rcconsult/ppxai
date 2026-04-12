@@ -1104,18 +1104,135 @@ removal path consumes the same helpers.
 
 ---
 
+### R7. Name-based attachment identity — **non-determinism + false positives** 🔴
+
+**Symptom.**
+- User attaches two files that happen to share a display name — e.g.,
+  `src/report.pdf` and `archive/report.pdf`, or two `screenshot.png`
+  from different folders / browser downloads. Or pastes the same file
+  twice in a session before we content-addressed things.
+- `/attach remove report.pdf` removes **both** — no way to target one.
+- Context-attachment badge shows 1 when there are 2 (dedup collapses
+  same-name entries when `file_id` is absent).
+- Model sees the "other" file that the user thought they removed.
+
+**Evidence from sessions.** Of the 5 most recent sessions on disk,
+only one has any attachment at all (`session_20260405_214711.json`) —
+a single `image_url` block with **empty `file_id`**. So the
+name-only identity path is exercised in the wild, not hypothetical.
+Multi-attachment scenarios haven't been tested enough yet for
+collisions to show up empirically, but the code paths make them
+inevitable as soon as a user attaches two files with the same name.
+
+**Root cause — three sites, same bug.**
+
+1. **Removal is name-only**
+   [`multimodal_ops.py:247-253`](../ppxai/engine/multimodal_ops.py#L247):
+   ```python
+   block_name = (
+       block.get("name")
+       or block.get("filename")
+       or block.get("file_id")
+       or ""
+   )
+   if remove_all or block_name == name:
+       removed_count += 1
+       ...
+   ```
+   `name` arrives as a plain string from the user. No way to pass a
+   `file_id` to disambiguate. Same-name collisions remove every match.
+
+2. **Dedup falls back to name when `file_id` missing**
+   [`multimodal_ops.py:96`](../ppxai/engine/multimodal_ops.py#L96),
+   [`:130`](../ppxai/engine/multimodal_ops.py#L130),
+   [`:159`](../ppxai/engine/multimodal_ops.py#L159):
+   ```python
+   dedup_key = file_id or name
+   ```
+   Good intent (stable content-addressed identity when we have it),
+   but two legacy / pasted blocks that both have empty `file_id` and
+   matching `name` collapse into one badge.
+
+3. **Uploaded-file markers have the same weakness**
+   (line 159) — `dedup_key = uf_fid or uf_name`. If a PDF is re-generated
+   without its file_id surviving (e.g., a session-migration path), two
+   `<uploaded_file name="report.pdf" ... file_id="">` markers collapse.
+
+**Proposed fix.**
+
+**Short-term (v1.17.4) — make `/attach remove` file_id-aware:**
+
+1. Extend `remove_context_attachment(engine, name_or_id: str)` to accept
+   either a display name or a `file_id`. Match in this order:
+   - exact `file_id` match (most specific, unambiguous)
+   - if name matches exactly ONE attachment → remove that one
+   - if name matches multiple → return a `CommandResult` with status
+     `AMBIGUOUS` listing all matches with their file_ids, asking the
+     user to re-run with the ID. Do NOT silently remove all.
+   - `"all"` keeps current blast-radius behavior.
+
+2. Extend `context_attachments` schema (already a dict) to include a
+   short display form of the file_id (first 8 chars is enough for
+   human disambiguation):
+   ```python
+   {"name": "report.pdf", "file_id": "sha256:abc123...", "short_id": "abc123"}
+   ```
+   So clients can render `report.pdf (abc123)` when there's a collision
+   and the user can type `/attach remove abc123` to target one.
+
+3. `/attach` completer (engine/completion.py) should offer both `name`
+   and `short_id` tokens when multiple same-name attachments exist.
+
+**Medium-term — guarantee `file_id` presence:**
+
+4. Every block produced by our file pipeline MUST carry a non-empty
+   `file_id`. Trace every code path that emits an `image_url` /
+   `input_file` / `<uploaded_file>` block and assert it hit `SessionFileStore.save()`
+   first. Add a test that fails if any producer emits blocks without
+   `file_id`.
+
+5. Once `file_id` presence is guaranteed, flip dedup_key logic from
+   `file_id or name` to just `file_id` — and log a warning for any
+   legacy block that arrives without one (likely a session restored
+   from pre-`file_id` data).
+
+**Test coverage.**
+
+- Unit test: `remove_context_attachment` with two blocks sharing
+  `name="report.pdf"` but different `file_id` — assert calling with
+  `name` returns `AMBIGUOUS`, calling with either `file_id` removes
+  exactly one.
+- Unit test: `refresh_context_attachments` with two empty-`file_id`
+  blocks sharing `name` — assert **two** badges appear (not
+  silently deduped). Or: assert a warning is logged.
+- Regression: replay `session_20260405_214711.json` and verify the
+  single empty-`file_id` image_url block still renders correctly
+  after the dedup policy change.
+
+**Relation to other findings.**
+- R1 (PDF/Office removal) and R7 (name identity) compound: fixing R1
+  without R7 means `/attach remove report.pdf` works for PDFs AND
+  wipes every same-named file.
+- R5 (first-class `uploaded_file` content type) naturally carries
+  `file_id` as a required field and retires this whole class of bug.
+
+---
+
 ### Proposed merge order
 
-Do R2 + R3 + R6 first — small, atomic, low-risk. Then R1 (the real
-bug) on top of R6. R4 and R5 are follow-ups that don't need to land
-for v1.17.4.
+Do R2 + R3 + R6 first — small, atomic, low-risk. Then R1 **+ R7**
+together on top of R6, because fixing removal for PDFs without also
+fixing name-identity creates a bigger footgun than either alone.
+R4 and R5 are follow-ups that don't need to land for v1.17.4.
 
 1. **R2** — `Field(default_factory=list)` [trivial]
 2. **R3** — streaming CSV count [small, pure function]
 3. **R6** — extract marker helpers [refactor, no behavior change]
-4. **R1** — fix `/attach remove` PDF/Office parity [uses R6; add test]
+4. **R1 + R7 together** — fix `/attach remove` parity for PDF/Office
+   AND make it file_id-aware with AMBIGUOUS status on name collisions
+   [uses R6; add tests for both correctness gaps]
 5. **R4** — `has_vision_sidecar` rename OR docstring note [optional]
-6. **R5** — first-class `uploaded_file` content type [v1.18.x]
+6. **R5** — first-class `uploaded_file` content type [v1.18.x, retires R7]
 
 ---
 
