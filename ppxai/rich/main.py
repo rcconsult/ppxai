@@ -344,53 +344,71 @@ def main():
     # Initialize configuration system (v1.13.10: explicit initialization)
     initialize()
 
-    # Check if provider selection is needed or use environment default
-    provider = get_default_provider()
-
-    # Allow provider selection at startup if multiple providers configured
-    if len(PROVIDERS) > 1:
-        console.print("\n[bold cyan]Available Providers:[/bold cyan]")
-        for key, config in PROVIDERS.items():
-            api_key_env = config["api_key_env"]
-            has_key = bool(os.getenv(api_key_env))
-            status = "[green]configured[/green]" if has_key else "[yellow]not configured[/yellow]"
-            console.print(f"  - {key}: {config['name']} ({status})")
-
-        # Check if user wants to change provider
-        if os.getenv("MODEL_PROVIDER"):
-            console.print(f"\n[dim]Using provider from MODEL_PROVIDER env: {provider}[/dim]")
-        else:
-            provider = select_provider()
-
-    # Get provider configuration
-    provider_config = get_provider_config(provider)
-    api_key = get_api_key(provider)
-    base_url = get_base_url(provider)
-
-    if not api_key:
-        api_key_env = provider_config["api_key_env"]
-        console.print(f"[red]Error: {api_key_env} not found in environment variables.[/red]")
-        console.print("[yellow]Please create a .env file with your API key (see .env.example)[/yellow]")
-        sys.exit(1)
-
-    console.print(f"\n[green]Connected to:[/green] {provider_config['name']} ({base_url})")
-
-    # Display welcome
-    display_welcome()
-
-    # Select initial model (from provider's available models)
-    current_model = select_model(provider)
-
-    # Create command handler with provider info (no legacy client)
-    handler = CommandHandler(api_key, current_model, base_url, provider)
-
-    # Check for session recovery
+    # Session recovery check — BEFORE provider/model selection so the user
+    # always sees the restore prompt even if they Ctrl+C during selection.
+    # If restoring, we skip the selection entirely (the session already has
+    # a provider + model).
     should_restore, session_state = check_session_recovery()
+    restored = False
+
     if should_restore and session_state:
-        if restore_session_to_handler(handler, session_state):
-            # Update local variables from restored session
-            provider = handler.provider
-            current_model = handler.current_model
+        # Recover: use the saved session's provider + model
+        provider = session_state.get("provider", get_default_provider())
+        provider_config = get_provider_config(provider)
+        api_key = get_api_key(provider)
+        base_url = get_base_url(provider)
+
+        if api_key:
+            current_model = session_state.get("model") or provider_config.get("default_model", "")
+            handler = CommandHandler(api_key, current_model, base_url, provider)
+            if restore_session_to_handler(handler, session_state):
+                provider = handler.provider
+                current_model = handler.current_model
+                restored = True
+                console.print(f"[green]Restored:[/green] {provider_config['name']} / {current_model}")
+            else:
+                console.print("[yellow]Session restore failed — starting fresh.[/yellow]")
+
+    if not restored:
+        # Fresh session — normal provider/model selection flow
+        provider = get_default_provider()
+
+        # Allow provider selection at startup if multiple providers configured
+        if len(PROVIDERS) > 1:
+            console.print("\n[bold cyan]Available Providers:[/bold cyan]")
+            for key, config in PROVIDERS.items():
+                api_key_env = config["api_key_env"]
+                has_key = bool(os.getenv(api_key_env))
+                status = "[green]configured[/green]" if has_key else "[yellow]not configured[/yellow]"
+                console.print(f"  - {key}: {config['name']} ({status})")
+
+            # Check if user wants to change provider
+            if os.getenv("MODEL_PROVIDER"):
+                console.print(f"\n[dim]Using provider from MODEL_PROVIDER env: {provider}[/dim]")
+            else:
+                provider = select_provider()
+
+        # Get provider configuration
+        provider_config = get_provider_config(provider)
+        api_key = get_api_key(provider)
+        base_url = get_base_url(provider)
+
+        if not api_key:
+            api_key_env = provider_config["api_key_env"]
+            console.print(f"[red]Error: {api_key_env} not found in environment variables.[/red]")
+            console.print("[yellow]Please create a .env file with your API key (see .env.example)[/yellow]")
+            sys.exit(1)
+
+        console.print(f"\n[green]Connected to:[/green] {provider_config['name']} ({base_url})")
+
+        # Display welcome
+        display_welcome()
+
+        # Select initial model (from provider's available models)
+        current_model = select_model(provider)
+
+        # Create command handler with provider info (no legacy client)
+        handler = CommandHandler(api_key, current_model, base_url, provider)
 
     # Create prompt session with history and completer
     # Pre-populate history from restored session
