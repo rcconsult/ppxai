@@ -1401,18 +1401,103 @@ orphan flat file.
 
 ---
 
+### R12. Silent gaps during agentic tool loops — **architectural UX** 🟢
+
+**Location.** [`ppxai/engine/chat.py:584`](../ppxai/engine/chat.py#L584),
+inside `while iteration < max_iterations`:
+
+```python
+async for event in ctx.provider.chat(messages, ctx.model, stream=False, tools=openai_tools):
+```
+
+**Symptom.** During a multi-step tool-calling loop (gemini-3-flash,
+gpt-5.4-mini, long refactor tasks) the UI shows tool_call / tool_result
+events executing but **no model prose** between iterations. The user
+sees 5–15 second silent waits between tool bubbles. Model IS producing
+explanatory text ("I'll now examine the config file..."), but the
+engine captures it as part of `full_response`, parses the tool JSON
+out of it, and discards the rest before looping. Nothing reaches the
+UI's stream-chunk renderer.
+
+After R1–R11 land, this is the single biggest remaining UX complaint
+for long agent sessions.
+
+**Why the engine does this.** At the end of each iteration the engine
+needs to decide:
+1. Did the model emit any `tool_calls`? → execute, loop again.
+2. Or is this the final answer? → exit loop, yield to UI.
+
+That decision needs the **complete response** + **complete tool_calls
+array**. With `stream=False` the provider buffers internally and hands
+the engine one atomic `STREAM_END` — branching is trivial. With
+`stream=True` the engine would have to accumulate chunks, watch for
+interleaved tool_call fragments (OpenAI streams tool call arguments
+as JSON fragments), distinguish prose from tool-call JSON,
+and route text upstream while holding tool_calls until iteration
+end. That's 60–100 lines of state machine per provider adapter.
+
+**Three fix options, increasing effort.**
+
+**Option 1 — Forward intermediate prose via an event.**
+After each iteration the engine already has `full_response` with tool
+JSON stripped. Emit it as `STREAM_INTERMEDIATE_TEXT` (or reuse
+`STREAM_CHUNK` with the whole chunk). UI renders it as a preamble
+message or appends to a running assistant bubble. Engine stays
+`stream=False` — no provider changes.
+*Effort:* ~50 lines in `chat.py`, ~20 in `stream_handler.py`.
+*Trade-off:* still silent DURING the iteration (15s wait), but
+prose appears right after each tool completes.
+
+**Option 2 — Stream the final iteration only.**
+Engine detects "this iteration emitted no tool_calls" and re-runs
+with `stream=True` for the user-visible part. But the engine doesn't
+know an iteration is final until after the call — requires a
+two-pass or speculative approach.
+*Effort:* ~100 lines, tricky edge cases around re-entering provider
+calls.
+*Trade-off:* full answer streams char-by-char (good), tool-iteration
+prose still missed (same as Option 1).
+
+**Option 3 — Full streaming tool loop.**
+Provider adapters emit interleaved `STREAM_CHUNK` +
+`TOOL_CALL_DELTA` + `TOOL_CALL_COMPLETE` events. Engine consumes a
+stream, keeps a per-tool-call accumulator, fires `TOOL_CALL` when one
+completes. UI gets real-time text throughout.
+*Effort:* ~60–100 lines per provider × 5 (OpenAI, OpenAI native,
+Gemini, Perplexity, OpenAI-compat). Plus end-to-end multi-turn
+tool-loop tests per provider.
+*Trade-off:* right fix, highest risk, needs a test harness we don't
+yet have for interleaved streaming.
+
+**Proposed.**
+Ship **Option 1 in v1.17.5 or v1.17.6** — cheap, high-ratio UX win,
+zero provider changes. Plan **Option 3 for v1.18.x** as a dedicated
+provider-adapter sweep with a new multi-turn test harness. Option 2
+skipped — halfway solution that doesn't justify the complexity.
+
+**Test for Option 1.**
+Build a session that triggers 2 tool iterations where the model
+produces both tool_calls AND intermediate prose on the first
+iteration. Assert the UI (or mock event recorder) receives a text
+event between `TOOL_GROUP_END` of iteration 1 and `TOOL_GROUP_START`
+of iteration 2.
+
+---
+
 ### Proposed merge order (updated)
 
-R1 + R7 already landed. R2, R3, R4, R6 already landed. R5 deferred
-to v1.18.x. The second-pass findings are all follow-ups — none gate
-the release.
+R1 + R7 already landed. R2, R3, R4, R6 already landed. Remaining
+items targeted for v1.17.5 at the user's request:
 
 | # | Priority | Effort | Target |
 |---|---|---|---|
-| **R8** | 🟡 polish R3 | ~30 min + test | v1.17.5 or later |
-| **R9** | 🟡 correctness edge | ~1 hr + 2 tests | v1.17.5 — worth doing |
-| **R10** | 🟢 micro-perf | ~30 min + test | v1.18.x (not urgent) |
-| **R11** | 🟢 crash-edge | ~1 hr (option 2 then 1) | v1.18.x (not urgent) |
+| **R8** | 🟡 polish R3 | ~30 min + test | v1.17.5 |
+| **R9** | 🟡 correctness edge | ~1 hr + 2 tests | v1.17.5 |
+| **R10** | 🟢 micro-perf | ~30 min + test | v1.17.5 |
+| **R11** | 🟢 crash-edge | ~1 hr (option 2 then 1) | v1.17.5 |
+| **R5** | 🟢 schema change, retires R7 | ~3 hr + cross-client sweep | v1.17.5 |
+| **R12** (Opt 1) | 🟢 UX progress signal | ~1 hr + test | v1.17.5 or v1.17.6 |
+| **R12** (Opt 3) | 🟢 full streaming tool loop | ~1 day + test harness | v1.18.x |
 
 ---
 
