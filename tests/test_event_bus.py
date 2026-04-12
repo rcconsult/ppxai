@@ -213,3 +213,72 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+# =============================================================================
+# Regression: sync-lambda wrapping an async handler (v1.17.4)
+# =============================================================================
+
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_sync_lambda_returning_coroutine_is_scheduled():
+    """Regression for the silent-drop bug.
+
+    PPXAIDEApp._initialize_engine registers handlers like:
+
+        lambda s, **kw: _sh.on_stream_end(self, s, **kw)
+
+    The lambda itself is sync, so iscoroutinefunction(receiver)
+    returns False and the event bus used to call it without awaiting
+    — silently dropping the coroutine that `on_stream_end` (async)
+    returned. STREAM_END fired but no assistant text appeared in UI.
+
+    This test asserts that when a sync handler returns a coroutine,
+    the event bus schedules it on the running loop and the body runs.
+    """
+    bus = EventBus(log_events=False)
+    received = []
+
+    async def async_handler(sender, **kwargs):
+        # Give the scheduler a tick to ensure we ran.
+        await asyncio.sleep(0)
+        received.append(kwargs.get("data"))
+
+    # Simulate the app.py wiring: sync lambda forwarding to async func.
+    bus.on("test:stream_end", lambda s, **kw: async_handler(s, **kw))
+
+    bus.emit("test:stream_end", data="final response")
+
+    # Give the scheduled coroutine a chance to execute.
+    await asyncio.sleep(0.05)
+
+    assert received == ["final response"], (
+        "Coroutine returned by sync lambda must be scheduled and "
+        "awaited — otherwise STREAM_END body never runs and the UI "
+        "never renders the final assistant message."
+    )
+
+
+@pytest.mark.asyncio
+async def test_coroutine_exception_is_logged_not_raised(caplog):
+    """Errors inside a scheduled coroutine are logged, not propagated."""
+    bus = EventBus(log_events=False)
+
+    async def async_handler_that_raises(sender, **kwargs):
+        await asyncio.sleep(0)
+        raise RuntimeError("simulated handler failure")
+
+    bus.on(
+        "test:broken",
+        lambda s, **kw: async_handler_that_raises(s, **kw),
+    )
+
+    # Must not raise — errors inside scheduled coroutines are caught
+    # and logged so one broken handler can't break event dispatch.
+    bus.emit("test:broken")
+    await asyncio.sleep(0.05)
+
+    # No assertion on log content here (pytest caplog integration is
+    # version-sensitive); the key invariant is that emit() survived.

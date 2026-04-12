@@ -141,7 +141,31 @@ class EventBus:
                     # positional `(s, **kw)` signatures, which spammed
                     # "missing 1 required positional argument" errors on
                     # every engine event.
-                    receiver(self, **kwargs)
+                    result = receiver(self, **kwargs)
+                    # Many handlers are registered as `lambda s, **kw:
+                    # _sh.on_<event>(self, s, **kw)` which forwards to an
+                    # `async def` in stream_handler.py. The lambda itself
+                    # is sync, so iscoroutinefunction() returns False and
+                    # we land here — but the call returns a coroutine that
+                    # would be silently dropped without this guard. Schedule
+                    # it on the running loop instead. Before v1.17.4 this
+                    # manifested as "STREAM_END fired but no assistant
+                    # response appeared in the UI" (handler body never ran).
+                    if asyncio.iscoroutine(result):
+                        try:
+                            loop = asyncio.get_running_loop()
+                            asyncio.create_task(
+                                self._await_and_log(event, result)
+                            )
+                        except RuntimeError:
+                            # No event loop — close the coroutine cleanly
+                            # so we don't leak a "never awaited" warning.
+                            result.close()
+                            if self._log_events:
+                                logger.debug(
+                                    f"[EventBus] Sync handler for '{event}' "
+                                    f"returned coroutine but no event loop"
+                                )
 
             except Exception as e:
                 logger.error(f"[EventBus] Error in handler for '{event}': {e}", exc_info=True)
@@ -153,6 +177,22 @@ class EventBus:
             await handler(self, **kwargs)
         except Exception as e:
             logger.error(f"[EventBus] Async handler error for '{event}': {e}", exc_info=True)
+
+    async def _await_and_log(self, event: str, coro):
+        """Await a coroutine returned from a sync-invoked handler.
+
+        Wraps sync lambdas that forward to async stream-handler
+        functions. Errors are logged rather than raised so one broken
+        handler can't kill unrelated event dispatch.
+        """
+        try:
+            await coro
+        except Exception as e:
+            logger.error(
+                f"[EventBus] Coroutine returned by sync handler for "
+                f"'{event}' raised: {e}",
+                exc_info=True,
+            )
 
     def _preview_data(self, kwargs: Dict[str, Any]) -> str:
         """Create abbreviated preview of event data for logging."""
