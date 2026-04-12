@@ -196,6 +196,16 @@ def initialize():
     try:
         from .features import get_debug_log_enabled
         if get_debug_log_enabled():
+            # Two-step restore:
+            # 1. Set PPXAI_DEBUG so any Logger instantiated LATER (engine,
+            #    chat, server, etc.) self-enables via the env-var check in
+            #    Logger.__init__. Without this, only pre-existing Logger
+            #    instances would pick up the flag.
+            # 2. Enable every Logger that already exists at this moment
+            #    (typically just the "tui" logger that the client's main()
+            #    created before calling initialize()).
+            import os as _os
+            _os.environ.setdefault("PPXAI_DEBUG", "1")
             from ..common.logger import Logger
             Logger.enable_all()
     except Exception:
