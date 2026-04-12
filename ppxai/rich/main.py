@@ -356,7 +356,9 @@ def main():
     parser.add_argument("--version", "-v", action="version", version=f"ppxai {__version__}")
     parser.parse_args()
 
-    # Initialize configuration system (v1.13.10: explicit initialization)
+    # Initialize configuration system (v1.13.10: explicit initialization).
+    # initialize() also restores persisted debug-log state — so the logger
+    # is writing to tui-debug.log BEFORE the session-recovery prompt runs.
     initialize()
 
     # Session recovery check — BEFORE provider/model selection so the user

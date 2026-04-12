@@ -36,6 +36,17 @@ def get_tui_theme() -> str:
     return get_tui_config().get("theme", "standard")
 
 
+def get_debug_log_enabled() -> bool:
+    """Get the persisted debug-log enable flag.
+
+    Persisted so the logger can be re-enabled during startup, BEFORE
+    the session-recovery prompt fires — otherwise `/debug-log on` only
+    takes effect from the next command onward and early-startup
+    regressions escape into the void.
+    """
+    return bool(get_tui_config().get("debug_log", False))
+
+
 def set_tui_config(key: str, value: Any) -> bool:
     """Set a TUI configuration value and save to config file."""
     config_path = find_config_file()
@@ -59,7 +70,8 @@ def set_tui_config(key: str, value: Any) -> bool:
 
     try:
         with open(config_path, "w", encoding="utf-8") as f:
-            json.dump(config_data, f, indent=2)
+            json.dump(config_data, f, indent=2, ensure_ascii=False)
+            f.write("\n")
 
         # Update in-memory config
         store = ConfigStore.get_instance()

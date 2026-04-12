@@ -247,6 +247,10 @@ async def set_debug_log(request: dict):
         logger.info("Debug logging disabled via API")
         logger.disable()
 
+    # Persist so next startup restores state before session recovery
+    from ...config import set_tui_config
+    set_tui_config("debug_log", enabled)
+
     return {
         "enabled": logger.enabled,
         "log_file": str(logger.log_file) if logger.log_file else None,

@@ -62,11 +62,17 @@ def main():
     if args.trace:
         os.environ['PPXAIDE_TRACE'] = '1'
 
-    # Initialize config and load .env BEFORE starting event loop (matches Rich TUI)
+    # Initialize config and load .env BEFORE starting event loop (matches Rich TUI).
+    # initialize() also restores persisted debug-log state — the logger is
+    # already writing by the time any TUI code runs.
     initialize()
 
+    # Pick up persisted state for the app's internal debug flags
+    from ..config import get_debug_log_enabled
+    persisted_debug = get_debug_log_enabled()
+
     # Create app instance
-    debug_mode = args.debug or args.trace
+    debug_mode = args.debug or args.trace or persisted_debug
     trace_mode = args.trace
     app = PPXAIDEApp(debug_logging=debug_mode, trace_logging=trace_mode)
 

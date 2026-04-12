@@ -98,6 +98,7 @@ from .features import (
     get_session_config,
     get_auto_restore_mode,
     get_auto_save_interval,
+    get_debug_log_enabled,
 )
 
 # Paths, data directory, server
@@ -186,6 +187,21 @@ def initialize():
 
     # Then populate PROVIDERS/MODELS from config
     _refresh_module_dicts()
+
+    # Restore persisted debug-log state for ALL ppxai clients (Rich, Textual,
+    # Web server, VSCode server, benchmarks). Must run inside initialize()
+    # so it fires BEFORE any client code — in particular, BEFORE the Rich
+    # TUI's session-recovery prompt, which used to swallow evidence of its
+    # own silent regressions (see memory/feedback_session_recovery_ordering.md).
+    try:
+        from .features import get_debug_log_enabled
+        if get_debug_log_enabled():
+            from ..common.logger import Logger
+            Logger.enable_all()
+    except Exception:
+        # Never let a logger-restore failure break startup
+        pass
+
     _initialized = True
 
 
@@ -250,6 +266,7 @@ __all__ = [
     "get_tui_config",
     "get_tui_theme",
     "set_tui_config",
+    "get_debug_log_enabled",
     # Session functions
     "get_session_config",
     "get_auto_restore_mode",

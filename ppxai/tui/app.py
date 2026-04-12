@@ -1684,6 +1684,10 @@ class PPXAIDEApp(App):
             Logger.enable_all()
         else:
             Logger.disable_all()
+        # Persist so next startup enables logger BEFORE session-recovery prompt
+        # — see memory/feedback_session_recovery_ordering.md
+        from ..config import set_tui_config
+        set_tui_config("debug_log", enabled)
         # Sync to AppState
         if self._engine_client:
             self._engine_client.state.set("debug_log", enabled)

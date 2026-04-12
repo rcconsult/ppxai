@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from ..common.logger import Logger, get_logger
-from ..config import find_config_file, reload_config
+from ..config import find_config_file, reload_config, set_tui_config
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
@@ -339,17 +339,21 @@ def handle_debug_log(context: CommandContext, args: str) -> CommandResult:
 
     if cmd in ["on", "enable", "1", "true", "yes"]:
         Logger.enable_all()
+        # Persist so next startup enables logger BEFORE session-recovery
+        # prompt fires — see memory/feedback_session_recovery_ordering.md
+        set_tui_config("debug_log", True)
         return ConfirmationResult(
             status=ResultStatus.SUCCESS,
-            message=f"Debug logging enabled for all components. Logs: {log_file.parent}/. All message flow, API requests, and tool executions will be logged.",
-            details={"log_file": str(log_file), "enabled": True}
+            message=f"Debug logging enabled for all components (persisted). Logs: {log_file.parent}/. All message flow, API requests, and tool executions will be logged.",
+            details={"log_file": str(log_file), "enabled": True, "persisted": True}
         )
     elif cmd in ["off", "disable", "0", "false", "no"]:
         Logger.disable_all()
+        set_tui_config("debug_log", False)
         return ConfirmationResult(
             status=ResultStatus.SUCCESS,
-            message="Debug logging disabled for all components",
-            details={"enabled": False}
+            message="Debug logging disabled for all components (persisted)",
+            details={"enabled": False, "persisted": True}
         )
     elif cmd in ["show", "view", "cat"]:
         # Show recent log entries
