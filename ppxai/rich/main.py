@@ -255,7 +255,21 @@ def check_session_recovery() -> tuple[bool, dict | None]:
 
     # Get last session state
     last_state = SessionManager.get_last_session_state()
+
+    # Debug logging for recurring regression tracking (see
+    # memory/feedback_session_recovery_ordering.md). If the prompt
+    # fails to appear again, these lines in tui-debug.log will show
+    # exactly why the early-return triggered.
+    logger.debug(
+        f"[session-recovery] auto_restore={auto_restore!r}, "
+        f"state={'found' if last_state else 'NONE'}"
+        + (f", name={last_state.get('name')}, dirty={last_state.get('dirty')}, "
+           f"messages={last_state.get('message_count')}"
+           if last_state else "")
+    )
+
     if not last_state:
+        logger.debug("[session-recovery] → skip: no state file")
         return False, None
 
     session_name = last_state.get("name")
@@ -264,6 +278,7 @@ def check_session_recovery() -> tuple[bool, dict | None]:
 
     # Skip if no messages in last session
     if message_count == 0:
+        logger.debug("[session-recovery] → skip: message_count == 0")
         return False, None
 
     # If session was dirty (crash), always try to recover
