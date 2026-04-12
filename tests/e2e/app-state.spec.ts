@@ -157,10 +157,16 @@ test.describe('AppState', () => {
 
   test.describe('snapshot()', () => {
     test('returns a plain object with all current values', async ({ page }) => {
+      // AppState is schema-driven (v1.17.4) — `new AppState(initial)`
+      // seeds EVERY schema-declared field with its default in addition
+      // to the caller-provided initial keys. snapshot() returns all
+      // live fields, so we assert the user-provided keys/values are
+      // present (toMatchObject) rather than strict equality which
+      // would fail on every schema default.
       const snap = await page.evaluate(() =>
         window.testHelpers.testSnapshot({ a: 1, b: 'two', c: true })
       );
-      expect(snap).toEqual({ a: 1, b: 'two', c: true });
+      expect(snap).toMatchObject({ a: 1, b: 'two', c: true });
     });
 
     test('snapshot is a copy — mutating it does not affect state', async ({ page }) => {
