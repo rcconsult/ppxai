@@ -253,8 +253,9 @@ def check_session_recovery() -> tuple[bool, dict | None]:
     """
     auto_restore = get_auto_restore_mode()
 
-    # Get last session state
-    last_state = SessionManager.get_last_session_state()
+    # Get last session state — with disk-scan fallback when the pointer
+    # file is missing (e.g. it was cleared but saved sessions still exist).
+    last_state = SessionManager.get_last_session_state_or_scan()
 
     # Debug logging for recurring regression tracking (see
     # memory/feedback_session_recovery_ordering.md). If the prompt
@@ -264,17 +265,19 @@ def check_session_recovery() -> tuple[bool, dict | None]:
         f"[session-recovery] auto_restore={auto_restore!r}, "
         f"state={'found' if last_state else 'NONE'}"
         + (f", name={last_state.get('name')}, dirty={last_state.get('dirty')}, "
-           f"messages={last_state.get('message_count')}"
+           f"messages={last_state.get('message_count')}, "
+           f"recovered_from_disk={last_state.get('recovered_from_disk', False)}"
            if last_state else "")
     )
 
     if not last_state:
-        logger.debug("[session-recovery] → skip: no state file")
+        logger.debug("[session-recovery] → skip: no state file and no sessions on disk")
         return False, None
 
     session_name = last_state.get("name")
     is_dirty = last_state.get("dirty", False)
     message_count = last_state.get("message_count", 0)
+    recovered_from_disk = last_state.get("recovered_from_disk", False)
 
     # Skip if no messages in last session
     if message_count == 0:
@@ -296,8 +299,12 @@ def check_session_recovery() -> tuple[bool, dict | None]:
         console.print(f"[dim]  {message_count} messages[/dim]")
         return True, last_state
 
-    # auto_restore == "prompt"
-    console.print(f"\n[cyan]Last session available:[/cyan] {session_name}")
+    # auto_restore == "prompt" — distinguish a normal pointer find from
+    # a disk-scan fallback so the user knows why we're asking.
+    if recovered_from_disk:
+        console.print(f"\n[yellow]State pointer missing — most recent session on disk:[/yellow] {session_name}")
+    else:
+        console.print(f"\n[cyan]Last session available:[/cyan] {session_name}")
     console.print(f"[dim]  {message_count} messages, provider: {last_state.get('provider', 'unknown')}[/dim]")
 
     try:

@@ -580,3 +580,143 @@ class TestResetForModelSwitch:
         # [user] -> trailing user removed -> []
         # The alternation fix removes trailing user messages
         assert len(session_manager.messages) == 0
+
+
+# =============================================================================
+# Disk-scan fallback for missing state pointer (v1.17.4)
+# =============================================================================
+
+
+class TestSessionDiskScanFallback:
+    """Tests for SessionManager.find_most_recent_session_on_disk and
+    get_last_session_state_or_scan — the safety net for when the state
+    pointer is missing but sessions still exist on disk.
+    """
+
+    def test_find_most_recent_returns_none_when_no_sessions(self, tmp_path, monkeypatch):
+        sessions_dir = tmp_path / "sessions"
+        sessions_dir.mkdir()
+        monkeypatch.setattr(
+            "pathlib.Path.home", lambda: tmp_path.parent / "home_stub"
+        )
+        # Point the sessions_dir via the function's own Path.home lookup
+        fake_home = tmp_path
+        monkeypatch.setattr("ppxai.engine.session.Path.home", lambda: fake_home)
+        result = SessionManager.find_most_recent_session_on_disk()
+        # tmp_path/.ppxai/sessions doesn't exist → returns None
+        assert result is None
+
+    def test_find_most_recent_picks_newest_flat_session(self, tmp_path, monkeypatch):
+        sessions_dir = tmp_path / ".ppxai" / "sessions"
+        sessions_dir.mkdir(parents=True)
+
+        old = sessions_dir / "session_old.json"
+        new = sessions_dir / "session_new.json"
+        old.write_text(json.dumps({
+            "session_name": "session_old",
+            "messages": [{"role": "user", "content": "hi"}],
+            "metadata": {"provider": "openai", "model": "gpt-4.1-mini"},
+        }))
+        new.write_text(json.dumps({
+            "session_name": "session_new",
+            "messages": [
+                {"role": "user", "content": "first"},
+                {"role": "assistant", "content": "second"},
+            ],
+            "metadata": {"provider": "perplexity", "model": "sonar"},
+            "tools_enabled": True,
+        }))
+        import os as _os
+        _os.utime(old, (1_000_000_000, 1_000_000_000))
+        _os.utime(new, (2_000_000_000, 2_000_000_000))
+
+        monkeypatch.setattr("ppxai.engine.session.Path.home", lambda: tmp_path)
+        result = SessionManager.find_most_recent_session_on_disk()
+
+        assert result is not None
+        assert result["name"] == "session_new"
+        assert result["message_count"] == 2
+        assert result["provider"] == "perplexity"
+        assert result["model"] == "sonar"
+        assert result["tools_enabled"] is True
+        assert result["recovered_from_disk"] is True
+        # Fallback never reports dirty — if it were dirty, the state file
+        # would still exist and we wouldn't have taken this path.
+        assert result["dirty"] is False
+
+    def test_find_most_recent_handles_directory_format(self, tmp_path, monkeypatch):
+        sessions_dir = tmp_path / ".ppxai" / "sessions"
+        sessions_dir.mkdir(parents=True)
+
+        # Directory-format session (multimodal).
+        session_dir = sessions_dir / "session_dir"
+        session_dir.mkdir()
+        inner = session_dir / "session.json"
+        inner.write_text(json.dumps({
+            "session_name": "session_dir",
+            "messages": [{"role": "user", "content": "ping"}],
+            "metadata": {"provider": "gemini", "model": "gemini-3-flash"},
+        }))
+        import os as _os
+        _os.utime(inner, (3_000_000_000, 3_000_000_000))
+
+        monkeypatch.setattr("ppxai.engine.session.Path.home", lambda: tmp_path)
+        result = SessionManager.find_most_recent_session_on_disk()
+
+        assert result is not None
+        assert result["name"] == "session_dir"
+        assert result["provider"] == "gemini"
+        assert result["recovered_from_disk"] is True
+
+    def test_get_or_scan_prefers_state_file(self, tmp_path, monkeypatch):
+        sessions_dir = tmp_path / ".ppxai" / "sessions"
+        sessions_dir.mkdir(parents=True)
+        state_file = tmp_path / ".ppxai" / "session-state.json"
+        state_file.write_text(json.dumps({
+            "version": 1,
+            "last_session": {
+                "name": "from_state",
+                "message_count": 5,
+                "provider": "openai",
+                "model": "gpt-4.1-mini",
+                "dirty": False,
+            },
+        }))
+
+        # Put a newer session on disk — the pointer should still win.
+        (sessions_dir / "newer.json").write_text(json.dumps({
+            "session_name": "newer",
+            "messages": [{"role": "user", "content": "x"}],
+            "metadata": {},
+        }))
+
+        monkeypatch.setattr("ppxai.engine.session.SESSION_STATE_FILE", state_file)
+        monkeypatch.setattr("ppxai.engine.session.Path.home", lambda: tmp_path)
+
+        result = SessionManager.get_last_session_state_or_scan()
+        assert result is not None
+        assert result["name"] == "from_state"
+        # recovered_from_disk should NOT be set on the state-file path
+        assert not result.get("recovered_from_disk", False)
+
+    def test_get_or_scan_falls_back_when_state_missing(self, tmp_path, monkeypatch):
+        sessions_dir = tmp_path / ".ppxai" / "sessions"
+        sessions_dir.mkdir(parents=True)
+        # No state file.
+        state_file = tmp_path / ".ppxai" / "session-state.json"
+
+        (sessions_dir / "orphan.json").write_text(json.dumps({
+            "session_name": "orphan",
+            "messages": [{"role": "user", "content": "x"},
+                         {"role": "assistant", "content": "y"}],
+            "metadata": {"provider": "openai", "model": "gpt-4.1-mini"},
+        }))
+
+        monkeypatch.setattr("ppxai.engine.session.SESSION_STATE_FILE", state_file)
+        monkeypatch.setattr("ppxai.engine.session.Path.home", lambda: tmp_path)
+
+        result = SessionManager.get_last_session_state_or_scan()
+        assert result is not None
+        assert result["name"] == "orphan"
+        assert result["message_count"] == 2
+        assert result["recovered_from_disk"] is True

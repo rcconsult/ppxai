@@ -634,16 +634,21 @@ class PPXAIDEApp(App):
                 self._log.debug("No engine client, skipping session restoration")
                 return
 
-            # Get last session state
-            last_state = SessionManager.get_last_session_state()
+            # Get last session state — with disk-scan fallback for cases
+            # where the pointer is missing but saved sessions still exist.
+            last_state = SessionManager.get_last_session_state_or_scan()
             if not last_state:
-                self._log.debug("No last session state found")
+                self._log.debug("No last session state found (pointer missing and no sessions on disk)")
                 return
 
             session_name = last_state.get("name")
             message_count = last_state.get("message_count", 0)
+            recovered_from_disk = last_state.get("recovered_from_disk", False)
 
-            self._log.info(f"Found last session: {session_name} with {message_count} messages")
+            self._log.info(
+                f"Found last session: {session_name} with {message_count} messages"
+                + (" (recovered from disk — state pointer was missing)" if recovered_from_disk else "")
+            )
 
             # Skip if no messages
             if message_count == 0:
@@ -722,11 +727,20 @@ class PPXAIDEApp(App):
             if auto_restore != "never":
                 self._log.info(f"Showing session restoration prompt for {session_name}")
 
-                # Show modal dialog
+                # Show modal dialog. When the state pointer was missing
+                # and we fell back to a disk scan, tell the user why — so
+                # they know this is a recovery path, not a normal resume.
+                if recovered_from_disk:
+                    dialog_title = "Session Recovery (state pointer missing)"
+                    dialog_message = f"Most recent session on disk: {session_name}"
+                else:
+                    dialog_title = "Session Restoration"
+                    dialog_message = f"Last session: {session_name}"
+
                 response = await self.push_screen_wait(
                     ConsentDialog(
-                        title="Session Restoration",
-                        message=f"Last session: {session_name}",
+                        title=dialog_title,
+                        message=dialog_message,
                         question=f"{message_count} messages, Provider: {provider_info}, Tools: {tools_info}\n\nRestore this session?",
                         options=["Yes", "No"]
                     )

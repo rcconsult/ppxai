@@ -1320,3 +1320,109 @@ class SessionManager:
         if SESSION_STATE_FILE.exists():
             SESSION_STATE_FILE.unlink()
 
+    @staticmethod
+    def find_most_recent_session_on_disk() -> Optional[Dict[str, Any]]:
+        """Scan ~/.ppxai/sessions/ for the newest session and return its info.
+
+        Fallback path when `session-state.json` is missing or corrupt but
+        saved sessions still exist on disk (either because the state file
+        was cleared externally, lost to a crash before save, or the
+        pointer was never written — see v1.17.4 investigation notes
+        around session_20260412_192249 for a real occurrence).
+
+        Considers both formats:
+          * flat: `sessions/<name>.json`
+          * directory: `sessions/<name>/session.json`
+
+        Returns a dict with the same shape as `get_last_session_state()`
+        so callers can use it interchangeably, plus:
+          * `"recovered_from_disk": True` — lets clients distinguish
+            fallback recovery from normal auto-restore and surface a
+            slightly different prompt ("State pointer missing — restore
+            most recent session?").
+
+        Returns:
+            Dict with session info, or None if no sessions on disk.
+        """
+        sessions_dir = Path.home() / ".ppxai" / "sessions"
+        if not sessions_dir.is_dir():
+            return None
+
+        best_path: Optional[Path] = None
+        best_mtime: float = -1.0
+        best_name: str = ""
+        try:
+            for entry in sessions_dir.iterdir():
+                # Flat format: sessions/<name>.json
+                if entry.is_file() and entry.suffix == ".json":
+                    name = entry.stem
+                    mtime = entry.stat().st_mtime
+                    if mtime > best_mtime:
+                        best_mtime = mtime
+                        best_path = entry
+                        best_name = name
+                # Directory format: sessions/<name>/session.json
+                elif entry.is_dir():
+                    candidate = entry / "session.json"
+                    if candidate.is_file():
+                        name = entry.name
+                        mtime = candidate.stat().st_mtime
+                        if mtime > best_mtime:
+                            best_mtime = mtime
+                            best_path = candidate
+                            best_name = name
+        except Exception as e:
+            logger.debug(f"Sessions dir scan failed: {e}")
+            return None
+
+        if best_path is None or not best_name:
+            return None
+
+        # Read minimal metadata from the session file so callers can
+        # render the same prompt content ("<N> messages, provider: X").
+        # Any field that's missing or unreadable falls back to a sane
+        # default so the caller never has to defend against KeyError.
+        try:
+            with open(best_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception as e:
+            logger.debug(f"Session file read failed for scan fallback: {e}")
+            return None
+
+        metadata = data.get("metadata", {}) or {}
+        messages = data.get("messages", []) or []
+
+        return {
+            "name": best_name,
+            "dirty": False,  # by definition — if dirty, state file would exist
+            "provider": metadata.get("provider"),
+            "model": metadata.get("model"),
+            "working_dir": data.get("working_dir") or metadata.get("working_dir"),
+            "tools_enabled": data.get("tools_enabled", False),
+            "message_count": len(messages),
+            "recovered_from_disk": True,
+        }
+
+    @staticmethod
+    def get_last_session_state_or_scan() -> Optional[Dict[str, Any]]:
+        """Return the last-session pointer, falling back to disk scan.
+
+        Primary path: `get_last_session_state()` — reads the pointer file.
+        Fallback path: when the pointer is missing, scan the sessions
+        directory for the newest saved session. This recovers gracefully
+        from state-file loss that would otherwise silently orphan a
+        session from its restore prompt.
+
+        The returned dict is shape-compatible with `get_last_session_state()`.
+        If the dict was produced by the fallback, it carries an extra
+        `"recovered_from_disk": True` flag so clients can adjust the
+        prompt wording.
+
+        Returns:
+            Session state dict, or None if neither path finds anything.
+        """
+        state = SessionManager.get_last_session_state()
+        if state:
+            return state
+        return SessionManager.find_most_recent_session_on_disk()
+

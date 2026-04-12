@@ -119,15 +119,20 @@ async def get_last_session(s: Session = Depends(get_session)):
     Returns:
         JSON with last session info or null if no state file exists
     """
-    state = EngineSessionManager.get_last_session_state()
+    # Disk-scan fallback: if the state pointer is missing but the
+    # sessions directory has content, recover the most recent session
+    # so the UI still offers a restore prompt.
+    state = EngineSessionManager.get_last_session_state_or_scan()
     if not state:
         return {"last_session": None}
 
     # Verify the session file still exists; clear stale pointer if not.
     # v1.17.4: Check both flat (.json) and directory (dir/session.json)
-    # formats — multimodal sessions save in directory format.
+    # formats — multimodal sessions save in directory format. Skip this
+    # check when the state came from a disk scan — by construction the
+    # file must exist, we literally just read it.
     session_name = state.get("name")
-    if session_name:
+    if session_name and not state.get("recovered_from_disk"):
         sessions_dir = Path.home() / ".ppxai" / "sessions"
         flat_exists = (sessions_dir / f"{session_name}.json").exists()
         dir_exists = (sessions_dir / session_name / "session.json").exists()
@@ -143,7 +148,11 @@ async def get_last_session(s: Session = Depends(get_session)):
             "model": state.get("model"),
             "working_dir": state.get("working_dir"),
             "tools_enabled": state.get("tools_enabled", False),
-            "message_count": state.get("message_count", 0)
+            "message_count": state.get("message_count", 0),
+            # Lets web/VSCode render a "State pointer missing — recover
+            # most recent session?" prompt instead of the normal
+            # "Restore last session?" text.
+            "recovered_from_disk": state.get("recovered_from_disk", False),
         }
     }
 
@@ -159,7 +168,9 @@ async def restore_last_session(s: Session = Depends(get_session)):
         JSON with restored session info
     """
 
-    state = EngineSessionManager.get_last_session_state()
+    # Same disk-scan fallback as GET /sessions/last — lets a client
+    # issue a direct restore even when the state pointer was cleared.
+    state = EngineSessionManager.get_last_session_state_or_scan()
     if not state or not state.get("name"):
         raise HTTPException(status_code=404, detail="No last session found")
 
