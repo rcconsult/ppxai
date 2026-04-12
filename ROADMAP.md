@@ -697,7 +697,7 @@ ppxai/tui/                     # New module (Textual-based)
 
 ### v1.17.4 - File Upload & Data Processing
 
-**Status:** All phases complete + coder.trad.int deployed + PPTX visual preview, ready for release
+**Status:** All phases complete + coder deployed + PPTX visual preview, ready for release
 **Branch:** `feat/file-upload`
 **Plan:** [docs/TODO-file-upload.md](docs/TODO-file-upload.md)
 

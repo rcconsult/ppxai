@@ -227,7 +227,7 @@
     }
   ],
   "metadata": {
-    "base_url": "https://codeai.trad.int/v1",
+    "base_url": "https://your-gpt-oss-host/v1",
     "timeout": 120,
     "retries": 1
   }

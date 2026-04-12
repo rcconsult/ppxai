@@ -31,7 +31,7 @@
 Phases 0-7 + Task #11 + autocomplete parity + schema-driven AppState DTO,
 zero regressions. 2 poppler-dependent tests deliberately skipped.
 
-### Post-Phase Work (coder.trad.int deployment, April 7)
+### Post-Phase Work (coder deployment, April 7)
 
 | Item | Status | Notes |
 |------|--------|-------|

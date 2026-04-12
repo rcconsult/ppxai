@@ -155,7 +155,7 @@ Expected output should include `custom` and `asusai-vllm`.
 
 | Setting | `custom` (GPT-OSS 120B) | `asusai-vllm` (Qwen3-Coder FP8) |
 |---------|-------------------------|----------------------------------|
-| **Base URL** | `https://codeai.trad.int/v1` | `http://10.28.15.50:8000/v1` |
+| **Base URL** | `https://your-gpt-oss-host/v1` | `http://your-vllm-host:8000/v1` |
 | **API key env** | `CUSTOM_API_KEY` | `OLLAMA_API_KEY` |
 | **Model ID** | `openai/gpt-oss-120b` | `Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8` |
 | **Context limit** | 131,072 | 131,072 |
@@ -410,7 +410,7 @@ You are an expert coding assistant running on a local NVIDIA GB10 GPU via vLLM. 
 |------|--------|------------|
 | Breaking Qwen3-Coder code editing (100%) | **HIGH** | Conservative tuning, revert immediately on any drop |
 | `frequency_penalty` regression | **HIGH** | Test 0.0 first, before any other changes |
-| DGX connectivity from Windows | MEDIUM | Verify `curl http://10.28.15.50:8000/v1/models` before starting |
+| DGX connectivity from Windows | MEDIUM | Verify `curl http://your-vllm-host:8000/v1/models` before starting |
 | Config not loaded (wrong file) | MEDIUM | Always set `PPXAI_CONFIG_FILE`, verify providers visible |
 
 ---
@@ -449,5 +449,5 @@ set UV_NATIVE_TLS=true
 .uv\uv run python benchmarks\llm-eval\benchmark.py --provider custom --model openai/gpt-oss-120b --compare
 
 # Check DGX connectivity
-curl http://10.28.15.50:8000/v1/models
+curl http://your-vllm-host:8000/v1/models
 ```

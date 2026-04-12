@@ -546,7 +546,7 @@ Examples:
         """
     )
     parser.add_argument("--model", default="qwen2.5-coder:0.5b", help="Model to benchmark")
-    parser.add_argument("--base-url", default="http://10.28.15.57:11434/v1", help="API base URL")
+    parser.add_argument("--base-url", default="http://localhost:11434/v1", help="API base URL")
     parser.add_argument("--api-key", default="ollama", help="API key")
     parser.add_argument("--compare", action="store_true", help="Compare multiple models")
     parser.add_argument("--compare-descriptions", action="store_true", help="Compare description sets for one model")
