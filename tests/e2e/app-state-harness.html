@@ -24,6 +24,27 @@
     <h1>AppState Test Harness</h1>
     <div id="status">Loaded</div>
 
+    <!--
+      v1.17.4 post-release hotfix: AppState is schema-driven and
+      throws in its constructor if `window.APP_STATE_SCHEMA` is
+      missing. The FastAPI static route injects this before
+      app-state.js loads in the real web app; the E2E harness
+      is served over file:// / http by Playwright, so we fetch the
+      canonical schema JSON synchronously here and set
+      window.APP_STATE_SCHEMA before importing app-state.js.
+      Path is relative to this HTML file — walks back to the repo
+      root and into the engine package.
+    -->
+    <script>
+        (function loadSchemaSync() {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', '../../ppxai/engine/app_state_schema.json', false);
+            xhr.send(null);
+            if (xhr.status === 200 || xhr.status === 0) {
+                window.APP_STATE_SCHEMA = JSON.parse(xhr.responseText);
+            }
+        })();
+    </script>
     <script src="../../ppxai/web/shared/app-state.js"></script>
     <script>
         // Expose helpers for Playwright page.evaluate() calls
