@@ -611,6 +611,7 @@ def _complete_at_query(
     items: List[Dict[str, Any]] = []
 
     # Context providers (prefix match on the bare name after @)
+    context_provider_matched = False
     for name, desc in _CONTEXT_PROVIDERS:
         bare = name[1:]
         if not query_lower or bare.lower().startswith(query_lower):
@@ -621,26 +622,44 @@ def _complete_at_query(
                 "kind": "context_ref",
                 "replace_start": -replace_len,
             })
+            if query_lower and bare.lower().startswith(query_lower):
+                context_provider_matched = True
+
+    # Fast path: skip filesystem scan when the query exclusively matches
+    # a context-provider shortcut (e.g. @gi → @git, @tr → @tree). The
+    # rglob("*") is expensive on large repos, network mounts, and
+    # monorepos — avoid it when the user clearly isn't looking for files.
+    # Only scan when: empty query (show everything), no context match
+    # (must be a file query), or the query contains path-like characters
+    # (dots, slashes) that suggest a filename, not a shortcut.
+    skip_filesystem = (
+        context_provider_matched
+        and query_lower
+        and "." not in query_lower
+        and "/" not in query_lower
+        and "_" not in query_lower
+    )
 
     # File refs
     root = Path(working_dir)
     files: List[Tuple[str, str]] = []
 
-    try:
-        for path in root.rglob("*"):
-            if len(files) >= max_files * 2:
-                break
-            try:
-                if not path.is_file():
-                    continue
-                if any(ignored in path.parts for ignored in _IGNORE_DIRS):
-                    continue
-                rel_path = str(path.relative_to(root))
-                files.append((path.name, rel_path))
-            except (ValueError, OSError):
-                pass
-    except (PermissionError, OSError):
-        pass
+    if not skip_filesystem:
+        try:
+            for path in root.rglob("*"):
+                if len(files) >= max_files * 2:
+                    break
+                try:
+                    if not path.is_file():
+                        continue
+                    if any(ignored in path.parts for ignored in _IGNORE_DIRS):
+                        continue
+                    rel_path = str(path.relative_to(root))
+                    files.append((path.name, rel_path))
+                except (ValueError, OSError):
+                    pass
+        except (PermissionError, OSError):
+            pass
 
     for filename, filepath in files[:max_files]:
         if not query_lower or query_lower in filename.lower() or query_lower in filepath.lower():

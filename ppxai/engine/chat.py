@@ -531,6 +531,14 @@ async def chat_with_tools(
     consecutive_truncation_retries = 0
     MAX_TRUNCATION_RETRIES = 3
 
+    # Track the last tool name for progress display
+    last_tool_name = ""
+
+    # Fix: ensure session.tools_enabled reflects actual tool usage (v1.17.4).
+    # This was None in session metadata when tools were enabled via native
+    # provider path rather than explicit /tools enable.
+    ctx.session.tools_enabled = True
+
     while iteration < max_iterations:
         if ctx.is_interrupted:
             yield Event(EventType.ERROR, "Interrupted by user")
@@ -539,7 +547,12 @@ async def chat_with_tools(
         iteration += 1
 
         if iteration > 1:
-            yield Event(EventType.INFO, f"Processing... (iteration {iteration})")
+            # Show which tool just completed so the user has breadcrumbs
+            # during long tool chains instead of 20+ seconds of silence.
+            if last_tool_name:
+                yield Event(EventType.INFO, f"Step {iteration}: processing {last_tool_name} result...")
+            else:
+                yield Event(EventType.INFO, f"Processing... (step {iteration})")
 
         messages = ctx.session.get_messages()
 
@@ -698,6 +711,7 @@ async def chat_with_tools(
                     return
 
                 results.append((tc, result, success))
+                last_tool_name = tool_name
 
             if interrupted:
                 # v1.16.0: Close group even on interruption
