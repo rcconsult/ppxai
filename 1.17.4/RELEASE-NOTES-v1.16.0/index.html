@@ -1,0 +1,2657 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.17.4/RELEASE-NOTES-v1.16.0/">
+      
+      
+        <link rel="prev" href="../RELEASE-NOTES-v1.16.1/">
+      
+      
+        <link rel="next" href="../RELEASE-NOTES-v1.15.6/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>v1.16.0 - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#release-notes-v1160" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              v1.16.0
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../INSTALLATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROVIDER_SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AGENT_MODE_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTEXT-INJECTION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CHECKPOINT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../FILE_EDITING_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AUTOROUTER-CONFIG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#major-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Major Changes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Major Changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-provider-hierarchy-step-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Provider Hierarchy (Step 1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-profile-driven-tool-loop-step-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Profile-Driven Tool Loop (Step 2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-proper-tool-messages-step-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Proper Tool Messages (Step 3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-multi-tool-support-step-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Multi-Tool Support (Step 4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-agent-ui-noise-reduction-step-5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Agent UI Noise Reduction (Step 5)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-config-integration-step-6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Config Integration (Step 6)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-benchmark-v2-step-7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Benchmark v2 (Step 7)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#benchmark-rankings-v1160-36-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benchmark Rankings (v1.16.0, 36 tests)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Benchmark Rankings (v1.16.0, 36 tests)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agentsmd-delta-testing-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AGENTS.md Delta Testing Results
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#new-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New Commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="New Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ls-directory-listing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        /ls — Directory Listing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tree-directory-tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        /tree — Directory Tree
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model-info-model-profile-info" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        /model info — Model Profile Info
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#session-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session Management
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Session Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#model-switch-context-reset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Switch Context Reset
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#per-model-iteration-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-Model Iteration Limits
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#session-pollution-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session Pollution Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sse-disconnect-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SSE Disconnect Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#files-changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Files Changed
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Files Changed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#new-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New Files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modified-files-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Modified Files (Key)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration Notes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Migration Notes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#session-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session Format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentsmd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AGENTS.md
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#provider-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provider API
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#major-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Major Changes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Major Changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-provider-hierarchy-step-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Provider Hierarchy (Step 1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-profile-driven-tool-loop-step-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Profile-Driven Tool Loop (Step 2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-proper-tool-messages-step-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Proper Tool Messages (Step 3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-multi-tool-support-step-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Multi-Tool Support (Step 4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-agent-ui-noise-reduction-step-5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Agent UI Noise Reduction (Step 5)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-config-integration-step-6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Config Integration (Step 6)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-benchmark-v2-step-7" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Benchmark v2 (Step 7)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#benchmark-rankings-v1160-36-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benchmark Rankings (v1.16.0, 36 tests)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Benchmark Rankings (v1.16.0, 36 tests)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agentsmd-delta-testing-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AGENTS.md Delta Testing Results
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#new-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New Commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="New Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ls-directory-listing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        /ls — Directory Listing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tree-directory-tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        /tree — Directory Tree
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model-info-model-profile-info" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        /model info — Model Profile Info
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#session-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session Management
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Session Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#model-switch-context-reset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Switch Context Reset
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#per-model-iteration-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-Model Iteration Limits
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#session-pollution-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session Pollution Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sse-disconnect-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SSE Disconnect Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#files-changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Files Changed
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Files Changed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#new-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New Files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modified-files-key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Modified Files (Key)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration Notes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Migration Notes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#session-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Session Format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentsmd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AGENTS.md
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#provider-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provider API
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="release-notes-v1160">Release Notes: v1.16.0<a class="headerlink" href="#release-notes-v1160" title="Permanent link">&para;</a></h1>
+<p><strong>Release Date:</strong> 2026-02-26
+<strong>Branch:</strong> feature/v1.16.0
+<strong>Focus:</strong> Profile-driven tool loop, multi-tool support, agent UI, benchmark v2</p>
+<hr />
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>v1.16.0 rewrites the core tool calling loop in <code>chat.py</code> with profile-driven routing, proper <code>tool</code> role messages, multi-tool support, and grouped tool call UI across all 4 clients. This is the largest single release in ppxai history.</p>
+<p><strong>Key Numbers:</strong>
+- 154 files changed, 30,400+ lines added
+- 1,536 tests passing (up from 1,349 in v1.15.6)
+- 36 benchmark tests across 9 categories (up from 28 in 7 categories)
+- 100+ benchmark runs across 29 model variants
+- 7 implementation steps over 4 days</p>
+<p><strong>Breaking Changes:</strong> Tool message format changed from synthetic assistant/user pairs to proper <code>tool</code> role messages for native mode. Session migration is automatic (v1.15.x sessions load via <code>None</code>-safe <code>.get()</code>). Prompt-based mode is unchanged.</p>
+<hr />
+<h2 id="major-changes">Major Changes<a class="headerlink" href="#major-changes" title="Permanent link">&para;</a></h2>
+<h3 id="1-provider-hierarchy-step-1">1. Provider Hierarchy (Step 1)<a class="headerlink" href="#1-provider-hierarchy-step-1" title="Permanent link">&para;</a></h3>
+<p><strong>What:</strong> All providers now inherit from <code>BaseProvider</code> ABC with a shared interface.</p>
+<p><strong>Why:</strong> <code>chat.py</code> relied on <code>hasattr</code> guards and duck-typing to handle provider differences. This made adding new providers fragile and the tool loop logic hard to follow.</p>
+<p><strong>Changes:</strong>
+- <code>BaseProvider</code> ABC defines the full provider interface: <code>stream()</code>, <code>get_capabilities_for_model()</code>, <code>get_model_profile()</code>, <code>list_models()</code>, <code>validate_config()</code>, <code>_convert_messages()</code>, <code>_get_generation_params()</code>, <code>_get_max_tokens()</code>, <code>_parse_usage()</code>
+- <code>OpenAINativeProvider</code>, <code>GeminiProvider</code>, and <code>OpenAICompatibleProvider</code> all inherit from <code>BaseProvider</code>
+- Removed all <code>hasattr</code> guards from <code>chat.py</code> — providers are called through guaranteed interface methods
+- 61 new parametrized tests in <code>test_provider_hierarchy.py</code></p>
+<p><strong>Impact:</strong> Internal refactoring only. No user-facing changes.</p>
+<h3 id="2-profile-driven-tool-loop-step-2">2. Profile-Driven Tool Loop (Step 2)<a class="headerlink" href="#2-profile-driven-tool-loop-step-2" title="Permanent link">&para;</a></h3>
+<p><strong>What:</strong> <code>ToolCallingProfile.mode</code> ("native", "prompt_based", "auto") replaces the binary <code>native_tool_calling: bool</code> decision.</p>
+<p><strong>Why:</strong> The v1.15.6 benchmark analysis (27 models, 54+ runs) showed that models need different tool calling strategies:
+- o4-mini: 80.8% prompt-based vs 11.5% native
+- gpt-4.1-mini: 71.9% prompt-based vs 60.9% native
+- GPT-5.2: needs JSON stripping from response text
+- Codex models: need Responses API routing</p>
+<p><strong>How it works:</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>1. Look up ModelProfile for current model
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>2. Merge with AGENTS.md overrides → ppxai-config.json overrides
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>3. Check tc_profile.mode:
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>   - &quot;native&quot; → send tools in API request, parse tool_calls from response
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>   - &quot;prompt_based&quot; → inject tool schema into system prompt, parse JSON from text
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>   - &quot;auto&quot; → try native first, fall back to prompt-based on empty/failure
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>4. Fallback flags:
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>   - fallback_on_empty → native returns empty → retry with prompt-based
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>   - fallback_on_failure → native tool parse fails → try prompt-based parser
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>5. Belt-and-suspenders → models with fallback flags get tool hints in system prompt
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>   even in native mode (safety net)
+</span></code></pre></div>
+<p><strong>Truncation recovery:</strong> Detects raw JSON truncation (unbalanced braces), sends escalating recovery messages, caps retries at 3 (<code>MAX_TRUNCATION_RETRIES</code>) with <code>stuck_tool_loop</code> WARNING event.</p>
+<p><strong>Key files:</strong>
+- <code>ppxai/engine/chat.py</code> — Mode routing (~line 470), fallback logic, truncation recovery
+- <code>tests/test_chat_profile_routing.py</code> — 16 routing tests
+- <code>tests/test_engine_tool_parsing.py</code> — 7 truncation + 4 stuck-loop tests</p>
+<h3 id="3-proper-tool-messages-step-3">3. Proper Tool Messages (Step 3)<a class="headerlink" href="#3-proper-tool-messages-step-3" title="Permanent link">&para;</a></h3>
+<p><strong>What:</strong> Native mode now uses proper <code>tool</code> role messages instead of synthetic assistant/user pairs.</p>
+<p><strong>Before (v1.15.x):</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Synthetic pair — all providers</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s2">&quot;assistant&quot;</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="s2">&quot;[tool call: read_file]&quot;</span><span class="p">))</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="s2">&quot;[tool result: file contents]&quot;</span><span class="p">))</span>
+</span></code></pre></div></p>
+<p><strong>After (v1.16.0):</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Native mode — proper tool messages</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">role</span><span class="o">=</span><span class="s2">&quot;assistant&quot;</span><span class="p">,</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">content</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">tool_calls</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;tc_1&quot;</span><span class="p">,</span> <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;read_file&quot;</span><span class="p">,</span> <span class="s2">&quot;arguments&quot;</span><span class="p">:</span> <span class="s2">&quot;...&quot;</span><span class="p">}}]</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="p">))</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">role</span><span class="o">=</span><span class="s2">&quot;tool&quot;</span><span class="p">,</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">content</span><span class="o">=</span><span class="s2">&quot;file contents&quot;</span><span class="p">,</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="n">tool_call_id</span><span class="o">=</span><span class="s2">&quot;tc_1&quot;</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="p">))</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="c1"># Prompt-based mode — unchanged synthetic pairs</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s2">&quot;assistant&quot;</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="s2">&quot;[tool call: read_file]&quot;</span><span class="p">))</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="n">role</span><span class="o">=</span><span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="s2">&quot;[tool result: file contents]&quot;</span><span class="p">))</span>
+</span></code></pre></div></p>
+<p><strong>Why:</strong> OpenAI, Gemini, and other providers expect <code>tool</code> role messages when using native function calling. Synthetic pairs worked but caused some models to get confused about conversation structure.</p>
+<p><strong>Changes:</strong>
+- <code>Message</code> dataclass extended with <code>tool_calls: Optional[List[Dict]]</code> and <code>tool_call_id: Optional[str]</code>
+- All 4 providers handle <code>tool</code> role in <code>_convert_messages()</code>:
+  - <code>base.py</code> — default conversion
+  - <code>openai_native.py</code> — OpenAI-specific format with function wrapper
+  - <code>openai_compat.py</code> — OpenAI-compatible format
+  - <code>gemini.py</code> — Gemini's <code>functionCall</code>/<code>functionResponse</code> format
+- Session serialization updated to save/load new fields
+- v1.15.x session migration: <code>m.get("tool_calls")</code> / <code>m.get("tool_call_id")</code> returns <code>None</code>
+- Message order validation allows <code>tool</code> messages after <code>assistant(tool_calls)</code>
+- 28 new tests in <code>test_tool_messages.py</code></p>
+<h3 id="4-multi-tool-support-step-4">4. Multi-Tool Support (Step 4)<a class="headerlink" href="#4-multi-tool-support-step-4" title="Permanent link">&para;</a></h3>
+<p><strong>What:</strong> All native tool calls in a response are processed, not just the first one.</p>
+<p><strong>Before:</strong> <code>native_tool_calls[0]</code> — only the first tool call was executed.</p>
+<p><strong>After:</strong> <code>for tc in tool_calls_list</code> — all tool calls are executed sequentially.</p>
+<p><strong>Gating:</strong> The <code>parallel_tool_calls</code> profile flag controls this behavior:
+- <code>True</code> (qwen3-coder, gpt-5.2, gemini-3.1-pro-customtools): Process all tool calls
+- <code>False</code> (default): Process only the first tool call (preserves v1.15.x behavior)</p>
+<p><strong>Sequential execution:</strong> Even when processing multiple calls, they're executed one at a time with individual consent prompts and loop detection per tool.</p>
+<p><strong>Key files:</strong>
+- <code>ppxai/engine/chat.py</code> — Multi-tool loop (~line 639), profile gating (~line 607)</p>
+<h3 id="5-agent-ui-noise-reduction-step-5">5. Agent UI Noise Reduction (Step 5)<a class="headerlink" href="#5-agent-ui-noise-reduction-step-5" title="Permanent link">&para;</a></h3>
+<p><strong>What:</strong> Tool calls are grouped per iteration with collapsible UI across all 4 clients.</p>
+<p><strong>New engine events:</strong>
+- <code>TOOL_GROUP_START</code> — emitted before each iteration's tool calls (contains iteration number)
+- <code>TOOL_GROUP_END</code> — emitted after (contains tool names, success/failure counts)
+- <code>AGENT_COMPLETE</code> — emitted when tool loop finishes (iteration count, commit hash)</p>
+<p><strong>Client rendering:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Client</th>
+<th>Rendering</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Web app</td>
+<td>Collapsible <code>.tool-group</code> containers, checkpoint bubble suppression, undo badge on commits only</td>
+</tr>
+<tr>
+<td>VSCode</td>
+<td>Tool group forwarding via <code>stream.ts</code> → <code>chatPanel.ts</code>, CSS styling</td>
+</tr>
+<tr>
+<td>ppxaide TUI</td>
+<td>Non-verbose: one summary line per group. Verbose: unchanged individual bubbles</td>
+</tr>
+<tr>
+<td>ppxai Rich CLI</td>
+<td>Dim separator lines with iteration number and status</td>
+</tr>
+</tbody>
+</table>
+<p><strong>SSE fixes:</strong>
+- Event type dispatch: side-channel events now emit their actual <code>EventType</code> instead of all being sent as <code>consent_request</code>
+- Consent deadlock: SSE generator uses racing poll pattern (<code>asyncio.ensure_future</code> + 100ms polling) instead of <code>async for</code></p>
+<h3 id="6-config-integration-step-6">6. Config Integration (Step 6)<a class="headerlink" href="#6-config-integration-step-6" title="Permanent link">&para;</a></h3>
+<p><strong>What:</strong> Per-model tool calling overrides with 3-layer precedence.</p>
+<p><strong>Precedence (highest wins):</strong>
+1. <code>ppxai-config.json</code> — user's explicit config
+2. <code>AGENTS.md</code> — project-specific hints with <code>tool_calling:</code> YAML front matter
+3. Built-in profile — <code>model_profiles.py</code> default</p>
+<p><strong>ppxai-config.json example:</strong>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;providers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">&quot;local-vllm&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">      </span><span class="nt">&quot;models&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">        </span><span class="nt">&quot;*/qwen3-coder-30b*&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">          </span><span class="nt">&quot;tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">            </span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;native&quot;</span><span class="p">,</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">            </span><span class="nt">&quot;parallel_tool_calls&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">          </span><span class="p">}</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">        </span><span class="p">}</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="p">}</span>
+</span></code></pre></div></p>
+<p><strong>AGENTS.md example:</strong>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">tool_calling</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="s">&quot;gpt-5.2*&quot;</span><span class="p p-Indicator">:</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">native</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">strip_json_from_text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="s">&quot;o4-mini*&quot;</span><span class="p p-Indicator">:</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">prompt_based</span>
+</span></code></pre></div></p>
+<p><strong><code>/model info</code> command:</strong> Shows effective profile with source attribution per field (e.g., "mode: native (built-in profile)" vs "mode: prompt_based (AGENTS.md override)").</p>
+<p><strong>Key files:</strong>
+- <code>ppxai/config/__init__.py</code> — <code>get_tool_calling_config()</code>
+- <code>ppxai/engine/bootstrap.py</code> — <code>_parse_tool_calling_section()</code>, <code>get_tool_calling_overrides()</code>
+- <code>ppxai/engine/chat.py</code> — <code>_get_effective_profile()</code> (3-layer merge)
+- 16 new tests across config, bootstrap, and profile merging</p>
+<h3 id="7-benchmark-v2-step-7">7. Benchmark v2 (Step 7)<a class="headerlink" href="#7-benchmark-v2-step-7" title="Permanent link">&para;</a></h3>
+<p><strong>What:</strong> Expanded from 28 tests/7 categories to 36 tests/9 categories with agentic multi-turn tests, efficiency metrics, and AGENTS.md delta testing.</p>
+<p><strong>New categories:</strong>
+- <code>agentic_tool_loops</code> — multi-turn tool call chains requiring search → read → edit patterns
+- <code>efficiency</code> — measures token usage and tool call redundancy</p>
+<p><strong>New tests:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Category</th>
+<th>Description</th>
+<th>Scoring</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>patch_apply_verify</code></td>
+<td>code_editing</td>
+<td>Generate patch, apply with <code>_replace_hunk()</code>, verify fix</td>
+<td>0.0/0.5/0.7/1.0</td>
+</tr>
+<tr>
+<td><code>search_then_edit</code></td>
+<td>agentic_tool_loops</td>
+<td>search_code → read_file → apply_patch (3 turns)</td>
+<td>steps/3</td>
+</tr>
+<tr>
+<td><code>fix_verify</code></td>
+<td>agentic_tool_loops</td>
+<td>write → test → fail → fix → retest (4 turns)</td>
+<td>steps/4</td>
+</tr>
+<tr>
+<td><code>information_gathering</code></td>
+<td>agentic_tool_loops</td>
+<td>Find and read 3 auth-related files</td>
+<td>files_found/3</td>
+</tr>
+<tr>
+<td><code>error_recovery_chain</code></td>
+<td>agentic_tool_loops</td>
+<td>Handle not-found → search → read → permission denied (4 turns)</td>
+<td>steps/4</td>
+</tr>
+<tr>
+<td><code>multi_file_review</code></td>
+<td>agentic_tool_loops</td>
+<td>Read all files before making claims</td>
+<td>files_read/total</td>
+</tr>
+<tr>
+<td><code>claim_without_action</code></td>
+<td>hallucination_resistance</td>
+<td>Refuse to fabricate without tool calls</td>
+<td>0.0 or 1.0</td>
+</tr>
+<tr>
+<td><code>consecutive_tool_loop</code></td>
+<td>agentic_tool_loops</td>
+<td>5-step dependent chain</td>
+<td>steps/5</td>
+</tr>
+<tr>
+<td><code>time_to_first_tool_call</code></td>
+<td>efficiency</td>
+<td>Penalize preamble &gt;100 chars</td>
+<td>0.0/0.5/1.0</td>
+</tr>
+<tr>
+<td><code>tool_call_efficiency</code></td>
+<td>efficiency</td>
+<td>Score by redundant calls vs optimal</td>
+<td>0.3-1.0</td>
+</tr>
+</tbody>
+</table>
+<p><strong>AGENTS.md delta testing:</strong>
+- <code>--agents-md both</code> runs suite twice per model (with/without AGENTS.md hints)
+- Reports per-category score delta and overall percentage lift
+- Biggest delta: gemini-3.1-pro-customtools +20.1% (81.5% → 61.4%)</p>
+<p><strong>Token/tool tracking:</strong>
+- <code>total_tokens</code> and <code>total_tool_calls</code> in benchmark metadata
+- Per-test <code>tokens_used</code> and <code>tool_calls_made</code> in test details</p>
+<p><strong>Duplicate tool call detection:</strong>
+- <code>_dedup_tool_call()</code> helper returns <code>[DUPLICATE CALL]</code> feedback for repeated tool+args
+- <code>exempt_tools</code> set for tools with intentionally varying results (run_command, search_code)</p>
+<hr />
+<h2 id="benchmark-rankings-v1160-36-tests">Benchmark Rankings (v1.16.0, 36 tests)<a class="headerlink" href="#benchmark-rankings-v1160-36-tests" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Rank</th>
+<th>Model</th>
+<th>Score</th>
+<th>Mode</th>
+<th>Tier</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>qwen3-coder (cloud)</td>
+<td>95.8%</td>
+<td>native</td>
+<td>S</td>
+</tr>
+<tr>
+<td>2</td>
+<td>gpt-5.2</td>
+<td>91.4%</td>
+<td>native</td>
+<td>A</td>
+</tr>
+<tr>
+<td>3</td>
+<td>gemini-2.5-flash</td>
+<td>90.6%</td>
+<td>native</td>
+<td>S</td>
+</tr>
+<tr>
+<td>4</td>
+<td>gpt-5</td>
+<td>89.1%</td>
+<td>native</td>
+<td>A</td>
+</tr>
+<tr>
+<td>5</td>
+<td>gemini-2.5-pro</td>
+<td>87.5%</td>
+<td>native</td>
+<td>S</td>
+</tr>
+<tr>
+<td>6</td>
+<td>gpt-5-mini</td>
+<td>86.5%</td>
+<td>native</td>
+<td>A</td>
+</tr>
+<tr>
+<td>7</td>
+<td>gemini-3-flash</td>
+<td>84.4%</td>
+<td>native</td>
+<td>S</td>
+</tr>
+<tr>
+<td>8</td>
+<td>sonar-pro</td>
+<td>84.4%</td>
+<td>prompt-based</td>
+<td>A</td>
+</tr>
+<tr>
+<td>9</td>
+<td>gpt-4.1</td>
+<td>82.8%</td>
+<td>native</td>
+<td>A</td>
+</tr>
+<tr>
+<td>10</td>
+<td>gemini-3.1-pro-customtools</td>
+<td>81.5%</td>
+<td>native</td>
+<td>A</td>
+</tr>
+<tr>
+<td>11</td>
+<td>gemini-3.1-pro</td>
+<td>81.5%</td>
+<td>native</td>
+<td>A</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Qwen3-Coder-30B (DGX)</td>
+<td>81.2%</td>
+<td>native</td>
+<td>S</td>
+</tr>
+<tr>
+<td>13</td>
+<td>o4-mini</td>
+<td>80.8%</td>
+<td>prompt-based</td>
+<td>B</td>
+</tr>
+<tr>
+<td>14</td>
+<td>sonar</td>
+<td>76.6%</td>
+<td>prompt-based</td>
+<td>B</td>
+</tr>
+<tr>
+<td>15</td>
+<td>gpt-4.1-mini</td>
+<td>71.9%</td>
+<td>prompt-based</td>
+<td>B</td>
+</tr>
+</tbody>
+</table>
+<h3 id="agentsmd-delta-testing-results">AGENTS.md Delta Testing Results<a class="headerlink" href="#agentsmd-delta-testing-results" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>WITH</th>
+<th>WITHOUT</th>
+<th>Delta</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gemini-3.1-pro-customtools</td>
+<td>81.5%</td>
+<td>61.4%</td>
+<td>+20.1%</td>
+</tr>
+<tr>
+<td>sonar-pro</td>
+<td>84.4%</td>
+<td>68.7%</td>
+<td>+15.7%</td>
+</tr>
+<tr>
+<td>gpt-5.2</td>
+<td>91.4%</td>
+<td>82.8%</td>
+<td>+8.6%</td>
+</tr>
+<tr>
+<td>gemini-2.5-flash</td>
+<td>90.6%</td>
+<td>84.4%</td>
+<td>+6.2%</td>
+</tr>
+<tr>
+<td>qwen3-coder</td>
+<td>95.8%</td>
+<td>93.7%</td>
+<td>+2.1%</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="new-commands">New Commands<a class="headerlink" href="#new-commands" title="Permanent link">&para;</a></h2>
+<h3 id="ls-directory-listing"><code>/ls</code> — Directory Listing<a class="headerlink" href="#ls-directory-listing" title="Permanent link">&para;</a></h3>
+<p>Lists files and directories with size, modification time, and type indicators.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>/ls                    # List current directory
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>/ls /path/to/dir       # List specific directory
+</span></code></pre></div>
+<p>Available in ppxaide TUI, Web app, and ppxai Rich CLI. HTTP endpoint: <code>GET /files/list?path=...</code></p>
+<h3 id="tree-directory-tree"><code>/tree</code> — Directory Tree<a class="headerlink" href="#tree-directory-tree" title="Permanent link">&para;</a></h3>
+<p>Shows directory structure as an indented tree with file counts.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>/tree                  # Tree of current directory
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>/tree /path/to/dir     # Tree of specific directory
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>/tree --depth 2        # Limit depth
+</span></code></pre></div>
+<p>Available in all 3 clients. HTTP endpoint: <code>GET /files/tree?path=...&amp;depth=...</code></p>
+<h3 id="model-info-model-profile-info"><code>/model info</code> — Model Profile Info<a class="headerlink" href="#model-info-model-profile-info" title="Permanent link">&para;</a></h3>
+<p>Shows the effective tool calling profile for the current model with source attribution.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>/model info
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a># Output:
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a># Model: gpt-5.2
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a># Tool Calling Profile:
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>#   mode: native (built-in profile)
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>#   strip_json_from_text: true (built-in profile)
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>#   parallel_tool_calls: true (AGENTS.md override)
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>#   fallback_on_empty: false (default)
+</span></code></pre></div>
+<hr />
+<h2 id="session-management">Session Management<a class="headerlink" href="#session-management" title="Permanent link">&para;</a></h2>
+<h3 id="model-switch-context-reset">Model Switch Context Reset<a class="headerlink" href="#model-switch-context-reset" title="Permanent link">&para;</a></h3>
+<p>Switching models now resets session context to prevent cross-model confusion:
+- <code>session.reset_for_model_switch()</code> clears conversation history
+- Commands show count of cleared messages
+- Session restore paths pass <code>reset_context=False</code> to preserve history on load</p>
+<h3 id="per-model-iteration-limits">Per-Model Iteration Limits<a class="headerlink" href="#per-model-iteration-limits" title="Permanent link">&para;</a></h3>
+<p><code>ModelProfile.max_tool_iterations</code> sets the maximum tool loop iterations per model:</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Max Iterations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gemini-2.5-pro/flash</td>
+<td>25</td>
+</tr>
+<tr>
+<td>gemini-3.1-pro</td>
+<td>20</td>
+</tr>
+<tr>
+<td>sonar-pro, sonar</td>
+<td>20</td>
+</tr>
+<tr>
+<td>qwen3-coder</td>
+<td>20</td>
+</tr>
+<tr>
+<td>codex-mini</td>
+<td>20</td>
+</tr>
+<tr>
+<td>Default</td>
+<td>15</td>
+</tr>
+</tbody>
+</table>
+<h3 id="session-pollution-detection">Session Pollution Detection<a class="headerlink" href="#session-pollution-detection" title="Permanent link">&para;</a></h3>
+<p>After the first tool loop iteration, <code>check_session_pollution()</code> computes bigram similarity between the model's latest response and the previous one. Similarity &gt;90% triggers a WARNING event, indicating the model is repeating itself.</p>
+<h3 id="sse-disconnect-detection">SSE Disconnect Detection<a class="headerlink" href="#sse-disconnect-detection" title="Permanent link">&para;</a></h3>
+<p><code>request.is_disconnected()</code> is checked in the SSE event generator. When a client disconnects mid-stream, the server stops processing instead of continuing to generate events into the void.</p>
+<hr />
+<h2 id="files-changed">Files Changed<a class="headerlink" href="#files-changed" title="Permanent link">&para;</a></h2>
+<h3 id="new-files">New Files<a class="headerlink" href="#new-files" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tests/test_provider_hierarchy.py</code></td>
+<td>61 provider hierarchy tests</td>
+</tr>
+<tr>
+<td><code>tests/test_chat_profile_routing.py</code></td>
+<td>16 profile routing + 11 truncation tests</td>
+</tr>
+<tr>
+<td><code>tests/test_tool_messages.py</code></td>
+<td>28 tool message format tests</td>
+</tr>
+<tr>
+<td><code>benchmarks/llm-eval/test_cases.py</code> (8 new tests)</td>
+<td>Agentic + efficiency benchmark tests</td>
+</tr>
+</tbody>
+</table>
+<h3 id="modified-files-key">Modified Files (Key)<a class="headerlink" href="#modified-files-key" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ppxai/engine/chat.py</code></td>
+<td>Profile-driven tool loop, proper tool messages, multi-tool, grouped events</td>
+</tr>
+<tr>
+<td><code>ppxai/engine/types.py</code></td>
+<td><code>Message.tool_calls</code>, <code>Message.tool_call_id</code>, new EventTypes</td>
+</tr>
+<tr>
+<td><code>ppxai/engine/session.py</code></td>
+<td><code>reset_for_model_switch()</code>, tool message serialization, validation</td>
+</tr>
+<tr>
+<td><code>ppxai/engine/client.py</code></td>
+<td>Model switch reset, config reload</td>
+</tr>
+<tr>
+<td><code>ppxai/engine/providers/base.py</code></td>
+<td><code>BaseProvider</code> ABC with shared interface</td>
+</tr>
+<tr>
+<td><code>ppxai/engine/providers/openai_native.py</code></td>
+<td><code>tool</code> role message conversion</td>
+</tr>
+<tr>
+<td><code>ppxai/engine/providers/openai_compat.py</code></td>
+<td><code>tool</code> role message conversion</td>
+</tr>
+<tr>
+<td><code>ppxai/engine/providers/gemini.py</code></td>
+<td><code>functionCall</code>/<code>functionResponse</code> conversion</td>
+</tr>
+<tr>
+<td><code>ppxai/engine/model_profiles.py</code></td>
+<td>Updated tiers, Gemini 3.1 profiles</td>
+</tr>
+<tr>
+<td><code>ppxai/engine/bootstrap.py</code></td>
+<td><code>tool_calling</code> YAML parsing, overrides</td>
+</tr>
+<tr>
+<td><code>ppxai/engine/context.py</code></td>
+<td><code>tool_calling_overrides</code> scope merging</td>
+</tr>
+<tr>
+<td><code>ppxai/config/__init__.py</code></td>
+<td><code>get_tool_calling_config()</code></td>
+</tr>
+<tr>
+<td><code>ppxai/server/http.py</code></td>
+<td><code>/files/list</code>, <code>/files/tree</code>, SSE fixes, consent deadlock fix</td>
+</tr>
+<tr>
+<td><code>ppxai/commands/utility.py</code></td>
+<td><code>/ls</code>, <code>/tree</code> commands</td>
+</tr>
+<tr>
+<td><code>ppxai/commands/provider.py</code></td>
+<td><code>/model info</code> command</td>
+</tr>
+<tr>
+<td><code>ppxai/commands/session.py</code></td>
+<td>Model switch reset UI</td>
+</tr>
+<tr>
+<td><code>ppxai/tui/app.py</code></td>
+<td>Tool group rendering, non-verbose mode</td>
+</tr>
+<tr>
+<td><code>AGENTS.md</code></td>
+<td>Gemini 3.1 hints, Perplexity rewrite, tool calling YAML</td>
+</tr>
+<tr>
+<td><code>ppxai-config.example.json</code></td>
+<td><code>tool_calling</code> override examples</td>
+</tr>
+<tr>
+<td><code>benchmarks/llm-eval/engine_runner.py</code></td>
+<td>AGENTS.md delta, token tracking, partial credit</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="migration-notes">Migration Notes<a class="headerlink" href="#migration-notes" title="Permanent link">&para;</a></h2>
+<h3 id="session-format">Session Format<a class="headerlink" href="#session-format" title="Permanent link">&para;</a></h3>
+<p>v1.15.x sessions load automatically. The new <code>tool_calls</code> and <code>tool_call_id</code> fields on <code>Message</code> default to <code>None</code> when loading old sessions. New sessions saved in v1.16.0 format are not backwards-compatible with v1.15.x.</p>
+<h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
+<p>No configuration changes required. Existing <code>ppxai-config.json</code> files work without modification.</p>
+<p><strong>New optional config:</strong> Per-model <code>tool_calling</code> overrides in provider config:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">{</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">&quot;providers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">&quot;my-provider&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">      </span><span class="nt">&quot;models&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">        </span><span class="nt">&quot;model-name&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">          </span><span class="nt">&quot;tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">            </span><span class="nt">&quot;mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;prompt_based&quot;</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">          </span><span class="p">}</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">        </span><span class="p">}</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">      </span><span class="p">}</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="agentsmd">AGENTS.md<a class="headerlink" href="#agentsmd" title="Permanent link">&para;</a></h3>
+<p>New optional <code>tool_calling:</code> YAML front matter section for project-specific tool calling overrides. Existing AGENTS.md files work unchanged.</p>
+<h3 id="provider-api">Provider API<a class="headerlink" href="#provider-api" title="Permanent link">&para;</a></h3>
+<p><code>BaseProvider</code> is now the required base class. Custom providers extending <code>OpenAICompatibleProvider</code> are unaffected (it inherits from <code>BaseProvider</code>). Direct provider implementations must implement the <code>BaseProvider</code> interface.</p>
+<hr />
+<h2 id="test-summary">Test Summary<a class="headerlink" href="#test-summary" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Provider hierarchy tests</td>
+<td>61</td>
+</tr>
+<tr>
+<td>Profile routing + truncation tests</td>
+<td>27</td>
+</tr>
+<tr>
+<td>Tool message tests</td>
+<td>28</td>
+</tr>
+<tr>
+<td>Config + bootstrap + profile merging</td>
+<td>16</td>
+</tr>
+<tr>
+<td>Benchmark test definitions</td>
+<td>36</td>
+</tr>
+<tr>
+<td>All other tests</td>
+<td>~1,368</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>1,536</strong></td>
+</tr>
+</tbody>
+</table>
+<p>All tests passing on macOS (Python 3.12).</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
