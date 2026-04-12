@@ -5,7 +5,7 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.17.4] - 2026-04-06
+## [1.17.4] - 2026-04-12
 
 ### Added
 
@@ -99,6 +99,110 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Split panel preview** for images (zoom toggle) and PDFs (iframe embed)
 - **Terminal PTY on Windows** — guarded Unix-only imports (`fcntl`, `pty`, `termios`) so server starts on Windows; WebSocket returns clear error instead of crash
 - **ppxai-desktop version** — added `ppxai.version` hidden import to PyInstaller spec; updated fallback version
+
+### Fixed (late-breaking, 2026-04-12 release day)
+
+Landed after the initial v1.17.4 changelog draft during live release
+testing. Pre-merge review by gpt-5.4 and gemini-3-flash surfaced
+seven issues (R1–R7); R11 and R13 were discovered during testing;
+supporting infrastructure fixes (event bus, session state, debug-log
+persistence, disk-scan fallback) all landed this day.
+
+- **R1 — `/attach remove` PDF/Office parity.** The remover only
+  handled structured `image_url`/`input_file`/`file` blocks; PDFs
+  and Office docs surface as `<uploaded_file>` markers inside text
+  blocks and silently slipped through. Remover now walks text
+  blocks too, stripping matching markers while preserving
+  surrounding user text. ([ppxai/engine/multimodal_ops.py](ppxai/engine/multimodal_ops.py))
+- **R2 — `ChatRequest.files` mutable default** → `Field(default_factory=list)`
+  in `ppxai/server/models.py`.
+- **R3 — `_count_csv_rows_cols` streaming.** Stream-count rows via
+  `sum(1 for _ in reader)` instead of `list(reader)`; O(1) memory
+  for the count step. (R8 for the full streaming decode lives in
+  v1.17.5 TODO.)
+- **R4 — `has_vision_model` → `has_vision_sidecar` rename.** The
+  name was ambiguous (sidecar config vs. active-model capability).
+  Renamed with a back-compat alias on `EngineClient`.
+- **R6 — shared `<uploaded_file>` marker helpers** in
+  `ppxai/engine/uploaded_file.py`. Single source of truth for
+  format + parse + targeted strip; replaces inline regex and
+  inline f-strings at 4 sites.
+- **R7 — file_id-aware `/attach remove` + ambiguity detection.**
+  Accepts name, file_id, short_id (8+ char suffix), or "all".
+  Same-name collisions return an AMBIGUOUS warning listing each
+  match's short_id instead of silently wiping all matches.
+  `refresh_context_attachments` dedup no longer falls back to name
+  when `file_id` is empty — two legacy same-name blocks now
+  surface as two badges, not silently collapsed into one.
+- **R11 — atomic flat↔directory session transition.** Two-layer
+  fix: (1) duplicate-format detector in `_resolve_session_load_path`
+  logs a WARNING and picks the newer format by mtime when both
+  coexist, (2) atomic rename in `_write_session_json` stages the
+  directory as `<name>.tmp/` and `os.rename`s into place before
+  unlinking the old flat file. A crash between steps is recoverable
+  without producing duplicate sessions.
+- **R13 — post-write syntax validation to block silent file
+  corruption.** All four file-editing tools (`apply_patch`,
+  `replace_block`, `insert_text`, `delete_lines`) now run a cheap
+  language-specific parser on the candidate content BEFORE
+  committing the write. On parse failure the file is left untouched
+  and the tool returns a clear error telling the model to re-read
+  with more context and retry. Supported: `.py` (`ast.parse`),
+  `.json` (`json.loads`), `.yaml`/`.yml` (`yaml.safe_load`),
+  `.toml` (`tomllib.loads`), `.js`/`.mjs`/`.cjs` (`node --check`
+  best-effort). Others pass-through. Discovered live on 2026-04-12
+  with gemini-3.1-pro-preview: `apply_patch` corrupted two files
+  and reported "✓ Successfully applied patch" anyway. R14 follow-up
+  (Go, Zig, Terraform, TS/Ruby/Shell) tracked for v1.18.x.
+- **Textual TUI event bus — coroutine-drop fix.** Handlers registered
+  as `lambda s, **kw: _sh.on_stream_end(self, s, **kw)` were sync
+  lambdas that forwarded to async functions. The event bus took
+  the sync path, the lambda returned a coroutine, Python discarded
+  it. `on_stream_end` body never ran → STREAM_END fired but the
+  chat view never received `add_assistant_message()`. Symptom: "I
+  see status change to Ready but no response text appeared."
+  Event bus now detects returned coroutines via
+  `asyncio.iscoroutine()` and schedules them with
+  `asyncio.create_task`. Regression test pins the exact lambda
+  wiring. ([ppxai/tui/event_bus.py](ppxai/tui/event_bus.py))
+- **Textual TUI event bus — kwarg mismatch.** Separate pre-existing
+  issue exposed during testing: emit passed `sender=self` as a
+  kwarg but lambdas expected it positionally, spamming TypeError.
+  Fixed to pass positionally.
+- **Textual TUI `_check_session_restoration` — undefined
+  `status_bar`.** NameError in the restore-branch of
+  `tui/app.py::_check_session_restoration`; swapped to
+  `self._status_bar`.
+- **Session recovery prompt ordering** — moved
+  `check_session_recovery()` to run BEFORE provider/model selection
+  in `ppxai/rich/main.py`, so a Ctrl+C during selection no longer
+  silently skips the prompt. Debug logging added inside the
+  recovery function so future regressions leave evidence in
+  `tui-debug.log`.
+- **Session state — disk-scan fallback.** When
+  `~/.ppxai/session-state.json` is missing but saved sessions
+  still exist, engine scans `~/.ppxai/sessions/` for the newest
+  session (flat or directory format), returns a synthesized state
+  with `"recovered_from_disk": true`. Every client picks this up
+  for free: Rich, Textual, web (`/sessions/last` + `/sessions/restore`),
+  VSCode. Prompt wording in each client distinguishes "state pointer
+  missing" from normal auto-restore.
+- **Debug-log state persistence.** `/debug-log on` / `/debug-log off`
+  now writes `tui.debug_log` to `ppxai-config.json` and is restored
+  in `config.initialize()` BEFORE any client code runs. Sets
+  `PPXAI_DEBUG=1` environment variable so Loggers created later
+  (engine, chat, server) pick it up too. Every client gets
+  persistence for free: Rich `/debug-log`, Textual `toggle_debug_logging`,
+  Web/VSCode `POST /config/debug-log`. New `docs/DEBUG-LOGGING.md`
+  explains the flow.
+- **AppState `debug_log` synced from config on startup.**
+  `EngineClient.__init__` now calls `get_debug_log_enabled()` and
+  `state.set("debug_log", ...)` to match — previously the server's
+  file logger was enabled but AppState stayed at default False, so
+  the web UI's debug toggle incorrectly showed OFF.
+- **read_file** — added `offset` parameter and metadata header
+  (`[File: path | N lines total | showing lines X-Y]`) so models
+  handle large files without re-reading from the top.
 
 ### Deploy (K8s / coder.trad.int)
 

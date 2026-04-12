@@ -1670,6 +1670,79 @@ languages like terraform, golang, rust, c, c++ or zig?"
 
 ---
 
+### R15. VSCode context-injected chat requests violate Perplexity alternation — **edge case** 🟡
+
+**Location.** `vscode-extension/src/chatPanel.ts` (or wherever the
+VSCode client builds and sends `/chat` requests — confirm at fix
+time) + `ppxai/server/routes/chat.py` handling of context-only
+messages.
+
+**Symptom.** During v1.17.4 release testing the server log caught
+three back-to-back 400 errors from Perplexity sonar-reasoning-pro:
+
+```
+21:38:22.603 | ERROR | Engine error: Error code: 400 -
+  {'error': {'message': 'After the (optional) system message(s),
+   user or tool message(s) should alternate with assistant
+   message(s).', 'type': 'invalid_message', 'code': 400}}
+```
+
+Tracing the request:
+1. Previous turn ended with an `assistant` message in session history
+2. VSCode sent `POST /chat` carrying a "user" turn whose body was
+   ONLY a context block: `"[Context: Working in VSCode workspace
+   \"ppxai\" at /Users/rado/git/utils/ppxai]"` — no actual user
+   prompt following
+3. Perplexity saw `assistant → context (treated as user) → assistant`
+   but somewhere in the sequence the pattern broke its strict
+   alternation check and it rejected with 400.
+
+Retry triggered the same error 3×.
+
+**Why it's not a release-blocker.**
+- OpenAI / Gemini / other providers tolerate the sequence. Only
+  Perplexity enforces strict alternation this rigidly.
+- The web client and CLI clients don't send standalone
+  context-injection chats — they bundle context into the user's
+  actual prompt.
+- The error surfaces cleanly to the user via SSE and doesn't
+  corrupt session state. Just a failed turn.
+
+**Proposed fix.**
+1. **VSCode client side.** Never send a `/chat` with no real user
+   content. Context injections should either:
+   - Be held in a staging buffer until the user types, then
+     prepended to their prompt, OR
+   - Go through a separate non-chat endpoint that updates session
+     context without triggering an LLM round-trip.
+2. **Server defense-in-depth.** In
+   `ppxai/server/routes/chat.py`, if the incoming request body's
+   `message` field is empty or contains only a bracketed context
+   preamble (`[Context: …]`), either:
+   - Reject with 400 before hitting the provider, OR
+   - Merge the context block into `session.context_injection`
+     (the existing AppState field) and return success without
+     dispatching to the LLM.
+3. **Test.** POST `/chat` with `message="[Context: …]"` only,
+   assert behaviour is (a) not an LLM round-trip, (b) no 400 from
+   upstream provider.
+
+**Related.**
+- Session alternation correctness → ties loosely to R9
+  (`validate_and_fix_alternation` heuristic).
+- Context injection mechanism → belongs alongside the AppState
+  `context_injection` / context_attachments work.
+
+**Target.** v1.17.5 alongside R9, since both touch alternation/
+context logic in adjacent code.
+
+**Discovered.** 2026-04-12 pre-release log audit. User's web test
+ran concurrently with a VSCode session, surfacing the
+alternation mismatch with Perplexity. Not a regression from
+today's commits — the behaviour predates v1.17.4.
+
+---
+
 ### Release plan
 
 **v1.17.4 — ship as-is.** Current branch HEAD is release-ready. R1,
@@ -1689,6 +1762,7 @@ after v1.17.4 ships.
 | **R8** | 🟡 polish R3 | ~30 min + test | CSV sniff on 8 KB, stream rest via `BytesIO`+`TextIOWrapper` |
 | **R9** | 🟡 correctness edge | ~1 hr + 2 tests | `validate_and_fix_alternation` — prefer messages with `tool_calls`, warn before dropping trailing user |
 | **R10** | 🟢 micro-perf | ~30 min + test | cache `_has_multimodal_attachments` on Session, invalidate from mutation sites |
+| **R15** | 🟡 VSCode + Perplexity alternation | ~1 hr + test | VSCode context-only `/chat` triggers upstream 400; hold or merge into user turn |
 | **R5** | 🟢 schema change | ~3 hr + cross-client sweep | first-class `uploaded_file` content type, retires R7 workaround |
 | **R12** (Opt 1) | 🟢 UX progress signal | ~1 hr + test | post-iteration intermediate-prose event |
 
