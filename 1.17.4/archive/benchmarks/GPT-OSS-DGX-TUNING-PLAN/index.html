@@ -1889,8 +1889,8 @@
 <tbody>
 <tr>
 <td><strong>Base URL</strong></td>
-<td><code>https://codeai.trad.int/v1</code></td>
-<td><code>http://10.28.15.50:8000/v1</code></td>
+<td><code>https://your-gpt-oss-host/v1</code></td>
+<td><code>http://your-vllm-host:8000/v1</code></td>
 </tr>
 <tr>
 <td><strong>API key env</strong></td>
@@ -2363,7 +2363,7 @@
 <tr>
 <td>DGX connectivity from Windows</td>
 <td>MEDIUM</td>
-<td>Verify <code>curl http://10.28.15.50:8000/v1/models</code> before starting</td>
+<td>Verify <code>curl http://your-vllm-host:8000/v1/models</code> before starting</td>
 </tr>
 <tr>
 <td>Config not loaded (wrong file)</td>
@@ -2430,7 +2430,7 @@
 </span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>.uv<span class="se">\u</span>v<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>benchmarks<span class="se">\l</span>lm-eval<span class="se">\b</span>enchmark.py<span class="w"> </span>--provider<span class="w"> </span>custom<span class="w"> </span>--model<span class="w"> </span>openai/gpt-oss-120b<span class="w"> </span>--compare
 </span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>
 </span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="c1"># Check DGX connectivity</span>
-</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>curl<span class="w"> </span>http://10.28.15.50:8000/v1/models
+</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>curl<span class="w"> </span>http://your-vllm-host:8000/v1/models
 </span></code></pre></div>
 
 
