@@ -1519,11 +1519,97 @@ of iteration 2.
 
 ---
 
+### R13. `apply_patch` silently corrupts files on wrong-context match — **correctness bug** 🔴
+
+**Location.** `ppxai/engine/tools/builtin/filesystem.py` (or wherever
+the `apply_patch` tool lives — TBD, confirm at implementation time),
+plus any diff-application helper it delegates to.
+
+**Symptom.** Reproducible with gemini-3.1-pro-preview on
+session_20260412_213407. The model emitted a unified diff whose hunks
+targeted `serve_lib` / `serve_shared` in `ppxai/server/routes/static.py`.
+The context-match heuristic landed instead on `serve_app_js` /
+`serve_styles_css` — same module, same indentation, similar surrounding
+lines, but **those functions don't take a `filename` parameter**. The
+diff applied "successfully," inserting unreachable code that references
+an out-of-scope variable mid-function:
+
+```python
+return FileResponse(
+    WEB_UI_DIR / 'app.js',
+base_dir = (WEB_UI_DIR / 'lib').resolve()    # wrong context, lands here
+file_path = (base_dir / filename).resolve()  # NameError at import time
+if not file_path.is_relative_to(base_dir):
+    raise HTTPException(status_code=403, detail="Access denied")
+    headers={"Cache-Control": "no-cache, must-revalidate"}
+)
+```
+
+Tool **reported success**: `"✓ Successfully applied patch to
+ppxai/server/routes/static.py (91 lines modified, +12 lines)"`.
+The same run also corrupted `ppxai/web/shared/formatters.js` — Node
+`-c` fails with `SyntaxError: Unexpected token '}'`.
+
+**Why this is serious.**
+1. A silent success on a corruption is the worst failure mode — user
+   trusts the ok, CI picks it up on the next run, production breakage.
+2. Small models and fast models (gemini-3.x, gpt-4-mini, vLLM-hosted)
+   misalign diff context with greater-than-rare frequency because
+   their structured-output quality drifts.
+3. The fix is cheap compared to the cost of one corruption shipped to
+   production.
+
+**Proposed fix.**
+After applying a diff, run a **cheap syntax validator for the file's
+language** before returning success. If the post-apply parse fails:
+  * **Revert** the change (restore the pre-apply content from the
+    `read_file` the model almost certainly just called — or from a
+    one-shot backup we stash before write).
+  * Return an `Error:` result explaining the mismatch and include a
+    suggestion to re-read the file + re-diff with more context lines.
+  * Never leave a corrupted file behind.
+
+Validator by extension:
+| Extension | Validator |
+|---|---|
+| `.py` | `ast.parse(content)` |
+| `.js`, `.ts`, `.tsx`, `.jsx` | `node --check` (available in dev envs) OR `esprima`/`acorn` via a lightweight Python wrapper, OR skip if no runner found |
+| `.json` | `json.loads(content)` |
+| `.yaml`, `.yml` | `yaml.safe_load(content)` (pyyaml already a dep) |
+| `.toml` | `tomllib.loads(content)` (stdlib in 3.11+) |
+| Other | skip validation, apply as today |
+
+**Test.**
+1. Synthesize an `apply_patch` call whose context matches the wrong
+   function (use `static.py` as the fixture — it has two similar
+   functions). Assert: tool result starts with `"Error:"`, file on
+   disk is unchanged, no corrupted output.
+2. Apply a valid diff → assert success path still works unchanged.
+3. Apply a diff to a `.txt` file → assert validator is skipped
+   (unsupported extension).
+
+**Related.**
+- Pairs with R9 in the correctness category.
+- Complements existing checkpoint system (file-edit consent snapshots)
+  — this catches corruption at write time rather than needing a user
+  to notice and run `/undo`.
+- Consider surfacing a WARNING if `git diff` post-apply shows massive
+  hunks at unexpected line ranges — secondary heuristic for "your
+  patch landed on wrong lines even if it parses."
+
+**Discovered.** 2026-04-12, web session
+`session_20260412_213407`, model `gemini-3.1-pro-preview`. User
+instructed "PROPOSE changes, don't change anything" — model violated
+instruction AND its attempted "fixes" corrupted both files it touched.
+Reverted via `git checkout` before the release.
+
+---
+
 ### Release plan
 
 **v1.17.4 — ship as-is.** Current branch HEAD is release-ready. R1,
-R2, R3, R4, R6, R7 are fixed; plus the event-bus coroutine-drop fix,
-disk-scan session fallback, and debug-log persistence all landed
+R2, R3, R4, R6, R7, R11 are fixed; plus the event-bus coroutine-drop
+fix, disk-scan session fallback, and debug-log persistence all landed
 during testing. Don't implement R8+ in this release.
 
 **v1.17.5 — collected scope (NOT YET IMPLEMENTED).** The items below
@@ -1532,10 +1618,10 @@ after v1.17.4 ships.
 
 | # | Priority | Effort | Notes |
 |---|---|---|---|
+| **R13** | 🔴 correctness bug | ~2 hr + 3 tests | `apply_patch` must syntax-validate result; revert on parse failure to prevent silent file corruption |
 | **R8** | 🟡 polish R3 | ~30 min + test | CSV sniff on 8 KB, stream rest via `BytesIO`+`TextIOWrapper` |
 | **R9** | 🟡 correctness edge | ~1 hr + 2 tests | `validate_and_fix_alternation` — prefer messages with `tool_calls`, warn before dropping trailing user |
 | **R10** | 🟢 micro-perf | ~30 min + test | cache `_has_multimodal_attachments` on Session, invalidate from mutation sites |
-| **R11** | 🟢 crash-edge | ~1 hr | atomic flat↔directory session transition (option 2 belt first, then option 1) |
 | **R5** | 🟢 schema change | ~3 hr + cross-client sweep | first-class `uploaded_file` content type, retires R7 workaround |
 | **R12** (Opt 1) | 🟢 UX progress signal | ~1 hr + test | post-iteration intermediate-prose event |
 
