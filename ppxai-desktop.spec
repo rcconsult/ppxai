@@ -8,6 +8,7 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
+        ('ppxai/engine/app_state_schema.json', 'ppxai/engine'),
         # Include entire web UI directory tree
         ('ppxai/web', 'ppxai/web'),
         ('ppxai-config.example.json', '.'),

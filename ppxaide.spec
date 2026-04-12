@@ -13,6 +13,7 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
+        ('ppxai/engine/app_state_schema.json', 'ppxai/engine'),
         ('.env.example', '.'),
         ('ppxai-config.example.json', '.'),
         ('ppxai/tui/themes', 'ppxai/tui/themes'),  # Include CSS themes
