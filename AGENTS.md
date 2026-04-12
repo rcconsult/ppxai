@@ -157,9 +157,24 @@ model_hints:
     - "Use ONLY tools from the available tools list - do NOT hallucinate tool names."
     - "apply_patch parameter names are EXACTLY 'path' and 'patch' - NEVER use 'file_path', 'filepath', 'unified_diff', or 'diff'."
     - "Do NOT output tool call JSON in markdown code blocks - use native tool calling."
-  # gpt-5.4* family — new flagship (released 2026-03-05 / 03-17). NOT BENCHMARKED yet.
-  # Stub hints cloned from gpt-5.2* and hardened for the common GPT-5.x failure modes.
-  # Refine after running benchmarks/llm-eval test_cases.py against each variant.
+  # gpt-5.4* family — flagship (released 2026-03-05 / 03-17).
+  # Benchmarked 2026-04-12: gpt-5.4 = 84.2%, gpt-5.4-mini = 97.5%.
+  #
+  # gpt-5.4 has 5 failures. Analysis:
+  #   - respects_tool_failure + repeated_failure_acknowledgment: model
+  #     prefers action (new tool call) over text acknowledgment after
+  #     failures. Same pattern as Flash. Forcing text via MUST/CRITICAL
+  #     broke Flash's code_editing −81.8% — do NOT attempt. Unfixable.
+  #   - claim_without_action: safety guardrails refuse /etc/shadow
+  #     access. Baked into weights; hints can't override. Benchmark
+  #     design issue — well-aligned model SHOULD refuse. Unfixable.
+  #   - fix_verify (3/4): write→test→fix ✅ but skips final retest.
+  #     Targeted gentle hint added below.
+  #   - error_recovery_chain (1/4): stalls after first recovery attempt.
+  #     Targeted gentle hint added below.
+  #
+  # gpt-5.4-mini at 97.5% needs no changes — its hints are working.
+  # The +7.3% delta (WITH vs WITHOUT) confirms the hint set is effective.
   "gpt-5.4-nano*":
     - "You are the cheapest GPT-5.4 variant — API-only, optimized for speed and high volume."
     - "Do NOT ask permission before using tools. Call tools immediately without explaining."
@@ -190,17 +205,15 @@ model_hints:
     - "When asked to read multiple files, call read_file for EACH file before responding."
     - "Leverage your 1M context window for large codebase analysis — include full file contents when relevant."
   "gpt-5.4*":
-    - "You are the newest OpenAI flagship (released 2026-03-05) with 1M context and 75% computer use benchmark."
     - "For code modifications, use apply_patch with complete unified diffs including ALL context lines (3+ before/after each change)."
-    - "CRITICAL: Do NOT output tool call JSON in your response text. Use the tools API to make function calls."
-    - "CRITICAL: When a tool returns an error or failure, TELL THE USER what went wrong. Do NOT silently retry without acknowledging the error."
-    - "After 2 consecutive failures of the same operation, STOP and report the persistent issue instead of retrying."
+    - "Do NOT output tool call JSON in your response text. Use the tools API to make function calls."
     - "Call tools directly — do NOT explain what you'll do first."
     - "Avoid duplicate or redundant calls for the same operation."
     - "For large file writes: ensure the COMPLETE content is in the tool call — never truncate or abbreviate."
-    - "CRITICAL: When a task requires multiple file operations, chain ALL tool calls consecutively. After receiving a tool result, immediately make the next tool call. Do NOT stop to narrate or summarize between tool calls."
+    - "When a task requires multiple file operations, chain ALL tool calls consecutively. Do NOT stop to narrate between tool calls."
     - "When asked to read multiple files, call read_file for EACH file before responding."
-    - "Leverage your 1M context window — feel free to include full file contents for large codebase analysis."
+    - "After fixing code or resolving an issue, verify the fix by re-running the relevant test or command. The cycle is: write → test → fix → retest. Do not skip the final retest."
+    - "When an approach fails, try at least one alternative before reporting the issue. Complete all recovery steps rather than stopping after the first attempt."
   "gpt-5.2*":
     - "You are a recent OpenAI flagship (GPT-5.2) — prioritize precise, complete tool calls."
     - "For code modifications, use apply_patch with complete unified diffs including ALL context lines (3+ before/after each change)."
