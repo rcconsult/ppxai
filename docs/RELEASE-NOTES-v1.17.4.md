@@ -6,6 +6,12 @@
 
 Users can attach files via `/attach` (Rich/Textual), drag-drop (Web), file picker (Web/VSCode), or file tree `a` key (Textual). Files are validated, preprocessed per type and model capability, stored efficiently via content-addressed SessionFileStore, and sent to vision-capable AI models as multimodal content. Session save/load round-trips attachments via compact file_id references — session JSON stays small while binary bytes live on disk.
 
+### Desktop Web App — drag-and-drop file upload, inline image/PDF preview, split-pane attachment viewer
+![Desktop Web App — multimodal](https://raw.githubusercontent.com/rcconsult/ppxai/v1.17.4/docs/ppxai-desktop-web-app-v1.17.4.png)
+
+### Rich TUI — multimodal attachments with inline image preview (iTerm2/Sixel) and Excel/PDF/PPTX tools
+![Rich TUI — multimodal](https://raw.githubusercontent.com/rcconsult/ppxai/v1.17.4/docs/ppxai-rich-v1.17.4-multimodal.png)
+
 ## Features
 
 ### File Upload Pipeline (Phases 0-3)

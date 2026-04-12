@@ -4,14 +4,14 @@
 
 **Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
 
-### Desktop Web App — browser-based UI with file tree, code editor (30 languages), and split-pane layout
-![Desktop Web App](docs/ppxai-web-desktop-app-v1.17.2.png)
+### Desktop Web App — drag-and-drop file upload, inline image/PDF preview, and split-pane attachment viewer (v1.17.4)
+![Desktop Web App](docs/ppxai-desktop-web-app-v1.17.4.png)
 
 ### ppxaide — Textual TUI with syntax-highlighted editor, file tree sidebar, and CSS themes
 ![ppxaide TUI](docs/ppxaide-v1.17.2.png)
 
-### ppxai — Rich TUI with markdown rendering, tool output, and status badges
-![ppxai Rich TUI](docs/ppxai-v1.17.2.png)
+### ppxai — Rich TUI with multimodal attachments, inline image preview (iTerm2/Sixel), and Excel/PDF/PPTX tools (v1.17.4)
+![ppxai Rich TUI](docs/ppxai-rich-v1.17.4-multimodal.png)
 
 ### VSCode Extension — chat panel with agent mode, tool consent, and inline code editing
 ![VSCode Extension](docs/ppxai-vscode-v1.17.3.png)
