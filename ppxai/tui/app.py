@@ -788,7 +788,8 @@ class PPXAIDEApp(App):
                 tui_config = get_tui_config()
                 if tui_config.get("show_cwd", True):
                     cwd_display = self._format_cwd_display(working_dir)
-                    status_bar.update_badge("cwd", cwd_display)
+                    if self._status_bar is not None:
+                        self._status_bar.update_badge("cwd", cwd_display)
                     self._log.info(f"Updated cwd badge to: {cwd_display}")
             except Exception as e:
                 self._log.warning(f"Failed to restore working directory: {e}")

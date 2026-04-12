@@ -134,8 +134,14 @@ class EventBus:
                         if self._log_events:
                             logger.debug(f"[EventBus] No event loop for async handler '{receiver.__name__}', skipping")
                 else:
-                    # Call sync handler immediately
-                    receiver(sender=self, **kwargs)
+                    # Call sync handler immediately. Pass `self` (the bus)
+                    # POSITIONALLY as sender — handlers registered via
+                    # `on()` are expected to have signature `(sender, **kw)`.
+                    # Passing as keyword (`sender=self`) broke lambdas with
+                    # positional `(s, **kw)` signatures, which spammed
+                    # "missing 1 required positional argument" errors on
+                    # every engine event.
+                    receiver(self, **kwargs)
 
             except Exception as e:
                 logger.error(f"[EventBus] Error in handler for '{event}': {e}", exc_info=True)
@@ -143,7 +149,8 @@ class EventBus:
     async def _handle_async(self, event: str, handler: Callable, kwargs: Dict[str, Any]):
         """Handle async event handler with error catching."""
         try:
-            await handler(sender=self, **kwargs)
+            # Positional sender — same reason as the sync path above.
+            await handler(self, **kwargs)
         except Exception as e:
             logger.error(f"[EventBus] Async handler error for '{event}': {e}", exc_info=True)
 
