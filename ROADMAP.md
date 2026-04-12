@@ -723,29 +723,30 @@ ppxai/tui/                     # New module (Textual-based)
 
 ## Planned (v1.18.x)
 
-**Theme:** AppState codegen + multi-model routing
+**Theme:** Agent engine primitives + multi-model routing + AppState codegen
 
-### v1.18.0 - AppState Codegen + Routing Infrastructure
-
-| Feature | Description | Plan |
-|---------|-------------|------|
-| **AppState schema + generator** | YAML → Python/JS/TS codegen, CI `--check` mode | [TODO-appstate-codegen.md](docs/TODO-appstate-codegen.md) |
-| **AppState client wiring** | Replace hand-crafted with generated across Rich, Textual, Web, VSCode, k8s | [TODO-appstate-codegen.md](docs/TODO-appstate-codegen.md) |
-| **Routing infrastructure** | `RoutingRole`, `ProviderPool`, `ModelRouter` classes | [TODO-routing.md](docs/TODO-routing.md) Phase 1 |
-| **Coding command routing** | Replace `coding_model` with `router.resolve(RoutingRole.CODER)` | [TODO-routing.md](docs/TODO-routing.md) Phase 2 |
-
-### v1.18.1 - Agent + Chat Mode Routing
+### v1.18.0 - Agent Heartbeat + Routing Infrastructure
 
 | Feature | Description | Plan |
 |---------|-------------|------|
-| **Agent mode routing** | Planner role on first turn, tools role on iterations 2+ | [TODO-routing.md](docs/TODO-routing.md) Phase 3 |
-| **Chat mode routing** | Route regular chat to `chat` role, mode presets | [TODO-routing.md](docs/TODO-routing.md) Phase 4 |
+| **Agent heartbeat (P0)** | `AgentBeatState`, lifecycle events in `EventType`, beat emission from `chat_with_tools()`, zombie detection circuit breaker, `agent_beat` AppState field. ~80 lines engine code. Unblocks ppxai-sre-repo. | [TODO-agent-primitives.md](docs/TODO-agent-primitives.md) P0 |
+| **AppState TS codegen** | Generate `AppStateFields` interface from the JSON schema at build time. Runtime loading already done in v1.17.4. | [TODO-appstate-codegen.md](docs/TODO-appstate-codegen.md) |
+| **Routing infrastructure** | `RoutingRole`, `ProviderPool`, `ModelRouter` classes. Informed by v1.17.4 benchmark: route routine → gpt-5.4-mini (97.5%), hard → gpt-5.4 (85.1%). | [TODO-routing.md](docs/TODO-routing.md) Phase 1-2 |
 
-### v1.18.2+ - Preset Commands + TUI Integration
+### v1.18.1 - Enterprise Readiness + Routing Modes
 
 | Feature | Description | Plan |
 |---------|-------------|------|
-| **`/preset` command** | List, switch, show preset bindings | [TODO-routing.md](docs/TODO-routing.md) Phase 5 |
+| **Action tier policy (P1)** | Generalize consent system into configurable tiers (auto/notify/approve). Replaces ppxai-sre-core `PolicyEngine`. | [TODO-agent-primitives.md](docs/TODO-agent-primitives.md) P1.1 |
+| **Structured audit logging (P1)** | JSONL action trail for tool executions. Replaces ppxai-sre-core `audit.py`. | [TODO-agent-primitives.md](docs/TODO-agent-primitives.md) P1.2 |
+| **Agent mode routing** | Planner role on first turn, tools role on iterations 2+ | [TODO-routing.md](docs/TODO-routing.md) Phase 3-4 |
+
+### v1.18.2+ - Scheduling + Preset Commands
+
+| Feature | Description | Plan |
+|---------|-------------|------|
+| **Background scheduler (P2)** | Optional `engine.schedule(callback, cron)` via APScheduler. Enables `/monitor`, SRE heartbeat loops. | [TODO-agent-primitives.md](docs/TODO-agent-primitives.md) P2 |
+| **`/preset` command** | List, switch, show routing preset bindings | [TODO-routing.md](docs/TODO-routing.md) Phase 5 |
 | **Status bar preset badge** | Show active preset name in TUI/Web | [TODO-routing.md](docs/TODO-routing.md) Phase 5 |
 
 ### v1.19.x - Prompt Analyzer + Adaptive Routing (Future)
