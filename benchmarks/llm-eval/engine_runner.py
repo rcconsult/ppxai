@@ -204,10 +204,47 @@ class EngineClientWrapper:
         # Build Message objects for the provider
         provider_messages = []
 
-        # System message: test system prompt only (no AGENTS.md — it pollutes
-        # benchmark results by making models "pretend" to use tools)
-        if system_content:
-            provider_messages.append(Message(role="system", content=system_content))
+        # System message: AGENTS.md hints (provider + model) + test system prompt.
+        #
+        # HISTORY: commit d334453 (2026-02-19) switched this runner from calling
+        # `self._client.chat()` to calling `self._client.provider.chat()` directly,
+        # to avoid engine-registered tools (read_file(filepath)) colliding with
+        # benchmark tools (read_file(path)) on parameter names. That fix was
+        # necessary for Codex scoring (37.5% → 64.1%) but had a hidden side
+        # effect: by bypassing `engine/chat.py` it also bypassed the
+        # `ctx.get_bootstrap_prompt()` injection that puts AGENTS.md hints into
+        # the system message. From 2026-02-19 until this fix, every benchmark
+        # run was measured against a 103-char adversarial system prompt with
+        # NO AGENTS.md hints — regardless of --agents-md=with/without — making
+        # the A/B delta pure noise and making the shipped stub hints untestable.
+        #
+        # FIX: explicitly call `get_bootstrap_prompt()` (which reads the
+        # already-loaded bootstrap context resolved for this provider/model)
+        # and prepend it to the system message. Keeps the direct `provider.chat()`
+        # call (preserving d334453's tool-isolation fix) while restoring the
+        # hint-injection signal that commit accidentally broke.
+        #
+        # In --agents-md=without mode, initialize() skipped load_bootstrap_context,
+        # so get_bootstrap_prompt() returns "" and only the test system prompt
+        # is sent. The A/B delta is restored to measure real hint effect.
+        bootstrap_prompt = ""
+        if self._client is not None:
+            try:
+                bootstrap_prompt = self._client.get_bootstrap_prompt() or ""
+            except Exception as exc:
+                if self.verbose:
+                    print(f"  [WARN] get_bootstrap_prompt failed: {exc}")
+                bootstrap_prompt = ""
+
+        if bootstrap_prompt and system_content:
+            full_system = f"{bootstrap_prompt}\n\n---\n\n{system_content}"
+        elif bootstrap_prompt:
+            full_system = bootstrap_prompt
+        else:
+            full_system = system_content
+
+        if full_system:
+            provider_messages.append(Message(role="system", content=full_system))
 
         # Add conversation history (excluding last message).
         # Collapse assistant(tool_calls) + tool(result) pairs into a single
@@ -304,7 +341,14 @@ class EngineClientWrapper:
                 "tools_provided": len(tools) if tools else 0,
                 "tools": [t.get("function", {}).get("name") for t in tools] if tools else [],
                 "use_native_tools": use_native,
+                # v1.17.4 post-regression fix: debug logs now capture the FULL
+                # system message (bootstrap hints + test prompt) and each
+                # component's length separately, so you can see at a glance
+                # whether AGENTS.md hints reached the provider.
                 "system_prompt_length": len(system_content),
+                "bootstrap_prompt_length": len(bootstrap_prompt),
+                "full_system_prompt_length": len(full_system),
+                "full_system_prompt": full_system,
             }
 
         try:
