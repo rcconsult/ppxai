@@ -390,6 +390,18 @@
         "timestamp": "2026-02-22T12:32:49.827072",
         "overall_score": 73.58974358974358,
         "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-3-flash-preview_2026-04-12_06f55064.json",
+        "timestamp": "2026-04-12T00:22:01.593052",
+        "overall_score": 74.25742574257426,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-3-flash-preview_2026-04-12_eac6ab63.json",
+        "timestamp": "2026-04-12T00:30:04.970192",
+        "overall_score": 67.32673267326733,
+        "agents_md_mode": "without"
       }
     ],
     "gemini/gemini-3-pro-preview": [
@@ -435,6 +447,34 @@
         "filename": "gemini_gemini-3.1-pro-preview-customtools_2026-02-22_dc0cf6f9.json",
         "timestamp": "2026-02-22T21:42:47.182199",
         "overall_score": 81.48514851485149,
+        "agents_md_mode": "with"
+      }
+    ],
+    "gemini/gemini-3.1-pro-preview": [
+      {
+        "filename": "gemini_gemini-3.1-pro-preview_2026-04-12_0c71cb13.json",
+        "timestamp": "2026-04-12T02:36:24.458061",
+        "overall_score": 63.96039603960395,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "gemini_gemini-3.1-pro-preview_2026-04-12_bb631a66.json",
+        "timestamp": "2026-04-12T01:48:54.171130",
+        "overall_score": 64.85148514851485,
+        "agents_md_mode": "with"
+      }
+    ],
+    "gemini/gemma-4-31b-it": [
+      {
+        "filename": "gemini_gemma-4-31b-it_2026-04-12_405ca17b.json",
+        "timestamp": "2026-04-12T00:12:42.102611",
+        "overall_score": 8.118811881188117,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "gemini_gemma-4-31b-it_2026-04-12_b08202f1.json",
+        "timestamp": "2026-04-12T00:12:34.448893",
+        "overall_score": 8.118811881188117,
         "agents_md_mode": "with"
       }
     ],
@@ -858,6 +898,34 @@
         "timestamp": "2026-02-22T20:43:51.997764",
         "overall_score": 80.79207920792079,
         "agents_md_mode": "with"
+      }
+    ],
+    "openai/gpt-5.4-mini": [
+      {
+        "filename": "openai_gpt-5.4-mini_2026-04-12_43c1c0bd.json",
+        "timestamp": "2026-04-12T00:14:51.720083",
+        "overall_score": 90.19801980198021,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "openai_gpt-5.4-mini_2026-04-12_5005416a.json",
+        "timestamp": "2026-04-12T00:13:23.470237",
+        "overall_score": 97.52475247524752,
+        "agents_md_mode": "with"
+      }
+    ],
+    "openai/gpt-5.4": [
+      {
+        "filename": "openai_gpt-5.4_2026-04-12_285e3485.json",
+        "timestamp": "2026-04-12T00:14:48.033268",
+        "overall_score": 84.15841584158416,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.4_2026-04-12_ca3267dc.json",
+        "timestamp": "2026-04-12T00:17:41.732862",
+        "overall_score": 84.15841584158416,
+        "agents_md_mode": "without"
       }
     ],
     "openai/gpt-5": [
@@ -1623,6 +1691,20 @@
       "agents_md_mode": "with"
     },
     {
+      "pair": "gemini/gemini-3-flash-preview",
+      "filename": "gemini_gemini-3-flash-preview_2026-04-12_06f55064.json",
+      "timestamp": "2026-04-12T00:22:01.593052",
+      "overall_score": 74.25742574257426,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-3-flash-preview",
+      "filename": "gemini_gemini-3-flash-preview_2026-04-12_eac6ab63.json",
+      "timestamp": "2026-04-12T00:30:04.970192",
+      "overall_score": 67.32673267326733,
+      "agents_md_mode": "without"
+    },
+    {
       "pair": "gemini/gemini-3-pro-preview",
       "filename": "gemini_gemini-3-pro-preview_2026-02-05_6d5eef49.json",
       "timestamp": "2026-02-05T15:03:35.876530",
@@ -1669,6 +1751,34 @@
       "filename": "gemini_gemini-3.1-pro-preview-customtools_2026-02-22_dc0cf6f9.json",
       "timestamp": "2026-02-22T21:42:47.182199",
       "overall_score": 81.48514851485149,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-3.1-pro-preview",
+      "filename": "gemini_gemini-3.1-pro-preview_2026-04-12_0c71cb13.json",
+      "timestamp": "2026-04-12T02:36:24.458061",
+      "overall_score": 63.96039603960395,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "gemini/gemini-3.1-pro-preview",
+      "filename": "gemini_gemini-3.1-pro-preview_2026-04-12_bb631a66.json",
+      "timestamp": "2026-04-12T01:48:54.171130",
+      "overall_score": 64.85148514851485,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemma-4-31b-it",
+      "filename": "gemini_gemma-4-31b-it_2026-04-12_405ca17b.json",
+      "timestamp": "2026-04-12T00:12:42.102611",
+      "overall_score": 8.118811881188117,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "gemini/gemma-4-31b-it",
+      "filename": "gemini_gemma-4-31b-it_2026-04-12_b08202f1.json",
+      "timestamp": "2026-04-12T00:12:34.448893",
+      "overall_score": 8.118811881188117,
       "agents_md_mode": "with"
     },
     {
@@ -2139,6 +2249,34 @@
       "timestamp": "2026-02-22T20:43:51.997764",
       "overall_score": 80.79207920792079,
       "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.4-mini",
+      "filename": "openai_gpt-5.4-mini_2026-04-12_43c1c0bd.json",
+      "timestamp": "2026-04-12T00:14:51.720083",
+      "overall_score": 90.19801980198021,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "openai/gpt-5.4-mini",
+      "filename": "openai_gpt-5.4-mini_2026-04-12_5005416a.json",
+      "timestamp": "2026-04-12T00:13:23.470237",
+      "overall_score": 97.52475247524752,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.4",
+      "filename": "openai_gpt-5.4_2026-04-12_285e3485.json",
+      "timestamp": "2026-04-12T00:14:48.033268",
+      "overall_score": 84.15841584158416,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.4",
+      "filename": "openai_gpt-5.4_2026-04-12_ca3267dc.json",
+      "timestamp": "2026-04-12T00:17:41.732862",
+      "overall_score": 84.15841584158416,
+      "agents_md_mode": "without"
     },
     {
       "pair": "openai/gpt-5",
