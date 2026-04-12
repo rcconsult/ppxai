@@ -1242,6 +1242,180 @@ R4 and R5 are follow-ups that don't need to land for v1.17.4.
 
 ---
 
+## Second-pass Review Findings (gemini-3-flash, session_20260412_192249, 21:03)
+
+Re-reviewed after R1–R7 landed. Confirmed R3's streaming goal isn't
+fully met yet, plus three smaller risks in session handling. Each
+is verified against the branch; none are v1.17.4 release-blockers.
+
+### R8. `_count_csv_rows_cols` still materializes via `_decode_text` — **polish R3** 🟡
+
+**Location.** [`ppxai/engine/file_preprocessing.py`](../ppxai/engine/file_preprocessing.py#L342)
+
+**Symptom.** R3 streamed the row count (O(1) memory for the counting
+step), but the function still calls `text = _decode_text(data)` on
+the full byte buffer before sniffing the delimiter. For a 10 MB CSV
+the decode produces a multi-MB Python string plus whatever intermediate
+allocations the codec needs. The memory win is partial.
+
+**Proposed fix.**
+```python
+def _count_csv_rows_cols(data: bytes) -> tuple[int, int]:
+    import csv as _csv, io as _io
+
+    # Sniff on the first 8 KB only — enough for the delimiter heuristic,
+    # avoids materializing a full-file string just to peek at it.
+    sample = _decode_text(data[:8192])
+    try:
+        dialect = _csv.Sniffer().sniff(sample)
+        delimiter = dialect.delimiter
+    except _csv.Error:
+        delimiter = ","
+
+    # Stream the actual bytes through TextIOWrapper — csv.reader
+    # iterates row-by-row and we never hold the full decoded string.
+    stream = _io.TextIOWrapper(
+        _io.BytesIO(data), encoding="utf-8", errors="replace"
+    )
+    reader = _csv.reader(stream, delimiter=delimiter)
+    try:
+        header = next(reader)
+    except StopIteration:
+        return 0, 0
+    columns = len(header)
+    data_rows = sum(1 for _ in reader)
+    return data_rows, columns
+```
+
+**Test.** Count rows on a synthetic 10 MB CSV and assert peak RSS
+growth stays under ~15 MB (one buffer, not two). Existing metadata
+correctness tests should pass unchanged.
+
+---
+
+### R9. `validate_and_fix_alternation` "longer wins" heuristic can drop tool_calls — **correctness edge** 🟡
+
+**Location.** [`ppxai/engine/session.py`](../ppxai/engine/session.py) — `validate_and_fix_alternation`
+
+**Symptom.** When two consecutive assistant messages are found, the
+"longer is better" heuristic picks the one with more text content
+and drops the other. But an assistant message carrying structured
+`tool_calls[]` may have **empty `content`** (native tool-calling
+pattern for several providers) — so a trailing explanatory text
+message will always win, and the tool_calls silently disappear.
+After serialize/deserialize or alternation repair, a session can
+lose pending tool invocations without any warning.
+
+Also: `validate_and_fix_alternation` removes trailing `user`
+messages. If a user saves a session right after typing a prompt but
+before the assistant responds, the prompt is lost on reload. Rare
+but reproducible via `/save` immediately after pressing Enter.
+
+**Proposed fix.**
+1. Before picking "longer wins," check each candidate for non-empty
+   `tool_calls`. A message with tool_calls is load-bearing regardless
+   of text length — prefer it over a plain-text sibling, or better,
+   merge them (structured + narrative).
+2. For the trailing-user case: either preserve it as a pending prompt
+   (and let the next session load auto-send it) or at least log a
+   WARNING before dropping, so the regression is visible.
+
+**Test.** Build a session with
+`[user, assistant(tool_calls=[...], content=""), assistant("short"), ...]`
+— a synthetic alternation violation — and assert the tool_calls
+message survives the repair. A second test for the trailing-user
+case: save immediately after appending a user message with no
+assistant response, reload, assert user turn still present.
+
+---
+
+### R10. `_has_multimodal_attachments` O(N) scan on every save — **micro-perf** 🟢
+
+**Location.** [`ppxai/engine/session.py`](../ppxai/engine/session.py) — `_has_multimodal_attachments`
+
+**Symptom.** Called from `save()` / `save_dirty()` to decide flat vs
+directory session format. Walks every content block of every message
+on every save. Long conversations (200+ messages, tool-heavy) add
+measurable latency to every auto-save, compounding UI stutter in
+the TUI and slow roundtrips in web/VSCode.
+
+**Proposed fix.**
+Cache the result on `Session`, invalidate in exactly two mutation
+paths:
+- `add_message` — if the new message contains multimodal parts,
+  flip the cache to True (never scans)
+- `remove_last_message` / `clear` — invalidate to `None` (recompute
+  lazily on next save)
+
+The cache defaults to `None` on load so existing sessions get one
+scan on first save and then O(1) forever.
+
+**Test.** Monkeypatch `_has_multimodal_attachments` with a call
+counter, build a 500-message session with one image attachment
+early on, call `save()` 20 times, assert the underlying scan ran
+at most twice (once on first save, once if attachments were
+removed in between).
+
+---
+
+### R11. Session format transition is not atomic — **crash-edge** 🟢
+
+**Location.** [`ppxai/engine/session.py`](../ppxai/engine/session.py) — `_write_session_json`
+
+**Symptom.** When a session gains its first multimodal attachment
+mid-conversation, the writer transitions from flat `sessions/<name>.json`
+to directory `sessions/<name>/session.json`. The current sequence is
+roughly:
+
+1. Create `sessions/<name>/` directory
+2. Write `sessions/<name>/session.json`
+3. Write attachment files into `sessions/<name>/uploads/`
+4. Unlink old `sessions/<name>.json`
+
+A crash (power loss, SIGKILL, filesystem issue) between any two
+steps leaves the user with **both** a flat session and a directory
+session sharing the same name. The session list UI then shows two
+entries, and it's ambiguous which one `/load <name>` picks.
+
+**Proposed fix.**
+Two options:
+
+1. **Atomic move.** Write to `sessions/<name>.tmp/`, then `os.rename`
+   to `sessions/<name>/` (atomic on POSIX for same-filesystem renames),
+   then unlink the flat file. Reorders the sequence so the only
+   observable intermediate state is "old flat still present, new
+   dir not yet visible" — which the load path already handles by
+   preferring the flat file when both exist (confirm this is true).
+
+2. **Reject duplicates on load.** If both formats exist for the same
+   name, log a WARNING and pick the newer one by mtime. Cheap belt
+   even if (1) lands — protects against prior corruption from existing
+   installations.
+
+Ship (2) first (one-line safety net), then (1) as the proper fix.
+
+**Test.** Mock out `Path.unlink` to raise after the directory write
+succeeds, call save on a session transitioning formats, assert the
+next load picks the directory version and logs a warning about the
+orphan flat file.
+
+---
+
+### Proposed merge order (updated)
+
+R1 + R7 already landed. R2, R3, R4, R6 already landed. R5 deferred
+to v1.18.x. The second-pass findings are all follow-ups — none gate
+the release.
+
+| # | Priority | Effort | Target |
+|---|---|---|---|
+| **R8** | 🟡 polish R3 | ~30 min + test | v1.17.5 or later |
+| **R9** | 🟡 correctness edge | ~1 hr + 2 tests | v1.17.5 — worth doing |
+| **R10** | 🟢 micro-perf | ~30 min + test | v1.18.x (not urgent) |
+| **R11** | 🟢 crash-edge | ~1 hr (option 2 then 1) | v1.18.x (not urgent) |
+
+---
+
 ## Key Files (planned)
 
 | File | Purpose |
