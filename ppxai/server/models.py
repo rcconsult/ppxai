@@ -4,7 +4,7 @@ Pydantic request/response models for the ppxai HTTP server.
 
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class FileAttachment(BaseModel):
@@ -42,7 +42,7 @@ class ChatRequest(BaseModel):
     message: str
     provider: Optional[str] = None
     model: Optional[str] = None
-    files: List[FileAttachment] = []
+    files: List[FileAttachment] = Field(default_factory=list)
 
 
 class CodingTaskRequest(BaseModel):

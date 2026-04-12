@@ -12,7 +12,8 @@ Covers:
 - `get_context_attachments(engine)` — reads the canonical AppState field
 - `remove_context_attachment(engine, name)` — drops matching parts from
   user turns, with alternation-preserving placeholder injection
-- `has_vision_model()` — config-only probe for the VL sidecar
+- `has_vision_sidecar()` — config-only probe for the VL sidecar
+  (formerly `has_vision_model` — see R4 note)
 - `caption_image(engine, name, media_type, data)` — one-shot VL caption
   call used by `file_preprocessing.preprocess_file` when the user
   attaches an image to a text-only model
@@ -27,11 +28,14 @@ client readers at the same time.
 
 import base64
 import os
-import re
 from typing import Any, Dict, List
 
 from ..common.logger import get_logger
 from ..config import get_vision_model_config
+from .uploaded_file import (
+    parse_uploaded_file_markers,
+    strip_uploaded_file_marker,
+)
 
 logger = get_logger("engine")
 
@@ -91,12 +95,13 @@ def refresh_context_attachments(engine) -> None:
             if btype == "image_url":
                 name = block.get("name") or "image"
                 file_id = block.get("file_id") or ""
-                # Dedup key prefers file_id (stable content-addressed
-                # identity) and falls back to name for legacy blocks.
-                dedup_key = file_id or name
-                if dedup_key in seen_keys:
-                    continue
-                seen_keys.add(dedup_key)
+                # Content-addressed dedup (R7). When file_id is empty
+                # (legacy blocks), do NOT collapse by name — two
+                # different same-named files should produce two badges.
+                if file_id:
+                    if file_id in seen_keys:
+                        continue
+                    seen_keys.add(file_id)
 
                 # Prefer authoritative metadata from the file store
                 # (populated in Phase 2.1a). Falls back to parsing the
@@ -127,10 +132,11 @@ def refresh_context_attachments(engine) -> None:
             elif btype in ("input_file", "file"):
                 name = block.get("name") or block.get("filename") or "file"
                 file_id = block.get("file_id") or ""
-                dedup_key = file_id or name
-                if dedup_key in seen_keys:
-                    continue
-                seen_keys.add(dedup_key)
+                # Content-addressed dedup (R7) — same semantics as image_url.
+                if file_id:
+                    if file_id in seen_keys:
+                        continue
+                    seen_keys.add(file_id)
                 attachments.append({
                     "name": name,
                     "kind": "file",
@@ -141,32 +147,33 @@ def refresh_context_attachments(engine) -> None:
             elif btype == "text":
                 # PDF and Office attachments produce text parts with
                 # an <uploaded_file> XML marker (Phase 2.8+). Parse
-                # the marker to recover name, file_id, and type for
-                # the attachment badge.
+                # them via the shared helper so tracker and remover
+                # agree on the format (see R6 in TODO-file-upload).
                 text = block.get("text") or ""
-                if "<uploaded_file " in text:
-                    m = re.search(
-                        r'<uploaded_file\s+'
-                        r'name="([^"]*)"[^>]*'
-                        r'type="([^"]*)"[^>]*'
-                        r'file_id="([^"]*)"',
-                        text,
-                    )
-                    if m:
-                        uf_name = m.group(1) or "file"
-                        uf_type = m.group(2) or ""
-                        uf_fid = m.group(3) or ""
-                        dedup_key = uf_fid or uf_name
-                        if dedup_key not in seen_keys:
-                            seen_keys.add(dedup_key)
-                            kind = "pdf" if "pdf" in uf_type else "file"
-                            attachments.append({
-                                "name": uf_name,
-                                "kind": kind,
-                                "media_type": uf_type,
-                                "turn_index": turn_index,
-                                "file_id": uf_fid,
-                            })
+                if "<uploaded_file " not in text:
+                    continue
+                for marker in parse_uploaded_file_markers(text):
+                    uf_name = marker.get("name") or "file"
+                    uf_type = marker.get("type") or ""
+                    uf_fid = marker.get("file_id") or ""
+                    # Dedup semantics (R7): content-addressed when
+                    # file_id is present; when absent, do NOT collapse
+                    # by name — two empty-file_id markers sharing a
+                    # name are two distinct attachments from the user's
+                    # perspective, and silently collapsing them is the
+                    # badge-count bug we're fixing.
+                    if uf_fid:
+                        if uf_fid in seen_keys:
+                            continue
+                        seen_keys.add(uf_fid)
+                    kind = "pdf" if "pdf" in uf_type else "file"
+                    attachments.append({
+                        "name": uf_name,
+                        "kind": kind,
+                        "media_type": uf_type,
+                        "turn_index": turn_index,
+                        "file_id": uf_fid,
+                    })
 
     # AppState.set() short-circuits on equality so unchanged lists don't
     # fire listeners or SSE events.
@@ -185,45 +192,96 @@ def get_context_attachments(engine) -> List[Dict[str, Any]]:
     return list(engine.state.get("context_attachments") or [])
 
 
-def remove_context_attachment(engine, name: str) -> int:
-    """Drop all user-turn multimodal parts matching `name` from history.
+def remove_context_attachment(engine, target: str) -> int:
+    """Drop all user-turn multimodal parts matching `target` from history.
 
-    Walks `session.messages`, rewrites any user message containing an
-    `image_url` or file content part whose `name` field (or file_id)
-    matches the argument, and drops those parts. Messages whose
-    content list becomes empty after removal get a `[Attachment
-    removed: name]` text placeholder so conversation alternation stays
-    valid — dropping the whole message would leave consecutive
-    assistant turns and violate provider API rules.
+    Matches across three attachment surfaces:
+      * structured blocks (`image_url`, `input_file`, `file`)
+      * `<uploaded_file>` markers embedded in `text` blocks (PDF/Office)
 
-    The SessionFileStore file_id → path mapping is intentionally NOT
-    touched: other turns may still reference the same file_id, and
-    cleaning up orphaned bytes is the job of `cleanup_all` at session
-    teardown. Clients that want to reclaim disk space immediately can
-    call `file_store.cleanup(file_id)` themselves after confirming no
-    remaining message references the id.
+    Matching rules (R7). The function first resolves `target` to a
+    **file_id** using the current `context_attachments` index:
 
-    Fires `on_messages_changed` at the end, which refreshes the
-    `context_attachments` AppState field and cascades to every
-    subscribed client (Rich status bar, Textual footer, web chips,
-    VSCode chips).
+      * `target == "all"` → remove every attachment (all surfaces).
+      * `target` equals an attachment's `file_id` → remove by file_id
+        (exact, unambiguous).
+      * `target` equals a `short_id` (last 8+ chars of a `file_id`) →
+        remove by that file_id.
+      * `target` equals an attachment's `name` → remove every block/
+        marker sharing that name. Callers that want to disambiguate
+        must pass the file_id or short_id explicitly; the command
+        layer is responsible for surfacing an AMBIGUOUS warning to
+        the user before calling here (see
+        `commands/attach.py::_handle_attach_remove`).
+
+    Messages whose content list becomes empty after removal get a
+    `[Attachment removed: <target>]` text placeholder so conversation
+    alternation stays valid — dropping the whole message would leave
+    consecutive assistant turns and violate provider API rules.
+
+    SessionFileStore bytes are intentionally NOT cleaned up here;
+    other turns may still reference the same file_id.
+
+    Fires `on_messages_changed` which refreshes `context_attachments`
+    and cascades to every subscribed client.
 
     Args:
-        name: Attachment display name as reported by
-              `get_context_attachments()`, OR the literal string
-              "all" to remove every attachment in one call. Matches
-              are case-insensitive for "all"; exact for names so
-              files that legitimately share a prefix aren't grouped.
+        target: file_id, short_id, display name, or "all".
 
     Returns:
-        Number of content parts removed across all messages. Zero
-        indicates no matches — the caller should surface a "no
-        such attachment" message rather than pretending success.
+        Number of content parts / markers removed across all messages.
     """
-    if not name:
+    if not target:
         return 0
 
-    remove_all = name.lower() == "all"
+    remove_all = target.lower() == "all"
+
+    # Resolve the caller's target to a concrete match set.
+    #
+    # We match against the current AppState view (the same data that
+    # clients see in their badge) so "remove what I can see" semantics
+    # hold. The matcher collects file_ids + names so the block-level
+    # pass below can use either.
+    matched_file_ids: set = set()
+    matched_names: set = set()
+    if not remove_all:
+        attachments = get_context_attachments(engine)
+        for entry in attachments:
+            fid = entry.get("file_id") or ""
+            name_ = entry.get("name") or ""
+            # Exact file_id match (preferred).
+            if fid and target == fid:
+                matched_file_ids.add(fid)
+                continue
+            # short_id match — suffix of file_id, min 8 chars so we
+            # don't accidentally match short strings.
+            if fid and len(target) >= 8 and fid.endswith(target):
+                matched_file_ids.add(fid)
+                continue
+            # Name match (may hit multiple entries — intentional; the
+            # command layer is expected to have filtered AMBIGUOUS
+            # cases out before calling here).
+            if name_ and target == name_:
+                matched_names.add(name_)
+                if fid:
+                    matched_file_ids.add(fid)
+
+    def _block_matches(block: Dict[str, Any]) -> bool:
+        """True if this structured block should be removed."""
+        fid = block.get("file_id") or ""
+        bname = block.get("name") or block.get("filename") or ""
+        if fid and fid in matched_file_ids:
+            return True
+        if bname and bname in matched_names and not fid:
+            # Fall-back for legacy blocks that never made it into the
+            # file store — name-only identity, same collision caveat.
+            return True
+        # Last-ditch: target typed literally as "name.ext" matches a
+        # legacy block whose only identifier is its name.
+        if not fid and bname == target:
+            return True
+        return False
+
     removed_count = 0
     mutated = False
 
@@ -241,31 +299,82 @@ def remove_context_attachment(engine, name: str) -> int:
                 kept.append(block)
                 continue
             btype = block.get("type")
-            if btype not in ("image_url", "input_file", "file"):
+
+            # Structured attachment blocks — drop on match.
+            if btype in ("image_url", "input_file", "file"):
+                if remove_all or _block_matches(block):
+                    removed_count += 1
+                    had_attachment = True
+                    continue
                 kept.append(block)
                 continue
-            block_name = (
-                block.get("name")
-                or block.get("filename")
-                or block.get("file_id")
-                or ""
-            )
-            if remove_all or block_name == name:
-                removed_count += 1
-                had_attachment = True
+
+            # Text blocks may contain one or more <uploaded_file>
+            # markers (PDF/Office). Strip matching markers; keep the
+            # surrounding text if any remains.
+            if btype == "text":
+                text = block.get("text") or ""
+                if "<uploaded_file " not in text:
+                    kept.append(block)
+                    continue
+
+                if remove_all:
+                    # Strip every marker from this text block; keep any
+                    # surrounding user text that remains.
+                    from .uploaded_file import UPLOADED_FILE_RE
+                    stripped_text = UPLOADED_FILE_RE.sub("", text).strip()
+                    marker_count = len(parse_uploaded_file_markers(text))
+                    removed_count += marker_count
+                    had_attachment = marker_count > 0
+                    if stripped_text:
+                        new_block = dict(block)
+                        new_block["text"] = stripped_text
+                        kept.append(new_block)
+                    # else: drop the whole block
+                    continue
+
+                # Targeted removal: strip each matched marker.
+                new_text = text
+                local_removed = 0
+                for fid in matched_file_ids:
+                    new_text, n = strip_uploaded_file_marker(
+                        new_text, file_id=fid
+                    )
+                    local_removed += n
+                if local_removed == 0 and matched_names:
+                    # Name-only fallback (legacy markers without file_id
+                    # OR when caller passed a literal name).
+                    for n_ in matched_names:
+                        new_text, n = strip_uploaded_file_marker(
+                            new_text, name=n_
+                        )
+                        local_removed += n
+
+                if local_removed > 0:
+                    removed_count += local_removed
+                    had_attachment = True
+                    stripped = new_text.strip()
+                    if stripped:
+                        new_block = dict(block)
+                        new_block["text"] = stripped
+                        kept.append(new_block)
+                    # else: drop the whole block
+                else:
+                    kept.append(block)
                 continue
+
+            # Any other block type passes through untouched.
             kept.append(block)
 
         if not had_attachment:
             continue
 
-        # If the message now has no content parts left (a rare case
-        # where a user turn was nothing but attachments), inject a
-        # text placeholder so alternation stays valid.
+        # If the message now has no content parts left, inject a text
+        # placeholder so alternation stays valid.
         if not kept:
             kept.append({
                 "type": "text",
-                "text": f"[Attachment removed: {name}]",
+                "text": f"[Attachment removed: {target}]",
             })
 
         msg.content = kept
@@ -282,19 +391,24 @@ def remove_context_attachment(engine, name: str) -> int:
 # =============================================================================
 
 
-def has_vision_model() -> bool:
-    """Return True if a vision-language sidecar is configured and usable.
+def has_vision_sidecar() -> bool:
+    """Return True if a vision-language **sidecar** is configured and usable.
 
-    Checks the `tools.vision_model` config section: the sidecar is
-    "available" when `enabled=True`, endpoint and model are both
-    non-empty, and (by default) `auto_caption=True` so file
+    Note the name: this checks the `tools.vision_model` config section,
+    NOT whether the currently active model is vision-capable. For
+    "does my model understand images natively?" use
+    `model_profiles.get_profile(model).supports_vision` instead
+    (see R4 in TODO-file-upload.md for the original naming confusion).
+
+    The sidecar is "available" when `enabled=True`, endpoint and model
+    are both non-empty, and (by default) `auto_caption=True` so file
     preprocessing calls it automatically. Callers with their own
     use policy can read `get_vision_model_config()` directly.
     """
     try:
         cfg = get_vision_model_config()
     except Exception as exc:
-        logger.debug(f"has_vision_model: config read failed: {exc}")
+        logger.debug(f"has_vision_sidecar: config read failed: {exc}")
         return False
     return (
         bool(cfg.get("enabled"))
@@ -410,6 +524,6 @@ __all__ = [
     "refresh_context_attachments",
     "get_context_attachments",
     "remove_context_attachment",
-    "has_vision_model",
+    "has_vision_sidecar",
     "caption_image",
 ]

@@ -514,7 +514,7 @@ def register_tools(manager: ToolManagerProtocol, engine: ToolEngineProtocol) -> 
     if _libreoffice_available():
         manager.register_tool(RenderPptxSlideTool(engine))
         # VL visual summary — requires both LibreOffice and a VL sidecar
-        if hasattr(engine, "has_vision_model") and engine.has_vision_model():
+        if hasattr(engine, "has_vision_sidecar") and engine.has_vision_sidecar():
             manager.register_tool(SummarizePptxVisualTool(engine))
     return True
 

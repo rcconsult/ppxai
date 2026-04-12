@@ -513,12 +513,12 @@ def main():
                     # current model is text-only, `preprocess_file` calls
                     # `engine.caption_image` to generate a text caption
                     # instead of dropping the image to a placeholder.
-                    # `has_vision_model()` returns False when the sidecar
+                    # `has_vision_sidecar()` returns False when the sidecar
                     # is disabled or unconfigured, so we pass None in
                     # that case and the placeholder fallback kicks in.
                     vl_captioner = (
                         handler.engine_client.caption_image
-                        if handler.engine_client.has_vision_model()
+                        if handler.engine_client.has_vision_sidecar()
                         else None
                     )
                     chat_payload = build_multimodal_content(

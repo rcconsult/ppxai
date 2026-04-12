@@ -386,12 +386,27 @@ def _handle_attach_list(context: Any, pending: List[PendingFile]) -> CommandResu
     )
 
 
+def _short_id(file_id: str) -> str:
+    """Return the last 8 chars of a file_id for user-facing disambiguation."""
+    return file_id[-8:] if file_id and len(file_id) >= 8 else file_id
+
+
 def _handle_attach_remove(context: Any, target: str) -> CommandResult:
     """Evict one or all committed attachments from session history.
 
+    Matching precedence (R1 + R7 fix):
+      1. `target == "all"` → wipe everything.
+      2. `target` is a full file_id or an 8+ char short_id suffix → exact
+         removal of that one attachment.
+      3. `target` matches exactly one attachment by name → remove it.
+      4. `target` matches multiple attachments by name → **AMBIGUOUS**.
+         We do NOT silently remove all — we surface each candidate's
+         short_id so the user can retry with the specific one.
+
     Delegates to `EngineClient.remove_context_attachment` which walks
-    `session.messages`, drops matching content parts, and fires the
-    on_messages_changed callback to refresh AppState.
+    `session.messages`, drops matching content parts (and strips
+    `<uploaded_file>` markers from text blocks), and fires the
+    `on_messages_changed` callback to refresh AppState.
     """
     if not target:
         return ErrorResult(
@@ -399,8 +414,9 @@ def _handle_attach_remove(context: Any, target: str) -> CommandResult:
             message=(
                 "Missing argument.\n\n"
                 "Usage:\n"
-                "  /attach remove <name>   evict a specific attachment by name\n"
-                "  /attach remove all      evict every committed attachment"
+                "  /attach remove <name>       evict an attachment by name\n"
+                "  /attach remove <short_id>   evict by 8+ char id suffix (disambiguates)\n"
+                "  /attach remove all          evict every committed attachment"
             ),
         )
 
@@ -413,6 +429,43 @@ def _handle_attach_remove(context: Any, target: str) -> CommandResult:
                 "attachment support."
             ),
         )
+
+    # Detect name-collision ambiguity BEFORE asking the engine to remove
+    # anything. The engine will happily wipe every same-named entry if
+    # we let it — which was the R7 footgun.
+    if target.lower() != "all" and hasattr(engine_client, "get_context_attachments"):
+        current = engine_client.get_context_attachments()
+        # Is target an exact file_id / short_id match? If so, skip
+        # ambiguity check — caller is already disambiguating.
+        is_id_match = any(
+            (entry.get("file_id") == target) or
+            (entry.get("file_id") and len(target) >= 8 and entry.get("file_id","").endswith(target))
+            for entry in current
+        )
+        if not is_id_match:
+            name_matches = [e for e in current if e.get("name") == target]
+            if len(name_matches) > 1:
+                lines = [
+                    f"Ambiguous: {len(name_matches)} attachments named {target!r}.",
+                    "",
+                    "Retry with a short_id suffix to target one:",
+                ]
+                for e in name_matches:
+                    fid = e.get("file_id") or ""
+                    short = _short_id(fid) if fid else "(no file_id)"
+                    kind = e.get("kind", "?")
+                    mt = e.get("media_type", "")
+                    turn = e.get("turn_index", "?")
+                    lines.append(
+                        f"  /attach remove {short}   "
+                        f"[{kind}, {mt}, turn {turn}]"
+                    )
+                lines.append("")
+                lines.append("Or /attach remove all to wipe every attachment.")
+                return NotificationResult(
+                    status=ResultStatus.WARNING,
+                    message="\n".join(lines),
+                )
 
     removed = engine_client.remove_context_attachment(target)
     if removed == 0:

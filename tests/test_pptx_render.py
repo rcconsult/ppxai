@@ -22,6 +22,8 @@ def _make_engine(file_store=None, has_vl=False, caption_result="A slide"):
     engine.get_working_dir.return_value = "/workspace"
     engine.set_working_dir = MagicMock()
     engine.request_file_edit_consent = AsyncMock(return_value=True)
+    engine.has_vision_sidecar.return_value = has_vl
+    # Back-compat alias (R4 rename in v1.17.4).
     engine.has_vision_model.return_value = has_vl
     engine.caption_image.return_value = caption_result
     return engine

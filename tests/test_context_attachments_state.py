@@ -122,16 +122,61 @@ class TestEngineRefreshWiring:
         assert attachments[0]["turn_index"] == 0
         assert attachments[1]["turn_index"] == 2
 
-    def test_duplicate_image_name_deduped(self, engine):
-        # Same attachment re-sent on two turns → single entry.
+    def test_same_file_id_deduped(self, engine):
+        # Same attachment (same file_id) re-sent on two turns → single entry.
+        # Content-addressed dedup: identity is the file_id, not the name.
+        for _ in range(2):
+            engine.session.add_message(Message(
+                role="user",
+                content=[{
+                    "type": "image_url",
+                    "name": "chart.png",
+                    "file_id": "sha256:abc123",
+                    "image_url": {"url": "data:image/png;base64,AA"},
+                }],
+            ))
+        attachments = engine.get_context_attachments()
+        assert len(attachments) == 1
+
+    def test_same_name_different_file_ids_not_deduped(self, engine):
+        # Two different files that happen to share a display name (e.g.
+        # two `chart.png` from different directories) must surface as
+        # TWO badges, not one. Silent collapse was the R7 bug.
+        engine.session.add_message(Message(
+            role="user",
+            content=[{
+                "type": "image_url",
+                "name": "chart.png",
+                "file_id": "sha256:aaa",
+                "image_url": {"url": "data:image/png;base64,AA"},
+            }],
+        ))
+        engine.session.add_message(Message(role="assistant", content="ok"))
+        engine.session.add_message(Message(
+            role="user",
+            content=[{
+                "type": "image_url",
+                "name": "chart.png",
+                "file_id": "sha256:bbb",
+                "image_url": {"url": "data:image/png;base64,BB"},
+            }],
+        ))
+        attachments = engine.get_context_attachments()
+        assert len(attachments) == 2
+        assert {a["file_id"] for a in attachments} == {"sha256:aaa", "sha256:bbb"}
+
+    def test_empty_file_id_not_collapsed_by_name(self, engine):
+        # Two legacy blocks with empty file_id + same name are distinct
+        # from the user's perspective. Don't silently dedup them.
         for _ in range(2):
             engine.session.add_message(Message(
                 role="user",
                 content=[{"type": "image_url", "name": "chart.png",
                           "image_url": {"url": "data:image/png;base64,AA"}}],
             ))
+            engine.session.add_message(Message(role="assistant", content="ok"))
         attachments = engine.get_context_attachments()
-        assert len(attachments) == 1
+        assert len(attachments) == 2
 
     def test_remove_last_message_refreshes(self, engine):
         engine.session.add_message(Message(

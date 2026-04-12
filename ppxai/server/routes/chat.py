@@ -61,7 +61,7 @@ def _build_chat_payload(
     file_store = getattr(engine, "file_store", None)
     vl_captioner = (
         engine.caption_image
-        if hasattr(engine, "has_vision_model") and engine.has_vision_model()
+        if hasattr(engine, "has_vision_sidecar") and engine.has_vision_sidecar()
         else None
     )
 

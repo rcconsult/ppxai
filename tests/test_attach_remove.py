@@ -351,3 +351,166 @@ class TestAttachRemoveCommand:
         assert "In context" in result.message
         assert "new.png" in result.message
         assert "old.png" in result.message
+
+
+# -----------------------------------------------------------------------------
+# R1 + R7: <uploaded_file> marker removal + file_id disambiguation
+# -----------------------------------------------------------------------------
+
+
+class TestUploadedFileMarkerRemoval:
+    """R1: /attach remove must strip <uploaded_file> markers from text blocks
+    (PDFs and Office docs), not just structured image_url/input_file blocks.
+    """
+
+    def _add_pdf_marker_turn(self, engine, *, name, file_id):
+        engine.session.add_message(Message(
+            role="user",
+            content=[
+                {"type": "text", "text": "describe this"},
+                {
+                    "type": "text",
+                    "text": (
+                        f'<uploaded_file name="{name}" '
+                        f'type="application/pdf" file_id="{file_id}" '
+                        f'pages="3" size_kb="12.4">\n'
+                        f"PDF attached: {name} (3 pages).\n"
+                        f"</uploaded_file>"
+                    ),
+                },
+            ],
+        ))
+        engine.session.add_message(Message(role="assistant", content="ok"))
+
+    def test_remove_by_name_strips_pdf_marker(self, engine):
+        self._add_pdf_marker_turn(engine, name="report.pdf", file_id="sha256:abc")
+        assert len(engine.get_context_attachments()) == 1
+
+        removed = engine.remove_context_attachment("report.pdf")
+        assert removed == 1
+        assert engine.get_context_attachments() == []
+        # Surrounding user text must be preserved.
+        first_user = engine.session.messages[0]
+        texts = [b.get("text","") for b in first_user.content if isinstance(b, dict)]
+        joined = " ".join(texts)
+        assert "describe this" in joined
+        assert "<uploaded_file" not in joined
+
+    def test_remove_by_file_id_strips_pdf_marker(self, engine):
+        self._add_pdf_marker_turn(engine, name="report.pdf", file_id="sha256:abc")
+        removed = engine.remove_context_attachment("sha256:abc")
+        assert removed == 1
+        assert engine.get_context_attachments() == []
+
+    def test_remove_by_short_id_strips_pdf_marker(self, engine):
+        self._add_pdf_marker_turn(engine, name="report.pdf", file_id="sha256:abcdef12")
+        # Last 8 chars only.
+        removed = engine.remove_context_attachment("abcdef12")
+        assert removed == 1
+        assert engine.get_context_attachments() == []
+
+    def test_remove_all_strips_both_structured_and_markers(self, engine):
+        # Mix: one image_url + one uploaded_file marker in the same turn.
+        engine.session.add_message(Message(
+            role="user",
+            content=[
+                _image_block("chart.png"),
+                {
+                    "type": "text",
+                    "text": (
+                        '<uploaded_file name="report.pdf" type="application/pdf" '
+                        'file_id="sha256:xyz" pages="2" size_kb="1.0">\n'
+                        "PDF attached: report.pdf\n"
+                        "</uploaded_file>"
+                    ),
+                },
+            ],
+        ))
+        engine.session.add_message(Message(role="assistant", content="ok"))
+
+        assert len(engine.get_context_attachments()) == 2
+        removed = engine.remove_context_attachment("all")
+        assert removed == 2
+        assert engine.get_context_attachments() == []
+
+    def test_targeted_remove_preserves_other_markers_in_same_block(self, engine):
+        # Two markers in one text block: remove only one.
+        engine.session.add_message(Message(
+            role="user",
+            content=[{
+                "type": "text",
+                "text": (
+                    '<uploaded_file name="a.pdf" type="application/pdf" '
+                    'file_id="sha256:aaa">a</uploaded_file>'
+                    "\n\n"
+                    '<uploaded_file name="b.pdf" type="application/pdf" '
+                    'file_id="sha256:bbb">b</uploaded_file>'
+                ),
+            }],
+        ))
+        engine.session.add_message(Message(role="assistant", content="ok"))
+
+        assert len(engine.get_context_attachments()) == 2
+        removed = engine.remove_context_attachment("sha256:aaa")
+        assert removed == 1
+        remaining = engine.get_context_attachments()
+        assert len(remaining) == 1
+        assert remaining[0]["file_id"] == "sha256:bbb"
+
+
+class TestAmbiguousRemoval:
+    """R7: /attach remove <name> with multiple same-name matches must
+    surface an AMBIGUOUS result listing short_ids instead of silently
+    wiping all matches.
+    """
+
+    def _make_context(self, engine):
+        return SimpleNamespace(
+            engine_client=engine,
+            pending_files=[],
+            _theme=None,
+        )
+
+    def _add_pdf(self, engine, *, name, file_id):
+        engine.session.add_message(Message(
+            role="user",
+            content=[{
+                "type": "text",
+                "text": (
+                    f'<uploaded_file name="{name}" type="application/pdf" '
+                    f'file_id="{file_id}" pages="1" size_kb="0.5">\n'
+                    f"PDF attached: {name}\n"
+                    f"</uploaded_file>"
+                ),
+            }],
+        ))
+        engine.session.add_message(Message(role="assistant", content="ok"))
+
+    def test_ambiguous_name_surfaces_warning_without_removing(self, engine):
+        # Two files named "report.pdf" with different file_ids.
+        self._add_pdf(engine, name="report.pdf", file_id="sha256:aaaaaaa1")
+        self._add_pdf(engine, name="report.pdf", file_id="sha256:bbbbbbb2")
+
+        ctx = self._make_context(engine)
+        result = handle_attach(ctx, "remove report.pdf")
+
+        # Must not have removed anything.
+        assert len(engine.get_context_attachments()) == 2
+        # Must be a WARNING with short_ids for disambiguation.
+        assert result.status == ResultStatus.WARNING
+        assert "Ambiguous" in result.message
+        # Both short_ids surface in the hint.
+        assert "aaaaaaa1" in result.message
+        assert "bbbbbbb2" in result.message
+
+    def test_unambiguous_short_id_removes_one(self, engine):
+        self._add_pdf(engine, name="report.pdf", file_id="sha256:aaaaaaa1")
+        self._add_pdf(engine, name="report.pdf", file_id="sha256:bbbbbbb2")
+
+        ctx = self._make_context(engine)
+        result = handle_attach(ctx, "remove aaaaaaa1")
+
+        assert result.status == ResultStatus.SUCCESS
+        remaining = engine.get_context_attachments()
+        assert len(remaining) == 1
+        assert remaining[0]["file_id"] == "sha256:bbbbbbb2"

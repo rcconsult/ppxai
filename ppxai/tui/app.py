@@ -1006,7 +1006,7 @@ class PPXAIDEApp(App):
                     file_store=self._engine_client.file_store,
                     vl_captioner=(
                         self._engine_client.caption_image
-                        if self._engine_client.has_vision_model()
+                        if self._engine_client.has_vision_sidecar()
                         else None
                     ),
                 )

@@ -62,6 +62,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from .image_validation import sniff_media_type, validate_image
 from .model_profiles import supports_vision as model_supports_vision
+from .uploaded_file import format_uploaded_file_reference
 from .session_store import (
     KIND_IMAGE,
     KIND_OFFICE,
@@ -356,13 +357,16 @@ def _count_csv_rows_cols(data: bytes) -> tuple[int, int]:
         delimiter = ","
 
     reader = _csv.reader(_io.StringIO(text), delimiter=delimiter)
-    rows = list(reader)
-    if not rows:
+    try:
+        header = next(reader)
+    except StopIteration:
         return 0, 0
-
-    columns = len(rows[0])
-    data_rows = len(rows) - 1  # exclude header
-    return max(data_rows, 0), columns
+    columns = len(header)
+    # Stream-count remaining rows — O(1) memory instead of O(n).
+    # For large CSVs (which this function exists to describe), we don't
+    # want to materialize the whole file just to report its shape.
+    data_rows = sum(1 for _ in reader)
+    return data_rows, columns
 
 
 def _preprocess_csv(
@@ -402,13 +406,19 @@ def _preprocess_csv(
     row_count, col_count = _count_csv_rows_cols(data)
     size_kb = len(data) / 1024
 
-    reference = (
-        f'<uploaded_file name="{name}" type="text/csv" '
-        f'file_id="{file_id}" rows="{row_count}" columns="{col_count}" '
-        f'size_kb="{size_kb:.1f}">\n'
-        f"CSV attached: {name} ({row_count} rows, {col_count} columns, "
-        f"{size_kb:.1f} KB). Use the read_csv tool to access its content.\n"
-        f"</uploaded_file>"
+    reference = format_uploaded_file_reference(
+        name=name,
+        media_type="text/csv",
+        file_id=file_id,
+        extra_attrs={
+            "rows": str(row_count),
+            "columns": str(col_count),
+            "size_kb": f"{size_kb:.1f}",
+        },
+        body=(
+            f"CSV attached: {name} ({row_count} rows, {col_count} columns, "
+            f"{size_kb:.1f} KB). Use the read_csv tool to access its content."
+        ),
     )
 
     return PreprocessResult(
@@ -514,13 +524,18 @@ def _preprocess_pdf(
         page_info = f"{page_count} page{'s' if page_count != 1 else ''}"
 
     size_kb = len(data) / 1024
-    reference = (
-        f'<uploaded_file name="{name}" type="application/pdf" '
-        f'file_id="{file_id}" pages="{page_count if page_count is not None else 0}" '
-        f'size_kb="{size_kb:.1f}">\n'
-        f"PDF attached: {name} ({page_info}, {size_kb:.1f} KB). "
-        f"Use the read_pdf or get_pdf_page_image tools to access its content.\n"
-        f"</uploaded_file>"
+    reference = format_uploaded_file_reference(
+        name=name,
+        media_type="application/pdf",
+        file_id=file_id,
+        extra_attrs={
+            "pages": str(page_count if page_count is not None else 0),
+            "size_kb": f"{size_kb:.1f}",
+        },
+        body=(
+            f"PDF attached: {name} ({page_info}, {size_kb:.1f} KB). "
+            f"Use the read_pdf or get_pdf_page_image tools to access its content."
+        ),
     )
 
     return PreprocessResult(
@@ -585,12 +600,14 @@ def _preprocess_office(
     else:
         tool_hint = "Use the appropriate extraction tools to access its content."
 
-    reference = (
-        f'<uploaded_file name="{meta.name}" type="{media_type}" '
-        f'file_id="{meta.file_id}" size_kb="{size_kb:.1f}">\n'
-        f"{doc_type} attached: {meta.name} ({size_kb:.1f} KB). "
-        f"{tool_hint}\n"
-        f"</uploaded_file>"
+    reference = format_uploaded_file_reference(
+        name=meta.name,
+        media_type=media_type,
+        file_id=meta.file_id,
+        extra_attrs={"size_kb": f"{size_kb:.1f}"},
+        body=(
+            f"{doc_type} attached: {meta.name} ({size_kb:.1f} KB). {tool_hint}"
+        ),
     )
 
     return PreprocessResult(

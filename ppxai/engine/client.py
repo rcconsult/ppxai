@@ -315,14 +315,21 @@ class EngineClient:
     # Vision-language sidecar (v1.17.4 Phase 2.7)
     # ------------------------------------------------------------------
 
-    def has_vision_model(self) -> bool:
-        """Return True if a vision-language sidecar is configured and usable.
+    def has_vision_sidecar(self) -> bool:
+        """Return True if a vision-language **sidecar** is configured and usable.
 
-        Delegates to `multimodal_ops.has_vision_model`. Reads the
-        `tools.vision_model` config section; returns True when enabled,
-        endpoint, and model are all set.
+        Checks the `tools.vision_model` config section only. Does NOT
+        report whether the currently active model is vision-capable
+        (for that, see `model_profiles.get_profile(model).supports_vision`).
+        Renamed from `has_vision_model` in v1.17.4 to remove the
+        model-vs-sidecar ambiguity (R4 in TODO-file-upload.md).
         """
-        return multimodal_ops.has_vision_model()
+        return multimodal_ops.has_vision_sidecar()
+
+    # Back-compat alias. Scheduled for removal in v1.18.x — callers
+    # should migrate to `has_vision_sidecar`. Still used by a few
+    # external/test helpers that haven't been updated yet.
+    has_vision_model = has_vision_sidecar
 
     def caption_image(
         self,
