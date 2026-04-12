@@ -913,7 +913,13 @@ TUI status bar does today.
 ## Pre-merge Review Findings (gpt-5.4, session_20260412_192249)
 
 External review on `feat/file-upload` by gpt-5.4 surfaced these issues.
-Each is verified against the branch; ranked by user-visible impact.
+Each was verified against the branch; ranked by user-visible impact.
+
+**Status (v1.17.4):** R1, R2, R3, R4, R6, R7 all fixed in commit `d2d1fd6`
+with 9 new regression tests in `test_attach_remove.py` and updated
+semantics tests in `test_context_attachments_state.py`. All 2308
+tests pass. R5 deferred to v1.18.x per the merge-order plan — it's a
+structural schema change that retires R7's workaround.
 
 ### R1. `/attach remove` doesn't handle PDF/Office attachments — **correctness gap** 🔴
 
