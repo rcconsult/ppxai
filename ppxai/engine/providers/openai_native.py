@@ -28,6 +28,7 @@ from openai import OpenAI
 
 from ...common.logger import get_logger
 from ..types import Message, Event, EventType, ProviderCapabilities, UsageStats
+from ..uploaded_file import flatten_uploaded_file_blocks
 from .base import BaseProvider
 
 
@@ -673,6 +674,11 @@ class OpenAINativeProvider(BaseProvider):
     def _convert_messages_for_responses(messages: List[Message]) -> tuple:
         """Convert Messages to Responses API format.
 
+        R5 (v1.17.6): any `uploaded_file` blocks on user/assistant/tool
+        messages are flattened to legacy text markers before they enter
+        the Responses API request. System messages are already flattened
+        to text via `text_content()`, so they're covered implicitly.
+
         Returns:
             Tuple of (instructions string or None, input items list)
         """
@@ -686,13 +692,19 @@ class OpenAINativeProvider(BaseProvider):
                 instructions_parts.append(m.text_content())
             elif m.role == "tool":
                 # Tool result — include tool_call_id for proper linking
-                item: Dict[str, Any] = {"role": "tool", "content": m.content}
+                item: Dict[str, Any] = {
+                    "role": "tool",
+                    "content": flatten_uploaded_file_blocks(m.content),
+                }
                 if m.tool_call_id:
                     item["tool_call_id"] = m.tool_call_id
                 input_items.append(item)
             else:
                 role = "assistant" if m.role == "assistant" else "user"
-                item = {"role": role, "content": m.content}
+                item = {
+                    "role": role,
+                    "content": flatten_uploaded_file_blocks(m.content),
+                }
                 if m.tool_calls:
                     item["tool_calls"] = m.tool_calls
                 input_items.append(item)

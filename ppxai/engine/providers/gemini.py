@@ -28,6 +28,7 @@ import httpx
 
 from ...common.logger import get_logger
 from ..types import Message, Event, EventType, ProviderCapabilities, UsageStats
+from ..uploaded_file import flatten_uploaded_file_blocks
 from .base import BaseProvider
 
 
@@ -481,11 +482,21 @@ class GeminiProvider(BaseProvider):
         parts. Data URIs (`data:image/png;base64,...`) are split into mime_type
         and base64 payload. Remote `http(s)://` URLs are unsupported — Gemini
         requires the caller to fetch and embed the bytes.
+
+        R5 (v1.17.6): `uploaded_file` blocks are flattened to legacy
+        text markers before the shape conversion, so the block-type
+        walk below only has to know about `text` and `image_url`.
         """
         if isinstance(content, str):
             return [{"text": content}]
         if not isinstance(content, list):
             return [{"text": str(content)}]
+
+        # R5: collapse any uploaded_file blocks to their legacy text form
+        # before we walk the list. Keeps the block-type dispatch simple
+        # and guarantees Gemini sees the exact same marker string it did
+        # pre-R5.
+        content = flatten_uploaded_file_blocks(content)
 
         parts: List[Dict[str, Any]] = []
         for block in content:

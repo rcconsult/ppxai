@@ -16,6 +16,7 @@ from openai import OpenAI
 
 from ..model_profiles import ModelProfile, get_profile
 from ..types import Message, Event, EventType, ProviderCapabilities, ModelInfo, UsageStats
+from ..uploaded_file import flatten_uploaded_file_blocks
 from ...config import get_generation_params, get_model_max_tokens
 from ...common.logger import get_logger
 
@@ -239,6 +240,16 @@ class BaseProvider(ABC):
     def _convert_messages(self, messages: List[Message]) -> List[Dict[str, Any]]:
         """Convert Message objects to API format.
 
+        R5 (v1.17.6): any `uploaded_file` content blocks are flattened
+        back to their legacy `<uploaded_file>` text-marker form before
+        shaping the API request. Providers (OpenAI, Perplexity, and any
+        OpenAI-compatible endpoint) would reject an unknown block type
+        outright, so the structured type is an engine-internal schema
+        only. The flatten uses `format_uploaded_file_reference` under
+        the hood, so the LLM sees byte-identical strings whether the
+        producer emitted a legacy text marker (pre-R5) or a structured
+        block flattened here.
+
         Args:
             messages: List of Message objects
 
@@ -247,7 +258,8 @@ class BaseProvider(ABC):
         """
         result = []
         for m in messages:
-            msg: Dict[str, Any] = {"role": m.role, "content": m.content}
+            content = flatten_uploaded_file_blocks(m.content)
+            msg: Dict[str, Any] = {"role": m.role, "content": content}
             if m.tool_calls:
                 msg["tool_calls"] = m.tool_calls
             if m.tool_call_id:

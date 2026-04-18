@@ -153,6 +153,16 @@ class Message:
             elif btype == "input_file" or btype == "file":
                 name = block.get("name") or block.get("filename") or "file"
                 parts.append(f"[File: {name}]")
+            elif btype == "uploaded_file":
+                # R5 (v1.17.6): first-class uploaded-file block. For
+                # human-readable display (logs, token estimates, markdown
+                # exports) render `[File: name (media_type)]` so the
+                # output matches what `input_file` / `file` blocks look
+                # like. Providers never see this branch because they
+                # flatten uploaded_file to text before calling this.
+                name = block.get("name") or "file"
+                media = block.get("media_type") or ""
+                parts.append(f"[File: {name} ({media})]" if media else f"[File: {name}]")
             else:
                 # Unknown part type — include a marker but don't crash.
                 parts.append(f"[{btype or 'part'}]")
