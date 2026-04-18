@@ -461,6 +461,109 @@ class TestAlternationValidationWithToolMessages:
         assert removed >= 1
         assert session.messages[0].role == "user"
 
+    # -----------------------------------------------------------------------
+    # R9: tool_calls preservation + trailing user visibility (v1.17.5)
+    # -----------------------------------------------------------------------
+
+    def test_tool_calls_survive_consecutive_assistants(self, tmp_path):
+        """R9: assistant(tool_calls, content='') must beat plain-text sibling.
+
+        Native tool-calling providers emit assistant messages with empty
+        content and the payload in tool_calls[]. The old "longer wins"
+        heuristic silently dropped those to keep a trailing narrative
+        message. Verify the tool_calls-carrying message is preserved.
+        """
+        session = SessionManager(sessions_dir=tmp_path, exports_dir=tmp_path / "exports")
+        tool_call = {
+            "id": "call_1", "type": "function",
+            "function": {"name": "read_file", "arguments": '{"path":"foo"}'}
+        }
+        session.messages = [
+            Message("user", "read foo"),
+            Message("assistant", "", tool_calls=[tool_call]),
+            # Synthetic alternation violation — a longer plain-text assistant
+            # immediately after. Without the fix, this one wins the tiebreak
+            # and the tool_calls vanish.
+            Message("assistant", "Sure, I'll read it for you."),
+            Message("tool", "foo contents", tool_call_id="call_1"),
+            Message("assistant", "Here's what I found."),
+        ]
+
+        session.validate_and_fix_alternation()
+
+        # The tool_calls message must survive the repair.
+        surviving_tool_call_msgs = [
+            m for m in session.messages if m.role == "assistant" and m.tool_calls
+        ]
+        assert len(surviving_tool_call_msgs) == 1
+        assert surviving_tool_call_msgs[0].tool_calls == [tool_call]
+        # The tool response must still be anchored to an assistant(tool_calls)
+        tool_msgs = [m for m in session.messages if m.role == "tool"]
+        assert len(tool_msgs) == 1
+
+    def test_tool_calls_win_when_prev_has_calls(self, tmp_path):
+        """R9: plain-text assistant after assistant(tool_calls) must not replace it."""
+        session = SessionManager(sessions_dir=tmp_path, exports_dir=tmp_path / "exports")
+        tool_call = {
+            "id": "call_1", "type": "function",
+            "function": {"name": "search", "arguments": "{}"}
+        }
+        session.messages = [
+            Message("user", "search for X"),
+            Message("assistant", "", tool_calls=[tool_call]),
+            # Much longer text, but no tool_calls — must NOT overwrite prev.
+            Message("assistant", "x" * 500),
+            Message("tool", "result", tool_call_id="call_1"),
+            Message("assistant", "done"),
+        ]
+
+        session.validate_and_fix_alternation()
+
+        # Find the assistant turn immediately after the initial user message.
+        assert session.messages[1].role == "assistant"
+        assert session.messages[1].tool_calls == [tool_call]
+        assert session.messages[1].text_content() == ""
+
+    def test_trailing_user_prompt_loss_logged_visibly(self, tmp_path, caplog):
+        """R9: dropping a trailing user message must emit an unambiguous WARNING.
+
+        Reproduces the `/save` immediately after pressing Enter case — the
+        unsent prompt is still dropped (preserving it auto-sends on reload,
+        which is a bigger change), but when debug logging is active, the
+        warning must make the loss visible so "where did my question go?"
+        bugs are diagnosable.
+        """
+        import logging
+        from ppxai.engine import session as session_mod
+
+        # The session logger is lazy-initialized and only dispatches when
+        # debug logging is enabled. Enable it for this test so caplog can
+        # capture what an operator would see with `/debug-log on`.
+        session_mod.logger.enable()
+        try:
+            session = SessionManager(sessions_dir=tmp_path, exports_dir=tmp_path / "exports")
+            session.messages = [
+                Message("user", "Hello"),
+                Message("assistant", "Hi"),
+                Message("user", "What is the capital of France?"),  # trailing — dropped
+            ]
+
+            with caplog.at_level(logging.WARNING, logger="ppxai.session"):
+                session.validate_and_fix_alternation()
+
+            # Message was dropped (existing behavior preserved)
+            assert len(session.messages) == 2
+
+            # But the loss is now unambiguously labeled.
+            warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+            assert any(
+                "DROPPED UNSENT USER PROMPT" in r.getMessage()
+                and "capital of France" in r.getMessage()
+                for r in warnings
+            ), f"Expected DATA-LOSS warning with preview; got: {[r.getMessage() for r in warnings]}"
+        finally:
+            session_mod.logger.disable()
+
 
 # ---------------------------------------------------------------------------
 # get_messages_as_dicts() tests

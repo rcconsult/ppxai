@@ -469,19 +469,34 @@ class SessionManager:
                 fixed_messages.append(msg)
             else:
                 # Same role as previous - this breaks alternation
-                # Strategy: keep the one with more content (likely more valuable)
-                # But prefer assistant messages over user messages
+                # Strategy: prefer the message with load-bearing payload, then
+                # fall back to "more content". For assistants, a message with
+                # non-empty tool_calls must never lose to a plain-text sibling
+                # because native tool-calling messages often have empty
+                # content (R9).
                 if msg.role == "assistant":
-                    # Two assistant messages in a row - keep longer one
-                    if len(msg.text_content()) > len(prev.text_content()):
+                    prev_has_calls = bool(prev.tool_calls)
+                    msg_has_calls = bool(msg.tool_calls)
+                    if msg_has_calls and not prev_has_calls:
+                        # tool_calls beats plain text regardless of length
                         fixed_messages[-1] = msg
+                    elif prev_has_calls and not msg_has_calls:
+                        # keep prev (tool_calls), drop msg
+                        pass
+                    else:
+                        # both have tool_calls, or neither does — longer wins
+                        if len(msg.text_content()) > len(prev.text_content()):
+                            fixed_messages[-1] = msg
                 else:
                     # Two user messages in a row - keep first one (already in fixed_messages)
                     pass
                 removed_count += 1
+                dropped = msg if fixed_messages[-1] is prev else prev
                 logger.warning(
                     f"Session alternation fix: removed duplicate {msg.role} message "
-                    f"(len={len(msg.text_content())}) at position {i}"
+                    f"(len={len(dropped.text_content())}, tool_calls="
+                    f"{bool(dropped.tool_calls) if dropped.role == 'assistant' else 'n/a'}) "
+                    f"at position {i}"
                 )
 
         # Also ensure session ends with assistant message (not orphan user)
@@ -491,10 +506,21 @@ class SessionManager:
         while fixed_messages and fixed_messages[-1].role in ("user", "tool"):
             removed = fixed_messages.pop()
             removed_count += 1
-            logger.warning(
-                f"Session alternation fix: removed trailing {removed.role} message "
-                f"(len={len(removed.text_content())})"
-            )
+            # Trailing user = unsent prompt. Make the loss unambiguous in logs
+            # so regressions like "session saved mid-turn lost my question" are
+            # visible instead of silently buried in an info-level roll-up (R9).
+            if removed.role == "user":
+                logger.warning(
+                    f"Session alternation fix: DROPPED UNSENT USER PROMPT "
+                    f"(len={len(removed.text_content())}) — "
+                    f"session was saved before the assistant responded. "
+                    f"Preview: {removed.text_content()[:120]!r}"
+                )
+            else:
+                logger.warning(
+                    f"Session alternation fix: removed trailing {removed.role} message "
+                    f"(len={len(removed.text_content())})"
+                )
 
         if removed_count > 0:
             self.messages = fixed_messages

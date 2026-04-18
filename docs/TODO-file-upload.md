@@ -1905,16 +1905,15 @@ by `apply_patch`) was promoted from v1.17.5 to v1.17.4 on
 2026-04-12 — a bug class too dangerous to release without a guard.
 Don't implement R8+ in this release.
 
-**v1.17.5 — collected scope (NOT YET IMPLEMENTED).** The items below
-are tracked here so they're not lost; implementation deferred until
-after v1.17.4 ships.
+**v1.17.5 — collected scope (IN PROGRESS on `bugfix/v1.17.5`).** The items below
+are tracked here so they're not lost; implementation began 2026-04-18.
 
 | # | Priority | Effort | Notes |
 |---|---|---|---|
 | **R8** | 🟡 polish R3 | ~30 min + test | CSV sniff on 8 KB, stream rest via `BytesIO`+`TextIOWrapper` |
-| **R9** | 🟡 correctness edge | ~1 hr + 2 tests | `validate_and_fix_alternation` — prefer messages with `tool_calls`, warn before dropping trailing user |
+| **R9** ✅ | 🟡 correctness edge | ~1 hr + 3 tests | **Fixed 2026-04-18.** `validate_and_fix_alternation` now preserves messages with `tool_calls` over plain-text siblings in the assistant-vs-assistant tiebreak (regardless of text length). Trailing-user drop emits a `DROPPED UNSENT USER PROMPT` warning with a 120-char preview so `/save`-mid-turn data loss is diagnosable. 3 new tests in `test_tool_messages.py::TestAlternationValidationWithToolMessages`. |
 | **R10** | 🟢 micro-perf | ~30 min + test | cache `_has_multimodal_attachments` on Session, invalidate from mutation sites |
-| **R15** | 🟡 VSCode + Perplexity alternation | ~1 hr + test | VSCode context-only `/chat` triggers upstream 400; hold or merge into user turn |
+| **R15** ✅ | 🟡 VSCode + Perplexity alternation | ~1 hr + test | **Fixed 2026-04-18.** Two-layer defense: (1) VSCode `handleChat` rejects empty user content with an error bubble instead of prepending a lone context block; (2) server `POST /chat` detects bodies that are empty or consist only of `[Context: ...]` blocks via `_is_empty_or_context_only()` and returns an SSE error event without acquiring the chat lock or calling the provider. 13 new tests in `test_chat_route_r15.py`. |
 | **R16** | 🟡 ppxaide event dispatch | ~30 min + test | Textual TUI dispatcher must handle every `EventType`; eliminates silent "Unknown event type" WARNINGs |
 | **R17** | 🟡 Gemini NoneType 2nd path | ~1 hr + test | confirm earlier `.parts` null-check is live in release binary; grep for second deref site |
 | **R18** | 🟢 `/attach` error UX | ~30 min | `difflib.get_close_matches` on file-not-found; list sibling suggestions |

@@ -5,6 +5,13 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — v1.17.5 collected batch
+
+### Fixed
+
+- **R9 — `validate_and_fix_alternation` silently dropped `tool_calls`.** When collapsing two consecutive assistant messages, the "longer text wins" heuristic would discard a message carrying native `tool_calls[]` (which typically has empty `content`) in favour of a shorter plain-text sibling. `ppxai/engine/session.py` now prefers messages with non-empty `tool_calls` regardless of text length; when both or neither carry tool_calls, the longer message still wins. Also upgrades the trailing-user-drop log line to `DROPPED UNSENT USER PROMPT` with a 120-char preview so `/save` immediately after pressing Enter is diagnosable instead of silent. 3 new tests in `tests/test_tool_messages.py::TestAlternationValidationWithToolMessages`.
+- **R15 — VSCode context-only chat requests returned 400 from Perplexity.** When the VSCode webview sent a chat with empty user content, `chatPanel.ts` still prepended the workspace `[Context: ...]` block and dispatched it; Perplexity's strict alternation check then rejected the resulting request. Two-layer fix: (1) `chatPanel.ts::handleChat` now rejects empty user content with an inline error bubble before any context injection; (2) server-side `POST /chat` detects empty-or-context-only bodies via `_is_empty_or_context_only()` and returns an SSE error event without acquiring the chat lock or reaching the provider. 13 new tests in `tests/test_chat_route_r15.py`.
+
 ## [1.17.4] - 2026-04-12
 
 ### Added

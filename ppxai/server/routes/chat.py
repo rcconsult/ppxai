@@ -16,6 +16,8 @@ routing logic that the Rich TUI already has.
 
 import asyncio
 import base64
+import json
+import re
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
@@ -30,6 +32,35 @@ from ..streaming import sse_event_generator, sse_coding_task_generator
 logger = get_logger("server")
 
 router = APIRouter()
+
+
+# R15: detect chat requests whose entire body is one or more VSCode-style
+# workspace context preambles. When the VSCode extension prepends
+# `[Context: Working in VSCode workspace "X" at /path]` to an empty user
+# message, the provider sees only that synthetic context block — which
+# Perplexity rejects with 400 for breaking user/assistant alternation.
+# Stop those requests server-side before they hit any provider.
+_CONTEXT_ONLY_RE = re.compile(
+    r"""
+    \A
+    (?:\s*\[Context:[^\]]*\]\s*)+   # one or more [Context: ...] blocks
+    \Z
+    """,
+    re.VERBOSE | re.DOTALL,
+)
+
+
+def _is_empty_or_context_only(message: str) -> bool:
+    """True if `message` is blank or contains only [Context: ...] preambles.
+
+    These messages would otherwise be sent to the LLM as a bare user turn
+    consisting of nothing but the VSCode workspace context block. The
+    provider has no actual prompt to answer and strict-alternation
+    providers (Perplexity) reject the request.
+    """
+    if not message or not message.strip():
+        return True
+    return bool(_CONTEXT_ONLY_RE.match(message.strip()))
 
 
 def _build_chat_payload(
@@ -129,6 +160,35 @@ async def chat(
     """
 
     logger.log_http_request("POST", "/chat", f"session={s.id}")
+
+    # R15: Reject context-only or empty requests before acquiring the chat
+    # lock. These come from clients that auto-prepend a workspace context
+    # block (VSCode) when the user sent no actual prompt; dispatching them
+    # wastes a provider round-trip and triggers 400 errors on strict
+    # alternation providers like Perplexity.
+    if not request.files and _is_empty_or_context_only(request.message or ""):
+        logger.warning(
+            f"Chat rejected for session {s.id}: empty or context-only message "
+            f"({len(request.message or '')} chars)"
+        )
+
+        async def _empty_message_error():
+            payload = json.dumps({
+                "type": "error",
+                "data": "Empty chat message. Type a prompt before sending.",
+            })
+            yield f"data: {payload}\n\n"
+
+        return StreamingResponse(
+            _empty_message_error(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+                "X-Session-Id": s.id,
+            }
+        )
 
     # Acquire lock to serialize chat requests (v1.12.0)
     async with s.lock:

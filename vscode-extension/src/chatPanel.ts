@@ -540,6 +540,19 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             return;
         }
 
+        // R15: Guard against empty user content. The extension auto-prepends
+        // a `[Context: Working in VSCode workspace ...]` block to every chat
+        // turn; if the user body is empty, the provider only sees that
+        // synthetic context block, which trips Perplexity's strict
+        // user/assistant alternation check and returns a 400.
+        if (!trimmed && (!files || files.length === 0)) {
+            this._view.webview.postMessage({
+                type: 'error',
+                content: 'Cannot send empty message.'
+            });
+            return;
+        }
+
         // Regular chat message
         // Show user message with attachment metadata for inline thumbnails
         this._view.webview.postMessage({
