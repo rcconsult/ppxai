@@ -4097,9 +4097,8 @@ persistence all landed during testing. R13 (silent file corruption
 by <code>apply_patch</code>) was promoted from v1.17.5 to v1.17.4 on
 2026-04-12 — a bug class too dangerous to release without a guard.
 Don't implement R8+ in this release.</p>
-<p><strong>v1.17.5 — collected scope (NOT YET IMPLEMENTED).</strong> The items below
-are tracked here so they're not lost; implementation deferred until
-after v1.17.4 ships.</p>
+<p><strong>v1.17.5 — collected scope (IN PROGRESS on <code>bugfix/v1.17.5</code>).</strong> The items below
+are tracked here so they're not lost; implementation began 2026-04-18.</p>
 <table>
 <thead>
 <tr>
@@ -4111,46 +4110,46 @@ after v1.17.4 ships.</p>
 </thead>
 <tbody>
 <tr>
-<td><strong>R8</strong></td>
+<td><strong>R8</strong> ✅</td>
 <td>🟡 polish R3</td>
-<td>~30 min + test</td>
-<td>CSV sniff on 8 KB, stream rest via <code>BytesIO</code>+<code>TextIOWrapper</code></td>
+<td>~30 min + 9 tests</td>
+<td><strong>Fixed 2026-04-19.</strong> <code>_count_csv_rows_cols</code> now sniffs delimiter on the first 8 KB head sample and streams the rest through <code>TextIOWrapper(BytesIO(data))</code> so csv.reader pulls one row at a time. 10 MB CSV: tracemalloc peak drops from ~20 MB (full-file decode) to under 2 MB. 9 tests in <code>test_count_csv_streaming.py</code> (8 correctness + 1 memory-bound regression guard).</td>
 </tr>
 <tr>
-<td><strong>R9</strong></td>
+<td><strong>R9</strong> ✅</td>
 <td>🟡 correctness edge</td>
-<td>~1 hr + 2 tests</td>
-<td><code>validate_and_fix_alternation</code> — prefer messages with <code>tool_calls</code>, warn before dropping trailing user</td>
+<td>~1 hr + 3 tests</td>
+<td><strong>Fixed 2026-04-18.</strong> <code>validate_and_fix_alternation</code> now preserves messages with <code>tool_calls</code> over plain-text siblings in the assistant-vs-assistant tiebreak (regardless of text length). Trailing-user drop emits a <code>DROPPED UNSENT USER PROMPT</code> warning with a 120-char preview so <code>/save</code>-mid-turn data loss is diagnosable. 3 new tests in <code>test_tool_messages.py::TestAlternationValidationWithToolMessages</code>.</td>
 </tr>
 <tr>
-<td><strong>R10</strong></td>
+<td><strong>R10</strong> ✅</td>
 <td>🟢 micro-perf</td>
-<td>~30 min + test</td>
-<td>cache <code>_has_multimodal_attachments</code> on Session, invalidate from mutation sites</td>
+<td>~45 min + 10 tests</td>
+<td><strong>Fixed 2026-04-18.</strong> Cached the <code>_has_multimodal_attachments()</code> result on <code>SessionManager._multimodal_cache</code>. <code>add_message</code> flips the cache to <code>True</code> eagerly when the new message is multimodal; <code>remove_last_message</code> invalidates only if the popped message carried multimodal content; <code>clear</code> sets to <code>False</code> directly; <code>load</code>, <code>reset_for_model_switch</code>, and <code>validate_and_fix_alternation</code> invalidate to <code>None</code> when they mutate messages wholesale. Extracted <code>_message_has_multimodal()</code> module helper so the predicate has one definition. 500-msg session × 20 saves: 0 rescans after warm-up (was 20). 10 tests in <code>test_multimodal_cache.py</code>.</td>
 </tr>
 <tr>
-<td><strong>R15</strong></td>
+<td><strong>R15</strong> ✅</td>
 <td>🟡 VSCode + Perplexity alternation</td>
 <td>~1 hr + test</td>
-<td>VSCode context-only <code>/chat</code> triggers upstream 400; hold or merge into user turn</td>
+<td><strong>Fixed 2026-04-18.</strong> Two-layer defense: (1) VSCode <code>handleChat</code> rejects empty user content with an error bubble instead of prepending a lone context block; (2) server <code>POST /chat</code> detects bodies that are empty or consist only of <code>[Context: ...]</code> blocks via <code>_is_empty_or_context_only()</code> and returns an SSE error event without acquiring the chat lock or calling the provider. 13 new tests in <code>test_chat_route_r15.py</code>.</td>
 </tr>
 <tr>
-<td><strong>R16</strong></td>
+<td><strong>R16</strong> ✅</td>
 <td>🟡 ppxaide event dispatch</td>
-<td>~30 min + test</td>
-<td>Textual TUI dispatcher must handle every <code>EventType</code>; eliminates silent "Unknown event type" WARNINGs</td>
+<td>~1 hr + 2 tests</td>
+<td><strong>Fixed 2026-04-18.</strong> Refactored <code>ppxai/tui/stream_handler.py</code> dispatcher into two explicit sets: <code>EVENT_MAP</code> (routes to UI bus signals — now includes <code>CONTEXT_INJECTED</code>) and <code>NOOP_EVENTS</code> (intentionally ignored — <code>STATE_SYNC</code> via AppState observers, <code>AGENT_*</code> Rich-only, <code>STATUS</code> via INFO). Unknown types now log an actionable WARNING pointing back to this file. Drift test in <code>test_stream_handler_dispatch.py</code> fails if an <code>EventType</code> is added without updating either set.</td>
 </tr>
 <tr>
-<td><strong>R17</strong></td>
+<td><strong>R17</strong> ✅</td>
 <td>🟡 Gemini NoneType 2nd path</td>
-<td>~1 hr + test</td>
-<td>confirm earlier <code>.parts</code> null-check is live in release binary; grep for second deref site</td>
+<td>~30 min + 4 tests</td>
+<td><strong>Verified fixed 2026-04-18.</strong> Audit of <code>gemini.py</code> confirmed all 12 access sites to <code>.candidates</code> / <code>.parts</code> are guarded. Original fix commit <code>6feb406b</code> ("guard against None .parts in non-streaming response path") is in the v1.17.4 tag — the TODO's log entry was from a pre-tag binary. Added 4 regression tests in <code>test_gemini_null_parts.py</code> pinning the null-parts, no-candidates, null-content, and sync-helper paths so the guard can't silently regress again.</td>
 </tr>
 <tr>
-<td><strong>R18</strong></td>
+<td><strong>R18</strong> ✅</td>
 <td>🟢 <code>/attach</code> error UX</td>
-<td>~30 min</td>
-<td><code>difflib.get_close_matches</code> on file-not-found; list sibling suggestions</td>
+<td>~30 min + 3 tests</td>
+<td><strong>Fixed 2026-04-18.</strong> <code>_not_found_error()</code> helper in <code>ppxai/commands/attach.py</code> — when the path's parent exists, suggests the 5 closest file matches via <code>difflib.get_close_matches(cutoff=0.3)</code>; when the parent doesn't exist, walks up to the first existing ancestor and suggests similarly-named sibling directories. Terse "(parent dir has N entries, none similar)" fallback when nothing is close enough to suggest. 3 tests in <code>test_attach_command.py::TestLoadFile</code>.</td>
 </tr>
 <tr>
 <td><strong>R19</strong></td>
@@ -4165,10 +4164,10 @@ after v1.17.4 ships.</p>
 <td>first-class <code>uploaded_file</code> content type, retires R7 workaround</td>
 </tr>
 <tr>
-<td><strong>R12</strong> (Opt 1)</td>
+<td><strong>R12</strong> (Opt 1) ✅</td>
 <td>🟢 UX progress signal</td>
-<td>~1 hr + test</td>
-<td>post-iteration intermediate-prose event</td>
+<td>~1 hr + 2 tests</td>
+<td><strong>Fixed 2026-04-19.</strong> New <code>EventType.AGENT_INTERMEDIATE_PROSE</code> emitted by <code>chat_with_tools</code> right before <code>TOOL_GROUP_START</code> for every iteration where the model produced prose alongside tool_calls. Empty/whitespace responses skip the event so tool-only iterations don't trigger empty bubbles. Rich TUI renders as <code>[dim italic]</code> preamble; ppxaide's stream_handler dispatches to <code>Events.ENGINE_AGENT_INTERMEDIATE_PROSE</code> → <code>add_system_message</code> (dim italic). Option 3 (full streaming tool loop) stays deferred to v1.18.x.</td>
 </tr>
 </tbody>
 </table>
