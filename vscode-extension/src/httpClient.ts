@@ -88,13 +88,20 @@ export interface EngineStatus {
 
 // Multimodal content part (OpenAI format). Text parts carry `text`, image
 // parts carry `image_url.url` (usually a data: URI), file parts carry
-// `name` / `filename`. Unknown types are tolerated and surface as placeholders.
+// `name` / `filename`, and the R5 (v1.17.6) `uploaded_file` type carries
+// structured metadata (name, media_type, file_id, summary, extra) for
+// PDFs / Office / large-CSV attachments. Unknown types are tolerated
+// and surface as placeholders.
 export interface ContentBlock {
     type: string;
     text?: string;
     image_url?: { url: string };
     name?: string;
     filename?: string;
+    media_type?: string;
+    file_id?: string;
+    summary?: string;
+    extra?: { [key: string]: string };
 }
 
 export type MessageContent = string | ContentBlock[];
@@ -122,6 +129,11 @@ export function textContent(content: MessageContent | undefined | null): string 
             parts.push(`[Image: ${block.name || 'image'}]`);
         } else if (block.type === 'input_file' || block.type === 'file') {
             parts.push(`[File: ${block.name || block.filename || 'file'}]`);
+        } else if (block.type === 'uploaded_file') {
+            // R5 (v1.17.6): PDFs / Office / large CSVs as first-class blocks.
+            const name = block.name || 'file';
+            const media = block.media_type || '';
+            parts.push(media ? `[Attached: ${name} (${media})]` : `[Attached: ${name}]`);
         } else {
             parts.push(`[${block.type || 'part'}]`);
         }

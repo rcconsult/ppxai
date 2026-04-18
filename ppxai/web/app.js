@@ -3379,6 +3379,14 @@ class PpxaiApp {
             } else if (btype === 'input_file' || btype === 'file') {
                 const name = block.name || block.filename || 'file';
                 parts.push(`[File: ${name}]`);
+            } else if (btype === 'uploaded_file') {
+                // R5 (v1.17.6): first-class uploaded_file content block
+                // (PDFs, Office docs, large CSVs). The engine flattens it
+                // to the legacy text marker before sending to the LLM,
+                // but for UI display we render a compact badge.
+                const name = block.name || 'file';
+                const media = block.media_type || '';
+                parts.push(media ? `[Attached: ${name} (${media})]` : `[Attached: ${name}]`);
             } else {
                 parts.push(`[${btype || 'part'}]`);
             }

@@ -1285,6 +1285,11 @@ function normalizeContent(content) {
             parts.push(`[Image: ${block.name || 'image'}]`);
         } else if (block.type === 'input_file' || block.type === 'file') {
             parts.push(`[File: ${block.name || block.filename || 'file'}]`);
+        } else if (block.type === 'uploaded_file') {
+            // R5 (v1.17.6): PDFs / Office / large CSVs as first-class blocks.
+            const name = block.name || 'file';
+            const media = block.media_type || '';
+            parts.push(media ? `[Attached: ${name} (${media})]` : `[Attached: ${name}]`);
         } else {
             parts.push(`[${block.type || 'part'}]`);
         }
