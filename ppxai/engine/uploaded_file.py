@@ -23,7 +23,24 @@ remove` parity bug (tracker handled the marker, remover didn't).
 from __future__ import annotations
 
 import re
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
+
+
+# R5 (v1.17.6): first-class content-part type for uploaded files.
+#
+# Previously non-image attachments (PDF, Excel, PPTX, DOCX, large CSV)
+# lived as `<uploaded_file>` XML markers *inside* `{"type": "text"}`
+# content blocks. Consumers had to regex-parse every text block to find
+# attachments, and clients rendered the raw XML if they didn't know to
+# strip it. The structured type below carries the same data as a
+# dedicated block so consumers dispatch on `block["type"]` and clients
+# render a badge from the fields.
+#
+# Provider adapters flatten this block back to the legacy text-marker
+# shape via `flatten_uploaded_file_blocks()` before the API call — the
+# LLM keeps seeing the exact same string it saw before, so model
+# behavior and token counts don't drift as this rollout completes.
+UPLOADED_FILE_BLOCK_TYPE = "uploaded_file"
 
 
 # Required attributes. Order-independent in the regex so callers that
@@ -150,3 +167,111 @@ def strip_uploaded_file_marker(
 
     new_text = UPLOADED_FILE_RE.sub(_match, text)
     return new_text, removed
+
+
+# ---------------------------------------------------------------------------
+# R5 — structured `uploaded_file` content block helpers
+# ---------------------------------------------------------------------------
+
+
+def make_uploaded_file_block(
+    *,
+    name: str,
+    media_type: str,
+    file_id: str,
+    summary: str,
+    extra: Optional[Dict[str, str]] = None,
+) -> Dict[str, Any]:
+    """Build a canonical `uploaded_file` content block (R5).
+
+    Dedicated content-part type that replaces the legacy
+    `<uploaded_file>` XML marker embedded in a text block. Consumers
+    (`refresh_context_attachments`, `remove_context_attachment`) iterate
+    on `block["type"]` instead of regex-parsing; clients render
+    structured badges from the fields.
+
+    The `extra` dict is always stringified values so the block
+    round-trips cleanly through JSON session serialization without
+    type ambiguity. Callers that have numeric values (page count, row
+    count, size in KB) must coerce to `str` before passing.
+
+    Providers never see this type directly — `flatten_uploaded_file_blocks`
+    converts every uploaded_file block back to the legacy text marker
+    via `format_uploaded_file_reference` before the API call, so model
+    behavior and token counts stay identical to pre-R5.
+    """
+    block: Dict[str, Any] = {
+        "type": UPLOADED_FILE_BLOCK_TYPE,
+        "name": name,
+        "media_type": media_type,
+        "file_id": file_id,
+        "summary": summary,
+    }
+    if extra:
+        # Defensive copy so a caller's dict can't mutate the block later.
+        block["extra"] = dict(extra)
+    return block
+
+
+def uploaded_file_block_to_text(block: Dict[str, Any]) -> str:
+    """Render a structured uploaded_file block as its legacy text marker.
+
+    Used by the provider-adapter flatten (so LLM-facing strings stay
+    byte-identical across the R5 rollout) and by tests that assert
+    the text representation hasn't drifted.
+
+    Falls back to a minimal marker if the block is missing required
+    keys — a malformed block shouldn't break the provider call, just
+    produce a less-informative marker.
+    """
+    return format_uploaded_file_reference(
+        name=block.get("name", ""),
+        media_type=block.get("media_type", ""),
+        file_id=block.get("file_id", ""),
+        body=block.get("summary", ""),
+        extra_attrs=block.get("extra") or None,
+    )
+
+
+def flatten_uploaded_file_blocks(content: Any) -> Any:
+    """Convert every uploaded_file block in `content` to a text block.
+
+    Walks a multimodal content list; any block whose `type` equals
+    `"uploaded_file"` is replaced by `{"type": "text", "text": <marker>}`
+    where `<marker>` is produced by `uploaded_file_block_to_text`.
+    Other block types (text, image_url, file, input_file) and non-list
+    content pass through unchanged.
+
+    Provider adapters call this on each message's content before shaping
+    the API request. Because the flatten uses the same
+    `format_uploaded_file_reference` helper the producers used pre-R5,
+    the LLM sees byte-identical strings — so model behavior and token
+    accounting are unchanged by the wire-format switch.
+
+    Returns a new list when any flattening occurred; returns the input
+    unchanged (identity-preserved) when no uploaded_file blocks are
+    present, so the common case avoids allocation.
+    """
+    if not isinstance(content, list):
+        return content
+
+    # Short-circuit: no flattening needed → return original list.
+    if not any(
+        isinstance(b, dict) and b.get("type") == UPLOADED_FILE_BLOCK_TYPE
+        for b in content
+    ):
+        return content
+
+    result: List[Any] = []
+    for block in content:
+        if (
+            isinstance(block, dict)
+            and block.get("type") == UPLOADED_FILE_BLOCK_TYPE
+        ):
+            result.append({
+                "type": "text",
+                "text": uploaded_file_block_to_text(block),
+            })
+        else:
+            result.append(block)
+    return result
