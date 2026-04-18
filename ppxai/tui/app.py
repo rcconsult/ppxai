@@ -342,6 +342,7 @@ class PPXAIDEApp(App):
         self._event_bus.on(Events.ENGINE_WARNING, lambda s, **kw: _sh.on_engine_warning(self, s, **kw))
         self._event_bus.on(Events.ENGINE_INFO, lambda s, **kw: _sh.on_engine_info(self, s, **kw))
         self._event_bus.on(Events.ENGINE_WORKING_DIR_CHANGED, lambda s, **kw: _sh.on_working_dir_changed(self, s, **kw))
+        self._event_bus.on(Events.ENGINE_AGENT_INTERMEDIATE_PROSE, lambda s, **kw: _sh.on_agent_intermediate_prose(self, s, **kw))
         self._log.info("[EventBus] Subscribed to all engine events")
 
         # Register AppState observers — auto-update status bar on state changes.

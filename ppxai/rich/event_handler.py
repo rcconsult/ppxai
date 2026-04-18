@@ -260,6 +260,7 @@ class TUIEventHandler(EventHandler):
         EventType.DISPLAY_FILE: ("_tui_display_file", True),
         EventType.TOOL_GROUP_START: ("_tui_tool_group_start", True),
         EventType.TOOL_GROUP_END: ("_tui_tool_group_end", True),
+        EventType.AGENT_INTERMEDIATE_PROSE: ("_tui_agent_intermediate_prose", True),
     }
 
     async def handle_event(self, event: Event) -> bool:
@@ -333,6 +334,20 @@ class TUIEventHandler(EventHandler):
         iteration = event.data.get("iteration", 0) if isinstance(event.data, dict) else 0
         count = event.data.get("count", 0) if isinstance(event.data, dict) else 0
         self.console.print(f"[dim]─── Iteration {iteration} ({count} tool{'s' if count != 1 else ''}) ───[/dim]")
+
+    def _tui_agent_intermediate_prose(self, event: Event) -> None:
+        """Render the model's narrative between tool iterations (R12 Opt 1).
+
+        Shown as a dim italic preamble so it reads as "the model talking
+        while it works" without competing with the final response bubble.
+        """
+        text = ""
+        if isinstance(event.data, dict):
+            text = event.data.get("text", "") or ""
+        elif isinstance(event.data, str):
+            text = event.data
+        if text.strip():
+            self.console.print(f"[dim italic]{text.strip()}[/dim italic]")
 
     def _tui_tool_group_end(self, event: Event) -> None:
         if isinstance(event.data, dict):

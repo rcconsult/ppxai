@@ -254,6 +254,7 @@ class Events:
     ENGINE_CONSENT_SHELL = "engine:consent_shell"
     ENGINE_WORKING_DIR_CHANGED = "engine:working_dir_changed"
     ENGINE_DISPLAY_FILE = "engine:display_file"  # Display file in viewer (v1.15.1)
+    ENGINE_AGENT_INTERMEDIATE_PROSE = "engine:agent_intermediate_prose"  # R12 Opt 1 (v1.17.5)
 
     # Consent responses (from UI)
     CONSENT_FILE_RESPONSE = "consent:file_response"

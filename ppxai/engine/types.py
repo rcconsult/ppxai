@@ -92,6 +92,7 @@ class EventType(Enum):
     TOOL_GROUP_START = "tool_group_start"  # Start of tool calls in one iteration (v1.16.0)
     TOOL_GROUP_END = "tool_group_end"  # End of tool calls in one iteration (v1.16.0)
     STATE_SYNC = "state_sync"  # AppState field changed — push to connected clients (v1.17.1)
+    AGENT_INTERMEDIATE_PROSE = "agent_intermediate_prose"  # R12 Opt 1 (v1.17.5): model prose between tool iterations
     WARNING = "warning"  # Validation warning (v1.15.2 - hallucination detection)
     ERROR = "error"
     INFO = "info"

@@ -1919,7 +1919,7 @@ are tracked here so they're not lost; implementation began 2026-04-18.
 | **R18** ✅ | 🟢 `/attach` error UX | ~30 min + 3 tests | **Fixed 2026-04-18.** `_not_found_error()` helper in `ppxai/commands/attach.py` — when the path's parent exists, suggests the 5 closest file matches via `difflib.get_close_matches(cutoff=0.3)`; when the parent doesn't exist, walks up to the first existing ancestor and suggests similarly-named sibling directories. Terse "(parent dir has N entries, none similar)" fallback when nothing is close enough to suggest. 3 tests in `test_attach_command.py::TestLoadFile`. |
 | **R19** | 🟡 ppxaide multimodal rough edges | ~half day | focused stress test of ppxaide multimodal flow (attach entry points × payload types × lifecycle); fix downstream ErrorResult captured post-send |
 | **R5** | 🟢 schema change | ~3 hr + cross-client sweep | first-class `uploaded_file` content type, retires R7 workaround |
-| **R12** (Opt 1) | 🟢 UX progress signal | ~1 hr + test | post-iteration intermediate-prose event |
+| **R12** (Opt 1) ✅ | 🟢 UX progress signal | ~1 hr + 2 tests | **Fixed 2026-04-19.** New `EventType.AGENT_INTERMEDIATE_PROSE` emitted by `chat_with_tools` right before `TOOL_GROUP_START` for every iteration where the model produced prose alongside tool_calls. Empty/whitespace responses skip the event so tool-only iterations don't trigger empty bubbles. Rich TUI renders as `[dim italic]` preamble; ppxaide's stream_handler dispatches to `Events.ENGINE_AGENT_INTERMEDIATE_PROSE` → `add_system_message` (dim italic). Option 3 (full streaming tool loop) stays deferred to v1.18.x. |
 
 **v1.18.x — deferred structural work**
 

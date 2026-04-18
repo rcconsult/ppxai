@@ -668,6 +668,20 @@ async def chat_with_tools(
             full_response = strip_tool_json_from_text(full_response)
 
         if tool_calls_list:
+            # R12 Opt 1 (v1.17.5): surface the model's intermediate prose
+            # between tool iterations. With stream=False the provider
+            # returns the full response as one blob; the engine stripped
+            # tool JSON out of `full_response` above, leaving whatever
+            # narrative the model emitted ("I'll check the config next…").
+            # Without this event the UI goes silent for 5–15 s between
+            # tool bubbles even though the model IS talking.
+            prose = full_response.strip() if full_response else ""
+            if prose:
+                yield Event(EventType.AGENT_INTERMEDIATE_PROSE, {
+                    "text": prose,
+                    "iteration": iteration,
+                })
+
             # v1.16.0: Emit group start for UI noise reduction
             yield Event(EventType.TOOL_GROUP_START, {
                 "iteration": iteration,

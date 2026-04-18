@@ -83,6 +83,7 @@ EVENT_MAP = {
     EventType.DISPLAY_FILE: Events.ENGINE_DISPLAY_FILE,
     EventType.CONSENT_REQUEST: Events.ENGINE_CONSENT_FILE,
     EventType.CONTEXT_INJECTED: Events.ENGINE_CONTEXT_INJECTED,
+    EventType.AGENT_INTERMEDIATE_PROSE: Events.ENGINE_AGENT_INTERMEDIATE_PROSE,
 }
 
 # Events that ppxaide intentionally does not render — either because another
@@ -402,6 +403,31 @@ async def on_engine_info(app, sender, data, **kwargs) -> None:
     if app._trace_logging:
         app._log.debug(f"[Event] Engine info: {data}")
     app._chat_view.add_system_message(f"[dim]{data}[/dim]")
+
+
+async def on_agent_intermediate_prose(app, sender, data, **kwargs) -> None:
+    """Handle AGENT_INTERMEDIATE_PROSE — model prose between tool iterations.
+
+    R12 Opt 1 (v1.17.5): the engine strips tool-call JSON from each
+    iteration's response and, with stream=False, buffers the prose
+    internally. Without a surface for that text the UI goes silent for
+    5–15 s between tool bubbles. Render it as a dim italic preamble so
+    it reads as "model thinking out loud" rather than competing with
+    the final answer bubble.
+    """
+    if app._chat_view is None:
+        return
+    text = ""
+    if isinstance(data, dict):
+        text = data.get("text", "") or ""
+    elif isinstance(data, str):
+        text = data
+    text = text.strip()
+    if not text:
+        return
+    if app._trace_logging:
+        app._log.debug(f"[Event] Agent intermediate prose: {len(text)} chars")
+    app._chat_view.add_system_message(f"[dim italic]{text}[/dim italic]")
 
 
 async def on_working_dir_changed(app, sender, data, **kwargs) -> None:

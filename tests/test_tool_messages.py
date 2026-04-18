@@ -742,6 +742,92 @@ class TestMultiToolExecution:
     """Test multi-tool support (Step 4)."""
 
     @pytest.mark.asyncio
+    async def test_intermediate_prose_emitted_between_iterations(self):
+        """R12 Opt 1: model prose in iteration 1's STREAM_END must surface.
+
+        Pre-R12 the engine stripped tool JSON out of `full_response` and
+        discarded the remainder before looping, so the UI went silent
+        between tool bubbles even when the model was narrating each
+        step. The fix emits AGENT_INTERMEDIATE_PROSE right before
+        TOOL_GROUP_START for every iteration that carries prose.
+        """
+        prose = "I'll read the file first to understand the context."
+        provider = MockProvider(
+            capabilities=ProviderCapabilities(native_tool_calling=True),
+            responses=[
+                # Iteration 1: one tool_call + narrative in STREAM_END.data
+                [
+                    Event(EventType.TOOL_CALL, {
+                        "tool": "read_file",
+                        "arguments": {"path": "a.py"},
+                        "tool_call_id": "call_1",
+                    }),
+                    Event(EventType.STREAM_END, prose),
+                ],
+                # Iteration 2: final answer — no prose event expected.
+                [Event(EventType.STREAM_END, "Done.")],
+            ],
+        )
+        tm = MockToolManager(tools={"read_file": lambda path="": "file body"})
+        ctx = MockChatContext(provider=provider, model="gpt-5.2", tool_manager=tm)
+        ctx.session.add_message(Message("user", "read a.py"))
+
+        with patch("ppxai.engine.chat.get_profile") as mock_profile:
+            mock_profile.return_value = ModelProfile(
+                tool_calling=ToolCallingProfile(mode="native"),
+            )
+            events = await collect_events(ctx)
+
+        # Exactly one intermediate-prose event (from iteration 1).
+        prose_events = [e for e in events if e.type == EventType.AGENT_INTERMEDIATE_PROSE]
+        assert len(prose_events) == 1
+        assert prose_events[0].data["text"] == prose
+        assert prose_events[0].data["iteration"] == 1
+
+        # Prose must appear BEFORE TOOL_GROUP_START so the UI renders
+        # "thinking" narrative above the tool bubbles, not mixed in.
+        types = [e.type for e in events]
+        prose_idx = types.index(EventType.AGENT_INTERMEDIATE_PROSE)
+        group_start_idx = types.index(EventType.TOOL_GROUP_START)
+        assert prose_idx < group_start_idx
+
+    @pytest.mark.asyncio
+    async def test_no_prose_event_when_response_is_tool_only(self):
+        """Empty / whitespace-only STREAM_END must NOT emit the event.
+
+        Models that speak exclusively via tool_calls (GPT-OSS native
+        mode, some Qwen builds) shouldn't trigger a dim-italic empty
+        bubble on every iteration.
+        """
+        provider = MockProvider(
+            capabilities=ProviderCapabilities(native_tool_calling=True),
+            responses=[
+                [
+                    Event(EventType.TOOL_CALL, {
+                        "tool": "read_file",
+                        "arguments": {"path": "a.py"},
+                        "tool_call_id": "call_1",
+                    }),
+                    # Empty STREAM_END — tool-only iteration.
+                    Event(EventType.STREAM_END, ""),
+                ],
+                [Event(EventType.STREAM_END, "Done.")],
+            ],
+        )
+        tm = MockToolManager(tools={"read_file": lambda path="": "body"})
+        ctx = MockChatContext(provider=provider, model="gpt-5.2", tool_manager=tm)
+        ctx.session.add_message(Message("user", "read a.py"))
+
+        with patch("ppxai.engine.chat.get_profile") as mock_profile:
+            mock_profile.return_value = ModelProfile(
+                tool_calling=ToolCallingProfile(mode="native"),
+            )
+            events = await collect_events(ctx)
+
+        prose_events = [e for e in events if e.type == EventType.AGENT_INTERMEDIATE_PROSE]
+        assert prose_events == []
+
+    @pytest.mark.asyncio
     async def test_two_native_tool_calls_both_execute(self):
         """When parallel_tool_calls=True, both native tool calls are executed."""
         provider = MockProvider(
