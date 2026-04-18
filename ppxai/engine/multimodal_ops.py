@@ -144,11 +144,34 @@ def refresh_context_attachments(engine) -> None:
                     "turn_index": turn_index,
                     "file_id": file_id,
                 })
+            elif btype == "uploaded_file":
+                # R5 (v1.17.6): first-class uploaded_file content block.
+                # Preferred shape for non-image attachments going forward.
+                # Dedup + badge-kind rules mirror the legacy text-marker
+                # branch below so the two shapes can coexist in the
+                # same session (useful during the rollout and for
+                # sessions loaded from pre-R5 ppxai builds).
+                uf_name = block.get("name") or "file"
+                uf_type = block.get("media_type") or ""
+                uf_fid = block.get("file_id") or ""
+                if uf_fid:
+                    if uf_fid in seen_keys:
+                        continue
+                    seen_keys.add(uf_fid)
+                kind = "pdf" if "pdf" in uf_type else "file"
+                attachments.append({
+                    "name": uf_name,
+                    "kind": kind,
+                    "media_type": uf_type,
+                    "turn_index": turn_index,
+                    "file_id": uf_fid,
+                })
             elif btype == "text":
-                # PDF and Office attachments produce text parts with
-                # an <uploaded_file> XML marker (Phase 2.8+). Parse
-                # them via the shared helper so tracker and remover
-                # agree on the format (see R6 in TODO-file-upload).
+                # Legacy path (pre-R5): PDF/Office/large-CSV attachments
+                # were embedded as `<uploaded_file>` XML markers inside
+                # text blocks. Kept for backward compat — sessions saved
+                # by pre-v1.17.6 code still load correctly and their
+                # attachments are tracked and removable.
                 text = block.get("text") or ""
                 if "<uploaded_file " not in text:
                     continue
@@ -302,6 +325,18 @@ def remove_context_attachment(engine, target: str) -> int:
 
             # Structured attachment blocks — drop on match.
             if btype in ("image_url", "input_file", "file"):
+                if remove_all or _block_matches(block):
+                    removed_count += 1
+                    had_attachment = True
+                    continue
+                kept.append(block)
+                continue
+
+            # R5 (v1.17.6): first-class uploaded_file block — same
+            # dispatch as image_url/input_file/file. `_block_matches`
+            # already reads `name` / `file_id` keys from the block so
+            # no special handling is needed beyond dispatching here.
+            if btype == "uploaded_file":
                 if remove_all or _block_matches(block):
                     removed_count += 1
                     had_attachment = True
