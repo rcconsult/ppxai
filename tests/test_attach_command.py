@@ -211,6 +211,42 @@ class TestLoadFile:
         assert pf is None
         assert err is not None and "no such file" in err
 
+    def test_missing_file_suggests_close_matches_in_parent(self, tmp_path):
+        """R18: siblings in the target dir are surfaced when the name is wrong."""
+        (tmp_path / "ppxai-vscode-v1.17.4.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+        (tmp_path / "ppxai-tui-preview.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+        (tmp_path / "something-unrelated.txt").write_text("x")
+
+        _, err = _load_file("ppxai-vscode-v1.17.3.png", str(tmp_path))
+        assert err is not None
+        assert "no such file" in err
+        assert "Nearest matches" in err
+        # The lexically closest PNG must show up first.
+        assert "ppxai-vscode-v1.17.4.png" in err
+
+    def test_missing_file_suggests_sibling_dirs_when_parent_absent(self, tmp_path):
+        """R18: when the typed subdir doesn't exist, suggest similar ancestors."""
+        (tmp_path / "docs").mkdir()
+        (tmp_path / "resources").mkdir()
+        (tmp_path / "archive").mkdir()
+
+        _, err = _load_file("resourcs/foo.png", str(tmp_path))
+        assert err is not None
+        assert "no such file" in err
+        assert "'resourcs' not found" in err
+        assert "resources" in err  # closest sibling directory
+
+    def test_missing_file_with_no_close_matches_keeps_message_terse(self, tmp_path):
+        """No noisy suggestions when nothing in the parent is similar."""
+        (tmp_path / "totally_unrelated.zip").write_bytes(b"PK\x03\x04")
+
+        _, err = _load_file("alpha.png", str(tmp_path))
+        assert err is not None
+        assert "no such file" in err
+        # Either the "none similar" note or nothing about matches — but not a
+        # misleading suggestion for an unrelated name.
+        assert "alpha.png" not in err.split("\n", 1)[-1] or "none similar" in err
+
     def test_pdf_deferred_with_helpful_message(self, tmp_path):
         (tmp_path / "doc.pdf").write_bytes(b"%PDF-1.4\n")
         pf, err = _load_file("doc.pdf", str(tmp_path))

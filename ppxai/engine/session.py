@@ -48,6 +48,21 @@ def _ext_from_media_type(media_type: str) -> str:
     return _MEDIA_TYPE_TO_EXT.get(media_type, "bin")
 
 
+def _message_has_multimodal(msg: Any) -> bool:
+    """True if `msg.content` carries any image_url content parts (R10).
+
+    Shared by add_message / remove_last_message / _has_multimodal_attachments
+    so the "is this multimodal?" predicate has exactly one definition.
+    """
+    content = getattr(msg, "content", None)
+    if not isinstance(content, list):
+        return False
+    for block in content:
+        if isinstance(block, dict) and block.get("type") == "image_url":
+            return True
+    return False
+
+
 class SessionManager:
     """Manages conversation sessions, history, and persistence."""
 
@@ -124,6 +139,15 @@ class SessionManager:
         # content can use SessionManager standalone without wiring a store.
         self.file_store: Optional[SessionFileStore] = None
 
+        # R10: cache the answer to _has_multimodal_attachments() so save()
+        # doesn't walk every message on every auto-save. None means "needs
+        # scan" (cold start / after a removal that could have flipped the
+        # answer); True/False is authoritative. Invalidated on any
+        # mutation that could remove multimodal content; eagerly upgraded
+        # to True in add_message when the new message is multimodal, so
+        # the common "adding another user turn" path stays scan-free.
+        self._multimodal_cache: Optional[bool] = None
+
     def _notify_messages_changed(self) -> None:
         """Invoke the on_messages_changed callback if wired.
 
@@ -144,6 +168,11 @@ class SessionManager:
         """
         self.messages.append(message)
         self.metadata["message_count"] = len(self.messages)
+        # R10: upgrade the multimodal cache inline. Adding a multimodal
+        # message always flips the answer to True; adding a text-only
+        # message never flips True → False, so False and None stay as-is.
+        if self._multimodal_cache is not True and _message_has_multimodal(message):
+            self._multimodal_cache = True
         self._notify_messages_changed()
 
     def get_messages(self) -> List[Message]:
@@ -386,8 +415,14 @@ class SessionManager:
             True if a message was removed, False if history was empty
         """
         if self.messages:
-            self.messages.pop()
+            removed = self.messages.pop()
             self.metadata["message_count"] = len(self.messages)
+            # R10: if the popped message carried multimodal content, the
+            # cached answer might now be wrong (was the only multimodal
+            # message, or one of several). Invalidate rather than scan —
+            # the next save() recomputes lazily.
+            if self._multimodal_cache is True and _message_has_multimodal(removed):
+                self._multimodal_cache = None
             self._notify_messages_changed()
             return True
         return False
@@ -525,6 +560,9 @@ class SessionManager:
         if removed_count > 0:
             self.messages = fixed_messages
             self.metadata["message_count"] = len(self.messages)
+            # R10: alternation fix may have dropped multimodal messages
+            # (it reassigns self.messages wholesale). Invalidate cache.
+            self._multimodal_cache = None
             logger.info(
                 f"Session alternation fixed: removed {removed_count} messages, "
                 f"{len(self.messages)} remaining"
@@ -551,6 +589,10 @@ class SessionManager:
         self.metadata["message_count"] = len(self.messages)
         removed = original_count - len(self.messages)
         if removed:
+            # R10: reset filtered out assistant/tool messages, which could
+            # have carried multimodal tool results. Invalidate — next
+            # save() recomputes lazily.
+            self._multimodal_cache = None
             logger.info(
                 f"Model switch: removed {removed} assistant/tool messages, "
                 f"kept {len(self.messages)} user messages"
@@ -574,6 +616,8 @@ class SessionManager:
         # Reset file editing consent state
         self.allowed_files.clear()
         self.edit_consent_mode = ConsentMode.PROMPT
+        # R10: empty session has no multimodal content — cache directly.
+        self._multimodal_cache = False
         self._notify_messages_changed()
 
     def set_provider(self, provider: str):
@@ -789,17 +833,22 @@ class SessionManager:
         Used by save()/load() to decide between the flat `<name>.json`
         format (text-only sessions, backward compat) and the directory
         format `<name>/session.json` + `<name>/uploads/` (multimodal
-        sessions). Scanning is O(messages × parts); a typical session
-        has under a hundred messages so the cost is negligible per save.
+        sessions).
+
+        R10: result is cached on the session and invalidated by the
+        mutation sites that could flip the answer (add_message /
+        remove_last_message / clear / reset_for_model_switch / load /
+        validate_and_fix_alternation). Cold-start cost is still
+        O(messages × parts), but every subsequent save() during a long
+        conversation is O(1) — which matters for text-only sessions on
+        TUIs that auto-save after every turn.
         """
-        for msg in self.messages:
-            content = getattr(msg, "content", None)
-            if not isinstance(content, list):
-                continue
-            for block in content:
-                if isinstance(block, dict) and block.get("type") == "image_url":
-                    return True
-        return False
+        if self._multimodal_cache is not None:
+            return self._multimodal_cache
+
+        result = any(_message_has_multimodal(m) for m in self.messages)
+        self._multimodal_cache = result
+        return result
 
     def _resolve_session_storage(self, name: str) -> tuple[Path, bool]:
         """Determine the JSON path and format for a given session name.
@@ -1125,6 +1174,9 @@ class SessionManager:
                 self._deserialize_message(m)
                 for m in data.get("messages", [])
             ]
+            # R10: reset the multimodal cache — one scan on the first save()
+            # after load, then O(1) for every subsequent auto-save.
+            self._multimodal_cache = None
 
             usage_data = data.get("usage", {})
             self.usage = UsageStats(

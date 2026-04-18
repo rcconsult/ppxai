@@ -25,7 +25,9 @@ clear error asking the user to wait for Phase 2 or paste the text.
 from __future__ import annotations
 
 import base64
+import difflib
 import mimetypes
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -203,7 +205,7 @@ def _load_file(
         return None, f"cannot resolve '{cleaned}': {exc}"
 
     if not path.exists():
-        return None, f"no such file: {path}"
+        return None, _not_found_error(path)
     if not path.is_file():
         return None, f"not a file: {path}"
 
@@ -282,6 +284,59 @@ def _load_file(
         kind="text",
         data=data,
     ), None
+
+
+def _not_found_error(path: Path) -> str:
+    """Build a file-not-found error message with close-match suggestions (R18).
+
+    When `/attach resources/foo.png` fails because the file lives in
+    `docs/`, the bare "no such file" message forces the user to retry
+    blindly. This walks up the path to the first existing ancestor and
+    offers the 5 closest matches (files if the parent exists, directories
+    otherwise), so the next guess is an informed one.
+    """
+    base = f"no such file: {path}"
+
+    parent = path.parent
+    if parent.exists() and parent.is_dir():
+        # Parent dir exists — suggest similar files within it.
+        try:
+            candidates = os.listdir(parent)
+        except OSError:
+            return base
+        matches = difflib.get_close_matches(path.name, candidates, n=5, cutoff=0.3)
+        if matches:
+            return f"{base}\n  Nearest matches in {parent}/: {', '.join(matches)}"
+        return f"{base} (parent dir {parent}/ has {len(candidates)} entries, none similar)"
+
+    # Parent doesn't exist — walk up to the first existing ancestor and
+    # suggest sibling directories there. This is the common "user typed
+    # the wrong subdirectory" case (e.g. resources/ vs docs/).
+    ancestor = parent
+    missing_segment = parent.name
+    while ancestor and not ancestor.exists():
+        missing_segment = ancestor.name or missing_segment
+        if ancestor.parent == ancestor:  # root
+            break
+        ancestor = ancestor.parent
+
+    if not ancestor.exists() or not ancestor.is_dir():
+        return base
+
+    try:
+        siblings = [
+            name for name in os.listdir(ancestor)
+            if (ancestor / name).is_dir()
+        ]
+    except OSError:
+        return base
+    matches = difflib.get_close_matches(missing_segment, siblings, n=5, cutoff=0.3)
+    if matches:
+        return (
+            f"{base}\n  '{missing_segment}' not found under {ancestor}/. "
+            f"Did you mean: {', '.join(matches)}?"
+        )
+    return base
 
 
 def _fmt_size(n: int) -> str:
