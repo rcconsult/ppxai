@@ -59,33 +59,68 @@ def handle_stream_error(app, error_msg: str) -> None:
     app._engine_client.state.update(is_streaming=False, cancel_requested=False)
 
 
+# R16: Every EventType emitted by the engine MUST appear in exactly one of
+# EVENT_MAP (routes to a UI bus signal) or NOOP_EVENTS (intentionally ignored
+# by the Textual TUI). Adding a new EventType without touching this file will
+# fail the drift test in tests/test_stream_handler_dispatch.py and log a
+# WARNING at runtime — deliberate friction so ppxaide doesn't silently drop
+# new engine signals again.
+
+EVENT_MAP = {
+    EventType.STREAM_START: Events.ENGINE_STREAM_START,
+    EventType.STREAM_CHUNK: Events.ENGINE_STREAM_CHUNK,
+    EventType.REASONING_CHUNK: Events.ENGINE_REASONING_CHUNK,
+    EventType.STREAM_END: Events.ENGINE_STREAM_END,
+    EventType.TOOL_CALL: Events.ENGINE_TOOL_CALL,
+    EventType.TOOL_RESULT: Events.ENGINE_TOOL_RESULT,
+    EventType.TOOL_ERROR: Events.ENGINE_TOOL_ERROR,
+    EventType.TOOL_GROUP_START: Events.ENGINE_TOOL_GROUP_START,
+    EventType.TOOL_GROUP_END: Events.ENGINE_TOOL_GROUP_END,
+    EventType.ERROR: Events.ENGINE_ERROR,
+    EventType.WARNING: Events.ENGINE_WARNING,
+    EventType.INFO: Events.ENGINE_INFO,
+    EventType.WORKING_DIR_CHANGED: Events.ENGINE_WORKING_DIR_CHANGED,
+    EventType.DISPLAY_FILE: Events.ENGINE_DISPLAY_FILE,
+    EventType.CONSENT_REQUEST: Events.ENGINE_CONSENT_FILE,
+    EventType.CONTEXT_INJECTED: Events.ENGINE_CONTEXT_INJECTED,
+}
+
+# Events that ppxaide intentionally does not render — either because another
+# subsystem already handles them, or because the feature has no Textual UI
+# counterpart yet. Listing them here (rather than letting them fall through to
+# WARNING) documents the decision and keeps the drift test green.
+NOOP_EVENTS = {
+    # STATE_SYNC is consumed by AppState observers on every client; the
+    # Textual TUI subscribes via state.on() rather than the event bus.
+    EventType.STATE_SYNC,
+    # Agent-loop events exist for Rich TUI's agent REPL. ppxaide doesn't
+    # expose the agent loop as a dedicated UI flow yet — surface via INFO
+    # instead. Remove from NOOP_EVENTS when ppxaide adds agent UI.
+    EventType.AGENT_ITERATION,
+    EventType.AGENT_COMPLETE,
+    EventType.AGENT_MAX_ITERATIONS,
+    # STATUS is generic notification plumbing; ppxaide surfaces these
+    # through ENGINE_INFO (checkpoint commands etc. use INFO).
+    EventType.STATUS,
+}
+
+
 def handle_stream_event(app, event_type: str, event_data: Any) -> None:
     """Handle stream event in main thread (called via call_from_thread)."""
     event = Event(type=EventType[event_type], data=event_data)
 
-    event_map = {
-        EventType.STREAM_START: Events.ENGINE_STREAM_START,
-        EventType.STREAM_CHUNK: Events.ENGINE_STREAM_CHUNK,
-        EventType.REASONING_CHUNK: Events.ENGINE_REASONING_CHUNK,
-        EventType.STREAM_END: Events.ENGINE_STREAM_END,
-        EventType.TOOL_CALL: Events.ENGINE_TOOL_CALL,
-        EventType.TOOL_RESULT: Events.ENGINE_TOOL_RESULT,
-        EventType.TOOL_ERROR: Events.ENGINE_TOOL_ERROR,
-        EventType.TOOL_GROUP_START: Events.ENGINE_TOOL_GROUP_START,
-        EventType.TOOL_GROUP_END: Events.ENGINE_TOOL_GROUP_END,
-        EventType.ERROR: Events.ENGINE_ERROR,
-        EventType.WARNING: Events.ENGINE_WARNING,
-        EventType.INFO: Events.ENGINE_INFO,
-        EventType.WORKING_DIR_CHANGED: Events.ENGINE_WORKING_DIR_CHANGED,
-        EventType.DISPLAY_FILE: Events.ENGINE_DISPLAY_FILE,
-        EventType.CONSENT_REQUEST: Events.ENGINE_CONSENT_FILE,
-    }
-
-    if event.type in event_map:
-        bus_event = event_map[event.type]
+    if event.type in EVENT_MAP:
+        bus_event = EVENT_MAP[event.type]
         app._event_bus.emit(bus_event, data=event.data, event_type=event.type)
-    elif app._trace_logging:
-        app._log.debug(f"Unhandled event type: {event.type}")
+    elif event.type in NOOP_EVENTS:
+        if app._trace_logging:
+            app._log.debug(f"Intentionally ignored event: {event.type}")
+    else:
+        # Drift: engine added an EventType without updating this file.
+        app._log.warning(
+            f"Unhandled event type: {event.type} — add an entry to EVENT_MAP "
+            f"or NOOP_EVENTS in ppxai/tui/stream_handler.py (R16)"
+        )
 
 
 async def _stream_response(app, user_input: str, engine_client) -> None:
