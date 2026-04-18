@@ -345,26 +345,37 @@ def _count_csv_rows_cols(data: bytes) -> tuple[int, int]:
 
     Uses csv.reader with delimiter sniffing. Row count excludes the
     header row. Returns (0, 0) on empty or unparseable data.
+
+    R8: sniff the delimiter on the first 8 KB only, then stream the
+    original bytes through TextIOWrapper so csv.reader iterates
+    row-by-row without ever materializing the whole file as a Python
+    string. For a 500 MB CSV this keeps peak memory at roughly the
+    TextIOWrapper buffer (~8 KB) + one decoded row, instead of
+    allocating a multi-hundred-MB string just to sniff the shape.
     """
     import csv as _csv
     import io as _io
 
-    text = _decode_text(data)
+    # Sniff on a small sample — enough for the delimiter heuristic,
+    # no need to decode the full buffer.
+    sample = _decode_text(data[:8192])
     try:
-        dialect = _csv.Sniffer().sniff(text[:8192])
+        dialect = _csv.Sniffer().sniff(sample)
         delimiter = dialect.delimiter
     except _csv.Error:
         delimiter = ","
 
-    reader = _csv.reader(_io.StringIO(text), delimiter=delimiter)
+    # Stream the raw bytes. TextIOWrapper decodes incrementally, so
+    # csv.reader pulls one row's worth of text at a time.
+    stream = _io.TextIOWrapper(
+        _io.BytesIO(data), encoding="utf-8", errors="replace", newline=""
+    )
+    reader = _csv.reader(stream, delimiter=delimiter)
     try:
         header = next(reader)
     except StopIteration:
         return 0, 0
     columns = len(header)
-    # Stream-count remaining rows — O(1) memory instead of O(n).
-    # For large CSVs (which this function exists to describe), we don't
-    # want to materialize the whole file just to report its shape.
     data_rows = sum(1 for _ in reader)
     return data_rows, columns
 
