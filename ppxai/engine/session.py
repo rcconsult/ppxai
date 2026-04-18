@@ -49,16 +49,24 @@ def _ext_from_media_type(media_type: str) -> str:
 
 
 def _message_has_multimodal(msg: Any) -> bool:
-    """True if `msg.content` carries any image_url content parts (R10).
+    """True if `msg.content` carries any multimodal content parts (R10).
 
     Shared by add_message / remove_last_message / _has_multimodal_attachments
     so the "is this multimodal?" predicate has exactly one definition.
+
+    R5 (v1.17.6): recognizes both `image_url` (images) and `uploaded_file`
+    (PDF/Office/large-CSV) content blocks. The cache correctness
+    depends on this — if a session is multimodal under either shape,
+    `save()` must route it through the directory-format writer so the
+    `uploads/` subtree carries the binary bytes.
     """
     content = getattr(msg, "content", None)
     if not isinstance(content, list):
         return False
     for block in content:
-        if isinstance(block, dict) and block.get("type") == "image_url":
+        if isinstance(block, dict) and block.get("type") in (
+            "image_url", "uploaded_file",
+        ):
             return True
     return False
 
