@@ -5,6 +5,17 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.17.6] - 2026-04-19
+
+### Changed
+
+- **R5 — promoted uploaded-file attachments to a first-class content type** (`{"type": "uploaded_file", "name", "media_type", "file_id", "summary", "extra"}`). PDFs, Office documents, and large CSVs previously lived as `<uploaded_file>` XML markers embedded inside `{"type": "text"}` content blocks; every consumer had to regex-parse text to find attachments, and clients rendered the raw XML. The new block type eliminates the string parsing — `refresh_context_attachments`, `remove_context_attachment`, and the R10 multimodal-cache predicate now dispatch on `block["type"]`; web and VSCode clients render a compact `[Attached: name (media_type)]` badge.
+  - **Byte-identical LLM-facing strings.** Provider adapters (OpenAI, OpenAI-compat, OpenAI-native chat + Responses, Gemini, Perplexity) flatten every `uploaded_file` block back to the legacy `<uploaded_file>...</uploaded_file>` text marker via `flatten_uploaded_file_blocks()` before the API call. The flatten uses the same `format_uploaded_file_reference()` helper the producers used pre-R5, so model behavior and token counts don't drift. An explicit test asserts this equality.
+  - **Backward compatible.** Sessions saved by v1.17.5 and earlier continue to load correctly — consumers recognize both the structured block and the legacy text marker, so a mid-rollout session with both shapes interleaved works too. Session round-trip preserves every field.
+  - **Staged rollout.** Six commits on `bugfix/v1.17.6`: schema helpers, provider flatten, dual-read consumers, producer flip, R10 cache predicate + session round-trip, client renderers. Each stage independently reversible.
+  - Producers flipped: `_preprocess_csv` (large-CSV lazy-load path), `_preprocess_pdf`, `_preprocess_office` (Excel/PPTX/DOCX) in `ppxai/engine/file_preprocessing.py`.
+  - 37 new tests across `tests/test_uploaded_file_block.py`, `tests/test_r5_provider_flatten.py`, `tests/test_r5_dual_read.py`, `tests/test_r5_end_to_end.py`, `tests/test_r5_session_round_trip.py`.
+
 ## [1.17.5] - 2026-04-19
 
 ### Fixed

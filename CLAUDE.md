@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.17.5
+**Current Version:** v1.17.6
 
 **v1.17.x highlights:**
 - **NEW:** AppState schema DTO — `ppxai/engine/app_state_schema.json` is the golden source of truth for all 4 clients. Python loads via `importlib.resources`, Web via `window.APP_STATE_SCHEMA` injected into `index.html` by FastAPI, VSCode via bundled copy kept in sync by `scripts/sync-schema.js` precompile hook. Rich + Textual TUIs consume it transitively via the Python `AppState`. `GET /schema/app-state` diagnostic endpoint. Zero hand-maintained parallel schemas.
@@ -29,9 +29,9 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **FIX:** ppxai-desktop version reporting — PyInstaller spec includes `ppxai.version` hidden import
 
 **Version Alignment:**
-- Python package (pyproject.toml): v1.17.5
-- VSCode extension (package.json): v1.17.5
-- Last release tag: v1.17.4
+- Python package (pyproject.toml): v1.17.6
+- VSCode extension (package.json): v1.17.6
+- Last release tag: v1.17.5
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
 
