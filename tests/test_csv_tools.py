@@ -166,10 +166,16 @@ class TestCsvPreprocessing:
             file_store=store,
         )
         assert result.ok
-        text = result.parts[0].get("text", "")
-        assert "<uploaded_file" in text
-        assert 'type="text/csv"' in text
-        assert "read_csv" in text
+        # R5 (v1.17.6): large-CSV preprocessor emits the first-class
+        # uploaded_file block; provider adapters flatten it to the
+        # legacy marker at API time.
+        block = result.parts[0]
+        assert block["type"] == "uploaded_file"
+        assert block["media_type"] == "text/csv"
+        assert "read_csv" in block["summary"]
+        # The extra dict carries row/col/size metadata.
+        assert "rows" in block["extra"]
+        assert "columns" in block["extra"]
 
     def test_csv_detection_by_extension(self):
         from ppxai.engine.file_preprocessing import preprocess_file

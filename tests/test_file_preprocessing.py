@@ -409,12 +409,17 @@ class TestPdfFiles:
         assert result.ok is True
         assert result.kind == KIND_PDF
         assert result.file_id
-        # Reference block contains the file_id and tool hints.
+        # R5 (v1.17.6): producers emit the first-class uploaded_file
+        # content block. Provider adapters flatten it to the legacy
+        # text marker before the API call via
+        # `flatten_uploaded_file_blocks` — see test_r5_provider_flatten.py
+        # for the byte-identical invariant.
         block = result.parts[0]
-        assert block["type"] == "text"
-        assert "<uploaded_file" in block["text"]
-        assert f'file_id="{result.file_id}"' in block["text"]
-        assert "read_pdf" in block["text"]
+        assert block["type"] == "uploaded_file"
+        assert block["name"] == "doc.pdf"
+        assert block["media_type"] == "application/pdf"
+        assert block["file_id"] == result.file_id
+        assert "read_pdf" in block["summary"]
         # And the bytes are actually on disk.
         assert store.get(result.file_id).read_bytes() == pdf_bytes
 
@@ -462,9 +467,12 @@ class TestOfficeFiles:
         assert result.ok is True
         assert result.kind == KIND_OFFICE
         assert result.file_id
+        # R5: structured uploaded_file block, not a text block.
         block = result.parts[0]
-        assert "Excel spreadsheet" in block["text"]
-        assert f'file_id="{result.file_id}"' in block["text"]
+        assert block["type"] == "uploaded_file"
+        assert block["name"] == "sheet.xlsx"
+        assert block["file_id"] == result.file_id
+        assert "Excel spreadsheet" in block["summary"]
 
     def test_pptx_persisted_and_referenced(self, store):
         pptx_bytes = b"PK\x03\x04" + b"\x00" * 500
@@ -475,7 +483,9 @@ class TestOfficeFiles:
             file_store=store,
         )
         assert result.ok is True
-        assert "PowerPoint presentation" in result.parts[0]["text"]
+        block = result.parts[0]
+        assert block["type"] == "uploaded_file"
+        assert "PowerPoint presentation" in block["summary"]
 
     def test_docx_persisted_and_referenced(self, store):
         docx_bytes = b"PK\x03\x04" + b"\x00" * 300
@@ -486,7 +496,9 @@ class TestOfficeFiles:
             file_store=store,
         )
         assert result.ok is True
-        assert "Word document" in result.parts[0]["text"]
+        block = result.parts[0]
+        assert block["type"] == "uploaded_file"
+        assert "Word document" in block["summary"]
 
     def test_office_without_store_rejected(self):
         # Office docs REQUIRE a store — unlike PDFs which degrade with

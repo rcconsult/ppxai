@@ -62,7 +62,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from .image_validation import sniff_media_type, validate_image
 from .model_profiles import supports_vision as model_supports_vision
-from .uploaded_file import format_uploaded_file_reference
+from .uploaded_file import make_uploaded_file_block
 from .session_store import (
     KIND_IMAGE,
     KIND_OFFICE,
@@ -417,24 +417,28 @@ def _preprocess_csv(
     row_count, col_count = _count_csv_rows_cols(data)
     size_kb = len(data) / 1024
 
-    reference = format_uploaded_file_reference(
+    # R5 (v1.17.6): emit the first-class uploaded_file block. Provider
+    # adapters flatten this back to the legacy text marker before the
+    # API call via `flatten_uploaded_file_blocks`, so the LLM sees the
+    # same string it did pre-R5.
+    block = make_uploaded_file_block(
         name=name,
         media_type="text/csv",
         file_id=file_id,
-        extra_attrs={
+        summary=(
+            f"CSV attached: {name} ({row_count} rows, {col_count} columns, "
+            f"{size_kb:.1f} KB). Use the read_csv tool to access its content."
+        ),
+        extra={
             "rows": str(row_count),
             "columns": str(col_count),
             "size_kb": f"{size_kb:.1f}",
         },
-        body=(
-            f"CSV attached: {name} ({row_count} rows, {col_count} columns, "
-            f"{size_kb:.1f} KB). Use the read_csv tool to access its content."
-        ),
     )
 
     return PreprocessResult(
         ok=True,
-        parts=[{"type": "text", "text": reference}],
+        parts=[block],
         file_id=file_id,
         name=name,
         media_type=media_type,
@@ -535,23 +539,25 @@ def _preprocess_pdf(
         page_info = f"{page_count} page{'s' if page_count != 1 else ''}"
 
     size_kb = len(data) / 1024
-    reference = format_uploaded_file_reference(
+    # R5 (v1.17.6): first-class uploaded_file block; flattened to
+    # legacy text marker by provider adapters at API time.
+    block = make_uploaded_file_block(
         name=name,
         media_type="application/pdf",
         file_id=file_id,
-        extra_attrs={
-            "pages": str(page_count if page_count is not None else 0),
-            "size_kb": f"{size_kb:.1f}",
-        },
-        body=(
+        summary=(
             f"PDF attached: {name} ({page_info}, {size_kb:.1f} KB). "
             f"Use the read_pdf or get_pdf_page_image tools to access its content."
         ),
+        extra={
+            "pages": str(page_count if page_count is not None else 0),
+            "size_kb": f"{size_kb:.1f}",
+        },
     )
 
     return PreprocessResult(
         ok=True,
-        parts=[{"type": "text", "text": reference}],
+        parts=[block],
         file_id=file_id,
         name=name,
         media_type=media_type,
@@ -611,19 +617,21 @@ def _preprocess_office(
     else:
         tool_hint = "Use the appropriate extraction tools to access its content."
 
-    reference = format_uploaded_file_reference(
+    # R5 (v1.17.6): first-class uploaded_file block; flattened to
+    # legacy text marker by provider adapters at API time.
+    block = make_uploaded_file_block(
         name=meta.name,
         media_type=media_type,
         file_id=meta.file_id,
-        extra_attrs={"size_kb": f"{size_kb:.1f}"},
-        body=(
+        summary=(
             f"{doc_type} attached: {meta.name} ({size_kb:.1f} KB). {tool_hint}"
         ),
+        extra={"size_kb": f"{size_kb:.1f}"},
     )
 
     return PreprocessResult(
         ok=True,
-        parts=[{"type": "text", "text": reference}],
+        parts=[block],
         file_id=meta.file_id,
         name=meta.name,
         media_type=media_type,
