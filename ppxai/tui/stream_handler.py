@@ -100,12 +100,13 @@ NOOP_EVENTS = {
     EventType.AGENT_ITERATION,
     EventType.AGENT_COMPLETE,
     EventType.AGENT_MAX_ITERATIONS,
-    # P0 (v1.18.0) agent lifecycle events. Stage 1 parks them here —
-    # the engine defines the types and dataclass but nothing emits them
-    # yet (Stage 2). When emission lands, Stage 5 will move the ones
-    # that need UI rendering into EVENT_MAP with dedicated bus signals.
+    # P0 (v1.18.0) agent lifecycle events. Parked here until Stage 5
+    # wires dedicated bus signals + ppxaide rendering. Stages 2+4 emit
+    # these and route them to AppState.agent_beat; clients that need
+    # to render progress subscribe to the state field, not the events.
     EventType.AGENT_BEAT,
     EventType.AGENT_RUN_START,
+    EventType.AGENT_RUN_COMPLETE,
     EventType.AGENT_RUN_ERROR,
     EventType.AGENT_ZOMBIE,
     # STATUS is generic notification plumbing; ppxaide surfaces these

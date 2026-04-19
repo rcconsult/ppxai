@@ -872,7 +872,8 @@ class EngineClient:
                     self.state.set("agent_beat", event.data)
             elif event.type in (
                 EventType.AGENT_RUN_ERROR,
-                EventType.AGENT_COMPLETE,
+                EventType.AGENT_RUN_COMPLETE,
+                EventType.AGENT_COMPLETE,  # legacy agent-mode event; keep for defensive clearing
             ):
                 self.state.set("agent_beat", {})
             yield event

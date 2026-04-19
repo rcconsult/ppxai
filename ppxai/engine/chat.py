@@ -999,6 +999,15 @@ async def chat_with_tools(
                     "commit": commit_hash[:8] if commit_hash else None,
                 })
 
+            # P0 (v1.18.0): mode-agnostic run-completion event. Unlike
+            # AGENT_COMPLETE above (agent_mode-only), AGENT_RUN_COMPLETE
+            # always fires — consumers clearing AppState.agent_beat
+            # depend on this.
+            yield Event(EventType.AGENT_RUN_COMPLETE, {
+                "iterations": iteration,
+                "elapsed_s": round(beat.elapsed_s, 1),
+            })
+
             # Transfer tool usage from context to accumulated_usage (v1.16.0)
             if hasattr(ctx, '_current_tool_usage') and ctx._current_tool_usage:
                 for t_name, t_usage in ctx._current_tool_usage.items():
@@ -1061,6 +1070,16 @@ async def chat_with_tools(
             "commit": commit_hash[:8] if commit_hash else None,
             "max_iterations_reached": True,
         })
+
+    # P0 (v1.18.0): mode-agnostic run-completion event. Fires here so
+    # AppState.agent_beat gets cleared even when the run hit the
+    # iteration ceiling (not a success, not an error — a controlled
+    # stop).
+    yield Event(EventType.AGENT_RUN_COMPLETE, {
+        "iterations": max_iterations,
+        "elapsed_s": round(beat.elapsed_s, 1),
+        "max_iterations_reached": True,
+    })
 
     ctx.session.add_message(Message(
         "assistant",

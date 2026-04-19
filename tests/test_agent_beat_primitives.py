@@ -41,6 +41,9 @@ class TestEventTypeAdditions:
     def test_agent_zombie_exists(self):
         assert EventType.AGENT_ZOMBIE.value == "agent_zombie"
 
+    def test_agent_run_complete_exists(self):
+        assert EventType.AGENT_RUN_COMPLETE.value == "agent_run_complete"
+
     def test_existing_agent_event_types_unchanged(self):
         """Sanity — AGENT_COMPLETE / AGENT_ITERATION / AGENT_MAX_ITERATIONS
         already exist from v1.11.8 and must stay exactly as they were.

@@ -50,11 +50,13 @@ def test_noop_events_are_intentional():
         EventType.AGENT_COMPLETE,
         EventType.AGENT_MAX_ITERATIONS,
         EventType.STATUS,               # surfaced via INFO
-        # P0 (v1.18.0) — Stage 1 parks these until Stage 5 wires
-        # dedicated bus signals + ppxaide rendering. Stage 2 only adds
-        # emission; no client surface yet.
+        # P0 (v1.18.0) — parked until Stage 5 wires dedicated bus
+        # signals + ppxaide rendering. Stages 2+4 emit these and feed
+        # them into AppState.agent_beat; ppxaide reads the state field,
+        # not the events, for current progress.
         EventType.AGENT_BEAT,
         EventType.AGENT_RUN_START,
+        EventType.AGENT_RUN_COMPLETE,
         EventType.AGENT_RUN_ERROR,
         EventType.AGENT_ZOMBIE,
     }

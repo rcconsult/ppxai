@@ -95,6 +95,7 @@ class EventType(Enum):
     AGENT_INTERMEDIATE_PROSE = "agent_intermediate_prose"  # R12 Opt 1 (v1.17.5): model prose between tool iterations
     AGENT_BEAT = "agent_beat"  # P0 (v1.18.0): structured per-iteration heartbeat — iteration/tool/ok/failures/elapsed_s
     AGENT_RUN_START = "agent_run_start"  # P0 (v1.18.0): whole-run start (fires once per chat_with_tools invocation)
+    AGENT_RUN_COMPLETE = "agent_run_complete"  # P0 (v1.18.0): whole-run finished successfully (always fires; unlike AGENT_COMPLETE it's not agent_mode-gated)
     AGENT_RUN_ERROR = "agent_run_error"  # P0 (v1.18.0): whole-run errored — payload includes reason + last iteration
     AGENT_ZOMBIE = "agent_zombie"  # P0 (v1.18.0): circuit breaker — consecutive tool failures exceeded threshold
     WARNING = "warning"  # Validation warning (v1.15.2 - hallucination detection)

@@ -460,7 +460,9 @@ class TestEngineClientWiresAgentBeat:
                 "iteration": 2, "beat": 2, "tool": "apply_patch",
                 "ok": True, "failures": 0, "elapsed_s": 1.2,
             })
-            yield Event(EventType.AGENT_COMPLETE, {"iterations": 2})
+            yield Event(EventType.AGENT_RUN_COMPLETE, {
+                "iterations": 2, "elapsed_s": 1.5,
+            })
             yield Event(EventType.STREAM_END, "done")
 
         with patch("ppxai.engine.client.chat_with_tools", fake_generator):
@@ -468,11 +470,11 @@ class TestEngineClientWiresAgentBeat:
             async for ev in engine._chat_with_tools(stream=False):
                 events.append(ev)
 
-        # Observed mutations: two beat states → empty (on AGENT_COMPLETE)
+        # Observed mutations: two beat states → empty on AGENT_RUN_COMPLETE
         assert len(captured_states) >= 3
         assert captured_states[0]["iteration"] == 1
         assert captured_states[1]["iteration"] == 2
-        assert captured_states[-1] == {}  # cleared on AGENT_COMPLETE
+        assert captured_states[-1] == {}  # cleared on AGENT_RUN_COMPLETE
 
     @pytest.mark.asyncio
     async def test_agent_beat_field_cleared_on_run_error(self):
