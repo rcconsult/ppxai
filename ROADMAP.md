@@ -721,11 +721,21 @@ ppxai/tui/                     # New module (Textual-based)
 
 ---
 
-## Planned (v1.18.x)
+## In Progress (v1.18.0)
 
-**Theme:** AppState codegen + multi-model routing
+**Branch:** `feature/v1.18.0` | **Theme:** Agent heartbeat primitives + AppState codegen + multi-model routing
 
-### v1.18.0 - AppState Codegen + Routing Infrastructure
+### v1.18.0 - Agent Heartbeat Primitives (P0 — landed on branch)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **`AgentBeatState` + lifecycle events** | `EventType.AGENT_BEAT` + `AGENT_RUN_START` / `_COMPLETE` / `_ERROR` + `AGENT_ZOMBIE`, emitted by `chat_with_tools`. Serializable `as_event_data()` payload. | ✅ Landed |
+| **`AppState.agent_beat` field** | Schema-driven across Python/JS/TS; pushed via `state_sync` SSE; cleared on run end. | ✅ Landed |
+| **Zombie circuit-breaker** | `tools.agent.zombie_threshold` (default 3, 0 disables) stops the tool loop after N consecutive failed iterations. | ✅ Landed |
+| **Client renderers** | Rich dim line, ppxaide status badge (success/warning/error variants), Web + VSCode header badge. | ✅ Landed |
+| **Architecture doc** | [ARCHITECTURE.md §"Agent Heartbeat Primitives"](docs/ARCHITECTURE.md) + [RELEASE-NOTES-v1.18.0.md](docs/RELEASE-NOTES-v1.18.0.md). | ✅ Landed |
+
+### v1.18.0 - AppState Codegen + Routing Infrastructure (planned for same release)
 
 | Feature | Description | Plan |
 |---------|-------------|------|

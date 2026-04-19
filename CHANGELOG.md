@@ -5,6 +5,32 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased — v1.18.0]
+
+### Added
+
+- **P0 — Agent heartbeat primitives.** New observable primitive for the agent tool loop. `EventType.AGENT_BEAT` fires once per tool iteration with an `AgentBeatState.as_event_data()` payload (`{iteration, beat, tool, ok, failures, elapsed_s}`); `AGENT_RUN_START` / `AGENT_RUN_COMPLETE` / `AGENT_RUN_ERROR` bracket the run; `AGENT_ZOMBIE` fires when the circuit-breaker trips. `ppxai/engine/chat.py` emits these across all agent-mode paths, including both exit branches (completion and max-iterations) so observers see a clean lifecycle. `AgentBeatState` (`ppxai/engine/types.py`) is a dataclass with a JSON-serializable payload contract — tests pin the wire format.
+- **P0 — `AppState.agent_beat` field.** Schema-driven (added to `app_state_schema.json`) and mirrored across Python / JS / TS — the engine writes the latest beat to AppState and clears it (empty dict) on run end, so every client sees the same canonical value. Included in `_SSE_SYNC_FIELDS` whitelist so the server pushes it automatically via `state_sync` events. No server code changes — the SSE generator is event-agnostic.
+- **P0 — Zombie circuit-breaker.** New config key `tools.agent.zombie_threshold` (default 3; 0 disables) stops the tool loop after N consecutive failed iterations, emits `AGENT_ZOMBIE` + `AGENT_RUN_ERROR`, and returns cleanly instead of burning `max_iterations` on hallucinated retries. Reachable via `ppxai-config.json → tools.agent.zombie_threshold`.
+- **P0 — Client renderers for `agent_beat`:**
+  - **Rich TUI** — dim `⚙ iter N · tool · status · Xs` line after each tool group; red `⚠ Agent stopped — …` warning on zombie trip.
+  - **Textual (ppxaide)** — persistent `⚙ iN · tool · Xs` status-bar badge with variant selection: `success` (ok), `error` (single fail), `warning` (2+ consecutive failures). Cleared when engine empties the field.
+  - **Web** — header badge (`#agentBeatBadge`) between streaming-badge and usage-badge with matching `.warn` / `.error` CSS variants; auto-hide when idle.
+  - **VSCode extension** — identical badge in the webview header; webview receives the payload over the existing `stateSync` channel.
+- **P0 — Test coverage.** ~120 new tests across `test_agent_beat_primitives.py` (dataclass + EventType), `test_agent_beat_emission.py` (chat.py emission contract), `test_agent_beat_zombie.py` (circuit-breaker), `test_agent_beat_sse.py` (end-to-end through real EngineClient + server streaming), `test_agent_beat_textual_renderer.py` (ppxaide badge variant logic), plus additions to `test_common_event_handler.py` for the Rich TUI renderer. Stream-handler drift test (`test_stream_handler_dispatch.py`) and AppState sentinel tests (`test_app_state.py`) bumped accordingly. **Suite: 2458 passed, 0 regressions.**
+
+### Changed
+
+- **`tests/test_app_state.py` field-count sentinel** bumped from 18 → 19 to cover the new `agent_beat` field. Intentional friction per the "cross-client state through AppState" architecture pattern.
+- **VSCode `AppState` TypeScript** — `SchemaField.type` widened to include `'object'` so the new `agentBeat` field validates cleanly against the schema at module init. `AgentBeatSnapshot` interface added alongside `ContextAttachment`.
+- **`ppxai/tui/stream_handler.py` `NOOP_EVENTS` comment** updated to explain that ppxaide renders heartbeat through `AppState.agent_beat`, not the event bus — event-level silence here avoids double-rendering.
+
+### Docs
+
+- New [docs/RELEASE-NOTES-v1.18.0.md](docs/RELEASE-NOTES-v1.18.0.md).
+- New §"Agent Heartbeat Primitives (v1.18.0)" in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) documenting the emission contract, zombie-breaker semantics, and the AppState lifecycle.
+- [ROADMAP.md](ROADMAP.md) v1.18.0 section split into "P0 heartbeat (landed)" and "AppState codegen + routing (planned)" blocks.
+
 ## [1.17.7] - 2026-04-19
 
 ### Fixed

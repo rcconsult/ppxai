@@ -35,6 +35,12 @@
 | [DGX Spark Setup](DGX-SPARK-SETUP.md) | vLLM + Ollama on NVIDIA DGX Spark |
 | [vLLM Tool Calling](vllm-tool-calling-guide.md) | Hermes vs Harmony, native vs prompt-based |
 | [Prompt-Based Tool Calling](prompt-based-tool-calling.md) | Developer guide for non-native tool calling |
+| [Release Notes v1.18.0 (draft)](RELEASE-NOTES-v1.18.0.md) | **In progress** — P0 agent heartbeat primitives (`AGENT_BEAT` / `_RUN_START` / `_RUN_COMPLETE` / `_RUN_ERROR` / `_ZOMBIE`), zombie circuit-breaker, cross-client renderers |
+| [Release Notes v1.17.7](RELEASE-NOTES-v1.17.7.md) | `ppxai-desktop --version` stale-fallback fix |
+| [Release Notes v1.17.6](RELEASE-NOTES-v1.17.6.md) | R5 first-class `uploaded_file` content type, R19 multimodal rendering gap |
+| [Release Notes v1.17.5](RELEASE-NOTES-v1.17.5.md) | R8–R18 bugfix batch (alternation, CSV streaming, Gemini null-parts, /attach UX) |
+| [Release Notes v1.17.4](RELEASE-NOTES-v1.17.4.md) | File upload Phases 0–7, CompletionProvider, schema DTO, EngineClient decomposition |
+| [Release Notes v1.17.3](RELEASE-NOTES-v1.17.3.md) | CodeMirror modular split, verbose tools toggle, benchmark infra |
 | [Release Notes v1.17.2](RELEASE-NOTES-v1.17.2.md) | SSE state_sync, thread-safe AppState, iTerm2 images, preview venv detect |
 | [Release Notes v1.17.1](RELEASE-NOTES-v1.17.1.md) | AppState wiring, EngineClient decomposition, web terminal, preview serve |
 | [Release Notes v1.17.0](RELEASE-NOTES-v1.17.0.md) | Server/config modularization, K8s POC, key bindings registry, Textual 8.1.1, protocol-based imports |

@@ -815,3 +815,138 @@ builds on this: runtime loading is the architecture; codegen adds
 compile-time type generation for TypeScript so the `AppStateFields`
 interface becomes an artifact instead of hand-maintained.
 
+## Agent Heartbeat Primitives (v1.18.0)
+
+Before v1.18.0 the agent tool loop had no structured progress signal
+of its own. Every client scraped `TOOL_CALL` / `TOOL_RESULT` / `ERROR`
+events to approximate "is the agent still working?" and the engine
+had no way to stop a runaway retry loop short of `max_iterations`.
+Three recurring failure modes motivated the primitive:
+
+- **Silent multi-minute loops** where a model kept producing tool
+  calls but the UI had no way to show progress without re-deriving
+  state per client.
+- **"apply_patch fails 10× with hallucinated variations"** sessions
+  that burned the full iteration budget before giving up.
+- **Cross-client renderer drift** — each client approximated agent
+  progress from different event subsets, producing four near-identical
+  bugs when the engine changed.
+
+### Emission contract (`ppxai/engine/chat.py`)
+
+`chat_with_tools` owns the heartbeat lifecycle. Every run emits
+exactly one `AGENT_RUN_START` on entry and exactly one of
+`AGENT_RUN_COMPLETE` / `AGENT_RUN_ERROR` on exit. `AGENT_BEAT` fires
+once per tool-iteration after `TOOL_GROUP_END`. `AGENT_ZOMBIE` fires
+at most once, on the iteration where the circuit breaker trips, and
+is always immediately followed by `AGENT_RUN_ERROR`.
+
+```
+stream_start
+  → AGENT_RUN_START {model, provider, max_iterations, agent_mode}
+  → loop:
+       tool_group_start
+       tool_call / tool_result | tool_error  (per tool)
+       tool_group_end
+       AGENT_BEAT {iteration, beat, tool, ok, failures, elapsed_s}
+       [if failures ≥ zombie_threshold:]
+         AGENT_ZOMBIE {reason, threshold, last_tool, iteration, elapsed_s}
+         AGENT_RUN_ERROR {reason: "zombie", ...}
+         return
+  → AGENT_RUN_COMPLETE {iteration, elapsed_s}   ← both exit paths
+    (or AGENT_RUN_ERROR on interrupt / provider error)
+```
+
+`AGENT_RUN_COMPLETE` is emitted from **both** exit branches
+(successful completion and max-iterations reached), regardless of
+`ctx.agent_mode`. The legacy `AGENT_COMPLETE` event remains for
+backward compatibility, but every new observer should subscribe to
+`AGENT_RUN_COMPLETE` instead — it's mode-agnostic and strictly
+paired with `AGENT_RUN_START`.
+
+### `AgentBeatState` (`ppxai/engine/types.py`)
+
+The dataclass is the single source of truth for the heartbeat
+payload shape. Treat it as the wire contract: serialize only via
+`as_event_data()`, never hand-roll dicts.
+
+```python
+@dataclass
+class AgentBeatState:
+    iteration: int = 0
+    beat_sequence: int = 0
+    last_beat_time: float = 0.0
+    last_tool: str = ""
+    last_run_ok: bool = True
+    consecutive_failures: int = 0
+    start_time: float = 0.0
+
+    @property
+    def elapsed_s(self) -> float: ...
+    def as_event_data(self) -> Dict[str, Any]:
+        # {iteration, beat, tool, ok, failures, elapsed_s} — all JSON
+        # primitives, no datetimes, no enums, stable across releases.
+```
+
+### AppState lifecycle
+
+`AppState.agent_beat` (schema default `{}`) is the canonical field
+every client renders from. The engine — not clients — owns
+invalidation:
+
+- `EngineClient._chat_with_tools` intercepts every `AGENT_BEAT`
+  event and calls `self.state.set("agent_beat", event.data)`.
+- On `AGENT_RUN_COMPLETE` / `AGENT_RUN_ERROR` (and legacy
+  `AGENT_COMPLETE` for defensiveness) it sets `agent_beat = {}`.
+- `agent_beat` is in `_SSE_SYNC_FIELDS`, so the server pushes every
+  write over `state_sync` SSE with no per-route plumbing.
+
+This follows the v1.17.4 §"Cross-Client State Through AppState"
+pattern: clients subscribe (`state.on("agent_beat", listener)`) or
+read (`state.get("agent_beat")`); they never scan events themselves.
+`AppState.set()` equality-dedupes, so no-op writes don't flood the
+SSE stream on text-only turns.
+
+### Zombie circuit-breaker
+
+The breaker reads `tools.agent.zombie_threshold` from
+`get_agent_config()` (default `3`, canonical default in
+`constants.py::Default.ZOMBIE_THRESHOLD`). `0` disables.
+
+After each iteration's beat is emitted, `_get_zombie_threshold(ctx)`
+is consulted; if `consecutive_failures >= threshold` the engine
+emits `AGENT_ZOMBIE`, then `AGENT_RUN_ERROR`, and returns
+immediately. The loop never reaches the next `max_iterations` check.
+
+`consecutive_failures` is reset on any successful iteration
+(`last_run_ok = True`), so transient tool errors don't accumulate
+across unrelated turns.
+
+### Renderer contract (per client)
+
+Every renderer reads the same payload and clears on empty dict:
+
+| Client | Surface | Variant cues |
+|---|---|---|
+| Rich (`TUIEventHandler._tui_agent_beat`) | Dim one-liner after each tool group | Text-only; zombie uses red warning |
+| ppxaide (`PPXAIDEApp._on_agent_beat_changed`) | Persistent status-bar badge | `success` / `error` / `warning` variant via failure streak |
+| Web (`updateAgentBeatBadge`) | Header badge | `.warn` (≥2 failures) / `.error` (single fail) CSS classes |
+| VSCode (`updateAgentBeatBadge` in webview) | Header badge | Same variant logic with `vscode-badge-*` theme tokens |
+
+Adding a new client means: (1) subscribe to the existing AppState
+field — do not add new engine events; (2) render the six-key
+payload; (3) hide when the dict is empty. No engine changes needed.
+
+### Drift protection
+
+- `tests/test_agent_beat_primitives.py` pins the dataclass defaults,
+  `as_event_data()` keys, and EventType membership.
+- `tests/test_agent_beat_emission.py` locks the event ordering and
+  failure-counter reset semantics in `chat_with_tools`.
+- `tests/test_agent_beat_zombie.py` exercises breaker thresholds and
+  config round-trips.
+- `tests/test_agent_beat_sse.py` runs the full real-engine + real-SSE
+  path with a MockProvider so wire format can't drift silently.
+- `tests/test_stream_handler_dispatch.py` fails if a new heartbeat
+  EventType lands without updating ppxaide's `NOOP_EVENTS` set.
+

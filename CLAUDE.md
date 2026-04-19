@@ -31,7 +31,16 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 **Version Alignment:**
 - Python package (pyproject.toml): v1.17.7
 - VSCode extension (package.json): v1.17.7
-- Last release tag: v1.17.6
+- Last release tag: v1.17.7
+- Active branch: `feature/v1.18.0` (P0 agent heartbeat primitives — see [docs/RELEASE-NOTES-v1.18.0.md](docs/RELEASE-NOTES-v1.18.0.md))
+
+**v1.18.0 (in progress) — P0 agent heartbeat primitives:**
+- **NEW:** `EventType.AGENT_BEAT` / `AGENT_RUN_START` / `AGENT_RUN_COMPLETE` / `AGENT_RUN_ERROR` / `AGENT_ZOMBIE` lifecycle events emitted by `chat_with_tools`
+- **NEW:** `AgentBeatState` dataclass (`ppxai/engine/types.py`) with `as_event_data()` JSON payload helper
+- **NEW:** `AppState.agent_beat` field (schema-driven across Python/JS/TS) — heartbeat pushed via `state_sync` SSE, cleared on run end
+- **NEW:** Zombie circuit-breaker — `tools.agent.zombie_threshold` config (default 3, 0 disables) stops the tool loop after N consecutive failed iterations, emits `AGENT_ZOMBIE` + `AGENT_RUN_ERROR`
+- **NEW:** Client renderers — dim status line in Rich, status-bar badge in ppxaide with `success`/`warning`/`error` variants, header badge in Web + VSCode
+- See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) §"Agent Heartbeat Primitives" for the emission contract
 
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
 
