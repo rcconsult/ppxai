@@ -100,6 +100,14 @@ NOOP_EVENTS = {
     EventType.AGENT_ITERATION,
     EventType.AGENT_COMPLETE,
     EventType.AGENT_MAX_ITERATIONS,
+    # P0 (v1.18.0) agent lifecycle events. Stage 1 parks them here —
+    # the engine defines the types and dataclass but nothing emits them
+    # yet (Stage 2). When emission lands, Stage 5 will move the ones
+    # that need UI rendering into EVENT_MAP with dedicated bus signals.
+    EventType.AGENT_BEAT,
+    EventType.AGENT_RUN_START,
+    EventType.AGENT_RUN_ERROR,
+    EventType.AGENT_ZOMBIE,
     # STATUS is generic notification plumbing; ppxaide surfaces these
     # through ENGINE_INFO (checkpoint commands etc. use INFO).
     EventType.STATUS,

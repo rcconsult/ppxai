@@ -93,6 +93,10 @@ class EventType(Enum):
     TOOL_GROUP_END = "tool_group_end"  # End of tool calls in one iteration (v1.16.0)
     STATE_SYNC = "state_sync"  # AppState field changed — push to connected clients (v1.17.1)
     AGENT_INTERMEDIATE_PROSE = "agent_intermediate_prose"  # R12 Opt 1 (v1.17.5): model prose between tool iterations
+    AGENT_BEAT = "agent_beat"  # P0 (v1.18.0): structured per-iteration heartbeat — iteration/tool/ok/failures/elapsed_s
+    AGENT_RUN_START = "agent_run_start"  # P0 (v1.18.0): whole-run start (fires once per chat_with_tools invocation)
+    AGENT_RUN_ERROR = "agent_run_error"  # P0 (v1.18.0): whole-run errored — payload includes reason + last iteration
+    AGENT_ZOMBIE = "agent_zombie"  # P0 (v1.18.0): circuit breaker — consecutive tool failures exceeded threshold
     WARNING = "warning"  # Validation warning (v1.15.2 - hallucination detection)
     ERROR = "error"
     INFO = "info"
@@ -290,3 +294,52 @@ class ToolCallInfo:
     arguments: Dict[str, Any]
     result: Optional[str] = None
     error: Optional[str] = None
+
+
+@dataclass
+class AgentBeatState:
+    """Structured per-iteration heartbeat state for the agent tool loop (P0, v1.18.0).
+
+    Emitted on every `chat_with_tools` iteration as `EventType.AGENT_BEAT`
+    data payload. Clients render progress bars, elapsed timers, and tool
+    counters from these fields instead of parsing free-form text.
+
+    Also the building block for zombie detection: when
+    `consecutive_failures` crosses the configured threshold the engine
+    emits `EventType.AGENT_ZOMBIE` and breaks the loop.
+
+    Design note: shape mirrors ppxai-sre-core's AgentBeatState so that
+    both standalone ppxai agent mode AND ppxai-sre scheduled agents
+    surface identical data to clients — one widget for both.
+    """
+    iteration: int = 0
+    beat_sequence: int = 0
+    last_beat_time: float = 0.0
+    last_tool: str = ""
+    last_run_ok: bool = True
+    consecutive_failures: int = 0
+    start_time: float = 0.0
+
+    @property
+    def elapsed_s(self) -> float:
+        """Wall time since run start in seconds (0.0 if not yet started)."""
+        import time
+        if not self.start_time:
+            return 0.0
+        return time.monotonic() - self.start_time
+
+    def as_event_data(self) -> Dict[str, Any]:
+        """Serialize to the AGENT_BEAT event payload (stable wire shape).
+
+        The keys here are the canonical schema — web/VSCode/TUI
+        renderers depend on these names. Don't rename without updating
+        every client.
+        """
+        return {
+            "iteration": self.iteration,
+            "beat": self.beat_sequence,
+            "tool": self.last_tool,
+            "ok": self.last_run_ok,
+            "failures": self.consecutive_failures,
+            "elapsed_s": round(self.elapsed_s, 1),
+        }

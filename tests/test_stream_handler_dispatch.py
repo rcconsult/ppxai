@@ -50,6 +50,13 @@ def test_noop_events_are_intentional():
         EventType.AGENT_COMPLETE,
         EventType.AGENT_MAX_ITERATIONS,
         EventType.STATUS,               # surfaced via INFO
+        # P0 (v1.18.0) — Stage 1 parks these until Stage 5 wires
+        # dedicated bus signals + ppxaide rendering. Stage 2 only adds
+        # emission; no client surface yet.
+        EventType.AGENT_BEAT,
+        EventType.AGENT_RUN_START,
+        EventType.AGENT_RUN_ERROR,
+        EventType.AGENT_ZOMBIE,
     }
 
     assert NOOP_EVENTS == expected_noop, (
